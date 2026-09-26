@@ -233,6 +233,13 @@ const HELPERS = `
    * than dropping them silently, which is the whole complaint against the
    * specs this one supplements.
    */
+  // A gradient sized to a band 2px tall or less is a drawn rule (a link's
+  // growing underline), not a ground under the glyphs.
+  const isRule = (cs) => {
+    const h = (cs.backgroundSize || '').split(',')[0].trim().split(/\\s+/)[1]
+    return !!h && /px$/.test(h) && parseFloat(h) <= 2
+  }
+
   const layersOf = (el, rect, samples) => {
     const layers = []
     let gradients = 0
@@ -243,7 +250,7 @@ const HELPERS = `
       // they are out of scope here and counted as refusals.
       const clip = cs.webkitBackgroundClip || cs.backgroundClip
       const img = cs.backgroundImage
-      if (img && img !== 'none') {
+      if (img && img !== 'none' && !isRule(cs)) {
         if (clip === 'text') return { refused: 'background-clip:text' }
         const box = n.getBoundingClientRect()
         const first = splitTop(img)[0]
@@ -275,7 +282,7 @@ const HELPERS = `
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
       const cs = getComputedStyle(n)
       const img = cs.backgroundImage
-      if (img && img !== 'none') {
+      if (img && img !== 'none' && !isRule(cs)) {
         const box = n.getBoundingClientRect()
         const g = parseLinear(splitTop(img)[0], box.width, box.height)
         if (!g) return null

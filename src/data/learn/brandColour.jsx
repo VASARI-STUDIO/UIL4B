@@ -5,8 +5,10 @@
 // in it comes from contrastRatio() — so the table cannot disagree with the tool
 // that produces the same ramp. Every figure quoted in the prose around it is
 // recomputed from the same functions by tests/unit/learn-figures.test.js,
-// including the two theme grounds, which are read back out of
-// src/styles/global.css rather than trusted.
+// including the two grounds. The dark one (#060607) is still read back out of
+// src/styles/global.css; the light one (#EFEEE9) is the ground this article was
+// measured on; the product's own light page is now #F5F5F2. It is pinned rather than re-read so the worked example
+// stays true to itself; the prose no longer calls it this product's ground.
 //
 // The two thresholds the article measures against are quoted from WCAG 2.2 with
 // links to the clauses.
@@ -126,7 +128,7 @@ export default function BrandColour() {
         <p>
           The seed here is worth its own line. <code>#2563EB</code> is the colour
           this product&rsquo;s own Colour Studio opens on, and it measures 4.45:1
-          against this product&rsquo;s light ground — five hundredths under the
+          against <code>#EFEEE9</code> — five hundredths under the
           threshold, against an off-white rather than a pure white. A brand
           colour that fails by that margin fails in a way no reviewer catches by
           eye, and the number is different again on <code>#FFFFFF</code>. Which
@@ -158,7 +160,7 @@ export default function BrandColour() {
           head={['Lightness', 'Pure grey', '8% towards hue 221', '16% towards hue 221']}
           numeric={[1, 2, 3]}
           rows={NEUTRAL_ROWS}
-          caption={`Built with hslToHex() and measured with contrastRatio() against ${LIGHT_GROUND}, this page's light-theme ground. Saturation is the only variable; HSL lightness is held.`}
+          caption={`Built with hslToHex() and measured with contrastRatio() against ${LIGHT_GROUND}. Saturation is the only variable; HSL lightness is held.`}
         />
 
         <p>

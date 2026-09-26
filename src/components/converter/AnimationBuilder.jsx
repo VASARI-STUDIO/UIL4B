@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import ColorPickerPop from '../ColorPickerPop'
 import DropZone from './DropZone'
 import JobStatus from './JobStatus'
-import { loadImage, prefersReducedMotion, useGatedDownload } from './shared'
+import { loadImage, prefersReducedMotion, revealResult, useGatedDownload } from './shared'
 import {
   ANIMATION_FORMATS, FPS_MAX, FPS_MIN, MAX_ANIMATION_SIDE, MAX_FRAMES, PLAY_OPTIONS, QUALITY_LEVELS,
   animationSize, clampFps, describeTiming, findFormat, fitContain, formatBytes, frameName,
@@ -74,6 +74,19 @@ export default function AnimationBuilder({ toast }) {
   // which the next run reset to false, let a cancelled run wake up and encode.
   const runRef = useRef(0)
   const loops = useRef(0)
+  // THE RESULT IS BROUGHT INTO VIEW. On a one-column bench the result sits
+  // under the frame strip and Build sits in the action bar pinned to the
+  // bottom of the screen, so a finished build could otherwise land out of
+  // sight with only a toast to say so. Only a NEW result from a build moves
+  // the page; removing or reordering frames never does.
+  const resultRef = useRef(null)
+  const revealNext = useRef(false)
+  useEffect(() => {
+    if (!result || !revealNext.current) return undefined
+    revealNext.current = false
+    const raf = requestAnimationFrame(() => revealResult(resultRef.current))
+    return () => cancelAnimationFrame(raf)
+  }, [result])
 
   const fmt = findFormat(format)
   const n = frames.length
@@ -313,6 +326,7 @@ export default function AnimationBuilder({ toast }) {
     }
     if (stale()) return
     const blob = new Blob([bytes], { type: target.mime })
+    revealNext.current = true
     setResult(prev => {
       if (prev?.url) URL.revokeObjectURL(prev.url)
       return { url: URL.createObjectURL(blob), blob, bytes: blob.size, w, h, format: target.id, frames: total, fps: fpsVal, sig }
@@ -404,7 +418,7 @@ export default function AnimationBuilder({ toast }) {
         </section>
 
         {result && (
-          <section className="fc-result" aria-label="Result">
+          <section className="fc-result" aria-label="Result" ref={resultRef}>
             <h2 className="fc-eyebrow">Result</h2>
             {resultFmt.kind === 'video' ? (
               <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
@@ -422,6 +436,7 @@ export default function AnimationBuilder({ toast }) {
         )}
       </div>
 
+      <div className="fc-side">
       <aside className="fc-inspector" aria-label="Animation settings">
         <div className="fc-insp-sec">
           <label className="fc-eyebrow" htmlFor="fc-an-format">Output format</label>
@@ -482,14 +497,21 @@ export default function AnimationBuilder({ toast }) {
           {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
         </div>
 
-        <div className="fc-insp-sec fc-actions">
+      </aside>
+
+      {/* The build bar: under the settings in the side card, and pinned to the
+          bottom of the screen on a one-column bench, so Build is in reach from
+          the frame strip without scrolling past every setting. */}
+      <div className="fc-actionbar fc-actions">
+        <div className="fc-actionbar-row">
           <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={build} disabled={busy}>
             {busy ? 'Building…' : `Build ${fmt.label}`}
           </button>
-          <JobStatus job={job} engineFailed={engineFailed} onCancel={busy ? cancel : null} />
           <button type="button" className="fc-btn" onClick={clearAll} disabled={busy}>Clear all frames</button>
         </div>
-      </aside>
+        <JobStatus job={job} engineFailed={engineFailed} onCancel={busy ? cancel : null} />
+      </div>
+      </div>
     </div>
   )
 }

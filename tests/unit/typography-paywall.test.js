@@ -27,7 +27,7 @@
 //      produced. Here that means the at-cap branch renders NO save control —
 //      absent, not disabled and not hidden by CSS.
 //
-// ── WHAT CHANGED, AND WHY (2026-09-08) ──────────────────────────────────────
+// ── WHAT CHANGED, AND WHY ──────────────────────────────────────
 //
 // The innermost layer of the gate — ProjectContext.saveProject refusing a save
 // at the cap — used to be one regex: `if (current.length >= projectLimit) {`
@@ -63,7 +63,7 @@
 //     structural layer over the same rule, and the wiring lines (the gate ids,
 //     the `free: true` login prompt, commit() re-resolving the quota) are
 //     source by nature.
-//   · Plans.jsx copy: the page copy is the artefact.
+//   · Pricing.jsx copy: the page copy is the artefact.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -92,7 +92,7 @@ const MATCHER = read('src/pages/FontMatcher.jsx')
 const SCALE = read('src/pages/TypeScale.jsx')
 const SAVE = read('src/components/SaveTypeSystem.jsx')
 const CSS = ALL_CSS
-const PLANS = read('src/pages/Plans.jsx')
+const PLANS = read('src/pages/Pricing.jsx')
 
 const TOOLS = [
   ['FontGallery', GALLERY],
@@ -260,7 +260,7 @@ test('2 · the font gallery raises no paywall at all', () => {
 })
 
 test('3 · every export and copy action stays ungated', () => {
-  // Plans.jsx sells "Unlimited palettes, font pairings, type scales, gradients
+  // Pricing.jsx sells "Unlimited palettes, font pairings, type scales, gradients
   // and exports" in the FREE column, and the comparison table repeats it. A
   // gate on any of these would make the pricing page false.
   const pairs = [
@@ -298,20 +298,26 @@ test('3 · every export and copy action stays ungated', () => {
   //
   // Written as two halves rather than one long literal so a future copy edit
   // fails on the half it actually broke.
-  assert.match(PLANS, /Unlimited palettes, font pairings, type scales and gradients/,
-    'the Free card no longer promises unlimited use of the typography tools — '
+  //
+  // ── ON /plans ───────────────────────────────────────────────────────────────
+  // /plans is the design's Pricing screen. Its Free card is the design's five-line
+  // list, and the design's "All thirteen tools, unmetered" lost "unmetered" because Alt
+  // Text is one of the thirteen and IS metered. The property survives in the
+  // page's answer to "What counts as one generation?", which says it in full:
+  // everything but an AI generation is unmetered, type scales by name.
+  assert.match(PLANS, /editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered/,
+    'the pricing page no longer promises unmetered use of the palette and typography tools — '
     + 'if that promise is really gone, the ungated copy/export assertions above must be reconsidered too')
-  assert.match(PLANS, /none of it metered/,
-    'the Free card no longer says the typography tools are unmetered')
-  assert.match(PLANS, /<td>Palettes, font pairings, type scales and gradients<\/td><td>Unlimited<\/td>/,
-    'the comparison table no longer repeats the unlimited promise')
+  // (The legacy comparison row "Palettes, font pairings, type scales and
+  // gradients · Unlimited" went with the legacy table; the design's comparison
+  // has no such row, and the promise is pinned once, above, where it is said.)
 
   // The export promise is now format-specific and is guarded separately, by
   // tests/unit/plans-truth.test.js, against src/config/exportFormats.js — the
   // array that renders the buttons. It is deliberately NOT restated here: this
   // file is about the typography paywall, and a copy of that rule living in two
   // places is how the two drift apart.
-  assert.match(PLANS, /Number of exports<\/td><td>Unlimited<\/td>/,
+  assert.match(PLANS, /label: 'Number of exports', free: 'Unlimited'/,
     'the page no longer states that the NUMBER of exports is unlimited on Free — '
     + 'that is the half of the export promise this test depends on')
 })

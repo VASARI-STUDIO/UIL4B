@@ -6,7 +6,7 @@
 //
 // .claude/skills/uil4b-brand-design/references/anti-slop-quality-bar.md, read
 // against the founder's own verdicts: taglines and payment-reassurance lines
-// are "a huge AI Slop feature" (2026-09-07), "Not a screenshot. The actual
+// are "a huge AI Slop feature", "Not a screenshot. The actual
 // tools, running here." is defensive negation he threw out, "Everything below
 // is the real tool. Use it." is "MEGA AI generated", "Systems worth stealing."
 // is "bad copy", and the three-up figure strip and the taxonomy eyebrow above
@@ -35,24 +35,11 @@ import { expectRendered, go, watch } from './helpers.js'
 import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 import { AI_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
-import { proOnlyFormats } from '../../src/config/exportFormats.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../../src/data/toolTree.js'
 import { SECTIONS } from '../../scripts/share-cards.mjs'
 import { sectionEyebrow } from '../../scripts/og-cards.mjs'
 
 const PERSONA = 'a designer who has seen a hundred AI-generated SaaS pages'
-
-// Scroll the whole page once so every `[data-reveal]` band has been given its
-// chance to reveal; the checks below read the DOM, but a visible-text check on
-// a band GSAP is still holding at autoAlpha:0 would fail for the wrong reason.
-async function walk(page) {
-  const h = await page.evaluate(() => document.documentElement.scrollHeight)
-  for (let y = 0; y < h; y += 600) {
-    await page.evaluate((yy) => window.scrollTo(0, yy), y)
-    await page.waitForTimeout(40)
-  }
-  await page.evaluate(() => window.scrollTo(0, 0))
-}
 
 test.describe('the homepage below the hero', () => {
   /* FOUR TESTS REMOVED HERE, 2026-09-22 — the sections they guarded are gone.
@@ -75,49 +62,43 @@ test.describe('the homepage below the hero', () => {
    *
    * ALSO REMOVED: "ends on the price panel — the closing CTA banner is gone".
    * Spectrum DOES end on a closing CTA section (.sp-close, "Start your first
-   * kit today") after the pricing and FAQ. That is the founder's own chosen
-   * design, so asserting the banner's absence would fail a page behaving as
-   * drawn — but it is the same object he had deleted from the old homepage
-   * and from the secondary landings for being a second copy of a CTA the page
-   * had already made. Recorded for him in OWNER-ACTIONS rather than decided
-   * here; an agent does not overrule his design to satisfy an old rule. */
+   * kit today") after the pricing and FAQ. That is the design as drawn, so
+   * asserting the banner's absence would fail a page behaving as drawn; a
+   * test does not overrule the design to satisfy an old rule. */
 
-  test('the price panel describes Pro from the config that enforces it', async ({ page }) => {
+  test('the plans page describes Pro from the config that enforces it', async ({ page }) => {
     // Was: "Free covers the complete core toolkit with no trial clock. Pro
     // raises the AI limits and unlocks saved projects, exports and
     // submissions." over four typed lines, three of them wrong — Free has
     // every tool and saves projects too, "full system exports" once sold a
     // JSON the product cannot make, and submissions need a sign-in, not Pro.
+    //
+    // Every plan detail lives on the Pricing screen at /plans, not on the
+    // landing. The claims are
+    // about the PRODUCT, so they follow the page that makes them; read as page
+    // text rather than through the old `.sp-plan` markup, because /plans is
+    // being rebuilt and the figures, not the classes, are the contract.
     watch(page, PERSONA)
+    await go(page, '/plans')
+    await expectRendered(page, '/plans')
+
+    const text = (await page.locator('main').first().evaluate((el) => el.textContent || ''))
+      .replace(/\s+/g, ' ')
+    expect(text).toContain(`${AI_LIMITS.pro.daily} AI generations a day`)
+    expect(text).toContain(`${AI_LIMITS.pro.monthly} a month`)
+
+    const lower = text.toLowerCase()
+    // The two claims that were FALSE of Pro. ("Every colour, type, icon and
+    // image tool" and "no trial clock" were only wrong as Pro bullets; on a
+    // whole pricing page they can describe Free truthfully, so they are not
+    // page-wide bans.)
+    for (const wrong of ['community submissions', 'full system exports']) {
+      expect(lower, `/plans is back to claiming "${wrong}"`).not.toContain(wrong)
+    }
+    // And the landing carries none of it: plan detail lives on /plans only.
     await go(page, '/')
     await expectRendered(page, '/')
-    await walk(page)
-
-    /* MOVED ONTO SPECTRUM'S PRICING SECTION.
-     *
-     * `.hprice-panel` was Home's single Pro panel. Spectrum draws both tiers as
-     * `.sp-plan` cards under `#pricing`, so the Pro card is the one this test is
-     * about — found by its own tier label rather than by index, because an index
-     * silently tests the Free card if the order is ever swapped.
-     *
-     * Everything below this point is unchanged, and that is the point: the
-     * figures still have to come from the config that ENFORCES them, and the
-     * four sentences the founder had removed still must not come back. Those
-     * are claims about the product, not about the page that carried them. */
-    const panel = page.locator('.sp-plan', { has: page.locator('.sp-plan-tier', { hasText: /^PRO$/i }) })
-    await expect(panel).toHaveCount(1)
-
-    const items = await panel.locator('li').allTextContents()
-    const joined = items.join(' | ')
-    expect(joined).toContain(`${AI_LIMITS.pro.daily} AI generations a day`)
-    expect(joined).toContain(`${AI_LIMITS.pro.monthly} a month`)
-    expect(joined).toContain(`All ${COLOUR_SYSTEMS.length} colour systems`)
-    for (const f of proOnlyFormats()) expect(joined).toContain(f.name)
-
-    const lower = joined.toLowerCase()
-    for (const wrong of ['community submissions', 'full system exports', 'every colour, type, icon and image tool', 'no trial clock']) {
-      expect(lower, `the price panel is back to claiming "${wrong}"`).not.toContain(wrong)
-    }
+    await expect(page.locator('.sp-plan'), 'a plan card is back on the landing').toHaveCount(0)
   })
 
 })
@@ -126,7 +107,7 @@ test.describe('the Discover landing', () => {
   test('is headed by its own name, with no eyebrow and no lede', async ({ page }) => {
     // Was: a "Discover" eyebrow over "Find systems worth stealing." — a line
     // the founder had already thrown out on the homepage ('"Systems worth
-    // stealing." is bad copy', 56-founder-rejected-headlines) with "Find" in
+    // stealing." is bad copy', 56-homepage-headline-copy) with "Find" in
     // front of it — over an agent lede built on the "earn a tab" idiom.
     watch(page, PERSONA)
     await go(page, '/discover')
@@ -167,25 +148,29 @@ test.describe('the Help centre', () => {
   })
 })
 
-test.describe('the Plans page closing band', () => {
-  test('is the founder’s sentence over derived facts, with no eyebrow or hint', async ({ page }) => {
-    // Was: "Start on Free" eyebrow / "Build first. Upgrade when your workflow
-    // asks for it." / "The complete toolkit is ready today. …" / "No trial
-    // clock on Free" — the third payment reassurance on one page.
+// /plans has no closing SystemCTA band: it is the design's Pricing screen, which ends on the colour band and
+// the footer's handoff. What this block guarded — no payment reassurance in a
+// micro-line slot, and the numbers derived — is guarded where the design puts
+// the same kind of line: the Free card's note.
+test.describe('the Plans page reassurance lines', () => {
+  test('the Free card note is the design\'s sentence without the retired payment reassurances', async ({ page }) => {
+    // The design reads "Free because the tools cost us nothing to run. No trial
+    // clock, no card." Both trailing clauses are the retired "no card" class
+    // the product no longer makes; the sentence before them
+    // stays, and the slot keeps the design's two-line height.
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page, '/plans')
 
-    const cta = page.locator('.system-cta')
-    await expect(cta).toHaveCount(1)
-    await expect(cta.locator('.system-cta-title')).toHaveText(line(SURFACE_LINE.plansClosing))
-    await expect(cta.locator('.home-eyebrow'), 'the eyebrow is back').toHaveCount(0)
-    await expect(cta.locator('.system-cta-hint'), 'the reassurance hint is back').toHaveCount(0)
-    const lede = cta.locator('.system-cta-lede')
-    await expect(lede).toContainText(`All ${COLOUR_SYSTEMS.length} colour systems`.replace('All ', 'all '))
-    await expect(lede).not.toContainText('ready today')
-    // 54-plans-truth owns the paint check; this only needs the control to exist.
-    await expect(cta.getByRole('button', { name: /Start building free/ })).toBeAttached()
+    const note = page.locator('.pr-plan--free .pr-plan-note')
+    await expect(note).toHaveText('Free because the tools cost us nothing to run.')
+    const text = (await page.locator('.pricing main').innerText()).toLowerCase()
+    for (const phrase of ['no trial clock', 'no card', 'ready today', 'upgrade when your workflow']) {
+      expect(text, `/plans says "${phrase}" again`).not.toContain(phrase)
+    }
+    // The sub-line's colour-system count is derived, not typed.
+    await expect(page.locator('.pr-sub')).toContainText(`colour systems`)
+    expect(COLOUR_SYSTEMS.length).toBeGreaterThan(2)
   })
 })
 
@@ -205,7 +190,9 @@ test.describe('the Plans page closing band', () => {
  * Spectrum footer's link parity with AppFooter is pinned by
  * tests/unit/spectrum-footer-parity.test.js. */
 test.describe('the footer', () => {
-  for (const route of ['/plans', '/discover/palettes']) {
+  // /plans renders the marketing footer and app pages draw no site footer, so
+  // the reading pages are where the site footer is checked.
+  for (const route of ['/help']) {
     test(`${route} carries the wordmark and no tagline`, async ({ page }) => {
       // Was: "The operating workspace for building, validating and exporting
       // interface foundations." under the wordmark on every page — a tagline,

@@ -52,13 +52,13 @@ test.describe('offline state', () => {
 
   test('nothing is shown while the connection is fine', async ({ page }) => {
     await go(page, '/create/palette')
-    await expect(page.locator('.plb-toolbar').first()).toBeVisible()
+    await expect(page.locator('.plb [data-tool-toolbar]').first()).toBeVisible()
     await expect(page.locator(BANNER)).toHaveCount(0)
   })
 
   test('losing the connection mid-session raises one app-level notice', async ({ page }) => {
     await go(page, '/create/palette')
-    await expect(page.locator('.plb-toolbar').first()).toBeVisible()
+    await expect(page.locator('.plb [data-tool-toolbar]').first()).toBeVisible()
 
     await goOffline(page)
     await expect(page.locator(BANNER)).toBeVisible()
@@ -134,16 +134,16 @@ test.describe('offline state', () => {
     await pinOnLine(page, false)
     await go(page, '/create/palette')
     await expect(page.locator(BANNER)).toBeVisible()
-    const toolbar = page.locator('.plb-toolbar')
+    const toolbar = page.locator('.plb [data-tool-toolbar]')
     await expect(toolbar).toBeVisible()
 
     const m = await page.evaluate(() => {
       const strip = document.querySelector('.notice-stack').getBoundingClientRect()
-      const bar = document.querySelector('.plb-toolbar').getBoundingClientRect()
+      const bar = document.querySelector('.plb [data-tool-toolbar]').getBoundingClientRect()
       const mid = document.elementFromPoint(bar.x + bar.width / 2, bar.y + bar.height / 2)
       return {
         covers: strip.bottom > bar.top + 1,
-        hitsToolbar: !!mid?.closest('.plb-toolbar'),
+        hitsToolbar: !!mid?.closest('.plb [data-tool-toolbar]'),
         reserved: getComputedStyle(document.documentElement).getPropertyValue('--notice-h').trim(),
         stripHeight: Math.round(strip.height),
       }

@@ -100,7 +100,7 @@ const resolve = (name, theme) => {
 }
 
 const GROUNDS = {
-  light: { '--bg-0': '#EFEEE9', 'card': '#FFFFFF', '--bg-2': '#F6F5F1', '--bg-3': '#E4E2DA' },
+  light: { '--bg-0': '#F5F5F2', 'card': '#FFFFFF', '--bg-2': '#F6F5F1', '--bg-3': '#E4E2DA' },
   dark: { '--bg-0': '#060607', '--bg-1': '#0B0C0E', '--bg-2': '#111215', '--bg-3': '#17181B' },
 }
 // The tint percentages global.css actually pairs with these tokens.

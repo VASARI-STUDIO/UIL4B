@@ -57,6 +57,7 @@
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
@@ -107,7 +108,8 @@ test.describe('1 — the phone sheet carries Export and Saved projects', () => {
       await expect(sheet).toBeVisible()
       const exportRow = sheet.getByRole('button', { name: 'Export', exact: true })
       await expect(exportRow).toBeVisible()
-      await expect(sheet.getByRole('link', { name: 'Saved projects' })).toHaveAttribute('href', '/projects')
+      // Saved projects is the tab bar's first tab.
+      await expect(page.locator('.pnav-tabs').getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/projects')
 
       await exportRow.click()
       const panel = page.locator('[role="dialog"][aria-labelledby="exp-title"]')
@@ -125,27 +127,37 @@ test.describe('1 — the phone sheet carries Export and Saved projects', () => {
     })
   }
 
-  test('768px: the same row, at the top of the band the bar hides its buttons in', async ({ browser }) => {
+  // From 768 the header is the App file's row, and below 900 it folds Export
+  // into the account popover (the row never wraps).
+  test('768px: Export is in the account popover, where the folded row puts it', async ({ browser }) => {
     const { context, page } = await open(browser, [768, 1024])
     watch(page, 'a tablet user looking for Export')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/create/palette')
-    await page.locator('.pnav-mobile').click()
-    await page.locator('.pnav-sheet').getByRole('button', { name: 'Export', exact: true }).click()
+    await page.getByRole('button', { name: 'Account and settings' }).click()
+    await page.locator('#pnav-account-pop').getByRole('button', { name: 'Export', exact: true }).click()
     await expect(page.locator('[role="dialog"][aria-labelledby="exp-title"]')).toBeVisible()
     await context.close()
   })
 
-  test('a sales route has nothing to export, so the sheet says nothing — the same gate as the bar', async ({ browser }) => {
+  // /plans renders the marketing nav (the design's Pricing screen), as `/` and `/home` already
+  // did — so no sales route renders the app header any more and the gate has
+  // no route left to act on. The guarantee is the same one, asserted on the
+  // nav a sales route actually has: its phone menu offers nothing to export,
+  // and a signed-in visitor's saved projects are still one tap away.
+  test('a sales route has nothing to export, so the phone menu says nothing — and keeps the way to saved projects', async ({ browser }) => {
     const { context, page } = await open(browser, PHONE)
     watch(page, 'a phone visitor on /plans')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/plans')
-    await page.locator('.pnav-mobile').click()
-    const sheet = page.locator('.pnav-sheet')
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    const sheet = page.getByRole('dialog', { name: 'Menu' })
     await expect(sheet).toBeVisible()
     await expect(sheet.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
-    await expect(sheet.getByRole('link', { name: 'Saved projects' }), 'the account row stays').toHaveCount(1)
+    await expect(sheet.getByRole('link', { name: 'Export', exact: true })).toHaveCount(0)
+    // The marketing menu has no account row; its way to saved projects is the
+    // toolkit link, which opens the workspace.
+    await expect(sheet.getByRole('link', { name: /Open the toolkit/ }), 'the way to saved projects stays').toHaveAttribute('href', '/projects')
     await context.close()
   })
 })
@@ -161,7 +173,7 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
       await signIn(page, { plan: 'free', projects: CAP - 1 })
       await go(page, '/create/palette')
 
-      await page.locator('button[aria-label="Save / export"]').click()
+      await page.getByRole('button', { name: 'Save current' }).click()
       const menu = page.locator('.plb-savemenu')
       await expect(menu).toBeVisible()
       const save = menu.getByRole('button', { name: 'Save', exact: true })
@@ -170,19 +182,18 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
       await page.keyboard.press('Escape')
       await expect(menu).toHaveCount(0)
 
-      // The colour-system menu: a real click, no force — Playwright refuses a
-      // click the footer would intercept, which is exactly how #436 found it.
-      const trigger = page.locator('button.plb-harm')
-      const current = (await trigger.textContent()) || ''
-      const pick = COLOUR_SYSTEMS.find((s) => s.free && !current.includes(s.label))
-      await trigger.click()
-      const harm = page.locator('.plb-harmmenu')
-      await expect(harm).toBeVisible()
-      const row = harm.getByRole('menuitemradio', { name: new RegExp(`^${pick.label}`) })
-      await expect.poll(() => hitWithin(row, '.plb-harmmenu').then((h) => h.inside),
-        `a tap on "${pick.label}" must reach the menu, not the adjust footer`).toBe(true)
-      await row.click({ timeout: 4000 })
-      await expect(trigger).toContainText(pick.label)
+      // The colour system, which a phone reaches in the Tools sheet: the
+      // select must take the tap over the adjust footer, and the choice holds.
+      let tools = await openPaletteTools(page)
+      const system = tools.getByRole('combobox', { name: 'Colour system' })
+      const current = await system.inputValue()
+      const pick = COLOUR_SYSTEMS.find((s) => s.free && s.id !== current)
+      await expect.poll(() => hitWithin(system, '.tl-sheet').then((h) => h.inside),
+        'a tap on the colour system must reach the Tools sheet, not the adjust footer').toBe(true)
+      await system.selectOption(pick.id)
+      await expect(tools).toHaveCount(0)
+      tools = await openPaletteTools(page)
+      await expect(tools.getByRole('combobox', { name: 'Colour system' })).toHaveValue(pick.id)
       await context.close()
     })
   }
@@ -192,7 +203,7 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
     watch(page, 'a desktop user opening Save / export')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/create/palette')
-    await page.locator('button[aria-label="Save / export"]').click()
+    await page.getByRole('button', { name: 'Save current' }).click()
     const menu = page.locator('.plb-savemenu')
     await expect(menu).toBeVisible()
     const box = await menu.boundingBox()
@@ -214,7 +225,7 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
       watch(page, `a free account at the cap saving a palette (${size[0]}px)`)
       const account = await signIn(page, { plan: 'free', projects: CAP })
       await go(page, '/create/palette')
-      await page.locator('button[aria-label="Save / export"]').click()
+      await page.getByRole('button', { name: 'Save current' }).click()
       const menu = page.locator('.plb-savemenu')
       const field = menu.getByLabel('Project name')
       await field.fill('One Too Many')
@@ -241,7 +252,7 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
       // Closing the menu clears it, so a stale refusal cannot greet the next attempt.
       await page.keyboard.press('Escape')
       await expect(menu).toHaveCount(0)
-      await page.locator('button[aria-label="Save / export"]').click()
+      await page.getByRole('button', { name: 'Save current' }).click()
       await expect(page.getByTestId('palette-save-refusal')).toHaveCount(0)
       await context.close()
     })
@@ -252,7 +263,7 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
     watch(page, 'a free account with a slot to spare saving a palette')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/create/palette')
-    await page.locator('button[aria-label="Save / export"]').click()
+    await page.getByRole('button', { name: 'Save current' }).click()
     await page.locator('.plb-savemenu').getByLabel('Project name').fill('Room To Spare')
     await page.keyboard.press('Enter')
     await expect(page.getByTestId('palette-save-refusal')).toHaveCount(0)
@@ -266,6 +277,10 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('4 — an error toast stays until it is read or dismissed; a success stays short', () => {
   const duplicateAtCap = async (page) => {
+    // The ⋯ menu is on a project's own page; open the first project, then
+    // its menu.
+    await page.locator('.uh-card-name').first().click()
+    await expect(page.locator('.pjd-h1')).toBeVisible()
     await page.getByRole('button', { name: /^Actions for/ }).first().click()
     const dup = page.getByRole('button', { name: 'Duplicate' })
     // Rendering this at 390 found a ninth defect: the hovered card's lift is
@@ -343,6 +358,22 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
       watch(page, `a free account opening its settings (${size[0]}px)`)
       await signIn(page, { plan: 'free', projects: 1 })
       await go(page, '/settings')
+      if (size === PHONE) {
+        // ON A PHONE the page opens on the list of sections (never tabs
+        // wrapped into a grid). The
+        // default and the remembered section are the list's current row.
+        const current = page.locator('.settings-nav-item.active')
+        await expect(page.locator('.settings-nav')).toBeVisible()
+        await expect(current).toHaveText(/Account/)
+        await page.locator('#settab-support').click()
+        await expect(page.locator('#set-support')).toBeVisible()
+        await go(page, '/settings')
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
+        await page.locator('#settab-support').click()
+        await expect(page.locator('#set-support')).toBeVisible()
+        await context.close()
+        return
+      }
       const selected = page.locator('.settings-nav [role="tab"][aria-selected="true"]')
       await expect(selected).toHaveText(/Account/)
       await expect(page.locator('#set-account')).toBeVisible()
@@ -376,7 +407,7 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
       const { context, page } = await open(browser, PHONE, theme)
       watch(page, `a stranger meeting the sign-in gate on a phone (${theme})`)
       await go(page, '/create/palette')
-      await page.locator('button[aria-label="Save / export"]').click()
+      await page.getByRole('button', { name: 'Save current' }).click()
       // The gate moved off the menu opener onto Save, 2026-09-15 — the menu
       // holds three Copy rows and copying is free. See PaletteBuilder's doSave.
       const saveBtn = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
@@ -402,7 +433,7 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
     const { context, page } = await open(browser, PHONE)
     watch(page, 'a first-time visitor on a phone: the gate, then the sign-up pane')
     await go(page, '/create/palette')
-    await page.locator('button[aria-label="Save / export"]').click()
+    await page.getByRole('button', { name: 'Save current' }).click()
     // The gate moved off the menu opener onto Save, 2026-09-15 — the menu holds
     // three Copy rows and copying is free forever. See PaletteBuilder's doSave.
     const saveBtn = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
@@ -416,7 +447,9 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
     await expect(gate).toHaveCount(0)
 
     await page.locator('.pnav-mobile').click()
-    await page.getByRole('button', { name: 'Start for Free' }).click()
+    // "Start for free" opens the workspace now; the sign-up form
+    // is "Create a free account", directly under Log in.
+    await page.locator('.pnav-sheet').getByRole('button', { name: 'Create a free account' }).click()
     const signup = page.getByRole('dialog', { name: /Create your free account/i })
     await expect(signup).toBeVisible()
     await expect(signup).not.toHaveClass(/ui-login--interrupt/)
@@ -461,16 +494,19 @@ test.describe('7 — an onboarded account typing /onboarding lands on its home',
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('8 — the dialog hook hands focus back a frame after the close, not inside it', () => {
   for (const size of [PHONE, DESK]) {
-    test(`${size[0]}px: when the project detail leaves the DOM focus is on nothing; a frame later it is on the card`, async ({ browser }) => {
+    // Neither the project detail nor New project is a dialog, so the dialog this
+    // hook serves on /projects is the Feedback form, opened from the floating
+    // Feedback button (FeedbackModal uses the same useModalDialog).
+    test(`${size[0]}px: when the Feedback dialog leaves the DOM focus is on nothing; a frame later it is on its opener`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
-      watch(page, `a keyboard user closing a project's detail (${size[0]}px)`)
+      watch(page, `a keyboard user closing the Feedback form (${size[0]}px)`)
       await signIn(page, { plan: 'free', projects: 1 })
       await go(page, '/projects')
-      const opener = page.locator('.uh-card-name').first()
-      const name = (await opener.textContent())?.trim()
+      const opener = page.locator('.global-feedback-btn')
+      const name = 'feedback'
       await opener.focus()
       await page.keyboard.press('Enter')
-      const dialog = page.getByRole('dialog', { name })
+      const dialog = page.locator('[role="dialog"]').filter({ has: page.locator('.fb-close') })
       await expect(dialog).toBeVisible()
 
       // #436's trace was keydown@input → keypress@button[opener] → click: the
@@ -496,16 +532,16 @@ test.describe('8 — the dialog hook hands focus back a frame after the close, n
         })
         mo.observe(document.body, { childList: true, subtree: true })
       })
-      await dialog.locator('.fg-detail-close').focus()
+      await dialog.locator('.fb-close').focus()
       await page.keyboard.press('Enter')
       await expect(dialog).toHaveCount(0)
       const atClose = await page.evaluate(() => window.__focusAtClose)
       expect(atClose, 'the observer must have seen the dialog leave').not.toBeNull()
-      expect(atClose, 'focus was already on the opener in the tick the dialog was removed — the tick in which the closing key\'s next event is still to be dispatched').not.toMatch(/uh-card-name/)
+      expect(atClose, 'focus was already on the opener in the tick the dialog was removed — the tick in which the closing key\'s next event is still to be dispatched').not.toMatch(/global-feedback-btn/)
 
       await page.waitForTimeout(400)
       await expect(dialog).toHaveCount(0)
-      expect(await focused(page), 'a frame later, focus is back on the card that opened it').toMatch(new RegExp(name.slice(0, 20)))
+      expect(await focused(page), 'a frame later, focus is back on the control that opened it').toMatch(new RegExp(name.slice(0, 20)))
       await context.close()
     })
   }

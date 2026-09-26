@@ -4,6 +4,7 @@ import { AI_LIMITS } from '../config/plans'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
+import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
 import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
@@ -145,7 +146,7 @@ export default function AiPromptGenerator({ toast }) {
     // MONTHLY limit could refuse a user every local check said was fine — and
     // that refusal then read as a generic error.
     if (quota.blocked || !canUseFeature(TOOL_ID, dailyLimit)) {
-      toast?.(quota.message || 'Daily limit reached — resets at midnight')
+      toast?.(quota.message || 'Daily limit reached — resets at 00:00 UTC')
       return
     }
     setBusy(true)
@@ -243,6 +244,11 @@ export default function AiPromptGenerator({ toast }) {
                 {/* Reference image upload (AIP-05/06/07) */}
                 <div className="aipg-ref-section">
                   <span className="aipg-option-label">Reference image (optional)</span>
+                  {/* The photo scan sends the image to Gemini (api/ai.js,
+                      SCAN_SYSTEM_PROMPT). Said before upload, visibly.
+                      This page has no route today; the notice is here so it
+                      is true the day it gets one. */}
+                  <p className="ai-image-consent" style={{ margin: '4px 0 8px', fontSize: 12, lineHeight: 1.5, color: 'var(--t2)' }}>{AI_IMAGE_CONSENT}</p>
                   {!refPreview ? (
                     <div
                       className="aipg-ref-drop"

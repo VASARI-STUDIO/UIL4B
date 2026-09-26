@@ -49,18 +49,18 @@ function bucket(used, limit) {
   }
 }
 
-// Midnight tonight, local time — when the DAILY bucket resets. The monthly one
-// resets on the 1st, which is why they are reported separately: telling someone
-// their monthly wall "resets at midnight" would be a lie they act on.
+// When the server's buckets roll over. api/ai.js keys the daily bucket on the
+// function's own clock, which is UTC on Vercel, and the monthly one on the UTC
+// month, so both resets are UTC midnights. These used to be LOCAL midnight,
+// which in Brisbane is ten hours before the server agreed a new day had
+// started. The monthly one is reported separately: telling someone their
+// monthly wall resets tonight would be a lie they act on.
 export function dailyResetAt(now = new Date()) {
-  const reset = new Date(now)
-  reset.setDate(reset.getDate() + 1)
-  reset.setHours(0, 0, 0, 0)
-  return reset
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
 }
 
 export function monthlyResetAt(now = new Date()) {
-  return new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0)
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
 }
 
 // Merge what the server last told us with the local estimate.
@@ -110,13 +110,32 @@ export function quotaState({ server = null, localUsed = 0, dailyLimit = 0, month
 
 // Plain English for the state above. Returns null when there is nothing worth
 // saying, so a caller can render nothing rather than a reassuring non-message.
-export function quotaMessage(state) {
+//
+// The reset is stated in UTC because that is when it happens, with the
+// viewer's own clock time beside it for the daily one (`timeZone` is for
+// tests; the browser's own zone is the default). A viewer already on UTC gets
+// the UTC sentence alone.
+export function quotaMessage(state, { timeZone } = {}) {
   if (!state?.binding) return null
   const isMonth = state.binding === 'month'
   const b = isMonth ? state.monthly : state.daily
   if (!b) return null
   const period = isMonth ? 'this month' : 'today'
-  const resets = isMonth ? 'It resets on the 1st.' : 'It resets at midnight.'
+  const resets = isMonth ? 'It resets on the 1st at 00:00 UTC.' : dailyResetPhrase(state.resetsAt, timeZone)
   if (b.exhausted) return `You've used all ${b.limit} AI generations ${period}. ${resets}`
   return `${b.remaining} AI generation${b.remaining === 1 ? '' : 's'} left ${period}. ${resets}`
+}
+
+function dailyResetPhrase(resetsAt, timeZone) {
+  const base = 'It resets at 00:00 UTC'
+  if (!(resetsAt instanceof Date) || Number.isNaN(resetsAt.getTime())) return `${base}.`
+  try {
+    const zone = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (!zone || zone === 'UTC' || zone === 'Etc/UTC') return `${base}.`
+    const local = new Intl.DateTimeFormat('en', { timeZone: zone, hour: 'numeric', minute: '2-digit' })
+      .format(resetsAt)
+    return `${base} (${local} your time).`
+  } catch {
+    return `${base}.`
+  }
 }

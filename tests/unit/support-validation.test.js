@@ -50,7 +50,7 @@ test('a non-string subject or email is refused rather than crashing the handler'
     const out = validateSupportBody({ message: 'hello', subject: bad }, NOW)
     assert.equal(out.error, 'Subject must be text', `${JSON.stringify(bad)} subject must be refused`)
   }
-  for (const bad of [{ length: 5 }, ['a@b.co'], 7]) {
+  for (const bad of [{ length: 5 }, ['a@b.test'], 7]) {
     const out = validateSupportBody({ message: 'hello', email: bad }, NOW)
     assert.equal(out.error, 'Invalid email format', `${JSON.stringify(bad)} email must be refused`)
   }

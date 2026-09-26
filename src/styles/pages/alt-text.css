@@ -1,57 +1,36 @@
 /* alt-text.css — the `alt` family, /create/alt-text's own sheet.
  *
- * ── SPECTRUM PASS, 2026-09-23 ───────────────────────────────────────────────
+ * Every selector is scoped under `.alt-page`, the page root, which is also the
+ * ToolLayout root (`.tl.alt-page`). Import order does not decide which sheet
+ * wins (Vite orders chunk CSS by the dependency graph); the root scope does,
+ * and it also beats the two `.alt-example.*` rules still in global.css and
+ * tool-shell.css.
  *
- * Every selector is scoped under `.alt-page`, the page root, because import
- * order does not decide which sheet wins (Vite orders chunk CSS by the
- * dependency graph — commit 8d30f37a measured it). The root scope is also what
- * beats the two `.alt-example.*` rules still in global.css and tool-shell.css,
- * which this lane may not edit.
- *
- * What changed, against UIL4B App.dc.html and the migrated /create/tint:
- *   - Hero at the Spectrum step; the italic "Generator" is set upright.
- *   - Controls are rectangles over a hairline (12px buttons, 10px fields).
- *     The Length picker was three `.pl-chip` pills whose selected state was
- *     `--accent-strong` ink — a per-theme literal that does not follow
- *     `--accent`. It is a segmented row of rectangles here; selected is ink.
- *   - The one filled button is --accent-mid on --accent-ink (tint's measured
- *     pair), hover --accent-text.
- *   - The per-card remove button was white on 50% black over the photo; it is
- *     a card-coloured tile with a hairline, legible on any image.
- *   - The error and warning boxes used rgba() literals; they are color-mix()
- *     of the state tokens, so both themes follow the tokens.
- *   - The drop zone's 2px dashed border is 1px, like every other hairline. */
+ * The page follows the shared tool pattern (tool-layout.css): a sticky toolbar
+ * carrying the name, the queue actions and Generate; the dropzone and the
+ * cards on the left; one side card holding the page context, the length and
+ * the note on plans. Buttons are pills over a hairline; the one filled
+ * control is the toolbar's Generate. */
 
 .alt-page {
   --alt-ease: cubic-bezier(.23, 1, .32, 1);
-  min-width: 0;
-  padding-bottom: var(--s-7);
 }
 
-/* ── Hero ─────────────────────────────────────────────────────────────────── */
-
-.alt-page .alt-hero { margin: 0 0 var(--s-6); }
-
-.alt-page .alt-hero h1 {
-  margin: 0 0 var(--s-4);
-  font-family: var(--display);
-  font-size: clamp(38px, 5.6vw, 72px);
-  font-weight: 600;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: var(--t0);
-  text-wrap: balance;
-}
-
-.alt-page .alt-hero h1 em { font-style: normal; font-weight: inherit; color: inherit; padding: 0; }
-
-.alt-page .alt-hero p {
-  max-width: 62ch;
+/* The allowance sits on the page, not in a card of its own. */
+.alt-page .quota.quota--tool {
   margin: 0;
-  font-size: 15.5px;
-  line-height: 1.62;
-  color: var(--t1);
-  text-wrap: pretty;
+  padding: 0 2px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+/* The Gemini notice slot above the dropzone. */
+.alt-page .ai-image-consent {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--tl-dim);
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
@@ -70,7 +49,7 @@
   color: var(--t0);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) var(--alt-ease);
 }
@@ -83,10 +62,6 @@
 
 .alt-page .alt-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-.alt-page .alt-btn--primary { color: var(--accent-ink); background: var(--accent-mid); border-color: transparent; }
-
-.alt-page .alt-btn--primary:hover:not(:disabled) { background: var(--accent-text); border-color: transparent; }
-
 /* ── Drop zone ────────────────────────────────────────────────────────────── */
 
 .alt-page .alt-dropzone {
@@ -95,7 +70,6 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-bottom: var(--s-5);
   padding: clamp(28px, 5vw, 52px) 20px;
   text-align: center;
   color: var(--t1);
@@ -127,108 +101,39 @@
 
 .alt-page .alt-dropzone-sub { font-size: 12px; color: var(--t2); }
 
-/* ── Options: page context + length ───────────────────────────────────────── */
+/* ── Side card: page context, length ──────────────────────────────────────── */
 
-.alt-page .alt-options {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
-  gap: 16px 24px;
-  margin-bottom: var(--s-5);
-  padding: 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-}
-
-.alt-page .alt-context { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-
-/* The app file's section label: mono, tracked, faint. --t3 on --card measured
-   5.24:1 light / 5.86:1 dark. */
-.alt-page .alt-context label,
-.alt-page .alt-label {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-
-.alt-page .alt-context input {
+.alt-page .alt-field {
+  width: 100%;
   height: 40px;
   padding: 0 12px;
   font-family: var(--font);
-  font-size: 14px;
-  color: var(--t0);
+  font-size: 16px;
+  color: var(--tl-ink);
   background: var(--inp);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
+  border: 1px solid var(--tl-line);
+  border-radius: 10px;
   outline: none;
   transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
 }
 
-.alt-page .alt-context input:hover { border-color: var(--bh); }
+.alt-page .alt-field:hover { border-color: var(--tl-line-on); }
 
-.alt-page .alt-context input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
+.alt-page .alt-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
 
-.alt-page .alt-field-help { max-width: 52ch; margin: 0; font-size: 12px; line-height: 1.45; color: var(--t2); }
+.alt-page .alt-field-help { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 
-.alt-page .alt-field-help strong { font-weight: 560; color: var(--t1); }
+.alt-page .alt-field-help strong { font-weight: 560; color: var(--tl-ink); }
 
-/* A segmented row of rectangles: three mutually exclusive lengths. Selected is
-   ink on the raised ground, not accent — the accent is the Generate button. */
-.alt-page .alt-seg {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 2px;
-  padding: 3px;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.alt-page .alt-seg-btn {
-  min-height: 32px;
-  padding: 0 14px;
-  font-family: var(--font);
-  font-size: 12.5px;
-  font-weight: 540;
-  color: var(--t2);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-s);
-  cursor: pointer;
-  transition: color var(--dur-1) ease, background var(--dur-1) ease;
-}
-
-.alt-page .alt-seg-btn:hover { color: var(--t0); }
-
-.alt-page .alt-seg-btn[aria-pressed="true"] { color: var(--t0); background: var(--card); border-color: var(--border); }
-
-.alt-page .alt-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.alt-page .alt-count { color: var(--tl-dim); }
 
 /* ── Guidance (empty state) ───────────────────────────────────────────────── */
 
-.alt-page .alt-examples {
-  margin-top: 0;
-  padding: 18px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-}
+.alt-page .alt-examples { display: grid; gap: 12px; padding: 4px 2px 0; }
 
-.alt-page .alt-examples-title {
-  margin: 0 0 14px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
+.alt-page .alt-examples .tl-sec-label { margin: 0; }
 
-.alt-page .alt-examples-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.alt-page .alt-examples-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .alt-page .alt-example {
   position: relative;
@@ -267,26 +172,7 @@
 
 .alt-page .alt-tips code { padding: 1px 5px; font-family: var(--mono); font-size: 11.5px; background: var(--bg-2); border-radius: var(--radius-xs); }
 
-/* ── Toolbar and cards ────────────────────────────────────────────────────── */
-
-.alt-page .alt-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 10px 12px 10px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.alt-page .alt-toolbar-info { font-size: 13px; color: var(--t1); }
-
-.alt-page .alt-toolbar-info strong { font-family: var(--mono); font-weight: 500; color: var(--t0); }
-
-.alt-page .alt-toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* ── Cards ──────────────────────────────────────────────────────────────── */
 
 .alt-page .alt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 16px; }
 
@@ -321,7 +207,7 @@
   color: var(--t1);
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
@@ -388,20 +274,14 @@
 
 /* ── Widths, touch, motion ────────────────────────────────────────────────── */
 
-@media (max-width: 860px) {
-  .alt-page .alt-options { grid-template-columns: minmax(0, 1fr); }
-}
-
 @media (max-width: 560px) {
   .alt-page .alt-examples-grid { grid-template-columns: 1fr; }
-  .alt-page .alt-hero p { font-size: 14.5px; }
-  .alt-page .alt-seg { display: grid; width: 100%; }
+  .alt-page .alt-dropzone { padding: 22px 16px; }
 }
 
 @media (pointer: coarse) {
   .alt-page .alt-btn,
-  .alt-page .alt-seg-btn,
-  .alt-page .alt-context input { min-height: 44px; }
+  .alt-page .alt-field { min-height: 44px; }
   .alt-page .alt-card-remove { width: 44px; height: 44px; }
 }
 

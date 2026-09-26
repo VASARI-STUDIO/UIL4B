@@ -34,13 +34,13 @@
 }
 
 /* ── Controls: the app's rectangles ──────────────────────────────────────── */
-.checkout-page .btn { min-height: 40px; padding: 0 16px; border-radius: var(--radius-s); border-color: var(--co-hair-2); background: transparent; color: var(--t0); font-size: 13.5px; font-weight: 500; transition: background var(--dur-1) ease, border-color var(--dur-1) ease; }
+.checkout-page .btn { min-height: 40px; padding: 0 16px; border-radius: var(--btn-radius); border-color: var(--co-hair-2); background: transparent; color: var(--t0); font-size: 13.5px; font-weight: 500; transition: background var(--dur-1) ease, border-color var(--dur-1) ease; }
 .checkout-page .btn:hover { background: var(--co-wash); border-color: var(--bh); color: var(--t0); }
 .checkout-page .btn-s { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
 /* --accent-mid under --accent-ink (5.18:1 light, 9.17:1 dark), hovering to
    --accent-text, which moves away from the ground in both themes. */
-.checkout-page .btn-accent { min-height: 44px; padding: 0 18px; border-radius: var(--radius); border-color: var(--accent-mid); background: var(--accent-mid); color: var(--accent-ink); font-weight: 560; }
-.checkout-page .btn-accent:hover { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent-ink); }
+.checkout-page .btn-accent { min-height: 44px; padding: 0 18px; border-radius: var(--btn-radius); border-color: var(--accent-fill); background: var(--accent-fill); color: var(--accent-ink); font-weight: 560; }
+.checkout-page .btn-accent:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); color: var(--accent-ink); }
 @media (pointer: coarse) {
   .checkout-page .btn, .checkout-page .btn-s { min-height: 44px; }
 }
@@ -111,7 +111,9 @@
 .checkout-page .checkout-spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--co-hair-2); border-top-color: var(--accent-mid); animation: checkout-spin .8s linear infinite; }
 /* A reference a customer may be asked for: mono, selectable in one gesture,
    and allowed to wrap because a Stripe session id has no spaces. */
-.checkout-page .checkout-return-ref { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; width: 100%; max-width: 100%; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--co-hair); border-radius: var(--radius); background: var(--co-wash); }
+/* One surface: the reference is a row set off by hairlines, not
+   a filled box inside the card. */
+.checkout-page .checkout-return-ref { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; width: 100%; max-width: 100%; margin-top: 10px; padding: 12px 0; border: 0; border-top: 1px solid var(--co-hair); border-bottom: 1px solid var(--co-hair); border-radius: 0; background: none; }
 .checkout-page .checkout-return-ref-label { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
 .checkout-page .checkout-return-ref-code { font-family: var(--mono); font-size: 12px; line-height: 1.45; color: var(--t0); word-break: break-all; user-select: all; }
 .checkout-page .checkout-return-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }

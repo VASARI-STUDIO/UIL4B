@@ -47,7 +47,7 @@ test.describe('Type Scale · the overhaul', () => {
     // 4. THE DISPLAY h1. On a page about type, the largest type on it was the
     //    one string the visitor cannot change. The ladder is the loudest thing
     //    here now, so the title must be smaller than the top step it sits over.
-    const h1 = await page.locator('.tsc-masthead h1').evaluate(
+    const h1 = await page.locator('[data-tool-toolbar] h1').evaluate(
       el => parseFloat(getComputedStyle(el).fontSize),
     )
     const topStep = await page.locator('.tsc-row-text').first().evaluate(

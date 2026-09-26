@@ -259,6 +259,9 @@ export function subscriptionDocFields(sub, now = Date.now()) {
     status: sub?.status,
     priceId: sub?.items?.data?.[0]?.price?.id || null,
     interval: sub?.items?.data?.[0]?.price?.recurring?.interval || null,
+    // Quarterly is interval 'month' with interval_count 3; readers need the
+    // count to tell it from monthly (src/utils/billingCadence.js).
+    intervalCount: sub?.items?.data?.[0]?.price?.recurring?.interval_count || null,
     currentPeriodEnd: subscriptionPeriodEnd(sub),
     cancelAtPeriodEnd: sub?.cancel_at_period_end || false,
     trialEndsAt: sub?.trial_end ? sub.trial_end * 1000 : null,

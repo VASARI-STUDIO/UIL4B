@@ -200,14 +200,13 @@ function appendAssetAudit(rows) {
  * as `suite-flake-class-unreproduced`, and it is measured rather than guessed:
  * the six spec files named in that item pass 130/130 against a stable dist/ and
  * fail 16 times across three of them with a rebuild loop running underneath.
- * tests/flakeprobe-a0e1/ is that experiment, kept runnable.
  *
  * ── A 4xx IS NOT THE ONLY WAY AN ASSET FAILS TO ARRIVE ──────────────────
  *
  * This started as a 4xx watch, and 4xx was only the half that the rebuild loop
  * produced. On 2026-09-06 five specs failed once each under full-suite
  * parallelism and every one passed in isolation — 09-auth-modal-accessibility,
- * 23-responsive-mid-band, 24-mobile-overhaul, 25-defect-sweep and
+ * 23-responsive-mid-band, 24-mobile-overhaul, 25-layout-target-sweep and
  * 11-palette-recovery. Two of those runs carried the cause in their own
  * feedback-loop section: `net::ERR_NO_BUFFER_SPACE` against
  * `/assets/index-*.js` and `/assets/en-*.js`. The app chunk never loaded, so
@@ -407,8 +406,7 @@ export function assertNoStaleBuildAssets() {
     + '\n\nEvery result in this run is void — the passes as much as the failures. Re-run it with '
     + 'nothing else building, and give each concurrent agent its own PLAYWRIGHT_PORT *and* its '
     + 'own checkout: the port keeps the preview servers and the report directories apart '
-    + '(tests/user-sim/report/<port>/), the checkout keeps the dist/ builds apart. See '
-    + 'tests/flakeprobe-a0e1/README.md.',
+    + '(tests/user-sim/report/<port>/), the checkout keeps the dist/ builds apart.',
   )
 }
 

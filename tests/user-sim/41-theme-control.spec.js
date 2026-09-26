@@ -216,7 +216,7 @@ await ready(page)
     }
   })
 
-  for (const [scheme, expected, bg] of [['dark', 'dark', 'rgb(6, 6, 7)'], ['light', 'light', 'rgb(239, 238, 233)']]) {
+  for (const [scheme, expected, bg] of [['dark', 'dark', 'rgb(6, 6, 7)'], ['light', 'light', 'rgb(245, 245, 242)']]) { // #F5F5F2, the App file's light page
     test(`on a ${scheme} device the FIRST painted frame is already ${expected}`, async ({ browser }) => {
       // The whole reason the theme is resolved in a synchronous boot script
       // rather than left to React. If the boot script and ThemeContext ever
@@ -265,25 +265,26 @@ await ready(page)
   // THE FRONT DOOR'S OWN COPY, and it is here so re-pointing the four tests
   // above onto /discover does not quietly drop the page every visitor lands on.
   //
-  // `/` is SpectrumNav now, and it carries the control in a different place: a
-  // `<ThemeCycle>` on the bar and the same `<ThemeChoice>` (the `.theme-seg`
-  // every test above drives) inside the full-screen menu, under "Appearance".
-  // That is a THIRD home for the control on top of the popover, the sheet and
-  // /settings, so what this file exists to say — a visitor can reach the dark
-  // theme from where they are — has to be said about it too.
-  test('the front door carries the control too, inside the Spectrum menu', async ({ browser }) => {
+  // `/` is SpectrumNav, the design's marketing pill, and its menu is the
+  // design's four items and nothing else — the
+  // three-way segment is no longer in it. The control on the front door is the
+  // one the design draws: the theme cycle on the pill (line 230), light → dark
+  // → system → light. What this file exists to say — a visitor can reach the
+  // dark theme from where they are, and it sticks — is said about that.
+  test('the front door carries the control too, as the pill\'s theme cycle', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await go(page, '/')
     expect(await themeOf(page)).toBe('light')
 
-    // Not on the bar: the menu is where the segmented control lives, which is
-    // the fact that makes the click below a reach rather than a tap.
-    expect(await visibleSegments(page), 'the segmented control is behind the menu, not on the bar').toBe(0)
+    // Not the segment: that lives in the app's popover, sheet and /settings.
+    expect(await visibleSegments(page), 'the segmented control is not part of the marketing pill').toBe(0)
 
-    await page.click('[aria-label="Open menu"]')
-    await expect(page.locator(`.spnav-util-theme ${SEG}`)).toBeVisible()
-    await page.locator(`.spnav-util-theme ${btn('dark')}`).click()
+    // From System (the fresh-profile default), the cycle's next stop is Light,
+    // then Dark. Its label is the design's, "Theme: auto. Switch to light.".
+    const cycle = page.locator('.spnav-bar .spnav-icon[aria-label^="Theme:"]')
+    await expect(cycle).toBeVisible()
+    for (let i = 0; i < 3 && (await themeOf(page)) !== 'dark'; i++) await cycle.click()
     await expect.poll(() => themeOf(page), { message: 'the front door could not switch the theme' }).toBe('dark')
 
     // Persistence, for the same reason as every other case here: a fabricated

@@ -11,7 +11,7 @@
 // (deliberate, see ADJUST_FIELDS in PaletteBuilder.jsx), keyboard steps are
 // computed here, exactly, and never reach the snap function. These tests assert
 // the stepping contract itself — the browser-level proof that a keyboard user
-// can now move the slider lives in tests/user-sim/16-founder-batch-2.spec.js.
+// can now move the slider lives in tests/user-sim/16-palette-toolbar-titles-snapslider.spec.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SLIDER_KEYS, pageStepFor, stepFromKey } from '../../src/utils/sliderKeys.js'

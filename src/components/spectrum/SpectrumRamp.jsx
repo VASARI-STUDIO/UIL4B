@@ -65,6 +65,28 @@ function Bars({ mirror }) {
 export default function SpectrumRamp({ mirror = false, className = '' }) {
   const ref = useRef(null)
 
+  // WHOLE-PIXEL BARS, AS THE DESIGN LAYS THEM OUT. Its tick() gives every bar
+  // floor((width - gaps) / 21) px and spreads them with space-between, so each
+  // bar is the same whole width and the leftover pixels fall in the gaps
+  // rather than making some bars a pixel wider than others. One custom
+  // property on the root, rewritten only when the band's width changes; the
+  // CSS falls back to equal flex shares until it is set (and in the shell).
+  useEffect(() => {
+    const node = ref.current
+    const bars = node?.querySelector('.sp-ramp-bars')
+    if (!node || !bars || typeof ResizeObserver === 'undefined') return undefined
+    const n = BARS.length
+    const layout = () => {
+      const w = bars.getBoundingClientRect().width
+      if (!w) return
+      node.style.setProperty('--sp-bar-w', `${Math.max(1, Math.floor((w - 2 * (n - 1)) / n))}px`)
+    }
+    const ro = new ResizeObserver(layout)
+    ro.observe(bars)
+    layout()
+    return () => ro.disconnect()
+  }, [])
+
   useEffect(() => {
     const node = ref.current
     if (!node) return undefined

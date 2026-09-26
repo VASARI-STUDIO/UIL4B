@@ -134,7 +134,7 @@ const addressPattern = () => new RegExp(ADDRESS_SOURCE, 'g')
 const UNROUTABLE = /(?:^|\.)(?:example\.(?:com|net|org)|example|invalid|test|localhost)$/i
 
 // EXACT addresses, not a uil4b.com wildcard. These two are role addresses
-// published on purpose in the Terms and Privacy pages; `dylan@uil4b.com` would
+// published on purpose in the Terms and Privacy pages; `someone@uil4b.com` would
 // still fail.
 const PUBLISHED_ON_PURPOSE = new Set([
   'legal@uil4b.com',
@@ -225,7 +225,7 @@ test('the address pattern finds a planted address, and the allowlist refuses it'
   assert.ok(addresses.has('you@example.com'), 'the pattern missed a reserved-domain placeholder')
   assert.equal(allowed('you@example.com'), true, 'RFC 2606 placeholders are meant to be allowed')
   assert.ok(!addresses.has('core@0.12.6'), 'a package version string is being reported as an email address')
-  assert.equal(allowed('dylan@uil4b.com'), false,
+  assert.equal(allowed('someone@uil4b.com'), false,
     'the allowlist is a domain wildcard — a personal mailbox on the site\'s own domain would pass')
   assert.equal(allowed('somebody.personal@gmail.com'), false,
     'a personal mailbox at a consumer provider — the shape the leak had — is on the allowlist')

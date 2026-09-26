@@ -1,13 +1,15 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import JSZip from 'jszip'
+import { ToolLayout, ToolButton } from '../components/tool/ToolLayout'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import DropZone from '../components/converter/DropZone'
 import AnimationBuilder from '../components/converter/AnimationBuilder'
 import JobStatus from '../components/converter/JobStatus'
-import { loadImage, prefersReducedMotion, useGatedDownload } from '../components/converter/shared'
-import { getLenis } from '../hooks/useSmoothScroll'
+import {
+  loadImage, revealResult, scrollDocTo, stickyTopOffset, useGatedDownload,
+} from '../components/converter/shared'
 import {
   DRAFT_FORMATS,
   DRAFT_RESOLUTIONS,
@@ -139,23 +141,15 @@ async function encodeIco(img, iw, ih) {
   return new Blob([out], { type: 'image/x-icon' })
 }
 
-// The PillNav is position:fixed, so anything scrolled to its own offsetTop hides
-// underneath it. Measure the live bar (its height changes at ≤640px, and a
-// chrome-less embed has none at all) and leave one --s-4 of air below it.
+// Air left between the sticky chrome (app header plus tool toolbar) and a
+// node scrolled up under it.
 const STICKY_GAP = 16
-
-function stickyTopOffset() {
-  const bar = document.querySelector('.pnav')
-  const h = bar ? bar.getBoundingClientRect().height : 0
-  return h > 0 ? h + STICKY_GAP : 0
-}
 
 // Land the visitor on their own images after a homepage hand-off: focus the
 // queue region (so assistive tech is told the viewport moved and where to) and
 // scroll it clear of the sticky bar. Called only once, only for a hand-off that
 // produced at least one real item.
 function revealQueue(node) {
-  const reduced = prefersReducedMotion()
   // Never yank focus out of a control the visitor already started using — this
   // fires a frame after mount, so in practice nothing is focused yet.
   const active = document.activeElement
@@ -164,13 +158,7 @@ function revealQueue(node) {
     // we do the positioning ourselves below.
     node.focus({ preventScroll: true })
   }
-  const top = Math.max(0, node.getBoundingClientRect().top + window.scrollY - stickyTopOffset())
-  // Lenis owns the scroll position whenever smooth scrolling is on; a raw
-  // window.scrollTo would desync its virtual position (same rule as App's
-  // route-change reset). Reduced motion never instantiates it.
-  const lenis = getLenis()
-  if (lenis) lenis.scrollTo(top, reduced ? { immediate: true } : undefined)
-  else window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' })
+  scrollDocTo(Math.max(0, node.getBoundingClientRect().top + window.scrollY - stickyTopOffset() - STICKY_GAP))
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -206,55 +194,60 @@ export default function FileConverter({ toast }) {
     tabRefs.current[MODES[next].id]?.focus()
   }
 
+  const navigate = useNavigate()
+
   return (
-    <div className="sec fc">
-      {/* NO TAXONOMY EYEBROW. This was the most literal instance in the
-          codebase: the eyebrow read "File Converter" at y=102 and the h1
-          below it read "File Converter" at y=135. The same three words,
-          twice, 33px apart. #surface-headers-read-as-ai. */}
-      <header className="fc-hero">
-        <h1>
-          File Converter
-          <span className="fc-alpha">Alpha</span>
-        </h1>
-        <p>
+    <ToolLayout
+      className="fc"
+      title="File Converter"
+      titleId="fc-title"
+      items={[
+        // A status tag, not an action: it leaves the row rather than the menu.
+        { id: 'alpha', menu: false, render: () => <span className="fc-alpha">Alpha</span> },
+        // WHERE 3D WENT. This was a fourth tab, "3D → Blender", that opened a
+        // "Coming soon" card and a disabled button. What a person holding a 3D
+        // file CAN do here is look at it, so the action points there.
+        {
+          id: '3d',
+          align: 'end',
+          priority: 1,
+          render: () => (
+            <ToolButton as={Link} to="/create/3d-viewer" aria-label="Open a 3D model in the 3D viewer">
+              3D viewer
+            </ToolButton>
+          ),
+          menu: { label: 'Open a 3D model in the 3D viewer', onSelect: () => navigate('/create/3d-viewer') },
+        },
+      ]}
+    >
+      <div className="fc-modes">
+        <div className="fc-tabs" role="tablist" aria-label="Converter mode">
+          {MODES.map((m, i) => (
+            <button
+              key={m.id}
+              ref={el => { tabRefs.current[m.id] = el }}
+              type="button"
+              role="tab"
+              id={`fc-tab-${m.id}`}
+              aria-selected={mode === m.id}
+              aria-controls={`fc-panel-${m.id}`}
+              tabIndex={mode === m.id ? 0 : -1}
+              className="fc-tab"
+              onClick={() => setMode(m.id)}
+              onKeyDown={e => onTabKey(e, i)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <p className="fc-about">
           Convert images between PNG, JPEG, WebP, AVIF and favicon ICO, turn short
           videos into GIFs, or extract video frames — all in your browser; your
           files are never uploaded. Image conversion is fully offline. The video
           tools download a converter engine — about 9 MB — from a public code
           CDN the first time you use one, then keep it cached.
         </p>
-      </header>
-
-      <div className="fc-tabs" role="tablist" aria-label="Converter mode">
-        {MODES.map((m, i) => (
-          <button
-            key={m.id}
-            ref={el => { tabRefs.current[m.id] = el }}
-            type="button"
-            role="tab"
-            id={`fc-tab-${m.id}`}
-            aria-selected={mode === m.id}
-            aria-controls={`fc-panel-${m.id}`}
-            tabIndex={mode === m.id ? 0 : -1}
-            className="fc-tab"
-            onClick={() => setMode(m.id)}
-            onKeyDown={e => onTabKey(e, i)}
-          >
-            {m.label}
-          </button>
-        ))}
       </div>
-
-      {/* WHERE 3D WENT. This was a fourth tab, "3D → Blender", that opened a
-          "Coming soon" card and a disabled button. Its one true statement is
-          kept: a .blend file needs Blender itself running on a server, which a
-          browser tool cannot do. What a person holding a 3D file CAN do here
-          is look at it, so the line points there instead of at a dead end. */}
-      <p className="fc-3d">
-        <Link to="/create/3d-viewer">Open a 3D model in the 3D viewer</Link>
-        <span className="fc-3d-note"> · Converting to Blender&apos;s .blend needs Blender running on a server, so it is not offered here.</span>
-      </p>
 
       <div className="fc-panel" role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
         {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
@@ -262,7 +255,13 @@ export default function FileConverter({ toast }) {
         {mode === 'video' && <VideoConvert toast={toast} />}
         {mode === 'frames' && <VideoFrames toast={toast} />}
       </div>
-    </div>
+
+      {/* The one true statement kept from the retired "3D → Blender" tab: a
+          .blend file needs Blender itself running on a server. */}
+      <p className="fc-3d-note">
+        Converting to Blender&apos;s .blend needs Blender running on a server, so it is not offered here.
+      </p>
+    </ToolLayout>
   )
 }
 
@@ -289,6 +288,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // The region holding the uploaded items + their output settings — the thing a
   // hand-off visitor actually came to look at.
   const queueRef = useRef(null)
+  const gridRef = useRef(null)
 
   // Revoke all object URLs on unmount. Read the latest items through a ref —
   // an empty-deps cleanup would close over the first render's empty array,
@@ -448,6 +448,9 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     }
     setBusy(false)
     toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}` : 'Conversion failed', ok ? 'success' : 'error')
+    // The converted files are the cards above the settings; on a one-column
+    // bench the press happened below them.
+    requestAnimationFrame(() => revealResult(gridRef.current))
   }, [items, busy, convertOne, toast])
 
   const fmt = OUTPUT_FORMATS.find(f => f.id === format)
@@ -559,7 +562,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               under 900px. The empty-state drop zone gives way to a slim "Add
               more" strip once the visitor's own files are on screen. */}
           <div className="fc-bench-main">
-            <ul className="fc-grid" aria-label="Queued images">
+            <ul className="fc-grid" aria-label="Queued images" ref={gridRef}>
               {items.map(it => (
                 <li key={it.id} className="fc-card">
                   <button type="button" className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>
@@ -593,6 +596,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
             {drop}
           </div>
 
+          <div className="fc-side">
           <aside className="fc-inspector" aria-label="Output settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
@@ -671,31 +675,35 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               </div>
             )}
 
-            <div className="fc-insp-sec fc-actions">
+          </aside>
+
+          {/* The run's action bar: under the settings in the side card, and
+              pinned to the bottom of the screen on a one-column bench. */}
+          <div className="fc-actionbar fc-actions">
+            <div className="fc-actionbar-row">
               <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convertAll} disabled={busy}>
                 {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
               </button>
-              {busy && items.length > 1 && (
-                <div className="fc-progress" role="progressbar" aria-label="Images converted" aria-valuemin={0} aria-valuemax={convertProgress.total} aria-valuenow={convertProgress.done}>
-                  <div className="fc-progress-bar" style={{ '--fc-pct': `${pct}%` }} />
-                </div>
+              {readyCount > 0 && (
+                <button type="button" className="fc-btn" onClick={downloadAll} disabled={zipping}>
+                  {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
+                </button>
               )}
-              <div className="fc-btn-row">
-                {readyCount > 0 && (
-                  <button type="button" className="fc-btn" onClick={downloadAll} disabled={zipping}>
-                    {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
-                  </button>
-                )}
-                <button type="button" className="fc-btn" onClick={clearAll} disabled={busy}>Clear</button>
-              </div>
-              {readyCount > 1 && (
-                <p className="fc-batch">
-                  {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
-                  <Delta orig={totalOrig} out={totalOut} />
-                </p>
-              )}
+              <button type="button" className="fc-btn" onClick={clearAll} disabled={busy}>Clear</button>
             </div>
-          </aside>
+            {busy && items.length > 1 && (
+              <div className="fc-progress" role="progressbar" aria-label="Images converted" aria-valuemin={0} aria-valuemax={convertProgress.total} aria-valuenow={convertProgress.done}>
+                <div className="fc-progress-bar" style={{ '--fc-pct': `${pct}%` }} />
+              </div>
+            )}
+            {readyCount > 1 && (
+              <p className="fc-batch">
+                {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
+                <Delta orig={totalOrig} out={totalOut} />
+              </p>
+            )}
+          </div>
+          </div>
         </section>
       )}
     </>
@@ -752,6 +760,14 @@ function VideoConvert({ toast }) {
   const runRef = useRef(0)
   const fmt = findFormat(format)
   const working = !!job
+  const resultRef = useRef(null)
+  const revealNext = useRef(false)
+  useEffect(() => {
+    if (!result || !revealNext.current) return undefined
+    revealNext.current = false
+    const raf = requestAnimationFrame(() => revealResult(resultRef.current))
+    return () => cancelAnimationFrame(raf)
+  }, [result])
 
   // Unmount-only cleanup via a ref — with [srcUrl, result] deps the cleanup
   // re-ran on every state change and revoked URLs still in use. An encode still
@@ -838,6 +854,7 @@ function VideoConvert({ toast }) {
       })
       if (stale()) return
       const blob = new Blob([bytes], { type: target.mime })
+      revealNext.current = true
       setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id })
       setJob(null)
       toast(`${target.label} ready`)
@@ -892,7 +909,7 @@ function VideoConvert({ toast }) {
               busy={working}
             />
             {result && (
-              <section className="fc-result" aria-label="Result">
+              <section className="fc-result" aria-label="Result" ref={resultRef}>
                 <h2 className="fc-eyebrow">Result</h2>
                 {resultFmt.kind === 'video' ? (
                   <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
@@ -910,6 +927,7 @@ function VideoConvert({ toast }) {
             )}
           </div>
 
+          <div className="fc-side">
           <aside className="fc-inspector" aria-label="Conversion settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-vid-format">Output format</label>
@@ -969,13 +987,14 @@ function VideoConvert({ toast }) {
                 </p>
               </div>
             )}
-            <div className="fc-insp-sec fc-actions">
-              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working}>
-                {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : `Convert to ${fmt.label}`}
-              </button>
-              <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />
-            </div>
           </aside>
+          <div className="fc-actionbar fc-actions">
+            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working}>
+              {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : `Convert to ${fmt.label}`}
+            </button>
+            <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />
+          </div>
+          </div>
         </div>
       )}
     </>
@@ -999,6 +1018,14 @@ function VideoFrames({ toast }) {
   const [frames, setFrames] = useState([])
   const [zipping, setZipping] = useState(false)
   const videoRef = useRef(null)
+  const framesRef = useRef(null)
+  const revealNext = useRef(false)
+  useEffect(() => {
+    if (!frames.length || !revealNext.current) return undefined
+    revealNext.current = false
+    const raf = requestAnimationFrame(() => revealResult(framesRef.current))
+    return () => cancelAnimationFrame(raf)
+  }, [frames])
 
   // Unmount-only URL cleanup via a ref — with [srcUrl, frames] deps the
   // cleanup re-ran when extract() reset frames and revoked the source URL
@@ -1105,6 +1132,7 @@ function VideoFrames({ toast }) {
       stopped = err.message
     }
 
+    revealNext.current = out.length > 0
     setFrames(out)
     setExtracting(false)
     setProgress(100)
@@ -1161,6 +1189,7 @@ function VideoFrames({ toast }) {
           </div>
 
           {meta && (
+            <div className="fc-side">
             <aside className="fc-inspector" aria-label="Extraction settings">
               <div className="fc-insp-sec">
                 <div className="fc-pair">
@@ -1211,23 +1240,24 @@ function VideoFrames({ toast }) {
                   {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} · ~{est.toLocaleString()} frames
                 </p>
               </div>
-              <div className="fc-insp-sec fc-actions">
-                <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
-                  {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
-                </button>
-                {extracting && (
-                  <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                    <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
-                  </div>
-                )}
-              </div>
             </aside>
+            <div className="fc-actionbar fc-actions">
+              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
+                {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
+              </button>
+              {extracting && (
+                <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                  <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                </div>
+              )}
+            </div>
+            </div>
           )}
         </div>
       )}
 
       {frames.length > 0 && (
-        <section className="fc-frames" aria-label="Extracted frames">
+        <section className="fc-frames" aria-label="Extracted frames" ref={framesRef}>
           <div className="fc-frames-head">
             <h2 className="fc-eyebrow">Extracted frames ({frames.length.toLocaleString()})</h2>
             <button type="button" className="fc-btn fc-btn--primary" onClick={downloadAll} disabled={zipping}>

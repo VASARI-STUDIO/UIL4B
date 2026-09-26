@@ -1,9 +1,8 @@
 // FLOW 4 — THE RETURNING USER, AND EVERYTHING THEY DO TO A PROJECT THEY OWN.
 //
 // Duplicate, rename, archive, restore, delete. Every one of these lives behind
-// the ⋯ menu on a project card, and until `signIn()` existed none of it had
-// ever been rendered by a test: the whole surface is behind RequireAuth, and
-// `audit-coverage-not-run` recorded it as unreachable for exactly that reason.
+// the ⋯ menu beside Save on a project's own page (/projects/:id). The whole
+// surface is behind RequireAuth, so these tests drive it through `signIn()`.
 //
 // ── WHAT THIS ASSERTS ON, AND WHY IT IS NOT THE MENU ────────────────────────
 //
@@ -27,7 +26,7 @@
 // ── MUTATION ───────────────────────────────────────────────────────────────
 //
 // Verified by breaking the CALL SITE rather than the component: dropping
-// `onDuplicate={handleDuplicate}` from the <ProjectCard> in src/pages/Projects.jsx
+// `onDuplicate={onDuplicate}` from the <ProjectActions> in src/pages/ProjectDetail.jsx
 // fails "duplicating writes a fourth project"; dropping `onArchive` fails the
 // archive test; dropping `onDelete` fails the delete test. The component keeps
 // rendering a full menu through all three, which is the point.
@@ -45,8 +44,10 @@ function stored(page, email) {
   )
 }
 
-/** Open the ⋯ menu on a named project card. */
+/** Open a named project from the workspace, then its ⋯ menu. */
 async function openActions(page, projectName) {
+  await page.locator('.uh-card-name', { hasText: projectName }).click()
+  await expect(page.getByRole('heading', { level: 1, name: projectName })).toBeVisible()
   await page.getByRole('button', { name: `Actions for ${projectName}` }).click()
   // The menu is a real popover; wait for it rather than for a timeout.
   await expect(page.getByRole('group', { name: `Actions for ${projectName}` })).toBeVisible()
@@ -119,7 +120,9 @@ test.describe('a returning free account managing its projects', () => {
       { message: 'the new name must be persisted, not just displayed' }).toBe('Autumn Rebrand')
   })
 
-  test('archiving takes it out of the grid without destroying it', async ({ page }) => {
+  test('archiving marks it archived without destroying it, and Restore brings it back', async ({ page }) => {
+    // The design's workspace keeps an archived project in "Recent projects" under an
+    // "Archived" tag (the old list hid it behind "Show archived (n)").
     watch(page, 'a designer archiving a finished project')
     const account = await signIn(page, { plan: 'free', projects: 2 })
     await go(page, '/projects')
@@ -127,16 +130,20 @@ test.describe('a returning free account managing its projects', () => {
     await openActions(page, 'Seeded Project 1')
     await page.getByRole('button', { name: 'Archive', exact: true }).click()
 
-    // Gone from the active grid …
-    await expect(page.getByRole('button', { name: 'Actions for Seeded Project 1' }),
-      'an archived project leaves the active grid').toHaveCount(0)
-    // … but still owned, and reachable behind the archived disclosure.
-    await expect(page.getByRole('button', { name: /Show archived \(1\)/i }),
-      'and the account must be told it still has it').toBeVisible()
+    await expect(page.locator('.pjd-status'), 'the page says so').toContainText('Archived')
     const all = await stored(page, account.email)
     expect(all.length, 'archiving must not delete anything').toBe(2)
     expect(all.find((p) => p.name === 'Seeded Project 1')?.archived,
       'it is archived, not removed').toBe(true)
+
+    await page.getByRole('link', { name: 'All projects' }).click()
+    await expect(page.locator('.proj-card', { hasText: 'Seeded Project 1' }).locator('.uh-card-tag'),
+      'and the workspace tells the account it still has it').toHaveText('Archived')
+
+    await page.locator('.uh-card-name', { hasText: 'Seeded Project 1' }).click()
+    await page.getByRole('button', { name: 'Restore', exact: true }).click()
+    await expect.poll(() => stored(page, account.email).then((p) => p.find((x) => x.name === 'Seeded Project 1')?.archived),
+      { message: 'Restore must un-archive it in the store' }).toBe(false)
   })
 
   test('deleting refuses until the name is typed exactly', async ({ page }) => {

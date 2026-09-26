@@ -5,16 +5,21 @@
 // / Referer), so the allowlist is the only thing stopping a checkout or billing
 // portal from returning the user to someone else's page. The dev origin is
 // therefore compiled out of production.
+//
+// Only the custom domains are allowed; DEFAULT_ORIGIN is the canonical site.
 
 const PRODUCTION_ORIGINS = [
-  'https://uil4b.vercel.app',
   'https://uil4b.com',
   'https://www.uil4b.com',
 ]
 
 const DEV_ORIGIN = 'http://localhost:5173'
 
-export const DEFAULT_ORIGIN = PRODUCTION_ORIGINS[0]
+// The canonical site origin — the same string as SITE_ORIGIN in
+// src/utils/routeMeta.js (tests/unit/origins.test.js holds them together).
+// While www is the primary host on Vercel the apex 308s there with the query
+// string intact, so a Stripe return_url built from it still arrives.
+export const DEFAULT_ORIGIN = 'https://uil4b.com'
 
 export function allowedOrigins() {
   return process.env.NODE_ENV === 'production'

@@ -305,6 +305,14 @@ export const introSeen = (storage) => read(GUIDE_SEEN_KEY, storage) === '1'
 /** Record that it has. Called when it is DISMISSED, never while rendering. */
 export const markIntroSeen = (storage) => write(GUIDE_SEEN_KEY, '1', storage)
 
+/**
+ * The router state a new blank project arrives with. The first step's
+ * orientation card reads it and opens for the new project even when the card
+ * was seen before; it is navigation state, so it lives on that one history
+ * entry and nothing is stored.
+ */
+export const NEW_PROJECT_STATE = Object.freeze({ newProject: true })
+
 /** The step object for a page's `step` prop, or null when it names no step. */
 export const stepById = (id) => BRAND_KIT_STEPS.find((s) => s.id === id) || null
 

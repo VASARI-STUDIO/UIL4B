@@ -1,309 +1,374 @@
-/* palette-builder.css — the Spectrum pass on `/create/palette`.
+/* palette-builder.css — /create/palette, rebuilt to the design.
  *
- * ── THIS PAGE IS AUTHORED. THE PASS IS DELIBERATELY SMALL ───────────────────
+ * Source: "UIL4B App.dc.html", `isPalette` (D:945-1051), its phone rules
+ * (D:65-76) and view model (D:1535-1570, D:2126-2181). The toolbar, its
+ * overflow ("Tools") and the slider rows come from pages/tool-layout.css; this
+ * sheet is the board, the ADD rail, the ADJUST ALL bar and the floating panels.
  *
- * The 2026-09-16 audit called `/create/palette` one of the few surfaces on the
- * site with real character, and it is right: the whole viewport IS the palette.
- * Five full-bleed colour columns from the top of the work area to the bottom, a
- * sticky tool rail above them and a sticky adjust bar below — no cards, no
- * panels, no hero. That is the design and this file does not touch it.
+ * Every selector is scoped `.plb …`. The previous board, toolbar and adjust
+ * rules were deleted from deferred/colour.css in the same change, so nothing
+ * here is fighting a legacy declaration; the popover, modal, preview and
+ * image-picker families there are still the live ones.
  *
- * What was pre-Spectrum here was never the composition. It was the CHROME: an
- * accent family that did not track `--accent`, focus rings drawn in a literal,
- * and a handful of radii and micro-labels from the Manrope era. So this sheet
- * changes colour, radius, focus and target size, and leaves every layout
- * decision, every measurement and every piece of type inside a colour column
- * exactly where the people who authored them put them.
- *
- * ── WHY IT IS A NEW FILE ────────────────────────────────────────────────────
- *
- * The `plb` family's rules live in `global.css` (249 of them) and in
- * `deferred/colour.css` (332), neither of which this lane may edit — colour.css
- * alone is imported by ten pages, two of which another agent is editing right
- * now. This sheet is imported LAST by PaletteBuilder.jsx. Nothing is renamed:
- * `11-palette-recovery` and `50-palette-preview-ink` assert twenty-odd
- * `.plb-*` classes by name.
- *
- * EVERY SELECTOR HERE IS SCOPED `.plb …`. Importing last does not put the
- * sheet last: measured in a browser, the runtime <link> order is
- * global.css -> index.css -> THIS SHEET -> colour.css -> tool-shell.css,
- * because Vite orders chunk CSS by the dependency graph and not by the order of
- * the `import` statements. So this file beats global.css but LOSES to
- * `deferred/colour.css` at equal specificity, and four of the rules below also
- * exist there. The root prefix takes each to (0,2,0) against (0,1,0) and
- * settles it by construction rather than by load order.
- *
- * The two ALIAS declarations are the exception that needs no prefix: they are
- * on `.plb` itself, nothing in colour.css sets them, and a custom property
- * resolves wherever it is read — which is why the remap reaches all twenty-one
- * rules without this sheet having to outrank any of them.
- *
- * ── THE TWO DECLARATIONS THAT DO MOST OF THE WORK ───────────────────────────
- *
- * Twenty-one `.plb-*` rules across the two base sheets read `--accent-strong`
- * or `--brand`. BOTH are per-theme literals declared beside `--accent` rather
- * than derived from it:
- *
- *     --accent:        #0F6FFF light   #6FA8FF dark
- *     --accent-strong: #0B5ED7 light   #4A90FF dark   <- literal, does not track
- *     --brand:         #0F6FFF light   #6FA8FF dark   <- literal, does not track
- *
- * A premium theme template moves `--accent` alone. Under it, every focus ring,
- * every selected-harmony tick, the image-picker points, the Pro chip and the
- * collapsed-rail CTA on this page would have stayed brand blue while the rest
- * of the app moved — twenty-one elements stranded, and no single rule to point
- * at afterwards.
- *
- * Rather than restate twenty-one rules, the two ALIASES are re-pointed once at
- * the page root. Every rule below them resolves through the derived family
- * without being touched, which also means a rule added to colour.css tomorrow
- * inherits the fix instead of reintroducing the bug.
- *
- * The mapping is not arbitrary. Read across the twenty-one call sites:
- *   · `--brand` is used for BORDERS, ICON FILLS and FOCUS RINGS — structure.
- *     `--accent` is the exact structural equivalent and is the root token.
- *   · `--accent-strong` is used for small accent TEXT, plus one button fill
- *     (`.plb-collapsed-cta:hover`, which pairs it with `--accent-fg`).
- *     `--accent-text` is the derived text step and carries both: measured on
- *     `--bg-0`, 6.02:1 light / 9.71:1 dark as text; and as that one fill,
- *     `--accent-fg` on it is 6.61:1 light (white on #0E5BCF) and 10.4:1 dark
- *     (#101012 on #8AB8FF) — `--accent-fg` is itself theme-aware, which is why
- *     the fill survives the swap in both directions.
- *
- * ── WHAT THIS FILE MUST NOT DO: THE TOOLBAR IS MEASURED ─────────────────────
- *
- * `src/utils/toolbarFit.js` decides whether the exploratory cluster collapses
- * behind one trigger by comparing the rail's INTRINSIC WIDTH against a budget,
- * band by band, because a breakpoint was tried here and left the fault sitting
- * outside it. Any change to a toolbar control's padding, font-size or
- * font-weight changes that intrinsic width and moves the collapse band — a
- * functional change wearing a style change's clothes.
- *
- * So no metric on `.plb-toolbar` or anything inside it is touched here. Colour,
- * radius and focus only. The `(pointer: coarse)` block at the foot raises
- * min-HEIGHT, which toolbarFit does not measure.
- *
- * ── AND NOT THE INK ON A COLOUR COLUMN ──────────────────────────────────────
- *
- * `.plb-hex` and `.plb-role` sit on `--plb-ink`, which PaletteBuilder.jsx sets
- * per column to whichever of black or white carries more contrast on the colour
- * the USER chose. Their weights are part of that guarantee, not a style choice:
- * `.plb-role` once spent an opacity of .6 on the same ink and broke AA on
- * 89.51% of possible grounds. Restyling 700 to 560 would move the worst-ground
- * figure without anyone re-running the sweep, so the type inside a column is
- * left alone. It is already mono, tracked and small, which is Spectrum's own
- * idiom for a measurement.
- *
- * ── MEASURED ────────────────────────────────────────────────────────────────
- *
- * Rendered at 390 / 834 / 1440, light and dark. Zero horizontal page overflow
- * at each; zero text nodes under their contrast floor on the COMPOSITED ground.
- */
+ * COLUMN INK. `--plb-ink` is textColorForBg() of the colour (worst case 4.58:1
+ * over the sRGB cube), so it is never dimmed with opacity
+ * (tests/unit/label-ink-not-dimmed.test.js). The chips on a colour (lock, ⋯,
+ * the AA chip) sit on a wash of `--plb-anti` — the OTHER pole — which raises
+ * the ink's contrast rather than spending it. */
 
-.plb {
-  /* Spectrum's house curve. */
-  --plb-ease: cubic-bezier(.23, 1, .32, 1);
+.plb .plb-file { display: none; }
+.plb .tl-body--bleed { min-height: 0; }
 
-  /* THE REMAP. See the header. Two declarations, twenty-one rules. */
-  --accent-strong: var(--accent-text);
-  --brand: var(--accent);
-  /* The two washes derived from the same literals, for the same reason. */
-  --brand-bg: var(--accent-wash);
-  --brand-glow: var(--accent-wash-4);
+/* The Pro-system notice. */
+.plb .plb-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 10px var(--tl-pad) 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+  font-size: 13px;
+  color: var(--tl-ink);
+}
+.plb .plb-collapsed strong { font-weight: 560; }
+
+/* ── The seed chip (D:952-955) ──────────────────────────────────────────── */
+/* Also in the phone Tools sheet, which renders outside .plb. */
+:is(.plb, .tl-sheet-layer) .plb-seedpick { display: flex; }
+.plb .plb-seedpick .cpk-pop { left: 0; right: auto; }
+:is(.plb, .tl-sheet-layer) .plb-seedchip { width: auto; gap: 9px; padding: 0 13px 0 6px; }
+:is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 8px; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); }
+:is(.plb, .tl-sheet-layer) .plb-seedchip-hex { font-family: var(--mono); font-size: 13px; letter-spacing: .02em; color: var(--tl-ink); }
+.plb .plb-menuwrap { position: relative; display: flex; }
+.plb .plb-menu-seed { display: flex; }
+.plb .plb-menu-tray { display: flex; justify-content: center; }
+.tl-sheet-layer .plb-menu-seed .cpk-pop { left: 0; right: auto; }
+
+/* ── The board (D:1017-1043) ────────────────────────────────────────────── */
+.plb .plb-stage {
+  flex: 1;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  min-height: min(62vh, 560px);
+}
+.plb .plb-board { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; align-items: stretch; }
+.plb .plb-col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 0;
+  padding: 22px clamp(12px, 1.4vw, 18px) 26px;
+  /* A vision check splits the column: the real colour above, the simulated
+     one below. With no check the two stops are the same colour. */
+  background: linear-gradient(var(--plb-c, transparent) 50%, var(--plb-sim, var(--plb-c, transparent)) 50%);
+  color: var(--plb-ink, currentColor);
+  cursor: grab;
+}
+.plb .plb-col--over { box-shadow: inset 0 0 0 3px var(--plb-ink, currentColor); }
+.plb .plb-col--in { animation: plb-col-in var(--dur-2) var(--ease-entrance); }
+@keyframes plb-col-in { from { opacity: 0; } to { opacity: 1; } }
+
+.plb .plb-col-tools {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  gap: 8px;
+}
+.plb .plb-tool {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--plb-anti, #fff) 22%, transparent);
+  color: var(--plb-ink, currentColor);
+  cursor: pointer;
+  transition: transform .14s var(--tl-ease), background .16s ease;
+}
+.plb .plb-tool:active { transform: scale(.97); }
+.plb .plb-tool--on { background: color-mix(in srgb, var(--plb-anti, #fff) 40%, transparent); }
+@media (hover: hover) and (pointer: fine) {
+  .plb .plb-tool--more { opacity: 0; }
+  .plb .plb-col:hover .plb-tool--more,
+  .plb .plb-col:focus-within .plb-tool--more,
+  .plb .plb-tool--more.plb-tool--on { opacity: 1; }
+  .plb .plb-tool:hover { background: color-mix(in srgb, var(--plb-anti, #fff) 34%, transparent); }
 }
 
-/* ── The heading slot ────────────────────────────────────────────────────────
-   Renders only when `PALETTE_LEDE` is non-empty — today it is `''`, so the h1
-   is `sr-only` and this rule paints nothing. It is here so that the day the
-   founder writes the line, the heading arrives already on Spectrum's metrics
-   rather than on the 500/-.035em h2 step it currently declares. */
-.plb .plb-hero h1{
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(38px, 5.6vw, 72px);
-  font-weight: 600;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: var(--t0);
-  text-wrap: balance;
+.plb .plb-ramp {
+  display: flex;
+  gap: 3px;
+  align-self: flex-start;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
-
-.plb .plb-hero-lede{
-  max-width: 52ch;
-  margin: 16px 0 0;
-  font-size: 15.5px;
-  line-height: 1.62;
-  color: var(--t1);
-  text-wrap: pretty;
+.plb .plb-ramp-bar { display: block; width: 13px; height: 34px; border-radius: 8px; background: var(--plb-rc, transparent); }
+.plb .plb-col-body { display: grid; gap: 7px; text-align: left; }
+.plb .plb-name { font-size: 16px; font-weight: 540; line-height: 1.2; color: var(--plb-ink, currentColor); overflow-wrap: anywhere; }
+.plb .plb-hex {
+  justify-self: start;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--plb-ink, currentColor);
+  font-family: var(--mono);
+  font-size: 14.5px;
+  font-weight: 540;
+  text-align: left;
+  cursor: pointer;
 }
-
-/* ── The rails ───────────────────────────────────────────────────────────────
-   Both bars keep their position, height, padding and every control metric. The
-   hairline is the only thing that changes: `--border` against `--bg-0` is the
-   Spectrum separator, and the top bar gains the matching one so the board reads
-   as held between two rules rather than sitting under one. */
-
-.plb .plb-toolbar{ border-bottom: 1px solid var(--border); }
-
-.plb .plb-adjust{ border-top: 1px solid var(--border); }
-
-/* The adjust bar's own title — "ADJUST ALL" — is a section label on a rail, so
-   it takes the mono micro-label Spectrum uses for exactly that job rather than
-   a bolded sans caps run. It KEEPS `--t0`: this bar sits directly under five
-   full-height columns of arbitrary colour, and the title is the one word that
-   says what the four sliders below it do.
-
-   `.plb-adjust-label` — the HUE / SATURATION / TONE / TEMPERATURE labels — is
-   deliberately NOT included, and the first cut of this file got that wrong. It
-   had them at `--t3`, which passes 4.5:1 and is still a regression: colour.css
-   sets them to `--t0` AND paints a .35px text-shadow in currentColor as a faux
-   bold. Somebody solved a legibility problem on that rail on purpose. Dimming
-   them to a quiet grey is the exact shape of the four AA failures already found
-   on this branch, arriving one step early. They are left alone. */
-.plb .plb-adjust-title{
+.plb .plb-role {
   font-family: var(--mono);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 540;
   letter-spacing: .18em;
   text-transform: uppercase;
-  color: var(--t0);
+  color: var(--plb-ink, currentColor);
 }
-
-/* ── The ADD column ──────────────────────────────────────────────────────────
-   The dashed column at the right end of the board. It is an invitation, not an
-   action bar, so it reads as mono micro-type in the quiet ink — the same
-   treatment the board's own role labels get, which is what makes it sit WITH
-   the columns instead of beside them. `--t2`, not `--t3`: this one is on
-   `--card` at 11px and has to clear 4.5:1, which `--t2` does at 6.37:1 light /
-   6.21:1 dark while `--t3` is 5.24 / 5.86 — both pass, and `--t2` is the one
-   that still reads as a label you can press. */
-.plb .plb-add{
+.plb .plb-aa {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--plb-anti, #fff) 22%, transparent);
+  color: var(--plb-ink, currentColor);
   font-family: var(--mono);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .18em;
-  color: var(--t2);
-  border-left: 1px dashed var(--border);
-  transition: color var(--dur-1) ease, background var(--dur-1) ease;
+  font-weight: 540;
+  letter-spacing: .1em;
+  white-space: nowrap;
 }
+.plb .plb-aa--locked { min-height: 24px; cursor: pointer; }
 
-.plb .plb-add:hover{ color: var(--t0); background: var(--hvr); }
+/* Insert-between: a 24px dot on the seam, shown on hover or focus. */
+.plb .plb-gap {
+  position: absolute;
+  top: 50%;
+  right: -12px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--tl-line-2);
+  border-radius: 999px;
+  background: var(--tl-card);
+  color: var(--tl-ink);
+  transform: translateY(-50%);
+  opacity: 0;
+  cursor: copy;
+}
+.plb .plb-gap-dot { display: grid; place-items: center; }
+.plb .plb-col:hover .plb-gap,
+.plb .plb-gap:focus-visible { opacity: 1; }
+@media (hover: none) { .plb .plb-gap { display: none; } }
 
-.plb .plb-add:focus-visible{ outline: 2px solid var(--accent); outline-offset: -3px; }
-
-/* ── The collapsed rail ─────────────────────────────────────────────────────
-   Shown when toolbarFit decides the exploratory cluster cannot have the row.
-   Radius only — its metrics belong to the same measured system as the rail. */
-
-.plb .plb-collapsed{ border-radius: var(--radius); }
-
-.plb .plb-collapsed strong{ font-weight: 560; }
-
-/* ── Popovers and menus ──────────────────────────────────────────────────────
-   Spectrum's card radius, so a menu opening off the rail matches the panels on
-   every neighbouring tool. Padding and width are untouched: the picker's
-   geometry is asserted by `50-palette-preview-ink`. */
-
-.plb .plb-menu,
-.plb .plb-pop,
-.plb .plb-picker{ border-radius: var(--radius-xl); box-shadow: var(--shadow-l); }
-
-.plb .plb-menu-sub a,
-.plb .plb-linkbtn{ border-radius: var(--radius-xs); }
-
-/* ── Focus ───────────────────────────────────────────────────────────────────
-   Never removed, only drawn, and drawn in `--accent` so it follows a premium
-   theme. `outline-offset` is positive everywhere except on a swatch, where a
-   ring outside the box would be painted on the neighbouring colour and become
-   invisible against it. */
-
-.plb .plb-icobtn:focus-visible,
-.plb .plb-hexfield:focus-visible,
+/* Focus on a user-chosen colour: a white inner ring backed by a near-black
+   outer one. Every colour is far from at least one end of that pair, so one
+   edge of the indicator always clears 3:1 (WCAG 1.4.11), whatever the seed. */
+.plb .plb-tool:focus-visible,
+.plb .plb-ramp:focus-visible,
 .plb .plb-hex:focus-visible,
-.plb .plb-linkbtn:focus-visible,
-.plb .plb-collapsed-cta:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.plb .plb-col:focus-visible{ outline: 2px solid var(--accent); outline-offset: -3px; }
-
-/* ── Structural pass, lane 1, 2026-09-23 ─────────────────────────────────────
-   Earlier passes here were colour, radius and focus only, by design (see the
-   header). This one changes composition on the board, and still leaves the
-   toolbar's metrics (bar one touch-only floor, below) and the column ink
-   alone.
-
-   CONSIDERED AND LEFT: "Copy CSS" wraps alone under the adjust sliders below
-   about 1590px. Keeping it inline costs the four slider tracks the width —
-   measured 51px each at 1181 and 102 at 1440, against 134 wrapped — and a
-   51px hue slider is worse than a wrapped button. */
-
-/* THE COLUMN READS FROM ITS LEFT EDGE, the way the founder's App design draws
-   it: ramp, then name, hex and role stacked flush-left at the foot of the
-   colour, with the column's tools at its top-left. Centred, five columns of
-   centred text made the board read as five posters rather than one palette
-   with five labelled slots, and a centred label drifts sideways every time a
-   name is a word longer or shorter than its neighbour.
-   From 769px only. At 768 and under global.css lays each colour out as a
-   ROW, already left-aligned, and none of this applies. Weights, sizes and
-   ink are untouched: see "AND NOT THE INK ON A COLOUR COLUMN" above. */
-@media (min-width: 769px) {
-  .plb .plb-col{ align-items: flex-start; padding-inline: clamp(12px, 1.4vw, 20px); }
-  .plb .plb-col-tools{ align-self: flex-start; }
-  .plb .plb-name{ padding: 0; text-align: left; }
-  /* The hex keeps its hover wash, so it keeps its padding; the negative margin
-     puts its TEXT on the same left edge as the name above it. */
-  .plb .plb-hex{ margin-left: -8px; }
-  .plb .plb-badges{ justify-content: flex-start; }
-}
-@media (min-width: 769px) and (hover: none) {
-  .plb .plb-col-tools{ justify-content: flex-start; }
+.plb .plb-aa--locked:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px rgba(10, 10, 11, .9);
 }
 
-/* The ramp lifted 2px on hover. Hover carried more personality than
-   feedback; the ramp is a button, and its focus ring and cursor say so. */
-.plb .plb-ramp:hover .plb-ramp-bar{ transform: none; }
+/* The popovers a column opens stay anchored to it. */
+.plb .plb-col .plb-pop { cursor: default; color: var(--t0); }
 
-/* The two `.plb` rules in global.css that still spelled a legacy token. The
-   rest (twenty, all in deferred/colour.css) are fixed at source now; the root
-   re-point above stays only as the net for shared components drawn inside
-   this page (`.btn-accent` and friends), which belong to another lane. */
-.plb .plb-varrow--active .plb-varrow-name{ color: var(--accent-text); }
-.plb .plb-collapsed-cta{ border-color: var(--accent); color: var(--accent-text); }
+/* ── The ADD rail (D:1037-1040) ─────────────────────────────────────────── */
+.plb .plb-add {
+  flex: 0 0 clamp(62px, 7vw, 86px);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--tl-hair);
+  background: var(--tl-card2);
+  color: var(--tl-dim);
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+.plb .plb-add-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; }
+@media (hover: hover) and (pointer: fine) {
+  .plb .plb-add:hover { background: var(--tl-card); color: var(--tl-ink); }
+}
 
-/* ── Coarse pointers ─────────────────────────────────────────────────────────
-   44px, and min-HEIGHT only. toolbarFit.js measures the rail's intrinsic
-   WIDTH; a height floor is invisible to it, so the touch target can be raised
-   without moving the band at which the cluster collapses. The colour columns
-   are not listed: they are already the full height of the work area. */
+/* ── ADJUST ALL (D:1044-1057) ───────────────────────────────────────────── */
+.plb .plb-adjust {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 26px);
+  flex-wrap: wrap;
+  padding: 13px clamp(12px, 2vw, 20px);
+  background: var(--tl-card2);
+  border-top: 1px solid var(--tl-hair);
+}
+.plb .plb-adjust-title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tl-dim);
+  white-space: nowrap;
+}
+.plb .plb-adjust .tl-slider { flex: 1 1 210px; gap: 11px; }
+/* The Adjust tracks are the drawn 20px pills (D:1042 sets no height, so the
+   global 20px range height applies), with the 15px thumb riding inside. */
+.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-runnable-track { height: 20px; }
+.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-thumb { margin-top: 2.5px; }
+.plb .plb-adjust .tl-slider input[type="range"]::-moz-range-track { height: 20px; }
+.plb .plb-adjust .tl-slider-k {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--tl-faint);
+}
+.plb .plb-adjust .tl-slider-v { min-width: 42px; text-align: right; color: color-mix(in srgb, var(--t0) 80%, var(--bg-0)); }
+.plb .plb-adjust-field--edited .tl-slider-v { color: var(--tl-ink); font-weight: 600; }
+/* Laid out while idle so the bar does not reflow on the first nudge. */
+.plb .plb-adjust-reset.is-idle { visibility: hidden; }
+.plb .plb-copycss {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--tl-line-2);
+  background: var(--tl-wash);
+  color: var(--tl-ink);
+  font-family: var(--font);
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .plb .plb-copycss:hover { background: color-mix(in srgb, var(--t0) 9%, transparent); }
+}
+
+/* ── Floating panels: Suggest / Explore, History, Save current ──────────── */
+.plb .plb-float {
+  position: fixed;
+  top: calc(var(--chrome-h) + 62px);
+  right: 16px;
+  z-index: 125;
+  display: block;
+}
+.plb .plb-float > .plb-menu {
+  position: static;
+  max-height: calc(100dvh - var(--chrome-h) - 90px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 16px;
+  box-shadow: 0 18px 48px -12px rgba(0, 0, 0, .45);
+}
+.plb .plb-float-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.plb .plb-float-head .plb-menu-title { margin: 0; }
+.plb .plb-galpopup-head .plb-pop-x { margin-left: auto; }
+
+/* Modals sit above the fixed app header (z 120); at z 90 the Preview modal
+   would slide under it in landscape. */
+.plb .plb-modal { z-index: 130; }
+
+/* ── Phone (D:65-76): columns become 104px rows, tints hide, the ADD rail is
+   a 56px row, and the adjust bar is one control per row. ───────────────── */
+@media (max-width: 767px) {
+  .plb .plb-stage { flex-wrap: wrap; min-height: 0; }
+  .plb .plb-board { flex: 1 1 100%; flex-wrap: wrap; }
+  .plb .plb-col {
+    flex: 1 1 100%;
+    min-height: 104px;
+    padding: 14px 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .plb .plb-col-tools { position: static; display: flex; gap: 8px; order: 0; }
+  .plb .plb-ramp { display: none; }
+  .plb .plb-col-body { flex: 1; min-width: 0; gap: 4px; order: 1; }
+  .plb .plb-aa { margin-top: 0; order: 2; align-self: center; }
+  .plb .plb-tool--more { opacity: 1; }
+  .plb .plb-gap { display: none; }
+  .plb .plb-add {
+    flex: 1 1 100%;
+    min-height: 56px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    border-left: 0;
+    border-top: 1px solid var(--tl-hair);
+  }
+  .plb .plb-adjust { flex-direction: column; align-items: stretch; }
+  .plb .plb-adjust .tl-slider { flex: 1 1 auto; }
+  /* Stacked, the sliders sit above it: nothing under the pointer moves. */
+  .plb .plb-adjust-reset.is-idle { display: none; }
+  .plb .plb-copycss { justify-content: center; }
+  .plb .tl-toolbar .tl-kbd { display: none; }
+}
+@media (max-width: 640px) {
+  .plb .plb-float { top: auto; right: 0; bottom: 0; left: 0; }
+  .plb .plb-float > .plb-menu {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    max-height: 80dvh;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .plb .plb-menu-row input { font-size: 16px; }
+}
+
 @media (pointer: coarse) {
-  .plb .plb-toolbar .btn-s,
-  .plb .plb-icobtn,
-  .plb .plb-hexfield,
-  .plb .plb-seedpick .cpk-trigger,
-  .plb .plb-collapsed-cta,
-  .plb .plb-menu-row,
-  .plb .plb-hex,
-  .plb .plb-copycss,
-  .plb .plb-adjust .snapv-value,
-  .plb .plb-adjust input[type="range"]{ min-height: 44px; }
-  /* The column's lock / copy / more were 32x32 on a phone, where they are the
-     only way to reach those actions. The rows they sit in are taller than 44
-     already, so the size costs no layout. */
-  .plb .plb-tool{ width: 44px; height: 44px; }
-  /* WIDTH on the three narrowest toolbar controls, measured 39-40px wide at
-     390. This is the one metric the header says not to move lightly:
-     toolbarFit.js measures the rail's intrinsic width. It measures, it does not
-     assume, so a wider touch control moves the collapse to where the controls
-     actually stop fitting; 53-palette-toolbar-fit holds the result. */
-  .plb .plb-seedpick .cpk-trigger,
-  .plb .plb-icobtn{ min-width: 44px; }
+  .plb .plb-tool { width: 44px; height: 44px; }
+  .plb .plb-hex { min-height: 44px; }
+  .plb .plb-aa--locked { min-height: 44px; }
+  .plb .plb-float .plb-menu-item,
+  .plb .plb-float .plb-varrow-main,
+  .plb .plb-float button.plb-varrow { min-height: 44px; }
+  .plb .plb-ctx-item { min-height: 44px; }
+  .plb .plb-copycss { min-height: 44px; }
 }
 
-/* ── Reduced motion ──────────────────────────────────────────────────────────
-   global.css's blanket rule clamps every DURATION under both spellings the app
-   uses — the Settings choice and the OS query for anyone who has not made one.
-   The one piece of MOVEMENT this page owns is `.plb-icobtn`'s label, which
-   expands a `grid-template-columns: 0fr` track on hover. A duration clamp makes
-   that snap rather than removes it, which is the right outcome — the label must
-   still appear, because for an icon-only control it is the only text there is.
-   So there is no companion turning it off: it is a disclosure, not decoration.
-   Recorded here so the next reader knows it was considered rather than missed. */
+:where(html[data-reduced-motion="true"]) .plb .plb-tool,
+:where(html[data-reduced-motion="true"]) .plb .plb-add,
+:where(html[data-reduced-motion="true"]) .plb .plb-col--in { transition: none !important; animation: none !important; }
+:where(html[data-reduced-motion="true"]) .plb .plb-tool:active { transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-tool,
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-add,
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-col--in { transition: none !important; animation: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-tool:active { transform: none !important; }
+}
+@media (forced-colors: active) {
+  .plb .plb-col,
+  .plb .plb-ramp-bar,
+  :is(.plb, .tl-sheet-layer) .plb-seedchip-sw { forced-color-adjust: none; }
+  .plb .plb-tool--on { outline: 2px solid Highlight; }
+}

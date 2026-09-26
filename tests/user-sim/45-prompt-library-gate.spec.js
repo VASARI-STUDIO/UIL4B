@@ -35,7 +35,7 @@
 // the grid's source from `browsableCommunity` to `sortedCommunity` fails these,
 // which is the wiring the first version of this gate got wrong.
 //
-// ── AND WHAT CHANGED AGAIN WHEN THE GATE GREW A THIRD RUNG (2026-09-18) ─────
+// ── AND WHAT CHANGED AGAIN WHEN THE GATE GREW A THIRD RUNG ─────
 //
 // The founder's tiers — 3 signed out, 10 with a free account, everything with
 // Pro — mean "free" is no longer one set. A signed-out visitor gets the first
@@ -242,8 +242,14 @@ for (const rung of RUNGS) {
       // Nothing focusable: there is nothing to open, copy or hand off, so a
       // control would be a control that does nothing and a keyboard user would
       // still have to walk past it.
-      expect(await cards.locator('button, a, [tabindex]').count(),
-        'a locked placeholder carries a focusable control').toBe(0)
+      // Each placeholder carries ONE
+      // control: an "Upgrade to Pro" link to /plans, shown on hover/focus. It
+      // opens nothing and copies nothing of the item it stands for.
+      const controls = cards.locator('button, a, [tabindex]')
+      expect(await controls.count(), 'each placeholder carries exactly one control').toBe(rung.placeholders)
+      for (let i = 0; i < rung.placeholders; i++) {
+        await expect(controls.nth(i)).toHaveAttribute('href', '/plans')
+      }
       // No name either. The palette placeholders carry the brand's name because
       // the name is the tease; a prompt's title is the product, so it does not.
       const placeholderText = (await cards.allTextContents()).join(' ').toLowerCase()
@@ -269,9 +275,9 @@ for (const rung of RUNGS) {
       await page.keyboard.press('Enter')
       // The canonical dialog for that step, not a second one built for this
       // surface: the app's own sign-in prompt, or the upgrade modal.
-      await expect(rung.wall === 'account'
-        ? page.locator('[role="dialog"]')
-        : page.locator('[role="dialog"]').filter({ hasText: 'The full community library' })).toBeVisible()
+      // The Pro step goes to /plans.
+      if (rung.wall === 'account') await expect(page.locator('[role="dialog"]')).toBeVisible()
+      else await expect(page).toHaveURL(/\/plans$/)
     })
 
     test('every rendered card carries a free prompt\'s own artefact — the positive control', async ({ page }) => {

@@ -43,7 +43,13 @@
 
 import { Fragment } from 'react'
 
-function Word({ text, index, mark }) {
+
+// A word, or — with `joinMark` — the whole marked run as ONE word. The hero's
+// design writes "one place." as a single revealed unit (`<span data-w><em>one
+// place</em>.</span>`), so the accent run can never break across two lines and
+// rises as one piece; its full stop stays in the ink colour, outside the
+// accent. `tail` is that trailing punctuation.
+function Word({ text, index, mark, tail }) {
   return (
     <span className="sp-wm" data-sp-wm="">
       <span
@@ -52,6 +58,7 @@ function Word({ text, index, mark }) {
         style={{ '--sp-wi': index }}
       >
         {text}
+        {tail ? <span className="sp-w-tail">{tail}</span> : null}
       </span>
     </span>
   )
@@ -62,23 +69,21 @@ function Word({ text, index, mark }) {
  * @param {string} [mark] a contiguous run inside `text` to paint in the accent.
  *                        Matched as whole words, so it can never highlight half
  *                        of one. Unmatched, nothing is marked and the headline
- *                        still renders — a silently unhighlighted headline is a
- *                        smaller failure than a thrown one on the front door.
+ *                        still renders.
+ * @param {boolean} [joinMark] render the marked run as one word, with its
+ *                        trailing punctuation outside the accent (the hero).
  */
-// Always a <span>. A polymorphic `tag` prop was here and every caller wrapped
-// this in its own heading anyway — the headline element belongs to the section
-// that owns the heading level, not to the thing that splits words.
-export default function SpectrumWords({ text, mark, className = '' }) {
+// Always a <span>. The headline element belongs to the section that owns the
+// heading level, not to the thing that splits words.
+export default function SpectrumWords({ text, mark, joinMark = false, className = '' }) {
   const words = text.split(/\s+/).filter(Boolean)
   const markWords = mark ? mark.split(/\s+/).filter(Boolean) : []
 
   let markStart = -1
   if (markWords.length) {
     for (let i = 0; i + markWords.length <= words.length; i += 1) {
-      // Compare with punctuation stripped from the END of the last word only:
-      // "in one unified location" has to match "…location." in a sentence that
-      // ends on it, and must not match a different phrase that merely shares a
-      // prefix.
+      // Punctuation is stripped from the END of the last word only: "one place"
+      // has to match "…place." in a sentence that ends on it.
       const window = words.slice(i, i + markWords.length)
       const ok = window.every((w, j) => {
         const isLast = j === markWords.length - 1
@@ -89,32 +94,32 @@ export default function SpectrumWords({ text, mark, className = '' }) {
     }
   }
 
+  // The render list: one item per word, except that a joined mark is one item.
+  const items = []
+  for (let i = 0; i < words.length; i += 1) {
+    const inMark = markStart > -1 && i >= markStart && i < markStart + markWords.length
+    if (inMark && joinMark) {
+      const run = words.slice(markStart, markStart + markWords.length).join(' ')
+      const tail = /[.,;:!?]+$/.exec(run)?.[0] || ''
+      items.push({ text: tail ? run.slice(0, -tail.length) : run, mark: true, tail })
+      i = markStart + markWords.length - 1
+    } else {
+      items.push({ text: words[i], mark: inMark, tail: '' })
+    }
+  }
+
   return (
     <span className={`sp-words ${className}`.trim()}>
       <span className="sr-only">{text}</span>
       <span aria-hidden="true" className="sp-words-visual">
-        {words.map((word, i) => (
-          // THE SPACE IS A REAL TEXT NODE, AND IT HAS TO BE.
-          //
-          // `.sp-wm` is `display:inline-block` with `overflow:hidden`, so two
-          // adjacent wrappers with no whitespace between them butt together and
-          // the headline renders as "Buildandexport…". JSX collapses the
-          // newlines in this map, so nothing separates them unless one is
-          // written. Caught in the browser at 1440 — `innerText` read
-          // "BuildandexportUIandbranddesignkits,inoneunifiedlocation."
-          //
-          // Outside the clipping wrapper rather than inside it: a space inside
-          // `overflow:hidden` would ride up with the word it belongs to and the
-          // gap would open and close during the reveal. And a `word-spacing` or
-          // `margin-right` would be a made-up gap rather than the font's own
-          // space glyph, which at a −0.045em tracking is visibly different.
-          <Fragment key={`${word}-${i}`}>
-            <Word
-              text={word}
-              index={i}
-              mark={markStart > -1 && i >= markStart && i < markStart + markWords.length}
-            />
-            {i < words.length - 1 ? ' ' : null}
+        {items.map((item, i) => (
+          // THE SPACE IS A REAL TEXT NODE, AND IT HAS TO BE. `.sp-wm` is an
+          // inline-block with overflow:hidden, so two wrappers with nothing
+          // between them render "Buildandexport". Outside the clip, so the gap
+          // does not ride up with the word during the reveal.
+          <Fragment key={`${item.text}-${i}`}>
+            <Word text={item.text} index={i} mark={item.mark} tail={item.tail} />
+            {i < items.length - 1 ? ' ' : null}
           </Fragment>
         ))}
       </span>

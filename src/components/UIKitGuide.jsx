@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { getRecentIcons } from '../utils/recentIcons'
 import {
   BRAND_KIT_STEPS,
+  NEW_PROJECT_STATE,
   endGuide,
   guideProgress,
   introSeen,
@@ -76,7 +77,10 @@ import {
 // item recorded about one-time popups, and it is the cheap half to get right.
 export default function UIKitGuide({ step }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { design } = useProject()
+  // A new blank project opens the card again, seen before or not.
+  const newProject = location.state?.newProject === NEW_PROJECT_STATE.newProject
   const [active, setActive] = useState(() => isGuideActive())
   // READ in the initialiser, WRITTEN on dismiss. React may render a component,
   // throw the result away and render it again (concurrent rendering, Suspense
@@ -84,7 +88,7 @@ export default function UIKitGuide({ step }) {
   // not be burned by anything a discarded render can reach — the same split
   // utils/handoffSlot.js draws between peek and consume, for the same reason.
   const [showIntro, setShowIntro] = useState(
-    () => step === BRAND_KIT_STEPS[0].id && isGuideActive() && !introSeen(),
+    () => step === BRAND_KIT_STEPS[0].id && isGuideActive() && (newProject || !introSeen()),
   )
   const cardRef = useRef(null)
   const introTriggerRef = useRef(null)

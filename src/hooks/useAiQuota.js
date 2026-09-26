@@ -34,5 +34,7 @@ export function useAiQuota(toolId) {
     setLocalUsed(getUsageCount(toolId))
   }, [toolId])
 
-  return { ...state, message: quotaMessage(state), absorb, dailyLimit, monthlyLimit }
+  // isPro decides whether the meter offers the plans page at the wall: the
+  // one moment an upgrade is the answer to what the person is trying to do.
+  return { ...state, message: quotaMessage(state), absorb, dailyLimit, monthlyLimit, isPro: plan?.id === 'pro' }
 }

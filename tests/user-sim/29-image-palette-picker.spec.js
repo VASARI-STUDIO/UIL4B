@@ -32,6 +32,7 @@
 import zlib from 'node:zlib'
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { clickPaletteAction } from './palette-helpers.js'
 
 // ── A four-band 4:1 test image ───────────────────────────────────────────────
 // 4:1 is chosen so the old fixed 16/10 stage cropped hard (it showed only the
@@ -88,7 +89,7 @@ const DIALOG = 'Pull colours from an image'
 
 async function openPickerWithImage(page) {
   await go(page, '/create/palette')
-  await page.getByRole('button', { name: 'Image', exact: true }).click()
+  await clickPaletteAction(page, 'Pull colours from an image', 'From image')
   const dialog = page.getByRole('dialog', { name: DIALOG })
   await expect(dialog).toBeVisible()
   await page.locator('.plb-file').setInputFiles({
@@ -307,7 +308,7 @@ test.describe('image to palette picker', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog', { name: DIALOG })).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Image', exact: true }).click()
+    await clickPaletteAction(page, 'Pull colours from an image', 'From image')
     const dialog = page.getByRole('dialog', { name: DIALOG })
     await expect(dialog).toBeVisible()
     // Left edge, vertically centred: the card is 720px wide on a 1440px

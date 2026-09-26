@@ -1,10 +1,9 @@
 import { useId, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { usePrices, refreshPrices } from '../hooks/usePrices'
 import { detectCurrency } from '../utils/currency'
-import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
+import { PRO_POINTS } from '../config/planFacts'
 import {
   resolvePlanLadder,
   purchasablePlans,
@@ -98,19 +97,14 @@ function Tick() {
   )
 }
 
-const DEFAULT_FEATURES = [
-  `${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month`,
-  `Unlimited saved projects (Free keeps ${FREE_SAVE_LIMITS.projects})`,
-  'Pro colour tools — HCT editing, light + dark contrast repair',
-  // "…and full design JSON" removed 2026-09-05: the JSON export is not built.
-  // See the note in src/pages/Checkout.jsx.
-  'The design system book (PDF), and style guides with no credit line',
-]
+// /plans' Pro lines, word for word (src/config/planFacts.js). This modal kept
+// its own list — "Pro colour tools — HCT editing, light + dark contrast
+// repair" — which described a different Pro from the page it links to.
+const DEFAULT_FEATURES = PRO_POINTS
 
 export default function ProUpgradeModal({ opts = {}, onClose }) {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { requireLogin } = useLoginPrompt()
   const { prices, settled } = usePrices()
   const dialogRef = useModalDialog(onClose)
   const uid = useId()
@@ -161,24 +155,15 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
   const priceUnavailable = settled && !prices
   const hasTrial = !!choice?.trialDays
 
-  const goCheckout = async () => {
+  // Every Pro/upgrade CTA goes to /plans — never to a login popup, never
+  // straight to checkout. The main button hands the visitor to the plans page,
+  // which is where the account and payment steps start. The chosen cadence rides along as `?plan=` for when /plans reads it
+  // (today it does not, so nothing depends on it).
+  const goCheckout = () => {
     if (!choice || starting) return
     setStarting(true)
-    const destination = `/checkout?plan=${choice.checkoutPlan}`
     onClose()
-    if (!user) {
-      // "Start a trial" for a signed-out visitor means create an account first —
-      // the founder's create-account → checkout order. Open the popup on the
-      // SIGN-UP form, not sign-in, so the control does what it said.
-      const u = await requireLogin('start your Pro plan', { signup: true })
-      if (!u) return
-      // A brand-new sign-up is intercepted into onboarding by App.jsx, which
-      // would otherwise discard this checkout intent. Stash the destination so
-      // onboarding resumes straight to checkout — including the chosen plan,
-      // which a bare '/checkout' would have dropped.
-      try { sessionStorage.setItem('vs-resume-after-onboarding', destination) } catch { /* ignore */ }
-    }
-    navigate(destination)
+    navigate(`/plans?plan=${encodeURIComponent(choice.checkoutPlan)}`)
   }
 
   const seeAllPlans = () => { onClose(); navigate('/plans') }
@@ -220,16 +205,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
         {showColourRail && <ProHarmonyPreview seed={seed} />}
 
         <div className="ui-pro-body">
-          <ul className="ui-pro-list">
-            {features.map((f) => (
-              <li className="ui-pro-li" key={f}>
-                <span className="ui-pro-tick"><Tick /></span>
-                <span>{f}</span>
-              </li>
-            ))}
-          </ul>
-
-          {priceUnavailable ? (
+          {/* NO PRICE, NO OFFER — so the outage and its two ways out come
+              FIRST. The Pro lines are /plans' now (planFacts), longer than
+              the modal's old four, and at 320x568 they pushed this block
+              below the sheet's first screen (69-flow-audit, flow 2). */}
+          {priceUnavailable && (
             // Murphy's law: the price service can be down or the visitor offline.
             // Never guess an amount at the moment money is discussed — say so and
             // offer the retry, which refreshPrices() exists for.
@@ -240,7 +220,17 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                 <button type="button" className="btn btn-s" onClick={seeAllPlans}>See all plans</button>
               </div>
             </div>
-          ) : (
+          )}
+          <ul className="ui-pro-list">
+            {features.map((f) => (
+              <li className="ui-pro-li" key={f}>
+                <span className="ui-pro-tick"><Tick /></span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+
+          {!priceUnavailable && (
             <fieldset className="ui-pro-plans" disabled={!settled}>
               <legend className="sr-only">Choose a billing period</legend>
               {!settled && <span className="sk ui-pro-plans-skel" aria-hidden="true" />}
@@ -302,11 +292,10 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                   <li><strong>Days 1&ndash;{choice.trialDays}</strong> — full Pro access. Nothing is charged.</li>
                   <li>
                     <strong>Day {choice.trialDays}</strong> — {choice.totalLabel} is charged, then {choice.cadence.replace('billed ', '')}.
-                    Cancel any time before then and you pay nothing.
                   </li>
                 </>
               ) : (
-                <li><strong>Then</strong> — {choice.totalLabel} {choice.cadence}, starting today. Cancel any time from Settings.</li>
+                <li><strong>Then</strong> — {choice.totalLabel} {choice.cadence}, starting today.</li>
               )}
             </ol>
           )}
@@ -324,7 +313,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                   return to that: it names the action the button performs, on
                   the cadences that genuinely carry a trial, and reverts to
                   "Upgrade to Pro" on the one that bills today. The founder
-                  asked for the trial to be more obvious (2026-09-15); a
+                  asked for the trial to be more obvious; a
                   disclaimer under a tile was not that, and the button is
                   where Riverside, Adobe and Behance all put it. */}
               <div className="ui-pro-cta">
@@ -336,7 +325,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                   aria-busy={starting}
                 >
                   {starting
-                    ? 'Opening checkout…'
+                    ? 'Opening plans…'
                     : hasTrial
                       ? `Start your ${choice.trialDays}-day free trial`
                       : 'Upgrade to Pro'}
@@ -353,8 +342,9 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                 {hasTrial
                   ? `Free for ${choice.trialDays} days. `
                   : ''}
-                {user ? 'Cancel any time from Settings.' : 'You’ll create a free account first, then confirm payment.'}
-                {' '}
+                {/* The Customer Portal is where a subscriber cancels, so the line
+                    is said only to someone with an account. */}
+                {user ? 'Cancel any time from Settings. ' : ''}
                 <button type="button" onClick={seeAllPlans}>See all plans</button>
               </p>
             </>

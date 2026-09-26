@@ -182,7 +182,7 @@ const SURFACES = {
   //
   // THE HEADLINE WAS A SENTENCE THE FOUNDER HAD ALREADY THROWN OUT. It read
   // "Find systems worth stealing." — and "Systems worth stealing." is one of
-  // the four homepage headings 56-founder-rejected-headlines.spec.js keeps off
+  // the four homepage headings 56-homepage-headline-copy.spec.js keeps off
   // the page, on his verdict: '"Systems worth stealing." is bad copy'. Adding
   // "Find" to a rejected line does not un-reject it. The lede under it
   // ("…the outside tools that earn a tab — most of them one click from the

@@ -37,6 +37,14 @@ export function ProModalProvider({ children }) {
   )
 }
 
+// The same event for a wall that does not raise this modal but links to
+// /plans (every Pro CTA goes to /plans).
+// Kept in this file so there is still ONE place the upgrade-gate event fires
+// from (tests/unit/upgrade-gate-names.test.js).
+export function reportUpgradeGate(gate) {
+  try { trackUpgradeGate(gate || 'unnamed') } catch { /* analytics must never block a gate */ }
+}
+
 export function useProModal() {
   const ctx = useContext(ProModalContext)
   if (!ctx) throw new Error('useProModal must be used within a ProModalProvider')

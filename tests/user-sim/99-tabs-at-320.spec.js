@@ -3,11 +3,12 @@
 // QA on #487, 320px: the File Converter's tabs wrapped, putting "Extract
 // frames" on a second line under the first line's underline, and the Aspect
 // Ratio presets left "Social" alone on a second row. A tab row that wraps
-// reads as two groups. Now: the converter's underline tabs scroll sideways
+// reads as two groups. Now: the converter's mode pills scroll sideways
 // and the aspect-ratio segmented control shares one row between its four
-// options. And the "Open a 3D model…" line under the converter tabs had a
-// loose gap where its link wrapped, because the link was an inline-flex box
-// taller than the line.
+// options. And the 3D note on the converter had a loose gap where a link in
+// it wrapped, because the link was an inline-flex box taller than the line;
+// the link is a toolbar action now and the note is plain text, still held to
+// even line steps.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -36,8 +37,8 @@ for (const touch of [false, true]) {
     await last.scrollIntoViewIfNeeded()
     await expect(last).toBeInViewport()
 
-    // The "Open a 3D model" line: every line of it is one line-height apart.
-    const gaps = await page.locator('.fc-3d').evaluate((p) => {
+    // The 3D note: every line of it is one line-height apart.
+    const gaps = await page.locator('.fc-3d-note').evaluate((p) => {
       const range = document.createRange()
       range.selectNodeContents(p)
       const tops = [...new Set([...range.getClientRects()].map((r) => Math.round(r.top)))].sort((a, b) => a - b)

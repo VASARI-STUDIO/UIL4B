@@ -53,7 +53,7 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'designer building a type scale')
     await go(page, '/create/type-scale')
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Type Scale Generator' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Type Scale' })).toBeVisible()
     // Default scale: 6 steps up + base + 2 down.
     await expect(page.locator('.tsc-row')).toHaveCount(9)
 
@@ -222,11 +222,11 @@ test.describe('Font Pair', () => {
 
     // POSITIVE CONTROL: the body face must not already BE the suggestion, or
     // the assertion below would pass without the click doing anything.
-    const bodyBefore = (await page.locator('.fpr-hero-pair span').last().innerText()).trim()
+    const bodyBefore = (await page.locator('.fpr-pair span').last().innerText()).trim()
     expect(bodyBefore).not.toBe(top)
 
     await wand.click()
-    await expect(page.locator('.fpr-hero-pair span').last()).toHaveText(top)
+    await expect(page.locator('.fpr-pair span').last()).toHaveText(top)
     // …and the panel agrees: exactly one card reads "In use".
     await expect(page.getByRole('button', { name: 'In use' })).toHaveCount(1)
   })
@@ -238,7 +238,6 @@ test.describe('Font Pair', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeVisible()
     await expect(page.locator('.fpr-specimen')).toBeVisible()
     await expect(page.getByRole('link', { name: /Browse the Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
-    await expect(page.getByRole('link', { name: /Select from the Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
 
     const cards = page.locator('.fpr-card')
     await expect(cards).toHaveCount(6)
@@ -276,7 +275,7 @@ test.describe('Font Pair', () => {
     // readout has a heading slot and a body slot, so naming the slot fails if
     // the handler ever writes the pick into the wrong one. `toContainText` on
     // the old four-cell container could not tell them apart.
-    await expect(page.locator('.fpr-hero-pair span').nth(1)).toHaveText(chosen)
+    await expect(page.locator('.fpr-pair span').nth(1)).toHaveText(chosen)
   })
 
   test('the specimen re-lays out and honours custom preview text', async ({ page }) => {
@@ -975,7 +974,7 @@ test.describe('typography hand-offs', () => {
     // header sweep deleted it - and that assertion would have passed on a
     // hand-off that landed in the body slot instead, because the strip put
     // both families in one container.
-    await expect(page.locator('.fpr-hero-pair span').nth(0)).toHaveText('Merriweather')
+    await expect(page.locator('.fpr-pair span').nth(0)).toHaveText('Merriweather')
     await expect(page.locator('.fpr-card')).not.toHaveCount(0)
 
     await page.getByRole('button', { name: /Build a scale from this pair/ }).click()
@@ -1311,8 +1310,12 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await go(page, '/create/font-gallery')
   await expect(page.locator('.fg-card').first()).toBeVisible()
   await expectTarget(page.locator('.fg-card-compare').first(), 'Font Gallery compare')
-  // The bespoke .fg-sort-btn segment is now the shared Library filter control.
-  await expectTarget(page.locator('.lbry-filter').first(), 'Font Gallery filter')
+  // On a phone the category filter lives in the toolbar's Filters sheet.
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Filters' })
+  await expectTarget(sheet.getByRole('button', { name: 'All', exact: true }), 'Font Gallery filter')
+  await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
   await page.locator('.fg-card-compare').first().click()
   await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery clear')
 

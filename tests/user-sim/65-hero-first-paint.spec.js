@@ -70,13 +70,16 @@
 // identity of the LCP element — all exact, all machine-independent.
 import { test, expect } from './base.js'
 import { go, ready, watch } from './helpers.js'
-import { heroHeadlineText } from '../../src/data/positioning.js'
+import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
 
 // One `.sp-w` per word of the headline. DERIVED, and the selectors below are
 // SCOPED to `.sp-hero-h1`, because `<SpectrumWords>` is used for the section
 // headings too — an unscoped `.sp-w` matches 47 elements on this page, most of
 // them nowhere near the hero.
-const HERO_WORDS = heroHeadlineText().trim().split(/\s+/).length
+// The headline is the design's Spectrum line, and
+// its accent run ("one place") reveals as ONE word, as the design draws it.
+const HERO_WORDS = SPECTRUM_HERO.text.trim().split(/\s+/).length
+  - (SPECTRUM_HERO.mark.trim().split(/\s+/).length - 1)
 
 // Installed before any page script, buffered so nothing painted before the
 // observer attached is missed. Records every candidate, not just the last one,
@@ -275,7 +278,7 @@ async function arriveFromAnotherRoute(page) {
     await page.evaluate(() => !!document.querySelector('#boot-shell')),
     'the boot shell is still on screen after ready() — this reads the wrong page',
   ).toBe(false)
-  await page.getByLabel('UIL4B home').click()
+  await page.getByRole('link', { name: 'Back to the site' }).click()
   await ready(page, '/home')
 }
 

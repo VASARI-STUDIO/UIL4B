@@ -146,13 +146,42 @@ test.describe('every tool surface renders operable controls and stays inside its
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the emoji category facet is a labelled control that opens a list', () => {
-  test('it is a trigger, never a wrapped chip tray, at all ten widths', async ({ page }) => {
+  // A PHONE GETS THE CATEGORIES AS ONE SCROLLING STRIP. Toolbars never wrap:
+  // one scrollable chip row plus a filter sheet. Below 641px the toolbar
+  // keeps its first group on screen as a single line that scrolls sideways —
+  // the shape every platform emoji keyboard uses. What is asserted there is
+  // that it is ONE line, holds all twelve, and does not scroll the page.
+  test('it is a trigger from 641px up and one scrolling strip on a phone, never a wrapped tray', async ({ page }) => {
     watch(page, 'someone looking for an emoji on a phone')
     await go(page, '/create/emoji')
 
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 844 })
       await settle(page)
+
+      if (PHONE_WIDTHS.includes(width)) {
+        // Waited for, not read once: the emoji library is a lazy chunk, and at
+        // the first width it can still be "Opening the emoji library".
+        await expect(page.locator('.lbry-toolbar-quick .lbry-filters'),
+          `@${width} no category strip on a phone`).toBeVisible({ timeout: 15_000 })
+        const strip = await page.evaluate(() => {
+          const row = document.querySelector('.lbry-toolbar-quick .lbry-filters')
+          if (!row) return null
+          const chips = [...row.querySelectorAll('.lbry-filter')]
+          return {
+            chips: chips.length,
+            lines: new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top))).size,
+            triggers: document.querySelectorAll('.lbry-toolbar .lbry-filtertrig').length,
+            pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          }
+        })
+        expect(strip, `@${width} no category strip on a phone`).not.toBeNull()
+        expect(strip.chips, `@${width} the strip does not carry all twelve categories`).toBe(12)
+        expect(strip.lines, `@${width} the category strip wraps`).toBe(1)
+        expect(strip.triggers, `@${width} a trigger AND a strip for one facet`).toBe(0)
+        expect(strip.pageOverflow, `@${width} the strip scrolls the page sideways`).toBeLessThanOrEqual(1)
+        continue
+      }
 
       const trigger = page.locator('.lbry-filtertrig')
       await expect(
@@ -224,6 +253,61 @@ test.describe('the emoji category facet is a labelled control that opens a list'
       ).toBeGreaterThan(0)
     }
   })
+
+  // OPENED AT PHONE WIDTH, THEN WIDENED. The sweep above loads wide first, so
+  // whether it caught this depended on when the lazy library mounted: the
+  // toolbar mounting at phone width held its phone stage past 640px, and the
+  // category facet then sat inside a Filters control instead of being the
+  // trigger. A window that opens narrow and is widened, or a tablet rotated,
+  // gets exactly that, so the order is fixed here rather than left to timing.
+  test('opened at phone width and widened, the category facet is the trigger again', async ({ page }) => {
+    watch(page, 'someone who opened the emoji library in a narrow window and then widened it')
+    await page.setViewportSize({ width: 430, height: 844 })
+    await go(page, '/create/emoji')
+    await expect(page.locator('.lbry-toolbar-quick .lbry-filters'),
+      '@430 no category strip on a phone').toBeVisible({ timeout: 15_000 })
+
+    for (const width of [768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await settle(page)
+      await expect(
+        page.locator('.lbry-filtertrig'),
+        `@${width} after opening at 430, the category facet is not the trigger`,
+      ).toHaveCount(1)
+      await expect(page.locator('.lbry-filtersbtn'),
+        `@${width} after opening at 430, the row is still on the Filters control`).toHaveCount(0)
+    }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The library toolbar steps back down when its row widens
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('the library toolbar gives the filters back when there is room again', () => {
+  // The Palette Library's row does not fit its two triggers at 700 and moves
+  // them into the Filters control. Widening back to 1440 must bring them out
+  // again; a row that only ever steps up keeps them hidden behind one button
+  // on a screen with room for all of it.
+  test('narrowed to the Filters control and widened again, the triggers return', async ({ page }) => {
+    watch(page, 'someone who narrowed the browser beside another window and then maximised it')
+    await go(page, '/discover/palettes')
+    const toolbar = page.locator('.lbry-toolbar')
+    await expect(toolbar, '@1440 no library toolbar').toBeVisible({ timeout: 15_000 })
+    await settle(page)
+    await expect(toolbar, '@1440 the row should start with every group on it').toHaveAttribute('data-stage', '0')
+
+    await page.setViewportSize({ width: 700, height: 844 })
+    await settle(page)
+    // POSITIVE CONTROL: without the step up, the return below proves nothing.
+    await expect(page.locator('.lbry-filtersbtn'),
+      '@700 the row did not move its groups into the Filters control, so this test measured nothing').toHaveCount(1)
+
+    await page.setViewportSize({ width: 1440, height: 844 })
+    await settle(page)
+    await expect(toolbar, '@1440 after 700, the row stayed on the Filters control').toHaveAttribute('data-stage', '0')
+    await expect(page.locator('.lbry-filtersbtn'), '@1440 after 700, the Filters control is still there').toHaveCount(0)
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -237,7 +321,8 @@ test.describe('the filter menu opens somewhere a finger can reach it', () => {
       await page.emulateMedia({ colorScheme: theme })
       await go(page, '/create/emoji')
 
-      for (const width of WIDTHS) {
+      // The menu exists from 641px up; a phone's strip is hit-tested below.
+      for (const width of WIDTHS.filter((w) => !PHONE_WIDTHS.includes(w))) {
         await page.setViewportSize({ width, height: 844 })
         await settle(page)
 
@@ -270,7 +355,9 @@ test.describe('the filter menu opens somewhere a finger can reach it', () => {
   test('choosing a category closes the menu and hands focus back', async ({ page }) => {
     watch(page, 'a keyboard user picking an emoji category')
     await go(page, '/create/emoji')
-    await page.setViewportSize({ width: 390, height: 844 })
+    // 834, not 390: a phone has no menu to close (see the
+    // strip test above); the tablet band is where the menu is narrowest.
+    await page.setViewportSize({ width: 834, height: 844 })
     await settle(page)
 
     const trigger = page.locator('.lbry-filtertrig').first()
@@ -379,7 +466,9 @@ test.describe('tool controls transition named properties, never `all`', () => {
         property,
         `${selector} still transitions \`all\`, which includes every layout property it owns`,
       ).not.toBe('all')
-      expect(property).toContain('background-color')
+      // The hover colour still animates, named either way: `background-color`,
+      // or the `background` shorthand the shared tool button lists.
+      expect(property.split(',').map((p) => p.trim())).toEqual(expect.arrayContaining([expect.stringMatching(/^background(-color)?$/)]))
     })
   }
 })

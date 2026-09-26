@@ -1,111 +1,128 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { NAV_SECTIONS } from '../data/toolTree'
+import { Link, useLocation } from 'react-router-dom'
+import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
+import { crossRouteHashClick, landOnHash, normPath, onSalesPage, salesHref } from './spectrum/salesLinks'
+import { useCloseOnBack } from './spectrum/useCloseOnBack'
+import { getLenis } from '../hooks/useSmoothScroll'
 import { SEARCH_KEY } from '../config/shortcuts'
-import { useAuth } from '../contexts/AuthContext'
-import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAppearance } from '../contexts/AppearanceContext'
-import { isAdminEmail } from '../utils/constants'
-import NavIcon from './NavIcon'
-import ThemeChoice from './ThemeChoice'
 import ThemeCycle from './nav/ThemeCycle'
-import { menuDescription } from './nav/menuDescription'
+import '../styles/pages/spectrum-chrome.css'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
-// THE MARKETING NAV — `UIL4B - Spectrum.dc.html` lines 217-258.
+// THE MARKETING NAV — `UIL4B - Spectrum.dc.html` lines 217-258, reproduced.
 //
-// This is the sales page's bar and it is deliberately NOT the app header. Where
-// PillNav is a full-width sticky shelf carrying three mega menus, a search
-// field, an export shell and an account cluster, this is a floating pill: the
-// wordmark, three quiet links, a theme cycle, a burger and one CTA — and it
-// hides itself on the way down the page so nothing competes with the hero.
+// The design file is the spec, so this is its bar and its menu, not an
+// adaptation of them:
 //
-// WHAT THE PILL DROPS, THE FULL-SCREEN MENU CARRIES.
-// The founder's number-one constraint is that no functionality is lost, and a
-// five-control bar on the product's most-visited route would lose a great deal
-// of it: the whole tool tree, search, the theme control, log in, sign up and
-// the account. So the burger does not open a list of four marketing links the
-// way the prototype's does — it opens all of that. Every tool in
-// `src/data/toolTree.js` is in there under its real group, with its real route
-// and its real Soon/Beta badge, and so are the search palette, the three-way
-// ThemeChoice, and the auth or account block for whichever state the visitor is
-// in. The prototype's four big items are the TOP of that menu, not the whole
-// of it.
+//   · the pill — wordmark + TOOLKIT, a rule, the three quiet links, the theme
+//     cycle, the burger and the "Open the toolkit" CTA (218-245);
+//   · the quiet links are Tools / Pricing / On mobile (226-228), and the one
+//     for the screen you are on is painted in ink (`navLanding` /
+//     `navPricing` / `navMobile`, 2368-2371) and announced with aria-current;
+//   · the full-screen menu is the four big items and the "EVERY CORE TOOL IS
+//     FREE, FOREVER" note (248-257), with the design's stagger in and fade out.
 //
-// ROUTES AND LABELS COME FROM THE PRODUCT, NOT THE MOCK. Spectrum's quiet links
-// are Tools / Pricing / On mobile against a one-page mock. `/` has real
-// sections, so Tools and Pricing point at `#bench` and `#pricing`, which are
-// the tools section and the pricing section of the page this bar sits on.
-// THERE IS NO "ON MOBILE" SECTION AND NO SUCH ROUTE — inventing one would be
-// inventing a destination, so the third link is Discover (`#discover`, and
-// "Discover" is NAV_SECTIONS' own label). The missing section is in the
-// handover for the founder.
-
-// The three quiet links. `hash` rather than `to`, because every one of these is
-// a section of the page the bar is fixed to.
+// IT IS NOT A MEGA MENU: the menu is four items. Every tool is still reachable
+// from this page: the bench, the hero's tool search, the footer's Tools column
+// and its Sitemap link; the theme is the pill's cycle; signing in happens in
+// the app, which "Open the toolkit" enters directly, with no sign-up gate.
+// The "/" search shortcut still opens the command palette — it draws nothing.
+//
+// DESTINATIONS. Tools is the sales page's bench (`#bench`). Pricing is the
+// separate Pricing screen, which is the route `/plans`. On mobile is the
+// "mobile" screen, `/mobile`. Off the sales page, Tools goes to `/home#bench`
+// and lands there (salesLinks.js).
 const QUIET = [
   { id: 'tools', label: 'Tools', hash: '#bench' },
-  { id: 'discover', label: 'Discover', hash: '#discover' },
-  { id: 'pricing', label: 'Pricing', hash: '#pricing' },
+  { id: 'pricing', label: 'Pricing', to: '/plans' },
+  { id: 'mobile', label: 'On mobile', to: '/mobile' },
 ]
 
-// Phosphor `x` and `arrow-up-right`, ported as inline SVG.
-//
-// SPECTRUM LOADS PHOSPHOR FROM A CDN (`<span class="ph ph-x">`). This product
-// has a strict no-new-origins rule on the first-paint path and ships every
-// glyph inline — PillNav alone carries a dozen of these — so the two shapes the
-// marketing nav needs are drawn here at the design's own optical sizes.
+// Which quiet link names the screen you are on. The sales page's own screen
+// is Tools — the design's `goLanding`.
+function activeQuiet(pathname) {
+  const p = normPath(pathname)
+  if (onSalesPage(p)) return 'tools'
+  if (p === '/plans') return 'pricing'
+  if (p === '/mobile') return 'mobile'
+  return null
+}
+
+// The design's menu opens over .28s and closes over .24s with the items
+// leaving over .2s, then unmounts after 260ms (`menuTimer`, line 2031). The
+// same beat here, so the close animation has a layer to play on.
+const MENU_EXIT_MS = 260
+
+// Phosphor `x` and `arrow-up-right`, drawn from Phosphor's own outlines
+// (phosphorNav.js) at the design's font-sizes, 14px and 12px. The design loads
+// Phosphor from a CDN; this product adds no origin to the first paint.
 function CloseGlyph() {
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M5.5 5.5l13 13M18.5 5.5l-13 13" />
+    <svg viewBox="0 0 256 256" width="14" height="14" fill="currentColor" aria-hidden="true">
+      <path d={PH_X} />
     </svg>
   )
 }
 
 function ArrowUpRightGlyph() {
   return (
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M7 17 17 7" />
-      <path d="M8.5 7H17v8.5" />
+    <svg viewBox="0 0 256 256" width="12" height="12" fill="currentColor" aria-hidden="true">
+      <path d={PH_ARROW_UP_RIGHT} />
     </svg>
   )
 }
 
-function SearchGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="7.25" />
-      <path d="m20 20-3.65-3.65" />
-    </svg>
-  )
-}
-
-// The bar hides going down and comes back coming up — Spectrum's `syncNav`
-// (standalone source, lines 2094-2115), ported with its own numbers: nothing
-// hides in the first 120px, a downward move of more than 2px hides it, and an
-// upward move waits 140ms before bringing it back so a stray wheel nudge does
-// not flash the bar. The menu being open pins it visible.
+// One quiet destination, as the element it has to be: a bare hash on the
+// sales page is a plain anchor (Lenis scrolls it); anything that changes route
+// is a router <Link>, so it never reloads the app. `current` is the design's
+// "this is the screen you are on" — announced, and painted by .is-active.
 //
-// IT RETURNS A FLAG, NOT A STYLE. Spectrum wrote `transform` and `opacity`
+// IN THE MENU (`mi`) a link must not leave a dead history step behind: the
+// menu owns one entry while open (useCloseOnBack), so a route link REPLACES
+// it, and a same-page section link swaps it for the section's URL and scrolls
+// there itself (`onHash`) instead of pushing over it.
+function QuietLink({ href, label, className, current, mi, onClick, onHash }) {
+  const props = {
+    className: current ? `${className} is-active` : className,
+    onClick: crossRouteHashClick(href, onClick),
+    'aria-current': current ? 'page' : undefined,
+    'data-mi': mi ? '' : undefined,
+  }
+  return href.startsWith('#')
+    ? <a href={href} {...props} onClick={onHash ? (e) => onHash(e, href) : props.onClick}>{label}</a>
+    : <Link to={href} replace={mi} {...props}>{label}</Link>
+}
+
+// The bar hides going down and comes back coming up — the design's `syncNav`
+// (lines 2094-2116), with its own numbers: nothing hides in the first 120px, a
+// downward move of more than 2px hides it, and an upward move waits 140ms
+// before bringing it back so a stray wheel nudge does not flash the bar. The
+// menu being open pins it visible.
+//
+// IT RETURNS A FLAG, NOT A STYLE. The design wrote `transform` and `opacity`
 // straight onto the element and branched on reduced motion in JS. Here the flag
 // goes on `data-nav-hidden` and the CSS decides what that means, so the
-// reduced-motion companion is a media query beside the animation it cancels
-// rather than a matchMedia read that can drift from it.
+// reduced-motion companion is a media query beside the animation it cancels.
 const HIDE_AFTER = 120
 const RETURN_DELAY = 140
 
 export default function SpectrumNav() {
-  const { user, userProfile, logout } = useAuth()
-  const { openLogin } = useLoginPrompt()
   const { reducedMotion } = useAppearance()
-  const navigate = useNavigate()
+  const location = useLocation()
+  const active = activeQuiet(location.pathname)
+  const quietHref = (q) => q.to || salesHref(q.hash, location.pathname)
 
   const [hidden, setHidden] = useState(false)
-  // 'out' at rest, 'in' while open. The menu stays MOUNTED through its exit so
-  // the close animation has something to play on; `mounted` is what unmounts it.
-  const [open, setOpen] = useState(false)
+  // 'closed' → 'in' while open → 'out' for the design's exit, then 'closed'.
+  // The menu stays MOUNTED through 'out' so the close animation has something
+  // to play on.
+  const [menu, setMenu] = useState('closed')
+  const open = menu === 'in'
+  const setOpen = useCallback((next) => {
+    setMenu((m) => (next ? 'in' : m === 'in' ? 'out' : m))
+  }, [])
   const [searchOpen, setSearchOpen] = useState(false)
 
   const burgerRef = useRef(null)
@@ -116,7 +133,18 @@ export default function SpectrumNav() {
 
   useEffect(() => { openRef.current = open }, [open])
 
-  const isAdmin = isAdminEmail(user?.email)
+  // The exit's unmount. Under reduced motion there is no exit to wait for.
+  useEffect(() => {
+    if (menu !== 'out') return undefined
+    const t = setTimeout(() => setMenu((m) => (m === 'out' ? 'closed' : m)), reducedMotion ? 0 : MENU_EXIT_MS)
+    return () => clearTimeout(t)
+  }, [menu, reducedMotion])
+
+  // A section link followed from ANOTHER screen (`/mobile` → `/home#bench`)
+  // arrives here on a freshly mounted page. Mount-only on purpose: a same-page
+  // hash click never remounts the nav, so this never fights Lenis's own smooth
+  // anchor scroll. See salesLinks.js for the Lenis limit it has to reset.
+  useEffect(() => landOnHash(), [])
 
   // Hide-on-scroll. Listener only — no state is set synchronously in the effect
   // body, which is the rule the rest of this codebase's nav follows.
@@ -151,13 +179,11 @@ export default function SpectrumNav() {
 
   // ESCAPE CLOSES AND GIVES FOCUS BACK TO THE BURGER (WCAG 2.4.3 / APG). The
   // SEARCH_KEY branch is the same contract PillNav holds: "/" opens the command
-  // palette, but never while the visitor is typing into a field, and the
-  // literal lives in config/shortcuts so /info cannot document a key this
-  // handler ignores.
+  // palette, but never while the visitor is typing into a field.
   const closeMenu = useCallback(() => {
     setOpen(false)
     requestAnimationFrame(() => burgerRef.current?.focus())
-  }, [])
+  }, [setOpen])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -178,10 +204,30 @@ export default function SpectrumNav() {
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [closeMenu])
+  }, [closeMenu, setOpen])
 
-  // Scroll lock + focus move-in + focus trap, for the same reasons and by the
-  // same mechanism as PillNav's mobile sheet: a full-screen layer that leaves
+  // Back closes the menu (the phone's back gesture).
+  useCloseOnBack(open, closeMenu)
+
+  // A section link inside the open menu: take the menu's history entry over
+  // with the section's URL (so nothing is left for back to pop), close, and
+  // scroll — through Lenis when it owns the page, honouring the section's
+  // scroll-margin so it clears the fixed pill.
+  const menuHash = useCallback((e, href) => {
+    e.preventDefault()
+    const state = { ...(window.history.state || {}) }
+    delete state.spnavMenu
+    window.history.replaceState(state, '', href)
+    setOpen(false)
+    const el = document.getElementById(href.slice(1))
+    if (!el) return
+    const lenis = getLenis()
+    // Lenis reads the target's scroll-margin-top itself.
+    if (lenis) lenis.scrollTo(el)
+    else el.scrollIntoView({ block: 'start' })
+  }, [setOpen])
+
+  // Scroll lock + focus move-in + focus trap: a full-screen layer that leaves
   // the page scrolling behind it and lets Tab walk out the back is not a dialog.
   useEffect(() => {
     if (!open) return undefined
@@ -212,20 +258,11 @@ export default function SpectrumNav() {
     }
   }, [open])
 
-  // The CTA. Signed in it opens the workspace; signed out it opens the SIGN-UP
-  // form over the page rather than navigating to /login — the same decision
-  // PillNav records: navigating away unmounts the page under the popup and the
-  // close button then drops the visitor somewhere they never were.
-  const openToolkit = () => {
-    setOpen(false)
-    if (user) navigate('/projects')
-    else openLogin({ signup: true })
-  }
-  const startLogin = () => { setOpen(false); openLogin() }
-  const startSignup = () => { setOpen(false); openLogin({ signup: true }) }
-  const openSearch = () => { setOpen(false); setSearchOpen(true) }
-
-  const displayName = userProfile?.displayName || user?.email?.split('@')[0] || 'Account'
+  // "Open the toolkit" ENTERS THE APP, signed in or not, with no sign-up
+  // gate: it lands on /projects, the
+  // workspace, and sign-up happens only when the visitor saves or exports. A
+  // real <Link>, so it is middle-clickable. The design's `goDashboard`.
+  const TOOLKIT = '/projects'
 
   return (
     <>
@@ -249,13 +286,11 @@ export default function SpectrumNav() {
 
           <div className="spnav-quiet">
             {QUIET.map((q) => (
-              <a className="spnav-quiet-link" key={q.id} href={q.hash} onClick={() => setOpen(false)}>
-                {q.label}
-              </a>
+              <QuietLink key={q.id} className="spnav-quiet-link" label={q.label} href={quietHref(q)} current={active === q.id} onClick={() => setOpen(false)} />
             ))}
           </div>
 
-          <ThemeCycle className="spnav-icon" />
+          <ThemeCycle className="spnav-icon" glyphs="phosphor" />
 
           <button
             type="button"
@@ -266,24 +301,20 @@ export default function SpectrumNav() {
             aria-controls={open ? 'spnav-menu' : undefined}
             onClick={() => (open ? closeMenu() : setOpen(true))}
           >
-            {/* Three bars that become a cross. Spectrum draws it with three
-                absolutely-positioned spans and transforms two of them
-                (lines 234-237 + the keyframes at 129-132); this is the same
-                three spans, and the reduced-motion companion that cancels the
-                morph sits beside the rule in global.css. */}
+            {/* Three bars that become a cross (lines 234-237 + 129-132). */}
             <span className="spnav-burger-ico" aria-hidden="true" data-burger={open ? 'in' : 'out'}>
               <span /><span /><span />
             </span>
           </button>
 
-          <button type="button" className="spnav-cta" data-cta onClick={openToolkit}>
+          <Link className="spnav-cta" data-cta to={TOOLKIT} onClick={() => setOpen(false)}>
             <span>Open the toolkit</span>
             <span className="spnav-cta-icon" aria-hidden="true"><ArrowUpRightGlyph /></span>
-          </button>
+          </Link>
         </div>
       </nav>
 
-      {open && (
+      {menu !== 'closed' && (
         <div
           className="spnav-menu"
           id="spnav-menu"
@@ -291,115 +322,24 @@ export default function SpectrumNav() {
           role="dialog"
           aria-modal="true"
           aria-label="Menu"
-          data-menu="in"
+          data-menu={open ? 'in' : 'out'}
         >
           <button type="button" className="spnav-close" onClick={closeMenu}>
             <span>Close</span>
             <span aria-hidden="true"><CloseGlyph /></span>
           </button>
 
-          <div className="spnav-menu-inner">
-            <div className="spnav-rail">
-              {/* The prototype's four big items, in its own type and with its
-                  own staggered entrance. `data-mi` is the design's attribute
-                  and the CSS keys the stagger off nth-child exactly as it
-                  does. */}
-              {QUIET.map((q) => (
-                <a className="spnav-mi" data-mi key={q.id} href={q.hash} onClick={closeMenu}>
-                  {q.label}
-                </a>
-              ))}
-              <button type="button" className="spnav-mi spnav-mi--accent" data-mi onClick={openToolkit}>
-                Open the toolkit <span aria-hidden="true">&#8599;</span>
-              </button>
-            </div>
-
-            {/* EVERY TOOL, FROM THE REAL TREE. This is the part the prototype
-                does not have and the product cannot do without: on `/` this
-                menu is the only way to the three section menus' contents, so
-                it lists NAV_SECTIONS in full — same groups, same routes, same
-                badges, same one-line descriptions (menuDescription's rules
-                included: a Soon row shows none). */}
-            <div className="spnav-tree" data-mi>
-              {NAV_SECTIONS.map((section) => (
-                <section className="spnav-tree-sec" key={section.id} aria-labelledby={`spnav-sec-${section.id}`}>
-                  <h2 className="spnav-tree-head" id={`spnav-sec-${section.id}`}>{section.label}</h2>
-                  {section.columns.flat().map((col) => (
-                    <div
-                      className="spnav-tree-col"
-                      key={col.label}
-                      data-soon={col.tools.length > 0 && col.tools.every((t) => t.soon) ? 'true' : undefined}
-                    >
-                      <p className="spnav-tree-colhead">{col.label}</p>
-                      {col.tools.map((t) => (
-                        <Link
-                          className="spnav-tool"
-                          key={t.id}
-                          to={t.route}
-                          data-hue={t.hue}
-                          data-soon={t.soon ? 'true' : undefined}
-                          aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
-                          onClick={() => setOpen(false)}
-                        >
-                          <span className="spnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                          <span className="spnav-tool-copy">
-                            <span className="spnav-tool-line">
-                              <span className="spnav-tool-label">{t.label}</span>
-                              {t.soon && <span className="soon-badge">Soon</span>}
-                              {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
-                            </span>
-                            {menuDescription(section, t) && (
-                              <span className="spnav-tool-desc">{menuDescription(section, t)}</span>
-                            )}
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  ))}
-                  <Link className="spnav-tree-all" to={section.viewAllHref} onClick={() => setOpen(false)}>
-                    Explore {section.label} <span aria-hidden="true">&rarr;</span>
-                  </Link>
-                </section>
-              ))}
-            </div>
-
-            {/* The utilities the pill has no room for. Everything here is a
-                control PillNav puts on the bar or in one of its popovers. */}
-            <div className="spnav-util" data-mi>
-              <button type="button" className="spnav-util-item" aria-haspopup="dialog" onClick={openSearch}>
-                <SearchGlyph />
-                <span>Search tools</span>
-                <kbd className="spnav-kbd" aria-hidden="true">/</kbd>
-              </button>
-
-              <div className="spnav-util-theme">
-                <p className="spnav-util-head">Appearance</p>
-                <ThemeChoice />
-              </div>
-
-              <div className="spnav-util-account">
-                {user ? (
-                  <>
-                    <p className="spnav-util-head">{displayName}</p>
-                    <Link className="spnav-util-item" to="/projects" onClick={() => setOpen(false)}>Saved projects</Link>
-                    <Link className="spnav-util-item" to="/settings" onClick={() => setOpen(false)}>Account &amp; settings</Link>
-                    <Link className="spnav-util-item" to="/plans" onClick={() => setOpen(false)}>Plans &amp; upgrade</Link>
-                    <Link className="spnav-util-item" to="/help" onClick={() => setOpen(false)}>Help centre</Link>
-                    <Link className="spnav-util-item" to="/feedback" onClick={() => setOpen(false)}>Send feedback</Link>
-                    {isAdmin && <Link className="spnav-util-item" to="/admin" onClick={() => setOpen(false)}>Admin dashboard</Link>}
-                    <button type="button" className="spnav-util-item" onClick={() => { setOpen(false); logout() }}>Sign out</button>
-                  </>
-                ) : (
-                  <>
-                    <Link className="spnav-util-item" to="/plans" onClick={() => setOpen(false)}>Pricing &amp; plans</Link>
-                    <Link className="spnav-util-item" to="/help" onClick={() => setOpen(false)}>Help centre</Link>
-                    <Link className="spnav-util-item" to="/feedback" onClick={() => setOpen(false)}>Send feedback</Link>
-                    <button type="button" className="spnav-util-item" aria-haspopup="dialog" onClick={startLogin}>Log in</button>
-                    <button type="button" className="spnav-util-item spnav-util-item--accent" aria-haspopup="dialog" onClick={startSignup}>Start for Free</button>
-                  </>
-                )}
-              </div>
-            </div>
+          {/* The design's four big items and its note (251-255). `data-mi` is
+              the design's attribute and the CSS keys the stagger off
+              nth-child exactly as it does — the note is the fifth. */}
+          <div className="spnav-rail">
+            {QUIET.map((q) => (
+              <QuietLink key={q.id} className="spnav-mi" mi label={q.label} href={quietHref(q)} current={active === q.id} onClick={() => setOpen(false)} onHash={menuHash} />
+            ))}
+            <Link className="spnav-mi spnav-mi--accent" data-mi to={TOOLKIT} replace onClick={() => setOpen(false)}>
+              Open the toolkit <span aria-hidden="true">&#8599;</span>
+            </Link>
+            <p className="spnav-mi-note" data-mi data-mi-note>EVERY CORE TOOL IS FREE, FOREVER</p>
           </div>
         </div>
       )}

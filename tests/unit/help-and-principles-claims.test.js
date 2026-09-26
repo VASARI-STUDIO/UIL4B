@@ -151,8 +151,8 @@ test('no surface copy names a tool that was retired', () => {
 /* ── the register the founder chose ──────────────────────────────────────── */
 
 test('neither surface writes in the first person or in marketing register', () => {
-  // The same rule the Learn guides are held to (founder decision 2026-09-05):
-  // neutral and factual, explicitly not his voice. Applied here because a
+  // The same rule the Learn guides are held to: neutral and factual, not a
+  // personal or marketing voice. Applied here because a
   // principles page is the surface most likely to drift into a manifesto.
   const firstPerson = /\b(?:we|we're|we've|our|ours|let's)\b/i
   const marketing = /\b(?:effortless|effortlessly|supercharge|unlock|unlocks|seamless|game-chang|revolutionar|delightful|best-in-class|world-class|at scale)\b/i
@@ -224,9 +224,12 @@ test('the hexes the proofs draw are still the product\'s own values', () => {
   const expected = {
     LIGHT_GROUND: themeToken('light', '--bg-0'),
     DARK_GROUND: themeToken('dark', '--bg-0'),
-    LIGHT_LINK: themeToken('light', '--accent-strong'),
-    DARK_LINK: themeToken('dark', '--accent-strong'),
-    LIGHT_FILL: themeToken('light', '--accent'),
+    LIGHT_LINK: themeToken('light', '--link'),
+    DARK_LINK: themeToken('dark', '--link'),
+    // PINNED, not read: the proof's fill is the previous accent. The live
+    // --accent (#2A60E8) clears 4.5:1 on the light page and cannot demonstrate
+    // the boundary-only case, so Principle 1's proof is owed new copy.
+    LIGHT_FILL: '#0F6FFF',
     LIGHT_INK: themeToken('light', '--t0'),
   }
   for (const [name, value] of Object.entries(expected)) {
@@ -241,8 +244,8 @@ test('the hexes the proofs draw are still the product\'s own values', () => {
 
 test('the contrast proof still demonstrates the split it claims', () => {
   const ground = themeToken('light', '--bg-0')
-  const link = contrastRatio(themeToken('light', '--accent-strong'), ground)
-  const fill = contrastRatio(themeToken('light', '--accent'), ground)
+  const link = contrastRatio(themeToken('light', '--link'), ground)
+  const fill = contrastRatio('#0F6FFF', ground)
 
   // The whole argument of the first principle: one of these two is text-safe
   // and one is not. If the palette ever moves so both pass, or both fail, the

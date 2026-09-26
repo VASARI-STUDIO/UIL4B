@@ -19,46 +19,21 @@
  *   - The hero is the Spectrum step (clamp 38-72px / 600 / -.045em) that
  *     /create/tint and /create/gradient use, instead of the global `.sec-h`.
  *   - The Generate and Try again buttons were the global `.btn` family. They
- *     are the app file's rectangles here: 12px radius, hairline, one filled
- *     action in --accent-mid on --accent-ink (tint's measured pair).
+ *     are pills here (--radius-pill) over a hairline, one filled action in
+ *     --accent-mid on --accent-ink (tint's measured pair).
  *   - Manrope-era 650 weights are Geist's 560; the sample chip's rgba() inset
  *     is a color-mix() of --t0 so it follows the theme.
  *
  * The four remaining inline styles in BrandStarter.jsx carry DATA — a
  * generated swatch's hex, a generated family/weight/size — and stay inline. */
 
-.bs-page { min-width: 0; padding-bottom: var(--s-7); }
-
-/* ── Hero ─────────────────────────────────────────────────────────────────── */
-
-.bs-page .bs-head { margin: 0 0 var(--s-6); }
-
-.bs-page .bs-head h1 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  margin: 0 0 var(--s-4);
-  font-family: var(--display);
-  font-size: clamp(38px, 5.6vw, 72px);
-  font-weight: 600;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: var(--t0);
-  text-wrap: balance;
-}
-
-.bs-page .bs-head > p {
-  max-width: 62ch;
-  margin: 0;
-  font-size: 15.5px;
-  line-height: 1.62;
-  color: var(--t1);
-  text-wrap: pretty;
-}
+/* The page root is also the ToolLayout root (`.tl.bs-page`): the toolbar
+   carries the name and the Beta tag; the brief, the result and the example sit
+   on the left; the side card says what the tool does and what beta means. */
 
 .bs-page .bs-beta {
   align-self: center;
+  flex: 0 0 auto;
   padding: 4px 8px;
   font-family: var(--mono);
   font-size: 10px;
@@ -74,7 +49,8 @@
 
 /* What beta MEANS, next to the word, rather than left for the reader to guess.
    A badge with no stated limit is a mood. */
-.bs-page .bs-head .bs-beta-note { margin: 10px 0 0; max-width: 62ch; font-size: var(--fs-caption); line-height: 1.55; color: var(--t2); }
+.bs-page .bs-beta-note,
+.bs-page .bs-about { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--tl-dim); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
@@ -92,7 +68,7 @@
   color: var(--t0);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) cubic-bezier(.23, 1, .32, 1);
 }
@@ -105,13 +81,15 @@
 
 .bs-page .bs-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-.bs-page .bs-btn--primary { color: var(--accent-ink); background: var(--accent-mid); border-color: transparent; }
+.bs-page .bs-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: transparent; }
 
-.bs-page .bs-btn--primary:hover:not(:disabled) { background: var(--accent-text); border-color: transparent; }
+.bs-page .bs-btn--primary:hover:not(:disabled) { background: var(--accent-fill-hover); border-color: transparent; }
 
 /* ── The workbench ────────────────────────────────────────────────────────── */
 
-.bs-page .bs { display: flex; flex-direction: column; gap: 28px; margin-top: 24px; }
+/* Higher than the shared `.tl .tl-main` grid on purpose: this column is a
+   flex stack with its own rhythm. */
+.bs-page .tl-main.bs-main { display: flex; flex-direction: column; gap: 28px; }
 
 /* The allowance, on a rule rather than in a panel: it is orientation, not an
    object. Above the field, because someone about to spend the only generation
@@ -188,7 +166,7 @@
   color: var(--t2);
   background: none;
   border: 0;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
   cursor: pointer;
 }
 
@@ -327,10 +305,10 @@
 .bs-page .bs-result-foot { max-width: 74ch; margin: 0; padding-top: 20px; font-size: var(--fs-caption); line-height: 1.6; color: var(--t2); border-top: 1px solid var(--border); }
 
 /* ── The signed-out example ──────────────────────────────────────────────────
-   Shown ABOVE the auth gate so a visitor can see what the tool returns before
-   being asked to make an account. It reads as a specimen, not as a result:
+   Shown under the brief to a signed-out visitor, so they can see what the
+   tool returns before being asked for an account. It reads as a specimen, not as a result:
    the three bands in the same 01/02/03 order the generator uses. */
-.bs-page .bs-sample { margin: var(--s-6) 0 var(--s-5); padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-2xl); }
+.bs-page .bs-sample { margin: 0; padding: 22px 0 0; border-top: 1px solid var(--border); }
 
 .bs-page .bs-sample-h { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
 
@@ -373,7 +351,6 @@
 }
 
 @media (max-width: 640px) {
-  .bs-page .bs-head > p { font-size: 14.5px; }
   .bs-page .bs-allowance-left { width: 100%; margin-left: 0; }
   .bs-page .bs-band-open { width: 100%; margin-left: 0; }
   .bs-page .bs-swatch { flex: 1 1 84px; min-width: 0; }

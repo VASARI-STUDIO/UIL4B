@@ -90,7 +90,7 @@ That is why specs import `test` from `./base.js` and never from
 `api.simplesvg.com` and `api.unisvg.com`): twenty-five `/collection` requests on
 first paint, a `/search` per query and an `.svg` per cell. After a day of
 full-suite runs from one machine the API answered **429** and both fallbacks
-**403** without CORS headers; the pack-label test in `25-defect-sweep` went red
+**403** without CORS headers; the pack-label test in `25-layout-target-sweep` went red
 and every icon-page visit logged ~100 CORS findings — the gate was being decided
 by a third party's rate limit.
 
@@ -108,7 +108,7 @@ hold.
 
 ```bash
 UIL4B_LIVE_ICONIFY=1 npm run test:users            # nothing stubbed; the teardown guard stands down and says so
-UIL4B_LIVE_ICONIFY=1 npx playwright test tests/user-sim/25-defect-sweep.spec.js
+UIL4B_LIVE_ICONIFY=1 npx playwright test tests/user-sim/25-layout-target-sweep.spec.js
 ```
 
 That is a human looking at the live API, never the gate: a run that hits the

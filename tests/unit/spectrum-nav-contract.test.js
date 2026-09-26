@@ -24,6 +24,11 @@ const PILL_NAV = 'src/components/PillNav.jsx'
 const THEME_CYCLE = 'src/components/nav/ThemeCycle.jsx'
 const MENU_DESC = 'src/components/nav/menuDescription.js'
 const GLOBAL_CSS = 'src/styles/global.css'
+// The marketing chrome's sheet: SpectrumNav's rules live here, apart from
+// global.css, so the marketing and app chromes stay separate.
+const CHROME_CSS = 'src/styles/pages/spectrum-chrome.css'
+// Both navs' rules, for the sweeps that hold the two to one standard.
+const navCss = () => `${stripCss(read(GLOBAL_CSS))}\n${stripCss(read(CHROME_CSS))}`
 
 const NAV_JS = [SPECTRUM_NAV, PILL_NAV, THEME_CYCLE]
 
@@ -46,14 +51,14 @@ test('NO NEW ORIGIN AND NO ICON FONT — Phosphor is ported, not linked', () => 
   }
   // And the glyphs it does need are really there, so this cannot pass by the
   // file having no icons at all.
-  assert.ok((read(SPECTRUM_NAV).match(/<svg\b/g) || []).length >= 3,
+  assert.ok((read(SPECTRUM_NAV).match(/<svg\b/g) || []).length >= 2,
     'SpectrumNav should carry its ported Phosphor glyphs as inline <svg>')
 })
 
 test('the accent stays swappable — no hardcoded brand blue anywhere in the nav', () => {
   // Premium theme templates work by moving --accent alone. A literal hex in a
   // nav rule is a paid feature quietly not working.
-  const css = stripCss(read(GLOBAL_CSS))
+  const css = navCss()
   const navRules = css.split('\n').filter((l) => /^\.(pnav|spnav)[-{ .:[]/.test(l.trim()))
   assert.ok(navRules.length > 60, 'the nav rule sweep found almost nothing — it is not reading the nav')
   for (const rule of navRules) {
@@ -89,7 +94,7 @@ test('every nav weight sits inside Geist\'s 300..700 axis', () => {
   // A weight outside the axis is clamped silently, so the page renders at a
   // weight nobody chose. hero-entrance.test.js sweeps all of src/styles; this
   // covers the nav's JSX, which that sweep does not reach.
-  const css = stripCss(read(GLOBAL_CSS))
+  const css = navCss()
   const navWeights = css.split('\n')
     .filter((l) => /\.(pnav|spnav)[-{ .:[]/.test(l))
     .flatMap((l) => [...l.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1])))
@@ -103,7 +108,7 @@ test('every nav animation ships a reduced-motion companion', () => {
   // The brief names the burger morph and the staggered menu-item entrances by
   // hand. Both mechanisms this repo uses are checked: the OS media query and
   // the stored Settings choice (html[data-reduced-motion]).
-  const css = stripCss(read(GLOBAL_CSS))
+  const css = stripCss(read(CHROME_CSS))
   const companions = [
     ['the burger morph', /\.spnav-burger-ico > span\{transition:none\}/],
     ['the staggered menu entrance', /\.spnav-menu \[data-mi\]\{animation:none\}/],
@@ -125,81 +130,115 @@ test('the hide-on-scroll bar does NOT hide under reduced motion', () => {
   // Spectrum's own script makes this choice (setNav): a bar that teleports
   // away with no transition reads as a rendering fault, and asking for less
   // motion is not asking for less navigation.
-  const css = stripCss(read(GLOBAL_CSS))
+  const css = stripCss(read(CHROME_CSS))
   assert.match(css, /html\[data-reduced-motion="true"\] \.spnav\[data-nav-hidden="1"\]\{transform:none;opacity:1\}/)
 })
 
-test('menuDescription has ONE implementation, and both navs use it', () => {
-  // Its two rules are subtle enough that a second copy drifts the first time a
-  // tool ships: a Soon row gets no line at all, and an explicit '' means "the
-  // label already says it" — which is NOT the same as deleting the key, because
-  // a missing key falls through to landing-page copy in a 180px column.
-  const mod = stripJs(read(MENU_DESC))
-  assert.match(mod, /export function menuDescription/)
-  assert.match(mod, /if \(tool\.soon\) return ''/, 'rule one: a Soon row shows no description')
-  assert.match(mod, /if \(tool\.id in MENU_TOOL_COPY\)/,
-    'rule two: the `in` test is what makes an explicit \'\' different from a missing key')
+test('neither nav renders menu descriptions, and neither carries a copy table', () => {
+  // The app header draws one-line rows and the marketing menu no longer lists
+  // tools, so the shared description helper has no consumer and was removed.
+  // A description line coming back in either nav, or a local copy of the old
+  // copy table, fails here.
+  assert.ok(!fs.existsSync(MENU_DESC), `${MENU_DESC} is back with no consumer`)
   for (const file of [SPECTRUM_NAV, PILL_NAV]) {
-    assert.match(stripJs(read(file)), /import \{ menuDescription \} from/,
-      `${file} must import the shared menuDescription, never restate it`)
-    assert.doesNotMatch(stripJs(read(file)), /const MENU_TOOL_COPY/,
-      `${file} carries a second copy of the menu copy table`)
+    const src = stripJs(read(file))
+    assert.doesNotMatch(src, /menuDescription|pnav-tool-desc/, `${file} renders tool descriptions again`)
+    assert.doesNotMatch(src, /const MENU_TOOL_COPY/, `${file} carries a copy of the menu copy table`)
   }
 })
 
-test('Beta is not a second Soon, in either nav', () => {
+test('Beta is not a second Soon, in the app header', () => {
   // One is "not yet", the other is "yes, with a stated limit". They share the
   // badge SHAPE and differ in colour, and a Soon tool can never also be Beta
   // because a tool the tree marks Soon is not mounted.
-  for (const file of [SPECTRUM_NAV, PILL_NAV]) {
-    const src = stripJs(read(file))
-    assert.match(src, /\{t\.soon && <span className="soon-badge">Soon<\/span>\}/, `${file}`)
-  }
-  assert.match(stripJs(read(SPECTRUM_NAV)), /\{!t\.soon && t\.beta && <span className="beta-badge">Beta<\/span>\}/)
-  assert.match(stripJs(read(PILL_NAV)), /\{!t\.soon && t\.beta && <span className="beta-badge">Beta<\/span>\}/)
+  const src = stripJs(read(PILL_NAV))
+  assert.match(src, /\{t\.soon && <span className="soon-badge">Soon<\/span>\}/, PILL_NAV)
+  assert.match(src, /\{!t\.soon && t\.beta && <span className="beta-badge">Beta<\/span>\}/)
   const css = stripCss(read(GLOBAL_CSS))
   // The menu-scoped chip changes geometry only; the colours stay with the
   // shared badges, which five other surfaces also render.
   assert.match(css, /\.pnav-tool \.soon-badge,\.pnav-tool \.beta-badge[^{]*\{padding:3px 6px;border-radius:var\(--radius-xs\)\}/)
 })
 
-test('the marketing nav keeps every path the app header offers', () => {
-  // The founder's number-one constraint. The pill itself carries five
-  // controls, so the full-screen menu is what stops the rest being lost.
+test('the full-screen menu is the design\'s four items and its note — not a mega menu', () => {
+  // The design file is the spec, and it has no mega-menu. The design's menu (UIL4B - Spectrum.dc.html 248-257) is Tools, Pricing,
+  // On mobile, "Open the toolkit ↗" and the note EVERY CORE TOOL IS FREE,
+  // FOREVER. An earlier pass hung the tool tree, search, the three-way theme and
+  // the account block under it; this fails if any of that comes back.
   const src = stripJs(read(SPECTRUM_NAV))
-  const required = [
-    ['the whole tool tree', /NAV_SECTIONS\.map/],
-    ['search, on the same shortcut', /SEARCH_KEY/],
-    ['the command palette', /CommandPalette/],
-    ['the three-way theme control', /<ThemeChoice \/>/],
-    ['the one-press theme cycle', /<ThemeCycle/],
-    ['sign in', /openLogin\(\)/],
-    ['sign up', /openLogin\(\{ signup: true \}\)/],
-    ['sign out', /logout\(\)/],
-    ['the admin link, gated', /isAdmin && /],
+  for (const [what, re] of [
+    ['the tool tree', /NAV_SECTIONS/],
+    ['the three-way theme segment', /<ThemeChoice/],
+    ['an account block', /logout\(\)|openLogin\(/],
+  ]) {
+    assert.doesNotMatch(src, re, `the marketing menu has grown ${what} again`)
+  }
+  assert.match(src, /EVERY CORE TOOL IS FREE, FOREVER/, 'the design\'s menu note is gone')
+  assert.match(src, /className="spnav-mi spnav-mi--accent"[\s\S]{0,80}Open the toolkit/,
+    'the fourth big item, "Open the toolkit ↗" in the accent, is gone')
+  // What a dialog has to do, whatever is in it.
+  for (const [what, re] of [
     ['scroll lock', /document\.body\.style\.overflow = 'hidden'/],
     ['a focus trap', /event\.key !== 'Tab'/],
     ['focus returned to the trigger on close', /burgerRef\.current\?\.focus\(\)/],
-  ]
-  for (const [what, re] of required) {
+    ['the design\'s exit, held mounted', /menu !== 'closed' &&/],
+    ['the one-press theme cycle on the pill', /<ThemeCycle[^>]*glyphs="phosphor"/],
+  ]) {
     assert.match(src, re, `the marketing nav dropped ${what}`)
   }
   assert.match(src, /role="dialog"[\s\S]{0,120}aria-modal="true"/,
     'the full-screen menu must declare itself a modal dialog')
 })
 
-test('the marketing nav invents no route and no section', () => {
-  // Spectrum's third quiet link is "On mobile", against a one-page mock. There
-  // is no such section and no such route here, so it is not shipped; the three
-  // that are shipped must all be real ids on src/pages/Spectrum.jsx.
+test('"Open the toolkit" enters the app, with no sign-up gate', () => {
+  // Signed out or in, it lands on
+  // /projects, the workspace; sign-up happens only on save or export.
   const src = stripJs(read(SPECTRUM_NAV))
+  assert.match(src, /const TOOLKIT = '\/projects'/)
+  assert.match(src, /<Link className="spnav-cta" data-cta to=\{TOOLKIT\}/)
+  const footer = stripJs(read('src/components/spectrum/SpectrumFooter.jsx'))
+  assert.match(footer, /toolkitTo = '\/projects'/)
+  assert.doesNotMatch(footer, /onOpenToolkit/, 'the footer CTA opens the sign-up dialog again')
+})
+
+test('the quiet links are the design\'s three, and each one goes somewhere real', () => {
+  // Spectrum's quiet links are Tools / Pricing / On mobile (lines 226-228).
+  // Tools is the sales page's bench; Pricing is the design's separate Pricing screen,
+  // the route /plans; On mobile is the design's "mobile" screen, the route /mobile.
+  // Every destination must exist: the hash as an id on Spectrum.jsx, each
+  // route as a page App.jsx renders AND a title in routeMetaMap.js (without
+  // which the route matrix would not prerender it and vercel.json would 404 it).
+  const src = stripJs(read(SPECTRUM_NAV))
+  const labels = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)'/g)].map((m) => m[1])
+  assert.deepEqual(labels, ['Tools', 'Pricing', 'On mobile'], 'the quiet links are the design\'s three, in its order')
   const hashes = [...src.matchAll(/hash: '#([a-z-]+)'/g)].map((m) => m[1])
-  assert.deepEqual(hashes, ['bench', 'discover', 'pricing'])
+  assert.deepEqual(hashes, ['bench'])
   const page = read('src/pages/Spectrum.jsx')
   for (const id of hashes) {
     assert.match(page, new RegExp(`id="${id}"`), `SpectrumNav links to #${id}, which Spectrum.jsx does not define`)
   }
-  assert.doesNotMatch(src, /On mobile/, 'the prototype\'s third link has no destination in this product')
+  const routes = [...src.matchAll(/to: '(\/[a-z-]+)'/g)].map((m) => m[1])
+  assert.deepEqual(routes, ['/plans', '/mobile'])
+  const app = stripJs(read('src/App.jsx'))
+  assert.match(app, /=== '\/mobile'[\s\S]{0,400}<SpectrumMobile \/>/, 'App.jsx does not render a page at /mobile')
+  assert.match(app, /=== '\/plans'[\s\S]{0,400}<Pricing \/>/, 'App.jsx does not render a page at /plans')
+  const titles = read('src/data/routeMetaMap.js')
+  assert.match(titles, /'\/mobile': 'UI L4B \| On mobile'/, '/mobile has no title in routeMetaMap.js')
+  assert.match(titles, /'\/plans': /, '/plans has no title in routeMetaMap.js')
+})
+
+test('the screen you are on is announced as well as painted', () => {
+  // The design colours the current screen's quiet link with --ink and the
+  // rest with --ink-faint (navLanding / navPricing / navMobile). Colour alone
+  // is not a state a screen reader can hear, so the link also carries
+  // aria-current.
+  const src = stripJs(read(SPECTRUM_NAV))
+  assert.match(src, /'aria-current': current \? 'page' : undefined/)
+  assert.match(src, /if \(onSalesPage\(p\)\) return 'tools'/)
+  assert.match(src, /if \(p === '\/plans'\) return 'pricing'/)
+  assert.match(src, /if \(p === '\/mobile'\) return 'mobile'/)
+  const css = stripCss(read(CHROME_CSS))
+  assert.match(css, /\.spnav-quiet-link\.is-active\{color:var\(--t0\)\}/)
 })
 
 test('the preview hook is not in the shipped nav', () => {

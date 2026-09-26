@@ -1,160 +1,199 @@
-/* font-gallery.css — /create/font-gallery (FontGallery.jsx), on Spectrum.
+/* font-gallery.css — /create/font-gallery (FontGallery.jsx), on the shared
+ * tool pattern.
  *
- * The Font Gallery is one of the six library surfaces: its root carries
- * `.lib-surface`, so deferred/library.css (another lane's) already restyles the
- * shared toolbar, the filter chips and `.lbry-card`. What that sheet cannot
- * reach is everything that is this page's own — the masthead, the specimen
- * list's row geometry, the preview/size controls, the compare tray and the two
- * dialogs — and those are here. library.css is not touched.
+ * The page is a ToolLayout (pages/tool-layout.css): the sticky toolbar carries
+ * the category pills, Sort, Size and the onward link, and moves them into its
+ * overflow when the row runs out of room. Its root also carries `.lib-surface`,
+ * so deferred/library.css styles the shared search field and `.lbry-card`.
+ * This sheet is what is the page's own: the search / preview-text strip, the
+ * specimen table's row geometry, the compare tray and the two dialogs.
  *
- * EVERY SELECTOR IS ROOTED AT `.fg-page`. Vite orders chunk CSS by the
- * dependency graph, not import order (8d30f37a), and three sheets on this
- * route (global.css, tool-shell.css, library.css) style the same classes.
- * The dialogs are rendered inside the page root, not portalled, so they are
- * reached through it too.
- *
- * ── WHAT CHANGED ────────────────────────────────────────────────────────────
- *
- * - THE MASTHEAD IS THE LIBRARY SLAB, not its own. It was `.fg-hero--premium`:
- *   a flat #0a0a0b box, a 128px h1 at -.07em, a 290px ghost "Aa" drawn in
- *   ::after, and a white CTA that hovered to lilac #d8d1ff. The five sibling
- *   libraries open on library.css's `.dgh-hero` — the app file's 26px slab on
- *   `--accent-deep` with its two mesh gradients and a 78px/600 title. This
- *   page now opens the same way, with the same numbers, so the family of
- *   library surfaces reads as one. The ghost "Aa" is switched off.
- * - THE SPECIMEN LIST IS A TABLE AGAIN. library.css's `.lib-surface .lbry-card`
- *   (border, 18px radius, card ground) matches every `.fg-card`, so the
- *   continuous ruled list type.css argues for at length had become a stack of
- *   seventy-seven floating rounded cards inside a rounded panel — the "every
- *   idea in a card" tell — and the same sheet's foot padding pulled each
- *   row's name 38px left of the specimen it names. Both are restored here.
- * - The shortlisted row is marked in ink (a 3px rule down the gutter on a
- *   faint ink ground), not `--brand` on `--brand-bg`.
- * - Controls are 10-12px rectangles over a hairline: the per-row compare
- *   toggle (a 30px circle), the dialog close buttons (circles), the pairing
- *   "Use" buttons and the compare tray's chips (999px pills).
- * - The overlay's 6px backdrop blur is deleted.
- * - `.fg-detail-label` was `--accent-strong` in tool-shell.css: four accent
- *   captions per dialog, none of them an action. It is `--t2`.
- * - The accent is spent on the primary dialog action ("Find a pairing") and
- *   the compare tray's primary ("Compare"), both `--accent-mid` under
- *   `--accent-ink`, hovering to `--accent-text`.
- *
- * The phone lede and every other sentence on this page are the founder's and
- * are unchanged; this sheet only restyles. */
+ * Every selector is scoped under `.fg-page`. The dialogs render inside the page
+ * root, not portalled, so they are reached through it too. */
+
+/* ── Base rules ──────────────────────────────────────────────────────────
+   Scoped with :where(.fg-page), which confines them to this page without
+   adding specificity, so the page's own rules below keep winning. */
+.fg-page{min-width:0;padding-bottom:var(--s-4)}
+:where(.fg-page) .fg-more-btn--primary{color:var(--accent-fg);background:var(--accent-fill);border-color:var(--accent-fill)}
+:where(.fg-page) .fg-more-btn--primary:hover:not(:disabled){background:var(--brand-soft);border-color:var(--brand-soft);color:var(--accent-fg)}
+:where(.fg-page) .fg-compare-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-2);font-size:12px;font-weight:600;color:var(--t0);cursor:pointer;transition:color var(--t),border-color var(--t)}
+:where(.fg-page) .fg-compare-tray-actions{display:flex;gap:8px;flex-shrink:0}
+:where(.fg-page) .fg-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fg-fade var(--dur-2) var(--ease-entrance)}
+:where(.fg-page) .fg-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0;padding:26px 28px 18px;border-bottom:1px solid var(--border)}
+:where(.fg-page) .fg-detail-controls{flex-shrink:0;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--bg-1)}
+:where(.fg-page) .fg-detail-body{flex:1;min-height:0;overflow-y:auto;padding:24px 28px 4px}
+@media (max-width:980px){
+  :where(.fg-page) .fg-detail-head{padding:22px 22px 16px}
+  :where(.fg-page) .fg-detail-controls{padding:13px 22px}
+  :where(.fg-page) .fg-detail-body{padding:20px 22px 4px}
+}
+@media (max-width:560px){
+  :where(.fg-page) .fg-overlay{padding:16px 10px}
+}
+@media (max-width:380px){
+  :where(.fg-page) .fg-compare-tray-actions .fg-more-btn{flex:1}
+}
+@media (pointer:coarse){
+  :where(.fg-page) .fg-compare-chip{min-height:44px}
+}
+:where(.fg-page) .fg-card{gap:13px;padding:18px 0 16px;border-bottom:1px solid var(--border)}
+:where(.fg-page) .fg-card:hover{background:var(--hvr)}
+:where(.fg-page) .fg-card:hover .lbry-card-shot{transform:none;box-shadow:none}
+:where(.fg-page) .fg-card-name{font-size:16px;line-height:1.3;letter-spacing:-.015em}
+:where(.fg-page) .fg-card-info{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:capitalize}
+:where(.fg-page) .fg-card .lbry-card-foot{align-items:baseline;padding-left:56px}
+@media (max-width:720px){
+  :where(.fg-page) .fg-card .lbry-card-foot{padding-left:34px}
+}
+:where(.fg-page) .fg-count{margin:0 0 14px;font-family:var(--mono);font-size:11px;color:var(--t2);letter-spacing:.02em}
+:where(.fg-page) .fg-grid{margin:0 0 var(--s-5);padding:0;list-style:none}
+:where(.fg-page) .fg-card-preview{display:flex;flex-direction:column;gap:10px;overflow:hidden;font-family:var(--fg-ff)}
+:where(.fg-page) .fg-card-preview--pending{font-family:var(--font)}
+:where(.fg-page) .fg-card-skeleton{display:block;flex:0 0 auto;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:fg-shimmer 1.4s linear infinite}
+:where(.fg-page) .fg-card-skeleton--sample{width:76%;height:52px}
+:where(.fg-page) .fg-card-skeleton--body{width:92%;height:38px}
+:where(.fg-page) .fg-card-sample{display:block;flex:0 0 auto;height:52px;font-size:42px;line-height:52px;letter-spacing:-.02em;color:var(--t0);font-weight:var(--fg-fw-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:where(.fg-page) .fg-card-pangram{display:-webkit-box;flex:0 0 auto;height:38px;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;line-height:19px;font-weight:var(--fg-fw-b);color:var(--t1)}
+:where(.fg-page) .fg-card-compare{z-index:2;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-0);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+:where(.fg-page) .fg-card-compare:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:where(.fg-page) .fg-card-compare:hover{border-color:var(--bh);color:var(--t0)}
+:where(.fg-page) .fg-card-compare--on{background:var(--t0);border-color:var(--t0);color:var(--bg-0)}
+:where(.fg-page) .fg-sentinel{height:1px}
+:where(.fg-page) .fg-more{display:flex;justify-content:center;margin-bottom:var(--s-5)}
+:where(.fg-page) .fg-compare-tray{position:sticky;bottom:14px;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:var(--s-5);padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l)}
+:where(.fg-page) .fg-compare-tray-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+:where(.fg-page) .fg-compare-tray-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+:where(.fg-page) .fg-compare-chip:hover{border-color:var(--bh);color:var(--t0)}
+:where(.fg-page) .fg-compare-chip svg{opacity:.6}
+:where(.fg-page) .fg-compare{max-width:1100px;padding:28px}
+:where(.fg-page) .fg-compare-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+:where(.fg-page) .fg-compare-title{margin:4px 0 0;font-size:clamp(20px,2.4vw,26px);font-weight:700;letter-spacing:-.02em;color:var(--t0)}
+:where(.fg-page) .fg-compare-close{position:static}
+:where(.fg-page) .fg-compare-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+:where(.fg-page) .fg-compare-input{flex:1;min-width:200px;min-height:38px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-size:14px;transition:border-color var(--t),box-shadow var(--t)}
+:where(.fg-page) .fg-compare-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+:where(.fg-page) .fg-compare-control{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--t2);font-weight:600}
+:where(.fg-page) .fg-compare-control input[type=range]{width:120px;accent-color:var(--accent)}
+:where(.fg-page) .fg-compare-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+:where(.fg-page) .fg-compare-col{display:flex;flex-direction:column;gap:10px;min-width:0;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
+:where(.fg-page) .fg-compare-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+:where(.fg-page) .fg-compare-col-name{min-width:0;padding:0;font-size:13px;font-weight:700;color:var(--t0);background:none;border:none;cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color var(--t)}
+:where(.fg-page) .fg-compare-col-name:hover{color:var(--accent-text)}
+:where(.fg-page) .fg-compare-col-remove{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:color var(--t),border-color var(--t)}
+:where(.fg-page) .fg-compare-col-remove:hover{border-color:var(--err);color:var(--err-strong)}
+:where(.fg-page) .fg-compare-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize}
+:where(.fg-page) .fg-compare-sample{min-height:96px;color:var(--t0);font-family:var(--fg-ff);font-size:var(--fg-size);font-weight:var(--fg-fw-h);line-height:1.25;letter-spacing:-.01em;word-break:break-word;overflow:hidden}
+:where(.fg-page) .fg-compare-charset{padding-top:8px;border-top:1px solid var(--border);color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw-b);font-size:15px;line-height:1.5}
+:where(.fg-page) .fg-compare-copy{margin-top:auto;min-height:34px;padding:7px;font-size:11px;font-weight:600;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t)}
+:where(.fg-page) .fg-compare-copy:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+:where(.fg-page) .fg-detail-id{min-width:0}
+:where(.fg-page) .fg-detail-hero{margin:0 0 12px;color:var(--t0);font-family:var(--fg-ff);font-size:clamp(30px,5vw,52px);font-weight:var(--fg-fw);line-height:1.1;letter-spacing:-.03em;word-break:break-word}
+:where(.fg-page) .fg-detail-facts{display:flex;gap:6px;margin:0;flex-wrap:wrap}
+:where(.fg-page) .fg-tag--scripts{max-width:100%;text-transform:none;letter-spacing:.03em}
+:where(.fg-page) .fg-detail-field{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+:where(.fg-page) .fg-detail-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+:where(.fg-page) .fg-detail-field>span{flex-shrink:0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+:where(.fg-page) .fg-detail-field input{width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+:where(.fg-page) .fg-detail-field input::placeholder{color:var(--t3)}
+:where(.fg-page) .fg-tag{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-pill)}
+:where(.fg-page) .fg-weight-rows{margin:0;padding:0;list-style:none}
+:where(.fg-page) .fg-weight-row{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid var(--border)}
+:where(.fg-page) .fg-weight-row:last-child{border-bottom:0}
+:where(.fg-page) .fg-weight-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:25px;line-height:1.3;letter-spacing:-.015em}
+:where(.fg-page) .fg-weight-tag{flex-shrink:0;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);font-variant-numeric:tabular-nums}
+:where(.fg-page) .fg-weight-tag strong{color:var(--t2);font-weight:700}
+:where(.fg-page) .fg-charset{color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:21px;line-height:1.8;letter-spacing:.02em;word-break:break-all}
+:where(.fg-page) .fg-pair-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+:where(.fg-page) .fg-pair-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--t)}
+:where(.fg-page) .fg-pair-card:hover{border-color:var(--bh)}
+:where(.fg-page) .fg-pair-preview{display:flex;flex-direction:column;gap:8px;min-height:112px;padding:16px;background:var(--bg-1)}
+:where(.fg-page) .fg-pair-heading{color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw-h);font-size:24px;line-height:1.1;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis}
+:where(.fg-page) .fg-pair-body{color:var(--t1);font-family:var(--fg-pair-ff);font-weight:var(--fg-pair-fw);font-size:13px;line-height:1.55}
+:where(.fg-page) .fg-pair-reason{margin:0;padding:10px 14px 0;font-size:11.5px;line-height:1.5;color:var(--t2)}
+:where(.fg-page) .fg-pair-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding:10px 14px 12px}
+:where(.fg-page) .fg-pair-name{min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:where(.fg-page) .fg-pair-apply{flex-shrink:0;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11.5px;font-weight:600;border-radius:var(--radius-pill);border:1px solid var(--border);background:transparent;color:var(--t1);cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t)}
+:where(.fg-page) .fg-pair-apply:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+:where(.fg-page) .fg-detail-btn{display:inline-flex;align-items:center;min-height:38px;padding:9px 15px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
+:where(.fg-page) .fg-detail-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+:where(.fg-page) .fg-detail-btn--primary{color:var(--accent-ink);background:var(--accent-fill);border-color:var(--accent-fill)}
+:where(.fg-page) .fg-detail-btn--primary:hover{background:var(--accent-fill-hover);border-color:var(--accent-fill-hover);color:var(--accent-ink)}
+:where(.fg-page) .fg-loading-note{display:flex;gap:10px;align-items:center;margin:0 0 24px;padding:12px 16px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);font-size:12.5px;color:var(--t1);line-height:1.5}
+:where(.fg-page) .fg-loading-note-spinner{flex-shrink:0;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:fg-spin .7s linear infinite}
+@media (max-width:560px){
+  :where(.fg-page) .fg-detail-head{padding:18px 18px 14px}
+  :where(.fg-page) .fg-detail-controls{padding:12px 18px}
+  :where(.fg-page) .fg-detail-body{padding:18px 18px 4px}
+  :where(.fg-page) .fg-detail-hero{font-size:30px}
+  :where(.fg-page) .fg-compare{padding:18px}
+  :where(.fg-page) .fg-charset{font-size:16px}
+  :where(.fg-page) .fg-weight-row{align-items:flex-start;flex-direction:column-reverse;gap:2px;padding:10px 0}
+  :where(.fg-page) .fg-weight-line{max-width:100%;font-size:21px}
+  :where(.fg-page) .fg-detail-btn{flex:1 1 46%;justify-content:center}
+}
+@media (max-width:380px){
+  :where(.fg-page) .fg-compare-tray{flex-direction:column;align-items:stretch}
+}
+@media (pointer:coarse){
+  :where(.fg-page) .fg-card-compare{width:44px;height:44px;opacity:1}
+}
+.fg-page{padding-bottom:72px}
+:where(.fg-page) .fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+:where(.fg-page) .fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}
+:where(.fg-page) .fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:0}
+:where(.fg-page) .fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:transparent;border:0;border-radius:0;cursor:pointer}
+:where(.fg-page) .fg-card-open:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+:where(.fg-page) .fg-card-index{padding:4px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
+:where(.fg-page) .fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:0 26px 0 0;background:transparent}
+:where(.fg-page) .fg-card-skeleton--sample{height:var(--fg-line)}
+:where(.fg-page) .fg-card-skeleton--body{height:24px}
+:where(.fg-page) .fg-card-skeleton--ladder{width:44%;height:26px}
+:where(.fg-page) .fg-card-sample{display:flex;align-items:center;height:var(--fg-line);font-size:clamp(22px,var(--fg-card-size),72px);line-height:1.06;letter-spacing:-.035em}
+:where(.fg-page) .fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:clip}
+:where(.fg-page) .fg-card-ladder{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 26px;height:26px;overflow:hidden;font-family:var(--fg-ff);font-size:19px;line-height:26px;color:var(--t1);font-variant-numeric:tabular-nums}
+:where(.fg-page) .fg-card-step{font-weight:var(--fg-fw)}
+:where(.fg-page) .fg-card-compare{position:static;opacity:1;transform:none}
+:where(.fg-page) .fg-card-scripts{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t3)}
+.fg-page .typ-loading{min-height:0;padding:var(--s-6) var(--s-5) var(--s-5)}
+:where(.fg-page) .fg-grid--skeleton{--lbry-col-min:100%}
+:where(.fg-page) .fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:18px 26px 16px 56px;border-bottom:1px solid var(--border)}
+:where(.fg-page) .fg-skel-row:last-child{border-bottom-color:transparent}
+:where(.fg-page) .fg-skel-row .fg-card-skeleton--sample{width:min(48%,520px)}
+:where(.fg-page) .fg-skel-row .fg-card-skeleton--body{width:min(64%,700px)}
+:where(.fg-page) .fg-skel-row .fg-card-skeleton--ladder{width:min(34%,380px);margin-top:auto}
+@media (min-width:721px) and (max-width:959px){
+  :where(.fg-page) .fg-card-pangram,:where(.fg-page) .fg-card-skeleton--body{height:48px}
+  :where(.fg-page) .fg-card-pangram{-webkit-line-clamp:2;line-clamp:2;white-space:normal}
+}
+@media (max-width:720px){
+  :where(.fg-page) .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
+  :where(.fg-page) .fg-card-index{padding-top:2px;font-size:10px}
+  :where(.fg-page) .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:0 60px 0 0}
+  :where(.fg-page) .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),44px)}
+  :where(.fg-page) .fg-card-scripts{display:none}
+  :where(.fg-page) .fg-card-pangram,:where(.fg-page) .fg-card-skeleton--body{height:40px}
+  :where(.fg-page) .fg-card-pangram{-webkit-line-clamp:2;white-space:normal;font-size:13px;line-height:20px}
+  :where(.fg-page) .fg-card-ladder,:where(.fg-page) .fg-card-skeleton--ladder{height:24px}
+  :where(.fg-page) .fg-card-ladder{gap:2px 18px;font-size:16px;line-height:24px}
+  :where(.fg-page) .fg-skel-row{--fg-line:67px;padding:16px 24px 14px 34px}
+  :where(.fg-page) .fg-skel-row .fg-card-skeleton--sample{width:72%}
+  :where(.fg-page) .fg-skel-row .fg-card-skeleton--body{width:90%}
+  :where(.fg-page) .fg-skel-row .fg-card-skeleton--ladder{width:56%}
+}
+:where(.fg-page) .fg-grid{
+  border:1px solid var(--border);
+  border-radius:var(--radius-l);
+  overflow:hidden;
+  background:var(--card);
+}
+:where(.fg-page) .fg-card:last-child{border-bottom-color:transparent}
+
 
 .fg-page {
   --fg-ease: cubic-bezier(.23, 1, .32, 1);
   --fg-wash: color-mix(in srgb, var(--t0) 4%, transparent);
 }
-
-/* ── Masthead: library.css's .dgh-hero, value for value ───────────────────── */
-
-.fg-page .fg-hero--premium {
-  --fg-mesh-a: color-mix(in srgb, var(--accent-hover) 55%, transparent);
-  --fg-mesh-b: color-mix(in srgb, color-mix(in srgb, #3FAFA0 62%, var(--accent-hover)) 32%, transparent);
-  min-height: 0;
-  margin: 0 0 18px;
-  padding: clamp(30px, 5.6vw, 72px) clamp(20px, 3.6vw, 48px);
-  color: #F7F7F4;
-  background: var(--accent-deep);
-  border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: 26px;
-  box-shadow: 0 22px 64px rgba(6, 6, 10, .16);
-}
-
-/* The ghost "Aa" goes; the design's mesh takes its layer. It was already
-   aria-free (a pseudo-element), so this is purely a subtraction. */
-.fg-page .fg-hero--premium::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  right: auto;
-  bottom: auto;
-  width: 100%;
-  height: 100%;
-  font-size: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(120% 140% at 88% 52%, var(--fg-mesh-a), transparent 58%),
-    radial-gradient(90% 120% at 66% 8%, var(--fg-mesh-b), transparent 62%);
-}
-
-/* The dark-theme lift global.css gives this slab is for a #0a0a0b box that
-   vanished into a #0A0B0D page. The design's slab carries its own hairline and
-   mesh, which is the answer the other five libraries use in dark. */
-[data-theme="dark"] .fg-page .fg-hero--premium {
-  background: var(--accent-deep);
-  border-color: rgba(255, 255, 255, .12);
-  box-shadow: 0 22px 64px rgba(0, 0, 0, .4);
-}
-
-.fg-page .fg-hero--premium .fg-hero-copy { gap: clamp(28px, 6vw, 96px); align-items: end; }
-
-.fg-page .fg-hero--premium h1 {
-  font-family: var(--display);
-  font-size: clamp(34px, 7.6vw, 78px);
-  font-weight: 600;
-  line-height: .92;
-  letter-spacing: -.045em;
-  color: #F7F7F4;
-}
-
-.fg-page .fg-hero-intro > p {
-  max-width: min(46ch, 100%);
-  margin: 0 0 24px;
-  font-size: clamp(14.5px, 1.5vw, 16.5px);
-  line-height: 1.55;
-  color: rgba(247, 247, 244, .72);
-}
-
-/* Paper on the slab: the page's onward action. The slab is dark in both
-   themes, so this is a fixed pair (#F7F7F4 / #0B0C0E), not theme tokens. */
-.fg-page .fg-hero-cta {
-  min-height: 44px;
-  padding: 10px 18px;
-  font-family: var(--font);
-  font-size: 13.5px;
-  font-weight: 560;
-  color: #0B0C0E;
-  background: #F7F7F4;
-  border: 1px solid #F7F7F4;
-  border-radius: var(--radius-pill);
-  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease;
-}
-
-.fg-page .fg-hero-cta:hover { color: #0B0C0E; background: rgba(247, 247, 244, .86); border-color: rgba(247, 247, 244, .86); }
-
-.fg-page .fg-hero-cta:focus-visible { outline: 2px solid #F7F7F4; outline-offset: 3px; }
-
-@media (max-width: 720px) {
-  .fg-page .fg-hero--premium { border-radius: 20px; }
-}
-
-/* ── The toolbar's second row: preview text and size ─────────────────────── */
-
-/* Recessed into the toolbar panel the way library.css draws the search field
-   beside them: 12px radius, a 4.5% ink wash, no border of their own. */
-.fg-page .fg-command-text,
-.fg-page .fg-command-size {
-  min-height: 44px;
-  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-}
-
-.fg-page .fg-command-text:focus-within,
-.fg-page .fg-command-size:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-wash-4);
-}
-
-.fg-page .fg-command-text > span,
-.fg-page .fg-command-size > span { font-weight: 500; letter-spacing: .14em; }
-
-.fg-page .fg-command-text input { font-size: 14px; }
-
-.fg-page .fg-command-size strong { font-weight: 500; color: var(--t0); }
 
 .fg-page .fg-count { font-size: 10.5px; letter-spacing: .14em; color: var(--t2); }
 
@@ -211,7 +250,7 @@
   color: var(--t1);
   background: var(--card);
   border: 1px solid var(--bh);
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
 }
 
 .fg-page .fg-card-compare:hover { color: var(--t0); border-color: color-mix(in srgb, var(--t0) 34%, transparent); }
@@ -239,7 +278,7 @@
   color: var(--t0);
   background: transparent;
   border: 1px solid var(--bh);
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
   transition: color var(--dur-1) ease, background-color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
 
@@ -257,15 +296,15 @@
 .fg-page .fg-more-btn--primary,
 .fg-page .fg-detail-btn--primary {
   color: var(--accent-ink);
-  background: var(--accent-mid);
-  border-color: var(--accent-mid);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
 }
 
 .fg-page .fg-more-btn--primary:hover:not(:disabled),
 .fg-page .fg-detail-btn--primary:hover {
   color: var(--accent-ink);
-  background: var(--accent-text);
-  border-color: var(--accent-text);
+  background: var(--accent-fill-hover);
+  border-color: var(--accent-fill-hover);
 }
 
 .fg-page .fg-compare-tray {
@@ -282,12 +321,8 @@
   color: var(--t0);
   background: transparent;
   border: 1px solid var(--bh);
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
 }
-
-.fg-page .fg-more-link { font-size: 12.5px; font-weight: 500; }
-
-.fg-page .fg-more-nav strong { font-size: 14px; font-weight: 560; }
 
 /* ── The two dialogs ─────────────────────────────────────────────────────── */
 
@@ -309,7 +344,7 @@
   color: var(--t1);
   background: transparent;
   border: 1px solid var(--bh);
-  border-radius: var(--radius);
+  border-radius: var(--btn-radius);
 }
 
 .fg-page .fg-detail-close:hover { color: var(--t0); background: var(--hvr); }
@@ -357,7 +392,7 @@
   height: 28px;
   background: transparent;
   border-color: var(--bh);
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
 }
 
 /* ── Focus: the tool-shell rules for these are still `--brand` ────────────── */
@@ -369,8 +404,7 @@
 .fg-page .fg-compare-copy:focus-visible,
 .fg-page .fg-compare-col-name:focus-visible,
 .fg-page .fg-compare-col-remove:focus-visible,
-.fg-page .fg-detail-close:focus-visible,
-.fg-page .fg-more-link:focus-visible {
+.fg-page .fg-detail-close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -388,9 +422,7 @@
   .fg-page .fg-detail-btn,
   .fg-page .fg-compare-copy,
   .fg-page .fg-pair-apply,
-  .fg-page .fg-compare-chip,
-  .fg-page .fg-more-link { min-height: 44px; }
-  .fg-page .fg-more-link { display: inline-flex; align-items: center; }
+  .fg-page .fg-compare-chip { min-height: 44px; }
 }
 
 /* ── Press feedback, with the house reduced-motion pair ──────────────────── */
@@ -407,4 +439,89 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   html:not([data-reduced-motion="false"]) .fg-page .fg-more-btn:active,
   html:not([data-reduced-motion="false"]) .fg-page .fg-detail-btn:active,
   html:not([data-reduced-motion="false"]) .fg-page .fg-card-compare:active { transform: none; }
+}
+
+/* ── The field strip: search and the preview words ──────────────────────── */
+.fg-page .fg-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin: 0 0 4px;
+}
+.fg-page .fg-controls .lbry-search { max-width: none; margin: 0; }
+.fg-page .fg-preview-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--t0) 3%, transparent);
+}
+.fg-page .fg-preview-field:focus-within { border-color: var(--tl-line-on); }
+.fg-page .fg-preview-k {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tl-faint);
+}
+.fg-page .fg-preview-field input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tl-ink);
+  font-family: var(--font);
+  font-size: 14px;
+  box-shadow: none;
+}
+.fg-page .fg-preview-field input:focus { outline: none; }
+.fg-page .fg-preview-field:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+
+/* ── Toolbar: the category pills stay on one line; the size control ───── */
+.fg-page .tl-toolbar .fg-cats { flex-wrap: nowrap; }
+.fg-page .fg-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+}
+.fg-page .fg-size-k { font-size: 12.5px; color: var(--tl-dim); }
+.fg-page .fg-size input[type="range"] { width: 96px; min-width: 0; margin: 0; accent-color: var(--t0); }
+.fg-page .fg-size-v { min-width: 36px; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); text-align: right; }
+.tl-sheet-layer .fg-size,
+.fg-page .tl-pop .fg-size { width: 100%; }
+.tl-sheet-layer .fg-size input[type="range"],
+.fg-page .tl-pop .fg-size input[type="range"] { flex: 1; width: auto; }
+.tl-sheet-layer .fg-cats,
+.fg-page .tl-pop .fg-cats { flex-wrap: wrap; }
+
+@media (max-width: 767px) {
+  .fg-page .fg-controls { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
+/* iOS zooms a focused field under 16px. */
+@media (max-width: 640px) {
+  .fg-page .fg-preview-field input,
+  .fg-page .fg-controls .lbry-search input { font-size: 16px; }
+}
+@media (pointer: coarse) {
+  .fg-page .fg-preview-field input { height: 44px; font-size: 16px; }
+  .fg-page .fg-controls .lbry-search input { font-size: 16px; }
+  .fg-page .fg-cats,
+  .tl-sheet-layer .fg-cats { gap: 8px; }
+  .fg-page .fdx-tab { min-height: 44px; }
+  .fg-page .fg-size,
+  .tl-sheet-layer .fg-size { height: 44px; }
+  /* A one-word category ("All") is narrower than a finger. */
+  .fg-page .fg-cats .tl-pill,
+  .tl-sheet-layer .fg-cats .tl-pill { min-width: 44px; justify-content: center; }
 }

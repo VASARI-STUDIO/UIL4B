@@ -7,7 +7,7 @@
 //
 // The rendered proof that the tool actually calls these — that pressing Random
 // still produces every type, and produces linear most often — is in
-// tests/user-sim/30-founder-requests-0808.spec.js.
+// tests/user-sim/30-gradient-random-nav-search.spec.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'

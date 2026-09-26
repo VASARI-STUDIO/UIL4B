@@ -123,9 +123,17 @@ test('the projects empty state still teaches, since it is now the first thing se
   // It names the two tools to start with and offers the action. That is why it
   // is the destination — a blank list would be a worse landing than the sales
   // page it replaced.
+  //
+  // On the design's workspace screen the empty card says
+  // "No projects yet", "Start with a colour and the rest of the project follows."
+  // and offers "Start a project"; the tool it names is one tap away in the
+  // "Start something" grid on the same page, the Palette Builder leading it.
   const src = read('src/pages/Projects.jsx')
   assert.match(src, /No projects yet/)
-  assert.match(src, /Create your first project/)
-  assert.ok(/to="\/create\/color"/.test(src) && /to="\/create\/font-pair"/.test(src),
-    'the empty state should still point at the tools that produce a project')
+  assert.match(src, /Start with a colour and the rest of the project follows\./)
+  assert.match(src, /Start a project/)
+  assert.match(src, /<StartSomething \/>/, 'the workspace no longer mounts the tool grid')
+  const start = read('src/components/userhome/StartSomething.jsx')
+  assert.match(start, /to=\{toolRoute\('palette'\)\}/,
+    'the empty workspace should still lead with the tool that produces a project')
 })

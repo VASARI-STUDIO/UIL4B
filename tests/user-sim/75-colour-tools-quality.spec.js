@@ -160,51 +160,31 @@ const UNDERSIZED = ([root, minimum]) => {
 // not see, the second on the sizes. (It was eight controls until 2026-09-14,
 // when the three <button> depictions became <span>s; see the note on the
 // positive control below.)
-test('the semantic-colour preview is a depiction, not eight controls that do nothing', async ({ browser }) => {
+test('the semantic-colour preview is a depiction, not controls that do nothing', async ({ browser }) => {
+  // The preview is the design's drawn "THE COLOURS AT WORK" card
+  // (D:883-907) — the design's buttons, alerts and field, drawn as spans inside an
+  // inert body. The contract is unchanged: the picture of an interface offers
+  // nothing to press and nothing to a screen reader's control list.
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'someone reading this page with a screen reader')
   await go(page, '/create/semantic-color')
   await settled(page)
 
-  // POSITIVE CONTROL: the scenes are on screen and they are the real markup,
-  // not a stand-in. Without this a page that failed to render would satisfy
-  // every "there is no operable control" assertion trivially.
-  const scenes = page.locator('.stc-scene')
-  await expect(scenes).toHaveCount(10)          // five roles x light + dark
-  await expect(scenes.first()).toBeVisible()
-  // TWO, NOT EIGHT, SINCE 2026-09-14 — and the drop is the founder's fix, not a
-  // regression. `.stc-sc-ghost`, `.stc-sc-solid` and `.stc-sc-link` were
-  // <button>s with tabIndex={-1} drawn INSIDE the specimens; they are <span>s
-  // now, because enlarging them to the 24x24 floor was impossible (they are
-  // scaled to the miniature they are drawn in) and the honest fix was to stop
-  // claiming they are controls at all. Three buttons x the light and dark copy
-  // is the six that left. What remains is the two readonly <input>s.
-  //
-  // The positive control still does its job: it proves the scenes rendered
-  // REAL markup rather than a stand-in, so the absence asserted below means
-  // something. It just counts a smaller, truer number.
-  const drawn = await page.evaluate(() => document.querySelectorAll('.stc-scene-list button, .stc-scene-list input').length)
-  expect(drawn, 'the scenes still draw real controls — that is the point of them').toBe(2)
+  // POSITIVE CONTROL: the depiction rendered, with every role in it — the
+  // brand button, success, warning, two Information rows (Information carries
+  // the retired "pending" meaning) and the error field.
+  const body = page.locator('.stc-work-body')
+  await expect(body).toBeVisible()
+  await expect(body.locator('.stc-btn--primary')).toHaveText('Save changes')
+  await expect(body.locator('.stc-alert--success')).toHaveCount(1)
+  await expect(body.locator('.stc-alert--warning')).toHaveCount(1)
+  await expect(body.locator('.stc-alert--info')).toHaveCount(2)
+  await expect(body.locator('.stc-field-input')).toHaveText('Untitled')
 
-  // THE ASSERTION: neither of those two is exposed as operable.
-  const exposed = await page.evaluate(() => {
-    const out = []
-    for (const el of document.querySelectorAll('.stc-scene-list button, .stc-scene-list input, .stc-scene-list [role=button]')) {
-      if (!el.closest('[inert]')) out.push(`${el.tagName.toLowerCase()}.${(el.className || '').toString()}`)
-    }
-    return out
-  })
-  expect(exposed, 'a control in the preview is still reachable by assistive technology').toEqual([])
-
-  // And it cannot be reached by pointer either, which is what makes the size
-  // question moot rather than merely unasserted.
-  const clickable = await page.evaluate(() => {
-    const b = document.querySelector('.stc-sc-solid')
-    const r = b.getBoundingClientRect()
-    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
-    return { hit: hit ? `${hit.tagName.toLowerCase()}.${(hit.className || '').toString().slice(0, 30)}` : null, inertAncestor: !!b.closest('[inert]') }
-  })
-  expect(clickable.inertAncestor, 'the scene stack is not inert').toBe(true)
+  // THE ASSERTION: nothing in it is a control, and the whole of it is inert.
+  const drawn = await body.evaluate((el) => el.querySelectorAll('button, input, select, a[href], [role=button]').length)
+  expect(drawn, 'a control was drawn into the depiction').toBe(0)
+  expect(await body.evaluate((el) => el.hasAttribute('inert')), 'the depiction is not inert').toBe(true)
 
   await ctx.close()
 })
@@ -222,7 +202,7 @@ for (const width of [320, 390, 430, 768, 1024, 1097, 1120, 1136, 1280, 1440, 192
     await settled(page)
 
     // POSITIVE CONTROL: the measurement examined a real number of controls.
-    const examined = await page.evaluate(() => document.querySelectorAll('main a[href], main button, main input, main select').length)
+    const examined = await page.evaluate(() => document.querySelectorAll('main a[href], main button, main input, main select, main [role=button]').length)
     expect(examined, `${width}: nothing to measure`).toBeGreaterThan(40)
 
     const small = await page.evaluate(UNDERSIZED, ['main', MIN_TARGET])
@@ -368,7 +348,7 @@ test('at the free cap the refusal stays under the field, with a way to Pro', asy
 // every width in both themes. Neither of 2.5.8's exceptions reaches an <input>
 // flanked by two adjacent controls.
 //
-// MUTATION: drop `min-height:24px` from `input.ggn-stop-hex` in
+// MUTATION: drop `min-height:24px` from `input.grd-hex` in
 // src/styles/global.css and every width below goes red.
 for (const width of [320, 390, 430, 768, 1024, 1097, 1120, 1136, 1280, 1440, 1920]) {
   test(`the gradient stop's hex field is at least 24px tall at ${width}`, async ({ browser }) => {
@@ -377,13 +357,14 @@ for (const width of [320, 390, 430, 768, 1024, 1097, 1120, 1136, 1280, 1440, 192
     await go(page, '/create/gradient')
     await settled(page)
 
-    // POSITIVE CONTROL: there are three stops on a fresh gradient and each one
-    // has its own field, so a page that rendered no stops cannot pass.
-    const fields = page.locator('input.ggn-stop-hex')
-    await expect(fields).toHaveCount(3)
+    // POSITIVE CONTROL: the rebuilt screen edits the SELECTED
+    // stop in one field under the swatches; a page that rendered no stop
+    // editor cannot pass.
+    const fields = page.locator('input.grd-hex')
+    await expect(fields).toHaveCount(1)
     await expect(fields.first()).toBeVisible()
 
-    const boxes = await page.evaluate(() => [...document.querySelectorAll('input.ggn-stop-hex')].map((el) => {
+    const boxes = await page.evaluate(() => [...document.querySelectorAll('input.grd-hex')].map((el) => {
       const r = el.getBoundingClientRect()
       return { name: el.getAttribute('aria-label'), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }
     }))
@@ -395,7 +376,7 @@ for (const width of [320, 390, 430, 768, 1024, 1097, 1120, 1136, 1280, 1440, 192
     // text in an 80.0px box at 320, and clipping it renders a plausible but
     // WRONG colour ("#7C3AED" as "#7C3AE"), which is the fault the rule's own
     // note records.
-    const clipped = await page.evaluate(() => [...document.querySelectorAll('input.ggn-stop-hex')]
+    const clipped = await page.evaluate(() => [...document.querySelectorAll('input.grd-hex')]
       .filter((el) => el.scrollWidth > el.clientWidth).map((el) => `${el.getAttribute('aria-label')} ${el.scrollWidth}>${el.clientWidth}`))
     expect(clipped, `${width}: the hex value is clipped`).toEqual([])
 

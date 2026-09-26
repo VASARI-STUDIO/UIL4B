@@ -198,6 +198,14 @@ const NOT_A_PLAN_PRICE = [
       + 'plus an invented account balance.',
   },
   {
+    file: 'src/components/spectrum/SpectrumBench.jsx',
+    context: /SURFACE AND INK|Total £48\.00|Pay now/,
+    why: 'The front door\'s Palette builder window, from the Spectrum design: '
+      + 'a "Surface and ink" preview that paints the chosen surface and primary on a '
+      + 'sample checkout ("Total £48.00", "Pay now"). Set dressing a palette is judged '
+      + 'against, in pounds, and not a tier of UIL4B.',
+  },
+  {
     file: 'src/pages/PaletteBuilder.jsx',
     context: /\.replace\(/,
     why: 'Not money at all: normaliseForFilter uses the character class /[$5]/ and '

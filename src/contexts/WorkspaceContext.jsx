@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { TOOLS } from '../data/tools'
+import { onAccountApplied } from '../utils/accountEvents'
 
 // Custom drag MIME type for dragging a tool from the sidebar onto the dashboard.
 export const TOOL_DRAG_TYPE = 'application/x-vs-tool'
@@ -58,6 +59,12 @@ export function WorkspaceProvider({ children }) {
   const [recent, setRecent] = useState(() => loadList(RECENT_KEY))
   const [pinned, setPinned] = useState(loadPinned)
   const location = useLocation()
+
+  // Pinned and recent tools follow the account.
+  useEffect(() => onAccountApplied([RECENT_KEY, PINNED_KEY], () => {
+    setRecent(loadList(RECENT_KEY))
+    setPinned(loadList(PINNED_KEY, DEFAULT_PINNED))
+  }), [])
 
   const trackVisit = useCallback((toolId) => {
     setRecent(prev => {

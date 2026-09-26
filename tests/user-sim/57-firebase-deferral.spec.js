@@ -96,16 +96,14 @@ test('the account affordance resolves, so auth still reaches the chrome', async 
   await go(page, '/')
   await expectRendered(page, 'the homepage')
 
-  // INSIDE THE MENU, because that is where the front door puts it now.
-  // SpectrumNav's bar is a wordmark, three anchors, a theme cycle, a burger and
-  // one CTA; the auth block — "Log in" / "Start for Free" when signed out,
-  // the account list when signed in — is in `.spnav-util-account` inside the
-  // full-screen menu. So the affordance is one press away rather than on the
-  // bar, and a search of the resting page finds nothing. Opening the menu is
-  // not a softening of the assertion: the block is rendered from `user`, so it
-  // still cannot show "Log in" until AuthContext has resolved to signed out,
-  // which is the whole point of this test.
-  await page.click('[aria-label="Open menu"]')
+  // THROUGH THE FRONT DOOR'S ONE WAY IN. The marketing chrome is the design
+  // exactly: a pill with no account block and a menu of four items. "Open the
+  // toolkit" enters the app with no sign-up gate, so the sign-in affordance a
+  // signed-out visitor meets is the app header's, one press from `/`. It is
+  // still rendered from `user`, so it cannot show "Log in" until AuthContext
+  // has resolved to signed out — which is the whole point of this test.
+  await page.locator('.spnav-cta').click()
+  await expect(page).toHaveURL(/\/projects$/)
 
   const signIn = page.getByRole('link', { name: /sign in|log ?in/i })
     .or(page.getByRole('button', { name: /sign in|log ?in/i }))

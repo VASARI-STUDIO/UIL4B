@@ -36,7 +36,7 @@ import {
   reauthenticateWithCredential as realReauthenticateWithCredential,
   reauthenticateWithPopup as realReauthenticateWithPopup,
 } from 'firebase/auth'
-import { fakeAuth, IS_FAKE_AUTH, authError, FIXTURE_MARKER } from './test-session.js'
+import { fakeAuth, IS_FAKE_AUTH, authError, FIXTURE_MARKER, authFailFor } from './test-session.js'
 
 // GoogleAuthProvider, EmailAuthProvider and everything else the app imports
 // come through untouched. A name explicitly exported below shadows this.
@@ -121,6 +121,8 @@ export function updateProfile(user, fields) {
 
 export function updateEmail(user, newEmail) {
   if (!isFakeUser(user)) return realUpdateEmail(user, newEmail)
+  const refused = authFailFor('updateEmail')
+  if (refused) return Promise.reject(refused)
   user.email = newEmail
   user.providerData[0].email = newEmail
   fakeAuth.notify()

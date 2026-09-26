@@ -132,22 +132,23 @@ test('a real route still gets its own canonical and stays indexable', { skip: !b
 
 // ── The routing that serves them ────────────────────────────────────────────
 
-test('the catch-all serves the 404 shell, not the homepage', async () => {
+test('nothing is rewritten to the homepage shell, and there is no catch-all', async () => {
+  // Unknown URLs used to be caught by `/((?!api/|assets/).*)` → `/404.html`,
+  // which served the right page with the wrong status (200). There is no
+  // pattern rewrite now; tests/unit/real-404.test.js walks Vercel's order.
   const rewrites = buildRewrites(await prerenderRoutes())
-  const catchAll = rewrites[rewrites.length - 1]
-  assert.equal(catchAll.destination, '/404.html',
+  assert.ok(!rewrites.some((r) => r.destination === '/index.html'),
     'unknown URLs must not be served index.html — that is the soft 404')
-  assert.match(catchAll.source, /\(\?!api\/\|assets\//, 'the API and assets must bypass it')
+  assert.ok(!rewrites.some((r) => r.source.includes('(')),
+    'a pattern rewrite is back — every unknown path would answer 200 again')
 })
 
-test('every prerendered route has its own explicit rewrite ahead of the catch-all', async () => {
+test('every prerendered route has its own explicit rewrite', async () => {
   const routes = prerenderRoutes()
   const rewrites = buildRewrites(routes)
-  const catchAllIndex = rewrites.length - 1
   for (const route of routes) {
     const i = rewrites.findIndex((r) => r.source === route)
-    assert.ok(i > -1, `${route} has no explicit rewrite, so it would fall to the 404 shell`)
-    assert.ok(i < catchAllIndex, `${route} is ordered after the catch-all`)
+    assert.ok(i > -1, `${route} has no explicit rewrite, so it would answer 404`)
     assert.equal(rewrites[i].destination, `${route}/index.html`)
   }
 })

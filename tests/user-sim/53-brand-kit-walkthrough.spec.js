@@ -23,6 +23,7 @@
 // building a system does not.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { setSeed } from './palette-helpers.js'
 
 const GUIDE_KEY = 'vs-uikit-guide'
 const SEEN_KEY = 'vs-uikit-guide-seen'
@@ -154,9 +155,9 @@ test.describe('Brand kit walkthrough', () => {
     // visible "Palette Generator" on 2026-09-14), so this asserts it is
     // ATTACHED rather than visible — it still names the board via
     // aria-labelledby, and the visible proof that the right route arrived is
-    // the seed field below.
+    // the seed chip below.
     await expect(page.getByRole('heading', { name: 'Palette Generator', exact: true })).toBeAttached()
-    await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toBeVisible()
+    await expect(page.locator('.plb-seedchip')).toBeVisible()
 
     // And the flow is actually running on it.
     await expect(rail(page)).toBeVisible()
@@ -182,9 +183,8 @@ test.describe('Brand kit walkthrough', () => {
     // styling preference: "go straight into step 1 then provide a popup". The
     // step behind has to remain usable WHILE the card is up. So: type into the
     // tool's own field with the card open and watch the tool respond.
-    const seed = page.getByRole('textbox', { name: 'Seed colour hex' })
-    await seed.fill('#3366FF')
-    await expect(seed).toHaveValue('#3366FF')
+    await setSeed(page, '#3366FF')
+    await expect(page.locator('.plb-seedchip-hex')).toHaveText('#3366FF')
     await expect(card(page)).toBeVisible()      // still there, still not in the way
     await expect(page.locator('.plb-col').first()).toBeVisible()
     await settle(card(page))
@@ -253,8 +253,7 @@ test.describe('Brand kit walkthrough', () => {
     await page.keyboard.press('Escape')
 
     // Do real work in step one, through the tool's own control.
-    await page.getByRole('textbox', { name: 'Seed colour hex' }).fill('#B5179E')
-    await page.getByRole('textbox', { name: 'Seed colour hex' }).press('Enter')
+    await setSeed(page, '#B5179E')
     await expect(rail(page)).toContainText('1 of 4 built')
 
     // Walk forward with the rail's own Next, the way the flow is meant to run.
@@ -332,6 +331,6 @@ test.describe('Brand kit walkthrough', () => {
     await expect(page.getByRole('button', { name: 'Open UI System mode' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /UI System/ })).toHaveCount(0)
     // The tool itself is still there and still works.
-    await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toBeVisible()
+    await expect(page.locator('.plb-seedchip')).toBeVisible()
   })
 })

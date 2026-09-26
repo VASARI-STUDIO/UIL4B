@@ -435,7 +435,7 @@ export default function InfoCentre() {
                         to or removed from SECTIONS cannot leave a hole in the
                         sequence. `aria-hidden`, so the button's accessible name
                         is still exactly the section title — which is what
-                        tests/user-sim/25-defect-sweep.spec.js matches the
+                        tests/user-sim/25-layout-target-sweep.spec.js matches the
                         panel's own region name against. */}
                     <span className="ic-acc-no" aria-hidden="true" />
                     <span className="ic-acc-title">{s.title}</span>

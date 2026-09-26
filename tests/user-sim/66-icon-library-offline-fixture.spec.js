@@ -6,7 +6,7 @@
 // and nothing in the suite stood between those requests and the network. After
 // a day of full-suite runs from one machine, api.iconify.design answered 429
 // and both fallbacks 403 without CORS headers (measured 2026-09-08 with curl
-// and the suite's own Origin). 25-defect-sweep's pack-label test then failed
+// and the suite's own Origin). 25-layout-target-sweep's pack-label test then failed
 // with "one pack name under every cell", every visit logged ~100 CORS findings,
 // and the gate for unrelated PRs was decided by a third party's rate limit.
 //
@@ -28,7 +28,7 @@
 //
 // MUTATIONS (each seen red before this landed):
 //   - empty the `uncategorized` list in fixtures/iconify/collection/logos.json,
-//     devicon.json and skill-icons.json → 25-defect-sweep's pack-label test
+//     devicon.json and skill-icons.json → 25-layout-target-sweep's pack-label test
 //     fails on "a mixed-pack result set must still name each cell's pack";
 //   - cut search.json to one prefix → "a search resolves against the fixture"
 //     fails on the label count;
@@ -551,17 +551,26 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
 // MUTATION: drop `lock` from groupOptions in IconLibrary.jsx — the signed-out
 // rung fails on "at least one chip carries the lock". Render the lock inline
 // (position:static) in library.css — the width comparison fails.
+// The group chips are read in whichever form the toolbar gives them. The
+// toolbar row never wraps and the icon
+// row also carries the weight segment, so at 1440 the group is its one-line
+// trigger and the chips are read from the menu it opens. `form` says which.
 async function groupChips(page) {
+  await expect(page.locator('.ig-toolbar')).toBeVisible({ timeout: 20000 })
+  await page.evaluate(() => document.fonts.ready)
+  const trigger = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
+  const form = (await trigger.count()) ? 'menu' : 'tray'
+  if (form === 'menu') await trigger.click()
   const tray = page.getByRole('group', { name: 'Filter by icon group' }).first()
   await expect(tray).toBeVisible({ timeout: 20000 })
-  await page.evaluate(() => document.fonts.ready)
-  return tray.evaluate((el) => ({
+  return tray.evaluate((el, f) => ({
+    form: f,
     width: (() => { const p = el.style.flexWrap; el.style.flexWrap = 'nowrap'; const w = el.scrollWidth; el.style.flexWrap = p; return w })(),
     chips: [...el.querySelectorAll('.lbry-filter')].map((b) => ({
       name: (b.getAttribute('aria-label') || b.textContent).replace(/\s+/g, ' ').trim(),
       badge: !!b.querySelector('.lbry-filter-lock svg') && b.querySelector('.lbry-filter-lock').getBoundingClientRect().width > 0,
     })),
-  }))
+  }), form)
 }
 
 test('the group chips mark a locked group before it is clicked, at no cost in width', async ({ browser }) => {
@@ -594,5 +603,10 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
   expect(locked(free).length, 'an account opens groups, so it sees fewer locks').toBeLessThan(locked(anon).length)
   expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
   expect(locked(pro), 'Pro sees no locks at all').toEqual([])
-  expect(Math.abs(anon.width - pro.width), `the tray is ${anon.width}px signed out and ${pro.width}px for Pro`).toBeLessThanOrEqual(1)
+  // The width half only means something for the TRAY: it is what the toolbar's
+  // fit decision measures. In the menu form the row is not being fitted.
+  expect(anon.form).toBe(pro.form)
+  if (anon.form === 'tray') {
+    expect(Math.abs(anon.width - pro.width), `the tray is ${anon.width}px signed out and ${pro.width}px for Pro`).toBeLessThanOrEqual(1)
+  }
 })

@@ -100,10 +100,13 @@ const contrast = (a, b) => {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
-test('the gradient preview pill stays legible on the brightest gradient possible', () => {
-  const rules = rulesFor('.ggn-pill').filter((r) => /background\s*:/.test(r.body))
+// The design's drawn gradient screen puts no label on the canvas. The one label that still sits over a user-chosen
+// gradient is the stop handle's live position readout, `.grd-handle-val`, so
+// the same arithmetic now guards it.
+test('the gradient handle readout stays legible on the brightest gradient possible', () => {
+  const rules = rulesFor('.grd-handle-val').filter((r) => /background\s*:/.test(r.body))
   assert.ok(rules.length > 0,
-    'no .ggn-pill rule with a background was found, so this test is guarding nothing.')
+    'no .grd-handle-val rule with a background was found, so this test is guarding nothing.')
 
   for (const { file, selector, body } of rules) {
     const ink = /(?:^|;)\s*color\s*:\s*([^;]+)/.exec(body)

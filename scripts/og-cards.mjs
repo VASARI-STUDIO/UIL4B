@@ -31,7 +31,9 @@ import { DEFAULT_CARD, SECTIONS, toolNamesFor } from './share-cards.mjs'
 // the hero now renders those strings from positioning.js by id, so scraping
 // the JSX would have captured the expression, not the sentence. Importing the
 // source is strictly better than parsing its consumer.
-import { HERO_HEADLINE, SURFACE_LINE, line } from '../src/data/positioning.js'
+import { HERO_HEADLINE } from '../src/data/positioning.js'
+// The hero's sub-line, from the module the landing renders it from.
+import { SPECTRUM_HERO_SUB } from '../src/components/spectrum/spectrumHero.js'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const out = path.join(root, 'public', 'previews')
@@ -76,7 +78,9 @@ export async function readTokens() {
     hues,
     // The accent, for the mark. The homepage card is the one card that carries
     // the logo, and it wears the brand's own blue rather than a section hue.
-    accent: pick(light[1], /--accent\s*:\s*(#[0-9a-fA-F]{3,8})/, '--accent'),
+    // --brand-mark, not --accent: the mark has its own token (see
+    // scripts/brand-icons.mjs).
+    accent: pick(light[1], /--brand-mark\s*:\s*(#[0-9a-fA-F]{3,8})/, '--brand-mark'),
     // The highlight the homepage paints behind "one system" — see .home-mark in
     // global.css. Reusing it is what ties the card to the page it links to.
     hi: pick(light[1], /--hi\s*:\s*(#[0-9a-fA-F]{3,8})/, '--hi'),
@@ -144,7 +148,7 @@ export async function readHero() {
   return {
     kicker: null,
     headline,
-    sub: line(SURFACE_LINE.homeHeroSub),
+    sub: SPECTRUM_HERO_SUB,
   }
 }
 

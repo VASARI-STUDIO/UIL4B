@@ -1,0 +1,543 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOL LAYOUT — the shared tool pattern.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Ported from the App design: the sticky tool toolbar
+   (D:612-620, D:947-1015), the `data-toolgrid` 1fr/336 grid (D:73-74), the r18
+   side card with its labelled sections (D:640-700), the chip/pill (`data-chip`)
+   and the slider rows. The design writes every rule as an inline style against
+   its own tokens (`--page`, `--card`, `--card2`, `--ink`, `--ink-rgb`,
+   `--ink-dim`, `--ink-faint`); none ship. They are mapped ONCE, below, onto the
+   app's own ramp, so a theme change moves this sheet with everything else.
+
+     design                        here
+     --page                        --bg-0
+     --card                        --card
+     --card2 (the ADD rail, the    --tl-card2: 3% ink over --bg-0 — the design's
+      adjust bar)                   card2 sits a step off the page in both themes
+     --ink                         --t0
+     rgba(--ink-rgb, a)            color-mix(in srgb, var(--t0) a%, transparent)
+     ink-dim  (.62 dark / .8 light)   --tl-dim, opaque over --bg-0 so the
+     ink-faint (.55 dark / .72 light) --tl-faint  contrast suites measure it
+
+   The accent is never a hex here: --accent / --accent-ink / --accent-hover are
+   global.css's; a change to the accent is made there, not here.
+   Focus and link ink read `--link` when the global token exists and fall back
+   to the derived --accent-text until then.
+
+   EVERY selector is scoped under `.tl`, the ToolLayout root — scope, not import
+   order, is what lets a page sheet win (Vite orders chunk CSS by the graph). */
+
+.tl {
+  --tl-page: var(--bg-0);
+  --tl-card: var(--card);
+  --tl-card2: color-mix(in srgb, var(--t0) 3%, var(--bg-0));
+  --tl-ink: var(--t0);
+  --tl-dim: color-mix(in srgb, var(--t0) 62%, var(--bg-0));
+  --tl-faint: color-mix(in srgb, var(--t0) 55%, var(--bg-0));
+  --tl-soft: color-mix(in srgb, var(--t0) 86%, var(--bg-0));
+  --tl-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --tl-line: color-mix(in srgb, var(--t0) 10%, transparent);
+  --tl-line-2: color-mix(in srgb, var(--t0) 13%, transparent);
+  --tl-line-on: color-mix(in srgb, var(--t0) 22%, transparent);
+  --tl-wash: color-mix(in srgb, var(--t0) 5%, transparent);
+  --tl-wash-2: color-mix(in srgb, var(--t0) 7%, transparent);
+  --tl-wash-on: color-mix(in srgb, var(--t0) 10%, transparent);
+  --tl-row-on: color-mix(in srgb, var(--t0) 6%, transparent);
+  --tl-link: var(--link, var(--accent-text));
+  --tl-ease: cubic-bezier(.23, 1, .32, 1);
+  --tl-pad: clamp(12px, 2vw, 18px);
+  --tl-gap: clamp(12px, 1.6vw, 18px);
+
+  /* Full bleed under the fixed nav. The margins cancel .rail-content's padding
+     (24px / --page-inline / --s-9, global.css) exactly as the palette board
+     always has, so the toolbar meets the nav with no gap and runs edge to edge. */
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--chrome-h));
+  min-height: calc(100dvh - var(--chrome-h));
+  margin: calc(-24px - var(--nav-clear) + var(--chrome-h)) calc(-1 * var(--page-inline)) calc(-1 * var(--s-9));
+  color: var(--tl-ink);
+  font-family: var(--font);
+}
+[data-theme="light"] .tl {
+  --tl-dim: color-mix(in srgb, var(--t0) 80%, var(--bg-0));
+  --tl-faint: color-mix(in srgb, var(--t0) 72%, var(--bg-0));
+}
+
+/* ── Toolbar (D:612, D:947) — ONE ROW, ALWAYS ──────────────
+   flex-wrap is off at every width. ToolToolbar measures the row and moves
+   what does not fit into the overflow; nothing here is allowed to wrap. */
+:is(.tl, .tl-sheet-layer) .tl-toolbar {
+  position: sticky;
+  top: var(--chrome-h);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  padding: 9px var(--tl-pad);
+  background: color-mix(in srgb, var(--bg-0) 82%, transparent);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--tl-hair);
+}
+/* The measuring pass lays every item out inline; clip it so that one
+   pre-paint frame can never scroll the page sideways. */
+:is(.tl, .tl-sheet-layer) .tl-toolbar.is-measuring { overflow: clip; }
+:is(.tl, .tl-sheet-layer) .tl-fixed,
+:is(.tl, .tl-sheet-layer) .tl-item,
+:is(.tl, .tl-sheet-layer) .tl-more,
+:is(.tl, .tl-sheet-layer) .tl-primary { display: flex; align-items: center; flex: 0 0 auto; min-width: 0; }
+:is(.tl, .tl-sheet-layer) .tl-more { position: relative; }
+:is(.tl, .tl-sheet-layer) .tl-item--end { margin-left: auto; }
+:is(.tl, .tl-sheet-layer) .tl-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  color: var(--tl-ink);
+}
+/* From 360px the tool's name never truncates: the row's actions move into the
+   overflow first (ToolToolbar measures the name at its full width). */
+@media (min-width: 360px) {
+  :is(.tl, .tl-sheet-layer) .tl-title { flex-shrink: 0; }
+}
+:is(.tl, .tl-sheet-layer) .tl-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tl-dim);
+  white-space: nowrap;
+}
+
+/* ── Overflow: a popover from 768px (one surface) ──────────── */
+:is(.tl, .tl-sheet-layer) .tl-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: max-content;
+  min-width: 232px;
+  max-width: min(360px, calc(100vw - 24px));
+  max-height: var(--pop-max-h, min(70vh, 560px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--tl-line-2);
+  background: var(--tl-card);
+  box-shadow: 0 18px 48px -12px rgba(0, 0, 0, .45);
+}
+:is(.tl, .tl-sheet-layer) .tl-pop[data-pop-side="top"] { top: auto; bottom: calc(100% + 6px); }
+
+/* ── Overflow: a bottom sheet below 768px ────────────────────────────────
+   Portalled to <body>: the toolbar's backdrop-filter would otherwise become
+   the containing block of a fixed sheet, so the sheet carries the tokens
+   itself. It sits above the fixed app header (z 120). */
+.tl-sheet-layer {
+  --tl-card: var(--card);
+  --tl-ink: var(--t0);
+  --tl-dim: color-mix(in srgb, var(--t0) 62%, var(--card));
+  --tl-faint: color-mix(in srgb, var(--t0) 55%, var(--card));
+  --tl-soft: color-mix(in srgb, var(--t0) 86%, var(--card));
+  --tl-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --tl-line: color-mix(in srgb, var(--t0) 10%, transparent);
+  --tl-line-2: color-mix(in srgb, var(--t0) 13%, transparent);
+  --tl-line-on: color-mix(in srgb, var(--t0) 22%, transparent);
+  --tl-wash: color-mix(in srgb, var(--t0) 5%, transparent);
+  --tl-wash-2: color-mix(in srgb, var(--t0) 7%, transparent);
+  --tl-wash-on: color-mix(in srgb, var(--t0) 10%, transparent);
+  --tl-row-on: color-mix(in srgb, var(--t0) 6%, transparent);
+  --tl-link: var(--link, var(--accent-text));
+  --tl-ease: cubic-bezier(.23, 1, .32, 1);
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  font-family: var(--font);
+  color: var(--t0);
+}
+[data-theme="light"] .tl-sheet-layer {
+  --tl-dim: color-mix(in srgb, var(--t0) 80%, var(--card));
+  --tl-faint: color-mix(in srgb, var(--t0) 72%, var(--card));
+}
+.tl-sheet-layer .tl-sheet-scrim { position: absolute; inset: 0; background: var(--scrim, rgba(3, 3, 4, .6)); }
+.tl-sheet-layer .tl-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: min(82dvh, 640px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px 22px 0 0;
+  border-top: 1px solid var(--tl-line-2);
+  background: var(--card);
+  animation: tl-sheet-up var(--dur-3, 280ms) var(--ease-entrance, ease-out);
+}
+.tl-sheet-layer .tl-sheet-grab { display: block; width: 36px; height: 4px; margin: 2px auto 8px; border-radius: 999px; background: color-mix(in srgb, var(--t0) 22%, transparent); }
+.tl-sheet-layer .tl-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px 6px; }
+.tl-sheet-layer .tl-sheet-title { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--tl-faint); }
+.tl-sheet-layer .tl-sheet-x {
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+  border: 0; border-radius: var(--btn-radius); background: transparent; color: var(--tl-ink); cursor: pointer;
+}
+@keyframes tl-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+:where(html[data-reduced-motion="true"]) .tl-sheet-layer .tl-sheet { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .tl-sheet-layer .tl-sheet { animation: none !important; }
+}
+
+/* Rows shared by the popover and the sheet. */
+:is(.tl, .tl-sheet-layer) .tl-menu-list { display: grid; gap: 2px; }
+:is(.tl, .tl-sheet-layer) .tl-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--tl-ink);
+  font-family: var(--font);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+:is(.tl, .tl-sheet-layer) .tl-menu-row .tl-ico { flex: 0 0 auto; color: var(--tl-dim); }
+:is(.tl, .tl-sheet-layer) .tl-menu-row-label { flex: 1; min-width: 0; }
+:is(.tl, .tl-sheet-layer) .tl-menu-row-hint { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
+:is(.tl, .tl-sheet-layer) .tl-menu-row[aria-pressed="true"] { background: var(--tl-row-on); }
+:is(.tl, .tl-sheet-layer) .tl-menu-row[disabled],
+:is(.tl, .tl-sheet-layer) .tl-menu-row[aria-disabled="true"] { color: color-mix(in srgb, var(--t0) 40%, transparent); cursor: not-allowed; }
+:is(.tl, .tl-sheet-layer) .tl-menu-custom { padding: 6px 4px; }
+:is(.tl, .tl-sheet-layer) .tl-menu-custom + .tl-menu-custom,
+:is(.tl, .tl-sheet-layer) .tl-menu-row + .tl-menu-custom,
+:is(.tl, .tl-sheet-layer) .tl-menu-custom + .tl-menu-row { border-top: 1px solid var(--tl-hair); margin-top: 4px; padding-top: 10px; }
+/* A row under a divider squares its top corners, so the hairline runs
+   straight to both edges instead of bending into the row's radius. */
+:is(.tl, .tl-sheet-layer) .tl-menu-custom + .tl-menu-row { border-top-left-radius: 0; border-top-right-radius: 0; }
+:is(.tl, .tl-sheet-layer) .tl-menu-custom .tl-select { width: 100%; }
+.tl-sheet-layer .tl-menu-row { min-height: 48px; font-size: 15px; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.tl, .tl-sheet-layer) .tl-menu-row:hover:not([disabled]) { background: var(--tl-wash-2); }
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--tl-line);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  color: var(--tl-ink);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .14s var(--tl-ease), background .16s ease, color .16s ease, border-color .16s ease;
+}
+:is(.tl, .tl-sheet-layer) .tl-btn:hover { text-decoration: none; color: var(--tl-ink); }
+:is(.tl, .tl-sheet-layer) .tl-btn:active { transform: scale(.97); }
+:is(.tl, .tl-sheet-layer) .tl-btn[disabled],
+:is(.tl, .tl-sheet-layer) .tl-btn[aria-disabled="true"] { cursor: not-allowed; color: color-mix(in srgb, var(--t0) 34%, var(--bg-0)); }
+:is(.tl, .tl-sheet-layer) .tl-btn[disabled]:active { transform: none; }
+:is(.tl, .tl-sheet-layer) .tl-btn--square { width: 36px; padding: 0; }
+/* The one primary. Same token contract as global .btn-accent (rest
+   --accent-mid, hover --accent-text, press --accent-bright, label
+   --accent-ink), so this moves with it when global.css re-points the accent — and passes AA in both themes today, which raw
+   --accent (#0F6FFF, 4.1:1 under #F4F7FF in light) does not. */
+:is(.tl, .tl-sheet-layer) .tl-btn--accent {
+  padding: 0 15px;
+  border: 0;
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-weight: 540;
+}
+:is(.tl, .tl-sheet-layer) .tl-btn--accent:hover { background: var(--accent-fill-hover); color: var(--accent-ink); }
+:is(.tl, .tl-sheet-layer) .tl-btn--accent:active { background: var(--accent-fill-hover); }
+:is(.tl, .tl-sheet-layer) .tl-btn--dashed {
+  justify-content: flex-start;
+  height: auto;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px dashed color-mix(in srgb, var(--t0) 20%, transparent);
+  color: var(--tl-soft);
+}
+:is(.tl, .tl-sheet-layer) .tl-btn-ico { flex: 0 0 auto; }
+:is(.tl, .tl-sheet-layer) .tl-kbd {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--t0) 8%, transparent);
+  color: var(--tl-dim);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.tl, .tl-sheet-layer) .tl-btn--quiet:hover,
+  :is(.tl, .tl-sheet-layer) .tl-btn--square:hover,
+  :is(.tl, .tl-sheet-layer) .tl-btn--dashed:hover { background: var(--tl-wash-2); }
+  :is(.tl, .tl-sheet-layer) .tl-btn[disabled]:hover { background: transparent; }
+}
+
+/* ── The drawn select (D:968-986) ────────────────────────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 32px 0 13px;
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease;
+}
+:is(.tl, .tl-sheet-layer) .tl-select:focus-within { border-color: color-mix(in srgb, var(--t0) 30%, transparent); }
+:is(.tl, .tl-sheet-layer) .tl-select:has(select:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+:is(.tl, .tl-sheet-layer) .tl-select-k { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-select-v { font-size: 13.5px; font-weight: 540; color: var(--tl-ink); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-select-caret { position: absolute; right: 11px; color: var(--tl-faint); }
+:is(.tl, .tl-sheet-layer) .tl-select select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+  border: 0;
+  appearance: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.tl, .tl-sheet-layer) .tl-select:hover { background: var(--tl-wash-2); }
+}
+
+/* ── Tray + divider (D:990-995) ──────────────────────────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-tray {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--tl-wash);
+  border: 1px solid color-mix(in srgb, var(--t0) 7%, transparent);
+}
+:is(.tl, .tl-sheet-layer) .tl-tray .tl-btn {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--btn-radius);
+  color: color-mix(in srgb, var(--t0) 82%, var(--bg-0));
+}
+:is(.tl, .tl-sheet-layer) .tl-tray .tl-btn[disabled] { color: color-mix(in srgb, var(--t0) 34%, var(--bg-0)); }
+:is(.tl, .tl-sheet-layer) .tl-divider { width: 1px; height: 24px; background: var(--tl-line); flex: 0 0 auto; }
+
+/* ── Body + the 1fr/336 grid (D:73-74, D:622-624) ───────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-body { flex: 1; min-height: 0; padding: clamp(12px, 2vw, 20px); }
+:is(.tl, .tl-sheet-layer) .tl-body--bleed { padding: 0; display: flex; flex-direction: column; }
+:is(.tl, .tl-sheet-layer) .tl-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 336px;
+  gap: var(--tl-gap);
+  align-items: start;
+}
+:is(.tl, .tl-sheet-layer) .tl-main { display: grid; gap: 12px; min-width: 0; }
+
+/* ── Side card + sections (D:640-700) ────────────────────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-panel {
+  min-width: 0;
+  border-radius: 18px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+}
+:is(.tl, .tl-sheet-layer) .tl-sec {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--tl-hair);
+}
+:is(.tl, .tl-sheet-layer) .tl-sec:last-child { border-bottom: 0; }
+:is(.tl, .tl-sheet-layer) .tl-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 12px; }
+:is(.tl, .tl-sheet-layer) .tl-sec-label {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tl-faint);
+}
+
+/* ── Pills (data-chip) ───────────────────────────────────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+:is(.tl, .tl-sheet-layer) .tl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid var(--tl-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tl-dim);
+  font-family: var(--font);
+  font-size: 12.5px;
+  line-height: 1.2;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .14s var(--tl-ease), background .16s ease, color .16s ease, border-color .16s ease;
+}
+:is(.tl, .tl-sheet-layer) .tl-pill:active { transform: scale(.97); }
+:is(.tl, .tl-sheet-layer) .tl-pill.is-on { border-color: var(--tl-line-on); background: var(--tl-wash-on); color: var(--tl-ink); }
+:is(.tl, .tl-sheet-layer) .tl-pill--mono { padding: 7px 12px; font-family: var(--mono); font-size: 10.5px; }
+:is(.tl, .tl-sheet-layer) .tl-pill[disabled] { cursor: not-allowed; opacity: .5; }
+:is(.tl, .tl-sheet-layer) .tl-pills--block { flex-wrap: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-pills--block .tl-pill { flex: 1; justify-content: center; padding: 9px 12px; border-radius: var(--btn-radius); }
+
+/* ── Slider rows ─────────────────────────────────────────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-slider { display: flex; align-items: center; gap: 12px; min-width: 0; }
+:is(.tl, .tl-sheet-layer) .tl-slider-k { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-k { width: 56px; flex: 0 0 auto; }
+:is(.tl, .tl-sheet-layer) .tl-slider-v { font-family: var(--mono); font-size: 11px; color: var(--tl-ink); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-v { width: 42px; text-align: right; flex: 0 0 auto; }
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  /* The drawn track is 6px; the CONTROL is 24px tall (WCAG 2.5.8), with the
+     track painted on the runnable-track pseudo so the two can differ. */
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tl-track, color-mix(in srgb, var(--t0) 12%, transparent));
+}
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tl-track, color-mix(in srgb, var(--t0) 12%, transparent));
+}
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -4.5px;
+  border-radius: 999px;
+  background: #FAFAF8;
+  border: 2px solid var(--bg-0);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, .6);
+}
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: #FAFAF8;
+  border: 2px solid var(--bg-0);
+}
+
+/* ── Code well ───────────────────────────────────────────────────────────── */
+:is(.tl, .tl-sheet-layer) .tl-code {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--tl-soft);
+  white-space: pre;
+}
+:is(.tl, .tl-sheet-layer) .tl-code code { font: inherit; color: inherit; background: none; padding: 0; }
+:is(.tl, .tl-sheet-layer) .tl-code--page { background: var(--bg-0); border-color: var(--tl-hair); font-size: 12px; line-height: 1.75; }
+
+/* ── Focus: never removed, drawn in the link ink ─────────────────────────── */
+:is(.tl, .tl-sheet-layer) :is(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--tl-link);
+  outline-offset: 2px;
+}
+:is(.tl, .tl-sheet-layer) .tl-select select:focus-visible { outline: 0; }
+
+/* ── Breakpoints (D:65-76). The design's tablet rule stacked the toolbar
+   into rows; this layout overrides it — the row never wraps, the overflow
+   takes what does not fit. ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  :is(.tl, .tl-sheet-layer) .tl-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .tl .tl-toolbar .tl-btn-label--collapse { display: none; }
+}
+/* Below the 390 phone the row tightens its gaps and gutters, so a whole tool
+   name and a labelled primary still share one line. At 360, with every action
+   already in the overflow, back + name + More + primary are all that is left;
+   a 6px gap left them under 3px from the screen edge, which text that measures
+   slightly wider on another platform used up. 4px buys back 6px. */
+@media (max-width: 380px) {
+  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: 8px; }
+}
+
+/* Coarse pointers: every control reaches the 44px floor the touch specs hold
+   (57-create-tool-target-size, 99-coarse-targets-44). The design draws 36px
+   for a mouse; on a finger the same control grows, nothing else moves. */
+@media (pointer: coarse) {
+  :is(.tl, .tl-sheet-layer) .tl-btn,
+  :is(.tl, .tl-sheet-layer) .tl-select { height: 44px; min-height: 44px; }
+  :is(.tl, .tl-sheet-layer) .tl-btn--square { width: 44px; }
+  :is(.tl, .tl-sheet-layer) .tl-tray .tl-btn { width: 44px; height: 44px; min-height: 44px; }
+  :is(.tl, .tl-sheet-layer) .tl-pill { min-height: 44px; }
+  :is(.tl, .tl-sheet-layer) .tl-slider input[type="range"] { height: 44px; }
+}
+
+/* Reduced motion, in both spellings the app uses: the Settings choice on
+   html[data-reduced-motion] and the OS preference, which an explicit in-app
+   "false" overrides. The press scale is the only movement here. */
+:where(html[data-reduced-motion="true"]) :is(.tl, .tl-sheet-layer) .tl-btn,
+:where(html[data-reduced-motion="true"]) :is(.tl, .tl-sheet-layer) .tl-pill { transition: none !important; }
+:where(html[data-reduced-motion="true"]) :is(.tl, .tl-sheet-layer) .tl-btn:active,
+:where(html[data-reduced-motion="true"]) :is(.tl, .tl-sheet-layer) .tl-pill:active { transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) :is(.tl, .tl-sheet-layer) .tl-btn,
+  :where(html:not([data-reduced-motion="false"])) :is(.tl, .tl-sheet-layer) .tl-pill { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) :is(.tl, .tl-sheet-layer) .tl-btn:active,
+  :where(html:not([data-reduced-motion="false"])) :is(.tl, .tl-sheet-layer) .tl-pill:active { transform: none !important; }
+}
+
+/* Forced colours: the pressed pill is carried by a wash alone, which Windows
+   High Contrast flattens — give it a border the OS must paint. */
+@media (forced-colors: active) {
+  :is(.tl, .tl-sheet-layer) .tl-pill.is-on { border: 2px solid Highlight; }
+}

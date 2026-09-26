@@ -20,7 +20,7 @@
    is a 24px fill carrying a glyph — `--accent-ink` on `--accent-mid`, the
    same pair as the page's accent buttons. */
 .lib-surface.pgl-page .pgal-card.is-selected .pgal-stripes{outline-color:var(--accent)}
-.lib-surface.pgl-page .pgal-tick{background:var(--accent-mid);color:var(--accent-ink)}
+.lib-surface.pgl-page .pgal-tick{background:var(--accent-fill);color:var(--accent-ink)}
 .lib-surface.pgl-page .pgal-use.is-selected svg{stroke:var(--accent)}
 
 /* "Open" and the compare glyph: hover is ink (a hover is not a claim); the
@@ -31,19 +31,18 @@
 .lib-surface.pgl-page .pgal-use--pro{color:var(--accent-mid)}
 .lib-surface.pgl-page .pgal-use:focus-visible,
 .lib-surface.pgl-page .pgal-cmp:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.lib-surface.pgl-page .pgal-cmp{border-radius:var(--radius-xs)}
+.lib-surface.pgl-page .pgal-cmp{border-radius:var(--btn-radius)}
 .lib-surface.pgl-page .pgal-cmp:hover{color:var(--t0)}
 
 /* The controls on the swatch: an action is a 10px rectangle, a hex readout a
    6px value chip — neither toggles, so neither is a pill. */
-.lib-surface.pgl-page .pgal-act{border-radius:var(--radius-s)}
+.lib-surface.pgl-page .pgal-act{border-radius:var(--btn-radius)}
 .lib-surface.pgl-page .pgal-hex{border-radius:var(--radius-xs)}
 .lib-surface.pgl-page .pgal-like{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(10,10,14,.56)}
 .lib-surface.pgl-page .pgal-like:hover{background:rgba(10,10,14,.72)}
 
 /* The "Create a palette" ink button in the toolbar. Its hover was a jump to
    `--brand` blue; the design's ink CTA deepens toward the page instead. */
-.lib-surface.pgl-page .pgl-build-link{border-radius:var(--radius)}
 /* The inverse-ink primary (--t0 fill, --bg-0 label) in BOTH themes: it was a
    hard-coded #111113 that vanished on the dark card (1.01:1). Hover steps to
    --t1 under the same label, as .btn-inverse does: 6.99:1 light, 10.86:1 dark.
@@ -67,4 +66,45 @@
   /* Below 600px the actions drop their labels to a glyph (global.css), which
      left them 29px wide. */
   .lib-surface.pgl-page .pgal-act{min-width:44px;justify-content:center}
+}
+
+
+/* ══ The app file's Palette Library, value for value ═══════════════════════
+   Source: UIL4B App.dc.html, the palettes screen (lines 219–282). */
+
+/* The pill toolbar and its "Create a palette" CTA live in deferred/library.css,
+   shared with the Gradient Library, which the app file does not draw and so
+   takes its sibling colour library's toolbar. */
+
+/* ── The grid and the card (lines 257–278) ──────────────────────────────────
+   auto-fill at a 320px floor, a clamp(14px,2vw,22px) gap, stripes
+   clamp(200px,34vw,260px) flush to the card top, and a foot of the name at
+   16/540, the meta at 12.5 dim, then the hexes as 10.5px mono chips. */
+.lib-surface.pgl-page .pgal-grid{
+  grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));
+  gap:clamp(14px,2vw,22px);
+}
+.lib-surface.pgl-page .pgal-stripes,
+.lib-surface.pgl-page .lockt-stripes{height:clamp(200px,34vw,260px);border:0}
+.lib-surface.pgl-page .pgal-card:hover .pgal-stripes{transform:none;box-shadow:none}
+.lib-surface.pgl-page .lbry-card-foot{align-items:baseline}
+.lib-surface.pgl-page .lbry-card .lbry-card-id{display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
+.lib-surface.pgl-page .lbry-card-meta{font-size:12.5px;color:var(--t2);white-space:nowrap}
+.lib-surface.pgl-page .lbry-card-extra{flex:1 1 100%;margin-top:13px}
+.lib-surface.pgl-page .pgal-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lib-surface.pgl-page .pgal-chip{
+  padding:5px 9px;border-radius:8px;
+  background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:color-mix(in srgb,var(--t0) 78%,transparent);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;
+}
+
+/* On a phone the CTA keeps its circled arrow and gives its words to the
+   search field, so it stays on the one toolbar row instead of stepping into
+   the Filters sheet. The words stay its accessible name. */
+@media(max-width:640px){
+  .lib-surface.pgl-page .pgl-build-link{width:44px;padding:0;justify-content:center;gap:0}
+  .lib-surface.pgl-page .pgl-build-label{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+  }
 }

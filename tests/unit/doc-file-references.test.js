@@ -300,15 +300,13 @@ test('the scan actually reaches the documents — positive control', () => {
   assert.ok(docs.length >= 1, `only ${docs.length} documents scanned; the tree holds more`)
 
   const rows = referencedPaths()
-  // README.md alone names some twenty repo-rooted paths in backticks. Ten is
-  // the floor: an extractor that has stopped seeing prose returns none.
+  // README.md names more than ten repo-rooted paths in backticks. Ten is the
+  // floor: an extractor that has stopped seeing prose returns none.
   assert.ok(rows.length >= 10,
     `only ${rows.length} path references found; the extractor has stopped seeing them`)
-  // A path README.md certainly names. It is itself local-only since
-  // 2026-09-16, which is the point: this asserts the EXTRACTOR still reads
-  // prose, and prose is present in every checkout whether the file is or not.
-  assert.ok(rows.some((r) => r.ref === 'src/data/pipeline.js'),
-    'no document was seen naming `src/data/pipeline.js`, which README.md does')
+  // A path README.md certainly names, so the extractor is proven to read prose.
+  assert.ok(rows.some((r) => r.ref === 'scripts/prerender.mjs'),
+    'no document was seen naming `scripts/prerender.mjs`, which README.md does')
 })
 
 // The ignore filter is the one thing standing between this file and scanning

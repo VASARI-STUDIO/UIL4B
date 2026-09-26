@@ -1,225 +1,255 @@
-import { useEffect, useRef, useCallback } from 'react'
-// URGENT access, not patient: every code path below is already behind a
-// truthy `uid`, which only exists once auth has resolved to a signed-in user.
-// By then the deferred chunk is either loaded or in flight, so this awaits an
-// already-settled promise in the common case — and if it is the first Firestore
-// touch of the session, the person whose data is syncing is exactly who should
-// open the gate rather than wait behind it. See src/utils/firebaseAccess.js.
+import { useEffect, useRef } from 'react'
+// URGENT access, not patient: every Firestore call below is behind a truthy
+// `uid`, which only exists once auth has resolved to a signed-in user. See
+// src/utils/firebaseAccess.js.
 import { loadFirestore } from '../utils/firebaseAccess'
-import { classifyError, syncFailureMessage, shouldApplyRemote } from '../utils/projectSync'
+import { classifyError, syncFailureMessage, payloadBytes, DOC_BYTE_BUDGET } from '../utils/projectSync'
 import { reportSyncFailure, reportSyncOk } from '../utils/syncStatus'
-
-const SYNC_KEYS = [
-  'vs-current-design',
-  'vs-prompts',
-  'vs-pinned-tools',
-  'vs-recent-tools',
-  'vs-t',
-  'vs-lang',
-  'vs-appearance',
-]
-
-const DEBOUNCE_MS = 2000
+import {
+  SYNC_DOCS, ACCOUNT_KEY_NAMES, LEGACY_STAMP_KEY, keySpec,
+  readMeta, writeMeta, readLocal, detectLocalChanges, pendingKeys,
+  reconcile, buildDoc, docsForKeys, applyToStorage, releaseCache, clearMirrors,
+  sameValue,
+} from '../utils/accountSync'
+import { announceApplied, RESET_EVENT } from '../utils/accountEvents'
 
 /* ═════════════════════════════════════════════════════════════════════════════
-   WHY THIS HOOK KEEPS A CLOCK
-   ═════════════════════════════════════════════════════════════════════════════
-   `firestore-sync-last-writer-wins` (2026-09-06 review). applyRemoteData used to
-   write every synced key straight into localStorage without ever reading
-   `remote._updatedAt`, while pushToFirestore wrote that field on every push. The
-   sequence the review read off the code, and it loses an edit at both ends:
+   ACCOUNT-BOUND DATA — the wiring. The rules are in src/utils/accountSync.js;
+   read its header first. This file decides WHEN: when to look for local
+   changes, when to read the account, when to write it, and what the screen is
+   told.
 
-     1. Device B edits vs-current-design. Its 2 s debounce starts.
-     2. Inside that window, device A's older push arrives as a snapshot. B is
-        not suppressed — suppressRef only covers B's OWN push — so A's data
-        overwrites B's localStorage.
-     3. B's debounce fires. getLocalData() reads the value A just wrote and
-        pushes A's data back up as if it were B's.
+   How it works:
 
-   B's edit is now gone from the device AND from the account. Nothing anywhere
-   noticed.
-
-   THE FIX IS A LOCAL CLOCK, not a bigger suppression window. `localStampRef` is
-   the moment this device last had a change of its own, and it is set the instant
-   the change is announced — not when the debounce fires — because step 2 happens
-   inside the debounce and a stamp written at push time would still be behind A's.
-   A remote snapshot older than that stamp is REFUSED and said so; the newer side
-   is always the one kept.
-
-   WHAT THE USER SEES ON A REFUSAL: nothing, and that is correct. A refusal means
-   the newer copy — theirs, on this screen — was kept and the older one discarded.
-   There is no loss to report and no action to offer. It is logged, and the
-   `vs-sync-refused` event carries both timestamps for anyone debugging it. The
-   conflicts a user IS told about are the ones where the screen changed under
-   them, and those are projects, reported by ProjectContext through the same
-   utils/syncStatus store this hook reports its failures into.
+   · IT LOOKS INSTEAD OF WAITING TO BE TOLD. A one-second look at the account
+     keys' stored strings, plus one on tab hide and on the cross-tab `storage`
+     event, so a same-tab change reaches the account without every writer
+     having to announce it.
+   · THE LOOK RUNS SIGNED OUT TOO, so a change made signed out carries the time
+     it was made, and the next sign-in can weigh it honestly.
+   · SIGN-IN READS BOTH DOCUMENTS, THEN LISTENS. The first read decides BIND /
+     SYNC / SWITCH (the cache's owner against the signed-in uid) and migrates
+     signed-out work up; later snapshots are per-key newer-wins.
+   · SIGN-OUT RELEASES THE CACHE — unless something has not reached the account
+     yet, in which case nothing is deleted (it cannot be sent after sign-out).
+   · Silent success is worse than a visible failure. Every read and write reports into utils/syncStatus.
    ═════════════════════════════════════════════════════════════════════════════ */
 
-/** Where this device records the moment it last changed something itself. */
-const STAMP_KEY = 'vs-sync-updatedAt'
-
+const LOOK_MS = 1000
+const PUSH_DEBOUNCE_MS = 1200
 /** The channel this hook reports into. See src/utils/syncStatus.js. */
 const SYNC_CHANNEL = 'preferences'
 
-function readStamp() {
-  try {
-    const n = Number(localStorage.getItem(STAMP_KEY))
-    return Number.isFinite(n) ? n : 0
-  } catch { return 0 }
+function storage() {
+  try { return typeof localStorage !== 'undefined' ? localStorage : null } catch { return null }
 }
 
-function writeStamp(value) {
-  try { localStorage.setItem(STAMP_KEY, String(value)) } catch { /* quota */ }
+// The one live pusher, so a sign-out button can send what is pending BEFORE it
+// signs out (after, the rules refuse the write). Module scope because the hook
+// is mounted once, in App.
+let activeFlush = null
+
+/**
+ * Send every pending account change now. Resolves when the write settles, or
+ * immediately when nobody is signed in. Never rejects: a failure is reported
+ * through syncStatus like every other.
+ *
+ * Call it before `logout()` and before switching accounts: Settings and the
+ * header's account switcher and sign-out rows do.
+ */
+export function flushAccountSync() {
+  return activeFlush ? activeFlush().catch(() => {}) : Promise.resolve()
 }
 
-function getLocalData() {
-  const data = {}
-  SYNC_KEYS.forEach(key => {
-    const raw = localStorage.getItem(key)
-    if (raw) {
-      try { data[key] = JSON.parse(raw) } catch { data[key] = raw }
-    }
-  })
-  return data
+/** Kept for any caller of the old API: a local change, announced. */
+export function notifyLocalChange() {
+  try { window.dispatchEvent(new CustomEvent('vs-local-change')) } catch { /* nothing listening */ }
+}
+
+function migrateLegacyClock(ls) {
+  // The old single device clock described no owner and no key, so there is
+  // nothing in it to carry over: this device binds on its next sign-in, which
+  // takes the account's settings and migrates up only what the account lacks.
+  try { ls?.removeItem(LEGACY_STAMP_KEY) } catch { /* nothing to remove */ }
 }
 
 export function useFirestoreSync(uid) {
-  const timerRef = useRef(null)
-  const unsubRef = useRef(null)
-  const suppressRef = useRef(false)
-  const localStampRef = useRef(0)
+  const uidRef = useRef(uid)
+  const prevUidRef = useRef(null)
+  const pushTimerRef = useRef(null)
+  const pushRef = useRef(null)
+  const pullRef = useRef(null)
 
-  const pushToFirestore = useCallback(async () => {
-    if (!uid) return
-    const data = getLocalData()
-    // The stamp that goes UP is the moment of the local change, not the moment
-    // of the push. Stamping at push time would put this device's edit two
-    // seconds into the future of itself and let a racing device's later pull
-    // draw the wrong conclusion.
-    data._updatedAt = localStampRef.current || Date.now()
-    try {
-      const fs = await loadFirestore()
-      await fs.setDoc(fs.doc(fs.db, 'users', uid, 'sync', 'data'), data, { merge: true })
-      writeStamp(data._updatedAt)
-      reportSyncOk(SYNC_CHANNEL)
-    } catch (error) {
-      // WAS `catch {}`. A permission-denied on the sync document was
-      // indistinguishable from an empty one, which is exactly how a settings
-      // sync can be dead for weeks with nobody able to tell.
-      reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)))
-    }
-  }, [uid])
+  useEffect(() => { uidRef.current = uid }, [uid])
 
-  const applyRemoteData = useCallback((remote) => {
-    if (!remote) return false
-    const verdict = shouldApplyRemote(remote._updatedAt, localStampRef.current)
-    if (!verdict.apply) {
-      // THE REFUSAL, LOGGED. The review's instruction was "compare _updatedAt
-      // before applying, keep the newer side, and log the refusal" — a silent
-      // refusal is a smaller bug than a silent overwrite but it is the same
-      // shape, and this one has to be debuggable from a user's console.
-      console.warn('[sync] refused an older remote snapshot', {
-        remote: Number(remote._updatedAt) || 0,
-        local: localStampRef.current,
-      })
-      try {
-        window.dispatchEvent(new CustomEvent('vs-sync-refused', {
-          detail: { remote: Number(remote._updatedAt) || 0, local: localStampRef.current },
-        }))
-      } catch { /* a page without CustomEvent is not a page we can help */ }
-      return false
-    }
-    SYNC_KEYS.forEach(key => {
-      if (remote[key] !== undefined) {
-        const val = typeof remote[key] === 'string' ? remote[key] : JSON.stringify(remote[key])
-        localStorage.setItem(key, val)
+  // ── THE LOOK. Always on, signed in or out. ─────────────────────────────────
+  useEffect(() => {
+    const ls = storage()
+    if (!ls) return undefined
+    migrateLegacyClock(ls)
+
+    const look = () => {
+      const meta = readMeta(ls)
+      const changed = detectLocalChanges(ls, meta)
+      if (!changed.length) return
+      writeMeta(ls, meta)
+      if (uidRef.current) {
+        if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
+        pushTimerRef.current = setTimeout(() => { pushRef.current?.() }, PUSH_DEBOUNCE_MS)
       }
-    })
-    const applied = Number(remote._updatedAt) || 0
-    if (applied > localStampRef.current) {
-      localStampRef.current = applied
-      writeStamp(applied)
     }
-    window.dispatchEvent(new Event('vs-sync-applied'))
-    return true
+    look()
+    const timer = setInterval(look, LOOK_MS)
+    const onStorage = (e) => { if (!e.key || ACCOUNT_KEY_NAMES.includes(e.key)) look() }
+    const onHide = () => {
+      look()
+      // A tab being put away is the last chance to send what is pending.
+      if (document.visibilityState === 'hidden' && uidRef.current) pushRef.current?.()
+    }
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('vs-local-change', look)
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', onHide)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('vs-local-change', look)
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', onHide)
+    }
   }, [])
 
-  const pullFromFirestore = useCallback(async () => {
-    if (!uid) return
-    try {
-      const fs = await loadFirestore()
-      const snap = await fs.getDoc(fs.doc(fs.db, 'users', uid, 'sync', 'data'))
-      if (!snap.exists()) { reportSyncOk(SYNC_CHANNEL); return }
-      applyRemoteData(snap.data())
-      reportSyncOk(SYNC_CHANNEL)
-    } catch (error) {
-      reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)))
-    }
-  }, [uid, applyRemoteData])
-
+  // ── THE ACCOUNT. Per signed-in uid. ────────────────────────────────────────
   useEffect(() => {
-    if (!uid) return
+    const ls = storage()
+    const prev = prevUidRef.current
+    prevUidRef.current = uid
 
-    localStampRef.current = readStamp()
-    pullFromFirestore()
+    if (!uid) {
+      activeFlush = null
+      // Only a sign-out SEEN in this session releases the cache. A page that
+      // loads signed out passes through here with no previous uid and touches
+      // nothing.
+      if (prev && ls) {
+        const meta = readMeta(ls)
+        const out = releaseCache(ls, meta)
+        writeMeta(ls, meta)
+        if (out.released) announceApplied(out.keys)
+        else console.warn('[sync] kept this device\'s copy at sign-out: changes had not reached the account', pendingKeys(meta))
+      }
+      return undefined
+    }
+    if (!ls) return undefined
 
-    // The subscribe is now asynchronous, so the cleanup below may run before it
-    // lands. `cancelled` is what stops a listener being attached to a uid the
-    // component has already moved off — without it, signing out and back in as
-    // someone else would leave the previous account's document streaming into
-    // this browser's localStorage.
     let cancelled = false
-    loadFirestore().then((fs) => {
-      if (cancelled) return
-      unsubRef.current = fs.onSnapshot(
-        fs.doc(fs.db, 'users', uid, 'sync', 'data'),
-        (snap) => {
-          if (!snap.exists() || suppressRef.current) return
-          applyRemoteData(snap.data())
-        },
-        (error) => {
-          reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)))
-        },
-      )
-    }).catch((error) => {
-      reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)))
-    })
+    const unsubs = []
 
-    // A local change stamps the clock NOW. See the block comment above: the
-    // stamp has to beat the incoming snapshot, and the incoming snapshot
-    // arrives during the debounce.
-    const markLocalChange = () => {
-      localStampRef.current = Date.now()
-      writeStamp(localStampRef.current)
-      if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => {
-        suppressRef.current = true
-        pushToFirestore().finally(() => {
-          setTimeout(() => { suppressRef.current = false }, 1000)
-        })
-      }, DEBOUNCE_MS)
+    // Decide and apply, for whichever documents were just read.
+    const settle = (remote) => {
+      const meta = readMeta(ls)
+      detectLocalChanges(ls, meta) // stamp anything changed since the last look
+      const before = readLocal(ls)
+      const result = reconcile({ uid, meta, local: before, remote })
+      if (result.mode === 'switch') {
+        clearMirrors(ls)
+        meta.pushed = {}
+      }
+      meta.owner = result.owner
+      meta.stamps = result.stamps
+      const written = applyToStorage(ls, meta, result.apply)
+      // What the account now holds and this device agrees with is, by
+      // definition, not pending.
+      const after = readLocal(ls)
+      for (const key of ACCOUNT_KEY_NAMES) {
+        const doc = keySpec(key).doc
+        if (!Object.hasOwn(remote, doc)) continue
+        const r = remote[doc] ? remote[doc][key] : undefined
+        if (sameValue(after[key], r)) meta.pushed[key] = meta.stamps[key] || 0
+      }
+      writeMeta(ls, meta)
+      if (written.length) announceApplied(written)
+      if (result.mode === 'switch') announceApplied(['vs-onboarded'])
+      if (result.push) pushRef.current?.()
     }
 
-    const onStorage = (e) => {
-      if (!SYNC_KEYS.includes(e.key)) return
-      markLocalChange()
-    }
+    const docRef = (fs, id) => fs.doc(fs.db, 'users', uid, 'sync', id)
 
-    window.addEventListener('storage', onStorage)
-    window.addEventListener('vs-local-change', markLocalChange)
+    const push = async () => {
+      if (cancelled || uidRef.current !== uid) return
+      const meta = readMeta(ls)
+      if (meta.owner !== uid) return // not bound to this account yet: the pull decides first
+      detectLocalChanges(ls, meta)
+      writeMeta(ls, meta)
+      const pending = pendingKeys(meta)
+      if (!pending.length) return
+      const local = readLocal(ls)
+      const stampsAtBuild = { ...meta.stamps }
+      try {
+        const fs = await loadFirestore()
+        for (const id of docsForKeys(pending)) {
+          const payload = buildDoc(id, local, stampsAtBuild)
+          const bytes = payloadBytes(payload)
+          if (bytes > DOC_BYTE_BUDGET) {
+            reportSyncFailure(SYNC_CHANNEL, syncFailureMessage('too-large', `${Math.round(bytes / 1024)} KB of a 1 MB limit`), () => pushRef.current?.())
+            return
+          }
+          await fs.setDoc(docRef(fs, id), payload, { merge: true })
+          const now = readMeta(ls)
+          for (const key of ACCOUNT_KEY_NAMES) {
+            if (keySpec(key).doc === id) now.pushed[key] = stampsAtBuild[key] || 0
+          }
+          writeMeta(ls, now)
+        }
+        reportSyncOk(SYNC_CHANNEL)
+      } catch (error) {
+        reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), () => pushRef.current?.())
+      }
+    }
+    pushRef.current = push
+    activeFlush = push
+
+    const pull = async () => {
+      try {
+        const fs = await loadFirestore()
+        if (cancelled) return
+        const snaps = await Promise.all(SYNC_DOCS.map((id) => fs.getDoc(docRef(fs, id))))
+        if (cancelled) return
+        const remote = {}
+        SYNC_DOCS.forEach((id, i) => { remote[id] = snaps[i].exists() ? snaps[i].data() : null })
+        settle(remote)
+        reportSyncOk(SYNC_CHANNEL)
+
+        // Then listen. A snapshot of our own write is a no-op: the values agree.
+        for (const id of SYNC_DOCS) {
+          if (cancelled) return
+          unsubs.push(fs.onSnapshot(
+            docRef(fs, id),
+            (snap) => { if (!cancelled) settle({ [id]: snap.exists() ? snap.data() : null }) },
+            (error) => reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), () => pullRef.current?.()),
+          ))
+        }
+      } catch (error) {
+        reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), () => pullRef.current?.())
+      }
+    }
+    pullRef.current = () => {
+      unsubs.splice(0).forEach((u) => u())
+      return pull()
+    }
+    pull()
+
+    // Settings → Clear local data wiped the cache; read the account again.
+    const onReset = () => { pullRef.current?.() }
+    window.addEventListener(RESET_EVENT, onReset)
 
     return () => {
       cancelled = true
-      window.removeEventListener('storage', onStorage)
-      window.removeEventListener('vs-local-change', markLocalChange)
-      if (unsubRef.current) { unsubRef.current(); unsubRef.current = null }
-      if (timerRef.current) clearTimeout(timerRef.current)
+      window.removeEventListener(RESET_EVENT, onReset)
+      unsubs.splice(0).forEach((u) => u())
+      if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
+      if (activeFlush === push) activeFlush = null
     }
-  }, [uid, pushToFirestore, pullFromFirestore, applyRemoteData])
+  }, [uid])
 
-  return { pushToFirestore }
-}
-
-export function notifyLocalChange() {
-  window.dispatchEvent(new CustomEvent('vs-local-change'))
+  return { pushToFirestore: () => pushRef.current?.() }
 }

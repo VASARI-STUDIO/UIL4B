@@ -12,9 +12,8 @@
  *   - the stage and the panel are 18px (`--radius-2xl`) cards over a hairline;
  *   - panel sections split by hairlines, each headed by a mono 9.5px / .16em
  *     index label;
- *   - controls are 10–12px rounded RECTANGLES over a hairline. 999px appears
- *     once, on the loading meter (director decision: pills are for meters and
- *     the marketing page);
+ *   - buttons are pills (--radius-pill) over a hairline, as in the shared
+ *     ToolButton; the format choices are 10px tiles;
  *   - no accent anywhere except the one primary action and the selected
  *     output, because accent means "the next action".
  *
@@ -31,42 +30,16 @@
  * <html>, so both the OS setting and the Settings toggle reach it.
  */
 
+/* The page root is also the ToolLayout root (`.tl.v3d`): the name, the Beta
+   tag and "Open a file" ride the sticky tool toolbar, so there is no head. */
 .v3d {
   min-width: 0;
-  padding-bottom: var(--s-7);
-}
-
-/* ── Head: the tool's name and, once a model is open, the way to swap it ── */
-
-.v3d .v3d-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  margin-bottom: var(--s-5);
-}
-
-/* The migrated tool pages' h1 step (tint.css): display face, 600, -.045em,
-   under 1 line-height. Smaller ceiling than a hero because this page is a
-   working surface and the model is the subject, not the title. */
-.v3d .v3d-head h1 {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(32px, 4.2vw, 52px);
-  font-weight: 600;
-  line-height: .98;
-  letter-spacing: -.045em;
-  color: var(--t0);
 }
 
 /* The word and only the word, as a small mono label in a hairline box — a
    rectangle, and in ink, not accent: beta is a limit, not a call to action. */
 .v3d .v3d-beta {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   height: 22px;
@@ -98,7 +71,7 @@
   color: var(--t0);
   background: var(--card);
   border: 1px solid var(--bh);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
@@ -112,11 +85,11 @@
 
 .v3d .v3d-btn--primary {
   color: var(--accent-ink);
-  background: var(--accent-mid);
-  border-color: var(--accent-mid);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
 }
 
-.v3d .v3d-btn--primary:hover:not(:disabled) { color: var(--accent-ink); background: var(--accent-text); border-color: var(--accent-text); }
+.v3d .v3d-btn--primary:hover:not(:disabled) { color: var(--accent-ink); background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
 
 /* A disabled primary drops to the neutral button rather than a faded accent:
    a washed-out blue still reads as "the next action", and it is not one yet. */
@@ -139,7 +112,8 @@
 
 .v3d .v3d-frame {
   position: relative;
-  height: clamp(360px, calc(100svh - var(--nav-clear, 72px) - 190px), 760px);
+  /* The screen under the header and the tool toolbar, less the hint line. */
+  height: clamp(360px, calc(100svh - var(--chrome-h, 60px) - 150px), 760px);
   overflow: hidden;
   background: var(--bg-2);
   border: 1px solid var(--border);
@@ -234,7 +208,7 @@
 
 .v3d .v3d-busy-bytes { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--t2); }
 
-/* The one place 999px is right on this page: a meter. */
+/* The loading meter. */
 .v3d .v3d-meter {
   width: min(320px, 100%);
   height: 4px;
@@ -292,7 +266,7 @@
   padding: 4px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   box-shadow: var(--shadow-s);
   translate: -50% 0;
 }
@@ -319,7 +293,7 @@
   white-space: nowrap;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
@@ -430,6 +404,7 @@
 .v3d .v3d-outs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 
 .v3d .v3d-out {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -451,15 +426,33 @@
 .v3d .v3d-out:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .v3d .v3d-out input {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  /* Over the tile's hairline too, so the control is the tile's full size. */
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
   margin: 0;
-  accent-color: var(--accent-mid);
+  opacity: 0;
   cursor: inherit;
 }
 
 .v3d .v3d-out input:focus-visible { outline: none; }
+
+/* The radio's picture: a 16px ring, filled when chosen. */
+.v3d .v3d-out-dot {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--t2);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.v3d .v3d-out.is-on .v3d-out-dot { border-color: var(--accent-mid); box-shadow: inset 0 0 0 3.5px var(--card), inset 0 0 0 8px var(--accent-mid); }
+
+.v3d .v3d-out.is-off .v3d-out-dot { border-color: var(--border); }
+
+.v3d .v3d-out-l { pointer-events: none; }
 
 .v3d .v3d-out-l { font-size: 13px; font-weight: 560; color: var(--t0); }
 
@@ -496,7 +489,6 @@
   .v3d .v3d-tool,
   .v3d .v3d-out { min-height: 44px; }
   .v3d .v3d-btn--quiet { min-height: 44px; }
-  .v3d .v3d-out input { width: 20px; height: 20px; }
 }
 
 /* ── Widths ── */

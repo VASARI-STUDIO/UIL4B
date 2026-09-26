@@ -75,13 +75,16 @@ const declared = (themeSelector, token) => {
 }
 
 // The grounds each theme actually paints text on.
-const LIGHT_GROUNDS = ['#FFFFFF', '#EFEEE9', '#F6F5F1']
+const LIGHT_GROUNDS = ['#FFFFFF', '#F5F5F2', '#F6F5F1']
 const DARK_GROUNDS = ['#060607', '#0B0C0E', '#111215', '#17181B']
 
 // The defaults these override, so "stronger" can be checked rather than assumed.
 const BASE = {
-  light: { '--t1': '#50504A', '--t2': '#5F5F59', '--t3': '#6C6C66', '--border': '#DAD8CF', '--bh': '#C0BDB0', '--accent': '#0F6FFF', '--accent-strong': '#0B5ED7' },
-  dark: { '--t1': '#BFBEB6', '--t2': '#9F9F98', '--t3': '#8E8E88', '--border': '#202125', '--bh': '#303136', '--accent': '#6FA8FF', '--accent-strong': '#4A90FF' },
+  // --accent is a FILL (one accent, #F4F7FF ink, both themes),
+  // so it is measured under its ink in its own test below, not against grounds.
+  // --accent-strong is the TEXT member; its base is the resolved --accent-mid.
+  light: { '--t1': '#50504A', '--t2': '#5F5F59', '--t3': '#6C6C66', '--border': '#DAD8CF', '--bh': '#C0BDB0', '--accent-strong': '#2654C9' },
+  dark: { '--t1': '#BFBEB6', '--t2': '#9F9F98', '--t3': '#8E8E88', '--border': '#202125', '--bh': '#303136', '--accent-strong': '#7999E9' },
 }
 const GROUNDS = { light: LIGHT_GROUNDS, dark: DARK_GROUNDS }
 
@@ -169,24 +172,19 @@ test('borders reach the 1.4.11 non-text floor, and hover stays distinct from res
   }
 })
 
-// The half of the accent story the backlog note got wrong.
-test('the accent pair is lifted per theme, not swapped blind', () => {
+// The accent under the one-accent model: the FILL deepens until its ink clears
+// 7:1, and the TEXT member (--accent-strong, the resolved --accent-mid) clears
+// 7:1 on every ground. A text-only lift would leave filled controls at 4.98:1;
+// a fill-only one would leave dark accent text where it was.
+const INK = '#F4F7FF'
+test('the accent fill and the accent text are both lifted per theme', () => {
   for (const theme of ['light', 'dark']) {
-    for (const token of ['--accent', '--accent-strong']) {
-      const worst = Math.min(...GROUNDS[theme].map((g) => ratio(declared(theme, token), g)))
-      assert.ok(worst >= 7,
-        `${theme} ${token} is ${show(worst)}:1 under prefers-contrast, under the 7:1 aimed for here`)
-    }
+    const fill = declared(theme, '--accent')
+    assert.ok(fill, `${theme}: the block does not deepen --accent`)
+    assert.ok(ratio(INK, fill) >= 7, `${theme}: #F4F7FF on the prefers-contrast fill ${fill} is ${show(ratio(INK, fill))}:1`)
+    assert.ok(ratio(INK, fill) > ratio(INK, '#2A60E8'), `${theme}: the fill is not deeper than the base accent`)
+    const text = declared(theme, '--accent-strong')
+    const worst = Math.min(...GROUNDS[theme].map((g) => ratio(text, g)))
+    assert.ok(worst >= 7, `${theme} --accent-strong is ${show(worst)}:1 under prefers-contrast, under the 7:1 aimed for here`)
   }
-  // In DARK, --accent (#6FA8FF, 6.54) is stronger than --accent-strong (#4A90FF,
-  // 5.04). The note prescribed swapping --accent FOR --accent-strong, which in
-  // dark would have LOWERED contrast for the one user who asked for more.
-  assert.ok(ratio(declared('dark', '--accent'), '#17181B') > ratio('#4A90FF', '#17181B'),
-    'the dark accent under prefers-contrast is weaker than plain --accent-strong;\n'
-    + 'that is the blind swap the note prescribed, and it is backwards in dark.')
-  // And the filled-control mirror, which a text-only lift would break.
-  assert.ok(ratio('#FFFFFF', declared('light', '--accent-strong')) >= 4.5,
-    'white on the light prefers-contrast accent fill is under AA')
-  assert.ok(ratio('#101012', declared('dark', '--accent-strong')) >= 4.5,
-    'near-black on the dark prefers-contrast accent fill is under AA')
 })

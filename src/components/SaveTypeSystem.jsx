@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { useProModal } from '../contexts/ProModalContext'
+import { reportUpgradeGate, useProModal } from '../contexts/ProModalContext'
 import { projectQuota } from '../utils/projectQuota'
 
 // Where the typography tools meet the paywall — and the ONLY place they do.
@@ -159,9 +159,9 @@ export function SaveTypeSystemMenu({
             on <NavLink to="/projects" className="svt-link">your projects</NavLink>, or
             overwrite one below.
           </p>
-          <button type="button" className="btn btn-accent btn-s svt-wall-btn" onClick={onUpgrade}>
+          <NavLink to="/plans" className="btn btn-accent btn-s svt-wall-btn" onClick={onUpgrade}>
             See what Pro adds
-          </button>
+          </NavLink>
         </div>
       ) : (
         <>
@@ -352,7 +352,7 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
           onName={setName}
           onSave={commit}
           onOverwrite={overwrite}
-          onUpgrade={raiseWall}
+          onUpgrade={() => { reportUpgradeGate('type-save-cap'); setOpen(false) }}
         />
       )}
     </div>

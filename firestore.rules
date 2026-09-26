@@ -3,12 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Billing/entitlement fields on a user doc. These decide whether the server
-    // hands out Pro (api/_lib/plans.js → planForUser reads `subscription` and
-    // `lifetimeEntitlement` straight off this doc), so a client that could write
-    // them could grant itself Pro and bill the founder for the AI calls.
-    // Only the Stripe webhook / checkout reconciliation may set them, and those
-    // run through the Firebase Admin SDK, which bypasses these rules entirely.
+    // Billing and entitlement fields on a user document. Clients may never set
+    // them; only server code using the Admin SDK writes them.
     function lockedUserFields() {
       return ['lifetimeEntitlement', 'subscription', 'stripeCustomerId'];
     }
@@ -18,29 +14,17 @@ service cloud.firestore {
       return !request.resource.data.keys().hasAny(lockedUserFields());
     }
 
-    // Update path: `request.resource.data` is the POST-merge document, so
-    // diffing against `resource.data` catches added, changed AND deleted locked
-    // fields — including ones smuggled in via setDoc(..., { merge: true }).
+    // Update path: `request.resource.data` is the post-merge document, so
+    // diffing against `resource.data` catches added, changed and deleted locked
+    // fields, including merge writes.
     function leavesLockedFieldsUntouched() {
       return !request.resource.data.diff(resource.data).affectedKeys()
         .hasAny(lockedUserFields());
     }
 
-    // A REVIEWER is the founder, or somebody he has put on the moderator roster.
-    //
-    // `admin` is minted by api/verify-admin.js from a Firebase-VERIFIED email
-    // checked against a server-side allowlist. `moderator` is minted by the same
-    // route from the `moderators` roster, which is Admin-SDK-only and has no
-    // rules block of its own — Firestore denies by default, so no browser can
-    // read the roster, enumerate who holds power here, or write itself into it.
-    //
-    // Neither claim is reachable from the client: setCustomUserClaims is a
-    // server call, and src/ is guarded by a test that fails if any file under it
-    // so much as names the roster collection.
-    //
-    // NOTE the deliberate limit: this widens who may REVIEW. It does not widen
-    // users/{uid}, which stays owner-only and still refuses every entitlement
-    // field, and it does not widen analytics-daily.
+    // A reviewer holds the `admin` or `moderator` custom claim. Both claims are
+    // set server-side by api/verify-admin.js. Reviewers get no additional access
+    // to users/{uid} or analytics-daily.
     function isReviewer() {
       return request.auth != null
         && (request.auth.token.admin == true
@@ -56,45 +40,8 @@ service cloud.firestore {
       allow read: if isOwner();
       allow create: if isOwner() && createsNoLockedField();
       allow update: if isOwner() && leavesLockedFieldsUntouched();
-      // CLOSED. Real account deletion runs server-side (api/delete-account.js)
-      // with the Admin SDK, because it also has to cancel Stripe and reach the
-      // sync subcollection, which a client rule can never delete with its
-      // parent. Nothing in src/ deletes this document — AuthContext.jsx says so
-      // in as many words ("deleteUser/deleteDoc are deliberately gone") and
-      // every other client path only reads it or merges profile fields onto it.
-      // So this rule never guarded a real delete; it only granted one.
-      //
-      // IT WAS KEPT ON A CLAIM THAT IS FALSE FOR SUBSCRIPTIONS. The old comment
-      // here said dropping your own profile "can only ever lose you access,
-      // never grant it". That holds for the one-off LIFETIME entitlement, which
-      // api/checkout-status.js re-proves from the Stripe CHARGE every time. It
-      // does not hold for a subscription:
-      //
-      //   `subscription.accessRevoked` — written by api/stripe-webhook.js when a
-      //   charge is refunded or charged back, and the only thing keeping that
-      //   customer on Free (api/_lib/plans.js) — HAS NO OTHER HOME. It is sticky
-      //   only because every later write is a { merge: true } onto the document
-      //   that carries it. Delete the document and there is nothing to merge
-      //   onto, so the next subscription write recreates it clean.
-      //
-      // The wash: subscribe → dispute the charge (money back, webhook revokes) →
-      // deleteDoc(users/<own uid>) from a browser console with the public
-      // Firebase config → the next renewal webhook, or one GET of
-      // /api/checkout-status with your own session id, rebuilds the document
-      // without the flag and Pro is back. Stripe does NOT cancel a disputed
-      // subscription unless the dashboard's cancel-on-dispute setting is on, so
-      // it keeps cycling and the wash repeats every period.
-      //
-      // WHAT THIS DENIES: a client removing its own users/{uid} document, which
-      // no feature uses. WHAT IT STILL GRANTS: everything else here — read,
-      // create, profile updates, and full read/write (including delete) over the
-      // sync subcollection below. Deleting an ACCOUNT is unaffected; it goes
-      // through /api/delete-account, which holds the Admin SDK and bypasses
-      // these rules entirely.
-      //
-      // The server paths were hardened in the same change and do not rely on
-      // this rule alone: api/_lib/billing.js now reads the subscription's latest
-      // charge before writing a document that grants access.
+      // Clients cannot delete a profile document. Account deletion runs
+      // server-side through /api/delete-account.
       allow delete: if false;
 
       // Sync data subcollection — only the owner
@@ -103,38 +50,18 @@ service cloud.firestore {
       }
     }
 
-    // Feedback — anyone can create, only a reviewer can read/update/delete.
-    //
-    // The reporter's email address lives on these documents. Who may SEE it is a
-    // narrower question than who may triage, and a rule cannot express "this
-    // field but not that one" on a read — so it is answered on the client by
-    // canSeeReporterEmail (founder only). A moderator can read the document.
+    // Feedback — reviewers can read, update and delete; clients cannot create.
+    // Reports are written server-side by /api/support.
     match /feedback/{feedbackId} {
-      // CLOSED. Nothing in src/ has ever written here: every report goes through
-      // fetch('/api/support') (FeedbackModal.jsx), which writes with the Admin
-      // SDK and bypasses these rules entirely. So this rule never guarded a real
-      // write — it only granted one. `if true` meant no auth, no field
-      // allowlist, no shape, no rate limit: a script could put unlimited
-      // documents of any shape, up to Firestore's 1 MiB ceiling, straight into
-      // the collection the admin queue renders, and the route's abuse limiter
-      // ([support-abuse-hardening]) does not apply because it lives in the
-      // route, not here.
-      //
-      // Reads, updates and deletes are UNCHANGED — the queue still works.
       allow create: if false;
       allow read, update, delete: if isReviewer();
     }
 
     // Community prompts — signed-in users can create, a reviewer can manage
     match /community-prompts/{promptId} {
-      // The shape buildCommunityPromptRecord + SubmitPromptPanel actually write.
-      // Before this, create checked authorUid and status and NOTHING else: one
-      // free account could write unlimited documents of any shape into a
-      // collection every signed-in user reads.
-      //
-      // hasOnly is the subset test (ownerId, mediaType and mediaUrl are
-      // conditional); hasAll pins the ones that are always present. Together
-      // they are an exact-shape check that still admits the optional fields.
+      // The exact record shape the client writes: hasOnly bounds the keys and
+      // hasAll pins the required ones (ownerId, mediaType and mediaUrl are
+      // optional).
       function promptShapeOk() {
         return request.resource.data.keys().hasOnly([
                  'title', 'text', 'tags', 'authorName', 'authorUid', 'ownerId',
@@ -142,12 +69,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasAll([
                  'title', 'text', 'tags', 'authorName', 'authorUid', 'status',
                  'profileLink', 'createdAt'])
-          // These caps are DELIBERATELY generous, not tight. None of the four
-          // inputs in SubmitPromptPanel carries a maxLength, so whatever is set
-          // here becomes the product's limit, and a bound that refuses a real
-          // submission is a worse bug than the one being fixed. 20,000
-          // characters is several times the longest prompt anyone writes and
-          // still bounds a media-less document at ~21 KB instead of 1 MiB.
+          // Length caps on each string field.
           && request.resource.data.title is string
           && request.resource.data.title.size() <= 300
           && request.resource.data.text is string
@@ -159,8 +81,8 @@ service cloud.firestore {
           && request.resource.data.createdAt is string
           && request.resource.data.createdAt.size() <= 40
           // buildCommunityPromptRecord writes null when there is no link, and a
-          // null field is still a PRESENT field — so this is a type union, not
-          // an optional key.
+          // null field is still a present field, so this is a type union rather
+          // than an optional key.
           && (request.resource.data.profileLink == null
               || (request.resource.data.profileLink is string
                   && request.resource.data.profileLink.size() <= 2048))
@@ -170,12 +92,8 @@ service cloud.firestore {
           && (!('mediaType' in request.resource.data)
               || (request.resource.data.mediaType is string
                   && request.resource.data.mediaType.size() <= 16))
-          // mediaUrl is the one field that is legitimately huge: when Firebase
-          // Storage is not enabled, SubmitPromptPanel falls back to inlining the
-          // image as base64 and guards it with `< 900_000` itself. This is that
-          // same guard, enforced where a client cannot skip it. Everything else
-          // above adds up to ~6 KB, so a prompt without media is bounded tightly
-          // and one with media is bounded by the client's own ceiling.
+          // mediaUrl may hold an inline base64 image; the cap matches the
+          // client's own limit.
           && (!('mediaUrl' in request.resource.data)
               || (request.resource.data.mediaUrl is string
                   && request.resource.data.mediaUrl.size() < 900000));
@@ -190,27 +108,14 @@ service cloud.firestore {
     }
 
     // Community submissions — the shared review queue for gradients, designs
-    // and palettes (utils/communityQueue.js).
-    //
-    // WHY IT EXISTS: those submissions were localStorage-only. A user who
-    // submitted on one browser saw nothing on another, and no admin could ever
-    // review them — "pending" described a review that could not happen.
-    //
-    // Same shape as community-prompts, with one addition: the owner may
-    // withdraw their own submission. That is the one write a non-admin has a
-    // legitimate reason to make after creating it, and it can only ever remove
-    // something from the queue, never promote it.
+    // and palettes (utils/communityQueue.js). The owner may withdraw their own
+    // submission.
     match /community-submissions/{submissionId} {
       function isSignedIn() { return request.auth != null; }
       function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
 
-      // The exact seven keys buildQueueRecord writes — no more, no fewer.
-      //
-      // `payload` is the only free-form field, and it is where an unbounded
-      // write would go, so it is bounded on BOTH axes: an allowlist over the
-      // union of the three call sites' payload keys, and a length cap on every
-      // string in it. The three real payloads are a handful of hex codes, a
-      // category and a URL — hundreds of bytes.
+      // The exact seven keys buildQueueRecord writes. `payload` is bounded by a
+      // key allowlist and a size cap on every field.
       function submissionPayloadOk() {
         return request.resource.data.payload is map
           && request.resource.data.payload.keys().hasOnly([
@@ -234,8 +139,7 @@ service cloud.firestore {
           && (!('c2' in request.resource.data.payload)
               || (request.resource.data.payload.c2 is string
                   && request.resource.data.payload.c2.size() <= 64))
-          // A gradient carries stops and a palette carries colours. Both are
-          // lists, and a list is the other way to make a document enormous.
+          // Gradient stops and palette colours are lists, capped by length.
           && (!('stops' in request.resource.data.payload)
               || (request.resource.data.payload.stops is list
                   && request.resource.data.payload.stops.size() <= 32))
@@ -247,7 +151,15 @@ service cloud.firestore {
       function submissionShapeOk() {
         return request.resource.data.keys().hasOnly([
                  'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
-                 'createdAt'])
+                 'createdAt', 'localId'])
+          // `localId` is the one optional key. Every submit path sends it
+          // (Community, GradientGenerator, PaletteBuilder) and the "my
+          // submissions" list pairs the server copy with the browser's own
+          // copy on it (communityQueue.js, mergeSubmissions). An identifier:
+          // a short string.
+          && (!('localId' in request.resource.data)
+              || (request.resource.data.localId is string
+                  && request.resource.data.localId.size() <= 64))
           && request.resource.data.keys().hasAll([
                  'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
                  'createdAt'])
@@ -261,9 +173,7 @@ service cloud.firestore {
           && submissionPayloadOk();
       }
 
-      // A client may only ever create its OWN submission, and only as
-      // 'pending'. 'approved' is a reviewer's word — reachable from nowhere on
-      // the client, so nothing can put itself in the library.
+      // A client may only create its own submission, with status 'pending'.
       allow create: if isSignedIn()
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.status == 'pending'
@@ -271,65 +181,23 @@ service cloud.firestore {
 
       allow read: if isSignedIn();
 
-      // Reviewers decide. This is the write that never worked: the `admin`
-      // claim was gated on here and NOTHING in the codebase ever called
-      // setCustomUserClaims, so every moderation write was rejected.
-      // api/verify-admin.js now grants it from a server-verified email — and
-      // grants `moderator` from the roster, so the founder is no longer the only
-      // person who can clear this queue.
+      // Reviewers may update; the owner may only set status to 'withdrawn',
+      // and no other field may change in the same write.
       allow update: if isReviewer()
         || (isOwner() && request.resource.data.status == 'withdrawn'
-            && request.resource.data.authorUid == resource.data.authorUid);
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
 
       allow delete: if isReviewer() || isOwner();
     }
 
-    // Aggregate usage analytics — per-day counter docs ({YYYY-MM-DD}).
-    // Any signed-in user may create/update (increment) the counters so the
-    // admin dashboard can reflect ALL users' usage. Read is gated to an
-    // administrator.
-    //
-    // It is the `admin` CLAIM, not an email literal. This rule used to compare
-    // against the founder's personal address: api/verify-admin.js has minted
-    // the claim since #241, and the comment here recorded that the rule merely
-    // predated it. That was a tidiness note while the repository was private
-    // and stopped being one when it went public — the literal named, in a file
-    // anyone can read, the single account whose compromise yields both
-    // site-wide admin and the full user list. The claim is also the stronger
-    // fact: it is minted from a server-verified email against the server-side
-    // allowlist (ADMIN_EMAILS), so it can never be carried by a token whose
-    // `email` was set some other way, and the allowlist can change without a
-    // rules deploy.
-    //
-    // Still deliberately NOT widened to isReviewer(): reviewing submissions is
-    // not a reason to hand a volunteer site-wide usage analytics.
-    //
-    // Note: this cannot fully prevent a signed-in user inflating counters —
-    // accepted limitation for an internal, non-billing dashboard.
+    // Aggregate usage analytics — per-day counter documents ({YYYY-MM-DD}).
+    // Signed-in users may create and update counters; reading requires the
+    // `admin` claim.
     match /analytics-daily/{day} {
       allow read: if request.auth != null && request.auth.token.admin == true;
 
-      // Two bounds this never had, and one it deliberately still does not.
-      //
-      // THE ID. `{day}` matched ANY document id, so a signed-in client could
-      // create analytics-daily/<anything>. The dashboard reads this collection
-      // and the founder's reset sweep (analytics.js resetPageAnalytics) orders
-      // by `day` — a document that is not a day is invisible to the sweep that
-      // is supposed to be able to clear it. The id must now be a date, and the
-      // `day` FIELD must agree with the id it is filed under, so the two can
-      // never disagree.
-      //
-      // THE FIELD COUNT. Field NAMES here are dynamic (`view__<path>`,
-      // `tool__<id>`), so no key allowlist is possible and no byte size is
-      // measurable in Firestore rules. The count of entries is the one bound
-      // that is: ~110 counters are in normal use (one per route, one per tool,
-      // plus icon and pack tallies), so 500 is roughly 4x headroom and still
-      // refuses a client trying to grow one document without limit.
-      //
-      // NOT WIDENED, and deliberately: counter INFLATION by a signed-in user
-      // stays possible. That was already recorded above as an accepted
-      // limitation for an internal, non-billing dashboard, and nothing here
-      // changes it — a rule cannot tell a real page view from a fake one.
+      // The document id must be a date, the `day` field must match it, and a
+      // document holds at most 500 fields.
       allow create, update: if request.auth != null
         && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.day == day

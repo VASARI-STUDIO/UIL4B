@@ -223,7 +223,7 @@ test('/create/emoji · at 320 the skin-tone popover still fits, and Escape retur
 // Two chips under AA in light
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('/create/emoji and /create/file-converter · the count chip and the 3D viewer line read at 4.5:1 in light', async ({ browser }) => {
+test('/create/emoji and /create/file-converter · the count chip and the converter notes read at 4.5:1 in light', async ({ browser }) => {
   // Both are --t3 ink on a --bg-3 chip: 4.07:1 in light (#6c6c66 on #e4e2da)
   // at every width from 320 to 1920, on 10px and 8px type. --t2 is 4.95:1.
   // Dark measured clear before and after.
@@ -239,17 +239,17 @@ test('/create/emoji and /create/file-converter · the count chip and the 3D view
   const a = await count.evaluate((el) => ({ fg: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }))
   expect(contrast(a.fg, a.bg), `.emoji-section-count ${a.fg} on ${a.bg}`).toBeGreaterThanOrEqual(4.5)
 
-  // The converter's SOON tag is gone with the "3D → Blender" tab it sat on
-  // (2026-09-23). What replaced it is a line linking to the 3D viewer, and its
-  // two inks are held to the same floor here so this half does not go vacuous:
-  // the link, and the note beside it, both on the page ground.
-  // MUTATION: `.fc .fc-3d a{color:var(--accent)}` fails in light at ~4.2.
+  // The converter's SOON tag is gone with the "3D → Blender" tab it sat on.
+  // The way to the 3D viewer is a toolbar action now, and the note that says
+  // why .blend is not offered sits under the tool on the page ground. Both
+  // inks are held to the same floor here so this half does not go vacuous.
+  // MUTATION: a 40% ink on .fc-3d-note (color-mix of --t0 into --bg-0) fails.
   await go(page, '/create/file-converter')
-  const link = page.locator('.fc-3d a')
+  const link = page.locator('[data-tool-toolbar] a[href="/create/3d-viewer"]')
   await expect(link).toBeVisible()
-  await expect(link).toHaveAttribute('href', '/create/3d-viewer')
+  await expect(link).toHaveAccessibleName('Open a 3D model in the 3D viewer')
   const pageGround = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-  for (const [name, loc] of [['.fc-3d a', link], ['.fc-3d-note', page.locator('.fc-3d-note')]]) {
+  for (const [name, loc] of [['.fc-3d-note', page.locator('.fc-3d-note')], ['.fc-about', page.locator('.fc-about')]]) {
     // Through a canvas: the link ink is a color-mix(), which Chromium
     // serialises as `color(srgb …)` and the rgba parser above cannot read.
     const fg = await loc.evaluate((el) => {
@@ -303,7 +303,7 @@ for (const [width, status, body] of [
     await expect(page.locator('.alt-dropzone')).toBeVisible({ timeout: 15000 })
     await page.locator('.alt-dropzone input[type="file"]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: await pngBytes(page) })
     await expect(page.locator('.alt-card-ready')).toBeVisible({ timeout: 10000 })
-    await page.locator('.alt-toolbar .alt-btn--primary').click()
+    await page.locator('[data-tool-toolbar] .tl-btn--accent').click()
 
     const card = page.locator('.alt-card.alt-card-error')
     await expect(card).toBeVisible({ timeout: 15000 })
@@ -323,7 +323,7 @@ for (const [width, status, body] of [
 
     // The batch is over when the toolbar's primary is pressable again. If the
     // old toast fired it is on screen right now — toasts stay for seconds.
-    await expect(page.locator('.alt-toolbar .alt-btn--primary')).toBeEnabled({ timeout: 10000 })
+    await expect(page.locator('[data-tool-toolbar] .tl-btn--accent')).toBeEnabled({ timeout: 10000 })
     await expect(page.locator('.toast'), 'nothing was generated, so nothing says it was').not.toContainText(/Generated \d+ alt text/)
     await ctx.close()
   })
@@ -367,7 +367,7 @@ test('/seo · Structured data · every "Remove question" control is at least 24p
 // /create/semantic-color — the custom-hue slider
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('/create/semantic-color · the custom-hue slider is a 24px control that still paints a 12px track', async ({ browser }) => {
+test('/create/semantic-color · the custom-hue slider is a 24px control that still paints a thin track', async ({ browser }) => {
   // The gradient and the hairline sat on the <input> itself at 14px tall, so
   // the whole range control was a 14px target (every custom-hue row, 320 to
   // 1920, 2026-09-09). The input is now a 24px transparent box and the track
@@ -379,10 +379,11 @@ test('/create/semantic-color · the custom-hue slider is a 24px control that sti
   const { ctx, page } = await at(browser, 390)
   watch(page, 'a designer dialling a custom hue on a phone')
   await go(page, '/create/semantic-color')
-  const custom = page.locator('.stc-role-presets button').filter({ hasText: /^custom$/i }).first()
-  await expect(custom).toBeVisible()
-  await custom.click()
-  const slider = page.locator('input.cs-hue-slider').first()
+  // The role's preset is a select on this screen, and the
+  // slider is the shared tool slider (a 24px control over the drawn 6px track).
+  await page.getByRole('combobox', { name: 'Success preset' }).selectOption('custom')
+  const slider = page.locator('.stc-hue input[type=range]').first()
+  await slider.scrollIntoViewIfNeeded()
   await expect(slider).toBeVisible()
   await settle(page)
   const box = await slider.boundingBox()
@@ -415,8 +416,8 @@ test('/create/semantic-color · the custom-hue slider is a 24px control that sti
   await ctx.close()
   expect(box.height, 'the control is at least 24px tall').toBeGreaterThanOrEqual(24)
   expect(inputPaint, 'the input box itself is transparent').toBe('rgba(0, 0, 0, 0)')
-  expect(painted.bar, 'the painted bar is still the 12px track (plus its hairline), not a 24px slab').toBeGreaterThanOrEqual(10)
-  expect(painted.bar).toBeLessThanOrEqual(16)
+  expect(painted.bar, 'the painted bar is the drawn 6px track, not a 24px slab').toBeGreaterThanOrEqual(4)
+  expect(painted.bar).toBeLessThanOrEqual(10)
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

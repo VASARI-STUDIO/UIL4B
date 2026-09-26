@@ -110,7 +110,7 @@ test.describe('/create/tint · the swatch labels keep the contrast they were giv
   test('the ink probe can see an opacity', async ({ page }) => {
     watch(page, 'the probe checking itself')
     await go(page, '/create/tint')
-    await arrived(page, 'Tint Scale Generator')
+    await arrived(page, 'Tint')
 
     await page.evaluate(() => {
       const host = document.createElement('div')
@@ -154,18 +154,18 @@ test.describe('/create/tint · the swatch labels keep the contrast they were giv
   test('every swatch label clears AA on a ramp built from #EC001A', async ({ page }) => {
     watch(page, 'a designer building a tint scale from a saturated red')
     await go(page, '/create/tint')
-    await arrived(page, 'Tint Scale Generator')
+    await arrived(page, 'Tint')
 
     // #EC001A is not arbitrary: it is the ground the sRGB sweep names as the
     // worst case for a dimmed label, and the tool accepts it as typed.
     const hex = page.getByRole('textbox', { name: 'Base colour 1 hex' })
     await hex.fill('#EC001A')
-    await expect(page.locator('.tt-ramp-select')).toContainText('#EC001A source')
+    await expect(hex).toHaveValue('#EC001A')
     await expect(page.locator('.tt-cell')).toHaveCount(11)
 
     const measured = await page.evaluate(`(() => {
       ${INK_PROBE}
-      return [...measure('.tt-cell-hex'), ...measure('.tt-role-sample span')]
+      return [...measure('.tt-cell-step')]
     })()`)
 
     // POSITIVE CONTROL. "No label failed" is true of a page that rendered no
@@ -249,7 +249,7 @@ test.describe('/create/gradient · the chosen gradient type reaches the tree', (
   test('the state probe can tell pressed from unpressed', async ({ page }) => {
     watch(page, 'the probe checking itself')
     await go(page, '/create/gradient')
-    await arrived(page, 'Gradient Generator')
+    await arrived(page, 'Gradient')
 
     await page.evaluate(() => {
       const host = document.createElement('div')
@@ -290,25 +290,27 @@ test.describe('/create/gradient · the chosen gradient type reaches the tree', (
   test('the type carrying `is-on` is the type the tree calls pressed', async ({ page }) => {
     watch(page, 'someone choosing a gradient type with a screen reader')
     await go(page, '/create/gradient')
-    await arrived(page, 'Gradient Generator')
+    await arrived(page, 'Gradient')
 
     // The group itself, named from the "Type" label already beside it rather
     // than from a sentence written for it. The name comes back UPPERCASE
-    // because `.ggn-label` sets text-transform:uppercase and an accessible
+    // (the group is named by its own aria-label — the drawn
+    // GEOMETRY pills carry no visible "Type" label — so no uppercase to allow for.)
+    // It used to be named from `.ggn-label`, which set text-transform:uppercase; an accessible
     // name is computed from RENDERED text, not from the source — asserted as
     // measured rather than as written, since asserting "Type" would be
     // asserting something no browser reports.
-    const group = await axRows(page, '.ggn-seg')
-    expect(group, 'no .ggn-seg was found, so nothing below is being measured').toHaveLength(1)
-    expect(`${group[0].role}("${group[0].name}")`).toBe('group("TYPE")')
+    const group = await axRows(page, '[aria-label="Gradient type"]')
+    expect(group, 'no gradient type group was found, so nothing below is being measured').toHaveLength(1)
+    expect(`${group[0].role}("${group[0].name}")`).toBe('group("Gradient type")')
 
     for (const want of ['Radial', 'Conic', 'Linear']) {
-      await page.locator('.ggn-seg-btn', { hasText: want }).click()
+      await page.locator('[aria-label="Gradient type"] .tl-pill', { hasText: want }).click()
 
-      const painted = await page.locator('.ggn-seg-btn.is-on').innerText()
+      const painted = await page.locator('[aria-label="Gradient type"] .tl-pill.is-on').innerText()
       expect(painted.trim(), 'the click did not move the painted state').toBe(want)
 
-      const rows = await axRows(page, '.ggn-seg-btn')
+      const rows = await axRows(page, '[aria-label="Gradient type"] .tl-pill')
       // POSITIVE CONTROL: three buttons, or the loop below is asserting over
       // an empty list and passing for it.
       expect(rows, 'the gradient type group did not render three buttons').toHaveLength(3)
@@ -419,9 +421,6 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("77 FAMILIES")',
-      'navigation("More typography tools")',
-      'contentinfo',
-      'navigation("Footer")',
     ])
 
     // AND IT SURVIVES THE EMPTY STATE. A section wrapped around only the
@@ -435,9 +434,6 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("0 FAMILIES MATCHING “ZZZZQQQ”")',
-      'navigation("More typography tools")',
-      'contentinfo',
-      'navigation("Footer")',
     ])
   })
 
@@ -464,8 +460,6 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("Showing all 1655 emojis")',
-      'contentinfo',
-      'navigation("Footer")',
     ])
 
     await page.locator('.emoji-toolbar input').first().fill('zzzzqqq')
@@ -476,8 +470,6 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("0 emojis for zzzzqqq")',
-      'contentinfo',
-      'navigation("Footer")',
     ])
   })
 })

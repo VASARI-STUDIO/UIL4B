@@ -106,7 +106,9 @@ function readRows() {
     const family = unquote(rule.style.getPropertyValue('font-family'))
     const weight = rule.style.getPropertyValue('font-weight').trim()
     const display = rule.style.getPropertyValue('font-display').trim()
-    const intervals = intervalsOf(rule.style.getPropertyValue('unicode-range'))
+    // A face with no unicode-range covers every code point (the CSS initial value).
+    const range = rule.style.getPropertyValue('unicode-range').trim()
+    const intervals = range ? intervalsOf(range) : [[0, 0x10FFFF]]
     if (!family || !weight || !display || !intervals) return null
 
     const probe = probeOf(intervals)

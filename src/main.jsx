@@ -11,7 +11,14 @@ import { WorkspaceProvider } from './contexts/WorkspaceContext'
 import { ExportProvider } from './contexts/ExportContext'
 import { SubscriptionProvider } from './contexts/SubscriptionContext'
 import { I18nProvider } from './contexts/I18nContext'
+import RouteErrorBoundary from './components/RouteErrorBoundary'
+import { installGlobalErrorCapture } from './utils/errorReport'
 import './styles/global.css'
+import { installDownloadObserver } from './utils/downloadObserver'
+
+// Recent exports: every tool download is recorded where
+// they all pass — an <a download> being clicked. See utils/downloadObserver.js.
+installDownloadObserver()
 
 // After a redeploy, a cached index.html can request lazy chunks whose hashed
 // filenames no longer exist; Vite fires vite:preloadError when that import
@@ -41,8 +48,17 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload()
 })
 
+// Errors nothing else caught — an event handler, a timer, a rejected promise —
+// recorded to the admin feedback queue, rate-limited and without PII. See
+// utils/errorReport.js.
+installGlobalErrorCapture()
+
+// The ROOT boundary catches what the per-route one in App.jsx cannot: a crash
+// in a provider, the nav or the feedback button itself. Its "Report this" finds
+// no dialog to open, so it goes to /feedback.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    <RouteErrorBoundary>
     <BrowserRouter>
       <ThemeProvider>
         <AppearanceProvider>
@@ -63,5 +79,6 @@ createRoot(document.getElementById('root')).render(
         </AppearanceProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </RouteErrorBoundary>
   </StrictMode>
 )

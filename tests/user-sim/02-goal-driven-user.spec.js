@@ -85,7 +85,8 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
 
 test.describe('goal-driven checks on the other live tools', () => {
   const LIVE_TOOLS = [
-    { url: '/create/color', expectText: /colou?r/i, goal: 'open the colour tool' },
+    // /create/color opens the Palette Generator.
+    { url: '/create/color', expectText: /palette|colou?r/i, goal: 'open the colour tool' },
     { url: '/create/icons', expectText: /icon/i, goal: 'open the icon library' },
     { url: '/create/file-converter', expectText: /convert/i, goal: 'open the file converter' },
   ]

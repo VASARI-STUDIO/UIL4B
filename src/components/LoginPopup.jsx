@@ -8,13 +8,9 @@ import useModalDialog from '../hooks/useModalDialog'
 // get for it? Every line is a real Free capability (see docs/reference/
 // growth-persuasion.md: the taste of power has to be power the user keeps), and
 // the list is overridable per caller via the `unlocks` prop.
-const DEFAULT_UNLOCKS = [
-  'Your work saves and follows you to any device',
-  'Live preview links you can share',
-  // "no card" removed 2026-09-07 on the founder's instruction; the trial
-  // clock is a separate, non-payment fact and it stays.
-  'Free — no trial clock',
-]
+// Empty by default: the sign-up pane must fit 390x844 without scrolling with
+// the Terms/Privacy line under the form (tests/user-sim/09, 72).
+const DEFAULT_UNLOCKS = []
 
 function GoogleIcon() {
   return (
@@ -359,6 +355,16 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
                   {loading ? (t('auth.pleaseWait') || 'Please wait…') : resetMode ? (t('auth.sendResetLink') || 'Send reset link') : isSignup ? (t('auth.createAccount') || 'Create account') : passwordOnly ? 'Switch account' : (t('common.signIn') || 'Sign in')}
                 </button>
               </form>
+
+              {/* Sign-up only. The links open in a new tab so the form keeps
+                  its values. */}
+              {isSignup && !resetMode && !passwordOnly && (
+                <p className="auth-legal" style={{ margin: '14px 0 0', fontSize: 12, lineHeight: 1.5, color: 'var(--t2)', textAlign: 'center' }}>
+                  By creating an account, you agree to our{' '}
+                  <a href="/terms" target="_blank" rel="noopener">Terms</a> and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener">Privacy</a> policy.
+                </p>
+              )}
 
               {!passwordOnly && <div className="auth-links">
                 {resetMode ? (

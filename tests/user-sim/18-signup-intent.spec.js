@@ -34,11 +34,15 @@ const dialogHeading = (page) => page.locator('#ui-login-title').first()
 const nameField = (page) => page.locator('#ui-login-name')
 
 test.describe('signup intent', () => {
-  test('the header "Start for Free" opens the sign-up form, not sign-in', async ({ page }) => {
+  test('the header menu "Create a free account" opens the sign-up form, not sign-in', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/plans')          // a page where the CTA is visible immediately
+    // A page with the APP header, where the CTA is visible immediately. /plans
+    // is the design's Pricing screen with the marketing nav; /help is an
+    // app-shell page.
+    await go(page, '/help')
 
-    await page.getByRole('button', { name: 'Start for Free' }).first().click()
+    await page.getByRole('button', { name: 'Menu', exact: true }).click()
+    await page.getByRole('button', { name: 'Create a free account' }).click()
     await expect(dialogHeading(page)).toBeVisible()
     await expect(nameField(page), 'a signup form collects a name').toBeVisible()
     await expect(dialogHeading(page)).toHaveText(/create your free account/i)
@@ -69,7 +73,7 @@ test.describe('signup intent', () => {
 
   test('"Log in" still opens the sign-in form — the two are not the same button', async ({ page }) => {
     watch(page, 'a returning visitor')
-    await go(page, '/plans')
+    await go(page, '/help')           // an app-header page, as above
 
     await page.getByRole('button', { name: 'Log in' }).first().click()
     await expect(dialogHeading(page)).toHaveText(/welcome back/i)
@@ -91,9 +95,22 @@ test.describe('signup intent', () => {
     // rather than drop them on a "Welcome Back" form. Anchoring on the hero's
     // own first CTA rather than on its copy is what stops the next headline
     // rewrite turning this into a test of nothing.
-    const hero = page.locator('.sp-hero-cta .sp-cta').first()
+    //
+    // "Open the toolkit" is a free CTA and does its job WITHOUT an account: it
+    // goes straight into the app at /projects, and no sign-up form stands in
+    // the way. Sign-up is asked for only when saving or exporting.
+    const hero = page.locator('.sp-hero-cta .sp-pill').first()
     await expect(hero).toBeVisible()
-    await expect(hero).toHaveAttribute('href', '/login?signup=1')
+    await expect(hero).toHaveAttribute('href', '/projects')
+    await hero.click()
+    await expect(page).toHaveURL(/\/projects$/)
+    await expect(nameField(page), 'opening the toolkit put a sign-up form in the way').toHaveCount(0)
+
+    // The closing band's CTA is free too: the workspace, no sign-up form.
+    await go(page, '/')
+    const close = page.locator('.sp-close-cta').getByRole('link', { name: 'Use for free' })
+    await expect(close).toHaveAttribute('href', '/projects')
+    await expect(page.locator('.sp-close-cta').getByRole('button'), 'the closing band opens a sign-up form again').toHaveCount(0)
 
     await go(page, '/login?signup=1')
     await expect(nameField(page), 'a signup form collects a name').toBeVisible()
@@ -107,17 +124,19 @@ test.describe('signup intent', () => {
     await expect(nameField(page), 'a sign-in form does not').toHaveCount(0)
   })
 
-  test('the bottom-of-page block and the Plans free tier both mean sign-up', async ({ page }) => {
+  // /plans is the design's Pricing screen: its Free card says "Open the
+  // toolkit", and a signed-out visitor goes straight into the app with no
+  // sign-up gate. What still means
+  // sign-up on /plans is the Pro CTA, which opens the sign-in flow and carries
+  // the checkout as its destination — 101-pricing-screen.spec.js walks that.
+  test('the Plans free tier opens the toolkit without a sign-up gate', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/plans')
 
-    // The Plans Free tier is a link, like the hero.
-    await expect(page.getByRole('link', { name: 'Start on Free' }))
-      .toHaveAttribute('href', '/login?signup=1')
-
-    // The SystemCTA block at the foot of the page opens in place.
-    await page.getByRole('button', { name: /Start building free/ }).click()
-    await expect(nameField(page), 'a signup form collects a name').toBeVisible()
-    await expect(dialogHeading(page)).toHaveText(/create your free account/i)
+    const free = page.locator('.pr-plan--free').getByRole('link', { name: 'Open the toolkit' })
+    await expect(free).toHaveAttribute('href', '/projects')
+    await free.click()
+    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page.locator('[role="dialog"]'), 'the toolkit is not gated behind a sign-up dialog').toHaveCount(0)
   })
 })

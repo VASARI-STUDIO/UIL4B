@@ -227,18 +227,23 @@ test('the five sibling colour tools still name their regions by their own headin
   // copying this branch's answer onto them, their landmark maps disappear.
   watch(page, 'someone comparing the colour tools with a screen reader')
   await page.setViewportSize({ width: 1440, height: 900 })
+  // The tools name their side card as a
+  // complementary landmark ("<Tool> controls") and keep a region only where
+  // the drawn screen has a titled section. Entries are `role:name`.
   const expected = {
-    '/create/tint': ['Choose source colours', 'Tune the system', 'Evaluate the system'],
-    '/create/gradient': ['Shape the gradient'],
-    '/create/semantic-color': ['See each role do its job', 'Canonical, predictable token names'],
+    '/create/tint': ['complementary:Tint controls'],
+    '/create/gradient': ['region:Start from a preset', 'complementary:Gradient controls'],
+    '/create/semantic-color': ['region:The colours at work', 'region:Seed and base step'],
   }
   for (const [route, names] of Object.entries(expected)) {
     await go(page, route)
     await expect(page.locator('h1')).toBeVisible()
     const nodes = await axNodes(page)
-    const regions = nodes.filter((n) => n.role === 'region').map((n) => n.name)
+    // Lower-cased: the drawn section labels are 9.5px mono CAPS, and Chrome
+    // computes a name from the RENDERED text, so it reports them uppercase.
+    const landmarks = nodes.filter((n) => n.role === 'region' || n.role === 'complementary').map((n) => `${n.role}:${n.name}`.toLowerCase())
     for (const name of names) {
-      expect(regions, `${route} still exposes "${name}" as a landmark`).toContain(name)
+      expect(landmarks, `${route} still exposes "${name}" as a landmark`).toContain(name.toLowerCase())
     }
   }
 })

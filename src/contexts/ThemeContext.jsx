@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { onAccountApplied } from '../utils/accountEvents'
 
 const ThemeContext = createContext()
 const STORAGE_KEY = 'vs-t'
@@ -106,6 +107,11 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, pref) } catch { /* storage unavailable */ }
   }, [pref])
+
+  // The theme follows the ACCOUNT. When the account's
+  // choice is written into storage — at sign-in, from another device, or back
+  // to the default at sign-out — show it now, not after a reload.
+  useEffect(() => onAccountApplied([STORAGE_KEY], () => setPrefState(loadPref())), [])
 
   const setTheme = (next) => {
     if (next !== 'dark' && next !== 'light' && next !== 'system') return

@@ -39,6 +39,7 @@
 //                    untouched and stay founder-blocked; see the PR body.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
+import { openPaletteTools } from './palette-helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -245,13 +246,13 @@ test.describe('/feedback carries a return address, or says there is none', () =>
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the gradient stop hex reads as a field', () => {
-  // MUTATION: in src/styles/global.css, inside the `input.ggn-stop-hex{…}` rule
-  // (the one that begins `font-family:var(--mono);padding:5px 6px`), replace
-  //   background:var(--ggn-bg);border:1px solid var(--ggn-line)
-  // with
-  //   background:transparent;border:none
-  // — which is what this field declared until 2026-09-11. Every width below
-  // goes red, in both themes.
+  // The rebuilt screen edits the SELECTED stop in one hex field
+  // under the SELECTED STOP swatches, drawn as the design's own input: a wash
+  // ground (ink 4.5%, the header search field's, D:108) inside a hairline.
+  //
+  // MUTATION: in src/styles/pages/gradient.css set `.grd .grd-hex` to
+  // `background:transparent;border:none` — every width below goes red, in
+  // both themes.
   for (const width of WIDTHS) {
     for (const theme of ['light', 'dark']) {
       test(`it paints a box at ${width} in ${theme}`, async ({ browser }) => {
@@ -260,12 +261,12 @@ test.describe('the gradient stop hex reads as a field', () => {
         await go(page, '/create/gradient')
         await settled(page)
 
-        // POSITIVE CONTROL: a fresh gradient has three stops, so a page that
-        // rendered none cannot pass this vacuously.
-        const fields = page.locator('input.ggn-stop-hex')
-        await expect(fields).toHaveCount(3)
+        // POSITIVE CONTROL: the selected stop's field exists, so a page that
+        // rendered no editor cannot pass vacuously.
+        const fields = page.locator('input.grd-hex')
+        await expect(fields).toHaveCount(1)
 
-        const boxes = await page.evaluate(() => [...document.querySelectorAll('input.ggn-stop-hex')].map((el) => {
+        const b = await fields.first().evaluate((el) => {
           const cs = getComputedStyle(el)
           const r = el.getBoundingClientRect()
           return {
@@ -275,77 +276,43 @@ test.describe('the gradient stop hex reads as a field', () => {
             padX: parseFloat(cs.paddingLeft),
             h: +r.height.toFixed(1),
             clipped: el.scrollWidth > el.clientWidth,
-            // What the neighbour in the same row has always had, so the
-            // assertion is "these two agree" and not "this one has a number".
-            posBorder: parseFloat(getComputedStyle(el.closest('.ggn-stop').querySelector('.ggn-stop-pos input')).borderTopWidth),
           }
-        }))
-
-        for (const b of boxes) {
-          expect(b.border, `${width}/${theme}: ${b.name} has no border`).toBeGreaterThanOrEqual(1)
-          expect(b.border, `${width}/${theme}: ${b.name} disagrees with its own row's position field`).toBe(b.posBorder)
-          expect(b.ground, `${width}/${theme}: ${b.name} has no ground`).not.toBe('rgba(0, 0, 0, 0)')
-          expect(b.padX, `${width}/${theme}: ${b.name} has no inline padding`).toBeGreaterThan(0)
-          // The two properties the previous lane bought and this must not spend.
-          expect(b.h, `${width}/${theme}: ${b.name} is ${b.h}px tall`).toBeGreaterThanOrEqual(MIN_TARGET)
-          expect(b.clipped, `${width}/${theme}: ${b.name} clips its own value`).toBe(false)
-        }
+        })
+        expect(b.border, `${width}/${theme}: ${b.name} has no border`).toBeGreaterThanOrEqual(1)
+        expect(b.ground, `${width}/${theme}: ${b.name} has no ground`).not.toBe('rgba(0, 0, 0, 0)')
+        expect(b.padX, `${width}/${theme}: ${b.name} has no inline padding`).toBeGreaterThan(0)
+        expect(b.h, `${width}/${theme}: ${b.name} is ${b.h}px tall`).toBeGreaterThanOrEqual(MIN_TARGET)
+        expect(b.clipped, `${width}/${theme}: ${b.name} clips its own value`).toBe(false)
 
         await ctx.close()
       })
     }
   }
 
-  // MUTATION: in the `@media (max-width: 640px)` block of
-  // src/styles/pages/gradient.css (where the stacked row moved on 2026-09-23,
-  // beside global.css's own copy at 480), change
-  // `.ggn .ggn-stop-hex-field{ grid-column: 3 / -1; }` to `3 / 4`. The field
-  // stops at the 1fr track, short of the row's right edge, and this goes red.
-  test('below 481 the field spends the row\'s empty tail, not the value\'s slack', async ({ browser }) => {
+  // MUTATION: give `.grd .grd-hex-field` `flex: 0 0 60px` in gradient.css —
+  // the field no longer holds the widest hex at 320 and this goes red.
+  test('at 320 the field holds the widest possible hex', async ({ browser }) => {
     const { ctx, page } = await at(browser, 320)
     watch(page, 'designer editing a gradient on the narrowest phone')
     await go(page, '/create/gradient')
     await settled(page)
 
     const m = await page.evaluate(() => {
-      const el = document.querySelector('input.ggn-stop-hex')
-      const row = el.closest('.ggn-stop')
+      const el = document.querySelector('input.grd-hex')
       const cs = getComputedStyle(el)
-      // What the widest possible value measures in this exact face.
       const probe = document.createElement('span')
-      probe.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${cs.font};letter-spacing:${cs.letterSpacing}`
+      probe.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${cs.font};letter-spacing:${cs.letterSpacing};text-transform:${cs.textTransform}`
       probe.textContent = '#WWWWWW'
       document.body.appendChild(probe)
       const need = probe.getBoundingClientRect().width
       probe.remove()
       return {
-        width: +el.getBoundingClientRect().width.toFixed(1),
         content: el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
         need: +need.toFixed(1),
-        rowHeight: +row.getBoundingClientRect().height.toFixed(1),
-        rowDisplay: getComputedStyle(row).display,
-        fieldRight: el.getBoundingClientRect().right,
-        rowContentRight: row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight),
-        // Two lines of the row's own controls, whatever the pointer makes them
-        // (44px under a coarse one since 2026-09-23), plus gap and padding.
-        twoLines: (() => {
-          const rs = getComputedStyle(row)
-          const line = (sel) => Math.max(...[...row.querySelectorAll(sel)].map((n) => n.getBoundingClientRect().height))
-          return line('.ggn-stop-swatch, .ggn-stop-hex-field') + line('.ggn-stop-pos, .ggn-stop-lock, .ggn-stop-x')
-            + parseFloat(rs.rowGap) + parseFloat(rs.paddingTop) + parseFloat(rs.paddingBottom)
-            + parseFloat(rs.borderTopWidth) + parseFloat(rs.borderBottomWidth)
-        })(),
       }
     })
-
-    expect(m.rowDisplay, 'the ≤480 row is no longer a grid; this test measures the wrong thing').toBe('grid')
-    // The field runs to the row's right edge: the columns the second line's
-    // controls leave empty on the first line are its to use.
-    expect(m.fieldRight, 'the field did not take the row\'s empty tail').toBeGreaterThanOrEqual(m.rowContentRight - 1)
+    expect(m.need, 'the probe measured nothing').toBeGreaterThan(20)
     expect(m.content, `the widest hex needs ${m.need}px and the box gives ${m.content}px`).toBeGreaterThan(m.need)
-    // And the row did not get taller to pay for it.
-    expect(m.rowHeight, 'the stop row grew').toBeLessThanOrEqual(m.twoLines + 1)
-
     await ctx.close()
   })
 })
@@ -362,7 +329,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   test('all eighteen scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     await go(page, '/create/palette')
-    await page.getByRole('button', { name: 'Preview', exact: true }).click()
+    await (await openPaletteTools(page)).getByRole('button', { name: 'Preview on a UI' }).click()
     await expect(page.locator('.plb-pv').first()).toBeVisible()
 
     const ROLES = ['--pv-bg', '--pv-surface', '--pv-primary', '--pv-onprimary', '--pv-accent',

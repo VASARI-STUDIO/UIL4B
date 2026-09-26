@@ -80,7 +80,7 @@ const AI_SRC = read('api/ai.js')
 const AI_CODE = stripJs(AI_SRC)
 const PAGE = read('src/pages/BrandStarter.jsx')
 const PAGE_CODE = stripJs(PAGE)
-const PLANS = read('src/pages/Plans.jsx')
+const PLANS = read('src/pages/Pricing.jsx')
 const CREATE_TOOL = read('src/pages/CreateTool.jsx')
 
 // ── 1. the mirror ────────────────────────────────────────────────────────────
@@ -638,11 +638,21 @@ test('nothing is written into the user’s working design', () => {
     'the page no longer says that nothing was applied, which is the question a generator has to answer')
 })
 
-test('the page requires a session and passes a REAL token', () => {
-  // Metering follows the account, not the browser. A page that let an
-  // anonymous caller through, or that fabricated a token, would meter nothing.
-  assert.match(PAGE_CODE, /<AuthGate featureLabel="generate a brand starter">/,
-    'the tool is no longer behind the auth gate')
+test('a generation requires a session and passes a REAL token', () => {
+  // Metering follows the account, not the browser. The tool itself opens
+  // signed out (free tools open without an account), so
+  // the session is asked for at the one step that spends an allowance —
+  // Generate — and a dismissed dialog must stop the request before it is made.
+  assert.ok(!PAGE_CODE.includes('<AuthGate'),
+    'the whole tool is behind an auth gate again, so a signed-out visitor cannot open it')
+  assert.match(PAGE_CODE, /requireLogin\('generate a brand starter'/,
+    'Generate no longer asks a signed-out visitor for an account')
+  const gen = PAGE_CODE.slice(PAGE_CODE.indexOf('const generate = useCallback'))
+  const ask = gen.indexOf('await ensureAccount()')
+  assert.ok(ask > -1 && ask < gen.indexOf("fetch('/api/ai'"),
+    'the account check does not run before the request to /api/ai')
+  assert.match(gen, /if \(ensureAccount && !\(await ensureAccount\(\)\)\) return/,
+    'a dismissed sign-in does not stop the generation')
   assert.match(PAGE_CODE, /getToken=\{\(\) => firebaseAuth\.currentUser\?\.getIdToken\(\)\}/,
     'the page no longer supplies a real Firebase ID token — the acceptance fixture’s stub would be '
     + 'the only implementation, which is the isolated-helper trap this suite exists to avoid')
@@ -654,7 +664,7 @@ test('the page requires a session and passes a REAL token', () => {
 
 test('/plans derives the allowance instead of typing it', () => {
   assert.match(PLANS, /import \{[^}]*allowanceSentence[^}]*\} from '\.\.\/config\/aiGeneration'/,
-    'Plans.jsx no longer imports the allowance, so its figure is prose again')
+    'Pricing.jsx no longer imports the allowance, so its figure is prose again')
   const code = stripJs(PLANS)
   assert.match(code, /allowanceSentence\('free'\)/, 'the free row does not derive its figure')
   assert.match(code, /allowanceSentence\('pro'\)/, 'the Pro row does not derive its figure')

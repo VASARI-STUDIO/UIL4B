@@ -34,13 +34,14 @@ const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
 /** The founder's matrix. 660 is his screenshot; the rest are the device band. */
 const WIDTHS = [320, 360, 390, 430, 660, 768, 834, 1024, 1280, 1440, 1920]
 
-/** The band where `.plb-col` is a row and there is no hover to reveal with. */
-const ROW_BAND = WIDTHS.filter((w) => w <= 768)
+/** The band where `.plb-col` is a row: the drawn phone layout, below 768px
+ *  (D:65). At 768 the board is columns and the actions menu waits for hover. */
+const ROW_BAND = WIDTHS.filter((w) => w < 768)
 
 /** WCAG 2.2 AA 2.5.8 (Target Size, Minimum). */
 const MIN_TARGET = 24
 
-// THE BUDGET IS PER PAGE LOAD, the same derivation 25-defect-sweep and
+// THE BUDGET IS PER PAGE LOAD, the same derivation 25-layout-target-sweep and
 // 37-toolbar-tablet-band already use and for the same reason: the 30s default
 // is a budget for a test that opens ONE page, and the matrix tests here open a
 // fresh context and navigate once per width — twenty-two times for the role
@@ -149,7 +150,7 @@ const readBoard = () => {
 }
 
 test.describe('the palette board across the width matrix', () => {
-  test('a swatch row is two controls and a named menu, never seven icons', async ({ browser }) => {
+  test('a swatch row is the lock and a named menu, never seven icons', async ({ browser }) => {
     budget(ROW_BAND.length)
     for (const width of ROW_BAND) {
       const { ctx, page } = await at(browser, width)
@@ -165,11 +166,12 @@ test.describe('the palette board across the width matrix', () => {
       expect(board.buttons, `${width}px: the page painted its controls`).toBeGreaterThan(40)
 
       for (const [index, col] of board.perColumn.entries()) {
-        expect(col.tools.length, `${width}px, column ${index}: inline tools`).toBe(3)
-        // Named, not merely few. Three unlabelled icons would pass a count.
+        // The drawn lock (D:1021) and the colour's named actions menu; the hex
+        // itself is the copy control (D:1030).
+        expect(col.tools.length, `${width}px, column ${index}: inline tools`).toBe(2)
+        // Named, not merely few. Two unlabelled icons would pass a count.
         expect(col.tools[0], `${width}px, column ${index}`).toMatch(/^(Lock|Unlock) /)
-        expect(col.tools[1], `${width}px, column ${index}`).toMatch(/^Copy #/)
-        expect(col.tools[2], `${width}px, column ${index}`).toMatch(/^More actions for /)
+        expect(col.tools[1], `${width}px, column ${index}`).toMatch(/^More actions for /)
         expect(col.undersized, `${width}px, column ${index}: below ${MIN_TARGET}px`).toEqual([])
         expect(col.covered, `${width}px, column ${index}: centre hit-tests elsewhere`).toEqual([])
       }
@@ -196,9 +198,13 @@ test.describe('the palette board across the width matrix', () => {
     expect(items.length, 'the menu opened with rows in it').toBeGreaterThanOrEqual(8)
 
     const text = items.join(' | ')
-    for (const action of ['Copy hex', 'Edit in HCT', 'View tints', 'Lock', 'contrast', 'Swap', 'Remove']) {
+    for (const action of ['Copy hex', 'Edit in HCT', 'View tints', 'Lock', 'Swap', 'Remove']) {
       expect(text, `"${action}" survived the collapse`).toContain(action)
     }
+    // Contrast is not in the menu because it is on the colour itself: the
+    // drawn AA chip (D:1032), Pro-gated, named for what it checks.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.plb-col').first().getByRole('button', { name: /^Contrast of .* a Pro check$/ })).toBeVisible()
     await ctx.close()
   })
 
@@ -278,7 +284,7 @@ test.describe('the palette board across the width matrix', () => {
       for (const [index, col] of board.perColumn.entries()) {
         expect(col.roleShown, `${width}px signed in, column ${index}`).toBe(true)
         expect(col.undersized, `${width}px signed in, column ${index}`).toEqual([])
-        if (width <= 768) expect(col.tools.length, `${width}px signed in, column ${index}`).toBe(3)
+        if (width < 768) expect(col.tools.length, `${width}px signed in, column ${index}`).toBe(2)
       }
       expect(board.overflowX, `${width}px signed in`).toBeLessThanOrEqual(0)
       await ctx.close()
@@ -324,7 +330,7 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
 
       const read = await page.evaluate(() => ({
         headings: [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((h) => h.textContent.trim()),
-        specimenTags: [...document.querySelectorAll('.cc-spec-h, .cc-spec-body, .cc-spec-small')].map((e) => e.tagName),
+        specimenTags: [...document.querySelectorAll('.cc-spec-h, .cc-spec-large, .cc-spec-body')].map((e) => e.tagName),
         specimenText: [...document.querySelectorAll('.cc-preview')].map((e) => e.innerText).join(' '),
         body: document.body.innerText,
       }))
@@ -335,9 +341,10 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       expect(read.specimenTags.length, `${theme}: the specimen rows painted`).toBe(3)
       expect(read.specimenText.length, `${theme}: the preview has text in it`).toBeGreaterThan(60)
 
-      // A specimen is not a section of this document.
+      // A specimen is not a section of this document — "Sample heading" is a
+      // picture of a heading (the design's drawn copy, D:731), not an h2.
       expect(read.specimenTags, `${theme}: no specimen row is a heading`).not.toContain('H2')
-      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Colour Contrast Checker', 'Live preview'])
+      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Common pairs in this kit'])
 
       // The claim the founder retired, and the tagline beside it.
       expect(read.body, `${theme}`).not.toContain('Free while in beta')
@@ -345,37 +352,43 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       await ctx.close()
     }
   })
-  // create-tools-left-2026-09-15 (1): the page reported main | navigation |
-  // contentinfo and no region naming its content. Both panels are named
-  // sections now — the instrument by the page's own h1, the specimen by its
-  // "Live preview" h2 — so no new words were needed to name them.
-  test('both panels are named regions, instrument and specimen', async ({ browser }) => {
+
+  // The page must name its content. On the drawn screen that is
+  // the specimen, a region, and the side card — the ratio, the tests and both
+  // fields — a named complementary landmark.
+  test('the specimen and the instrument are both named landmarks', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440)
     await go(page, '/create/contrast')
     await expect(page.locator('.cc-preview')).toBeVisible()
-    const instrument = page.getByRole('region', { name: 'Colour Contrast Checker' })
-    const specimen = page.getByRole('region', { name: /live preview/i })
+    const instrument = page.getByRole('complementary', { name: 'Contrast result' })
+    const specimen = page.getByRole('region', { name: 'Preview of the pair' })
     await expect(instrument).toHaveCount(1)
     await expect(specimen).toHaveCount(1)
-    // The instrument region holds the tool, not just its heading.
     await expect(instrument.locator('#cc-fg')).toHaveCount(1)
-    await expect(specimen.locator('.cc-preview')).toHaveCount(1)
+    await expect(instrument.locator('#cc-bg')).toHaveCount(1)
+    await expect(specimen.locator('.cc-spec-body')).toHaveCount(1)
     await ctx.close()
   })
 
-  // App controls are rounded rectangles; 999px is for meters and the sales
-  // page. The AA/AAA switch and the verdict chips were both 999px pills.
-  test('no control or verdict chip on the checker is a pill', async ({ browser }) => {
+  // Every button on the checker is a pill, or a circle when it is square;
+  // the fields keep their own radius. The colour swatch triggers and the
+  // suggested pairs are samples and cards, not buttons, and keep theirs.
+  test('the checker\'s buttons are pills and its fields are not', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440)
     await go(page, '/create/contrast')
-    await expect(page.locator('.cc-level-opt')).toHaveCount(2)
-    const radii = await page.evaluate(() => [...document.querySelectorAll(
-      '.cc-page button, .cc-page input, .cc-level-opts, .cc-verdict')]
+    await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
+    const radii = await page.evaluate(() => [...document.querySelectorAll('.cc button, .cc input')]
       .filter((el) => el.getBoundingClientRect().width > 0)
-      .map((el) => ({ cls: String(el.className), r: parseFloat(getComputedStyle(el).borderTopLeftRadius) })))
-    // POSITIVE CONTROL: the switch, both fields, swap and four chips at least.
+      .map((el) => {
+        const r = el.getBoundingClientRect()
+        return { tag: el.tagName, cls: String(el.className), r: parseFloat(getComputedStyle(el).borderTopLeftRadius), w: r.width, h: r.height }
+      }))
+    // POSITIVE CONTROL: swap, the Text/Background pair, both fields, the pairs.
     expect(radii.length).toBeGreaterThan(8)
-    expect(radii.filter((x) => x.r >= 20), 'pill-shaped controls').toEqual([])
+    const buttons = radii.filter((x) => x.tag === 'BUTTON' && !/cpk-trigger|cc-pair/.test(x.cls))
+    expect(buttons.length, 'no buttons were measured').toBeGreaterThan(2)
+    expect(buttons.filter((x) => x.r + 0.5 < Math.min(x.w, x.h) / 2), 'buttons that are not pills').toEqual([])
+    expect(radii.filter((x) => x.tag === 'INPUT' && x.r >= 20 && x.w > x.h + 4), 'fields drawn as pills').toEqual([])
     await ctx.close()
   })
 })
@@ -387,10 +400,10 @@ test.describe('the gradient stop row under a thumb', () => {
   test('every stop control is 44px on a phone', async ({ browser }) => {
     const { ctx, page } = await at(browser, 390)
     await go(page, '/create/gradient')
-    await expect(page.locator('.ggn-stop')).toHaveCount(3)
+    await expect(page.locator('.grd-stop')).toHaveCount(3)
     const read = await page.evaluate(() => ({
       coarse: matchMedia('(pointer: coarse)').matches,
-      boxes: [...document.querySelectorAll('.ggn-stop-lock, .ggn-stop-x, .ggn-stop-swatch .cpk-trigger')]
+      boxes: [...document.querySelectorAll('.grd-stop-lock, .grd-stop-x, .grd-stop-swatch')]
         .map((el) => { const b = el.getBoundingClientRect(); return { cls: String(el.className), w: Math.round(b.width), h: Math.round(b.height) } }),
     }))
     expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
@@ -400,7 +413,7 @@ test.describe('the gradient stop row under a thumb', () => {
   })
 })
 
-// The founder's App design reads each palette column from its left edge; the
+// The design's App design reads each palette column from its left edge; the
 // board used to centre name, hex and role, so five labels drifted sideways
 // with the length of each name. And a phone reaches lock / copy / more only
 // through the column's 32px tools, which a coarse pointer now gets at 44.

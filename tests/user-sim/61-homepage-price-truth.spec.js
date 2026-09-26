@@ -29,7 +29,6 @@ import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
 import {
   PLAN_LADDER,
-  cheapestPerMonth,
   purchasablePlans,
   resolvePlanLadder,
 } from '../../src/config/planLadder.js'
@@ -71,127 +70,37 @@ const UNBUYABLE = RESOLVED.filter((p) => !p.purchasable)
 // and this fails on the next run, with no scroll to hide behind.
 const PRICING = '#pricing'
 
-/** What the front door's pricing section says, read where it rests. */
-const readPricing = (page) => page.evaluate((sel) => {
-  const el = document.querySelector(sel)
-  if (!el) return null
-  const plans = el.querySelector('.sp-plans')
-  return {
-    // textContent, not innerText: the claim is what the section SAYS, and a
-    // block the reader has not scrolled to must not be able to hide a retired
-    // tier from this sweep.
-    text: el.textContent || '',
-    opacity: Number(getComputedStyle(plans || el).opacity),
-    // The two things that NAME a tier: the cadence tabs and the plan cards.
-    cadenceCount: el.querySelectorAll('.sp-billing-tab').length,
-    tierCount: el.querySelectorAll('.sp-plan-tier').length,
-  }
-}, PRICING)
-
 test.describe('the homepage price panel only names tiers that can be bought', () => {
-  test('no unpurchasable tier is advertised, and every purchasable one is', async ({ page }) => {
+  // In the design the tiers, the cadence tabs, the comparison and the FAQ
+  // are the Pricing SCREEN, at /plans; the landing only points
+  // there. So the front door must name no tier and quote no
+  // price, and its plan links must all go to /plans. The panel checks
+  // themselves belong to /plans's own specs.
+  test('the landing quotes no price and names no tier; its plan links all go to /plans', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/')
     await expectRendered(page)
 
-    const panel = await readPricing(page)
-
-    // ── Positive controls. Every assertion below is an absence or a match, and
-    //    both are trivially satisfiable by a panel that failed to render.
-    expect(panel, 'the pricing section is not in the DOM at all').not.toBeNull()
-    expect(panel.cadenceCount, 'the pricing section rendered no cadence tabs — the tier assertions below would pass vacuously')
-      .toBe(BUYABLE.length)
-    expect(panel.tierCount, 'the pricing section rendered no plan cards — FREE and PRO are what the tier names hang on')
-      .toBe(2)
-    // Read WITHOUT scrolling to it, which is what makes this a statement about
-    // the resting state rather than about a reveal that happened to fire.
-    expect(panel.opacity, 'the pricing panel rests at opacity 0 — a visitor who has not scrolled to it '
-      + 'sees nothing, which is the ordering useSpectrumReveal.js exists to prevent')
-      .toBeGreaterThan(0.9)
-
-    // ── The central guard. A tier with no `checkoutPlan` has nothing that can
-    //    accept the click: Checkout.jsx only accepts monthly|yearly|lifetime.
-    expect(UNBUYABLE.length, 'planLadder.js currently has no unpurchasable tier, so this guard is not exercising anything — if quarterly was wired up, delete this test with it')
-      .toBeGreaterThan(0)
-
-    // CASE-INSENSITIVELY, and that is load-bearing rather than tidy. The tab
-    // and tier labels are uppercased in CSS, so what is PAINTED is "MONTHLY"
-    // while the ladder says "Monthly". A case-SENSITIVE absence check would
-    // have been satisfied by a panel with "QUARTERLY" printed across it — an
-    // assertion that could not fail, guarding the one claim this file exists
-    // for. (`textContent` returns the authored case, which is the same
-    // argument from the other end: neither reading may decide the result.)
-    const names = panel.text.toLowerCase()
-    for (const plan of UNBUYABLE) {
-      expect(
-        names.includes(plan.label.toLowerCase()),
-        `the homepage advertises the ${plan.label} tier, which has no checkoutPlan and dead-ends at "Invalid selection"`,
-      ).toBe(false)
+    await expect(page.locator(PRICING), 'the landing has its pricing section back').toHaveCount(0)
+    await expect(page.locator('.sp-plan, .sp-billing-tab, .sp-compare-table'), 'plan cards are back on the landing').toHaveCount(0)
+    const text = await page.locator('#main').evaluate((el) => (el.textContent || '').replace(/\s+/g, ' '))
+    // POSITIVE CONTROL: the read found the landing, not an empty shell.
+    expect(text, 'the landing text was not read').toContain('Start your first project today.')
+    for (const plan of RESOLVED) {
+      if (!plan.perMonthLabel) continue
+      expect(text.includes(`${plan.perMonthLabel} /`) || text.includes(`${plan.perMonthLabel} a month`),
+        `the landing quotes the ${plan.label} rate ${plan.perMonthLabel}`).toBe(false)
     }
+    expect(/\$\d/.test(text), 'the landing quotes a dollar amount; prices live on /plans').toBe(false)
 
-    // ── …and both directions, so this cannot be satisfied by a panel that
-    //    stopped naming tiers at all.
-    for (const plan of BUYABLE) {
-      expect(
-        names.includes(plan.label.toLowerCase()),
-        `the homepage no longer names the ${plan.label} tier, which is one the product does sell`,
-      ).toBe(true)
+    // Every plan link goes to /plans — never checkout, never the login popup.
+    for (const name of [/^View plans$/, /^See the plans$/]) {
+      await expect(page.locator('#main').getByRole('link', { name }), `"${name.source}" is gone`).toHaveAttribute('href', '/plans')
     }
-  })
-
-  // THE HEADLINE FIGURE MOVED OUT OF THE HEADING, AND THAT IS THE POINT OF
-  // RE-POINTING RATHER THAN RETIRING THIS.
-  //
-  // Home's `#hprice-title` quoted the rate in the heading itself. Spectrum's
-  // `#sp-price-h` deliberately does not — it reads "The whole toolkit is free.
-  // Pro adds room.", because /plans's own h1 is the position and a visitor must
-  // not meet two different ones. The claim this test exists for did not move
-  // with it: SOMEWHERE on the front door a headline rate is stated, and it must
-  // be the cheapest one a person can actually buy. On Spectrum that sentence is
-  // `.sp-compare-foot` ("…Pro starts at $4 a month"), rendered from `CHEAPEST`,
-  // which is `cheapestPerMonth(RESOLVED)` — the same export this file resolves.
-  //
-  // The Pro card's own `$N / month` is asserted beside it because the two can
-  // disagree: the card shows the PRESELECTED cadence's rate, which is seeded
-  // from the ladder's `best` flag, and a ladder where the recommended cadence
-  // is not the cheapest would put two different rates a card apart.
-  test('the headline price is the cheapest tier that can actually be bought', async ({ page }) => {
-    watch(page, PERSONA)
-    await go(page, '/')
-    await expectRendered(page)
-
-    const cheapest = cheapestPerMonth(RESOLVED)
-    expect(cheapest?.perMonthLabel, 'the ladder resolved no purchasable per-month figure').toBeTruthy()
-
-    const headline = (await page.locator('.sp-compare-foot').innerText()).replace(/\s+/g, ' ').trim()
-    // POSITIVE CONTROL — the sentence is on the page and says something. An
-    // empty string satisfies the absence half below for free.
-    expect(headline.length, 'the front door no longer states a headline rate anywhere, so the '
-      + 'checks below are guarding an empty string').toBeGreaterThan(20)
-
-    expect(
-      headline.includes(cheapest.perMonthLabel),
-      `the headline reads "${headline}" but the cheapest buyable tier is ${cheapest.perMonthLabel}/month (${cheapest.label})`,
-    ).toBe(true)
-
-    // A typed headline survives a ladder change; a derived one cannot. Guard
-    // the direction that matters: the headline must not quote a figure that
-    // belongs only to a tier nobody can buy.
-    for (const plan of UNBUYABLE) {
-      if (!plan.perMonthLabel || plan.perMonthLabel === cheapest.perMonthLabel) continue
-      expect(
-        headline.includes(plan.perMonthLabel),
-        `the headline quotes ${plan.perMonthLabel}, which is the ${plan.label} rate — a tier that cannot be bought`,
-      ).toBe(false)
-    }
-
-    // …and the card a visitor clicks agrees with the sentence they just read.
-    const card = (await page.locator('.sp-plan--pro .sp-plan-price').innerText()).replace(/\s+/g, ' ').trim()
-    expect(
-      card.includes(cheapest.perMonthLabel),
-      `the Pro card leads with "${card}" while the sentence under the table says `
-      + `${cheapest.perMonthLabel} — the preselected cadence is not the cheapest buyable one`,
-    ).toBe(true)
+    const toCheckout = await page.locator('#main a[href^="/checkout"], #main a[href*="signup=1"]').count()
+    expect(toCheckout, 'a landing CTA skips /plans for checkout or the sign-up route').toBe(0)
+    expect(BUYABLE.length, 'the ladder has nothing to buy, so /plans has nothing to show').toBeGreaterThan(0)
+    expect(UNBUYABLE.length + BUYABLE.length).toBe(PLAN_LADDER.length)
   })
 
   test('the homepage does not promise a cancellation the billing portal cannot do', async ({ page }) => {

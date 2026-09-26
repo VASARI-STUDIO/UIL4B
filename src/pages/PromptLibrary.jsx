@@ -371,6 +371,8 @@ export default function PromptLibrary({ onCopy, toast }) {
           shape rather than a workaround. */}
       <LibraryToolbar
         className="pl-lbry-toolbar"
+        quick={1}
+        activeFilters={isCommunity ? (communitySort !== 'popular' ? 1 : 0) + (activeCategory ? 1 : 0) : 0}
         search={{
           value: search,
           onChange: setSearch,
@@ -378,24 +380,28 @@ export default function PromptLibrary({ onCopy, toast }) {
           label: isCommunity ? 'Search community prompts' : 'Search your prompts',
         }}
       >
-        {isCommunity && (
-          <>
+        {/* An ARRAY, not a fragment: LibraryToolbar reads its groups with
+            Children.toArray, which flattens arrays and does not flatten
+            fragments, and it needs to see two groups to keep the category
+            chips on a phone's quick row and put the sort in the sheet. */}
+        {isCommunity && [
             <LibraryFilterGroup
+              key="sort"
               label="Sort community prompts"
               triggerLabel="Sort"
               value={communitySort}
               onChange={setCommunitySort}
               options={SORT_OPTIONS}
-            />
+            />,
             <LibraryFilterGroup
+              key="category"
               label="Filter prompts by category"
               triggerLabel="Category"
               value={activeCategory || 'all'}
               onChange={(id) => setActiveCategory(id === 'all' ? null : id)}
               options={CATEGORY_OPTIONS}
-            />
-          </>
-        )}
+            />,
+        ]}
       </LibraryToolbar>
 
       {/* Add prompt panel (slide-down) — only for My Prompts */}
@@ -523,18 +529,13 @@ export default function PromptLibrary({ onCopy, toast }) {
                 heading level. */}
             <h2 className="sr-only" id="pl-locked-community">Community prompts included with Pro</h2>
             <div className="pl-gallery pl-gallery--continues" role="group" aria-labelledby="pl-locked-community">
-              {lockedPrompts.map((preview) => <LockedPromptCard key={preview.id} preview={preview} />)}
+              {lockedPrompts.map((preview) => <LockedPromptCard key={preview.id} preview={preview} gate="prompt-library-locked-card" />)}
             </div>
             <LockedTeaseCta
               gate="prompt-library-community-lock"
               heading={`Another ${lockedCount} community ${lockedCount === 1 ? 'prompt' : 'prompts'} with Pro`}
               body="Each one opens as the complete brief its author wrote — the full prompt text to copy, not a preview of it."
               action="See what Pro includes"
-              modal={{
-                eyebrow: 'Pro prompt library',
-                title: 'The full community library',
-                subtitle: `Free covers ${browsableCommunity.length} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens the remaining ${lockedCount}, each as the full text its author submitted.`,
-              }}
             />
           </>
         )
@@ -546,13 +547,25 @@ export default function PromptLibrary({ onCopy, toast }) {
           exactly the requireLogin gate the masthead's Submit button uses, with
           the same COMMUNITY_SUBMIT_REASONS, because it IS that code path and
           not a second copy of it. */}
-      <GalleryCloseCta
-        className="pl-cta"
-        detail="Write one and submit it to the community library — every submission is reviewed before it appears."
-        action="Create and submit your own"
-        onAction={openSubmitFromClose}
-        busy={authLoading}
-      />
+      {/* "create and submit your
+          own" is for Pro viewers only; everyone else is offered more access
+          instead, except where the locked tease above already is that offer. */}
+      {isPro === true ? (
+        <GalleryCloseCta
+          className="pl-cta"
+          detail="Write one and submit it to the community library — every submission is reviewed before it appears."
+          action="Create and submit your own"
+          onAction={openSubmitFromClose}
+          busy={authLoading}
+        />
+      ) : !lockedBlockVisible && lockedCount > 0 ? (
+        <GalleryCloseCta
+          className="pl-cta"
+          detail={`Free covers ${openCommunity.length} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens all of them.`}
+          action="See what Pro includes"
+          to="/plans"
+        />
+      ) : null}
 
       {/* Detail Modal */}
       {modalPrompt && (

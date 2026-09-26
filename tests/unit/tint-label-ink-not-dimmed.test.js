@@ -154,8 +154,8 @@ function rulesFor(sel) {
 // The two label families on /create/tint whose ink is computed, not chosen.
 // Adding a selector here is how a new computed-ink label joins the guarantee.
 const COMPUTED_INK_LABELS = [
-  { sel: '.tt-cell-hex', what: 'the hex printed under every tint swatch' },
-  { sel: '.tt-role-sample', what: 'the role name on every preview sample' },
+  // The screen prints the step label on every column (.tt-cell-step).
+  { sel: '.tt-cell-step', what: 'the step label printed on every tint column' },
 ]
 
 test('no tint swatch label dims its computed ink', () => {

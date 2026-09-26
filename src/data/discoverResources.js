@@ -26,117 +26,12 @@
 // rel="noopener noreferrer nofollow" target="_blank".
 
 export const DISCOVER_RESOURCES = [
-  // ─── Gradients ───────────────────────────────────────────────────────────
-  {
-    id: 'designgradients',
-    title: 'Design Gradients',
-    host: 'designgradients.com',
-    url: 'https://www.designgradients.com',
-    category: 'gradients',
-    free: true,
-    tags: ['gradients', 'css', 'backgrounds', 'inspiration'],
-    shortDescription: 'A hand-picked gallery of modern CSS gradients with copy-ready backgrounds for hero sections and cards.',
-    useCase: 'Hero & card backgrounds',
-    difficulty: 'Beginner',
-    whyUseful: 'A fast way to find a tasteful gradient without fiddling with stops. Browse, then bring a starting point straight into the Gradient Generator to fine-tune the angle, stops and export the CSS.',
-    relatedTools: [
-      { label: 'Gradient Generator', route: '/create/gradient', preset: 'sunset', tab: 'gradient' },
-      { label: 'Colour System Builder', route: '/create/color' },
-    ],
-    added: '2026-06-20',
-    featured: true,
-  },
-  {
-    id: 'uigradients',
-    title: 'uiGradients',
-    host: 'uigradients.com',
-    url: 'https://uigradients.com',
-    category: 'gradients',
-    free: true,
-    tags: ['gradients', 'css', 'two-tone'],
-    shortDescription: 'A community collection of two-tone gradients you can preview full-screen and copy as CSS in one click.',
-    useCase: 'Quick two-tone backgrounds',
-    whyUseful: 'Great when you want a clean two-stop gradient fast. Pick one you like and rebuild it in the Gradient Generator to adjust direction and add stops.',
-    relatedTools: [
-      { label: 'Gradient Generator', route: '/create/gradient', preset: 'malibu', tab: 'gradient' },
-    ],
-    added: '2026-06-12',
-  },
-  {
-    id: 'gradient-magic',
-    title: 'Gradient Magic',
-    host: 'gradientmagic.com',
-    url: 'https://www.gradientmagic.com',
-    category: 'gradients',
-    free: true,
-    tags: ['gradients', 'css', 'patterns', 'radial', 'conic'],
-    shortDescription: 'Generative radial, conic and patterned gradients that go well beyond the usual two-stop linear look.',
-    useCase: 'Unusual radial / conic effects',
-    difficulty: 'Intermediate',
-    whyUseful: 'For when a plain linear gradient is too flat. Use it for inspiration, then recreate the radial or conic type in the Gradient Generator.',
-    relatedTools: [
-      { label: 'Gradient Generator', route: '/create/gradient', preset: 'aurora-conic', tab: 'gradient' },
-    ],
-    added: '2026-06-08',
-  },
-
-  // ─── Palettes ────────────────────────────────────────────────────────────
-  {
-    id: 'colorhunt',
-    title: 'Color Hunt',
-    host: 'colorhunt.co',
-    url: 'https://colorhunt.co',
-    category: 'palettes',
-    free: true,
-    tags: ['palettes', 'colour', 'inspiration', 'trending'],
-    shortDescription: 'A curated, trending feed of four-colour palettes — one of the fastest ways to find a starting colour direction.',
-    useCase: 'Finding a colour direction',
-    difficulty: 'Beginner',
-    whyUseful: 'Perfect for kicking off a brand or UI palette. Find a set you like, then drop a colour into the Colour System Builder to generate the full tonal system and check contrast.',
-    relatedTools: [
-      { label: 'Colour System Builder', route: '/create/color' },
-    ],
-    // Representative sample palette (static, local — rendered as real swatches
-    // on the Discover card face instead of the generated monogram).
-    palette: ['#222831', '#393E46', '#00ADB5', '#EEEEEE'],
-    added: '2026-06-18',
-    featured: true,
-  },
-  {
-    id: 'coolors',
-    title: 'Coolors',
-    host: 'coolors.co',
-    url: 'https://coolors.co',
-    category: 'palettes',
-    free: true,
-    tags: ['palettes', 'colour', 'generator'],
-    shortDescription: 'The popular spacebar palette generator — lock colours you like and reshuffle the rest until it clicks.',
-    useCase: 'Generating palettes fast',
-    whyUseful: 'Good for exploring quickly. Once you have a base colour, build the production-ready scale and exports in the Colour System Builder.',
-    relatedTools: [
-      { label: 'Colour System Builder', route: '/create/color' },
-    ],
-    palette: ['#264653', '#2A9D8F', '#E9C46A', '#F4A261', '#E76F51'],
-    added: '2026-06-05',
-  },
-  {
-    id: 'happyhues',
-    title: 'Happy Hues',
-    host: 'happyhues.co',
-    url: 'https://www.happyhues.co',
-    category: 'palettes',
-    free: true,
-    tags: ['palettes', 'colour', 'roles', 'context'],
-    shortDescription: 'Palettes shown in real UI context, with each colour labelled by role (background, text, accent) so you can see how it actually reads.',
-    useCase: 'Seeing colour in context',
-    difficulty: 'Beginner',
-    whyUseful: 'The role-based presentation maps cleanly onto how the Colour System Builder assigns colours — a great reference before you commit.',
-    relatedTools: [
-      { label: 'Colour System Builder', route: '/create/color' },
-    ],
-    palette: ['#16161A', '#7F5AF0', '#2CB67D', '#FFFFFE'],
-    added: '2026-05-28',
-  },
+  // SCOPE: this page is for what sits OUTSIDE the UIL4B orbit - UI elements,
+  // inspiration, assets, motion. Not listed, because a UIL4B tool or library
+  // already does the job: the three
+  // gradient sites (Design Gradients, uiGradients, Gradient Magic), the three
+  // palette sites (Color Hunt, Coolors, Happy Hues) and the three font sites
+  // (Google Fonts, Fontshare, Typewolf).
 
   // ─── Inspiration ─────────────────────────────────────────────────────────
   {
@@ -313,60 +208,6 @@ export const DISCOVER_RESOURCES = [
       { label: 'Colour System Builder', route: '/create/color' },
     ],
     added: '2026-05-22',
-  },
-
-  // ─── Fonts ───────────────────────────────────────────────────────────────
-  {
-    id: 'google-fonts',
-    title: 'Google Fonts',
-    host: 'fonts.google.com',
-    url: 'https://fonts.google.com',
-    category: 'fonts',
-    free: true,
-    tags: ['fonts', 'typography', 'webfonts', 'free'],
-    shortDescription: 'The definitive library of 1,500+ open-source font families, ready to drop into any project for free.',
-    useCase: 'Sourcing webfonts',
-    difficulty: 'Beginner',
-    whyUseful: 'Where most real projects get their type. Find candidates here, then test combinations in Font Pairs and lock a scale in Type Scale.',
-    relatedTools: [
-      { label: 'Font Pairs', route: '/create/font-pair' },
-      { label: 'Type Scale', route: '/create/type-scale' },
-    ],
-    added: '2026-06-15',
-    featured: true,
-  },
-  {
-    id: 'fontshare',
-    title: 'Fontshare',
-    host: 'fontshare.com',
-    url: 'https://www.fontshare.com',
-    category: 'fonts',
-    free: true,
-    tags: ['fonts', 'typography', 'free', 'commercial'],
-    shortDescription: 'A growing library of professionally-designed fonts that are free for commercial use — a cut above the usual free fare.',
-    useCase: 'Premium-feeling free type',
-    whyUseful: 'When Google Fonts feels overused, Fontshare has fresher faces. Pair your pick in Font Pairs.',
-    relatedTools: [
-      { label: 'Font Pairs', route: '/create/font-pair' },
-    ],
-    added: '2026-06-01',
-  },
-  {
-    id: 'typewolf',
-    title: 'Typewolf',
-    host: 'typewolf.com',
-    url: 'https://www.typewolf.com',
-    category: 'fonts',
-    free: true,
-    tags: ['fonts', 'typography', 'inspiration', 'pairings'],
-    shortDescription: 'Trend-led typography inspiration with real-world font pairings and recommended alternatives for popular typefaces.',
-    useCase: 'Pairing inspiration',
-    difficulty: 'Intermediate',
-    whyUseful: 'The best source for "what pairs with this font" thinking. Take its suggestions into Font Pairs to preview them live.',
-    relatedTools: [
-      { label: 'Font Pairs', route: '/create/font-pair' },
-    ],
-    added: '2026-05-20',
   },
 
   // ─── Components ──────────────────────────────────────────────────────────

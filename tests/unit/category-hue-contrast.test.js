@@ -91,7 +91,7 @@ const HUES = ['--hue-colour', '--hue-type', '--hue-component', '--hue-imagery', 
 const AA = 4.5
 
 /** The grounds each theme actually paints these on: --bg-0..--bg-3 plus the card. */
-const LIGHT_GROUNDS = ['#FFFFFF', '#EFEEE9', '#F6F5F1']
+const LIGHT_GROUNDS = ['#FFFFFF', '#F5F5F2', '#F6F5F1']
 const DARK_GROUNDS = ['#060607', '#0B0C0E', '#111215', '#17181B']
 
 /**
@@ -297,17 +297,34 @@ test('every category carries both roles, so no rule can resolve to nothing', () 
   }
 })
 
+// THE ONE-ACCENT MODEL. --accent is one value in both
+// themes and it is a FILL; --accent-strong is an alias of --accent-mid, the
+// TEXT member, which walks toward #0B0C0E in light and toward paper in dark.
+// The split is still load-bearing: bare --accent as text fails on the dark
+// page, and that is why the text member exists.
+const mixHex = (a, b, pA) => '#' + [1, 3, 5].map((i) => {
+  const v = Math.round(parseInt(a.slice(i, i + 2), 16) * pA + parseInt(b.slice(i, i + 2), 16) * (1 - pA))
+  return v.toString(16).padStart(2, '0')
+}).join('').toUpperCase()
 test('--accent and --accent-strong still carry the roles the sheet documents', () => {
-  const light = resolve('--accent', ':root') || resolve('--accent', '\\[data-theme="light"\\]')
-  const strong = resolve('--accent-strong', ':root') || resolve('--accent-strong', '\\[data-theme="light"\\]')
-  assert.ok(light && strong, 'accent pair not found')
-  // --accent is the brand colour and is NOT expected to clear AA as small text.
-  // If it ever does, the two tokens have collapsed into one and the sweep that
-  // separated them has been undone.
-  assert.ok(ratio(light, '#FFFFFF') < AA,
-    `--accent ${light} now clears AA on white; the pair has collapsed`)
-  for (const g of LIGHT_GROUNDS) {
-    assert.ok(ratio(strong, g) >= AA,
-      `--accent-strong ${strong} is ${show(ratio(strong, g))}:1 on ${g} — it is the readable one`)
+  const accent = resolve('--accent', ':root')
+  assert.ok(accent, 'accent not found on :root')
+  assert.match(CSS, /--accent-strong:var\(--accent-mid\)/, '--accent-strong is no longer the text member')
+  assert.match(CSS, /--accent-mid:color-mix\(in srgb,var\(--accent\) var\(--accent-k-mid\),var\(--accent-toward\)\)/,
+    '--accent-mid is no longer derived the way this test measures it')
+  const k = (scope) => {
+    const bodies = bodiesOf(scope).join(';')
+    const m = [...bodies.matchAll(/--accent-k-mid:(\d+)%/g)]
+    return m.length ? Number(m[m.length - 1][1]) / 100 : null
   }
+  const lightMid = mixHex(accent, '#0B0C0E', k(':root'))
+  const darkMid = mixHex(accent, '#EFEEEA', k('\\[data-theme="dark"\\]'))
+  for (const g of LIGHT_GROUNDS) {
+    assert.ok(ratio(lightMid, g) >= AA, `light --accent-mid ${lightMid} is ${show(ratio(lightMid, g))}:1 on ${g}`)
+  }
+  for (const g of DARK_GROUNDS) {
+    assert.ok(ratio(darkMid, g) >= AA, `dark --accent-mid ${darkMid} is ${show(ratio(darkMid, g))}:1 on ${g}`)
+  }
+  assert.ok(ratio(accent, DARK_GROUNDS[0]) < AA,
+    `--accent ${accent} now clears AA as text on the dark page; the fill/text split is no longer needed — re-read the family note`)
 })

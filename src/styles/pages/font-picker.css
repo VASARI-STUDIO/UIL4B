@@ -121,7 +121,7 @@
   color: var(--t1);
   background: transparent;
   border: 1px solid var(--bh);
-  border-radius: var(--radius);
+  border-radius: var(--btn-radius);
   transition: color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), background var(--dur-1) var(--ease-standard);
 }
 
@@ -132,7 +132,7 @@
 .fbd-overlay .fbd-info {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
   background: var(--card);
 }
 
@@ -333,4 +333,9 @@ html[data-reduced-motion="true"] .fbd-overlay .lbry-filtertrig:active { transfor
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .fbd-overlay .lbry-filters .lbry-filter:active,
   html:not([data-reduced-motion="false"]) .fbd-overlay .lbry-filtertrig:active { transform: none; }
+}
+
+/* The dossier tabs reach the 44px touch floor on a finger. */
+@media (pointer: coarse) {
+  .fbd-overlay .fdx-tab { min-height: 44px; }
 }

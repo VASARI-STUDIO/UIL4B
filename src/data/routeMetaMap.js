@@ -36,6 +36,7 @@ export const PAGE_TITLES = {
   '/create/font-pair': 'UI L4B | Font Pair',
   '/create/font-gallery': 'UI L4B | Font Gallery',
   '/create/icons': 'UI L4B | Icon Library',
+  '/create/icons/groups': 'UI L4B | Icon Groups',
   '/create/imagery': 'UI L4B | Imagery',
   '/create/icons-emoji': 'UI L4B | Icons & Emoji',
   '/discover': 'UI L4B | Discover',
@@ -57,6 +58,7 @@ export const PAGE_TITLES = {
   '/settings': 'UI L4B | Settings',
   '/login': 'UI L4B | Sign In',
   '/plans': 'UI L4B | Pricing & Plans',
+  '/mobile': 'UI L4B | On mobile',
   '/checkout': 'UI L4B | Checkout',
   '/community': 'UI L4B | Community',
   '/feedback': 'UI L4B | Feedback',
@@ -116,6 +118,7 @@ export const PAGE_DESCRIPTIONS = {
   '/create/font-pair': 'Free font pairing tool. Pick a heading face and see which body faces work under it, with the reasoning, previewed as a real page. Copy the import and CSS.',
   '/create/font-gallery': 'Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.',
   '/create/icons': 'Search icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
+  '/create/icons/groups': 'Sets of icons from multiple packs that follow a similar style and fit a theme or task. Recolour a whole set and export it in one go.',
   '/create/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
   '/create/icons-emoji': 'Search icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
   // AWAITING THE FOUNDER'S WORD (proposed 2026-09-13, shipped so the false one
@@ -152,7 +155,7 @@ export const PAGE_DESCRIPTIONS = {
   '/create/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
   '/create/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
   '/discover/prompts': 'A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.',
-  '/discover/resources': 'Hand-picked design and dev tools — gradients, palettes, fonts, components and free assets — each with a route into the UI L4B tool that finishes the job.',
+  '/discover/resources': 'Hand-picked design and dev tools from outside UI L4B — inspiration, components, free assets and developer utilities.',
   '/create/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
   '/create/aspect-ratio': 'Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.',
   '/create/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',
@@ -164,6 +167,9 @@ export const PAGE_DESCRIPTIONS = {
   '/login': 'Sign in to UI L4B to save projects, sync settings, and unlock AI-powered design tools.',
   // 192 chars was ~35 over what Google renders, so the sentence that names what
   // Pro actually buys was the part being cut. Front-loaded and trimmed to 154.
+  // The Spectrum design's own sentence for its "On mobile" screen, verbatim —
+  // see src/pages/SpectrumMobile.jsx for what was checked against the product.
+  '/mobile': 'Every tool runs the same on a phone. Pick colours on the train, check contrast in a meeting, then copy the tokens when you get back to your desk.',
   '/plans': 'Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.',
   '/checkout': 'Upgrade to UI L4B Pro for higher AI capacity, advanced colour controls, unlimited saved projects and watermark-free export.',
   // A CLAUSE DELETED, NOT A SENTENCE REWRITTEN. This ended "and connect with

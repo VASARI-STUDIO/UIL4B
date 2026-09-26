@@ -34,25 +34,31 @@ test('--avatar-grad and --avatar-ink are declared for both themes, not one', () 
 
 test('every avatar disc paints its initials in --avatar-ink', () => {
   const users = blocks(css).filter(([, b]) => /background:\s*var\(--avatar-grad\)/.test(b))
-  // POSITIVE CONTROL: the six known discs are found.
-  assert.ok(users.length >= 6, `only ${users.length} rules paint the avatar disc`)
+  // POSITIVE CONTROL: the three known discs (nav avatar, account popover,
+  // account switcher) are found.
+  assert.ok(users.length >= 3, `only ${users.length} rules paint the avatar disc`)
   const wrong = users.filter(([, b]) => !/(^|;)\s*color:\s*var\(--avatar-ink\)/.test(b)).map(([s]) => s)
   assert.deepEqual(wrong, [], 'these discs paint their initials in something other than --avatar-ink')
 })
 
 // The disc and ink, resolved from the same tokens global.css derives them from.
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
-const mix = (a, b, p) => hex(a).map((v, i) => v * p + hex(b)[i] * (1 - p))
 const lum = (rgb) => rgb.map((c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 })
   .reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0)
 const ratio = (a, b) => { const x = lum(a); const y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
 
 test('the initials clear 4.5:1 on the disc in light and in dark', () => {
-  assert.match(global, /--avatar-grad:\s*var\(--accent-mid\)/, 'the disc is no longer --accent-mid; re-measure this test')
+  assert.match(global, /--avatar-grad:\s*var\(--accent-fill\)/, 'the disc is no longer --accent-fill; re-measure this test')
   assert.match(global, /--avatar-ink:\s*var\(--accent-ink\)/, 'the ink is no longer --accent-ink; re-measure this test')
-  // --accent-mid = 86% --accent toward --accent-toward; --accent-ink per theme.
-  const light = ratio(mix('#0F6FFF', '#0B0C0E', 0.86), hex('#F4F7FF'))
-  const dark = ratio(mix('#6FA8FF', '#F4F7FF', 0.86), hex('#0B0C0E'))
+  assert.match(global, /--accent-fill:\s*var\(--accent\)/, '--accent-fill no longer IS the accent; re-measure this test')
+  // The design's disc (App line 123): the accent under #F4F7FF, one value in
+  // both themes. Read both off the sheet rather than typed.
+  const accent = /:root\{[^}]*?--accent:(#[0-9A-Fa-f]{6})/.exec(global)?.[1]
+  const ink = /--accent-ink:(#[0-9A-Fa-f]{6})/.exec(global)?.[1]
+  assert.ok(accent && ink, 'could not read --accent / --accent-ink off :root')
+  assert.doesNotMatch(global, /\[data-theme="dark"\]\{[^}]*--accent-ink:/, 'dark re-declares --accent-ink; measure it separately')
+  const light = ratio(hex(accent), hex(ink))
+  const dark = light
   assert.ok(light >= 4.5, `light initials ${light.toFixed(2)}:1`)
   assert.ok(dark >= 4.5, `dark initials ${dark.toFixed(2)}:1`)
 })

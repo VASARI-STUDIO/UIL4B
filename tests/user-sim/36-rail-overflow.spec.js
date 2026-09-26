@@ -36,19 +36,6 @@ const PHONE = { width: 390, height: 844 }
 const TABLET = { width: 834, height: 1112 }
 const DESKTOP = { width: 1440, height: 900 }
 
-/**
- * Settle the rail's scroll-driven edge fades.
- *
- * These are not a timed animation — they are a function of `scrollLeft`, driven
- * by `animation-timeline: scroll(self inline)` — so there is nothing to wait
- * OUT, only a frame to wait FOR. Two rAFs: one for the scroll to be committed,
- * one for the timeline to sample it. This is deliberately not `restingScrollY`,
- * which measures the WINDOW coming to rest under Lenis; nothing here scrolls the
- * window, and an inner container's `scrollLeft` assignment is synchronous.
- */
-const settleRail = (page) => page.evaluate(
-  () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
-)
 
 test.describe('the Pro column is reachable on a phone (A2)', () => {
   test.use({ viewport: PHONE })
@@ -57,12 +44,14 @@ test.describe('the Pro column is reachable on a phone (A2)', () => {
     watch(page, 'someone deciding whether to pay, on their phone')
     await go(page, '/plans')
     await expectRendered(page)
-    await expect(page.locator('.plans-compare-table')).toBeVisible()
+    // The design's comparison stacks each row below 760px, the
+    // way the design does, so the table itself is the box that must not scroll.
+    await expect(page.locator('.pr-compare')).toBeVisible()
 
     const report = await page.evaluate(() => {
-      const wrap = document.querySelector('.plans-compare-wrap')
+      const wrap = document.querySelector('.pr-compare')
       const vw = document.documentElement.clientWidth
-      const cells = [...document.querySelectorAll('.plans-compare-table .pct-pro')]
+      const cells = [...document.querySelectorAll('.pr-compare td.is-pro')]
       return {
         // The table needs no horizontal scroll at all any more.
         needsScroll: wrap.scrollWidth > wrap.clientWidth + 1,
@@ -87,36 +76,33 @@ test.describe('the Pro column is reachable on a phone (A2)', () => {
 test.describe('the primary action is reachable on a tablet (A4)', () => {
   test.use({ viewport: TABLET })
 
-  test('Randomise is fully visible in the action ribbon at 834px', async ({ page }) => {
+  // The drawn toolbar is one row that never scrolls: what does
+  // not fit goes to the Tools overflow, lowest priority first. Randomise is
+  // the page's own action, so at 834px it is on the row, whole, at rest.
+  test('Randomise is fully visible on the toolbar row at 834px', async ({ page }) => {
     watch(page, 'a designer opening Palette Builder on an iPad')
     await go(page, '/create/palette')
     await expectRendered(page)
-    const random = page.locator('.plb-random')
+    const bar = page.locator('.plb [data-tool-toolbar]')
+    await expect(bar).not.toHaveClass(/is-measuring/)
+    const random = bar.locator('.plb-random')
     await expect(random).toBeVisible()
 
-    const report = await page.evaluate(() => {
-      const group = document.querySelector('.plb-toolbar-group.rail-overflow')
-      const btn = document.querySelector('.plb-random')
-      const g = group.getBoundingClientRect()
+    const report = await random.evaluate((btn) => {
+      const row = btn.closest('[data-tool-toolbar]')
+      const g = row.getBoundingClientRect()
       const b = btn.getBoundingClientRect()
       return {
-        railScrolls: group.scrollWidth > group.clientWidth + 1,
-        scrollLeft: Math.round(group.scrollLeft),
-        // Fully inside the ribbon's own visible box, at rest, with no swipe.
-        insideAtRest: b.left >= g.left - 1 && b.right <= g.right + 1,
+        barScrolls: row.scrollWidth > row.clientWidth + 1,
+        insideAtRest: b.left >= g.left - 1 && b.right <= g.right + 1 && b.right <= document.documentElement.clientWidth,
         btn: { left: Math.round(b.left), right: Math.round(b.right) },
-        rail: { left: Math.round(g.left), right: Math.round(g.right) },
+        bar: { left: Math.round(g.left), right: Math.round(g.right) },
       }
     })
-
-    // The ribbon is still a scroller here — that is the design, and it is what
-    // makes "the primary action is the one you get for free" a real choice
-    // rather than a side effect of everything happening to fit.
-    expect(report.railScrolls, '834px should still make the action group a scroller').toBe(true)
-    expect(report.scrollLeft, 'the ribbon should open at its start, not pre-scrolled').toBe(0)
+    expect(report.barScrolls, 'the toolbar is a row, never a scroller').toBe(false)
     expect(
       report.insideAtRest,
-      `Randomise must be visible without swiping: button ${JSON.stringify(report.btn)} vs rail ${JSON.stringify(report.rail)}`,
+      `Randomise must be visible without swiping: button ${JSON.stringify(report.btn)} vs toolbar ${JSON.stringify(report.bar)}`,
     ).toBe(true)
   })
 })
@@ -134,10 +120,10 @@ test.describe('the whole preset library is on screen on a desktop (A6)', () => {
     watch(page, 'a designer picking a gradient on a laptop')
     await go(page, '/create/gradient')
     await expectRendered(page)
-    await expect(page.locator('.ggn-presets')).toBeVisible()
+    await expect(page.locator('.grd-preset-grid')).toBeVisible()
 
     const report = await page.evaluate(() => {
-      const rail = document.querySelector('.ggn-presets')
+      const rail = document.querySelector('.grd-preset-grid')
       const box = rail.getBoundingClientRect()
       const cs = getComputedStyle(rail)
       const tiles = [...rail.children]
@@ -182,168 +168,99 @@ test.describe('the shared rail affordance', () => {
   // scrollbar-width rule — at a phone width and a tablet width. What is lost is
   // only the third SHAPE, not the contract. If a tab strip comes back on any
   // route, it belongs in this list.
-  const RAILS = [
-    { name: 'gradient preset rail', path: '/create/gradient', sel: '.ggn-presets', viewport: PHONE },
-    { name: 'palette action ribbon', path: '/create/palette', sel: '.plb-toolbar-group.rail-overflow', viewport: TABLET },
-  ]
+  // ── DELETED: 'palette action ribbon' and 'gradient preset rail' ─────────
+  // Both rails went with the rebuild to the design's drawn screens: the
+  // palette toolbar is one row with an overflow and the gradient
+  // presets a wrapping grid (D:79-81). No colour tool ships a scrolling rail
+  // now, so the positive case of the shared affordance (fade while there is
+  // more, withdrawn at the end) has no subject here; the counter-case below
+  // still holds its other half.
 
-  for (const rail of RAILS) {
-    test(`${rail.name}: says there is more, and stops saying it at the end`, async ({ page }) => {
-      await page.setViewportSize(rail.viewport)
-      watch(page, `someone reaching the ${rail.name}`)
-      await go(page, rail.path)
-      await expectRendered(page)
-      await expect(page.locator(rail.sel).first()).toBeVisible()
-      await settleRail(page)
-
-      const atRest = await page.evaluate((sel) => {
-        const el = document.querySelector(sel)
-        const cs = getComputedStyle(el)
-        return {
-          overflows: el.scrollWidth > el.clientWidth + 1,
-          scrollLeft: Math.round(el.scrollLeft),
-          // NEVER `none`. Deleting the scrollbar is the original defect.
-          scrollbarWidth: cs.scrollbarWidth,
-          masked: (cs.maskImage || 'none') !== 'none',
-          right: cs.getPropertyValue('--rail-r').trim(),
-          left: cs.getPropertyValue('--rail-l').trim(),
-        }
-      }, rail.sel)
-
-      expect(atRest.overflows, `${rail.name} should be a scroller at this width`).toBe(true)
-      expect(atRest.scrollbarWidth, `${rail.name} must not delete its scrollbar`).not.toBe('none')
-      expect(atRest.masked, `${rail.name} should carry the edge fade`).toBe(true)
-      expect(Number(atRest.right), `${rail.name} should fade its RIGHT edge while there is more to the right`).toBeGreaterThan(0)
-      expect(Number(atRest.left), `${rail.name} should not fade its left edge before anything has been scrolled past`).toBe(0)
-
-      // Drive it to the end and the claim must be withdrawn — a fade that stays
-      // on at the end is the vignette that made `.plans-compare-wrap` read as
-      // decoration rather than as an affordance.
-      await page.evaluate((sel) => { document.querySelector(sel).scrollLeft = 1e6 }, rail.sel)
-      await settleRail(page)
-      const atEnd = await page.evaluate((sel) => {
-        const cs = getComputedStyle(document.querySelector(sel))
-        return { right: cs.getPropertyValue('--rail-r').trim(), left: cs.getPropertyValue('--rail-l').trim() }
-      }, rail.sel)
-
-      expect(Number(atEnd.right), `${rail.name} should stop fading its right edge once there is nothing more`).toBe(0)
-      expect(Number(atEnd.left), `${rail.name} should fade its left edge once content is behind it`).toBeGreaterThan(0)
-    })
-  }
-
-  test('a rail that fits claims nothing — /plans at desktop', async ({ page }) => {
-    // The counter-case, and the reason the fade is scroll-driven rather than a
-    // static mask: `.plans-compare-wrap` carries `.rail-overflow` at every
-    // width, and at a desktop width it must not suggest there is anything to
-    // the right, because there is not.
+  // ── DELETED: 'a rail that fits claims nothing — the palette ribbon' ─────
+  // Its subject, `.plb-toolbar-group.rail-overflow`, went with the palette's
+  // move onto the shared one-row tool toolbar, and no rail renders at 1440 on
+  // any tool route now. 100-tool-toolbar-one-row holds the toolbar instead.
+  test('no colour tool ships a scrolling rail', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    watch(page, 'a visitor reading the plans table on a laptop')
-    await go(page, '/plans')
+    watch(page, 'a designer on a laptop, looking at the palette actions')
+    await go(page, '/create/palette')
     await expectRendered(page)
-    await expect(page.locator('.plans-compare-table')).toBeVisible()
-    await settleRail(page)
-
-    const state = await page.evaluate(() => {
-      const el = document.querySelector('.plans-compare-wrap')
-      const cs = getComputedStyle(el)
-      return {
-        overflows: el.scrollWidth > el.clientWidth + 1,
-        right: cs.getPropertyValue('--rail-r').trim(),
-        left: cs.getPropertyValue('--rail-l').trim(),
-      }
-    })
-
-    expect(state.overflows, 'the plans table should fit at 1440px').toBe(false)
-    expect(Number(state.right), 'a rail with nothing to the right must not fade its right edge').toBe(0)
-    expect(Number(state.left), 'a rail with nothing behind it must not fade its left edge').toBe(0)
+    await expect(page.locator('.rail-overflow')).toHaveCount(0)
   })
 })
 
 test.describe('the journey can be finished, and undone, on a touch device (A5)', () => {
   // The 2026-09-03 audit measured the palette action ribbon at four touch
   // widths and found Save / export off the right edge at EVERY one of them,
-  // with Undo and Reset alongside it:
+  // with Undo and Reset alongside it. Save is the only route from a finished
+  // palette to a file, and Undo is how a mis-tap is taken back.
   //
-  //   390px   4 of 11 fully visible, 6 hidden, 669px of scroll
-  //   640px   6 of 11 fully visible, 4 hidden, 419px
-  //   641px   6 of 11 fully visible, 4 hidden, 418px
-  //   834px   3 of 11 fully visible, 7 hidden, 691px
-  //
-  // Save / export is the only route from a finished palette to a file, so on a
-  // phone the journey simply could not be finished without first discovering
-  // that the row scrolls. Undo and Reset are the worse half: a mis-tap could
-  // not be taken back.
-  //
-  // THIS ASSERTS REACHABILITY AT REST, NOT THAT NOTHING SCROLLS. The rail is a
-  // scroller by design at these widths and the A4 test above pins that; the
-  // question this file exists to answer is WHICH controls you get for free.
-  // Exploratory controls (Explore, Preview, Vision, Gradient, History) are
-  // still behind a swipe and that is the deliberate trade.
-  const FREE = ['Randomise', 'Undo', 'Reset', 'Save / export']
+  // The drawn toolbar keeps them on its one row by priority: Save current is
+  // the primary and never leaves the row, undo/redo are the last actions to
+  // go, then Randomise. Reset palette is a Tools row, one named tap away with
+  // no swipe. What is asserted is exactly that, at the audit's widths.
+  const ON_ROW = [
+    ['Randomise', '.plb-random'],
+    ['Undo', '.plb-undo'],
+    ['Redo', '.plb-redo'],
+    ['Save current', '.plb-save'],
+  ]
 
   for (const width of [390, 640, 641, 834]) {
-    test(`Save / export, Undo and Reset need no swipe at ${width}px`, async ({ page }) => {
+    test(`Save, Undo and Randomise need no swipe, and Reset is one named tap, at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: width < 700 ? 844 : 1112 })
       watch(page, `someone finishing a palette on a ${width}px screen`)
       await go(page, '/create/palette')
       await expectRendered(page)
-      await expect(page.locator('.plb-random')).toBeVisible()
-      await settleRail(page)
+      const bar = page.locator('.plb [data-tool-toolbar]')
+      await expect(bar).not.toHaveClass(/is-measuring/)
 
-      const report = await page.evaluate((names) => {
-        const rail = document.querySelector('.plb-toolbar-group.rail-overflow')
-        const g = rail.getBoundingClientRect()
-        const out = { scrollLeft: Math.round(rail.scrollLeft), controls: {} }
-        for (const name of names) {
-          // Randomise has no aria-label; it is named by its text.
-          const btn = rail.querySelector(`[aria-label="${name}"]`)
-            || [...rail.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(name))
-          if (!btn) { out.controls[name] = { missing: true }; continue }
+      const report = await bar.evaluate((el, pairs) => {
+        const vw = document.documentElement.clientWidth
+        const out = {}
+        for (const [name, sel] of pairs) {
+          const btn = el.querySelector(sel)
+          if (!btn || btn.offsetParent === null) { out[name] = { missing: true }; continue }
           const b = btn.getBoundingClientRect()
-          out.controls[name] = {
-            // Fully inside the ribbon's own clipping box, at rest, no swipe.
-            inside: b.left >= g.left - 1 && b.right <= g.right + 1,
-            box: [Math.round(b.left), Math.round(b.right)],
-            rail: [Math.round(g.left), Math.round(g.right)],
-          }
+          out[name] = { inside: b.left >= -1 && b.right <= vw + 1 && b.width > 0, box: [Math.round(b.left), Math.round(b.right)] }
         }
-        return out
-      }, FREE)
+        return { vw, controls: out, scrolls: el.scrollWidth > el.clientWidth + 1 }
+      }, ON_ROW)
 
-      expect(report.scrollLeft, 'the ribbon should open at its start, not pre-scrolled').toBe(0)
-      for (const name of FREE) {
+      expect(report.scrolls, 'the toolbar is a row, never a scroller').toBe(false)
+      for (const [name] of ON_ROW) {
         const c = report.controls[name]
-        expect(c.missing, `${name} should exist in the action ribbon`).toBeFalsy()
-        expect(
-          c.inside,
-          `${name} must be reachable without swiping at ${width}px: button ${JSON.stringify(c.box)} vs rail ${JSON.stringify(c.rail)}`,
-        ).toBe(true)
+        expect(c.missing, `${name} should be on the toolbar row at ${width}px`).toBeFalsy()
+        expect(c.inside, `${name} must be whole on screen at ${width}px: ${JSON.stringify(c.box)} of ${report.vw}`).toBe(true)
       }
+
+      // Reset: the overflow names it, and pressing it resets.
+      const before = await page.locator('.plb-col .plb-hex').allTextContents()
+      await bar.getByRole('button', { name: 'Tools' }).click()
+      await page.getByRole('dialog', { name: 'Tools' }).getByRole('button', { name: 'Reset palette' }).click()
+      await expect.poll(async () => (await page.locator('.plb-col .plb-hex').allTextContents()).join()).not.toBe(before.join())
     })
   }
 
-  test('the promoted controls keep their accessible names when the label is hidden', async ({ page }) => {
-    // Undo and Reset go icon-only below 961px, which is what buys the room for
-    // Save / export. That trades a visible word for a visible BUTTON and must
-    // not trade away the name a screen reader reads.
+  test('the icon-only controls keep their accessible names on a phone', async ({ page }) => {
+    // Below 768px the row's buttons drop their words for their icons, which is
+    // what buys the room. That trades a visible word for a visible BUTTON and
+    // must not trade away the name a screen reader reads.
     await page.setViewportSize({ width: 390, height: 844 })
     watch(page, 'a screen-reader user on a phone')
     await go(page, '/create/palette')
     await expectRendered(page)
+    const bar = page.locator('.plb [data-tool-toolbar]')
+    await expect(bar).not.toHaveClass(/is-measuring/)
 
-    for (const name of ['Undo', 'Reset', 'Save / export']) {
-      await expect(
-        page.locator('.plb-toolbar').getByRole('button', { name, exact: true }),
-      ).toHaveCount(1)
+    for (const name of ['Undo', 'Redo', 'Randomise', 'Tools', 'Save current']) {
+      await expect(bar.getByRole('button', { name, exact: true })).toHaveCount(1)
     }
-    const labelHidden = await page.evaluate(() => {
-      const q = (s) => document.querySelector(s)
-      return {
-        undo: getComputedStyle(q('.plb-undo .plb-lbl')).display,
-        reset: getComputedStyle(q('.plb-reset .plb-lbl')).display,
-      }
-    })
-    expect(labelHidden.undo, 'Undo should be icon-only at 390px').toBe('none')
-    expect(labelHidden.reset, 'Reset should be icon-only at 390px').toBe('none')
+    const labelHidden = await bar.evaluate((el) => ({
+      randomise: getComputedStyle(el.querySelector('.plb-random .tl-btn-label')).display,
+      tools: getComputedStyle(el.querySelector('.tl-more-btn .tl-btn-label')).display,
+    }))
+    expect(labelHidden.randomise, 'Randomise should be icon-only at 390px').toBe('none')
+    expect(labelHidden.tools, 'Tools should be icon-only at 390px').toBe('none')
   })
 })

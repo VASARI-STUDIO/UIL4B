@@ -10,9 +10,14 @@ test.describe('Gradient Generator workbench resilience', () => {
     watch(page, 'front-end developer')
     await go(page, '/create/gradient')
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Gradient Generator' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Shape the gradient' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Refine & export' })).toBeVisible()
+    // The tool opens on its toolbar label, and its controls are one
+    // named side panel (the drawn STOPS / SELECTED STOP / GEOMETRY card).
+    await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
+    const panel = page.getByRole('complementary', { name: 'Gradient controls' })
+    await expect(panel).toBeVisible()
+    for (const name of ['Stops', 'Selected stop', 'Geometry']) {
+      await expect(panel.getByRole('group', { name, exact: true })).toBeVisible()
+    }
 
     const firstHex = page.getByRole('textbox', { name: 'Stop 1 hex' })
     await expect(firstHex).toHaveValue('#7C3AED')
@@ -22,15 +27,13 @@ test.describe('Gradient Generator workbench resilience', () => {
     await firstHex.press('Enter')
     await expect(firstHex).toHaveValue('#7C3AED')
 
-    const position = page.getByRole('spinbutton', { name: 'Stop 1 position' })
-    await position.fill('')
-    await position.blur()
+    const position = page.getByRole('slider', { name: 'Stop position' })
     await expect(position).toHaveValue('0')
 
     const handle = page.getByRole('button', { name: /Gradient stop 1 at 0%/ })
     await handle.focus()
     await page.keyboard.press('Shift+ArrowRight')
-    await expect(page.getByRole('spinbutton', { name: 'Stop 1 position' })).toHaveValue('10')
+    await expect(position).toHaveValue('10')
 
     await page.screenshot({
       path: test.info().outputPath('gradient-workbench-desktop.png'),
@@ -51,12 +54,16 @@ test.describe('Gradient Generator workbench resilience', () => {
     await random.click()
     await random.click()
     await random.click()
+    // The hex field follows the SELECTED stop; stop 1 is re-selected first.
+    await page.getByRole('button', { name: /^Select stop 1,/ }).click()
     await expect(page.getByRole('textbox', { name: 'Stop 1 hex' })).toHaveValue('#123456')
 
-    const add = page.getByRole('button', { name: /Add Stop/ })
-    while (await add.isEnabled()) await add.click()
-    await expect(page.locator('.ggn-stop')).toHaveCount(12)
-    await expect(add).toBeDisabled()
+    const add = page.getByRole('button', { name: 'Add a stop' })
+    while (await add.isVisible()) await add.click()
+    await expect(page.locator('.grd-stop')).toHaveCount(12)
+    // At the ceiling the drawn "Add a stop" row is gone, as the design hides it
+    // (addStopDisplay) — there is nothing to press that would do nothing.
+    await expect(add).toHaveCount(0)
   })
 
   test('clipboard denial is recoverable and the mobile canvas stays contained', async ({ page }) => {
@@ -70,9 +77,9 @@ test.describe('Gradient Generator workbench resilience', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/gradient')
 
-    await page.getByRole('button', { name: 'Copy', exact: true }).click()
+    await page.getByRole('button', { name: 'Copy CSS', exact: true }).click()
     await expect(page.getByText(/Failed to copy|Copy failed/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Copy', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Copy CSS', exact: true })).toBeVisible()
     const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
     expect(hasOverflow, 'Gradient Generator should not create page-level horizontal overflow').toBe(false)
   })
@@ -95,66 +102,65 @@ test.describe('Gradient Generator workbench resilience', () => {
     ]
     expect(normalized).toEqual(['#ABCDEF', '42', '', ''])
 
-    await page.getByRole('button', { name: 'Copy', exact: true }).click()
+    await page.getByRole('button', { name: 'Copy CSS', exact: true }).click()
     await expect(page.getByText('Clipboard is not available in this browser')).toBeVisible()
   })
 
-  // The page used to end with a numbered step called "03 - Starting points /
-  // Begin with colours you trust", BELOW the canvas and the inspector - so it
-  // told you where to begin after you had already composed and exported. For
-  // anyone without a saved palette that whole numbered step rendered a single
-  // apology in a full-height card, and a second card beside it made the same
-  // offer with the curated rail.
-  //
-  // There are two real steps here. This asserts the numbered sequence is exactly
-  // those two and has no gap, which is the part that silently regresses when a
-  // section is added back.
-  test('the numbered steps are the two the page actually has, and the sources are not one of them', async ({ page }) => {
+  // The page used to carry numbered steps ("01 · Canvas", "02 · Inspector") and
+  // a numbered sources block. The design's drawn screen has no
+  // step numbers at all: a canvas, one side card, and an unnumbered "Start from
+  // a preset" strip. This asserts that shape — the strip is present, named by
+  // its own heading, never empty, links to the library, and nothing on the page
+  // is numbered again.
+  test('the preset strip is one named, unnumbered section that is never empty', async ({ page }) => {
     watch(page, 'a designer arriving with no saved palette')
     await go(page, '/create/gradient')
 
-    // The tool is lazy-loaded; read the sequence only once it has mounted.
-    await expect(page.getByRole('heading', { level: 1, name: 'Gradient Generator' })).toBeVisible()
-    await expect(page.locator('.ggn-step').first()).toBeVisible()
-
-    const steps = await page.locator('.ggn-step').allTextContents()
-    expect(steps.map(t => t.trim())).toEqual(['01 · Canvas', '02 · Inspector'])
-
-    // The sources block is present, unnumbered, and never empty: the curated
-    // rail is always populated even when the user has no palettes.
-    const start = page.locator('.ggn-starting')
+    await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
+    const start = page.getByRole('region', { name: 'Start from a preset' })
     await expect(start).toBeVisible()
-    await expect(start.locator('.ggn-step')).toHaveCount(0)
-    await expect(start.locator('.ggn-preset').first()).toBeVisible()
+    await expect(start.locator('.grd-preset').first()).toBeVisible()
+    expect(await start.locator('.grd-preset').count()).toBeGreaterThanOrEqual(16)
     await expect(start.getByRole('link', { name: /Gradient Library/ })).toBeVisible()
+
+    const numbered = await page.locator('.grd').evaluate((root) =>
+      [...root.querySelectorAll('*')].filter((el) => el.children.length === 0 && /^0\d\s*·/.test(el.textContent.trim())).length)
+    expect(numbered, 'no step numbers on the drawn screen').toBe(0)
   })
 })
 
 test.describe('Semantic Colour system workflow', () => {
-  test('a designer can choose a bundle and evaluate non-colour state cues', async ({ page }) => {
+  test('a designer can choose a bundle, a base step and a custom hue', async ({ page }) => {
     watch(page, 'product designer')
     await go(page, '/create/semantic-color')
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Semantic Colours' })).toBeVisible()
-    await expect(page.getByRole('radio', { name: /Balanced/ })).toHaveAttribute('aria-checked', 'true')
-    const vividBundle = page.getByRole('radio', { name: /Vivid/ })
+    await expect(page.getByRole('heading', { level: 1, name: 'Semantic Colour' })).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Balanced' })).toHaveAttribute('aria-checked', 'true')
+    const vividBundle = page.getByRole('radio', { name: 'Vivid' })
     await vividBundle.click()
     await expect(vividBundle).toHaveAttribute('aria-checked', 'true')
     await vividBundle.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('radio', { name: /Cool/ })).toBeFocused()
+    await expect(page.getByRole('radio', { name: 'Cool' })).toBeFocused()
     await page.keyboard.press('ArrowLeft')
     await expect(vividBundle).toBeFocused()
 
-    await expect(page.getByText('Light interface')).toBeVisible()
-    await expect(page.getByText('Dark interface')).toBeVisible()
-    await expect(page.locator('.stc-code')).toContainText('--color-success-50:')
-    await expect(page.locator('.stc-code')).toContainText('--color-info-900:')
-    // The fifth role. Its ramp exports on the same contract as the other four.
-    await expect(page.locator('.stc-code')).toContainText('--color-pending-900:')
+    const code = page.locator('.stc-code')
+    await expect(code).toContainText('--color-success:')
+    await expect(code).toContainText('--color-success-50:')
+    await expect(code).toContainText('--color-info-900:')
 
-    const successRole = page.locator('.stc-role').first()
-    await successRole.getByRole('button', { name: 'Custom' }).click()
+    // The base step moves the aliases and the ring, not the ramps.
+    const alias = async () => (await code.textContent()).match(/--color-success: (#[0-9a-f]{6})/i)[1]
+    const at500 = await alias()
+    await page.getByRole('button', { name: 'Step 600' }).click()
+    await expect(page.getByRole('button', { name: 'Step 600' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await alias()).not.toBe(at500)
+    await expect(page.locator('[data-role="success"] .stc-cell.is-base')).toHaveAttribute('aria-label', /^Copy 600, /)
+
+    // Custom: a hue slider, and a pasted hex rotated into the role's arc.
+    await page.getByRole('combobox', { name: 'Success preset' }).selectOption('custom')
+    await expect(page.getByRole('slider', { name: 'success custom hue' })).toBeVisible()
     const successHex = page.getByRole('textbox', { name: 'Import a hex colour for success' })
     await successHex.fill('bad')
     await successHex.press('Enter')
@@ -163,121 +169,85 @@ test.describe('Semantic Colour system workflow', () => {
     await successHex.press('Enter')
     await expect(successHex).toHaveValue('')
 
-    await page.screenshot({
-      path: test.info().outputPath('semantic-colours-desktop.png'),
-      fullPage: true,
+    await page.screenshot({ path: test.info().outputPath('semantic-colours-desktop.png'), fullPage: true })
+  })
+
+  // Pending is not a state: blue Information covers it, and purple is an
+  // alternative Information hue. The set is four roles;
+  // pending is absent from every output, and Information's purple alternative
+  // reaches every output when chosen.
+  //
+  // MUTATION: add `pending` back to ROLE_IDS in ColorStudio.jsx — the first
+  // absence goes red; make resolveStateShades ignore infoHue — the purple
+  // assertion goes red.
+  test('pending is gone from every output, and purple Information reaches them all', async ({ page }) => {
+    watch(page, 'a designer choosing a purple information colour')
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+    await go(page, '/create/semantic-color')
+
+    // Four family rows, and the depiction shows Information as "underway".
+    await expect(page.locator('.stc-fam')).toHaveCount(4)
+    await expect(page.locator('.stc-fam-name')).toHaveText(['✓Success', '!Warning', '×Error', 'iInformation'])
+    await expect(page.locator('.stc-alert--info').filter({ hasText: 'Publishing design system' })).toHaveCount(1)
+    const body = await page.evaluate(() => document.querySelector('main').innerText)
+    expect(body, 'pending is still on the page').not.toMatch(/pending/i)
+
+    await page.getByRole('button', { name: 'Copy tokens' }).click()
+    const blue = await page.evaluate(() => navigator.clipboard.readText())
+    expect(blue).not.toMatch(/pending/i)
+    expect(blue).toContain('--color-info-500: #3b82f6')
+
+    // Purple, and the cached shades other exports read.
+    await page.getByRole('button', { name: 'Purple', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Purple', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('button', { name: 'Copy tokens' }).click()
+    const purple = await page.evaluate(() => navigator.clipboard.readText())
+    expect(purple).toContain('--color-info-500: #8b5cf6')
+    expect(purple).not.toContain('#3b82f6')
+    const cached = await page.evaluate(() => JSON.parse(localStorage.getItem('vs-state-shades') || '{}'))
+    expect(Object.keys(cached).sort()).toEqual(['error', 'info', 'success', 'warning'])
+    expect(cached.info[5]).toBe('#8b5cf6')
+  })
+
+  test('a saved set with the retired pending role loads without it', async ({ page }) => {
+    watch(page, 'a returning designer with an old project')
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('vs-current-design', JSON.stringify({ states: { success: 2, warning: 1, error: 2, info: 1, pending: 3 } }))
+      } catch { /* private mode */ }
     })
-  })
-
-  // The founder asked for the Semantic Colour HERO specifically (2026-09-03),
-  // and then marked the two motifs it had been given "AI"
-  // (#surface-headers-read-as-ai). This test used to assert both of them:
-  // `.stc-hero-eyebrow` reading "Create / Colour", and the four cells of
-  // `.stc-status`. Both are now deleted, so it pins the CORRECTED shape.
-  //
-  // THE OLD STRIP ASSERTIONS WERE WEAK, WHICH IS PART OF WHY THE STRIP WENT.
-  // `facts.nth(1)).toContainText('5')` passed on any cell containing the digit
-  // 5 - including the cell that said 50 - and `stateRoleIds`, `STATE_LABELS`
-  // and their product are module constants, so three of the four could not
-  // change however the tool was rewired. Only the bundle name was live, and
-  // the selected bundle CARD 47px below it said the same word.
-  //
-  // So the replacement for "the strip is live" is the card and the radio
-  // state, which is the actual wiring: `selected` is computed by comparing
-  // `stateColors` against `bundle.config`, so breaking the onClick that sets
-  // `stateColors` turns this red. It is also two-sided - the old bundle must
-  // give up its selection, which the single-cell assertion never checked.
-  test('the Semantic Colours hero states its name and its action, and counts nothing', async ({ page }) => {
-    watch(page, 'a designer landing on the semantic tool')
     await go(page, '/create/semantic-color')
-
-    const hero = page.locator('.stc-hero')
-    await expect(hero).toBeVisible()
-    await expect(hero.getByRole('heading', { level: 1, name: 'Semantic Colours' })).toBeVisible()
-    // The action belongs to the hero, the way Gradient's Random/Reset do.
-    await expect(hero.getByRole('button', { name: 'Copy all CSS variables' })).toBeVisible()
-
-    // The two motifs the founder marked.
-    await expect(hero.locator('.stc-hero-eyebrow')).toHaveCount(0)
-    await expect(page.getByText('Create / Colour', { exact: true })).toHaveCount(0)
-    await expect(page.locator('.stc-status')).toHaveCount(0)
-
-    // 50 SURVIVES, on the control it is about to act on. This is the figure
-    // that is NOT furniture: it is the size of what reaches the clipboard,
-    // and the copy it replaced typed "40" as a literal.
-    await expect(page.getByRole('button', { name: 'Copy 50 CSS variables' })).toBeVisible()
-
-    // Choosing another bundle moves the selection - on the cards, which are
-    // where a person chooses and where the answer was always visible.
-    const balanced = page.getByRole('radio', { name: /Balanced/ })
-    const tailwind = page.getByRole('radio', { name: /Tailwind/ })
-    await expect(balanced).toHaveAttribute('aria-checked', 'true')
-    await tailwind.click()
-    await expect(tailwind).toHaveAttribute('aria-checked', 'true')
-    await expect(balanced).toHaveAttribute('aria-checked', 'false')
-    await expect(tailwind).toContainText('Selected')
+    // The four saved roles are kept: that is the Cool bundle.
+    await expect(page.getByRole('radio', { name: 'Cool' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.locator('.stc-fam')).toHaveCount(4)
+    // And the saved design no longer carries pending once the tool has run.
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-current-design') || '{}').states || {}))
+      .not.toHaveProperty('pending')
   })
 
-  // The three onward-navigation blocks this page used to end with offered
-  // overlapping destinations: "Next in the workflow" listed contrast, tint and
-  // palette, all three of which the "More colour tools" footer ~200px below it
-  // already offered alongside gradient. One choice, asked twice.
-  test('the page offers each sibling colour tool exactly once on the way out', async ({ page }) => {
-    watch(page, 'a designer deciding where to go next')
-    await go(page, '/create/semantic-color')
-
-    /* SCOPED TO <main>, WHICH IS WHAT "THIS PAGE" MEANS.
-     *
-     * This counted document-wide and passed for a year because the shared app
-     * footer's two colour links pointed at '/create/color' — a different href
-     * from anything the page itself offered. Deleting the colour landing made
-     * categoryDestination('colour') resolve to '/create/palette', so the
-     * footer's "Start with colour" CTA and its "Colour systems" list item
-     * started colliding with the page's own Palette card and the count went to
-     * three, on a page whose onward-navigation block is still correct.
-     *
-     * The app footer renders on every route and is not "the way out of THIS
-     * page", so it is out of scope. Its own two links sharing a destination is
-     * a CTA and a nav item agreeing, which is ordinary; 07 owns the footer. */
-    const main = page.locator('main')
-    for (const route of ['/create/contrast', '/create/tint', '/create/palette', '/create/gradient']) {
-      await expect(
-        main.locator(`a[href="${route}"]`),
-        `${route} should be offered exactly once on the way out of this page`,
-      ).toHaveCount(1)
-    }
-    // The sequencing advice the removed block carried is kept.
-    await expect(page.locator('.cs-tools-footer-lead')).toContainText('Validate the states')
-  })
-
-  // The selected preset was carried by `.on` and colour alone: a screen-reader
-  // user heard eight identical buttons per role and never which was on.
-  test('each role announces which preset is on, and the announcement follows a click', async ({ page }) => {
+  // The chosen preset is a real select, so a screen reader hears its value.
+  test('each role says which preset is on, and it follows a change', async ({ page }) => {
     watch(page, 'a designer on a screen reader choosing a success green')
     await go(page, '/create/semantic-color')
-    const success = page.locator('.stc-role').first()
-    // One pressed chip per role, five roles.
-    await expect(page.locator('.stc-role-presets button[aria-pressed="true"]')).toHaveCount(5)
-    const teal = success.getByRole('button', { name: 'Teal', exact: true })
-    await expect(teal).toHaveAttribute('aria-pressed', 'false')
-    await teal.click()
-    await expect(teal).toHaveAttribute('aria-pressed', 'true')
-    await expect(success.locator('button[aria-pressed="true"]')).toHaveCount(1)
+    const success = page.getByRole('combobox', { name: 'Success preset' })
+    await expect(success).toHaveValue('1')
+    await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Green')
+    await success.selectOption({ label: 'Teal' })
+    await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Teal')
+    // The bundle no longer matches, so no bundle claims the selection.
+    await expect(page.locator('.stc-bundles [aria-checked="true"]')).toHaveCount(0)
   })
 
-  test('the semantic editor and handoff remain contained on a narrow screen', async ({ page }) => {
+  test('the semantic editor and its code remain contained on a narrow screen', async ({ page }) => {
     watch(page, 'mobile product designer')
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/semantic-color')
 
-    await expect(page.getByRole('radio', { name: /Balanced/ })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Canonical, predictable token names' })).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Balanced' })).toBeVisible()
+    await expect(page.locator('.stc-code')).toBeVisible()
     const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
     expect(hasOverflow, 'Semantic Colours should not create page-level horizontal overflow').toBe(false)
-    await page.screenshot({
-      path: test.info().outputPath('semantic-colours-mobile.png'),
-      fullPage: true,
-    })
+    await page.screenshot({ path: test.info().outputPath('semantic-colours-mobile.png'), fullPage: true })
   })
 })
 
@@ -416,41 +386,39 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     })
   }
 
-  // ── The rule the verdict chips exist to obey ──────────────────────────────
-  // A chip that painted in the pair under test would go unreadable exactly when
-  // the pair fails — the moment its reader most needs it. So drive the page to a
-  // pair that fails everything and assert the chips are STILL legible.
+  // ── The rule the verdicts exist to obey ─────────────────────────────────────
+  // On the rebuilt screen every verdict — the headline, the five
+  // test marks, the pair marks — sits on the page's own card, never on the
+  // user's pair. Drive the page to a pair that fails everything and assert
+  // they are STILL legible: at the default 4.83:1 a verdict drawn in the pair
+  // would pass anyway, so only a broken pair separates "uses page tokens" from
+  // "got lucky".
   //
-  // This is the assertion the test above cannot make: at the default 4.83:1 a
-  // chip drawn in the pair passes anyway, so only a deliberately broken pair
-  // separates "uses page tokens" from "got lucky".
+  // MUTATION: in contrast.css drop the light-theme 50% mix on --cc-bad (paint
+  // the raw #F0A58C on the white card) — the light run goes red on every
+  // "Fail" mark at ~2:1.
   for (const theme of ['light', 'dark']) {
-    test(`its verdict chips stay legible when the pair itself fails (${theme})`, async ({ browser }) => {
+    test(`its verdicts stay legible when the pair itself fails (${theme})`, async ({ browser }) => {
       const ctx = await browser.newContext({ colorScheme: theme })
       await ctx.addInitScript((t) => {
         try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
       }, theme)
       const page = await ctx.newPage()
-      watch(page, 'a designer testing a pair that cannot pass')
+      watch(page, 'a designer reading a failing pair')
       await go(page, '/create/contrast')
-      await expect(page.locator('.cc-verdict').first()).toBeVisible()
-
-      // #F2F4F6 on #FFFFFF is about 1.1:1 — it fails every tier, so every chip
-      // flips and the preview text is effectively invisible.
+      await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
       await page.fill('#cc-fg', '#F2F4F6')
-      await expect(page.locator('.cc-verdict--fail').first()).toBeVisible()
+      await page.fill('#cc-bg', '#FFFFFF')
+      await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails')
 
-      const state = await page.evaluate(() => {
+      const report = await page.evaluate(() => {
         const lum = ([r, g, b]) => {
           const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
           return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
         }
         const parse = (c) => {
           const n = (c.match(/[\d.]+/g) || []).map(Number)
-          if (n.length < 3) return []
-          return /^color\(srgb/.test(c)
-            ? [n[0] * 255, n[1] * 255, n[2] * 255, n.length > 3 ? n[3] : undefined]
-            : n.slice(0, 4)
+          return /^color\(srgb/.test(c) ? [n[0] * 255, n[1] * 255, n[2] * 255, n[3]] : n.slice(0, 4)
         }
         const bgOf = (el) => {
           for (let n = el; n; n = n.parentElement) {
@@ -459,52 +427,32 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           }
           return [255, 255, 255]
         }
-        const ratioOf = (el) => {
-          const cs = getComputedStyle(el)
+        const els = [...document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-pair-mark')]
+        const bad = []
+        for (const el of els) {
+          const raw = parse(getComputedStyle(el).color)
           const bg = bgOf(el)
-          const raw = parse(cs.color)
           const a = raw[3] === undefined ? 1 : raw[3]
-          const fg = [0, 1, 2].map(i => raw[i] * a + bg[i] * (1 - a))
+          const fg = [0, 1, 2].map((i) => raw[i] * a + bg[i] * (1 - a))
           const L1 = lum(fg), L2 = lum(bg)
-          return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+          const r = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+          if (r < 4.5) bad.push(`${el.className} "${el.textContent.trim().slice(0, 20)}" ${r.toFixed(2)}:1`)
         }
-        const chips = [...document.querySelectorAll('.cc-verdict')].filter(el => el.offsetParent !== null)
-        return {
-          chips: chips.length,
-          // The specimen really is unreadable — otherwise the pair was not applied
-          // and the whole test is measuring the resting state again.
-          specimen: Math.round(ratioOf(document.querySelector('.cc-spec-body')) * 100) / 100,
-          bad: chips
-            .map(el => ({ t: el.textContent.trim().slice(0, 18), r: Math.round(ratioOf(el) * 100) / 100 }))
-            .filter(x => x.r < 4.5)
-            .map(x => `${x.t} at ${x.r}:1`),
-        }
+        return { measured: els.length, bad }
       })
       await ctx.close()
-
-      expect(state.chips, 'no verdict chips were found to measure').toBeGreaterThanOrEqual(4)
-      expect(state.specimen,
-        `the failing pair was not applied \u2014 the specimen measured ${state.specimen}:1, which is not a failing pair`)
-        .toBeLessThan(3)
-      expect(state.bad,
-        `a verdict chip is unreadable in ${theme} on a pair that fails: ${state.bad.join(', ')}. ` +
-        'Chips must paint with page tokens, never with --cc-fg/--cc-bg.').toEqual([])
+      expect(report.measured, 'no verdict text was found to measure').toBeGreaterThan(8)
+      expect(report.bad, 'verdicts must paint with page tokens, never with the pair').toEqual([])
     })
   }
 
-  // ── The left panel [contrast-checker-overhaul] ────────────────────────────
   // These drive the PAGE. The solver's maths is swept over 46,656 pairs in
-  // tests/unit/contrast-fixes.test.js and none of that would notice a call site
-  // still wired to fixForeground, which is the failure mode this repo keeps
-  // paying for. What is asserted here is what the page RENDERS.
-
+  // tests/unit/contrast-fixes.test.js; what is asserted here is what the page
+  // RENDERS.
+  //
   // THE DEFECT, as a user meets it. #000099 on #009900 measures 3.806:1. Black
-  // clears 5.56:1, so a one-click fix plainly exists — but the ground's relative
-  // luminance is 0.228, and fixForeground's `bgLum < 0.5` rule sent the search
-  // toward white, which tops out at 3.78:1. It found nothing and returned its
-  // input, the page's own re-verification dropped it, and "Make it pass" came up
-  // EMPTY. Measured across a 6-level-per-channel grid, that was 42.7% of failing
-  // pairs missing a text fix and 17.0% shown no fix of any kind.
+  // clears 5.56:1, so a one-click fix plainly exists — the old direction rule
+  // searched toward white, found nothing, and "Make it pass" came up EMPTY.
   test('a pair the old direction rule gave up on now offers a fix', async ({ page }) => {
     watch(page, 'a designer fixing a green button label')
     await go(page, '/create/contrast')
@@ -513,15 +461,11 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await page.fill('#cc-fg', '#000099')
     await page.fill('#cc-bg', '#009900')
 
-    // The pair really is the failing one, so an empty row below cannot be
-    // explained by the page having ignored the input.
-    await expect(page.locator('.cc-ratio-num')).toHaveText('3.81 : 1')
+    await expect(page.locator('.cc-ratio-num')).toHaveText('3.81:1')
 
     const fixes = page.locator('.cc-fix')
     await expect(fixes).toHaveCount(2)
 
-    // Both sides, and each one verified in the browser against the pair as
-    // rendered — not merely present.
     const offered = await page.locator('.cc-fix-chip').allTextContents()
     const check = await page.evaluate((hexes) => {
       const lum = ([r, g, b]) => {
@@ -533,163 +477,158 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
         const L1 = lum(rgb(a)), L2 = lum(rgb(b))
         return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
       }
-      return {
-        textFixOnGreen: ratio(hexes[0], '#009900'),
-        blueOnBgFix: ratio('#000099', hexes[1]),
-      }
+      return { textFixOnGreen: ratio(hexes[0], '#009900'), blueOnBgFix: ratio('#000099', hexes[1]) }
     }, offered)
 
-    expect(check.textFixOnGreen,
-      `the offered text fix ${offered[0]} does not reach 4.5:1 on #009900`).toBeGreaterThanOrEqual(4.5)
-    expect(check.blueOnBgFix,
-      `the offered background fix ${offered[1]} does not reach 4.5:1 under #000099`).toBeGreaterThanOrEqual(4.5)
-
-    // And the suggestion is still the designer's blue rather than a jump to
-    // black — the point of walking the seed's own lightness axis.
+    expect(check.textFixOnGreen, `the offered text fix ${offered[0]} does not reach 4.5:1 on #009900`).toBeGreaterThanOrEqual(4.5)
+    expect(check.blueOnBgFix, `the offered background fix ${offered[1]} does not reach 4.5:1 under #000099`).toBeGreaterThanOrEqual(4.5)
     const [r, g, b] = [1, 3, 5].map(i => parseInt(offered[0].slice(i, i + 2), 16))
     expect(b, `the text fix ${offered[0]} stopped being blue`).toBeGreaterThan(Math.max(r, g))
   })
 
-  // Applying a fix must actually resolve the failure it was offered for.
+  // Applying a fix must actually resolve the failure it was offered for. The
+  // fix aims at the next level missed — AA first — so after it the body test
+  // passes and the section moves on to the AAA goal.
   test('applying an offered fix makes the pair pass', async ({ page }) => {
     watch(page, 'a designer taking the one-click fix')
     await go(page, '/create/contrast')
     await page.fill('#cc-fg', '#000099')
     await page.fill('#cc-bg', '#009900')
     await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AA (4.5:1)')
 
     await page.locator('.cc-fix').first().getByRole('button', { name: 'Apply' }).click()
 
-    // The body-copy check is the one that was failing; it must now pass, and
-    // the fix row must empty because there is nothing left to fix.
     await expect(page.locator('.cc-check').first()).toHaveClass(/cc-check--pass/)
-    await expect(page.locator('.cc-fix')).toHaveCount(0)
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Good for body text/)
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Passes AA/)
+    await expect(page.getByRole('group', { name: 'Make it pass' })).not.toContainText('AA (4.5:1)')
   })
 
-  // A pair no single-side move can fix must SAY so. Showing nothing is what the
-  // page used to do for 17% of failing pairs, and an empty space is
-  // indistinguishable from a page that did not look.
-  //
-  // THIS STATE IS ONLY REACHABLE AT AAA, and the test says so because the reason
-  // is a real property rather than a quirk of the fixture. Pure black clears
-  // 4.5:1 on every ground at or above relative luminance 0.175 and pure white on
-  // every one at or below 0.1833 — those ranges OVERLAP, so against a SINGLE
-  // ground one pole always clears and an AA fix always exists. At 7:1 the two
-  // ranges separate and a band of mid greys opens up where neither works.
-  test('an unfixable pair says so instead of showing an empty row', async ({ page }) => {
-    watch(page, 'a designer on a pair that cannot be rescued')
+  // The fixes aim at the NEXT level the pair misses (AA, then AAA), not at a
+  // level chosen elsewhere — the drawn screen has no level control. That makes
+  // the old "unfixable" state unreachable: against one ground a pole always
+  // clears 4.5:1, and a pair that already clears AA always has a single-side
+  // move to 7:1 (swept over the 6-level grid, 0 exceptions). So the thing to
+  // hold is the other half: a failing pair never meets an empty section.
+  // #808080 on #7F7F7F is the pair that USED to be unfixable, at AAA.
+  test('every failing pair is offered a fix, aimed at the next level it misses', async ({ page }) => {
+    watch(page, 'a designer on a pair that looks hopeless')
     await go(page, '/create/contrast')
     await page.fill('#cc-fg', '#808080')
     await page.fill('#cc-bg', '#7F7F7F')
-
-    // At AA this pair IS fixable, which is the control: it proves the message
-    // below is a verdict about the pair and not just the failing state.
     await expect(page.locator('.cc-fix')).toHaveCount(2)
     await expect(page.locator('.cc-unfixable')).toHaveCount(0)
+    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AA (4.5:1)')
 
-    await page.getByRole('radio', { name: 'AAA' }).click()
-    await expect(page.locator('.cc-fix')).toHaveCount(0)
-    await expect(page.locator('.cc-unfixable')).toBeVisible()
-    await expect(page.locator('.cc-unfixable')).toContainText('Neither colour can reach 7:1')
+    // Past AA, the section aims at AAA; past AAA, it is gone.
+    await page.fill('#cc-fg', '#000000')
+    await page.fill('#cc-bg', '#767676')
+    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AAA (7:1)')
+    await expect(page.locator('.cc-fix').first()).toBeVisible()
+    await page.fill('#cc-bg', '#FFFFFF')
+    await expect(page.getByRole('group', { name: 'Make it pass' })).toHaveCount(0)
   })
 
-  // Whereby's `AA ⌄`: the level is chosen once and everything follows it.
-  // Reverting any one of the four consumers to a hard-coded 4.5 fails here.
-  test('the level control drives the badges, the checks and the preview chips', async ({ page }) => {
-    watch(page, 'a designer holding a pair to AAA')
+  // The five tests as drawn (D:1903-1906): both levels at once, each row naming
+  // its level. NON-TEXT has no AAA row — SC 1.4.11 is AA only.
+  test('the five tests carry both levels, and follow the pair', async ({ page }) => {
+    watch(page, 'a designer holding a pair to AA and AAA')
     await go(page, '/create/contrast')
     await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
-
-    const read = () => page.evaluate(() => ({
-      badges: [...document.querySelectorAll('.cc-field-badge')].map(e => e.textContent.trim()),
-      checkMins: [...document.querySelectorAll('.cc-check-min')].map(e => e.textContent.replace(/\s+/g, ' ').trim()),
-      chipMins: [...document.querySelectorAll('.cc-verdict')].map(e => e.children[1]?.textContent),
-    }))
-
-    const aa = await read()
-    expect(aa.badges.every(b => b.startsWith('✓AA') || b.startsWith('✕AA')),
-      `the AA badges did not name their level: ${aa.badges.join(' | ')}`).toBe(true)
-    expect(aa.checkMins).toEqual([
-      'Passes; needs ≥ 4.5:1', 'Passes; needs ≥ 3:1', 'Passes; needs ≥ 3:1',
+    const rows = page.locator('.cc-check')
+    await expect(rows).toHaveCount(5)
+    await expect(page.locator('.cc-check-name')).toHaveText([
+      'Body text, 16px', 'Body text, enhanced', 'Large text, 24px', 'Large text, enhanced', 'UI borders and icons',
     ])
-    expect(aa.chipMins).toEqual(['3:1', '4.5:1', '4.5:1', '4.5:1'])
+    await expect(page.locator('.cc-check-level')).toHaveText(['AA', 'AAA', 'AA', 'AAA', 'AA'])
 
-    await page.getByRole('radio', { name: 'AAA' }).click()
-    const aaa = await read()
+    // #6B7280 on #FFFFFF is 4.83:1 — AA passes, AAA body fails.
+    const marks = () => page.locator('.cc-check-mark').evaluateAll((els) => els.map((e) => e.childNodes[0].textContent))
+    expect(await marks()).toEqual(['Pass', 'Fail', 'Pass', 'Pass', 'Pass'])
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AA')
 
-    expect(aaa.badges.every(b => b.includes('AAA')),
-      `the badges did not follow the level: ${aaa.badges.join(' | ')}`).toBe(true)
-    // Body copy rises to 7 and large text to 4.5 — but NON-TEXT STAYS AT 3.
-    // SC 1.4.11 is a AA criterion with no AAA counterpart, and scaling it would
-    // be inventing a rule on the page that teaches the rules.
-    expect(aaa.checkMins).toEqual([
-      'Fails; needs ≥ 7:1', 'Passes; needs ≥ 4.5:1', 'Passes; needs ≥ 3:1',
-    ])
-    expect(aaa.chipMins).toEqual(['4.5:1', '7:1', '7:1', '7:1'])
-  })
-
-  // Typeform writes its checks as sentences about real objects; Hotjar makes the
-  // verdict a short headline. Both replaced jargon, so both are asserted as the
-  // ABSENCE of the jargon as well as the presence of the prose — a sentence
-  // added beside a surviving tier list would pass a presence-only test.
-  test('the checks name real objects and the verdict is a sentence', async ({ page }) => {
-    watch(page, 'a designer who does not know what AA means')
-    await go(page, '/create/contrast')
-    await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
-
-    const names = await page.locator('.cc-check-name').allTextContents()
-    expect(names).toHaveLength(3)
-    for (const n of names) {
-      expect(n, `"${n}" is not a sentence about anything`).toMatch(/\.$/)
-      expect(n, `"${n}" is still a tier name`).not.toMatch(/^A{2,3}\b|·/)
-    }
-    expect(names.join(' ')).toContain('Body copy at 16px')
-    expect(names.join(' ')).toContain('Buttons, borders and focus rings')
-
-    // The old five-tier list, gone rather than merely restyled.
-    const panel = await page.locator('.cc-checks').innerText()
-    expect(panel).not.toMatch(/AA\s*·\s*normal text/)
-    expect(panel).not.toMatch(/AAA\s*·\s*large text/)
-
-    // Hotjar: the verdict says what the pair can CARRY, not "Passes some checks".
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Good for body text at any size.')
     await page.fill('#cc-fg', '#BBBBBB')
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Not usable for text at any size.')
+    expect(await marks()).toEqual(['Fail', 'Fail', 'Fail', 'Fail', 'Fail'])
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails')
+    await page.fill('#cc-fg', '#000000')
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AAA')
   })
 
-  // Whereby puts the measured ratio beside the field being edited. The two here
-  // form ONE pair, so the number is the same on both sides — naming the ground
-  // is what stops that reading as a duplicate, and is the part worth pinning.
-  test('each colour field carries its own verdict, naming its ground', async ({ page }) => {
-    watch(page, 'a designer reading the verdict beside the field')
+  // TRUTH: "Common pairs in this kit" and the swatches are the person's own
+  // palette (the design's are invented brand values). Seed a palette and both
+  // follow it; a pair applies both sides.
+  //
+  // MUTATION: make kitFrom() in ContrastChecker.jsx ignore palette.colors —
+  // the swatch assertion goes red on the first seeded hex.
+  test('the common pairs and swatches come from the person’s own palette', async ({ page }) => {
+    watch(page, 'a designer checking their own kit')
+    const PALETTE = ['#1D3557', '#E63946', '#F1FAEE', '#A8DADC', '#457B9D']
+    await page.addInitScript((colors) => {
+      try {
+        localStorage.setItem('vs-current-design', JSON.stringify({ palette: { base: colors[0], harmony: 'auto', colors } }))
+      } catch { /* private mode */ }
+    }, PALETTE)
     await go(page, '/create/contrast')
+    await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
 
-    const badges = page.locator('.cc-field-badge')
-    await expect(badges).toHaveCount(2)
-    await expect(badges.nth(0)).toContainText('vs background')
-    await expect(badges.nth(1)).toContainText('vs text')
+    const swatches = await page.locator('.cc-swatch').evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label').match(/#[0-9A-F]{6}/i) || [''])[0].toUpperCase()))
+    for (const hex of PALETTE) expect(swatches, `the kit swatches are missing the palette's ${hex}`).toContain(hex)
 
-    // They track the pair, rather than being decoration painted once.
-    await expect(badges.nth(0)).toHaveClass(/cc-field-badge--pass/)
-    await page.fill('#cc-fg', '#DDDDDD')
-    await expect(badges.nth(0)).toHaveClass(/cc-field-badge--fail/)
-    await expect(badges.nth(1)).toHaveClass(/cc-field-badge--fail/)
+    const pairs = page.locator('.cc-pair')
+    expect(await pairs.count(), 'the kit offered no pairs').toBeGreaterThan(2)
+    // Named by the palette's roles, never the design's "Brand on ink".
+    await expect(pairs.first()).toContainText(/Primary|Secondary|Accent|Subtle|Deep/)
+    await expect(page.locator('.cc-pairs')).not.toContainText('Brand on ink')
+
+    await pairs.first().click()
+    const fg = await page.locator('#cc-fg').inputValue()
+    const bg = await page.locator('#cc-bg').inputValue()
+    expect(PALETTE).toContain(fg)
+    expect(PALETTE).toContain(bg)
   })
 
-  // The two panels are not equal halves any more: the preview renders a page and
-  // needs the room. Asserted as a RELATIONSHIP, not as pixel values, so a change
-  // to the page gutter does not fail it for the wrong reason.
-  test('the preview panel is given more width than the controls', async ({ page }) => {
+  // The drawn grid: the specimen (1fr) is far wider than the 336px card.
+  test('the preview is given more width than the controls', async ({ page }) => {
     watch(page, 'a designer on a wide screen')
     await go(page, '/create/contrast')
     await expect(page.locator('.cc-preview')).toBeVisible()
+    const preview = await page.locator('.cc-preview').evaluate((e) => Math.round(e.getBoundingClientRect().width))
+    const controls = await page.locator('.cc-panel').evaluate((e) => Math.round(e.getBoundingClientRect().width))
+    expect(controls, 'the side card is the drawn 336px').toBe(336)
+    expect(preview, `preview ${preview}px is not wider than controls ${controls}px`).toBeGreaterThan(controls)
+  })
+})
 
-    const [controls, preview] = await page.locator('.cc-panel').evaluateAll(
-      els => els.map(e => Math.round(e.getBoundingClientRect().width)))
-    expect(preview, `preview ${preview}px is not wider than controls ${controls}px`)
-      .toBeGreaterThan(controls)
-    // Wider, but still two real columns rather than a sliver beside a slab.
-    expect(preview / controls).toBeLessThan(1.6)
+// The design's GEOMETRY "Interpolation: OKLCH | sRGB" control (D:692-699),
+// implemented for real: the choice reaches the copied CSS, the painted canvas
+// and the SVG export (SVG cannot say `in oklch`, so it is sampled instead).
+//
+// MUTATION: make gradientCssIn() in GradientGenerator.jsx return the plain
+// sRGB string for 'oklch' — the first expectation goes red.
+test.describe('Gradient interpolation space', () => {
+  test('OKLCH writes `in oklch` everywhere it can, and sRGB writes nothing', async ({ page }) => {
+    watch(page, 'front-end developer choosing an interpolation space')
+    await go(page, '/create/gradient')
+    const code = page.locator('.grd-code-text code')
+    const oklch = page.getByRole('button', { name: 'OKLCH', exact: true })
+    const srgb = page.getByRole('button', { name: 'sRGB', exact: true })
+
+    await oklch.click()
+    await expect(oklch).toHaveAttribute('aria-pressed', 'true')
+    await expect(code).toContainText('in oklch')
+    const painted = await page.locator('.grd-canvas').evaluate((el) => getComputedStyle(el).backgroundImage)
+    expect(painted, 'the canvas paints the OKLCH gradient').toContain('oklch')
+
+    // SVG: sampled into sRGB stops, so there are more stops than the gradient has.
+    await page.getByRole('button', { name: 'Linear', exact: true }).click()
+    await page.getByRole('tab', { name: 'SVG' }).click()
+    const svg = await code.textContent()
+    expect((svg.match(/<stop /g) || []).length, 'the OKLCH path was sampled into sRGB stops').toBeGreaterThan(3)
+
+    await page.getByRole('tab', { name: 'CSS' }).click()
+    await srgb.click()
+    await expect(srgb).toHaveAttribute('aria-pressed', 'true')
+    await expect(code).not.toContainText('in oklch')
+    await expect(code).toContainText('gradient(')
   })
 })

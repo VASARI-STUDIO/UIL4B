@@ -48,17 +48,15 @@ const settle = async (page) => {
 
 // route -> the handoff link on it, and the words a person reads.
 const HANDOFF = [
-  ['/create/tint', '.tt-more-link', 'Build a full palette'],
-  // The visible text is "← Palette Builder"; "Back to Palette Builder" is the
-  // aria-label. Assert the words a sighted person reads, not the ones a screen
-  // reader announces — otherwise this control's own arrow makes the check pass
-  // for the wrong reason.
-  ['/create/tint', '.tt-back', 'Palette Builder'],
-  ['/create/type-scale', '.tsc-more-link', 'Pair two families'],
-  ['/create/font-pair', '.fpr-more-link', 'Build a type scale'],
-  ['/create/font-gallery', '.fg-more-link', 'Pair two families'],
-  ['/create/contrast', '.cc-more-link', 'Build a tint scale from this colour'],
-  ['/create/gradient', '.ggn-gal-link', 'Browse the Gradient Library'],
+  // /create/tint is not listed: its
+  // drawn screen has no cross-tool links, and its back button is the shared
+  // toolbar's (see 100-tool-toolbar-one-row).
+  ['/create/type-scale', '.tsc-handoff', 'Find a pairing'],
+  ['/create/font-pair', '.fpr-handoff', 'Build a scale'],
+  ['/create/font-gallery', '.fg-pair-link', 'Build a font pair'],
+  // '/create/contrast' is not listed: its drawn screen has no
+  // cross-tool links (the Create menu carries them), so the link is gone.
+  ['/create/gradient', '.grd-lib', 'Gradient Library'],
 ]
 
 test.describe('cross-tool handoff links meet the 24px target floor', () => {
@@ -129,8 +127,10 @@ test.describe('the small in-page controls that actually do something', () => {
   // red at its measured height above.
   const CASES = [
     ['/create/palette', '.plb-hex', 'the hex on a swatch'],
-    ['/create/palette', '.snapv-value', 'the value beside a slider'],
-    ['/create/gradient', '.ggn-copy', 'the CSS copy button'],
+    // Not listed: '.snapv-value — the value beside a slider'. The drawn
+    // Adjust bar's value is a readout (D:1043), not a click-to-type control,
+    // so it is no longer a target; its alignment is held below.
+    ['/create/gradient', '.grd .tl-primary .tl-btn', 'the CSS copy button'],
   ]
 
   for (const [route, selector, human] of CASES) {
@@ -174,7 +174,7 @@ test.describe('the small in-page controls that actually do something', () => {
     // on a layout that was never wrong.
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/palette')
-    await expect(page.locator('.snapv-value').first()).toBeVisible()
+    await expect(page.locator('.plb-adjust .tl-slider-v').first()).toBeVisible()
     await settle(page)
 
     // MEASURE THE TEXT, NOT THE BOX. The box is a fixed 56px and never moves,
@@ -185,7 +185,7 @@ test.describe('the small in-page controls that actually do something', () => {
     // test green. A Range over the text node reports where the digits actually
     // sit.
     const vals = await page.evaluate(() => {
-      const list = [...document.querySelectorAll('.plb-adjust .snapv-value')]
+      const list = [...document.querySelectorAll('.plb-adjust .tl-slider-v')]
       return list.map((v) => {
         const box = v.getBoundingClientRect()
         const range = document.createRange()

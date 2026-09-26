@@ -217,16 +217,6 @@ test('.ch-thumb-mono reads the per-item ink and is opaque', () => {
 // (0,1,0) and this sheet declares --accent only in theme blocks. Read off the
 // sheet rather than repeated here, so moving a brand value fails this test
 // instead of silently invalidating it.
-function themeToken(css, theme, token) {
-  const re = new RegExp('\\[data-theme="' + theme + '"\\]\\s*\\{([^}]*)\\}', 'g')
-  let value = null
-  for (const m of css.matchAll(re)) {
-    const d = m[1].match(new RegExp('--' + token + ':\\s*(#[0-9a-fA-F]{6})'))
-    if (d) value = d[1]
-  }
-  return value
-}
-
 // The stylesheet's own fallback ink for a thumbnail with no usable stops.
 //
 // LAST DECLARATION WINS, so every matching rule is scanned rather than the
@@ -245,13 +235,28 @@ function fallbackInk(css, theme) {
   return value
 }
 
+// THE ONE-ACCENT MODEL. The fallback ramp is the
+// accent FILL to its hover — `var(--accent)` to `var(--accent-fill-hover)`, which
+// is --accent mixed 14% toward ink #0B0C0E — and both are one value in both
+// themes, so there is one pair to measure per preference, not one per theme.
+function rootAccent(css) {
+  const m = css.match(/:root\{[^}]*?--accent:\s*(#[0-9a-fA-F]{6})/)
+  return m && m[1]
+}
+function fallbackPair(css, accent) {
+  const rule = css.match(/\.ch-thumb\{[^}]*background:linear-gradient\(135deg,var\(--c1,var\(--accent\)\),var\(--c2,var\(--accent-fill-hover\)\)\)/)
+  assert.ok(rule, '.ch-thumb no longer falls back to --accent -> --accent-fill-hover; re-measure this test')
+  assert.match(css, /--accent-fill-hover:color-mix\(in srgb,var\(--accent\) 86%,var\(--accent-deep\)\)/, 'the fill hover mix moved')
+  return [accent, mixHex(accent, '#0B0C0E', 0.14)]
+}
+
 test('the accent-gradient fallback carries a MEASURED ink in both themes', () => {
   const css = stripComments(ALL_CSS)
+  const accent = rootAccent(css)
+  assert.ok(accent, 'could not read --accent off :root')
+  const [c1, c2] = fallbackPair(css, accent)
   for (const theme of ['light', 'dark']) {
-    const c1 = themeToken(css, theme, 'accent')
-    const c2 = themeToken(css, theme, 'accent-strong')
-    assert.ok(c1 && c2, `${theme}: could not read the accent pair off the sheet`)
-    const ink = fallbackInk(css, theme)
+    const ink = fallbackInk(css, theme) || fallbackInk(css, 'light')
     assert.ok(ink, `${theme}: .ch-thumb declares no fallback --mono-ink`)
     const ratio = worstOnGradient(ink, c1, c2)
     assert.ok(
@@ -263,9 +268,6 @@ test('the accent-gradient fallback carries a MEASURED ink in both themes', () =>
 })
 
 test('and prefers-contrast: more does not undo it', () => {
-  // That block overrides --accent and --accent-strong to a single value per
-  // theme, so the fallback ground changes shape - a solid, not a ramp - for
-  // the one user who asked for MORE contrast. Both poles are checked there too.
   const css = stripComments(ALL_CSS)
   const block = css.match(/@media \(prefers-contrast: more\)\{([\s\S]*?)[\r\n]\}/)
   assert.ok(block, 'the prefers-contrast block has gone from the sheet')
@@ -273,25 +275,24 @@ test('and prefers-contrast: more does not undo it', () => {
     const scoped = block[1].match(new RegExp('\\[data-theme="' + theme + '"\\]\\{([^}]*)\\}'))
     assert.ok(scoped, `${theme}: no prefers-contrast override`)
     const c1 = scoped[1].match(/--accent:\s*(#[0-9a-fA-F]{6})/)
-    const c2 = scoped[1].match(/--accent-strong:\s*(#[0-9a-fA-F]{6})/)
-    assert.ok(c1 && c2, `${theme}: the override no longer sets both accent tokens`)
-    const ink = fallbackInk(css, theme)
-    const ratio = worstOnGradient(ink, c1[1], c2[1])
-    assert.ok(ratio >= FLOOR, `${theme} prefers-contrast: ${ink} is ${ratio.toFixed(2)}:1 on ${c1[1]}->${c2[1]}`)
+    assert.ok(c1, `${theme}: the override no longer deepens --accent`)
+    const [a, b] = fallbackPair(css, c1[1])
+    const ink = fallbackInk(css, theme) || fallbackInk(css, 'light')
+    const ratio = worstOnGradient(ink, a, b)
+    assert.ok(ratio >= FLOOR, `${theme} prefers-contrast: ${ink} is ${ratio.toFixed(2)}:1 on ${a}->${b}`)
   }
 })
 
-test('the fixture discriminates: the hard-coded white this replaced really failed', () => {
-  // Without this the two tests above would pass on a sheet that never had a
-  // problem. #FFFFFF measures 4.43:1 on the light pair and 2.41:1 on the dark
-  // one - so the defect was theme-shaped, and a light-only check would have
-  // reported a clean pass. Same reversal [gradient-text-below-aa] recorded for
-  // --accent-strong on /seo.
+test('the fixture discriminates: the dark ink this replaced fails under prefers-contrast', () => {
   const css = stripComments(ALL_CSS)
-  const dark = worstOnGradient('#FFFFFF', themeToken(css, 'dark', 'accent'), themeToken(css, 'dark', 'accent-strong'))
-  assert.ok(dark < FLOOR, `plain white now measures ${dark.toFixed(2)}:1 on the dark accent pair - `
-    + 'the brand values moved and the two tests above need re-measuring, not deleting')
+  const block = css.match(/@media \(prefers-contrast: more\)\{([\s\S]*?)[\r\n]\}/)
+  const dark = block[1].match(/\[data-theme="dark"\]\{[^}]*--accent:\s*(#[0-9a-fA-F]{6})/)
+  const [a, b] = fallbackPair(css, dark[1])
+  const r = worstOnGradient('#0A0B0D', a, b)
+  assert.ok(r < FLOOR, `the old dark ink #0A0B0D now measures ${r.toFixed(2)}:1 - `
+    + 'the pair moved and the two tests above need re-measuring, not deleting')
 })
+
 
 test('CommunityCard writes the stops and the ink together, or writes neither', () => {
   // The hole this closes was a SPLIT: --c1/--c2 were written unconditionally

@@ -2,6 +2,13 @@
   "_generated": "scripts/sync-credits.mjs — run `node scripts/sync-credits.mjs`. Do not edit by hand. tests/unit/credits-coverage.test.js re-derives all three lists from public/fonts/, package.json and node_modules/ and fails the build if this file has drifted, so a font added without its notice or a dependency added without its licence cannot ship uncredited. It is .json rather than .js because its content is npm package NAMES, and a module under src/ that names a package reads to a text scan exactly like a module that imports one.",
   "fonts": [
     {
+      "slug": "big-shoulders-display",
+      "family": "Big Shoulders Display",
+      "copyright": "Copyright 2019 The Big Shoulders Project Authors (https://github.com/xotypeco/big_shoulders)",
+      "source": "https://github.com/xotypeco/big_shoulders",
+      "licenceFile": "/fonts/BIG-SHOULDERS-DISPLAY-OFL.txt"
+    },
+    {
       "slug": "caveat",
       "family": "Caveat",
       "copyright": "Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)",
@@ -23,11 +30,32 @@
       "licenceFile": "/fonts/GEIST-MONO-OFL.txt"
     },
     {
+      "slug": "hanken-grotesk",
+      "family": "Hanken Grotesk",
+      "copyright": "Copyright 2021 The Hanken Grotesk Project Authors (https://github.com/marcologous/hanken-grotesk)",
+      "source": "https://github.com/marcologous/hanken-grotesk",
+      "licenceFile": "/fonts/HANKEN-GROTESK-OFL.txt"
+    },
+    {
+      "slug": "instrument-sans",
+      "family": "Instrument Sans",
+      "copyright": "Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)",
+      "source": "https://github.com/Instrument/instrument-sans",
+      "licenceFile": "/fonts/INSTRUMENT-SANS-OFL.txt"
+    },
+    {
       "slug": "jetbrains-mono",
       "family": "JetBrains Mono",
       "copyright": "Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)",
       "source": "https://github.com/JetBrains/JetBrainsMono",
       "licenceFile": "/fonts/JETBRAINS-MONO-OFL.txt"
+    },
+    {
+      "slug": "literata",
+      "family": "Literata",
+      "copyright": "Copyright 2017 The Literata Project Authors (https://github.com/googlefonts/literata)",
+      "source": "https://github.com/googlefonts/literata",
+      "licenceFile": "/fonts/LITERATA-OFL.txt"
     },
     {
       "slug": "manrope",
@@ -37,11 +65,25 @@
       "licenceFile": "/fonts/MANROPE-OFL.txt"
     },
     {
+      "slug": "martian-mono",
+      "family": "Martian Mono",
+      "copyright": "Copyright 2021 The Martian Mono Project Authors (https://github.com/evilmartians/mono)",
+      "source": "https://github.com/evilmartians/mono",
+      "licenceFile": "/fonts/MARTIAN-MONO-OFL.txt"
+    },
+    {
       "slug": "outfit",
       "family": "Outfit",
       "copyright": "Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)",
       "source": "https://github.com/Outfitio/Outfit-Fonts",
       "licenceFile": "/fonts/OUTFIT-OFL.txt"
+    },
+    {
+      "slug": "schibsted-grotesk",
+      "family": "Schibsted Grotesk",
+      "copyright": "Copyright 2023 The Schibsted-Grotesk Project Authors (https://github.com/schibsted/schibsted-grotesk)",
+      "source": "https://github.com/schibsted/schibsted-grotesk",
+      "licenceFile": "/fonts/SCHIBSTED-GROTESK-OFL.txt"
     }
   ],
   "dependencies": [

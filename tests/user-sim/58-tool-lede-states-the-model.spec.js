@@ -18,38 +18,14 @@
 // Import / tune / copy and compose / refine / hand off are controls the visitor
 // can already see on the screen.
 //
-// WHY THIS ASSERTS AN EXACT STRING RATHER THAN A REGEX. A "does it mention the
-// model" check is satisfied by almost any sentence, and a `not.toContain` on
-// the old wording is satisfied the moment a single word changes. Both would go
-// on passing through a rewrite that quietly restored the workflow narration.
-// The exact sentence is the thing being defended, so the exact sentence is what
-// is pinned; changing it deliberately means changing this line deliberately.
+// The tools now open on their toolbar, with no lede at all. What is guarded is
+// that each old lede stays gone and that no sentence selling the tool appears
+// anywhere on its page.
 //
-// MUTATION: restore either old paragraph and that tool's test goes red on the
-// text comparison.
+// MUTATION: restore a tool's old lede and its test goes red on the `gone`
+// sentence; put "production-ready" on any of these pages and the sweep fails.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-
-const LEDES = [
-  {
-    route: '/create/tint',
-    selector: '.tt-hero-copy p',
-    heading: 'Tint Scale Generator',
-    text: 'One base colour and one curve. Every step below is that colour at a measured tone.',
-  },
-  {
-    route: '/create/gradient',
-    selector: '.ggn-sub',
-    heading: 'Gradient Generator',
-    text: 'Colour stops and where each one sits. Everything below is those two facts, as CSS, Tailwind or SVG.',
-  },
-  {
-    route: '/create/font-pair',
-    selector: '.fpr-hero-intro p',
-    heading: 'Font Pair',
-    text: 'Two families — one for headings, one for body. Every preview below is those two, together.',
-  },
-]
 
 // The persona claim is its own motif and gets its own guard: "like a creative
 // director" told the reader nothing the specimens do not show better. It is
@@ -58,29 +34,17 @@ const LEDES = [
 // is far more likely to reach for one than the other.
 const BANNED_PHRASES = ['production-ready', 'like a creative director']
 
-for (const lede of LEDES) {
-  test(`${lede.route} opens on the model, in one sentence`, async ({ page }) => {
-    watch(page, 'someone landing on a tool page cold, from search')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, lede.route)
-
-    // POSITIVE CONTROL. The lede lives next to the h1, and a page that failed
-    // to render would satisfy a `not.toContain` check trivially — so prove the
-    // tool actually mounted before believing anything about its copy.
-    await expect(page.locator('h1')).toHaveText(lede.heading)
-
-    const p = page.locator(lede.selector).first()
-    await expect(p).toBeVisible()
-    // `toHaveText` on a single element compares the whole string, so this
-    // cannot be satisfied by a second paragraph or a longer one containing it.
-    await expect(p).toHaveText(lede.text)
-
-    // One sentence of narration is the budget. Two full stops would mean the
-    // three-clause shape had crept back under different words.
-    const sentences = lede.text.split('.').filter((s) => s.trim()).length
-    expect(sentences, 'the lede is at most two short statements').toBeLessThanOrEqual(2)
-  })
-}
+// ── The tools rebuilt to the design's drawn screen carry NO lede ────────────
+// A tool page has no big page title and no paragraph
+// under it — the tool's name is a 15px label in the sticky tool toolbar, and
+// the work starts directly below. The lede these pages had is deleted, not
+// moved, so what is guarded now is that it stays gone and that no sentence
+// selling the tool grows back in its place.
+const NO_LEDE = [
+  { route: '/create/gradient', heading: 'Gradient', gone: 'Colour stops and where each one sits.' },
+  { route: '/create/tint', heading: 'Tint', gone: 'One base colour and one curve.' },
+  { route: '/create/font-pair', heading: 'Font Pair', gone: 'Two families — one for headings, one for body. Every preview below is those two, together.' },
+]
 
 test('no tool sells itself instead of showing itself', async ({ page }) => {
   // The vague-claim vocabulary the anti-slop bar names. Both old ledes used it;
@@ -90,7 +54,7 @@ test('no tool sells itself instead of showing itself', async ({ page }) => {
   // sample or an export that legitimately contains the words would still be
   // caught — there are none on these two pages today, and if one arrives this
   // should be re-read rather than loosened silently.
-  for (const { route, heading } of LEDES) {
+  for (const { route, heading } of NO_LEDE) {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, route)
     await expect(page.locator('h1')).toHaveText(heading)
@@ -109,3 +73,21 @@ test('no tool sells itself instead of showing itself', async ({ page }) => {
     }
   }
 })
+
+for (const t of NO_LEDE) {
+  test(`${t.route} opens on its toolbar, with no lede and no sales line`, async ({ page }) => {
+    watch(page, 'someone landing on a tool page cold, from search')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, t.route)
+    // POSITIVE CONTROL: the tool mounted, and its h1 is the toolbar label.
+    const h1 = page.locator('h1')
+    await expect(h1).toHaveText(t.heading)
+    await expect(page.locator('[data-tool-toolbar] h1')).toHaveCount(1)
+    // No paragraph shares the toolbar with the label.
+    await expect(page.locator('[data-tool-toolbar] p')).toHaveCount(0)
+    const body = await page.evaluate(() => document.body.innerText)
+    expect(body.length, `${t.route} should have rendered real text`).toBeGreaterThan(200)
+    expect(body, 'the old lede is gone').not.toContain(t.gone)
+    for (const phrase of BANNED_PHRASES) expect(body.toLowerCase()).not.toContain(phrase)
+  })
+}

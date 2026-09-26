@@ -36,19 +36,19 @@ const MONO = /Geist Mono/
 const FIELDS = [
   {
     route: '/create/contrast', sel: '.cc-hex-input', name: 'contrast checker hex field',
-    want: { fontFamily: MONO, padding: '0px 12px', borderRadius: '10px' },
+    // The drawn pair footer's field: 0 8px, r10.
+    want: { fontFamily: MONO, padding: '0px 8px', borderRadius: '10px' },
     wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px', borderRadius: '12px' },
   },
   {
     route: '/create/tint', sel: '.tt-hex-input', name: 'tint tool hex field',
-    want: { fontFamily: MONO, padding: '0px 14px', fontSize: '14px' },
+    // The source row's field on the rebuilt screen: 0 10px, 12px.
+    want: { fontFamily: MONO, padding: '0px 10px', fontSize: '12px' },
     wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px', fontSize: '13px' },
   },
-  {
-    route: '/create/palette', sel: '.plb-hexfield', name: 'palette builder hex field',
-    want: { fontFamily: MONO, padding: '0px 10px' },
-    wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px' },
-  },
+  // Not listed: 'palette builder hex field'. The drawn palette toolbar
+  // has no seed text field (D:949-957): the seed is a chip that opens the
+  // shared colour picker, whose own field is the one a hex is typed into.
   {
     route: '/create/font-pair', sel: '.fpr-input', name: 'font pair preview field',
     want: { padding: '0px 12px', borderRadius: '10px' },
@@ -65,7 +65,7 @@ const FIELDS = [
     // colour was the one drawn as a caption. The field now asks for a box, so
     // what this spec must prove about it is unchanged in kind — that the class
     // wins over `input[type="text"]` — and changed in value.
-    route: '/create/gradient', sel: '.ggn-stop-hex', name: 'gradient stop hex field',
+    route: '/create/gradient', sel: '.grd-hex', name: 'gradient stop hex field',
     // 10px, not 6px: the colour-tools pass moved this field off a literal onto
     // `--radius-s`, which is what "tokens only" asks for and what the rest of
     // the sheet now uses. The CONTRACT this spec exists for is unchanged and
@@ -73,8 +73,12 @@ const FIELDS = [
     // still winning over `input[type="text"]`. Only the number moved, and
     // `wasWrongly` below is what keeps that a real assertion rather than a
     // value copied out of whatever the page happens to render today.
-    want: { fontFamily: MONO, padding: '5px 6px', borderRadius: '10px' },
-    wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px', borderRadius: '12px' },
+    // On the design's drawn screen the field is the
+    // design's 36px hairline control (r12, 0 12px). r12 happens to equal the
+    // reset's radius, so radius is no longer evidence either way; padding and
+    // the mono face still are, and they are what this asserts.
+    want: { fontFamily: MONO, padding: '0px 12px', borderRadius: '12px' },
+    wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px' },
   },
 ]
 
@@ -82,9 +86,10 @@ const FIELDS = [
 // control that already carries its own border and ground, which is why the
 // component asks for neither — and why getting one looked like a bug in the
 // layout rather than a bug in the cascade.
-const BARE_FIELDS = [
-  { route: '/create/gradient', sel: '.ggn-angle-input', name: 'gradient angle input' },
-]
+//
+// EMPTY. The gradient has no numeric angle input: the design's drawn screen sets the angle with a slider (D:684),
+// so there is no bare field left on any route to hold to this.
+const BARE_FIELDS = []
 
 test.describe('component input classes outrank the type reset', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'designer typing into a tool field') })
@@ -147,8 +152,8 @@ test.describe('component input classes outrank the type reset', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     for (const [route, field] of [
       ['/create/contrast', '.cc-hex-input'],
+      ['/create/gradient', '.grd-hex'],
       ['/create/tint', '.tt-hex-input'],
-      ['/create/palette', '.plb-hexfield'],
     ]) {
       await go(page, route)
       // Wait for the surface to hydrate — an empty list would pass vacuously.

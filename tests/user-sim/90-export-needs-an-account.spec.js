@@ -78,7 +78,7 @@ test.describe('a file needs a free account', () => {
     expect(await page.locator('.plb-col').count(),
       'the palette board did not render').toBeGreaterThan(2)
 
-    await page.getByRole('button', { name: 'Save / export' }).click()
+    await page.getByRole('button', { name: 'Save current' }).click()
     const menu = page.locator('.plb-savemenu')
     await expect(menu, 'the menu asked for an account before it would open. It holds three '
       + 'Copy rows, and copying is free forever.').toBeVisible({ timeout: 10000 })
@@ -253,11 +253,11 @@ test.describe('a signed-in visitor is never asked again', () => {
 test.describe('copying stays free, and that is half the decision', () => {
   // If this half ever goes red the gate has been put in the wrong place: the
   // tools are supposed to stay fully usable signed out.
-  // The two pages label the control differently — Tint says "Copy CSS" and
-  // Gradient says "Copy" — so the name is per route rather than one regex. A
+  // Each route names its control; Gradient's is the drawn toolbar primary
+  // "Copy CSS" (D:617). The name is per route rather than one regex: a
   // loose /copy/i would also match Tint's "Copy row", which copies a single step
   // and would let this pass while saying nothing about the CSS.
-  for (const [route, label] of [['/create/tint', 'Copy CSS'], ['/create/gradient', 'Copy']]) {
+  for (const [route, label] of [['/create/tint', 'Copy variables'], ['/create/gradient', 'Copy CSS']]) {
     test(`${route} copies without asking for anything`, async ({ page }) => {
       watch(page, PERSONA)
       await go(page, route)

@@ -130,7 +130,7 @@ test.describe('focus is visible on controls sitting on a user-chosen colour', ()
       }
       const bad = []
       let checked = 0
-      for (const el of document.querySelectorAll('button.plb-tool, .plb-ramp-bar')) {
+      for (const el of document.querySelectorAll('.plb-col button.plb-tool, .plb-col .plb-ramp, .plb-col .plb-hex, .plb-col .plb-aa--locked')) {
         el.focus()
         if (!el.matches(':focus-visible')) continue
         checked++

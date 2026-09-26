@@ -55,10 +55,11 @@ test('/create/color stays available even though the Create tree does not own it'
   // App.jsx intercepts /create/color above CreateTool and renders ColorLanding,
   // so it is a real page and is absent from createTools(). A derivation that
   // gated "anything not in liveToolRoutes()" would wrongly kill the hand-off on
-  // all four palette + undraw resources.
+  // unDraw, the one resource left pointing there since the palette sites were
+  // removed (a UIL4B library already does their job).
   assert.ok(isToolAvailable({ route: '/create/color' }))
   const viaColor = DISCOVER_RESOURCES.filter(r => primaryAvailableTool(r)?.route === '/create/color')
-  assert.ok(viaColor.length >= 4, `expected the palette resources to hand off to /create/color, got ${viaColor.length}`)
+  assert.deepEqual(viaColor.map(r => r.id), ['undraw'], 'unDraw must still hand off to /create/color')
 })
 
 test('no curated resource offers a hand-off to a tool that has not shipped', () => {

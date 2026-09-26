@@ -203,7 +203,8 @@ const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) =>
    * `auto` — all still fail. What no longer fails is a horizontal margin moving
    * from one length to another; `padding-left`, `padding-right` and `gap` carry
    * authored horizontal spacing and are untouched, as are `margin-top` and
-   * `margin-bottom`, which do not resolve from `auto` on any element here.
+   * `margin-bottom`, which resolve from `auto` on only the elements listed in
+   * AUTO_VERTICAL_MARGIN below.
    *
    * Do NOT widen this to the vertical properties or to anything in the colour,
    * type, radius or shadow families. Those were stable across both platforms on
@@ -288,6 +289,18 @@ async function openSettled(browser, route, width, selectors) {
   }
 }
 
+/* VERTICAL `auto` MARGINS, NAMED ONE BY ONE.
+ *
+ * `.fpr-card-foot` is `margin-top: auto` in a flex column: it pins the footer to
+ * the bottom of its card, and the computed value is whatever height the card's
+ * text left over. The Linux runner measured 20.7969px where the baseline holds
+ * 0px, on an unchanged stylesheet. That is text measurement, the same class as
+ * `.hlp-start-go` above, so this one property on this one element is not
+ * compared. Every other property of the element still is, and the list is
+ * per-selector on purpose: widening it to every `margin-top` would blind the
+ * snapshot to authored vertical spacing everywhere. */
+const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'] }
+
 const updated = {}
 
 for (const route of routeNames) {
@@ -310,6 +323,7 @@ for (const route of routeNames) {
       const moved = []
       for (const s of selectors) {
         for (const p of Object.keys(expected[s])) {
+          if (AUTO_VERTICAL_MARGIN[s]?.includes(p)) continue
           if (actual[s][p] !== expected[s][p]) moved.push(`${s} { ${p}: ${expected[s][p]} -> ${actual[s][p]} }`)
         }
       }

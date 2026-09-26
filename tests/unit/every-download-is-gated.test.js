@@ -37,9 +37,6 @@ const DIRS = ['src/pages', 'src/components']
 // reason, because an entry here is a decision rather than an exemption — and a
 // reason that stops being true is findable.
 const GATED_ELSEWHERE = new Map([
-  ['src/pages/AltTextGenerator.jsx',
-    'the whole tool is wrapped in <AuthGate featureLabel="generate alt text">, so a '
-    + 'signed-out visitor never reaches the CSV'],
   ['src/pages/Admin.jsx',
     'behind admin verification (api/verify-admin.js); these CSVs are not a product feature'],
   ['src/pages/Settings.jsx',
@@ -107,16 +104,11 @@ test('the exemptions still describe something true', () => {
       `${rel} is exempt from the download gate and no longer exists. Remove the entry.`)
     const code = stripJs(fs.readFileSync(full, 'utf8'))
 
-    if (rel.includes('AltTextGenerator')) {
-      assert.ok(code.includes('AuthGate'),
-        `${rel} is exempt because "${reason}" — and it no longer renders an AuthGate, so `
-        + 'its CSV is now reachable signed out.')
-    }
     if (rel.includes('Settings')) {
       // The exemption is about the visitor's OWN data. If this file started
       // exporting something else, the reason would no longer cover it.
       assert.ok(/uil4b-export-/.test(code),
-        `${rel} is exempt because it exports the visitor's own data, and that export is `
+        `${rel} is exempt because "${reason}" — and that export is `
         + 'no longer here. Recheck what it downloads now.')
     }
   }

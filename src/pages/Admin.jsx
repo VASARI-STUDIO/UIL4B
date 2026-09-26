@@ -5,8 +5,7 @@ import { Link } from 'react-router-dom'
 // the `analytics-daily` documents every signed-in session writes, so what it
 // returns is the SITE. Everything else exported there —  getPageViews(),
 // getSessions(), getDesignAnalytics() — reads this browser's own localStorage,
-// and on 2026-09-16 the founder's instruction was to get "data from my specific
-// browser window" off this dashboard. They are not imported here any more, and
+// which is not site data, so they are not imported here, and
 // tests/unit/admin-reads-nothing-from-this-browser.test.js fails the build if
 // one comes back.
 //
@@ -27,28 +26,20 @@ import {
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
 import { isAdminEmail } from '../utils/constants'
-// ── THE TWO INTERNAL BOARDS ARE NOT ON THIS PAGE AT ALL ANY MORE ──────────
-// src/data/pipeline.js and src/data/moduleBoard.js are still imported here
-// neither statically nor dynamically — but the reason has changed, and the new
-// one is stronger. They used to arrive from GET /api/ai?backlog=1 behind the
-// verified-admin gate, rendered by a Pipeline tab and a Board tab. Since
-// 2026-09-16 the modules live on the founder's machine and out of this
-// repository, so that endpoint answers 501 `localOnly` in every deployment and
-// both tabs rendered a paragraph explaining why they were empty. He asked for
-// the pipeline to go; the module board was the same tab in a different shape,
-// so it went with it. The request is gone, the two components are gone, and
-// there is now no code path from this page to either module.
+// No internal planning data is imported by this page, statically or
+// dynamically, and there is no code path from it to any such module.
 import { firstWinById } from '../utils/firstWin'
 import { resolvePromptProfileLink } from '../utils/promptSubmission'
+import { promptTagList, promptTagString } from '../utils/promptStore'
 import { PLAN_STATES, planStateOf, planSortKey, PLAN_STATE_ORDER } from '../utils/adminUsers'
 import { toCsv } from '../utils/csv'
+import { cadenceOf } from '../utils/billingCadence'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/admin.css'
 import '../styles/deferred/tool-shell.css'
 
-const ADMIN_CODE = 'uil4b-dev-2026'
 // The triage vocabulary now lives in utils/moderation.js, so the moderation
 // decisions and this dashboard cannot drift into two meanings of "done".
 // The strings are unchanged; only where they are defined moved.
@@ -58,33 +49,24 @@ const STATUS_LABELS = FEEDBACK_STATUS_LABELS
 // (with rgba(168,85,247,.1) behind it, and the same hex again as DONUT slice 5).
 // Both were the app reaching for a fifth signal colour it had no token for -
 // one borrowed the BRAND colour, the other was typed in and had no dark value at
-// all. --pending now exists and is measured in both themes; see the PENDING note
-// in ColorStudio.jsx. NOT RENDER-VERIFIED: this page is admin-only and behind
-// auth, so these are source-level swaps onto a token that is theme-aware, which
-// is strictly better than a literal, but the badge contrast here is unchecked
-// and belongs to [flair-tone-contrast]'s class of text-on-a-tint-of-itself.
-const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--pending)', done: 'var(--ok)' }
-// SPECTRUM, 2026-09-18: the last three literals here became color-mix() on the
-// tokens they were approximating. `rgba(245,158,11,.1)` is amber, `rgba(16,185,
-// 129,.1)` is emerald and `rgba(239,68,68,.1)` is red — each one the LIGHT
-// theme's value of a signal token, frozen. The note above records that the
-// same fault was already fixed once here for `#a855f7`, which "had no dark
-// value at all"; these three had the same problem and survived that sweep
-// because an rgba() reads less like a hardcoded colour than a hex does. They
-// are the same thing. Derived from the token, they now track both themes and
-// any future change to the signal ramp.
-const STATUS_BGS = { new: 'color-mix(in srgb,var(--warn) 12%,transparent)', 'in-progress': 'color-mix(in srgb,var(--pending) 12%,transparent)', done: 'color-mix(in srgb,var(--ok) 12%,transparent)' }
-const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--pending)' }
-const TYPE_BGS = { bug: 'color-mix(in srgb,var(--err) 12%,transparent)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--pending) 12%,transparent)' }
-const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', 'var(--pending)', 'var(--t3)']
+// all. They now read --info, the Information blue, which covers the in-progress
+// state (there is no separate pending colour). The donut's fifth slice is
+// --accent-soft, a lighter blue, so it stays distinct from slice one.
+const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--info)', done: 'var(--ok)' }
+// The tints are color-mix() on the signal tokens rather than rgba() literals,
+// so they track both themes and any future change to the signal ramp.
+const STATUS_BGS = { new: 'color-mix(in srgb,var(--warn) 12%,transparent)', 'in-progress': 'color-mix(in srgb,var(--info) 12%,transparent)', done: 'color-mix(in srgb,var(--ok) 12%,transparent)' }
+const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--info)' }
+const TYPE_BGS = { bug: 'color-mix(in srgb,var(--err) 12%,transparent)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--info) 12%,transparent)' }
+const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', 'var(--accent-soft)', 'var(--t3)']
 
 // ── TEN TABS, AUDITED, SIX LEFT ───────────────────────────────────────────
 // Every tab here answers a question with data that can answer it. The four
 // that went could not:
 //
-//   Pipeline  the founder asked for it. Its data has been local-only since
-//             2026-09-16, so the deployed tab was a paragraph saying so.
-//   Board     the same endpoint, the same paragraph, the same emptiness.
+//   Pipeline  its data is not part of this repository, so the tab had
+//             nothing to show.
+//   Board     the same, for the same reason.
 //   Design    "Most Copied Fonts" and "Most Picked Colours" counted what was
 //             copied and picked IN THIS BROWSER. The site-wide equivalents —
 //             icons and icon packs — moved to Overview, where the rest of the
@@ -94,7 +76,7 @@ const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)',
 //             same question answered from the server.
 //
 // Order is by how often the surface is worked rather than by how it grew: the
-// dashboard opens on Overview, and Users is the tab the founder named.
+// dashboard opens on Overview, then Users.
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'users', label: 'Users' },
@@ -341,7 +323,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(prompt.title || '')
   const [text, setText] = useState(prompt.text || '')
-  const [tags, setTags] = useState((prompt.tags || []).join(', '))
+  const [tags, setTags] = useState(promptTagString(prompt.tags))
   const [busy, setBusy] = useState(false)
 
   const updatePrompt = async (updates) => {
@@ -402,7 +384,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
   }
 
   const handleSave = () => {
-    updatePrompt({ title, text, tags: tags.split(',').map(t => t.trim()).filter(Boolean) })
+    updatePrompt({ title, text, tags: promptTagString(tags) })
     setEditing(false)
   }
 
@@ -454,16 +436,16 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn btn-s btn-accent" onClick={handleSave} disabled={busy}>Save</button>
-              <button className="btn btn-s" onClick={() => { setTitle(prompt.title || ''); setText(prompt.text || ''); setTags((prompt.tags || []).join(', ')); setEditing(false) }}>Cancel</button>
+              <button className="btn btn-s" onClick={() => { setTitle(prompt.title || ''); setText(prompt.text || ''); setTags(promptTagString(prompt.tags)); setEditing(false) }}>Cancel</button>
             </div>
           </div>
         ) : (
           <>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 4 }}>{prompt.title || 'Untitled'}</div>
             <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{prompt.text}</p>
-            {(prompt.tags || []).length > 0 && (
+            {promptTagList(prompt.tags).length > 0 && (
               <div className="adm-prompt-tags">
-                {prompt.tags.map(tag => <span key={tag} className="adm-prompt-tag">{tag}</span>)}
+                {promptTagList(prompt.tags).map(tag => <span key={tag} className="adm-prompt-tag">{tag}</span>)}
               </div>
             )}
             {profileLink && (
@@ -962,7 +944,7 @@ const USER_VIEWS = [
   { id: 'role', label: 'Moderators' },
 ]
 
-/** One value the founder needs in his clipboard to act on this person elsewhere. */
+/** One value an administrator needs on the clipboard to act on this person elsewhere. */
 function CopyValue({ label, value, mono = true, onCopy }) {
   if (!value) return null
   return (
@@ -1211,7 +1193,7 @@ function UsersPanel({ localUsers, toast, role }) {
     const csv = toCsv(cols, filtered, (r, c) => (
       c === 'plan' ? r.planState.label
         : c === 'stripeStatus' ? (r.subscription?.status || '')
-          : c === 'interval' ? (r.subscription?.interval || '')
+          : c === 'interval' ? cadenceOf(r.subscription)
             : c === 'country' ? (r.country ? countryName(r.country) : '')
               : r[c]
     ))
@@ -1389,7 +1371,7 @@ function UsersPanel({ localUsers, toast, role }) {
                           )}
                           <td role="cell" data-label="Plan">
                             <PlanBadge state={u.planState} />
-                            {u.subscription?.interval && <span className="adm-plan-interval">{u.subscription.interval}</span>}
+                            {cadenceOf(u.subscription) && <span className="adm-plan-interval">{cadenceOf(u.subscription)}</span>}
                           </td>
                           <td role="cell" data-label="Joined" style={{ whiteSpace: 'nowrap' }}>{u.createdAt ? fmtDate(u.createdAt) : '—'}</td>
                           <td role="cell" data-label="Last seen" style={{ whiteSpace: 'nowrap' }}>{u.lastLoginAt ? fmtDate(u.lastLoginAt) : '—'}</td>
@@ -1601,8 +1583,6 @@ export default function Admin({ toast }) {
   // what finally reads /api/verify-admin's `claimUpdated` and forces the token
   // refresh that makes a freshly minted claim usable in the same session.
   const { role, loading: roleLoading } = useModerationRole()
-  const [unlocked, setUnlocked] = useState(false)
-  const [code, setCode] = useState('')
   const [tab, setTab] = useState('overview')
   // Roving-tabindex keyboard navigation for the tab bar. A tablist is ONE tab
   // stop; arrows move within it. Without this the ten tabs were ten separate
@@ -1758,16 +1738,17 @@ export default function Admin({ toast }) {
     })()
   }, [isAdminUser, tab, aiHealth])
 
-  // The gate gains a SERVER-VERIFIED path. `isAdminUser` is an email compared
-  // against a list that ships in the bundle and ADMIN_CODE is a shared secret
-  // sitting in the same bundle; canReview(role) is a signed custom claim, which
-  // is the only one of the three a browser cannot fake. It is an OR, so nothing
-  // that opened before is closed now — this only adds a way in that is true.
+  // Two ways in. `isAdminUser` is an email compared against a list that ships
+  // in the bundle; canReview(role) is a signed custom claim, which a browser
+  // cannot fake. The data behind the page is gated on the server either way
+  // (api/verify-admin.js, firestore.rules), so the email check only decides
+  // which screen to draw.
   //
-  // It admits `moderator` as well as `founder`, which is inert until the claim
-  // is granted AND firestore.rules honours it — both founder-gated changes, both
-  // proposed rather than taken. Today the branch that fires is `founder`.
-  const effectiveUnlocked = unlocked || isAdminUser || canReview(role)
+  // There is no third way: no secret is compared in the browser, and
+  // tests/unit/admin-no-client-secret.test.js keeps it that way.
+  //
+  // canReview(role) admits `moderator` as well as `founder`.
+  const effectiveUnlocked = isAdminUser || canReview(role)
 
   useEffect(() => {
     if (effectiveUnlocked) refresh()
@@ -1816,13 +1797,6 @@ export default function Admin({ toast }) {
   }, [feedback])
 
   // ── Handlers ──
-
-  const handleUnlock = (e) => {
-    e.preventDefault()
-    if (code.trim() === ADMIN_CODE) { setUnlocked(true); toast('Admin access granted') }
-    else toast('Invalid code', 'error')
-    setCode('')
-  }
 
   // ── Triage writes ─────────────────────────────────────────────────────────
   // These three used to update local state optimistically, send the write
@@ -1954,11 +1928,7 @@ export default function Admin({ toast }) {
         <div className="adm-lock">
           <div className="adm-lock-eyebrow">Admin Access</div>
           <h1>Developer Dashboard</h1>
-          <p>{user ? 'Your account does not have admin access. Enter the admin code to continue.' : 'Sign in with an owner account, or enter the admin code.'}</p>
-          <form onSubmit={handleUnlock}>
-            <input type="password" value={code} onChange={e => setCode(e.target.value)} placeholder="Enter admin code" autoFocus />
-            <button className="btn btn-accent" type="submit">Unlock</button>
-          </form>
+          <p>{user ? 'Your account does not have admin access.' : 'Sign in with an owner account.'}</p>
         </div>
       </div>
     )
@@ -1988,7 +1958,6 @@ export default function Admin({ toast }) {
           )}
           <button className="btn btn-s" onClick={refresh}>Refresh</button>
           <button className="btn btn-s" onClick={exportCSV}>Export CSV</button>
-          {!isAdminUser && <button className="btn btn-s" onClick={() => { setUnlocked(false); toast('Admin access revoked') }} style={{ color: 'var(--err)' }}>Lock</button>}
         </div>
       </div>
 

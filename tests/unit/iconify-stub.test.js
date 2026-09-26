@@ -43,7 +43,7 @@ test('/collection answers per pack, and Lucide holds a full first page', () => {
   const names = Object.values(body.categories || {}).flat().concat(body.uncategorized || [])
   // Lucide leads ALL_PACKS and the page paints pack-by-pack, so the first
   // PAGE_SIZE (120) cells of the default grid are one pack when Lucide has at
-  // least that many — the property 25-defect-sweep's pack-label test asserts.
+  // least that many — the property 25-layout-target-sweep's pack-label test asserts.
   assert.ok(names.length >= 120, `lucide fixture has ${names.length} names; the default grid's first page needs 120 from one pack`)
   assert.ok(names.includes('zap'), '10-home hands lucide:zap to the editor; the fixture must hold it')
   assert.equal(answerIconify(`${HOST}/collection?prefix=no-such-pack`).status, 404)

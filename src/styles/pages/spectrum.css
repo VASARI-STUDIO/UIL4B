@@ -1,82 +1,102 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   SPECTRUM — the sales page.
+   SPECTRUM — the sales page, ported from "UIL4B - Spectrum.dc.html".
    ═══════════════════════════════════════════════════════════════════════════
 
-   Ported from "UIL4B - Spectrum.dc.html", which authors every rule as an inline
-   `style=` attribute against its own parallel token set (`--page`, `--card`,
-   `--ink`, `--ink-rgb`, `--ink-dim`, `--ink-faint`, `--shade-rgb`). None of
-   those ship. The design's ground IS this product's ground already reseeded —
-   dark #0B0C0E/#16181D/#EFEEEA against the app's #060607/#111215/#F2F1EC, light
-   #F5F5F2/#FFFFFF/#121418 against #EFEEE9/#FFFFFF/#0F0F10 — so the whole sheet
-   maps onto the existing --bg-* / --t* ramp rather than adding a second one
-   beside it. A parallel ramp is precisely the "disjointed" the 2026-09-16 audit
-   measured and this redesign exists to end.
+   THE RULE: the design file is the spec, reproduced, not
+   adapted. Every size, weight, radius, shadow and alpha below is the value the
+   design writes inline; where the file says `rgba(var(--ink-rgb),.12)` this
+   sheet says `rgba(var(--sp-ink-rgb), .12)`, so a line here can be checked
+   against the design line it came from.
+
+   ── THE GROUND ───────────────────────────────────────────────────────────────
+   Dark uses the app's near-black:
+   page #060607 and card #111215, read from the app's own --bg-0 / --card.
+   Light uses the design's own values. Secondary text is ink at the design's
+   opacities (.62 / .55 dark, .80 / .72 light), never a fixed grey.
 
    ── THE ACCENT IS NEVER A HEX HERE ──────────────────────────────────────────
-   Spectrum's `#2A60E8` appears nowhere in this file. Every accent surface reads
-   the family global.css derives from `--accent`: --accent-mid, --accent-text,
-   --accent-bright, --accent-hover, --accent-border, --accent-border-strong,
-   --accent-wash, --accent-wash-4, --accent-ink, --accent-ink-wash. That is the
-   mechanism behind premium theme templates — a Pro user picks a theme, one
-   variable moves, and this page follows without a second token being touched —
-   so a literal here would be a hole in the product, not just a style nit.
-   `tests/unit/spectrum-truth.test.js` fails the build on any hex that is not a
-   neutral or one of the design's own fixed non-accent colours.
-
-   ── MOTION ──────────────────────────────────────────────────────────────────
-   `cubic-bezier(.23,1,.32,1)` is the design's house curve and is kept as
-   --sp-ease; the entrance curve is the app's own --ease-entrance, which is the
-   same `cubic-bezier(.16,1,.3,1)` the design uses for its reveals. Every
-   transition and animation below has a reduced-motion companion, and the
-   companions are grouped at the foot of the file so a sweep can read them in one
-   place. global.css's blanket rule already clamps durations; these turn the
-   MOVEMENT off, which is the part a duration clamp does not fix.
-
-   ── OVERFLOW ────────────────────────────────────────────────────────────────
-   Zero horizontal overflow at 320 / 360 / 390 / 414 / 768 / 834 / 1024 / 1280 /
-   1440 is true on every route today and has to stay true. The two rules that do
-   the work: every grid child that can hold a long token gets `min-width:0`, and
-   every grid track is `minmax(min(Npx,100%),1fr)` so a 320px viewport collapses
-   the floor rather than overflowing it.                                        */
+   Every accent surface reads --accent or its derived family, so a theme
+   template that moves --accent moves this page. The fixed colours that remain
+   are neutrals, the window dots, and the paper of the exported UI kit drawn in
+   the second exports card (a picture of a document, not a product colour).   */
 
 .spectrum {
-  /* Local aliases, so the port reads like the source while resolving to the
-     app's tokens. Nothing below this block names a --bg-* or --t- directly. */
   --sp-page: var(--bg-0);
+  --sp-page-rgb: 6, 6, 7;
   --sp-card: var(--card);
-  --sp-card-2: var(--bg-1);
-  --sp-ink: var(--t0);
-  --sp-dim: var(--t1);
-  --sp-faint: var(--t2);
-  --sp-quiet: var(--t3);
-  --sp-line: var(--border);
-  --sp-line-strong: var(--bh);
-  /* The design's ink-alpha washes, as colour-mix off the ink token so they
-     track the theme without a second RGB triple to keep in step. (The design
-     spells them as an rgba of its own ink triple, which does not ship here.) */
-  --sp-hair: color-mix(in srgb, var(--t0) 9%, transparent);
-  --sp-wash: color-mix(in srgb, var(--t0) 4%, transparent);
-  --sp-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
+  --sp-ink: #EFEEEA;
+  --sp-ink-rgb: 239, 238, 234;
+  --sp-shade-rgb: 0, 0, 0;
+  --sp-shade-a: 1;
+  --sp-dim-a: .62;
+  --sp-faint-a: .55;
+  --sp-ink-hover: #D5D4CE;
+
+  /* Derived, and the names the footer (SpectrumFooter.jsx) reads. */
+  --sp-dim: rgba(var(--sp-ink-rgb), var(--sp-dim-a));
+  --sp-faint: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
+  --sp-quiet: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
+  --sp-line: rgba(var(--sp-ink-rgb), .1);
+  --sp-line-strong: rgba(var(--sp-ink-rgb), .16);
+  --sp-hair: rgba(var(--sp-ink-rgb), .09);
+  --sp-wash: rgba(var(--sp-ink-rgb), .04);
+  --sp-wash-2: rgba(var(--sp-ink-rgb), .06);
+  --sp-link: var(--link, var(--accent-text));
 
   --sp-gutter: clamp(20px, 4vw, 52px);
   --sp-shell: 1400px;
   --sp-sec: clamp(80px, 11vw, 152px);
   --sp-ease: cubic-bezier(.23, 1, .32, 1);
+  --sp-ease-out: cubic-bezier(.16, 1, .3, 1);
 
   position: relative;
   background: var(--sp-page);
   color: var(--sp-ink);
-  /* `clip` rather than `hidden`: `hidden` on an ancestor silently turns every
-     descendant `position:sticky` into a no-op, and this page has two sticky
-     systems (the bench rail and the specimen stack). body already carries
-     `overflow-x:clip` for the same reason. */
+  font-family: var(--font);
+  /* The design's body sets no line-height, so every row it draws sits on the
+     font's own `normal`; the app's body sets a looser one. */
+  line-height: normal;
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+  /* `clip`, not `hidden`: `hidden` on an ancestor turns every descendant
+     `position:sticky` into a no-op, and this page has two sticky systems (the
+     bench rail and the exports stack). */
   overflow-x: clip;
 }
+[data-theme="light"] .spectrum {
+  --sp-page: #F5F5F2;
+  --sp-page-rgb: 245, 245, 242;
+  --sp-card: #FFFFFF;
+  --sp-ink: #121418;
+  --sp-ink-rgb: 18, 20, 24;
+  --sp-shade-rgb: 26, 30, 42;
+  --sp-shade-a: .16;
+  --sp-dim-a: .8;
+  --sp-faint-a: .72;
+  --sp-ink-hover: #2C313B;
+}
+/* The sales design's own dark accent text family: 22 / 40 / 58% toward
+   #EFEEEA. The app's tokens follow the App file's lighter walk (40 / 48 / 56%),
+   so the sales pages redeclare the three here; light already matches.
+   Measured on #060607 / #111215: mid #557FE8 5.39 / 4.98, text #7999E9
+   7.28 / 6.73, bright #9CB2E9 9.60 / 8.88. Text only, never a fill.
+   Skipped under prefers-contrast: more, whose own stronger walk stands. */
+@media not (prefers-contrast: more) {
+  [data-theme="dark"] .spectrum {
+    --accent-mid: color-mix(in srgb, var(--accent) 78%, var(--accent-paper));
+    --accent-text: color-mix(in srgb, var(--accent) 60%, var(--accent-paper));
+    --accent-bright: color-mix(in srgb, var(--accent) 42%, var(--accent-paper));
+  }
+}
 
-/* The film grain. One inline SVG turbulence, 5%, fixed — the design's own
-   layer, kept because very large flat fields of --bg-0 band on 6-bit panels and
-   this page is mostly large flat fields. It is `pointer-events:none` so it can
-   never eat a click, and it sits UNDER the nav (z-index 50 vs PillNav's 120). */
+.spectrum h1, .spectrum h2, .spectrum h3 { text-wrap: balance; }
+.spectrum [id] { scroll-margin-top: 104px; }
+.spectrum ::selection { background: var(--accent); color: var(--accent-ink); }
+.spectrum :is(button, input) { font-variant-numeric: tabular-nums; }
+.spectrum button:not(.sp-cta):not(.sp-pill):not(.hcmd-kbd) { transition: transform .14s var(--sp-ease), background .16s ease, color .16s ease, border-color .16s ease; }
+.spectrum button:not(.sp-cta):not(.sp-pill):active { transform: scale(.97); }
+
+/* The film grain: the design's own layer, fixed at 5%, under the nav. */
 .sp-grain {
   position: fixed;
   inset: 0;
@@ -88,21 +108,10 @@
 
 .spectrum > main { position: relative; z-index: 2; }
 
-/* ── shell and rhythm ─────────────────────────────────────────────────────── */
+.sp-shell { max-width: var(--sp-shell); margin-inline: auto; padding-inline: var(--sp-gutter); }
+.sp-section { max-width: var(--sp-shell); margin: 0 auto; padding: var(--sp-sec) var(--sp-gutter) 0; }
 
-.sp-shell {
-  max-width: var(--sp-shell);
-  margin-inline: auto;
-  padding-inline: var(--sp-gutter);
-}
-
-.sp-section { padding-top: var(--sp-sec); }
-.sp-section--bench { padding-top: clamp(64px, 9vw, 120px); }
-
-/* One anchor offset for every `#id` on the page, so a jump from the footer or
-   from a shared link never parks a heading under the fixed nav. */
-.spectrum [id] { scroll-margin-top: calc(var(--chrome-h) + 24px); }
-
+/* The design's shared section heading (bench, discover). */
 .sp-h2 {
   margin: 0;
   font-family: var(--display);
@@ -110,158 +119,826 @@
   font-size: clamp(34px, 5vw, 68px);
   line-height: .98;
   letter-spacing: -.035em;
-  max-width: 24ch;
-  text-wrap: balance;
+  max-width: min(24ch, 100%);
 }
-.sp-h2--sm { font-size: clamp(28px, 4vw, 52px); line-height: 1; }
-
-.sp-lede {
-  margin: 18px 0 0;
-  max-width: 52ch;
-  font-size: clamp(15.5px, 1.2vw, 16.5px);
-  line-height: 1.62;
-  color: var(--sp-dim);
-  text-wrap: pretty;
-}
-
-.sp-centre-head { max-width: 62ch; margin-inline: auto; text-align: center; }
-.sp-centre-head .sp-h2 { margin-inline: auto; }
-.sp-centre-head .sp-lede { margin-inline: auto; }
+.sp-lede { margin: 18px 0 0; max-width: min(52ch, 100%); font-size: 16px; line-height: 1.6; color: var(--sp-dim); }
 
 /* ── the word reveal ──────────────────────────────────────────────────────────
-   RESTING STATE IS VISIBLE. `.sp-w` has no transform of its own; the movement
-   is a keyframe animation that only exists once an ancestor carries `.is-in`,
-   which is added by useReveal() on scroll (or, for the hero, on mount). A
-   headline that is hidden until JS runs is invisible in the prerendered shell
-   and invisible to a reader with motion off — see the note in Spectrum.jsx. */
+   RESTING STATE IS VISIBLE. `.sp-w` carries no transform; the movement is a
+   keyframe animation that exists only under an ancestor's `.is-in`, so the
+   prerendered shell, a runtime with no observer and reduced motion all read
+   the headline. The design's values: translateY(112%) to 0 over 1s on
+   cubic-bezier(.16,1,.3,1), 55ms per word. */
 .sp-words, .sp-words-visual { display: inline; }
 .sp-wm {
   display: inline-block;
   overflow: hidden;
   vertical-align: bottom;
-  /* Descenders would be clipped by the overflow otherwise; the pair cancels out
-     so the line box is unchanged. The design's own values. */
   padding-bottom: .09em;
   margin-bottom: -.09em;
 }
-.sp-w { display: inline-block; will-change: transform; }
+.sp-w { display: inline-block; }
 .sp-w--mark { color: var(--accent-mid); font-weight: 600; }
+.sp-w-tail { color: var(--sp-ink); }
 
 @keyframes sp-word-up {
   from { transform: translateY(112%); }
   to { transform: none; }
 }
 .is-in .sp-w {
-  animation: sp-word-up var(--dur-6) var(--ease-entrance) both;
+  animation: sp-word-up 1s var(--sp-ease-out) both;
   animation-delay: calc(var(--sp-wi, 0) * var(--fl-stagger));
 }
 
-/* ── the section entrances ────────────────────────────────────────────────────
-   `[data-sp-reveal]` DECLARES NOTHING AT REST. That is the whole rule and it is
-   not a style preference: the shared `[data-reveal]` contract starts at
-   `opacity:0` and waits for an observer, and measured in a rendered browser on
-   this page a fast pass down the document left 16 of 19 blocks invisible. The
-   entrance is therefore an animation that exists only while `.is-in` is on the
-   element, and its last frame is the element's ordinary appearance — so a missed
-   observation costs the movement, never the content. useSpectrumReveal.js
-   carries the measurement.
+/* ── the pill buttons ─────────────────────────────────────────────────────────
+   The design's `[data-cta]`: ink ground, page-coloured label, a round bubble
+   holding an arrow that turns 45° on hover. Sizes are the design's per site. */
+.sp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sp-ink);
+  color: var(--sp-page);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 540;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .16s var(--sp-ease), background .16s ease;
+}
+.sp-pill:hover { background: var(--sp-ink-hover); color: var(--sp-page); text-decoration: none; }
+.sp-pill:active { transform: scale(.978); }
+.sp-pill-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(var(--sp-page-rgb), .1);
+  font-size: 12px;
+  transition: transform .16s var(--sp-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sp-pill:hover .sp-pill-icon, .sp-disc-cta:hover .sp-pill-icon { transform: rotate(45deg); }
+}
+.sp-pill--hero { gap: 11px; padding: 8px 9px 8px 20px; font-size: 15px; }
+.sp-pill--hero .sp-pill-icon { width: 28px; height: 28px; font-size: 13px; }
+.sp-pill--close { gap: 11px; padding: 12px 13px 12px 24px; font-size: 15.5px; }
+.sp-pill--close .sp-pill-icon { width: 30px; height: 30px; font-size: 13px; }
 
-   `--sp-d` lets a caller stagger a block behind the one above it, the way the
-   design's `data-d="1|2|3"` does. Unset, there is no delay. */
-@keyframes sp-rise {
-  from { opacity: 0; transform: translate3d(0, 34px, 0); }
-  to { opacity: 1; transform: none; }
+.sp-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 16px;
+  border: 1px solid rgba(var(--sp-ink-rgb), .13);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--sp-ink-rgb), .86);
+  font-family: var(--font);
+  font-size: 13px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
 }
-.is-in[data-sp-reveal] {
-  animation: sp-rise var(--dur-5) var(--ease-entrance) both;
-  animation-delay: calc(var(--sp-d, 0) * 90ms);
+@media (hover: hover) and (pointer: fine) {
+  .sp-ghost:hover { background: rgba(var(--sp-ink-rgb), .055); border-color: rgba(var(--sp-ink-rgb), .24); color: rgba(var(--sp-ink-rgb), .86); text-decoration: none; }
 }
+.sp-ghost--hero { gap: 9px; padding: 8px 20px; border-color: rgba(var(--sp-ink-rgb), .16); color: var(--sp-ink); font-size: 15px; font-weight: 500; }
+.sp-ghost--hero:hover { background: rgba(var(--sp-ink-rgb), .05); border-color: rgba(var(--sp-ink-rgb), .3); color: var(--sp-ink); }
+.sp-ghost--close { padding: 14px 22px; border-color: rgba(var(--sp-ink-rgb), .14); color: rgba(var(--sp-ink-rgb), .88); font-size: 15px; }
+
+/* One Phosphor glyph: 1em square, so `font-size` sizes it as the design's
+   icon font did. */
+.sp-ph { display: inline-block; width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -.125em; fill: currentColor; }
 
 /* ── the spectrum band ────────────────────────────────────────────────────── */
 
 .sp-ramp { position: relative; display: flex; flex-direction: column; width: 100%; }
 .sp-ramp--hero { margin-top: clamp(48px, 6vw, 84px); }
-.sp-ramp--close { margin-top: clamp(56px, 7vw, 96px); }
 
 .sp-ramp-bars {
   display: flex;
   align-items: flex-end;
+  justify-content: space-between;
   gap: 2px;
-  padding-inline: 2px;
   height: clamp(120px, 15vw, 200px);
 }
-.sp-ramp--hero .sp-ramp-bars { height: clamp(140px, 18vw, 232px); }
+.sp-ramp--hero .sp-ramp-bars { height: clamp(140px, 18vw, 232px); padding: 0 2px; }
 
 .sp-ramp-bar {
   flex: 1 1 0;
   min-width: 0;
-  /* EVERY ONE OF THESE FOUR IS WRITTEN BY REACT, AND EVERY ONE CARRIES A
-     FALLBACK. A `var()` with no fallback that resolves to nothing makes its
-     whole declaration invalid and the browser drops it silently — which for
-     `background` would paint twenty-one invisible bars. The fallbacks are the
-     first bar's own values, so a ramp that somehow lost its inline styles is a
-     flat band rather than a hole. tests/unit/design-tokens.test.js enforces
-     this across every sheet in the app; it caught this file. */
   height: var(--sp-bar-h, 60%);
   transform-origin: bottom;
-  /* ONE custom property drives all twenty-one hues. See SpectrumRamp.jsx. */
   background: hsl(calc(var(--sp-h, 8deg) + var(--sp-spin, 0deg)) var(--sp-s, 58%) var(--sp-l, 56%));
-  transition: transform var(--dur-3) var(--sp-ease), filter var(--dur-2) ease;
+  transition: transform .24s var(--sp-ease), filter .2s ease;
 }
+/* The design lays the bars out in whole pixels (floor of the share, spread
+   with space-between). SpectrumRamp writes that width once per resize. */
+.sp-ramp[style*="--sp-bar-w"] .sp-ramp-bar { flex: 0 0 auto; width: var(--sp-bar-w, auto); }
 @media (hover: hover) and (pointer: fine) {
-  .sp-ramp-bar:hover { transform: scale3d(1, 1.07, 1); filter: brightness(1.08); }
+  .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar:hover { transform: scale3d(1, 1.07, 1); filter: brightness(1.08); }
 }
 
-/* The reflection, BELOW the band, falling away from the same baseline and
-   fading into the ground. The bars hang from the top of a shorter box and the
-   overflow clips them, so the tallest reflections run off the bottom of the
-   fade exactly as the real bars run off the top of the band. */
 .sp-ramp-mirror {
   position: relative;
   height: clamp(104px, 14vw, 190px);
   overflow: hidden;
   pointer-events: none;
 }
-.sp-ramp-bars--mirror { align-items: flex-start; opacity: .4; }
+.sp-ramp-bars--mirror { align-items: flex-start; opacity: .55; }
 .sp-ramp-fade {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--sp-page) 0%, transparent) 0%,
-    color-mix(in srgb, var(--sp-page) 55%, transparent) 52%,
-    color-mix(in srgb, var(--sp-page) 92%, transparent) 84%,
-    var(--sp-page) 100%);
+    rgba(var(--sp-page-rgb), 0) 0%,
+    rgba(var(--sp-page-rgb), .55) 52%,
+    rgba(var(--sp-page-rgb), .92) 84%,
+    rgba(var(--sp-page-rgb), 1) 100%);
 }
 
 /* ── hero ─────────────────────────────────────────────────────────────────── */
 
-.sp-hero { padding-top: calc(var(--chrome-h) + clamp(34px, 5vw, 72px)); text-align: center; }
+/* The design's nav spacer (clamp(14px,2vw,26px) + 50px) plus the section's own
+   clamp(34px,5vw,72px). */
+.sp-hero { padding-top: calc(clamp(14px, 2vw, 26px) + 50px + clamp(34px, 5vw, 72px)); text-align: center; }
 .sp-hero-h1 {
   margin: 0 auto;
-  max-width: 24ch;
+  max-width: min(26ch, 100%);
   font-family: var(--display);
   font-weight: 600;
-  font-size: clamp(38px, 6.4vw, 92px);
+  font-size: clamp(40px, 6.6vw, 98px);
   line-height: .96;
   letter-spacing: -.045em;
-  text-wrap: balance;
 }
 .sp-hero-sub {
   margin: 28px auto 0;
-  max-width: 58ch;
-  font-size: clamp(16px, 1.4vw, 19px);
+  max-width: min(62ch, 100%);
+  font-size: clamp(16.5px, 1.5vw, 19px);
   line-height: 1.6;
   color: var(--sp-dim);
 }
 .sp-hero-bar { position: relative; margin: clamp(30px, 4vw, 44px) auto 0; max-width: 660px; text-align: left; }
-.sp-hero-cta { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+.sp-hero-cta { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin-top: 18px; }
 
-/* ── the CTA family ───────────────────────────────────────────────────────────
-   The design's `[data-cta]` pill: ink ground, page-coloured label, a round
-   bubble on the right holding an arrow that rotates 45° on hover so it points
-   along the direction of travel. Three variants (ink, ghost, accent) and two
-   sizes — which is the whole button system on this page, against the four the
-   2026-09-16 audit counted across the site. */
+/* THE SEARCH BAR — HomeCommandBar, wrapped. Its behaviour (the tool index,
+   keyboard, results) is untouched; this restyles it into the design's pill:
+   ⌕, a "Search for" ghost with a rotating accent phrase, the ⌘K chip and an
+   outer 4px focus ring with no inner outline. */
+.sp-search { position: relative; }
+.sp-search .hcmd { max-width: none; margin: 0; animation: none; }
+.sp-search .hcmd-bar {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+  min-height: 0;
+  padding: 18px 24px;
+  border: 1px solid rgba(var(--sp-ink-rgb), .14);
+  border-radius: 999px;
+  background: var(--sp-card);
+  box-shadow: 0 30px 70px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.sp-search .hcmd-bar:focus-within { border-color: var(--sp-link); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.sp-search .hcmd-prompt { font-size: 0; font-weight: 400; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-search .hcmd-prompt::after { content: "⌕"; font-family: var(--mono); font-size: 15px; }
+.sp-search input.hcmd-input { height: auto; font-size: 16.5px; font-weight: 400; line-height: normal; color: var(--sp-ink); }
+.sp-search .hcmd-input::placeholder { color: transparent; }
+.sp-search .hcmd-kbd {
+  display: inline-flex;
+  min-height: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(var(--sp-ink-rgb), .07);
+  min-height: 25px;
+}
+.sp-search .hcmd-kbd kbd { font-family: var(--mono); font-size: 10px; font-weight: 400; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-search-ghost {
+  position: absolute;
+  left: 46px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  font-size: 16.5px;
+  color: rgba(var(--sp-ink-rgb), .5);
+  white-space: nowrap;
+}
+.sp-search-rot { display: inline-block; margin-left: 7px; color: var(--accent-mid); }
+.sp-search:has(.hcmd-input:not(:placeholder-shown)) .sp-search-ghost { display: none; }
+@media (max-width: 480px) {
+  .sp-search .hcmd-bar { grid-template-columns: auto minmax(0, 1fr) auto; padding-right: 24px; }
+  .sp-search .hcmd-kbd { display: inline-flex; }
+}
+
+/* ── the bench ────────────────────────────────────────────────────────────── */
+
+.sp-bench-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: clamp(28px, 4vw, 72px);
+  align-items: start;
+}
+.sp-bench-col { position: sticky; top: clamp(96px, 12vh, 128px); min-width: 0; }
+.sp-bench-col .sp-h2 { margin-top: 18px; }
+.sp-bench-lede { margin: 20px 0 0; max-width: min(52ch, 100%); font-size: 16px; line-height: 1.62; color: var(--sp-dim); }
+.sp-rail { display: grid; gap: 1px; list-style: none; margin: clamp(26px, 3vw, 40px) 0 0; padding: 0; }
+.sp-rail-row {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
+  font-family: var(--font);
+  font-size: 15.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.spectrum .sp-rail-row { transition: none; }
+.sp-rail-row.is-on { background: rgba(var(--sp-ink-rgb), .07); color: var(--sp-ink); }
+.sp-rail-no { font-size: 10px; letter-spacing: .1em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-rail-row.is-on .sp-rail-no, .sp-rail-row.is-on .sp-rail-mark { color: var(--accent-text); }
+.sp-rail-label { flex: 1; min-width: 0; }
+.sp-rail-mark { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+
+.sp-steps { display: grid; gap: 0; min-width: 0; }
+.sp-step { min-width: 0; min-height: 100dvh; display: flex; align-items: center; scroll-snap-align: center; }
+
+.sp-panel {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  width: 100%;
+  height: 700px;
+  border-radius: 20px;
+  background: var(--sp-card);
+  border: 1px solid rgba(var(--sp-ink-rgb), .12);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--sp-ink-rgb), .06),
+    0 2px 4px -2px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .45)),
+    0 18px 36px -20px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .7)),
+    0 44px 80px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
+  transform-origin: 50% 50%;
+}
+.sp-panel-in { height: 100%; display: flex; flex-direction: column; }
+.sp-panel-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 46px;
+  padding: 0 clamp(12px, 1.6vw, 16px);
+  background: linear-gradient(180deg, rgba(var(--sp-ink-rgb), .065), rgba(var(--sp-ink-rgb), .03));
+  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
+  box-shadow: inset 0 1px 0 rgba(var(--sp-ink-rgb), .07);
+}
+.sp-panel-title { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.sp-panel-lights { display: flex; gap: 6px; flex: 0 0 auto; }
+.sp-panel-lights i { width: 11px; height: 11px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+.sp-panel-lights i:nth-child(1) { background: #ED6A5E; }
+.sp-panel-lights i:nth-child(2) { background: #F4BF4F; }
+.sp-panel-lights i:nth-child(3) { background: #61C554; }
+.sp-panel-rule { width: 1px; height: 15px; background: rgba(var(--sp-ink-rgb), .14); flex: 0 0 auto; }
+.sp-panel-no { font-size: 10px; letter-spacing: .14em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-panel-name { font-size: 14px; font-weight: 540; color: var(--sp-ink); white-space: nowrap; }
+.sp-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sp-panel-body--pad { gap: 12px; padding: clamp(15px, 2vw, 22px); overflow: auto; }
+.sp-panel .sp-panel-body * { scrollbar-width: thin; scrollbar-color: rgba(var(--sp-ink-rgb), .18) transparent; }
+.sp-panel-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sp-panel-foot > span { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* The underline tab: every text tab in the four windows. */
+.sp-utab {
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
+  font-family: var(--font);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  white-space: nowrap;
+  cursor: pointer;
+  /* 25px floors, not the design's text-width boxes: WCAG 2.2's 24px target
+     minimum, with a pixel spare for the bench windows' depth scale (.978). */
+  min-width: 25px;
+  min-height: 25px;
+}
+.spectrum .sp-utab { transition: color .18s ease; }
+.sp-utab[aria-pressed="true"] { border-bottom-color: var(--sp-ink); color: var(--sp-ink); }
+.sp-label { font-size: 9.5px; letter-spacing: .16em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+
+/* 01 · Palette builder */
+.sp-shuffle { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); background: var(--sp-card); color: rgba(var(--sp-ink-rgb), .84); font-family: var(--font); font-size: 12.5px; cursor: pointer; }
+.sp-shuffle .sp-ph { font-size: 14px; }
+@media (hover: hover) and (pointer: fine) { .sp-shuffle:hover { background: rgba(var(--sp-ink-rgb), .06); } }
+.sp-pal-strip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(10px, 1.6vw, 18px);
+  flex-wrap: wrap;
+  margin: calc(clamp(15px, 2vw, 22px) * -1) calc(clamp(15px, 2vw, 22px) * -1) 0;
+  padding: 10px clamp(14px, 1.8vw, 20px);
+  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
+}
+.sp-pal-seedwrap { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
+.sp-seeds { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); }
+.sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 8px; display: grid; place-items: center; cursor: pointer; font-size: 11px; }
+.sp-seed-name { display: grid; gap: 1px; min-width: 0; }
+.sp-seed-name b { font-size: 13px; font-weight: 560; color: var(--sp-ink); white-space: nowrap; }
+.sp-seed-name small { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-seg { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); overflow-x: auto; scrollbar-width: none; min-width: 0; max-width: 100%; }
+.sp-seg button { padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; font-weight: 440; cursor: pointer; white-space: nowrap; }
+.sp-seg button[aria-pressed="true"] { background: var(--sp-card); color: var(--sp-ink); font-weight: 560; }
+.sp-roles { flex: 1; min-height: 210px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border-radius: 12px; overflow: hidden; background: rgba(var(--sp-ink-rgb), .1); }
+.sp-role {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 76px;
+  padding: 13px 15px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(var(--sp-ink-rgb), .06);
+  cursor: pointer;
+  text-align: left;
+}
+.spectrum .sp-role { transition: filter .18s ease; }
+@media (hover: hover) and (pointer: fine) { .sp-role:hover { filter: brightness(1.08); } }
+.spectrum .sp-role:active { transform: scale(.986); }
+.sp-role-name { font-size: 9.5px; letter-spacing: .18em; opacity: .85; }
+.sp-role-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; }
+.sp-role-val { font-size: 13px; letter-spacing: .02em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-role-aa { font-size: 9.5px; letter-spacing: .14em; opacity: .85; }
+.sp-prev { flex: none; border-radius: 12px; padding: 15px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sp-prev-say { display: grid; gap: 3px; min-width: 0; }
+.sp-prev-say small { font-size: 9px; letter-spacing: .18em; opacity: .7; }
+.sp-prev-say b { font-size: 15px; font-weight: 560; }
+.sp-prev-btn { display: inline-flex; align-items: center; padding: 9px 17px; border-radius: 999px; font-size: 13px; font-weight: 540; }
+.sp-copyas { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
+.sp-copyas > div { display: flex; flex-wrap: wrap; gap: 16px; }
+
+/* 02 · Icon library */
+.sp-ico-strip { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); flex-wrap: wrap; padding: 0 clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); }
+.sp-find { flex: 1 1 180px; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px 0; }
+.sp-find .sp-ph { font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-find input { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 14px; box-shadow: none; }
+.sp-find input::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
+.sp-find:focus-within { box-shadow: inset 0 -2px 0 var(--sp-link); }
+.sp-find input:focus-visible { outline-color: transparent; }
+.sp-tabs-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.sp-tabs-row .sp-utab { padding: 13px 0; font-size: 12.5px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-tabs-row .sp-utab[aria-pressed="true"] { color: var(--sp-ink); font-weight: 560; }
+.sp-icogrid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); grid-auto-rows: minmax(76px, 1fr); align-content: stretch; gap: 8px; padding: 14px clamp(14px, 1.8vw, 20px); }
+.sp-ico { display: grid; place-items: center; min-height: 0; padding: 8px; border: 1px solid rgba(var(--sp-ink-rgb), .1); border-radius: 12px; background: transparent; color: rgba(var(--sp-ink-rgb), .74); cursor: pointer; }
+.spectrum .sp-ico { transition: background .16s ease; }
+@media (hover: hover) and (pointer: fine) { .sp-ico:not([aria-pressed="true"]):hover { background: rgba(var(--sp-ink-rgb), .06); } }
+.sp-ico[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.sp-ico-detail { flex: 0 0 auto; display: flex; align-items: center; gap: clamp(14px, 2vw, 22px); padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
+.sp-ico-big { flex: 0 0 auto; width: 96px; height: 96px; display: grid; place-items: center; border-radius: 16px; background: rgba(var(--sp-ink-rgb), .05); border: 1px solid rgba(var(--sp-ink-rgb), .09); font-size: 52px; color: var(--sp-ink); }
+.sp-ico-meta { flex: 1; min-width: 0; display: grid; gap: 12px; }
+.sp-ico-meta b { font-size: 15px; font-weight: 540; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-ico-opts { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
+.sp-ico-opts .sp-utab { padding: 4px 0; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-ico-opts .sp-utab[aria-pressed="true"] { color: var(--sp-ink); }
+.sp-ico-opts .sp-panel-rule { height: 14px; }
+.sp-ico-foot { flex: none; display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); flex-wrap: wrap; padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
+.sp-ico-foot > i { flex: 1 1 40px; min-width: 0; }
+.sp-copybtn { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; height: 41px; padding: 0 10px 0 16px; color: rgba(var(--sp-ink-rgb), .88); }
+.sp-copybtn .sp-pill-icon { background: rgba(var(--sp-ink-rgb), .08); }
+
+/* 03 · Font gallery */
+.sp-font-strip { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 24px); flex-wrap: wrap; padding: 10px clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); }
+.sp-font-strip .sp-find { flex: 1 1 200px; padding: 9px 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .14); }
+.sp-font-cats { display: flex; gap: 16px; flex: 0 0 auto; }
+.sp-font-cats .sp-utab { padding: 9px 0; font-size: 13px; letter-spacing: 0; }
+.sp-font-cats .sp-utab[aria-pressed="true"] { font-weight: 560; }
+.sp-font-ctl { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); flex-wrap: wrap; padding: 9px clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); background: rgba(var(--sp-ink-rgb), .022); }
+.sp-font-ctl label { display: flex; align-items: center; gap: 11px; }
+.sp-font-ctl label:first-child { flex: 1 1 200px; min-width: 0; }
+.sp-font-ctl label:last-child { flex: 0 1 200px; min-width: 150px; }
+.sp-font-ctl input[type="text"] { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13.5px; box-shadow: none; }
+.sp-font-ctl input[type="text"]::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
+.sp-font-ctl output { font-size: 11px; color: var(--sp-ink); white-space: nowrap; min-width: 38px; text-align: right; }
+.sp-fontlist { flex: 1; min-height: 0; overflow: auto; }
+.sp-fontrow { width: 100%; display: grid; gap: 12px; padding: clamp(16px, 2vw, 22px) clamp(14px, 1.8vw, 20px); border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08); background: transparent; cursor: pointer; text-align: left; color: var(--sp-ink); }
+.spectrum .sp-fontrow { transition: background .18s ease; }
+.spectrum .sp-fontrow:active { transform: none; }
+@media (hover: hover) and (pointer: fine) { .sp-fontrow:hover { background: rgba(var(--sp-ink-rgb), .04); } }
+.sp-fontrow-top { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
+.sp-fontrow-no { font-size: 10px; letter-spacing: .1em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); padding-top: .5em; flex: 0 0 auto; }
+.sp-fontrow-main { flex: 1; min-width: 0; display: grid; gap: 10px; }
+.sp-fontrow-name { line-height: 1.24; padding-bottom: .06em; letter-spacing: -.02em; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-fontrow-sample { font-size: 15px; line-height: 1.45; color: rgba(var(--sp-ink-rgb), .82); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-fontrow-w { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; font-size: 18px; }
+.sp-fontrow-w span:first-child { font-weight: 400; color: rgba(var(--sp-ink-rgb), .78); }
+.sp-fontrow-w span:last-child { font-weight: 600; color: var(--sp-ink); }
+.sp-fontrow-add { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .14); display: grid; place-items: center; font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-fontrow[aria-pressed="true"] .sp-fontrow-add { border-color: var(--sp-ink); background: var(--sp-ink); color: var(--sp-page); }
+.sp-fontrow-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 10px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-font-foot { flex: none; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
+.sp-font-pair { display: flex; align-items: baseline; gap: 9px; min-width: 0; flex: 1 1 180px; }
+.sp-font-pair small { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-font-pair b { font-weight: 400; font-size: 18px; line-height: 1.2; color: var(--sp-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-font-foot > span:last-child { display: flex; gap: 8px; flex: 0 0 auto; }
+
+/* The range slider, as the design draws it inside a panel. */
+.sp-panel input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; width: 100%; height: 16px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; accent-color: var(--accent); }
+.sp-panel input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .2); }
+.sp-panel input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -6px; width: 16px; height: 16px; border-radius: 999px; background: var(--sp-page); border: 2px solid var(--sp-ink); box-shadow: 0 1px 3px rgba(var(--sp-shade-rgb), .35); cursor: pointer; }
+.sp-panel input[type="range"]::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .2); }
+.sp-panel input[type="range"]::-moz-range-progress { height: 4px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .55); }
+.sp-panel input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 999px; background: var(--sp-page); border: 2px solid var(--sp-ink); cursor: pointer; }
+
+/* 04 · File converter */
+.sp-modes {
+  flex: none;
+  display: flex;
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(90deg, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 94%, transparent);
+  margin: calc(clamp(15px, 2vw, 22px) * -1) calc(clamp(15px, 2vw, 22px) * -1) 0;
+  padding: 0 clamp(14px, 1.8vw, 20px);
+  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
+}
+.sp-modes .sp-utab { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 0; margin-right: 18px; flex: 0 0 auto; font-size: 13px; letter-spacing: 0; }
+.sp-modes .sp-utab[aria-pressed="true"] { font-weight: 560; }
+.sp-modes .sp-ph { font-size: 14px; }
+.sp-drop {
+  position: relative;
+  flex: none;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px 9px 9px;
+  border-radius: 14px;
+  background: rgba(var(--sp-ink-rgb), .035);
+  border: 1px dashed rgba(var(--sp-ink-rgb), .2);
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+@media (hover: hover) and (pointer: fine) { .sp-drop:hover { border-color: rgba(var(--sp-ink-rgb), .34); } }
+.sp-drop.is-drag { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.sp-drop:focus-within { border-color: var(--sp-link); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.sp-drop-thumb { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; flex: none; background-size: cover; background-position: center; }
+.sp-drop-say { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.sp-drop-say b { font-size: 13px; font-weight: 400; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-drop-say small { font-size: 10px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-drop-btn { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .14); background: rgba(var(--sp-ink-rgb), .04); color: var(--sp-ink); font-size: 12px; white-space: nowrap; }
+.sp-drop-btn .sp-ph { font-size: 13px; }
+.sp-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.sp-conv { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.sp-conv-art { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); background: var(--sp-page); }
+.sp-conv-art img, .sp-conv-art > span[role="img"] { display: block; width: 100%; height: 100%; object-fit: cover; background-size: cover; background-position: center; }
+.sp-conv-dims { position: absolute; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 9px; padding: 5px 11px; border-radius: 999px; background: rgba(11, 12, 14, .72); color: #F4F6FA; font-size: 9.5px; letter-spacing: .1em; }
+.sp-bars { display: grid; gap: 9px; }
+.sp-bar { display: grid; gap: 6px; }
+.sp-bar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sp-bar-row small { font-size: 10px; letter-spacing: .12em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-bar-row span { font-size: 11.5px; color: rgba(var(--sp-ink-rgb), .86); }
+.sp-bar:last-child .sp-bar-row span { color: var(--sp-ink); }
+.sp-bar-track { height: 10px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
+.sp-bar-fill { display: block; height: 100%; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .42); }
+.sp-bar-fill--out { background: var(--accent); transition: width .3s var(--sp-ease); }
+.sp-fmtrow { display: flex; flex-wrap: wrap; gap: 18px; padding-top: 2px; }
+.sp-fmtrow .sp-utab { padding: 5px 0; }
+.sp-quality { display: grid; gap: 8px; }
+.sp-quality > span { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-quality > span b { font-weight: 400; color: var(--sp-ink); }
+.sp-ratio { flex: none; display: grid; gap: 12px; }
+.sp-ratio-stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); background: var(--sp-page); display: grid; place-items: center; padding: 10px; }
+.sp-ratio-stage img { display: block; width: 100%; max-width: 100%; max-height: 150px; border-radius: 8px; object-fit: cover; }
+.sp-ratio-size { position: absolute; right: 10px; bottom: 9px; font-size: 9.5px; letter-spacing: .1em; padding: 4px 8px; border-radius: 8px; background: rgba(var(--sp-page-rgb), .72); color: var(--sp-ink); }
+.sp-ratio-half { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-frames { flex: none; display: grid; gap: 12px; }
+.sp-strip { display: flex; gap: 2px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); }
+.sp-strip > span { position: relative; flex: 1; min-width: 0; height: 152px; overflow: hidden; display: block; }
+.sp-strip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sp-strip small { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); font-size: 8px; color: var(--sp-page); background: rgba(241, 244, 255, .92); border-radius: 8px; padding: 2px 4px; }
+.sp-frames-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.sp-frames-row > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-frames-row .sp-utab { padding: 5px 0; margin-right: 18px; }
+.sp-frames-row > small { font-size: 10px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-conv-foot { margin-top: auto; flex: none; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── discover ─────────────────────────────────────────────────────────────── */
+
+.sp-disc-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: clamp(20px, 3vw, 40px); }
+.sp-disc-head > div:first-child { max-width: min(60ch, 100%); min-width: 0; }
+.sp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-chip {
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--sp-ink-rgb), .12);
+  background: transparent;
+  color: rgba(var(--sp-ink-rgb), var(--sp-dim-a));
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+}
+.spectrum .sp-chip:active { transform: scale(.96); }
+.sp-chip[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
+
+.sp-disc-grid { margin-top: clamp(26px, 3.4vw, 44px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .sp-disc-grid { grid-template-columns: minmax(0, 1fr); } }
+.sp-disc-card {
+  display: block;
+  padding: 0;
+  border-radius: 18px;
+  background: rgba(var(--sp-ink-rgb), .035);
+  border: 1px solid rgba(var(--sp-ink-rgb), .09);
+  color: var(--sp-ink);
+  overflow: hidden;
+  text-decoration: none;
+  transition: border-color .2s ease, background .2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sp-disc-card:hover { border-color: rgba(var(--sp-ink-rgb), .26); background: rgba(var(--sp-ink-rgb), .06); color: var(--sp-ink); text-decoration: none; }
+}
+.sp-disc-art { display: flex; height: 132px; overflow: hidden; }
+.sp-disc-art > span { flex: 1; min-width: 0; }
+.sp-disc-art--icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); place-items: center; background: var(--sp-page); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08); color: var(--sp-ink); font-size: 26px; }
+.sp-disc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 13px 14px 14px; }
+.sp-disc-name { font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-disc-meta { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-disc-cta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 176px;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--sp-ink);
+  border: 1px solid var(--sp-ink);
+  color: var(--sp-page);
+  overflow: hidden;
+  text-decoration: none;
+  transition: background .26s ease, border-color .26s ease, color .26s ease, transform .16s var(--sp-ease);
+}
+.sp-disc-cta:active { transform: scale(.978); }
+.sp-disc-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 12% 118%, color-mix(in srgb, var(--accent) 85%, transparent), color-mix(in srgb, var(--accent) 0%, transparent) 62%);
+  opacity: 0;
+  transform: scale(.9);
+  transition: opacity .34s ease, transform .5s var(--sp-ease);
+}
+.sp-disc-cta > * { position: relative; z-index: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .sp-disc-cta:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); text-decoration: none; }
+  .sp-disc-cta:hover::after { opacity: 1; transform: scale(1); }
+}
+.sp-disc-cta-say { font-family: var(--display); font-weight: 560; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.04; letter-spacing: -.02em; max-width: min(14ch, 100%); }
+.sp-disc-cta-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.sp-disc-cta-count { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; opacity: .72; }
+.sp-disc-cta .sp-pill-icon { width: 38px; height: 38px; background: rgba(var(--sp-page-rgb), .14); font-size: 16px; }
+.sp-disc-foot { margin-top: clamp(22px, 2.6vw, 32px); padding-top: 22px; border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
+.sp-disc-foot p { margin: 0; max-width: min(52ch, 100%); font-size: 14.5px; line-height: 1.55; color: var(--sp-dim); }
+
+/* ── studio quality exports: the stack ────────────────────────────────────────
+   NESTED, as the design nests it. Card 0 sticks at 84px inside a wrapper that
+   also holds cards 1 and 2; card 1 sticks at 116px inside a wrapper holding
+   card 2; card 2 at 148px with the 26dvh tail. A sticky box only pins within
+   its own containing block, so siblings in separate slots never pin at all. */
+.sp-spec-head { max-width: min(60ch, 100%); margin: 0 auto; text-align: center; }
+.sp-spec-head h2 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(36px, 5.4vw, 74px); line-height: .98; letter-spacing: -.035em; }
+.sp-spec-head p { margin: 18px auto 0; max-width: min(52ch, 100%); font-size: 16px; line-height: 1.6; color: var(--sp-dim); }
+.sp-stack { margin-top: clamp(32px, 4.4vw, 56px); position: relative; }
+.sp-stack-nest { position: relative; }
+.sp-stack-card {
+  position: sticky;
+  top: var(--sp-stack-top, 84px);
+  border-radius: 24px;
+  background: var(--sp-card);
+  border: 1px solid rgba(var(--sp-ink-rgb), .11);
+  box-shadow:
+    0 2px 4px -2px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .5)),
+    0 14px 28px -14px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .7)),
+    0 54px 100px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
+  transform-origin: 50% 0%;
+  transition: transform .4s var(--sp-ease), filter .4s ease;
+}
+.sp-stack-grid {
+  padding: clamp(22px, 3vw, 44px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(22px, 3vw, 48px);
+  align-items: stretch;
+  min-height: clamp(548px, 66dvh, 720px);
+}
+.sp-stack-pad { height: min(14dvh, 140px); }
+.sp-stack-pad--tail { height: min(26dvh, 260px); }
+.sp-stack-say { align-self: center; min-width: 0; }
+.sp-stack-say h3 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(26px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -.03em; }
+.sp-stack-say > p { margin: 16px 0 0; max-width: min(46ch, 100%); font-size: 15.5px; line-height: 1.62; color: var(--sp-dim); }
+.sp-stack-say > p.sp-stack-wide { max-width: min(48ch, 100%); }
+.sp-stack-say > p.sp-stack-note { margin-top: 20px; font-size: 13.5px; line-height: normal; }
+.sp-kitchips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 22px; }
+.sp-kitchips span { font-family: var(--mono); font-size: 10.5px; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); color: rgba(var(--sp-ink-rgb), .78); }
+.sp-kitchips span.is-on { border-color: color-mix(in srgb, var(--accent) 24%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent-bright); }
+
+/* card 1: one piece */
+.sp-ex { min-width: 0; border-radius: 18px; background: var(--sp-page); border: 1px solid rgba(var(--sp-ink-rgb), .12); overflow: hidden; display: flex; flex-direction: column; }
+.sp-ex-pieces { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 11px clamp(12px, 1.4vw, 16px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); }
+.sp-ex-piece { padding: 7px 13px; border: 1px solid rgba(var(--sp-ink-rgb), .13); border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.sp-ex-piece[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
+.spectrum .sp-ex-piece:active, .spectrum .sp-ex-fmt:active { transform: scale(.96); }
+.sp-ex-body { flex: 1 1 0; min-height: 0; padding: clamp(14px, 1.6vw, 20px); overflow: auto; }
+.sp-ex-rows { display: grid; gap: 6px; }
+.sp-ex-rows > span { display: flex; align-items: center; gap: 12px; }
+.sp-ex-sw { width: 52px; height: 26px; border-radius: 7px; flex: 0 0 auto; }
+.sp-ex-step { width: 34px; flex: 0 0 auto; font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-ex-hex { flex: 1; min-width: 0; font-size: 12.5px; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-ex-aa { flex: 0 0 auto; font-size: 10px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-ex-aa.is-pass { color: var(--accent-text); }
+.sp-ex-type { display: grid; gap: 12px; }
+.sp-ex-type > span { display: flex; align-items: baseline; gap: 14px; min-width: 0; padding-bottom: 10px; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .07); }
+.sp-ex-type small { width: 58px; flex: 0 0 auto; font-size: 10.5px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-ex-type b { flex: 1; min-width: 0; font-weight: 400; line-height: 1.1; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-ex-type i { flex: 0 0 auto; font-style: normal; font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-ex-files { display: grid; gap: 13px; }
+.sp-ex-file { display: grid; gap: 7px; }
+.sp-ex-file > span:first-child { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.sp-ex-file .sp-ph { font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-ex-file .sp-ph.sp-ex-arrow { font-size: 10px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-ex-file b { flex: 1; min-width: 0; font-weight: 400; font-size: 12.5px; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-ex-file small { flex: 0 0 auto; font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-ex-file strong { flex: 0 0 auto; font-size: 11.5px; font-weight: 540; color: var(--sp-ink); }
+.sp-ex-track { display: block; height: 7px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
+.sp-ex-track > span { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.sp-ex-icons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(74px, 100%), 1fr)); gap: 1px; background: rgba(var(--sp-ink-rgb), .09); border-radius: 12px; overflow: hidden; }
+.sp-ex-icons > span { display: grid; gap: 7px; place-items: center; padding: 13px 6px; background: var(--sp-page); }
+.sp-ex-icons .sp-ph { font-size: 20px; color: var(--sp-ink); }
+.sp-ex-icons small { font-size: 9px; letter-spacing: .06em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.sp-ex-filebar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
+.sp-ex-filebar > .sp-ph { font-size: 15px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-ex-filebar b { flex: 1; min-width: 0; font-family: var(--mono); font-weight: 400; font-size: 11.5px; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-ex-filebar small { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-ex-actions { flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
+.sp-ex-fmts { display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .05); }
+.sp-ex-fmt { padding: 6px 12px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; cursor: pointer; }
+.sp-ex-fmt[aria-pressed="true"] { background: rgba(var(--sp-ink-rgb), .1); border-color: rgba(var(--sp-ink-rgb), .2); color: var(--sp-ink); }
+.sp-ex-copy { margin-left: auto; gap: 9px; padding: 9px 16px; }
+.sp-ex-copy .sp-ph { font-size: 13px; }
+
+/* card 2: the UI kit document. The paper and its inks are the exported
+   kit's own colours, fixed in both themes because it is a picture of a file. */
+/* ONE SURFACE, never a panel inside a panel, so the design's tray is not
+   drawn here: the document sits directly on the card. The tray's 6px
+   frame and wash are gone; a hairline and a soft drop keep the paper's weight. */
+.sp-kit { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.sp-kit-paper { flex: 1 1 0; min-height: 0; border-radius: 18px; box-shadow: 0 0 0 1px rgba(var(--sp-ink-rgb), .09), 0 18px 40px -28px rgba(var(--sp-shade-rgb), var(--sp-shade-a)); background: #F7F6F1; overflow: hidden; display: flex; flex-direction: column; color: #18221E; }
+.sp-kit-tabs { flex: none; display: flex; align-items: center; gap: clamp(12px, 1.6vw, 20px); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0 clamp(12px, 1.4vw, 16px); border-bottom: 1px solid rgba(20, 24, 20, .12); }
+.sp-kit-tab { padding: 12px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #5C6B63; font-family: var(--font); font-size: 12px; cursor: pointer; white-space: nowrap; }
+.spectrum .sp-kit-tab { transition: color .18s ease; }
+.sp-kit-tab[aria-pressed="true"] { border-bottom-color: #18221E; color: #18221E; }
+.sp-kit-ed { margin-left: auto; font-size: 11px; color: #3A4A42; white-space: nowrap; }
+.sp-kit-body { flex: 1 1 0; min-height: 0; padding: clamp(14px, 1.6vw, 20px); overflow: auto; }
+.sp-kit-h { font-weight: 600; font-size: clamp(17px, 1.9vw, 23px); line-height: 1.1; letter-spacing: -.02em; }
+.sp-kit-colour { display: grid; gap: 11px; }
+.sp-kit-sws { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
+.sp-kit-sw { display: grid; gap: 6px; min-width: 0; }
+.sp-kit-sw > span { display: flex; flex-direction: column; justify-content: space-between; height: 104px; padding: 8px; border: 1px solid rgba(20, 24, 20, .08); }
+.sp-kit-sw b { font-size: 11px; font-weight: 600; }
+.sp-kit-sw code { font-family: var(--mono); font-size: 8.5px; }
+.sp-kit-sw small { font-size: 9.5px; line-height: 1.3; color: #3A4A42; overflow: hidden; }
+.sp-kit-type { display: grid; gap: 12px; }
+.sp-kit-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sp-kit-pair > span { display: grid; gap: 10px; padding: 14px; min-width: 0; }
+.sp-kit-pair > span:first-child { background: #203C35; }
+.sp-kit-pair > span:last-child { background: #DBD0EB; }
+.sp-kit-pair small { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 9.5px; }
+.sp-kit-pair > span:first-child small { color: rgba(247, 246, 241, .78); }
+.sp-kit-pair > span:last-child small { color: #3A3050; }
+.sp-kit-aa { font-weight: 600; font-size: 40px; line-height: 1; color: #F7F6F1; }
+.sp-kit-body-face { font-size: 14px; line-height: 1.35; color: #221B33; }
+.sp-kit-step { display: flex; align-items: baseline; gap: 12px; min-width: 0; padding-bottom: 7px; border-bottom: 1px solid rgba(20, 24, 20, .09); }
+.sp-kit-step small { width: 54px; flex: 0 0 auto; font-size: 10px; color: #3A4A42; }
+.sp-kit-step b { flex: 1; min-width: 0; font-weight: 600; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-kit-step code { flex: 0 0 auto; font-family: var(--mono); font-size: 9.5px; color: #3A4A42; }
+.sp-kit-found { display: grid; gap: 13px; }
+.sp-kit-found > span { display: grid; gap: 6px; }
+.sp-kit-found small { font-size: 11px; color: #3A4A42; }
+.sp-kit-space { display: flex; align-items: flex-end; gap: 8px; height: 56px; }
+.sp-kit-space > span { display: grid; gap: 4px; justify-items: center; }
+.sp-kit-space i { width: 22px; background: #203C35; }
+.sp-kit-space code { font-family: var(--mono); font-size: 8px; color: #3A4A42; }
+.sp-kit-cols { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+.sp-kit-cols i { height: 38px; background: #E4E8DE; }
+.sp-kit-files { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 0; background: #203C35; padding: 16px; color: #F7F6F1; }
+.sp-kit-files > span:first-child { display: grid; gap: 9px; align-content: start; min-width: 0; padding-right: 14px; }
+.sp-kit-files > span:first-child .sp-kit-h { line-height: 1.08; }
+.sp-kit-files > span:first-child small { font-size: 11.5px; line-height: 1.5; color: rgba(247, 246, 241, .8); }
+.sp-kit-files ul { display: grid; gap: 0; min-width: 0; list-style: none; margin: 0; padding: 0; }
+.sp-kit-files li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid rgba(247, 246, 241, .22); }
+.sp-kit-files li > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.sp-kit-files li b { font-size: 12px; font-weight: 540; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-kit-files li small { font-size: 9.5px; color: rgba(247, 246, 241, .7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-kit-files .sp-ph { font-size: 13px; }
+.sp-kit-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(20, 24, 20, .12); font-size: 10px; color: #3A4A42; }
+
+/* card 3: the projects */
+.sp-projects { display: grid; gap: 9px; align-self: center; align-content: center; list-style: none; margin: 0; padding: 0; }
+.sp-projects li { display: flex; align-items: center; gap: 13px; padding: 14px; border-radius: 12px; background: rgba(var(--sp-ink-rgb), .035); border: 1px solid rgba(var(--sp-ink-rgb), .09); }
+.sp-projects-ico { width: 34px; height: 34px; border-radius: 12px; background: rgba(var(--sp-ink-rgb), .06); display: grid; place-items: center; color: var(--accent-mid); flex: 0 0 auto; font-size: 16px; }
+.sp-projects li > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.sp-projects b { font-size: 14px; font-weight: 400; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-projects small { font-size: 12px; line-height: 1.35; color: var(--sp-dim); }
+
+@media (max-width: 900px) {
+  .sp-stack-card { position: static; top: auto; transform: none !important; filter: none !important; }
+  .sp-stack-grid { min-height: 0; padding: clamp(20px, 4vw, 28px); }
+  .sp-stack-pad, .sp-stack-pad--tail { height: clamp(16px, 3vw, 28px); }
+  /* DEVIATION, and a deliberate one (mobile first). The design's two
+     panels size their bodies `flex: 1 1 0` against the card's min-height; with
+     that min-height released below 900px the bodies collapse to nothing — the
+     design's own render at 390 shows card 1 as one clipped row and card 2 as a bare
+     strip. These floors give the panels back their contents at phone width;
+     nothing changes above 900px. */
+  .sp-ex { min-height: 545px; }
+  .sp-kit { min-height: 380px; }
+}
+
+/* ── "Don't just take it from us" (#index) ────────────────────────────────────
+   The design's proof band as drawn: heading, four figures between two ink rules, 4 → 2
+   columns at 860px → 1 at 460px. */
+.sp-proof { padding-top: clamp(140px, 17vw, 248px); }
+.sp-proof-head { max-width: min(40ch, 100%); margin: 0 auto; text-align: center; }
+.sp-proof-head h2 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(32px, 4.8vw, 64px); line-height: 1.02; letter-spacing: -.035em; }
+.sp-proof-row {
+  margin-top: clamp(40px, 5vw, 72px);
+  padding: clamp(30px, 4vw, 48px) 0;
+  border-top: 1px solid rgba(var(--sp-ink-rgb), .13);
+  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .13);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(26px, 4vw, 48px);
+}
+@media (max-width: 860px) { .sp-proof-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .sp-proof-row { grid-template-columns: minmax(0, 1fr); } }
+.sp-proof-row > div { min-width: 0; text-align: center; display: grid; gap: 10px; }
+.sp-proof-n { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: -.04em; color: var(--sp-ink); font-variant-numeric: tabular-nums; }
+.sp-proof-l { font-size: 13.5px; line-height: 1.45; color: var(--sp-dim); max-width: min(22ch, 100%); margin: 0 auto; }
+
+/* ── the handoff ──────────────────────────────────────────────────────────── */
+
+.sp-close { max-width: var(--sp-shell); margin: 0 auto; padding: clamp(120px, 15vw, 220px) var(--sp-gutter) clamp(48px, 6vw, 88px); text-align: center; }
+.sp-close h2 { margin: 0 auto; max-width: min(26ch, 100%); font-family: var(--display); font-weight: 560; font-size: clamp(32px, 5vw, 68px); line-height: 1; letter-spacing: -.04em; }
+.sp-close p { margin: 22px auto 0; max-width: min(46ch, 100%); font-size: clamp(16px, 1.5vw, 18px); line-height: 1.6; color: var(--sp-dim); }
+.sp-close-cta { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 32px; }
+
+/* ── responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 1000px) {
+  .sp-bench-grid { grid-template-columns: minmax(0, 1fr); gap: clamp(22px, 4vw, 34px); }
+  .sp-bench-col { position: static; top: auto; }
+  .sp-step { min-height: 0; padding: 0; }
+  .sp-step + .sp-step { margin-top: clamp(18px, 3vw, 28px); }
+}
+@media (max-width: 760px) {
+  .sp-panel { height: min(78dvh, 620px); border-radius: 16px; }
+}
+
+/* ── the Font Gallery panel's six families ────────────────────────────────
+   Self-hosted latin subsets under /fonts (OFL; licences beside them), so the
+   bench makes no Google Fonts request. A face downloads only when the panel
+   paints text in it. */
+@font-face{font-family:'Schibsted Grotesk';font-style:normal;font-weight:400 900;font-display:swap;src:url('/fonts/schibsted-grotesk-latin.woff2') format('woff2')}
+@font-face{font-family:'Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
+@font-face{font-family:'Martian Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('/fonts/martian-mono-latin.woff2') format('woff2')}
+@font-face{font-family:'Big Shoulders Display';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/big-shoulders-display-latin.woff2') format('woff2')}
+@font-face{font-family:'Hanken Grotesk';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/hanken-grotesk-latin.woff2') format('woff2')}
+@font-face{font-family:'Instrument Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('/fonts/instrument-sans-latin.woff2') format('woff2')}
+
+
+/* ── the footer's CTA family (SpectrumFooter.jsx) ─────────────────────────────
+   Kept verbatim for the footer; the landing's own buttons are .sp-pill. */
 .sp-cta {
   display: inline-flex;
   align-items: center;
@@ -284,37 +961,11 @@
 }
 .sp-cta:hover { text-decoration: none; }
 .sp-cta:active { transform: scale(.978); }
-.sp-cta--lg { font-size: 15.5px; padding: 11px 12px 11px 24px; }
-.sp-cta--block { justify-content: center; width: 100%; padding: 14px 22px; }
 
 .sp-cta--ink { background: var(--sp-ink); color: var(--sp-page); border-color: var(--sp-ink); }
 .sp-cta--ink:hover { background: color-mix(in srgb, var(--t0) 86%, var(--bg-0)); color: var(--sp-page); }
 
-.sp-cta--ghost { background: transparent; color: var(--sp-ink); border-color: var(--sp-line-strong); }
-.sp-cta--ghost:hover { background: var(--sp-wash); border-color: var(--sp-ink); color: var(--sp-ink); }
 
-/* THE FILL IS --accent-mid, NOT --accent, AND THE FIX HAD TO BE THE FILL.
-   "Upgrade to Pro" is the front door's one paid conversion, and it measured
-   #F4F7FF on #0F6FFF = 4.14:1 against a 4.5:1 floor at 15px/540, at 390 and at
-   1280 (48-text-over-gradients). The ink cannot rescue it: --accent-ink is
-   already the lighter of the pair its own definition picks by contrast, and
-   PURE WHITE on --accent is 4.46 — still short. So the only thing left to move
-   is the ground. --accent-mid measures 5.18:1 in light (#0E61DD under
-   #F4F7FF) and 9.17:1 in dark (#82B3FF under #0B0C0E).
-   And NOT --accent-strong, which is the obvious swap: it is a per-theme
-   literal, so it would not follow a premium theme template that moves --accent
-   alone, and this file's whole contract — see the header, and the positive
-   control in tests/unit/spectrum-truth.test.js — is that every accent surface
-   here resolves from the DERIVED family.
-   HOVER MOVED WITH IT, and not for tidiness. --accent-hover mixes toward
-   --accent-paper in BOTH themes, so in light it is lighter than the button it
-   is lifting off: on the old fill it measured 3.40:1, i.e. hovering the button
-   undid the very thing this rule now fixes. --accent-text is the next step in
-   the same direction --accent-mid already travels — deeper in light, lighter
-   in dark — so the hover pushes further from the page whichever theme is on,
-   and measures 5.73:1 light (#0E5BCF) / 9.65:1 dark (#8AB8FF). */
-.sp-cta--accent { background: var(--accent-mid); color: var(--accent-ink); border-color: var(--accent-mid); }
-.sp-cta--accent:hover { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent-ink); }
 
 .sp-cta-icon {
   display: grid;
@@ -326,787 +977,85 @@
   background: color-mix(in srgb, currentColor 14%, transparent);
   transition: transform var(--dur-1) var(--sp-ease);
 }
-.sp-cta-icon--lg { width: 38px; height: 38px; }
 @media (hover: hover) and (pointer: fine) {
   .sp-cta:hover .sp-cta-icon { transform: rotate(45deg); }
-  .sp-disc-card--cta:hover .sp-cta-icon { transform: rotate(45deg); }
 }
 
-.sp-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 7px 14px;
-  border: 1px solid var(--sp-line);
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  color: var(--sp-dim);
-  text-decoration: none;
-  transition: background var(--dur-2) ease, border-color var(--dur-2) ease, color var(--dur-2) ease;
-}
-.sp-ghost:hover { background: var(--sp-wash); border-color: var(--sp-line-strong); color: var(--sp-ink); }
 
-.sp-quiet-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 24px;
-  font-size: 13.5px;
-  color: var(--accent-text);
-  text-decoration: none;
-}
-.sp-quiet-link:hover { color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; }
 
-.sp-beta {
-  margin-left: 6px;
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
-  background: var(--accent-wash-4);
-  color: var(--accent-bright);
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+/* ── touch targets ────────────────────────────────────────────────────────────
+   The design's controls are drawn small (a 24px seed, a 10.5px underline tab). On a
+   coarse pointer each gets an invisible 44px hit area centred on it, so the
+   drawn size is the design's and the target is WCAG's. Nothing moves visually. */
+@media (pointer: coarse) {
+  .sp-seed, .sp-utab, .sp-ghost, .sp-ex-fmt, .sp-ex-piece, .sp-shuffle,
+  .sp-kit-tab, .sp-seg button, .sp-chip, .sp-pill, .sp-rail-row { position: relative; }
+  .sp-seed::after, .sp-utab::after, .sp-ghost::after, .sp-shuffle::after,
+  .sp-ex-fmt::after, .sp-ex-piece::after, .sp-kit-tab::after, .sp-seg button::after,
+  .sp-chip::after, .sp-pill::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  /* The seeds sit 3px apart, so a 44px-wide area would reach over the next
+     chip and a later sibling paints on top: a tap beside a chip's centre
+     picks its neighbour. Each area reaches only halfway into the gap on
+     either side, and keeps the full 44px height. */
+  .sp-seeds .sp-seed::after { width: calc(100% + 3px); }
 }
 
-/* ── chips and tabs ───────────────────────────────────────────────────────── */
-
-.sp-tabs { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.sp-tab {
-  min-height: 32px;
-  padding: 7px 12px;
-  border: 0;
-  border-radius: var(--radius-s);
-  background: transparent;
-  color: var(--sp-faint);
-  font-family: var(--font);
-  font-size: 12.5px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+/* Data-bearing marks stay at 11px or larger on a phone: the AA verdicts are
+   facts a reader acts on. The design's decorative mono labels keep their size. */
+@media (max-width: 760px) {
+  .sp-role-aa, .sp-ex-aa { font-size: 11px; }
 }
-.sp-tab:hover { color: var(--sp-ink); background: var(--sp-wash); }
-.sp-tab[aria-pressed="true"] { background: var(--accent-wash-4); color: var(--accent-bright); font-weight: 560; }
-
-.sp-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 9px 16px;
-  border: 1px solid var(--sp-line);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--sp-dim);
-  font-family: var(--font);
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: transform var(--dur-1) var(--sp-ease), background var(--dur-1) ease,
-              border-color var(--dur-1) ease, color var(--dur-1) ease;
-}
-.sp-chip:hover { background: var(--sp-wash); border-color: var(--sp-line-strong); color: var(--sp-ink); }
-.sp-chip:active { transform: scale(.96); }
-.sp-chip[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
-.sp-chip--copy { font-size: 12.5px; padding: 8px 14px; }
-
-/* ── the bench ────────────────────────────────────────────────────────────── */
-
-.sp-bench-head { max-width: 100%; min-width: 0; }
-.sp-bench-head .sp-lede { max-width: 42ch; }
-/* The rail column is narrower than half, and deliberately: the evidence is the
-   thing being read, and a 50/50 split would give a five-row index the same
-   weight as five product panels. Equal weight for unequal things is on the
-   anti-slop tell list — it is the same reasoning that made the homepage tools
-   grid size its cards by how many live tools each group has. */
-.sp-bench-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 27rem) minmax(0, 1fr);
-  gap: clamp(28px, 4vw, 64px);
-  align-items: start;
-  margin-top: clamp(20px, 2.4vw, 32px);
-}
-.sp-h2--rail { font-size: clamp(30px, 3.4vw, 50px); max-width: 15ch; }
-
-.sp-rail-col { position: sticky; top: calc(var(--chrome-h) + 28px); min-width: 0; }
-.sp-rail { margin-top: clamp(24px, 3vw, 38px); min-width: 0; }
-.sp-rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
-.sp-rail-row {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  width: 100%;
-  min-height: 44px;
-  padding: 12px 16px;
-  border: 0;
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--sp-faint);
-  font-family: var(--font);
-  font-size: 15.5px;
-  text-align: left;
-  cursor: pointer;
-  transition: background var(--dur-1) ease, color var(--dur-1) ease;
-}
-.sp-rail-row:hover { background: var(--sp-wash); color: var(--sp-ink); }
-.sp-rail-row.is-on { background: var(--sp-wash-2); color: var(--sp-ink); }
-.sp-rail-no { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--sp-quiet); }
-.sp-rail-row.is-on .sp-rail-no { color: var(--accent-text); }
-.sp-rail-label { flex: 1; min-width: 0; }
-.sp-rail-count { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; color: var(--sp-quiet); }
-.sp-rail-row.is-on .sp-rail-count { color: var(--accent-text); }
-
-.sp-panels { display: grid; gap: 0; min-width: 0; }
-/* One panel, one screen — the design's `min-height:100dvh` step, trimmed to
-   92svh so the panel has room to breathe without a full viewport of dead air
-   above and below it. `svh` rather than `dvh`: the step must not resize when a
-   mobile URL bar retracts, which would reflow the whole column mid-scroll. */
-.sp-step { min-width: 0; display: flex; align-items: center; min-height: 92svh; }
-.sp-step + .sp-step { margin-top: 0; }
-
-.sp-panel {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--sp-line);
-  border-radius: var(--radius-3xl);
-  background: var(--sp-card);
-  box-shadow: var(--shadow-l);
-}
-.sp-panel-chrome { display: flex; flex-direction: column; min-height: min(74svh, 660px); }
-.sp-panel-bar {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  flex: none;
-  min-height: 46px;
-  padding: 0 clamp(12px, 1.6vw, 16px);
-  border-bottom: 1px solid var(--sp-line);
-  background: var(--sp-wash);
-}
-.sp-panel-lights { display: flex; gap: 6px; flex: 0 0 auto; }
-.sp-panel-lights i { width: 11px; height: 11px; border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
-/* The three window dots are the ONE place a fixed hue is correct: they are a
-   picture of an operating-system window, not a product colour, and tinting them
-   with the brand accent would make them read as status. The design ships these
-   exact values. */
-.sp-panel-lights i:nth-child(1) { background: #ED6A5E; }
-.sp-panel-lights i:nth-child(2) { background: #F4BF4F; }
-.sp-panel-lights i:nth-child(3) { background: #61C554; }
-.sp-panel-rule { width: 1px; height: 15px; background: var(--sp-line-strong); flex: 0 0 auto; }
-.sp-panel-no { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--sp-quiet); }
-.sp-panel-glyph { display: grid; place-items: center; color: var(--sp-dim); }
-.sp-panel-glyph svg { width: 16px; height: 16px; }
-.sp-panel-name { font-size: 14px; font-weight: 540; color: var(--sp-ink); min-width: 0; }
-.sp-panel-hint { margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--accent-text); }
-
-/* A FLEX COLUMN, not a block with a percentage-height child.
-   `.sp-fig` was `height:100%` against this, and a percentage height resolved
-   against a flex item's own flexed height is not reliably definite — measured at
-   1440 the figures came out 226–368px inside a 539px body, so every panel
-   carried up to 310px of dead air under its content. Making this the flex
-   container and letting the figure GROW is the version that cannot be
-   indefinite. */
-.sp-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: clamp(15px, 2vw, 22px); }
-.sp-panel-foot {
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 14px clamp(15px, 2vw, 22px);
-  border-top: 1px solid var(--sp-line);
-}
-.sp-panel-tools { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; min-width: 0; }
-
-/* THE PANEL CTA WRAPS ITS LABEL RATHER THAN OVERFLOWING THE VIEWPORT.
-   .sp-cta is white-space:nowrap, and at a 320px viewport this foot is 278px
-   wide — 248px inside its padding. Measured there, two of the five panel CTAs
-   ran past the edge: "Open Typography System Builder" 304px wide with its
-   right edge at 340, and "Open Colour System Generator" 289px ending at 325.
-   The page sets overflow-x:clip, so those tails were not merely off-screen,
-   they were unreachable — no sideways scroll gets to them, which is what
-   1.4.10 forbids and what 21-reflow-320 measures. The other three fit ("Open
-   Icons & Emoji" 241, "Open Imagery & Media" 264, "Open AI Studio" 211), so
-   this is the two long labels.
-   SHORTENING THE LABELS IS NOT AVAILABLE: they are built from the category
-   names, and a CTA that names its destination is asserted elsewhere in the
-   suite. Shrinking cannot reach it either — the pill's chrome is a fixed 67px
-   (20 + 9 padding, the 10 gap, the 28 bubble), leaving 181px for a label that
-   wants 237, i.e. an 11.5px type step on the page's primary panel action. So
-   the label wraps.
-   NO MEDIA QUERY, DELIBERATELY. The button's flex base size is still
-   max-content, so at every width where the label fits it lays out exactly as
-   it did before — one line, same pill, same weight. It shrinks only when the
-   flex line genuinely overflows, which is the case this rule exists for. A
-   breakpoint here would be a guess, and it would be wrong the first time a
-   label, a font or a panel width moved. */
-.sp-panel-foot .sp-cta { white-space: normal; max-width: 100%; }
-/* Balanced, so the wrap reads as two lines rather than a full line plus an
-   orphan. The label is a flex item, so it is blockified and this applies. */
-.sp-panel-foot .sp-cta > span:not(.sp-cta-icon) { text-wrap: balance; }
-
-/* ── panel figures ────────────────────────────────────────────────────────── */
-
-.sp-fig { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; min-height: 0; min-width: 0; }
-.sp-fig-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
-.sp-fig-meta { display: grid; gap: 2px; min-width: 0; }
-.sp-fig-meta-name { font-size: 13px; font-weight: 560; color: var(--sp-ink); }
-.sp-fig-meta-sub { font-family: var(--mono); font-size: 11px; color: var(--sp-quiet); }
-.sp-fig-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid var(--sp-line); margin-top: auto; }
-.sp-fig-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; color: var(--sp-quiet); }
-.sp-fig-note { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--sp-dim); }
-.sp-fig-note--quiet { color: var(--sp-quiet); }
-
-.sp-seedset { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: var(--radius-l); background: var(--sp-wash); border: 1px solid var(--sp-line); }
-.sp-seed {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-s);
-  background: var(--sp-seed, var(--accent));
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  transition: box-shadow var(--dur-1) ease, transform var(--dur-1) var(--sp-ease);
-}
-.sp-seed:active { transform: scale(.94); }
-.sp-seed-tick { opacity: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .55)); }
-.sp-seed[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sp-card), 0 0 0 4px var(--accent); }
-.sp-seed[aria-pressed="true"] .sp-seed-tick { opacity: 1; }
-
-.sp-roles { flex: 1 1 auto; list-style: none; display: grid; grid-auto-rows: 1fr; gap: 1px; margin: 0; padding: 0; border-radius: var(--radius); overflow: hidden; background: var(--sp-line); }
-/* THE <li> IS THE GRID CELL AND THE SWATCH HAS TO FILL IT.
-   `.sp-roles` paints `--sp-line` behind a 1px gap to draw hairlines between the
-   swatches. With `grid-auto-rows:1fr` the cells are taller than the swatch's own
-   `min-height`, so that hairline colour showed through as a ~25px beige band
-   under every colour — four stripes of the line token masquerading as part of
-   the palette, on the one panel whose whole job is to state colours exactly. */
-.sp-roles li { display: flex; min-width: 0; }
-.sp-role {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 62px;
-  padding: 12px 14px;
-  min-width: 0;
-}
-.sp-role-val { font-family: var(--mono); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-role-aa { flex: 0 0 auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; opacity: .85; }
-
-/* `grid-auto-rows: 1fr` inside a flexed figure stretched two rows of tiles to
-   ~200px each — tall narrow boxes around a 20px glyph. A fixed band keeps the
-   tile roughly square and lets the leftover height fall to the detail row
-   below, which is pinned to the bottom by its own `margin-top:auto`. */
-/* `flex: 0 1 auto` — the grid takes the height its rows need and no more. With
-   `1 1 auto` the box grew to fill the panel while `align-content:start` held the
-   rows at the top, so 216px of the grid was empty space INSIDE the grid, where
-   the detail row's own `margin-top:auto` could not reach it. */
-.sp-glyphgrid { flex: 0 1 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(74px, 100%), 1fr)); grid-auto-rows: minmax(64px, 84px); gap: 8px; min-width: 0; align-content: start; }
-.sp-glyph {
-  display: grid;
-  place-items: center;
-  min-height: 62px;
-  padding: 8px;
-  border: 1px solid var(--sp-line);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--sp-dim);
-  cursor: pointer;
-  transition: background var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease;
-}
-.sp-glyph:hover { background: var(--sp-wash); color: var(--sp-ink); }
-.sp-glyph[aria-pressed="true"] { border-color: var(--accent-border); background: var(--accent-wash); color: var(--accent-bright); }
-.sp-glyph-detail { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--sp-line); margin-top: auto; }
-.sp-glyph-large { display: grid; place-items: center; width: 74px; height: 74px; border-radius: var(--radius-xl); border: 1px solid var(--sp-line); background: var(--sp-wash); color: var(--sp-ink); flex: 0 0 auto; }
-.sp-glyph-large svg { width: 38px; height: 38px; }
-.sp-glyph-meta { display: grid; gap: 4px; flex: 1; min-width: 0; }
-.sp-glyph-name { font-size: 15px; font-weight: 540; text-transform: capitalize; }
-.sp-glyph-note { font-size: 12px; color: var(--sp-quiet); }
-
-.sp-scale { flex: 1 1 auto; list-style: none; display: grid; grid-auto-rows: minmax(0, 1fr); align-content: stretch; gap: 10px; margin: 0; padding: 0; min-width: 0; }
-.sp-scale li { display: flex; align-items: baseline; gap: 14px; min-width: 0; padding-bottom: 9px; border-bottom: 1px solid var(--sp-line); }
-.sp-scale-name { flex: 0 0 auto; width: 62px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--sp-quiet); }
-.sp-scale-specimen { flex: 1; min-width: 0; line-height: 1.12; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-scale-px { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; color: var(--sp-dim); }
-
-.sp-ratio-stage { flex: 1 1 auto; position: relative; display: grid; place-items: center; min-height: 190px; padding: 14px; border: 1px solid var(--sp-line); border-radius: var(--radius-xl); background: var(--sp-page); }
-.sp-ratio-box { width: min(100%, 320px); max-height: 160px; border-radius: var(--radius-s); background: linear-gradient(135deg, var(--accent-wash-4), var(--accent-wash)); border: 1px solid var(--accent-border); transition: aspect-ratio var(--dur-3) var(--sp-ease); }
-.sp-ratio-dims { position: absolute; right: 12px; bottom: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--sp-dim); }
-.sp-ratio-rows { display: grid; gap: 8px; margin: 0; }
-.sp-ratio-rows > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--sp-line); min-width: 0; }
-.sp-ratio-rows dt { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--sp-quiet); flex: 0 0 auto; }
-.sp-ratio-rows dd { margin: 0; font-size: 13px; color: var(--sp-ink); text-align: right; min-width: 0; }
-
-/* The AI panel has the least content of the five, so it is CENTRED in its
-   window rather than pinned to the top with its footnote pushed to the floor —
-   which left a third of the panel empty in the middle, the one place a reader
-   looks first. */
-.sp-fig--ai { justify-content: center; gap: 20px; }
-.sp-quota { flex: 0 0 auto; list-style: none; display: grid; gap: 14px; margin: 0; padding: 0; }
-.sp-quota li { display: grid; grid-template-columns: minmax(0, 96px) minmax(0, 1fr) minmax(0, auto); align-items: center; gap: 4px 14px; min-width: 0; }
-.sp-quota-name { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--sp-quiet); }
-.sp-quota-track { display: block; height: 10px; border-radius: var(--radius-pill); background: var(--sp-hair); overflow: hidden; }
-.sp-quota-fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--sp-line-strong); }
-.sp-quota-fill.is-pro { background: var(--accent); }
-.sp-quota-val { font-family: var(--mono); font-size: 11.5px; color: var(--sp-dim); white-space: nowrap; text-align: right; }
-
-/* ── discover ─────────────────────────────────────────────────────────────── */
-
-.sp-disc-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: clamp(20px, 3vw, 40px); }
-.sp-disc-head > div { max-width: 60ch; min-width: 0; }
-.sp-tabs--chips { gap: 6px; }
-
-/* THREE TRACKS, NOT `auto-fill`. Auto-fill gave five columns at 1440, which put
-   the five artefacts on one row and stranded the "Open the gallery" card alone
-   on a second — a ragged shelf. Three is the design's own count and it divides
-   six evenly at every width it applies to. */
-.sp-disc-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: clamp(26px, 3.4vw, 44px);
-  min-width: 0;
-}
-@media (max-width: 900px) { .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .sp-disc-grid { grid-template-columns: minmax(0, 1fr); } }
-.sp-disc-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--sp-line);
-  border-radius: var(--radius-2xl);
-  background: var(--sp-wash);
-  color: var(--sp-ink);
-  text-decoration: none;
-  transition: border-color var(--dur-2) ease, background var(--dur-2) ease, transform var(--dur-2) var(--sp-ease);
-}
-.sp-disc-card:hover { border-color: var(--sp-line-strong); background: var(--sp-wash-2); color: var(--sp-ink); transform: translateY(-2px); }
-.sp-disc-art { display: block; height: 132px; }
-.sp-disc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 13px 14px 14px; min-width: 0; }
-.sp-disc-name { font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-disc-meta { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--sp-quiet); white-space: nowrap; }
-
-.sp-disc-card--cta { justify-content: space-between; gap: 18px; min-height: 176px; padding: 18px; background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
-.sp-disc-card--cta:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); transform: translateY(-2px); }
-.sp-disc-cta-say { font-family: var(--display); font-weight: 560; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.04; letter-spacing: -.02em; max-width: 14ch; }
-.sp-disc-cta-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.sp-disc-cta-count { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; opacity: .78; }
-.sp-disc-foot { margin: clamp(22px, 2.6vw, 32px) 0 0; padding-top: 22px; border-top: 1px solid var(--sp-line); max-width: 52ch; font-size: 14.5px; line-height: 1.55; color: var(--sp-dim); }
-
-/* ── specimens: the stacked cards ─────────────────────────────────────────── */
-
-.sp-stack { position: relative; margin-top: clamp(32px, 4.4vw, 56px); }
-.sp-stack-slot { position: relative; }
-.sp-stack-pad { height: min(14dvh, 140px); }
-.sp-stack-card {
-  border: 1px solid var(--sp-line);
-  border-radius: var(--radius-3xl);
-  background: var(--sp-card);
-  box-shadow: var(--shadow-l);
-  transition: transform var(--dur-4) var(--sp-ease), filter var(--dur-4) ease;
-}
-.sp-stack-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: clamp(22px, 3vw, 48px);
-  align-items: stretch;
-  padding: clamp(22px, 3vw, 44px);
-  min-width: 0;
-}
-.sp-stack-say { align-self: center; min-width: 0; }
-.sp-stack-say h3 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(26px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
-.sp-stack-say p { margin: 16px 0 0; max-width: 46ch; font-size: 15.5px; line-height: 1.62; color: var(--sp-dim); }
-.sp-stack-note { margin-top: 20px !important; font-size: 13.5px; color: var(--sp-quiet) !important; }
-.sp-stack-art { display: flex; flex-direction: column; justify-content: center; gap: 14px; min-width: 0; padding: clamp(14px, 1.6vw, 20px); border: 1px solid var(--sp-line); border-radius: var(--radius-2xl); background: var(--sp-page); }
-.sp-stack-foot { margin: auto 0 0; font-size: 12px; line-height: 1.5; color: var(--sp-quiet); }
-
-.sp-filelist, .sp-projects { list-style: none; display: grid; gap: 9px; margin: 0; padding: 0; min-width: 0; }
-.sp-filelist li, .sp-projects li { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 11px 12px; border: 1px solid var(--sp-line); border-radius: var(--radius); background: var(--sp-card); }
-.sp-filelist-ico, .sp-projects-ico { display: grid; place-items: center; flex: 0 0 auto; color: var(--sp-quiet); }
-.sp-filelist-name, .sp-projects-slot { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-filelist-tag, .sp-projects-state { flex: 0 0 auto; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; color: var(--sp-quiet); }
-.sp-filelist-tag.is-pro, .sp-projects-state.is-pro { padding: 3px 8px; border-radius: var(--radius-pill); background: var(--accent-wash-4); color: var(--accent-bright); }
-.sp-projects li.is-locked { border-style: dashed; background: transparent; }
-
-/* ── the terms band ───────────────────────────────────────────────────────── */
-
-.sp-section--terms { padding-top: clamp(96px, 12vw, 176px); }
-.sp-terms {
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-  gap: clamp(26px, 4vw, 48px);
-  margin: 0;
-  padding: clamp(30px, 4vw, 48px) 0;
-  border-top: 1px solid var(--sp-line-strong);
-  border-bottom: 1px solid var(--sp-line-strong);
-  min-width: 0;
-}
-.sp-terms li { display: grid; gap: 10px; align-content: start; min-width: 0; }
-.sp-terms-claim { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(19px, 2vw, 24px); line-height: 1.16; letter-spacing: -.02em; text-wrap: balance; }
-.sp-terms-note { margin: 0; font-size: 14px; line-height: 1.55; color: var(--sp-dim); }
-
-/* ── pricing ──────────────────────────────────────────────────────────────── */
-
-.sp-billing { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin: 32px auto 0; padding: 5px; border: 1px solid var(--sp-line); border-radius: var(--radius-pill); background: var(--sp-wash); width: fit-content; max-width: 100%; }
-.sp-billing-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 40px;
-  padding: 10px 20px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--sp-dim);
-  font-family: var(--font);
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: background var(--dur-1) ease, color var(--dur-1) ease;
-}
-.sp-billing-tab:hover { color: var(--sp-ink); }
-.sp-billing-tab[aria-pressed="true"] { background: var(--sp-ink); color: var(--sp-page); }
-.sp-billing-save { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; padding: 3px 8px; border-radius: var(--radius-pill); background: var(--accent-wash-4); color: var(--accent-bright); }
-.sp-billing-tab[aria-pressed="true"] .sp-billing-save { background: color-mix(in srgb, var(--bg-0) 18%, transparent); color: var(--sp-page); }
-
-.sp-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: clamp(16px, 2vw, 26px); margin-top: clamp(28px, 4vw, 48px); min-width: 0; }
-.sp-plan { position: relative; display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 3vw, 36px); border: 1px solid var(--sp-line); border-radius: var(--radius-3xl); background: var(--sp-card); overflow: hidden; }
-.sp-plan--pro { border-color: var(--accent-border-strong); background: linear-gradient(170deg, var(--accent-wash), var(--sp-card) 58%); box-shadow: var(--shadow-m); }
-.sp-plan-edge { position: absolute; inset: 0 0 auto; height: 3px; background: var(--accent); }
-.sp-plan-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 26px; }
-.sp-plan-tier { font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; color: var(--sp-quiet); }
-.sp-plan-tier.is-pro { color: var(--accent-text); }
-.sp-plan-aside { font-size: 12.5px; color: var(--sp-quiet); text-align: right; }
-.sp-plan-badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; padding: 5px 11px; border-radius: var(--radius-pill); background: var(--accent-wash); color: var(--accent-bright); white-space: nowrap; }
-.sp-plan-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; font-family: var(--display); font-weight: 560; font-size: clamp(42px, 5vw, 62px); line-height: 1; letter-spacing: -.035em; }
-/* --sp-faint (--t2), NOT --sp-quiet (--t3). The unit beside the figure is
-   15px normal text, so its floor is 4.5 — and on the Pro card it does not sit
-   on --sp-card, it sits on `linear-gradient(170deg, var(--accent-wash),
-   var(--sp-card) 58%)`. At that gradient's worst point, its first stop,
-   --sp-quiet measured #6C6C66 on #E8ECF1 = 4.46:1 in light. Four hundredths,
-   and invisible unless the ground is composited rather than read off the
-   declaration. --sp-faint measures 5.42:1 on the same worst point.
-   The Free card's "/ forever" moves with it (5.28 -> 6.43 on plain --sp-card)
-   rather than being scoped to .sp-plan--pro: one price, two cards, and a unit
-   that is a different grey on each would be a visible seam paid for nothing.
-   Dark was already clear (--accent-wash LIFTS a dark card rather than
-   bleaching it, so the worst point is brighter than the card) and stays clear:
-   6.50:1 at the same point, 6.54:1 on the Free card. */
-.sp-plan-price em { font-style: normal; font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--sp-faint); }
-.sp-plan-intro { margin: 12px 0 0; min-height: 2.6em; font-size: 14px; line-height: 1.45; color: var(--sp-quiet); }
-.sp-plan .sp-cta--block { margin-top: 24px; }
-.sp-plan-rule { display: block; height: 1px; margin-top: 26px; background: var(--sp-line); }
-.sp-plan--pro .sp-plan-rule { background: var(--accent-border-strong); }
-.sp-plan-label { margin: 22px 0 0; font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; color: var(--sp-quiet); }
-.sp-plan-label.is-pro { color: var(--accent-text); }
-.sp-plan-list { list-style: none; display: grid; gap: 12px; margin: 16px 0 0; padding: 0; }
-.sp-plan-list li { display: flex; gap: 11px; font-size: 14.5px; line-height: 1.5; color: var(--sp-dim); min-width: 0; }
-.sp-plan-list li > span:first-child { flex: 0 0 auto; margin-top: 4px; color: var(--sp-quiet); }
-.sp-plan-list li > span.is-pro { color: var(--accent-text); }
-.sp-plan-list li.is-off { color: var(--sp-quiet); }
-
-.sp-assure { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(14px, 2.4vw, 34px); margin: clamp(22px, 3vw, 34px) 0 0; padding: 0; }
-.sp-assure li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--sp-dim); }
-.sp-assure li > span { display: grid; place-items: center; color: var(--accent-mid); }
-
-.sp-compare { margin-top: clamp(56px, 8vw, 110px); min-width: 0; }
-.sp-compare-h { margin: 0 0 22px; font-family: var(--display); font-weight: 560; font-size: clamp(26px, 3.4vw, 44px); line-height: 1; letter-spacing: -.035em; }
-.sp-compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.sp-compare-table thead th { padding: 14px 0; border-bottom: 1px solid var(--sp-line-strong); font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--sp-quiet); text-align: left; }
-.sp-compare-table thead th:last-child { color: var(--accent-bright); }
-.sp-compare-table tbody th { font-weight: 400; text-align: left; font-size: 15px; line-height: 1.5; color: var(--sp-dim); }
-.sp-compare-table td { font-size: 13.5px; line-height: 1.5; color: var(--sp-quiet); vertical-align: baseline; }
-.sp-compare-table td.is-pro { color: var(--accent-text); }
-.sp-compare-table tbody th, .sp-compare-table td { padding: 14px clamp(8px, 2vw, 32px) 14px 0; border-bottom: 1px solid var(--sp-line); overflow-wrap: anywhere; }
-.sp-compare-table tbody th { width: 46%; }
-.sp-compare-group { display: block; margin-bottom: 8px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; color: var(--sp-quiet); }
-.sp-compare-foot { margin: 22px 0 0; font-size: 13.5px; color: var(--sp-quiet); }
-.sp-compare-foot a { color: var(--accent-text); }
-
-/* ── FAQ ──────────────────────────────────────────────────────────────────── */
-
-/* A NARROW HEADING COLUMN, not an equal half.
-   The design gives this column a heading and a lede; the lede it ships ("ask
-   support and we'll add it to this list") is a commitment nothing in this repo
-   can honour, so it is not here and the founder has it in the handover. An equal
-   half holding a four-word heading and one link reads as a column that failed to
-   load, and it squeezed the questions themselves into ~250px of measure. The
-   heading takes the width it needs and the questions take the rest. */
-.sp-faq { display: grid; grid-template-columns: minmax(0, 19rem) minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start; }
-@media (max-width: 900px) { .sp-faq { grid-template-columns: minmax(0, 1fr); } }
-.sp-faq-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(24px, 3vw, 48px); border-top: 1px solid var(--sp-line-strong); min-width: 0; }
-.sp-faq-row { padding: 22px 0; border-bottom: 1px solid var(--sp-line); min-width: 0; }
-.sp-faq-row h3 { margin: 0; font-size: 16.5px; font-weight: 540; }
-.sp-faq-row p { margin: 11px 0 0; max-width: 52ch; font-size: 14.5px; line-height: 1.6; color: var(--sp-dim); }
-
-/* ── the handoff ──────────────────────────────────────────────────────────── */
-
-.sp-close { padding-top: clamp(110px, 14vw, 200px); padding-bottom: clamp(40px, 5vw, 72px); }
-
-/* ── footer ───────────────────────────────────────────────────────────────── */
-
-.sp-footer { position: relative; z-index: 2; border-top: 1px solid var(--sp-line); background: var(--sp-page); }
-.sp-footer-inner { max-width: var(--sp-shell); margin-inline: auto; padding: clamp(48px, 6vw, 80px) var(--sp-gutter); }
-/* The brand column takes about a third and the four link columns share the rest
-   — the design's proportion, held with explicit tracks rather than `auto-fit`,
-   which at 1440 gave the display line the same width as a list of four words. */
-.sp-footer-grid { display: grid; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); gap: 36px clamp(32px, 5vw, 72px); align-items: start; min-width: 0; }
-@media (max-width: 860px) { .sp-footer-grid { grid-template-columns: minmax(0, 1fr); } }
-.sp-footer-say { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(24px, 3vw, 38px); line-height: 1.06; letter-spacing: -.02em; max-width: 22ch; text-wrap: balance; }
-.sp-footer-brand .sp-cta { margin-top: 22px; }
-/* Four columns now (the design's three, with its middle split — see the note in
-   SpectrumFooter.jsx), so the floor drops to 130px and they collapse to two at
-   phone width rather than to one very tall list. */
-.sp-footer-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr)); gap: 28px 24px; min-width: 0; }
-.sp-footer-col { min-width: 0; }
-.sp-footer-col-h { margin: 0; font-family: var(--mono); font-size: 10px; font-weight: 540; letter-spacing: .18em; color: var(--sp-quiet); }
-.sp-footer-col ul { list-style: none; display: grid; gap: 10px; margin: 16px 0 0; padding: 0; }
-.sp-footer-col a { display: inline-flex; align-items: center; min-height: 24px; font-size: 14px; color: var(--sp-dim); text-decoration: none; transition: color var(--dur-1) ease; }
-.sp-footer-col a:hover { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
-
-.sp-footer-legal {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px clamp(14px, 2vw, 28px);
-  margin-top: clamp(36px, 4vw, 56px);
-  padding-top: 22px;
-  border-top: 1px solid var(--sp-line);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: .06em;
-  color: var(--sp-quiet);
-}
-.sp-footer-legal a { color: var(--sp-dim); }
-.sp-footer-legal a:hover { color: var(--sp-ink); }
-/* THE FOUNDER CREDIT IS UNDERLINED AT REST, and that is his direction rather
-   than a style choice: 2026-09-02, the one link in this footer that LEAVES the
-   app has to be discoverable without hover, because on touch there is no hover
-   to reveal it. `.app-footer-attrib` has carried that since; this footer is a
-   different component and shipped without it, so on the front door — the page
-   every visitor lands on — the outbound link was bare text.
-
-   The same recipe AppFooter uses: 70% of the current ink so the rule reads as
-   a rule rather than as a second baseline, at a 2px offset. Lifting the ink to
-   `--sp-dim`'s brighter sibling on hover keeps the hover state doing something
-   once the resting state already says "link".
-
-   07-public-shell-library-palette measures this by CONTRAST in both themes,
-   not by presence — an underline at 1.7:1 on a dark footer is a decoration, not
-   a signal, and "has an underline" would pass on one. */
-.sp-footer-legal a.sp-footer-attrib {
-  color: var(--sp-ink);
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
-  text-underline-offset: 2px;
-}
-.sp-footer-legal a.sp-footer-attrib:hover { text-decoration-color: currentColor; }
-/* THE FOUNDER'S NOTE TRIGGER, restyled to this footer and nothing else.
-   `.app-footer-note` is FounderNote.jsx's own class and global.css styles it for
-   AppFooter's legal row; here it needs the mono baseline the row is set in. Only
-   appearance moves — the element, its label, its `aria-haspopup="dialog"` and
-   the fact that it opens on a press and never on its own are untouched. */
-.sp-footer .app-footer-note {
-  min-height: 24px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: .06em;
-  color: var(--sp-dim);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.sp-footer .app-footer-note:hover { color: var(--sp-ink); }
 
 /* ── focus ────────────────────────────────────────────────────────────────────
-   One ring for the whole page, on the accent, with an offset so it clears the
-   round CTA bubbles and the swatch fills. `:focus-visible` only, so a pointer
-   press never paints it — and the word `outline:none` appears nowhere in this
-   file, for any control, in any state.
-
-   NO `border-radius` IN A FOCUS RULE. An outline follows its OWN element's
-   radius, so declaring one here would not round the ring — it would round the
-   CONTROL, at the instant of focus, and the ring would then trace a shape the
-   user was not looking at a frame earlier. The founder reported that as "the
-   search bar has a weird visual, i have noticed this on many of the search
-   bars" (2026-09-04), and tests/unit/focus-ring-geometry.test.js has banned it
-   in every sheet since. This file was written with the same mistake and that
-   test caught it. Every control here already carries its radius at rest — pills
-   at --radius-pill, panels at --radius-3xl, glyph tiles at --radius — so the
-   ring is the right shape for free, which is the point. */
+   The design's ring: 2px in the link colour, offset 3px. `:focus-visible`
+   only, so a pointer press never paints it, and no rule here removes an
+   outline. No border-radius in a focus rule — an outline follows its own
+   element's radius (tests/unit/focus-ring-geometry.test.js). */
 .spectrum :focus-visible {
   outline: 2px solid var(--accent);
+  outline-color: var(--sp-link);
   outline-offset: 3px;
 }
-/* The swatch buttons already carry a selection ring in `box-shadow`; the outline
-   sits outside it rather than replacing it, so focus and selection stay legible
-   as two different things. */
-.spectrum .sp-seed:focus-visible { outline-offset: 4px; }
-
-/* ── responsive ───────────────────────────────────────────────────────────── */
-
-@media (max-width: 1000px) {
-  /* The rail stops being a sidebar and becomes a horizontal index above the
-     panels. It keeps its scroll-linked highlight and its jump behaviour — the
-     design drops the rail entirely at this width, which throws away the only
-     overview of thirteen tools on the width where an overview is worth most. */
-  .sp-bench-grid { grid-template-columns: minmax(0, 1fr); gap: clamp(22px, 4vw, 34px); }
-  .sp-rail-col { position: static; }
-  .sp-h2--rail { max-width: 20ch; }
-  .sp-bench-head .sp-lede { max-width: 52ch; }
-  .sp-rail ol {
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    overflow-x: auto;
-    gap: 6px;
-    padding-bottom: 6px;
-    scrollbar-width: none;
-    /* Bleed to the gutter so the row reads as scrollable rather than as a
-       truncated list, then pad it back — the same trick the design uses for its
-       phone row. */
-    margin-inline: calc(var(--sp-gutter) * -1);
-    padding-inline: var(--sp-gutter);
-  }
-  .sp-rail ol::-webkit-scrollbar { display: none; height: 0; }
-  .sp-rail-row { border: 1px solid var(--sp-line); border-radius: var(--radius-pill); font-size: 14px; padding: 10px 16px; }
-  .sp-step { min-height: 0; }
-  .sp-step + .sp-step { margin-top: clamp(18px, 3vw, 28px); }
-}
-
-@media (min-width: 900px) {
-  /* The stack only stacks where there is room to see two cards at once. Below
-     this it is three ordinary cards in the document, which is the honest
-     degradation — a sticky card in a 640px viewport pins something taller than
-     the screen and traps the reader. */
-  .sp-stack-card { position: sticky; top: var(--sp-stack-top, 96px); }
-  .sp-stack-grid { min-height: clamp(440px, 56dvh, 640px); }
-}
-
-@media (max-width: 899px) {
-  .sp-stack-pad { height: clamp(14px, 3vw, 24px); }
-}
-
-@media (max-width: 760px) {
-  .sp-panel { border-radius: var(--radius-xl); }
-  .sp-panel-chrome { min-height: 0; }
-  .sp-faq-grid { grid-template-columns: minmax(0, 1fr); }
-  .sp-hero-cta { gap: 8px; }
-
-  /* THE COMPARISON TABLE AT PHONE WIDTH.
-     Three columns cannot fit, so each row becomes a block and each value is
-     prefixed with the plan it belongs to. The prefix is VISUAL ONLY — the
-     `<th scope>` pair still carries the relationship for assistive tech, which
-     is what the design's `content: attr(data-plan)` pseudo-element could not do
-     because a pseudo-element is not reliably in the accessibility tree. */
-  .sp-compare-table, .sp-compare-table tbody, .sp-compare-table tr,
-  .sp-compare-table tbody th, .sp-compare-table td { display: block; width: auto; }
-  .sp-compare-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-  .sp-compare-table tr { padding: 14px 0; border-bottom: 1px solid var(--sp-line); }
-  .sp-compare-table tbody th { width: auto; padding: 0 0 5px; border-bottom: 0; color: var(--sp-ink); }
-  .sp-compare-table td { padding: 2px 0; border-bottom: 0; }
-  .sp-compare-table td::before { content: attr(data-plan) " "; display: inline-block; min-width: 42px; color: var(--sp-quiet); }
-}
-
-@media (max-width: 560px) {
-  .sp-role { min-height: 54px; }
-  .sp-glyph-large { width: 60px; height: 60px; }
-  .sp-glyph-large svg { width: 30px; height: 30px; }
-  .sp-stack-note { margin-top: 16px !important; }
-}
+.spectrum .sp-panel button:focus-visible { outline-offset: 2px; }
+.spectrum .sp-search input.hcmd-input:focus-visible { outline-color: transparent; }
 
 /* ── REDUCED MOTION ───────────────────────────────────────────────────────────
    Every moving thing on this page, turned off in one place, under BOTH
    spellings the app uses: the Settings choice (`html[data-reduced-motion]`,
-   which wins in both directions) and the OS preference (only when no choice has
-   been made). That is the precedence global.css encodes and the one
-   `reducedMotion.js` mirrors in JS.
-
-   global.css already clamps every duration and delay to 0.01ms. These rules
-   remove the MOVEMENT itself, which a duration clamp does not — a 0.01ms slide
-   is still a slide, and on the word reveal it is a flicker. `animation:none` on
-   `.sp-w` is also what guarantees the headline is readable: its resting state is
-   its final state, so removing the animation leaves the words exactly where they
-   belong rather than parked below a clipping edge.
-
-   `tests/unit/spectrum-structure.test.js` fails the build if either block is
-   deleted. */
-:where(html[data-reduced-motion="true"]) .spectrum .sp-w,
-:where(html[data-reduced-motion="true"]) .spectrum .is-in .sp-w,
-:where(html[data-reduced-motion="true"]) .spectrum [data-sp-reveal],
-:where(html[data-reduced-motion="true"]) .spectrum .is-in[data-sp-reveal] {
-  animation: none !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-:where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-stack-card,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-cta,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-cta-icon,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-chip,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-disc-card,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-ratio-box,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-seed {
-  transition: none !important;
-}
-:where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar:hover,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-disc-card:hover,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-cta:hover .sp-cta-icon,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-cta:active,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-chip:active,
-:where(html[data-reduced-motion="true"]) .spectrum .sp-seed:active {
-  transform: none !important;
-}
-
+   which wins in both directions) and the OS preference (only when no choice
+   has been made) — the precedence global.css encodes and reducedMotion.js
+   mirrors. `animation:none` on `.sp-w` leaves every word where it belongs,
+   because its resting state is its final state. The stack's scale and the
+   bench windows' depth are written by JS, which skips them under reduced
+   motion; these rules stop any transition that would animate them.
+   tests/unit/spectrum-structure.test.js fails the build if either block goes. */
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, button), :where(html[data-reduced-motion="true"]) .spectrum .sp-disc-cta::after { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-w,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .is-in .sp-w,
-  :where(html:not([data-reduced-motion="false"])) .spectrum [data-sp-reveal],
-  :where(html:not([data-reduced-motion="false"])) .spectrum .is-in[data-sp-reveal] {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-stack-card,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta-icon,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-chip,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-card,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ratio-box,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-seed {
-    transition: none !important;
-  }
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar:hover,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-card:hover,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta:hover .sp-cta-icon,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta:active,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-chip:active,
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-seed:active {
-    transform: none !important;
-  }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
 }
 
 /* ── FORCED COLOURS ──────────────────────────────────────────────────────────
-   In Windows High Contrast the accent family collapses to the system colours and
-   every `color-mix` wash becomes indistinguishable from its ground, so the
-   selected states below — which are carried by a wash alone — would be
-   invisible. Give each one a border the OS is obliged to paint. */
+   Selected states carried by a wash alone vanish in Windows High Contrast, so
+   each gets a border the OS is obliged to paint. */
 @media (forced-colors: active) {
-  .spectrum .sp-tab[aria-pressed="true"],
   .spectrum .sp-chip[aria-pressed="true"],
-  .spectrum .sp-billing-tab[aria-pressed="true"],
-  .spectrum .sp-glyph[aria-pressed="true"],
+  .spectrum .sp-seg button[aria-pressed="true"],
+  .spectrum .sp-ex-piece[aria-pressed="true"],
+  .spectrum .sp-ex-fmt[aria-pressed="true"],
+  .spectrum .sp-ico[aria-pressed="true"],
   .spectrum .sp-rail-row.is-on { border: 2px solid Highlight; }
   .spectrum .sp-seed[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: 2px; }
-  .spectrum .sp-ramp { forced-color-adjust: none; }
+  .spectrum .sp-ramp, .spectrum .sp-roles, .spectrum .sp-kit-paper { forced-color-adjust: none; }
 }

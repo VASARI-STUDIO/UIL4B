@@ -190,12 +190,23 @@ test.describe('the homepage marks point at something real', () => {
     expect(overflow, 'the hero scrolls horizontally at 1440px').toBe(0)
   })
 
-  test('the drawn mark goes when there is no margin left to hang it in', async ({ page }) => {
+  // THE MARK NO LONGER GOES. This asserted it was hidden at 1180 and under. The
+  // design (UIL4B - Spectrum.dc.html lines 166-170) keeps it at every
+  // width: with no margin to hang in, it drops into the flow ABOVE the bar,
+  // left-aligned, arrow shrunk and turned to point down into the field. So: visible, above the bar, not over it, no overflow.
+  test('with no margin left, the drawn mark sits above the bar instead', async ({ page }) => {
     watch(page, 'visitor on a narrow laptop, then a phone')
-    for (const width of [1180, 1024, 390]) {
+    for (const width of [1180, 1024, 390, 320]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/')
-      await expect(page.locator('.tim'), `the mark is still painted at ${width}px`).toBeHidden()
+      await expect(page.locator('.tim'), `the mark is gone at ${width}px`).toBeVisible()
+      const geo = await page.evaluate(() => {
+        const m = document.querySelector('.tim').getBoundingClientRect()
+        const bar = document.querySelector('.hcmd').getBoundingClientRect()
+        return { above: m.bottom <= bar.top + 1, gap: Math.round(bar.top - m.bottom) }
+      })
+      expect(geo.above, `${width}px: the mark overlaps the bar instead of sitting above it`).toBe(true)
+      expect(geo.gap, `${width}px: the mark has drifted away from the bar`).toBeLessThan(60)
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       )

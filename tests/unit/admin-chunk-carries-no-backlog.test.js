@@ -157,7 +157,7 @@
 //     green on; all controls green.
 //   · MODULE_BOARD dropped from the /api/ai?backlog=1 payload -> the
 //     still-has-a-source control red, which is the half that stops this file
-//     being satisfied by deleting the founder's board.
+//     being satisfied by deleting the design's board.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // SINCE 2026-09-16 THE BOARDS ARE NOT IN EVERY CHECKOUT, AND THAT IS HANDLED
@@ -195,8 +195,10 @@ const ROOT = process.cwd()
 const DATA_DIR = path.join(ROOT, 'src', 'data')
 
 // Something only the Admin dashboard has, so a found chunk can be shown to be
-// the real one rather than a stub.
-const ADMIN_MARKER = 'uil4b-dev-2026'
+// the real one rather than a stub. This was the admin unlock code until that
+// was removed from the bundle; the lock screen's heading is just
+// as unique to the page and is not a secret.
+const ADMIN_MARKER = 'Developer Dashboard'
 
 const outDir = path.join(os.tmpdir(), `uil4b-admin-chunk-${process.pid}-${Date.now()}`)
 

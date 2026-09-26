@@ -20,8 +20,7 @@
 //
 // ── NOTHING HERE IS TYPED ───────────────────────────────────────────────────
 //
-// The sentence is the founder's, approved on 2026-09-10, and it lives in
-// src/data/positioning.js. It is imported, never restated. A second hard-coded
+// The sentence lives in src/data/positioning.js. It is imported, never restated. A second hard-coded
 // copy of an approved sentence is the defect class this repository keeps paying
 // for — scripts/site-pricing.mjs records the same argument for prices, and
 // tests/unit/index-html-pricing.test.js fails the build if a price-shaped
@@ -93,7 +92,12 @@
 // there — an arrival — and the clip-up plays as it always has.
 // `prefers-reduced-motion` is untouched: those two rules in global.css already
 // say `animation:none`, and none of this restates them.
-import { HERO_HEADLINE, heroHeadlineText } from '../src/data/positioning.js'
+// The Spectrum headline. ONE module feeds both the hydrated hero and this
+// shell.
+import { SPECTRUM_HERO } from '../src/components/spectrum/spectrumHero.js'
+
+const heroHeadlineText = () => SPECTRUM_HERO.text
+const HERO_HEADLINE = SPECTRUM_HERO
 
 /** Escape for text between tags. Same contract as prerender.mjs's `text()`. */
 const text = (s) => String(s)
@@ -211,9 +215,22 @@ function heroWords() {
     if (ok) { markStart = i; break }
   }
 
-  return words.map((word, i) => {
-    const marked = markStart > -1 && i >= markStart && i < markStart + markWords.length
-    return `<span class="sp-wm" data-sp-wm=""><span class="${marked ? 'sp-w sp-w--mark' : 'sp-w'}" data-sp-w="" style="--sp-wi:${i}">${text(word)}</span></span>`
+  // The marked run is ONE word, its trailing punctuation outside the accent in
+  // a .sp-w-tail: SpectrumWords' `joinMark`, which the hero uses.
+  const items = []
+  for (let i = 0; i < words.length; i += 1) {
+    if (markStart > -1 && i === markStart) {
+      const run = words.slice(markStart, markStart + markWords.length).join(' ')
+      const tail = /[.,;:!?]+$/.exec(run)?.[0] || ''
+      items.push({ word: tail ? run.slice(0, -tail.length) : run, marked: true, tail })
+      i = markStart + markWords.length - 1
+    } else {
+      items.push({ word: words[i], marked: false, tail: '' })
+    }
+  }
+  return items.map(({ word, marked, tail }, i) => {
+    const tailHtml = tail ? `<span class="sp-w-tail">${text(tail)}</span>` : ''
+    return `<span class="sp-wm" data-sp-wm=""><span class="${marked ? 'sp-w sp-w--mark' : 'sp-w'}" data-sp-w="" style="--sp-wi:${i}">${text(word)}${tailHtml}</span></span>`
   }).join(' ')
 }
 

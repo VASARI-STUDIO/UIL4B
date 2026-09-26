@@ -1,0 +1,133 @@
+/* ══ /create/icons/groups — the Groups tab of the icon library ════════════
+   Every selector is rooted at `.iel-page .igp-page`, so it wins on
+   specificity rather than on chunk order.
+
+   Built phone first: the rules below are the 390px layout, and the media
+   queries only add room. One surface throughout — cards are single
+   hairline-bordered surfaces with the preview flush inside, never a box in a
+   box, and the group view's toolbar is one row that does not wrap: on a phone
+   its labels collapse to their glyphs, which is what keeps three controls
+   inside 288px at 320. */
+
+.iel-page .igp-page{padding:16px 0 40px}
+
+/* ── The index: one card per group ─────────────────────────────────────── */
+.iel-page .igp-page .igp-cards{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:10px;
+  margin:0;padding:0;list-style:none;
+}
+.iel-page .igp-page .igp-cards>li{display:flex;min-width:0}
+.iel-page .igp-page .igp-card{
+  display:flex;flex-direction:column;width:100%;min-width:0;
+  border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--card);
+  color:var(--t0);text-decoration:none;overflow:hidden;
+  transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard);
+}
+.iel-page .igp-page .igp-card:hover{border-color:var(--bh);background:color-mix(in srgb,var(--t0) 2%,var(--card))}
+.iel-page .igp-page .igp-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .igp-page .igp-card-preview{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;justify-items:center;
+  padding:18px 12px 14px;
+}
+.iel-page .igp-page .igp-card-preview img,
+.iel-page .igp-page .igp-card-preview .igp-wait{width:22px;height:22px}
+.iel-page .igp-page .igp-card-foot{
+  display:flex;flex-direction:column;gap:3px;min-width:0;
+  padding:12px 14px 14px;border-top:1px solid var(--border);
+}
+.iel-page .igp-page .igp-card-name{font-size:14px;font-weight:560;letter-spacing:-.01em;color:var(--t0)}
+.iel-page .igp-page .igp-card-meta{font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iel-page .igp-page .igp-wait{display:block;border-radius:6px;background:color-mix(in srgb,var(--t0) 6%,transparent)}
+
+/* The locked group card: the libraries' blurred locked card, with a row of
+   neutral outline shapes in place of the palette stripes. No transition or
+   animation on any .lockt- rule (a placeholder must not read as loading). */
+.iel-page .igp-page .lockt-card--group{display:flex;flex-direction:column;width:100%;min-width:0}
+.iel-page .igp-page .lockt-card--group .lockt-glyphs{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;justify-items:center;
+  padding:18px 12px 14px;color:var(--t0);opacity:.55;filter:blur(5px);
+}
+.iel-page .igp-page .lockt-card--group .lockt-glyphs svg{width:22px;height:22px}
+.iel-page .igp-page .lockt-card--group .lockt-foot{
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  padding:12px 14px 14px;border-top:1px solid var(--border);
+}
+.iel-page .igp-page .lockt-card--group .lockt-name{font-size:14px;font-weight:560}
+.iel-page .igp-page .lockt-card--group .lockt-tag{margin:0}
+.iel-page .igp-page .lockt-card--group .lockt-upgrade{top:calc(50% - 24px);padding:0 14px;font-size:12.5px}
+
+/* ── The group view ────────────────────────────────────────────────────── */
+.iel-page .igp-page .igp-head{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:14px}
+.iel-page .igp-page .igp-back{
+  display:inline-flex;align-items:center;gap:4px;min-height:44px;margin-left:-4px;padding:0 4px;
+  color:var(--t2);font-size:13px;font-weight:560;text-decoration:none;border-radius:var(--radius-s);
+}
+.iel-page .igp-page .igp-back:hover{color:var(--t0)}
+.iel-page .igp-page .igp-back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .igp-page .igp-title{margin:0;font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
+.iel-page .igp-page .igp-meta{margin:0;font-size:13px;color:var(--t2)}
+
+/* The toolbar: colour, stroke weight, export — one row, never wrapped. */
+.iel-page .igp-page .igp-toolbar{
+  display:flex;flex-wrap:nowrap;align-items:center;gap:8px;min-width:0;
+  margin-bottom:14px;padding:8px 0;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.iel-page .igp-page .igp-toolbar>*{flex:0 0 auto}
+.iel-page .igp-page .igp-toolbar .cpk-wrap{display:flex}
+.iel-page .igp-page .igp-colour{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  width:auto;height:auto;min-width:44px;min-height:44px;padding:0 12px;
+  border:1px solid var(--bh);border-radius:var(--radius);background:transparent;color:var(--t0);
+  font-family:var(--font);font-size:13px;font-weight:560;cursor:pointer;
+}
+.iel-page .igp-page .igp-colour:hover{background:var(--hvr)}
+.iel-page .igp-page .igp-colour:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .igp-page .igp-colour-chip{
+  width:18px;height:18px;border-radius:50%;flex:0 0 auto;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 22%,transparent);
+}
+.iel-page .igp-page .igp-colour-chip.is-ink{background:var(--t0)}
+.iel-page .igp-page .igp-stroke{
+  display:flex;gap:2px;padding:3px;
+  border-radius:var(--radius);background:color-mix(in srgb,var(--t0) 6%,transparent);
+}
+.iel-page .igp-page .igp-stroke-btn{
+  min-width:36px;min-height:38px;padding:0 8px;
+  border:0;border-radius:var(--btn-radius);background:transparent;color:var(--t2);
+  font-family:var(--font);font-size:12.5px;font-weight:560;font-variant-numeric:tabular-nums;cursor:pointer;
+}
+.iel-page .igp-page .igp-stroke-btn:hover{color:var(--t0)}
+.iel-page .igp-page .igp-stroke-btn[aria-pressed="true"]{background:var(--card);color:var(--t0);box-shadow:0 1px 2px rgba(10,10,18,.08)}
+[data-theme="dark"] .iel-page .igp-page .igp-stroke-btn[aria-pressed="true"]{background:var(--bg-3)}
+.iel-page .igp-page .igp-stroke-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.iel-page .igp-page .igp-export{margin-left:auto;min-width:44px;min-height:44px;padding:0 12px}
+
+/* On a phone the labels go; each control keeps its glyph and its name. */
+.iel-page .igp-page .igp-label{white-space:nowrap}
+@media(max-width:559px){
+  .iel-page .igp-page .igp-label{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+  }
+  .iel-page .igp-page .igp-colour{padding:0}
+  .iel-page .igp-page .igp-export{padding:0}
+}
+@media(pointer:coarse){.iel-page .igp-page .igp-stroke-btn{min-height:44px}}
+
+/* The grid is the library's (`.ig` / `.ic`): no frame on a resting tile. The
+   tiles here copy their SVG, so they are buttons; the button chrome is reset
+   to the tile's. */
+.iel-page .igp-page .igp-grid .ic{font:inherit;color:inherit;width:100%}
+.iel-page .igp-page .igp-grid .ic img,
+.iel-page .igp-page .igp-grid .ic .igp-wait{width:24px;height:24px;flex-shrink:0}
+
+@media(min-width:640px){
+  .iel-page .igp-page .igp-cards{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .iel-page .igp-page .igp-card-preview,
+  .iel-page .igp-page .lockt-card--group .lockt-glyphs{gap:18px 8px;padding:24px 16px 20px}
+  .iel-page .igp-page .igp-card-preview img,
+  .iel-page .igp-page .igp-card-preview .igp-wait,
+  .iel-page .igp-page .lockt-card--group .lockt-glyphs svg{width:24px;height:24px}
+  .iel-page .igp-page .igp-title{font-size:26px}
+}

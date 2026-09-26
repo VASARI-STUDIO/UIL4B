@@ -95,7 +95,9 @@ test('there is at least one gate call site to check', () => {
   // walk broke or openProModal were renamed, all of them would pass vacuously.
   assert.ok(CALLERS.length >= 5, `expected several files to raise gates, found ${CALLERS.length}`)
   const total = CALLERS.reduce((n, p) => n + callArguments(read(p), 'openProModal').length, 0)
-  assert.ok(total >= 16, `expected at least 16 openProModal call sites, found ${total}`)
+  // Locked library items and plan CTAs link to /plans rather than raising the
+  // modal, so the floor is the in-tool gates that remain.
+  assert.ok(total >= 12, `expected at least 12 openProModal call sites, found ${total}`)
 })
 
 test('every openProModal call site names its gate', () => {
@@ -166,8 +168,10 @@ test('the walls that share a title report as separate gates', () => {
   assert.equal(capCalls.length, 3, 'expected three colour-cap walls')
   capCalls.forEach(c => assert.match(c.text, /gate: 'palette-colour-cap'/))
 
+  // One contrast wall since the drawn board: the AA chip on each
+  // colour. It must still name its own gate.
   const contrastCalls = callArguments(pb, 'openProModal').filter(c => c.text.includes("'Check contrast, light and dark'"))
-  assert.equal(contrastCalls.length, 2, 'expected two contrast walls')
+  assert.equal(contrastCalls.length, 1, 'expected one contrast wall')
   contrastCalls.forEach(c => assert.match(c.text, /gate: 'palette-contrast-view'/))
 })
 

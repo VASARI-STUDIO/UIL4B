@@ -38,34 +38,25 @@
 .cp-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--bg-2);font-size:11px;color:var(--t2);gap:12px;flex-wrap:wrap}
 .cp-footer-keys{display:flex;gap:14px}
 .cp-footer-keys span{display:inline-flex;align-items:center;gap:6px}
-.cmdk-hint-text{flex:1;text-align:left}
+/* A10: a touch screen has no arrow keys or Enter legend to learn, and on a
+   phone the panel starts near the top so the keyboard does not cover it. */
+@media(pointer:coarse){.cp-footer-keys{display:none}}
+@media(max-width:767px){.cp-overlay{padding-top:calc(env(safe-area-inset-top) + 12px)}}
 /* The footer's label. It was an inline style object. */
 .cp-footer-brand{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
-.cmdk-hint-keys kbd{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:2px 6px;line-height:1}
-
-/* ─── Section switcher (top bar) ─── */
-.nav-switch{position:relative;flex-shrink:0}
-.nav-switch-trigger:hover{border-color:var(--bh);background:var(--bg-2)}
-.nav-switch-trigger-label{white-space:nowrap}
-.nav-switch-chev{width:13px;height:13px;flex-shrink:0;color:var(--t2);transition:transform var(--t)}
-.pnav-group{min-width:0}
-/* Hue-tinted icon tile — colour comes from the group's data-hue */
-.pnav-ico{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid));transition:background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-.pnav-group-title{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.012em;color:var(--t0);transition:color var(--dur-2) var(--ease-out)}
-.pnav-promo-visual{border-radius:var(--radius-l);overflow:hidden;background:var(--bg-1);border:1px solid var(--border);aspect-ratio:16/10;margin-bottom:4px}
 
 /* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
    nav search cluster. No real export yet: every format previews and the primary
    action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
 .exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84vh,720px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84dvh,720px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
 .exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
 /* --accent-mid on the panel's --bg-1: 5.55:1 light, 8.48:1 dark. */
 .exp-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .exp-sub{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
-.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .exp-formats{display:flex;flex-direction:column;gap:8px;padding:8px 24px 20px}
 .exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}

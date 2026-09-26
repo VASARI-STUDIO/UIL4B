@@ -91,39 +91,28 @@ test('THE ONE THAT MATTERS: vercel.json serves the prerendered file for every ro
   }
 })
 
-test('the explicit rewrites come BEFORE the catch-all, or they never fire', async () => {
+test('there is no catch-all: an unknown path must be able to answer 404', async () => {
   const rewrites = vercel().rewrites
-  // The catch-all now serves /404.html, not /index.html: serving the homepage
-  // shell for unknown URLs was the soft 404 (200 + index,follow + the
-  // homepage's content at unlimited URLs). Matched on the negative-lookahead
-  // source, which is what actually makes it the catch-all.
-  const catchAll = rewrites.findIndex(r => r.source.includes('?!'))
-  assert.ok(catchAll > -1, 'the SPA catch-all must still exist for client-side routes')
-  const routes = prerenderRoutes()
-  for (const route of routes) {
-    const at = rewrites.findIndex(r => r.source === route)
-    assert.ok(at < catchAll, `${route} is listed after the catch-all and would never match`)
-  }
+  // The catch-all `/((?!api/|assets/).*)` → `/404.html` served the right page
+  // with status 200 for every unknown path. Each route is now listed by exact
+  // path; tests/unit/real-404.test.js walks Vercel's order end to end.
+  assert.ok(!rewrites.some(r => r.source.includes('?!') || r.source.includes('(')),
+    'a pattern rewrite is back — every unknown path would answer 200 again')
 })
 
-test('the API share route survives, and the SPA fallback still covers everything else', async () => {
+test('the API share route survives, and client-only routes still reach the SPA', async () => {
   const rewrites = vercel().rewrites
   assert.equal(rewrites[0].source, '/p/:code', 'the share shortlink must stay first')
   assert.equal(rewrites[0].destination, '/api/share?c=:code')
   // Client-only routes that are deliberately NOT prerendered (they are
-  // noindexed, gated or redirect-only) still need the fallback to reach React.
-  //
-  // That fallback is now /404.html rather than /index.html. Both are the same
-  // SPA shell so React still boots and renders the real page — the difference
-  // is the head it arrives with. Serving index.html meant every unknown URL
-  // returned 200 with `index,follow` and the homepage's canonical, which is a
-  // soft 404. These gated routes get `noindex` out of the same change, which is
-  // what they should have carried anyway.
-  const catchAll = rewrites[rewrites.length - 1]
-  assert.equal(catchAll.destination, '/404.html')
+  // noindexed, gated or redirect-only) are rewritten, by exact path, to the
+  // noindex 404 shell. It is the same SPA shell, so React still boots and
+  // renders the real page; the difference is the head it arrives with.
   for (const clientOnly of ['/settings', '/projects', '/checkout', '/login']) {
-    assert.ok(!rewrites.some(r => r.source === clientOnly),
-      `${clientOnly} must fall through to the SPA, not be prerendered`)
+    const hit = rewrites.find(r => r.source === clientOnly)
+    assert.ok(hit, `${clientOnly} has no rewrite — it would answer 404`)
+    assert.equal(hit.destination, '/404.html',
+      `${clientOnly} must boot the SPA from the noindex shell, not be prerendered`)
   }
   // /discover moved the other way: it is a real page with real content and is
   // now prerendered and advertised.

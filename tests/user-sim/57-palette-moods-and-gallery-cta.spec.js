@@ -95,7 +95,7 @@ test.describe('palette mood filters', () => {
       await pickMood(page, MOOD_LABELS[mood])
 
       const expected = expectedFor(mood)
-      // A control that matches nothing is broken — the founder's own bar.
+      // A control that matches nothing is broken — the design's bar.
       expect(expected, `${mood} matches nothing in the free library`).toBeGreaterThan(0)
       // And a control that matches EVERYTHING is not a filter.
       expect(expected, `${mood} matches the entire free library`).toBeLessThan(total)
@@ -150,17 +150,18 @@ test.describe('palette mood filters', () => {
   })
 
   test('the results head never names a collection the view is not', async ({ page }) => {
-    const eyebrow = page.locator('.drh-head span')
+    // The design's h2 carries the collection name now; there is no eyebrow.
+    const eyebrow = page.locator('.drh-head h2')
     // A mood on its own reaches into BOTH collections, so it must not be
     // labelled as either — this is #396's finding, re-asserted through the new
     // tray where a mood can no longer touch the collection state at all.
     await pickMood(page, 'Warm')
-    await expect(eyebrow).not.toHaveText(/curated collection|brand systems/i)
+    await expect(eyebrow).not.toHaveText(/curated collection|brand/i)
 
     // But a collection PLUS a mood is still that collection, and saying so is
     // true rather than false.
     await page.locator(COLLECTION_TRAY).getByRole('button', { name: 'Brand', exact: true }).click()
-    await expect(eyebrow).toHaveText('Brand systems')
+    await expect(eyebrow).toHaveText('Brand palettes')
   })
 })
 
@@ -178,17 +179,18 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
     await go(page, PALETTES)
     await expect(page.locator(CARD).first()).toBeVisible()
 
-    // The Mood menu OPEN, because a menu that overflows the viewport is the same
-    // defect as a tray that does, and it is the state the eight new options are
-    // actually read in.
-    await page.locator(MOOD_TRIGGER).click()
-    await expect(page.locator(MOOD_TRAY)).toBeVisible()
+    // The Mood options OPEN, because a panel that overflows the viewport is the
+    // same defect as a tray that does, and it is the state the eight options
+    // are actually read in. Toolbars never wrap, so a phone keeps the collection chips on one scrolling row and
+    // puts Mood in the Filters sheet, where it is laid out as chips.
+    await page.locator('.pgl-toolbar .lbry-filtersbtn').click()
+    await expect(page.locator(`.lbry-sheet ${MOOD_TRAY}`)).toBeVisible()
 
     const box = await page.evaluate(() => ({
-      // A horizontal scrollbar on the BODY is the failure. The tray wrapping
-      // onto more lines is the design below 641px (#298) and is not.
+      // A horizontal scrollbar on the BODY is the failure. The quick row
+      // scrolling sideways inside itself is the design and is not.
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      chips: [...document.querySelectorAll('.lbry-toolbar .lbry-filter, .lbry-toolbar .lbry-filtertrig, .lbry-filtermenu .lbry-filter')].map((el) => {
+      chips: [...document.querySelectorAll('.lbry-sheet .lbry-filter, .lbry-toolbar .lbry-filtersbtn')].map((el) => {
         const r = el.getBoundingClientRect()
         return { label: el.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) }
       }),
@@ -221,7 +223,7 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
 // SUBMIT_SURFACES in utils/submitIntent.js is exactly community / gradient /
 // palette / prompt. A "create and submit your own" on that page would be a
 // promise the product cannot keep, which is the one thing this repo does not
-// ship. It already closes with its own "Continue your typography system" nav,
+// ship. Its toolbar already offers an onward action ("Build a font pair"),
 // which answers the same question with something real.
 const GALLERIES = [
   { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
@@ -288,6 +290,45 @@ test.describe('the closing CTA on every gallery', () => {
   }
 })
 
+// ── Who the end of a result is offered to ──────────────────────────────────
+// At the end of capped results, a FREE viewer sees an
+// UPGRADE CTA; only a PREMIUM viewer sees "create and submit your own". Where
+// the locked tease is on screen (an unfiltered view) it IS the offer, so the
+// close does not repeat it; under a filter the tease steps aside and the
+// close carries the offer instead.
+test.describe('the end of a capped result offers more access to free, submission to Pro', () => {
+  test('free, filtered: the close is an upgrade to /plans, and never "create and submit"', async ({ page }) => {
+    watch(page, 'a free account at the end of a filtered palette result')
+    await signIn(page, { plan: 'free' })
+    await go(page, PALETTES)
+    await expect(page.locator(CARD).first()).toBeVisible()
+    await page.locator('.pgl-toolbar .lbry-search input').fill('blue')
+    const cta = page.locator('.gcta')
+    await expect(cta).toHaveCount(1)
+    await expect(cta.locator('a, button')).toHaveText('See what Pro includes')
+    await expect(cta.locator('a')).toHaveAttribute('href', '/plans')
+    await expect(page.getByText('Create and submit your own')).toHaveCount(0)
+  })
+
+  test('free, unfiltered: the locked tease is the offer, and the close does not repeat it', async ({ page }) => {
+    watch(page, 'a free account at the end of the palette library')
+    await signIn(page, { plan: 'free' })
+    await go(page, PALETTES)
+    await expect(page.locator('.lockt-cta')).toBeVisible()
+    await expect(page.locator('.gcta')).toHaveCount(0)
+    await expect(page.getByText('Create and submit your own')).toHaveCount(0)
+  })
+
+  test('Pro, filtered: the close is "create and submit your own"', async ({ page }) => {
+    watch(page, 'a Pro account at the end of a filtered palette result')
+    await signIn(page, { plan: 'pro' })
+    await go(page, PALETTES)
+    await expect(page.locator(CARD).first()).toBeVisible()
+    await page.locator('.pgl-toolbar .lbry-search input').fill('blue')
+    await expect(page.locator('.gcta a')).toHaveText('Create and submit your own')
+  })
+})
+
 // ── Request 2, the hazard: the feedback FAB is fixed to the corner ───────────
 //
 // #413 found a FAB covering a footer control on a page with 0px of scroll room.
@@ -316,6 +357,10 @@ test('the closing CTA clears the feedback button at twenty widths', async ({ bro
     const page = await context.newPage()
     try {
       watch(page, `CTA clearance at ${width}px`)
+      // Pro: the closing CTA on an unfiltered gallery is a
+      // Pro viewer's; everyone else meets the locked
+      // tease there instead, which is its own end-of-page offer.
+      await signIn(page, { plan: 'pro' })
       await go(page, PALETTES)
       await expect(page.locator('.pgal-card').first()).toBeVisible()
 

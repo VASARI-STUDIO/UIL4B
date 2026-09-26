@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/tool-shell.css'
-import '../styles/deferred/type.css'
-// This page's own Spectrum sheet. Every selector in it is rooted at .arc-page,
-// so it wins over the two shared sheets above however Vite orders the chunk.
+import {
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
+} from '../components/tool/ToolLayout'
+// The page's own sheet; every rule is scoped under `.arc-page`, the page root.
 import '../styles/pages/aspect-ratio.css'
 import { standardSizesForRatio } from '../utils/standardWidths'
 
-// Aspect & Resolution Calculator — start from ANY single piece of information
-// (a device, a screen, a social format, a ratio, one dimension, or a full size)
-// and get everything else: the matching dimensions, simplified + nearest
-// standard ratio, PPI, and the diagonal in pixels and inches.
+// Aspect & Resolution Calculator — start from ANY single piece of information (a device,
+// a screen, a social format, a ratio, one dimension, or a full size) and get
+// everything else: the matching dimensions, simplified + nearest standard
+// ratio, PPI, and the diagonal in pixels and inches.
+//
+// On the shared tool pattern: a sticky toolbar (Swap, and "Copy size" as the
+// one primary), the answer in the wide column — the shape and the result — and
+// every input in the side panel. Below 900px the columns stack in source
+// order, so a phone opens on the answer and the inputs follow it.
 //
 // Preset sources are dropdowns (not pill walls) so each option can carry a
 // mini box drawn at the option's true aspect ratio plus its exact resolution,
@@ -449,141 +451,225 @@ export default function RatioCalculator({ onCopy }) {
   }, [ratioMatch, ratioW, ratioH])
   const sizeValue = out ? sizeOptions.find(o => o.w === out.width && o.h === out.height)?.name : undefined
 
-  return (
-    // A NAMED REGION, NOT A BARE <div>. Walked through Chrome's accessibility
-    // tree on 2026-09-15 this route reported navigation | main | contentinfo
-    // and nothing naming its content: 56 controls under one heading. The
-    // region takes its name from the page's own h1 — no new words — so a
-    // screen-reader user's landmark list now has the tool in it. The
-    // calculator PANEL still has no heading of its own; that needs a sentence
-    // from the founder (create-tools-left-2026-09-15) and is left for him.
-    <section className="sec arc-page" aria-labelledby="arc-title">
-      <div className="sec-h arc-hero">
-        {/* NO TAXONOMY EYEBROW. It read "Imagery" at y=102 — the name of the
-            Create group the visitor clicked through to get here, above an h1
-            that names the tool. #surface-headers-read-as-ai. */}
-        <h1 id="arc-title">Aspect &amp; Resolution Calculator</h1>
-        <p>Start from anything — a device, a screen, a social format, a ratio, or a couple of pixels — and get the matching dimensions, simplified ratio, PPI and diagonal.</p>
-      </div>
+  const copySize = () => { if (out) copy(`${out.width} × ${out.height}`) }
 
-      <div className="rc-grid">
-        {/* Controls */}
-        <div className="card rc-panel">
-          {/* aria-pressed, BECAUSE THE `on` CLASS IS INVISIBLE TO EVERYTHING
-              THAT IS NOT AN EYE. Eighteen buttons on this page carried their
-              selection in a class name and nowhere else - these four, the
-              eleven ratio cards below, and the three side toggles - so the
-              accessibility tree showed no pressed, selected or current state on
-              any of them, and it was the only one of the nine Create surfaces
-              doing that. A visitor using a screen reader could press a shape and
-              get no confirmation that anything had been chosen.
-
-              aria-pressed rather than a full role="tab" tablist: these are a
-              toggle group, and a real tablist owes aria-controls, tabpanels and
-              roving tabindex - a rework of the page structure, not a fix for the
-              state being unannounced. Filed as its own question. */}
-          <div className="rc-tabs">
-            {TABS.map(t => (
+  // A preset tab is the first choice a visitor makes, and it decides which of
+  // the four preset lists the section under it shows.
+  const presetBody = (
+    <>
+      {tab === 'Devices' && (
+        <PresetSelect
+          placeholder="Pick a device…" options={DEVICE_OPTIONS}
+          value={pixelValue(DEVICE_OPTIONS)} onPick={applyPixel}
+        />
+      )}
+      {tab === 'Screens' && (
+        <PresetSelect
+          placeholder="Pick a screen…" options={SCREEN_OPTIONS}
+          value={pixelValue(SCREEN_OPTIONS)} onPick={applyPixel}
+        />
+      )}
+      {tab === 'Social' && (
+        <>
+          <PresetSelect
+            placeholder="Pick a social format…" options={SOCIAL_OPTIONS}
+            value={pixelValue(SOCIAL_OPTIONS)} onPick={applyPixel}
+          />
+          <p className="arc-note">Social sizes are the platform-recommended exports at the standard 72 PPI.</p>
+        </>
+      )}
+      {tab === 'Ratios' && (
+        <>
+          <PresetSelect
+            placeholder="Pick a ratio…" options={RATIO_OPTIONS}
+            value={ratioMatch?.name} onPick={applyRatio}
+          />
+          <div className="arc-ratio-grid" role="group" aria-label="Ratio shapes">
+            {RATIOS.map(r => (
               <button
-                key={t} type="button"
-                className={`rc-tab${tab === t ? ' on' : ''}`}
-                aria-pressed={tab === t}
-                onClick={() => setTab(t)}
+                key={r.name} type="button"
+                className={`arc-ratio-card${ratioMatch?.name === r.name ? ' on' : ''}`}
+                aria-pressed={ratioMatch?.name === r.name}
+                onClick={() => applyRatio(r)}
               >
-                {t}
+                <RatioThumb w={r.w} h={r.h} big />
+                <span className="arc-ratio-card-name">{r.name}</span>
+                <span className="arc-ratio-card-use">{r.use}</span>
               </button>
             ))}
           </div>
+        </>
+      )}
+    </>
+  )
 
-          {tab === 'Devices' && (
-            <PresetSelect
-              placeholder="Pick a device…" options={DEVICE_OPTIONS}
-              value={pixelValue(DEVICE_OPTIONS)} onPick={applyPixel}
-            />
-          )}
-          {tab === 'Screens' && (
-            <PresetSelect
-              placeholder="Pick a screen…" options={SCREEN_OPTIONS}
-              value={pixelValue(SCREEN_OPTIONS)} onPick={applyPixel}
-            />
-          )}
-          {tab === 'Social' && (
-            <>
-              <PresetSelect
-                placeholder="Pick a social format…" options={SOCIAL_OPTIONS}
-                value={pixelValue(SOCIAL_OPTIONS)} onPick={applyPixel}
-              />
-              <p className="arc-note">Social sizes are the platform-recommended exports at the standard 72 PPI.</p>
-            </>
-          )}
-          {tab === 'Ratios' && (
-            <>
-              <PresetSelect
-                placeholder="Pick a ratio…" options={RATIO_OPTIONS}
-                value={ratioMatch?.name} onPick={applyRatio}
-              />
-              <div className="arc-ratio-grid" role="group" aria-label="Ratio shapes">
-                {RATIOS.map(r => (
-                  <button
-                    key={r.name} type="button"
-                    className={`arc-ratio-card${ratioMatch?.name === r.name ? ' on' : ''}`}
-                    aria-pressed={ratioMatch?.name === r.name}
-                    onClick={() => applyRatio(r)}
-                  >
-                    <RatioThumb w={r.w} h={r.h} big />
-                    <span className="arc-ratio-card-name">{r.name}</span>
-                    <span className="arc-ratio-card-use">{r.use}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+  const simplifiedReadout = simplified && (
+    <span className="rc-simplified">
+      = {simplified}
+      {nearest && nearest.label !== simplified && nearest.off < 2 && (
+        <small> ≈ {nearest.label}</small>
+      )}
+    </span>
+  )
 
-          {sizeOptions.length > 0 && (
-            <div className="rc-field">
-              {/* ratioMatch is null for a computed ladder, so the name comes from
-                  the simplified ratio the user is actually in. */}
-              <div className="seg-label">Standard {ratioMatch?.name || simplified} sizes</div>
-              <PresetSelect
-                placeholder={`Pick a standard ${ratioMatch?.name || simplified} size…`}
-                options={sizeOptions} value={sizeValue} onPick={applyPixel}
-              />
+  return (
+    // The root is a region named by the toolbar's h1, so the calculator is in
+    // a screen reader's landmark list.
+    <ToolLayout
+      className="arc-page"
+      title="Aspect & Resolution"
+      titleId="arc-title"
+      role="region"
+      aria-labelledby="arc-title"
+      items={[
+        {
+          id: 'swap',
+          priority: 1,
+          render: () => (
+            <ToolButton icon="arrows-left-right" collapse className="rc-flip" onClick={flip} disabled={!validRatio} aria-label="Swap width and height" title="Swap width and height">
+              Swap
+            </ToolButton>
+          ),
+          menu: { label: 'Swap width and height', icon: 'arrows-left-right', onSelect: flip, disabled: !validRatio },
+        },
+      ]}
+      primary={(
+        <ToolButton variant="accent" icon="copy" iconSize={14} className="arc-copy" onClick={copySize} disabled={!out}>
+          Copy size
+        </ToolButton>
+      )}
+    >
+      <ToolGrid className="arc-grid">
+        <ToolMain className="arc-main">
+          {/* The answer: the shape at its true proportions, then the numbers. */}
+          <div className="arc-stage rc-vis-panel">
+            <div className="rc-vis-head">
+              <span className="tl-sec-label">Shape preview</span>
+              {orientation && <span className="rc-vis-tag">{orientation}</span>}
             </div>
-          )}
+            <div className="rc-vis-stage">
+              {validRatio
+                ? (
+                  <div className="rc-vis-box" ref={(el) => { if (el) { el.style.setProperty('--arc-w', `${vis.w}px`); el.style.setProperty('--arc-h', `${vis.h}px`) } }}>
+                    <svg className="rc-vis-diag" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      <line x1="0" y1="0" x2="100" y2="100" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                    <span className="rc-vis-ratio">{simplified}</span>
+                    {out && <span className="rc-vis-dims">{out.width} × {out.height}</span>}
+                    {diag && diag.inches !== null && <span className="rc-vis-dims">⤢ {diag.inches}″ · {ppiNum} PPI</span>}
+                  </div>
+                )
+                : <div className="rc-vis-empty">Enter a valid ratio</div>}
+            </div>
+          </div>
 
-          {side !== 'both' && (
-            <div className="rc-field">
-              <div className="seg-label">Aspect ratio</div>
-              <div className="rc-ratio-row">
-                <input type="number" min="0" value={rw} onChange={e => setRw(e.target.value)} aria-label="Ratio width" />
-                <button type="button" className="rc-flip" onClick={flip} title="Swap width and height" aria-label="Swap width and height">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M8 3 4 7l4 4" /><path d="M4 7h16" /><path d="m16 21 4-4-4-4" /><path d="M20 17H4" />
-                  </svg>
+          {out && diag && (
+            <div className="rc-out">
+              <div className="rc-result-dims">
+                <button type="button" className="rc-dim" onClick={() => copy(String(out.width))} title="Copy width">{out.width}<small>W</small></button>
+                <span className="rc-times" aria-hidden="true">×</span>
+                <button type="button" className="rc-dim" onClick={() => copy(String(out.height))} title="Copy height">{out.height}<small>H</small></button>
+              </div>
+              <div className="arc-stats">
+                <button type="button" className="arc-stat" onClick={() => copy(simplified || '')} title="Copy ratio">
+                  <span className="arc-stat-k">Ratio</span>
+                  <span className="arc-stat-v">{simplified}</span>
                 </button>
-                <input type="number" min="0" value={rh} onChange={e => setRh(e.target.value)} aria-label="Ratio height" />
-                {simplified && (
-                  <span className="rc-simplified">
-                    = {simplified}
-                    {nearest && nearest.label !== simplified && nearest.off < 2 && (
-                      <small> ≈ {nearest.label}</small>
-                    )}
-                  </span>
+                {/* The one cell that changes the numbers rather than copying
+                    one: it adopts the nearest standard ratio and re-derives the
+                    other side. Offered within 5%, with the percentage printed. */}
+                {nearest && nearest.label !== simplified && nearest.off < 5 && nearest.w > 0 && nearest.h > 0 && (
+                  <button
+                    type="button"
+                    className="arc-stat arc-stat--snap"
+                    onClick={() => applyRatio({ w: nearest.w, h: nearest.h })}
+                    title={`Use ${nearest.label} and re-derive the other side`}
+                  >
+                    <span className="arc-stat-k">Nearest standard</span>
+                    <span className="arc-stat-v">{nearest.label}</span>
+                    <span className="arc-stat-sub">
+                      {nearest.off >= 0.05 ? `${round(nearest.off)}% off · ` : ''}tap to use
+                    </span>
+                  </button>
+                )}
+                <button type="button" className="arc-stat" onClick={() => copy(String(round(ratioW / ratioH)))} title="Copy decimal ratio">
+                  <span className="arc-stat-k">Decimal</span>
+                  <span className="arc-stat-v">{round(ratioW / ratioH)}</span>
+                </button>
+                {orientation && (
+                  <button type="button" className="arc-stat" onClick={() => copy(orientation)} title="Copy orientation">
+                    <span className="arc-stat-k">Orientation</span>
+                    <span className="arc-stat-v">{orientation}</span>
+                  </button>
+                )}
+                <button type="button" className="arc-stat" onClick={() => copy(`${diag.px}px`)} title="Copy diagonal in pixels">
+                  <span className="arc-stat-k">Diagonal</span>
+                  <span className="arc-stat-v">{diag.px.toLocaleString()} px</span>
+                </button>
+                {diag.inches !== null && (
+                  <button type="button" className="arc-stat" onClick={() => copy(`${diag.inches}"`)} title="Copy diagonal in inches">
+                    <span className="arc-stat-k">Diagonal ″</span>
+                    <span className="arc-stat-v">{diag.inches}″</span>
+                  </button>
+                )}
+                {diag.physW !== null && (
+                  <button type="button" className="arc-stat" onClick={() => copy(`${diag.physW}" × ${diag.physH}"`)} title="Copy physical size">
+                    <span className="arc-stat-k">Physical</span>
+                    <span className="arc-stat-v">{diag.physW}″ × {diag.physH}″</span>
+                  </button>
                 )}
               </div>
             </div>
           )}
+        </ToolMain>
 
-          <div className="rc-field">
-            <div className="seg-label" id="arc-known-label">I know the…</div>
+        <ToolPanel label="Calculator inputs" className="arc-panel">
+          <ToolSection label="Start from">
+            {/* A toggle group with aria-pressed: each button announces whether
+                it is the chosen preset list. */}
+            <div className="rc-tabs tl-pills tl-pills--block" role="group" aria-label="Preset list">
+              {TABS.map(t => (
+                <button
+                  key={t} type="button"
+                  className={`rc-tab tl-pill${tab === t ? ' on is-on' : ''}`}
+                  aria-pressed={tab === t}
+                  onClick={() => setTab(t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            {presetBody}
+            {sizeOptions.length > 0 && (
+              <div className="rc-field">
+                {/* ratioMatch is null for a computed ladder, so the name comes
+                    from the simplified ratio the user is actually in. */}
+                <span className="arc-field-k">Standard {ratioMatch?.name || simplified} sizes</span>
+                <PresetSelect
+                  placeholder={`Pick a standard ${ratioMatch?.name || simplified} size…`}
+                  options={sizeOptions} value={sizeValue} onPick={applyPixel}
+                />
+              </div>
+            )}
+          </ToolSection>
+
+          {side !== 'both' && (
+            <ToolSection label="Aspect ratio">
+              <div className="rc-ratio-row">
+                <input type="number" min="0" value={rw} onChange={e => setRw(e.target.value)} aria-label="Ratio width" />
+                <span className="rc-colon" aria-hidden="true">:</span>
+                <input type="number" min="0" value={rh} onChange={e => setRh(e.target.value)} aria-label="Ratio height" />
+                {simplifiedReadout}
+              </div>
+            </ToolSection>
+          )}
+
+          <ToolSection label="I know the…" labelId="arc-known-label">
             <div className="rc-known">
-              {/* A labelled group, named by the caption above it, so the three
-                  toggles announce what they choose between. The gap that used
-                  to ride here as an inline style is in aspect-ratio.css. */}
-              <div className="arc-sides" role="group" aria-labelledby="arc-known-label">
-                <button type="button" className={`pt-t${side === 'width' ? ' on' : ''}`} aria-pressed={side === 'width'} onClick={() => pickSide('width')}>Width</button>
-                <button type="button" className={`pt-t${side === 'height' ? ' on' : ''}`} aria-pressed={side === 'height'} onClick={() => pickSide('height')}>Height</button>
-                <button type="button" className={`pt-t${side === 'both' ? ' on' : ''}`} aria-pressed={side === 'both'} onClick={() => pickSide('both')}>Width × height</button>
+              <div className="arc-sides tl-pills tl-pills--block" role="group" aria-labelledby="arc-known-label">
+                <button type="button" className={`pt-t tl-pill${side === 'width' ? ' on is-on' : ''}`} aria-pressed={side === 'width'} onClick={() => pickSide('width')}>Width</button>
+                <button type="button" className={`pt-t tl-pill${side === 'height' ? ' on is-on' : ''}`} aria-pressed={side === 'height'} onClick={() => pickSide('height')}>Height</button>
+                <button type="button" className={`pt-t tl-pill${side === 'both' ? ' on is-on' : ''}`} aria-pressed={side === 'both'} onClick={() => pickSide('both')}>Width × height</button>
               </div>
               {side === 'both'
                 ? (
@@ -593,19 +679,12 @@ export default function RatioCalculator({ onCopy }) {
                       onChange={e => { setRw(e.target.value); setKnown(e.target.value) }}
                       placeholder="width" aria-label="Width in pixels"
                     />
-                    <span className="rc-colon">×</span>
+                    <span className="rc-colon" aria-hidden="true">×</span>
                     <input
                       type="number" min="0" value={rh} onChange={e => setRh(e.target.value)}
                       placeholder="height" aria-label="Height in pixels"
                     />
-                    {simplified && (
-                      <span className="rc-simplified">
-                        = {simplified}
-                        {nearest && nearest.label !== simplified && nearest.off < 2 && (
-                          <small> ≈ {nearest.label}</small>
-                        )}
-                      </span>
-                    )}
+                    {simplifiedReadout}
                   </div>
                 )
                 : (
@@ -615,10 +694,9 @@ export default function RatioCalculator({ onCopy }) {
                   />
                 )}
             </div>
-          </div>
+          </ToolSection>
 
-          <div className="rc-field">
-            <div className="seg-label">Pixel density (optional — unlocks inches)</div>
+          <ToolSection label="Pixel density (optional — unlocks inches)">
             <div className="arc-ppi-row">
               <label className="arc-ppi-field">
                 <input type="number" min="0" value={ppi} onChange={e => setPpi(e.target.value)} aria-label="Pixels per inch" placeholder="PPI" />
@@ -635,104 +713,9 @@ export default function RatioCalculator({ onCopy }) {
                 <span>″</span>
               </label>
             </div>
-          </div>
-
-          {out && diag && (
-            <div className="rc-out">
-              <div className="seg-label">Result</div>
-              <div className="rc-out-size">
-                <div className="rc-result-dims">
-                  <button className="rc-dim" onClick={() => copy(String(out.width))} title="Copy width">{out.width}<small>W</small></button>
-                  <span className="rc-times">×</span>
-                  <button className="rc-dim" onClick={() => copy(String(out.height))} title="Copy height">{out.height}<small>H</small></button>
-                </div>
-                {/* The page's one primary action, so it is the one accent fill
-                    — drawn by this page's sheet rather than the shared .btn. */}
-                <button type="button" className="arc-copy" onClick={() => copy(`${out.width} × ${out.height}`)}>Copy size</button>
-              </div>
-              <div className="arc-stats">
-                <button className="arc-stat" onClick={() => copy(simplified || '')} title="Copy ratio">
-                  <span className="arc-stat-k">Ratio</span>
-                  <span className="arc-stat-v">{simplified}</span>
-                </button>
-                {/* SNAP TO THE NEAREST STANDARD.
-
-                    Its own control, not a line of text inside the Ratio stat:
-                    that button copies, so a nested one was impossible and the
-                    suggestion could only ever be read.
-
-                    The ceiling moved from 2% to 5%. Under the old one a
-                    measurement 3% off a standard got no suggestion at all,
-                    which is the case that needs one most — 2% is close enough
-                    that the user has usually already noticed. The percentage is
-                    always printed so the offer can be judged rather than
-                    trusted. */}
-                {nearest && nearest.label !== simplified && nearest.off < 5 && nearest.w > 0 && nearest.h > 0 && (
-                  <button
-                    className="arc-stat arc-stat--snap"
-                    onClick={() => applyRatio({ w: nearest.w, h: nearest.h })}
-                    title={`Use ${nearest.label} and re-derive the other side`}
-                  >
-                    <span className="arc-stat-k">Nearest standard</span>
-                    <span className="arc-stat-v">{nearest.label}</span>
-                    <span className="arc-stat-sub">
-                      {nearest.off >= 0.05 ? `${round(nearest.off)}% off · ` : ''}tap to use
-                    </span>
-                  </button>
-                )}
-                <button className="arc-stat" onClick={() => copy(String(round(ratioW / ratioH)))} title="Copy decimal ratio">
-                  <span className="arc-stat-k">Decimal</span>
-                  <span className="arc-stat-v">{round(ratioW / ratioH)}</span>
-                </button>
-                {orientation && (
-                  <button className="arc-stat" onClick={() => copy(orientation)} title="Copy orientation">
-                    <span className="arc-stat-k">Orientation</span>
-                    <span className="arc-stat-v">{orientation}</span>
-                  </button>
-                )}
-                <button className="arc-stat" onClick={() => copy(`${diag.px}px`)} title="Copy diagonal in pixels">
-                  <span className="arc-stat-k">Diagonal</span>
-                  <span className="arc-stat-v">{diag.px.toLocaleString()} px</span>
-                </button>
-                {diag.inches !== null && (
-                  <button className="arc-stat" onClick={() => copy(`${diag.inches}"`)} title="Copy diagonal in inches">
-                    <span className="arc-stat-k">Diagonal ″</span>
-                    <span className="arc-stat-v">{diag.inches}″</span>
-                  </button>
-                )}
-                {diag.physW !== null && (
-                  <button className="arc-stat" onClick={() => copy(`${diag.physW}" × ${diag.physH}"`)} title="Copy physical size">
-                    <span className="arc-stat-k">Physical</span>
-                    <span className="arc-stat-v">{diag.physW}″ × {diag.physH}″</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Visualiser */}
-        <div className="card rc-panel rc-vis-panel">
-          <div className="rc-vis-head">
-            <div className="seg-label">Shape preview</div>
-            {orientation && <span className="rc-vis-tag">{orientation}</span>}
-          </div>
-          <div className="rc-vis-stage">
-            {validRatio
-              ? (
-                <div className="rc-vis-box" style={{ width: vis.w, height: vis.h }}>
-                  <svg className="rc-vis-diag" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <line x1="0" y1="0" x2="100" y2="100" vectorEffect="non-scaling-stroke" />
-                  </svg>
-                  <span className="rc-vis-ratio">{simplified}</span>
-                  {out && <span className="rc-vis-dims">{out.width} × {out.height}</span>}
-                  {diag && diag.inches !== null && <span className="rc-vis-dims">⤢ {diag.inches}″ · {ppiNum} PPI</span>}
-                </div>
-              )
-              : <div className="rc-vis-empty">Enter a valid ratio</div>}
-          </div>
-        </div>
-      </div>
-    </section>
+          </ToolSection>
+        </ToolPanel>
+      </ToolGrid>
+    </ToolLayout>
   )
 }

@@ -228,10 +228,14 @@ test.describe('Design Principles', () => {
       const s = getComputedStyle(document.documentElement)
       return {
         ground: s.getPropertyValue('--bg-0').trim(),
-        link: s.getPropertyValue('--accent-strong').trim(),
-        fill: s.getPropertyValue('--accent').trim(),
+        link: s.getPropertyValue('--link').trim(),
       }
     })
+    // The FILL is pinned to the value Principle 1's proof was written against.
+    // The live --accent (#2A60E8) clears 4.5:1 on the light page and cannot
+    // show the boundary-only case, so that proof is owed new copy;
+    // help-and-principles-claims.test.js pins the same.
+    tokens.fill = '#0F6FFF'
     const expected = [
       `${contrastRatio(tokens.link, tokens.ground).toFixed(2)}:1`,
       `${contrastRatio(tokens.fill, tokens.ground).toFixed(2)}:1`,

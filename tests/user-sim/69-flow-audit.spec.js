@@ -53,6 +53,7 @@
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
@@ -96,7 +97,7 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
       // Copy worked signed out. Copying is free forever; the account is asked
       // for at the things that keep or produce something. So the opener now
       // opens, and Save inside it is what asks.
-      const opener = page.locator('button[aria-label="Save / export"]')
+      const opener = page.getByRole('button', { name: 'Save current' })
       await opener.focus()
       await page.keyboard.press('Enter')
 
@@ -135,44 +136,30 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
 
 test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
   for (const size of WIDTHS) {
-    test(`${size[0]}px: New project opens by keyboard, Enter creates it, Escape returns focus`, async ({ browser }) => {
+    test(`${size[0]}px: New project opens by keyboard into the Palette Builder, and the project is kept by naming it there`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a new account making its first project (${size[0]}px)`)
       await signIn(page, { plan: 'free', projects: 0 })
       await go(page, '/projects')
 
-      // WHAT A NEW ACCOUNT ACTUALLY SEES — AND IT IS NOT WHAT IT WAS.
-      //
-      // This assertion used to read the other way round: ProjectContext seeded
-      // a "Default Project" into any account that had none, so the empty state
-      // was unreachable signed in and the seed had already spent one of the
-      // three free slots. It was recorded here as a fact and put to the founder
-      // in #436's PR, because the decision was his. He answered on 2026-09-10:
-      // drop the seed. So a new account starts genuinely empty, the empty state
-      // is the first thing it sees, and no card exists that nobody made.
-      // tests/user-sim/73-founder-calls-0910.spec.js holds the whole of it.
+      // A new account starts empty, with no seeded "Default Project";
+      // 73-hero-headline-new-account holds the whole of it.
       await expect(page.locator('.uh-grid .proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Create your first project' })).toHaveCount(1)
+      await expect(page.getByRole('button', { name: 'Start a project' })).toHaveCount(1)
 
-      const opener = page.getByRole('button', { name: 'New Project' })
-      await opener.focus()
+      // New project goes straight into the Palette Builder on a new, unsaved
+      // project, named when it is saved.
+      await page.getByRole('button', { name: 'New project' }).focus()
       await page.keyboard.press('Enter')
-      const dialog = page.getByRole('dialog', { name: 'New project' })
-      await expect(dialog).toBeVisible()
-      expect(await focused(page), 'the name field takes focus').toMatch(/^input#proj-new-name/)
+      await expect(page).toHaveURL(/\/create\/palette$/)
 
-      // Way back first: Escape closes and returns focus to the opener.
-      await page.keyboard.press('Escape')
-      await expect(dialog).toHaveCount(0)
-      await expect.poll(() => focused(page), 'Escape must hand focus back to the opener').toMatch(/New Project/)
+      await page.getByRole('button', { name: /^Save current/ }).click()
+      const field = page.locator('.plb-savemenu').getByLabel('Project name')
+      await field.fill('Brand v1')
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.toast.show')).toContainText('Project saved')
 
-      // Then the way through.
-      await page.keyboard.press('Enter')
-      await expect(dialog).toBeVisible()
-      await page.keyboard.type('Brand v1')
-      await page.keyboard.press('Enter')
-      await expect(dialog).toHaveCount(0)
-      await expect(page.locator('.toast.show')).toContainText('Created "Brand v1"')
+      await go(page, '/projects')
       await expect(page.locator('.uh-grid .proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
       await context.close()
     })
@@ -183,21 +170,19 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
 // FLOW 2 — the free cap → Pro → checkout return
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', () => {
-  async function saveCurrent(page, name) {
-    await page.getByRole('button', { name: 'Save Current' }).click()
-    await page.getByPlaceholder(/Brand v1/i).fill(name)
-    await page.getByRole('button', { name: 'Save', exact: true }).click()
-  }
-
+  // Starting a new project at the cap. New project opens the Palette Builder rather than a form, so at the cap the
+  // button itself answers — in place, in ProjectContext's words, with a way
+  // forward — instead of opening a project that could never be saved. (The
+  // builder's own save refusal is held by 72-flow-followups, section 3.)
   for (const size of WIDTHS) {
-    test(`${size[0]}px: the ${CAP + 1}th save is refused under the field, in the product's words, with a way forward`, async ({ browser }) => {
+    test(`${size[0]}px: New project at the cap is refused in place, in the product's words, with a way forward`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a free account at the cap (${size[0]}px)`)
       const account = await signIn(page, { plan: 'free', projects: CAP })
       await go(page, '/projects')
-      await saveCurrent(page, 'One Too Many')
+      await page.getByRole('button', { name: 'New project' }).click()
 
-      const refusal = page.getByTestId('project-save-refusal')
+      const refusal = page.getByTestId('project-create-refusal')
       await expect(refusal).toBeVisible()
       await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
       await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
@@ -206,48 +191,25 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
       // And it STAYS. The toast this replaced was gone in 1.8 seconds.
       await page.waitForTimeout(2500)
       await expect(refusal, 'the refusal must outlive a toast').toBeVisible()
-      // The form is still there to act on, name intact.
-      await expect(page.getByPlaceholder(/Brand v1/i)).toHaveValue('One Too Many')
+      await expect(page, 'and nothing was opened behind it').toHaveURL(/\/projects$/)
 
       const stored = await page.evaluate(
         (email) => JSON.parse(localStorage.getItem('vs-projects') || '{}')[email]?.length ?? -1,
         account.email,
       )
       expect(stored, 'nothing may be written once the cap is reached').toBe(CAP)
-
-      // Cancel clears it, so a stale refusal cannot greet the next attempt.
-      await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-      await expect(refusal).toHaveCount(0)
       await context.close()
     })
   }
 
-  test('one under the cap saves and says so — the control', async ({ browser }) => {
+  test('one under the cap opens the Palette Builder and says nothing — the control', async ({ browser }) => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account with a slot to spare')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/projects')
-    await saveCurrent(page, 'Room To Spare')
-    await expect(page.getByTestId('project-save-refusal')).toHaveCount(0)
-    await expect(page.locator('.toast-success.show')).toContainText('Saved "Room To Spare"')
-    await context.close()
-  })
-
-  test('the New project dialog is refused the same way, and stays open to act on', async ({ browser }) => {
-    const { context, page } = await open(browser, WIDTHS[1])
-    watch(page, 'a free account at the cap using New Project')
-    await signIn(page, { plan: 'free', projects: CAP })
-    await go(page, '/projects')
-    await page.getByRole('button', { name: 'New Project' }).click()
-    const dialog = page.getByRole('dialog', { name: 'New project' })
-    await page.locator('#proj-new-name').fill('Fourth')
-    await page.getByRole('button', { name: 'Create project' }).click()
-
-    const refusal = page.getByTestId('project-create-refusal')
-    await expect(refusal).toBeVisible()
-    await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
-    await expect(dialog, 'the dialog must not close over its own refusal').toBeVisible()
-    await expect(page.locator('.toast-success.show')).toHaveCount(0)
+    await page.getByRole('button', { name: 'New project' }).click()
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expect(page.getByTestId('project-create-refusal')).toHaveCount(0)
     await context.close()
   })
 })
@@ -256,11 +218,19 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
   // The book's wall, which every width and both plans can reach from the
   // nav at 1280. (At 390 the nav's Export button is display:none and the
   // panel has no other entry — recorded in the PR, not asserted here.)
+  // The modal is raised from the palette's colour-system wall. The export
+  // panel's "Unlock with Pro" goes straight to /plans and raises no modal at all — see the
+  // export test in flow 4. Keyboard activation for the reason the phone test
+  // above gives.
   async function raiseWall(page) {
-    await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-    await page.getByRole('radio', { name: /Design system book/i }).click()
-    await page.getByRole('button', { name: /Unlock with Pro/i }).click()
-    const modal = page.getByRole('dialog', { name: /Export the design system book/i })
+    // The colour system is a select on the toolbar, or in its Tools overflow
+    // when the row has no room; a Pro system raises the wall.
+    const system = page.getByRole('combobox', { name: 'Colour system' }).first()
+    if (!(await system.isVisible())) await page.getByRole('button', { name: /^Tools/ }).click()
+    // A person changing a select has it focused; selectOption alone does not.
+    await system.focus()
+    await system.selectOption({ label: 'Analogous (Pro)' })
+    const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
     await expect(modal).toBeVisible()
     return modal
   }
@@ -304,13 +274,11 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
       await signIn(page, { plan: 'free' })
       await go(page, '/create/palette')
-      await page.locator('button', { hasText: /SYSTEM/i }).first().click()
-      // Keyboard activation on purpose: at 390 the palette's sticky adjust
-      // footer intercepts pointer events over this menu (a PaletteBuilder
-      // finding, in the PR). Enter on the focused item is the real keyboard path.
-      const locked = page.locator('.plb-harmmenu button', { hasText: /Analogous/i }).first()
-      await locked.focus()
-      await page.keyboard.press('Enter')
+      // On a phone the System select is in the palette's Tools sheet; its
+      // paid options read "(Pro)" and choosing one raises the wall.
+      const tools = await openPaletteTools(page)
+      await tools.getByRole('combobox', { name: 'Colour system' }).selectOption('analogous')
+      await expect(tools).toHaveCount(0)
       const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
       await expect(modal).toBeVisible()
       const err = modal.locator('.ui-pro-plans-err')
@@ -397,7 +365,10 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     // Declining is a real button and it hands focus back to the wall's opener.
     await modal.getByRole('button', { name: 'Maybe later' }).click()
     await expect(modal).toHaveCount(0)
-    await expect.poll(() => focused(page), 'Maybe later must return focus to the Unlock button').toMatch(/Unlock with Pro/)
+    // The opener is a row of a menu that unmounts behind the modal, so focus
+    // lands on the nearest surviving ancestor in useModalDialog's chain: the
+    // colour-system trigger. What must never happen is focus dropped on <body>.
+    await expect.poll(() => focused(page), 'Maybe later must return focus to the wall, not drop it').not.toMatch(/^(body|none)/)
     await context.close()
   })
 })
@@ -415,7 +386,11 @@ test.describe('flow 2 — the checkout return page', () => {
 
       const card = page.locator('.checkout-return-card')
       await expect(card.getByRole('heading')).toContainText(/on UIL4B Pro/i)
-      await expect(card).toContainText('pro.user@uil4b.test')
+      // No "a confirmation has been sent to …": whether Stripe emails a
+      // receipt is a dashboard setting nobody here can see, so the page no
+      // longer claims one was sent (or names the address it went to).
+      await expect(card).not.toContainText(/confirmation has been sent/i)
+      await expect(card).not.toContainText('pro.user@uil4b.test')
       await expect(card).toContainText('cs_test_flow_audit')
       await expect(card.getByRole('link', { name: 'Start building' })).toHaveAttribute('href', '/projects')
       await expect(card.getByRole('link', { name: 'Manage subscription' })).toHaveAttribute('href', '/settings')
@@ -504,8 +479,9 @@ test.describe('flow 3 — a generated starter touches nothing until asked, on th
       await page.getByTestId('brand-starter-open-fonts').click()
       await expect(page).toHaveURL(/\/create\/font-pair$/)
       // THE ARRIVAL: the tool shows the pairing the visitor asked to open.
-      await expect(page.locator('.sec').first()).toContainText('Manrope')
-      await expect(page.locator('.sec').first()).toContainText('Lora')
+      const pair = page.getByRole('group', { name: 'Current font pair' })
+      await expect(pair).toContainText('Manrope')
+      await expect(pair).toContainText('Lora')
       await context.close()
     })
   }
@@ -516,14 +492,22 @@ test.describe('flow 3 — a generated starter touches nothing until asked, on th
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('flow 4 — each live free format downloads under its own name', () => {
   const FREE_LIVE = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
-  const EXT = { html: 'html', md: 'md', png: 'png', jpeg: 'jpg' }
+  // Each free format and the file name it must download under.
+  const FILE = {
+    html: /-style-guide\.html$/,
+    md: /-style-guide\.md$/,
+    png: /-style-guide\.png$/,
+    jpeg: /-style-guide\.jpg$/,
+    css: /\.tokens\.css$/,
+    json: /\.tokens\.json$/,
+  }
 
-  test('the four style-guide formats each produce a file named for the format', async ({ browser }) => {
+  test('every free format produces a file named for the format', async ({ browser }) => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account exporting every format it is entitled to')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/create/palette')
-    expect(FREE_LIVE.map((f) => f.id).sort()).toEqual(Object.keys(EXT).sort())
+    expect(FREE_LIVE.map((f) => f.id).sort()).toEqual(Object.keys(FILE).sort())
 
     for (const fmt of FREE_LIVE) {
       await page.getByRole('button', { name: 'Export', exact: true }).first().click()
@@ -536,7 +520,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
       await expect(cta).not.toContainText(/Pro|Soon/)
       const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
       expect(download.suggestedFilename(), `${fmt.name} must download as its own format`)
-        .toMatch(new RegExp(`-style-guide\\.${EXT[fmt.id]}$`))
+        .toMatch(FILE[fmt.id])
       // The panel closes after a successful export; the page is still the tool.
       await expect(panel).toHaveCount(0)
     }
@@ -551,8 +535,11 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await page.getByRole('radio', { name: /Brand guidelines/i }).click()
     await expect(page.locator('.exp-foot button').last()).toHaveText('Unlock with Pro')
+    // The wall goes to /plans, and asks
+    // for nothing on the way.
     await page.getByRole('button', { name: /Unlock with Pro/i }).click()
-    await expect(page.getByRole('dialog', { name: /Export the brand guidelines/i })).toBeVisible()
+    await expect(page).toHaveURL(/\/plans(\?|$)/)
+    await expect(page.getByRole('dialog')).toHaveCount(0)
     await context.close()
   })
 })
@@ -563,7 +550,9 @@ test.describe('flow 4 — each live free format downloads under its own name', (
 test.describe('flow 5 — settings: name, theme and the delete confirmation', () => {
   async function accountTab(page) {
     await go(page, '/settings')
-    await page.getByRole('tab', { name: 'Account', exact: true }).click()
+    // A tab on desktop, a row that opens the section on a phone:
+    // the same element either way.
+    await page.locator('#settab-account').click()
   }
 
   for (const size of WIDTHS) {
@@ -618,7 +607,7 @@ test.describe('flow 5 — settings: name, theme and the delete confirmation', ()
     watch(page, 'someone switching theme on a phone')
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
-    await page.getByRole('tab', { name: 'Accessibility', exact: true }).click()
+    await page.locator('#settab-accessibility').click()
     const html = page.locator('html')
     await page.locator('[data-theme-choice="dark"]').click()
     await expect(html).toHaveAttribute('data-theme', 'dark')

@@ -34,12 +34,17 @@ const PERSONA = 'someone who followed a dead link and is looking for a way out'
 // The widths the collision was measured at, plus 1080 tall where it also bit.
 const CASES = [[981, 900], [1440, 900], [1920, 1080]]
 
+// The site footer is on reading and legal pages only, and a 404 is neither, so
+// the shortest footer page is /credits. The fault guarded is the same: the
+// floating button sitting on the footer's last row of controls.
+const FOOTER_ROUTE = '/credits'
+
 test.describe('the feedback button never covers the footer', () => {
   for (const [width, height] of CASES) {
-    test(`the 404 footer stays pressable at ${width}x${height}`, async ({ page }) => {
+    test(`the shortest footer page stays pressable at ${width}x${height}`, async ({ page }) => {
       watch(page, PERSONA)
       await page.setViewportSize({ width, height })
-      await go(page, '/this-page-does-not-exist')
+      await go(page, FOOTER_ROUTE)
       await expectRendered(page)
       await page.evaluate(() => document.querySelector('.app-footer')?.scrollIntoView({ block: 'end', behavior: 'instant' }))
       await page.waitForFunction(() => {
@@ -85,7 +90,7 @@ test.describe('the feedback button never covers the footer', () => {
 
       // ── Positive controls. "Nothing is covered" is trivially true when there
       //    is no FAB to cover anything, or no footer controls to be covered.
-      expect(result.fabPresent, 'the feedback button is not on the 404 at all — this test would pass vacuously').toBe(true)
+      expect(result.fabPresent, 'the feedback button is not on the page at all — this test would pass vacuously').toBe(true)
       expect(result.fabVisible, 'the feedback button is present but not rendered — this test would pass vacuously').toBe(true)
       expect(result.controlsExamined, 'the footer legal row exposed no controls — this test would pass vacuously')
         .toBeGreaterThan(1)
@@ -104,7 +109,7 @@ test.describe('the feedback button never covers the footer', () => {
     // document, so no viewport position can put one over the other.
     watch(page, PERSONA)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/this-page-does-not-exist')
+    await go(page, FOOTER_ROUTE)
     await expectRendered(page)
 
     const gap = await page.evaluate(() => {

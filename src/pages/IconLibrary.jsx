@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useProject } from '../contexts/ProjectContext'
-import { useProModal } from '../contexts/ProModalContext'
+import { useProModal, reportUpgradeGate } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getLenis } from '../hooks/useSmoothScroll'
 import useExportGate from '../hooks/useExportGate'
@@ -232,6 +232,54 @@ const keepStyle = (pack, names, style) => {
   const rule = STYLE_RULES[pack]?.[style]
   return rule ? names.filter(rule) : names
 }
+
+// ── Weights: Regular / Bold / Fill / Duo ─────────────────────────────────────
+// the Regular/Bold/Fill/Duo tabs
+// on the design's phone mock are built for real. A weight is not a CSS effect: it swaps
+// every glyph for the weight the pack's own designers drew, which Iconify
+// serves under a suffix on the same name. Only the packs that DRAW a weight
+// offer it, and the table says exactly which:
+//
+//   Phosphor  (ph)         regular, -bold, -fill, -duotone   — all four
+//   Heroicons              outline, -solid                   — Fill
+//   Tabler                 outline, -filled (a subset)       — Fill
+//   Iconoir                outline, -solid  (a subset)       — Fill
+//
+// Lucide draws one weight and so offers Regular only. A segment the current
+// scope cannot honour is DISABLED with the reason (which packs do draw it),
+// never faked with a thicker stroke. Heroicons' 16px and 20px solid sets are
+// left out: they are drawn for other grids, so they are a size, not a weight.
+//
+// Nothing here widens what is fetched: a weight filters the names of packs the
+// viewer may already browse, so the tier gate is untouched.
+const ICON_WEIGHTS = [
+  { id: 'regular', label: 'Regular' },
+  { id: 'bold', label: 'Bold' },
+  { id: 'fill', label: 'Fill' },
+  { id: 'duo', label: 'Duo' },
+]
+const WEIGHT_RULES = {
+  bold: { ph: n => /-bold$/.test(n) },
+  fill: {
+    ph: n => /-fill$/.test(n),
+    heroicons: n => /-solid$/.test(n) && !/-(?:16|20)-solid$/.test(n),
+    tabler: n => /-filled$/.test(n),
+    iconoir: n => /-solid$/.test(n),
+  },
+  duo: { ph: n => /-duotone$/.test(n) },
+}
+const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
+const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
+// The names one pack shows at one weight. A collection chip (groupKey) is a
+// style of its own and wins; Regular is the pack's own browse style.
+const keepWeight = (pack, names, weight, groupKey = null) => {
+  if (groupKey || weight === 'regular') return keepStyle(pack, names, groupKey || PACK_STYLE[pack])
+  const rule = WEIGHT_RULES[weight]?.[pack]
+  return rule ? names.filter(rule) : []
+}
+const matchesWeight = (pack, name, weight, style) => (
+  weight === 'regular' ? matchesStyle(pack, name, style) : !!WEIGHT_RULES[weight]?.[pack]?.(name)
+)
 
 function buildSvgUrl(host, pack, name, params = {}) {
   let url = `${host}/${pack}/${name}.svg`
@@ -1129,7 +1177,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (!activeIcon || !baseSvgText) return
     const existing = readCustomIcons()
     const used = existing.filter(r => r.projectId === projectId).length
-    if (!isPro && used >= saveLimit) { setSavePickerOpen(false); openInNewTab('/checkout'); return }
+    if (!isPro && used >= saveLimit) { setSavePickerOpen(false); openInNewTab('/plans'); return }
     const base = activeIcon.custom ? activeIcon.base : (activeIcon.cdn || activeIcon.d ? activeIcon.name : 'icon')
     const { iteration, name } = nextCustomName(base, existing)
     const colored = isColoredPack || !!color || (activeIcon.pasted === true && !isStroke)
@@ -1709,6 +1757,36 @@ function packsOnScreen(...lists) {
  * and would also put an unbounded number of extra requests behind a keystroke,
  * on the one surface in this app with a measured history of being rate-limited.
  */
+// The weight segment — Regular / Bold / Fill / Duo, the control the design's phone mock
+// draws under the search (Spectrum "On mobile"). A pill track with the chosen
+// segment lifted onto the card ground, as drawn. A segment the current scope
+// cannot honour is `aria-disabled` rather than `disabled`, so a keyboard user
+// can still reach it and hear WHY (the reason is in its accessible name and
+// its tooltip) instead of meeting a gap in the tab order.
+function IconWeightSeg({ value, stateOf, onChange }) {
+  return (
+    <div className="ig-weight" role="group" aria-label="Icon weight">
+      {ICON_WEIGHTS.map((w) => {
+        const st = stateOf(w.id)
+        return (
+          <button
+            key={w.id}
+            type="button"
+            className="ig-weight-btn"
+            aria-pressed={value === w.id}
+            aria-disabled={!st.ok || undefined}
+            aria-label={st.ok ? w.label : `${w.label} — ${st.why}`}
+            title={st.why || undefined}
+            onClick={() => { if (st.ok) onChange(w.id) }}
+          >
+            {w.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function IconPackCredit({ packs }) {
   const rows = packs.map((prefix) => packCredit(prefix, liveCredit(prefix)) || {
     prefix,
@@ -1806,8 +1884,8 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
 export default function IconLibrary({ onCopy, onCatalogue }) {
   const { isPro, plan } = useSubscription()
   const { user, loading: authLoading } = useAuth()
-  const { openProModal } = useProModal()
   const { requireLogin } = useLoginPrompt()
+  const navigate = useNavigate()
 
   /* ── WHAT THIS VIEWER MAY ASK FOR ────────────────────────────────────────
      Derived once, here, and every fetch path below is scoped by it. The check
@@ -1870,6 +1948,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const [loadError, setLoadError] = useState(false)
   const [activeCat] = useState('all')
   const [pack, setPack] = useState('')
+  // The weight is read through a ref by the browse functions, so choosing one
+  // can re-run the current scope in the same tick (see handleWeight).
+  const [weight, setWeight] = useState('regular')
+  const weightRef = useRef('regular')
   const [group, setGroup] = useState(null)   // active cross-pack collection, or null
   const [source, setSource] = useState('all')  // all | group | pack | custom | search
   /* The pack or group the viewer chose and may not have: `{ kind, label, need }`
@@ -2002,7 +2084,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (allowedPacks.every(p => COLLECTION_CACHE.has(p))) {
       cdnOk.current = true
       allowedPacks.forEach((p, idx) => {
-        const names = keepStyle(p, COLLECTION_CACHE.get(p).names, PACK_STYLE[p]).slice(0, perPackCap)
+        const names = keepWeight(p, COLLECTION_CACHE.get(p).names, weightRef.current).slice(0, perPackCap)
         lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
       })
       const merged = capList(lists.flat())
@@ -2022,7 +2104,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           if (rid !== reqId.current) return
           cdnOk.current = true
           okCount++
-          const names = keepStyle(p, raw, PACK_STYLE[p]).slice(0, perPackCap)
+          const names = keepWeight(p, raw, weightRef.current).slice(0, perPackCap)
           lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
           // Default sort = pack-by-pack: lists stays in allowedPacks order and
           // each pack's icons are contiguous, so flat() groups every pack
@@ -2140,7 +2222,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
-        const names = capList(keepStyle(packFilter, raw, groupKey || PACK_STYLE[packFilter]))
+        const names = capList(keepWeight(packFilter, raw, weightRef.current, groupKey))
+        // A weight this pack does not draw is an empty answer, not a failure:
+        // the built-in fallback would show Regular glyphs under a Bold label.
+        if (!names.length && weightRef.current !== 'regular' && !groupKey) {
+          setIcons([]); setVisible(PAGE_SIZE); setLoading(false)
+          setMode(`${title} · no ${weightRef.current} weight`)
+          return
+        }
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
@@ -2282,7 +2371,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         const items = capList(d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
-          .filter(ic => matchesStyle(ic.pack, ic.name, style)))
+          .filter(ic => (groupKey ? matchesStyle(ic.pack, ic.name, style) : matchesWeight(ic.pack, ic.name, weightRef.current, style))))
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
@@ -2411,9 +2500,39 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (p === 'custom') { setQuery(''); browseCustom(); return }
     const nextPack = p === 'all' ? '' : p
     setPack(nextPack)
+    // A pack that does not draw the chosen weight puts it back to Regular, so
+    // the grid shows the pack rather than an empty answer to a question the
+    // visitor asked of a different pack.
+    if (weightRef.current !== 'regular' && nextPack && !weightPacks(weightRef.current).includes(nextPack)) {
+      weightRef.current = 'regular'
+      setWeight('regular')
+    }
     if (query.trim().length >= 2) doSearch(query, { pack: nextPack, group })
     else if (nextPack) browsePack(nextPack, group)
     else if (group) browseGroup(group)
+    else browseAll()
+  }
+
+  // Which weights the current scope can honour, and why not when it cannot.
+  // "All packs" can show a weight when any pack the viewer may browse draws
+  // it; a single pack only when that pack does.
+  const weightState = (w) => {
+    if (w === 'regular') return { ok: true }
+    const drawn = weightPacks(w)
+    const scope = pack && pack !== 'custom' ? [pack] : allowedPacks
+    const ok = scope.some((p) => drawn.includes(p))
+    const who = drawn.map((p) => WEIGHT_PACK_NAMES[p]).join(', ')
+    return { ok, why: ok ? (pack ? '' : `Drawn by ${who}`) : `${ICON_WEIGHTS.find((x) => x.id === w).label} is drawn by ${who} only` }
+  }
+  const handleWeight = (w) => {
+    if (w === weight || !weightState(w).ok) return
+    clearTimeout(timer.current)
+    weightRef.current = w
+    setWeight(w)
+    setGroup(null)
+    const q = query.trim()
+    if (q.length >= 2) doSearch(query, { pack, group: null })
+    else if (pack && pack !== 'custom') browsePack(pack, null)
     else browseAll()
   }
 
@@ -2424,6 +2543,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const q = query.trim()
     const nextGroup = group === key ? null : key
     setGroup(nextGroup)
+    // A collection chip ("Outlined", "Solid", …) is a style of its own, so
+    // choosing one puts the weight back to Regular rather than composing two
+    // style answers into an empty grid.
+    if (nextGroup) { weightRef.current = 'regular'; setWeight('regular') }
     if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
     else if (pack) browsePack(pack, nextGroup)
     else if (nextGroup) browseGroup(nextGroup)
@@ -2745,8 +2868,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (need === 'free') { requireLogin('browse every icon pack'); return }
     // `gate` is what trackUpgradeGate measures this wall as. Without it the
     // whole surface would report as the modal's own title.
-    openProModal({ gate: 'icon-pack-tier' })
-  }, [requireLogin, openProModal])
+    // A Pro pack's wall goes to /plans, reporting the
+    // same gate id the modal used to.
+    reportUpgradeGate('icon-pack-tier')
+    navigate('/plans')
+  }, [requireLogin, navigate])
 
   // Shared glyph renderer — one code path for custom (saved), CDN and embedded
   // icons, reused by the main grid and both My Icons sections.
@@ -2811,10 +2937,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // remaining path from a cell to api.iconify.design. A cell for a gated pack
   // should never be on screen; if one ever is, hovering it must not be what
   // fetches the markup every other path in this file refused to.
+  // `is-picked` is the design's selected tile (accent wash over an accent
+  // hairline): the one whose customizer is open. Matched on pack + name, the
+  // same identity the customizer's own key is built from below.
+  const isPicked = (icon) => !!selected && selected.name === icon.name
+    && (selected.pack || null) === (icon.pack || null) && !!selected.custom === !!icon.custom
   const renderCell = (icon, idx, showPack = false) => (
     <div
-      key={icon.id || icon.key || `${idx}-${icon.name || ''}`}
-      className="ic"
+      // THE KEY CARRIES THE POSITION. The built-in set repeats ids across its
+      // pages ("flag" is in two of them), and with two pages loaded React met
+      // the duplicate and left an orphan cell behind that no later render
+      // removed: a stray "flag" sat at the head of every pack's grid, and an
+      // uncovered pack showed that one cell above its empty state. Grids here
+      // only ever grow at the end (infinite scroll) or are replaced whole (a
+      // new pack or query), so a position prefix costs no reconciliation.
+      key={`${idx}:${icon.id || icon.key || icon.name || ''}`}
+      className={isPicked(icon) ? 'ic is-picked' : 'ic'}
       role="button"
       tabIndex={0}
       aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
@@ -2913,6 +3051,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             which is what "consistent" has to mean for a control this size. */}
         <LibraryToolbar
           className="ig-toolbar"
+          quick={0}
+          activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' ? 1 : 0)}
           search={{
             value: query,
             onChange: handleQueryChange,
@@ -2922,10 +3062,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           action={(
             <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              Add icon
+              <span className="ig-addbtn-label">Add icon</span>
             </button>
           )}
         >
+          {/* FIRST, so a phone keeps it on screen under the search (the
+              toolbar's quick row) exactly where the design's phone mock draws it; the
+              pack menu and the collection chips go to the Filters sheet. */}
+          <IconWeightSeg value={weight} stateOf={weightState} onChange={handleWeight} />
           <select className="lbry-select" value={selectValue} onChange={handlePackChange} aria-label="Icon pack">
             <option value="all">All packs</option>
             <optgroup label="Yours">
@@ -3004,7 +3148,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               {!isPro && (
                 <p className="ig-custom-hint">
                   Free plan saves up to {customIconLimit} icons per project ·{' '}
-                  <button type="button" className="ig-custom-hint-link" onClick={() => openInNewTab('/checkout')}>Go Pro for unlimited</button>
+                  <button type="button" className="ig-custom-hint-link" onClick={() => openInNewTab('/plans')}>Go Pro for unlimited</button>
                 </p>
               )}
             </section>

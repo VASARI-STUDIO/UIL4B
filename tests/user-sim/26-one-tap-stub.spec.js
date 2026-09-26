@@ -7,7 +7,7 @@
 // `assertOneTapNeverLeft()` in the global teardown, which fails the whole run if
 // a single response from accounts.google.com arrived without the stub's header.
 //
-// Numbered 26 rather than 25: 25 is claimed by the defect-sweep spec in flight
+// Numbered 26 rather than 25: 25 is claimed by the layout-target-sweep spec in flight
 // alongside this branch.
 //
 // Each case injects the exact script tag src/components/GoogleOneTap.jsx

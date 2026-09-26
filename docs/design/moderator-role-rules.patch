@@ -2,25 +2,13 @@ diff --git a/firestore.rules b/firestore.rules
 index 5360bda9..0b12de73 100644
 --- a/firestore.rules
 +++ b/firestore.rules
-@@ -26,6 +26,27 @@ service cloud.firestore {
+@@ -26,6 +26,15 @@ service cloud.firestore {
          .hasAny(lockedUserFields());
      }
  
-+    // A REVIEWER is the founder, or somebody he has put on the moderator roster.
-+    //
-+    // `admin` is minted by api/verify-admin.js from a Firebase-VERIFIED email
-+    // checked against a server-side allowlist. `moderator` is minted by the same
-+    // route from the `moderators` roster, which is Admin-SDK-only and has no
-+    // rules block of its own — Firestore denies by default, so no browser can
-+    // read the roster, enumerate who holds power here, or write itself into it.
-+    //
-+    // Neither claim is reachable from the client: setCustomUserClaims is a
-+    // server call, and src/ is guarded by a test that fails if any file under it
-+    // so much as names the roster collection.
-+    //
-+    // NOTE the deliberate limit: this widens who may REVIEW. It does not widen
-+    // users/{uid}, which stays owner-only and still refuses every entitlement
-+    // field, and it does not widen analytics-daily.
++    // A reviewer holds the `admin` or `moderator` custom claim. Both claims are
++    // set server-side by api/verify-admin.js. Reviewers get no additional access
++    // to users/{uid} or analytics-daily.
 +    function isReviewer() {
 +      return request.auth != null
 +        && (request.auth.token.admin == true
@@ -30,17 +18,12 @@ index 5360bda9..0b12de73 100644
      // User profiles — only the owner can read/write, and never the billing fields
      match /users/{userId} {
        function isOwner() {
-@@ -51,21 +72,24 @@ service cloud.firestore {
+@@ -51,21 +60,19 @@ service cloud.firestore {
        }
      }
  
 -    // Feedback — anyone can create, only admin can read/update/delete
 +    // Feedback — anyone can create, only a reviewer can read/update/delete.
-+    //
-+    // The reporter's email address lives on these documents. Who may SEE it is a
-+    // narrower question than who may triage, and a rule cannot express "this
-+    // field but not that one" on a read — so it is answered on the client by
-+    // canSeeReporterEmail (founder only). A moderator can read the document.
      match /feedback/{feedbackId} {
        allow create: if true;
 -      allow read, update, delete: if request.auth != null
@@ -61,7 +44,7 @@ index 5360bda9..0b12de73 100644
      }
  
      // Community submissions — the shared review queue for gradients, designs
-@@ -81,7 +105,6 @@ service cloud.firestore {
+@@ -81,7 +88,6 @@ service cloud.firestore {
      // something from the queue, never promote it.
      match /community-submissions/{submissionId} {
        function isSignedIn() { return request.auth != null; }
@@ -69,15 +52,11 @@ index 5360bda9..0b12de73 100644
        function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
  
        // A client may only ever create its OWN submission, and only as
-@@ -96,18 +119,23 @@ service cloud.firestore {
-       // Reviewers decide. This is the write that never worked: the `admin`
-       // claim was gated on here and NOTHING in the codebase ever called
-       // setCustomUserClaims, so every moderation write was rejected.
--      // api/verify-admin.js now grants it, from a server-verified email.
+@@ -96,14 +102,14 @@ service cloud.firestore {
+       // Reviewers decide.
+-      // api/verify-admin.js grants the `admin` claim from a verified email.
 -      allow update: if isAdmin()
-+      // api/verify-admin.js now grants it from a server-verified email — and
-+      // grants `moderator` from the roster, so the founder is no longer the only
-+      // person who can clear this queue.
++      // api/verify-admin.js sets the `admin` and `moderator` claims.
 +      allow update: if isReviewer()
          || (isOwner() && request.resource.data.status == 'withdrawn'
              && request.resource.data.authorUid == resource.data.authorUid);
@@ -89,11 +68,6 @@ index 5360bda9..0b12de73 100644
      // Aggregate usage analytics — per-day counter docs ({YYYY-MM-DD}).
      // Any signed-in user may create/update (increment) the counters so the
      // admin dashboard can reflect ALL users' usage. Read is gated to the owner
--    // email (the Firebase `admin` custom claim is never set in this project).
-+    // email. (The `admin` custom claim IS set — api/verify-admin.js has minted it
-+    // since #241 — but this rule predates that and still matches on email. It is
-+    // deliberately NOT widened to isReviewer(): reviewing submissions is not a
-+    // reason to hand a volunteer site-wide usage analytics.)
-     // Note: this cannot fully prevent a signed-in user inflating counters —
-     // accepted limitation for an internal, non-billing dashboard.
+-    // email.
++    // email. Reviewers are not granted read access.
      match /analytics-daily/{day} {

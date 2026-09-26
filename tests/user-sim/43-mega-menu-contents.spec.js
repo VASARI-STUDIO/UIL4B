@@ -33,11 +33,12 @@ import { test, expect } from './base.js'
 import { watch, go } from './helpers.js'
 import { GALLERY_PALETTES } from '../../src/data/paletteGallery.js'
 import { inkFor, grade } from '../../src/utils/styleGuideExport.js'
-import { GALLERY_GRADIENTS, gradientCss } from '../../src/data/gradientGallery.js'
+import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { readingMinutes } from '../../src/data/learnIndex.js'
 
-// ── DRIVEN FROM AN APP ROUTE, NOT FROM '/' (2026-09-22) ───────────────────
+// ── DRIVEN FROM AN APP ROUTE, NOT FROM '/' ───────────────────
 //
 // This panel belongs to the APP HEADER (PillNav). The front door is Spectrum
 // now and mounts <PillNav variant="spectrum" />, which is a different nav
@@ -144,7 +145,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     // swatch rail plus "Ag" and "0123 abc" — the INGREDIENTS, never the
     // artefact — beside a card selling a flow whose whole point is what you get
     // at the end. It is page 2 of the style guide now.
-    const chips = page.locator('.pnav-prev--create .pnav-prev-chip')
+    const chips = page.locator('#pnav-mega .pnav-prev-chip')
     const expected = GALLERY_PALETTES[0].colors
     await expect(chips).toHaveCount(expected.length)
 
@@ -184,95 +185,81 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     expect(inks).toEqual(expected.map((hex) => (inkFor(hex).ink === '#000000' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)')))
   })
 
-  test('the Discover card previews real gradients at their stored angles', async ({ page }) => {
+
+  // The Discover pane is the App file's 2×2 of
+  // counts (lines 176-190), not the three gradient tiles. The design file typed "71"
+  // and "100"; these are counted from the galleries the pages render.
+  test('the Discover pane counts its libraries from the data the galleries render', async ({ page }) => {
     watch(page, 'a designer scanning for something worth a tab')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Discover')
 
-    const tiles = page.locator('.pnav-prev--discover .pnav-prev-grad')
-    await expect(tiles).toHaveCount(3)
-
-    // The angle is the assertion. A gradient rendered at a default 180deg would
-    // look plausible and be a different object from the one the gallery ships.
-    const painted = await tiles.evaluateAll((els) => els.map((el) => el.style.backgroundImage))
-    const expected = GALLERY_GRADIENTS.slice(0, 3).map((g) => gradientCss(g.type, g.angle, g.stops))
-
-    // Normalise the expected strings through the SAME CSS parser that produced
-    // the painted ones -- the browser rewrites #FF512F as rgb(255, 81, 47), so a
-    // raw string compare fails on notation while the gradients are identical.
-    // Round-tripping both sides keeps the assertion about the gradient rather
-    // than about hex formatting.
-    const normalised = await page.evaluate((list) => list.map((css) => {
-      const probe = document.createElement('div')
-      probe.style.backgroundImage = css
-      return probe.style.backgroundImage
-    }), expected)
-
-    expect(painted).toEqual(normalised)
-    expect(normalised.some((css) => /\d+deg/.test(css))).toBe(true)
+    const counts = page.locator('#pnav-mega .pnav-dcount-n')
+    await expect(counts).toHaveCount(4)
+    const values = (await counts.allTextContents()).map((t) => t.trim())
+    expect(values.slice(0, 2)).toEqual([String(GALLERY_PALETTES.length), String(GALLERY_GRADIENTS.length)])
+    // The gradient strip is a real gallery gradient, not a decorative ramp.
+    const strip = await page.locator('#pnav-mega .pnav-dcount-strip').nth(1).evaluate((el) => el.style.backgroundImage)
+    expect(strip).toContain('linear-gradient')
+    const cta = page.locator('#pnav-mega .pnav-editorial-cta')
+    await expect(cta).toHaveText(/Open Discover/)
+    await expect(cta).toHaveAttribute('href', '/discover')
   })
 
-  test('Learn gets no preview at all, because Learn is not built', async ({ page }) => {
+
+  // Learn is BUILT now (seven guides), and the App file's Learn pane lists the
+  // guides with a mono reading time (lines 192-200). Each time is computed from
+  // the article's measured word count, never typed.
+  test('the Learn pane lists every published guide with its reading time', async ({ page }) => {
     watch(page, 'a visitor checking whether the guides exist yet')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Learn')
 
-    // Not "an empty box" and not "a book illustration" -- no frame either. The
-    // absence is the honest signal, and it is only honest if it is total.
-    await expect(page.locator('#pnav-mega .pnav-editorial-visual')).toHaveCount(0)
-    await expect(page.locator('#pnav-mega .pnav-prev')).toHaveCount(0)
-
-    // Every Learn row is Soon today, so the panel must not offer a "start here"
-    // action it cannot honour.
-    await expect(page.locator('#pnav-mega .pnav-editorial-cta')).toHaveCount(0)
+    const rows = page.locator('#pnav-mega .pnav-guide')
+    await expect(rows).toHaveCount(LEARN_ARTICLES.length)
+    await expect(page.locator('#pnav-mega .pnav-guide-label')).toHaveText(LEARN_ARTICLES.map((a) => a.title))
+    await expect(page.locator('#pnav-mega .pnav-guide-mins')).toHaveText(LEARN_ARTICLES.map((a) => `${readingMinutes(a.words)} MIN`))
+    const cta = page.locator('#pnav-mega .pnav-editorial-cta')
+    await expect(cta).toHaveText(/Read the guides/)
+    await expect(cta).toHaveAttribute('href', '/learn')
   })
 
-  test('the Create card names the guided path and launches it', async ({ page }) => {
+
+  test('the Create pane launches the guided path', async ({ page }) => {
     watch(page, 'a new visitor asking which tool to open first')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
-
-    const labels = guideStepLabels()
-    expect(labels.length).toBeGreaterThan(2)
-    await expect(page.locator('#pnav-mega .pnav-step-label')).toHaveText(labels)
-    await expect(page.locator('#pnav-mega .pnav-step-n').first()).toHaveText('1')
-
-    // The button the card's own copy has always promised. It was in the data and
-    // on the mobile sheet, and the desktop panel dropped it.
+    // The numbered step list gave way to the export-page preview (
+    // the export-page preview inside the file's pane layout). The step names still
+    // appear once the flow runs, in its own step bar.
+    expect(guideStepLabels().length).toBeGreaterThan(2)
     const cta = page.locator('#pnav-mega .pnav-editorial-cta')
     await expect(cta).toBeVisible()
+    await expect(cta).toHaveText(/Build a brand kit|Resume:/)
     await cta.click()
-    // MOVED DELIBERATELY, 2026-09-05, and the old value is worth recording
-    // because it did not go stale -- IT PINNED A DEFECT. This line asserted
-    // /create/color and justified it as "the merged studio". That stopped being
-    // true: App.jsx routes /create/color to ColorLanding, the compressed colour
-    // SALES page, and ColorStudio -- the only page that rendered the guide's
-    // colour step -- moved to /create/semantic-color. So the guided flow landed
-    // on a page of links with no step bar and no step one, and this assertion
-    // stayed green through all of it, because it checked the URL rather than
-    // whether anything was there when you arrived.
-    //
-    // Step one is /create/palette now: a live tool, and the one that writes
-    // design.palette, which is what the walkthrough reads to know the step is
-    // done. tests/unit/brand-kit-guide.test.js checks every step path against
-    // liveToolRoutes() so this cannot rot the same way twice, and
-    // 53-brand-kit-walkthrough.spec.js asserts the flow is RUNNING on arrival
-    // rather than only that the URL changed.
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
     await expect(page.getByRole('region', { name: 'Brand kit walkthrough' })).toBeVisible()
   })
 
-  test('column heads wear their own category hue instead of one shared accent', async ({ page }) => {
+
+  // The App file's group labels (line 135) are one quiet mono caption in the
+  // faint ink, sentence case, with no rule — and its rows carry no category
+  // colour. There are no hue rules.
+  test('group labels are the file\'s quiet mono captions: one colour, no rule, sentence case', async ({ page }) => {
     watch(page, 'a scanner trying to tell six columns apart')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
-
-    const rules = await page.locator('#pnav-mega .pnav-col-label').evaluateAll(
-      (els) => els.map((el) => getComputedStyle(el, '::before').backgroundColor),
-    )
-    // Six columns previously drew one identical accent rule. At least three
-    // distinct hues now, which is what stops the panel reading as one field.
-    expect(new Set(rules).size).toBeGreaterThanOrEqual(3)
+    const labels = await page.locator('#pnav-mega .pnav-col-label').evaluateAll((els) => els.map((el) => {
+      const cs = getComputedStyle(el)
+      return { color: cs.color, size: cs.fontSize, transform: cs.textTransform, rule: getComputedStyle(el, '::before').content }
+    }))
+    expect(labels.length).toBeGreaterThanOrEqual(6)
+    expect(new Set(labels.map((l) => l.color)).size).toBe(1)
+    for (const l of labels) {
+      expect(l.size).toBe('9.5px')
+      expect(l.transform).toBe('none')
+      expect(['none', 'normal']).toContain(l.rule)
+    }
   })
 
   // ── The fifteen-part keyboard contract, on the new markup ────────────────
@@ -309,7 +296,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     // keyboard before this pass, jumped over in each direction by the Tab
     // bridge, so naming them is what stops that regressing quietly.
     //
-    // BY NAME, NOT BY INDEX, since the Spectrum rebuild (2026-09-18). This read
+    // BY NAME, NOT BY INDEX, since the Spectrum rebuild. This read
     // `items[0]` for the guided CTA, which encoded the old DOM order: the promo
     // card was the FIRST child of .pnav-menu-cols and the tool columns came
     // after it. `UIL4B App.dc.html` puts the promo pane on the right, and the
@@ -321,12 +308,11 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     // endpoints are pinned separately below.
     const names = items.join(' | ')
     expect(names, 'the guided CTA fell out of the keyboard ring again').toMatch(/Build a brand kit|Resume:/)
-    expect(names, 'the "how it works" link fell out of the keyboard ring').toContain('How UIL4B works')
-    expect(names, 'the view-all fell out of the keyboard ring').toContain('Explore Create')
+    expect(names, 'the view-all fell out of the keyboard ring').toContain('View all create tools')
     // The ring still opens on a real destination and ends on the panel's
     // view-all, which is the last thing in the card's DOM.
     expect(items[0]).toContain('Palette')
-    expect(items[items.length - 1]).toContain('Explore Create')
+    expect(items[items.length - 1]).toContain('View all create tools')
     // The trigger handler focuses inside requestAnimationFrame twice over, so
     // every assertion that follows a trigger key has to settle rather than read
     // the first frame. Arrow keys WITHIN the panel move focus synchronously and
@@ -412,30 +398,27 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     expect(isBadge).toBe(false)
   })
 
+
+  // The promo pane no longer hides below 1240 (it moves under the columns), so
+  // the layout hides nothing in the ring today. The filter still matters the
+  // moment it does, so this hides a row and proves ArrowDown steps over it.
   test('the keyboard ring skips items the layout has hidden', async ({ page }) => {
     watch(page, 'a keyboard user on a small laptop')
-    // Below 1240 the editorial card is display:none, and it now carries the
-    // first menu item. querySelectorAll returns elements inside a display:none
-    // subtree and .focus() on one is a silent no-op, so an unfiltered ring would
-    // make ArrowDown appear to do nothing at all in this band.
-    await page.setViewportSize({ width: 1200, height: 860 })
     await go(page, MENU_ROUTE)
-
     const create = page.getByRole('button', { name: 'Create', exact: true })
     await create.focus()
     await create.press('ArrowDown')
     await expect(page.getByRole('region', { name: 'Create menu' })).toBeVisible()
-
-    const hidden = await page.locator('#pnav-mega .pnav-editorial').evaluate((el) => getComputedStyle(el).display)
-    expect(hidden).toBe('none')
-
-    const raw = await page.locator('#pnav-mega [data-pnav-menuitem]').count()
-    const visible = (await ring(page)).length
-    expect(visible).toBeLessThan(raw)
-
-    // Focus landed on something real, and it is the first VISIBLE item.
-    const smallRing = await ring(page)
-    await expect.poll(() => focusedText(page)).toBe(smallRing[0])
+    // Park focus on the third row, hide the first, then Home: the ring must
+    // land on the second row, never on the hidden one (a silent no-op).
+    const second = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('#pnav-mega [data-pnav-menuitem]')]
+      rows[2].focus()
+      rows[0].style.display = 'none'
+      return rows[1].textContent.trim()
+    })
+    await page.keyboard.press('Home')
+    expect(await focusedText(page)).toBe(second)
     const onBody = await page.evaluate(() => document.activeElement === document.body)
     expect(onBody).toBe(false)
   })
@@ -461,9 +444,8 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     expect(sheetBg).toBe('rgb(255, 255, 255)')
 
     // The card, the guided path and the action all survive the theme.
-    await expect(page.locator('#pnav-mega .pnav-prev--create')).toBeVisible()
+    await expect(page.locator('#pnav-mega .pnav-prev')).toBeVisible()
     await expect(page.locator('#pnav-mega .pnav-editorial-cta')).toBeVisible()
-    await expect(page.locator('#pnav-mega .pnav-step-label').first()).toBeVisible()
 
     // And the keyboard contract is not a light-theme feature.
     const create = page.getByRole('button', { name: 'Create', exact: true })
@@ -509,12 +491,13 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
           .map((d) => d.textContent))
         expect(clipped, `${name} at ${size.width}x${size.height} clipped a description`).toEqual([])
 
-        // The 44px target-size floor the row height was relaxed TO, not past.
+        // The file's row is 42px (8px + a 26px tile + 8px). On a mouse that is
+        // well over WCAG 2.5.8's 24px; a coarse pointer gets 44px (global.css).
         const short = await panel.evaluate((el) => [...el.querySelectorAll('.pnav-tool')]
-          .filter((r) => r.getBoundingClientRect().height < 43.5)
+          .filter((r) => r.getBoundingClientRect().height < 41.5)
           .map((r) => r.textContent.trim()))
         expect(short,
-          `${name} at ${size.width}x${size.height} has a row under the 44px target-size floor`,
+          `${name} at ${size.width}x${size.height} has a row under the file's 42px`,
         ).toEqual([])
 
         await page.keyboard.press('Escape')
@@ -583,68 +566,32 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await expect(page.locator('#pnav-mega .pnav-tool-desc')).toHaveCount(0)
   })
 
-  test('an emptied description does not fall through to the page copy behind it', async ({ page }) => {
-    watch(page, 'a visitor reading the Typography column')
+
+  // No row carries a description any more (App lines 138-142: one line each),
+  // so there is nothing that can fall through to landing-page copy.
+  test('no row carries a description, in any menu', async ({ page }) => {
+    watch(page, 'a scanner reading the menu')
     await go(page, MENU_ROUTE)
-    await openWithPointer(page, 'Create')
-
-    // THIS IS THE SUBTLE ONE. menuDescription used a truthiness test, so setting a
-    // key to '' would not have dropped the line -- it would have fallen through to
-    // the group's `desc` in toolTree.js, which is page copy written for a card on
-    // /discover and runs three lines deep in a menu column. The `in` test is what
-    // makes an empty string mean "deliberately none". Deleting the key instead of
-    // emptying it would put a paragraph here and this test is the tripwire.
-    for (const label of ['Font Gallery', 'Font Pair', 'Type Scale', 'Emoji Library']) {
-      const row = page.locator('#pnav-mega .pnav-tool', { hasText: label }).first()
-      await expect(row).toBeVisible()
-      await expect(row.locator('.pnav-tool-desc')).toHaveCount(0)
+    for (const name of TRIGGERS) {
+      await openWithPointer(page, name)
+      await expect(page.locator('#pnav-mega .pnav-tool-desc')).toHaveCount(0)
+      await expect(page.locator('#pnav-mega .pnav-tool').first()).not.toContainText(/Google Fonts catalogue|one seed/)
+      await page.keyboard.press('Escape')
     }
-
-    // THE ROW THAT ACTUALLY BREAKS IS ON DISCOVER, and the four above would not
-    // have caught it. Mutation-checked: reverting `in` to a truthiness test left
-    // all four of them empty and green, because the fall-through only has
-    // somewhere to fall when the tool's id ALSO names a group in toolTree.js, and
-    // Create has no such group. Discover does -- id 'font-gallery' matches the
-    // Discover group of the same id, whose desc is a 79-character sentence
-    // written for a card. That is the assertion with teeth.
-    await page.keyboard.press('Escape')
-    await openWithPointer(page, 'Discover')
-    const discoverFonts = page.locator('#pnav-mega .pnav-tool', { hasText: 'Font Gallery' }).first()
-    await expect(discoverFonts).toBeVisible()
-    await expect(discoverFonts.locator('.pnav-tool-desc')).toHaveCount(0)
-    await expect(discoverFonts).not.toContainText(/Google Fonts catalogue/)
-
-    await page.keyboard.press('Escape')
-    await openWithPointer(page, 'Create')
-    // And the rows that kept a line kept it because it carries a fact the label
-    // cannot: an input, a range, a standard, a privacy claim.
-    const palette = page.locator('#pnav-mega .pnav-tool', { hasText: 'Palette' }).first()
-    await expect(palette.locator('.pnav-tool-desc')).toHaveText(/one seed/)
-    const tint = page.locator('#pnav-mega .pnav-tool', { hasText: 'Tint' }).first()
-    await expect(tint.locator('.pnav-tool-desc')).toHaveText(/50/)
   })
 
-  test('the rows stop tiling: a row without a second line is visibly shorter', async ({ page }) => {
-    watch(page, 'a visitor scanning for the thing that matters')
+
+  // The file's rows are one line and one height (App line 138). No row carries a
+  // description or varies its height.
+  test('every row is one line at the file\'s height', async ({ page }) => {
+    watch(page, 'a scanner reading the menu')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
-
-    // min-height:50px was holding every row at a measured 54px whether it had
-    // anything to say or not, so removing the prose would have changed the text
-    // and left the tiling exactly as it was. The panel has to contain rows of at
-    // least two different heights for the hierarchy to be visible at all.
     const heights = await page.evaluate(() => [...new Set([...document.querySelectorAll('#pnav-mega .pnav-tool')]
-      .map((r) => Math.round(r.getBoundingClientRect().height)))].sort((a, b) => a - b))
-    expect(heights.length, `every Create row is still ${heights[0]}px`).toBeGreaterThan(1)
-    expect(Math.min(...heights)).toBeGreaterThanOrEqual(44)
-
-    // And the short ones are the ones with no second line, not an unrelated cause.
-    const mismatched = await page.evaluate(() => [...document.querySelectorAll('#pnav-mega .pnav-tool')]
-      .filter((r) => {
-        const tall = Math.round(r.getBoundingClientRect().height) > 44
-        return tall !== Boolean(r.querySelector('.pnav-tool-desc'))
-      })
-      .map((r) => r.querySelector('.pnav-tool-label').textContent))
-    expect(mismatched).toEqual([])
+      .map((r) => Math.round(r.getBoundingClientRect().height)))])
+    expect(heights).toEqual([42])
+    const wrapped = await page.evaluate(() => [...document.querySelectorAll('#pnav-mega .pnav-tool-label')]
+      .filter((l) => l.getClientRects().length > 1).map((l) => l.textContent))
+    expect(wrapped).toEqual([])
   })
 })

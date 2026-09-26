@@ -20,7 +20,7 @@
 // Every assertion is paired with a POSITIVE CONTROL over the free brands. If
 // the gallery ever fails to render, "no paid hexes found" would be true and
 // meaningless, and that is exactly how this suite would start lying.
-// ── WHAT CHANGED WHEN THE GATE GREW A THIRD RUNG (2026-09-18) ───────────────
+// ── WHAT CHANGED WHEN THE GATE GREW A THIRD RUNG ───────────────
 //
 // The founder's tiers — 3 signed out, 10 with a free account, everything with
 // Pro — mean the withheld set is no longer "the paid brands". It is now
@@ -32,6 +32,7 @@
 // unchanged and still gates on the flag alone, so its block is untouched.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { openPaletteTools } from './palette-helpers.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
 import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
@@ -209,14 +210,24 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
       'a withheld colour is painted on an element').toEqual([])
   })
 
-  test('nothing on a locked card can be clicked, copied or tabbed into', async ({ page }) => {
+  test('a locked card copies and opens nothing — its one control is the way to Pro', async ({ page }) => {
     const cards = page.locator('.lockt-card')
     await expect(cards).toHaveCount(3)
-    // A locked card holds no control at all — no button, no link, no tabindex.
-    // A disabled-looking control that copies an empty string is still a control
-    // a keyboard user has to walk past.
-    expect(await cards.locator('button, a, [tabindex]').count(),
-      'a locked placeholder carries a focusable control').toBe(0)
+    // a locked card is blurred
+    // and shows "Upgrade to Pro" on hover or focus, going to /plans. So each
+    // card carries exactly ONE control, and it is that link — never a button
+    // that copies, opens or hands off the item it stands for.
+    const controls = cards.locator('button, a, [tabindex]')
+    expect(await controls.count(), 'each locked card carries exactly one control').toBe(3)
+    for (let i = 0; i < 3; i++) {
+      await expect(controls.nth(i)).toHaveAttribute('href', '/plans')
+      await expect(controls.nth(i)).toHaveAccessibleName(/^Upgrade to Pro/)
+    }
+    // Hidden at rest on a mouse, shown on hover — the card is blurred, not greyed.
+    const first = cards.first()
+    expect(await first.locator('.lockt-stripes').evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
+    await first.hover()
+    await expect(first.locator('.lockt-upgrade')).toHaveCSS('opacity', '1')
   })
 
   test('the wall is keyboard reachable, named, and opens the real Pro gate', async ({ page }) => {
@@ -229,8 +240,8 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
     await cta.focus()
     await expect(cta).toBeFocused()
     await page.keyboard.press('Enter')
-    // The canonical upgrade modal, not a second one built for this surface.
-    await expect(page.locator('[role="dialog"]').filter({ hasText: 'The full brand library' })).toBeVisible()
+    // /plans — not a modal.
+    await expect(page).toHaveURL(/\/plans$/)
   })
 
   test('the wall states the true remaining count, not a rounded boast', async ({ page }) => {
@@ -247,7 +258,7 @@ test.describe('the same gate in the Palette Builder brands panel', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor looking for a brand palette')
     await go(page, '/create/palette')
-    await page.locator('button[aria-label="Explore"]').click()
+    await (await openPaletteTools(page)).getByRole('button', { name: 'Explore palettes' }).click()
     await page.locator('button[role="tab"]', { hasText: 'Brands' }).click()
     await expect(page.locator('.plb-galpopup-body .plb-varrow').first()).toBeVisible()
   })
@@ -277,9 +288,10 @@ test.describe('the same gate in the Palette Builder brands panel', () => {
       'a locked row carries a control that would load a brand').toBe(0)
   })
 
-  test('the panel wall opens the canonical Pro modal under its own gate id', async ({ page }) => {
+  test('the panel wall goes to /plans', async ({ page }) => {
+    // The shared LockedTeaseCta links to /plans; it raises no modal here.
     await page.locator('.plb-galpopup-body .lockt-cta-btn').click()
-    await expect(page.locator('[role="dialog"]').filter({ hasText: 'Load any brand system' })).toBeVisible()
+    await expect(page).toHaveURL(/\/plans$/)
   })
 })
 

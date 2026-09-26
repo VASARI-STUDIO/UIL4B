@@ -1,483 +1,348 @@
-/* projects.css — /projects on the Spectrum ground: the `uh` and `proj` families.
+/* projects.css — "Your workspace" (/projects), built to the design's screen.
  *
- * Imported by src/pages/Projects.jsx (and by the user-home fixture the
- * acceptance suite mounts), so it ships with that lazy chunk only.
+ * Source: UIL4B App.dc.html, the `projects` screen (and its helmet CSS for
+ * [data-quickgrid], [data-lift], [data-icon-edit], [data-hov], [data-cta]).
+ * Every size, radius, alpha and breakpoint below is the design's, rule for rule. What is
+ * NOT the design's is the colour SOURCE: the design writes `rgba(var(--ink-rgb), a)`
+ * over its own palette; this sheet writes the same alpha as `color-mix()` off
+ * the app's ink token (--t0) and its accent (--accent), so the app's darker
+ * grounds and the app-wide accent both carry
+ * through without a literal to chase.
+ *
+ * Imported by src/pages/Projects.jsx and src/pages/ProjectDetail.jsx — the
+ * project page wears `.uh` too, for the shared menu and tokens, and lays
+ * itself out in project.css under `.pjd`.
  *
  * ── Every selector is scoped under `.uh`, the page root ─────────────────────
  * Vite orders chunk CSS by the dependency graph, not by import order, so a page
- * sheet imported last can still load BEFORE deferred/account.css and
- * deferred/tool-shell.css, which restate `.uh-card.is-archived`,
- * `.fg-detail-*` and `.checkout-*` at equal specificity. `.uh .x` wins by
- * construction rather than by a load order nobody controls. The one exception
- * is the reduced-motion block at the foot, which has to start at <html>.
- *
- * ── The page is a LIST of a person's work, not a grid of cards ──────────────
- * The founder named /projects on 2026-09-13 as one of four surfaces that "feel
- * AI generated". The rework he asked to see was #481 ("Make /projects a list
- * of a person's work, not a grid of cards"), built before Spectrum. This sheet
- * is that rework ported onto the Spectrum language rather than merged: one
- * column of hairline-ruled rows, the palette as a specimen chip filled only
- * when somebody chose the colours, both actions for a row at the row's end, and
- * one filled control on the page. The shapes are `UIL4B App.dc.html`'s — its
- * workspace screen's "Other projects" list (hairline rows, a 56x34 swatch chip,
- * mono values, a 36px open control), its 18px panels, its 12px primary and 10px
- * secondary rectangles over a hairline border. 999px is reserved for meters.
- *
- * ── The accent is never --accent-strong and never --brand ───────────────────
- * Both are per-theme literals that do not follow `--accent`, so a premium theme
- * template would strand them at the old blue. Accent TEXT is --accent-mid
- * (5.18:1 on --bg-0 light, 9.17:1 dark); the one filled control is --accent-mid
- * under --accent-ink, hovering to --accent-text, which moves AWAY from the
- * ground in both themes (--accent-hover mixes toward paper in both and would
- * lower the contrast it lifts off).
- *
- * ── --t3 is not allowed on a wash ───────────────────────────────────────────
- * --t3 is 4.59:1 on --bg-0 and drops under 4.5 on any tinted ground. A row
- * tints under the pointer, so every label inside a row is --t2 or darker.   */
+ * sheet can load BEFORE deferred/account.css and deferred/tool-shell.css, which
+ * restate shared `.uh-*` names at equal specificity. `.uh .x` wins by construction.
+ * The reduced-motion block at the foot starts at <html>, its only exception. */
 
 .uh {
-  --uh-hair: color-mix(in srgb, var(--t0) 9%, transparent);
-  --uh-hair-2: color-mix(in srgb, var(--t0) 13%, transparent);
-  --uh-wash: color-mix(in srgb, var(--t0) 4%, transparent);
-  --uh-ease: cubic-bezier(.23, 1, .32, 1);
-}
+  /* The design's ink alphas, off the app's ink. */
+  --ws-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --ws-dim: color-mix(in srgb, var(--t0) 62%, transparent);
+  --ws-faint: color-mix(in srgb, var(--t0) 55%, transparent);
+  /* The design's accent family (accentMid / accentHover / accentWash / accentWash2 /
+     accentBorder), off --accent. accentMid mixes 40% toward the design's paper in dark
+     and 14% toward the design's ink in light; hover mixes 24% toward paper in both. */
+  --ws-acc-text: color-mix(in srgb, var(--accent) 60%, #EFEEEA);
+  --ws-acc-hover: color-mix(in srgb, var(--accent) 76%, #EFEEEA);
+  --ws-acc-wash: color-mix(in srgb, var(--accent) 10%, transparent);
+  --ws-acc-wash-2: color-mix(in srgb, var(--accent) 18%, transparent);
+  --ws-acc-border: color-mix(in srgb, var(--accent) 24%, transparent);
+  --ws-card2: var(--bg-1);
+  --ws-shade-1: rgba(0, 0, 0, .5);
+  --ws-shade-2: rgba(0, 0, 0, .8);
+  --ws-scrim: rgba(9, 10, 12, .34);
 
-/* ── Controls: the app's rectangles, not the marketing pill ──────────────────
-   `.btn` in the critical sheet is a 999px pill (lane 5 owns that decision).
-   This page draws its own controls the way the app design file does. */
-.uh .btn {
-  border-radius: var(--radius-s);
-  border-color: var(--uh-hair-2);
-  background: transparent;
+  /* THE PAGE, NOT THE SHELL, SETS THE MEASURE. The design's <main> is 1240 wide with
+     clamp(12px,3vw,36px) inside it; .app-page already insets by that same
+     clamp, which would stack under the design's padding and narrow a phone. So the root
+     steps back out of the shell's inset and the inner column takes the design's exact
+     box. */
+  margin-inline: calc(-1 * clamp(12px, 3vw, 36px));
   color: var(--t0);
-  font-size: 13px;
-  font-weight: 500;
-  min-height: 36px;
-  padding: 0 14px;
-  gap: 8px;
-  transition: background var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
-}
-.uh .btn:hover { background: var(--uh-wash); border-color: var(--bh); color: var(--t0); }
-.uh .btn-s { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
-.uh .btn-accent {
-  border-radius: var(--radius);
-  min-height: 44px;
-  padding: 0 17px;
-  border-color: var(--accent-mid);
-  background: var(--accent-mid);
-  color: var(--accent-ink);
-  font-size: 13.5px;
-  font-weight: 560;
-}
-.uh .btn-accent:hover { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent-ink); }
-.uh .btn-s.btn-accent { min-height: 32px; padding: 0 12px; font-size: 12.5px; border-radius: var(--radius-s); }
-.uh .btn:disabled { opacity: .5; cursor: not-allowed; }
-.uh .btn:disabled:hover { background: transparent; border-color: var(--uh-hair-2); }
-.uh .btn-accent:disabled:hover { background: var(--accent-mid); border-color: var(--accent-mid); }
-.uh input:not([type="file"]),
-.uh select { border-radius: var(--radius); }
-@media (pointer: coarse) {
-  .uh .btn, .uh .btn-s { min-height: 44px; }
-}
-
-/* ── Masthead ─────────────────────────────────────────────────────────────── */
-.uh .uh-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-5); flex-wrap: wrap; margin-bottom: var(--s-5); }
-.uh .uh-head-main { min-width: 0; flex: 1 1 420px; }
-/* The viewer's own date and time. Mono because it is a VALUE read at a glance,
-   tabular so the line does not reflow as the minute turns, and quiet: it is
-   orientation, not a second title. */
-.uh .uh-clock { display: block; margin-bottom: 10px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
-/* The app design file's page title (`clamp(26px,3.6vw,40px)/600/-.035em`), not
-   .sec-h's 52px/1.3 content-page scale: this is a working surface. */
-.uh .uh-head h1,
-.uh .uh-head .uh-h1 {
-  margin: 0;
-  padding: 0;
-  font-family: var(--display);
-  font-size: clamp(28px, 3.4vw, 40px);
-  font-weight: 600;
-  letter-spacing: -.035em;
-  line-height: 1.04;
-  color: var(--t0);
-}
-.uh .uh-sub { margin: 10px 0 0; max-width: 56ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
-.uh .uh-head-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.uh .uh-head-actions .btn { white-space: nowrap; min-height: 44px; }
-
-/* Quick data tracking: mono, tabular, one hairline between figures. Any figure
-   that would be zero never reaches this list (utils/userHome.js). */
-.uh .uh-stats { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); margin: var(--s-3) 0 0; padding: 0; list-style: none; font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; color: var(--t2); font-variant-numeric: tabular-nums; }
-.uh .uh-stats li { display: flex; align-items: baseline; gap: .35em; }
-.uh .uh-stats li + li { padding-left: var(--s-4); border-left: 1px solid var(--uh-hair); }
-.uh .uh-stats strong { font-weight: 600; font-size: 13px; color: var(--t0); }
-.uh .uh-quota { margin: var(--s-3) 0 0; max-width: 60ch; font-size: 13px; line-height: 1.65; color: var(--t1); }
-.uh .uh-quota-link { color: var(--accent-mid); font-weight: 560; }
-
-/* ── Save the current design ─────────────────────────────────────────────── */
-.uh .uh-save { max-width: 620px; margin-bottom: var(--s-5); padding: 16px; border: 1px solid var(--uh-hair); border-radius: var(--radius-2xl); background: var(--card); }
-.uh .uh-save-label { display: block; margin-bottom: 10px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
-.uh .uh-save-row { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
-.uh .uh-save-row input { flex: 1 1 220px; min-width: 0; min-height: 44px; }
-.uh .uh-save-row .btn { min-height: 44px; }
-.uh .uh-save-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
-
-/* ── Search and sort ─────────────────────────────────────────────────────── */
-.uh .proj-toolbar { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); flex-wrap: wrap; }
-.uh .proj-search { position: relative; display: flex; align-items: center; flex: 1 1 240px; min-width: 200px; max-width: 380px; }
-.uh .proj-search svg { position: absolute; left: 13px; color: var(--t2); pointer-events: none; }
-.uh .proj-search input { width: 100%; min-height: 40px; padding: 9px 38px 9px 36px; border: 1px solid var(--uh-hair); border-radius: var(--radius); background: var(--card); color: var(--t0); font-size: 14px; }
-.uh .proj-search input:focus { border-color: var(--bh); }
-.uh .proj-search button { position: absolute; right: 8px; width: 24px; height: 24px; border: none; background: var(--uh-wash); color: var(--t1); border-radius: var(--radius-xs); cursor: pointer; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; }
-.uh .proj-sort { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
-.uh .proj-sort select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--uh-hair); border-radius: var(--radius); background: var(--card); color: var(--t0); font-family: var(--font); font-size: 13.5px; letter-spacing: 0; text-transform: none; cursor: pointer; }
-.uh .proj-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--t2); font-variant-numeric: tabular-nums; }
-@media (pointer: coarse) {
-  .uh .proj-search input, .uh .proj-sort select { min-height: 44px; }
-}
-
-/* ── The list ─────────────────────────────────────────────────────────────────
-   One column of rows, full width at every size. No fill, no border box, no
-   radius, no shadow: a hairline between rows is the only separation, which is
-   what makes each row's own contents — the chip, the name, the values — the
-   loudest thing in it. The -8px inline margin is the row's hover band and
-   nothing else; it is well inside the shell's 20px gutter at every width. */
-.uh .uh-grid { display: block; margin-inline: calc(var(--s-2) * -1); border-bottom: 1px solid var(--uh-hair); }
-
-.uh .uh-card {
-  position: relative;
-  display: grid;
-  align-items: center;
-  /* ONE FLEXIBLE COLUMN, the body. #481 measured the reason: two proportional
-     columns put slack inside BOTH text columns and the row read as three loose
-     clusters at 1440. Body takes the slack, and parts/when/Load/⋯ pack against
-     the right as one group. Fixed tracks, not `auto`: every row is its own grid,
-     and an `auto` track would put Load at a different x on every row. */
-  grid-template-columns: auto minmax(0, 1fr) 17rem 7.5rem auto auto;
-  grid-template-areas: "art body parts when foot acts" "confirm confirm confirm confirm confirm confirm";
-  column-gap: var(--s-5);
-  padding: 14px var(--s-2);
-  border-top: 1px solid var(--uh-hair);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
-  transition: background var(--dur-1) ease, box-shadow var(--dur-2) var(--uh-ease);
-}
-@media (hover: hover) and (pointer: fine) {
-  .uh .uh-card:hover { background: var(--uh-wash); }
-}
-/* LOADED — the only way a row differs from its neighbours. An inset rule, so
-   the row does not shift when it becomes the loaded one, and a transition on
-   it so a person who has just pressed Load on the third row can see which row
-   answered. That is the list's whole motion budget, spent on state. */
-.uh .uh-card.proj-card-active { box-shadow: inset 2px 0 0 var(--accent-mid); }
-/* Put away, not deleted. Stated by the word "Archived" and by weight — NOT by
-   opacity, which account.css used to apply to the whole row and which took
-   every label in it under 4.5:1. */
-.uh .uh-card.is-archived { opacity: 1; }
-.uh .uh-card.is-archived .uh-card-name { color: var(--t1); font-weight: 500; }
-
-/* THE PALETTE AS A SPECIMEN, NOT AS A BANNER — and only filled if somebody
-   filled it. An untouched project keeps the outline at the same size (so the
-   rows share a left edge) and loses the fill, because its "palette" is the one
-   default seed nobody chose. The chip and the four dots read the same fact
-   (utils/userHome.js, partsPresent), so they cannot disagree. */
-.uh .uh-card-art { grid-area: art; width: 56px; height: 34px; border: 1px solid var(--uh-hair); border-radius: var(--radius-xs); }
-.uh .uh-card-art.is-unset { background: none; }
-.uh .uh-card-body { grid-area: body; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.uh .uh-card-top { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
-.uh .uh-card-icon { width: 20px; height: 20px; border-radius: var(--radius-xs); object-fit: contain; flex: 0 0 auto; }
-
-/* The name. A button, because it opens the detail sheet; styled as the row's
-   title. Set in the UI face, not the project's own — see ProjectCard.jsx. */
-.uh .uh-card-name {
-  flex: 0 1 auto;
-  min-width: 0;
-  min-height: 24px;
-  padding: 0;
-  border: none;
-  background: none;
   font-family: var(--font);
-  font-size: 15px;
-  font-weight: 560;
-  letter-spacing: -.01em;
-  line-height: 1.3;
-  color: var(--t0);
-  text-align: left;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.uh .uh-card-name:hover { color: var(--accent-mid); }
-/* A 44px TARGET WITHOUT A TALLER ROW. The name is a 24px text button; under a
-   coarse pointer it takes 10px of padding above and below and gives the same
-   back as negative margin, so the row does not move and the tap area does.
-   Raised over the meta line its lower half now covers, which is plain text. */
+/* global.css gives every page's first child `padding-top:clamp(12px,3vw,32px)`
+   (.app-page > :first-child, specificity 0,2,0). The design's top padding is on the
+   inner column below, so the root drops the shell's — measured 32px stacked on
+   the design's 32px at 1440 before this rule. Doubled class to outrank it here. */
+div.uh.uh { padding-top: 0; }
+[data-theme="light"] .uh {
+  --ws-dim: color-mix(in srgb, var(--t0) 80%, transparent);
+  --ws-faint: color-mix(in srgb, var(--t0) 72%, transparent);
+  --ws-acc-text: color-mix(in srgb, var(--accent) 86%, #0B0C0E);
+  --ws-card2: var(--bg-2);
+  --ws-shade-1: rgba(26, 30, 42, .08);
+  --ws-shade-2: rgba(26, 30, 42, .128);
+}
+
+.uh .uh-main {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(14px, 2.6vw, 32px) clamp(12px, 3vw, 36px) 0;
+  box-sizing: border-box;
+}
+.uh .uh-main > * { min-width: 0; }
+
+/* The design's press feedback on every control. */
+.uh button,
+.uh a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.uh button,
+.uh .uh-lead,
+.uh .uh-tool,
+.uh .uh-new,
+.uh .uh-empty-cta { transition: transform .14s cubic-bezier(.23, 1, .32, 1), background .16s ease, color .16s ease, border-color .16s ease; }
+.uh button:active:not(:disabled),
+.uh .uh-lead:active,
+.uh .uh-tool:active { transform: scale(.97); }
+
+.uh :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── The clock ───────────────────────
+   In the design's mono voice — the register of the design's "UIL4B PRO" eyebrow: Geist Mono,
+   tracked, small — in the ink's faint alpha rather than the accent, because
+   it is context for the page, not a label for a section. */
+.uh .uh-clock { display: block; margin: 0 0 10px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; color: var(--ws-faint); }
+
+/* ── Title row ──────────────────────────────────────────────────────────── */
+.uh .uh-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.uh .uh-h1 { margin: 0; padding: 0; font-family: var(--font); font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: -.035em; line-height: 1.04; color: var(--t0); text-wrap: balance; }
+.uh .uh-new,
+.uh .uh-empty-cta {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 44px; padding: 11px 17px;
+  border: 0; border-radius: var(--btn-radius);
+  background: var(--accent); color: var(--accent-ink);
+  font-family: var(--font); font-size: 13.5px; font-weight: 560; line-height: 1.2;
+  white-space: nowrap; cursor: pointer;
+}
+.uh .uh-new:hover,
+.uh .uh-empty-cta:hover { background: var(--ws-acc-hover); }
+/* New project's answer at the free cap (SaveRefusal), under the title row. */
+.uh .uh-save-refusal { margin: 12px 0 0; }
+.uh .uh-quota-link { color: var(--ws-acc-text); font-weight: 560; }
+
+/* ── Plan strip ─────────────────────────────────────────────────────────── */
+.uh .uh-plan {
+  margin-top: 14px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: clamp(12px, 2vw, 20px);
+  padding: 12px 15px;
+  border-radius: 12px; background: var(--card); border: 1px solid var(--ws-hair);
+}
+.uh .uh-plan-chip { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; }
+.uh .uh-plan-ico { width: 28px; height: 28px; border-radius: 9px; background: var(--ws-acc-wash); color: var(--ws-acc-text); display: grid; place-items: center; }
+.uh .uh-plan-name { font-size: 13.5px; font-weight: 540; color: var(--t0); white-space: nowrap; }
+.uh .uh-meter { flex: 1 1 200px; min-width: 0; display: grid; gap: 6px; }
+.uh .uh-meter-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ws-dim); }
+.uh .uh-meter-val { color: var(--t0); font-variant-numeric: tabular-nums; }
+.uh .uh-meter-track { display: block; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--t0) 10%, transparent); overflow: hidden; }
+.uh .uh-meter-fill { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--t0) 34%, transparent); }
+.uh .uh-meter-fill.is-accent { background: var(--accent); }
+
+/* ── Start something ────────────────────────────────────────────────────── */
+.uh .uh-start { margin-top: clamp(20px, 2.6vw, 30px); border-radius: 18px; background: var(--card); border: 1px solid var(--ws-hair); overflow: hidden; }
+.uh .uh-start-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid color-mix(in srgb, var(--t0) 8%, transparent); }
+.uh .uh-start-h { margin: 0; font-family: var(--font); font-size: 14px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
+.uh .uh-alltools {
+  display: flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--t0) 11%, transparent); border-radius: var(--btn-radius);
+  background: transparent; color: color-mix(in srgb, var(--t0) 86%, transparent);
+  font-family: var(--font); font-size: 12.5px; cursor: pointer; white-space: nowrap;
+}
+.uh .uh-alltools-caret { color: var(--ws-faint); }
+.uh .uh-quick { display: grid; gap: 1px; background: color-mix(in srgb, var(--t0) 8%, transparent); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.uh .uh-lead {
+  grid-column: span 2; grid-row: span 3;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 16px;
+  min-height: 140px; padding: 17px 18px;
+  background: var(--card); text-align: left; text-decoration: none; color: inherit;
+}
+.uh .uh-lead-top { display: flex; align-items: flex-start; gap: 12px; width: 100%; }
+.uh .uh-lead-ico { width: 36px; height: 36px; border-radius: 11px; background: var(--ws-acc-wash); color: var(--ws-acc-text); display: grid; place-items: center; flex: 0 0 auto; }
+.uh .uh-lead-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.uh .uh-lead-name { font-size: 15.5px; font-weight: 560; color: var(--t0); }
+.uh .uh-lead-note { font-size: 12.5px; line-height: 1.45; color: var(--ws-dim); }
+.uh .uh-lead-go { width: 26px; height: 26px; border-radius: 999px; background: color-mix(in srgb, var(--t0) 6%, transparent); color: var(--ws-dim); display: grid; place-items: center; flex: 0 0 auto; }
+.uh .uh-lead-ramp { display: flex; width: 100%; height: 26px; border-radius: 7px; overflow: hidden; }
+.uh .uh-lead-ramp > span { flex: 1; }
+.uh .uh-tool {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 69px; padding: 15px 16px;
+  background: var(--card); text-align: left; text-decoration: none; color: inherit;
+}
+.uh .uh-tool-ico { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: 0 0 auto;
+  /* The design's six hue chips: OKLCH at a fixed hue per tool, the glyph darkened until
+     it clears AA on the card. Dark first, light below. */
+  color: oklch(.76 .1 var(--q-h));
+  background: color-mix(in oklab, oklch(.76 .1 var(--q-h)) 17%, transparent);
+}
+[data-theme="light"] .uh .uh-tool-ico { color: oklch(.44 .115 var(--q-h)); background: oklch(.93 .045 var(--q-h)); }
+.uh .uh-tool[data-tool="gradient"] { --q-h: 212; }
+.uh .uh-tool[data-tool="tint"] { --q-h: 168; }
+.uh .uh-tool[data-tool="semantic"] { --q-h: 286; }
+.uh .uh-tool[data-tool="contrast"] { --q-h: 24; }
+.uh .uh-tool[data-tool="icons"] { --q-h: 96; }
+.uh .uh-tool[data-tool="palettes"] { --q-h: 320; }
+.uh .uh-tool-text { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.uh .uh-tool-name { font-size: 14px; color: var(--t0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uh .uh-tool-note { font-size: 11.5px; line-height: 1.3; color: var(--ws-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1000px) {
+  .uh .uh-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uh .uh-lead { grid-column: span 2; grid-row: auto; }
+}
+@media (max-width: 520px) {
+  .uh .uh-quick { grid-template-columns: minmax(0, 1fr); }
+  .uh .uh-lead { grid-column: span 1; }
+}
+
+/* The design's [data-hov] wash, for pointers that hover. */
+@media (hover: hover) and (pointer: fine) {
+  .uh .uh-alltools:hover,
+  .uh .uh-lead:hover,
+  .uh .uh-tool:hover { background: color-mix(in srgb, var(--t0) 7%, transparent); }
+}
+
+/* ── Section heads ──────────────────────────────────────────────────────── */
+.uh .uh-recent-head { margin-top: clamp(22px, 3vw, 34px); }
+.uh .uh-sec-h { margin: 0; font-family: var(--font); font-size: 16.5px; font-weight: 560; color: var(--t0); letter-spacing: normal; }
+
+/* ── Recent projects ────────────────────────────────────────────────────── */
+.uh .uh-grid { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(258px, 100%), 1fr)); gap: clamp(12px, 1.6vw, 18px); }
+.uh .uh-card { min-width: 0; border-radius: 18px; background: var(--card); border: 1px solid var(--ws-hair); overflow: hidden; transition: background .18s ease, border-color .18s ease; }
+.uh .uh-card-art { position: relative; }
+.uh .uh-card-strip { display: flex; height: 132px; }
+.uh .uh-card-strip > span { flex: 1; }
+.uh .uh-card-scrim { position: absolute; inset: 0; background: var(--ws-scrim); }
+.uh .uh-card-tile-wrap { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.uh .uh-card-tile { width: 54px; height: 54px; border-radius: 18px; background: color-mix(in srgb, var(--bg-0) 94%, transparent); color: var(--t0); display: grid; place-items: center; box-shadow: 0 12px 28px -14px rgba(9, 10, 12, .7); }
+.uh .uh-card-img { width: 28px; height: 28px; object-fit: contain; }
+.uh .uh-card-edit { position: absolute; top: 9px; right: 9px; display: flex; opacity: 0; transition: opacity .2s ease; }
+.uh .uh-card:focus-within .uh-card-edit,
+.uh .uh-card-edit:focus-within { opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .uh .uh-card:hover .uh-card-edit { opacity: 1; } }
+@media (hover: none) { .uh .uh-card-edit { opacity: 1; } }
+.uh .uh-card-pencil { width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--btn-radius); background: rgba(9, 10, 12, .5); color: #F4F6FA; display: grid; place-items: center; cursor: pointer; }
+.uh .uh-card-picker { position: absolute; left: 8px; right: 8px; bottom: 8px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 5px; border-radius: 14px; background: rgba(9, 10, 12, .74); }
+.uh .uh-card-pick { aspect-ratio: 1; min-width: 0; padding: 0; border: 0; border-radius: 9px; background: color-mix(in srgb, var(--bg-0) 14%, transparent); color: #F4F6FA; display: grid; place-items: center; cursor: pointer; }
+.uh .uh-card-pick[aria-pressed="true"] { background: var(--bg-0); color: var(--t0); }
+.uh .uh-card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: color-mix(in srgb, var(--t0) 14%, transparent); }
+.uh .uh-card-bar > span { display: block; height: 100%; background: var(--accent); }
+.uh .uh-card-name { display: block; width: 100%; padding: 13px 15px 15px; text-align: left; text-decoration: none; color: inherit; box-sizing: border-box; }
+.uh .uh-card-name:hover { text-decoration: none; }
+.uh .uh-card-name:focus-visible { outline-offset: -2px; }
+.uh .uh-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.uh .uh-card-title { min-width: 0; font-size: 14.5px; font-weight: 540; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uh .uh-card-tag { font-size: 11.5px; color: var(--ws-dim); white-space: nowrap; }
+.uh .uh-card-tag.is-ready { color: var(--ws-acc-text); }
+.uh .uh-card-line { display: block; margin-top: 7px; font-size: 12.5px; color: var(--ws-faint); }
+
+/* The design's [data-lift]: the card and the Discover card. */
+@media (hover: hover) and (pointer: fine) {
+  .uh .uh-card:hover,
+  .uh .uh-disc-card:hover { border-color: color-mix(in srgb, var(--t0) 24%, transparent); background: color-mix(in srgb, var(--t0) 4.5%, transparent); }
+}
+
+/* ── Empty state, and the signed-out card that shares its shape ─────────── */
+.uh .uh-empty {
+  margin-top: 14px;
+  padding: clamp(26px, 4vw, 48px);
+  border-radius: 18px; border: 1px dashed color-mix(in srgb, var(--t0) 20%, transparent); background: var(--card);
+  display: grid; gap: 14px; justify-items: start;
+}
+.uh .uh-empty-title { margin: 0; font-family: var(--font); font-size: 19px; font-weight: 560; color: var(--t0); letter-spacing: normal; line-height: 1.25; }
+.uh .uh-empty-text { margin: 0; max-width: min(46ch, 100%); font-size: 14px; line-height: 1.55; color: var(--ws-dim); }
+.uh .uh-empty-cta { padding: 12px 18px; }
+
+.uh .uh-resolving { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; min-height: 180px; margin-top: 14px; color: var(--ws-dim); font-size: 14px; }
+.uh .uh-resolving p { margin: 0; }
+
+/* ── New in Discover ────────────────────────────────────────────────────── */
+.uh .uh-disc-head { margin-top: clamp(26px, 3.4vw, 42px); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--ws-hair); }
+.uh .uh-disc-all { padding: 0; font-family: var(--font); font-size: 13px; color: var(--ws-acc-text); text-decoration: none; }
+.uh .uh-disc-all:hover { text-decoration: underline; text-underline-offset: 3px; }
+.uh .uh-disc-grid { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: 12px; }
+.uh .uh-disc-card { display: block; min-width: 0; border: 1px solid var(--ws-hair); border-radius: 18px; background: var(--card); overflow: hidden; text-align: left; text-decoration: none; color: inherit; transition: background .18s ease, border-color .18s ease; }
+.uh .uh-disc-strip { display: flex; height: 74px; }
+.uh .uh-disc-strip > span { flex: 1; }
+.uh .uh-disc-body { display: block; padding: 11px 13px 13px; }
+.uh .uh-disc-name { display: block; font-size: 13.5px; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uh .uh-disc-meta { display: block; margin-top: 5px; font-size: 11.5px; color: var(--ws-faint); }
+
+/* ── Pro panel ──────────────────────────────────────────────────────────── */
+.uh .uh-pro {
+  margin-top: clamp(30px, 4vw, 52px);
+  border-radius: 20px;
+  background: linear-gradient(170deg, var(--ws-acc-wash-2), var(--card) 62%);
+  border: 1px solid var(--ws-acc-border);
+  box-shadow: 0 2px 4px -2px var(--ws-shade-1), 0 22px 44px -24px var(--ws-shade-2);
+  padding: clamp(22px, 3vw, 40px);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: clamp(22px, 3vw, 44px); align-items: center;
+}
+.uh .uh-pro-copy { min-width: 0; }
+.uh .uh-pro-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; color: var(--ws-acc-text); }
+.uh .uh-pro-h { margin: 12px 0 0; font-family: var(--font); font-size: clamp(22px, 2.6vw, 32px); font-weight: 600; letter-spacing: -.03em; line-height: 1.06; max-width: min(24ch, 100%); color: var(--t0); text-wrap: balance; }
+.uh .uh-pro-line { margin: 12px 0 0; max-width: min(44ch, 100%); font-size: 14px; line-height: 1.6; color: var(--ws-dim); }
+.uh .uh-pro-cta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 22px; }
+.uh .uh-pro-cta {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 11px 10px 20px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 14.5px; font-weight: 560; text-decoration: none;
+  transition: transform .16s cubic-bezier(.23, 1, .32, 1), background .18s ease;
+}
+.uh .uh-pro-cta:hover { background: var(--ws-acc-hover); color: var(--accent-ink); text-decoration: none; }
+.uh .uh-pro-cta:active { transform: scale(.978); }
+.uh .uh-pro-cta-ico { width: 28px; height: 28px; border-radius: 999px; background: rgba(255, 255, 255, .16); display: grid; place-items: center; transition: transform .2s cubic-bezier(.23, 1, .32, 1); }
+@media (hover: hover) and (pointer: fine) { .uh .uh-pro-cta:hover .uh-pro-cta-ico { transform: rotate(45deg); } }
+.uh .uh-pro-billed { font-size: 12.5px; color: var(--ws-faint); }
+/* ONE SURFACE, NOT A CARD IN A CARD. The design
+   file draws the perks as a 14px-radius tray of card-coloured rows inside the
+   panel; the rows stay, the inner box does not — they are ruled by hairlines
+   on the panel's own ground. */
+.uh .uh-pro-perks { list-style: none; margin: 0; padding: 0; display: grid; }
+.uh .uh-pro-perk { display: flex; align-items: center; gap: 12px; padding: 14px 15px; }
+.uh .uh-pro-perk + .uh-pro-perk { border-top: 1px solid color-mix(in srgb, var(--t0) 8%, transparent); }
+.uh .uh-pro-perk-ico { width: 26px; height: 26px; border-radius: 8px; background: var(--ws-acc-wash); color: var(--ws-acc-text); display: grid; place-items: center; flex: 0 0 auto; }
+.uh .uh-pro-perk-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.uh .uh-pro-perk-label { font-size: 13.5px; color: var(--t0); }
+.uh .uh-pro-perk-note { font-size: 11.5px; color: var(--ws-faint); }
+
+/* ── Touch: the house floor is 44px on a coarse pointer ──────────────────────
+   The design's 32px "All … tools" and pencil are fine under a mouse; under a thumb they
+   grow to the floor (tests/user-sim/99-coarse-targets-44.spec.js). */
 @media (pointer: coarse) {
-  .uh .uh-card-name { position: relative; z-index: 1; min-height: 44px; padding-block: 10px; margin-block: -10px; }
+  .uh .uh-alltools { height: 44px; }
+  .uh .uh-card-pencil { width: 44px; height: 44px; }
+  .uh .uh-disc-all { display: inline-flex; align-items: center; min-height: 44px; }
 }
 
-/* A WORD, NOT A PILL. Metadata is not given the shape of a control. */
-.uh .uh-tag { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); line-height: 1.4; }
-.uh .uh-tag--live { color: var(--accent-mid); }
-
-/* What is in it, as values: mono, tabular. Wraps rather than truncating. */
-.uh .uh-card-meta { margin: 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.6; letter-spacing: .01em; color: var(--t2); font-variant-numeric: tabular-nums; }
-.uh .uh-dot { margin: 0 .5em; color: var(--t2); }
-
-.uh .uh-card-rename { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.uh .uh-card-rename input { flex: 1 1 180px; min-width: 0; min-height: 36px; font-size: 14px; font-weight: 500; }
-
-.uh .uh-parts { grid-area: parts; display: flex; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; font-size: 11.5px; }
-.uh .uh-parts-dots { display: inline-flex; gap: 5px; flex: 0 0 auto; align-self: center; }
-/* The dots are an image with a spoken label (ProjectCard.jsx); these rings are
-   graphics against a 3:1 floor, and --t2 clears it on the row's hover wash. */
-.uh .uh-part { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--t2); }
-.uh .uh-part.is-done { box-shadow: none; background: var(--accent-mid); }
-.uh .uh-parts-label { flex: 1 1 auto; min-width: 0; font-family: var(--mono); font-weight: 500; letter-spacing: .02em; line-height: 1.6; color: var(--t1); }
-
-/* Right-aligned in its own column, so "1 hour ago" and "2 days ago" line up
-   at their right edge down the list. */
-.uh .uh-card-when { grid-area: when; justify-self: end; font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; line-height: 1.6; color: var(--t2); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uh .uh-card-foot { grid-area: foot; display: flex; align-items: center; gap: var(--s-2); justify-self: end; }
-
-/* Deletion still types the name. The ⋯ menu only ARMS it. It spans the whole
-   row: a field squeezed into a button's width is how somebody mistypes the name
-   of the thing they are about to destroy. */
-.uh .uh-card-confirm { grid-area: confirm; display: flex; flex-direction: column; gap: var(--s-2); max-width: 46ch; margin-top: var(--s-3); }
-.uh .uh-card-confirm p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--err-strong); }
-.uh .uh-card-confirm input { min-height: 40px; font-size: 14px; }
-.uh .uh-card-confirm-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.uh .uh-danger { color: var(--err-strong); border-color: color-mix(in srgb, var(--err) 45%, transparent); }
-.uh .uh-danger:hover { color: var(--err-strong); border-color: var(--err-strong); background: color-mix(in srgb, var(--err) 7%, transparent); }
-/* The armed, irreversible action. --err-strong under --err-fg: 7.6:1 light,
-   8.1:1 dark. White on --err (the inline style this replaces) was 2.8:1 dark. */
-.uh .uh-danger-go,
-.uh .uh-card-confirm .uh-danger:not(:disabled) { background: var(--err-strong); border-color: var(--err-strong); color: var(--err-fg); }
-.uh .uh-danger-go:hover:not(:disabled),
-.uh .uh-card-confirm .uh-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--err-strong) 88%, var(--t0)); border-color: var(--err-strong); color: var(--err-fg); }
-
-.uh .uh-actions { grid-area: acts; justify-self: end; position: relative; flex: 0 0 auto; }
-/* A row with its menu open outranks its neighbours, or the next row's painted
-   hover band takes the tap on Duplicate (72-flow-followups § M9). */
-.uh .uh-card:has(.uh-menu) { z-index: 2; }
-
-/* Square, 36px, the design's open control — not a pill. */
-.uh .uh-actions-trigger { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid transparent; border-radius: var(--radius-s); background: none; color: var(--t1); cursor: pointer; transition: background var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease; }
-.uh .uh-actions-trigger:hover,
-.uh .uh-actions-trigger[aria-expanded="true"] { background: var(--uh-wash); border-color: var(--uh-hair-2); color: var(--t0); }
-@media (pointer: coarse) {
-  .uh .uh-actions-trigger { width: 44px; height: 44px; }
+/* ── The project menu (ProjectActions, on the project page) ─────────────── */
+.uh .uh-actions { position: relative; flex: 0 0 auto; }
+.uh .uh-actions-trigger {
+  display: grid; place-items: center;
+  width: 44px; height: 44px; padding: 0;
+  border: 1px solid color-mix(in srgb, var(--t0) 13%, transparent); border-radius: var(--btn-radius);
+  background: transparent; color: color-mix(in srgb, var(--t0) 88%, transparent); cursor: pointer;
 }
-.uh .uh-menu { min-width: 230px; border-radius: var(--radius-2xl); }
+.uh .uh-actions-trigger[aria-expanded="true"] { background: color-mix(in srgb, var(--t0) 7%, transparent); }
+@media (hover: hover) and (pointer: fine) { .uh .uh-actions-trigger:hover { background: color-mix(in srgb, var(--t0) 7%, transparent); } }
+.uh .uh-menu { min-width: 230px; border-radius: 14px; }
 .uh .uh-menu-hint { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--t2); }
 .uh .uh-menu-danger { color: var(--err-strong); }
 .uh .uh-menu-danger:hover { background: color-mix(in srgb, var(--err) 9%, transparent); color: var(--err-strong); }
 
-/* Archived projects, behind their own disclosure. */
-.uh .uh-archived { margin-top: var(--s-6); }
-.uh .uh-archived-toggle { margin-bottom: var(--s-3); color: var(--t1); }
-.uh .uh-archived-chev { transition: transform var(--dur-2) var(--uh-ease); }
-.uh .uh-archived-toggle[aria-expanded="true"] .uh-archived-chev { transform: rotate(180deg); }
-
-/* ── The one panel for "nothing here yet", signed out or brand new ───────────
-   The app design file's own empty-state shape — an 18px panel on --card, left
-   aligned, a heading, one sentence, the primary control — used for BOTH
-   states, because the signed-out visitor and the brand-new account are being
-   told the same kind of thing. What it replaces: a centred card with a 48px
-   tinted icon circle (empty), and a 3px accent stripe down the left edge
-   (sign-in). A solid hairline rather than the design's dashed one: a dashed box
-   reads as a drop target, and nothing drops here. */
-.uh .uh-empty,
-.uh .uh-signin {
-  max-width: 62ch;
-  margin-bottom: var(--s-6);
-  padding: clamp(22px, 3.4vw, 36px);
-  border: 1px solid var(--uh-hair);
-  border-radius: var(--radius-2xl);
-  background: var(--card);
-  text-align: left;
-}
-.uh .uh-empty-title,
-.uh .uh-signin h2 { margin: 0 0 var(--s-2); font-family: var(--font); font-size: 19px; font-weight: 560; letter-spacing: -.015em; line-height: 1.3; color: var(--t0); }
-.uh .uh-empty-text,
-.uh .uh-signin p { margin: 0 0 var(--s-4); max-width: 52ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
-.uh .uh-empty-text a { color: var(--accent-mid); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-
-/* "Nothing matched" answers an action the reader just took, so it is not the
-   greeting panel: a band between two hairlines, with its reset inside it. */
-.uh .uh-filtered { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3); padding: var(--s-4) 0; border-top: 1px solid var(--uh-hair); border-bottom: 1px solid var(--uh-hair); }
-.uh .uh-filtered-text { margin: 0; font-size: 14px; color: var(--t1); }
-
-.uh .uh-resolving { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--s-3); min-height: 180px; color: var(--t1); font-size: 14px; }
-.uh .uh-resolving p { margin: 0; }
-
-/* ── NEXT | TIP ───────────────────────────────────────────────────────────────
-   Two columns of text between two hairlines. No fill, no radius, no shadow. */
-.uh .uh-band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-7); margin: var(--s-6) 0; padding: var(--s-4) 0; border-top: 1px solid var(--uh-hair); border-bottom: 1px solid var(--uh-hair); }
-.uh .uh-band-col + .uh-band-col { padding-left: var(--s-7); border-left: 1px solid var(--uh-hair); }
-.uh .uh-eyebrow { display: flex; align-items: baseline; gap: var(--s-2); margin: 0 0 var(--s-2); font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
-/* The tip's kind (colour, type, a11y…) is a classification, not the next
-   action — so it is not accent. It is set apart by the separator and weight. */
-.uh .uh-eyebrow-kind { font-weight: 500; letter-spacing: .1em; color: var(--t1); }
-.uh .uh-eyebrow-kind::before { content: '\00b7'; margin-right: .5em; color: var(--t2); }
-.uh .uh-band-text { margin: 0; max-width: 62ch; font-size: 14px; line-height: 1.65; color: var(--t1); }
-.uh .uh-band-go { font-weight: 560; color: var(--accent-mid); white-space: nowrap; }
-.uh .uh-tip { color: var(--t1); }
-.uh .uh-skel { display: block; width: min(38ch, 100%); height: 1em; border-radius: var(--radius-xs); background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%); background-size: 200% 100%; animation: uh-skel-slide var(--fl-shimmer-dur) var(--ease-standard) infinite; }
-@media (max-width: 860px) {
-  .uh .uh-band { grid-template-columns: 1fr; gap: var(--s-4); }
-  .uh .uh-band-col + .uh-band-col { padding-left: 0; padding-top: var(--s-4); border-left: none; border-top: 1px solid var(--uh-hair); }
-}
-
-/* ── Daily starters ───────────────────────────────────────────────────────────
-   These STAY objects — they are artefacts you browse and their art is their
-   content — and that is now a distinction rather than a coincidence: your own
-   work is a list of values, a suggestion is a thing to look at. The design
-   file's "New in Discover" card: 18px, --card, a swatch band, no lift. */
-.uh .uh-starters { margin-top: var(--s-7); }
-.uh .uh-band + .uh-starters { margin-top: var(--s-6); }
-.uh .uh-starters-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--s-4); padding-bottom: 12px; border-bottom: 1px solid var(--uh-hair); }
-.uh .uh-starters-head .uh-eyebrow { margin: 0; }
-.uh .uh-starters-note { margin: 0; max-width: 60ch; font-size: 12.5px; line-height: 1.55; color: var(--t2); }
-.uh .uh-starter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
-.uh .uh-starter { display: flex; flex-direction: column; height: 100%; border: 1px solid var(--uh-hair); border-radius: var(--radius-2xl); background: var(--card); overflow: hidden; text-decoration: none; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
-.uh .uh-starter:hover { border-color: var(--bh); text-decoration: none; }
-.uh .uh-starter-art { display: block; height: 74px; }
-.uh .uh-starter-body { display: flex; flex-direction: column; gap: 3px; padding: 11px 13px 13px; }
-/* "Gradient" / "Palette" is the KIND of artefact — metadata, so not accent. */
-.uh .uh-starter-kind { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
-.uh .uh-starter-name { font-size: 14px; font-weight: 540; letter-spacing: -.01em; color: var(--t0); }
-.uh .uh-starter-fact { font-family: var(--mono); font-size: 11.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
-.uh .uh-starter-opens { margin-top: 2px; font-size: 12px; color: var(--t2); }
-
-/* ── The two dialogs: project detail and new project ──────────────────────────
-   `.fg-detail-overlay` HAD NO RULE. It lost its declaration in #200 and nothing
-   noticed, so both dialogs — aria-modal, focus-trapped, Escape-to-close — were
-   laid out in the document flow at the foot of the page, under the starters,
-   while the scroll lock froze the page above them. A modal the page's own
-   contract calls a modal is drawn as one now: fixed, over a scrim, centred,
-   scrolling on its own. No blur — a scrim says "the page is behind this"
-   without the glass the anti-slop bar names. */
-.uh .fg-detail-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: clamp(16px, 6vh, 72px) 16px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: var(--scrim);
-}
-.uh .il-detail {
-  position: relative;
-  width: 100%;
-  max-width: 560px;
-  margin: auto 0;
-  padding: clamp(20px, 3.4vw, 32px);
-  border: 1px solid var(--uh-hair);
-  border-radius: var(--radius-2xl);
-  background: var(--card);
-  box-shadow: 0 24px 56px -24px rgba(0, 0, 0, .35);
-}
-.uh .proj-new-modal { max-width: 480px; }
-.uh .fg-detail-close { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: var(--radius-s); border-color: var(--uh-hair); background: transparent; color: var(--t1); }
-.uh .fg-detail-close:hover { background: var(--uh-wash); color: var(--t0); }
-.uh .fg-detail-section { margin-bottom: var(--s-5); }
-.uh .fg-detail-label { display: block; margin-bottom: 10px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
-.uh .fg-detail-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; padding: var(--s-4) 0 0; border-top: 1px solid var(--uh-hair); background: none; }
-.uh .proj-detail-head { padding-right: 44px; }
-.uh .proj-detail-title { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; min-width: 0; }
-.uh .proj-detail-h { flex: 1 1 auto; min-width: 0; margin: 0; font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.025em; line-height: 1.2; color: var(--t0); overflow-wrap: anywhere; }
-.uh .proj-detail-rename { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.uh .proj-detail-rename input { flex: 1 1 200px; min-width: 0; min-height: 40px; font-size: 15px; font-weight: 560; }
-.uh .proj-new-lede { margin: 6px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--t1); }
-.uh .proj-new-name { width: 100%; min-height: 44px; font-size: 15px; font-weight: 500; }
-.uh .proj-detail-none { margin: 0; font-size: 13px; color: var(--t2); }
-.uh .proj-detail-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
-.uh .proj-detail-swatch { display: flex; flex-direction: column; gap: 6px; }
-.uh .proj-detail-swatch-chip { height: 48px; border-radius: var(--radius-s); border: 1px solid var(--uh-hair); }
-.uh .proj-detail-swatch-hex { font-family: var(--mono); font-size: 11px; color: var(--t1); text-align: center; font-variant-numeric: tabular-nums; }
-.uh .proj-detail-meta { display: flex; flex-direction: column; }
-.uh .proj-detail-meta-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--uh-hair); font-size: 13.5px; }
-.uh .proj-detail-meta-row:first-child { border-top: 0; padding-top: 0; }
-.uh .proj-detail-meta-row span { color: var(--t1); }
-.uh .proj-detail-meta-row strong { color: var(--t0); font-weight: 560; }
-.uh .proj-detail-iconrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.uh .proj-detail-upload { cursor: pointer; }
-.uh .proj-detail-upload:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
-.uh .proj-detail-hint { font-size: 12px; color: var(--t2); }
-.uh .proj-detail-icon { width: 32px; height: 32px; border-radius: var(--radius-xs); object-fit: contain; border: 1px solid var(--uh-hair); background: var(--bg-2); padding: 2px; }
-.uh .proj-detail-icon-lg { width: 56px; height: 56px; border-radius: var(--radius-s); object-fit: contain; border: 1px solid var(--uh-hair); background: var(--bg-2); padding: 4px; }
-.uh .proj-detail-icon-empty { display: flex; align-items: center; justify-content: center; color: var(--t2); font-size: 20px; }
-.uh .proj-detail-confirm { flex-direction: column; align-items: stretch; gap: var(--s-2); }
-.uh .proj-detail-confirm-text { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--err-strong); }
-.uh .proj-detail-confirm input { min-height: 40px; font-size: 14px; }
-.uh .proj-detail-confirm-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-
-.uh .proj-new-start { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.uh .proj-new-start-opt { display: flex; flex-direction: column; gap: 4px; min-height: 44px; padding: 12px 14px; border: 1px solid var(--uh-hair-2); border-radius: var(--radius); background: transparent; text-align: left; cursor: pointer; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
-.uh .proj-new-start-opt:hover { border-color: var(--bh); background: var(--uh-wash); }
-/* Selected = the ink ring, not an accent fill: which starting point is chosen
-   is state, and the accent is kept for the action that creates the project. */
-.uh .proj-new-start-opt.active { border-color: var(--t0); box-shadow: inset 0 0 0 1px var(--t0); }
-.uh .proj-new-start-opt strong { font-size: 13.5px; font-weight: 560; color: var(--t0); }
-.uh .proj-new-start-opt span { font-size: 12px; color: var(--t1); line-height: 1.45; }
-@media (max-width: 520px) { .uh .proj-new-start { grid-template-columns: 1fr; } }
-
-/* ── Focus. Drawn, never removed; no radius in the rule (the outline follows
-   its element's own radius — focus-ring-geometry.test.js). ── */
-.uh :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-
-/* ── The row, below a single line ─────────────────────────────────────────────
-   Five columns do not fit a phone, and the honest reflow is three lines — WHAT
-   IT IS, WHAT IS IN IT, WHAT YOU CAN DO — in the same order the wide row reads.
-   900 rather than 640 because the parts column carries a string as long as "No
-   type scale, fonts or tints", and it runs out of room first. */
-@media (max-width: 900px) {
-  .uh .uh-card {
-    align-items: start;
-    /* Load and ⋯ share the second line, in that order, so the row is painted
-       in the order it is tabbed (and the two ways to act stay together). */
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "art body body body" "parts parts foot acts" "when when when when" "confirm confirm confirm confirm";
-    column-gap: var(--s-3);
-  }
-  .uh .uh-card-art { width: 44px; height: 28px; margin-top: 2px; }
-  .uh .uh-parts { margin-top: var(--s-2); align-self: center; }
-  .uh .uh-card-when { justify-self: start; }
-  .uh .uh-card-foot { margin-top: var(--s-2); align-self: start; }
-}
-
-@media (max-width: 640px) {
-  .uh .uh-head { margin-bottom: var(--s-4); align-items: flex-start; }
-  .uh .uh-head-actions { width: 100%; }
-  .uh .proj-toolbar { gap: var(--s-2); }
-  .uh .proj-search { max-width: none; }
-  .uh .uh-card-foot { flex-wrap: wrap; }
-  /* A trailing middot, not a leading rule: the list wraps here, and a
-     border-left on a wrapped item draws a divider against the left margin. */
-  .uh .uh-stats li + li { padding-left: 0; border-left: none; }
-  .uh .uh-stats li:not(:last-child)::after { content: '·'; margin-left: .55em; color: var(--t2); }
+/* ── Recent exports ─────────────────────────────────────────────────────────
+   A hairline, a mono label, then one row per file: type chip, name, size, when. */
+.uh .uh-exports { margin-top: clamp(24px, 3vw, 40px); padding-top: 22px; border-top: 1px solid color-mix(in srgb, var(--t0) 6%, transparent); }
+.uh .uh-exports-h { margin: 0; font-family: var(--mono); font-size: 9.5px; font-weight: 400; letter-spacing: .18em; text-transform: uppercase; color: var(--ws-faint); }
+.uh .uh-exports-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 1px; }
+.uh .uh-export { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 12px; border-radius: 12px; color: color-mix(in srgb, var(--t0) 86%, transparent); transition: background .18s ease, color .18s ease; }
+.uh .uh-export-type { flex: none; padding: 4px 9px; border-radius: 8px; background: color-mix(in srgb, var(--t0) 7%, transparent); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--ws-dim); }
+.uh .uh-export-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; }
+.uh .uh-export-meta { flex: none; font-family: var(--mono); font-size: 10.5px; white-space: nowrap; color: var(--ws-faint); }
+@media (hover: hover) and (pointer: fine) {
+  .uh .uh-export:hover { background: color-mix(in srgb, var(--t0) 5%, transparent); color: var(--t0); }
 }
 
 /* ── Reduced motion ───────────────────────────────────────────────────────────
-   global.css clamps durations; these remove the movement. Both spellings: the
-   Settings choice wins in both directions, the OS query only when no choice was
-   made. Not prefixed with `.uh` — <html> is an ancestor of it. */
-html[data-reduced-motion="true"] .uh .uh-archived-chev,
+   Both spellings: the Settings choice wins in both directions, the OS query
+   only when no choice was made. Not prefixed with `.uh` — <html> is an
+   ancestor of it. */
+html[data-reduced-motion="true"] .uh *,
 html[data-reduced-motion="true"] .uh .uh-card { transition: none; }
-html[data-reduced-motion="true"] .uh .il-detail { animation: none; }
+html[data-reduced-motion="true"] .uh *:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduced-motion="false"]) .uh .uh-archived-chev,
-  html:not([data-reduced-motion="false"]) .uh .uh-card { transition: none; }
-  html:not([data-reduced-motion="false"]) .uh .il-detail { animation: none; }
+  html:not([data-reduced-motion="false"]) .uh * { transition: none; }
+  html:not([data-reduced-motion="false"]) .uh *:active { transform: none; }
 }
 
 @media (forced-colors: active) {
-  .uh .uh-card.proj-card-active { border-left: 3px solid Highlight; }
-  .uh .uh-part.is-done { background: CanvasText; }
+  .uh .uh-card-bar > span,
+  .uh .uh-meter-fill { background: CanvasText; }
 }

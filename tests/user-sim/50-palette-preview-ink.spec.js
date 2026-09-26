@@ -49,6 +49,7 @@
 //    it just stops being measured.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { openPaletteTools } from './palette-helpers.js'
 
 // A DETERMINISTIC palette, not a reroll. The defect was common enough that
 // random palettes would catch it, but a fixed seed is the difference between a
@@ -161,7 +162,7 @@ test.describe('Palette Builder preview ink', () => {
     }, PALETTE)
 
     await go(page, '/create/palette')
-    await page.getByRole('button', { name: 'Preview', exact: true }).click()
+    await (await openPaletteTools(page)).getByRole('button', { name: 'Preview on a UI' }).click()
     const scene = page.locator('.plb-pv').first()
     await expect(scene).toBeVisible()
 

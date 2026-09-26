@@ -86,7 +86,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
         }
       }
       await addDoc(collection(db, 'community-prompts'), doc)
-      toast('Prompt submitted for review — you\'ll get +25 AI generations if approved!')
+      toast('Prompt submitted for review')
       if (mediaDropped) toast('Your image was too large to attach (after compression) — the prompt was submitted without it')
       setSubmitTitle('')
       setSubmitText('')
@@ -152,7 +152,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
           </button>
         </div>
         <div className="pl-add-note">
-          Submissions are reviewed before appearing in the community library. Approved prompts earn you <strong>+25 bonus AI generations</strong>.
+          Submissions are reviewed before appearing in the community library.
         </div>
       </div>
     </div>

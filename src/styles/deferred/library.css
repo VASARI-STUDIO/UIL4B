@@ -41,66 +41,6 @@
    so the two libraries sit side by side again; on a phone they stack back. */
 @media(max-width:720px){.lib-switch{grid-template-columns:1fr 1fr}.lib-head-status{flex-direction:row;align-items:center;justify-content:space-between;width:100%}}
 @media(max-width:480px){.lib-switch{grid-template-columns:1fr}.lib-keyhint{display:none}}
-.cs-pillnav-item:active{transform:translateY(.5px)}
-/* No radius hoisted to rest for this one: #348 left the block with no JSX
-   consumer, so there is no rendered shape to preserve and a new rule here
-   would be dead CSS added on top of dead CSS. The geometry override is just
-   dropped. */
-.cs-pillnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--accent);box-shadow:0 2px 8px -2px var(--accent-border);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
-[data-theme="light"] .cs-pillnav{box-shadow:var(--shadow-m)}
-.cs-section-header{user-select:none;position:relative;z-index:10}
-.cs-section-header>h2{transition:color var(--dur-1) var(--ease-standard)}
-.cs-section-header:hover>h2{color:var(--t1)}
-/* Solo tool pages (#50): the header is a plain action toolbar — no collapse. */
-.cs-section-header.cs-solo-toolbar{cursor:default}
-
-/* ─── Palette Builder core (CS#3.1/3.3–3.6/3.8/3.10/3.15/3.16) ─── */
-.cs-pb-section{margin-bottom:48px;scroll-margin-top:100px}
-/* Header */
-.cs-pb-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer}
-.cs-pb-title{margin:0;flex-shrink:0}
-.cs-pb-randomize{display:inline-flex;align-items:center;gap:8px}
-.cs-pb-kbd{font-family:var(--mono);font-size:10px;font-weight:700;line-height:1;padding:3px 6px;border-radius:var(--radius-xs);background:color-mix(in srgb,#000 18%,transparent);color:var(--accent-fg)}
-.cs-pb-reset{display:inline-flex;align-items:center;gap:8px}
-.cs-pb-add-trigger{display:inline-flex;align-items:center;gap:5px}
-.cs-pb-live{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
-
-/* Base colour + harmony quick-switch */
-.cs-pb-base{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--s-3)}
-.cs-pb-base-swatch{position:relative;width:40px;height:40px;flex-shrink:0;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border)}
-.cs-pb-base-hex{width:104px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;padding:9px 12px;min-height:40px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);color:var(--t0)}
-.cs-pb-base-div{width:1px;height:24px;background:var(--border);flex-shrink:0}
-.cs-pb-harms{display:flex;gap:4px;flex-wrap:wrap}
-
-/* Swatch rail (CS#3.1/3.3) */
-.cs-pb-rail{display:flex;gap:var(--s-2);margin-bottom:var(--s-3);flex-wrap:wrap}
-.cs-pb-swatch-meta{padding:var(--s-3) var(--s-3) var(--s-2)}
-.cs-pb-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.65}
-.cs-pb-hex{position:relative;display:inline-block;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;cursor:pointer;background:none;border:none;padding:0;color:inherit;text-align:left}
-.cs-pb-edit{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
-.cs-pb-tints{display:flex;height:36px;flex-shrink:0}
-.cs-pb-tint{flex:1;border:none;padding:0;cursor:pointer;transition:filter var(--dur-1) var(--ease-standard)}
-.cs-pb-tint:hover{filter:brightness(1.06)}
-.cs-pb-tool:active{transform:scale(.92)}
-.cs-pb-tool:focus-visible{outline:2px solid var(--accent-fg);outline-offset:1px}
-.cs-pb-tool--drag{cursor:grab}
-
-/* Gap-insert ×1–3 (CS#3.5) */
-.cs-pb-gap{position:relative;flex:0 0 var(--s-2);align-self:stretch;display:grid;place-items:center;cursor:pointer}
-.cs-pb-gap-count{font-family:var(--mono);font-size:12px;font-weight:700;line-height:1}
-.cs-pb-add-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.cs-pb-adjust-field{display:flex;flex-direction:column;gap:6px}
-.cs-pb-adjust-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
-.cs-pb-adjust-val{color:var(--t1)}
-.cs-pb-adjust-reset{grid-column:1/-1;justify-self:start;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-mid);padding:4px 0;min-height:32px;transition:opacity var(--dur-1) var(--ease-standard)}
-.cs-pb-adjust-reset:disabled{color:var(--t3);cursor:default;opacity:.6}
-
-/* Pro-lock affordance (real gate — glyph is the conversion driver) */
-.cs-pro-lock{position:relative}
-.cs-pro-lock-glyph{margin-left:6px;color:var(--accent);flex-shrink:0;vertical-align:-1px}
-
-.cs-chevron{color:var(--t2);transition:transform var(--dur-2) var(--ease-standard);flex-shrink:0}
 
 /* ─── Prompt Library (gallery style) ─── */
 .pl-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
@@ -175,13 +115,6 @@
    rather than repeated: the 720px band retunes it and the seam follows. */
 .pl-gallery--continues{margin-top:var(--pl-gap)}
 .pl-card:hover{transform:translateY(-4px);box-shadow:var(--warm-shadow-lg);border-color:var(--bh)}
-.pl-card:hover .pl-card-overlay{opacity:1}
-.pl-card:hover .pl-card-img img{transform:scale(1.04)}
-
-/* Card image */
-.pl-card-img{position:relative;overflow:hidden;aspect-ratio:16/10}
-.pl-card-img img{width:100%;height:100%;object-fit:cover;transition:transform var(--dur-5) var(--ease-out)}
-.pl-card-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.1) 50%,transparent 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px;opacity:0;transition:opacity var(--dur-3) var(--ease-standard)}
 
 /* ── The prompt preview: the card shows the ARTEFACT ────────────────────────
    The founder asked the library to "preivew the prompts" and referenced
@@ -265,7 +198,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-mid);transition:opacity var(--dur-2) var(--ease-standard)}
 /* Prompt modal overlay */
 .pl-modal-backdrop{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;animation:fg-fade var(--dur-2) var(--ease-entrance)}
-.pl-modal{background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);width:100%;max-width:680px;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--warm-shadow-lg);position:relative;animation:fg-rise var(--dur-3) var(--ease-entrance)}
+.pl-modal{background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);width:100%;max-width:680px;max-height:80vh;max-height:80dvh;display:flex;flex-direction:column;box-shadow:var(--warm-shadow-lg);position:relative;animation:fg-rise var(--dur-3) var(--ease-entrance)}
 .pl-modal-close{position:absolute;top:16px;right:16px;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all var(--t);z-index:2}
 .pl-modal-close:hover{background:var(--bg-3);color:var(--t0)}
 .pl-modal-header{padding:28px 28px 0;flex-shrink:0}
@@ -277,7 +210,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    Only rendered for a prompt whose output has been built, so the modal is
    unchanged for a user-submitted one. */
 .pl-modal-views{display:flex;gap:2px;padding:14px 28px 0;flex-shrink:0}
-.pl-modal-view{appearance:none;background:none;border:none;border-bottom:2px solid transparent;border-radius:var(--radius-xs);padding:8px 2px;margin-right:18px;font:inherit;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.pl-modal-view{appearance:none;background:none;border:none;border-bottom:2px solid transparent;border-radius:var(--btn-radius);padding:8px 2px;margin-right:18px;font:inherit;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pl-modal-view:hover{color:var(--t0)}
 .pl-modal-view.is-on{color:var(--t0);border-bottom-color:var(--accent)}
 .pl-modal-view:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -321,7 +254,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Recovery action inside the search empty/error states (Try again · Search all
    categories). 40px tall — comfortably over the 24px WCAG 2.5.8 floor, and it
    matches .emoji-tone-btn so the two controls on this surface agree. */
-.emoji-retry-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.emoji-retry-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
 .emoji-retry-btn:hover{border-color:var(--bh);background:var(--hvr)}
 /* Skin-tone popover — one compact toolbar button opens the six tone swatches */
 .emoji-tone-wrap{position:relative;flex-shrink:0}
@@ -336,32 +269,12 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    (the panel's left edge pinned EDGE_PAD from the viewport), not a centre. */
 .emoji-tone-pop[data-pop-align="clamp"]{left:var(--pop-x,0px)}
 .emoji-tone-pop[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
-/* Category chips — glyph icon + label, count badge on the All chip */
-.emoji-chip{display:inline-flex;align-items:center;gap:6px}
-.emoji-chip-ic{font-size:13px;line-height:1}
 
 /* ─── Box Shadow Generator ─── */
 
 /* ─── UI Builder ─── */
 
-/* ─── Docs ─── */
-.doc-sub{border-bottom:1px solid var(--border)}
-.doc-sub:last-child{border-bottom:none}
-.doc-body p{font-size:14px;color:var(--t1);line-height:1.75;margin-bottom:12px}
-.doc-body h4{font-size:14px;font-weight:700;color:var(--t0);margin:16px 0 6px}
-.doc-body ul,.doc-body ol{padding-left:20px;margin-bottom:12px}
-.doc-body li{font-size:14px;color:var(--t1);line-height:1.7;margin-bottom:6px}
-.doc-body li strong{color:var(--t0)}
-.auth-brand{display:flex;justify-content:center;margin-bottom:22px;text-decoration:none}
-.auth-brand:hover{text-decoration:none}
-.auth-trust{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);line-height:1.4;text-align:center}
-.auth-trust svg{flex-shrink:0;color:var(--t3)}
-
 /* ─── Seg bar ─── */
-.seg-bar{display:flex;flex-wrap:wrap;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);overflow:hidden}
-.fp:hover{border-color:var(--accent)}
-@media(max-width:640px){
-  .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}}
 
 
 /* ══ Icon library — Customizer dialog (icust-), recents rail (ig-rail-), toolbar
@@ -401,7 +314,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-stage-img{display:block;max-width:100%;height:auto}
 .icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:rgba(244,244,245,.55)}
 .icust-stage--light .icust-stage-msg{color:rgba(10,10,11,.5)}
-.icust-value{flex:0 0 auto;min-width:42px;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1)}
 .icust-note{flex:1;font-size:var(--fs-caption);color:var(--t2);font-style:italic}
 /* Pro-gated line-style controls: buttons preview their own cap/join effect */
 .icust-seg--icon button{padding:6px}
@@ -414,7 +326,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-gate{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:min(380px,100%);padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .icust-gate-title{margin:0;font-size:var(--fs-h5);font-weight:640;color:var(--t0)}
 .icust-gate-copy{margin:0;font-size:var(--fs-body-s);line-height:1.55;color:var(--t1)}
-.icust-gate-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .icust-gate-dismiss{align-self:center;margin-top:2px;padding:6px 12px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
 .icust-gate-dismiss:hover{color:var(--t0);background:var(--hvr)}
 /* Save-to-project picker (shares the gate dialog shell) */
@@ -445,10 +356,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    way out — keeps the workflow inside UIL4B. */
 .icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
 .icust-reset{margin-left:0}
-.icust-save-lock{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
-.icust-save--locked{cursor:pointer;opacity:.85}
-.icust-save--locked:hover{opacity:1}
-.icust-lock-glyph{display:inline-grid;place-items:center}
 .icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
 .icust-upgrade:hover{text-decoration:underline}
 
@@ -456,14 +363,14 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-similar{padding:16px 24px 24px;border-top:1px solid var(--border)}
 .icust-similar-label{margin-bottom:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .icust-similar-row{display:flex;flex-wrap:wrap;gap:8px}
-.icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+.icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
 .icust-similar-btn:hover{border-color:var(--bh);background:var(--hvr);transform:translateY(-1px)}
 .icust-similar-btn img{display:block;width:24px;height:24px}
 
 /* Recents rail */
 .ig-rail{margin:8px 0 28px}
 .ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
-.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--radius-s);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--btn-radius);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .ig-rail-clear:hover{color:var(--accent-mid);border-color:var(--border);background:var(--bg-1)}
 .ig-rail-clear svg{width:11px;height:11px}
 /* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
@@ -489,15 +396,11 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail-badge--copy{background:var(--t2)}
 
 /* Toolbar add-icon button (icon-scoped; does not touch shared .pl- toolbar bits) */
-.ig-addbtn{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.ig-addbtn{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .ig-addbtn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-mid)}
 .ig-addbtn svg{flex-shrink:0}
 
 /* Custom-icons: Pro lock + empty state */
-.ig-custom-lock{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;max-width:420px;margin:0 auto;padding:72px 24px}
-.ig-custom-lock-glyph{display:grid;place-items:center;width:56px;height:56px;border-radius:var(--radius-l);background:var(--accent-bg);color:var(--accent)}
-.ig-custom-lock-title{font-family:var(--display);font-size:var(--fs-h4);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
-.ig-custom-lock-sub{max-width:340px;font-size:var(--fs-body-s);color:var(--t2);line-height:1.55}
 .ig-custom-empty{max-width:460px;margin:0 auto;padding:56px 24px;text-align:center;font-size:var(--fs-body-s);color:var(--t2);line-height:1.6}
 
 /* My Icons: two stacked, independently-clearable collections (Saved + Copied) */
@@ -506,7 +409,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-mysec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
 .ig-mysec-title{font-family:var(--display);font-size:var(--fs-h5);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
 .ig-mysec .ig-custom-empty{margin:0;padding:32px 24px;text-align:left}
-.ig-mysec .ig-custom-lock{padding:48px 24px}
 /* Free-tier allowance hint under the Saved collection (non-Pro only). */
 .ig-custom-hint{margin-top:4px;font-size:var(--fs-caption);color:var(--t3)}
 .ig-custom-hint-link{font:inherit;color:var(--accent-mid);font-weight:600;background:none;border:0;padding:0;cursor:pointer}
@@ -596,14 +498,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
   .icust-code{margin:12px 16px 0}
   .icust-foot{padding:16px 16px 20px;flex-wrap:wrap}}
 
-
-/* ══ Kept-page wrapper (nav clearance + container) ══ */
-.page-shell{max-width:1216px;margin:0 auto;padding-inline:clamp(20px,4vw,32px);padding-bottom:var(--s-9);min-height:60vh}
-.soon-mark{margin-bottom:var(--s-4)}
-.soon-title{font-size:var(--fs-h2);font-weight:700;letter-spacing:-.02em;line-height:1.12;color:var(--t0);margin-bottom:12px;text-wrap:balance}
-.soon-text{font-size:var(--fs-body);color:var(--t1);line-height:1.6;margin-bottom:var(--s-6);max-width:48ch}
-.soon-actions{display:flex;gap:12px;flex-wrap:wrap}
-
 /* Hero */
 .home-workspace-intro{position:relative;isolation:isolate}
 
@@ -622,7 +516,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    from existing role tokens, so this block inherits the V2 palette the moment
    feat/v2-token-foundation remaps them — nothing here names a hex.
 
-   ⚠️ ACCENT CONTRAST (founder, 2026-08-16): the V2 accent is blue #0F6FFF,
+   ⚠️ ACCENT CONTRAST: the V2 accent is blue #0F6FFF,
    which measures ≈3.85:1 on the page ground — fine for fills, borders, icons,
    large display text and focus rings, and BELOW the 4.5:1 floor for normal
    text. Every accent-coloured string in this block that is smaller than large
@@ -631,9 +525,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
    The five V2 tokens this block consumes — --hi, --hi-fg, --radius-3xl,
    --shadow-cmd, --shadow-panel — are owned by feat/v2-token-foundation. */
-
-/* ── Shared V2 section furniture ── */
-.hbrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 
 /* ── Hero ────────────────────────────────────────────────────────────────────
    Composition is the page's existing centred measure; every TYPE and SPACING
@@ -694,78 +585,73 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 
 /* ── The masthead slab ─────────────────────────────────────────────────────
-   Design: 26px radius on `#0B0C0E` (= `--accent-deep`, the same value the
-   token layer already carries for the Spectrum ground), with TWO radial mesh
-   gradients rather than the one blurred glow this surface shipped.
+   overriding the app file here:
+   "the header is way too large" and "i preferred the old gradient in these
+   headers, it looked less AI generated and fit our theme better".
 
-   The mesh colours are the design's `meshA`/`meshB`, derived rather than
-   pasted: `alphaOf(accent,.55)` and `alphaOf(mix(accent,#3FAFA0,.62),.32)`.
-   `--accent-hover` is the accent lifted toward paper, which is what the accent
-   family already means by "the accent on a dark ground" — and this slab is a
-   fixed dark surface in BOTH themes, so the paper-ward member is the one that
-   holds up in light mode too. `#3FAFA0` is the design's own second hue (one of
-   its four `accentColor` options); there is no token for it because the app
-   has never had a second decorative hue.
+   THE GRADIENT IS THE OLD ONE, RESTORED RATHER THAN REDRAWN. Found with
+   `git log -p -S dgh-hero`: originally the slab
+   was `#0a0a0b` with ONE blurred glow low on the right —
+   `deferred/tool-shell.css` `.dgh-hero::before`, purple into teal. That rule
+   was never deleted; phase 2 (8ab4de8c) switched it off here and painted the
+   design's two accent meshes on `::after` instead. So restoring it is taking
+   the override away: `::before` paints again from its original declaration,
+   and the ground goes back to its original value. Nothing is re-typed, so the
+   restored glow cannot drift from the original.
 
-   `::before` is switched off rather than restyled: tests/user-sim/
-   40-gallery-hero.spec.js suppresses it to prove nothing REAL overflows, and
-   the replacement is `inset:0` so the figure is zero either way. */
+   tests/user-sim/40-gallery-hero.spec.js suppresses `::before` to prove that
+   nothing REAL overflows the slab; that is again the element it names.
+
+   SMALLER, IN BOTH AXES. The app file's clamp(34px,7.6vw,78px) title under
+   clamp(30px,5.6vw,72px) of padding was a 436px masthead on /create/icons at
+   1440 (measured) — half the fold before a single icon. The title steps down
+   to a screen title, the padding roughly halves, and the blurb sits closer. */
 .lib-surface .dgh-hero{
-  --dgh-mesh-a:color-mix(in srgb,var(--accent-hover) 55%,transparent);
-  --dgh-mesh-b:color-mix(in srgb,color-mix(in srgb,#3FAFA0 62%,var(--accent-hover)) 32%,transparent);
-  padding:clamp(30px,5.6vw,72px) clamp(20px,3.6vw,48px);
-  background:var(--accent-deep);
-  border-color:rgba(255,255,255,.09);
-  border-radius:26px;
-  box-shadow:0 22px 64px rgba(6,6,10,.16);
+  padding:clamp(20px,3vw,36px) clamp(18px,3vw,40px);
+  gap:clamp(16px,3vw,40px);
+  margin:0 0 clamp(12px,1.6vw,18px);
+  background:#0a0a0b;
+  border-color:rgba(255,255,255,.1);
+  border-radius:22px;
+  box-shadow:0 18px 48px rgba(6,6,10,.14);
 }
-.lib-surface .dgh-hero::before{content:none}
-.lib-surface .dgh-hero::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:
-    radial-gradient(120% 140% at 88% 52%,var(--dgh-mesh-a),transparent 58%),
-    radial-gradient(90% 120% at 66% 8%,var(--dgh-mesh-b),transparent 62%);
-}
-/* The design's own h1 metric. The shipping one was clamp(54px,8vw,110px)/500 at
-   -.065em/.88 — 102px at 1280, a display setting borrowed from the sales page.
-   The app file sets its screen titles 24px smaller, one step heavier and less
-   tightly tracked, which is what makes a library title read as a page rather
-   than as a poster. #F7F7F4 is the design's paper on this slab. */
 .lib-surface .dgh-hero h1{
   max-width:min(20ch,100%);
-  font-size:clamp(34px,7.6vw,78px);font-weight:600;
-  letter-spacing:-.045em;line-height:.92;color:#F7F7F4;
+  font-size:clamp(28px,4.2vw,52px);font-weight:600;
+  letter-spacing:-.04em;line-height:.96;color:#F7F7F4;
 }
 .lib-surface .dgh-hero p{
-  max-width:min(46ch,100%);margin:16px 0 0;
-  font-size:clamp(14.5px,1.5vw,16.5px);line-height:1.55;
+  max-width:min(58ch,100%);margin:10px 0 0;
+  font-size:clamp(14px,1.2vw,15.5px);line-height:1.5;
   color:rgba(247,247,244,.68);
 }
+.lib-surface .dgh-action{margin-top:16px}
 /* The 2-line clamp below 641 survives untouched: it is `.dgh-copy>p` in
-   global.css and nothing here sets `display` on that element. It exists
-   because this masthead was 453px of an 844px screen. */
+   global.css and nothing here sets `display` on that element. */
 @media(max-width:720px){
-  .lib-surface .dgh-hero{border-radius:20px}
+  .lib-surface .dgh-hero{border-radius:18px}
 }
 
-/* ── The Icons / Emoji tabs move into the slab ─────────────────────────────
-   Design: the tabs sit INSIDE the card, under the blurb, as a wrapping row of
-   999px pills — glyph plus a 13.5px label, 11px/18px, 44px floor.
+/* ── The Icons / Emoji tabs ────────────────────────────────────────────────
+   Pills with a glyph and a 13.5px label, 44px floor — the app file's tab.
+
+   WHERE THEY SIT is the height decision. Under the blurb (the app file) they
+   cost the slab a 44px row plus its gap; beside it, in the aside column that
+   `--controls` already declares, they cost nothing, and that is where the old
+   masthead put them. So they
+   ride the right-hand column from 900px up and drop under the copy below it.
 
    THEY KEEP `role="tab"` AND `aria-selected`, and that is a deliberate
-   departure from the design's `aria-pressed`. The design's tabs are plain
-   buttons with no panels; ours control two real `role="tabpanel"` regions and
-   carry `aria-controls`, roving `tabindex` and ←/→ navigation. Swapping the
-   state attribute would leave two tabpanels named by something that is no
-   longer a tab — a role that lies, which is the one thing the scorecard's a11y
-   axis calls out by name. `aria-selected` on a tab is the same statement.
-
-   The sub-label ("SVG and JSX", "Unicode, copy-ready") stays in the accessible
-   name and becomes the control's tooltip, but leaves the pill: the design's own
-   tab renders the glyph and the label only, and a two-line 999px pill is not
-   the shape it draws. Nothing is removed from the DOM. */
-.lib-surface .dgh-hero--controls{grid-template-columns:minmax(0,1fr);gap:26px}
+   departure from the design's `aria-pressed`: ours control two real
+   `role="tabpanel"` regions with `aria-controls`, roving `tabindex` and ←/→.
+   The sub-label ("SVG and JSX") stays in the accessible name and the tooltip. */
+.lib-surface .dgh-hero--controls{grid-template-columns:minmax(0,1fr);gap:16px}
 .lib-surface .dgh-aside{align-self:start}
+@media(min-width:900px){
+  .lib-surface .dgh-hero--controls{grid-template-columns:minmax(0,1fr) auto;align-items:start}
+  .lib-surface .dgh-aside{align-self:end;align-items:flex-end}
+  .lib-surface .dgh-aside .lib-head-status{align-items:flex-end}
+}
 .lib-surface .lib-switch{
   display:flex;flex-wrap:wrap;gap:8px;width:auto;
   padding:0;background:none;border:0;border-radius:0;
@@ -837,20 +723,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    not be: it is the one piece of motion this control has. `color` transitions
    on the same duration and curve as the indicator's travel, so the incoming
    label darkens as the fill arrives instead of flashing invisible. */
-/* THE FILTER ROW IS ITS OWN ROW, and `order` is what makes that a ROW rather
-   than a BREAK: with the container simply at 100% the action ("Add icon",
-   "Create a palette") fell PAST it onto a third line — measured 170px of
-   toolbar on /create/icons at 1280, in three rows. Ordering the filters last
-   puts the search, the count and the action back on one line with the filters
-   under them, which is the design's two-row panel.
-
-   UNCONDITIONAL, including for the collapsed trigger form, and that is a
-   decision rather than an oversight: /create/icons keeps an expanded tray at
-   1280 while /create/emoji's twelve categories collapse, so a rule that gave a
-   row to chips but not to a trigger would make the two tabs of ONE page
-   different heights — the exact defect 25-defect-sweep measures (68px against
-   213px, the page moving 145px under the cursor when you switch tab). */
-.lib-surface .lbry-toolbar-filters{flex:1 1 100%;order:9;gap:10px}
+/* The filter groups sit on the toolbar's one row (see "The toolbar row never
+   wraps", below), so both tabs of /create/icons share one toolbar height
+   (25-layout-target-sweep: 68px vs 213px). */
+.lib-surface .lbry-toolbar-filters{gap:10px}
 .lib-surface .lbry-filters{gap:6px;padding:0;background:none;border-radius:0}
 .lib-surface .lbry-filters .lbry-filter{
   min-height:40px;padding:9px 15px;
@@ -1009,6 +885,114 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 }
 
 
+/* ── The toolbar row never wraps ───────────────────────────────────────────
+   toolbars never wrap, at any
+   width. LibraryToolbar steps the row down through stages until it fits
+   (groups as written → groups as triggers → one Filters control → the action
+   too), so the row itself only has to refuse to wrap and let the search field
+   be the one thing that gives. `data-stage` is that component's; the CSS does
+   not decide anything, it only lays out what the component chose.
+
+   The base rules this overrides are phone rules in global.css that made the
+   filters and the action full-width blocks (`width:100%`), which was the
+   stacked, five-row phone toolbar (the first icon at y≈654). */
+.lib-surface .lbry-toolbar-row{flex-wrap:nowrap}
+.lib-surface .lbry-toolbar-row>.lbry-search{flex:1 1 200px;min-width:0}
+.lib-surface .lbry-toolbar-filters{flex:0 0 auto;flex-wrap:nowrap;gap:8px;width:auto}
+.lib-surface .lbry-toolbar-filters>.lbry-filters{flex-wrap:nowrap;width:auto}
+.lib-surface .lbry-toolbar-action{flex:0 0 auto;width:auto;margin-left:auto}
+.lib-surface .lbry-toolbar-action>*{width:auto;white-space:nowrap}
+.lib-surface .lbry-toolbar-row .lbry-select{width:auto}
+
+/* The one control the groups collapse into. The same resting affordance as a
+   collapsed group trigger (a hairline pill), because it is the same kind of
+   thing: a control that opens filters. */
+.lib-surface .lbry-filterpanel{position:relative;flex:0 0 auto;display:flex}
+.lib-surface .lbry-filtersbtn{
+  display:inline-flex;align-items:center;gap:8px;
+  min-height:44px;padding:0 14px;
+  border:1px solid var(--bh);border-radius:var(--radius-pill);
+  background:transparent;color:var(--t1);
+  font-family:var(--font);font-size:12.5px;font-weight:560;white-space:nowrap;cursor:pointer;
+}
+.lib-surface .lbry-filtersbtn:hover{color:var(--t0);background:var(--hvr)}
+.lib-surface .lbry-filtersbtn[aria-expanded="true"],
+.lib-surface .lbry-filtersbtn[data-active="true"]{color:var(--t0);background:var(--card)}
+.lib-surface .lbry-filtersbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface .lbry-filtersbtn-count{
+  display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;
+  border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);
+  font-size:11px;font-variant-numeric:tabular-nums;
+}
+/* On a phone the word goes and the glyph stays: the search field is the thing
+   the row exists for, and 44px of glyph says "filters" as well as 90px does.
+   The word stays in the accessible name. */
+@media(max-width:640px){
+  .lib-surface .lbry-filtersbtn{padding:0;width:44px;justify-content:center;position:relative}
+  .lib-surface .lbry-filtersbtn-label{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+  }
+  .lib-surface .lbry-filtersbtn-count{position:absolute;top:-4px;right:-4px}
+}
+
+/* Desktop: the Filters popover. One surface — the groups are separated by
+   space, not boxed (no panel inside a panel). */
+.lib-surface .lbry-filterpop-panel{
+  position:absolute;top:calc(100% + 8px);left:0;z-index:60;
+  display:flex;flex-direction:column;gap:14px;
+  width:min(440px,calc(100vw - 32px));max-height:var(--pop-max-h,min(70vh,560px));
+  overflow-y:auto;overscroll-behavior:contain;padding:16px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-l);
+}
+.lib-surface .lbry-filterpop-panel[data-pop-align="end"]{left:auto;right:0}
+.lib-surface .lbry-filterpop-panel[data-pop-align="clamp"]{left:var(--pop-x,0)}
+.lib-surface .lbry-filterpop-panel[data-pop-side="top"]{top:auto;bottom:calc(100% + 8px)}
+.lib-surface .lbry-filterpop-panel:focus-visible{outline:none}
+.lib-surface .lbry-panel-groups{display:flex;flex-direction:column;gap:14px}
+.lib-surface .lbry-panel-groups>.lbry-filters{flex-wrap:wrap;width:auto}
+.lib-surface .lbry-panel-groups .lbry-select{width:100%;max-width:none}
+.lib-surface .lbry-panel-action{padding-top:14px;border-top:1px solid var(--border)}
+.lib-surface .lbry-panel-action>*{width:100%;justify-content:center}
+
+/* Phone: the bottom sheet. Portalled to <body> inside its own `.lib-surface`
+   layer (see LibraryToolbar), so it is laid out against the viewport. */
+.lbry-sheet-layer{position:fixed;inset:0;z-index:9990;display:flex;flex-direction:column;justify-content:flex-end}
+.lbry-sheet-scrim{position:absolute;inset:0;background:var(--scrim)}
+.lbry-sheet{
+  position:relative;display:flex;flex-direction:column;
+  max-height:min(80dvh,640px);
+  background:var(--card);border-top:1px solid var(--border);
+  border-radius:20px 20px 0 0;box-shadow:var(--shadow-l);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.lbry-sheet:focus-visible{outline:none}
+.lbry-sheet-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px 10px;border-bottom:1px solid var(--border);
+}
+.lbry-sheet-title{margin:0;font-family:var(--font);font-size:15px;font-weight:560;color:var(--t0)}
+.lbry-sheet-done{
+  min-height:44px;padding:0 16px;border:0;border-radius:var(--radius-pill);
+  background:var(--t0);color:var(--bg-1);
+  font-family:var(--font);font-size:13px;font-weight:560;cursor:pointer;
+}
+.lbry-sheet-done:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lbry-sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:16px}
+
+/* Phone: the one chip row that stays on screen. It scrolls sideways and never
+   grows; `.rail-overflow`'s own fade is not borrowed because its mask needs
+   the rail script, so the row simply clips at the toolbar's padding. */
+.lib-surface .lbry-toolbar-quick{margin:-8px -10px 0;padding:8px 10px 0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-inline:contain}
+.lib-surface .lbry-toolbar-quick::-webkit-scrollbar{display:none}
+.lib-surface .lbry-toolbar-quick>.lbry-filters{flex-wrap:nowrap;width:max-content;max-width:none}
+
+/* E8 — one focus ring on the search, not two. The wrapper draws the ring
+   (`:focus-within`, below); the input's own global outline sat inside it. */
+.lib-surface .lbry-search input:focus-visible{outline:none}
+
+
 /* ── The result head ───────────────────────────────────────────────────────
    Design (Palette Library, line 250): the heading and the count on one
    baseline over a hairline. Ours already is that row; the metrics were a
@@ -1049,7 +1033,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    `.lbry-card-id` is `flex:1 1 0` and simply absorbs whatever is left. That left
    the name 97px at 320, 103px at 640 and 104px at 1280, against a widest curated
    name ("Harmonic Energy") of 127px: 20 of 100 names ellipsized at 320, 15 at
-   640 and 13 at 1280 — the last of those at a width 25-defect-sweep:942 does not
+   640 and 13 at 1280 — the last of those at a width 25-layout-target-sweep:942 does not
    even walk, so the founder's "no gradient name or meta line is truncated at any
    width" was failing wider than its own guard could see.
 
@@ -1092,25 +1076,38 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 
 
 /* ── The icon grid ─────────────────────────────────────────────────────────
-   Design (icons page, line 313): `minmax(min(92px,30vw),1fr)` at a 10px gap,
-   with 18px cells over a hairline and a 92px floor. The shipping grid was a
-   4px gap between borderless 80px cells, which is a contact sheet rather than
-   a set of objects you can pick one of.
+   Design (icons page, line 313): `minmax(min(92px,30vw),1fr)` at a 10px gap
+   with a 92px floor, 10px sans labels, and the picked tile on the accent wash
+   over an accent hairline.
 
-   `calc((100% - 20px)/3)` rather than the design's flat `30vw` in the `min()`:
-   at 320px the page column is 288px and three 92px cells plus two 10px gaps
-   want 296, so the literal rule drops a phone from three columns to two. This
-   keeps the design's cell size everywhere it fits and its COLUMN COUNT where
-   it does not. */
+   NO FRAME ON A RESTING TILE. The app file draws a `rgba(ink,.08)` hairline
+   round every cell; this build deliberately omits it, so a
+   tile at rest paints nothing and the glyphs sit on the page. The frame
+   arrives only as state: a ground on hover, and the design's accent wash plus
+   hairline on the tile whose customizer is open (`.is-picked`).
+
+   THE PHONE IS FOUR COLUMNS. The design's phone mock (Spectrum "On mobile", the icon
+   screen) is a dense 4-up grid of about twenty; the 92px floor gave a 390px
+   phone three columns and six icons above the fold. Below
+   641px the cell drops to a 72px floor and the label to one line. */
 .lib-surface .ig{
   grid-template-columns:repeat(auto-fill,minmax(min(92px,30vw,calc((100% - 20px)/3)),1fr));
   gap:10px;
 }
 .lib-surface .ic{
   gap:9px;padding:16px 8px;min-height:92px;
-  border:1px solid var(--border);border-radius:var(--radius-2xl);
+  border:1px solid transparent;border-radius:var(--radius-2xl);
+  background:transparent;
 }
-.lib-surface .ic:hover{background:var(--hvr);border-color:var(--bh)}
+.lib-surface .ic:hover{background:var(--hvr);border-color:transparent}
+.lib-surface .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
+.lib-surface .ic:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.lib-surface .ic>span:not(.ic-pack){font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
+@media(max-width:640px){
+  .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
+  .lib-surface .ic{gap:6px;min-height:72px;padding:12px 4px;border-radius:var(--radius)}
+  .lib-surface .ic>span:not(.ic-pack){-webkit-line-clamp:1;line-clamp:1}
+}
 
 
 /* ── The tier marker on a locked group chip ────────────────────────────────
@@ -1128,7 +1125,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 
    It straddles the chip's TOP edge, inset from the right, rather than
    hanging off the corner: a badge past the chip's right side is content past
-   the tray's right side on the row's last chip, and 25-defect-sweep's S4
+   the tray's right side on the row's last chip, and 25-layout-target-sweep's S4
    check reads that as the row turning back into a horizontal scroller
    (measured 4px over at 320, 390 and 1180). Upward overflow is not
    scrollable overflow, and the 6px row gap clears it.
@@ -1169,11 +1166,11 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    which `--accent-strong`, a per-theme literal, would not. The hover no longer
    lifts the button a pixel with a coloured shadow: the fill change is the
    feedback. */
-.lib-surface .btn{border-radius:var(--radius)}
+.lib-surface .btn{border-radius:var(--btn-radius)}
 .lib-surface .btn-accent,
-.lib-surface .btn-primary{background:var(--accent-mid);color:var(--accent-ink);border-color:transparent}
+.lib-surface .btn-primary{background:var(--accent-fill);color:var(--accent-ink);border-color:transparent}
 .lib-surface .btn-accent:hover,
-.lib-surface .btn-primary:hover{background:var(--accent-text);color:var(--accent-ink);transform:none;box-shadow:none}
+.lib-surface .btn-primary:hover{background:var(--accent-fill-hover);color:var(--accent-ink);transform:none;box-shadow:none}
 .lib-surface .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* The shared app button — the rectangle every library surface's own dialogs
@@ -1192,7 +1189,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .lib-btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   min-height:40px;padding:0 16px;
-  border:1px solid var(--bh);border-radius:var(--radius);
+  border:1px solid var(--bh);border-radius:var(--btn-radius);
   background:transparent;color:var(--t0);
   font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
   cursor:pointer;text-decoration:none;
@@ -1215,7 +1212,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 /* Restated at (0,3,0) because `.lib-surface .btn-accent` above is (0,2,0) and
    in a later sheet than global's `.dgh-action .btn`: without this the Prompt
    Library's "Add prompt" (a .btn-accent) would lose the paper fill on the slab. */
-.lib-surface .dgh-action .btn{min-height:44px;padding:0 18px;border-radius:var(--radius);color:#0a0a0b;background:#fff;border-color:#fff}
+.lib-surface .dgh-action .btn{min-height:44px;padding:0 18px;border-radius:var(--btn-radius);color:#0a0a0b;background:#fff;border-color:#fff}
 .lib-surface .dgh-action .btn:hover{color:#0a0a0b;background:rgba(247,247,244,.84);border-color:transparent}
 
 /* The result head's eyebrow ("Everything you can browse", "Curated
@@ -1246,3 +1243,119 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .lib-surface .btn{min-height:44px}
   .lib-surface .lbry-search input{min-height:44px}
 }
+
+
+/* ── Locked items: blurred, with the way to Pro on hover/focus ─────────────
+   "the greyed-out locked cards"
+   become BLURRED, and hovering or focusing one shows an "Upgrade to Pro" CTA
+   that goes to /plans. The card takes the gallery card's own shape (an 18px
+   card over a hairline, preview flush to its top, name inside) so the locked
+   row reads as the next row of the collection rather than as dashed grey
+   stubs.
+
+   THE TINTS ARE DECORATION, NOT DATA. The preview has no colours to paint
+   (LockedTease.jsx), so four fixed tints stand in, the same on every card;
+   none of them is a hex anywhere in src/data. Blurred at 16px they read as
+   "a palette is here" and give nothing to an eyedropper that means anything.
+
+   NO TRANSITION on any .lockt- rule — tests/unit/locked-library-tease pins
+   that a placeholder never animates (it would read as a load). The CTA
+   simply appears. On a touch screen there is no hover, so it is always
+   shown there. */
+.lib-surface .lockt-card--blur{
+  position:relative;gap:0;overflow:hidden;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);
+}
+.lib-surface .lockt-card--blur .lockt-stripes{
+  height:clamp(200px,34vw,260px);border:0;border-radius:0;
+  filter:blur(16px) saturate(1.1);transform:scale(1.15);
+}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:#B7C4E6}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:#E6C7B7}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:#BFE0CF}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:#D9A8D5}
+[data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.55}
+.lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--card)}
+.lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--t0)}
+.lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(6px)}
+.lib-surface .lockt-upgrade{
+  position:absolute;left:50%;top:calc(50% - 30px);z-index:2;transform:translate(-50%,-50%);
+  display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;
+  border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);
+  font-family:var(--font);font-size:13px;font-weight:560;white-space:nowrap;text-decoration:none;
+  opacity:0;
+}
+.lib-surface .lockt-upgrade .lockt-glyph{width:13px;height:13px}
+.lib-surface .lockt-card--blur:hover .lockt-upgrade,
+.lib-surface .lockt-card--blur:focus-within .lockt-upgrade{opacity:1}
+.lib-surface .lockt-upgrade:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(hover:none){.lib-surface .lockt-upgrade{opacity:1}}
+.lib-surface a.lockt-upgrade:hover{background:var(--accent-fill-hover)}
+:where(.lib-surface) a.lockt-upgrade{color:var(--accent-ink)}
+
+
+/* ══ The colour libraries' pill toolbar (Palette + Gradient) ════════════════
+   UIL4B App.dc.html, palettes screen, lines 227–250. The Gradient Library is
+   not drawn in that file; it is the palettes screen's sibling, so it takes
+   the same bar. */
+/* ── ONE pill bar (line 227): a 999px track at a 5% ink wash
+   over an 8% hairline, 10px in. Opaque rather than a wash because it is
+   sticky and cards scroll under it. On a phone it carries a second row (the
+   collection chips), so its radius steps down to stay a pill-ended box. */
+.lib-surface .lbry-toolbar:is(.pgl-toolbar,.grg-toolbar){
+  padding:10px;border-radius:var(--radius-pill);
+  background:color-mix(in srgb,var(--t0) 5%,var(--bg-0));
+  border:1px solid color-mix(in srgb,var(--t0) 8%,transparent);box-shadow:none;
+}
+@media(max-width:640px){.lib-surface .lbry-toolbar:is(.pgl-toolbar,.grg-toolbar){border-radius:26px}}
+/* The search pill (line 228): the card ground, 999px, 11px/18px. */
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-search{
+  min-height:44px;padding:0 18px;border-radius:var(--radius-pill);
+  background:var(--card);border:1px solid color-mix(in srgb,var(--t0) 10%,transparent);
+}
+/* The All/Curated/Brand segment (line 232): a 5% track, 3px in, the chosen
+   segment a 9% ink wash in full ink — not the solid ink chip the icon filters
+   use, which is a different control in the file. */
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters{
+  gap:2px;padding:3px;border-radius:var(--radius-pill);
+  background:color-mix(in srgb,var(--t0) 5%,transparent);
+}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter{
+  min-height:40px;padding:0 18px;border:0;border-radius:var(--radius-pill);
+  background:transparent;color:var(--t2);font-size:13.5px;font-weight:400;
+}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter:hover{background:transparent;color:var(--t0)}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter[data-active="true"]{
+  background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0);border:0;
+}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter-ind{background:color-mix(in srgb,var(--t0) 9%,transparent)}
+@media(pointer:coarse){.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter{min-height:44px}}
+/* The Mood pill (line 237): a 5% ground over an 8% hairline, the key dim at
+   12.5, the value in ink at 13.5/540. */
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig{
+  min-height:44px;padding:0 16px;border-radius:var(--radius-pill);
+  background:color-mix(in srgb,var(--t0) 5%,transparent);
+  border:1px solid color-mix(in srgb,var(--t0) 8%,transparent);
+}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig-k{
+  font-size:12.5px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t2);
+}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig-v{font-size:13.5px;font-weight:540;color:var(--t0)}
+/* "Create a palette" (line 247): ink pill, 8px 9px 8px 20px, 13.5/560, with
+   the arrow in a 28px circle at a 10% page wash. The data-cta-icon arrow
+   turns on hover — the file's one piece of motion on this bar. */
+.lib-surface.pgl-page .pgl-build-link{
+  gap:10px;min-height:44px;padding:8px 9px 8px 20px;border-radius:var(--radius-pill);
+  background:var(--t0);color:var(--bg-0);font-size:13.5px;font-weight:560;
+}
+.lib-surface.pgl-page .pgl-build-icon{
+  display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-pill);
+  background:color-mix(in srgb,var(--bg-0) 10%,transparent);
+  transition:transform var(--dur-2) var(--ease-standard);
+}
+.lib-surface.pgl-page .pgl-build-link:hover .pgl-build-icon{transform:rotate(45deg)}
+html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pgl-build-icon{transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface.pgl-page .pgl-build-link:hover .pgl-build-icon{transform:none}
+}
+

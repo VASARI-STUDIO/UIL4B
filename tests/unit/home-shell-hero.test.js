@@ -47,7 +47,11 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { stripJs } from '../helpers/strip-comments.js'
-import { HERO_HEADLINE, heroHeadlineText } from '../../src/data/positioning.js'
+// The front door's headline is the design's Spectrum line, held in src/components/spectrum/spectrumHero.js
+// and read by both Spectrum.jsx and scripts/home-shell.mjs. The guards below:
+// nobody types it, the shell emits exactly it, and in the
+// element chain the hydrated page renders.
+import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
 import { SESSION_HINT_KEY } from '../../src/utils/sessionHint.js'
 import { SITE_ORIGIN } from '../../src/utils/routeMeta.js'
 import {
@@ -67,8 +71,11 @@ const visibleText = (html) => html
   .replace(/\s+/g, ' ')
   .trim()
 
-/** Every part of the sentence, as the three pieces that are separately typed. */
-const PARTS = [HERO_HEADLINE.lead, HERO_HEADLINE.mark]
+const heroHeadlineText = () => SPECTRUM_HERO.text
+const HERO_HEADLINE = SPECTRUM_HERO
+
+/** The sentence, minus its full stop, which is what a second copy would carry. */
+const PARTS = [SPECTRUM_HERO.text.replace(/\.$/, '')]
 
 // ── 1. Nobody typed it ──────────────────────────────────────────────────────
 
@@ -94,9 +101,9 @@ test('the generator holds no copy of the sentence either', () => {
   assert.deepEqual(hits, [],
     `scripts/home-shell.mjs hard-codes the headline: ${hits.join(' / ')}. `
     + 'It must render HERO_HEADLINE, not a copy of it.')
-  assert.match(src, /from '\.\.\/src\/data\/positioning\.js'/,
-    'scripts/home-shell.mjs no longer imports from src/data/positioning.js, so nothing '
-    + 'ties the shell it writes to the sentence the founder approved.')
+  assert.match(src, /from '\.\.\/src\/components\/spectrum\/spectrumHero\.js'/,
+    'scripts/home-shell.mjs no longer imports from src/components/spectrum/spectrumHero.js, so '
+    + 'nothing ties the shell it writes to the sentence the page renders.')
 })
 
 // ── 2. What it emits is what the module says ────────────────────────────────

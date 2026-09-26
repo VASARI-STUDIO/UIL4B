@@ -87,7 +87,7 @@ const AA = 4.5
 // inset rows. Adding --bg-3/--bg-4 to the light set as well would force amber to
 // #864904 and gold to #795015 — brown, not amber — which is the cost of tuning
 // against a ground you have not confirmed the element can sit on.
-const LIGHT_GROUNDS = ['#FFFFFF', '#EFEEE9', '#F6F5F1']
+const LIGHT_GROUNDS = ['#FFFFFF', '#F5F5F2', '#F6F5F1']
 const DARK_GROUNDS = ['#060607', '#111215', '#17181B']
 
 // ANCHORED AT THE START OF A LINE, and that is load-bearing. An unanchored

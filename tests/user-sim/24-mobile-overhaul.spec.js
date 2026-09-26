@@ -71,19 +71,24 @@ async function openTouch(browser, width, height, path, tablet = false, waitFor =
  * How many pixels of the CTA's glyph run fall outside the pill's painted box,
  * plus the width of the `1fr` label track. Both are rendered geometry.
  */
+// THE SIGNED-OUT HEADER CTA IS THE FILE'S UPGRADE PILL (App line 122). The sliding "Start for Free"
+// pill this measured is gone from the bar — a visitor opens the tools without
+// an account — so the same S15 guarantees are read off `.pnav-upgrade`: the
+// label fully inside its pill, the bar not overrunning itself, painted and
+// reachable from the first frame.
 async function ctaGeometry(page) {
   return page.evaluate(() => {
-    const btn = document.querySelector('.pnav-cta')
-    if (!btn) return null
-    const inner = btn.querySelector('.pnav-cta-i')
+    const btn = document.querySelector('.pnav-upgrade')
+    if (!btn || !btn.getClientRects().length) return null
     const br = btn.getBoundingClientRect()
     const range = document.createRange()
-    range.selectNodeContents(inner)
+    range.selectNodeContents(btn)
     const tr = range.getBoundingClientRect()
+    const cs = getComputedStyle(btn)
     return {
-      // The label's natural width, and the width the grid track gives it.
+      // The label's natural width, and the width the pill gives it.
       needs: Math.round(tr.width * 100) / 100,
-      track: Math.round(parseFloat(getComputedStyle(btn).gridTemplateColumns) * 100) / 100,
+      track: Math.round((btn.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) * 100) / 100,
       // Glyphs painted outside the pill — white-on-white, i.e. gone.
       outside: Math.round((Math.max(0, br.left - tr.left) + Math.max(0, tr.right - br.right)) * 100) / 100,
       // The bar must not solve it by overrunning itself either: body has
@@ -102,13 +107,13 @@ async function ctaGeometry(page) {
 const CTA_WIDTHS = [768, 769, 800, 834, 844, 870, 900, 960, 1024]
 
 for (const path of ['/color/palette', '/settings']) {
-  test(`S15 · "Start for Free" is fully painted at every width on ${path}`, async ({ browser }) => {
+  test(`S15 · the signed-out Upgrade pill is fully painted at every width on ${path}`, async ({ browser }) => {
     const damage = []
     for (const w of CTA_WIDTHS) {
       const { ctx, page } = await openTouch(browser, w, 800, path, true)
       const g = await ctaGeometry(page)
       await ctx.close()
-      expect(g, `${w}px: .pnav-cta missing`).not.toBeNull()
+      expect(g, `${w}px: .pnav-upgrade missing`).not.toBeNull()
       if (g.outside > 0 || g.track + 0.5 < g.needs || g.navOverrun > 0) {
         damage.push(`${w}px: ${g.outside}px of the label outside the pill, track ${g.track}px for a ${g.needs}px label, bar overran itself by ${g.navOverrun}px`)
       }
@@ -145,15 +150,15 @@ for (const path of ['/color/palette', '/settings']) {
     watch(page, `cta first paint ${path}`)
     // One Tap is stubbed suite-wide in base.js; this spec's own copy is gone.
     await go(page, path)
-    await page.locator('.pnav-cta').first().waitFor({ state: 'attached', timeout: 15000 })
+    await page.locator('.pnav-upgrade').first().waitFor({ state: 'attached', timeout: 15000 })
     const first = await page.evaluate(() => {
-      const b = document.querySelector('.pnav-cta')
-      const inner = b.querySelector('.pnav-cta-i')
+      const b = document.querySelector('.pnav-upgrade')
       const range = document.createRange()
-      range.selectNodeContents(inner)
+      range.selectNodeContents(b)
+      const cs = getComputedStyle(b)
       return {
         waiting: b.classList.contains('is-waiting'),
-        track: Math.round(parseFloat(getComputedStyle(b).gridTemplateColumns) * 100) / 100,
+        track: Math.round((b.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) * 100) / 100,
         needs: Math.round(range.getBoundingClientRect().width * 100) / 100,
         hidden: b.getAttribute('aria-hidden'),
         tabIndex: b.tabIndex,
@@ -286,7 +291,11 @@ test('the hover reveal itself is preserved on pointer devices', async ({ browser
 
   expect(await page.evaluate(() => matchMedia('(hover: hover)').matches)).toBe(true)
 
-  const tool = page.locator('.plb-tool').first()
+  // The drawn lock (D:1021) is always on the swatch; the colour's actions
+  // menu beside it is the one control that waits for the pointer.
+  expect(await page.locator('.plb-tool--key').first().evaluate((el) => parseFloat(getComputedStyle(el).opacity)),
+    'the lock is drawn at rest').toBe(1)
+  const tool = page.locator('.plb-tool--more').first()
   expect(await tool.evaluate((el) => parseFloat(getComputedStyle(el).opacity)),
     'a pointer device should still get a clean swatch at rest').toBe(0)
 
@@ -762,9 +771,9 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
           const cr = cell.getBoundingClientRect()
           if (cr.left < rb.left - 0.5 || cr.right > rb.right + 0.5) hiddenCells++
           if (cr.width < 24 || cr.height < 24) tiny++
-          // The tone number and the hex are the output; a clipped one is the
-          // S15 fault in a new place.
-          for (const t of cell.querySelectorAll('.stc-cell-tone, .stc-cell-hex')) {
+          // The tone number is the drawn label (D:934) and a clipped one is
+          // the S15 fault in a new place. The hex is in the cell's name.
+          for (const t of cell.querySelectorAll('.stc-cell-tone')) {
             const range = document.createRange()
             range.selectNodeContents(t)
             const tr = range.getBoundingClientRect()
@@ -776,7 +785,7 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
       return {
         ramps: ramps.length,
         cells: document.querySelectorAll('.stc-cell').length,
-        hexShown: [...document.querySelectorAll('.stc-cell-hex')].filter((e) => getComputedStyle(e).display !== 'none').length,
+        hexShown: [...document.querySelectorAll('.stc-cell')].filter((e) => /#[0-9A-F]{6}/.test(e.getAttribute('aria-label') || '')).length,
         hiddenCells, scrollers, tiny, clipped, sample,
       }
     })
@@ -791,7 +800,7 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
     expect(r.cells, `${w}x${h}: expected ${expectedCells} tone cells (${r.ramps} ramps x 10)`).toBe(expectedCells)
     if (r.hiddenCells) damage.push(`${w}x${h}: ${r.hiddenCells} tone cell(s) outside their ramp`)
     if (r.scrollers) damage.push(`${w}x${h}: ${r.scrollers} ramp(s) are horizontal scrollers again`)
-    if (r.hexShown !== expectedCells) damage.push(`${w}x${h}: only ${r.hexShown} of ${expectedCells} hex values rendered — the tool's output is unreadable here`)
+    if (r.hexShown !== expectedCells) damage.push(`${w}x${h}: only ${r.hexShown} of ${expectedCells} tone cells name their hex — the tool's output is unreadable here`)
     if (r.tiny) damage.push(`${w}x${h}: ${r.tiny} tone cell(s) under 24px`)
     if (r.clipped) damage.push(`${w}x${h}: ${r.clipped} clipped label(s), e.g. ${r.sample}`)
   }
@@ -805,7 +814,7 @@ test('S2 · all seven starting bundles are visible without swiping', async ({ br
     const r = await page.evaluate(() => {
       const box = document.querySelector('.stc-bundles')
       const bb = box.getBoundingClientRect()
-      const bundles = [...box.querySelectorAll('.stc-bundle')]
+      const bundles = [...box.querySelectorAll('[role="radio"]')]
       return {
         total: bundles.length,
         outside: bundles.filter((b) => {
@@ -872,16 +881,10 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
 // swatch, five columns at once, 35 buttons sitting on the colours. 1280 hid
 // them until hover; 390 laid them out as a short row under the name and hex.
 //
-// TWO INDEPENDENT HALVES OF THE FIX ARE ASSERTED HERE, because reverting either
-// one alone brings the defect back and a test that only checked the other would
-// stay green:
-//   1. COUNT. Only Lock, Copy and the overflow control survive in this band.
-//      Restoring `.plb-col-tools>*` to `display:flex` puts all seven back — that
-//      is the exact revert this guards, and without it the whole fix can be
-//      undone with every gate still passing.
-//   2. PLACEMENT. The row sits BELOW the name and hex, which is where 390
-//      already puts it. Dropping the `order:2` half sends the stack back to the
-//      top of the swatch even with the count correct.
+// COUNT is what is asserted: only the lock and the overflow control are on a
+// colour in this band. (PLACEMENT was asserted too, the row below the name and
+// hex; the design's drawn board puts the lock at the column's top corner, D:1021, so
+// that half went with the redraw.)
 //
 // And the overflow control must be PRESENT, not merely the others absent: the
 // cheap way to pass a count assertion is to delete the actions outright, which
@@ -921,18 +924,11 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
       const cols = [...document.querySelectorAll('.plb-col')].filter(c => c.offsetParent !== null)
       return cols.map((col, i) => {
         const tools = [...col.querySelectorAll('.plb-tool')].filter(shown)
-        const toolsBox = col.querySelector('.plb-col-tools')
-        const hex = col.querySelector('.plb-hex')
         return {
           i,
           count: tools.length,
           labels: tools.map(t => t.getAttribute('aria-label') || t.className),
           hasOverflow: tools.some(t => t.classList.contains('plb-tool--more')),
-          // Positive when the tool row starts below the top of the hex, i.e. the
-          // controls are under the swatch identity rather than over the colour.
-          belowHex: shown(toolsBox) && shown(hex)
-            ? Math.round(toolsBox.getBoundingClientRect().top - hex.getBoundingClientRect().top)
-            : null,
         }
       })
     })
@@ -942,7 +938,7 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
     expect(r.length, `${w}x${h}: no palette columns rendered, so this proves nothing`).toBeGreaterThan(2)
 
     for (const c of r) {
-      if (c.count > 3) {
+      if (c.count > 2) {
         damage.push(`${w}x${h} col${c.i}: ${c.count} controls pinned open — ${c.labels.join(', ')}`)
       }
       if (c.count === 0) {
@@ -950,9 +946,6 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
       }
       if (!c.hasOverflow) {
         damage.push(`${w}x${h} col${c.i}: no .plb-tool--more, so the hidden actions are unreachable on touch`)
-      }
-      if (c.belowHex === null || c.belowHex <= 0) {
-        damage.push(`${w}x${h} col${c.i}: the tool row is ${c.belowHex}px relative to the hex — it must sit BELOW the swatch name and hex, not over the colour`)
       }
     }
   }
@@ -981,6 +974,10 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
 //
 // If this is ever reversed again, reverse it because the founder looked at the
 // rendered page again, not because an audit preferred the older row.
+//
+// The design's drawn board (D:1017-1043) puts one control on a colour, the
+// lock at its top corner; copy is the hex itself. The row is now Lock and the
+// named "More actions" menu, which holds every other action on the colour.
 test('S11b · the phone row collapses to two controls and a named menu', async ({ browser }) => {
   const { ctx, page } = await openTouch(browser, 390, 844, '/create/palette', false, '.plb-col')
 
@@ -1008,8 +1005,8 @@ test('S11b · the phone row collapses to two controls and a named menu', async (
   })
   await ctx.close()
 
-  expect(r.count, 'the phone row is Lock, Copy and the overflow control — no more, and never zero')
-    .toBe(3)
+  expect(r.count, 'the phone row is the lock and the overflow control — no more, and never zero')
+    .toBe(2)
   expect(r.overflow, 'without the overflow control the five collapsed actions would be unreachable on a phone')
     .toBe(1)
 })

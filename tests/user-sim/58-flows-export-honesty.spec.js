@@ -7,7 +7,7 @@
 // CAN have, and the two honesty rules the panel owes it:
 //
 //   1. An UNBUILT format may never offer a working button. `exportFormats.js`
-//      marks css/json/tailwind/assets without `live`, and this is the file that
+//      marks tailwind/assets without `live`, and this is the file that
 //      already cost this project a false claim: "full design JSON" was sold as a
 //      Pro benefit on four paid surfaces while runExport() had no branch that
 //      could build one. Somebody could have paid for a file the product cannot

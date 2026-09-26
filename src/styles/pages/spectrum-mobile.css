@@ -1,0 +1,413 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   /mobile — the "On mobile" screen of "UIL4B - Spectrum.dc.html".
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Reproduced from the design source, lines 1344-1591 for the markup and
+   57-59 / 99-100 / 119-124 for the rules that are not inline. Every value
+   below is the design's; the line it came from is beside each block.
+
+   THE ROOT IS `.spectrum.spm`, so the page inherits spectrum.css's own
+   aliases — --sp-page / --sp-ink / --sp-dim / --sp-faint and the accent family
+   — which are that sheet's mapping of the design's `--page`, `--ink`,
+   `rgba(var(--ink-rgb),var(--ink-dim))` and `…var(--ink-faint))` onto this
+   product's tokens. The design's ink-alpha washes (`rgba(var(--ink-rgb),.14)`
+   and friends) are written as color-mix off --sp-ink at the same percentage,
+   so they track the theme exactly as the design's do. Nothing here is scoped
+   any wider than `.spm`.
+
+   `{{ accent }}` FILLS ARE --accent-fill: #2A60E8 under #F4F7FF, 4.98:1 in
+   both themes. Not --accent-mid, which is a TEXT colour: in dark it lifts
+   toward paper and #F4F7FF on it measures 2.60:1. */
+
+.spm {
+  --spm-a04: color-mix(in srgb, var(--sp-ink) 4%, transparent);
+  --spm-a05: color-mix(in srgb, var(--sp-ink) 5%, transparent);
+  --spm-a06: color-mix(in srgb, var(--sp-ink) 6%, transparent);
+  --spm-a07: color-mix(in srgb, var(--sp-ink) 7%, transparent);
+  --spm-a08: color-mix(in srgb, var(--sp-ink) 8%, transparent);
+  --spm-a09: color-mix(in srgb, var(--sp-ink) 9%, transparent);
+  --spm-a12: color-mix(in srgb, var(--sp-ink) 12%, transparent);
+  --spm-a14: color-mix(in srgb, var(--sp-ink) 14%, transparent);
+  --spm-a20: color-mix(in srgb, var(--sp-ink) 20%, transparent);
+  --spm-a34: color-mix(in srgb, var(--sp-ink) 34%, transparent);
+  --spm-a86: color-mix(in srgb, var(--sp-ink) 86%, transparent);
+  --spm-fill: var(--accent-fill);
+  --spm-fill-ink: var(--accent-ink);
+}
+
+/* data-nav-spacer (line 217). --notice-h so a notice strip, when one shows,
+   pushes the screen down with the nav rather than sliding under it. */
+.spm .spm-spacer { height: calc(clamp(14px, 2vw, 26px) + 50px + var(--notice-h, 0px)); }
+
+/* ── the intro section (1345) ────────────────────────────────────────────── */
+.spm .spm-intro {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: clamp(48px, 7vw, 96px) clamp(20px, 4vw, 52px);
+}
+
+/* data-mhero (1346, rule at 99-100). One column at 820 and under. The side
+   column keeps `justify-items:end` there: the stylesheet asks for `start`, but
+   the design's inline `justify-items:end` outranks it, so the rendered design
+   puts the CTA on the right at every width. */
+.spm .spm-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+  gap: clamp(20px, 4vw, 56px);
+  align-items: end;
+}
+@media (max-width: 820px) {
+  .spm .spm-hero { grid-template-columns: minmax(0, 1fr); }
+}
+.spm .spm-hero-copy { max-width: min(60ch, 100%); min-width: 0; }
+.spm .spm-hero-side { display: grid; gap: 18px; justify-items: end; align-content: end; }
+
+/* 1348 */
+.spm .spm-h1 {
+  margin: 18px 0 0;
+  max-width: min(24ch, 100%);
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(36px, 5.6vw, 80px);
+  line-height: .96;
+  letter-spacing: -.028em;
+  text-wrap: balance;
+}
+/* The word entrance: the design's `[data-w]` transition is 1s on
+   cubic-bezier(.16,1,.3,1) with a 55ms step per word (159, 1348). spectrum.css
+   owns the keyframes and the reduced-motion companion; this sets the design's
+   own timing for this headline. */
+.spm .spm-hero.is-in .sp-w {
+  animation-duration: 1s;
+  animation-timing-function: cubic-bezier(.16, 1, .3, 1);
+  animation-delay: calc(var(--sp-wi, 0) * 55ms);
+}
+
+/* 1349 */
+.spm .spm-lede {
+  margin: 20px 0 0;
+  max-width: min(52ch, 100%);
+  font-size: 16px;
+  line-height: 1.62;
+  color: var(--sp-dim);
+  text-wrap: pretty;
+}
+
+/* The hero CTA (1352-1355): ink pill, 10/11/10/22, 15px 540, 28px icon well.
+   min-height 44px is the only addition — 48px is what the padding already
+   gives, so it changes nothing and pins the target. */
+.spm .spm-cta {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 44px;
+  padding: 10px 11px 10px 22px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--sp-ink);
+  color: var(--sp-page);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 540;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: transform .16s cubic-bezier(.23, 1, .32, 1), background .16s ease;
+}
+.spm .spm-cta:hover { background: color-mix(in srgb, var(--t0) 86%, var(--bg-0)); color: var(--sp-page); text-decoration: none; }
+.spm .spm-cta:active { transform: scale(.978); }
+.spm .spm-cta-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--sp-page) 10%, transparent);
+  transition: transform .16s cubic-bezier(.23, 1, .32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .spm .spm-cta:hover .spm-cta-icon { transform: rotate(45deg); }
+}
+
+/* ── the phone row (1359, rules 119-124) ─────────────────────────────────── */
+.spm .spm-row {
+  margin-top: clamp(38px, 5vw, 64px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(20px, 3vw, 40px);
+  justify-items: center;
+  align-items: start;
+}
+.spm .spm-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+@media (max-width: 860px) {
+  .spm .spm-row {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: 78%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 20px;
+    padding-bottom: 6px;
+    margin-left: calc(clamp(20px, 4vw, 52px) * -1);
+    margin-right: calc(clamp(20px, 4vw, 52px) * -1);
+    padding-left: clamp(20px, 4vw, 52px);
+    padding-right: clamp(20px, 4vw, 52px);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+  .spm .spm-row::-webkit-scrollbar { display: none; height: 0; }
+  .spm .spm-fig { scroll-snap-align: center; min-width: 0; }
+  .spm .spm-phone { width: 100%; max-width: 300px; }
+}
+
+.spm .spm-fig { margin: 0; display: grid; gap: 14px; justify-items: center; }
+/* 1441 */
+.spm .spm-fig figcaption { font-size: 12.5px; color: var(--sp-dim); text-align: center; }
+
+/* The hardware (1361, 57-59, 1362-1368). Bezel, side buttons, island and
+   home indicator are the design's fixed near-blacks — a phone is dark in both
+   themes, which is why these are not theme tokens. */
+.spm .spm-phone {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+  aspect-ratio: 390 / 844;
+  padding: 11px;
+  border-radius: 54px;
+  background: linear-gradient(155deg, #3A3D45, #14161A 42%, #0A0B0D);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 255, 255, .14),
+    inset 0 0 0 7px #0A0B0D,
+    0 60px 110px -50px var(--spm-shade),
+    0 10px 24px -14px rgba(0, 0, 0, .7);
+  --spm-shade: rgba(26, 30, 42, .16);
+}
+:where([data-theme="dark"]) .spm .spm-phone { --spm-shade: #000; }
+.spm .spm-phone::before,
+.spm .spm-phone::after {
+  content: "";
+  position: absolute;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #0A0B0D, #33363E);
+}
+.spm .spm-phone::before { left: -3px; top: 26%; height: 13%; box-shadow: 0 -60px 0 0 #1B1E24; }
+.spm .spm-phone::after { right: -3px; top: 31%; height: 9%; background: linear-gradient(270deg, #0A0B0D, #33363E); }
+
+.spm .spm-screen {
+  position: relative;
+  height: 100%;
+  border-radius: 44px;
+  background: var(--sp-page);
+  color: var(--sp-ink);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.spm .spm-status {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px 5px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--sp-ink);
+}
+.spm .spm-status-ico { display: flex; align-items: center; gap: 5px; }
+.spm .spm-island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88px;
+  height: 26px;
+  border-radius: 999px;
+  background: #07080A;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 9px;
+  z-index: 3;
+}
+.spm .spm-island > span { width: 7px; height: 7px; border-radius: 999px; background: #191C22; box-shadow: inset 0 0 2px rgba(120, 150, 255, .5); }
+.spm .spm-home {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 118px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--spm-a34);
+  z-index: 3;
+}
+
+/* The app inside (1369-1375) */
+.spm .spm-app { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 6px; }
+.spm .spm-apphead { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 0 10px; }
+.spm .spm-appword { flex: 1; min-width: 0; font-family: var(--display); font-weight: 560; font-size: 15px; letter-spacing: -.01em; }
+.spm .spm-appword > span { color: var(--accent-mid); }
+.spm .spm-round {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--spm-a14);
+  display: grid;
+  place-items: center;
+  color: var(--sp-ink);
+}
+.spm .spm-round--me { border: 0; background: var(--spm-fill); color: var(--spm-fill-ink); font-family: var(--mono); font-size: 9px; }
+
+/* Tab bar (1432-1438) */
+.spm .spm-tabs {
+  flex: none;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 12px 2px;
+  border-top: 1px solid var(--spm-a08);
+}
+.spm .spm-tab { display: grid; justify-items: center; gap: 3px; color: var(--sp-dim); font-size: 8.5px; }
+.spm .spm-tab.is-on { color: var(--sp-ink); }
+.spm .spm-chin { flex: none; height: 12px; }
+
+.spm .spm-dim { color: var(--sp-dim); }
+.spm .spm-faint { color: var(--sp-faint); }
+.spm .spm-accent { color: var(--accent-mid); }
+
+/* ── screen 1: Palette Builder (1376-1430) ───────────────────────────────── */
+.spm .spm-pb-seedrow { flex: none; display: flex; align-items: center; gap: 6px; }
+.spm .spm-pb-seed {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+  padding: 6px 8px; border-radius: 9px; border: 1px solid var(--spm-a14);
+}
+.spm .spm-pb-chip { width: 18px; height: 18px; border-radius: 5px; flex: none; }
+.spm .spm-pb-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spm .spm-pb-system {
+  display: flex; align-items: center; gap: 5px; padding: 6px 8px; border-radius: 9px;
+  border: 1px solid var(--spm-a14); flex: none;
+}
+.spm .spm-pb-syslabel { font-family: var(--mono); font-size: 8px; letter-spacing: .1em; color: var(--sp-faint); }
+.spm .spm-pb-sysval { font-size: 9.5px; }
+.spm .spm-pb-actions { flex: none; margin-top: 7px; display: flex; align-items: center; gap: 5px; }
+.spm .spm-pb-btn { display: flex; align-items: center; gap: 5px; padding: 7px 9px; border-radius: 9px; border: 1px solid var(--spm-a14); font-size: 9.5px; }
+/* No flex:none, as in the design (1390-1391): these two are the only items
+   in the row allowed to shrink, and in the rendered design they do — to 14px
+   wide at a 300px phone. That squeeze is what lets TOOLS fit. */
+.spm .spm-pb-sq { width: 28px; height: 28px; border-radius: 9px; border: 1px solid var(--spm-a14); display: grid; place-items: center; }
+.spm .spm-pb-save { display: flex; align-items: center; gap: 5px; padding: 7px 10px; border-radius: 9px; background: var(--spm-fill); color: var(--spm-fill-ink); flex: none; font-size: 9.5px; font-weight: 540; }
+.spm .spm-pb-tools { display: flex; align-items: center; gap: 4px; padding: 7px 9px; border-radius: 9px; border: 1px solid var(--spm-a14); flex: none; font-family: var(--mono); font-size: 8px; letter-spacing: .1em; }
+.spm .spm-pb-rows { flex: 1; min-height: 0; margin-top: 8px; display: grid; grid-auto-rows: 1fr; overflow: hidden; border-radius: 8px; }
+.spm .spm-pb-row { display: flex; align-items: center; gap: 7px; padding: 0 9px; }
+.spm .spm-pb-rowtext { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 7px; }
+.spm .spm-pb-name { font-size: 9.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 9ch; }
+.spm .spm-pb-rowhex { font-family: var(--mono); font-size: 8.5px; }
+.spm .spm-pb-role { font-family: var(--mono); font-size: 6.5px; letter-spacing: .1em; opacity: .78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spm .spm-pb-rowico { display: flex; gap: 6px; opacity: .8; flex: none; }
+.spm .spm-pb-addrow { flex: none; display: flex; justify-content: center; padding: 7px 0 6px; }
+.spm .spm-pb-add {
+  display: flex; align-items: center; gap: 7px; padding: 5px 12px 5px 6px; border-radius: 999px;
+  border: 1px solid var(--spm-a14); font-family: var(--mono); font-size: 8px; letter-spacing: .14em; color: var(--sp-dim);
+}
+.spm .spm-pb-plus { width: 19px; height: 19px; border-radius: 999px; border: 1px solid var(--spm-a20); display: grid; place-items: center; color: var(--sp-ink); }
+.spm .spm-pb-adjust { flex: none; display: flex; align-items: center; gap: 8px; padding: 9px 9px 4px; border-radius: 10px; background: var(--spm-a04); }
+.spm .spm-pb-adjlabel { flex: none; width: 44px; font-family: var(--mono); font-size: 6.5px; letter-spacing: .1em; line-height: 1.3; color: var(--sp-faint); }
+.spm .spm-pb-sliders { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.spm .spm-pb-slider { display: flex; align-items: center; gap: 7px; }
+.spm .spm-pb-slabel { flex: none; width: 52px; font-family: var(--mono); font-size: 6.5px; letter-spacing: .08em; color: var(--sp-dim); text-align: right; }
+.spm .spm-pb-track { position: relative; flex: 1; min-width: 0; height: 9px; border-radius: 999px; }
+.spm .spm-pb-track > span {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 11px; height: 11px; border-radius: 999px; background: transparent;
+  border: 2px solid var(--sp-page); box-shadow: 0 0 0 1px rgba(26, 30, 42, .3);
+}
+.spm .spm-pb-sval { flex: none; width: 20px; font-family: var(--mono); font-size: 7px; color: var(--sp-dim); }
+
+/* ── screen 2: Icon Library (1459-1485) ──────────────────────────────────── */
+.spm .spm-ic-search {
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px;
+  background: var(--spm-a05); border: 1px solid var(--spm-a09);
+}
+.spm .spm-ic-query { flex: 1; min-width: 0; font-size: 12.5px; color: var(--sp-dim); }
+.spm .spm-ic-fmt { font-family: var(--mono); font-size: 8px; letter-spacing: .1em; padding: 3px 6px; border-radius: 6px; background: var(--spm-a08); color: var(--sp-faint); }
+.spm .spm-ic-weights { flex: none; display: flex; align-items: center; gap: 2px; margin-top: 8px; padding: 3px; border-radius: 999px; background: var(--spm-a06); }
+.spm .spm-ic-weight { flex: 1; padding: 6px 4px; border-radius: 999px; color: var(--sp-dim); font-size: 10px; text-align: center; }
+.spm .spm-ic-weight.is-on { background: var(--sp-card); color: var(--sp-ink); }
+.spm .spm-ic-grid {
+  flex: 1; min-height: 0; margin-top: 9px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 1fr; gap: 1px; background: var(--spm-a09); border-radius: 10px; overflow: hidden;
+}
+.spm .spm-ic-cell { display: grid; place-items: center; gap: 5px; padding: 11px 4px; background: var(--sp-page); color: var(--sp-ink); min-width: 0; }
+.spm .spm-ic-cell > span { font-size: 7px; letter-spacing: .04em; color: var(--sp-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.spm .spm-ic-foot { flex: none; margin-top: 9px; display: flex; align-items: center; gap: 7px; }
+.spm .spm-ic-recolour {
+  display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; padding: 9px 10px; border-radius: 10px;
+  background: var(--spm-a04); border: 1px solid var(--spm-a08); font-size: 10.5px; color: var(--spm-a86);
+}
+.spm .spm-ic-recolour > span:first-of-type { flex: 1; min-width: 0; }
+.spm .spm-ic-chip { width: 16px; height: 16px; border-radius: 5px; flex: none; }
+.spm .spm-ic-export { display: flex; align-items: center; gap: 6px; padding: 10px 13px; border-radius: 999px; background: var(--spm-fill); color: var(--spm-fill-ink); font-size: 11.5px; font-weight: 540; flex: none; }
+
+/* ── screen 3: Projects and your plan (1514-1550) ────────────────────────── */
+.spm .spm-pj-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.spm .spm-pj-title { font-size: 14.5px; font-weight: 560; }
+.spm .spm-pj-new { display: flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 999px; background: var(--spm-fill); color: var(--spm-fill-ink); font-size: 11px; font-weight: 540; }
+.spm .spm-pj-list { flex: none; margin-top: 11px; display: grid; gap: 8px; }
+.spm .spm-pj-card {
+  display: flex; align-items: center; gap: 10px; padding: 9px 11px 9px 9px; border-radius: 14px;
+  background: var(--spm-a04); border: 1px solid var(--spm-a08);
+}
+.spm .spm-pj-thumb { position: relative; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; overflow: hidden; }
+.spm .spm-pj-shade { position: absolute; inset: 0; background: rgba(9, 10, 12, .34); }
+.spm .spm-pj-glyph {
+  position: relative; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--sp-page) 94%, transparent); color: var(--sp-ink);
+}
+.spm .spm-pj-text { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.spm .spm-pj-name { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spm .spm-pj-when { font-size: 10px; color: var(--sp-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spm .spm-pj-card > svg { flex: none; }
+.spm .spm-pj-eyebrow { flex: none; margin-top: 14px; font-family: var(--mono); font-size: 8px; letter-spacing: .16em; color: var(--sp-faint); }
+.spm .spm-pj-exports { flex: 1; min-height: 0; margin-top: 8px; display: grid; grid-auto-rows: min-content; overflow: hidden; }
+.spm .spm-pj-export { display: flex; align-items: center; gap: 9px; padding: 8px 2px; border-bottom: 1px solid var(--spm-a07); }
+.spm .spm-pj-type { font-family: var(--mono); font-size: 7.5px; letter-spacing: .1em; padding: 3px 6px; border-radius: 6px; background: var(--spm-a07); color: var(--sp-dim); flex: none; }
+.spm .spm-pj-file { flex: 1; min-width: 0; font-size: 10.5px; color: var(--spm-a86); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spm .spm-pj-size { font-family: var(--mono); font-size: 8px; color: var(--sp-faint); flex: none; }
+.spm .spm-pj-plan {
+  flex: none; margin-top: 9px; display: grid; gap: 7px; padding: 11px; border-radius: 14px;
+  background: var(--accent-wash); border: 1px solid var(--accent-border-strong);
+}
+.spm .spm-pj-planrow { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.spm .spm-pj-planname { font-size: 11.5px; font-weight: 560; }
+.spm .spm-pj-planuse { font-size: 10px; color: var(--sp-dim); }
+.spm .spm-pj-meter { display: block; height: 4px; border-radius: 999px; background: var(--spm-a12); overflow: hidden; }
+.spm .spm-pj-meter > span { display: block; height: 100%; width: 100%; border-radius: 999px; background: var(--spm-fill); }
+.spm .spm-pj-upgrade {
+  display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 1px; padding: 10px;
+  border-radius: 999px; background: var(--spm-fill); color: var(--spm-fill-ink); font-size: 11.5px; font-weight: 540;
+}
+
+/* ── the ramp (1566-1590) ────────────────────────────────────────────────────
+   spectrum.css's `.sp-ramp--close` is this block's margin and height already;
+   the design's mobile ramp has no side padding (the hero's has 2px). */
+.spm .spm-ramp .sp-ramp-bars { padding-inline: 0; }
+
+/* ── reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .spm .spm-cta,
+  :where(html:not([data-reduced-motion="false"])) .spm .spm-cta-icon { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .spm .spm-cta:active,
+  :where(html:not([data-reduced-motion="false"])) .spm .spm-cta:hover .spm-cta-icon { transform: none; }
+}
+:where(html[data-reduced-motion="true"]) .spm .spm-cta,
+:where(html[data-reduced-motion="true"]) .spm .spm-cta-icon { transition: none; }
+:where(html[data-reduced-motion="true"]) .spm .spm-cta:active,
+:where(html[data-reduced-motion="true"]) .spm .spm-cta:hover .spm-cta-icon { transform: none; }
+
+/* The design's phone content sets no line-height, so its text sits at the UA
+   `normal`; the body's 1.65 would make every row taller than the design's and
+   push the last export row out of the Projects screen. Glyphs are blocks so no
+   inline baseline gap is added under them. */
+.spm .spm-screen { line-height: normal; }
+.spm .spm-screen svg { display: block; flex: none; }

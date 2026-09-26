@@ -52,11 +52,11 @@ import { go, watch } from './helpers.js'
 // printed. Asserting the STRING as well as the class is what stops the motif
 // coming back under a fifth class name.
 const EYEBROWS = [
-  { route: '/create/tint', cls: '.sec-h-eyebrow', text: 'Create / Colour', h1: 'Tint Scale Generator' },
-  { route: '/create/semantic-color', cls: '.stc-hero-eyebrow', text: 'Create / Colour', h1: 'Semantic Colours' },
-  { route: '/create/gradient', cls: '.ggn-eyebrow', text: 'Create / Colour', h1: 'Gradient Generator' },
-  { route: '/create/contrast', cls: '.sec-h-eyebrow', text: 'Colour', h1: 'Colour Contrast Checker' },
-  { route: '/create/aspect-ratio', cls: '.sec-h-eyebrow', text: 'Imagery', h1: 'Aspect & Resolution Calculator' },
+  { route: '/create/tint', cls: '.sec-h-eyebrow', text: 'Create / Colour', h1: 'Tint' },
+  { route: '/create/semantic-color', cls: '.stc-hero-eyebrow', text: 'Create / Colour', h1: 'Semantic Colour' },
+  { route: '/create/gradient', cls: '.ggn-eyebrow', text: 'Create / Colour', h1: 'Gradient' },
+  { route: '/create/contrast', cls: '.sec-h-eyebrow', text: 'Colour', h1: 'Contrast Checker' },
+  { route: '/create/aspect-ratio', cls: '.sec-h-eyebrow', text: 'Imagery', h1: 'Aspect & Resolution' },
   { route: '/create/alt-text', cls: '.sec-h-eyebrow', text: 'AI Tools', h1: 'Alt Text Generator' },
   { route: '/create/file-converter', cls: '.sec-h-eyebrow', text: 'File Converter', h1: 'File Converter' },
 ]
@@ -83,7 +83,9 @@ test.describe('no tool header restates the path the visitor walked', () => {
         const h1Top = h1.getBoundingClientRect().top + window.scrollY
         const offenders = []
         for (const el of document.querySelectorAll('body *')) {
-          if (el.closest('nav') || el.closest('.pnav') || el.children.length) continue
+          // The h1 itself is the name, not an eyebrow — a toolbar label that
+          // IS the h1 has no child element to skip it by.
+          if (el === h1 || el.closest('nav') || el.closest('.pnav') || el.children.length) continue
           if ((el.textContent || '').trim() !== text) continue
           const r = el.getBoundingClientRect()
           if (r.width === 0 || r.height === 0) continue
@@ -109,22 +111,22 @@ test.describe('no tool header restates the path the visitor walked', () => {
 // their place still on the page.
 const STRIPS = [
   {
-    route: '/create/tint', cls: '.tt-status', h1: 'Tint Scale Generator',
-    // The stops figure was restated verbatim 520px below by `.tt-hint`. That
-    // hint is the survivor, and it is where the number belongs.
-    survives: '11 stops per ramp.',
+    route: '/create/tint', cls: '.tt-status', h1: 'Tint',
+    // The step count now lives only on the control that sets it: the drawn
+    // "11 steps" pill (D:840).
+    survives: '11 steps',
   },
   {
-    route: '/create/gradient', cls: '.ggn-status', h1: 'Gradient Generator',
-    // `.ggn-badge` said "3/12 stops" 45px below the strip and is strictly
-    // better than the strip's "3 editable stops": it also carries the limit.
-    survives: '3/12 stops',
+    route: '/create/gradient', cls: '.ggn-status', h1: 'Gradient',
+    // The stop count now lives where the design draws it: beside Copy CSS in
+    // the tool toolbar ("3 stops", D:616). It is the one statement of it.
+    survives: '3 stops',
   },
   {
-    route: '/create/semantic-color', cls: '.stc-status', h1: 'Semantic Colours',
+    route: '/create/semantic-color', cls: '.stc-status', h1: 'Semantic Colour',
     // 50 was "canonical variables" in the strip. On the button it is the size
     // of what is about to reach your clipboard.
-    survives: 'Copy all CSS variables',
+    survives: 'Copy tokens',
   },
   {
     route: '/create/font-pair', cls: '.fpr-status', h1: 'Font Pair',
@@ -181,22 +183,15 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
   watch(page, 'a designer reading the page in the order it is laid out')
   await go(page, '/create/font-pair')
 
-  // PRESENT: the four panels still exist and are still named, in words. The
-  // headings are the ordering now, and they say what the numbers only implied.
-  // THREE VISIBLE PANEL HEADS SINCE 2026-09-14, not four. The founder struck
-  // "Read the pairing / The two faces together, at the sizes and weights
-  // they'll actually ship at" — ninety-six pixels describing the preview
-  // directly beneath it. Its h2 still EXISTS, because the output <section> is
-  // aria-labelledby it, but it is sr-only and so carries no `.fpr-section-head`.
-  // The guarantee this test exists for is untouched: whatever panel heads are
-  // on screen, none of them may be numbered.
+  // PRESENT: the output's sections are named in words. The controls are the
+  // side panel, an <aside> named by its label rather than a visible head.
   const headings = page.locator('.fpr-section-head h2')
-  await expect(headings).toHaveCount(3)
-  await expect(headings.nth(0)).toHaveText('Choose the pair')
-  await expect(headings.nth(2)).toHaveText('Prepare the handoff')
+  await expect(headings).toHaveCount(2)
+  await expect(headings.nth(0)).toContainText('Body faces that work under')
+  await expect(headings.nth(1)).toHaveText('Prepare the handoff')
+  await expect(page.getByRole('complementary', { name: 'Font Pair controls' })).toBeVisible()
 
-  // The retired head's h2 is still in the document and still names the region,
-  // which is the half of this that must NOT have been lost.
+  // The specimen's sr-only h2 still names its region.
   const named = page.locator('h2#fpr-output-title')
   await expect(named).toHaveText('Read the pairing')
   await expect(page.locator('section[aria-labelledby="fpr-output-title"]')).toHaveCount(1)
@@ -204,82 +199,28 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
   // ABSENT: the badges.
   await expect(page.locator('.fpr-section-num')).toHaveCount(0)
 
-  // And the reason. Nothing in a panel head may be a bare two-digit ordinal —
-  // which is what "01" was, and what would come back if someone re-added it in
-  // a <span> with a different class. The x-order below is the measurement that
-  // condemned them: at 1440 the first panel head sits to the RIGHT of the
-  // second, so any ascending numbering on them reads against the page.
+  // Nothing in a section head may be a bare two-digit ordinal, and the
+  // condition that made numbering wrong still holds: at 1440 the controls sit
+  // to the RIGHT of the output, so an ascending number on "panel one" would
+  // read against the page.
   const geometry = await page.evaluate(() => {
     const heads = [...document.querySelectorAll('.fpr-section-head')]
+    const panel = document.querySelector('.fpr-config')
+    const main = document.querySelector('.fpr-output')
     return {
       ordinals: heads.flatMap((h) => [...h.querySelectorAll('span')]
-        .map((s) => (s.textContent || '').trim())
+        .map((x) => (x.textContent || '').trim())
         .filter((t) => /^\d{1,2}$/.test(t))),
-      xs: heads.map((h) => Math.round(h.getBoundingClientRect().left)),
-      ys: heads.map((h) => Math.round(h.getBoundingClientRect().top + window.scrollY)),
+      panelX: panel ? Math.round(panel.getBoundingClientRect().left) : null,
+      mainX: main ? Math.round(main.getBoundingClientRect().left) : null,
     }
   })
   expect(geometry.ordinals, 'a panel ordinal has come back').toEqual([])
-  // The condition that made numbering wrong is still true — this is why the
-  // fix was to delete rather than to renumber. If the grid is ever changed so
-  // that panel 1 leads on the x axis, this assertion fails and the decision
-  // can be revisited on purpose rather than by accident.
-  expect(geometry.xs[0], 'the config rail has moved to the left column')
-    .toBeGreaterThan(Math.max(...geometry.xs.slice(1)))
-
-  // THE `ys[0] === ys[1]` ASSERTION WAS RETIRED ON 2026-09-14, deliberately.
-  // It said the first two panel heads sat on one line, which was a fact about
-  // the OLD layout rather than the guarantee: the output panel's first head
-  // used to be "Read the pairing", level with the config head. That head is
-  // sr-only now, so the second visible head is "Body faces…", which sits below
-  // the preview and never was level with anything.
-  //
-  // What condemned the numbering is the X axis, and that is asserted above and
-  // is still true: the config rail — panel ONE — leads on x at 1440, so any
-  // ascending numbering across these heads reads against the page. Keeping a
-  // y-equality that the layout no longer has would have meant loosening the x
-  // check to make it pass, which is the wrong half to give up.
+  expect(geometry.panelX, 'the controls did not render').not.toBeNull()
+  expect(geometry.panelX, 'the controls have moved to the left column').toBeGreaterThan(geometry.mainX)
 })
 
-test('the Tint Scale audience switch is the one next to the panel it changes', async ({ page }) => {
-  watch(page, 'a developer switching to the handoff view')
-  await go(page, '/create/tint')
-
-  // ABSENT: the hero pair of cards. It was 1348x118px of the masthead.
-  await expect(page.locator('.tt-audience')).toHaveCount(0)
-  await expect(page.getByText('For designers', { exact: true })).toHaveCount(0)
-
-  // PRESENT, and it is a real tablist now rather than a pair of aria-pressed
-  // buttons — the ARIA the hero cards used to claim moved onto the control
-  // that is actually adjacent to the panel.
-  const tabs = page.getByRole('tab')
-  await expect(tabs).toHaveCount(2)
-
-  const panel = page.locator('#tt-audience-panel')
-  await expect(panel).toBeVisible()
-  await expect(panel).toHaveAttribute('aria-labelledby', 'tt-tab-designer')
-
-  // THE WIRING, not the helper: pressing the tab must change the panel, and the
-  // panel must say which tab labels it. Reverting the promotion — putting the
-  // roving tabindex and the ids back on the hero cards — fails here.
-  const dev = page.getByRole('tab', { name: 'Developer handoff' })
-  await dev.click()
-  await expect(dev).toHaveAttribute('aria-selected', 'true')
-  await expect(panel).toHaveAttribute('aria-labelledby', 'tt-tab-developer')
-  await expect(page.getByRole('heading', { name: 'Prepare the handoff' })).toBeVisible()
-
-  // Arrow keys, which the hero cards advertised and which had to move with the
-  // role. Focus must land on the tab, not be lost.
-  await page.keyboard.press('ArrowLeft')
-  await expect(page.getByRole('tab', { name: 'Design preview' })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.locator(':focus')).toHaveAttribute('id', 'tt-tab-designer')
-
-  // The measurement that made the hero pair wrong: its panel was 922px below
-  // it. The survivor must stay within one screen of what it changes.
-  const gap = await page.evaluate(() => {
-    const sw = document.querySelector('.tt-view-switch').getBoundingClientRect()
-    const pn = document.querySelector('#tt-audience-panel').getBoundingClientRect()
-    return Math.round(pn.top - sw.bottom)
-  })
-  expect(gap, 'the audience switch has drifted away from its panel').toBeLessThan(200)
-})
+// Not tested: 'the Tint Scale audience switch is the one next to the
+// panel it changes'. The designer/developer switch and both of its panels went
+// with the rebuild to the design's drawn Tint screen, which has
+// one output — the scale — and one export, "Copy variables" in its toolbar.
