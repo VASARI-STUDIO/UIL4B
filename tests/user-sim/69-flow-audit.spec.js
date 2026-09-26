@@ -494,6 +494,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
   const FREE_LIVE = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
   // Each free format and the file name it must download under.
   const FILE = {
+    kit: /ui-kit\.html$/,
     html: /-style-guide\.html$/,
     md: /-style-guide\.md$/,
     png: /-style-guide\.png$/,
@@ -521,6 +522,11 @@ test.describe('flow 4 — each live free format downloads under its own name', (
       const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
       expect(download.suggestedFilename(), `${fmt.name} must download as its own format`)
         .toMatch(FILE[fmt.id])
+      // The kit stays open only to report a font it could not embed (the font
+      // hosts are live network here); that notice follows a finished export.
+      if (fmt.id === 'kit' && await panel.getByRole('status').count()) {
+        await panel.getByRole('button', { name: 'Close', exact: true }).click()
+      }
       // The panel closes after a successful export; the page is still the tool.
       await expect(panel).toHaveCount(0)
     }

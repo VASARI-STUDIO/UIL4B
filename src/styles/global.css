@@ -2949,9 +2949,14 @@ html.lenis{scroll-behavior:auto!important}
   html.has-tabbar body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
 }
 
-.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
-.exp-fmt:hover{border-color:var(--bh);background:var(--bg-1)}
-.exp-fmt.is-active{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--bg-1))}
+/* Export formats: rows of the one dialog surface, divided by hairlines — never
+   a card per format. */
+.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 24px;text-align:left;background:none;border:0;border-radius:0;color:inherit;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out)}
+.exp-fmt + .exp-fmt{border-top:1px solid var(--border)}
+@media (hover:hover){.exp-fmt:hover{background:var(--hvr)}}
+.exp-fmt.is-active{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.exp-fmt:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+@media(max-width:560px){.exp-fmt{padding:14px 16px}}
 .exp-fmt-check{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--bh);border-radius:50%;transition:border-color var(--dur-2) var(--ease-out)}
 .exp-fmt.is-active .exp-fmt-check{border-color:var(--accent);box-shadow:inset 0 0 0 4px var(--accent)}
 /* Add-mode: paste-SVG affordance */

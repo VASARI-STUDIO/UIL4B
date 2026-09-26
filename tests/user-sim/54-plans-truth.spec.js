@@ -249,8 +249,9 @@ test.describe('/plans says what the design says', () => {
     }
     // The unit is a "project", never a "kit" ("toolkit", the
     // product's name for itself, is not the unit and is allowed).
+    // "UI kit" names the exported file, the one thing the word may mean here.
     const main = await page.locator('.pricing main').innerText()
-    expect(main, 'the pricing page calls a saved project a "kit"').not.toMatch(/\bkits?\b/i)
+    expect(main.replace(/\bUI kit\b/g, ''), 'the pricing page calls a saved project a "kit"').not.toMatch(/\bkits?\b/i)
     expect(main, 'the pricing page no longer names the unit at all').toMatch(/\bprojects\b/)
     // Positive control: the design's assurances minus the retired one, in order.
     await expect(page.locator('.pr-assure li')).toHaveText(['Cancel Pro any time', 'Files stay in your browser'])

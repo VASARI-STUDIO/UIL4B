@@ -41,7 +41,7 @@
 - [Curated Resources](https://uil4b.com/discover/resources): Hand-picked design and dev tools from outside UI L4B — inspiration, components, free assets and developer utilities.
 
 ## Plans
-- Free: 5 AI generations a day and 40 a month; style guide export in HTML, Markdown, PNG, JPEG, CSS tokens and JSON tokens, with a "Made with UIL4B" footer line; Brand Starter (beta) 1 generation, once per account.
+- Free: 5 AI generations a day and 40 a month; UI kit export, and style guide export in HTML, Markdown, PNG, JPEG, CSS tokens and JSON tokens, with a "Made with UIL4B" footer line; Brand Starter (beta) 1 generation, once per account.
 - Pro, from $4 USD a month: 30 AI generations a day and 300 a month; adds Design system book (PDF) and Brand guidelines (presentation); removes the footer line; Brand Starter (beta) 20 generations a month. Same AI model as Free.
 - Not built, on any plan, and not for sale: Tailwind theme and Asset bundle.
 
