@@ -32,8 +32,7 @@ import {
 } from '../../api/_lib/pricing.js'
 import { APPROVED_CURRENCY, PLAN_LADDER } from '../../src/config/planLadder.js'
 
-// The subscription rows the ladder governs. `lifetime` is a separately
-// founder-approved one-off and is deliberately not part of it.
+// The subscription rows the ladder governs.
 const LADDER_INTERVALS = PLAN_LADDER.map((p) => p.liveKey)
 
 test('the server fallback quotes the same USD ladder the client does', () => {

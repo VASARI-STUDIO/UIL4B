@@ -1,10 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { detectCurrency, formatCurrency } from '../utils/currency'
 
-const CANONICAL_LIFETIME = {
-  usd: 89.99, eur: 84.99, gbp: 74.99, aud: 129, nzd: 139.99, cad: 119.99,
-}
-
 export const formatPrice = formatCurrency
 
 let priceCache = null
@@ -61,7 +57,6 @@ export function useProPrice(requestedCurrency) {
     const monthlyAmount = prices?.monthly?.[currency]
     const quarterlyAmount = prices?.quarterly?.[currency]
     const yearlyAmount = prices?.yearly?.[currency]
-    const lifetimeAmount = prices?.lifetime?.[currency] ?? CANONICAL_LIFETIME[currency] ?? null
     const hasRecurring = typeof monthlyAmount === 'number' && typeof yearlyAmount === 'number'
     const savingsPct = hasRecurring
       ? Math.max(0, Math.round((1 - yearlyAmount / (monthlyAmount * 12)) * 100))
@@ -77,19 +72,16 @@ export function useProPrice(requestedCurrency) {
       quarterlyPerMonth: settled && typeof quarterlyAmount === 'number' ? formatPrice(quarterlyAmount / 3, currency) : null,
       yearlyPerMonth: settled && typeof yearlyAmount === 'number' ? formatPrice(yearlyAmount / 12, currency) : null,
       yearlyTotal: settled && typeof yearlyAmount === 'number' ? formatPrice(yearlyAmount, currency) : null,
-      lifetime: settled && typeof lifetimeAmount === 'number' ? formatPrice(lifetimeAmount, currency) : null,
       savingsPct,
       availability: {
         monthly: !!currencyAvailability.monthly?.[currency],
         quarterly: !!currencyAvailability.quarterly?.[currency],
         yearly: !!currencyAvailability.yearly?.[currency],
-        lifetime: !!currencyAvailability.lifetime?.[currency],
       },
       source: {
         monthly: prices?.source?.monthly || 'unavailable',
         quarterly: prices?.source?.quarterly || 'unavailable',
         yearly: prices?.source?.yearly || 'unavailable',
-        lifetime: prices?.source?.lifetime || 'unavailable',
       },
     }
   }, [prices, settled, currency])

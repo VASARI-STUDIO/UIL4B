@@ -7,24 +7,19 @@ import {
   LOOKUP_KEYS,
   PRICE_ENV_KEYS,
   fromCents,
+  priceIsSellable,
 } from './_lib/pricing.js'
 
 let cached = null
 let cachedAt = 0
 const TTL_MS = 5 * 60 * 1000
 
-function priceMatchesInterval(price, interval) {
-  if (!price?.active) return false
-  if (interval === 'lifetime') return !price.recurring
-  return price.recurring?.interval === (interval === 'yearly' ? 'year' : 'month')
-}
-
 async function resolveLivePrice(stripe, interval) {
   const envId = process.env[PRICE_ENV_KEYS[interval]]
   if (envId) {
     try {
       const price = await stripe.prices.retrieve(envId, { expand: ['currency_options'] })
-      if (priceMatchesInterval(price, interval)) return price
+      if (priceIsSellable(price, interval)) return price
     } catch (err) {
       // Falling through to the lookup key is correct, but doing it in silence is
       // not: a STRIPE_PRICE_* env var pointing at a deleted or wrong-account
@@ -41,7 +36,7 @@ async function resolveLivePrice(stripe, interval) {
     expand: ['data.currency_options'],
   })
   const price = found.data[0]
-  return priceMatchesInterval(price, interval) ? price : null
+  return priceIsSellable(price, interval) ? price : null
 }
 
 function currencyMap(price) {

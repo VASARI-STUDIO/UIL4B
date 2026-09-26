@@ -474,10 +474,10 @@ test('the webhook no longer claims Stripe cancels a subscription on a chargeback
 
 test('the webhook threads the Stripe client into every subscription write', () => {
   const src = stripComments(read('api/stripe-webhook.js'))
-  assert.match(src, /async function upsertSubscription\(stripe, subscription\)/,
+  assert.match(src, /async function upsertSubscription\(stripe, subscription, eventCreated\)/,
     'upsertSubscription no longer receives the Stripe client')
   assert.doesNotMatch(src, /upsertSubscription\((?!stripe)/,
     'a call site drops the Stripe client — that write can no longer check the charge')
-  assert.match(src, /writeSubscription\([^)]*,\s*null,\s*stripe\)/,
+  assert.match(src, /writeSubscription\([^)]*,\s*null,\s*stripe,\s*eventCreated\)/,
     'upsertSubscription does not pass the client through to writeSubscription')
 })

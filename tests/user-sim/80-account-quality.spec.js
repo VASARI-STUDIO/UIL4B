@@ -63,16 +63,13 @@ test.describe('checkout states a price it cannot confirm', () => {
     })
   }
 
-  test('the one-off plan keeps its canonical amount and says where it came from', async ({ page }) => {
-    watch(page, 'buyer whose price service is down')
+  test('a one-off plan is not offered — it is an invalid selection', async ({ page }) => {
+    watch(page, 'buyer asking for a one-off plan')
     await signIn(page, {})
     await go(page, '/checkout?plan=lifetime')
-    // CANONICAL_LIFETIME in usePrices.js gives this interval a fallback the
-    // recurring ones have no equivalent for, so the amount is real and the note
-    // has to say it is not the live one.
-    await expect(page.locator('.checkout-plan-amount')).not.toHaveText('Unavailable')
-    await expect(page.locator('.checkout-plan-note'))
-      .toHaveText('Live pricing is unreachable · showing the canonical USD amount')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Invalid checkout selection')
+    await expect(page.locator('.checkout-plan-amount')).toHaveCount(0)
+    await expect(page.locator('.checkout-page')).not.toContainText(/one-off|Buy Pro once/i)
   })
 
   test('a priced-out summary offers a way back to a live price', async ({ page }) => {

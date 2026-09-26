@@ -21,6 +21,9 @@
 //          interval, that amount is displayed — we never advertise a number we
 //          do not charge. `approvedTotal` is only the pre-settle fallback.
 //       2. A tier with no `checkoutPlan` is NOT rendered by the upgrade modal.
+//          src/pages/Checkout.jsx only accepts the plans in its own table
+//          (monthly, quarterly, yearly); offering anything else would dead-end
+//          on "Invalid checkout selection".
 //       3. The "from $X/month" headline is COMPUTED from whatever is actually
 //          renderable, never typed. If the ladder changes, the headline follows.
 // ─────────────────────────────────────────────────────────────────────────────

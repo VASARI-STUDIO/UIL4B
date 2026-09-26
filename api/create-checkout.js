@@ -2,29 +2,85 @@ import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 import {
   CURRENCY_CODES,
-  LIFETIME_CURRENCY_CODES,
   BILLING_INTERVALS,
   LOOKUP_KEYS,
   PRICE_ENV_KEYS,
+  priceIsSellable,
   trialDaysFor,
 } from './_lib/pricing.js'
-import { LIFETIME_SKU, ensureStripeCustomer, parseBillingInterval } from './_lib/billing.js'
+import { ensureStripeCustomer, parseBillingInterval } from './_lib/billing.js'
 import { planForUser } from './_lib/plans.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins, resolveOrigin } from './_lib/origins.js'
 
-let priceCache = {}
+// Resolved price ids, per interval, for a few minutes. Short enough that a
+// price archived in Stripe stops being sold on the next refresh; only a
+// sellable price is ever cached, so a fixed configuration is picked up at once.
+export const PRICE_CACHE_TTL_MS = 5 * 60 * 1000
+const priceCache = new Map()
 
-async function resolvePrice(stripe, interval) {
+/**
+ * The Stripe price a checkout for `interval` charges, or null when there is no
+ * sellable one.
+ *
+ * A configured STRIPE_PRICE_* id is used only while Stripe reports it sellable
+ * (active, on the right recurrence). Otherwise the interval's lookup key
+ * decides, which is the same rule /api/get-prices uses to choose the price it
+ * shows. A Stripe error while resolving also yields null, so the caller answers
+ * with its "temporarily unavailable" response instead of a failed session.
+ *
+ * `env`, `cache` and `now` are injectable for tests/unit/checkout-price-guard.test.js.
+ */
+export async function resolvePrice(stripe, interval, { env = process.env, cache = priceCache, now = Date.now() } = {}) {
   const key = parseBillingInterval(interval)
   if (!key) return null
-  const envPrice = process.env[PRICE_ENV_KEYS[key]]
-  if (envPrice) return envPrice
-  if (priceCache[key]) return priceCache[key]
-  const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1 })
-  if (!found.data.length) return null
-  priceCache[key] = found.data[0].id
-  return found.data[0].id
+  const hit = cache.get(key)
+  if (hit && now - hit.at < PRICE_CACHE_TTL_MS) return hit.id
+
+  const envKey = PRICE_ENV_KEYS[key]
+  const envPrice = env[envKey]
+  if (envPrice) {
+    try {
+      const price = await stripe.prices.retrieve(envPrice)
+      if (priceIsSellable(price, key)) {
+        cache.set(key, { id: envPrice, at: now })
+        return envPrice
+      }
+      console.error('create-checkout: the configured price is not sellable — resolving by lookup key instead', {
+        interval: key, envKey, active: price?.active ?? null, recurring: price?.recurring?.interval ?? null,
+      })
+    } catch (err) {
+      console.error('create-checkout: the configured price could not be read — resolving by lookup key instead', {
+        interval: key, envKey, error: err?.message, type: err?.type,
+      })
+    }
+  }
+
+  try {
+    const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1 })
+    const price = found?.data?.[0]
+    if (!priceIsSellable(price, key)) return null
+    cache.set(key, { id: price.id, at: now })
+    return price.id
+  } catch (err) {
+    console.error('create-checkout: the price lookup failed', {
+      interval: key, error: err?.message, type: err?.type,
+    })
+    return null
+  }
+}
+
+/**
+ * The 400 answer for an interval that cannot be bought, or null when it can.
+ * Pro is sold as a subscription only, so a request for a one-off purchase gets
+ * its own message rather than the generic list.
+ */
+export function intervalRefusal(rawInterval) {
+  if (parseBillingInterval(rawInterval)) return null
+  if (rawInterval === 'lifetime') {
+    return { status: 400, error: 'Pro is sold as a monthly, quarterly or yearly subscription. There is no one-off purchase. No payment session was created.' }
+  }
+  return { status: 400, error: `interval must be one of: ${BILLING_INTERVALS.join(', ')}` }
 }
 
 export default async function handler(req, res) {
@@ -43,6 +99,11 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  // Checked first: an interval that cannot be bought needs no account, token
+  // or Stripe call to refuse.
+  const refusal = intervalRefusal(req.body?.interval)
+  if (refusal) return res.status(refusal.status).json({ error: refusal.error })
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -74,21 +135,14 @@ export default async function handler(req, res) {
   try {
     const { interval: rawInterval, currency } = req.body || {}
     const interval = parseBillingInterval(rawInterval)
-    if (!interval) {
-      return res.status(400).json({ error: `interval must be one of: ${BILLING_INTERVALS.join(', ')}` })
-    }
     const stripe = getStripeServer()
-    const isLifetime = interval === 'lifetime'
     const wantCurrency = typeof currency === 'string' && CURRENCY_CODES.includes(currency.toLowerCase())
       ? currency.toLowerCase()
       : null
-    if (isLifetime && wantCurrency && !LIFETIME_CURRENCY_CODES.includes(wantCurrency)) {
-      return res.status(400).json({ error: `One-off checkout is not available in ${wantCurrency.toUpperCase()} yet` })
-    }
     const priceId = await resolvePrice(stripe, interval)
     if (!priceId) {
       console.error('create-checkout: no Stripe price resolved for interval', interval)
-      return res.status(503).json({ error: `The ${isLifetime ? 'one-off' : interval} price is temporarily unavailable. No payment session was created.` })
+      return res.status(503).json({ error: `The ${interval} price is temporarily unavailable. No payment session was created.` })
     }
 
     const userDoc = await adminDb().collection('users').doc(uid).get()
@@ -124,7 +178,7 @@ export default async function handler(req, res) {
     // seven days. Yearly is unchanged by this commit — it granted 7 before and
     // grants 7 now — so no existing promise moved.
     const subscriptionData = { metadata: { firebaseUid: uid } }
-    const trialDays = isLifetime ? 0 : trialDaysFor(interval)
+    const trialDays = trialDaysFor(interval)
     if (trialDays > 0) {
       subscriptionData.trial_period_days = trialDays
       subscriptionData.trial_settings = {
@@ -138,21 +192,14 @@ export default async function handler(req, res) {
       // client still consumes the same client_secret via <EmbeddedCheckout>.
       ui_mode: 'embedded_page',
       customer: customerId,
-      mode: isLifetime ? 'payment' : 'subscription',
+      mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         firebaseUid: uid,
         billingInterval: interval,
-        ...(isLifetime ? { entitlementSku: LIFETIME_SKU } : {}),
       },
-    }
-    if (isLifetime) {
-      sessionParams.payment_intent_data = {
-        metadata: { firebaseUid: uid, entitlementSku: LIFETIME_SKU },
-      }
-    } else {
-      sessionParams.subscription_data = subscriptionData
+      subscription_data: subscriptionData,
     }
     // Present the customer's local currency (the price carries currency_options
     // for each supported currency). Falls back gracefully if a returning

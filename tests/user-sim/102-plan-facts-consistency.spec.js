@@ -10,9 +10,9 @@ import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
 const PRICES = {
-  monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 }, lifetime: { usd: 89.99 },
-  source: { monthly: 'live', quarterly: 'live', yearly: 'live', lifetime: 'live' },
-  currencyAvailability: { monthly: { usd: true }, quarterly: { usd: true }, yearly: { usd: true }, lifetime: { usd: true } },
+  monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 },
+  source: { monthly: 'live', quarterly: 'live', yearly: 'live' },
+  currencyAvailability: { monthly: { usd: true }, quarterly: { usd: true }, yearly: { usd: true } },
 }
 
 test.use({ locale: 'en-US', timezoneId: 'America/New_York' })

@@ -1163,7 +1163,7 @@ html[data-reduced-motion="true"] .rail-overflow{scroll-snap-type:none}
 .sub-check{color:var(--accent);flex-shrink:0;box-sizing:content-box;padding:2px;border-radius:var(--radius-xs);background:var(--accent-bg)}
 .sub-tier-btn{width:100%;justify-content:center}
 .sub-tier-btn:disabled{opacity:.55;cursor:default}
-/* A control that is unavailable for a product reason (no live one-off price)
+/* A control that is unavailable for a product reason (no live price)
    stays focusable via aria-disabled so keyboard and screen-reader users reach
    its aria-describedby explanation instead of tabbing past a skipped button.
    The label text carries the meaning — colour is never the only signal. */
