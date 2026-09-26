@@ -432,6 +432,9 @@ for (const rung of RUNGS) {
       const card = page.locator('.pl-card').first()
       await expect(card, 'no open prompt card rendered — this assertion is vacuous').toBeVisible()
       await card.click()
+      // A prompt with a demo opens on the running demo; its text is the other tab.
+      const promptTab = page.getByRole('dialog').getByRole('tab', { name: /the prompt/i })
+      if (await promptTab.count()) await promptTab.click()
 
       const shown = page.locator('.pl-modal-prompt pre')
       await expect(shown, 'the modal rendered no prompt body').toBeVisible()

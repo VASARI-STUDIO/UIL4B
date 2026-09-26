@@ -3,483 +3,461 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FlowFix Plumbing — Newcastle &amp; Lake Macquarie</title>
+<title>FlowFix Plumbing &amp; Gas · Newcastle and Lake Macquarie</title>
+<meta name="description" content="Licensed plumbers and gasfitters across Newcastle and Lake Macquarie. Fixed prices before we start, 24 hours a day.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":4500}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/archivo.js"></script>
+<script src="../vendor/fonts/azeret-mono.js"></script>
 <style>
   :root{
-    --navy:#1B3A5C; --navy-d:#12283F; --navy-l:#2C5580;
-    --orange:#F47B20; --orange-d:#D9640D; --orange-t:#FDF0E5;
-    --ink:#132436; --ink-2:#4B5E72; --ink-3:#77879A;
-    --paper:#FFFFFF; --wash:#F5F8FB; --line:#DFE7EE;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --paper:#f4f1ea;
+    --paper-2:#ebe6db;
+    --ink:#14233a;
+    --ink-2:#4a576a;
+    --ink-3:#6b7585;
+    --line:rgba(20,35,58,.14);
+    --line-2:rgba(20,35,58,.28);
+    --copper:#b8622f;
+    --copper-d:#9e4d1c;
+    --cold:#3a78ad;
+    --gas:#c99414;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.6vw,56px);
+    --sans:"Archivo","Helvetica Neue",Arial,sans-serif;
+    --mono:"Azeret Mono",ui-monospace,Menlo,monospace;
+    color-scheme:light;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{background:var(--paper);-webkit-text-size-adjust:100%}
+  body{background:var(--paper);color:var(--ink);font:400 16.5px/1.55 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--copper)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--ink);color:var(--paper)}
   a{color:inherit}
-  img,svg{max-width:100%}
-  button{font:inherit;cursor:pointer}
-  :focus-visible{outline:3px solid var(--orange);outline-offset:2px;border-radius:4px}
-  .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
-  h1,h2,h3{letter-spacing:-.025em;margin:0}
-  .eye{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--orange);margin:0 0 12px}
+  h1,h2,h3,p,ul,ol,dl,dd{margin:0}
+  ul,ol{list-style:none;padding:0}
+  :focus-visible{outline:2px solid var(--copper-d);outline-offset:3px;border-radius:4px}
+  .mono{font-family:var(--mono);font-size:12px;letter-spacing:.02em}
+  .num{font-variant-numeric:tabular-nums}
 
-  /* ---- bars ---- */
-  .alert{background:var(--navy-d);color:#CFE0EE;font-size:13.5px}
-  .alert .wrap{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;padding-top:9px;padding-bottom:9px}
-  .alert b{color:#fff;font-weight:600}
-  .alert .ph{margin-left:auto;color:#fff;font-weight:700;text-decoration:none;letter-spacing:.01em}
-  .alert .ph:hover{color:var(--orange)}
-  .pulse{width:7px;height:7px;border-radius:50%;background:var(--orange);flex:0 0 auto}
+  /* ---------- bars ---------- */
+  .alert{display:flex;justify-content:space-between;gap:16px;padding:9px var(--gutter);background:var(--ink);color:#e9edf3;font-size:14px}
+  .alert b{font-weight:600}
+  .alert a{font-family:var(--mono);font-size:13px;text-decoration:none;white-space:nowrap}
+  .nav{display:flex;align-items:center;gap:clamp(14px,2.4vw,34px);padding:12px var(--gutter);border-bottom:1px solid var(--line)}
+  .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;min-height:44px}
+  .brand b{font-weight:800;font-size:19px;letter-spacing:-.03em;line-height:1}
+  .brand small{display:block;font:500 10.5px/1.3 var(--mono);color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+  .nav ul{display:flex;gap:2px;margin-left:auto}
+  .nav ul a{display:block;text-decoration:none;font-size:15px;color:var(--ink-2);padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .nav ul a:hover{color:var(--ink);background:rgba(20,35,58,.06)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 20px;border-radius:999px;text-decoration:none;font:600 15.5px/1 var(--sans);border:1px solid transparent;cursor:pointer;
+    transition:background-color .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:scale(.98)}
+  .btn.call{background:var(--copper-d);color:#fff}
+  .btn.call:hover{background:#86400f}
+  .btn.ink{background:var(--ink);color:var(--paper)}
+  .btn.ink:hover{background:#22354f}
+  .btn.line{border-color:var(--line-2);color:var(--ink)}
+  .btn.line:hover{border-color:var(--ink);background:rgba(20,35,58,.04)}
+  .btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .nav .btn{min-height:44px;font-size:14.5px}
 
-  header{border-bottom:1px solid var(--line);background:#fff;position:relative;z-index:5}
-  .hd{display:flex;align-items:center;gap:28px;height:74px}
-  .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-  .logo .m{width:34px;height:34px;border-radius:9px;background:var(--navy);display:grid;place-items:center;flex:0 0 auto}
-  .logo .m svg{width:19px;height:19px;fill:var(--orange)}
-  .logo b{font-size:19px;font-weight:800;letter-spacing:-.035em;color:var(--navy);line-height:1.05;display:block}
-  .logo small{display:block;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
-  nav.main{display:flex;gap:26px;margin-left:10px}
-  nav.main a{font-size:15px;text-decoration:none;color:var(--ink-2);font-weight:550;padding:6px 0}
-  nav.main a:hover{color:var(--navy)}
-  .hd .r{margin-left:auto;display:flex;align-items:center;gap:14px}
+  /* ---------- hero ---------- */
+  .hero{display:grid;grid-template-columns:minmax(0,4.2fr) minmax(0,7.8fr);gap:clamp(24px,4vw,64px);align-items:center;padding:clamp(28px,5vh,64px) var(--gutter) clamp(30px,5vh,60px)}
+  .area{font:500 12px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--copper-d)}
+  h1{margin-top:16px;font-weight:800;font-size:clamp(40px,4.6vw,76px);line-height:.96;letter-spacing:-.045em;text-wrap:balance}
+  .lede{margin-top:20px;max-width:40ch;color:var(--ink-2);font-size:clamp(16.5px,1.2vw,18.5px)}
+  .lede b{color:var(--ink);font-weight:600}
+  .acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .proof{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14.5px;color:var(--ink-2)}
+  .proof li{display:flex;align-items:center;gap:8px}
+  .proof li::before{content:"";width:14px;height:8px;border-left:2px solid var(--copper);border-bottom:2px solid var(--copper);transform:rotate(-45deg) translate(1px,-2px)}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:13px 20px;border-radius:9px;
-       font-weight:700;font-size:15.5px;text-decoration:none;border:2px solid transparent;
-       transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
-  .btn svg{width:17px;height:17px;flex:0 0 auto}
-  .btn-o{background:var(--orange);color:#fff;box-shadow:0 2px 0 var(--orange-d)}
-  .btn-o:hover{background:var(--orange-d);box-shadow:0 2px 0 #B85309}
-  .btn-o svg{fill:#fff}
-  .btn-g{border-color:var(--line);color:var(--navy);background:#fff}
-  .btn-g:hover{border-color:var(--navy);background:var(--wash)}
-  .btn-sm{padding:10px 16px;font-size:14.5px}
+  /* the house, in section */
+  .plan{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.46fr);border:1px solid var(--line-2);border-radius:14px;background:#faf8f3;overflow:hidden}
+  .draw{position:relative;border-right:1px solid var(--line)}
+  .draw svg{display:block;width:100%;height:auto}
+  .draw .hint{position:absolute;left:14px;top:12px;font:500 11.5px/1 var(--mono);color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase}
+  .legend{position:absolute;left:14px;bottom:12px;display:flex;flex-wrap:wrap;gap:6px 14px;font:500 11px/1 var(--mono);color:var(--ink-3)}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .wall{fill:none;stroke:var(--ink);stroke-width:1.4}
+  .thin{fill:none;stroke:var(--ink);stroke-width:1;opacity:.55}
+  .fix{fill:#fff;stroke:var(--ink);stroke-width:1.2}
+  .soil{fill:#e9e3d5}
+  .p{fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+  .p.cold{stroke:var(--cold)} .p.hot{stroke:var(--copper)} .p.gas{stroke:var(--gas);stroke-dasharray:6 5} .p.waste{stroke:#8b8f96;stroke-width:6}
+  .lbl{font:500 9.5px var(--mono);fill:var(--ink-3);letter-spacing:.04em}
+  .drip{fill:var(--cold)}
+  .spot{cursor:pointer}
+  .spot circle.r{fill:var(--paper);stroke:var(--ink);stroke-width:1.5;transition:fill .2s var(--ease)}
+  .spot text{font:700 12px var(--sans);fill:var(--ink);pointer-events:none}
+  .spot:hover circle.r{fill:#fff}
+  .spot[aria-pressed="true"] circle.r{fill:var(--ink)}
+  .spot[aria-pressed="true"] text{fill:var(--paper)}
+  .spot:focus{outline:none}
+  .spot:focus-visible circle.r{stroke:var(--copper-d);stroke-width:3}
+  .quote{padding:20px 20px 18px;display:flex;flex-direction:column;gap:10px}
+  .quote .k{font:500 11.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .quote h3{font-weight:700;font-size:22px;letter-spacing:-.03em;line-height:1.1}
+  .quote .price{font-weight:800;font-size:40px;letter-spacing:-.04em;line-height:1}
+  .quote .price small{font:500 12px var(--mono);color:var(--ink-3);letter-spacing:0;margin-right:6px;vertical-align:.9em}
+  .quote p{color:var(--ink-2);font-size:14.5px;line-height:1.5}
+  .quote dl{display:grid;gap:0;border-top:1px solid var(--line);margin-top:auto}
+  .quote dl div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .quote dt{color:var(--ink-3)}
+  .quote dd{font-weight:600;text-align:right}
+  .quote .btn{min-height:44px;margin-top:6px}
 
-  /* ---- hero ---- */
-  .hero{background:var(--wash);border-bottom:1px solid var(--line)}
-  .hero .wrap{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:52px;
-              padding-top:56px;padding-bottom:56px;align-items:center}
-  .hero h1{font-size:clamp(34px,4.6vw,52px);line-height:1.04;font-weight:800;color:var(--navy);letter-spacing:-.037em}
-  .hero .lede{margin:18px 0 0;font-size:18px;color:var(--ink-2);max-width:46ch;line-height:1.55}
-  .hero .lede b{color:var(--ink);font-weight:700}
-  .acts{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0 10px}
-  .micro{font-size:13.5px;color:var(--ink-3);margin:0}
-  .ticks{list-style:none;margin:26px 0 0;padding:20px 0 0;border-top:1px solid var(--line);
-         display:grid;grid-template-columns:1fr 1fr;gap:11px 22px}
-  .ticks li{display:flex;gap:10px;font-size:14.5px;color:var(--ink-2);font-weight:550;line-height:1.35}
-  .ticks svg{width:17px;height:17px;flex:0 0 auto;margin-top:1px;stroke:var(--orange);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  /* ---------- facts ---------- */
+  .facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .facts div{padding:22px var(--gutter)}
+  .facts div + div{border-left:1px solid var(--line)}
+  .facts dd{font-weight:800;font-size:clamp(26px,2.6vw,40px);letter-spacing:-.04em;line-height:1}
+  .facts dt{margin-top:8px;font-size:14px;color:var(--ink-2)}
 
-  .van{background:var(--navy);border-radius:16px;padding:26px;position:relative;overflow:hidden}
-  .van::before{content:"";position:absolute;inset:0;opacity:.5;
-    background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);
-    background-size:26px 26px}
-  .van>svg{position:relative;display:block;width:100%;height:auto}
-  .van .cap{position:relative;display:flex;align-items:center;gap:9px;margin-top:18px;
-            color:#BFD6E8;font-size:13px}
-  .van .cap b{color:#fff;font-weight:700}
-  .van .cap svg{width:15px;height:15px;flex:0 0 auto}
+  /* ---------- rate card ---------- */
+  .sec{padding:clamp(64px,9vw,120px) var(--gutter)}
+  .sec-head{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(24px,4vw,64px);align-items:end;margin-bottom:34px}
+  .sec-head h2{font-weight:800;font-size:clamp(32px,3.6vw,56px);letter-spacing:-.045em;line-height:1}
+  .sec-head p{color:var(--ink-2);max-width:48ch}
+  .rates li{display:grid;grid-template-columns:3.2em minmax(0,1.3fr) minmax(0,2.4fr) 7.5em 7em;gap:20px;align-items:baseline;padding:20px 0;border-top:1px solid var(--line)}
+  .rates li:last-child{border-bottom:1px solid var(--line)}
+  .rates .n{font:500 12px/1 var(--mono);color:var(--ink-3)}
+  .rates h3{font-weight:700;font-size:21px;letter-spacing:-.025em}
+  .rates p{color:var(--ink-2);font-size:15.5px}
+  .rates .t{font:500 12.5px/1.4 var(--mono);color:var(--ink-3)}
+  .rates .pr{text-align:right;font-weight:800;font-size:22px;letter-spacing:-.03em}
+  .rates .pr small{display:block;font:500 11px var(--mono);color:var(--ink-3);letter-spacing:0}
+  .fine{margin-top:18px;font-size:14px;color:var(--ink-3);max-width:70ch}
 
-  /* ---- trust ---- */
-  .trust{border-bottom:1px solid var(--line)}
-  .trust .wrap{display:grid;grid-template-columns:repeat(4,1fr);padding:0}
-  .trust div{padding:26px 24px;border-left:1px solid var(--line)}
-  .trust div:first-child{border-left:0}
-  .trust b{display:block;font-size:30px;font-weight:800;color:var(--navy);letter-spacing:-.035em;line-height:1.1}
-  .trust span{display:block;font-size:13.5px;color:var(--ink-2);margin-top:4px}
+  /* ---------- about + area ---------- */
+  .about{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,6fr);gap:clamp(28px,5vw,80px);background:var(--paper-2)}
+  .about h2{font-weight:800;font-size:clamp(32px,3.6vw,56px);letter-spacing:-.045em;line-height:1}
+  .about .story{margin-top:22px;display:grid;gap:14px;color:var(--ink-2);max-width:52ch}
+  .team{margin-top:28px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}
+  .team li{padding:12px 0;border-top:1px solid var(--line-2);display:flex;justify-content:space-between;gap:10px;font-size:15px}
+  .team span{color:var(--ink-3);font:500 12px/1.9 var(--mono)}
+  .map svg{display:block;width:100%;height:auto;border:1px solid var(--line-2);border-radius:14px;background:#f4f1ea}
+  .map .water{fill:#dbe5ee}
+  .map .coast{fill:none;stroke:var(--ink);stroke-width:1;opacity:.5}
+  .map .road{fill:none;stroke:var(--ink);stroke-width:.8;opacity:.25}
+  .map .ring{fill:none;stroke:var(--copper);stroke-width:1.2;stroke-dasharray:4 5}
+  .map circle.sub{fill:var(--ink)}
+  .map text{font:500 11px var(--sans);fill:var(--ink)}
+  .map text.m{font:500 9.5px var(--mono);fill:var(--ink-3)}
+  .map .depot{fill:var(--copper-d)}
+  .suburbs{margin-top:14px;font-size:14px;color:var(--ink-2)}
 
-  section{padding:74px 0}
-  .sec-hd{max-width:60ch;margin-bottom:34px}
-  .sec-hd h2{font-size:clamp(26px,3.3vw,36px);color:var(--navy);font-weight:800;line-height:1.1}
-  .sec-hd p{margin:12px 0 0;font-size:17px;color:var(--ink-2)}
-
-  /* ---- services ---- */
-  .svcs{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
-        border:1px solid var(--line);border-radius:14px;overflow:hidden}
-  .svc{background:#fff;padding:26px 24px 24px;display:flex;flex-direction:column;transition:background .16s}
-  .svc:hover{background:var(--wash)}
-  .svc .ic{width:44px;height:44px;border-radius:11px;background:var(--orange-t);display:grid;place-items:center;margin-bottom:16px}
-  .svc .ic svg{width:23px;height:23px;stroke:var(--orange-d);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .svc h3{font-size:17.5px;color:var(--navy);font-weight:750}
-  .svc p{margin:8px 0 0;font-size:14.5px;color:var(--ink-2);line-height:1.5}
-  .svc .price{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
-              font-size:13.5px;color:var(--ink-3);display:flex;align-items:baseline;gap:6px}
-  .svc .price b{font-size:16px;color:var(--navy);font-weight:750}
-
-  /* ---- about + map ---- */
-  .about{background:var(--wash);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .about .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:52px;align-items:center}
-  .about p{font-size:16.5px;color:var(--ink-2);margin:0 0 16px;line-height:1.62}
-  .creds{list-style:none;margin:24px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
-  .creds li{display:flex;gap:12px;font-size:14.5px;color:var(--ink);align-items:flex-start}
-  .creds svg{width:19px;height:19px;flex:0 0 auto;margin-top:2px;stroke:var(--navy);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .creds b{font-weight:700}
-  .creds span{display:block;color:var(--ink-3);font-size:13px}
-  .map{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
-  .map svg{display:block;width:100%;height:auto;border-radius:9px}
-  .map .lg{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--ink-2)}
-  .map .lg i{width:9px;height:9px;border-radius:50%;background:var(--orange);display:inline-block;margin-right:6px}
-  .map .lg .b i{background:var(--navy-l)}
-
-  /* ---- reviews ---- */
-  .revs{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-  .rev{border:1px solid var(--line);border-radius:14px;padding:24px 22px;display:flex;flex-direction:column}
-  .stars{display:flex;gap:2px;margin-bottom:14px}
-  .stars svg{width:17px;height:17px;fill:var(--orange)}
-  .rev blockquote{margin:0;font-size:15.5px;color:var(--ink);line-height:1.58}
-  .rev .who{margin-top:auto;padding-top:18px;font-size:13.5px;color:var(--ink-3)}
-  .rev .who b{display:block;color:var(--navy);font-size:14.5px;font-weight:700}
-  .demo{margin:18px 0 0;font-size:12.5px;color:var(--ink-3)}
-
-  /* ---- contact ---- */
-  .contact{background:var(--navy);color:#fff}
-  .contact .wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:52px}
-  .contact h2{font-size:clamp(26px,3.3vw,36px);font-weight:800;line-height:1.1}
-  .contact .lede{margin:12px 0 28px;font-size:17px;color:#BFD6E8;max-width:44ch}
+  /* ---------- contact ---------- */
+  .contact{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(28px,5vw,80px)}
+  .contact h2{font-weight:800;font-size:clamp(32px,3.6vw,56px);letter-spacing:-.045em;line-height:1}
+  .hours{margin-top:24px;border-top:1px solid var(--line-2)}
+  .hours div{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+  .hours dt{color:var(--ink-2)}
+  .hours dd{font-weight:600}
+  .big-call{display:block;margin-top:24px;font-weight:800;font-size:clamp(30px,3vw,44px);letter-spacing:-.04em;text-decoration:none;color:var(--copper-d)}
+  .big-call:hover{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
   form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .f{display:flex;flex-direction:column;gap:7px}
-  .f.wide{grid-column:1/-1}
-  label{font-size:13.5px;font-weight:650;color:#CFE0EE}
-  label .req{color:var(--orange)}
-  input,textarea,select{font:inherit;font-size:15.5px;padding:12px 14px;border-radius:9px;
-        border:1.5px solid #3C5F82;background:#153149;color:#fff;width:100%;
-        transition:border-color .15s,background .15s}
-  textarea{min-height:104px;resize:vertical}
-  input::placeholder,textarea::placeholder{color:#7B96AE}
-  input:hover,textarea:hover,select:hover{border-color:#517AA0}
-  input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#173751}
-  form .btn{grid-column:1/-1;justify-self:start}
-  .fnote{grid-column:1/-1;font-size:13px;color:#9FBBD2;margin:0}
+  .f{display:grid;gap:7px}
+  .f.full{grid-column:1/-1}
+  label{font-size:14px;font-weight:600}
+  input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:#fff;border:1px solid var(--line-2);border-radius:10px;padding:12px 14px;min-height:48px;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
+  input:hover,select:hover,textarea:hover{border-color:var(--ink-3)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(184,98,47,.3)}
+  input[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:#b3261e}
+  textarea{min-height:110px;resize:vertical}
+  .send{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+  .err{color:#b3261e;font-size:14.5px;min-height:1.3em}
+  .done{grid-column:1/-1;padding:16px 18px;border-radius:10px;background:#fff;border:1px solid var(--line-2)}
+  footer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 30px;padding:28px var(--gutter) 34px;background:var(--ink);color:#c9d0da;font-size:14px}
+  footer b{color:#fff}
+  footer .mono{color:#9aa4b2;text-align:right;line-height:1.8}
 
-  .side .blk{border:1px solid #3C5F82;border-radius:13px;padding:22px;margin-bottom:18px;background:#153149}
-  .side h3{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#8FB2CE;font-weight:700;margin-bottom:14px}
-  .hrs{list-style:none;margin:0;padding:0;font-size:15px}
-  .hrs li{display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.09)}
-  .hrs li:last-child{border-bottom:0}
-  .hrs b{font-weight:650}
-  .hrs .em{color:var(--orange);font-weight:700}
-  .areas{font-size:14.5px;color:#CFE0EE;line-height:1.75;margin:0}
-  .areas b{color:#fff}
+  /* ---------- motion ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    .draw .p{stroke-dasharray:var(--len) var(--len);animation:pipe 1.6s var(--ease) backwards}
+    .draw .p.gas{stroke-dasharray:6 5;animation:fade 1s .6s var(--ease) backwards}
+    .draw .p.hot{animation-delay:.25s}
+    .draw .p.waste{animation-delay:.1s}
+    @keyframes pipe{from{stroke-dashoffset:var(--len)}}
+    @keyframes fade{from{opacity:0}}
+    .spot{animation:pop .5s var(--ease) backwards}
+    .spot:nth-of-type(2){animation-delay:.9s}.spot:nth-of-type(3){animation-delay:1s}.spot:nth-of-type(4){animation-delay:1.1s}
+    .spot:nth-of-type(5){animation-delay:1.2s}.spot:nth-of-type(6){animation-delay:1.3s}.spot:nth-of-type(1){animation-delay:.8s}
+    @keyframes pop{from{opacity:0;transform:scale(.4)}}
+    .spot{transform-box:fill-box;transform-origin:center}
+    .drip{animation:drip 1.4s cubic-bezier(.5,0,1,1) infinite}
+    .drip:nth-of-type(2){animation-delay:.47s}.drip:nth-of-type(3){animation-delay:.94s}
+    @keyframes drip{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(34px);opacity:0}}
+    .quote.swap > *{animation:rise .4s var(--ease) backwards}
+    @keyframes rise{from{opacity:0;transform:translateY(6px)}}
+  }
+  @media (prefers-reduced-motion: reduce){ .drip:not(:first-of-type){display:none} .drip{transform:translateY(12px)} }
 
-  footer{background:var(--navy-d);color:#9FBBD2;font-size:13.5px;padding:34px 0}
-  footer .wrap{display:flex;gap:20px 40px;flex-wrap:wrap;align-items:flex-start}
-  footer .logo b{color:#fff}
-  footer .logo small{color:#7B96AE}
-  footer a{color:#CFE0EE;text-decoration:none}
-  footer a:hover{color:var(--orange)}
-  .legal{margin-left:auto;text-align:right;line-height:1.85}
-  .legal span{display:block}
-
-  /* ---- responsive ---- */
-  @media (max-width:960px){
-    .hero .wrap,.about .wrap,.contact .wrap{grid-template-columns:1fr;gap:38px}
-    .svcs,.revs{grid-template-columns:1fr 1fr}
-    .trust .wrap{grid-template-columns:1fr 1fr}
-    .trust div:nth-child(3){border-left:0}
-    .trust div:nth-child(n+3){border-top:1px solid var(--line)}
-    nav.main{display:none}
-    .legal{margin-left:0;text-align:left}
+  /* ---------- responsive ---------- */
+  @media (max-width:1080px){
+    .nav ul{display:none}
+    .nav .btn.line{display:none}
+    .nav .btn.call{margin-left:auto}
+    .hero{grid-template-columns:minmax(0,1fr)}
+    .rates li{grid-template-columns:2.4em minmax(0,1fr) 7em}
+    .rates p{grid-column:2}
+    .rates .t{grid-column:2}
+    .rates .pr{grid-row:1;grid-column:3}
+    .about,.contact,.sec-head{grid-template-columns:minmax(0,1fr)}
   }
   @media (max-width:640px){
-    .wrap{padding:0 16px}
-    section{padding:52px 0}
-    .svcs,.revs{grid-template-columns:1fr}
-    .trust .wrap{grid-template-columns:1fr}
-    .trust div{border-left:0;border-top:1px solid var(--line);padding:20px 16px}
-    .trust div:first-child{border-top:0}
-    .ticks{grid-template-columns:1fr}
-    form{grid-template-columns:1fr}
-    .hd{height:66px}
-    .hd .r .btn span{display:none}
-    .alert .ph{margin-left:0}
-    .acts .btn{flex:1 1 100%}
+    .alert span{display:none}
+    .alert{justify-content:center}
+    .plan{grid-template-columns:minmax(0,1fr)}
+    .draw{border-right:0;border-bottom:1px solid var(--line)}
+    .legend{position:static;padding:0 14px 12px}
+    .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .facts div:nth-child(3){border-left:0}
+    .facts div:nth-child(n+3){border-top:1px solid var(--line)}
+    .facts div{padding:18px var(--gutter)}
+    .acts .btn{flex:1 1 auto}
+    form{grid-template-columns:minmax(0,1fr)}
+    .team{grid-template-columns:minmax(0,1fr)}
+    footer{grid-template-columns:minmax(0,1fr)}
+    footer .mono{text-align:left}
   }
-  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-  @media (prefers-reduced-motion:no-preference){
-    .pulse{animation:pl 2.4s ease-in-out infinite}
-    @keyframes pl{0%,100%{box-shadow:0 0 0 0 rgba(244,123,32,.6)}60%{box-shadow:0 0 0 6px rgba(244,123,32,0)}}
+  @media (max-height:520px) and (min-width:560px){
+    .alert{display:none}
+    .hero{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);padding-top:14px;gap:18px;align-items:start}
+    h1{font-size:clamp(28px,4.6vw,40px);margin-top:8px}
+    .lede,.proof{display:none}
+    .acts{margin-top:14px}
+    .acts .btn.line{display:none}
+    .plan{grid-template-columns:minmax(0,1fr)}
+    .quote{display:none}
+    .legend{display:none}
   }
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <symbol id="tick" viewBox="0 0 24 24"><path d="M4 12.5l5.4 5.4L20 7"/></symbol>
-  <symbol id="phone" viewBox="0 0 24 24"><path d="M6.6 3h3l1.6 4-2 1.4a12.4 12.4 0 0 0 5.4 5.4l1.4-2 4 1.6v3a2 2 0 0 1-2.2 2A16.8 16.8 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3z"/></symbol>
-  <symbol id="star" viewBox="0 0 24 24"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z"/></symbol>
-  <symbol id="s-emg" viewBox="0 0 24 24"><path d="M13.5 2L4 13.8h6L9.8 22l9.7-11.9h-6.3z"/></symbol>
-  <symbol id="s-drn" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v3.5c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M6.5 13.5L12 21l5.5-7.5"/></symbol>
-  <symbol id="s-hw" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="16" rx="3"/><path d="M9 19v2M15 19v2M6 8h12"/><circle cx="12" cy="13" r="1.6"/></symbol>
-  <symbol id="s-gas" viewBox="0 0 24 24"><path d="M12 2.5S6.5 7.8 6.5 13a5.5 5.5 0 0 0 11 0c0-2.4-1.6-4.6-2.9-6.1-.6 1.6-1.4 2.3-2.2 2.3.8-2.6.4-5-.4-6.7z"/></symbol>
-  <symbol id="s-bth" viewBox="0 0 24 24"><path d="M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M6 12V5.5A2.5 2.5 0 0 1 8.5 3c1.2 0 2.1.8 2.4 2"/><path d="M6.5 21l-1 1.5M17.5 21l1 1.5"/></symbol>
-  <symbol id="s-leak" viewBox="0 0 24 24"><path d="M10 3.5S4.5 9.5 4.5 13.2a5.5 5.5 0 0 0 7.8 5"/><circle cx="17" cy="15.5" r="4"/><path d="M20 18.5L22.5 21"/></symbol>
-  <symbol id="c-lic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="10" r="2.2"/><path d="M5 17c.4-1.8 1.8-2.8 3.5-2.8S11.6 15.2 12 17M14.5 9H19M14.5 13H19"/></symbol>
-  <symbol id="c-shd" viewBox="0 0 24 24"><path d="M12 2.8l7.5 2.8v6.1c0 4.4-3 7.8-7.5 9.5-4.5-1.7-7.5-5.1-7.5-9.5V5.6z"/><path d="M8.8 12l2.2 2.2 4.2-4.4"/></symbol>
-  <symbol id="c-clk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.4 2"/></symbol>
-</defs></svg>
-
-<div class="alert">
-  <div class="wrap">
-    <span class="pulse" aria-hidden="true"></span>
-    <span><b>Burst pipe or no hot water?</b> We answer the phone 24/7, including public holidays.</span>
-    <a class="ph" href="tel:+61255500184">(02) 5550 0184</a>
-  </div>
-</div>
-
-<header>
-  <div class="wrap hd">
-    <a class="logo" href="#top">
-      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5S5.5 9.2 5.5 14a6.5 6.5 0 0 0 13 0C18.5 9.2 12 2.5 12 2.5z"/></svg></span>
-      <span><b>FlowFix</b><small>Plumbing &amp; Gas</small></span>
-    </a>
-    <nav class="main" aria-label="Main">
-      <a href="#services">Services</a>
-      <a href="#about">About</a>
-      <a href="#areas">Service areas</a>
-      <a href="#contact">Contact</a>
-    </nav>
-    <div class="r">
-      <a class="btn btn-g btn-sm" href="#contact">Book online</a>
-      <a class="btn btn-o btn-sm" href="tel:+61255500184"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#phone"/></svg><span>(02) 5550 0184</span></a>
-    </div>
-  </div>
+<div class="page">
+<div class="alert" role="note"><span><b>Burst pipe or no hot water?</b> We answer the phone 24/7, public holidays included.</span><a href="#contact">(02) 5550 0184</a></div>
+<header class="nav">
+  <a class="brand" href="#top" aria-label="FlowFix Plumbing and Gas home">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#14233a"/><path d="M9 11h8a6 6 0 0 1 6 6v8" fill="none" stroke="#e08b55" stroke-width="4" stroke-linecap="round"/><circle cx="23" cy="27.5" r="1.8" fill="#8ec0ea"/></svg>
+    <span><b>FlowFix</b><small>Plumbing &amp; Gas</small></span>
+  </a>
+  <ul><li><a href="#rates">Prices</a></li><li><a href="#about">About</a></li><li><a href="#area">Service area</a></li><li><a href="#contact">Contact</a></li></ul>
+  <a class="btn line" href="#contact">Book online</a>
+  <a class="btn call" href="#contact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>(02) 5550 0184</a>
 </header>
 
 <main id="top">
-  <section class="hero">
-    <div class="wrap">
-      <div>
-        <p class="eye">Newcastle &amp; Lake Macquarie</p>
-        <h1>Your Local Plumbing Experts</h1>
-        <p class="lede">Licensed plumbers and gas fitters on call <b>24 hours a day, 7 days a week</b> — blocked drains, burst pipes, dead hot water systems. Fixed price quoted before we start.</p>
-        <div class="acts">
-          <a class="btn btn-o" href="tel:+61255500184"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#phone"/></svg>Call now — (02) 5550 0184</a>
-          <a class="btn btn-g" href="#contact">Request a callback</a>
-        </div>
-        <p class="micro">Average arrival time last month: <strong>47 minutes</strong> across the Newcastle CBD.</p>
-        <ul class="ticks">
-          <li><svg><use href="#tick"/></svg>Same-day service, 7 days</li>
-          <li><svg><use href="#tick"/></svg>No call-out fee, Mon–Fri</li>
-          <li><svg><use href="#tick"/></svg>Fixed price before we start</li>
-          <li><svg><use href="#tick"/></svg>12-month workmanship guarantee</li>
-        </ul>
-      </div>
-
-      <div class="van">
-        <svg viewBox="0 0 420 210" role="img" aria-label="Illustration of a FlowFix Plumbing service van">
-          <rect x="14" y="188" width="392" height="5" rx="2.5" fill="#0C1E31"/>
-          <path d="M58 46h188v126H36V82c0-6 3-11 8-14l14-22z" fill="#F7FAFD"/>
-          <path d="M246 46h96c9 0 17 6 20 15l18 47v64H246z" fill="#FFFFFF"/>
-          <path d="M70 58h58v30H50l12-24a9 9 0 0 1 8-6z" fill="#1B3A5C" opacity=".2"/>
-          <rect x="140" y="58" width="96" height="30" rx="4" fill="#1B3A5C" opacity=".13"/>
-          <text x="313" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="800" letter-spacing="-.2" fill="#1B3A5C">(02) 5550 0184</text>
-          <rect x="36" y="106" width="210" height="28" fill="#F47B20"/>
-          <rect x="246" y="106" width="134" height="28" fill="#F47B20"/>
-          <text x="58" y="126" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="17.5" font-weight="800" letter-spacing="-.5" fill="#FFFFFF">FLOWFIX PLUMBING &amp; GAS</text>
-          <text x="152" y="158" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.5" fill="#8FB2CE">LIC. 312487C</text>
-          <rect x="30" y="142" width="13" height="10" rx="3" fill="#F47B20"/>
-          <rect x="373" y="142" width="13" height="10" rx="3" fill="#C8443A"/>
-          <circle cx="100" cy="170" r="22" fill="#12283F"/><circle cx="100" cy="170" r="9" fill="#8FB2CE"/>
-          <circle cx="316" cy="170" r="22" fill="#12283F"/><circle cx="316" cy="170" r="9" fill="#8FB2CE"/>
-        </svg>
-        <p class="cap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F47B20" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><use href="#tick"/></svg><b>6 vans on the road</b> — Islington depot, out by 6:30am.</p>
-      </div>
+<section class="hero" aria-labelledby="h">
+  <div>
+    <p class="area">Newcastle &amp; Lake Macquarie · Lic. 312487C</p>
+    <h1 id="h">Plumbing, priced before we pick up a spanner.</h1>
+    <p class="lede">Licensed plumbers and gasfitters, <b>24 hours a day</b>. Tell us what's wrong and you get a fixed price on the phone. Last month we reached Newcastle callers in <b>47 minutes</b> on average.</p>
+    <div class="acts">
+      <a class="btn call" href="#contact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Call (02) 5550 0184</a>
+      <a class="btn line" href="#rates">See every price</a>
     </div>
-  </section>
-
-  <div class="trust">
-    <div class="wrap">
-      <div><b>Since 2009</b><span>17 years serving the Hunter</span></div>
-      <div><b>18,400+</b><span>Jobs completed</span></div>
-      <div><b>Lic. 312487C</b><span>NSW plumbing &amp; gasfitting</span></div>
-      <div><b>$20m</b><span>Public liability cover</span></div>
-    </div>
+    <ul class="proof"><li>No call-out fee, Mon–Fri</li><li>Fixed price before we start</li><li>12-month workmanship guarantee</li></ul>
   </div>
 
-  <section id="services">
-    <div class="wrap">
-      <div class="sec-hd">
-        <p class="eye">What we do</p>
-        <h2>Six things we are called out for most</h2>
-        <p>Every job is quoted as a fixed price before a spanner comes out of the van. Prices below include GST and the first 30 minutes on site.</p>
-      </div>
-      <div class="svcs">
-        <article class="svc">
-          <span class="ic"><svg><use href="#s-emg"/></svg></span>
-          <h3>Emergency repairs</h3>
-          <p>Burst pipes, overflowing toilets and failed mains isolated and repaired, any hour.</p>
-          <p class="price">From <b>$180</b> call-out, 24/7</p>
-        </article>
-        <article class="svc">
-          <span class="ic"><svg><use href="#s-drn"/></svg></span>
-          <h3>Blocked drains</h3>
-          <p>CCTV camera inspection then high-pressure jetting. Root cutting and pipe relining available.</p>
-          <p class="price">From <b>$250</b> inc. camera</p>
-        </article>
-        <article class="svc">
-          <span class="ic"><svg><use href="#s-hw"/></svg></span>
-          <h3>Hot water systems</h3>
-          <p>Rheem, Rinnai and Dux repairs. Same-day replacement held in stock for gas and electric.</p>
-          <p class="price">Repair from <b>$190</b></p>
-        </article>
-        <article class="svc">
-          <span class="ic"><svg><use href="#s-gas"/></svg></span>
-          <h3>Gas fitting</h3>
-          <p>Cooktop and heater installs, gas leak testing and compliance certificates issued on the day.</p>
-          <p class="price">From <b>$160</b> + parts</p>
-        </article>
-        <article class="svc">
-          <span class="ic"><svg><use href="#s-bth"/></svg></span>
-          <h3>Bathroom renovations</h3>
-          <p>Full rough-in and fit-off, waterproofing certified, tiler and electrician coordinated by us.</p>
-          <p class="price">From <b>$14,500</b> complete</p>
-        </article>
-        <article class="svc">
-          <span class="ic"><svg><use href="#s-leak"/></svg></span>
-          <h3>Leak detection</h3>
-          <p>Thermal imaging and acoustic tracing to find a slab or wall leak without opening the whole floor.</p>
-          <p class="price">From <b>$290</b> per site</p>
-        </article>
-      </div>
+  <div class="plan">
+    <div class="draw">
+      <span class="hint">Point at the problem</span>
+      <svg viewBox="0 0 640 470" role="group" aria-label="A house in section with its pipework. Choose a numbered problem to see its price.">
+        <rect class="soil" x="0" y="400" width="640" height="70"/>
+        <path class="thin" d="M0 400 H640"/>
+        <!-- house -->
+        <path class="wall" d="M62 400 V160 H578 V400 M62 280 H578 M320 160 V400 M40 162 L320 70 L600 162"/>
+        <text class="lbl" x="74" y="176">BATHROOM</text><text class="lbl" x="332" y="176">BEDROOM</text>
+        <text class="lbl" x="74" y="296">KITCHEN</text><text class="lbl" x="332" y="296">GARAGE &amp; LAUNDRY</text>
+        <!-- fixtures -->
+        <rect class="fix" x="80" y="244" width="120" height="30" rx="12"/>
+        <path class="fix" d="M232 246 h26 v28 h-26 z M236 238 h18 v8 h-18z"/>
+        <path class="fix" d="M282 226 h26 l-4 14 h-18 z"/><path class="thin" d="M295 240 V274"/>
+        <rect class="fix" x="84" y="352" width="200" height="48"/>
+        <path class="fix" d="M104 352 v8 h54 v-8"/>
+        <path class="thin" d="M200 346 h24 M240 346 h24"/>
+        <rect class="fix" x="470" y="300" width="56" height="96" rx="14"/>
+        <path class="thin" d="M498 300 V240 H520 V162"/>
+        <text class="lbl" x="468" y="292">HWS 250 L</text>
+        <rect class="fix" x="370" y="350" width="52" height="50" rx="4"/><circle class="thin" cx="396" cy="375" r="15"/>
+        <!-- meters -->
+        <rect class="fix" x="592" y="372" width="22" height="16" rx="2"/><text class="lbl" x="580" y="366">WATER</text>
+        <rect class="fix" x="592" y="336" width="22" height="16" rx="2"/><text class="lbl" x="590" y="330">GAS</text>
+        <!-- pipes -->
+        <path class="p waste" style="--len:620" d="M140 274 V290 H300 V300 M295 274 V410 H300 M180 400 V430 H18"/>
+        <path class="p cold" style="--len:940" d="M640 380 H603 M592 380 H540 V398 H470 M540 380 V220 H310 V256 M310 220 H214 V246 M160 220 V244 M540 380 V338 H300 V352 H150"/>
+        <path class="p hot" style="--len:700" d="M498 310 V260 H330 V232 H190 V244 M330 260 V330 H132 V352"/>
+        <path class="p gas" style="--len:400" d="M603 344 H560 V330 H232 V346 M560 344 V372 H526"/>
+        <!-- the leak, in the wall void -->
+        <circle class="drip" cx="330" cy="268" r="3"/><circle class="drip" cx="330" cy="268" r="3"/><circle class="drip" cx="330" cy="268" r="3"/>
+        <!-- hotspots -->
+        <g class="spot" role="button" tabindex="0" data-s="0" aria-pressed="true" aria-label="1, burst pipe"><circle class="r" cx="352" cy="252" r="13"/><text x="352" y="256.5" text-anchor="middle">1</text></g>
+        <g class="spot" role="button" tabindex="0" data-s="1" aria-pressed="false" aria-label="2, blocked drain"><circle class="r" cx="120" cy="430" r="13"/><text x="120" y="434.5" text-anchor="middle">2</text></g>
+        <g class="spot" role="button" tabindex="0" data-s="2" aria-pressed="false" aria-label="3, hot water system"><circle class="r" cx="498" cy="350" r="13"/><text x="498" y="354.5" text-anchor="middle">3</text></g>
+        <g class="spot" role="button" tabindex="0" data-s="3" aria-pressed="false" aria-label="4, gas cooktop"><circle class="r" cx="232" cy="322" r="13"/><text x="232" y="326.5" text-anchor="middle">4</text></g>
+        <g class="spot" role="button" tabindex="0" data-s="4" aria-pressed="false" aria-label="5, leak under the bath"><circle class="r" cx="140" cy="226" r="13"/><text x="140" y="230.5" text-anchor="middle">5</text></g>
+        <g class="spot" role="button" tabindex="0" data-s="5" aria-pressed="false" aria-label="6, bathroom renovation"><circle class="r" cx="270" cy="200" r="13"/><text x="270" y="204.5" text-anchor="middle">6</text></g>
+      </svg>
+      <p class="legend" aria-hidden="true"><span><i style="background:var(--cold)"></i>Cold</span><span><i style="background:var(--copper)"></i>Hot</span><span><i style="background:var(--gas)"></i>Gas</span><span><i style="background:#8b8f96"></i>Waste</span></p>
     </div>
-  </section>
-
-  <section class="about" id="about">
-    <div class="wrap">
-      <div>
-        <p class="eye">About FlowFix</p>
-        <h2 style="font-size:clamp(26px,3.3vw,36px);color:var(--navy);font-weight:800;line-height:1.1;margin-bottom:18px">Started with one van and a 4am callout</h2>
-        <p>Gavin Ruddock finished his apprenticeship in Mayfield in 2004 and went out on his own five years later, working out of a Hiace with a second-hand drain camera. The first job was a burst riser in a Hamilton terrace at four in the morning.</p>
-        <p>FlowFix is now nine plumbers and two apprentices working out of a yard in Islington. Every tradesperson on the team is licensed in their own right — we don't subcontract a job out and hope it goes well.</p>
-        <ul class="creds">
-          <li><svg><use href="#c-lic"/></svg><span><b>NSW Plumbing &amp; Gasfitting Licence 312487C</b><span>Verifiable on the NSW Fair Trading register</span></span></li>
-          <li><svg><use href="#c-shd"/></svg><span><b>$20 million public liability, renewed annually</b><span>Certificate of currency supplied on request</span></span></li>
-          <li><svg><use href="#c-clk"/></svg><span><b>12-month guarantee on all workmanship</b><span>Manufacturer warranty on parts passed straight to you</span></span></li>
-        </ul>
-      </div>
-
-      <div class="map" id="areas">
-        <svg viewBox="0 0 460 320" role="img" aria-label="Service area map centred on the Islington depot, covering Newcastle and Lake Macquarie within about 25 kilometres">
-          <rect width="460" height="320" rx="8" fill="#F0F5F9"/>
-          <path d="M330 0c-14 44 8 78 4 118-4 42-38 64-30 110 5 30 30 60 44 92h112V0z" fill="#DCE9F2"/>
-          <path d="M296 128c-26 20-30 56-8 78s62 14 74-12-12-52-32-60-22-12-34-6z" fill="#DCE9F2"/>
-          <g stroke="#C6D6E3" stroke-width="5" fill="none" stroke-linecap="round">
-            <path d="M0 176h300M138 0v320M40 78h230M214 60l86 236"/>
-          </g>
-          <g stroke="#B0C6D8" stroke-width="2.4" fill="none">
-            <path d="M0 240h268M76 0v320M262 22L94 300"/>
-          </g>
-          <circle cx="138" cy="176" r="118" fill="none" stroke="#F47B20" stroke-width="2" stroke-dasharray="7 6" opacity=".85"/>
-          <g fill="#2C5580" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="650">
-            <circle cx="196" cy="104" r="5"/><text x="207" y="109">Newcastle CBD</text>
-            <circle cx="96" cy="112" r="5"/><text x="107" y="117">Mayfield</text>
-            <circle cx="72" cy="214" r="5"/><text x="83" y="219">Cardiff</text>
-            <circle cx="182" cy="252" r="5"/><text x="193" y="257">Charlestown</text>
-            <circle cx="58" cy="286" r="5"/><text x="69" y="291">Toronto</text>
-            <circle cx="248" cy="46" r="5"/><text x="259" y="51">Stockton</text>
-          </g>
-          <circle cx="138" cy="176" r="11" fill="#F47B20"/><circle cx="138" cy="176" r="4" fill="#fff"/>
-          <text x="154" y="181" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="13" font-weight="800" fill="#1B3A5C">Islington depot</text>
-        </svg>
-        <p class="lg"><span><i></i>Depot &amp; 25 km no-travel-fee zone</span><span class="b"><i></i>Suburbs we cover daily</span></p>
-      </div>
+    <div class="quote" id="quote" aria-live="polite">
+      <p class="k">Emergency repair</p>
+      <h3>Burst or leaking pipe</h3>
+      <p class="price num"><small>from</small>$220</p>
+      <p>We isolate the water, find the break and replace the section. Wall access is patched ready for paint.</p>
+      <dl><div><dt>Usually done in</dt><dd>1–2 hours</dd></div><div><dt>After hours</dt><dd>+$90</dd></div></dl>
+      <a class="btn ink" href="#contact">Book this job</a>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <div class="wrap">
-      <div class="sec-hd">
-        <p class="eye">Reviews</p>
-        <h2>What people say after we have been</h2>
-      </div>
-      <div class="revs">
-        <article class="rev">
-          <div class="stars" role="img" aria-label="Rated 5 out of 5"><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg></div>
-          <blockquote>Hot water died on the Saturday of a long weekend with a house full of people. Jordan was there by eleven, had the element replaced and didn't charge a weekend loading.</blockquote>
-          <p class="who"><b>Priya N.</b>New Lambton · Hot water repair</p>
-        </article>
-        <article class="rev">
-          <div class="stars" role="img" aria-label="Rated 5 out of 5"><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg></div>
-          <blockquote>Two other mobs wanted to dig up the driveway. FlowFix put a camera down, found the root ball at 6 metres, cut it out and relined the section. Half the quote and no concrete work.</blockquote>
-          <p class="who"><b>Dave &amp; Marion K.</b>Cardiff · Blocked sewer line</p>
-        </article>
-        <article class="rev">
-          <div class="stars" role="img" aria-label="Rated 4 out of 5"><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg style="fill:#DFE7EE"><use href="#star"/></svg></div>
-          <blockquote>Bathroom came out beautifully and the waterproofing certificate came through the same week. Took three days longer than quoted because of the tiler, which they were upfront about.</blockquote>
-          <p class="who"><b>Tom A.</b>Merewether · Bathroom renovation</p>
-        </article>
-      </div>
-      <p class="demo">Reviews shown are sample content for this demonstration site.</p>
+<dl class="facts" aria-label="About the business">
+  <div><dd>Since 2009</dd><dt>17 years across the Hunter</dt></div>
+  <div><dd class="num">18,400</dd><dt>Jobs completed</dt></div>
+  <div><dd>312487C</dd><dt>NSW plumbing &amp; gasfitting licence</dt></div>
+  <div><dd class="num">$20m</dd><dt>Public liability cover</dt></div>
+</dl>
+
+<section class="sec" id="rates" aria-labelledby="rates-h">
+  <div class="sec-head">
+    <h2 id="rates-h">Every price, before you ask.</h2>
+    <p>These are starting prices for a standard home. We confirm the exact figure on the phone or when we arrive, and nothing starts until you have said yes to it.</p>
+  </div>
+  <ol class="rates" id="rateList"></ol>
+  <p class="fine">Prices include GST. After-hours work (6 pm to 7 am, weekends and public holidays) adds $90. Parts over $50 are quoted separately.</p>
+</section>
+
+<section class="sec about" id="about" aria-labelledby="about-h">
+  <div>
+    <h2 id="about-h">A Newcastle business, still run from the van.</h2>
+    <div class="story">
+      <p>Dan Moretti started FlowFix in 2009 with one ute and a pager, after twelve years with the Hunter Water maintenance crew. He still takes the first call most mornings.</p>
+      <p>Today there are six of us, working from a depot in Islington, with five vans on the road by 6:30 am. Every plumber is licensed, drug and alcohol tested, and carries a Working with Children Check.</p>
     </div>
-  </section>
+    <ul class="team">
+      <li>Dan Moretti <span>Founder · gasfitter</span></li>
+      <li>Priya Nair <span>Plumber · hot water</span></li>
+      <li>Sam Whitlock <span>Plumber · drainage</span></li>
+      <li>Josh Kereama <span>Plumber · renovations</span></li>
+      <li>Ellie Tran <span>Apprentice, 3rd year</span></li>
+      <li>Rhonda Moretti <span>Bookings &amp; accounts</span></li>
+    </ul>
+  </div>
+  <div class="map" id="area">
+    <svg viewBox="0 0 480 420" role="img" aria-label="Map of the service area: Newcastle, Lake Macquarie and nearby suburbs, all within about forty minutes of the Islington depot.">
+      <path class="water" d="M480 0 H400 C392 60 408 110 386 160 C366 210 372 260 350 310 C336 350 330 390 322 420 H480 Z"/>
+      <path class="water" d="M170 200 C200 188 250 196 262 226 C276 262 262 300 284 330 C296 350 270 372 240 364 C206 356 186 330 168 300 C150 272 136 216 170 200 Z"/>
+      <path class="coast" d="M400 0 C392 60 408 110 386 160 C366 210 372 260 350 310 C336 350 330 390 322 420"/>
+      <path class="coast" d="M170 200 C200 188 250 196 262 226 C276 262 262 300 284 330 C296 350 270 372 240 364 C206 356 186 330 168 300 C150 272 136 216 170 200 Z"/>
+      <path class="road" d="M40 40 C120 70 220 80 330 70 M330 70 C320 140 300 190 300 250 C300 320 330 360 330 420 M120 90 C140 170 120 260 150 400"/>
+      <circle class="ring" cx="330" cy="82" r="210"/>
+      <circle class="depot" cx="330" cy="82" r="7"/><text x="344" y="86">FlowFix depot, Islington</text>
+      <circle class="sub" cx="372" cy="64" r="3.5"/><text x="340" y="52">Newcastle</text>
+      <circle class="sub" cx="362" cy="128" r="3.5"/><text x="296" y="132">Merewether</text>
+      <circle class="sub" cx="306" cy="176" r="3.5"/><text x="232" y="172">Charlestown</text>
+      <circle class="sub" cx="252" cy="192" r="3.5"/><text x="186" y="182">Warners Bay</text>
+      <circle class="sub" cx="296" cy="268" r="3.5"/><text x="304" y="272">Belmont</text>
+      <circle class="sub" cx="160" cy="330" r="3.5"/><text x="96" y="336">Toronto</text>
+      <circle class="sub" cx="318" cy="370" r="3.5"/><text x="248" y="386">Swansea</text>
+      <circle class="sub" cx="160" cy="54" r="3.5"/><text x="120" y="42">Maitland Rd corridor</text>
+      <text class="m" x="200" y="266">LAKE MACQUARIE</text><text class="m" x="404" y="250">TASMAN SEA</text>
+      <text class="m" x="112" y="126">40 MIN FROM THE DEPOT</text>
+    </svg>
+    <p class="suburbs">Newcastle, Merewether, Adamstown, Charlestown, Warners Bay, Belmont, Toronto, Swansea and everywhere between. Further out, call and ask.</p>
+  </div>
+</section>
 
-  <section class="contact" id="contact">
-    <div class="wrap">
-      <div>
-        <h2>Tell us what is going wrong</h2>
-        <p class="lede">We read every enquiry and call back within one business hour. If water is actively running, please ring instead — <a href="tel:+61255500184" style="color:#fff">(02) 5550 0184</a>.</p>
-        <form action="#contact" method="post" novalidate>
-          <div class="f">
-            <label for="nm">Your name <span class="req" aria-hidden="true">*</span></label>
-            <input id="nm" name="name" type="text" autocomplete="name" placeholder="Sam Whitlock" required>
-          </div>
-          <div class="f">
-            <label for="ph">Phone <span class="req" aria-hidden="true">*</span></label>
-            <input id="ph" name="phone" type="tel" autocomplete="tel" placeholder="0491 570 006" required>
-          </div>
-          <div class="f">
-            <label for="em">Email</label>
-            <input id="em" name="email" type="email" autocomplete="email" placeholder="sam@example.com">
-          </div>
-          <div class="f">
-            <label for="sb">Suburb</label>
-            <input id="sb" name="suburb" type="text" placeholder="Adamstown">
-          </div>
-          <div class="f wide">
-            <label for="ms">What is happening? <span class="req" aria-hidden="true">*</span></label>
-            <textarea id="ms" name="message" placeholder="Laundry drain backing up when the washing machine empties. Started Tuesday." required></textarea>
-          </div>
-          <button class="btn btn-o" type="submit">Request a callback</button>
-          <p class="fnote">We only use these details to get back to you about the job. No marketing lists.</p>
-        </form>
-      </div>
-
-      <div class="side">
-        <div class="blk">
-          <h3>Opening hours</h3>
-          <ul class="hrs">
-            <li><span>Monday – Friday</span><b>7:00am – 5:00pm</b></li>
-            <li><span>Saturday</span><b>8:00am – 2:00pm</b></li>
-            <li><span>Sunday</span><b>Emergency only</b></li>
-            <li><span>Emergency line</span><b class="em">24 / 7</b></li>
-          </ul>
-        </div>
-        <div class="blk">
-          <h3>Where we work</h3>
-          <p class="areas"><b>No travel fee within 25 km of Islington:</b><br>
-          Newcastle CBD, Hamilton, Mayfield, Islington, Adamstown, New Lambton, Merewether, Charlestown, Kotara, Cardiff, Warners Bay, Toronto, Stockton and Wallsend.<br><br>
-          <b>Outside that?</b> Still call — travel is quoted up front.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+<section class="sec contact" id="contact" aria-labelledby="contact-h">
+  <div>
+    <h2 id="contact-h">Tell us what's wrong.</h2>
+    <a class="big-call num" href="#contact">(02) 5550 0184</a>
+    <dl class="hours">
+      <div><dt>Phones</dt><dd>24 hours, every day</dd></div>
+      <div><dt>Standard jobs</dt><dd>Mon–Fri, 7 am–6 pm</dd></div>
+      <div><dt>Saturday</dt><dd>8 am–2 pm</dd></div>
+      <div><dt>Emergencies</dt><dd>Any time</dd></div>
+    </dl>
+  </div>
+  <form id="form" novalidate>
+    <div class="f"><label for="n">Name</label><input id="n" autocomplete="name" required></div>
+    <div class="f"><label for="ph">Phone</label><input id="ph" type="tel" autocomplete="tel" inputmode="tel" required></div>
+    <div class="f"><label for="em">Email</label><input id="em" type="email" autocomplete="email"></div>
+    <div class="f"><label for="sb">Suburb</label><input id="sb" autocomplete="address-level2" required></div>
+    <div class="f full"><label for="ms">What's happening?</label><textarea id="ms" required></textarea></div>
+    <div class="send"><button class="btn ink" type="submit">Request a callback</button><p class="err" id="err" role="alert"></p></div>
+  </form>
+</section>
 </main>
 
 <footer>
-  <div class="wrap">
-    <a class="logo" href="#top">
-      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5S5.5 9.2 5.5 14a6.5 6.5 0 0 0 13 0C18.5 9.2 12 2.5 12 2.5z"/></svg></span>
-      <span><b>FlowFix</b><small>Plumbing &amp; Gas</small></span>
-    </a>
-    <div>
-      <a href="tel:+61255500184">(02) 5550 0184</a><br>
-      <a href="mailto:jobs@flowfix.example.com">jobs@flowfix.example.com</a><br>
-      Unit 4, 118 Maitland Road, Islington NSW 2296
-    </div>
-    <div class="legal">
-      <span>FlowFix Plumbing Pty Ltd</span>
-      <span>ABN 44 128 906 331</span>
-      <span>NSW Plumbing &amp; Gasfitting Licence 312487C</span>
-      <span>© 2026 — all quotes include GST</span>
-    </div>
-  </div>
+  <div><b>FlowFix Plumbing &amp; Gas Pty Ltd</b><br>14 Clyde Street, Islington NSW 2296</div>
+  <div class="mono">ABN 51 824 753 556<br>Licence 312487C</div>
 </footer>
+</div>
+
+<script>
+(function(){
+  var S = [
+    { k: 'Emergency repair', h: 'Burst or leaking pipe', p: 220, d: 'We isolate the water, find the break and replace the section. Wall access is patched ready for paint.', t: '1–2 hours' },
+    { k: 'Blocked drains', h: 'Blocked drain or sewer', p: 180, d: 'Cleared with a high-pressure jetter, then checked with a camera so you can see what caused it.', t: 'Under an hour' },
+    { k: 'Hot water', h: 'Hot water system', p: 290, d: 'Repairs to gas, electric and heat-pump units. Same-day replacement if it has to go, with the old one taken away.', t: '2–3 hours' },
+    { k: 'Gas fitting', h: 'Gas cooktop or heater', p: 240, d: 'Connect, move or disconnect a gas appliance, pressure-tested and certified before we leave.', t: '1–2 hours' },
+    { k: 'Leak detection', h: 'Hidden leak', p: 260, d: 'Thermal camera and acoustic listening find it without opening walls on a guess. You get a written report.', t: '1–2 hours' },
+    { k: 'Renovations', h: 'Bathroom renovation', p: 4800, d: 'The plumbing side of a bathroom: rough-in, relocations and fit-off, coordinated with your builder or tiler.', t: '3–5 days' }
+  ];
+  function money(n){ return '$' + n.toLocaleString('en-AU'); }
+
+  /* the rate card is built from the same list the drawing uses, so they cannot disagree */
+  var list = document.getElementById('rateList');
+  list.innerHTML = S.map(function(s, i){
+    return '<li><span class="n">0' + (i + 1) + '</span><h3>' + s.h + '</h3><p>' + s.d + '</p><span class="t">' + s.t + '</span><span class="pr num"><small>from</small>' + money(s.p) + '</span></li>';
+  }).join('');
+
+  var quote = document.getElementById('quote');
+  var spots = [].slice.call(document.querySelectorAll('.spot'));
+  function pick(i){
+    var s = S[i];
+    spots.forEach(function(g, j){ g.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+    quote.classList.remove('swap'); void quote.offsetWidth; quote.classList.add('swap');
+    quote.querySelector('.k').textContent = s.k;
+    quote.querySelector('h3').textContent = s.h;
+    quote.querySelector('.price').innerHTML = '<small>from</small>' + money(s.p);
+    quote.querySelector('p:not(.k):not(.price)').textContent = s.d;
+    quote.querySelector('dd').textContent = s.t;
+  }
+  spots.forEach(function(g){
+    g.addEventListener('click', function(){ pick(+g.dataset.s); });
+    g.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(+g.dataset.s); }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+        e.preventDefault(); var n = (+g.dataset.s + (e.key === 'ArrowRight' ? 1 : 5)) % 6; spots[n].focus(); pick(n);
+      }
+    });
+  });
+
+  var form = document.getElementById('form'), err = document.getElementById('err');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var bad = [].filter.call(form.querySelectorAll('[required]'), function(f){ return !f.value.trim(); });
+    var em = document.getElementById('em');
+    if (em.value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value)) bad.push(em);
+    [].forEach.call(form.querySelectorAll('input,textarea'), function(f){ f.removeAttribute('aria-invalid'); });
+    if (bad.length){
+      bad.forEach(function(f){ f.setAttribute('aria-invalid', 'true'); });
+      var name = form.querySelector('label[for="' + bad[0].id + '"]').textContent.replace('?', '').toLowerCase();
+      err.textContent = bad[0] === em ? 'That email address looks incomplete.' : 'Please add your ' + (name === "what's happening" ? 'description of the problem' : name) + '.';
+      bad[0].focus(); return;
+    }
+    var done = document.createElement('p');
+    done.className = 'done'; done.setAttribute('role', 'status'); done.tabIndex = -1;
+    done.textContent = 'Thanks. This is a demonstration page, so nothing was sent and nobody will call.';
+    form.replaceChildren(done); done.focus();
+  });
+})();
+</script>
 </body>
 </html>

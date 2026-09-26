@@ -26,18 +26,35 @@ const ICONS = {
 // `inert` while hidden: a hidden toast keeps its DOM (the exit transition needs
 // it), and without inert the ✕ would still be a tab stop inside an
 // aria-hidden region — a focus that goes nowhere visible.
-export default function Toast({ message, visible, type = 'success', onDismiss }) {
+//
+// `action` ({ label, onAction }) adds one action button, e.g. Undo. Pressing
+// it runs the action and closes the toast. `onHold`/`onRelease` stop and
+// restart the toast's clock while the pointer or focus is on it.
+export default function Toast({ message, visible, type = 'success', onDismiss, action = null, onHold, onRelease }) {
   const kind = ICONS[type] ? type : 'success'
   return (
     <div
-      className={`toast toast-${kind}${visible ? ' show' : ''}`}
+      className={`toast toast-${kind}${visible ? ' show' : ''}${action ? ' has-action' : ''}`}
       role={kind === 'error' ? 'alert' : 'status'}
       aria-live={kind === 'error' ? 'assertive' : 'polite'}
       aria-hidden={!visible}
       inert={!visible}
+      onPointerEnter={action ? onHold : undefined}
+      onPointerLeave={action ? onRelease : undefined}
+      onFocus={action ? onHold : undefined}
+      onBlur={action ? onRelease : undefined}
     >
       <span className="toast-ico">{ICONS[kind]}</span>
       <span className="toast-msg">{message}</span>
+      {action && (
+        <button
+          type="button"
+          className="toast-action"
+          onClick={() => { action.onAction(); onDismiss?.() }}
+        >
+          {action.label}
+        </button>
+      )}
       {onDismiss && (
         <button type="button" className="toast-x" onClick={onDismiss} aria-label="Dismiss">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

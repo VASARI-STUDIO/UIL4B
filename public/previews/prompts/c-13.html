@@ -3,433 +3,530 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nocturne A3 — Halden Audio</title>
+<title>Stilte TT-2 turntable</title>
+<meta name="description" content="The Stilte TT-2: a belt-drive turntable with a 4.2 kg cast platter, a 9-inch carbon arm and a plinth of Dutch ash.">
+<meta name="uil4b-capture" content='{"mode":"scroll","stops":[0,0.16,0.32,0.46,0.6],"hold":700,"ms":9000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/schibsted-grotesk.js"></script>
+<script src="../vendor/fonts/red-hat-mono.js"></script>
 <style>
   :root{
-    --bg:#0a0a1a;
-    --ink:#eef0ff;
-    --dim:#9ba4cc;
-    --faint:#6a729c;
-    --line:rgba(140,158,255,.16);
-    --warm:#fff5e6;
-    --rim:#4466ff;
-    --r:124px;            /* cylinder radius */
-    --h:268px;            /* cylinder height */
-    --w:33px;             /* slat width = 2r*tan(pi/24) */
-    --cap:32px;           /* visual half-height of the end ellipses at this tilt */
+    --paper:#ece6db;
+    --paper-2:#e3dccf;
+    --ink:#1b1916;
+    --ink-2:#5e574d;
+    --ink-3:#7a7266;
+    --line:rgba(27,25,22,.14);
+    --line-2:rgba(27,25,22,.26);
+    --signal:#c7401a;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.4vw,52px);
+    --sans:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
+    --mono:"Red Hat Mono",ui-monospace,Menlo,monospace;
+    --a:1; --b:0;
+    color-scheme:light;
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{
-    background:#0a0a1a;
-    background:
-      radial-gradient(120% 86% at 50% 34%, #1e1e46 0%, #151533 38%, #0c0c22 68%, #0a0a1a 100%);
-    background-attachment:fixed;
-    color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:16px;line-height:1.55;
-    -webkit-font-smoothing:antialiased;
-    overflow-x:hidden;
-  }
+  html{background:var(--paper);-webkit-text-size-adjust:100%}
+  body{background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--signal)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--ink);color:var(--paper)}
   a{color:inherit}
-  ::selection{background:rgba(68,102,255,.45)}
+  h1,h2,p,dl,dd{margin:0}
+  :focus-visible{outline:2px solid var(--signal);outline-offset:3px;border-radius:4px}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- the pinned stage ---------- */
+  .stage{position:relative;height:250vh}
+  .pin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;isolation:isolate;
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr auto;
+    grid-template-areas:"nav nav" "head spec" "foot foot"}
+  .view{position:absolute;inset:0;z-index:-1}
+  .view canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0}
+  .gl-on .view canvas{opacity:1}
+  .still{position:absolute;left:50%;top:52%;width:min(46vw,640px);transform:translate(-44%,-50%);color:var(--ink)}
+  .still svg{display:block;width:100%;height:auto}
+  .gl-on .still{display:none}
 
   /* ---------- nav ---------- */
-  .nav{
-    position:relative;z-index:6;
-    display:flex;align-items:center;gap:24px;
-    padding:20px clamp(18px,4vw,56px);
-  }
-  .brand{
-    font-size:13px;font-weight:700;letter-spacing:.20em;text-decoration:none;
-    display:flex;gap:.55em;align-items:baseline;
-  }
-  .brand span{color:var(--faint);font-weight:500}
-  .links{display:flex;gap:26px;margin-left:auto;font-size:13.5px}
-  .links a{color:var(--dim);text-decoration:none;padding:6px 2px;border-radius:4px}
-  .links a:hover{color:var(--ink)}
-  .cta{
-    font-size:13.5px;font-weight:600;text-decoration:none;
-    padding:9px 16px;border-radius:999px;
-    background:var(--ink);color:#0d0d22;white-space:nowrap;
-  }
-  .cta:hover{background:#fff}
-  :where(a,button):focus-visible{outline:2px solid #8fa4ff;outline-offset:3px}
+  .nav{grid-area:nav;display:flex;align-items:center;gap:clamp(14px,2.2vw,30px);padding:18px var(--gutter)}
+  .brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;text-decoration:none;font-weight:600;font-size:19px;letter-spacing:-.03em}
+  .links{display:flex;gap:2px;margin-left:auto}
+  .links a{text-decoration:none;color:var(--ink-2);font-size:14.5px;padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .links a:hover{color:var(--ink);background:rgba(27,25,22,.06)}
+  .btn{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 20px;border-radius:999px;text-decoration:none;font-weight:600;font-size:15px;
+    border:1px solid transparent;transition:background-color .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:translateY(1px) scale(.985)}
+  .btn.solid{background:var(--ink);color:var(--paper)}
+  .btn.solid:hover{background:#34302a}
+  .btn.line{border-color:var(--line-2)}
+  .btn.line:hover{border-color:var(--ink);background:rgba(27,25,22,.04)}
+  .btn svg{transition:transform .3s var(--ease)}
+  .btn:hover svg{transform:translateX(3px)}
+  .nav .btn{min-height:42px;padding:0 16px;font-size:14px}
+  .nav .btn b{font-weight:600;padding-left:10px;margin-left:2px;border-left:1px solid rgba(236,230,219,.28)}
 
-  /* ---------- hero ---------- */
-  .hero{
-    position:relative;
-    min-height:calc(100vh - 68px);
-    min-height:calc(100svh - 68px);
-    display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(300px,40vmin) minmax(0,1fr);
-    align-items:center;
-    gap:clamp(20px,3vw,54px);
-    padding:clamp(12px,2vh,32px) clamp(18px,4vw,56px) clamp(40px,7vh,72px);
-    overflow:hidden;
-  }
-  .hero > *:not(#px){position:relative;z-index:1}
-  .eyebrow{
-    margin:0 0 18px;font-size:11.5px;letter-spacing:.17em;text-transform:uppercase;
-    color:var(--faint);
-  }
-  h1{
-    margin:0;
-    font-size:clamp(38px,5.2vw,68px);
-    line-height:.98;letter-spacing:-.033em;font-weight:680;
-    text-wrap:balance;
-  }
-  h1 em{font-style:normal;color:#9db0ff}
-  .lede{
-    margin:22px 0 0;max-width:34ch;color:var(--dim);font-size:clamp(14.5px,1.15vw,16.5px);
-  }
-  .acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
-  .btn{
-    display:inline-flex;align-items:center;gap:.5em;
-    font-size:14px;font-weight:600;text-decoration:none;
-    padding:12px 20px;border-radius:999px;
-    background:var(--ink);color:#0d0d22;
-    transition:transform .18s ease,background .18s ease;
-  }
-  .btn:hover{background:#fff;transform:translateY(-1px)}
-  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-  .btn.ghost:hover{background:rgba(140,158,255,.10);border-color:rgba(140,158,255,.4)}
+  /* ---------- copy ---------- */
+  .head{grid-area:head;padding:clamp(10px,4vh,48px) var(--gutter) 0;align-self:start;opacity:var(--a);transform:translateY(calc((1 - var(--a)) * -24px))}
+  .eyebrow{font:500 12.5px/1.4 var(--mono);letter-spacing:.02em;color:var(--ink-2);display:flex;gap:10px;align-items:center}
+  .eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--signal);display:block}
+  h1{margin-top:18px;font-weight:600;font-size:clamp(40px,5.5vw,88px);line-height:.96;letter-spacing:-.045em;max-width:8.6em;text-wrap:balance}
+  h1 span{color:var(--ink-3)}
+  .spec{grid-area:spec;align-self:center;justify-self:end;width:min(300px,24vw);margin-right:var(--gutter);opacity:var(--a)}
+  .spec div{display:grid;gap:3px;padding:13px 0;border-top:1px solid var(--line)}
+  .spec div:last-child{border-bottom:1px solid var(--line)}
+  .spec dt{font:500 11.5px/1.3 var(--mono);color:var(--ink-3);letter-spacing:.03em;text-transform:uppercase}
+  .spec dd{font-size:15.5px;font-weight:500;letter-spacing:-.01em}
+  .foot{grid-area:foot;display:flex;align-items:flex-end;justify-content:space-between;gap:28px;padding:0 var(--gutter) clamp(20px,4.4vh,44px)}
+  .lede-box{opacity:var(--a)}
+  .lede{max-width:36ch;color:var(--ink-2);font-size:clamp(15.5px,1.15vw,17.5px)}
+  .lede b{color:var(--ink);font-weight:600}
+  .acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+  .readout{display:grid;gap:8px;justify-items:end;font:500 12px/1.3 var(--mono);color:var(--ink-2);letter-spacing:.02em;text-align:right}
+  .readout .row{display:flex;gap:18px}
+  .readout b{color:var(--ink);font-weight:500}
+  .rail{display:flex;gap:6px}
+  .rail i{display:block;width:34px;height:2px;background:var(--line-2);position:relative;overflow:hidden}
+  .rail i::after{content:"";position:absolute;inset:0;background:var(--ink);transform-origin:0 50%;transform:scaleX(var(--f,0))}
+  .hint{display:flex;align-items:center;gap:10px}
+  .hint::before{content:"";width:1px;height:22px;background:var(--ink-2)}
+  .hide-rm{}
+  /* the second beat: caption once the needle is down */
+  .beat{position:absolute;left:var(--gutter);bottom:clamp(20px,4.4vh,44px);max-width:31ch;opacity:var(--b);transform:translateY(calc((1 - var(--b)) * 22px));pointer-events:none}
+  .beat h2{font-weight:600;font-size:clamp(36px,4.4vw,68px);line-height:.98;letter-spacing:-.045em}
+  .beat p{margin-top:14px;color:var(--ink-2);font-size:clamp(15px,1.1vw,17px)}
 
-  .specs{list-style:none;margin:0;padding:0;justify-self:end;width:min(100%,290px)}
-  .specs li{
-    display:grid;grid-template-columns:1fr;gap:2px;
-    padding:13px 0;border-top:1px solid var(--line);
-  }
-  .specs li:last-child{border-bottom:1px solid var(--line)}
-  .specs dt,.specs .k{
-    font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);
-  }
-  .specs .v{font-size:14px;color:#dfe3ff}
-  .specs .v b{font-weight:600}
+  /* ---------- after the stage ---------- */
+  .bench{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(28px,6vw,110px);padding:clamp(72px,11vw,150px) var(--gutter) clamp(56px,8vw,110px);border-top:1px solid var(--line)}
+  .bench h2{font-weight:600;font-size:clamp(30px,3.4vw,52px);line-height:1;letter-spacing:-.04em;max-width:11em}
+  .bench .note{margin-top:18px;color:var(--ink-2);max-width:38ch}
+  .table{display:grid}
+  .table div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:20px;padding:16px 0;border-top:1px solid var(--line)}
+  .table div:last-child{border-bottom:1px solid var(--line)}
+  .table dt{font:500 12.5px/1.5 var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em}
+  .table dd{font-size:16.5px;font-weight:500;letter-spacing:-.01em}
+  .table dd small{display:block;font-size:14px;font-weight:400;color:var(--ink-2);letter-spacing:0;margin-top:2px}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 28px;padding:24px var(--gutter) 30px;border-top:1px solid var(--line);font:500 12.5px/1.5 var(--mono);color:var(--ink-2)}
 
-  /* ---------- 3D stage ---------- */
-  .stage{
-    position:relative;
-    height:min(62vh,440px);
-    display:flex;align-items:center;justify-content:center;
-    isolation:isolate;
-  }
-  #px{
-    position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
-    -webkit-mask-image:radial-gradient(64% 76% at 52% 50%,#000 22%,rgba(0,0,0,.35) 62%,transparent 88%);
-    mask-image:radial-gradient(64% 76% at 52% 50%,#000 22%,rgba(0,0,0,.35) 62%,transparent 88%);
-  }
-  .glow{
-    position:absolute;z-index:0;left:50%;top:46%;
-    width:min(150%,520px);aspect-ratio:1;transform:translate(-50%,-50%);
-    background:radial-gradient(circle,rgba(68,102,255,.30) 0%,rgba(68,102,255,.10) 42%,transparent 68%);
-    filter:blur(6px);pointer-events:none;
-  }
-  .scene{
-    position:absolute;z-index:2;left:50%;top:50%;width:0;height:0;
-    perspective:1100px;perspective-origin:50% 44%;
-  }
-  .tilt,.orbit,.spin{transform-style:preserve-3d;position:absolute;left:0;top:0;width:0;height:0}
-  .tilt{transform:rotateX(-15deg)}
-  .orbit{transform:scale(1) rotateY(0deg)}
-  .spin{transform:rotateY(-16deg)}
-
-  .spin i{
-    position:absolute;display:block;
-    width:var(--w);height:var(--h);
-    left:calc(var(--w) / -2);top:calc(var(--h) / -2);
-    transform:rotateY(calc(var(--i) * 15deg)) translateZ(var(--r));
-    background:
-      /* walnut plinth at the foot */
-      linear-gradient(180deg,transparent 0 76%,#5f4228 76.5%,#7a5734 80%,#4a321e 92%,#2c1d11 100%),
-      /* woven felt */
-      repeating-linear-gradient(0deg,rgba(255,255,255,.055) 0 1px,rgba(0,0,0,.16) 1px 3px),
-      linear-gradient(180deg,#2b3049 0%,#242940 55%,#1b2033 100%);
-    backface-visibility:hidden;
-  }
-  /* a status LED riding the body — it orbits out of view and back, which is the
-     clearest possible tell that this really is a rotating solid */
-  .spin i.led::after{
-    content:"";position:absolute;left:50%;top:22%;width:5px;height:5px;margin-left:-2.5px;
-    border-radius:50%;background:#ffd9a8;
-    box-shadow:0 0 7px 2px rgba(255,200,140,.75);
-  }
-
-  /* top cap: charcoal disc with a control ring */
-  .cap{
-    position:absolute;z-index:1;
-    width:calc(var(--r) * 2);height:calc(var(--r) * 2);
-    left:calc(var(--r) * -1);top:calc(var(--r) * -1);
-    border-radius:50%;
-    transform:rotateX(90deg) translateZ(calc(var(--h) / 2));
-    background:
-      radial-gradient(circle at 62% 30%,#4b5379 0%,#343a5c 30%,#232840 62%,#171b2c 100%);
-    box-shadow:inset 0 0 0 1px rgba(178,194,255,.30),inset 0 0 26px rgba(0,0,0,.55);
-  }
-  .cap::after{
-    content:"";position:absolute;inset:24%;border-radius:50%;
-    border:1px solid rgba(140,168,255,.42);
-    background:radial-gradient(circle,rgba(68,102,255,.26) 0%,transparent 64%);
-  }
-  .cap::before{
-    content:"";position:absolute;inset:39%;border-radius:50%;
-    background:radial-gradient(circle,#dbe3ff 0%,rgba(130,158,255,.55) 42%,transparent 74%);
-    opacity:.9;
-  }
-
-  /* the 2D lighting overlays live in one wrapper so they scale with the product */
-  .ovl{position:absolute;z-index:3;left:50%;top:50%;width:0;height:0;pointer-events:none;transform:scale(1)}
-  /* the underside of the walnut plinth, so the foot reads as an ellipse not a cut */
-  .foot{
-    position:absolute;left:0;top:calc(var(--h) / 2);
-    width:calc(var(--r) * 2);height:calc(var(--cap) * 2);
-    transform:translate(-50%,-50%);border-radius:50%;
-    background:linear-gradient(180deg,#523720 0%,#3a2614 42%,#1d1309 100%);
-  }
-
-  /* fixed studio lighting, painted over the (constant) cylinder silhouette */
-  .sheen{
-    position:absolute;left:0;top:0;
-    width:calc(var(--r) * 2);height:calc(var(--h) + (var(--cap) * 2));
-    transform:translate(-50%,-50%);
-    border-radius:var(--r) / var(--cap);
-    background:
-      /* curvature: the body falls away at both edges */
-      linear-gradient(90deg,rgba(4,4,14,.72) 0%,rgba(4,4,14,.26) 11%,transparent 30%,
-                            transparent 70%,rgba(4,4,14,.34) 88%,rgba(4,4,14,.74) 100%),
-      /* rim light, blue, back-left */
-      linear-gradient(90deg,rgba(90,125,255,.80) 0%,rgba(68,102,255,.22) 4.5%,transparent 16%),
-      /* key light, warm white, top-right */
-      linear-gradient(212deg,rgba(255,245,230,.40) 0%,rgba(255,240,220,.16) 24%,rgba(255,245,230,0) 52%),
-      linear-gradient(270deg,rgba(255,245,230,.26) 0%,rgba(255,245,230,.06) 14%,transparent 34%),
-      /* the floor eats the light at the foot */
-      linear-gradient(180deg,transparent 62%,rgba(0,0,0,.50) 100%);
-  }
-  .shadow{
-    position:absolute;z-index:1;left:50%;top:calc(50% + (var(--h) / 2) + 26px);
-    width:calc(var(--r) * 2.5);height:52px;transform:translate(-50%,-50%);
-    background:radial-gradient(ellipse at center,rgba(0,0,0,.62) 0%,rgba(0,0,0,.28) 45%,transparent 72%);
-    filter:blur(7px);pointer-events:none;
-  }
-  .hint{
-    position:absolute;z-index:4;left:50%;bottom:-6px;transform:translateX(-50%);
-    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
-    white-space:nowrap;
-  }
-
-  /* ---------- band ---------- */
-  .band{
-    position:relative;z-index:5;
-    border-top:1px solid var(--line);
-    background:rgba(8,8,22,.72);
-    padding:clamp(34px,6vh,64px) clamp(18px,4vw,56px);
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-    gap:clamp(20px,3vw,44px);
-  }
-  .band h2{
-    grid-column:1/-1;margin:0 0 4px;font-size:12px;letter-spacing:.17em;
-    text-transform:uppercase;color:var(--faint);font-weight:600;
-  }
-  .band h3{margin:0 0 7px;font-size:16px;font-weight:620;letter-spacing:-.01em}
-  .band p{margin:0;color:var(--dim);font-size:14px;max-width:32ch}
-  .band .num{
-    display:block;font-size:11px;color:#7f8ecd;margin-bottom:12px;letter-spacing:.14em;
-  }
-  footer{
-    padding:22px clamp(18px,4vw,56px) 34px;border-top:1px solid var(--line);
-    color:var(--faint);font-size:12px;display:flex;flex-wrap:wrap;gap:6px 22px;
-    background:rgba(8,8,22,.72);position:relative;z-index:5;
-  }
-
-  /* ---------- motion ---------- */
+  /* ---------- entrance ---------- */
   @media (prefers-reduced-motion: no-preference){
-    .spin{animation:spin 30s linear infinite}
-    @keyframes spin{from{transform:rotateY(-16deg)}to{transform:rotateY(344deg)}}
-    .cap::before{animation:breathe 4.2s ease-in-out infinite}
-    @keyframes breathe{0%,100%{opacity:.62;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
-    .glow{animation:breathe 6s ease-in-out infinite}
-    .lift{animation:lift 1.15s cubic-bezier(.22,1.3,.36,1) both}
-    @keyframes lift{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
-    .d1{animation-delay:.05s}.d2{animation-delay:.14s}.d3{animation-delay:.23s}.d4{animation-delay:.32s}
-
-    /* scroll-bound orbit: camera pulls in and swings round (brief: cameraZ 5 -> 2.5) */
-    @supports (animation-timeline: scroll()){
-      .orbit,.ovl,.shadow,.hint{
-        animation-timeline:scroll(root block);
-        animation-range:0 70vh;
-        animation-timing-function:linear;
-        animation-fill-mode:both;
-      }
-      .orbit{animation-name:orbit}
-      .ovl{animation-name:zoom}
-      .shadow{animation-name:zoomShadow}
-      .hint{animation-name:hintOut}
-      @keyframes orbit{
-        from{transform:scale(1) rotateY(0deg)}
-        to{transform:scale(1.22) rotateY(90deg)}
-      }
-      @keyframes zoom{from{transform:scale(1)}to{transform:scale(1.22)}}
-      @keyframes zoomShadow{
-        from{transform:translate(-50%,-50%) scale(1)}
-        to{transform:translate(-50%,-50%) scale(1.22,1.1)}
-      }
-      @keyframes hintOut{from{opacity:1}30%,to{opacity:0}}
-    }
+    .js .rise{animation:rise 1s var(--ease) backwards}
+    .js .head.rise{animation-delay:.35s}
+    .js .spec.rise{animation-delay:.5s}
+    .js .foot .rise{animation-delay:.6s}
+    @keyframes rise{from{opacity:0;translate:0 20px}to{opacity:1;translate:0 0}}
+    .view canvas{transition:opacity .9s var(--ease)}
   }
   @media (prefers-reduced-motion: reduce){
-    html{scroll-behavior:auto}
-    /* at rest the product is already in its best three-quarter pose */
-    .spin{transform:rotateY(-16deg);animation:none}
-    .lift{opacity:1;transform:none;animation:none}
-    .hint{visibility:hidden}
+    .stage{height:auto}
+    .pin{position:relative}
+    .hide-rm,.beat{display:none}
   }
 
   /* ---------- responsive ---------- */
-  @media (max-width:1040px){
-    .hero{grid-template-columns:minmax(0,1fr) minmax(260px,34vmin);}
-    .specs{grid-column:1/-1;justify-self:stretch;width:100%;
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 28px}
-  }
-  @media (max-width:760px){
-    .nav{gap:14px}
+  @media (max-width:1020px){
     .links{display:none}
-    .hero{
-      grid-template-columns:minmax(0,1fr);
-      text-align:left;padding-top:8px;gap:26px;
-      min-height:0;
-    }
-    .stage{order:-1;height:min(46vh,320px);--r:92px;--h:200px;--w:25px;--cap:24px}
-    .specs{grid-column:auto}
-    h1{font-size:clamp(34px,10vw,46px)}
-    .hint{display:none}
+    .nav .btn{margin-left:auto}
+    .spec{display:none}
+    .pin{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "head" "foot"}
+  }
+  /* portrait frames: the turntable sits above the copy */
+  @media (max-aspect-ratio:9/10){
+    .pin{grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"nav" "gap" "head" "foot"}
+    .head{padding-top:0}
+    .still{top:27%;width:86vw;transform:translate(-50%,-50%)}
+    .beat{bottom:auto;top:calc(55svh);right:var(--gutter)}
+  }
+  @media (max-width:640px){
+    .stage{height:210vh}
+    h1{font-size:clamp(36px,10.4vw,52px);margin-top:12px}
+    .nav .btn b{display:none}
+    .foot{flex-direction:column;align-items:stretch;gap:18px;padding-top:14px}
+    .readout{justify-items:start;text-align:left}
+    .acts .btn{flex:1 1 auto;justify-content:center}
+    .bench{grid-template-columns:minmax(0,1fr)}
+    .table div{grid-template-columns:minmax(0,1fr)}
+    .table div{gap:4px}
+  }
+  /* the modal's 640 x 400 frame */
+  @media (max-height:520px) and (min-width:560px){
+    .nav{padding-top:8px;padding-bottom:0}
+    .head{padding-top:4px}
+    .eyebrow{display:none}
+    h1{font-size:clamp(28px,5.4vw,46px);margin-top:4px}
+    .lede,.readout .hint{display:none}
+    .acts{margin-top:0}
+    .btn{min-height:42px}
+    .foot{padding-bottom:14px}
+    .beat h2{font-size:32px}
+    .beat p{display:none}
   }
 </style>
 </head>
 <body>
-
-<header class="nav">
-  <a class="brand" href="#top">HALDEN <span>AUDIO</span></a>
-  <nav class="links" aria-label="Primary">
-    <a href="#tech">Technology</a>
-    <a href="#tech">Measurements</a>
-    <a href="#tech">Stockists</a>
-  </nav>
-  <a class="cta" href="#tech">Pre-order · £429</a>
-</header>
-
-<main class="hero" id="top">
-  <canvas id="px" aria-hidden="true"></canvas>
-  <div>
-    <p class="eyebrow lift d1">Nocturne series — third generation</p>
-    <h1 class="lift d2">It fills the room,<br>then <em>gets out of it.</em></h1>
-    <p class="lede lift d3">The A3 measures the room it is standing in four hundred times a second, and aims its eight drivers at the walls you actually have — not the ones in an anechoic chamber.</p>
-    <div class="acts lift d4">
-      <a class="btn" href="#tech">Pre-order · £429</a>
-      <a class="btn ghost" href="#tech">Read the measurements <span aria-hidden="true">→</span></a>
+<div class="page">
+<section class="stage" aria-labelledby="h">
+  <div class="pin">
+    <div class="view" aria-hidden="true">
+      <div class="still">
+        <svg viewBox="0 0 640 360" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">
+          <path d="M60 206 L360 318 L600 206 L300 108 Z" fill="#dcc9a8" stroke-opacity=".5"/>
+          <path d="M60 206 v22 L360 340 v-22 M360 340 L600 228 v-22" stroke-opacity=".5"/>
+          <ellipse cx="290" cy="205" rx="170" ry="84" fill="#2a2724"/>
+          <ellipse cx="290" cy="198" rx="162" ry="79" fill="#141312"/>
+          <ellipse cx="290" cy="198" rx="54" ry="26" fill="#c7401a" stroke="none"/>
+          <ellipse cx="290" cy="198" rx="3" ry="2" fill="#ddd" stroke="none"/>
+          <circle cx="500" cy="168" r="14" fill="#8d8a84" stroke="none"/>
+          <path d="M500 168 L388 236" stroke-width="3" stroke="#3a3632"/>
+          <path d="M386 232 l-12 10 l8 6 l12 -9 Z" fill="#c7401a" stroke="none"/>
+        </svg>
+      </div>
+      <canvas id="gl"></canvas>
     </div>
-  </div>
 
-  <div class="stage">
-    <div class="glow" aria-hidden="true"></div>
-    <div class="scene" aria-hidden="true">
-      <div class="tilt"><div class="orbit"><div class="spin">
-        <i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i>
-        <i style="--i:4"></i><i class="led" style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i>
-        <i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i>
-        <i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i>
-        <i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i>
-        <i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i>
-        <div class="cap"></div>
-      </div></div></div>
+    <header class="nav">
+      <a class="brand" href="#h" aria-label="Stilte home">
+        <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#1b1916"/><circle cx="11" cy="11" r="3.6" fill="#c7401a"/><circle cx="11" cy="11" r=".9" fill="#ece6db"/></svg>
+        stilte
+      </a>
+      <nav class="links" aria-label="Primary">
+        <a href="#bench">Turntables</a><a href="#bench">Listening room</a><a href="#bench">Service</a>
+      </nav>
+      <a class="btn solid" href="#bench">Reserve <b class="num">€1,190</b></a>
+    </header>
+
+    <div class="head rise">
+      <p class="eyebrow"><i></i>Stilte TT-2 · built in Eindhoven</p>
+      <h1 id="h">Put a record on. <span>Then leave it alone.</span></h1>
     </div>
-    <div class="shadow" aria-hidden="true"></div>
-    <div class="ovl" aria-hidden="true"><div class="foot"></div><div class="sheen"></div></div>
-    <p class="hint">Scroll to orbit</p>
-  </div>
 
-  <ul class="specs lift d4">
-    <li><span class="k">Drivers</span><span class="v"><b>1 × 120 mm</b> woofer, <b>4 × 19 mm</b> tweeters</span></li>
-    <li><span class="k">Room correction</span><span class="v">8-microphone array, 400 Hz sweep</span></li>
-    <li><span class="k">Wireless</span><span class="v">Wi-Fi 6E · 12 ms bus latency</span></li>
-    <li><span class="k">Finish</span><span class="v">Recycled merino felt, oiled walnut</span></li>
-    <li><span class="k">Size</span><span class="v">168 mm ⌀ × 240 mm · 3.1 kg</span></li>
-  </ul>
-</main>
+    <dl class="spec rise" aria-label="Key specifications">
+      <div><dt>Platter</dt><dd>4.2 kg cast aluminium</dd></div>
+      <div><dt>Wow and flutter</dt><dd class="num">0.03% DIN weighted</dd></div>
+      <div><dt>Tonearm</dt><dd>9″ carbon, 11 g mass</dd></div>
+      <div><dt>Speeds</dt><dd>33⅓ and 45, electronic</dd></div>
+    </dl>
 
-<section class="band" id="tech">
-  <h2>Inside the A3</h2>
-  <div>
-    <span class="num">01</span>
-    <h3>Eight drivers, one axis</h3>
-    <p>Tweeters sit at 90° intervals around the crown; the woofer fires down into the plinth and out through the felt.</p>
-  </div>
-  <div>
-    <span class="num">02</span>
-    <h3>It listens first</h3>
-    <p>A 400 Hz sweep on power-up maps first reflections, then trims each driver by up to 6 dB to suit the room.</p>
-  </div>
-  <div>
-    <span class="num">03</span>
-    <h3>Felt, not plastic</h3>
-    <p>The grille is 2.4 mm recycled merino — acoustically open, and it stops looking like a computer within a week.</p>
-  </div>
-  <div>
-    <span class="num">04</span>
-    <h3>Repairable to 2035</h3>
-    <p>Six screws to the driver bay. Amp board, PSU and each driver are sold separately for at least ten years.</p>
+    <div class="foot">
+      <div class="lede-box rise">
+        <p class="lede">A belt-drive turntable with a <b>4.2 kg platter</b>, a carbon arm and a plinth of Dutch ash. It holds 33⅓ to within 0.03%, so you never have to think about it.</p>
+        <div class="acts">
+          <a class="btn solid" href="#bench">Reserve yours</a>
+          <a class="btn line" href="#bench">Read the bench test
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8h11M9 3.5 13.5 8 9 12.5"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="readout rise" aria-hidden="true">
+        <div class="row"><span>ARM <b class="num" id="deg">0.0°</b></span><span>STYLUS <b id="sty">PARKED</b></span><span>33⅓ RPM</span></div>
+        <div class="rail hide-rm"><i id="r1"></i><i id="r2"></i><i id="r3"></i></div>
+        <div class="hint hide-rm">Scroll to drop the needle</div>
+      </div>
+    </div>
+
+    <div class="beat" aria-hidden="true">
+      <h2>Needle down.</h2>
+      <p>A silicone-damped cue lowers the arm in 1.8 seconds, at the same speed every time. Side A starts about three seconds later.</p>
+    </div>
   </div>
 </section>
 
+<section class="bench" id="bench" aria-labelledby="bench-h">
+  <div>
+    <h2 id="bench-h">Measured on the bench, not in the brochure.</h2>
+    <p class="note">Every TT-2 is run for forty minutes before it ships, and the sheet with its own numbers goes in the box.</p>
+  </div>
+  <dl class="table">
+    <div><dt>Speeds</dt><dd>33⅓ and 45 rpm<small>Switched electronically, so the belt never moves pulleys.</small></dd></div>
+    <div><dt>Wow and flutter</dt><dd class="num">0.03%<small>DIN weighted, at 33⅓.</small></dd></div>
+    <div><dt>Rumble</dt><dd class="num">−72 dB<small>Unweighted, with the platter mat fitted.</small></dd></div>
+    <div><dt>Platter</dt><dd>4.2 kg cast aluminium, 30 cm<small>On an inverted bearing with a ceramic ball.</small></dd></div>
+    <div><dt>Tonearm</dt><dd>9-inch carbon tube, 11 g effective mass<small>Suits most moving-magnet cartridges.</small></dd></div>
+    <div><dt>Plinth</dt><dd class="num">Dutch ash, 46 × 36 × 12 cm<small>Oiled, never lacquered.</small></dd></div>
+    <div><dt>Price</dt><dd class="num">€1,190 including VAT<small>First batch ships in November. Two-year warranty; parts kept for ten.</small></dd></div>
+  </dl>
+</section>
+
 <footer>
-  <span>Halden Audio Ltd</span>
-  <span>Unit 4, Barrow Works, Sheffield S3 8DN</span>
-  <span>Ships from 14 March</span>
+  <span>Stilte Audio B.V. · Kanaaldijk 12, Eindhoven</span>
+  <span>KvK 90412277</span>
 </footer>
+</div>
 
 <script>
 (function(){
-  var c = document.getElementById('px');
-  if(!c || !c.getContext) return;
-  var ctx = c.getContext('2d');
-  var dpr = Math.min(window.devicePixelRatio || 1, 2);
-  var W = 0, H = 0, N = 200, pts = [], seed = 20240314;
-  function rnd(){ seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
-  for (var i = 0; i < N; i++){
-    pts.push({ x: rnd(), y: rnd(), z: 0.25 + rnd() * 0.75, ph: rnd() * 6.283, sp: 0.3 + rnd() * 0.9 });
+  var root = document.documentElement;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) root.classList.add('js');
+
+  var canvas = document.getElementById('gl');
+  var stage = document.querySelector('.stage');
+  var degEl = document.getElementById('deg'), styEl = document.getElementById('sty');
+  var rails = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
+
+  function clamp(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function smooth(x){ x = clamp(x); return x * x * (3 - 2 * x); }
+  function lerp(a, b, t){ return a + (b - a) * t; }
+
+  /* scroll progress through the pinned stage, 0..1 */
+  function progress(){
+    var r = stage.getBoundingClientRect(), span = r.height - innerHeight;
+    return span > 0 ? clamp(-r.top / span) : 1;
   }
-  function resize(){
-    var r = c.getBoundingClientRect();
-    W = Math.max(1, r.width); H = Math.max(1, r.height);
-    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  var lib = document.createElement('script');
+  lib.src = '../vendor/three/three.min.js';
+  lib.onload = function(){
+    /* the label is drawn with the page's own type, so wait for it */
+    var ready = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 40px "Schibsted Grotesk"'), document.fonts.load('500 20px "Red Hat Mono"')]) : Promise.resolve();
+    ready.then(init, init);
+  };
+  document.head.appendChild(lib);
+
+  function init(){
+  if (!window.THREE) return;
+  var renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' }); }
+  catch (e) { return; }
+  if (!renderer || !renderer.getContext()) return;
+
+  var phone = Math.min(innerWidth, innerHeight) < 600;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phone ? 1.5 : 1.75));
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+
+  var scene = new THREE.Scene();
+  var pmrem = new THREE.PMREMGenerator(renderer);
+  var envRT = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04);
+  scene.environment = envRT.texture;
+  var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+
+  var key = new THREE.DirectionalLight(0xfff1e0, 1.4); key.position.set(4, 7, 3); scene.add(key);
+  var rim = new THREE.DirectionalLight(0xdfe7ff, 0.6); rim.position.set(-5, 3, -4); scene.add(rim);
+
+  /* ---- textures, drawn once ---- */
+  function cnv(w, h){ var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+  var seed = 7;
+  function rnd(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+
+  /* ash: long, slightly wavy grain lines */
+  var wc = cnv(1024, 512), wx = wc.getContext('2d');
+  wx.fillStyle = '#c9ab80'; wx.fillRect(0, 0, 1024, 512);
+  for (var i = 0; i < 260; i++){
+    var y0 = rnd() * 512, amp = 2 + rnd() * 7, fr = 0.004 + rnd() * 0.01, ph = rnd() * 6;
+    wx.strokeStyle = 'rgba(' + (120 + (rnd() * 40 | 0)) + ',' + (88 + (rnd() * 30 | 0)) + ',52,' + (0.05 + rnd() * 0.16).toFixed(3) + ')';
+    wx.lineWidth = 0.6 + rnd() * 1.8;
+    wx.beginPath();
+    for (var x = 0; x <= 1024; x += 16){ var yy = y0 + Math.sin(x * fr + ph) * amp; if (x) wx.lineTo(x, yy); else wx.moveTo(x, yy); }
+    wx.stroke();
   }
-  function frame(t){
-    ctx.clearRect(0, 0, W, H);
-    for (var i = 0; i < N; i++){
-      var p = pts[i];
-      var x = p.x * W + Math.sin(t * 0.00012 * p.sp + p.ph) * 16 * p.z;
-      var yy = (p.y - t * 0.0000075 * p.sp) % 1; if (yy < 0) yy += 1;
-      var y = yy * H;
-      var rad = 0.5 + p.z * 1.5;
-      var a = (0.10 + p.z * 0.34) * (0.45 + 0.55 * Math.sin(t * 0.0006 * p.sp + p.ph) * 0.5 + 0.275);
-      ctx.beginPath();
-      ctx.arc(x, y, rad, 0, 6.283);
-      ctx.fillStyle = 'rgba(' + (p.z > 0.72 ? '214,224,255' : '150,170,255') + ',' + a.toFixed(3) + ')';
-      ctx.fill();
+  var woodTex = new THREE.CanvasTexture(wc); woodTex.colorSpace = THREE.SRGBColorSpace; woodTex.anisotropy = 4;
+
+  /* the record: grooves, lead-in bands between tracks, and the label */
+  var R = 1024, rc = cnv(R, R), rx = rc.getContext('2d'), gc = cnv(R, R), gx = gc.getContext('2d');
+  rx.fillStyle = '#0c0c0d'; rx.fillRect(0, 0, R, R);
+  gx.fillStyle = '#6e6e6e'; gx.fillRect(0, 0, R, R);
+  var cx = R / 2, rr = R / 2, gaps = [0.5, 0.61, 0.7, 0.8, 0.9];
+  for (var r = rr * 0.38; r < rr * 0.985; r += 1.6){
+    var f = r / rr, gap = false;
+    for (var g = 0; g < gaps.length; g++) if (Math.abs(f - gaps[g]) < 0.006) gap = true;
+    rx.strokeStyle = gap ? 'rgba(0,0,0,.9)' : 'rgba(255,255,255,' + (0.025 + rnd() * 0.03).toFixed(3) + ')';
+    rx.lineWidth = 0.8; rx.beginPath(); rx.arc(cx, cx, r, 0, Math.PI * 2); rx.stroke();
+    gx.strokeStyle = gap ? '#262626' : (rnd() > 0.5 ? '#7a7a7a' : '#5f5f5f');
+    gx.lineWidth = 1.6; gx.beginPath(); gx.arc(cx, cx, r, 0, Math.PI * 2); gx.stroke();
+  }
+  /* label */
+  var LR = rr * 0.34;
+  rx.fillStyle = '#c7401a'; rx.beginPath(); rx.arc(cx, cx, LR, 0, Math.PI * 2); rx.fill();
+  rx.strokeStyle = 'rgba(236,230,219,.5)'; rx.lineWidth = 1.2; rx.beginPath(); rx.arc(cx, cx, LR * 0.9, 0, Math.PI * 2); rx.stroke();
+  gx.fillStyle = '#b4b4b4'; gx.beginPath(); gx.arc(cx, cx, LR, 0, Math.PI * 2); gx.fill();
+  rx.fillStyle = '#ece6db'; rx.textAlign = 'center'; rx.textBaseline = 'middle';
+  rx.font = '600 58px "Schibsted Grotesk", Arial, sans-serif'; rx.fillText('stilte', cx, cx - 64);
+  rx.font = '500 17px "Red Hat Mono", monospace';
+  rx.fillText('TEST PRESSING · SIDE A', cx, cx + 58);
+  rx.fillText('33⅓ RPM · STEREO', cx, cx + 84);
+  rx.fillStyle = '#1b1916'; rx.beginPath(); rx.arc(cx, cx, 9, 0, Math.PI * 2); rx.fill();
+  var recTex = new THREE.CanvasTexture(rc); recTex.colorSpace = THREE.SRGBColorSpace; recTex.anisotropy = 8;
+  var recRough = new THREE.CanvasTexture(gc);
+
+  /* soft contact shadow under the floating deck */
+  var sc = cnv(256, 256), sx = sc.getContext('2d'), sg = sx.createRadialGradient(128, 128, 8, 128, 128, 128);
+  sg.addColorStop(0, 'rgba(40,30,20,.55)'); sg.addColorStop(0.55, 'rgba(40,30,20,.18)'); sg.addColorStop(1, 'rgba(40,30,20,0)');
+  sx.fillStyle = sg; sx.fillRect(0, 0, 256, 256);
+  var shadowTex = new THREE.CanvasTexture(sc);
+
+  /* ---- materials ---- */
+  var M = {
+    wood: new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.62, metalness: 0 }),
+    alu: new THREE.MeshStandardMaterial({ color: 0xcfcdc8, roughness: 0.3, metalness: 1 }),
+    chrome: new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.12, metalness: 1 }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x24211e, roughness: 0.55, metalness: 0.2 }),
+    carbon: new THREE.MeshStandardMaterial({ color: 0x1a1918, roughness: 0.35, metalness: 0.4 }),
+    rubber: new THREE.MeshStandardMaterial({ color: 0x191817, roughness: 0.9 }),
+    signal: new THREE.MeshStandardMaterial({ color: 0xc7401a, roughness: 0.45 }),
+    vinylTop: new THREE.MeshStandardMaterial({ map: recTex, roughnessMap: recRough, roughness: 0.9, metalness: 0, envMapIntensity: 0.55 }),
+    vinylEdge: new THREE.MeshStandardMaterial({ color: 0x0e0e0f, roughness: 0.3 }),
+    shadow: new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
+  };
+
+  /* ---- the deck ---- */
+  var deck = new THREE.Group(); scene.add(deck);
+  var body = new THREE.Group(); deck.add(body);
+  function add(geo, mat, x, y, z, parent){ var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); (parent || body).add(m); return m; }
+
+  add(new THREE.RoundedBoxGeometry(4.7, 0.5, 3.7, 5, 0.1), M.wood, 0, 0, 0);
+  var foot = new THREE.CylinderGeometry(0.28, 0.24, 0.18, 32);
+  [[-1.95, -1.45], [1.95, -1.45], [-1.95, 1.45], [1.95, 1.45]].forEach(function(p){ add(foot, M.rubber, p[0], -0.34, p[1]); });
+
+  var PC = new THREE.Vector3(-0.45, 0, 0.05);           /* platter centre */
+  add(new THREE.CylinderGeometry(1.15, 1.15, 0.06, 64), M.dark, PC.x, 0.28, PC.z);
+  var spin = new THREE.Group(); spin.position.set(PC.x, 0, PC.z); body.add(spin);
+  add(new THREE.CylinderGeometry(1.62, 1.6, 0.2, 128), M.alu, 0, 0.41, 0, spin);
+  add(new THREE.CylinderGeometry(1.52, 1.52, 0.024, 160), [M.vinylEdge, M.vinylTop, M.vinylEdge], 0, 0.522, 0, spin);
+  add(new THREE.CylinderGeometry(0.035, 0.035, 0.16, 16), M.chrome, 0, 0.6, 0, spin);
+
+  /* motor pod and speed knob */
+  add(new THREE.CylinderGeometry(0.3, 0.3, 0.12, 48), M.alu, -1.82, 0.31, -1.35);
+  var knob = add(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 48), M.alu, -1.9, 0.3, 1.45);
+  add(new THREE.BoxGeometry(0.03, 0.012, 0.1), M.signal, -1.9, 0.357, 1.33);
+
+  /* tonearm */
+  var P = new THREE.Vector3(1.62, 0, -1.2), ARMY = 0.66, L = 2.34;
+  add(new THREE.CylinderGeometry(0.32, 0.32, 0.08, 48), M.dark, P.x, 0.29, P.z);
+  add(new THREE.CylinderGeometry(0.1, 0.1, 0.29, 32), M.alu, P.x, 0.475, P.z);
+  add(new THREE.CylinderGeometry(0.035, 0.035, 0.36, 16), M.alu, P.x - 0.3, 0.43, P.z + 0.1);    /* cue post */
+  add(new THREE.BoxGeometry(0.16, 0.03, 0.05), M.dark, P.x - 0.3, 0.62, P.z + 0.1);
+  var arm = new THREE.Group(); arm.position.set(P.x, ARMY, P.z); body.add(arm);
+  var lift = new THREE.Group(); arm.add(lift);
+  add(new THREE.BoxGeometry(0.2, 0.14, 0.2), M.dark, 0, 0, 0, lift);
+  var tube = add(new THREE.CylinderGeometry(0.034, 0.034, L + 0.5, 20), M.carbon, 0, 0, (L - 0.5) / 2 - 0.06, lift); tube.rotation.x = Math.PI / 2;
+  var cw = add(new THREE.CylinderGeometry(0.15, 0.15, 0.26, 40), M.alu, 0, 0, -0.52, lift); cw.rotation.x = Math.PI / 2;
+  var shell = add(new THREE.BoxGeometry(0.17, 0.035, 0.34), M.alu, 0.03, -0.02, L - 0.12, lift); shell.rotation.y = -0.38;
+  var cart = add(new THREE.BoxGeometry(0.12, 0.085, 0.17), M.signal, 0.035, -0.08, L - 0.1, lift); cart.rotation.y = -0.38;
+  add(new THREE.CylinderGeometry(0.006, 0.002, 0.03, 8), M.chrome, 0.04, -0.135, L - 0.04, lift);
+  var fingerLift = add(new THREE.BoxGeometry(0.02, 0.02, 0.14), M.alu, 0.11, -0.01, L - 0.02, lift); fingerLift.rotation.y = 0.9;
+  /* arm rest, under the tube when parked */
+  add(new THREE.CylinderGeometry(0.04, 0.04, 0.34, 16), M.alu, P.x, 0.42, P.z + 1.9);
+  add(new THREE.BoxGeometry(0.14, 0.05, 0.05), M.dark, P.x, 0.6, P.z + 1.9);
+
+  var shadow = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 6.8), M.shadow);
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.05; deck.add(shadow);
+
+  /* play angle: where the stylus meets the outer groove */
+  var LE = L - 0.04, PLAY = (function(){
+    var lo = -1.4, hi = 0;
+    for (var k = 0; k < 40; k++){
+      var mid = (lo + hi) / 2, nx = P.x + LE * Math.sin(mid) - PC.x, nz = P.z + LE * Math.cos(mid) - PC.z;
+      if (Math.sqrt(nx * nx + nz * nz) > 1.44) hi = mid; else lo = mid;
     }
+    return (lo + hi) / 2;
+  })();
+  var LIFT = -0.075;
+
+  /* arm timeline, a in 0..1: lift, swing across, lower */
+  function armPose(a){
+    var up = smooth(a / 0.15) * (1 - smooth((a - 0.78) / 0.22));
+    arm.rotation.y = PLAY * smooth((a - 0.15) / 0.6);
+    lift.rotation.x = LIFT * up;
+    return { deg: Math.abs(arm.rotation.y) * 180 / Math.PI, down: a > 0.98 };
   }
-  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  resize();
-  frame(2400);                       /* seeded mid-state: never an empty box at first paint */
-  if (!still){
-    var t0 = performance.now();
-    (function loop(now){ frame(2400 + (now - t0)); requestAnimationFrame(loop); })(t0);
+
+  /* ---- camera: a quarter orbit that pulls in toward the arm ---- */
+  var target = new THREE.Vector3(), portrait = false, zoom = 1;
+  function camPose(c){
+    var az = lerp(0.62, 0.62 + Math.PI / 2 * 0.98, c), el = lerp(0.56, 0.36, c), rad = lerp(13.4, 8.8, c) * zoom;
+    target.set(lerp(0.1, 0.55, c), lerp(0.1, 0.45, c), lerp(0, -0.3, c));
+    camera.position.set(target.x + rad * Math.cos(el) * Math.sin(az), target.y + rad * Math.sin(el), target.z + rad * Math.cos(el) * Math.cos(az));
+    camera.lookAt(target);
   }
+
+  function frame(){
+    var box = canvas.parentNode, w = box.clientWidth, h = box.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    portrait = w / h < 0.9;
+    /* keep the whole deck in frame: narrow frames step back, short ones too */
+    zoom = Math.max(1, 0.95 / (w / h)) * (h < 520 ? 1.2 : 1);
+    /* phones: push the deck into the upper half, above the copy */
+    if (portrait) camera.setViewOffset(w, h, 0, h * 0.25, w, h); else if (w / h > 1.25) camera.setViewOffset(w, h, -w * (h < 520 ? 0.13 : 0.075), h * 0.03, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+  }
+
+  var t0 = performance.now(), last = t0, running = false, visible = true, inView = true;
+  var cur = { c: 0, a: 0 }, ENTER = 1.4;
+  function backOut(x){ var s = 1.4; x = clamp(x) - 1; return 1 + x * x * ((s + 1) * x + s); }
+
+  function apply(el, dt){
+    var p = progress();
+    var tc = smooth(p / 0.85), ta = clamp((p - 0.18) / 0.6);
+    var k = 1 - Math.exp(-dt * 7);
+    cur.c += (tc - cur.c) * k; cur.a += (ta - cur.a) * k;
+    camPose(cur.c);
+    var st = armPose(cur.a);
+    /* resting sway fades out as soon as the reader starts scrolling */
+    var still = 1 - smooth(cur.c / 0.12);
+    deck.rotation.y = Math.sin(el * 0.39) * 0.2 * still;
+    var e = backOut(el / ENTER), bob = Math.sin(el * 0.9) * 0.06 * still;
+    body.position.y = lerp(-1.1, 0, e) + bob;
+    shadow.material.opacity = 0.85 - bob * 2.2 + (1 - clamp(el / ENTER)) * -0.6;
+    shadow.scale.setScalar(1 - bob * 0.6);
+    spin.rotation.y = -el * (33.333 / 60) * Math.PI * 2;
+    knob.rotation.y = 0;
+    root.style.setProperty('--a', (1 - smooth((p - 0.32) / 0.18)).toFixed(3));
+    root.style.setProperty('--b', smooth((cur.a - 0.9) / 0.1).toFixed(3));
+    degEl.textContent = st.deg.toFixed(1) + '°';
+    styEl.textContent = st.down ? 'DOWN' : cur.a > 0.02 ? 'CUEING' : 'PARKED';
+    rails[0].style.setProperty('--f', clamp(cur.a / 0.15).toFixed(3));
+    rails[1].style.setProperty('--f', clamp((cur.a - 0.15) / 0.6).toFixed(3));
+    rails[2].style.setProperty('--f', clamp((cur.a - 0.75) / 0.25).toFixed(3));
+  }
+
+  function render(now){
+    var el = Math.max(0, (now - t0) / 1000), dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+    apply(el, dt);
+    renderer.render(scene, camera);
+  }
+  function loop(now){ if (!running) return; render(now); requestAnimationFrame(loop); }
+  function sync(){
+    var go = visible && inView && !reduce;
+    if (go && !running){ running = true; last = performance.now(); requestAnimationFrame(loop); }
+    else if (!go) running = false;
+  }
+
+  function still(){
+    /* one composed frame: three-quarter view, needle on the record */
+    camPose(0.24); var st = armPose(1);
+    body.position.y = 0; deck.rotation.y = 0; spin.rotation.y = -1.1; shadow.material.opacity = 0.85;
+    degEl.textContent = st.deg.toFixed(1) + '°'; styEl.textContent = 'DOWN';
+    renderer.render(scene, camera);
+  }
+
+  frame();
+  if (reduce) still();
+  else {
+    render(t0);
+    document.addEventListener('visibilitychange', function(){ visible = !document.hidden; sync(); });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function(en){ inView = en[0].isIntersecting; sync(); }).observe(stage);
+    sync();
+  }
+  root.classList.add('gl-on');
+
   var rt;
-  window.addEventListener('resize', function(){
-    clearTimeout(rt); rt = setTimeout(function(){ resize(); frame(2400); }, 120);
+  function onResize(){ clearTimeout(rt); rt = setTimeout(function(){ frame(); if (reduce) still(); else if (!running) render(performance.now()); }, 80); }
+  if ('ResizeObserver' in window) new ResizeObserver(onResize).observe(canvas.parentNode); else addEventListener('resize', onResize);
+
+  /* release the GPU context when the frame is closed */
+  addEventListener('pagehide', function(){
+    running = false;
+    scene.traverse(function(o){ if (o.geometry) o.geometry.dispose(); });
+    for (var m in M) M[m].dispose();
+    [woodTex, recTex, recRough, shadowTex].forEach(function(t){ t.dispose(); });
+    envRT.dispose(); pmrem.dispose(); renderer.dispose(); renderer.forceContextLoss();
   });
+  }
 })();
 </script>
 </body>

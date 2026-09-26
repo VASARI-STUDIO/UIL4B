@@ -3,320 +3,451 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Six Hover Effects — Halfday Studio</title>
+<title>Selected prints · Offcut Press, Footscray</title>
+<meta name="description" content="A risograph studio's work index. Six prints, each answering the pointer and the Tab key with a different CSS effect.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":6000,"pointer":[[0.30,0.86],[0.34,0.88],[0.81,0.74],[0.78,0.78]]}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/bricolage-grotesque.js"></script>
+<script src="../vendor/fonts/dm-mono.js"></script>
 <style>
-  /* =========================================================
-     CSS-only hover gallery. This page carries no scripting at all.
-     Every effect is triggered by :hover AND by :focus-within,
-     so the gallery works from the keyboard as well as the mouse.
-     The at-rest state is the finished state; only the
-     transitions live inside prefers-reduced-motion: no-preference.
-     ========================================================= */
+  /* Every effect below is CSS: :hover and :focus-within drive the same states.
+     Resting states are finished states; only transitions are conditional on motion. */
   :root{
-    --bg:#0E0F11;
-    --bg-2:#16181B;
-    --line:rgba(255,255,255,.14);
-    --line-2:rgba(255,255,255,.08);
-    --fg:#F2EFE9;
-    --fg-70:rgba(242,239,233,.70);
-    --fg-45:rgba(242,239,233,.45);
-    --accent:#E0A03C;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
-    --ease:cubic-bezier(.16,1,.3,1);
+    --page:#E9E4D8;
+    --sheet:#F6F2E9;
+    --ink:#1E1C19;
+    --ink-2:#57534B;
+    --ink-3:#6E6A61;
+    --line:rgba(30,28,25,.16);
+    --line-2:rgba(30,28,25,.3);
+    /* risograph drum colours */
+    --pink:#FF48B0;
+    --teal:#00838A;
+    --blue:#0078BF;
+    --yellow:#FFE800;
+    --gold:#AC936E;
+    --green:#00A95C;
+    --orange:#FF6C2F;
+    --federal:#3D5588;
+    --black:#231F20;
+    --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+    --mono:"DM Mono",ui-monospace,Menlo,monospace;
+    --out:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,4vw,64px);
+    color-scheme:light;
   }
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
-  body{
-    margin:0;background:var(--bg);color:var(--fg);
-    font-family:var(--sans);font-size:16px;line-height:1.6;
-    -webkit-font-smoothing:antialiased;
-  }
-  .page{max-width:1240px;margin:0 auto;padding:40px 20px 60px}
-  @media(min-width:900px){.page{padding:56px 36px 80px}}
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;background:var(--page)}
+  body{margin:0;background:var(--page);color:var(--ink);font:400 16px/1.55 var(--display);-webkit-font-smoothing:antialiased}
+  h1,h2,h3,p,ul,ol,dl,dd,figure{margin:0}
+  ul{list-style:none;padding:0}
+  a{color:inherit}
+  .mono{font:400 12px/1.45 var(--mono);letter-spacing:.02em}
+  .page{overflow-x:clip}
 
-  /* ---------- header ---------- */
-  header{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:34px}
-  .studio{
-    font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;
-    color:var(--accent);margin:0 0 14px;
-  }
-  h1{font-size:clamp(30px,5vw,46px);line-height:1.08;letter-spacing:-.03em;margin:0 0 14px;font-weight:700}
-  .lede{margin:0;max-width:62ch;color:var(--fg-70);font-size:16.5px}
-  .kbd-note{margin:20px 0 0;font-size:13.5px;color:var(--fg-45);max-width:60ch}
-  kbd{margin-right:7px;
-    font-family:var(--mono);font-size:11.5px;border:1px solid var(--line);border-bottom-width:2px;
-    border-radius:4px;padding:2px 6px;color:var(--fg-70);background:var(--bg-2);
-  }
+  /* ---------- masthead ---------- */
+  .mast{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px var(--gutter);border-bottom:1px solid var(--line)}
+  .mark{position:relative;display:inline-block;isolation:isolate;white-space:nowrap;font:800 22px/1 var(--display);letter-spacing:-.03em;text-decoration:none}
+  .mark span{display:block}
+  .mark .p{color:var(--pink);mix-blend-mode:multiply}
+  .mark .t{position:absolute;left:2px;top:1.5px;color:var(--teal);mix-blend-mode:multiply}
+  .nav{display:flex;align-items:center;gap:clamp(14px,2.4vw,32px)}
+  .nav a{text-decoration:none;font:400 12.5px var(--mono);color:var(--ink-2);padding:10px 0;transition:color .15s ease}
+  .nav a:hover{color:var(--ink)}
+  .nav .open{color:var(--ink)}
+  .nav .open::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--green);vertical-align:1px}
+
+  /* ---------- intro ---------- */
+  .intro{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:22px 28px;padding:clamp(36px,4.4vw,64px) var(--gutter) clamp(32px,3.4vw,48px)}
+  .kicker{grid-column:1/-1;color:var(--ink-3)}
+  h1{grid-column:1/-1;font-weight:700;font-size:clamp(48px,6.6vw,104px);line-height:.9;letter-spacing:-.05em}
+  h1 em{font-style:normal;color:var(--federal)}
+  .lede{grid-column:1/span 5;max-width:46ch;font-size:clamp(16px,1.25vw,18.5px);color:var(--ink-2)}
+  .lede b{color:var(--ink);font-weight:600}
+  .how{grid-column:7/span 6;align-self:end;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink-2)}
+  kbd{display:inline-grid;place-items:center;min-width:44px;height:28px;padding:0 9px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:6px;background:var(--sheet);font:500 12px var(--mono);color:var(--ink)}
+  .how .touch{display:none}
+  @media (hover:none){.how .desk{display:none}.how .touch{display:inline}}
+
+  .inks{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;padding:16px var(--gutter);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .inks h2{font:400 12px var(--mono);color:var(--ink-3);margin-right:6px}
+  .inks ul{display:flex;flex-wrap:wrap;gap:10px 22px}
+  .inks li{display:flex;align-items:center;gap:8px;font:400 12.5px var(--mono);color:var(--ink-2)}
+  .inks i{width:14px;height:14px;border-radius:50%;background:var(--c)}
 
   /* ---------- gallery ---------- */
-  .gallery{display:grid;gap:20px;grid-template-columns:1fr}
-  @media(min-width:620px){.gallery{grid-template-columns:repeat(2,1fr);gap:22px}}
-  @media(min-width:1000px){.gallery{grid-template-columns:repeat(3,1fr);gap:24px}}
+  .gallery{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:clamp(56px,6vw,96px) 28px;padding:clamp(48px,6vw,96px) var(--gutter) clamp(56px,7vw,112px)}
+  .tile{display:block;min-width:0;scroll-margin-top:24px;text-decoration:none;color:inherit;outline:none;-webkit-tap-highlight-color:transparent}
+  .t1{grid-column:1/span 7;align-self:end}
+  .t2{grid-column:9/span 4}
+  .t3{grid-column:2/span 4}
+  .t4{grid-column:7/span 3;align-self:center}
+  .t5{grid-column:10/span 3;align-self:end}
+  .t6{grid-column:1/span 7}
+  .colophon{grid-column:9/span 4;align-self:center}
 
-  .tile{
-    display:block;text-decoration:none;color:inherit;min-width:0;
-  }
-  .tile .label{
-    display:flex;justify-content:space-between;gap:10px;align-items:baseline;
-    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--fg-45);margin-bottom:9px;
-  }
-  .tile .label b{color:var(--accent);font-weight:400}
-  .media{
-    position:relative;display:block;aspect-ratio:4/3;overflow:hidden;
-    background:var(--bg-2);border:1px solid var(--line-2);
-  }
-  .art{position:absolute;inset:0;display:block}
-  .meta{display:block;padding-top:12px}
-  .meta .name{display:block;font-size:17px;letter-spacing:-.01em;line-height:1.3}
-  .meta .disc{display:block;font-size:13px;color:var(--fg-45);margin-top:2px}
-  .tile:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
-  .tile:hover .meta .name,.tile:focus-within .meta .name{text-decoration:underline;text-underline-offset:4px}
+  .label{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;font:400 12px var(--mono);color:var(--ink-3)}
+  .label b{font-weight:500;color:var(--ink)}
+  .label code{margin-left:auto;font:inherit;color:var(--ink-3)}
+  .media{position:relative;display:block;overflow:hidden;isolation:isolate;background:var(--sheet);border-radius:2px}
+  .media::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .12 0 0 0 0 .11 0 0 0 0 .1 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .art{position:absolute;inset:0;display:block;width:100%;height:100%}
+  .t1 .media{aspect-ratio:8/5}
+  .t2 .media{aspect-ratio:500/707}
+  .t3 .media{aspect-ratio:1}
+  .t4 .media{aspect-ratio:3/4}
+  .t5 .media{aspect-ratio:4/5}
+  .t6 .media{aspect-ratio:5/4}
+  .ov{mix-blend-mode:multiply}
 
-  /* ============ 01 · Ken Burns ============ */
-  .fx-ken .art{transform-origin:62% 38%}
-  .fx-ken:hover .art,.fx-ken:focus-within .art{transform:scale(1.12) translateX(-2%)}
+  .meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 16px;padding-top:14px}
+  .name{font-weight:600;font-size:clamp(18px,1.5vw,21px);letter-spacing:-.02em;line-height:1.25;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:4px;text-decoration-thickness:1.5px;transition:text-decoration-color .2s ease}
+  .disc{font-size:14.5px;color:var(--ink-2);grid-column:1}
+  .year{grid-column:2;grid-row:1;font:400 12.5px var(--mono);color:var(--ink-3);align-self:baseline}
+  .spec{grid-column:1/-1;margin-top:8px;font:400 12px/1.5 var(--mono);color:var(--ink-3)}
+  .tile:hover .name,.tile:focus-within .name{text-decoration-color:currentColor}
+  .tile:focus-visible .media{outline:2px solid var(--ink);outline-offset:5px}
 
-  /* ============ 02 · Colour reveal ============ */
-  .fx-colour .art{filter:grayscale(1) contrast(.94)}
-  .fx-colour:hover .art,.fx-colour:focus-within .art{filter:grayscale(0) contrast(1)}
-  .lede code{font-family:var(--mono);font-size:.84em;color:var(--fg);letter-spacing:-.01em}
+  /* 01 Ken Burns: the zoom travels toward the studio pin */
+  .fx-ken .art{transform-origin:47.5% 66%}
+  .fx-ken:hover .art,.fx-ken:focus-within .art{transform:scale(1.14) translateX(-2%)}
 
-  /* ============ 03 · Split reveal ============ */
-  .fx-split .reveal{
-    position:absolute;left:0;right:0;bottom:0;
-    background:rgba(14,15,17,.88);
-    padding:14px 16px;
-    clip-path:inset(100% 0 0 0);
-    display:flex;justify-content:space-between;align-items:center;gap:12px;
-    font-size:13.5px;color:var(--fg);
-  }
-  .fx-split .reveal span:last-child{color:var(--accent);font-family:var(--mono);font-size:12px}
-  .fx-split:hover .reveal,.fx-split:focus-within .reveal{clip-path:inset(0 0 0 0)}
+  /* 02 Colour reveal: a greyscale proof becomes the two-colour print */
+  .fx-colour .art{filter:grayscale(1) contrast(1.06)}
+  .fx-colour:hover .art,.fx-colour:focus-within .art{filter:none}
 
-  /* ============ 04 · Tilt shine ============ */
-  .fx-tilt .media{transform-style:preserve-3d}
-  .fx-tilt:hover .media,.fx-tilt:focus-within .media{
-    transform:perspective(900px) rotateY(5deg) rotateX(2deg) scale(1.01);
-    box-shadow:-14px 14px 34px -20px rgba(0,0,0,.85);
-  }
-  .fx-tilt .shine{
-    position:absolute;inset:-20% -60%;pointer-events:none;
-    background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.26) 47%,rgba(255,255,255,.05) 52%,transparent 57%);
-    transform:translateX(-62%);
-  }
-  .fx-tilt:hover .shine,.fx-tilt:focus-within .shine{transform:translateX(62%)}
+  /* 03 Split reveal: the label lifts and a caption wipes up behind a clip-path */
+  .fx-split .reveal{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;gap:4px;padding:18px 20px 20px;background:var(--black);color:var(--sheet);clip-path:inset(100% 0 0 0)}
+  .fx-split .reveal b{font-weight:600;font-size:17px;letter-spacing:-.01em}
+  .fx-split .reveal span{font:400 12px var(--mono);color:#CFC9BC}
+  .fx-split:hover .reveal,.fx-split:focus-within .reveal{clip-path:inset(0)}
+  .fx-split:hover .art,.fx-split:focus-within .art{transform:translateY(-12%)}
 
-  /* ============ 05 · Blur focus ============ */
-  /* The tile that demonstrates it drives the whole gallery, using :has(). */
-  .gallery:has(.fx-blur:hover) .tile:not(:hover),
-  .gallery:has(.fx-blur:focus-within) .tile:not(:focus-within){
-    filter:blur(4px) saturate(.55);opacity:.5;
-  }
-  .fx-blur .hint{
-    position:absolute;left:14px;top:14px;font-family:var(--mono);font-size:11px;
-    letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.72);
-    background:rgba(14,15,17,.55);padding:5px 8px;
-  }
+  /* 04 Tilt shine: a perspective tilt and a light sweep across the gold ink */
+  .fx-tilt{perspective:900px}
+  .fx-tilt .media{transform-origin:50% 60%}
+  .fx-tilt:hover .media,.fx-tilt:focus-within .media{transform:rotateY(-8deg) rotateX(4deg);box-shadow:0 1px 2px rgba(30,28,25,.12),18px 26px 40px -24px rgba(30,28,25,.55)}
+  .fx-tilt .shine{position:absolute;inset:-10% -80%;z-index:2;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(105deg,transparent 40%,rgba(255,236,196,.5) 49%,rgba(255,236,196,.08) 54%,transparent 60%);transform:translateX(-58%)}
+  .fx-tilt:hover .shine,.fx-tilt:focus-within .shine{transform:translateX(58%)}
 
-  /* ============ 06 · Border frame ============ */
-  .fx-frame .frame{
-    position:absolute;inset:0;pointer-events:none;
-    border:1px solid rgba(255,255,255,0);
-    clip-path:inset(0);
-  }
-  .fx-frame:hover .frame,.fx-frame:focus-within .frame{
-    inset:14px;border-color:rgba(242,239,233,.85);
-  }
-  .fx-frame .corner{
-    position:absolute;width:10px;height:10px;border:0 solid var(--accent);opacity:0;
-  }
-  .fx-frame .c1{left:14px;top:14px;border-left-width:2px;border-top-width:2px}
-  .fx-frame .c2{right:14px;bottom:14px;border-right-width:2px;border-bottom-width:2px}
-  .fx-frame:hover .corner,.fx-frame:focus-within .corner{opacity:1}
+  /* 05 Blur focus: this tile drives the whole gallery through :has() */
+  .gallery:has(.fx-blur:hover) .tile:not(.fx-blur),
+  .gallery:has(.fx-blur:focus-within) .tile:not(.fx-blur){filter:blur(5px) saturate(.6);opacity:.45}
 
-  /* =========================================================
-     ARTWORK — CSS gradients only, no images of any kind.
-     ========================================================= */
-  .art-dune{
-    background:
-      repeating-linear-gradient(97deg,rgba(255,255,255,.055) 0 1px,transparent 1px 21px),
-      radial-gradient(circle at 72% 22%,#FBE0A6 0 5%,rgba(251,224,166,.35) 6%,transparent 26%),
-      radial-gradient(130% 80% at 76% 6%,#EFB268 0%,#D97F42 32%,transparent 66%),
-      linear-gradient(172deg,#2B1A12 0%,#6E3A22 44%,#B65E33 72%,#E2954F 100%);
-  }
-  .art-spectrum{
-    background:
-      linear-gradient(218deg,transparent 0 60%,#1F5E8A 60% 100%),
-      linear-gradient(146deg,transparent 0 52%,#3D8F79 52% 100%),
-      radial-gradient(closest-side circle at 69% 27%,#E3993A 0 32%,transparent 33%),
-      linear-gradient(28deg,#D9452B 0 30%,transparent 30%),
-      repeating-linear-gradient(90deg,rgba(20,18,16,.07) 0 1px,transparent 1px 26px),
-      linear-gradient(178deg,#DCC9A4,#C3AC82);
-  }
-  .art-disc{
-    background:
-      radial-gradient(closest-side circle at 63% 37%,#EDE4D0 0 40%,transparent 41%),
-      radial-gradient(closest-side circle at 63% 37%,transparent 0 55%,rgba(237,228,208,.22) 56%,transparent 57%),
-      linear-gradient(134deg,#0F3138 0 47%,#1A4C56 47% 100%);
-  }
-  .art-steel{
-    background:
-      radial-gradient(closest-side circle at 50% 50%,rgba(255,255,255,.16) 0 17%,rgba(0,0,0,.28) 18% 20%,transparent 21%),
-      linear-gradient(90deg,transparent 0 45%,rgba(255,255,255,.10) 45% 55%,transparent 55%),
-      repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 34px),
-      linear-gradient(112deg,#20272F 0%,#414D59 26%,#6F7E8C 45%,#39434E 62%,#1B2128 100%);
-  }
-  .art-field{
-    background:
-      radial-gradient(58% 66% at 26% 30%,#84AE72 0 38%,transparent 62%),
-      radial-gradient(50% 58% at 76% 70%,#E7DAA6 0 36%,transparent 60%),
-      radial-gradient(40% 46% at 62% 24%,rgba(46,84,58,.9) 0 40%,transparent 64%),
-      linear-gradient(162deg,#0F1D16 0%,#23402C 100%);
-  }
-  .art-grid{
-    background:
-      repeating-linear-gradient(0deg,rgba(255,255,255,.075) 0 1px,transparent 1px 30px),
-      repeating-linear-gradient(90deg,rgba(255,255,255,.075) 0 1px,transparent 1px 30px),
-      radial-gradient(closest-side circle at 36% 60%,#E0A03C 0 40%,transparent 41%),
-      linear-gradient(0deg,transparent 0 29%,rgba(224,160,60,.5) 29% 29.6%,transparent 29.6%),
-      linear-gradient(203deg,#43332B 0%,#1B1411 100%);
-  }
+  /* 06 Border frame: a mount closes in from the edges, with a hairline bevel */
+  .fx-frame .mount{position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 0 0 var(--sheet),inset 0 0 0 0 rgba(30,28,25,0)}
+  .fx-frame:hover .mount,.fx-frame:focus-within .mount{box-shadow:inset 0 0 0 clamp(16px,2.4vw,30px) var(--sheet),inset 0 0 0 calc(clamp(16px,2.4vw,30px) + 1px) rgba(30,28,25,.35)}
 
-  /* ---------- footer ---------- */
-  footer{
-    margin-top:44px;border-top:1px solid var(--line);padding-top:22px;
-    display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:space-between;
-    font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-45);
-  }
+  .colophon h2{font:400 12px var(--mono);color:var(--ink-3);margin-bottom:14px}
+  .colophon p{font-size:15.5px;color:var(--ink-2);max-width:40ch}
+  .colophon p + p{margin-top:12px}
+  .colophon code{font:400 .86em var(--mono);color:var(--ink)}
+  .book{display:inline-flex;align-items:center;gap:10px;min-height:48px;margin-top:26px;padding:0 22px;border-radius:999px;background:var(--ink);color:var(--sheet);text-decoration:none;font-weight:600;transition:background-color .15s ease}
+  .book:hover{background:#3A3630}
+  .book:active{background:#000}
+  .book:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  .book small{font:400 12px var(--mono);color:#CFC9BC}
 
-  /* =========================================================
-     MOTION — transitions only. Every state above is already
-     correct with motion switched off; it simply arrives at once.
-     ========================================================= */
-  @media(prefers-reduced-motion:no-preference){
-    .fx-ken .art{transition:transform 7s ease-out}
-    .fx-ken:hover .art,.fx-ken:focus-within .art{transition:transform 8s ease-out}
-    .fx-colour .art{transition:filter .55s ease}
-    .fx-split .reveal{transition:clip-path .42s var(--ease)}
-    .fx-tilt .media{transition:transform .5s var(--ease),box-shadow .5s var(--ease)}
-    .fx-tilt .shine{transition:transform .75s var(--ease)}
-    .gallery .tile{transition:filter .4s ease,opacity .4s ease}
-    .fx-frame .frame{transition:inset .45s var(--ease),border-color .35s ease}
-    .fx-frame .corner{transition:opacity .35s ease .1s}
-  }
+  footer{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 28px;padding:28px var(--gutter) 36px;border-top:1px solid var(--line);font:400 12px/1.6 var(--mono);color:var(--ink-3)}
+  footer b{display:block;font-weight:500;color:var(--ink)}
+  footer p:last-child{text-align:right}
 
-  /* With motion reduced, the two travel effects are replaced by a
-     static highlight rather than a jump-cut; the reveals still work. */
-  @media(prefers-reduced-motion:reduce){
-    *{transition:none!important;animation:none!important}
-    .fx-ken:hover .art,.fx-ken:focus-within .art{transform:none;filter:brightness(1.14)}
-    .fx-tilt:hover .media,.fx-tilt:focus-within .media{transform:none;box-shadow:none;border-color:var(--fg)}
-    .fx-tilt .shine{display:none}
+  /* ---------- motion: transitions only ---------- */
+  @media (prefers-reduced-motion:no-preference){
+    .fx-ken .art{transition:transform 1.1s cubic-bezier(.4,0,.2,1)}
+    .fx-ken:hover .art,.fx-ken:focus-within .art{transition:transform 8s cubic-bezier(.2,.6,.35,1)}
+    .fx-colour .art{transition:filter .6s ease}
+    .fx-split .reveal{transition:clip-path .38s cubic-bezier(.4,0,1,1)}
+    .fx-split:hover .reveal,.fx-split:focus-within .reveal{transition:clip-path .5s var(--out)}
+    .fx-split .art{transition:transform .5s var(--out)}
+    .fx-tilt .media{transition:transform .55s var(--out),box-shadow .55s var(--out)}
+    .fx-tilt .shine{transition:transform .9s var(--out)}
+    .gallery .tile{transition:filter .35s ease,opacity .35s ease}
+    .fx-frame .mount{transition:box-shadow .5s var(--out)}
+  }
+  /* With motion reduced the two travel effects become still highlights */
+  @media (prefers-reduced-motion:reduce){
+    .fx-ken:hover .art,.fx-ken:focus-within .art{transform:none}
+    .fx-ken:hover .pin-halo,.fx-ken:focus-within .pin-halo{opacity:1}
+    .fx-tilt:hover .media,.fx-tilt:focus-within .media{transform:none;box-shadow:0 0 0 2px var(--gold)}
+    .fx-tilt .shine{transform:none;opacity:0}
+    .fx-tilt:hover .shine,.fx-tilt:focus-within .shine{transform:none;opacity:.6}
+  }
+  .pin-halo{opacity:0}
+
+  /* ---------- widths ---------- */
+  @media (max-width:1000px){
+    .intro,.gallery{grid-template-columns:repeat(6,minmax(0,1fr))}
+    h1{grid-column:1/-1}
+    .lede{grid-column:1/span 4}
+    .how{grid-column:1/-1;align-self:start}
+    .t1{grid-column:1/-1}
+    .t2{grid-column:1/span 3}
+    .t3{grid-column:4/span 3;align-self:end}
+    .t4{grid-column:1/span 3;align-self:start}
+    .t5{grid-column:4/span 3;align-self:start}
+    .t6{grid-column:1/-1}
+    .colophon{grid-column:1/span 4}
+    footer{grid-template-columns:repeat(2,minmax(0,1fr))}
+    footer p:last-child{grid-column:1/-1;text-align:left}
+  }
+  @media (max-width:620px){
+    .mast{padding-top:16px;padding-bottom:16px}
+    .nav .hide-s{display:none}
+    .intro{grid-template-columns:minmax(0,1fr);gap:20px}
+    .lede,.how,.kicker{grid-column:1}
+    .gallery{grid-template-columns:minmax(0,1fr);gap:56px}
+    .t1,.t2,.t3,.t4,.t5,.t6,.colophon{grid-column:1;align-self:start}
+    .t2{width:80%;justify-self:end}
+    .t3{width:88%}
+    .t4{width:72%;justify-self:end}
+    .t5{width:82%}
+    footer{grid-template-columns:minmax(0,1fr)}
+  }
+  @media (max-height:520px) and (min-width:560px){
+    .intro{padding-top:28px;padding-bottom:24px;gap:14px 28px}
+    h1{font-size:64px}
+    .lede{display:none}
   }
 </style>
 </head>
 <body>
+<div class="page">
+<header class="mast">
+  <a class="mark" href="#top" aria-label="Offcut Press, home"><span class="p" aria-hidden="true">Offcut Press</span><span class="t" aria-hidden="true">Offcut Press</span></a>
+  <nav class="nav" aria-label="Main">
+    <a href="#prints">Prints</a>
+    <a href="#inks" class="hide-s">Inks</a>
+    <a href="#visit" class="open">Open Sat 10–2</a>
+  </nav>
+</header>
 
-<main class="page">
+<main id="top">
+<section class="intro" aria-labelledby="h">
+  <p class="kicker mono">Risograph studio · Footscray</p>
+  <h1 id="h">Selected prints, <em>2024–26</em></h1>
+  <p class="lede"><b>Offcut Press prints on a two-drum risograph</b>, one ink at a time, for bands, bakeries, libraries and anyone with a short run. Each print below answers differently when you point at it.</p>
+  <p class="how mono"><span class="desk">Point at a print, or press</span><span class="touch">Tap a print, or press</span> <kbd>Tab</kbd> <span>to step through all six. Same effect either way.</span></p>
+</section>
 
-  <header>
-    <p class="studio">Halfday Studio — Collingwood</p>
-    <h1>Six hover effects, no JavaScript</h1>
-    <p class="lede">A work grid where each tile answers the pointer differently. Every effect here is plain CSS — transforms, filters, clip-path and one <code>:has()</code> selector — and every one of them is wired to <code>:focus-within</code> as well as <code>:hover</code>, so the grid behaves the same for someone tabbing through it.</p>
-    <p class="kbd-note">
-      <kbd>Tab</kbd> <span>moves through the six tiles and fires the same states hovering does.</span>
-    </p>
-  </header>
+<section class="inks" id="inks" aria-labelledby="inks-h">
+  <h2 id="inks-h">On the drums</h2>
+  <ul>
+    <li><i style="--c:var(--pink)"></i>Fluoro Pink</li>
+    <li><i style="--c:var(--teal)"></i>Teal</li>
+    <li><i style="--c:var(--blue)"></i>Blue</li>
+    <li><i style="--c:var(--yellow)"></i>Yellow</li>
+    <li><i style="--c:var(--green)"></i>Green</li>
+    <li><i style="--c:var(--orange)"></i>Orange</li>
+    <li><i style="--c:var(--federal)"></i>Federal Blue</li>
+    <li><i style="--c:var(--gold)"></i>Metallic Gold</li>
+  </ul>
+</section>
 
-  <div class="gallery" id="gallery">
+<section class="gallery" id="prints" aria-label="Prints">
 
-    <!-- 01 -->
-    <a class="tile fx-ken" href="#gallery">
-      <span class="label"><b>01</b><span>Ken Burns</span></span>
-      <span class="media">
-        <span class="art art-dune"></span>
-      </span>
-      <span class="meta">
-        <span class="name">Rosslyn Terrace</span>
-        <span class="disc">Identity &amp; signage · 2026</span>
-      </span>
-    </a>
+  <!-- 01 Ken Burns -->
+  <a class="tile t1 fx-ken" id="print-river" href="#print-river">
+    <span class="label"><b>01</b>Ken Burns<code>transform</code></span>
+    <span class="media">
+      <svg class="art" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A three-colour map of the Maribyrnong River with a pink walking route and the studio marked">
+        <defs><path id="ct" d="M-40 0 C 90 -46, 200 44, 330 4 S 560 -52, 690 -6 S 800 30, 860 10" fill="none"/></defs>
+        <g class="ov" stroke="var(--teal)" stroke-width="1.6" fill="none" opacity=".9">
+          <use href="#ct" y="40"/><use href="#ct" y="68" x="-14"/><use href="#ct" y="96" x="-26"/><use href="#ct" y="124" x="-34"/>
+          <use href="#ct" y="286" x="20"/><use href="#ct" y="314" x="8"/><use href="#ct" y="342" x="-6"/><use href="#ct" y="370" x="-20"/><use href="#ct" y="398" x="-30"/>
+        </g>
+        <!-- one drum, one layer: the river and its branch blend as a group so they never overprint each other -->
+        <g class="ov" fill="none" stroke="var(--blue)">
+          <path d="M560 -20 C 520 70, 650 130, 600 214 S 420 290, 452 372 S 612 452, 560 530" stroke-width="30" stroke-linecap="round"/>
+          <path d="M600 214 C 690 236, 760 210, 830 240" stroke-width="12"/>
+        </g>
+        <path class="ov" d="M192 424 C 250 404, 300 400, 350 360 S 470 250, 560 214 S 640 150, 700 96" fill="none" stroke="var(--pink)" stroke-width="6" stroke-dasharray="0.1 13" stroke-linecap="round"/>
+        <circle class="ov pin-halo" cx="380" cy="330" r="22" fill="var(--pink)" opacity="0"/>
+        <circle class="ov" cx="380" cy="330" r="11" fill="var(--pink)"/>
+        <circle cx="380" cy="330" r="4" fill="var(--black)"/>
+        <g fill="var(--sheet)">
+          <rect x="0" y="0" width="326" height="148"/><rect x="0" y="424" width="176" height="76"/>
+          <rect x="258" y="288" width="112" height="17"/><rect x="204" y="226" width="84" height="17"/><rect x="294" y="466" width="94" height="17"/><rect x="654" y="148" width="96" height="17"/>
+        </g>
+        <g font-family="DM Mono, monospace" font-size="11" letter-spacing="1.6" fill="var(--black)">
+          <text x="366" y="301" text-anchor="end">OFFCUT PRESS</text>
+          <text x="210" y="238">FOOTSCRAY</text>
+          <text x="300" y="478">YARRAVILLE</text>
+          <text x="660" y="160">KENSINGTON</text>
+          <text x="628" y="482" transform="rotate(-10 628 482)" fill="var(--blue)">MARIBYRNONG RIVER</text>
+        </g>
+        <g fill="var(--black)" font-family="Bricolage Grotesque, sans-serif">
+          <text x="40" y="70" font-size="40" font-weight="800" letter-spacing="-1.4">The River,</text>
+          <text x="40" y="110" font-size="40" font-weight="800" letter-spacing="-1.4">Walked</text>
+          <text x="40" y="136" font-family="DM Mono, monospace" font-size="11" letter-spacing="1">9.4 KM · 1:12 500 · SHEET 2 OF 3</text>
+        </g>
+        <g transform="translate(40 440)" fill="none" stroke="var(--black)" stroke-width="1.5">
+          <path d="M0 0 h120 M0 -5 v10 M60 -4 v8 M120 -5 v10"/>
+          <text x="0" y="22" fill="var(--black)" stroke="none" font-family="DM Mono, monospace" font-size="10">0</text>
+          <text x="104" y="22" fill="var(--black)" stroke="none" font-family="DM Mono, monospace" font-size="10">1 KM</text>
+        </g>
+        <g transform="translate(750 44)"><path d="M0 -22 L8 10 L0 4 L-8 10 Z" fill="var(--black)"/><text x="-4" y="30" font-family="DM Mono, monospace" font-size="11" fill="var(--black)">N</text></g>
+      </svg>
+    </span>
+    <span class="meta"><span class="name">The River, Walked</span><span class="year">2026</span><span class="disc">Walking map for Maribyrnong Council</span><span class="spec">A2 · Blue, Teal, Fluoro Pink · 300 copies</span></span>
+  </a>
 
-    <!-- 02 -->
-    <a class="tile fx-colour" href="#gallery">
-      <span class="label"><b>02</b><span>Colour reveal</span></span>
-      <span class="media">
-        <span class="art art-spectrum"></span>
-      </span>
-      <span class="meta">
-        <span class="name">Kite Festival</span>
-        <span class="disc">Poster series · 2025</span>
-      </span>
-    </a>
+  <!-- 02 Colour reveal -->
+  <a class="tile t2 fx-colour" id="print-tide" href="#print-tide">
+    <span class="label"><b>02</b>Colour reveal<code>filter</code></span>
+    <span class="media">
+      <svg class="art" viewBox="0 0 500 707" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A gig poster in pink and blue: two overlapping suns over the words Low Tide Choir">
+        <circle class="ov" cx="300" cy="250" r="168" fill="var(--pink)"/>
+        <circle class="ov" cx="196" cy="336" r="150" fill="var(--blue)"/>
+        <g class="ov" fill="var(--blue)">
+          <rect x="0" y="530" width="500" height="6"/><rect x="0" y="544" width="500" height="4"/><rect x="0" y="556" width="500" height="3"/><rect x="0" y="566" width="500" height="2"/>
+        </g>
+        <g font-family="DM Mono, monospace" font-size="14" letter-spacing="2" fill="var(--blue)" class="ov">
+          <text x="34" y="52">SUNDAY TAPES Nº 14</text>
+          <text x="466" y="52" text-anchor="end">WITH PALE HARBOUR</text>
+        </g>
+        <g font-family="Bricolage Grotesque, sans-serif" font-weight="800" letter-spacing="-4" word-spacing="18" class="ov">
+          <text x="28" y="508" font-size="104" fill="var(--blue)">LOW TIDE</text>
+          <text x="28" y="650" font-size="104" fill="var(--pink)">CHOIR</text>
+        </g>
+        <g font-family="DM Mono, monospace" font-size="12.5" letter-spacing="1.2" fill="var(--blue)" class="ov">
+          <text x="34" y="686">SUN 12 OCT · DOORS 7PM · REVERENCE HOTEL · $18</text>
+        </g>
+      </svg>
+    </span>
+    <span class="meta"><span class="name">Low Tide Choir</span><span class="year">2025</span><span class="disc">Gig poster, Sunday Tapes series</span><span class="spec">A3 · Fluoro Pink, Blue · 120 copies</span></span>
+  </a>
 
-    <!-- 03 -->
-    <a class="tile fx-split" href="#gallery">
-      <span class="label"><b>03</b><span>Split reveal</span></span>
-      <span class="media">
-        <span class="art art-disc"></span>
-        <span class="reveal"><span>Eight labels, one press run</span><span>Case study →</span></span>
-      </span>
-      <span class="meta">
-        <span class="name">Ardent Coffee</span>
-        <span class="disc">Packaging · 2026</span>
-      </span>
-    </a>
+  <!-- 03 Split reveal -->
+  <a class="tile t3 fx-split" id="print-sidamo" href="#print-sidamo">
+    <span class="label"><b>03</b>Split reveal<code>clip-path</code></span>
+    <span class="media">
+      <svg class="art" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A round yellow coffee label reading Sidamo, with halftone hills and the roaster's name around the rim">
+        <defs>
+          <pattern id="dots" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="5" cy="5" r="2.4" fill="var(--black)"/></pattern>
+          <clipPath id="disc"><circle cx="250" cy="250" r="196"/></clipPath>
+          <path id="rim" d="M250 250 m-214 0 a214 214 0 1 1 428 0 a214 214 0 1 1 -428 0"/>
+        </defs>
+        <circle class="ov" cx="250" cy="250" r="196" fill="var(--yellow)"/>
+        <g clip-path="url(#disc)" class="ov">
+          <path d="M40 386 C 110 330, 170 352, 230 318 S 360 296, 470 346 L 470 470 L 40 470 Z" fill="url(#dots)"/>
+          <path d="M40 414 C 140 378, 260 404, 330 374 S 430 368, 470 394 L 470 470 L 40 470 Z" fill="var(--black)"/>
+        </g>
+        <text font-family="DM Mono, monospace" font-size="15" letter-spacing="4.2" fill="var(--black)"><textPath href="#rim" startOffset="2%">BARKLY STREET ROASTERS · FOOTSCRAY · SINGLE ORIGIN · BARKLY STREET ROASTERS · FOOTSCRAY ·</textPath></text>
+        <g fill="var(--black)" text-anchor="middle">
+          <text x="250" y="178" font-family="DM Mono, monospace" font-size="13" letter-spacing="3">ETHIOPIA</text>
+          <text x="250" y="246" font-family="Bricolage Grotesque, sans-serif" font-size="78" font-weight="800" letter-spacing="-3">Sidamo</text>
+          <text x="250" y="276" font-family="DM Mono, monospace" font-size="13" letter-spacing="1.4">WASHED · 1,950 M · 250 G</text>
+        </g>
+      </svg>
+      <span class="reveal"><b>Eight origins, one press run</b><span>A6 labels · Yellow, Black · 2,400 prints</span></span>
+    </span>
+    <span class="meta"><span class="name">Barkly Street Roasters</span><span class="year">2026</span><span class="disc">Bag labels for eight single origins</span><span class="spec">Printed two-up on 120 gsm uncoated</span></span>
+  </a>
 
-    <!-- 04 -->
-    <a class="tile fx-tilt" href="#gallery">
-      <span class="label"><b>04</b><span>Tilt shine</span></span>
-      <span class="media">
-        <span class="art art-steel"></span>
-        <span class="shine" aria-hidden="true"></span>
-      </span>
-      <span class="meta">
-        <span class="name">Meridian Tools</span>
-        <span class="disc">Product site · 2025</span>
-      </span>
-    </a>
+  <!-- 04 Tilt shine -->
+  <a class="tile t4 fx-tilt" id="print-night" href="#print-night">
+    <span class="label"><b>04</b>Tilt shine<code>perspective</code></span>
+    <span class="media">
+      <svg class="art" viewBox="0 0 450 600" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A zine cover in metallic gold on black stock: a crescent moon, scattered stars and the title Night Shift">
+        <defs><mask id="moon"><rect width="450" height="600" fill="#000"/><circle cx="286" cy="190" r="96" fill="#fff"/><circle cx="326" cy="160" r="86" fill="#000"/></mask></defs>
+        <rect width="450" height="600" fill="#24211F"/>
+        <rect width="450" height="600" fill="var(--gold)" mask="url(#moon)"/>
+        <g fill="var(--gold)">
+          <circle cx="60" cy="80" r="2"/><circle cx="112" cy="140" r="1.4"/><circle cx="170" cy="62" r="2.4"/><circle cx="84" cy="220" r="1.6"/><circle cx="148" cy="262" r="2"/><circle cx="40" cy="300" r="1.4"/><circle cx="392" cy="70" r="1.8"/><circle cx="410" cy="300" r="2.2"/><circle cx="220" cy="130" r="1.3"/><circle cx="200" cy="300" r="1.6"/><circle cx="360" cy="330" r="1.2"/><circle cx="118" cy="330" r="1.2"/>
+          <path d="M176 196 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 Z"/>
+        </g>
+        <g fill="var(--gold)" font-family="Bricolage Grotesque, sans-serif" font-weight="800" letter-spacing="-3">
+          <text x="30" y="450" font-size="84">Night</text>
+          <text x="30" y="528" font-size="84">Shift</text>
+        </g>
+        <g fill="var(--gold)" font-family="DM Mono, monospace" font-size="12" letter-spacing="1.2">
+          <text x="30" y="46">ISSUE 3 · WINTER</text>
+          <text x="30" y="568">STORIES FROM PEOPLE WHO WORK WHILE YOU SLEEP</text>
+          <text x="420" y="46" text-anchor="end">$12</text>
+        </g>
+      </svg>
+      <span class="shine" aria-hidden="true"></span>
+    </span>
+    <span class="meta"><span class="name">Night Shift, issue 3</span><span class="year">2025</span><span class="disc">Zine cover and 32 pages inside</span><span class="spec">A5 · Metallic Gold on black · 400 copies</span></span>
+  </a>
 
-    <!-- 05 -->
-    <a class="tile fx-blur" href="#gallery">
-      <span class="label"><b>05</b><span>Blur focus</span></span>
-      <span class="media">
-        <span class="art art-field"></span>
-        <span class="hint">The other five blur</span>
-      </span>
-      <span class="meta">
-        <span class="name">Thornbury Library</span>
-        <span class="disc">Wayfinding · 2024</span>
-      </span>
-    </a>
+  <!-- 05 Blur focus -->
+  <a class="tile t5 fx-blur" id="print-seed" href="#print-seed">
+    <span class="label"><b>05</b>Blur focus<code>:has()</code></span>
+    <span class="media">
+      <svg class="art" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A seed calendar wheel in green and orange, marking the sowing months of 2027">
+        <g transform="rotate(-90 200 215)">
+          <circle class="ov" cx="200" cy="215" r="130" fill="none" stroke="var(--green)" stroke-width="60" pathLength="12" stroke-dasharray="0.93 0.07"/>
+          <circle class="ov" cx="200" cy="215" r="130" fill="none" stroke="var(--orange)" stroke-width="24" pathLength="12" stroke-dasharray="0 2 2 4 3 1"/>
+        </g>
+        <g font-family="DM Mono, monospace" font-size="13" fill="var(--green)" text-anchor="middle" dominant-baseline="middle" class="ov">
+          <text x="246" y="43">J</text><text x="326" y="89">F</text><text x="372" y="169">M</text><text x="372" y="261">A</text><text x="326" y="341">M</text><text x="246" y="387">J</text><text x="154" y="387">J</text><text x="74" y="341">A</text><text x="28" y="261">S</text><text x="28" y="169">O</text><text x="74" y="89">N</text><text x="154" y="43">D</text>
+        </g>
+        <g text-anchor="middle" class="ov">
+          <text x="200" y="224" font-family="Bricolage Grotesque, sans-serif" font-size="52" font-weight="800" letter-spacing="-2" fill="var(--green)">2027</text>
+          <text x="200" y="248" font-family="DM Mono, monospace" font-size="10" letter-spacing="2" fill="var(--orange)">SOW · GROW · SAVE</text>
+        </g>
+        <g font-family="DM Mono, monospace" font-size="11" letter-spacing="1" class="ov">
+          <text x="30" y="440" font-family="Bricolage Grotesque, sans-serif" font-size="26" font-weight="800" letter-spacing="-.8" fill="var(--green)">Seed calendar</text>
+          <rect x="30" y="458" width="18" height="8" fill="var(--orange)"/><text x="56" y="466" fill="var(--green)">SOW OUTDOORS</text>
+          <rect x="200" y="458" width="18" height="8" fill="var(--green)"/><text x="226" y="466" fill="var(--green)">IN THE GROUND</text>
+        </g>
+      </svg>
+    </span>
+    <span class="meta"><span class="name">Seed Calendar 2027</span><span class="year">2026</span><span class="disc">For Footscray Community Garden</span><span class="spec">A3 · Green, Orange · 250 copies</span></span>
+  </a>
 
-    <!-- 06 -->
-    <a class="tile fx-frame" href="#gallery">
-      <span class="label"><b>06</b><span>Border frame</span></span>
-      <span class="media">
-        <span class="art art-grid"></span>
-        <span class="frame" aria-hidden="true"></span>
-        <span class="corner c1" aria-hidden="true"></span>
-        <span class="corner c2" aria-hidden="true"></span>
-      </span>
-      <span class="meta">
-        <span class="name">Field Notes 07</span>
-        <span class="disc">Editorial · 2026</span>
-      </span>
-    </a>
+  <!-- 06 Border frame -->
+  <a class="tile t6 fx-frame" id="print-afternoon" href="#print-afternoon">
+    <span class="label"><b>06</b>Border frame<code>box-shadow</code></span>
+    <span class="media">
+      <svg class="art" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice" role="img" aria-label="An art print of a row of weatherboard houses under an orange sun, with power lines across the sky">
+        <defs><pattern id="boards" width="8" height="7" patternUnits="userSpaceOnUse"><rect width="8" height="5" fill="var(--federal)"/></pattern></defs>
+        <circle class="ov" cx="336" cy="140" r="74" fill="var(--orange)"/>
+        <rect class="ov" x="0" y="318" width="500" height="82" fill="var(--yellow)"/>
+        <g class="ov" fill="url(#boards)">
+          <path d="M0 330 V 250 L 44 214 L 88 250 V 330 Z"/>
+          <path d="M96 330 V 240 L 150 196 L 204 240 V 330 Z"/>
+          <path d="M212 330 V 256 L 252 222 L 292 256 V 330 Z"/>
+          <path d="M300 330 V 236 L 356 190 L 412 236 V 330 Z"/>
+          <path d="M420 330 V 250 L 460 216 L 500 250 V 330 Z"/>
+        </g>
+        <g fill="var(--sheet)">
+          <rect x="30" y="270" width="18" height="24"/><rect x="132" y="262" width="22" height="30"/><rect x="170" y="290" width="16" height="40"/>
+          <rect x="240" y="276" width="18" height="24"/><rect x="336" y="258" width="22" height="30"/><rect x="376" y="290" width="16" height="40"/><rect x="446" y="272" width="18" height="24"/>
+        </g>
+        <g class="ov" fill="none" stroke="var(--federal)" stroke-width="1.5">
+          <path d="M-10 92 Q 120 128 250 96 T 510 100"/>
+          <path d="M-10 106 Q 120 142 250 110 T 510 114"/>
+          <path d="M250 80 V 330" stroke-width="5"/>
+          <path d="M234 88 H 266"/>
+        </g>
+        <g class="ov" fill="var(--federal)" font-family="DM Mono, monospace" font-size="11" letter-spacing="1.4">
+          <text x="30" y="378">AFTERNOON, YARRAVILLE</text>
+          <text x="470" y="378" text-anchor="end">7/40</text>
+        </g>
+      </svg>
+      <span class="mount" aria-hidden="true"></span>
+    </span>
+    <span class="meta"><span class="name">Afternoon, Yarraville</span><span class="year">2024</span><span class="disc">Art print, edition of 40</span><span class="spec">A3 · Federal Blue, Orange, Yellow · signed and numbered</span></span>
+  </a>
 
-  </div>
-
-  <footer>
-    <span>No script tag · No dependency · No image file</span>
-    <span>Every effect also on :focus-within</span>
-  </footer>
-
+  <aside class="colophon" aria-labelledby="col-h">
+    <h2 id="col-h" class="mono">How these tiles work</h2>
+    <p>Every effect is plain CSS, wired to <code>:hover</code> and <code>:focus-within</code> so the keyboard gets the same six states as the pointer. The prints are inline SVG in flat riso inks, overprinted with <code>mix-blend-mode: multiply</code>, so no image files load.</p>
+    <p>With motion reduced, each state arrives at once. The zoom and the tilt, the two effects that travel, swap for a still highlight.</p>
+    <a class="book" href="#visit">Book the press <small>$85 an hour</small></a>
+  </aside>
+</section>
 </main>
+
+<footer id="visit">
+  <p><b>Offcut Press</b>3/41 Moreland Street, Footscray VIC 3011</p>
+  <p><b>Open studio</b>Saturdays 10–2, or book the press any weekday</p>
+  <p><b>Built with</b>CSS for every effect · inline SVG art</p>
+</footer>
+</div>
 </body>
 </html>
