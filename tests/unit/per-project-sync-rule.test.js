@@ -1,33 +1,21 @@
-// THE FOUNDER-GATED RULE, GUARDED WHERE IT CAN SILENTLY STOP BEING TRUE.
+// THE PER-PROJECT SYNC RULE, AND THE CLIENT FLAG THAT DEPENDS ON IT.
 //
-// The per-project sync shape (`project-sync-single-document`, 2026-09-06
-// engineering review) needs one rule added to firestore.rules, and that file is
-// founder-gated — it cannot be staged from an agent branch. So the rule ships as
-// a committed, UNAPPLIED diff and the client half ships gated OFF behind
-// PER_PROJECT_SYNC_ENABLED.
+// The client writes users/{uid}/projects/{id} only while
+// PER_PROJECT_SYNC_ENABLED is true, and those writes succeed only if
+// firestore.rules grants the collection. docs/design/per-project-sync-rules.patch
+// is that rule as a unified diff against firestore.rules, applied by
+// `npm run apply:gated`. These tests keep the three in agreement:
 //
-// That arrangement has four ways of going quietly wrong, and all four leave the
-// build green:
-//
-//   1. THE PATCH GOES STALE. firestore.rules changes underneath it, the patch
-//      stops applying, and the design becomes unappliable at the exact moment
-//      it is approved. This is the failure #390 and the firebase-deferral patch
-//      both had to guard, for the same reason.
-//   2. THE PATCH LOSES ITS RULE. Someone regenerates it against the wrong tree
-//      and it applies cleanly while granting nothing.
-//   3. THE GATE OPENS EARLY. PER_PROJECT_SYNC_ENABLED flips to true while the
-//      rule is still unapplied, so every client write to
-//      users/{uid}/projects/{id} is refused in production. That is not a
-//      degraded sync — it is a total one, and it would arrive as the very
-//      "silent failure" this whole change exists to abolish.
-//   4. THE PATCH IS QUIETLY APPLIED ANYWAY. If firestore.rules already carries
-//      the rule, the gate should have opened with it; a repository in which
-//      both are true and the gate is shut is a repository shipping a fix it has
-//      already paid for.
+//   1. The patch applies to firestore.rules, or is already applied.
+//   2. The patch grants the owner-only rule, inside match /users/{userId}.
+//   3. The patch only adds lines.
+//   4. The flag is on exactly when the rule is in firestore.rules. A flag on
+//      without the rule would have every project push refused; a rule without
+//      the flag would leave the client on the single-document shape.
 //
 // These run on every `npm run test:unit`, with no emulator. Whether the rule
-// GRANTS AND REFUSES what it claims is a different question, answered against
-// the real emulator in tests/rules/per-project-sync.test.js.
+// grants and refuses what it claims is tested against the emulator in
+// tests/rules/per-project-sync.test.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -38,16 +26,10 @@ import { PER_PROJECT_SYNC_ENABLED } from '../../src/utils/projectSync.js'
 
 const readRules = () => fs.readFileSync(RULES_PATH, 'utf8')
 
-test('the gated rules patch still applies to firestore.rules', async () => {
-  // Guard 1. If this fails, the design is unappliable — regenerate the patch
-  // against the current file rather than editing the error away.
-  //
-  // ONCE `npm run apply:gated` HAS RUN, the rule is in the file and there is
-  // nothing left to apply. That is the design succeeding, not the guard
-  // failing, so the assertion below is the one that survives both states: the
-  // patch either changes the file, or is already the reason the file needs no
-  // change. What it may never be is "applies cleanly and grants nothing" —
-  // that is the next test.
+test('the rules patch applies to firestore.rules, or is already applied', async () => {
+  // An applied patch has nothing left to change, so it must return the file
+  // untouched; an unapplied one must change it. What it may never be is
+  // "applies cleanly and grants nothing" — that is the next test.
   const { patched, original, alreadyApplied } = await applyRulesPatchToCopy()
   if (alreadyApplied) {
     assert.equal(patched, original, 'an applied patch must return the file untouched')
@@ -56,16 +38,14 @@ test('the gated rules patch still applies to firestore.rules', async () => {
   }
 })
 
-test('applying it never writes the founder-gated file', async () => {
+test('applying it to a copy never writes firestore.rules', async () => {
   const before = readRules()
   await applyRulesPatchToCopy()
   assert.equal(readRules(), before,
     'firestore.rules must be byte-identical after the patch has been applied to a copy')
 })
 
-test('the patch grants the owner-only rule the client is waiting on', async () => {
-  // Guard 2. A patch that applies cleanly and grants nothing is worse than no
-  // patch: it would be approved, merged, and change nothing at all.
+test('the patch grants the owner-only rule the client depends on', async () => {
   const { patched } = await applyRulesPatchToCopy()
   assert.match(patched, RULE_MATCHER)
 
@@ -81,8 +61,7 @@ test('the patch grants the owner-only rule the client is waiting on', async () =
 })
 
 test('the patch adds a rule and takes nothing away', async () => {
-  // The blast radius, asserted rather than described. Every line the current
-  // file has must survive; the diff may only add.
+  // Every line the current file has must survive; the diff may only add.
   const { patched, original } = await applyRulesPatchToCopy()
   for (const line of original.split(/\r?\n/)) {
     if (!line.trim()) continue
@@ -91,31 +70,20 @@ test('the patch adds a rule and takes nothing away', async () => {
   }
 })
 
-test('the rule is NOT yet in firestore.rules, and the client is gated because of it', async () => {
-  // Guards 3 and 4, as one statement, because they are two halves of the same
-  // invariant: the client flag and the deployed rule must agree.
+test('the client flag is on exactly when firestore.rules carries the rule', async () => {
   const ruleIsLive = RULE_MATCHER.test(readRules())
-
-  if (!ruleIsLive) {
-    assert.equal(PER_PROJECT_SYNC_ENABLED, false,
-      'users/{uid}/projects/{id} has no rule yet, so a client that wrote there would be ' +
-      'refused on every push. PER_PROJECT_SYNC_ENABLED must stay false until the rule lands.')
-  } else {
-    // The happy day this test is written to survive: the founder applied the
-    // patch. Then the gate is meant to open, and leaving it shut ships a fix
-    // that has already been approved and paid for.
-    assert.equal(PER_PROJECT_SYNC_ENABLED, true,
-      'the rule is now in firestore.rules — turn PER_PROJECT_SYNC_ENABLED on, ' +
-      'and delete the patch and this branch of the test with it.')
-  }
+  assert.equal(PER_PROJECT_SYNC_ENABLED, ruleIsLive,
+    ruleIsLive
+      ? 'firestore.rules grants users/{uid}/projects/{id}, so PER_PROJECT_SYNC_ENABLED must be true'
+      : 'firestore.rules has no rule for users/{uid}/projects/{id}, so a client writing there ' +
+        'would be refused on every push: PER_PROJECT_SYNC_ENABLED must be false')
 })
 
-test('the patch is committed where the PR body says it is', () => {
-  assert.ok(fs.existsSync(PATCH_PATH),
-    'docs/design/per-project-sync-rules.patch is named in the PR under FOUNDER APPROVAL NEEDED')
+test('the patch is a unified diff of firestore.rules alone', () => {
+  assert.ok(fs.existsSync(PATCH_PATH), 'docs/design/per-project-sync-rules.patch must exist')
   const patch = fs.readFileSync(PATCH_PATH, 'utf8')
   assert.match(patch, /^diff --git a\/firestore\.rules b\/firestore\.rules/m,
     'and must be a real unified diff against that one file')
   assert.equal(patch.split('diff --git').length - 1, 1,
-    'and must touch exactly one file — a gated patch that reaches further is a different review')
+    'and must touch exactly one file')
 })

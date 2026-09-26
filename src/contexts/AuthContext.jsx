@@ -29,6 +29,8 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 // reaches the subcollections a client never could.
 import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
+import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
+import { needsEmailVerification } from '../utils/emailVerification'
 
 const AuthContext = createContext()
 const PROFILE_CACHE_KEY = 'vs-profile-cache'
@@ -117,12 +119,17 @@ function upsertKnownAccount(account) {
   return list
 }
 
+// Found, missing or failed — never a bare null. "No document" and "could not
+// read" call for opposite actions: the first creates the account's profile, the
+// second must write nothing (see planProfileRead).
 async function loadProfileFromFirestore(uid) {
   try {
     const fs = await loadFirestore()
     const snap = await fs.getDoc(fs.doc(fs.db, 'users', uid))
-    return snap.exists() ? snap.data() : null
-  } catch { return null }
+    return snap.exists() ? { status: 'found', data: snap.data() } : { status: 'missing' }
+  } catch (error) {
+    return { status: 'failed', code: error?.code || 'unknown' }
+  }
 }
 
 // Never swallows a failure. A rejected profile write means the user's edit only
@@ -166,6 +173,13 @@ export function AuthProvider({ children }) {
   // (optimistic) edit is kept — discarding the user's typing would be worse —
   // but the UI says plainly that it did not reach their account.
   const [profileSyncError, setProfileSyncError] = useState(null)
+  // True once this session's profile document has been read from Firestore.
+  // Until then the profile is a cache or a default, and cannot say whether the
+  // account has finished onboarding.
+  const [profileLoaded, setProfileLoaded] = useState(false)
+  // Held in state because `reload()` updates the flag on the same User object,
+  // which would not re-render anything that read it.
+  const [emailVerified, setEmailVerified] = useState(false)
   const profileRef = useRef(null)
   const authEpochRef = useRef(0)
 
@@ -178,9 +192,11 @@ export function AuthProvider({ children }) {
     let unsub = null
     const onAuthUser = (fbUser) => {
       const authEpoch = ++authEpochRef.current
+      setProfileLoaded(false)
       if (fbUser) {
         const expectedUid = fbUser.uid
         setFirebaseUser(fbUser)
+        setEmailVerified(fbUser.emailVerified === true)
         setKnownAccounts(upsertKnownAccount({
           uid: fbUser.uid,
           email: fbUser.email || '',
@@ -205,29 +221,51 @@ export function AuthProvider({ children }) {
         // on a slow or failing Firestore read. Hydrate the profile in the
         // background and merge it in once it arrives.
         setLoading(false)
-        loadProfileFromFirestore(fbUser.uid).then((fsProfile) => {
+        const hydrate = () => loadProfileFromFirestore(fbUser.uid).then((read) => {
           if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return
-          if (fsProfile) {
-            const merged = { ...initial, ...fsProfile, email: fbUser.email || fsProfile.email }
+          // profileRef rather than `initial`: a retry must keep edits made
+          // while the read was waiting.
+          const plan = planProfileRead(read, profileRef.current || initial, Date.now())
+          if (plan.action === 'wait') {
+            // No answer from the account. Keep the cached/initial profile, write
+            // nothing, and read again once the browser is back online.
+            window.addEventListener('online', hydrate, { once: true })
+            return
+          }
+          if (plan.action === 'merge') {
+            const fsProfile = read.data
+            const merged = { ...plan.profile, email: fbUser.email || fsProfile.email }
             setProfile(merged)
             profileRef.current = merged
             setCachedProfile(fbUser.uid, merged)
+            // An email change completes from a link in the new inbox, away from
+            // this page, so the stored copy catches up on the next load.
+            if (fbUser.email && fsProfile.email !== fbUser.email) {
+              saveProfileToFirestore(fbUser.uid, { email: fbUser.email })
+            }
             // Returning users who completed onboarding on another device — sync
             // the flag to localStorage so they skip it here too (AUTH-03).
             if (fsProfile.onboarding?.completedAt) {
               try { localStorage.setItem('vs-onboarded', '1') } catch {}
             }
           } else {
-            if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return
-            setCachedProfile(fbUser.uid, initial)
-            saveProfileToFirestore(fbUser.uid, initial).then((result) => {
+            // No profile document yet: this is the account's first one, and the
+            // plan has opened the onboarding record that marks onboarding owed.
+            const created = plan.profile
+            setProfile(created)
+            profileRef.current = created
+            setCachedProfile(fbUser.uid, created)
+            saveProfileToFirestore(fbUser.uid, created).then((result) => {
               if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return
               setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
             })
           }
-        }).catch(() => { /* keep cached/initial profile */ })
+          setProfileLoaded(true)
+        }).catch(() => { /* keep cached/initial profile; completion stays unknown */ })
+        hydrate()
       } else {
         setFirebaseUser(null)
+        setEmailVerified(false)
         setProfile(null)
         profileRef.current = null
         setProfileSyncError(null)
@@ -259,6 +297,7 @@ export function AuthProvider({ children }) {
     bio: profile.bio || '',
     company: profile.company || '',
     flair: profile.flair || '',
+    onboarding: profile.onboarding || null,
   } : null
 
   // Every action below is URGENT: a person is waiting on it, so it opens the
@@ -274,7 +313,13 @@ export function AuthProvider({ children }) {
     if (displayName) {
       await A.updateProfile(cred.user, { displayName })
     }
-    const p = { ...DEFAULT_PROFILE, displayName: displayName || '', email }
+    // Establishes that the address belongs to the person signing up. A send
+    // that fails does not fail the signup: Settings keeps offering the link
+    // until the address is verified.
+    A.sendEmailVerification(cred.user).catch((error) => {
+      console.error('AuthContext: verification email was not sent', { code: error?.code })
+    })
+    const p ={ ...DEFAULT_PROFILE, displayName: displayName || '', email, onboarding: openOnboardingRecord(Date.now()) }
     setCachedProfile(cred.user.uid, p)
     saveProfileToFirestore(cred.user.uid, p).then((result) => {
       setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
@@ -387,17 +432,36 @@ export function AuthProvider({ children }) {
     await A.reauthenticateWithCredential(firebaseUser, credential)
   }
 
+  // The new address has to be proved before it replaces the old one, so this
+  // sends a confirmation link to it and changes nothing yet. The account keeps
+  // its current address until that link is opened; the profile copy follows on
+  // the next load (see the hydration above).
   const updateEmail = useCallback(async (newEmail, password) => {
     if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
     await reauthenticate(password)
     const A = await loadAuthSdk()
-    await A.updateEmail(firebaseUser, newEmail)
-    const updated = { ...profileRef.current, email: newEmail }
-    setProfile(updated)
-    profileRef.current = updated
-    setCachedProfile(firebaseUser.uid, updated)
-    const result = await saveProfileToFirestore(firebaseUser.uid, { email: newEmail })
-    setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
+    await A.verifyBeforeUpdateEmail(firebaseUser, newEmail)
+  }, [firebaseUser])
+
+  const sendVerificationEmail = useCallback(async () => {
+    if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
+    const A = await loadAuthSdk()
+    await A.sendEmailVerification(firebaseUser)
+  }, [firebaseUser])
+
+  // The link is opened in another tab or on another device, so the flag here
+  // only changes when the account is re-read. Returns the fresh value.
+  const refreshEmailVerified = useCallback(async () => {
+    if (!firebaseUser) return false
+    const A = await loadAuthSdk()
+    await A.reload(firebaseUser)
+    if (firebaseUser !== A.auth.currentUser) return false
+    const verified = firebaseUser.emailVerified === true
+    setEmailVerified(verified)
+    // Roles are read from the ID token, which carries its own copy of the
+    // flag, so a fresh token is minted as soon as the address is verified.
+    if (verified) await firebaseUser.getIdToken(true).catch(() => {})
+    return verified
   }, [firebaseUser])
 
   const updatePassword = useCallback(async (currentPassword, newPassword) => {
@@ -472,13 +536,15 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, userProfile, loading,
+      user, userProfile, loading, profileLoaded,
       profileSyncError, dismissProfileSyncError,
       pendingOnboarding, clearPendingOnboarding,
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
       knownAccounts, switchAccount, removeKnownAccount,
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
       isGoogleOnlyAccount,
+      emailVerificationOwed: needsEmailVerification(firebaseUser, emailVerified),
+      sendVerificationEmail, refreshEmailVerified,
     }}>
       {children}
     </AuthContext.Provider>

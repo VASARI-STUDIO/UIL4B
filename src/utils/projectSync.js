@@ -1,65 +1,35 @@
 // CROSS-DEVICE PROJECT SYNC — the merge rules, the document shape, and the
-// migration between the two shapes, with no React and no Firebase in sight.
+// migration between the two shapes, with no React and no Firebase SDK, so every
+// rule here is reachable from a unit test (tests/unit/project-sync.test.js).
 //
 // ═══════════════════════════════════════════════════════════════════════════
-// WHY THIS FILE EXISTS
+// THE DOCUMENT SHAPES
 // ═══════════════════════════════════════════════════════════════════════════
-// All of this lived inside ProjectContext.jsx, which means none of it could be
-// tested without a DOM, a router and the Firebase SDK — so none of it was. The
-// 2026-09-06 review found four defects in it and every one of them is the kind a
-// unit test catches in a line:
+// v2, the live shape (PER_PROJECT_SYNC_ENABLED):
 //
-//   · project-sync-single-document (P1) — every project the account owns was
-//     pushed into ONE Firestore document. Measured: 684 bytes for an empty
-//     project, but brandLogo.js caps a logo at 32 KB, so roughly THIRTY logo
-//     projects reach Firestore's 1 MiB per-document ceiling. Pro has no project
-//     cap, so nothing stops a user getting there.
-//   · the write was wrapped in `catch {}`. Past the ceiling every push failed
-//     in silence: local editing kept working, nothing said sync had stopped,
-//     and a second device pulled the last list that fit.
-//   · `merge: true` does not merge INSIDE an array, so two devices replaced
-//     each other's whole list.
-//   · deletes never propagated — the next pull resurrected them.
+//     users/{uid}/projects/{projectId} = { project, updatedAt, deletedAt,
+//                                          _updatedAt }
+//     users/{uid}/sync/projects        = { index: [{id, updatedAt}],
+//                                          deleted: {…}, v: 2, _updatedAt }
 //
-// ═══════════════════════════════════════════════════════════════════════════
-// THE DOCUMENT SHAPE, BEFORE AND AFTER
-// ═══════════════════════════════════════════════════════════════════════════
-// TODAY (v1, and still the live path — see PER_PROJECT_SYNC_ENABLED):
+//   One document per project, so Firestore's 1 MiB ceiling applies to each
+//   project on its own rather than to the account's whole list: a project with
+//   a 32 KB logo fills one 32 KB document. The index is ~60 bytes per project.
+//   `match /users/{userId}/projects/{projectId}` in firestore.rules grants this
+//   collection to its owner only.
 //
-//     users/{uid}/sync/projects = { list: [ …every project… ], _updatedAt }
-//
-// TODAY AFTER THIS CHANGE (v1 + tombstones — same document, same rule, so it
-// ships now):
+// v1, one document holding every project. The live path reads and migrates
+// it, and writes only the v2 index fields over it — never `list`:
 //
 //     users/{uid}/sync/projects = { list: [ …projects… ],
 //                                   deleted: { <id>: <ISO deletedAt> },
 //                                   _updatedAt, v: 1 }
 //
-//   `deleted` is additive and merge-safe, so deletes propagate as deletes
-//   without a schema break and without a rules change. The 1 MiB ceiling is
-//   still there — but it is no longer SILENT: writeRemoteProjects() measures the
-//   payload and REFUSES rather than letting Firestore reject it into an empty
-//   catch. See DOC_BYTE_BUDGET.
-//
-// AFTER THE RULE LANDS (v2, gated off in this branch):
-//
-//     users/{uid}/projects/{projectId} = { project, updatedAt, deletedAt,
-//                                          _updatedAt }
-//     users/{uid}/sync/projects        = { index: [{id, updatedAt, deletedAt}],
-//                                          deleted: {…}, v: 2, _updatedAt }
-//
-//   One document per project, so the ceiling stops being a function of logo
-//   size: a 32 KB logo now occupies one 32 KB document out of a per-document
-//   1 MiB, instead of 3% of a shared one. The index is ~60 bytes per project,
-//   which puts ~17,000 projects inside the same ceiling.
-//
-//   This needs a Firestore rule that does not exist yet — firestore.rules is
-//   founder-gated (docs/reference/human-validation-zones.md) and cannot be
-//   staged from here. The exact diff is in the PR body under FOUNDER APPROVAL
-//   NEEDED, and tests/rules/ proves it against a temporary patched copy. Until
-//   it lands, PER_PROJECT_SYNC_ENABLED is false and every live write takes the
-//   v1 path, which the existing `match /users/{userId}/sync/{docId}` already
-//   permits. Flipping one constant is the whole switch.
+//   An account with a v1 `list` is moved across by migrateToPerProject() on its
+//   next pull. The `list` is left in place as a frozen copy of what the account
+//   held before migrating. When the v1 path is used (perProject: false),
+//   writeRemoteProjects() measures the payload against DOC_BYTE_BUDGET and
+//   refuses an oversized one instead of sending it.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // THE MERGE RULE
@@ -67,8 +37,7 @@
 // Union by id, newest `updatedAt` wins, and a tombstone removes a project only
 // when the project was not edited after the delete. Nothing is ever discarded
 // without being reported: mergeProjects() returns what it chose and why, and the
-// caller shows it. "Last writer wins" was not the bug on its own — losing the
-// newer side without telling anyone was.
+// caller shows it.
 
 /** Firestore's hard per-document ceiling. */
 export const DOC_BYTE_CEILING = 1024 * 1024
@@ -95,13 +64,11 @@ export const SYNC_DOC = 'projects'
 export const PROJECTS_COLLECTION = 'projects'
 
 /**
- * THE RULE GATE. False until `users/{uid}/projects/{id}` has an owner-only rule
- * in firestore.rules — a client that wrote there today would be refused, and a
- * refusal is exactly what this change exists to stop hiding.
- *
- * Everything behind it is written, unit-tested against a fake db, and inert.
+ * Which shape the live path reads and writes. It must agree with firestore.rules:
+ * true only while `users/{uid}/projects/{id}` has its owner-only rule, because a
+ * client writing to a collection with no rule is refused on every push.
  */
-export const PER_PROJECT_SYNC_ENABLED = false
+export const PER_PROJECT_SYNC_ENABLED = true
 
 /** Tombstones older than this are pruned; a device offline longer re-adds. */
 export const TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000
@@ -348,7 +315,15 @@ function projectsCollection(fs, uid) {
  * yet is still pushing there, and dropping its projects on the floor during the
  * rollout would be the same data loss by a different route.
  *
- * @returns {{ list, tombstones, version, found }}
+ * `stored` (v2 only) is what each per-project document holds right now,
+ * `id -> { updatedAt, deletedAt }`. Handing it back to writeRemoteProjects()
+ * is what limits a push to the projects this device actually changed.
+ *
+ * `needsMigration` (v2 only) is true while the v1 document still carries a
+ * `list` that has not been moved across — a fresh account on v1, or a device
+ * still running the v1 client that pushed since the last migration.
+ *
+ * @returns {{ list, tombstones, version, found, stored?, needsMigration? }}
  */
 export async function readRemoteProjects(fs, uid, opts = {}) {
   const perProject = opts.perProject ?? PER_PROJECT_SYNC_ENABLED
@@ -366,8 +341,13 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
   const docs = await fs.getDocs(projectsCollection(fs, uid))
   const perList = []
   const perTombstones = {}
+  const stored = new Map()
   docs.forEach((d) => {
     const data = d.data() || {}
+    stored.set(d.id, {
+      updatedAt: data.project?.updatedAt ?? data.updatedAt ?? null,
+      deletedAt: data.deletedAt || null,
+    })
     if (data.deletedAt) { perTombstones[d.id] = data.deletedAt; return }
     if (data.project && data.project.id != null) perList.push(data.project)
   })
@@ -383,7 +363,29 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
     tombstones: merged.tombstones,
     version,
     found: !!head || docs.size > 0,
+    stored,
+    needsMigration: legacyList.length > 0 && version < SYNC_SCHEMA_VERSION_PER_PROJECT,
   }
+}
+
+/**
+ * The pull the provider runs on sign-in: read, and if the account is still on
+ * the v1 document, migrate it and read again.
+ *
+ * A migration that fails does not fail the pull. The first read already holds
+ * the union of both shapes, so the device still merges everything the account
+ * has; `migration` carries the refusal so the caller can say sync is not
+ * complete, and the next pull tries again (the migration is safe to repeat).
+ *
+ * @returns {{ list, tombstones, version, found, stored?, migration? }}
+ */
+export async function pullRemoteProjects(fs, uid, opts = {}) {
+  const first = await readRemoteProjects(fs, uid, opts)
+  if (!first.needsMigration) return first
+  const migration = await migrateToPerProject(fs, uid, { now: opts.now })
+  if (!migration.ok) return { ...first, migration }
+  const second = await readRemoteProjects(fs, uid, opts)
+  return { ...second, migration }
 }
 
 /**
@@ -426,7 +428,12 @@ export async function writeRemoteProjects(fs, uid, opts = {}) {
   }
 
   // v2 — one document per project, plus a small index.
-  const previous = opts.previous instanceof Map ? opts.previous : new Map()
+  //
+  // `stored` is what the account held at the last pull or push. A project whose
+  // document already carries this `updatedAt` is not written again. That is a
+  // cost saving, and it is also what keeps this device from overwriting a
+  // project another device edited since: an untouched project is never sent.
+  const stored = opts.stored instanceof Map ? new Map(opts.stored) : new Map()
   let written = 0
   try {
     for (const project of list) {
@@ -435,20 +442,25 @@ export async function writeRemoteProjects(fs, uid, opts = {}) {
       if (bytes > DOC_BYTE_BUDGET) {
         return { ok: false, reason: 'too-large', bytes, projectId: project.id }
       }
-      if (previous.get(project.id) === project.updatedAt) continue
+      const there = stored.get(project.id)
+      const updatedAt = project.updatedAt || null
+      if (there && !there.deletedAt && there.updatedAt === updatedAt) continue
       await fs.setDoc(
         projectRef(fs, uid, project.id),
-        { project, updatedAt: project.updatedAt || null, deletedAt: null, _updatedAt: now },
+        { project, updatedAt, deletedAt: null, _updatedAt: now },
         { merge: false },
       )
+      stored.set(project.id, { updatedAt, deletedAt: null })
       written += 1
     }
     for (const [id, deletedAt] of Object.entries(tombstones)) {
+      if (stored.get(id)?.deletedAt === deletedAt) continue
       await fs.setDoc(
         projectRef(fs, uid, id),
         { project: null, updatedAt: null, deletedAt, _updatedAt: now },
         { merge: false },
       )
+      stored.set(id, { updatedAt: null, deletedAt })
       written += 1
     }
     await fs.setDoc(
@@ -461,7 +473,7 @@ export async function writeRemoteProjects(fs, uid, opts = {}) {
       },
       { merge: true },
     )
-    return { ok: true, written }
+    return { ok: true, written, stored }
   } catch (error) {
     return { ok: false, reason: classifyError(error), error }
   }
@@ -535,7 +547,13 @@ export async function migrateToPerProject(fs, uid, opts = {}) {
       migrated += 1
     }
     for (const [id, deletedAt] of Object.entries(tombstones)) {
-      if (already.get(id)?.deleted) { skipped += 1; continue }
+      const there = already.get(id)
+      // Already a tombstone, or a live copy edited after this delete: the edit
+      // wins, the same rule mergeProjects() applies.
+      if (there?.deleted || (there && newerSide(deletedAt, there.updatedAt) === 'remote')) {
+        skipped += 1
+        continue
+      }
       await fs.setDoc(
         projectRef(fs, uid, id),
         { project: null, updatedAt: null, deletedAt, _updatedAt: now },

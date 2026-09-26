@@ -159,6 +159,9 @@ function importAuthSdk() {
           reauthenticateWithCredential: sdk.reauthenticateWithCredential,
           reauthenticateWithPopup: sdk.reauthenticateWithPopup,
           sendPasswordResetEmail: sdk.sendPasswordResetEmail,
+          sendEmailVerification: sdk.sendEmailVerification,
+          verifyBeforeUpdateEmail: sdk.verifyBeforeUpdateEmail,
+          reload: sdk.reload,
         }
         return authNs
       })
