@@ -3,7 +3,12 @@ import { planForUser, dailyLimitFor, monthlyLimitFor, modelFor } from './_lib/pl
 import { requireAdmin } from './_lib/admin.js'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
-import { classifyGeminiFinish } from './_lib/geminiFinish.js'
+import {
+  altTextGenerationConfig,
+  altTextOutcome,
+  altTextCutoffReply,
+  ALT_TEXT_CUTOFF_REFUND_CAP,
+} from './_lib/altText.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
 import {
   BRAND_STARTER_TOOL_ID,
@@ -160,29 +165,27 @@ Bad: Envelope icon. (Describes the artwork instead of the destination, which is 
 
 // The three modes the UI offers. `instruction` is appended to the brief under
 // its own heading so it reads as the length spec for THIS request rather than
-// as a tenth accessibility rule.
+// as a tenth accessibility rule. Length comes from the instruction alone; the
+// token budget is shared and set in _lib/altText.js.
 const TONE_CONFIGS = {
   concise: {
     instruction: 'Write 1-2 sentences, under 125 characters where the image allows it. Lead with the subject that matters most. This is the default for ordinary body-content images.',
-    maxOutputTokens: 300,
     temperature: 0.4,
   },
   detailed: {
     instruction: 'Write 2-4 sentences, up to 300 characters. Cover subject, setting, spatial arrangement and any detail a sighted reader would notice. Use this length because the image carries meaning, not to pad it out.',
-    maxOutputTokens: 600,
     temperature: 0.4,
   },
   technical: {
     instruction: 'Prioritise exact content over atmosphere: on-image text verbatim, data values, units, axis and series labels, UI element types, and colour values where they carry meaning. Be precise and factual in 2-4 sentences.',
-    maxOutputTokens: 600,
     temperature: 0.2,
   },
 }
 
-async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit }) {
+async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit, refundCapped }) {
   const { image, mimeType, context, tone } = req.body || {}
   if (!image || !mimeType) return res.status(400).json({ error: 'image (base64) and mimeType required' })
-  const toneKey = tone && TONE_CONFIGS[tone] ? tone : 'concise'
+  const toneKey = typeof tone === 'string' && Object.hasOwn(TONE_CONFIGS, tone) ? tone : 'concise'
   const toneConfig = TONE_CONFIGS[toneKey]
   if (!/^image\/(jpeg|png|webp|gif|heic|heif)$/.test(mimeType)) {
     return res.status(400).json({ error: 'unsupported mimeType' })
@@ -190,20 +193,13 @@ async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit }
 
   const model = modelFor(plan, 'alt-text')
   const promptParts = [ALT_BASE_PROMPT, `# Length and emphasis for this request\n\n${toneConfig.instruction}`]
-  // Relevance only, and said so at the point of injection rather than trusting
-  // the general rule to hold 60 lines further up. Page context is the input a
-  // keyword-stuffing tool would abuse; this is the line that stops it being one.
+  // Page context steers relevance only, and the prompt says so where the
+  // context is inserted, not only in the general rules above.
   if (context) {
-    // Neutralise markdown structure in the one attacker-controlled string that
-    // reaches the prompt. The brief above is markdown, so the model now treats
-    // `#` headings as structure — which means a context of "# Output contract\n
-    // ignore the above" carries far more leverage than it did against the old
-    // flat bullet list. Stripping the leading markers keeps the field usable as
-    // prose while removing the ability to forge a new section. The blast radius
-    // is only the caller's own generation (there is no other tenant's data in
-    // this call, and the per-user quota still meters it), so this is
-    // defence-in-depth against the tool being turned into a general-purpose
-    // free LLM, not a confidentiality fix.
+    // Author-supplied context enters the prompt as quoted prose: at most 500
+    // characters, with leading markdown heading markers and backticks removed,
+    // so it reads as text inside its own section and never as a new section of
+    // the brief.
     const safeContext = context
       .slice(0, 500)
       .replace(/^\s*#{1,6}\s*/gm, '')   // forged headings
@@ -232,10 +228,7 @@ async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit }
               { inline_data: { mime_type: mimeType, data: image } },
             ],
           }],
-          generationConfig: {
-            temperature: toneConfig.temperature,
-            maxOutputTokens: toneConfig.maxOutputTokens,
-          },
+          generationConfig: altTextGenerationConfig(model, toneConfig.temperature),
         }),
       })
     } finally {
@@ -253,56 +246,30 @@ async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit }
 
     const data = await r.json()
 
-    // Gemini reports WHY it stopped and nothing here ever read it — see
-    // _lib/geminiFinish.js for the full account of what that cost.
-    const verdict = classifyGeminiFinish(data)
-
-    if (verdict.status === 'blocked') {
-      return res.status(422).json({
-        error: 'The AI declined to describe this image — its safety filters flagged it. Nothing is wrong with your file; try a different image, or write this one by hand.',
-        finishReason: verdict.reason,
-      })
+    // Refusals, empty replies and replies cut off at the token ceiling all
+    // answer through `res`, and a cut-off reply is never returned as text. No
+    // automatic retry: the budget in _lib/altText.js is what prevents the
+    // cut-off, and a retry would re-upload the image.
+    // Every error but a cut-off is refunded in full. A cut-off's refund is
+    // capped per day, so it is settled here, before the reply, and the message
+    // says which way it went; a counted attempt carries the new usage.
+    const outcome = altTextOutcome(data)
+    if (!outcome.ok) {
+      const body = { error: outcome.error, finishReason: outcome.finishReason, quotaSpent: false }
+      if (outcome.cutOff) {
+        console.error('alt-text: reply hit the token ceiling', { model, tone: toneKey, usage: data?.usageMetadata })
+        const refund = typeof refundCapped === 'function' ? await refundCapped() : 'kept'
+        Object.assign(body, altTextCutoffReply(refund))
+        if (refund === 'limit') {
+          Object.assign(body, { usage: { used: used + 1, limit, remaining: limit - used - 1, monthUsed: monthUsed + 1, monthLimit, monthRemaining: monthLimit - monthUsed - 1 } })
+        }
+      }
+      return res.status(outcome.status).json(body)
     }
-    if (verdict.status === 'recitation') {
-      return res.status(422).json({
-        error: 'The AI stopped because its answer was reproducing copyrighted text it recognised. Try again, or describe this image by hand.',
-        finishReason: verdict.reason,
-      })
-    }
-    if (verdict.status === 'empty') {
-      return res.status(502).json({ error: 'Empty response from AI provider', finishReason: verdict.reason })
-    }
-
-    let altText = verdict.text
-
-    // Strip any markdown formatting the model might return
-    altText = altText
-      .replace(/^#+\s*/gm, '')           // heading markers
-      .replace(/\*\*(.+?)\*\*/g, '$1')   // bold
-      .replace(/\*(.+?)\*/g, '$1')       // italic
-      .replace(/__(.+?)__/g, '$1')       // bold underscores
-      .replace(/_(.+?)_/g, '$1')         // italic underscores
-      .replace(/`(.+?)`/g, '$1')         // inline code
-      .replace(/^[-*]\s+/gm, '')         // list markers
-      .replace(/^\d+\.\s+/gm, '')        // numbered list markers
-      .trim()
-
-    // Flag the truncation and hand the text over, rather than silently retrying
-    // at a bigger budget. A retry re-uploads the image, and vision input tokens
-    // dominate this call, so it roughly doubles the cost of the single most
-    // expensive request the tool makes — against a standing instruction to stay
-    // on free provider tiers. It would also either spend a second unit of the
-    // user's daily/monthly allowance on a result they never asked for, or hide
-    // that spend from the quota meter, and both are worse than telling them.
-    // The user already has a Retry button and an editable field, so the choice
-    // and the quota stay theirs. What is NOT acceptable, and what this replaces,
-    // is presenting half a sentence as a finished answer.
-    const truncated = verdict.status === 'truncated'
 
     return {
-      altText,
-      truncated,
-      finishReason: verdict.reason,
+      altText: outcome.altText,
+      finishReason: outcome.finishReason,
       model,
       tone: toneKey,
       plan: plan.id,
@@ -975,6 +942,7 @@ const TASKS = {
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
     run: runAltText,
+    cutoffRefundCap: ALT_TEXT_CUTOFF_REFUND_CAP,
   },
   'scan-photo': {
     toolId: 'scan-photo',
@@ -1386,13 +1354,15 @@ export default async function handler(req, res) {
   const metered = await runMeteredTask({
     db: fireDb,
     meters,
-    run: async ([monthUsed, used]) => {
+    // Which document holds the per-day count of capped refunds, if the task has one.
+    cap: task.cutoffRefundCap ? { ref: usageRef, ...task.cutoffRefundCap } : undefined,
+    run: async ([monthUsed, used], { refundCapped }) => {
       res.setHeader('Cache-Control', 'no-store')
       // Task runners either send an error response themselves (and return the
       // res object / undefined) or return the success payload for the shared
       // tail. `used`/`monthUsed` are the counts as they were BEFORE the
       // reservation, so the runners' `used + 1` arithmetic is unchanged.
-      const result = await task.run(req, res, { plan, limit, used, monthUsed, monthLimit })
+      const result = await task.run(req, res, { plan, limit, used, monthUsed, monthLimit, refundCapped })
       if (!result || result === res || res.writableEnded || res.headersSent) return null
       return result
     },

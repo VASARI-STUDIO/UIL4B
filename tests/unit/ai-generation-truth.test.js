@@ -459,7 +459,7 @@ test('THE ONE THAT MATTERS: a failed generation cannot consume the allowance', (
   // generation free. Without it, reserving early would make every provider
   // outage cost a free user their one and only generation.
   const lib = stripJs(read('api/_lib/aiGeneration.js'))
-  assert.match(lib, /if \(!result\) await refundQuotaUnit\(db, meters\)/,
+  assert.match(lib, /if \(!result[^)]*\) await refundQuotaUnit\(db, meters\)/,
     'a runner that produced nothing no longer gets its reservation refunded')
 })
 
@@ -475,7 +475,7 @@ test('the refusal is checked BEFORE the provider is called, not after', () => {
   // route's `run:` callback is written before the refusal is READ.
   const lib = stripJs(read('api/_lib/aiGeneration.js'))
   const libReserve = lib.indexOf('reservation = await reserveQuotaUnit(db, meters)')
-  const libRun = lib.indexOf('result = await run(reservation.counts)')
+  const libRun = lib.indexOf('result = await run(reservation.counts')
   assert.ok(libReserve > -1 && libRun > -1, 'runMeteredTask no longer reserves and runs')
   assert.ok(libReserve < libRun, 'the limit is checked after the generation has already been paid for')
 
