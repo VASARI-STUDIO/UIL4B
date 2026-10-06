@@ -2050,12 +2050,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // ── Pick: the design's third labelled tool (D:1159-1162) ──
   // The EyeDropper API reads any pixel on the screen. Chrome and Edge ship it;
-  // where it does not exist the button says so rather than doing nothing.
+  // phones, Firefox and Safari do not, and there the Pick control is not drawn
+  // at all (the toolbar row and the Tools menu both skip it).
+  const canPickFromScreen = typeof window !== 'undefined' && 'EyeDropper' in window
   const pickFromScreen = async () => {
-    if (typeof window === 'undefined' || !('EyeDropper' in window)) {
-      toast?.('This browser cannot pick from the screen. Use the seed colour picker instead.')
-      return
-    }
+    if (!canPickFromScreen) return
     try {
       const { sRGBHex } = await new window.EyeDropper().open()
       const hex = normaliseHex(sRGBHex)
@@ -2144,11 +2143,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
     },
-    {
+    ...(canPickFromScreen ? [{
       id: 'pick', priority: 1,
       render: () => <ToolButton icon="eyedropper" collapse onClick={pickFromScreen} aria-label="Pick a colour from the screen" title="Pick a colour from the screen">Pick</ToolButton>,
       menu: { label: 'Pick from the screen', icon: 'eyedropper', onSelect: pickFromScreen },
-    },
+    }] : []),
     { id: 'system', priority: 0, align: 'end', render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
     { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
     { id: 'div', priority: 0, divider: true },

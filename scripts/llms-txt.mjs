@@ -97,6 +97,16 @@ export function llmsRoutes() {
     return route
   }
 
+  // Not derived from a flag — there is no registry of "the pages about the
+  // product" — so each one is checked against the matrix instead.
+  // `/credits` is here with the other two legal surfaces because it answers the
+  // same kind of question they do — what this product is bound by — and because
+  // a machine summarising the product should be able to see which third-party
+  // work it is built on without inferring it from the tool list.
+  const more = ['/plans', '/mobile', '/help', '/principles', '/sitemap', '/privacy', '/terms', '/credits']
+    .map((r) => mustBePrerendered(r, 'the More section'))
+  const moreRoutes = new Set(more)
+
   const live = createTools().filter((t) => !t.soon)
   const liveRoutes = new Set(live.map((t) => t.route))
   // The Create tools that mount, in tree order.
@@ -106,10 +116,11 @@ export function llmsRoutes() {
   }))
   // Surfaces the search index declares outside the Create tree, kept only when
   // they render as a page of their own rather than resolving to a Discover or
-  // Learn destination those sections already list. Today that is /seo.
+  // Learn destination those sections already list, or to a page the More
+  // section lists. Today that is /seo.
   for (const entry of TOOL_ENTRIES) {
     const route = entry.path
-    if (liveRoutes.has(route) || /^\/(discover|learn)(\/|$)/.test(route)) continue
+    if (liveRoutes.has(route) || moreRoutes.has(route) || /^\/(discover|learn)(\/|$)/.test(route)) continue
     if (!prerendered.has(route)) continue
     if (tools.some((t) => t.route === route)) continue
     tools.push({ route, beta: false })
@@ -122,15 +133,6 @@ export function llmsRoutes() {
   const browse = DISCOVER_GROUPS
     .filter((g) => !g.soon && !liveRoutes.has(g.route) && g.route !== '/discover')
     .map((g) => mustBePrerendered(g.route, 'the Browse section'))
-
-  // Not derived from a flag — there is no registry of "the pages about the
-  // product" — so each one is checked against the matrix instead.
-  // `/credits` is here with the other two legal surfaces because it answers the
-  // same kind of question they do — what this product is bound by — and because
-  // a machine summarising the product should be able to see which third-party
-  // work it is built on without inferring it from the tool list.
-  const more = ['/plans', '/mobile', '/help', '/principles', '/sitemap', '/privacy', '/terms', '/credits']
-    .map((r) => mustBePrerendered(r, 'the More section'))
 
   // Still in the workshop: every tool the tree marks Soon, group Soon included.
   const soon = CREATE_GROUPS.flatMap((g) => (

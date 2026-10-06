@@ -52,6 +52,8 @@
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
+  DISCOVER_GROUPS,
+  LEARN_GROUPS,
   createTools,
 } from './toolTree.js'
 import { LEGACY_REDIRECTS } from './legacyRoutes.js'
@@ -75,6 +77,22 @@ export function liveDestination(path) {
   for (let hop = 0; hop < 4 && REDIRECTS.has(out); hop += 1) out = REDIRECTS.get(out)
   return out
 }
+
+/**
+ * The route of a live row in one of toolTree.js's own lists, read rather than
+ * typed. A row that is missing or still Soon throws at import, so a renamed or
+ * withdrawn page fails the build instead of leaving search pointing at a hub.
+ */
+function treeRoute(rows, id) {
+  const row = rows.find((r) => r.id === id)
+  if (!row || row.soon) throw new Error(`toolTree.js has no live row "${id}" for the search index to point at`)
+  return row.route
+}
+
+const ROUTE_PRINCIPLES = treeRoute(LEARN_GROUPS, 'principles')
+const ROUTE_THEMES = treeRoute(LEARN_GROUPS, 'themes')
+const ROUTE_BRAND_COLOUR = treeRoute(LEARN_GROUPS, 'brand')
+const ROUTE_RESOURCES = treeRoute(DISCOVER_GROUPS, 'curated')
 
 // ── Categories ──────────────────────────────────────────────────────────────
 //
@@ -146,6 +164,10 @@ const CATEGORY_DEFS = [
   {
     id: 'documentation',
     path: '/docs',
+    // Not a page: /docs resolves to the Learn hub. The category stays in the
+    // list because the Prompt Library and SEO Specialist rows take their pill
+    // and icon from it.
+    destination: false,
     labelKey: 'categories.documentation.label',
     descKey: 'categories.documentation.description',
     label: 'Documentation',
@@ -153,7 +175,7 @@ const CATEGORY_DEFS = [
   },
   {
     id: 'resources',
-    path: '/resources',
+    path: ROUTE_RESOURCES,
     labelKey: 'categories.resources.label',
     descKey: 'categories.resources.description',
     label: 'Resources',
@@ -168,7 +190,7 @@ export const CATEGORY_ENTRIES = CATEGORY_DEFS.map((def) => {
   return {
     ...def,
     path,
-    destination: group ? CREATE_HOMES_THAT_RENDER.includes(group.home) : true,
+    destination: group ? CREATE_HOMES_THAT_RENDER.includes(group.home) : def.destination !== false,
   }
 })
 
@@ -293,28 +315,26 @@ const CREATE_TOOL_ENTRIES = createTools().map((tool) => {
 
 // ── Surfaces outside the Create tree ────────────────────────────────────────
 //
-// toolTree.js does not own these, so they are declared. Their paths still go
-// through liveDestination(), which is why they no longer point at retired URLs:
-// the seven /docs* rows and /docs itself resolve to /learn, /prompts to
-// /discover/prompts and /resources to /discover.
+// toolTree.js does not own the Create-tree identity of these, so they are
+// declared. Where toolTree.js does list the page (the Learn guides and the
+// curated resources), the route is READ from it with treeRoute() rather than
+// typed again, so a row can never sit on a retired path or on a hub when the
+// page it names exists. Every path still goes through liveDestination().
 //
-// NOTE FOR THE FOUNDER, recorded rather than acted on: resolving those makes
-// visible that seven "documentation" rows now share one destination, /learn,
-// which is itself a coming-soon surface. That is exactly where they landed
-// before (via a 301), so nothing has changed for a visitor — but whether pages
-// that no longer exist belong in the search index at all is a product call, not
-// a refactor. See the PR description.
+// A row is only listed when a page stands behind it. Learn topics that are
+// still Soon in the tree (social, SEO, marketing, AI coding) are not indexed: a
+// result that promises a guide and lands on the Learn hub reads as a broken
+// link. Add the row when its page ships.
+//
+// The three Learn guides carry no category and so no pill: Documentation is not
+// a page, and a pill naming it labels the row with something that is not there.
 const STATIC_TOOL_DEFS = [
   { id: 'prompts', label: 'Prompt Library', path: '/prompts', category: 'documentation', description: 'AI image generation prompts with output previews.', keywords: ['prompt', 'prompts', 'ai', 'midjourney', 'dalle', 'stable diffusion', 'library'] },
-  { id: 'docs-design', label: 'Design Principles', path: '/docs-design', category: 'documentation', subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
-  { id: 'docs-social', label: 'Social & Marketing', path: '/docs-social', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Social media and marketing best practices.', keywords: ['social', 'marketing', 'content', 'documentation'] },
-  { id: 'docs-themes', label: 'UI Design Themes', path: '/docs-themes', category: 'documentation', subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
-  { id: 'docs-brand', label: 'Brand Colour Guide', path: '/docs-brand', category: 'documentation', subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
-  { id: 'docs-seo', label: 'SEO for Small Business', path: '/docs-seo', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Practical SEO strategies — Google Business Profile, local SEO, technical foundations.', keywords: ['seo', 'google', 'search', 'local', 'business', 'ranking', 'schema', 'web vitals'] },
+  { id: 'docs-design', label: 'Design Principles', path: ROUTE_PRINCIPLES, subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
+  { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
+  { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
   { id: 'seo', label: 'SEO Specialist', path: '/seo', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Live SERP + social preview, scored checklist, copy-ready meta tags, and a JSON-LD structured-data generator.', keywords: ['seo', 'meta', 'serp', 'title', 'description', 'snippet', 'preview', 'open graph', 'social', 'score', 'inspector', 'specialist', 'schema', 'json-ld', 'structured data'] },
-  { id: 'docs-marketing', label: 'Marketing Fundamentals', path: '/docs-marketing', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Positioning, funnels, email, paid ads, and brand voice for small businesses.', keywords: ['marketing', 'funnel', 'email', 'ads', 'brand', 'positioning', 'conversion', 'analytics'] },
-  { id: 'docs-ai', label: 'AI Coding Assistants', path: '/docs-ai', category: 'documentation', subcategory: 'AI & Workflow', description: 'Claude tips, prompting patterns, subagents, and workflow integration for AI-assisted development.', keywords: ['ai', 'claude', 'cursor', 'copilot', 'prompting', 'subagent', 'coding', 'assistant'] },
-  { id: 'resources', label: 'External Resources', path: '/resources', category: 'resources', description: 'Curated links to fonts, colours, AI tools, and inspiration.', keywords: ['resources', 'links', 'external', 'google fonts', 'tailwind', 'framer', 'awwwards'] },
+  { id: 'resources', label: 'External Resources', path: ROUTE_RESOURCES, category: 'resources', description: 'Curated links to fonts, colours, AI tools, and inspiration.', keywords: ['resources', 'links', 'external', 'google fonts', 'tailwind', 'framer', 'awwwards'] },
 ]
 
 const STATIC_TOOL_ENTRIES = STATIC_TOOL_DEFS.map((tool) => ({
@@ -342,7 +362,6 @@ export const TOOL_I18N_MAP = {
   'alt-text': 'tools.altText',
   prompts: 'tools.promptLibrary',
   'docs-design': 'tools.docsDesign',
-  'docs-social': 'tools.docsSocial',
   resources: 'tools.externalResources',
 }
 
@@ -462,6 +481,15 @@ function rankedMatches(list, q) {
     .map(entry => entry.item)
 }
 
+/**
+ * The categories a visitor can be sent to. Both the typed query and the
+ * empty-query list read this, so a row the search refuses to match is also not
+ * offered unprompted.
+ */
+export function offerableCategories(categories) {
+  return categories.filter((c) => c.destination !== false)
+}
+
 export function queryCommandIndex(query, { tools = [], categories = [], actions = [] }) {
   const q = query.trim().toLowerCase()
   if (!q) return { query: '', tools: [], categories: [], actions: [], total: 0 }
@@ -470,7 +498,7 @@ export function queryCommandIndex(query, { tools = [], categories = [], actions 
   // filter lives inside the shared query rather than at each caller, because a
   // caller that forgets it starts navigating visitors to URLs that only bounce
   // — which is what "alt text" did, landing on /create/ai-tools.
-  const hitCats = rankedMatches(categories.filter(c => c.destination !== false), q)
+  const hitCats = rankedMatches(offerableCategories(categories), q)
   const hitActions = rankedMatches(actions, q)
   return {
     query: q,

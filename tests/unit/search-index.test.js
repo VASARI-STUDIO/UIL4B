@@ -43,14 +43,18 @@ import {
   CREATE_TOOL_SEARCH,
   HINT_MAX_LEN,
   TOOL_ENTRIES,
+  categoryPillFor,
   liveDestination,
   matchRank,
+  offerableCategories,
   queryCommandIndex,
   searchHints,
 } from '../../src/data/toolIndex.js'
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
+  DISCOVER_GROUPS,
+  LEARN_GROUPS,
   NAV_SECTIONS,
   createRoutes,
   createTools,
@@ -239,6 +243,91 @@ test('nothing search offers is a retired URL', () => {
   }
   // The resolver is what keeps that true, so check it does something.
   assert.equal(liveDestination('/prompts'), '/discover/prompts')
+})
+
+test('each row that names a page the tree lists lands on the tree own route', () => {
+  // Not being a retired URL is not enough: /docs-design, /docs-themes,
+  // /docs-brand and /resources redirect to a hub (/learn, /discover) even
+  // though the pages those rows name are real. So the expected side is read
+  // from toolTree.js, never typed here.
+  const learn = (id) => LEARN_GROUPS.find((g) => g.id === id)
+  const discover = (id) => DISCOVER_GROUPS.find((g) => g.id === id)
+  const expected = [
+    ['docs-design', learn('principles')],
+    ['docs-themes', learn('themes')],
+    ['docs-brand', learn('brand')],
+    ['resources', discover('curated')],
+  ]
+  for (const [rowId, treeRow] of expected) {
+    assert.ok(treeRow && !treeRow.soon, `the tree has no live row for the "${rowId}" search row`)
+    const entry = TOOL_ENTRIES.find((t) => t.id === rowId)
+    assert.ok(entry, `the "${rowId}" search row is gone`)
+    assert.equal(entry.path, treeRow.route, `"${entry.label}" opens ${entry.path}, not the tree route ${treeRow.route}`)
+  }
+  // The Resources category row is the same page.
+  const cat = CATEGORY_ENTRIES.find((c) => c.id === 'resources')
+  assert.equal(cat.path, discover('curated').route, 'the Resources category opens a different page from External Resources')
+})
+
+test('search offers no row that lands on a section hub with no page of its own', () => {
+  // /learn and /discover are the section landings. A row that promises a named
+  // page and opens one of them reads as a broken link, so such rows are not
+  // indexed (Documentation, the Learn topics that are still Soon).
+  const hubs = new Set(['/learn', '/discover', '/docs'])
+  const offered = [...TOOL_ENTRIES, ...offerableCategories(CATEGORY_ENTRIES)]
+  for (const entry of offered) {
+    assert.ok(!hubs.has(entry.path), `"${entry.label}" opens ${entry.path}, a hub with no page behind the label`)
+  }
+  // Every Learn topic the tree still marks Soon is absent by name.
+  const labels = new Set(offered.map((e) => e.label.toLowerCase()))
+  for (const topic of LEARN_GROUPS.filter((g) => g.soon)) {
+    assert.ok(!labels.has(topic.label.toLowerCase()), `"${topic.label}" is still Soon in the tree but is in search`)
+  }
+  assert.ok(!offered.some((e) => e.id === 'documentation'), 'the Documentation category is offered')
+  // POSITIVE CONTROL: the filter removes rows rather than the whole list.
+  assert.ok(offered.some((e) => e.path === '/principles'), 'Design Principles is no longer findable')
+})
+
+test('a row is never badged with a category that is not a page', () => {
+  // The Learn guides carry no category, so their result rows carry no pill.
+  // Documentation is not a destination: a pill naming it labels the row with
+  // something a visitor cannot open.
+  const pillCats = new Map(CATEGORY_ENTRIES.map((c) => [c.id, c]))
+  for (const id of ['docs-design', 'docs-themes', 'docs-brand']) {
+    const row = TOOL_ENTRIES.find((t) => t.id === id)
+    assert.ok(row, `the "${id}" row is gone`)
+    assert.equal(row.category, undefined, `"${row.label}" still names a category`)
+    assert.equal(categoryPillFor(row, pillCats.get(row.category), (k) => k), null, `"${row.label}" still gets a pill`)
+  }
+  // POSITIVE CONTROLS: a tool that is a page keeps its pill, and the rows that
+  // still read from Documentation (a tool and the Prompt Library) are untouched.
+  const seo = TOOL_ENTRIES.find((t) => t.id === 'seo')
+  assert.equal(categoryPillFor(seo, pillCats.get(seo.category), (k) => k), 'Documentation')
+  const palette = TOOL_ENTRIES.find((t) => t.category === 'color')
+  assert.ok(palette && categoryPillFor(palette, pillCats.get(palette.category), (k) => k), 'a Create tool lost its pill')
+  // And the two components draw no empty pill for a row without one.
+  for (const file of ['src/components/CommandPalette.jsx', 'src/components/HomeCommandBar.jsx']) {
+    const src = stripComments(read(file))
+    assert.ok(src.includes('categoryPillFor'), `stripping ate ${file} own code`)
+    assert.ok(!/categoryPillFor\([^)]*\)\s*\|\|\s*'Tool'/.test(src), `${file} still falls back to a "Tool" pill`)
+  }
+})
+
+test('the empty-query category list drops the same rows the typed query does', () => {
+  // CommandPalette lists every category before anything is typed. It must apply
+  // the destination filter queryCommandIndex applies, or UI Builder (a Soon
+  // page) is offered unprompted and refused once you type it.
+  const ui = CATEGORY_ENTRIES.find((c) => c.id === 'ui-builder')
+  assert.ok(ui && ui.destination === false, 'UI Builder is expected to be a non-destination')
+  const offered = offerableCategories(CATEGORY_ENTRIES).map((c) => c.id)
+  assert.ok(!offered.includes('ui-builder'), 'UI Builder is offered in the empty-query list')
+  assert.ok(offered.includes('resources'), 'the Resources category must stay offered')
+  const typed = queryCommandIndex('ui builder', { tools: [], categories: CATEGORY_ENTRIES }).categories
+  assert.deepEqual(typed.filter((c) => !offered.includes(c.id)), [], 'a typed query offers a row the empty list refuses')
+  // And the component really calls it, comments stripped.
+  const src = stripComments(read('src/components/CommandPalette.jsx'))
+  assert.ok(src.includes('queryCommandIndex'), 'stripping ate CommandPalette own code')
+  assert.match(src, /offerableCategories\(lCats\)/, 'the empty-query list no longer filters its categories')
 })
 
 test('search never offers a Create category home that only redirects', () => {
