@@ -207,8 +207,33 @@ const assertFirebaseIsDeferred = () => ({
   },
 })
 
+// three's DRACOLoader and KTX2Loader default their decoder paths to files
+// beside them (`new URL('../libs/…', import.meta.url)`), and Vite emits every
+// file named that way into dist/assets as soon as either loader is imported:
+// three .wasm and four scripts, about 1.9 MB. The app always sets the paths to
+// pinned, verified CDN copies (src/utils/mesh/decoders.js), so the defaults
+// are blanked here and nothing is emitted. If a three.js upgrade changes the
+// pattern, the build fails rather than quietly shipping the files again.
+const THREE_DECODER_LOADER = /[/\\]three[/\\]examples[/\\]jsm[/\\]loaders[/\\](DRACOLoader|KTX2Loader)\.js$/
+const DECODER_DEFAULT_URL = /new URL\(\s*'\.\.\/libs\/(?:draco|basis)\/[^']+',\s*import\.meta\.url\s*\)\.toString\(\)/g
+const DECODER_DEFAULT_COUNT = { DRACOLoader: 5, KTX2Loader: 2 }
+const threeDecodersOffOrigin = () => ({
+  name: 'uil4b-three-decoders-off-origin',
+  enforce: 'pre',
+  transform(code, id) {
+    const loader = THREE_DECODER_LOADER.exec(id.replace(/\?.*$/, ''))?.[1]
+    if (!loader) return null
+    const found = code.match(DECODER_DEFAULT_URL)?.length || 0
+    if (found !== DECODER_DEFAULT_COUNT[loader]) {
+      this.error(`${loader}.js: expected ${DECODER_DEFAULT_COUNT[loader]} default decoder URLs, found ${found}. `
+        + 'Re-check the pattern against the installed three.js before building.')
+    }
+    return { code: code.replace(DECODER_DEFAULT_URL, "''"), map: null }
+  },
+})
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), pricingHtml(), learnSearchTextPlugin(), assertFirebaseIsDeferred(), ...(mode === 'test' ? [testSessionDouble()] : [])],
+  plugins: [react(), threeDecodersOffOrigin(), pricingHtml(), learnSearchTextPlugin(), assertFirebaseIsDeferred(), ...(mode === 'test' ? [testSessionDouble()] : [])],
   resolve: { alias: firebaseAccessAlias },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),

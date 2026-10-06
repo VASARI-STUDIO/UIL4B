@@ -1,4 +1,4 @@
-// /create/3d-viewer — the format table, the signature checks, real conversions
+// /create/3d-converter — the format table, the signature checks, real conversions
 // through the real three.js loaders and exporters, and the bundle proof that
 // three.js never reaches the entry chunk.
 //
@@ -8,7 +8,7 @@
 //
 // WHAT NODE CANNOT RUN, and where it is covered instead: ThreeMFLoader needs
 // DOMParser, and the viewer needs WebGL. The 3MF round trip, drawing, keyboard
-// orbit and the download gate are in tests/user-sim/98-three-d-viewer.spec.js,
+// orbit and the download gate are in tests/user-sim/98-model-converter.spec.js,
 // in a real browser.
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
@@ -70,12 +70,28 @@ const FIXTURE_TRIANGLES = 16
 
 // ── The table ───────────────────────────────────────────────────────────────
 
-test('the viewer opens the seven mesh formats it was asked for, and STEP and IGES', () => {
+test('the converter opens the mesh, CAD, BIM and point-cloud formats it was asked for', () => {
   const ids = F.INPUT_FORMATS.map((f) => f.id)
-  for (const id of ['obj', 'stl', 'gltf', 'glb', 'ply', '3mf', 'fbx', 'step', 'iges']) {
-    assert.ok(ids.includes(id), `${id} is missing from INPUT_FORMATS`)
+  const asked = [
+    'obj', 'stl', 'gltf', 'glb', 'ply', '3mf', 'fbx', 'step', 'iges',
+    '3ds', 'dae', 'usd', 'wrl', 'amf', 'off', '3dm', 'ifc', 'dxf', 'brep', 'lwo', 'xyz', 'pcd',
+  ]
+  for (const id of asked) assert.ok(ids.includes(id), `${id} is missing from INPUT_FORMATS`)
+  assert.deepEqual(F.OUTPUT_FORMATS.map((f) => f.id).sort(), ['3mf', 'glb', 'glb-meshopt', 'gltf', 'obj', 'ply', 'stl', 'usdz'])
+  // Every output sits in a group the panel shows, and every group has one.
+  for (const f of F.OUTPUT_FORMATS) assert.ok(F.OUTPUT_GROUPS.some((g) => g.id === f.group), `${f.id} is in no output group`)
+  for (const g of F.OUTPUT_GROUPS) assert.ok(F.outputsInGroup(g.id).length, `output group ${g.id} is empty`)
+  assert.equal(F.outputName('bracket.step', F.outputFormat('glb-meshopt')), 'bracket.meshopt.glb')
+})
+
+test('formats with no honest browser reader are named with a way round, never opened', () => {
+  for (const name of ['scene.blend', 'part.SLDPRT', 'plan.dwg', 'house.skp']) {
+    assert.equal(F.formatForFile(name), null, `${name} resolved to a reader`)
+    const row = F.unsupportedFor(name)
+    assert.ok(row, `${name} has no explanation`)
+    assert.match(row.route, /convert (it|that file|the DXF) here/)
   }
-  assert.deepEqual(F.OUTPUT_FORMATS.map((f) => f.id).sort(), ['3mf', 'glb', 'gltf', 'obj', 'ply', 'stl'])
+  assert.equal(F.unsupportedFor('part.stl'), null)
 })
 
 test('every extension resolves to its format, in any case, and nothing else does', () => {
@@ -104,14 +120,18 @@ test('a drop is split into the model, its sidecars, and anything else', () => {
 
 test('every format the viewer reads has a loader behind it (no advertised dead format)', () => {
   const src = stripJs(read('src/utils/meshEngine.js'))
+  assert.deepEqual([...new Set(F.INPUT_FORMATS.map((f) => f.engine))].sort(), ['cad', 'ifc', 'mesh', 'rhino'])
   for (const f of F.INPUT_FORMATS) {
-    if (f.engine === 'cad') continue
+    if (f.engine === 'cad' || f.engine === 'ifc') continue
     assert.match(src, new RegExp(`case '${f.id}'`), `meshEngine.parseModel has no case for ${f.id}`)
   }
   const cad = stripJs(read('src/utils/cadEngine.js'))
   for (const f of F.INPUT_FORMATS.filter((x) => x.engine === 'cad')) {
     assert.match(cad, new RegExp(`${f.id}:\\s*'Read`), `cadEngine has no reader for ${f.id}`)
   }
+  // IFC has its own worker; loadModel hands every 'ifc' row to it.
+  assert.match(src, /format\.engine === 'ifc'[\s\S]{0,80}readIfc\(/, 'loadModel does not route IFC to readIfc')
+  assert.match(stripJs(read('src/utils/ifcEngine.js')), /export async function readIfc\(/)
   for (const f of F.OUTPUT_FORMATS) {
     assert.match(src, new RegExp(`case '${f.id}'`), `meshEngine.exportModel has no case for ${f.id}`)
   }
@@ -119,9 +139,41 @@ test('every format the viewer reads has a loader behind it (no advertised dead f
 
 test('the route description lists the formats from the table, so it cannot drift', async () => {
   const { PAGE_DESCRIPTIONS, PAGE_TITLES } = await load('src/data/routeMetaMap.js')
-  const d = PAGE_DESCRIPTIONS['/create/3d-viewer']
-  assert.ok(PAGE_TITLES['/create/3d-viewer'])
-  for (const f of [...F.INPUT_FORMATS, ...F.OUTPUT_FORMATS]) assert.ok(d.includes(f.label), `${f.label} missing from the description`)
+  const d = PAGE_DESCRIPTIONS['/create/3d-converter']
+  assert.ok(PAGE_TITLES['/create/3d-converter'])
+  // Every output by name; the inputs as the named few plus a count of the rest
+  // that matches the table, so adding an input moves the number.
+  for (const label of F.outputLabels()) assert.ok(d.includes(label), `${label} missing from the description`)
+  const m = d.match(/^View ((?:[\w.]+, )*[\w.]+) and (\d+) more 3D formats /)
+  assert.ok(m, `the description no longer names and counts its inputs: ${d}`)
+  const named = m[1].split(', ')
+  for (const label of named) assert.ok(F.INPUT_FORMATS.some((f) => f.label === label), `${label} is not an input format`)
+  assert.equal(Number(m[2]) + named.length, F.INPUT_FORMATS.length, 'the count of other formats is not the table\'s')
+  assert.ok(d.length <= 160, `${d.length} characters is cut off in a search result`)
+})
+
+test('the tool lives at /create/3d-converter and the old viewer URL redirects to it, at the edge and in the app', async () => {
+  const { createTools } = await load('src/data/toolTree.js')
+  const tool = createTools().find((t) => t.route === '/create/3d-converter')
+  assert.ok(tool, 'no Create tool is mounted at /create/3d-converter')
+  assert.equal(tool.label, '3D Model Converter')
+  assert.equal(tool.beta, true, 'the converter lost its beta flag')
+  assert.equal(createTools().some((t) => t.route === '/create/3d-viewer'), false, 'the old route is still a tool')
+
+  const { LEGACY_REDIRECTS, CLIENT_REDIRECT_ROUTES } = await load('src/data/legacyRoutes.js')
+  const pair = (list) => list.some(([from, to]) => from === '/create/3d-viewer' && to === '/create/3d-converter')
+  assert.ok(pair(LEGACY_REDIRECTS), 'no redirect from /create/3d-viewer in the legacy table')
+  assert.ok(pair(CLIENT_REDIRECT_ROUTES), 'the app does not render a client redirect for /create/3d-viewer')
+
+  const vercel = JSON.parse(read('vercel.json'))
+  const edge = vercel.redirects.find((r) => r.source === '/create/3d-viewer')
+  assert.equal(edge?.destination, '/create/3d-converter', 'vercel.json does not 301 the old URL')
+  assert.equal(edge?.permanent, true)
+  assert.ok(vercel.rewrites.some((r) => r.source === '/create/3d-converter'), 'the new route has no prerendered shell rewrite')
+  assert.equal(vercel.rewrites.some((r) => r.source === '/create/3d-viewer'), false, 'the old route still has a shell')
+  assert.match(read('public/sitemap.xml'), /\/create\/3d-converter</)
+  assert.doesNotMatch(read('public/sitemap.xml'), /\/create\/3d-viewer</)
+  assert.match(stripJs(read('src/pages/CreateTool.jsx')), /'\/create\/3d-converter':\s*ModelConverter/)
 })
 
 // ── Does the file look like what its name says? ─────────────────────────────
@@ -219,6 +271,57 @@ test('FBX: a hand-written text FBX 7.3 is read as one mesh of two triangles', as
   assert.deepEqual(stats.size.map((n) => Math.round(n * 1000) / 1000), [2, 3, 0])
 })
 
+test('FBX: GlobalSettings.UnitScaleFactor sets the unit (centimetres per file unit)', async () => {
+  const fbxWith = (factor) => bytesOf([
+    '; FBX 7.3.0 project file',
+    'FBXHeaderExtension:  {', '\tFBXHeaderVersion: 1003', '\tFBXVersion: 7300', '}',
+    ...(factor == null ? [] : ['GlobalSettings:  {', '\tVersion: 1000', '\tProperties70:  {', `\t\tP: "UnitScaleFactor", "double", "Number", "",${factor}`, '\t}', '}']),
+    'Objects:  {',
+    '\tGeometry: 100, "Geometry::quad", "Mesh" {',
+    '\t\tVertices: *12 {', '\t\t\ta: 0,0,0,2,0,0,2,3,0,0,3,0', '\t\t}',
+    '\t\tPolygonVertexIndex: *4 {', '\t\t\ta: 0,1,2,-4', '\t\t}',
+    '\t\tGeometryVersion: 124', '\t}',
+    '\tModel: 200, "Model::quad", "Mesh" {', '\t\tVersion: 232', '\t\tProperties70:  {', '\t\t}', '\t}',
+    '}',
+    'Connections:  {', '\tC: "OO",100,200', '\tC: "OO",200,0', '}', '',
+  ].join('\n')).buffer
+  // Blender's default FBX export writes 1: centimetres.
+  assert.equal((await E.parseModel(input('fbx'), fbxWith(1))).unit, 'cm')
+  assert.equal((await E.parseModel(input('fbx'), fbxWith(100))).unit, 'm')
+  assert.equal((await E.parseModel(input('fbx'), fbxWith(0.1))).unit, 'mm')
+  assert.equal((await E.parseModel(input('fbx'), fbxWith(2.54))).unit, 'in')
+  // No GlobalSettings: bare numbers, which the page asks the user to name.
+  assert.equal((await E.parseModel(input('fbx'), fbxWith(null))).unit, undefined)
+  // A factor with no unit of its own is scaled into metres.
+  const odd = await E.parseModel(input('fbx'), fbxWith(50))
+  assert.equal(odd.unit, 'm')
+  const stats = E.measure(E.normalise(odd.object, odd.warnings))
+  assert.deepEqual(stats.size.map((n) => Math.round(n * 1000) / 1000), [1, 1.5, 0])
+})
+
+test('the list of outputs reads as one name per format, with no comma inside a name', () => {
+  const labels = F.outputLabels()
+  assert.equal(labels.length, F.OUTPUT_FORMATS.length)
+  for (const l of labels) assert.doesNotMatch(l, /,/)
+  assert.ok(labels.includes('GLB (compressed)'))
+})
+
+test('3DM: the reader\'s per-object warnings are counted and never shown in its own words', async () => {
+  const { rhinoWarnings } = await load('src/utils/mesh/rhino.js')
+  const noMesh = (n) => Array.from({ length: n }, () => ({ type: 'missing mesh', message: 'THREE.3DMLoader: ObjectType_Brep has no associated mesh geometry.' }))
+  const out = rhinoWarnings([
+    ...noMesh(3),
+    { type: 'not implemented', message: 'THREE.3DMLoader: Conversion not implemented for ObjectType_Hatch' },
+    { type: 'no conversion', message: 'THREE.3DMLoader: No conversion exists for the decals associated with this object.' },
+  ])
+  assert.equal(out.length, 3)
+  assert.match(out[0], /^3 objects were saved without a render mesh/)
+  assert.match(out[1], /^1 object is of a kind/)
+  assert.match(out[2], /^1 texture, light or decal /)
+  for (const line of out) assert.doesNotMatch(line, /THREE|3DMLoader|ObjectType_/)
+  assert.deepEqual(rhinoWarnings(undefined), [])
+})
+
 test('an STL that stores every normal as zero is lit, not drawn black', async () => {
   // Valid STL: the format allows zero facet normals and slicers recompute
   // them. Lit as stored, every face is black — which is how the first
@@ -277,6 +380,33 @@ test('CAD tessellation output becomes geometry, and an uncoloured body is not dr
   assert.equal(stats.triangles, 2)
   const colour = group.children[0].material.color
   assert.ok(colour.r + colour.g + colour.b > 0.5, 'a body occt reports with no colour was painted black')
+  // The same grey every other uncoloured model gets (0xa9a59b, an sRGB hex),
+  // not a lighter one from reading those numbers as linear.
+  assert.equal(colour.getHexString(), 'a9a59b', 'an uncoloured CAD part is not the default grey')
+})
+
+test('the IFC worker answers only its own verified wasm, and refuses every other request', async () => {
+  const vm = await import('node:vm')
+  const network = []
+  let delivered = null
+  const ctx = { URL, Blob, Response, Uint32Array, Float32Array, console }
+  ctx.self = ctx
+  ctx.fetch = (u) => { network.push(String(u?.url || u)); return Promise.resolve(new Response('')) }
+  ctx.postMessage = () => {}
+  // Stands in for web-ifc: the script defines WebIFC, and Init fetches the
+  // wasm by the name it is told.
+  ctx.importScripts = () => {
+    ctx.WebIFC = { IfcAPI: class { async Init(locate) { delivered = new Uint8Array(await (await ctx.fetch(locate('web-ifc.wasm'))).arrayBuffer()) } } }
+  }
+  vm.createContext(ctx)
+  vm.runInContext(read('src/utils/ifcWorker.js'), ctx)
+  ctx.onmessage({ data: { type: 'engine', script: new Uint8Array(1), wasm: new Uint8Array([0, 0x61, 0x73, 0x6d]) } })
+  for (let i = 0; i < 50 && !delivered; i++) await new Promise((r) => setTimeout(r, 5))
+  assert.deepEqual(delivered && [...delivered], [0, 0x61, 0x73, 0x6d], 'the verified wasm was not answered from memory')
+  await assert.rejects(() => ctx.fetch('https://example.test/web-ifc-mt.worker.js'))
+  await assert.rejects(() => ctx.fetch(new URL('https://example.test/data.json')))
+  await assert.rejects(() => ctx.fetch({ url: '/assets/anything.js' }))
+  assert.deepEqual(network, [], 'the worker passed a request through to the network')
 })
 
 test('cancelling is not an error, and every other failure is a sentence', () => {
@@ -299,17 +429,23 @@ test('only the engine module imports three.js, and the page reaches it only lazi
     }
   })('src')
   assert.ok(files.length > 100, `only ${files.length} source files found`)
-  const importers = files.filter((f) => /from\s+['"]three(\/[^'"]*)?['"]/.test(stripJs(read(f))))
-  assert.deepEqual(importers, ['src/utils/meshEngine.js'])
+  // The engine and the three helpers it splits into; nothing else.
+  const importers = files.filter((f) => /from\s+['"]three(\/[^'"]*)?['"]/.test(stripJs(read(f)))).sort()
+  assert.deepEqual(importers, ['src/utils/mesh/cad.js', 'src/utils/mesh/rhino.js', 'src/utils/mesh/transform.js', 'src/utils/meshEngine.js'])
+  // Each helper is reached only from the engine (statically) or its lazy table.
+  for (const helper of ['cad', 'rhino', 'transform']) {
+    const users = files.filter((f) => f !== `src/utils/mesh/${helper}.js` && new RegExp(`['"]\\./(mesh/)?${helper}\\.js['"]`).test(stripJs(read(f))))
+    assert.deepEqual(users, ['src/utils/meshEngine.js'], `mesh/${helper}.js is imported from outside the engine`)
+  }
   // OpenCascade is fetched at runtime from a pinned CDN URL, never bundled.
   const occt = files.filter((f) => /from\s+['"]occt-import-js|import\(\s*['"]occt-import-js/.test(stripJs(read(f))))
   assert.deepEqual(occt, [])
 
-  const page = stripJs(read('src/pages/ThreeDViewer.jsx'))
-  assert.doesNotMatch(page, /import\s[^;]*from\s+['"][^'"]*meshEngine['"]/, 'ThreeDViewer imports the engine statically')
-  assert.match(page, /import\(\s*['"]\.\.\/utils\/meshEngine['"]\s*\)/, 'ThreeDViewer no longer loads the engine lazily')
+  const page = stripJs(read('src/pages/ModelConverter.jsx'))
+  assert.doesNotMatch(page, /import\s[^;]*from\s+['"][^'"]*meshEngine['"]/, 'ModelConverter imports the engine statically')
+  assert.match(page, /import\(\s*['"]\.\.\/utils\/meshEngine['"]\s*\)/, 'ModelConverter no longer loads the engine lazily')
   const shell = stripJs(read('src/pages/CreateTool.jsx'))
-  assert.match(shell, /lazy\(\(\)\s*=>\s*import\(\s*['"]\.\/ThreeDViewer['"]\s*\)\)/)
+  assert.match(shell, /lazy\(\(\)\s*=>\s*import\(\s*['"]\.\/ModelConverter['"]\s*\)\)/)
   assert.doesNotMatch(read('src/utils/meshFormats.js'), /^\s*import\s/m, 'meshFormats.js is in the entry graph and must import nothing')
 })
 
@@ -345,9 +481,9 @@ test('a production build keeps three.js out of the entry chunk and out of the pa
   assert.ok(entryIds.length > 50, 'the entry closure is too small to be this app')
   assert.deepEqual(entryIds.filter(isThree), [], 'three.js is reachable from the entry chunk by static import')
 
-  const page = chunks.find((c) => c.facadeModuleId && /src[\\/]pages[\\/]ThreeDViewer\.jsx$/.test(c.facadeModuleId))
-  assert.ok(page, 'the 3D Viewer page did not get a chunk of its own')
-  assert.deepEqual(staticClosure(page).filter(isThree), [], 'three.js is in the 3D Viewer page chunk or its static imports')
+  const page = chunks.find((c) => c.facadeModuleId && /src[\\/]pages[\\/]ModelConverter\.jsx$/.test(c.facadeModuleId))
+  assert.ok(page, 'the 3D Model Converter page did not get a chunk of its own')
+  assert.deepEqual(staticClosure(page).filter(isThree), [], 'three.js is in the 3D Model Converter page chunk or its static imports')
 
   // POSITIVE CONTROL: three.js is in the build, in the engine chunk, reached
   // from the page by a dynamic import. Without this the two assertions above
@@ -357,10 +493,25 @@ test('a production build keeps three.js out of the entry chunk and out of the pa
   assert.ok(staticClosure(engine).some(isThree), 'the engine chunk carries no three.js — is this the right chunk?')
   assert.ok(page.dynamicImports.includes(engine.fileName), 'the page does not reach the engine by dynamic import')
 
-  // The CAD worker ships as its own small file, and no OpenCascade wasm does.
+  // The CAD and IFC workers ship as their own small files. OpenCascade,
+  // web-ifc, rhino3dm and three's Draco and Basis (KTX2) decoders are fetched
+  // from their pinned CDN URLs, never bundled: no engine file and no
+  // WebAssembly of any kind is emitted.
   const files = fs.readdirSync(path.join(outDir, 'assets'))
   assert.ok(files.some((f) => /^cadWorker-.*\.js$/.test(f)), `no cadWorker asset among ${files.length} files`)
-  assert.deepEqual(files.filter((f) => /occt|\.wasm$/i.test(f) && !/ffmpeg/i.test(f)), [])
+  assert.ok(files.some((f) => /^ifcWorker-.*\.js$/.test(f)), `no ifcWorker asset among ${files.length} files`)
+  assert.deepEqual(files.filter((f) => /occt|web-ifc|rhino3dm|draco_|basis_|\.wasm$/i.test(f)), [])
+  // The two decoder loaders still get chunks of their own (the positive
+  // control for the line above), reached from the engine only by dynamic
+  // import, so nothing on the page's static path carries them.
+  const decoderLoaders = chunks.filter((c) => /[\\/](DRACOLoader|KTX2Loader)\.js$/.test(c.facadeModuleId || ''))
+  assert.deepEqual(decoderLoaders.map((c) => path.basename(c.facadeModuleId)).sort(), ['DRACOLoader.js', 'KTX2Loader.js'])
+  for (const c of decoderLoaders) {
+    assert.ok(engine.dynamicImports.includes(c.fileName), `${c.fileName} is not a lazy import of the engine`)
+    assert.doesNotMatch(c.code, /import\.meta\.url/, `${c.fileName} still resolves a decoder next to itself`)
+  }
+  const staticIds = new Set([...entryIds, ...staticClosure(page), ...staticClosure(engine)])
+  for (const c of decoderLoaders) assert.equal(staticIds.has(c.facadeModuleId), false, `${c.facadeModuleId} is on a static path`)
 })
 
 // An MTL written on Windows names its textures with backslashes
