@@ -327,7 +327,7 @@ test.describe('a recent project card is read off the project', () => {
     // per-browser key beside it.
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test']?.[0]?.icon))
       .toBe('flask')
-    await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_STORE__?.get('users/test-uid-free/sync/projects')?.list?.find((x) => x.id === 'p-done')?.icon),
+    await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_STORE__?.get('users/test-uid-free/projects/p-done')?.project?.icon),
       { message: 'the icon must reach the account', timeout: 10_000 }).toBe('flask')
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('vs-project-icons') || '{}')['p-done'])).toBeUndefined()
 

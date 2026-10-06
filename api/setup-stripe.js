@@ -7,7 +7,7 @@ import { proProductDescription } from './_lib/plans.js'
 import { allowedOrigins } from './_lib/origins.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
-  LOOKUP_KEYS, INTERVAL_MAP, INTERVAL_COUNTS, BILLING_INTERVALS, LIFETIME_CURRENCY_CODES,
+  LOOKUP_KEYS, INTERVAL_MAP, INTERVAL_COUNTS, BILLING_INTERVALS,
   toCents, fromCents,
 } from './_lib/pricing.js'
 
@@ -91,7 +91,6 @@ function validatePrices(prices) {
     if (!(BASE_CURRENCY in map)) return `${interval}: base currency (${BASE_CURRENCY.toUpperCase()}) is required`
     for (const [cur, amt] of Object.entries(map)) {
       if (!CURRENCY_CODES.includes(cur)) return `Unsupported currency: ${cur}`
-      if (interval === 'lifetime' && !LIFETIME_CURRENCY_CODES.includes(cur)) return `Lifetime pricing is not approved for ${cur.toUpperCase()}`
       const n = Number(amt)
       if (!isFinite(n) || n <= 0 || n > 100000) return `${interval} ${cur.toUpperCase()}: invalid amount`
     }
@@ -173,15 +172,13 @@ export default async function handler(req, res) {
       // is precisely how that ships unnoticed — the price object looks correct
       // in the dashboard and the error appears on a customer's statement.
       //
-      // Sent for every recurring interval, not only quarterly. Monthly and
-      // yearly are both count 1, so this changes nothing for them and it means
-      // the next interval added cannot reintroduce the bug by forgetting a
-      // special case.
-      if (interval !== 'lifetime') {
-        priceParams.recurring = {
-          interval: INTERVAL_MAP[interval],
-          interval_count: INTERVAL_COUNTS[interval] ?? 1,
-        }
+      // Sent for every interval, not only quarterly. Monthly and yearly are
+      // both count 1, so this changes nothing for them and it means the next
+      // interval added cannot reintroduce the bug by forgetting a special case.
+      // Every interval is recurring: no one-off price is created here.
+      priceParams.recurring = {
+        interval: INTERVAL_MAP[interval],
+        interval_count: INTERVAL_COUNTS[interval] ?? 1,
       }
       const newPrice = await stripe.prices.create(priceParams)
 
@@ -196,7 +193,7 @@ export default async function handler(req, res) {
       ok: true,
       product: product.id,
       prices: out,
-      note: 'Prices saved. Recurring and one-off checkout resolve by lookup key; lifetime stays unavailable in currencies without an approved amount.',
+      note: 'Prices saved. Checkout resolves each interval by lookup key.',
     })
   } catch (err) {
     console.error('setup-stripe failed:', err)

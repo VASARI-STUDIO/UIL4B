@@ -52,6 +52,14 @@
 //  · 'union'   — collections (prompts, likes, saves, custom icons, recents,
 //                exports). Both sides are kept, de-duplicated by identity; the
 //                recency lists keep local first and are capped.
+//
+// PER-ITEM STAMPS (`merge: 'stamped'`). A key whose value is a list of
+// `{ id, at, … }` entries, where removing an item writes an entry saying so
+// rather than dropping it, is merged ITEM BY ITEM on bind and sync alike: for
+// each id the entry with the newer `at` wins. Two devices that each changed a
+// different item both keep their change, and a removal cannot be undone by a
+// device that never saw it. While either side still holds the list in an older
+// shape (no `at` on its entries), the key falls back to the rules above.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
@@ -82,7 +90,7 @@ export const ACCOUNT_KEYS = Object.freeze([
   { key: 'vs-current-design', doc: 'data', firstBind: 'local' },
   // Saved items and history
   { key: 'vs-prompts', doc: 'data', firstBind: 'union' },
-  { key: 'vs-saved-prompt-ids', doc: 'data', firstBind: 'union' },
+  { key: 'vs-saved-prompt-ids', doc: 'data', firstBind: 'union', merge: 'stamped' },
   { key: 'vs-palette-likes', doc: 'data', firstBind: 'union' },
   { key: 'vs-gradient-likes', doc: 'data', firstBind: 'union' },
   { key: 'vs-community-saves', doc: 'data', firstBind: 'union' },
@@ -277,6 +285,31 @@ export function unionList(first, second, cap) {
   return typeof cap === 'number' ? out.slice(0, cap) : out
 }
 
+/** True for a list whose every entry is `{ id, at }` (an empty list counts). */
+export function isStampedList(value) {
+  return Array.isArray(value) && value.every((e) => e && typeof e === 'object'
+    && e.id !== undefined && e.id !== null && Number.isFinite(e.at))
+}
+
+/**
+ * Merge two stamped lists item by item: for each id the entry with the newer
+ * `at` wins. A tie is settled on the entries' canonical text, so both devices
+ * reach the same answer. The result is sorted by id, so equal content always
+ * compares equal.
+ */
+export function mergeStamped(a, b) {
+  const byId = new Map()
+  for (const entry of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]) {
+    const key = String(entry.id)
+    const held = byId.get(key)
+    if (!held || entry.at > held.at
+      || (entry.at === held.at && JSON.stringify(canonical(entry)) < JSON.stringify(canonical(held)))) {
+      byId.set(key, entry)
+    }
+  }
+  return [...byId.values()].sort((x, y) => (String(x.id) < String(y.id) ? -1 : String(x.id) > String(y.id) ? 1 : 0))
+}
+
 // ── Stamps ──────────────────────────────────────────────────────────────────
 
 /**
@@ -407,6 +440,19 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
     }
 
     if (sameValue(l, r)) { stamps[key] = Math.max(ls, rs); continue }
+
+    // Per-item stamps: both sides keep what they know, whichever mode.
+    if (spec.merge === 'stamped' && isStampedList(l) && (rAbsent || isStampedList(r))) {
+      const merged = mergeStamped(l, rAbsent ? [] : r)
+      if (!sameValue(merged, l)) apply[key] = merged
+      if (sameValue(merged, r)) {
+        stamps[key] = Math.max(ls, rs)
+      } else {
+        stamps[key] = Math.max(now, ls, rs)
+        push = true
+      }
+      continue
+    }
 
     if (mode === 'bind') {
       if (rAbsent) { stamps[key] = ls || now; push = true; continue }

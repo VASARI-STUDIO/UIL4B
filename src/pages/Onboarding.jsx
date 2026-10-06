@@ -3,7 +3,7 @@ import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { FIRST_WINS, FIRST_WIN_SKIPPED } from '../utils/firstWin'
 import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
-import { onboardingDestination } from '../utils/onboardingState'
+import { onboardingDestination, knownProfile, localOnboardingFlag, SIGNED_IN_HOME } from '../utils/onboardingState'
 
 // Where a brand-new account lands when it does NOT pick a starting point.
 //
@@ -67,7 +67,7 @@ function ArrowIcon() {
 }
 
 export default function Onboarding() {
-  const { user, userProfile, updateProfile, loading } = useAuth()
+  const { user, userProfile, profileLoaded, updateProfile, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const headingRef = useRef(null)
@@ -105,7 +105,12 @@ export default function Onboarding() {
   // per-browser, so a previous account's flag on this device must not skip a
   // new account's first screen).
   const fresh = location.state?.fresh === true
-  const settled = onboardingDestination(userProfile)
+  // Until the account has answered, only this browser's own record of
+  // finishing can send the visitor away; otherwise the flow stays on screen.
+  const known = knownProfile(userProfile, profileLoaded)
+  const settled = known
+    ? onboardingDestination(known)
+    : (localOnboardingFlag() ? SIGNED_IN_HOME : '/onboarding')
   if (user && userProfile && !leaving && !fresh && settled !== '/onboarding') {
     return <Navigate to={settled} replace />
   }

@@ -1,276 +1,195 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Measure — Ligature</title>
+<title>The measure is the decision you make first · Ligature</title>
+<meta name="description" content="Line length sets the leading, the type size, the grid and half of how a page feels. Most of us set it last, by accident, in a container.">
+<meta name="uil4b-capture" content='{"mode":"scroll","stops":[0,0.12,0.3,0.48,0.66,0.85,1],"hold":650,"ms":10000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/newsreader.js"></script>
+<script src="../vendor/fonts/newsreader-italic.js"></script>
+<script src="../vendor/fonts/hanken-grotesk.js"></script>
+<script src="../vendor/fonts/jetbrains-mono.js"></script>
 <style>
   :root{
-    --paper:#FBFAF7;
-    --paper-2:#F2F0EA;
-    --ink:#17171A;
-    --ink-80:#3A3A3F;
-    --ink-60:#63636B;
-    --ink-40:#94949C;
-    --rule:#E2DFD7;
-    --accent:#8C2F26;
-    --serif:Georgia,"Times New Roman",serif;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --paper:#f7f4ee;
+    --paper-2:#efeae1;
+    --ink:#1a1a1e;
+    --ink-2:#56534e;
+    --ink-3:#6f6b64;
+    --line:rgba(26,26,30,.13);
+    --line-2:rgba(26,26,30,.26);
+    --ox:#8c2f26;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.6vw,56px);
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    --measure:66ch;
+    color-scheme:light;
   }
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-  body{
-    margin:0;background:var(--paper);color:var(--ink);
-    font-family:var(--serif);font-size:18px;line-height:1.75;
-    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  }
-  svg{display:block}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{background:var(--paper);-webkit-text-size-adjust:100%;scroll-padding-top:70px}
+  body{background:var(--paper);color:var(--ink);font:400 19px/1.7 var(--serif);-webkit-font-smoothing:antialiased;caret-color:var(--ox);font-optical-sizing:auto}
+  .page{overflow-x:clip}
+  ::selection{background:var(--ox);color:#fff}
   a{color:inherit}
-  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  h1,h2,h3,p,ol,ul,figure,blockquote{margin:0}
+  :focus-visible{outline:2px solid var(--ox);outline-offset:3px;border-radius:3px}
+  .ui{font-family:var(--sans)}
+  .k{font:600 11px/1.3 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 
-  /* ---------- masthead ---------- */
-  .masthead{border-bottom:1px solid var(--rule)}
-  .mast-in{
-    max-width:1200px;margin:0 auto;padding:0 20px;height:58px;
-    display:flex;align-items:center;justify-content:space-between;gap:20px;
-  }
-  .pub{font-family:var(--serif);font-size:19px;letter-spacing:.16em;text-transform:uppercase;text-decoration:none}
-  .mast-nav{display:none;gap:24px;font-family:var(--sans);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
-  @media(min-width:760px){.mast-nav{display:flex}}
-  .mast-nav a{color:var(--ink-60);text-decoration:none}
-  .mast-nav a:hover{color:var(--ink)}
-  .mast-nav a[aria-current]{color:var(--ink);border-bottom:1px solid var(--accent);padding-bottom:2px}
+  .progress{position:fixed;left:0;top:0;right:0;height:2px;z-index:40;background:var(--ox);transform-origin:0 50%;transform:scaleX(var(--read,0))}
+  .mast{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:20px;padding:12px var(--gutter);background:rgba(247,244,238,.94);border-bottom:1px solid var(--line)}
+  .pub{font:italic 400 24px/1 var(--serif);text-decoration:none;min-height:44px;display:inline-flex;align-items:center;letter-spacing:-.01em}
+  .mast nav{display:flex;gap:2px;margin-left:auto}
+  .mast nav a{display:block;font:500 14px/1 var(--sans);text-decoration:none;color:var(--ink-2);padding:12px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .mast nav a:hover{color:var(--ink);background:rgba(26,26,30,.05)}
+  .mast nav a[aria-current]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ox);border-radius:0}
+  .sub{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:999px;background:var(--ink);color:var(--paper);font:600 14px/1 var(--sans);text-decoration:none;transition:background-color .2s var(--ease)}
+  .sub:hover{background:#34343a}
 
   /* ---------- hero ---------- */
-  .hero{position:relative;background:#16161A;color:#fff;overflow:hidden}
-  .hero-art{position:absolute;inset:0}
-  .hero-art svg{width:100%;height:100%}
-  .hero-art::after{
-    content:"";position:absolute;inset:0;
-    background:linear-gradient(96deg,#16161A 0%,rgba(22,22,26,.97) 40%,rgba(22,22,26,.72) 58%,rgba(22,22,26,.3) 76%,rgba(22,22,26,.08) 100%);
-  }
-  @media(max-width:759px){
-    .hero-art::after{background:linear-gradient(180deg,rgba(22,22,26,.92),rgba(22,22,26,.76))}
-  }
-  .hero-in{
-    position:relative;max-width:1000px;margin:0 auto;padding:72px 20px 40px;
-  }
-  @media(min-width:760px){.hero-in{padding:132px 32px 56px}}
-  .eyebrow{
-    font-family:var(--sans);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
-    color:#C9A29C;margin:0 0 16px;
-  }
-  .hero h1{
-    font-size:clamp(34px,6.4vw,62px);line-height:1.06;letter-spacing:-.022em;
-    margin:0;max-width:19ch;font-weight:400;text-wrap:balance;
-  }
-  .hero .dek{
-    font-size:clamp(17px,2.2vw,21px);line-height:1.55;color:rgba(255,255,255,.72);
-    margin:18px 0 0;max-width:46ch;
-  }
+  .hero{padding:clamp(40px,8vh,96px) var(--gutter) 0;display:grid;grid-template-columns:220px minmax(0,1fr);gap:0 clamp(28px,4vw,64px)}
+  .hero .k{padding-top:14px}
+  h1{font:300 clamp(46px,6.6vw,112px)/.95 var(--serif);letter-spacing:-.035em;max-width:13em;text-wrap:balance}
+  h1 em{font-style:italic;color:var(--ox)}
+  .dek{margin-top:26px;font:italic 400 clamp(20px,1.7vw,26px)/1.4 var(--serif);color:var(--ink-2);max-width:32em}
+  /* a ruler drawn at exactly this article's measure */
+  .ruler{grid-column:2;margin-top:40px;width:var(--measure);max-width:100%;font-size:19px;position:relative;height:40px;border-bottom:1px solid var(--ink)}
+  .ruler i{position:absolute;bottom:0;width:1px;background:var(--ink)}
+  .ruler span{position:absolute;right:0;top:0;font:500 11px/1 var(--mono);color:var(--ox)}
+  .ruler span::before{content:"";position:absolute;right:0;top:14px;width:1px;height:26px;background:var(--ox)}
+  .byline{grid-column:2;display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;padding:22px 0 30px;font-family:var(--sans);font-size:14.5px;color:var(--ink-2)}
+  .av{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--paper);font:italic 400 18px var(--serif)}
+  .byline b{display:block;color:var(--ink);font-weight:600}
 
-  /* ---------- byline ---------- */
-  .byline{
-    max-width:1000px;margin:0 auto;padding:20px;
-    display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;
-    border-bottom:1px solid var(--rule);
-  }
-  @media(min-width:760px){.byline{padding:22px 32px}}
-  .avatar{
-    width:42px;height:42px;border-radius:50%;background:var(--paper-2);color:var(--accent);
-    display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:.04em;flex:none;
-    border:1px solid var(--rule);
-  }
-  .who{font-size:15.5px;line-height:1.35}
-  .who b{font-weight:400}
-  .who span{display:block;font-family:var(--sans);font-size:12.5px;color:var(--ink-60);letter-spacing:.01em}
-  .meta{
-    margin-left:auto;font-family:var(--sans);font-size:12.5px;color:var(--ink-60);
-    display:flex;flex-wrap:wrap;gap:6px 16px;
-  }
-  .meta span{white-space:nowrap}
-
-  /* ---------- layout ---------- */
-  .shell{max-width:1000px;margin:0 auto;padding:0 20px}
-  @media(min-width:980px){
-    .shell{
-      display:grid;grid-template-columns:200px minmax(0,680px);
-      gap:56px;justify-content:center;max-width:none;padding:0 32px;
-    }
-  }
-  /* table of contents */
-  .toc{display:none}
-  @media(min-width:980px){
-    .toc{display:block;position:sticky;top:34px;align-self:start;padding-top:56px;max-height:calc(100vh - 60px);overflow:auto}
-  }
-  .toc h2{
-    font-family:var(--sans);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--ink-40);margin:0 0 14px;font-weight:600;
-  }
-  .toc ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--rule)}
-  .toc li{margin:0}
-  .toc a{
-    display:block;padding:7px 0 7px 14px;margin-left:-1px;border-left:1px solid transparent;
-    font-family:var(--sans);font-size:13px;line-height:1.4;color:var(--ink-60);text-decoration:none;
-  }
+  /* ---------- the reading grid: contents, column, margin ---------- */
+  .shell{display:grid;grid-template-columns:220px var(--measure) minmax(0,1fr);gap:0 clamp(28px,4vw,64px);padding:0 var(--gutter);border-top:1px solid var(--line)}
+  .toc{position:sticky;top:90px;align-self:start;padding-top:40px}
+  .toc ol{list-style:none;padding:0;margin-top:14px;border-left:1px solid var(--line)}
+  .toc a{display:block;padding:7px 0 7px 14px;margin-left:-1px;border-left:2px solid transparent;font:500 14px/1.35 var(--sans);color:var(--ink-3);text-decoration:none;transition:color .2s var(--ease),border-color .2s var(--ease)}
   .toc a:hover{color:var(--ink)}
-  .toc a[aria-current="true"]{color:var(--ink);border-left-color:var(--accent);font-weight:600}
+  .toc a[aria-current="true"]{color:var(--ink);border-left-color:var(--ox)}
+  article{padding:40px 0 20px;min-width:0}
+  article > * + *{margin-top:1.05em}
+  article p{text-wrap:pretty;hanging-punctuation:first}
+  .lede-p::first-letter{float:left;font:300 5.2em/.8 var(--serif);margin:.06em .08em 0 0;color:var(--ox)}
+  article h2{margin-top:2.2em;font:400 1.75em/1.1 var(--serif);letter-spacing:-.02em;max-width:22ch}
+  article h3{margin-top:1.6em;font:600 .74em/1.3 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+  article ul{padding-left:1.1em}
+  article li + li{margin-top:.4em}
+  article li::marker{color:var(--ox)}
+  code{font:.8em var(--mono);background:var(--paper-2);padding:.12em .36em;border-radius:4px}
+  pre{margin-top:1.3em;padding:18px 20px;background:#1d1d22;color:#e6e1d6;border-radius:10px;overflow-x:auto;font:13.5px/1.65 var(--mono);tab-size:2;scrollbar-color:#555 transparent}
+  pre code{background:none;padding:0;font-size:inherit}
+  .c-com{color:#9a958a;font-style:italic}.c-sel{color:#f0b37e}.c-prop{color:#9cc4e4}.c-val{color:#c7e3a8}
+  .code-cap{font:italic .85em/1.5 var(--serif);color:var(--ink-3);margin-top:.6em}
+  blockquote{margin:1.8em 0;padding-left:22px;border-left:3px solid var(--ox);max-width:30ch}
+  blockquote p{font:italic 400 1.5em/1.3 var(--serif);letter-spacing:-.01em}
+  blockquote cite{display:block;margin-top:10px;font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;font-style:normal;color:var(--ink-3)}
+  .note{padding:18px 20px;border-top:2px solid var(--ink);border-bottom:1px solid var(--line);font-size:.92em}
+  .note b{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+  .end{color:var(--ox)}
+  /* sidenotes hang in the right margin on wide screens */
+  .sn{font:400 14px/1.5 var(--sans);color:var(--ink-2)}
+  .sn b{color:var(--ink);font-weight:600}
+  sup.r{font:600 .62em var(--sans);color:var(--ox);vertical-align:super;line-height:0}
+  figure{margin-top:1.8em}
+  figure svg{display:block;width:100%;height:auto}
+  figcaption{margin-top:10px;font:400 14px/1.5 var(--sans);color:var(--ink-2)}
+  figcaption b{color:var(--ink)}
 
-  /* ---------- article ---------- */
-  article{padding:44px 0 0;max-width:680px}
-  @media(min-width:980px){article{padding:56px 0 0}}
-  article > p{margin:0 0 26px}
-  .lede-p{font-size:21px;line-height:1.62;color:var(--ink-80)}
-  .lede-p:first-letter{
-    float:left;font-size:64px;line-height:.82;padding:6px 10px 0 0;color:var(--accent);
-  }
-  h2{
-    font-size:29px;line-height:1.2;letter-spacing:-.015em;margin:52px 0 16px;font-weight:400;
-    scroll-margin-top:24px;
-  }
-  h3{font-size:20px;line-height:1.3;margin:34px 0 10px;font-weight:700;letter-spacing:-.005em}
-  article ul{margin:0 0 26px;padding-left:22px}
-  article li{margin-bottom:10px}
-  article strong{font-weight:700}
-  article a:not(.rel){color:var(--accent);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
-
-  code{
-    font-family:var(--mono);font-size:.82em;background:var(--paper-2);
-    padding:.14em .38em;border-radius:3px;color:#5A2B24;
-  }
-  pre{
-    background:#1B1B1F;color:#E8E6E0;border-radius:6px;padding:18px 20px;overflow-x:auto;
-    font-family:var(--mono);font-size:13.5px;line-height:1.65;margin:0 0 12px;
-  }
-  pre code{background:none;padding:0;color:inherit;font-size:inherit}
-  .tok-sel{color:#9CC7A6}.tok-prop{color:#8FB8DB}.tok-val{color:#E8C07D}.tok-com{color:#6F6F78;font-style:italic}
-  .code-cap{font-family:var(--sans);font-size:12.5px;color:var(--ink-60);margin:0 0 30px}
-
-  blockquote{
-    margin:34px 0;padding:4px 0 4px 26px;border-left:3px solid var(--accent);
-    font-size:24px;line-height:1.42;letter-spacing:-.012em;color:var(--ink);
-  }
-  blockquote p{margin:0}
-  blockquote cite{
-    display:block;font-family:var(--sans);font-style:normal;font-size:12.5px;letter-spacing:.06em;
-    text-transform:uppercase;color:var(--ink-40);margin-top:14px;
-  }
-
-  figure{margin:34px 0;padding:0}
-  figure .art{background:var(--paper-2);border:1px solid var(--rule);padding:22px 20px}
-  figcaption{
-    font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink-60);margin-top:10px;
-    max-width:56ch;
-  }
-  figcaption b{color:var(--ink-80);font-weight:600}
-
-  .note{
-    font-family:var(--sans);font-size:14.5px;line-height:1.6;color:var(--ink-80);
-    background:var(--paper-2);padding:18px 20px;margin:0 0 30px;border-radius:4px;
-  }
-  .note b{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-60);margin-bottom:6px}
-
-  .endmark{color:var(--accent);font-size:20px}
+  /* ---------- the measure lab ---------- */
+  .lab{margin-top:1.8em;border-top:2px solid var(--ink);padding-top:14px}
+  .lab-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 20px}
+  .lab-read{font:500 14px var(--mono)}
+  .lab-read b{color:var(--ox);font-weight:600}
+  .lab-ctrl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 16px;align-items:center;margin-top:12px;font:500 14px var(--sans)}
+  .lab-ctrl input[type=range]{width:100%;accent-color:var(--ox);height:32px}
+  .band{grid-column:2;position:relative;height:8px;margin-bottom:22px;border-radius:4px;background:var(--paper-2)}
+  .band i{position:absolute;top:0;bottom:0;left:var(--l);right:var(--r);background:rgba(140,47,38,.22);border-radius:4px}
+  .band span{position:absolute;top:12px;font:500 11px var(--mono);color:var(--ink-3);transform:translateX(-50%)}
+  .tog{display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+  .tog input{width:18px;height:18px;accent-color:var(--ox);margin:0}
+  .sample{margin-top:34px;padding:22px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+  .sample p{max-width:var(--m,66ch);font-size:17px;line-height:var(--lh,1.7);transition:max-width .25s var(--ease),line-height .25s var(--ease)}
+  .verdict{margin-top:10px;font:500 14px var(--sans);color:var(--ink-2)}
 
   /* ---------- related ---------- */
-  .related{border-top:1px solid var(--rule);margin-top:64px;padding:44px 0 72px}
-  .related-in{max-width:1000px;margin:0 auto;padding:0 20px}
-  @media(min-width:760px){.related-in{padding:0 32px}}
-  .related h2{
-    font-family:var(--sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--ink-40);margin:0 0 22px;font-weight:600;
-  }
-  .rel-grid{display:grid;gap:26px;grid-template-columns:1fr}
-  @media(min-width:640px){.rel-grid{grid-template-columns:repeat(3,1fr);gap:32px}}
-  .rel{text-decoration:none;display:block}
-  .rel .k{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-  .rel h3{font-size:20px;line-height:1.28;margin:8px 0 6px;font-weight:400;letter-spacing:-.01em}
-  .rel p{font-family:var(--sans);font-size:13.5px;line-height:1.55;color:var(--ink-60);margin:0}
-  .rel .t{font-family:var(--sans);font-size:12px;color:var(--ink-40);margin-top:8px;display:block}
-  .rel:hover h3{text-decoration:underline;text-underline-offset:3px}
+  .related{margin-top:clamp(50px,7vw,90px);padding:clamp(50px,7vw,90px) var(--gutter);border-top:1px solid var(--ink);background:var(--paper-2)}
+  .related h2{font:400 clamp(28px,2.6vw,40px)/1.1 var(--serif);letter-spacing:-.02em;margin-bottom:26px}
+  .rel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.4vw,36px);list-style:none;padding:0}
+  .rel a{display:grid;gap:10px;text-decoration:none;border-radius:6px}
+  .rel .glyph{aspect-ratio:16/10;display:grid;place-items:center;background:var(--paper);border:1px solid var(--line);border-radius:6px;font:300 clamp(56px,6vw,96px)/1 var(--serif);color:var(--ink);transition:color .3s var(--ease),background-color .3s var(--ease)}
+  .rel a:hover .glyph{color:var(--paper);background:var(--ink)}
+  .rel h3{font:400 23px/1.2 var(--serif);letter-spacing:-.01em}
+  .rel p{font:400 15px/1.5 var(--sans);color:var(--ink-2)}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;padding:22px var(--gutter) 30px;font:500 13px/1.5 var(--sans);color:var(--ink-3);background:var(--paper-2);border-top:1px solid var(--line)}
 
-  footer{border-top:1px solid var(--rule);background:var(--paper-2)}
-  .foot{
-    max-width:1000px;margin:0 auto;padding:24px 20px;display:flex;flex-wrap:wrap;gap:8px 24px;
-    justify-content:space-between;font-family:var(--sans);font-size:12.5px;color:var(--ink-60);
+  @media (min-width:1180px){
+    .sn{float:right;clear:right;width:clamp(170px,15vw,240px);margin-right:calc(-1 * clamp(170px,15vw,240px) - clamp(28px,4vw,64px));margin-top:.3em;padding-top:8px;border-top:1px solid var(--line)}
   }
-  @media(min-width:760px){.foot{padding:24px 32px}}
-
-  @media(prefers-reduced-motion:reduce){
-    html{scroll-behavior:auto}
-    *{animation:none!important;transition:none!important}
+  @media (max-width:1179px){
+    .shell{grid-template-columns:200px minmax(0,var(--measure))}
+    .sn{padding:10px 14px;border-left:2px solid var(--line-2)}
   }
+  @media (max-width:860px){
+    .mast nav{display:none}
+    .sub{margin-left:auto}
+    .hero{grid-template-columns:minmax(0,1fr)}
+    .hero .k{padding-top:0;margin-bottom:14px}
+    .ruler,.byline{grid-column:1}
+    .shell{grid-template-columns:minmax(0,1fr)}
+    .toc{position:static;padding-top:24px}
+    .toc ol{display:flex;flex-wrap:wrap;gap:0 14px;border-left:0}
+    .toc a{border-left:0;padding-left:0}
+    .rel{grid-template-columns:minmax(0,1fr)}
+    body{font-size:18px}
+  }
+  @media (max-width:560px){
+    body{font-size:17.5px}
+    .lede-p::first-letter{font-size:4.2em}
+    .lab-ctrl{grid-template-columns:minmax(0,1fr)}
+    .band{grid-column:1}
+    .toc,.ruler{display:none}
+  }
+  @media (max-height:520px) and (min-width:560px){
+    .mast{padding-top:4px;padding-bottom:4px}
+    .hero{padding-top:18px}
+    h1{font-size:clamp(34px,6vw,54px)}
+    .dek{margin-top:12px;font-size:17px}
+    .ruler{margin-top:16px}
+  }
+  @media (prefers-reduced-motion: reduce){ .sample p{transition:none} }
 </style>
 </head>
 <body>
-
-<header class="masthead">
-  <div class="mast-in">
-    <a class="pub" href="#top">Ligature</a>
-    <nav class="mast-nav" aria-label="Sections">
-      <a href="#top" aria-current="page">Typography</a>
-      <a href="#top">Print</a>
-      <a href="#top">Interfaces</a>
-      <a href="#top">Archive</a>
-    </nav>
-  </div>
+<div class="progress" id="progress" aria-hidden="true"></div>
+<div class="page">
+<header class="mast">
+  <a class="pub" href="#top">Ligature</a>
+  <nav aria-label="Sections"><a href="#top" aria-current="page">Typography</a><a href="#top">Print</a><a href="#top">Interfaces</a><a href="#top">Archive</a></nav>
+  <a class="sub" href="#top">Subscribe</a>
 </header>
 
-<div class="hero" id="top">
-  <div class="hero-art" aria-hidden="true">
-    <svg viewBox="0 0 1200 460" preserveAspectRatio="xMidYMid slice">
-      <defs>
-        <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#16161A"/>
-          <stop offset="0.55" stop-color="#1D1D22"/>
-          <stop offset="1" stop-color="#2A2429"/>
-        </linearGradient>
-      </defs>
-      <rect width="1200" height="460" fill="url(#hg)"/>
-      <!-- ghosted text block: a narrow column and a too-wide column -->
-      <g fill="#FFFFFF" opacity=".07">
-        <rect x="726" y="96" width="250" height="9"/><rect x="726" y="118" width="250" height="9"/>
-        <rect x="726" y="140" width="250" height="9"/><rect x="726" y="162" width="250" height="9"/>
-        <rect x="726" y="184" width="250" height="9"/><rect x="726" y="206" width="188" height="9"/>
-        <rect x="726" y="250" width="418" height="9"/><rect x="726" y="272" width="418" height="9"/>
-        <rect x="726" y="294" width="418" height="9"/><rect x="726" y="316" width="330" height="9"/>
-      </g>
-      <g stroke="#8C2F26" stroke-width="2" fill="none" opacity=".85">
-        <path d="M726 78h250M726 70v16M976 70v16"/>
-      </g>
-      <g stroke="#FFFFFF" stroke-width="2" fill="none" opacity=".3">
-        <path d="M726 232h418M726 224v16M1144 224v16"/>
-      </g>
-      <!-- ruler ticks along the bottom -->
-      <g stroke="#FFFFFF" opacity=".16" stroke-width="1">
-        <path d="M0 430h1200"/>
-        <path d="M40 430v-9M80 430v-14M120 430v-9M160 430v-9M200 430v-14M240 430v-9M280 430v-9M320 430v-14M360 430v-9M400 430v-9M440 430v-14M480 430v-9M520 430v-9M560 430v-14M600 430v-9M640 430v-9M680 430v-14M720 430v-9M760 430v-9M800 430v-14M840 430v-9M880 430v-9M920 430v-14M960 430v-9M1000 430v-9M1040 430v-14M1080 430v-9M1120 430v-9M1160 430v-14"/>
-      </g>
-    </svg>
-  </div>
-  <div class="hero-in">
-    <p class="eyebrow">Typography · Craft</p>
-    <h1>The measure is the decision you make first</h1>
+<main id="top">
+<header class="hero">
+  <p class="k">Typography · Issue 34</p>
+  <div>
+    <h1>The measure is the decision you make <em>first</em></h1>
     <p class="dek">Line length sets the leading, the type size, the grid and half of how a page feels. Most of us set it last, by accident, in a container.</p>
   </div>
-</div>
-
-<div class="byline">
-  <span class="avatar" aria-hidden="true">NF</span>
-  <span class="who"><b>Nadia Ferris</b><span>Type director, Ligature</span></span>
-  <span class="meta">
-    <span>11 September 2026</span>
-    <span>9 min read</span>
-    <span>Issue 34</span>
-  </span>
-</div>
+  <div class="ruler" id="ruler" aria-hidden="true"><span>66 characters: the line you are about to read</span></div>
+  <div class="byline"><span class="av" aria-hidden="true">NF</span><span><b>Nadia Ferris</b>Type director, Ligature</span><span>11 September 2026</span><span>9 minute read</span></div>
+</header>
 
 <div class="shell">
-
   <nav class="toc" aria-label="On this page">
-    <h2>On this page</h2>
-    <ol>
+    <p class="k">On this page</p>
+    <ol id="toc">
       <li><a href="#s1">What the measure is</a></li>
       <li><a href="#s2">Where 45 to 75 comes from</a></li>
       <li><a href="#s3">Setting it in CSS</a></li>
@@ -281,196 +200,146 @@
   </nav>
 
   <article>
-    <p class="lede-p">Every argument about web typography eventually turns out to be an argument about the measure. Someone says the type is too small; it is not, the column is too wide. Someone says the page feels cramped; it is not, the leading is fighting a short line. The measure — the length of a line of text — is the first decision, and almost nobody makes it first.</p>
+    <p class="lede-p">Every argument about web typography eventually turns out to be an argument about the measure. Someone says the type is too small; it is not, the column is too wide. Someone says the page feels cramped; it is not, the leading is fighting a short line. The measure, the length of a line of text, is the first decision, and almost nobody makes it first.</p>
 
     <h2 id="s1">What the measure is</h2>
     <p>The measure is how far the eye travels before it has to come back. At the end of every line the reader performs a return sweep: a fast movement back to the left edge and down one line. It is the least conscious and most fragile part of reading. When the line is long, the sweep has further to go and lands less accurately, and the reader re-reads a line or loses one. When the line is short, the sweep happens so often that it becomes the rhythm of the page, and the reader feels hurried.</p>
     <p>So the measure is not a matter of taste. It is a mechanical setting, like the gear on a bicycle, and it has a range where the machine runs well.</p>
-
     <figure>
-      <div class="art">
-        <svg viewBox="0 0 600 450" role="img" aria-label="Three columns of text set at 38, 66 and 104 characters a line and drawn to the same scale. A red arrow traces the return sweep the eye makes at the end of each line: short and frequent in the narrow column, long and shallow in the wide one.">
-          <text x="0" y="16" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" fill="#63636B">38 CH — the return becomes the rhythm</text>
-          <g fill="#C7C3B8">
-            <rect x="0" y="32" width="180" height="7" rx="1"/>
-            <rect x="0" y="58" width="180" height="7" rx="1"/>
-            <rect x="0" y="84" width="180" height="7" rx="1"/>
-            <rect x="0" y="110" width="104" height="7" rx="1"/>
-          </g>
-          <g stroke="#8C2F26" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M180 42 L11 55"/>
-            <path d="M11 55 l9 -4.6M11 55 l8.4 3.2" stroke-dasharray="0"/>
-            <path d="M180 68 L11 81"/>
-            <path d="M11 81 l9 -4.6M11 81 l8.4 3.2" stroke-dasharray="0"/>
-            <path d="M180 94 L11 107"/>
-            <path d="M11 107 l9 -4.6M11 107 l8.4 3.2" stroke-dasharray="0"/>
-          </g>
-
-          <text x="0" y="164" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" fill="#63636B">66 CH — the working range</text>
-          <g fill="#C7C3B8">
-            <rect x="0" y="180" width="313" height="7" rx="1"/>
-            <rect x="0" y="206" width="313" height="7" rx="1"/>
-            <rect x="0" y="232" width="313" height="7" rx="1"/>
-            <rect x="0" y="258" width="182" height="7" rx="1"/>
-          </g>
-          <g stroke="#8C2F26" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M313 190 L11 203"/>
-            <path d="M11 203 l9 -4.6M11 203 l8.4 3.2" stroke-dasharray="0"/>
-            <path d="M313 216 L11 229"/>
-            <path d="M11 229 l9 -4.6M11 229 l8.4 3.2" stroke-dasharray="0"/>
-            <path d="M313 242 L11 255"/>
-            <path d="M11 255 l9 -4.6M11 255 l8.4 3.2" stroke-dasharray="0"/>
-          </g>
-
-          <text x="0" y="312" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" fill="#63636B">104 CH — the sweep lands on the wrong line</text>
-          <g fill="#C7C3B8">
-            <rect x="0" y="328" width="493" height="7" rx="1"/>
-            <rect x="0" y="354" width="493" height="7" rx="1"/>
-            <rect x="0" y="380" width="493" height="7" rx="1"/>
-            <rect x="0" y="406" width="286" height="7" rx="1"/>
-          </g>
-          <g stroke="#8C2F26" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 4">
-            <path d="M493 338 L11 351"/>
-            <path d="M11 351 l9 -4.6M11 351 l8.4 3.2" stroke-dasharray="0"/>
-            <path d="M493 364 L11 377"/>
-            <path d="M11 377 l9 -4.6M11 377 l8.4 3.2" stroke-dasharray="0"/>
-            <path d="M493 390 L11 403"/>
-            <path d="M11 403 l9 -4.6M11 403 l8.4 3.2" stroke-dasharray="0"/>
-          </g>
-
-        </svg>
-      </div>
-      <figcaption><b>The return sweep at three measures.</b> The red line is the movement the eye makes at the end of each line. Nothing about the type changes between these three columns — only the width of the container.</figcaption>
+      <svg viewBox="0 0 600 420" role="img" aria-label="Three blocks of lines at 38, 66 and 104 characters, drawn to the same scale. A red arrow traces the return sweep at the end of each line: short and frequent in the narrow block, long and shallow in the wide one.">
+        <g font-family="JetBrains Mono, monospace" font-size="11" fill="#6f6b64"><text x="0" y="14">38 CH · THE RETURN BECOMES THE RHYTHM</text><text x="0" y="152">66 CH · THE WORKING RANGE</text><text x="0" y="290">104 CH · THE SWEEP LANDS ON THE WRONG LINE</text></g>
+        <g fill="#d6cfc2"><rect x="0" y="28" width="180" height="7" rx="1"/><rect x="0" y="52" width="180" height="7" rx="1"/><rect x="0" y="76" width="180" height="7" rx="1"/><rect x="0" y="100" width="104" height="7" rx="1"/>
+          <rect x="0" y="166" width="313" height="7" rx="1"/><rect x="0" y="190" width="313" height="7" rx="1"/><rect x="0" y="214" width="313" height="7" rx="1"/><rect x="0" y="238" width="182" height="7" rx="1"/>
+          <rect x="0" y="304" width="493" height="7" rx="1"/><rect x="0" y="328" width="493" height="7" rx="1"/><rect x="0" y="352" width="493" height="7" rx="1"/><rect x="0" y="376" width="286" height="7" rx="1"/></g>
+        <g stroke="#8c2f26" stroke-width="1.4" fill="none" stroke-linecap="round"><path d="M180 37 L12 50 M12 50 l9-4.6 M12 50 l8.4 3.2 M180 61 L12 74 M12 74 l9-4.6 M12 74 l8.4 3.2 M180 85 L12 98 M12 98 l9-4.6 M12 98 l8.4 3.2"/>
+          <path d="M313 175 L12 188 M12 188 l9-4.6 M12 188 l8.4 3.2 M313 199 L12 212 M12 212 l9-4.6 M12 212 l8.4 3.2 M313 223 L12 236 M12 236 l9-4.6 M12 236 l8.4 3.2"/>
+          <path d="M493 313 L12 326 M493 337 L12 350 M493 361 L12 374" stroke-dasharray="6 4"/><path d="M12 326 l9-4.6 M12 326 l8.4 3.2 M12 350 l9-4.6 M12 350 l8.4 3.2 M12 374 l9-4.6 M12 374 l8.4 3.2"/></g>
+      </svg>
+      <figcaption><b>The return sweep at three measures.</b> The red line is the movement the eye makes at the end of each line. Nothing about the type changes between the three blocks, only the width of the container.</figcaption>
     </figure>
 
     <h2 id="s2">Where 45 to 75 comes from</h2>
-    <p>The number most often quoted — 45 to 75 characters, 66 as the ideal — comes from Robert Bringhurst, who was describing text set in a book, in a serif face, read by an adult who had chosen to read it. It is a good number. It is not a law, and the conditions matter.</p>
-    <p>Mid-century legibility research, most of it associated with Miles Tinker and Donald Paterson, had already established the shape of the finding: comprehension and reading speed hold steady across a band of line lengths and fall away at both ends. What the research did not give us is a single correct value, because the value moves with the size of the type, the leading, the face, and whether the reader is reading or scanning.</p>
-    <p>Treat 45–75 as the band, and then place yourself inside it deliberately:</p>
+    <p class="sn"><b>Bringhurst,</b> <i>The Elements of Typographic Style</i>, first published 1992. The 66-character ideal is in section 2.1.2.</p>
+    <p>The number most often quoted, 45 to 75 characters with 66 as the ideal, comes from Robert Bringhurst<sup class="r">1</sup>, who was describing text set in a book, in a serif face, read by an adult who had chosen to read it. It is a good number. It is not a law, and the conditions matter.</p>
+    <p class="sn"><b>Tinker and Paterson</b> ran their legibility studies at the University of Minnesota from the late 1920s; Tinker summarised them in <i>Legibility of Print</i>, 1963.</p>
+    <p>Mid-century legibility research, most of it associated with Miles Tinker and Donald Paterson<sup class="r">2</sup>, had already established the shape of the finding: comprehension and reading speed hold steady across a band of line lengths and fall away at both ends. What the research did not give us is a single correct value, because the value moves with the size of the type, the leading, the face, and whether the reader is reading or scanning.</p>
+    <p>Treat 45 to 75 as the band, and then place yourself inside it deliberately:</p>
     <ul>
       <li><strong>Nearer 45</strong> for reference material that is scanned, for sidebars, for anything set in two columns, and for text a reader dips into.</li>
-      <li><strong>Around 66</strong> for continuous prose — an essay, a long documentation page, a story.</li>
+      <li><strong>Around 66</strong> for continuous prose: an essay, a long documentation page, a story.</li>
       <li><strong>Nearer 75</strong> only with generous leading and a face with a small x-height, and only when the reader is settled.</li>
     </ul>
 
     <h2 id="s3">Setting it in CSS</h2>
     <p>The instinct is to reach for <code>max-width</code> in pixels, which is fine until the type size changes and the measure quietly changes with it. The <code>ch</code> unit ties the container to the type instead: one <code>ch</code> is the advance width of the digit zero in the current font, which is close enough to an average character to be useful.</p>
-
-<pre><code><span class="tok-com">/* The container is described in characters, not pixels. */</span>
-<span class="tok-sel">.prose</span> {
-  <span class="tok-prop">max-width</span>: <span class="tok-val">66ch</span>;
-  <span class="tok-prop">font-size</span>: <span class="tok-val">clamp(1rem, 0.94rem + 0.32vw, 1.125rem)</span>;
-  <span class="tok-prop">line-height</span>: <span class="tok-val">1.72</span>;
-  <span class="tok-prop">text-wrap</span>: <span class="tok-val">pretty</span>;
+<pre><code><span class="c-com">/* The container is described in characters, not pixels. */</span>
+<span class="c-sel">.prose</span> {
+  <span class="c-prop">max-width</span>: <span class="c-val">66ch</span>;
+  <span class="c-prop">font-size</span>: <span class="c-val">clamp(1rem, 0.94rem + 0.32vw, 1.125rem)</span>;
+  <span class="c-prop">line-height</span>: <span class="c-val">1.72</span>;
+  <span class="c-prop">text-wrap</span>: <span class="c-val">pretty</span>;
 }</code></pre>
     <p class="code-cap">The measure is now a function of the type size. Grow the type and the column grows with it, so the line still holds about sixty-six characters.</p>
-
-    <p>Two cautions. First, <code>ch</code> is measured on the <em>zero</em> of the current font, so a face with wide figures gives you a wider column than you asked for — check the result, do not trust the unit. Second, <code>text-wrap: pretty</code> only tidies the last lines; it is not a substitute for a sensible width.</p>
-
-    <blockquote>
-      <p>A column that is too wide never looks wrong. It quietly costs the reader a line every few seconds, and they blame themselves for losing concentration.</p>
-      <cite>Nadia Ferris</cite>
-    </blockquote>
+    <p>Two cautions. First, <code>ch</code> is measured on the zero of the current font, so a face with wide figures gives you a wider column than you asked for: check the result, do not trust the unit. Second, <code>text-wrap: pretty</code> only tidies the last lines; it is not a substitute for a sensible width.</p>
+    <blockquote><p>A column that is too wide never looks wrong. It quietly costs the reader a line every few seconds, and they blame themselves for losing concentration.</p><cite>Nadia Ferris</cite></blockquote>
 
     <h2 id="s4">Leading moves with it</h2>
     <p>Line length and line height are one decision, not two. A longer line needs more leading, because the return sweep needs a clearer target to land on; a short line needs less, or the lines stop reading as a paragraph and start reading as a list.</p>
-    <p>A working rule: at 45 characters set <strong>1.5</strong>; at 66 set <strong>1.7</strong>; at 75 set <strong>1.8</strong> and check it in the worst light you can find. If you change the measure later — and you will, when the sidebar arrives — change the leading in the same commit.</p>
+    <p>A working rule: at 45 characters set <strong>1.5</strong>; at 66 set <strong>1.7</strong>; at 75 set <strong>1.8</strong> and check it in the worst light you can find. Try it here:</p>
 
-    <div class="note">
-      <b>One test that catches almost everything</b>
-      Read three paragraphs of your own page on a phone, standing up, at the brightness you actually use outdoors. Every measure problem shows itself within about fifteen seconds, and nothing else you can do at a desk finds them as fast.
-    </div>
+    <section class="lab" aria-labelledby="lab-h">
+      <div class="lab-head"><h3 id="lab-h" class="k" style="margin:0;color:var(--ink)">The measure lab</h3><p class="lab-read" id="read" aria-live="polite"><b>66</b> characters · leading 1.70</p></div>
+      <div class="lab-ctrl">
+        <label for="m">Measure</label><input id="m" type="range" min="28" max="110" step="1" value="66" aria-describedby="verdict">
+        <div class="band" aria-hidden="true"><i style="--l:20.7%;--r:42.7%"></i><span style="left:20.7%">45</span><span style="left:46.3%">66</span><span style="left:57.3%">75</span></div>
+        <label class="tog" style="grid-column:1/-1"><input type="checkbox" id="link" checked> Move the leading with the measure</label>
+      </div>
+      <div class="sample" id="sample"><p>Every argument about web typography eventually turns out to be an argument about the measure. Someone says the type is too small; it is not, the column is too wide. Someone says the page feels cramped; it is not, the leading is fighting a short line.</p></div>
+      <p class="verdict" id="verdict">In the working range, for continuous prose.</p>
+    </section>
+
+    <p>If you change the measure later, and you will when the sidebar arrives, change the leading in the same commit.</p>
+    <div class="note"><b>One test that catches almost everything</b>Read three paragraphs of your own page on a phone, standing up, at the brightness you actually use outdoors. Every measure problem shows itself within about fifteen seconds, and nothing else you can do at a desk finds them as fast.</div>
 
     <h2 id="s5">What breaks on a phone</h2>
-    <p>On a narrow screen the measure is decided for you — a 390&nbsp;px viewport with sensible margins gives about 38 characters at 17&nbsp;px, which is at the short end of the band and perfectly readable. The failures are elsewhere.</p>
+    <p>On a narrow screen the measure is decided for you: a 390&nbsp;px viewport with sensible margins gives about 38 characters at 17&nbsp;px, which is at the short end of the band and perfectly readable. The failures are elsewhere.</p>
     <h3>Padding eaten by a card</h3>
     <p>A card inside a card inside a container leaves 22 characters a line. Text ends up in a gutter you did not design. Count characters, not nesting levels.</p>
     <h3>Headings set at body measure</h3>
-    <p>A heading is scanned, not read, and it wants a shorter measure than the paragraph under it — around 20 to 30 characters. Give headings their own <code>max-width</code> and they stop breaking into three ragged lines.</p>
+    <p>A heading is scanned, not read, and it wants a shorter measure than the paragraph under it, around 20 to 30 characters. Give headings their own <code>max-width</code> and they stop breaking into three ragged lines.</p>
     <h3>Code blocks that force a scroll</h3>
-    <p>A code block does not obey the measure and should not try to. Give it its own horizontal scroll, keep it inside the reading column, and never let it widen the page — a body that scrolls sideways is the one typographic failure a reader notices immediately.</p>
+    <p>A code block does not obey the measure and should not try to. Give it its own horizontal scroll, keep it inside the reading column, and never let it widen the page: a body that scrolls sideways is the one typographic failure a reader notices immediately.</p>
 
     <h2 id="s6">A checklist</h2>
     <ul>
       <li>Set the measure in <code>ch</code>, in the same rule as the font size.</li>
-      <li>Count the characters on a line at your largest breakpoint — the actual characters, in a browser, not in the design file.</li>
+      <li>Count the characters on a line at your largest breakpoint: the actual characters, in a browser, not in the design file.</li>
       <li>Move the leading whenever the measure moves.</li>
       <li>Give headings, captions and pull quotes their own, shorter measures.</li>
       <li>Let code blocks scroll inside the column; never let the page scroll sideways.</li>
-      <li>Read it on a phone, outdoors, standing up. <span class="endmark">■</span></li>
+      <li>Read it on a phone, outdoors, standing up. <span class="end" aria-hidden="true">■</span></li>
     </ul>
   </article>
 </div>
 
-<section class="related">
-  <div class="related-in">
-    <h2>Related reading</h2>
-    <div class="rel-grid">
-      <a class="rel" href="#top">
-        <span class="k">Craft</span>
-        <h3>Optical sizes are not a luxury any more</h3>
-        <p>Variable fonts made optical sizing free. Almost nobody uses it, and headings are the poorer for it.</p>
-        <span class="t">7 min read</span>
-      </a>
-      <a class="rel" href="#top">
-        <span class="k">Interfaces</span>
-        <h3>The tab bar is a typographic problem</h3>
-        <p>Eleven-pixel labels, three languages, and a container that cannot grow. What actually gives way.</p>
-        <span class="t">6 min read</span>
-      </a>
-      <a class="rel" href="#top">
-        <span class="k">Print</span>
-        <h3>What a book designer knows about scroll</h3>
-        <p>Pagination forced decisions that scrolling lets us avoid. The avoidance is the problem.</p>
-        <span class="t">11 min read</span>
-      </a>
-    </div>
-  </div>
+<section class="related" aria-labelledby="rel-h">
+  <h2 id="rel-h">Related reading</h2>
+  <ul class="rel">
+    <li><a href="#top"><span class="glyph" aria-hidden="true">Aa</span><span class="k">Craft · 7 min</span><h3>Optical sizes are not a luxury any more</h3><p>Variable fonts made optical sizing free. Almost nobody uses it, and headings are the poorer for it.</p></a></li>
+    <li><a href="#top"><span class="glyph" aria-hidden="true">⇥</span><span class="k">Interfaces · 6 min</span><h3>The tab bar is a typographic problem</h3><p>Eleven-pixel labels, three languages, and a container that cannot grow. What actually gives way.</p></a></li>
+    <li><a href="#top"><span class="glyph" aria-hidden="true">¶</span><span class="k">Print · 11 min</span><h3>What a book designer knows about scroll</h3><p>Pagination forced decisions that scrolling lets us avoid. The avoidance is the problem.</p></a></li>
+  </ul>
 </section>
-
-<footer>
-  <div class="foot">
-    <span>Ligature — a quarterly on typography and the making of pages</span>
-    <span>Issue 34 · Melbourne</span>
-  </div>
-</footer>
+</main>
+<footer><span>Ligature, a quarterly on typography and the making of pages</span><span>Issue 34 · Melbourne</span></footer>
+</div>
 
 <script>
 (function(){
-  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
-  var heads = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
-  if(!heads.length || !('IntersectionObserver' in window)) return;
+  var root = document.documentElement;
 
-  function mark(i){
-    links.forEach(function(a, n){
-      if(n === i) a.setAttribute('aria-current','true');
-      else a.removeAttribute('aria-current');
-    });
+  /* ruler ticks every five characters across the article's own measure */
+  var ruler = document.getElementById('ruler'), t = '';
+  for (var c = 0; c <= 66; c += 5) t += '<i style="left:' + (c / 66 * 100).toFixed(2) + '%;height:' + (c % 10 ? 8 : 14) + 'px"></i>';
+  ruler.insertAdjacentHTML('afterbegin', t);
+
+  /* reading progress and the contents' active state */
+  var article = document.querySelector('article'), bar = document.getElementById('progress');
+  var ticking = false;
+  function progress(){
+    ticking = false;
+    var r = article.getBoundingClientRect(), span = r.height - innerHeight * .6;
+    root.style.setProperty('--read', Math.max(0, Math.min(1, -r.top / span)).toFixed(4));
   }
-  mark(0);
+  addEventListener('scroll', function(){ if (!ticking){ ticking = true; requestAnimationFrame(progress); } }, { passive: true });
+  progress();
+  var links = [].slice.call(document.querySelectorAll('#toc a'));
+  var heads = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function mark(id){ links.forEach(function(a){ a.setAttribute('aria-current', a.getAttribute('href') === '#' + id ? 'true' : 'false'); }); }
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(){
+      /* the active section is the last heading above the upper third of the screen */
+      var cur = heads[0].id;
+      heads.forEach(function(h){ if (h.getBoundingClientRect().top < innerHeight * .34) cur = h.id; });
+      mark(cur);
+    }, { rootMargin: '0px 0px -60% 0px', threshold: [0, 1] });
+    heads.forEach(function(h){ io.observe(h); });
+    addEventListener('scroll', function(){ var cur = heads[0].id; heads.forEach(function(h){ if (h.getBoundingClientRect().top < innerHeight * .34) cur = h.id; }); mark(cur); }, { passive: true });
+  }
+  mark(heads[0].id);
 
-  var seen = heads.map(function(){ return false; });
-  var io = new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      seen[heads.indexOf(e.target)] = e.isIntersecting;
-    });
-    // the active section is the last heading whose top has passed the trigger line
-    var active = 0;
-    heads.forEach(function(h, i){
-      if(h.getBoundingClientRect().top < window.innerHeight * 0.35) active = i;
-    });
-    mark(active);
-  }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
-
-  heads.forEach(function(h){ io.observe(h); });
-
-  window.addEventListener('scroll', function(){
-    var active = 0;
-    heads.forEach(function(h, i){
-      if(h.getBoundingClientRect().top < window.innerHeight * 0.35) active = i;
-    });
-    mark(active);
-  }, { passive: true });
+  /* the measure lab: leading follows the measure unless the reader unlinks it */
+  var m = document.getElementById('m'), link = document.getElementById('link'), sample = document.getElementById('sample'), read = document.getElementById('read'), verdict = document.getElementById('verdict');
+  function lead(ch){ return ch <= 45 ? 1.5 : ch <= 66 ? 1.5 + (ch - 45) / 21 * .2 : Math.min(1.9, 1.7 + (ch - 66) / 9 * .1); }
+  function lab(){
+    var ch = +m.value, lh = link.checked ? lead(ch) : 1.5;
+    sample.style.setProperty('--m', ch + 'ch');
+    sample.style.setProperty('--lh', lh.toFixed(2));
+    read.innerHTML = '<b>' + ch + '</b> characters · leading ' + lh.toFixed(2);
+    verdict.textContent = ch < 45 ? 'Short: the return sweep becomes the rhythm of the page.' : ch <= 75 ? (ch < 55 ? 'In the band, nearer the short end: good for scanning and sidebars.' : 'In the working range, for continuous prose.') : 'Too long: the sweep starts landing on the wrong line.' + (link.checked ? '' : ' Tight leading makes it worse.');
+    m.setAttribute('aria-valuetext', ch + ' characters a line');
+  }
+  m.addEventListener('input', lab); link.addEventListener('change', lab); lab();
 })();
 </script>
 </body>

@@ -359,8 +359,9 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
   )
 }
 
-// Firebase's refusals, in words. updateEmail() is awaited, so "Email updated"
-// only shows when it is true and every failure lands here.
+// Firebase's refusals, in words. updateEmail() is awaited, so the confirmation
+// note only shows once the link has really been sent, and every failure lands
+// here.
 const EMAIL_ERRORS = {
   'auth/wrong-password': 'That password is incorrect.',
   'auth/invalid-credential': 'That password is incorrect.',
@@ -368,8 +369,6 @@ const EMAIL_ERRORS = {
   'auth/email-already-in-use': 'Another account already uses that email.',
   'auth/too-many-requests': 'Too many attempts. Wait a few minutes and try again.',
   'auth/requires-recent-login': 'For your security, sign out, sign back in, then try again.',
-  // Projects with email-enumeration protection refuse a direct email change;
-  // it has to go through a verification link, which this form does not send.
   'auth/operation-not-allowed': 'Your email could not be changed here yet. Nothing was changed.',
   'auth/network-request-failed': 'You appear to be offline. Nothing was changed.',
 }
@@ -377,13 +376,65 @@ function emailErrorText(e) {
   return EMAIL_ERRORS[e?.code] || 'Your email could not be changed. Nothing was changed. Please try again.'
 }
 
-function EmailEditField({ value, onSave, googleOnly }) {
+const VERIFY_ERRORS = {
+  'auth/too-many-requests': 'Too many links sent. Wait a few minutes and try again.',
+  'auth/network-request-failed': 'You appear to be offline. Try again when you are connected.',
+}
+
+// Shown only while the account's address is unproved. The link is opened in
+// the inbox, usually in another tab, so returning to this one re-reads the
+// account and the note clears without a reload.
+function EmailVerificationNote({ address, onSend, onRefresh }) {
+  const [state, setState] = useState('idle')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState === 'visible') onRefresh().catch(() => {})
+    }
+    check()
+    window.addEventListener('focus', check)
+    document.addEventListener('visibilitychange', check)
+    return () => {
+      window.removeEventListener('focus', check)
+      document.removeEventListener('visibilitychange', check)
+    }
+  }, [onRefresh])
+
+  const send = async () => {
+    setState('sending')
+    try {
+      await onSend()
+      setState('sent')
+    } catch (e) {
+      setError(VERIFY_ERRORS[e?.code] || 'The verification link could not be sent. Please try again.')
+      setState('failed')
+    }
+  }
+
+  return (
+    <>
+      <div className="settings-row-meta">Not verified</div>
+      <button type="button" className="settings-linkbtn" onClick={send} disabled={state === 'sending'}>
+        {state === 'sending' ? 'Sending…' : 'Send verification link'}
+      </button>
+      {state === 'sent' && <div className="settings-field-ok" role="status">Link sent to {address}. Check your inbox and spam folder.</div>}
+      {state === 'failed' && <div className="settings-field-err" role="alert">{error}</div>}
+    </>
+  )
+}
+
+function EmailEditField({ value, onSave, googleOnly, verification }) {
   const [editing, setEditing] = useState(false)
   const [email, setEmail] = useState(value || '')
   const [password, setPassword] = useState('')
   const [step, setStep] = useState('email')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // The address a confirmation link went to. The account keeps its current
+  // address until that link is opened, so the row says so instead of showing
+  // the new one early.
+  const [pendingEmail, setPendingEmail] = useState('')
 
   const handleNext = () => {
     if (!email || email === value) { setError('Enter a new email address'); return }
@@ -396,6 +447,7 @@ function EmailEditField({ value, onSave, googleOnly }) {
     setBusy(true)
     try {
       await onSave(email, password)
+      setPendingEmail(email)
       setEditing(false)
       setStep('email')
       setPassword('')
@@ -428,6 +480,14 @@ function EmailEditField({ value, onSave, googleOnly }) {
         <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
           <div className="settings-row-value">{value || '—'}</div>
+          {verification?.owed && (
+            <EmailVerificationNote address={value} onSend={verification.onSend} onRefresh={verification.onRefresh} />
+          )}
+          {pendingEmail && (
+            <div className="settings-field-ok" role="status">
+              Confirmation link sent to {pendingEmail}. Your email changes when you open it.
+            </div>
+          )}
         </div>
         <button className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
       </div>
@@ -614,7 +674,7 @@ function rememberSection(id) {
 }
 
 export default function Settings({ toast }) {
-  const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError } = useAuth()
+  const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
@@ -1157,14 +1217,13 @@ export default function Settings({ toast }) {
                     </div>
                   )}
                   <EditField label="Display name" value={userProfile?.displayName} onSave={(v) => { updateProfile({ displayName: v }); toast('Display name updated') }} placeholder="Enter your display name" />
-                  {/* AWAITED. It was `updateEmail(email, pw); toast('Email updated')`
-                      — no await, so the toast fired before Firebase answered and
-                      the field never saw a refusal. Now a failure stays in the
-                      field, in words, and the toast means it happened. */}
+                  {/* AWAITED, so a failure stays in the field, in words, and the
+                      toast means the confirmation link really went out. */}
                   <EmailEditField
                     value={user.email}
                     googleOnly={isGoogleOnlyAccount()}
-                    onSave={async (email, pw) => { await updateEmail(email, pw); toast('Email updated') }}
+                    onSave={async (email, pw) => { await updateEmail(email, pw); toast('Confirmation link sent') }}
+                    verification={{ owed: emailVerificationOwed, onSend: sendVerificationEmail, onRefresh: refreshEmailVerified }}
                   />
                   <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} />
                   <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" />

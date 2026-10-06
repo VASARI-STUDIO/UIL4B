@@ -48,10 +48,10 @@ function projectRecord(id, name, updatedAt, extra = {}) {
   }
 }
 
-/** Thirty logo-carrying projects: the account that produces the longest sync sentence. */
+/** One project past the per-document size budget: the longest sync sentence. */
 function heavyProjects() {
-  const logo = `data:image/png;base64,${'A'.repeat(32 * 1024)}`
-  return Array.from({ length: 30 }, (_, i) => projectRecord(`big-${i}`, `Brand ${i}`, '2026-09-01T09:00:00.000Z', { brandLogo: logo }))
+  const logo = `data:image/png;base64,${'A'.repeat(950 * 1024)}`
+  return [projectRecord('big-0', 'Brand 0', '2026-09-01T09:00:00.000Z', { brandLogo: logo })]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ test.describe('the sync notice reaches the person it was written for', () => {
     const failures = []
     for (const width of [320, 390, 430]) {
       const { ctx, page } = await phone(browser, width)
-      watch(page, `a Pro designer with thirty brand-kit projects, on a ${width}px phone`)
+      watch(page, `a Pro designer with one oversized project, on a ${width}px phone`)
       await signIn(page, { plan: 'pro', projects: heavyProjects() })
       await go(page, '/projects')
       const notice = page.locator('[data-testid="sync-notice"]')

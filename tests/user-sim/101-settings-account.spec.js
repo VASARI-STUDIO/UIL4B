@@ -1,7 +1,8 @@
 // SETTINGS AND ACCOUNT — every section says what actually happened.
 //
 // Held here:
-//   · changing your email says "Email updated" only when Firebase accepts it;
+//   · changing your email says a confirmation link went out only when Firebase
+//     sent one, and the address does not change until that link is opened;
 //   · "Manage billing" / "Cancel plan" say so when the Stripe portal errors;
 //   · Settings names the real billing cadence, not "Billed monthly" for all;
 //   · at 390 the section tabs never wrap into a grid.
@@ -14,9 +15,9 @@ async function openSection(page, id) {
 }
 
 test.describe('settings — account', () => {
-  test('a refused email change says so, and never says "Email updated"', async ({ page }) => {
-    watch(page, 'a person changing their email on a project that refuses direct changes')
-    await signIn(page, { plan: 'free', authFail: { updateEmail: 'auth/operation-not-allowed' } })
+  test('a refused email change says so, and never says a link was sent', async ({ page }) => {
+    watch(page, 'a person changing their email when Firebase refuses the change')
+    await signIn(page, { plan: 'free', authFail: { verifyBeforeUpdateEmail: 'auth/operation-not-allowed' } })
     await go(page, '/settings')
     await openSection(page, 'account')
     const section = page.locator('#set-account')
@@ -27,12 +28,12 @@ test.describe('settings — account', () => {
     await section.getByRole('button', { name: 'Save' }).click()
 
     await expect(section.getByRole('alert')).toContainText('could not be changed')
-    await expect(page.getByText('Email updated')).toHaveCount(0)
+    await expect(page.getByText(/Confirmation link sent/)).toHaveCount(0)
     // Nothing changed, and the page still says the old address.
     await expect(section).toContainText('free.user@uil4b.test')
   })
 
-  test('an accepted email change says so (positive control)', async ({ page }) => {
+  test('an accepted email change sends a link to the new address and keeps the old one until it is opened', async ({ page }) => {
     watch(page, 'a person changing their email')
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
@@ -43,8 +44,12 @@ test.describe('settings — account', () => {
     await section.getByRole('button', { name: 'Next' }).click()
     await section.getByPlaceholder('Enter your password to confirm').fill('hunter22')
     await section.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Email updated')).toBeVisible()
+    await expect(section.getByRole('status')).toContainText('Confirmation link sent to new.address@uil4b.test')
     await expect(section.getByRole('alert')).toHaveCount(0)
+    // The link went to the NEW inbox, and the account still has the old address.
+    const mail = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)
+    expect(mail).toEqual([{ kind: 'change-email', to: 'new.address@uil4b.test' }])
+    await expect(section.locator('.settings-row-value').nth(1)).toHaveText('free.user@uil4b.test')
   })
 
   test('cancelling account deletion puts focus back on the button that opened it', async ({ page }) => {

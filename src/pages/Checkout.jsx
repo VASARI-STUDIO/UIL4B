@@ -53,13 +53,6 @@ const PLANS = {
     per: 'per year',
     trial: trialLine('yearly'),
   },
-  lifetime: {
-    interval: 'lifetime',
-    name: 'UIL4B Pro',
-    cadence: 'One-off',
-    per: 'one payment',
-    trial: null,
-  },
 }
 
 // Derived, never typed. This list is read at the moment money changes hands,
@@ -99,8 +92,7 @@ export default function Checkout() {
   const proPrice = useProPrice()
   const amount = planKey === 'yearly' ? proPrice.yearlyTotal
     : planKey === 'quarterly' ? proPrice.quarterlyTotal
-      : planKey === 'lifetime' ? proPrice.lifetime
-        : proPrice.monthly
+      : proPrice.monthly
   // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and until
   // 2026-09-11 it rendered it as a lie. `useProPrice` returns `loaded: true`
   // the moment the fetch SETTLES — including when it settled by failing — and
@@ -114,9 +106,6 @@ export default function Checkout() {
   //                 unconditionally, so the page printed the string
   //                 "USD · null/mo", in accent colour, on the screen where
   //                 money changes hands.
-  //
-  // Lifetime escaped both because CANONICAL_LIFETIME in usePrices.js gives it a
-  // fallback the recurring intervals do not have.
   //
   // src/pages/Plans.jsx — the step immediately before this one — already
   // answers this exact outage, and these are ITS sentences, not new ones. Two
@@ -136,7 +125,6 @@ export default function Checkout() {
       // Quarterly has its own note, so a quarterly buyer is never told
       // "billed monthly".
       : planKey === 'quarterly' ? `${proPrice.currencyLabel} · ${proPrice.quarterlyPerMonth}/mo · billed every 3 months`
-      : planKey === 'lifetime' ? `${proPrice.currencyLabel} · one-off purchase · no renewal`
         : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
   const [error, setError] = useState('')
 
@@ -144,9 +132,6 @@ export default function Checkout() {
 
   const fetchClientSecret = useCallback(() => {
     if (!plan) return Promise.reject(new Error('Invalid checkout selection'))
-    if (plan.interval === 'lifetime' && !proPrice.availability.lifetime) {
-      return Promise.reject(new Error(`One-off checkout is not available in ${proPrice.currencyLabel} yet`))
-    }
     // Stripe's embedded checkout calls this when it starts, so this is the
     // moment a checkout began, not a visit to the page.
     sendEvent(EVENTS.checkoutStarted, { plan: plan.interval })
@@ -154,7 +139,7 @@ export default function Checkout() {
       setError(e?.message || 'Could not start checkout')
       throw e
     })
-  }, [createCheckoutSession, plan, proPrice.availability.lifetime, proPrice.currencyLabel])
+  }, [createCheckoutSession, plan])
 
   // Send signed-out users to login, and already-Pro users back to settings.
   useEffect(() => {
@@ -192,8 +177,8 @@ export default function Checkout() {
             the page's own section, directly above an h1 that names the page,
             on a route the nav already has lit. Hierarchy is a control, not a
             label. */}
-        <h1>{planKey === 'lifetime' ? 'Buy Pro once' : 'Upgrade to Pro'}</h1>
-        <p>{planKey === 'lifetime' ? 'Complete one secure payment for durable Pro access.' : 'Complete your subscription securely.'} Your payment is processed by Stripe.</p>
+        <h1>Upgrade to Pro</h1>
+        <p>Complete your subscription securely. Your payment is processed by Stripe.</p>
       </div>
 
       <div className="checkout-grid">
@@ -247,11 +232,6 @@ export default function Checkout() {
         <div className="checkout-form card">
           {!proPrice.loaded ? (
             <div className="checkout-error">Checking the live Stripe price…</div>
-          ) : planKey === 'lifetime' && !proPrice.availability.lifetime ? (
-            <div className="checkout-error">
-              <strong className="checkout-error-h">One-off checkout is temporarily unavailable</strong>
-              <span className="checkout-error-p">No payment session was created. Return to Plans and try again after the live {proPrice.currencyLabel} price is activated.</span>
-            </div>
           ) : !hasStripeKey ? (
             <div className="checkout-error">
               Payments aren’t configured yet. Set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in your environment to enable checkout.

@@ -139,7 +139,7 @@
 .adm-stripe-input{display:flex;align-items:center;gap:4px}
 .adm-stripe-input span{font-size:11px;color:var(--t3);min-width:24px}
 .adm-stripe-input input{width:90px;font-size:12px;font-family:var(--mono)}
-/* A currency this plan has no approved amount in — lifetime in SGD/CHF. */
+/* A currency this plan has no approved amount in. */
 .adm-stripe-na{font-size:12px;color:var(--t3);font-family:var(--mono);padding-left:4px}
 .adm-stripe-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
 .adm-stripe-env{font-size:12px;font-family:var(--mono);line-height:2.2;color:var(--t1)}

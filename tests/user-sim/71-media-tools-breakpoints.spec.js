@@ -240,14 +240,14 @@ test('/create/emoji and /create/file-converter · the count chip and the convert
   expect(contrast(a.fg, a.bg), `.emoji-section-count ${a.fg} on ${a.bg}`).toBeGreaterThanOrEqual(4.5)
 
   // The converter's SOON tag is gone with the "3D → Blender" tab it sat on.
-  // The way to the 3D viewer is a toolbar action now, and the note that says
+  // The way to the 3D Model Converter is a toolbar action now, and the note that says
   // why .blend is not offered sits under the tool on the page ground. Both
   // inks are held to the same floor here so this half does not go vacuous.
   // MUTATION: a 40% ink on .fc-3d-note (color-mix of --t0 into --bg-0) fails.
   await go(page, '/create/file-converter')
-  const link = page.locator('[data-tool-toolbar] a[href="/create/3d-viewer"]')
+  const link = page.locator('[data-tool-toolbar] a[href="/create/3d-converter"]')
   await expect(link).toBeVisible()
-  await expect(link).toHaveAccessibleName('Open a 3D model in the 3D viewer')
+  await expect(link).toHaveAccessibleName('Open the 3D Model Converter')
   const pageGround = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
   for (const [name, loc] of [['.fc-3d-note', page.locator('.fc-3d-note')], ['.fc-about', page.locator('.fc-about')]]) {
     // Through a canvas: the link ink is a color-mix(), which Chromium

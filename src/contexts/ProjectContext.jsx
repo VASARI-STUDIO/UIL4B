@@ -6,7 +6,7 @@ import { trackActivation } from '../utils/analytics'
 import { loadFirestore } from '../utils/firebaseAccess'
 import {
   mergeProjects, projectListsEqual, mergeTombstones, pruneTombstones,
-  readRemoteProjects, writeRemoteProjects, syncFailureMessage, classifyError,
+  pullRemoteProjects, writeRemoteProjects, syncFailureMessage, classifyError,
 } from '../utils/projectSync'
 import { reportSyncFailure, reportSyncNotice, reportSyncOk } from '../utils/syncStatus'
 import { useAuth } from './AuthContext'
@@ -137,6 +137,9 @@ export function ProjectProvider({ children }) {
   //  - pushTimerRef: debounce handle for the push effect.
   const suppressPushRef = useRef(false)
   const pushTimerRef = useRef(null)
+  // What each per-project document on the account holds, as of the last pull
+  // or push. See writeRemoteProjects(): it limits a push to what changed here.
+  const storedRef = useRef(new Map())
 
   // Auto-persist current design
   useEffect(() => {
@@ -409,11 +412,14 @@ export function ProjectProvider({ children }) {
   const pullNow = useCallback(async (signal) => {
     if (!uid || !userKey) return
     suppressPushRef.current = true
+    // Another account's map must never decide what this one pushes.
+    storedRef.current = new Map()
     try {
       const fs = await loadFirestore()
       if (signal?.cancelled) return
-      const remote = await readRemoteProjects(fs, uid)
+      const remote = await pullRemoteProjects(fs, uid)
       if (signal?.cancelled) return
+      storedRef.current = remote.stored instanceof Map ? remote.stored : new Map()
 
       // Read from the store rather than from state: every mutator on this
       // provider writes through to localStorage before it returns, so the store
@@ -446,6 +452,12 @@ export function ProjectProvider({ children }) {
       // kept, and the user is told which ones moved under them.
       if (merged.replaced.length || merged.removed.length) {
         reportSyncNotice(SYNC_CHANNEL, conflictMessage(merged.replaced, merged.removed))
+      }
+      // The account's projects were read and merged, but moving them to one
+      // document each was refused, so the account is not fully synced yet.
+      if (remote.migration && !remote.migration.ok) {
+        reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(remote.migration.reason), retry)
+        return
       }
       reportSyncOk(SYNC_CHANNEL)
     } catch (error) {
@@ -482,8 +494,11 @@ export function ProjectProvider({ children }) {
     if (!uid) return
     try {
       const fs = await loadFirestore()
-      const result = await writeRemoteProjects(fs, uid, { list: projects, tombstones })
+      const result = await writeRemoteProjects(fs, uid, {
+        list: projects, tombstones, stored: storedRef.current,
+      })
       if (result.ok) {
+        if (result.stored instanceof Map) storedRef.current = result.stored
         reportSyncOk(SYNC_CHANNEL)
         return
       }

@@ -51,7 +51,7 @@ const KEEP = {
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim'],
   // underline and folder tabs, and the phone tab bar's items
-  tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
+  tab: ['pl-tab', 'pl-modal-view', 'fdx-tab', 'pnav-tab'],
   // a switch track, drawn by its own geometry
   switch: ['toggle-switch', 'aipg-rule'],
   // previews of the user's own design system, drawn at the user's radius

@@ -105,6 +105,14 @@ test('the CSP allows what the code actually loads', () => {
     ['connect-src', 'https://fonts.googleapis.com', 'src/utils/kitFonts.js'],
     ['connect-src', 'https://fonts.gstatic.com', 'src/utils/kitFonts.js'],
     ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/kitFonts.js'],
+    ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/ifcEngine.js'],
+    ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/mesh/rhino.js'],
+    ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/mesh/meshopt.js'],
+    ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/mesh/decoders.js'],
+    // three's FileLoader reads the Rhino engine, and a glTF's dropped .bin
+    // and textures, from blob: URLs made in the page.
+    ['connect-src', 'blob:', 'src/utils/mesh/rhino.js'],
+    ['connect-src', 'blob:', 'src/utils/meshEngine.js'],
     ['img-src', 'https://lh3.googleusercontent.com', null],
   ]
   for (const [directive, origin, file] of loads) {

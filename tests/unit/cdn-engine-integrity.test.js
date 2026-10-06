@@ -14,6 +14,7 @@ import crypto from 'node:crypto'
 import { assertIntegrity, fetchVerified, IntegrityError } from '../../src/utils/integrity.js'
 import { FFMPEG_CORE_SHA256, getFfmpeg, resetFfmpeg } from '../../src/utils/ffmpegEngine.js'
 import { OCCT_SHA256, readCad } from '../../src/utils/cadEngine.js'
+import { DECODERS, THREE_VERSION, decoderURLs, resetDecoders } from '../../src/utils/mesh/decoders.js'
 
 const CORE_DIR = path.join(process.cwd(), 'node_modules', '@ffmpeg', 'core', 'dist', 'esm')
 const coreJs = fs.readFileSync(path.join(CORE_DIR, 'ffmpeg-core.js'))
@@ -76,6 +77,59 @@ test('a tampered converter engine is refused before anything executable exists',
   assert.ok(calls.length >= 1, 'the loader never fetched — the stub is not what it is reading')
   assert.equal(seen.blobs, 0, 'a blob: URL was minted from bytes that failed the check')
   resetFfmpeg()
+})
+
+// three's Draco and Basis decoders are fetched at the installed three.js
+// version, so the installed files ARE the pinned artifact: each pin must hash
+// the local copy, and the URL must name that exact version.
+const THREE_DIR = path.join(process.cwd(), 'node_modules', 'three')
+const THREE_LIBS_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/libs/`
+const localDecoderFile = (url) => path.join(THREE_DIR, 'examples', 'jsm', 'libs', url.slice(THREE_LIBS_URL.length))
+
+test('the pinned three.js decoders are the installed version, and hash its bytes', () => {
+  const installed = JSON.parse(fs.readFileSync(path.join(THREE_DIR, 'package.json'), 'utf8')).version
+  assert.equal(THREE_VERSION, installed,
+    `decoders.js pins three@${THREE_VERSION} while ${installed} is installed. Update the version and the four hashes together.`)
+  assert.match(THREE_VERSION, /^\d+\.\d+\.\d+$/, 'the version must be exact, not a range or a tag')
+  assert.deepEqual(Object.keys(DECODERS).sort(), ['basis', 'draco'])
+  for (const [name, d] of Object.entries(DECODERS)) {
+    for (const kind of ['js', 'wasm']) {
+      assert.ok(d[kind].startsWith(THREE_LIBS_URL), `${name}.${kind} is not under ${THREE_LIBS_URL}: ${d[kind]}`)
+      assert.ok(d[kind].endsWith(`.${kind}`), `${name}.${kind} names the wrong kind of file: ${d[kind]}`)
+      assert.equal(d.sha256[kind], sha(fs.readFileSync(localDecoderFile(d[kind]))), `${name}.${kind} pin does not hash the installed file`)
+    }
+  }
+})
+
+test('verified decoder bytes become blob: URLs, one per file', async (t) => {
+  resetDecoders()
+  const real = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (url) => {
+    calls.push(String(url))
+    return new Response(new Uint8Array(fs.readFileSync(localDecoderFile(String(url)))), { status: 200 })
+  }
+  t.after(() => { globalThis.fetch = real; resetDecoders() })
+  const seen = watchExecutables(t)
+  const files = await decoderURLs('draco')
+  assert.deepEqual(calls.sort(), [DECODERS.draco.js, DECODERS.draco.wasm].sort())
+  assert.match(files.js, /^blob:/)
+  assert.match(files.wasm, /^blob:/)
+  assert.equal(seen.blobs, 2)
+  files.revoke()
+})
+
+test('a tampered decoder is refused before a blob: URL is minted', async (t) => {
+  const calls = stubFetch(t, tamper(coreJs))
+  const seen = watchExecutables(t)
+  for (const name of Object.keys(DECODERS)) {
+    resetDecoders()
+    const before = calls.length
+    await assert.rejects(decoderURLs(name), (err) => err.name === 'IntegrityError' && /decoder.*not run/.test(err.message))
+    assert.ok(calls.length > before, `the ${name} loader never fetched`)
+    assert.equal(seen.blobs, 0, `a blob: URL was minted from ${name} bytes that failed the check`)
+  }
+  resetDecoders()
 })
 
 test('a tampered CAD engine is refused before a worker is started', async (t) => {

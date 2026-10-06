@@ -273,6 +273,10 @@ function seedProject(i, design) {
  *              local flag and `onboarding.completedAt` on the account document
  *              — because those are the two the app reconciles, and a fixture
  *              that set only one would be a state no real account is in.
+ *              `false` is an account that opened onboarding and has not
+ *              finished it: its document carries an open `onboarding` record
+ *              with no completedAt. An account with no record at all owes
+ *              nothing; seed that through `docs`.
  *   deny       path substrings this session's Firestore must REFUSE, e.g.
  *              ['sync/projects']. Every read, write and listener whose path
  *              contains one answers with a FirebaseError('permission-denied')
@@ -310,6 +314,7 @@ export async function signIn(page, opts = {}) {
     authFail = null,
     projectTombstones = null,
     displayName,
+    emailVerified = true,
   } = opts
 
   const email = (opts.email || (admin ? TEST_ADMIN_EMAIL : `${plan}.user@uil4b.test`)).toLowerCase()
@@ -336,6 +341,7 @@ export async function signIn(page, opts = {}) {
     displayName: name,
     photoURL: '',
     provider: 'password',
+    emailVerified,
     claims,
     deny,
     authFail,
@@ -350,7 +356,9 @@ export async function signIn(page, opts = {}) {
         company: '',
         flair: '',
         ...(sub ? { subscription: sub } : {}),
-        ...(onboarded ? { onboarding: { completedAt: Date.now() - 7 * 86_400_000 } } : {}),
+        onboarding: onboarded
+          ? { completedAt: Date.now() - 7 * 86_400_000 }
+          : { openedAt: Date.now() - 86_400_000 },
       },
       ...docs,
     },

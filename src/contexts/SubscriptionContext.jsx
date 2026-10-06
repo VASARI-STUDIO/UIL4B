@@ -25,7 +25,7 @@ const SubscriptionContext = createContext()
 // yet only because planLadder.js still holds checkoutPlan: null.
 //
 // Guarded by tests/unit/trial-cadence.test.js, which now compares the two.
-const BILLING_INTERVALS = new Set(['monthly', 'quarterly', 'yearly', 'lifetime'])
+const BILLING_INTERVALS = new Set(['monthly', 'quarterly', 'yearly'])
 
 // The billing APIs return a generic message plus a correlation id (the real
 // Stripe/Firebase error stays in the server log). Show the id so a user can

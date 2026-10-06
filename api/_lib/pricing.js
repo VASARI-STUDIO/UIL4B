@@ -46,9 +46,10 @@ export const BASE_CURRENCY = 'usd'
 // per-currency multiplier its own previous defaults already implied
 // (old amount ÷ old USD amount); quarterly, which had no row at all, takes the
 // midpoint of the monthly and yearly multipliers. Results are rounded to whole
-// units to match the USD ladder's whole-number convention. The old "everything
-// ends in .99" rule now applies to `lifetime` only, whose separately
-// founder-approved one-off amounts this ladder does not touch.
+// units to match the USD ladder's whole-number convention.
+//
+// Pro is sold as a subscription only. There is no one-off price: every entry
+// below is a recurring interval.
 //
 // Still editable from the admin Stripe panel — these are only the defaults
 // shown before anything is saved to Stripe.
@@ -56,16 +57,12 @@ export const DEFAULT_PRICES = {
   monthly:   { usd: 7,  eur: 7,  gbp: 6,  aud: 11, nzd: 13,  cad: 10, sgd: 10, chf: 7 },
   quarterly: { usd: 18, eur: 18, gbp: 15, aud: 32, nzd: 36,  cad: 26, sgd: 26, chf: 18 },
   yearly:    { usd: 48, eur: 48, gbp: 42, aud: 96, nzd: 108, cad: 72, sgd: 72, chf: 48 },
-  // Founder-approved canonical one-off amounts. SGD/CHF intentionally stay
-  // unavailable until an owner approves canonical values for those currencies.
-  lifetime: { usd: 89.99, eur: 84.99, gbp: 74.99, aud: 129, nzd: 139.99, cad: 119.99 },
 }
 
 export const LOOKUP_KEYS = {
   monthly: 'uil4b_pro_monthly',
   quarterly: 'uil4b_pro_quarterly',
   yearly: 'uil4b_pro_yearly',
-  lifetime: 'uil4b_pro_lifetime',
 }
 
 // Stripe’s `recurring.interval`. Quarterly is a three-MONTH recurrence, so
@@ -77,11 +74,25 @@ export const LOOKUP_KEYS = {
 export const INTERVAL_MAP = { monthly: 'month', quarterly: 'month', yearly: 'year' }
 export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, quarterly: 3, yearly: 1 })
 
+/**
+ * Whether a Stripe price may be sold for a billing interval: it must be active
+ * and recurring on the interval's unit AND count. Monthly and quarterly share
+ * the 'month' unit, so the count is what keeps one from being sold as the
+ * other. A one-off (non-recurring) price is never sellable. The price list and
+ * checkout both apply this one check, so the price a visitor is shown and the
+ * price a checkout charges are chosen by the same rule.
+ */
+export function priceIsSellable(price, interval) {
+  if (!price?.active) return false
+  return !!INTERVAL_MAP[interval]
+    && price.recurring?.interval === INTERVAL_MAP[interval]
+    && price.recurring?.interval_count === INTERVAL_COUNTS[interval]
+}
+
 export const PRICE_ENV_KEYS = {
   monthly: 'STRIPE_PRICE_MONTHLY',
   quarterly: 'STRIPE_PRICE_QUARTERLY',
   yearly: 'STRIPE_PRICE_YEARLY',
-  lifetime: 'STRIPE_PRICE_LIFETIME',
 }
 
 // HOW LONG A CADENCE IS FREE BEFORE THE FIRST CHARGE, and the only place that
@@ -104,7 +115,6 @@ export const TRIAL_DAYS = Object.freeze({
   monthly: 0,
   quarterly: 7,
   yearly: 7,
-  lifetime: 0,
 })
 
 /** Days of trial for a billing interval, 0 for anything unrecognised. */
@@ -128,18 +138,14 @@ export function trialDaysFor(interval) {
 //      `recurring.interval` alone as a MONTHLY price. Creating quarterly
 //      without `interval_count: 3` produces an $18-per-month subscription —
 //      three times the intended charge, on a real card, and only visible on a
-//      statement. The count was already sitting in INTERVAL_COUNTS above,
-//      unused, which is exactly how that bug would have shipped.
+//      statement. The count comes from INTERVAL_COUNTS above.
 //   4. this list
 //
 // The Stripe price itself is created in the DASHBOARD and is not in this
 // repository. Until it exists, resolvePrice returns null and create-checkout
 // answers 503 with "the quarterly price is temporarily unavailable" rather
-// than charging anyone anything — see docs/OWNER-ACTIONS.md for the test-mode
-// steps the founder asked to run first. That register is local-only since
-// 2026-09-16 and is not in this repository; .gitignore says why.
-export const BILLING_INTERVALS = Object.freeze(['monthly', 'quarterly', 'yearly', 'lifetime'])
-export const LIFETIME_CURRENCY_CODES = Object.freeze(Object.keys(DEFAULT_PRICES.lifetime))
+// than charging anyone anything.
+export const BILLING_INTERVALS = Object.freeze(['monthly', 'quarterly', 'yearly'])
 
 export function toCents(amount) { return Math.round(Number(amount) * 100) }
 export function fromCents(cents) { return Math.round(Number(cents)) / 100 }

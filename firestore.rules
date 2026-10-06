@@ -48,6 +48,13 @@ service cloud.firestore {
       match /sync/{docId} {
         allow read, write: if isOwner();
       }
+
+      // Per-project sync: one document per saved project, owner-only like
+      // sync/{docId}. A document is { project, updatedAt, deletedAt,
+      // _updatedAt }; `deletedAt` marks a deletion so it propagates as one.
+      match /projects/{projectId} {
+        allow read, write: if isOwner();
+      }
     }
 
     // Feedback — reviewers can read, update and delete; clients cannot create.

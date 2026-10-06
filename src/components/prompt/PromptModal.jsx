@@ -1,59 +1,118 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { parseTags } from '../../utils/promptStore'
 import UserName from '../UserName'
 import { resolvePromptProfileLink } from '../../utils/promptSubmission'
-import { hasPromptPreview, promptPageSrc } from '../../data/promptPreviewAssets'
+import { hasPromptPreview, promptPageSrc, promptPosterSrc } from '../../data/promptPreviewAssets'
+import { framePreviewHtml, isPreviewEscape } from '../../utils/previewFrame'
 import useModalDialog from '../../hooks/useModalDialog'
+import { useCloseOnBack } from '../../hooks/useCloseOnBack'
+import PromptSaveButton from './PromptSaveButton'
 
 // Full prompt detail modal — works for both community and personal prompts.
 //
-// ── THE OUTPUT, RUNNING ─────────────────────────────────────────────────────
+// Where a prompt has a built demo, the modal has two views of it over one
+// panel: the page running, and the prompt text to copy. It OPENS ON THE
+// RUNNING PAGE; the text is the other tab. A prompt without a demo opens on
+// its text and shows no tabs.
 //
-// The founder, 2026-09-15: "even better is showing it but on click it shows the
-// actual output in live preview. similar to other component libraries."
+// ── THE SANDBOX ─────────────────────────────────────────────────────────────
+// `sandbox="allow-scripts"` without `allow-same-origin` puts the frame in an
+// opaque origin: it cannot read this origin's cookies, storage or Firebase
+// session. Scripts are allowed because the demos are motion, canvas and
+// scroll pieces. Not granted: popups, top navigation, forms, modals,
+// downloads. The page arrives as srcdoc with a small bridge (utils/
+// previewFrame) so Escape inside the frame still closes the dialog.
 //
-// So where an output exists this modal has two views of one prompt: the text
-// you copy, and the page it produces, actually running — animations, hover
-// states, scroll behaviour and all. A screenshot cannot show any of that, and
-// for eight of these twenty prompts (the 3D heroes, the loading states, the
-// scroll transitions) the motion IS the deliverable.
-//
-// THE PROMPT IS THE DEFAULT VIEW, not the preview. Someone who opened a card in
-// a prompt library came for the prompt; the output is the evidence that it is
-// worth copying. Making the demo the landing view would bury the product behind
-// its own advertisement.
-//
-// ── THE SANDBOX IS LOAD-BEARING ─────────────────────────────────────────────
-//
-// These pages are generated output. They are ours today, but the shape of this
-// feature invites community-submitted ones tomorrow, and an iframe of arbitrary
-// HTML on our own origin can read our cookies, our localStorage and our
-// Firebase session. `sandbox` with no `allow-same-origin` puts the frame in an
-// opaque origin: same-origin reads throw, storage is inaccessible, and it
-// cannot reach anything of ours.
-//
-// `allow-scripts` IS granted, because without it c-16's canvas, c-17's carousel
-// and c-10's flow are dead rectangles and the feature has no point. Scripts
-// plus no-same-origin is the safe combination; it is scripts plus same-origin
-// that is the documented escape.
-//
-// Not granted, deliberately: allow-popups, allow-top-navigation,
-// allow-forms, allow-modals, allow-downloads. A preview may not navigate the
-// page it sits in, open a window, or take a submission.
-export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove, isCommunity, isSaved }) {
+// The frame is mounted only while the running view is open. Switching to the
+// text or closing the modal unmounts it, which destroys its document and with
+// it any animation loop or WebGL context.
+function LiveFrame({ id, title, onEscape }) {
+  const frameRef = useRef(null)
+  const [attempt, setAttempt] = useState(0)
+  const [state, setState] = useState({ status: 'loading', html: '' })
+
+  useEffect(() => {
+    let alive = true
+    const ctrl = typeof AbortController === 'undefined' ? null : new AbortController()
+    const url = new URL(promptPageSrc(id), window.location.href)
+    const base = new URL('./', url).href
+    fetch(url.href, { signal: ctrl?.signal })
+      .then((res) => (res.ok ? res.text() : Promise.reject(new Error(String(res.status)))))
+      .then((html) => { if (alive) setState({ status: 'ready', html: framePreviewHtml(html, base) }) })
+      .catch(() => { if (alive) setState({ status: 'error', html: '' }) })
+    return () => { alive = false; ctrl?.abort() }
+  }, [id, attempt])
+
+  useEffect(() => {
+    const onMessage = (e) => { if (isPreviewEscape(e, frameRef.current?.contentWindow)) onEscape() }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [onEscape])
+
+  return (
+    <div className="pl-modal-live">
+      <div className="pl-modal-stage" data-state={state.status}>
+        {/* The poster holds the frame's place while the page loads, so the
+            view opens on the output rather than on an empty box. */}
+        <img className="pl-modal-stage-poster" src={promptPosterSrc(id)} alt="" aria-hidden="true" width="960" height="600" />
+        {state.status === 'ready' && (
+          <iframe
+            ref={frameRef}
+            className="pl-modal-frame"
+            srcDoc={state.html}
+            title={`Live output: ${title || 'this prompt'}`}
+            sandbox="allow-scripts"
+            referrerPolicy="no-referrer"
+          />
+        )}
+        {state.status === 'loading' && <p className="pl-modal-stage-note" role="status">Loading the demo…</p>}
+        {state.status === 'error' && (
+          <div className="pl-modal-stage-error" role="alert">
+            <p>The demo didn’t load. Check your connection and try again.</p>
+            <button type="button" className="lib-btn" onClick={(e) => { e.stopPropagation(); setState({ status: 'loading', html: '' }); setAttempt((n) => n + 1) }}>Retry</button>
+          </div>
+        )}
+      </div>
+      <p className="pl-modal-live-note">
+        Generated from this prompt. Interactive — hover, scroll and click inside it.
+      </p>
+    </div>
+  )
+}
+
+export default function PromptModal({ prompt, onClose, onCopy, onToggleSave, onRemove, isCommunity, isSaved }) {
   const pTags = parseTags(prompt.tags)
   const profileLink = resolvePromptProfileLink(prompt)
   const canPreview = isCommunity && hasPromptPreview(prompt.id)
-  const [view, setView] = useState('prompt')
+  const [view, setView] = useState(canPreview ? 'preview' : 'prompt')
   const showingPreview = canPreview && view === 'preview'
+  const name = prompt.title || prompt.text.slice(0, 60)
 
-  // Was Escape only — no focus trap, no scroll lock, no focus restoration,
-  // while declaring aria-modal="true".
+  // Focus trap, Escape, scroll lock and focus return; the back gesture closes
+  // it too, and a close by any other route removes the history entry it added.
   const dialogRef = useModalDialog(onClose)
+  useCloseOnBack(true, onClose)
+
+  const selectView = (next) => setView(next)
+  const onTabKey = (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
+    e.preventDefault()
+    const next = (e.key === 'Home') ? 'preview' : (e.key === 'End') ? 'prompt' : (view === 'preview' ? 'prompt' : 'preview')
+    selectView(next)
+    dialogRef.current?.querySelector(next === 'preview' ? '#pl-view-preview' : '#pl-view-prompt')?.focus()
+  }
 
   return (
     <div className="pl-modal-backdrop" onClick={onClose} role="presentation">
-      <div className="pl-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="pl-modal-title" tabIndex={-1} ref={dialogRef}>
+      <div
+        className={`pl-modal${canPreview ? ' has-live' : ''}${showingPreview ? ' is-live' : ''}`}
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pl-modal-title"
+        tabIndex={-1}
+        ref={dialogRef}
+      >
         <button type="button" className="pl-modal-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -61,7 +120,7 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
         </button>
 
         <div className="pl-modal-header">
-          <h2 id="pl-modal-title">{prompt.title || prompt.text.slice(0, 60)}</h2>
+          <h2 id="pl-modal-title">{name}</h2>
           {pTags.length > 0 && (
             <div className="pl-card-tags pl-modal-tags">
               {pTags.map(tag => <span key={tag} className="pl-tag">{tag}</span>)}
@@ -87,22 +146,7 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
         </div>
 
         {canPreview && (
-          // Two real tabs over one panel. A tablist rather than a pair of
-          // buttons, because that is what this is: one region whose content
-          // swaps, and a screen reader should be told which view is current.
-          <div className="pl-modal-views" role="tablist" aria-label="View this prompt or its output">
-            <button
-              type="button"
-              role="tab"
-              id="pl-view-prompt"
-              aria-selected={!showingPreview}
-              aria-controls="pl-view-panel"
-              tabIndex={showingPreview ? -1 : 0}
-              className={'pl-modal-view' + (showingPreview ? '' : ' is-on')}
-              onClick={(e) => { e.stopPropagation(); setView('prompt') }}
-            >
-              The prompt
-            </button>
+          <div className="pl-modal-views" role="tablist" aria-label="View this prompt running or as text">
             <button
               type="button"
               role="tab"
@@ -111,9 +155,23 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
               aria-controls="pl-view-panel"
               tabIndex={showingPreview ? 0 : -1}
               className={'pl-modal-view' + (showingPreview ? ' is-on' : '')}
-              onClick={(e) => { e.stopPropagation(); setView('preview') }}
+              onClick={(e) => { e.stopPropagation(); selectView('preview') }}
+              onKeyDown={onTabKey}
             >
               See it running
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="pl-view-prompt"
+              aria-selected={!showingPreview}
+              aria-controls="pl-view-panel"
+              tabIndex={showingPreview ? -1 : 0}
+              className={'pl-modal-view' + (showingPreview ? '' : ' is-on')}
+              onClick={(e) => { e.stopPropagation(); selectView('prompt') }}
+              onKeyDown={onTabKey}
+            >
+              The prompt
             </button>
           </div>
         )}
@@ -125,23 +183,7 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
           aria-labelledby={canPreview ? (showingPreview ? 'pl-view-preview' : 'pl-view-prompt') : undefined}
         >
           {showingPreview ? (
-            <div className="pl-modal-live">
-              {/* The iframe is only MOUNTED while this view is open, so opening
-                  a prompt costs nothing until the output is asked for — and
-                  leaving the view stops whatever it was running rather than
-                  leaving a canvas animating behind a hidden panel. */}
-              <iframe
-                className="pl-modal-frame"
-                src={promptPageSrc(prompt.id)}
-                title={`Live output: ${prompt.title || 'this prompt'}`}
-                sandbox="allow-scripts"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-              <p className="pl-modal-live-note">
-                Generated from this prompt. Interactive — hover, scroll and click inside it.
-              </p>
-            </div>
+            <LiveFrame key={prompt.id} id={prompt.id} title={prompt.title} onEscape={onClose} />
           ) : (
             <div className="pl-modal-prompt" onClick={(e) => { e.stopPropagation(); onCopy(e, prompt.text) }}>
               <pre>{prompt.text}</pre>
@@ -157,12 +199,7 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
 
         <div className="pl-modal-footer">
           {isCommunity ? (
-            <button type="button" className={`lib-btn${isSaved ? ' is-saved' : ''}`} onClick={(e) => { e.stopPropagation(); onSave(prompt) }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
-              </svg>
-              {isSaved ? 'Saved' : 'Save to my library'}
-            </button>
+            <PromptSaveButton className="lib-btn" saved={isSaved} onToggle={() => onToggleSave(prompt)} />
           ) : (
             <button type="button" className="lib-btn pl-modal-delete" onClick={(e) => { e.stopPropagation(); onRemove(e, prompt.id) }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

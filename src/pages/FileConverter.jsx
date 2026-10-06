@@ -204,19 +204,17 @@ export default function FileConverter({ toast }) {
       items={[
         // A status tag, not an action: it leaves the row rather than the menu.
         { id: 'alpha', menu: false, render: () => <span className="fc-alpha">Alpha</span> },
-        // WHERE 3D WENT. This was a fourth tab, "3D → Blender", that opened a
-        // "Coming soon" card and a disabled button. What a person holding a 3D
-        // file CAN do here is look at it, so the action points there.
+        // 3D files are converted by their own tool; this action links to it.
         {
           id: '3d',
           align: 'end',
           priority: 1,
           render: () => (
-            <ToolButton as={Link} to="/create/3d-viewer" aria-label="Open a 3D model in the 3D viewer">
-              3D viewer
+            <ToolButton as={Link} to="/create/3d-converter" aria-label="Open the 3D Model Converter">
+              3D Model Converter
             </ToolButton>
           ),
-          menu: { label: 'Open a 3D model in the 3D viewer', onSelect: () => navigate('/create/3d-viewer') },
+          menu: { label: 'Open the 3D Model Converter', onSelect: () => navigate('/create/3d-converter') },
         },
       ]}
     >
@@ -256,8 +254,7 @@ export default function FileConverter({ toast }) {
         {mode === 'frames' && <VideoFrames toast={toast} />}
       </div>
 
-      {/* The one true statement kept from the retired "3D → Blender" tab: a
-          .blend file needs Blender itself running on a server. */}
+      {/* A .blend file is written only by Blender itself. */}
       <p className="fc-3d-note">
         Converting to Blender&apos;s .blend needs Blender running on a server, so it is not offered here.
       </p>
