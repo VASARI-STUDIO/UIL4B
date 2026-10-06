@@ -35,6 +35,9 @@ import {
   updatePassword as realUpdatePassword,
   reauthenticateWithCredential as realReauthenticateWithCredential,
   reauthenticateWithPopup as realReauthenticateWithPopup,
+  sendEmailVerification as realSendEmailVerification,
+  verifyBeforeUpdateEmail as realVerifyBeforeUpdateEmail,
+  reload as realReload,
 } from 'firebase/auth'
 import { fakeAuth, IS_FAKE_AUTH, authError, FIXTURE_MARKER, authFailFor } from './test-session.js'
 
@@ -126,6 +129,33 @@ export function updateEmail(user, newEmail) {
   user.email = newEmail
   user.providerData[0].email = newEmail
   fakeAuth.notify()
+  return Promise.resolve()
+}
+
+/* Links that would be emailed are recorded in `fakeAuth.mail` instead, so a
+ * spec can read what was sent and to whom. Opening one is modelled by the
+ * spec setting `fakeAuth.account.emailVerified`, the server-side copy of the
+ * flag; only `reload()` brings it onto the user, as the real SDK does. */
+export function sendEmailVerification(user, settings) {
+  if (!isFakeUser(user)) return realSendEmailVerification(user, settings)
+  const refused = authFailFor('sendEmailVerification')
+  if (refused) return Promise.reject(refused)
+  fakeAuth.mail.push({ kind: 'verify-email', to: user.email })
+  return Promise.resolve()
+}
+
+export function verifyBeforeUpdateEmail(user, newEmail, settings) {
+  if (!isFakeUser(user)) return realVerifyBeforeUpdateEmail(user, newEmail, settings)
+  const refused = authFailFor('verifyBeforeUpdateEmail')
+  if (refused) return Promise.reject(refused)
+  // Nothing about the user changes until the link is opened.
+  fakeAuth.mail.push({ kind: 'change-email', to: newEmail })
+  return Promise.resolve()
+}
+
+export function reload(user) {
+  if (!isFakeUser(user)) return realReload(user)
+  user.emailVerified = fakeAuth.account.emailVerified === true
   return Promise.resolve()
 }
 

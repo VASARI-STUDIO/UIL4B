@@ -208,6 +208,7 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
     mergeTombstones: notModelled('mergeTombstones'),
     pruneTombstones: (t) => t,
     readRemoteProjects: notModelled('readRemoteProjects'),
+    pullRemoteProjects: notModelled('pullRemoteProjects'),
     writeRemoteProjects: notModelled('writeRemoteProjects'),
     syncFailureMessage: notModelled('syncFailureMessage'),
     classifyError: notModelled('classifyError'),

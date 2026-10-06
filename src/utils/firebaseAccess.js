@@ -42,6 +42,7 @@ import {
   onAuthStateChanged, updateProfile, updateEmail, updatePassword,
   EmailAuthProvider, GoogleAuthProvider,
   reauthenticateWithCredential, reauthenticateWithPopup, sendPasswordResetEmail,
+  sendEmailVerification, verifyBeforeUpdateEmail, reload,
 } from 'firebase/auth'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
@@ -60,6 +61,7 @@ const authNs = {
   onAuthStateChanged, updateProfile, updateEmail, updatePassword,
   EmailAuthProvider, GoogleAuthProvider,
   reauthenticateWithCredential, reauthenticateWithPopup, sendPasswordResetEmail,
+  sendEmailVerification, verifyBeforeUpdateEmail, reload,
 }
 const storageNs = { storage, ref, uploadBytes, getDownloadURL }
 

@@ -29,7 +29,7 @@ import fs2 from 'node:fs'
 import {
   newerSide, mergeProjects, mergeTombstones, pruneTombstones, projectListsEqual,
   normaliseTombstones, payloadBytes, syncFailureMessage, classifyError,
-  readRemoteProjects, writeRemoteProjects, migrateToPerProject,
+  readRemoteProjects, writeRemoteProjects, migrateToPerProject, pullRemoteProjects,
   DOC_BYTE_CEILING, DOC_BYTE_BUDGET, TOMBSTONE_TTL_MS,
   SYNC_SCHEMA_VERSION_SINGLE, SYNC_SCHEMA_VERSION_PER_PROJECT,
   PER_PROJECT_SYNC_ENABLED, shouldApplyRemote,
@@ -506,6 +506,34 @@ test('migration does not resurrect a project the user had deleted', async () => 
   assert.deepEqual(read.list.map((p) => p.id), ['b'])
 })
 
+test('migration does not write a tombstone over a project edited after the delete', async () => {
+  // The v1 document says `a` was deleted at T.early; another device has since
+  // written a per-project copy edited at T.late. The edit wins, as it does in
+  // mergeProjects(), so the live document must not be replaced by a tombstone.
+  const edited = project('a', T.late)
+  const { fs, docs } = fakeFirestore({
+    [LEGACY]: { list: [project('b', T.mid)], deleted: { a: T.early }, v: 1 },
+    [`${PER}/a`]: { project: edited, updatedAt: T.late, deletedAt: null },
+  })
+  const result = await migrateToPerProject(fs, UID, { now: 1000 })
+  assert.equal(result.ok, true)
+  assert.equal(docs.get(`${PER}/a`).deletedAt, null, 'the live document must stay live')
+  assert.equal(docs.get(`${PER}/a`).project.updatedAt, T.late)
+
+  const read = await readRemoteProjects(fs, UID, { perProject: true })
+  assert.deepEqual(read.list.map((p) => p.id).sort(), ['a', 'b'])
+})
+
+test('migration still writes a tombstone over a copy older than the delete', async () => {
+  const { fs, docs } = fakeFirestore({
+    [LEGACY]: { list: [], deleted: { a: T.late }, v: 1 },
+    [`${PER}/a`]: { project: project('a', T.early), updatedAt: T.early, deletedAt: null },
+  })
+  await migrateToPerProject(fs, UID, { now: 1000 })
+  assert.equal(docs.get(`${PER}/a`).deletedAt, T.late)
+  assert.equal(docs.get(`${PER}/a`).project, null)
+})
+
 test('an account with nothing to migrate is not an error', async () => {
   const { fs, calls } = fakeFirestore()
   const result = await migrateToPerProject(fs, UID, { now: 1000 })
@@ -523,6 +551,105 @@ test('a migration refused halfway reports the refusal and how far it got', async
   assert.equal(result.ok, false)
   assert.equal(result.reason, 'permission-denied')
   assert.equal(result.migrated, 1, 'and says how far it got, so a retry can be reasoned about')
+})
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   7b. THE PULL THAT MIGRATES, AND THE PUSH THAT SENDS ONLY WHAT CHANGED
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+test('the first pull of a v1 account moves it to one document per project', async () => {
+  const list = [project('a', T.early), project('b', T.mid)]
+  const { fs, docs } = fakeFirestore({ [LEGACY]: { list, deleted: { z: T.early }, v: 1 } })
+
+  const pulled = await pullRemoteProjects(fs, UID, { perProject: true, now: 1000 })
+  assert.equal(pulled.migration?.ok, true)
+  assert.equal(pulled.migration.migrated, 3, 'two projects and one tombstone')
+  assert.deepEqual(pulled.list.map((p) => p.id).sort(), ['a', 'b'])
+  assert.deepEqual(docs.get(`${PER}/a`).project, list[0])
+  assert.equal(docs.get(`${PER}/z`).deletedAt, T.early)
+  assert.deepEqual(docs.get(LEGACY).list, list, 'the v1 list survives as a copy')
+  assert.equal(pulled.stored.get('a').updatedAt, T.early,
+    'and the pull hands back what each document now holds')
+})
+
+test('a second pull of a migrated account migrates nothing', async () => {
+  const { fs, calls } = fakeFirestore({ [LEGACY]: { list: [project('a', T.mid)], v: 1 } })
+  await pullRemoteProjects(fs, UID, { perProject: true, now: 1000 })
+  const writes = calls.setDoc
+
+  const again = await pullRemoteProjects(fs, UID, { perProject: true, now: 1000 })
+  assert.equal(again.migration, undefined, 'v2 accounts are not migrated again')
+  assert.equal(calls.setDoc, writes, 'and a plain pull writes nothing')
+  assert.deepEqual(again.list.map((p) => p.id), ['a'])
+})
+
+test('a device still on the v1 client is picked up by the next pull', async () => {
+  const { fs, docs } = fakeFirestore({ [LEGACY]: { list: [project('a', T.early)], v: 1 } })
+  await pullRemoteProjects(fs, UID, { perProject: true, now: 1000 })
+
+  // An older client pushes its whole list, v: 1, over the same document.
+  await writeRemoteProjects(fs, UID, { list: [project('a', T.late)], perProject: false, now: 2000 })
+
+  const pulled = await pullRemoteProjects(fs, UID, { perProject: true, now: 3000 })
+  assert.equal(pulled.migration?.migrated, 1)
+  assert.equal(docs.get(`${PER}/a`).project.updatedAt, T.late,
+    'the newer edit from the old client reaches its own document')
+})
+
+test('a refused migration still hands back every project, and says it was refused', async () => {
+  const { fs, failures } = fakeFirestore({ [LEGACY]: { list: [project('a', T.mid)], v: 1 } })
+  failures.set(`${PER}/a`, firebaseError('permission-denied'))
+
+  const pulled = await pullRemoteProjects(fs, UID, { perProject: true, now: 1000 })
+  assert.equal(pulled.migration.ok, false)
+  assert.equal(pulled.migration.reason, 'permission-denied')
+  assert.deepEqual(pulled.list.map((p) => p.id), ['a'], 'nothing the account held is dropped')
+})
+
+test('a push writes only the projects this device changed', async () => {
+  // Device A pulled a and b. Device B then edits b. A edits only a and pushes.
+  const { fs, docs } = fakeFirestore({
+    [`${PER}/a`]: { project: project('a', T.early), updatedAt: T.early, deletedAt: null },
+    [`${PER}/b`]: { project: project('b', T.early), updatedAt: T.early, deletedAt: null },
+  })
+  const pulled = await readRemoteProjects(fs, UID, { perProject: true })
+  await fs.setDoc(fs.doc(fs.db, 'users', UID, 'projects', 'b'),
+    { project: project('b', T.late), updatedAt: T.late, deletedAt: null })
+
+  const result = await writeRemoteProjects(fs, UID, {
+    list: [project('a', T.mid), project('b', T.early)],
+    stored: pulled.stored,
+    perProject: true,
+    now: 1,
+  })
+  assert.equal(result.ok, true)
+  assert.equal(result.written, 1, 'only a was changed here, so only a is sent')
+  assert.equal(docs.get(`${PER}/a`).project.updatedAt, T.mid)
+  assert.equal(docs.get(`${PER}/b`).project.updatedAt, T.late,
+    'the edit another device made to b must survive this push')
+  assert.equal(result.stored.get('a').updatedAt, T.mid, 'and the map moves forward with the write')
+
+  // POSITIVE CONTROL: with no map, the same push sends both, and b is lost.
+  const blind = await writeRemoteProjects(fs, UID, {
+    list: [project('a', T.mid), project('b', T.early)], perProject: true, now: 2,
+  })
+  assert.equal(blind.written, 2)
+  assert.equal(docs.get(`${PER}/b`).project.updatedAt, T.early)
+})
+
+test('a delete the account already holds is not written again', async () => {
+  const { fs, calls } = fakeFirestore()
+  const first = await writeRemoteProjects(fs, UID, {
+    list: [], tombstones: { gone: T.mid }, perProject: true, now: 1,
+  })
+  assert.equal(first.written, 1)
+  const writes = calls.setDoc
+
+  const second = await writeRemoteProjects(fs, UID, {
+    list: [], tombstones: { gone: T.mid }, stored: first.stored, perProject: true, now: 2,
+  })
+  assert.equal(second.written, 0)
+  assert.equal(calls.setDoc, writes + 1, 'only the index is rewritten')
 })
 
 /* ═══════════════════════════════════════════════════════════════════════════

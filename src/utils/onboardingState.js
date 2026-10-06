@@ -46,6 +46,64 @@ export function profileOnboardingState(profile) {
   return Number.isFinite(profile?.onboarding?.completedAt) ? true : false
 }
 
+/**
+ * The onboarding record a newly created account starts with. Its presence is
+ * what marks an account as owing onboarding: an account whose profile has no
+ * `onboarding` record at all predates the record and is never sent back to it.
+ */
+export function openOnboardingRecord(now) {
+  return { openedAt: now }
+}
+
+/**
+ * What to do with one read of the account's profile document.
+ *
+ * `read` is `{ status: 'found', data }`, `{ status: 'missing' }` (the account
+ * answered and has no document) or `{ status: 'failed' }` (no answer: offline,
+ * a chunk that did not load, a refused read).
+ *
+ *   found   → `merge`: the document is laid over the local profile.
+ *   missing → `create`: this is the account's first document, so it opens the
+ *             onboarding record and is written.
+ *   failed  → `wait`: nothing is written and the profile stays unloaded, so a
+ *             cache or default is never taken for the account's answer.
+ *
+ * @returns {{ action: 'merge'|'create'|'wait', profile: object, loaded: boolean }}
+ */
+export function planProfileRead(read, initial, now) {
+  if (read?.status === 'found' && read.data) {
+    return { action: 'merge', profile: { ...initial, ...read.data }, loaded: true }
+  }
+  if (read?.status === 'missing') {
+    const profile = initial.onboarding ? initial : { ...initial, onboarding: openOnboardingRecord(now) }
+    return { action: 'create', profile, loaded: true }
+  }
+  return { action: 'wait', profile: initial, loaded: false }
+}
+
+/**
+ * True only for an account that was opened with an onboarding record and has
+ * not recorded completion. An account with no record owes nothing.
+ */
+export function owesOnboarding(profile) {
+  const record = profile?.onboarding
+  return !!record && typeof record === 'object' && profileOnboardingState(profile) === false
+}
+
+/**
+ * The profile to decide from, or null while the account has not answered.
+ *
+ * Until the profile document has been read, the profile is a local cache or a
+ * default. Either can confirm completion (a cached copy of the account's own
+ * record) but neither can deny it: a default carries no record, and a cache
+ * may predate completion on another device.
+ */
+export function knownProfile(profile, loaded) {
+  if (!profile) return null
+  if (loaded) return profile
+  return profileOnboardingState(profile) === true ? profile : null
+}
+
 /** The local mirror. Only consulted while the account answer is unknown. */
 export function localOnboardingFlag(storage) {
   try {
@@ -77,14 +135,32 @@ export function localOnboardingFlag(storage) {
  * path (App.jsx routes them from the auth event via `pendingOnboarding`).
  */
 export function onboardingDestination(profile, storage) {
-  const onAccount = profileOnboardingState(profile)
-  if (onAccount === true) return SIGNED_IN_HOME
-  if (onAccount === false) {
-    // The account says no. Honour a local flag anyway if one exists: it means
-    // this browser watched them finish, and the profile write is either still
-    // in flight or was rejected. Showing it again would be the same bug in the
-    // other direction.
-    return localOnboardingFlag(storage) ? SIGNED_IN_HOME : '/onboarding'
-  }
-  return SIGNED_IN_HOME
+  if (!owesOnboarding(profile)) return SIGNED_IN_HOME
+  // The account says it is owed. Honour a local flag anyway if one exists: it
+  // means this browser watched them finish, and the profile write is either
+  // still in flight or was rejected. Showing it again would be the same bug in
+  // the other direction.
+  return localOnboardingFlag(storage) ? SIGNED_IN_HOME : '/onboarding'
+}
+
+/**
+ * Whether the resume decision is still owed: once per signed-in account per
+ * page load, after that account's profile has loaded. `decidedUid` is the
+ * account it was last made for, so signing in as another account owes a new one.
+ */
+export function resumeDecisionOwed(decidedUid, uid, loaded) {
+  return !!uid && !!loaded && decidedUid !== uid
+}
+
+/**
+ * Where a returning visitor who has just arrived on the signed-in home should
+ * go instead, or null to stay. Only the signed-in home resumes onboarding: the
+ * sales page and deep links are left where the visitor asked to be.
+ */
+export function resumeOnboardingTarget({ pathname, profile, loaded, storage }) {
+  if (pathname !== SIGNED_IN_HOME) return null
+  const known = knownProfile(profile, loaded)
+  if (!known) return null
+  const destination = onboardingDestination(known, storage)
+  return destination === '/onboarding' ? destination : null
 }
