@@ -54,11 +54,11 @@ const LOAD_BUDGET_MS = 6000
 const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 
 /** A context at an exact width: real touch metrics under 700, desktop above. */
-async function at(browser, width, { theme = 'light', reducedMotion } = {}) {
+async function at(browser, width, { theme = 'light', reducedMotion, height } = {}) {
   const ctx = await browser.newContext({
     ...(width < 700
-      ? { viewport: { width, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IOS_UA }
-      : { viewport: { width, height: 900 } }),
+      ? { viewport: { width, height: height ?? 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IOS_UA }
+      : { viewport: { width, height: height ?? 900 } }),
     ...(reducedMotion ? { reducedMotion } : {}),
   })
   await ctx.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* private mode */ } }, theme)
@@ -124,18 +124,6 @@ const readBoard = () => {
             return r.width < 24 || r.height < 24
           })
           .map((t) => `${t.getAttribute('aria-label')} ${Math.round(t.getBoundingClientRect().width)}x${Math.round(t.getBoundingClientRect().height)}`),
-        // A control whose centre hit-tests to something else is not operable,
-        // however good its size. This is how the 390x640 regression was found.
-        covered: tools
-          .filter((t) => {
-            const r = t.getBoundingClientRect()
-            const cx = r.left + r.width / 2
-            const cy = r.top + r.height / 2
-            if (cy < 0 || cy > innerHeight || cx < 0 || cx > innerWidth) return false
-            const hit = document.elementFromPoint(cx, cy)
-            return hit !== t && !t.contains(hit)
-          })
-          .map((t) => t.getAttribute('aria-label')),
         roleShown: !!(role && shown(role)),
         roleText: role ? role.textContent.trim() : null,
         width: Math.round(col.getBoundingClientRect().width),
@@ -147,6 +135,47 @@ const readBoard = () => {
     hexSize: hex ? parseFloat(getComputedStyle(hex).fontSize) : null,
     overflowX: document.documentElement.scrollWidth - innerWidth,
   }
+}
+
+/**
+ * Every inline tool, hit-tested where a person actually meets it.
+ *
+ * A control whose centre hit-tests to something else is not operable, however
+ * good its size. But row heights follow the generated colour names, which wrap
+ * to one, two or three lines at 320px, so on arrival the last row sits anywhere
+ * from clear of the phone tab bar to wholly behind it. A hit-test taken on
+ * arrival measured that random draw, not the page. So each tool is focused, the
+ * way a keyboard user reaches it, and tested once the scroll the focus causes
+ * has stopped. A tool the page leaves under its own chrome, or under anything
+ * else, still fails, and so does one below the fold, which an arrival read
+ * never tested at all.
+ */
+const reachTools = async () => {
+  const shown = (el) => {
+    const r = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.opacity !== '0'
+  }
+  const frame = () => new Promise((r) => requestAnimationFrame(r))
+  const out = []
+  for (const col of [...document.querySelectorAll('.plb-col')].filter(shown)) {
+    const covered = []
+    let reached = 0
+    for (const tool of [...col.querySelectorAll('.plb-tool')].filter(shown)) {
+      tool.focus()
+      if (document.activeElement === tool) reached++
+      // A position read during a scroll is a number in transit: wait until a
+      // whole frame passes without the scroll moving.
+      let last = NaN
+      for (let f = 0; f < 60 && scrollY !== last; f++) { last = scrollY; await frame() }
+      const r = tool.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      if (hit !== tool && !tool.contains(hit)) covered.push(tool.getAttribute('aria-label'))
+    }
+    out.push({ reached, covered })
+  }
+  document.activeElement?.blur()
+  return out
 }
 
 test.describe('the palette board across the width matrix', () => {
@@ -173,11 +202,69 @@ test.describe('the palette board across the width matrix', () => {
         expect(col.tools[0], `${width}px, column ${index}`).toMatch(/^(Lock|Unlock) /)
         expect(col.tools[1], `${width}px, column ${index}`).toMatch(/^More actions for /)
         expect(col.undersized, `${width}px, column ${index}: below ${MIN_TARGET}px`).toEqual([])
-        expect(col.covered, `${width}px, column ${index}: centre hit-tests elsewhere`).toEqual([])
       }
       expect(board.overflowX, `${width}px: horizontal overflow`).toBeLessThanOrEqual(0)
+
+      const reach = await page.evaluate(reachTools)
+      // POSITIVE CONTROL: every tool counted above took focus, so every one of
+      // them was actually hit-tested.
+      expect(reach.length, `${width}px: columns reached`).toBe(5)
+      for (const [index, col] of reach.entries()) {
+        expect(col.reached, `${width}px, column ${index}: tools that took focus`).toBe(2)
+        expect(col.covered, `${width}px, column ${index}: centre hit-tests elsewhere`).toEqual([])
+      }
       await ctx.close()
     }
+  })
+
+  test('a tool reached from the keyboard is scrolled clear of the phone tab bar', async ({ browser }) => {
+    // The deterministic case of the check above. Rather than wait for a draw of
+    // long colour names, a short phone is scrolled so the last row's lock sits
+    // wholly behind the fixed tab bar, then the lock takes focus. A focused
+    // control the browser judges "already in view" is not scrolled at all, so
+    // this only passes while the scrollport excludes the bar.
+    const { ctx, page } = await at(browser, 320, { height: 640 })
+    await go(page, '/create/palette')
+    await expect(page.locator('.plb-col')).toHaveCount(5)
+    await settled(page)
+
+    const lock = page.locator('.plb-col').nth(4).locator('.plb-tool').first()
+    await expect(lock).toHaveAttribute('aria-label', /^(Lock|Unlock) /)
+
+    const probe = (el, place) => new Promise((resolve) => {
+      const bar = document.querySelector('.pnav-tabs')
+      const barTop = bar.getBoundingClientRect().top
+      if (place) {
+        window.scrollTo({ top: scrollY + el.getBoundingClientRect().top - (barTop + 4), behavior: 'instant' })
+      } else {
+        el.focus()
+      }
+      let last = NaN
+      const settle = () => {
+        if (scrollY === last) {
+          const r = el.getBoundingClientRect()
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+          resolve({ top: r.top, bottom: r.bottom, barTop, focused: document.activeElement === el,
+            onTool: hit === el || el.contains(hit), underBar: bar.contains(hit) })
+          return
+        }
+        last = scrollY
+        requestAnimationFrame(settle)
+      }
+      requestAnimationFrame(settle)
+    })
+
+    const placed = await lock.evaluate(probe, true)
+    // POSITIVE CONTROL: the lock really is behind the bar before focus moves.
+    // Without this, a page that never scrolled would make the check vacuous.
+    expect(placed.underBar, `the lock was placed behind the tab bar (${JSON.stringify(placed)})`).toBe(true)
+    expect(placed.top, 'the lock is inside the viewport, not below it').toBeLessThan(640)
+
+    const reached = await lock.evaluate(probe, false)
+    expect(reached.focused, 'the lock took focus').toBe(true)
+    expect(reached.onTool, `the focused lock hit-tests to itself (${JSON.stringify(reached)})`).toBe(true)
+    expect(reached.bottom, 'the focused lock ends above the tab bar').toBeLessThanOrEqual(reached.barTop + 1)
+    await ctx.close()
   })
 
   test('nothing behind the overflow menu is lost — every action is there by name', async ({ browser }) => {

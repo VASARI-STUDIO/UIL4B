@@ -2947,6 +2947,10 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-tab.is-current,.pnav-tab[aria-expanded="true"]{color:rgb(var(--ink-rgb));font-weight:560}
   .pnav-tab:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
   html.has-tabbar body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
+  /* The bar is fixed over the bottom of the scrollport. Without this, a control
+     that takes keyboard focus behind the bar counts as already in view, so the
+     browser does not scroll it clear and the focused control stays hidden. */
+  html.has-tabbar{scroll-padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
 }
 
 .exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
