@@ -115,7 +115,8 @@ test('this guard is not toothless — the tables are real and distinct', () => {
   // string, and all of them would pass against an empty ladder or a TRIAL_DAYS
   // that had lost its entries.
   assert.ok(PLAN_LADDER.length >= 3, `the ladder has only ${PLAN_LADDER.length} entries`)
-  assert.ok(Object.keys(TRIAL_DAYS).length >= 4)
+  assert.deepEqual(Object.keys(TRIAL_DAYS).sort(), [...BILLING_INTERVALS].sort(),
+    'every sellable interval has exactly one trial entry')
   const distinct = new Set(Object.values(TRIAL_DAYS))
   assert.ok(distinct.size > 1, 'every cadence has the same trial — the cadence rule has been flattened')
 })

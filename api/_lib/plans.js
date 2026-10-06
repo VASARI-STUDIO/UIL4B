@@ -154,10 +154,9 @@ export { isAdminEmail }
 // Resolve the effective plan for a request: admins are always Pro; everyone
 // else falls back to their real subscription.
 //
-// NOTE on lifetime: the one-off tier is no longer SOLD (it was removed from the
-// pricing page — an unfinished checkout path advertised as a product). Existing
-// entitlements are still honoured here, deliberately: someone who already holds
-// one keeps it. Selling it again is a founder decision, not a code change.
+// NOTE on lifetime: one-off Pro is not sold — create-checkout accepts recurring
+// intervals only. An entitlement already on an account is still honoured here,
+// deliberately: someone who holds one keeps Pro until it is revoked.
 export function planForUser({ subscription, lifetimeEntitlement, email } = {}) {
   if (isAdminEmail(email)) return PLANS.pro
   if (hasLifetimeEntitlement(lifetimeEntitlement)) return PLANS.pro
