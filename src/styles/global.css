@@ -768,6 +768,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast-x svg{width:14px;height:14px}
 .toast-x:hover{background:var(--bg-2);color:var(--t0)}
 .toast:not(.show) .toast-x{pointer-events:none}
+/* One action on a toast (Undo): an outline pill, opted back into pointer
+   events like the dismiss control. */
+.toast.has-action{max-width:min(420px,calc(100vw - 32px))}
+.toast-action{flex:0 0 auto;min-height:32px;padding:0 14px;margin:-4px 0;border:1px solid var(--border);border-radius:999px;background:none;color:var(--t0);font:inherit;font-size:13px;font-weight:600;cursor:pointer;pointer-events:auto;transition:background var(--t),border-color var(--t)}
+.toast-action:hover{background:var(--bg-2);border-color:var(--bh)}
+.toast-action:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toast:not(.show) .toast-action{pointer-events:none}
+@media(pointer:coarse){.toast-action{min-height:44px;margin:-8px 0}}
 .uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
 /* Success motion: the checkmark draws, which is the state ("done") being
    said. The spring pop that scaled the tile from .5 went: it said nothing the

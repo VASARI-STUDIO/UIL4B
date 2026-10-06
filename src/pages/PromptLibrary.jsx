@@ -6,7 +6,8 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { TAG_CATEGORIES } from '../data/promptCategories'
-import { getPrompts, setPromptsStore, getSavedIds, setSavedIdsStore, parseTags } from '../utils/promptStore'
+import { getPrompts, setPromptsStore, getSavedIds, markStoredSave, readPromptLibrary, parseTags, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
+import { onAccountApplied } from '../utils/accountEvents'
 import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import { LockedPromptCard, LockedTeaseCta } from '../components/library/LockedTease'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
@@ -73,43 +74,70 @@ export default function PromptLibrary({ onCopy, toast }) {
 
   // Persist a freshly-created personal prompt (built by AddPromptPanel).
   const addPrompt = useCallback((prompt) => {
-    setPrompts(prev => {
-      const updated = [prompt, ...prev]
-      setPromptsStore(updated)
-      return updated
-    })
+    const updated = [prompt, ...getPrompts()]
+    setPromptsStore(updated)
+    setPrompts(updated)
     toast(t('promptLibrary.promptSaved'))
   }, [toast, t])
 
-  const saveCommunityPrompt = useCallback((cp) => {
-    if (savedIds.has(cp.id)) { toast('Already in your library'); return }
-    const prompt = {
-      id: Date.now(),
-      title: cp.title,
-      text: cp.text,
-      tags: cp.tags,
-      img: cp.img || '',
-      date: new Date().toLocaleDateString('en-AU'),
+  // The library and the saved set are account-bound. When the account writes
+  // a newer copy into storage (another device, a sign-in), read it again, so
+  // this page never shows, or writes back, a set that is out of date. The
+  // library copy of a prompt unsaved elsewhere is pruned on the way in, since
+  // the two keys can arrive separately. It runs on mount too: an update can
+  // land while the page is closed.
+  useEffect(() => {
+    const refresh = () => {
+      const next = readPromptLibrary()
+      setPrompts(next.prompts)
+      setSavedIds(next.savedIds)
     }
-    setPrompts(prev => {
-      const updated = [prompt, ...prev]
-      setPromptsStore(updated)
-      return updated
-    })
-    const newSaved = new Set(savedIds)
-    newSaved.add(cp.id)
-    setSavedIds(newSaved)
-    setSavedIdsStore(newSaved)
-    toast('Saved to your library')
-  }, [savedIds, toast])
+    refresh()
+    const onStorage = (e) => { if (!e.key || PROMPT_STORE_KEYS.includes(e.key)) refresh() }
+    window.addEventListener('storage', onStorage)
+    const off = onAccountApplied(PROMPT_STORE_KEYS, refresh)
+    return () => { window.removeEventListener('storage', onStorage); off() }
+  }, [])
+
+  // Save is a toggle, the same on the card and in the modal. Saving adds the
+  // saved id and a copy in My Prompts; saving again removes both and offers
+  // Undo. The store is read fresh inside the toggle (utils/promptStore).
+  const toggleCommunitySave = useCallback((cp) => {
+    const result = toggleStoredCommunitySave(cp)
+    setPrompts(result.prompts)
+    setSavedIds(result.savedIds)
+    if (result.saved) { toast('Saved to your library'); return }
+    const undo = result.undo
+    toast(
+      result.edited ? 'Removed from your library, including your edits' : 'Removed from your library',
+      'success',
+      {
+        action: {
+          label: 'Undo',
+          onAction: () => {
+            const back = undoStoredUnsave(undo)
+            setPrompts(back.prompts)
+            setSavedIds(back.savedIds)
+          },
+        },
+      },
+    )
+  }, [toast])
+
+  const closeModal = useCallback(() => setModalPrompt(null), [])
 
   const remove = useCallback((e, id) => {
     e.stopPropagation()
-    setPrompts(prev => {
-      const updated = prev.filter(p => p.id !== id)
-      setPromptsStore(updated)
-      return updated
-    })
+    const current = getPrompts()
+    const gone = current.find(p => p.id === id)
+    const updated = current.filter(p => p.id !== id)
+    setPromptsStore(updated)
+    setPrompts(updated)
+    // Deleting the copy a community Save made also clears that Save, so the
+    // community card does not read "Saved" with nothing in My Prompts.
+    if (gone?.sourceId != null && getSavedIds().has(gone.sourceId)) {
+      setSavedIds(markStoredSave(gone.sourceId, false))
+    }
     setModalPrompt(null)
     toast(t('promptLibrary.promptDeleted'))
   }, [toast, t])
@@ -349,26 +377,15 @@ export default function PromptLibrary({ onCopy, toast }) {
       </div>
 
       {/* Toolbar — the shared Library control block, as used by the Palette,
-          Gradient, Icon, Emoji and Font surfaces. This page ran the one-off
-          `.pl-toolbar` with outlined `.pl-chip` pills, which meant the tablet
-          band fix in #318 (the tray collapses to a menu between 641 and 980px)
-          reached every browse surface EXCEPT this one — measured 172px of
-          sticky chrome at both 641 and 834px against 80px at 1280, with the
-          sort pills stranded hard-right on the first line and the categories
-          on a second.
+          Gradient, Icon, Emoji and Font surfaces, so the tablet band (the tray
+          collapses to a menu between 641 and 980px) applies here too.
 
-          Sort is a filter group rather than its own control for the same
-          reason the Font Gallery's is: it asks "which subset, in which order?"
-          in the one idiom, instead of adding a second visual language to a row
-          that already has one.
+          Sort is a filter group rather than its own control, as in the Font
+          Gallery: it asks "which subset, in which order?" in the one idiom.
 
-          The primary action lives in the HERO, not here. The shared masthead is
-          430px tall, and with the action in the toolbar underneath it the
-          "Submit prompt" CTA left the viewport entirely at 320x800 — caught by
-          21-reflow-320, which has guarded that exact button since it was found
-          off screen horizontally in the 2026-08-11 audit. The sibling galleries
-          already put their primary action in the hero, so this is the shared
-          shape rather than a workaround. */}
+          The primary action lives in the HERO, not here, as on the sibling
+          galleries: under the masthead it would leave the viewport at
+          320x800 (guarded by 21-reflow-320). */}
       <LibraryToolbar
         className="pl-lbry-toolbar"
         quick={1}
@@ -416,30 +433,11 @@ export default function PromptLibrary({ onCopy, toast }) {
         </div>
       )}
 
-      {/* THE RESULTS WERE THE ONE REGION ON THIS PAGE THAT NAMED NOTHING, and
-          the count they turn on was announced nowhere.
-
-          Its three sibling libraries — Palette, Gradient and Curated Resources
-          — all render DiscoverResultHead, which is a labelled <section> plus an
-          aria-live count. This page was the only one of the four without
-          either: the grid was a bare <div className="pl-gallery">, so a reader
-          navigating by landmark found the masthead and the closing CTA and
-          nothing naming the thing the page is for, and filtering from 20 to 0
-          changed the screen while saying nothing.
-
-          It does NOT adopt DiscoverResultHead, deliberately. That component
-          renders a VISIBLE eyebrow and h2, and the titles its siblings pass
-          ("Colours worth building with") are exactly the marketing lines the
-          re-score flagged as the founder's to write. Adding a visible heading
-          here would be a design change and a copy decision inside an
-          accessibility fix.
-
-          So this uses the pattern THIS PAGE already established forty lines
-          below, where the locked grid names itself with an sr-only h2: nothing
-          moves on screen, and the region, its name and its count all exist for
-          anyone reading the outline. The name is the tab the visitor is
-          standing in — their own choice, already rendered as the tab's label —
-          and the count is counted. No sentence was written. */}
+      {/* The results region: a labelled <section> and an aria-live count, as
+          the sibling libraries have through DiscoverResultHead. That component
+          draws a visible eyebrow and heading; this page names the region with
+          an sr-only h2 instead (the same pattern the locked grid below uses),
+          so nothing moves on screen. The name is the current tab's label. */}
       <section aria-labelledby="pl-results-heading">
         <h2 className="sr-only" id="pl-results-heading">
           {isCommunity ? 'Community' : 'My Prompts'}
@@ -456,6 +454,7 @@ export default function PromptLibrary({ onCopy, toast }) {
               onOpen={setModalPrompt}
               isCommunity={isCommunity}
               isSaved={savedIds.has(p.id)}
+              onToggleSave={isCommunity ? toggleCommunitySave : undefined}
             />
           ))}
         </div>
@@ -571,9 +570,9 @@ export default function PromptLibrary({ onCopy, toast }) {
       {modalPrompt && (
         <PromptModal
           prompt={modalPrompt}
-          onClose={() => setModalPrompt(null)}
+          onClose={closeModal}
           onCopy={copyPrompt}
-          onSave={saveCommunityPrompt}
+          onToggleSave={toggleCommunitySave}
           onRemove={remove}
           isCommunity={isCommunity}
           isSaved={savedIds.has(modalPrompt.id)}

@@ -17,6 +17,7 @@ import {
   PREVIEW_CHARS_PER_SECOND, PREVIEW_MAX_SECONDS, PREVIEW_MIN_SECONDS, previewDuration,
 } from '../../src/utils/promptPreview.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { hasPromptPreview, hasPromptAnim } from '../../src/data/promptPreviewAssets.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css on
@@ -60,49 +61,42 @@ test('between the clamps the pace is constant, not the duration', () => {
     `pace drifted: ${paceA.toFixed(1)} vs ${paceB.toFixed(1)} chars/s`)
 })
 
-test('the real library lands inside the band, so neither clamp is the common case', () => {
-  // Vacuity guard on the two tests above: if every shipped prompt sat at a
-  // clamp, the pace assertion would be about nothing the product renders.
-  //
-  // ── THE THRESHOLD MOVED ON 2026-09-15, AND WHY ────────────────────────────
-  // It read `inBand > durations.length / 2` and went red at exactly 10/20 when
-  // the seven animation prompts (c-13..c-19) were rewritten. That was not a
-  // false alarm — it is the guard reporting a real change in the library, and
-  // it is worth writing down rather than tuning away:
-  //
-  //   the other thirteen   66-202 words
-  //   c-13..c-19           392-488 words, every one of them pinned at the
-  //                        34-second maximum
-  //
-  // The rewrite was an anti-slop fix (c-14 had hardcoded the canonical AI
-  // gradient) and the longer briefs are better PROMPTS — they say what to build
-  // rather than gesturing at a feeling. The cost lands here: a card preview
-  // cannot scroll 450 words inside the cap, so for those seven the scroll shows
-  // the opening and stops short.
-  //
-  // That is survivable by the card's own design, which this file's module
-  // header already states: "At rest every card shows the TOP of its prompt,
-  // which is the half that says what the prompt is for", and the whole text is
-  // one click away in the modal. It is NOT survivable if the library keeps
-  // drifting longer, which is what the threshold below now watches.
-  //
-  // A THIRD, not a half, and both clamps must stay reachable — that is what
-  // makes this a vacuity guard rather than a length preference. If in-band ever
-  // falls under a third, the pace rule is describing a minority of the library
-  // and the band itself is wrong; raising PREVIEW_MAX_SECONDS is not the fix,
-  // because 34 seconds is already longer than anyone hovers.
-  const durations = COMMUNITY_PROMPTS.map((p) => previewDuration(p.text))
-  assert.ok(durations.length >= 20, 'the library shrank; this fixture is stale')
-  const inBand = durations.filter((d) => d > PREVIEW_MIN_SECONDS && d < PREVIEW_MAX_SECONDS)
-  assert.ok(inBand.length >= durations.length / 3,
-    `only ${inBand.length}/${durations.length} shipped prompts are between the clamps — ` +
-    'the pace rule now describes a minority of the library. Prompts have grown; ' +
-    'shorten them or re-think the band, but do not raise PREVIEW_MAX_SECONDS.')
+test('every library prompt previews as its built output, never the timed text scroll', () => {
+  // The timed text scroll is capped at PREVIEW_MAX_SECONDS, which is too short
+  // to travel through a long brief. The library's briefs are long by design,
+  // so none of them may fall back to it: each card shows the prompt's built
+  // output (a poster, with an animation over it while in view). The timed
+  // scroll is left to prompts that have no output, i.e. user-submitted ones.
+  assert.ok(COMMUNITY_PROMPTS.length >= 20, 'the library shrank; this fixture is stale')
+  for (const p of COMMUNITY_PROMPTS) {
+    assert.ok(hasPromptPreview(p.id), `${p.id}: no poster, so its card falls back to the timed text scroll`)
+    assert.ok(hasPromptAnim(p.id), `${p.id}: no animation, so its card never shows the page running`)
+  }
+  // And the card really does branch on that: output first, text only without it.
+  const src = stripComments(read('src/components/prompt/PromptCard.jsx'))
+  assert.match(src, /const showsOutput = isCommunity && hasPromptPreview\(p\.id\)/,
+    'the card no longer chooses the output preview from the manifest')
+  assert.match(src, /\{showsOutput \? \(/, 'the card no longer renders the output preview first')
+})
 
-  // And the band must still be a band. If nothing reached a clamp the two
-  // tests above would be untested at their edges; if everything did, the
-  // assertion above would be all that is left.
-  assert.ok(inBand.length > 0, 'no prompt is inside the band at all')
+test('the full prompt text reads in the modal, in a scroll box with no time limit', () => {
+  // Where the whole text lives: the modal's text view, a plain block inside a
+  // scrolling body. Nothing there is animated, so no length is cut short.
+  const src = stripComments(read('src/components/prompt/PromptModal.jsx'))
+  assert.match(src, /<pre>\{prompt\.text\}<\/pre>/, 'the modal no longer shows the whole prompt text')
+  assert.match(src, /className="pl-modal-body"/, 'the text is no longer inside the modal body')
+  const css = stripComments(ALL_CSS)
+  const body = /\.pl-modal-body\{([^}]*)\}/.exec(css)
+  assert.ok(body, '.pl-modal-body has no rule at all')
+  assert.match(body[1], /overflow-y:auto/, 'the modal body no longer scrolls, so a long prompt is clipped')
+  let seen = 0
+  for (const sel of ['\\.pl-modal-prompt', '\\.pl-modal-prompt pre', '\\.plib-page \\.pl-modal-prompt', '\\.plib-page \\.pl-modal-prompt pre']) {
+    for (const m of css.matchAll(new RegExp(`(?:^|[{}])\\s*${sel}\\{([^}]*)\\}`, 'g'))) {
+      seen++
+      assert.ok(!/animation/.test(m[1]), `${sel.replace(/\\/g, '')} is animated, so the text view is timed`)
+    }
+  }
+  assert.ok(seen >= 3, `found only ${seen} text-view rules; the selectors above no longer match the stylesheet`)
 })
 
 test('PromptCard actually renders the prompt into the preview, and calls the helper', () => {

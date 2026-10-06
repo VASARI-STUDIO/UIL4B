@@ -3,419 +3,704 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Keel — Store overview</title>
+<title>Keel: Fernway Supply Co. overview</title>
+<meta name="description" content="Keel analytics overview for Fernway Supply Co., an outdoor gear store: live sessions, 28-day revenue against the previous period, channels and the checkout funnel.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":4000}'>
+<script src="../vendor/fonts/geist.js"></script>
+<script src="../vendor/fonts/geist-mono.js"></script>
 <style>
-  :root{
-    --bg:#12121e; --sidebar:#16162a; --panel:#1a1a2e; --raised:#16213e;
-    --line:rgba(146,166,208,.16); --line-soft:rgba(146,166,208,.09);
-    --ink:#eef2f9; --ink-2:#98a4c0; --ink-3:#6b7691;
-    --accent:#53a8b6; --deep:#0f3460; --neg:#e0736b;
-    --r:10px;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{
-    background:var(--bg); color:var(--ink); font-family:var(--sans);
-    font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
-  }
-  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
-  a{color:inherit;text-decoration:none}
-  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+:root{
+  color-scheme:dark;
+  --bg:#0f1012; --panel:#15171a; --raise:#1b1e22; --hover:#20242a;
+  --line:#24282d; --line-2:#30353c;
+  --ink:#eceef0; --ink-2:#a9afb7; --ink-3:#8b929b;
+  --teal:#28a894; --teal-ink:#63d8c4; --teal-wash:rgba(40,168,148,.13);
+  --coral:#e0695a; --coral-ink:#ff8e7d; --coral-wash:rgba(224,105,90,.13);
+  --prev:#737a84;
+  --sans:"Geist",ui-sans-serif,"Segoe UI",system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --out:cubic-bezier(.16,1,.3,1); --std:cubic-bezier(.2,.8,.2,1);
+  --r:12px;
+}
+*{box-sizing:border-box}
+html{scrollbar-color:#3a4047 var(--bg);scrollbar-width:thin;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.45 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--teal-ink)}
+::selection{background:rgba(40,168,148,.35);color:#fff}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--teal-ink);outline-offset:2px;border-radius:6px}
+svg{display:block}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-40px;z-index:30;background:var(--teal);color:#07201c;padding:8px 12px;border-radius:8px;font-weight:600}
+.skip:focus{top:10px}
+.ico{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{max-width:1440px;margin:0 auto;padding:0 28px;overflow-x:clip}
 
-  /* ---------- shell ---------- */
-  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh;
-       background:linear-gradient(90deg,var(--sidebar) 0 229px,var(--line-soft) 229px 230px,var(--bg) 230px)}
-  .side{
-    background:transparent;
-    display:flex;flex-direction:column;padding:16px 12px;gap:18px;
-    position:sticky;top:0;height:100vh;
-  }
-  .brand{display:flex;align-items:center;gap:9px;padding:2px 6px 0}
-  .brand b{font-size:15px;letter-spacing:-.01em}
-  .mark{width:24px;height:24px;border-radius:7px;background:linear-gradient(150deg,var(--accent),var(--deep));
-        display:grid;place-items:center;flex:0 0 auto}
-  .mark svg{width:13px;height:13px;stroke:#0c1626;stroke-width:2.4;fill:none;stroke-linecap:round}
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:rgba(15,16,18,.92);border-bottom:1px solid var(--line)}
+@supports (backdrop-filter:blur(8px)){.top{background:rgba(15,16,18,.78);backdrop-filter:blur(12px) saturate(140%)}}
+.top .wrap{display:flex;align-items:center;gap:20px;height:56px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px;letter-spacing:-.01em}
+.brand svg{width:22px;height:22px}
+.slash{color:var(--line-2);font-size:20px;font-weight:300;margin:0 -6px}
+.ws{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px 0 4px;border-radius:8px;transition:background .15s var(--std)}
+.ws:hover{background:var(--raise)}
+.ws .av{width:22px;height:22px;border-radius:6px;background:#23413b;color:#bfeee4;display:grid;place-items:center;font-size:10px;font-weight:600}
+.ws b{font-weight:500}
+.ws .ico{width:14px;height:14px;color:var(--ink-3)}
+.nav{display:flex;gap:2px;margin-left:8px}
+.nav a{position:relative;display:flex;align-items:center;height:56px;padding:0 10px;color:var(--ink-2);font-weight:450;transition:color .15s var(--std)}
+.nav a:hover{color:var(--ink)}
+.nav a[aria-current=page]{color:var(--ink)}
+.nav a[aria-current=page]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--teal-ink);border-radius:2px}
+.nav .livechip{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal-ink);margin-left:7px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:8px}
+.search{display:flex;align-items:center;gap:10px;height:32px;padding:0 8px 0 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink-3);min-width:220px;transition:border-color .15s var(--std),color .15s}
+.search:hover{border-color:var(--line-2);color:var(--ink-2)}
+.search kbd{margin-left:auto;font:500 11px var(--mono);color:var(--ink-2);background:var(--raise);border:1px solid var(--line-2);border-radius:5px;padding:1px 5px}
+.iconbtn{position:relative;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:var(--ink-2);transition:background .15s var(--std),color .15s}
+.iconbtn:hover{background:var(--raise);color:var(--ink)}
+.iconbtn .badge{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 2px var(--bg)}
+.me{width:28px;height:28px;border-radius:50%;background:#2b3138;color:var(--ink);display:grid;place-items:center;font-size:11px;font-weight:600;margin-left:4px}
 
-  .ws{display:flex;align-items:center;gap:9px;width:100%;padding:8px;border-radius:8px;
-      border:1px solid var(--line);background:rgba(255,255,255,.015);text-align:left}
-  .ws:hover{background:var(--raised);border-color:rgba(83,168,182,.35)}
-  .ws .av{width:22px;height:22px;border-radius:6px;background:#2f4a3c;color:#a8d8bf;
-          display:grid;place-items:center;font-size:10px;font-weight:700;flex:0 0 auto}
-  .ws span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:600}
-  .ws small{display:block;color:var(--ink-3);font-size:10.5px;font-weight:500}
-  .ws .cv{margin-left:auto;stroke:var(--ink-3)}
+/* header */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:26px 0 20px}
+h1{margin:0;font-size:24px;line-height:1.2;font-weight:600;letter-spacing:-.025em}
+.sub{margin:6px 0 0;color:var(--ink-2);font-size:13px}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.seg{display:flex;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+.seg button{height:26px;padding:0 10px;border-radius:6px;color:var(--ink-2);font:500 12px var(--mono);transition:background .15s var(--std),color .15s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed=true]{background:var(--hover);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+.btn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:9px;color:var(--ink);font-weight:500;font-size:13px;background:var(--panel);transition:background .15s var(--std),border-color .15s,transform .1s}
+.btn:hover{background:var(--raise);border-color:var(--line-2)}
+.btn:active{transform:translateY(1px)}
+.btn .ico{color:var(--ink-2)}
 
-  nav{display:flex;flex-direction:column;gap:1px}
-  .grp{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
-       padding:12px 8px 5px;font-weight:600}
-  .nav-i{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:7px;
-         color:var(--ink-2);font-size:13px;font-weight:500;transition:background .14s,color .14s}
-  .nav-i svg{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;stroke-width:1.6;fill:none;
-             stroke-linecap:round;stroke-linejoin:round;opacity:.9}
-  .nav-i:hover{background:rgba(255,255,255,.04);color:var(--ink)}
-  .nav-i[aria-current]{background:var(--raised);color:var(--ink);box-shadow:inset 2px 0 0 var(--accent)}
-  .nav-i .tag{margin-left:auto;font-size:10px;font-weight:700;color:var(--neg);
-              background:rgba(224,115,107,.14);padding:1px 6px;border-radius:20px}
-  .side-foot{margin-top:auto;border-top:1px solid var(--line-soft);padding-top:12px;
-             display:flex;align-items:center;gap:9px}
-  .side-foot .av{width:26px;height:26px;border-radius:50%;background:var(--deep);color:#9fd4dd;
-                 display:grid;place-items:center;font-size:10.5px;font-weight:700}
-  .side-foot b{font-size:12.5px;font-weight:600;display:block}
-  .side-foot small{color:var(--ink-3);font-size:10.5px}
+/* live strip */
+.live{display:grid;grid-template-columns:230px minmax(0,1fr) 300px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);overflow:hidden}
+.live>div{padding:16px 20px}
+.lnow{border-right:1px solid var(--line)}
+.lab{display:flex;align-items:center;gap:8px;color:var(--ink-2);font-size:12.5px;font-weight:500}
+.pulse{position:relative;width:8px;height:8px;border-radius:50%;background:var(--teal-ink);flex:none}
+.pulse::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1.5px solid var(--teal-ink);opacity:0}
+.big{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.big strong{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.big span{color:var(--ink-2);font-size:12.5px}
+.lbars{position:relative;padding:14px 20px 10px!important;min-width:0}
+.bars{position:relative;height:50px;overflow:hidden;margin-top:6px;border-bottom:1px solid var(--line-2)}
+.track{position:absolute;inset:0;display:flex;align-items:flex-end;will-change:transform}
+.bar{flex:none;height:100%;display:flex;align-items:flex-end;justify-content:center}
+.bar i{display:block;width:calc(100% - 3px);max-width:9px;height:100%;background:#2c5c55;border-radius:2px 2px 0 0;transform-origin:50% 100%}
+.bar.recent i{background:var(--teal)}
+.bax{display:flex;justify-content:space-between;margin-top:6px;color:var(--ink-3);font:11px var(--mono)}
+.ltoday{border-left:1px solid var(--line)}
+.ltoday .row{display:flex;gap:14px;margin-top:8px;color:var(--ink-2);font-size:12.5px}
+.ltoday .row b{color:var(--ink);font-weight:500}
+.tick{display:inline-block}
+.tick.bump{animation:bump .5s var(--out)}
+@keyframes bump{0%{transform:translateY(5px);opacity:.25}100%{transform:none;opacity:1}}
 
-  main{min-width:0;padding:0 26px 34px}
-  .top{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;
-       padding:22px 0 16px;border-bottom:1px solid var(--line-soft);margin-bottom:20px}
-  .top h1{margin:0;font-size:21px;letter-spacing:-.02em;font-weight:650}
-  .top p{margin:3px 0 0;color:var(--ink-3);font-size:12.5px}
-  .top .r{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-  .btn{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:8px;
-       border:1px solid var(--line);font-size:12.5px;font-weight:550;color:var(--ink-2);
-       transition:background .14s,border-color .14s,color .14s}
-  .btn svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .btn:hover{background:var(--raised);color:var(--ink);border-color:rgba(146,166,208,.3)}
-  .btn-a{background:var(--accent);color:#08161a;border-color:var(--accent);font-weight:650}
-  .btn-a:hover{background:#6bc0cd;color:#08161a;border-color:#6bc0cd}
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);margin-top:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);overflow:hidden}
+.kpi{position:relative;text-align:left;padding:16px 20px 17px;border-left:1px solid var(--line);transition:background .15s var(--std)}
+.kpi:first-child{border-left:0}
+.kpi:hover{background:#181b1f}
+.kpi[aria-selected=true]{background:var(--raise)}
+.kpi[aria-selected=true]::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--teal-ink)}
+.kpi.bad[aria-selected=true]::before{background:var(--coral-ink)}
+.kpi .l{color:var(--ink-2);font-size:12.5px;font-weight:500}
+.kpi .v{display:block;margin-top:6px;font-size:28px;font-weight:600;letter-spacing:-.03em;line-height:1.1}
+.kpi .v small{font-size:17px;font-weight:500;color:var(--ink-2);margin-left:1px}
+.kpi .d{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--ink-2)}
+.delta{display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 6px;border-radius:5px;font:500 11.5px var(--mono)}
+.delta svg{width:10px;height:10px}
+.up{color:var(--teal-ink);background:var(--teal-wash)}
+.down{color:var(--coral-ink);background:var(--coral-wash)}
 
-  .panel{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--r)}
+/* main grid */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:16px;margin-top:16px}
+.panel{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);min-width:0}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px 20px 0}
+h2{margin:0;font-size:14px;font-weight:600;letter-spacing:-.01em}
+.ph p{margin:3px 0 0;color:var(--ink-2);font-size:12.5px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:12px 20px 0;color:var(--ink-2);font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.key{width:16px;height:0;border-top:2px solid var(--teal)}
+.key.prev{border-top:2px dashed var(--prev)}
+.key.wk{width:10px;height:10px;border:0;border-radius:2px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px var(--line)}
+/* the chart takes whatever height the row gives the panel, so the card never ends in dead space */
+#chartpanel{display:flex;flex-direction:column}
+.chartbox{position:relative;flex:1 1 auto;display:flex;flex-direction:column;padding:4px 8px 10px 4px}
+#chart{display:block;width:100%;flex:1 1 auto;height:auto;min-height:300px;overflow:visible;touch-action:pan-y;outline:none}
+#chart:focus-visible{outline:2px solid var(--teal-ink);outline-offset:-2px}
+.axis text{fill:var(--ink-3);font:11px var(--mono)}
+.grid-l{stroke:var(--line);stroke-width:1}
+.base-l{stroke:var(--line-2);stroke-width:1}
+.wkend{fill:rgba(255,255,255,.028)}
+.ln{fill:none;stroke:var(--teal);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.ln.bad{stroke:var(--coral)}
+.ln-prev{fill:none;stroke:var(--prev);stroke-width:1.5;stroke-dasharray:4 4;stroke-linecap:round}
+.area{opacity:1}
+.enddot{stroke:var(--panel);stroke-width:2}
+.endlab{fill:var(--ink);font:500 11.5px var(--mono)}
+.xh{stroke:var(--ink-3);stroke-width:1;opacity:0;transition:opacity .12s}
+.hdot{stroke:var(--panel);stroke-width:2;opacity:0;transition:opacity .12s}
+.anno{position:absolute;pointer-events:none;background:var(--raise);border:1px solid var(--line-2);border-radius:9px;padding:8px 11px 9px;box-shadow:0 10px 24px -12px rgba(0,0,0,.7);white-space:nowrap;font-size:12px;transition:opacity .15s var(--std)}
+.anno .t{color:var(--ink-2);font-size:11.5px}
+.anno .n{display:block;margin:2px 0 1px;font:600 15px var(--sans);letter-spacing:-.02em;color:var(--ink)}
+.anno .c{color:var(--ink-2)}
+.tip{position:absolute;left:0;top:0;pointer-events:none;min-width:190px;background:#1f2328;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;box-shadow:0 12px 28px -10px rgba(0,0,0,.75);opacity:0;transition:opacity .12s;font-size:12px}
+.tip.on{opacity:1}
+.tip .t{color:var(--ink-2);margin-bottom:6px}
+.tip .r{display:flex;align-items:center;gap:8px;margin-top:3px}
+.tip .r b{font:500 12.5px var(--mono);color:var(--ink);min-width:62px}
+.tip .r span{color:var(--ink-2)}
+.tip .dl{margin-top:6px;padding-top:6px;border-top:1px solid var(--line-2);font:500 11.5px var(--mono)}
+.hovering .anno{opacity:.15}
+.sum{display:flex;flex-wrap:wrap;gap:4px 22px;padding:0 20px 16px;color:var(--ink-2);font-size:12.5px}
+.sum b{color:var(--ink);font-weight:500}
+.tview{display:none;max-height:300px;overflow:auto;margin:10px 20px 16px;border:1px solid var(--line);border-radius:9px}
+.tview table{width:100%;border-collapse:collapse;font-size:12.5px}
+.tview th,.tview td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:right}
+.tview th:first-child,.tview td:first-child{text-align:left}
+.tview th{position:sticky;top:0;background:var(--raise);color:var(--ink-2);font-weight:500}
+.show-table .tview{display:block}
+.show-table .chartbox,.show-table .legend{display:none}
 
-  /* ---------- kpi strip ---------- */
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:18px;overflow:hidden}
-  .kpi{padding:15px 18px 16px;border-left:1px solid var(--line-soft)}
-  .kpi:first-child{border-left:0}
-  .kpi .hd{display:flex;align-items:center;gap:8px;margin-bottom:9px}
-  .kpi .lb{font-size:11.5px;color:var(--ink-2);font-weight:550;letter-spacing:.01em}
-  .kpi .sp{margin-left:auto;width:72px;height:22px;flex:0 0 auto}
-  .kpi .sp polyline{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-  .kpi .v{font-size:26px;font-weight:650;letter-spacing:-.025em;line-height:1.1}
-  .kpi .v .u{font-size:16px;color:var(--ink-2);font-weight:550;letter-spacing:0}
-  .kpi .ft{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:11.5px;color:var(--ink-3)}
-  .chip{display:inline-flex;align-items:center;gap:3px;font-weight:650;font-size:11px;
-        padding:2px 6px;border-radius:5px}
-  .up{color:var(--accent);background:rgba(83,168,182,.13)}
-  .dn{color:var(--neg);background:rgba(224,115,107,.13)}
-  .chip svg{width:9px;height:9px;fill:currentColor}
-  .live{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--accent);font-size:11px}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+/* feed */
+.feed .ph{align-items:center}
+.pausebtn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:7px;border:1px solid var(--line);color:var(--ink-2);font-size:12px;transition:background .15s,color .15s}
+.pausebtn:hover{background:var(--raise);color:var(--ink)}
+.pausebtn .ico{width:12px;height:12px}
+.list{list-style:none;margin:10px 0 0;padding:0 8px 8px;position:relative;height:422px;overflow:hidden}
+.ev{position:relative;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px 12px;border-radius:9px}
+.ev::before{content:"";position:absolute;inset:0;border-radius:9px;background:var(--teal-wash);opacity:0;transition:opacity 1.6s var(--std)}
+.ev.fresh::before{opacity:1;transition:none}
+.ev .ic{position:relative;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--raise);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line)}
+.ev.alert .ic{color:var(--coral-ink);background:var(--coral-wash);box-shadow:none}
+.ev.order .ic{color:var(--teal-ink)}
+.ev .tt{position:relative;display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .mt{position:relative;display:block;margin-top:1px;color:var(--ink-2);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .ts{position:relative;color:var(--ink-3);font:11.5px var(--mono);padding-top:2px}
+.ev .amt{font-family:var(--mono);font-size:13px}
+.feedfoot{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:11px 20px;color:var(--ink-3);font-size:12px}
+.feedfoot a{color:var(--ink-2)}
+.feedfoot a:hover{color:var(--ink)}
 
-  /* ---------- chart ---------- */
-  .chart-p{padding:16px 18px 14px;margin-bottom:18px}
-  .ch-hd{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px}
-  .ch-hd h2{margin:0;font-size:14.5px;font-weight:650;letter-spacing:-.01em}
-  .ch-hd p{margin:2px 0 0;font-size:11.5px;color:var(--ink-3)}
-  .seg{display:flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:8px;margin-left:auto}
-  .seg button{padding:4px 10px;border-radius:6px;font-size:11.5px;font-weight:600;color:var(--ink-3);transition:background .14s,color .14s}
-  .seg button:hover{color:var(--ink)}
-  .seg button[aria-pressed=true]{background:var(--raised);color:var(--ink)}
-  .legend{display:flex;gap:14px;font-size:11px;color:var(--ink-2);margin:10px 0 12px;flex-wrap:wrap}
-  .legend i{display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);vertical-align:middle;margin-right:6px}
-  .legend .p i{border-top:2px dashed var(--ink-3)}
+/* table */
+.row2{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:16px;margin:16px 0 0}
+.tbl{width:100%;border-collapse:collapse;margin-top:12px}
+.tbl th{padding:9px 20px 9px 0;color:var(--ink-3);font-weight:500;font-size:12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:11px 20px 11px 0;text-align:right;border-bottom:1px solid var(--line);font-size:13px;white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;padding-left:20px}
+.tbl tbody tr{transition:background .12s}
+.tbl tbody tr:hover{background:#181b1f}
+.tbl .ch{font-weight:500}
+.tbl .ch small{display:none}
+.share{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.share .sb{width:96px;height:6px;border-radius:3px;overflow:hidden}
+.share .sb i{display:block;height:100%;background:var(--teal);border-radius:0 3px 3px 0;transform-origin:0 50%}
+.tbl tfoot td{border-bottom:0;color:var(--ink);font-weight:600;padding-top:13px;padding-bottom:14px}
+.tbl tfoot td:first-child{font-weight:600}
+.pos{color:var(--teal-ink)}.neg{color:var(--coral-ink)}
+.tnote{margin:0;padding:0 20px 16px;color:var(--ink-3);font-size:12px}
 
-  .plot-wrap{display:grid;grid-template-columns:1fr 46px}
-  .plot{position:relative;height:236px;min-width:0}
-  .grid{position:absolute;inset:0;pointer-events:none}
-  .grid span{position:absolute;left:0;right:0;border-top:1px solid var(--line-soft)}
-  .grid span:last-child{border-top-color:var(--line)}
-  .plot svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .plot svg path{vector-effect:non-scaling-stroke}
-  .ylab{position:relative;font-size:10.5px;color:var(--ink-3);padding-left:10px}
-  .ylab span{position:absolute;transform:translateY(-50%);white-space:nowrap}
-  .xlab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);
-        padding:8px 46px 0 0;margin-top:2px;border-top:0}
-  .cross{position:absolute;top:0;bottom:0;width:1px;background:rgba(83,168,182,.45)}
-  .cross::after{content:"";position:absolute;left:50%;top:10.5%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;
-                border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(83,168,182,.22)}
-  .tip{position:absolute;left:77.8%;top:10.5%;transform:translate(calc(-100% - 15px),-14px);
-       background:#0d1424;border:1px solid rgba(83,168,182,.35);border-radius:9px;padding:9px 11px;
-       min-width:172px;box-shadow:0 10px 26px rgba(0,0,0,.5);z-index:2}
-  .tip b{display:block;font-size:11px;color:var(--ink-2);font-weight:600;margin-bottom:6px}
-  .tip .row{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:3px}
-  .tip .row em{font-style:normal;color:var(--ink-3);flex:1}
-  .tip .row strong{font-weight:650}
-  .tip .sw{width:8px;height:8px;border-radius:2px;background:var(--accent);flex:0 0 auto}
-  .tip .sw.pv{background:var(--ink-3)}
-  .tip .d{margin-top:7px;padding-top:6px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--ink-3)}
-  .peak{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 0;
-        font-size:11.5px;color:var(--ink-3)}
-  .peak b{color:var(--ink);font-weight:650;font-size:12.5px}
+/* funnel */
+.fun{list-style:none;margin:6px 0 0;padding:6px 20px 4px}
+.fun li{padding:11px 0 12px;border-bottom:1px solid var(--line)}
+.fun li:last-child{border-bottom:0}
+.fun .top2{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.fun .nm{font-weight:500}
+.fun .ct{font:500 13px var(--mono)}
+.fun .rate{position:relative;height:6px;margin:9px 0 7px;border-radius:3px;background:#1f2a28}
+.fun .rate i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--teal);transform-origin:0 50%}
+.fun .rate b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink-2);border-radius:1px}
+.fun li.bad .rate{background:#2c1f1d}
+.fun li.bad .rate i{background:var(--coral)}
+.fun .meta{display:flex;justify-content:space-between;color:var(--ink-2);font-size:12px}
+.fun .meta .mono{font-size:11.5px}
+.fnote{display:flex;gap:10px;margin:4px 20px 18px;padding:11px 12px;border-radius:9px;background:var(--coral-wash);color:#ffc7bd;font-size:12.5px;line-height:1.45}
+.fnote .ico{color:var(--coral-ink);margin-top:1px}
+.foot{display:flex;justify-content:space-between;gap:16px;padding:22px 0 30px;color:var(--ink-3);font-size:12px}
 
-  /* ---------- bottom row ---------- */
-  .row2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px;align-items:start}
-  .p-hd{display:flex;align-items:center;gap:10px;padding:14px 18px 12px;border-bottom:1px solid var(--line-soft)}
-  .p-hd h2{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em}
-  .p-hd .lnk{margin-left:auto;font-size:11.5px;color:var(--ink-2);font-weight:550;
-             padding:3px 6px;border-radius:6px;transition:color .14s,background .14s}
-  .p-hd .lnk:hover{color:var(--accent);background:rgba(83,168,182,.1)}
+/* motion (only when allowed and JS is running) */
+@media (prefers-reduced-motion:no-preference){
+  .m .pulse::after{animation:ring 2.4s var(--out) infinite}
+  .m .kpis,.m .live{animation:rise .5s var(--out) both}
+  .m .kpis{animation-delay:.06s}
+  .m .grid{animation:rise .5s var(--out) .12s both}
+  .m .ln.draw{animation:draw 1.5s var(--out) .25s both}
+  .m .area.draw{animation:fade .8s var(--std) .9s both}
+  .m .ln-prev.draw{animation:fade .6s var(--std) .2s both}
+  .m .endg.draw,.m .anno.draw{animation:pop .45s var(--out) 1.35s both}
+  .m .share .sb i{animation:grow .9s var(--out) .4s both}
+  .m .fun .rate i{animation:grow .9s var(--out) .5s both}
+  .m .ev.enter{animation:evin .55s var(--out) both}
+  .m .ev.leave{animation:evout .35s var(--std) both}
+}
+@keyframes ring{0%{transform:scale(.5);opacity:.9}70%,100%{transform:scale(1.5);opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes evin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes evout{to{opacity:0}}
 
-  table{width:100%;border-collapse:collapse}
-  th,td{text-align:right;padding:9px 18px;font-size:12.5px;white-space:nowrap}
-  th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;
-     padding-top:11px;padding-bottom:8px}
-  th:first-child,td:first-child{text-align:left;width:46%}
-  tbody tr{border-top:1px solid var(--line-soft)}
-  tbody tr:hover{background:rgba(22,33,62,.6)}
-  .src{position:relative;z-index:1;display:inline-block;font-weight:550}
-  td:first-child{position:relative}
-  .bar{position:absolute;left:0;top:0;bottom:0;border-radius:0 3px 3px 0;
-       background:linear-gradient(90deg,rgba(83,168,182,.20),rgba(83,168,182,.055))}
-  .tfoot{display:flex;gap:8px 18px;flex-wrap:wrap;padding:11px 18px;border-top:1px solid var(--line);
-         font-size:11.5px;color:var(--ink-3)}
-  .tfoot b{color:var(--ink-2);font-weight:650}
-
-  .feed{list-style:none;margin:0;padding:4px 0}
-  .feed li{display:flex;gap:11px;padding:10px 18px;border-bottom:1px solid var(--line-soft)}
-  .feed li:last-child{border-bottom:0}
-  .ic{width:26px;height:26px;border-radius:7px;flex:0 0 auto;display:grid;place-items:center;
-      background:var(--raised);color:var(--accent)}
-  .ic svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .ic.w{background:rgba(224,115,107,.12);color:var(--neg)}
-  .feed .tx{min-width:0}
-  .feed .tx b{display:block;font-size:12.5px;font-weight:600;letter-spacing:-.005em}
-  .feed .tx span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:1px}
-  .feed .tx code{font-family:var(--mono);font-size:11px;color:var(--ink-2)}
-  .feed time{margin-left:auto;font-size:10.5px;color:var(--ink-3);white-space:nowrap;padding-top:2px}
-
-  /* ---------- responsive ---------- */
-  @media (max-width:1080px){
-    .app{grid-template-columns:62px 1fr;
-         background:linear-gradient(90deg,var(--sidebar) 0 61px,var(--line-soft) 61px 62px,var(--bg) 62px)}
-    .side{padding:16px 9px}
-    .brand b,.ws span,.ws small,.ws .cv,.nav-i span,.grp,.side-foot .tx{display:none}
-    .ws{justify-content:center;padding:7px}
-    .nav-i{justify-content:center;padding:9px 0}
-    .side-foot{justify-content:center}
-    .row2{grid-template-columns:1fr}
-  }
-  @media (max-width:860px){
-    main{padding:0 16px 30px}
-    .kpis{grid-template-columns:1fr 1fr}
-    .kpi:nth-child(3),.kpi:nth-child(4){border-top:1px solid var(--line-soft)}
-    .kpi:nth-child(3){border-left:0}
-  }
-  @media (max-width:700px){
-    .tip{display:none}
-    .peak{display:flex}
-  }
-  @media (max-width:560px){
-    .app{grid-template-columns:50px 1fr;
-         background:linear-gradient(90deg,var(--sidebar) 0 49px,var(--line-soft) 49px 50px,var(--bg) 50px)}
-    .side{padding:14px 5px}
-    main{padding:0 12px 28px}
-    .kpis{grid-template-columns:1fr}
-    .kpi{border-left:0;border-top:1px solid var(--line-soft)}
-    .kpi:first-child{border-top:0}
-    .plot{height:200px}
-    .top h1{font-size:19px}
-    .seg{margin-left:0}
-    th,td{padding-left:12px;padding-right:12px;font-size:12px}
-    th:nth-child(3),td:nth-child(3){display:none}
-    th:first-child,td:first-child{width:auto}
-    td:first-child .src{white-space:normal}
-    .tfoot{padding-left:12px;padding-right:12px}
-    .feed li{padding-left:12px;padding-right:12px}
-    .p-hd{padding-left:12px;padding-right:12px}
-    .tip{min-width:152px;font-size:11px}
-  }
-
-  @media (prefers-reduced-motion:reduce){
-    *{animation:none!important;transition:none!important}
-  }
-  @media (prefers-reduced-motion:no-preference){
-    .dot{animation:pulse 2.6s ease-in-out infinite}
-    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(83,168,182,.55)}55%{box-shadow:0 0 0 5px rgba(83,168,182,0)}}
-  }
+/* tablet */
+@media (max-width:1180px){
+  .search{min-width:0}.search span{display:none}
+  .grid,.row2{grid-template-columns:minmax(0,1fr)}
+  .list{height:auto;max-height:none}
+  .list .ev:nth-child(n+6){display:none}
+  .live{grid-template-columns:200px minmax(0,1fr) 250px}
+}
+@media (max-width:900px){
+  .nav{display:none}
+  .mnav{display:flex!important}
+  .head{flex-direction:column;align-items:flex-start;gap:14px;padding-top:20px}
+  .ctrl{justify-content:flex-start}
+  .live{grid-template-columns:1fr 1fr}
+  .lbars{grid-column:1/-1;grid-row:2;border-top:1px solid var(--line)}
+  .lnow{border-right:0}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi:nth-child(3){border-left:0}
+  .kpi:nth-child(n+3){border-top:1px solid var(--line)}
+}
+.mnav{display:none;gap:4px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-bottom:1px solid var(--line);padding:0 16px;background:var(--bg)}
+.mnav::-webkit-scrollbar{display:none}
+.mnav a{flex:none;scroll-snap-align:start;display:flex;align-items:center;min-height:44px;padding:0 10px;color:var(--ink-2);font-weight:450;position:relative}
+.mnav a[aria-current=page]{color:var(--ink)}
+.mnav a[aria-current=page]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--teal-ink);border-radius:2px}
+@media (max-width:720px){
+  .wrap{padding:0 16px}
+  .top .wrap{gap:12px}
+  .ws b{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .search{width:36px;min-width:0;padding:0;justify-content:center;border:0}
+  .search kbd{display:none}
+  .iconbtn{width:40px;height:40px}
+  .head{padding:18px 0 16px}
+  h1{font-size:21px}
+  .ctrl{width:100%;flex-wrap:nowrap}
+  .seg{flex:1}.seg button{flex:1;height:34px}
+  .ctrl .btn span{display:none}
+  .ctrl .btn{height:42px;width:42px;justify-content:center;padding:0}
+  .live>div{padding:14px 16px}
+  .lbars{padding:12px 16px 10px!important}
+  .big strong{font-size:26px}
+  .ltoday .row{gap:10px;flex-wrap:wrap}
+  .kpi{padding:14px 16px}
+  .kpi .v{font-size:23px}
+  .kpi .v small{font-size:14px}
+  .kpi .d .vs{display:none}
+  .ph{padding:14px 16px 0}
+  .legend{padding:10px 16px 0}
+  .sum{padding:0 16px 14px}
+  #chart{min-height:230px}
+  .tbl .hide-m{display:none}
+  .tbl th,.tbl td{padding-right:16px}
+  .tbl th:first-child,.tbl td:first-child{padding-left:16px}
+  .tbl .ch small{display:block;margin-top:2px;color:var(--ink-3);font:400 11.5px var(--mono)}
+  .share .sb{width:54px}
+  .fun{padding:6px 16px 4px}
+  .fnote{margin:4px 16px 16px}
+  .feedfoot{padding:11px 16px}
+  .tnote{padding:0 16px 14px}
+  .foot{flex-direction:column;gap:4px}
+  .ev{padding:10px 8px}
+}
+@media (max-width:420px){
+  .ltoday .row span:last-child{display:none}
+  .ws .av{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <symbol id="i-ov" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="11" width="7" height="10" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
-  <symbol id="i-acq" viewBox="0 0 24 24"><path d="M12 20V6"/><path d="M6 12l6-6 6 6"/><path d="M4 4h16"/></symbol>
-  <symbol id="i-fun" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol>
-  <symbol id="i-ret" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-5"/><path d="M4 13a8 8 0 0 0 14 5"/><path d="M6 3v3.5h3.5"/><path d="M18 21v-3.5h-3.5"/></symbol>
-  <symbol id="i-rev" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 6.5c0-2-2.2-3-5-3s-5 .9-5 3 2 2.7 5 3.3 5 1.3 5 3.5-2.2 3.2-5 3.2-5-1-5-3"/></symbol>
-  <symbol id="i-seg" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><path d="M16 5.6a3.2 3.2 0 0 1 0 6.3"/><path d="M18 14.9c2 .8 3 2.6 3 5.1"/></symbol>
-  <symbol id="i-al" viewBox="0 0 24 24"><path d="M18 9a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 20a2 2 0 0 0 3 0"/></symbol>
-  <symbol id="i-set" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1"/></symbol>
-  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
-  <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></symbol>
-  <symbol id="i-cv" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
-  <symbol id="i-und" viewBox="0 0 24 24"><path d="M3 10h11a5 5 0 0 1 0 10H9"/><path d="M7 6l-4 4 4 4"/></symbol>
-  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 10h18"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8"/><path d="M3 21h18"/><path d="M12 3l9 5H3z"/></symbol>
-  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.5v.01"/></symbol>
-  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 17l-5.3 2.7 1.1-5.9L3.5 9.7l5.9-.8z"/></symbol>
-  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></symbol>
-</defs></svg>
+<a class="skip" href="#main">Skip to overview</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chev" viewBox="0 0 16 16"><path d="M5 6.5 8 9.5l3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7.2" cy="7.2" r="4.4"/><path d="m10.4 10.4 3.1 3.1"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 16 16"><path d="M4.2 11.5V7.3a3.8 3.8 0 0 1 7.6 0v4.2l1.2 1.3H3z"/><path d="M6.6 14.2a1.5 1.5 0 0 0 2.8 0"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M8 2.5v8m-3.2-3.2L8 10.5l3.2-3.2M3 13.5h10"/></symbol>
+  <symbol id="i-cmp" viewBox="0 0 16 16"><path d="M2.5 11.5 6 8l2.5 2.5 5-5.5"/><path d="M2.5 13.5h11" stroke-dasharray="2 2"/></symbol>
+  <symbol id="i-up" viewBox="0 0 10 10"><path d="M5 8V2.2M2.4 4.6 5 2l2.6 2.6"/></symbol>
+  <symbol id="i-dn" viewBox="0 0 10 10"><path d="M5 2v5.8M2.4 5.4 5 8l2.6-2.6"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 16 16"><path d="M3.5 5.5h9l-.7 8h-7.6z"/><path d="M5.8 5.5V4.8a2.2 2.2 0 0 1 4.4 0v.7"/></symbol>
+  <symbol id="i-ret" viewBox="0 0 16 16"><path d="M5.5 4 2.5 7l3 3"/><path d="M2.5 7h7a4 4 0 0 1 0 8h-2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 16 16"><path d="M8 2.2 14 13H2z"/><path d="M8 6.5v3M8 11.3v.2"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 16 16"><path d="M2 6 8 2.8 14 6M3 13.5h10M4 7.5v4.5m2.7-4.5v4.5m2.6-4.5v4.5M12 7.5v4.5"/></symbol>
+  <symbol id="i-box" viewBox="0 0 16 16"><path d="M2.5 5 8 2.5 13.5 5v6.5L8 14l-5.5-2.5z"/><path d="M2.5 5 8 7.5 13.5 5M8 7.5V14"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 16 16"><rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="m2.5 4.5 5.5 4 5.5-4"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9m5-9v9"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5 3.2v9.6L12.5 8z"/></symbol>
+</svg>
 
-<div class="app">
-  <aside class="side">
-    <div class="brand">
-      <span class="mark"><svg viewBox="0 0 24 24"><path d="M12 3v18M12 12l7-6M12 14l7 6"/></svg></span>
-      <b>Keel</b>
-    </div>
-
-    <button class="ws" type="button" aria-label="Switch workspace. Current workspace: Fernway Supply Co.">
-      <span class="av">FS</span>
-      <span>Fernway Supply Co.<small>Shopify · AU/NZ</small></span>
-      <svg class="cv" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 9l4 4 4-4"/></svg>
-    </button>
-
-    <nav aria-label="Main">
-      <span class="grp">Measure</span>
-      <a class="nav-i" href="#overview" aria-current="page"><svg><use href="#i-ov"/></svg><span>Overview</span></a>
-      <a class="nav-i" href="#acquisition"><svg><use href="#i-acq"/></svg><span>Acquisition</span></a>
-      <a class="nav-i" href="#funnels"><svg><use href="#i-fun"/></svg><span>Funnels</span></a>
-      <a class="nav-i" href="#retention"><svg><use href="#i-ret"/></svg><span>Retention</span></a>
-      <a class="nav-i" href="#revenue"><svg><use href="#i-rev"/></svg><span>Revenue</span></a>
-      <span class="grp">Operate</span>
-      <a class="nav-i" href="#segments"><svg><use href="#i-seg"/></svg><span>Segments</span></a>
-      <a class="nav-i" href="#alerts"><svg><use href="#i-al"/></svg><span>Alerts</span><span class="tag">2</span></a>
-      <a class="nav-i" href="#settings"><svg><use href="#i-set"/></svg><span>Settings</span></a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#main" aria-label="Keel home">
+      <svg viewBox="0 0 22 22" aria-hidden="true"><rect width="22" height="22" rx="6" fill="#1d3a35"/><path d="M5 8.5h12L11 17z" fill="#63d8c4"/><path d="M11 4.5v4" stroke="#63d8c4" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Keel
+    </a>
+    <span class="slash" aria-hidden="true">/</span>
+    <button class="ws" type="button" aria-label="Workspace: Fernway Supply Co. Switch workspace"><span class="av">FS</span><b>Fernway Supply Co.</b><svg class="ico"><use href="#i-chev"/></svg></button>
+    <nav class="nav" aria-label="Sections">
+      <a href="#main" aria-current="page">Overview</a>
+      <a href="#channels">Acquisition</a>
+      <a href="#funnel">Funnels</a>
+      <a href="#main">Retention</a>
+      <a href="#main">Products</a>
+      <a href="#live">Live<span class="livechip" aria-hidden="true"></span></a>
     </nav>
-
-    <div class="side-foot">
-      <span class="av">DM</span>
-      <span class="tx"><b>Dana Mehri</b><small>Analyst</small></span>
+    <div class="tools">
+      <button class="search" type="button" aria-label="Search (Control K)"><svg class="ico"><use href="#i-search"/></svg><span>Search orders, pages</span><kbd>Ctrl K</kbd></button>
+      <button class="iconbtn" type="button" aria-label="Alerts, 1 unread"><svg class="ico"><use href="#i-bell"/></svg><span class="badge"></span></button>
+      <span class="me" role="img" aria-label="Signed in as Dana Mehri">DM</span>
     </div>
-  </aside>
+  </div>
+</header>
+<nav class="mnav" aria-label="Sections (compact)">
+  <a href="#main" aria-current="page">Overview</a><a href="#channels">Acquisition</a><a href="#funnel">Funnels</a><a href="#main">Retention</a><a href="#main">Products</a><a href="#live">Live</a>
+</nav>
 
-  <main id="overview">
-    <header class="top">
-      <div>
-        <h1>Store overview</h1>
-        <p>Last 28 days · 19 Aug – 15 Sep 2026 · compared with previous 28 days</p>
+<main id="main" class="wrap">
+  <div class="head">
+    <div>
+      <h1>Overview</h1>
+      <p class="sub">Last 28 complete days, 18 Aug to 14 Sep 2026, against 21 Jul to 17 Aug. AUD, after refunds and discounts.</p>
+    </div>
+    <div class="ctrl">
+      <div class="seg" role="group" aria-label="Date range">
+        <button type="button" aria-pressed="false">7D</button><button type="button" aria-pressed="true">28D</button><button type="button" aria-pressed="false">90D</button><button type="button" aria-pressed="false">12M</button>
       </div>
-      <div class="r">
-        <button class="btn" type="button"><svg><use href="#i-cal"/></svg>Last 28 days</button>
-        <button class="btn" type="button"><svg><use href="#i-dl"/></svg>Export CSV</button>
-        <button class="btn btn-a" type="button">Share report</button>
-      </div>
-    </header>
+      <button class="btn" type="button" aria-label="Compare with previous period"><svg class="ico"><use href="#i-cmp"/></svg><span>Previous period</span></button>
+      <button class="btn" type="button" aria-label="Export CSV"><svg class="ico"><use href="#i-down"/></svg><span>Export</span></button>
+    </div>
+  </div>
 
-    <section class="panel kpis" aria-label="Key metrics">
-      <div class="kpi">
-        <div class="hd"><span class="lb">Net revenue</span>
-          <svg class="sp" viewBox="0 0 72 22" preserveAspectRatio="none" aria-hidden="true"><polyline stroke="#53a8b6" points="0.0,20.0 8.0,17.8 16.0,19.5 24.0,14.8 32.0,16.2 40.0,12.3 48.0,9.0 56.0,10.7 64.0,6.6 72.0,3.0"/></svg>
-        </div>
-        <div class="v num">$459,280</div>
-        <div class="ft"><span class="chip up"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1l4 6H1z"/></svg>17.4%</span> vs $391,320</div>
+  <section class="live" id="live" aria-label="Right now, today">
+    <div class="lnow">
+      <div class="lab"><span class="pulse" aria-hidden="true"></span>On fernway.example now</div>
+      <div class="big"><strong class="tick" id="nowv">47</strong><span>visitors, last 5 min</span></div>
+    </div>
+    <div class="lbars">
+      <div class="lab">Sessions started, every 10 seconds</div>
+      <div class="bars" id="bars" role="img" aria-label="Bar chart of sessions started in each 10 second window over the last 10 minutes, between 0 and 6 per window"><div class="track" id="track"></div></div>
+      <div class="bax" aria-hidden="true"><span>10 min ago</span><span>5 min</span><span>now</span></div>
+    </div>
+    <div class="ltoday">
+      <div class="lab">Today so far, Tue 15 Sep</div>
+      <div class="big"><strong class="tick mono" id="todayv" style="font-family:var(--sans)">$9,842.10</strong></div>
+      <div class="row"><span><b class="tick" id="ordv">57</b> orders</span><span><b id="chkv">3</b> in checkout</span><span>AEST 10:42</span></div>
+    </div>
+  </section>
+
+  <div class="kpis" role="tablist" aria-label="Metric shown in the chart">
+    <button class="kpi" role="tab" id="t-rev" aria-selected="true" aria-controls="chartpanel" data-m="rev">
+      <span class="l">Net revenue</span><span class="v">$459,280</span>
+      <span class="d"><span class="delta up"><svg class="ico"><use href="#i-up"/></svg>17.4%</span><span class="vs">vs $391,320</span></span>
+    </button>
+    <button class="kpi" role="tab" id="t-ord" aria-selected="false" aria-controls="chartpanel" tabindex="-1" data-m="ord">
+      <span class="l">Orders</span><span class="v">2,642</span>
+      <span class="d"><span class="delta up"><svg class="ico"><use href="#i-up"/></svg>9.8%</span><span class="vs">vs 2,406</span></span>
+    </button>
+    <button class="kpi" role="tab" id="t-ses" aria-selected="false" aria-controls="chartpanel" tabindex="-1" data-m="ses">
+      <span class="l">Sessions</span><span class="v">61,244</span>
+      <span class="d"><span class="delta up"><svg class="ico"><use href="#i-up"/></svg>14.3%</span><span class="vs">vs 53,580</span></span>
+    </button>
+    <button class="kpi bad" role="tab" id="t-cvr" aria-selected="false" aria-controls="chartpanel" tabindex="-1" data-m="cvr">
+      <span class="l">Conversion rate</span><span class="v">4.31<small>%</small></span>
+      <span class="d"><span class="delta down"><svg class="ico"><use href="#i-dn"/></svg>0.18 pt</span><span class="vs">vs 4.49%</span></span>
+    </button>
+  </div>
+
+  <div class="grid">
+    <section class="panel" id="chartpanel" role="tabpanel" aria-labelledby="ctitle">
+      <div class="ph">
+        <div><h2 id="ctitle">Net revenue by day</h2><p id="csub">AUD per day. Weekends shaded; Fernway sells most on Sundays and Mondays.</p></div>
+        <div class="seg" role="group" aria-label="View"><button type="button" aria-pressed="true" id="vchart">Chart</button><button type="button" aria-pressed="false" id="vtable">Table</button></div>
       </div>
-      <div class="kpi">
-        <div class="hd"><span class="lb">Users</span>
-          <svg class="sp" viewBox="0 0 72 22" preserveAspectRatio="none" aria-hidden="true"><polyline stroke="#53a8b6" points="0.0,20.0 8.0,17.0 16.0,18.0 24.0,14.0 32.0,12.0 40.0,13.0 48.0,9.0 56.0,6.0 64.0,7.0 72.0,3.0"/></svg>
-        </div>
-        <div class="v num">41,276</div>
-        <div class="ft"><span class="chip up"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1l4 6H1z"/></svg>8.3%</span> 61,244 sessions</div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="key" id="lkey"></i>18 Aug to 14 Sep</span>
+        <span><i class="key prev"></i>21 Jul to 17 Aug</span>
+        <span><i class="key wk"></i>Weekend</span>
       </div>
-      <div class="kpi">
-        <div class="hd"><span class="lb">Conversion rate</span>
-          <svg class="sp" viewBox="0 0 72 22" preserveAspectRatio="none" aria-hidden="true"><polyline stroke="#e0736b" points="0.0,4.9 8.0,7.4 16.0,3.0 24.0,11.8 32.0,14.3 40.0,9.9 48.0,17.5 56.0,19.4 64.0,18.1 72.0,20.0"/></svg>
-        </div>
-        <div class="v num">4.31<span class="u">%</span></div>
-        <div class="ft"><span class="chip dn"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9L1 3h8z"/></svg>0.18 pt</span> 2,642 orders</div>
+      <div class="chartbox" id="chartbox">
+        <svg id="chart" tabindex="0" role="img" aria-label="Line chart"></svg>
+        <div class="anno" id="anno" aria-hidden="true"></div>
+        <div class="tip" id="tip" aria-hidden="true"></div>
       </div>
-      <div class="kpi">
-        <div class="hd"><span class="lb">Active sessions</span>
-          <svg class="sp" viewBox="0 0 72 22" preserveAspectRatio="none" aria-hidden="true"><polyline stroke="#53a8b6" points="0.0,20.0 8.0,13.4 16.0,15.5 24.0,7.5 32.0,10.6 40.0,5.4 48.0,9.6 56.0,3.0 64.0,4.7 72.0,3.3"/></svg>
-        </div>
-        <div class="v num">1,904</div>
-        <div class="ft"><span class="live"><span class="dot"></span>Live</span> 68% mobile</div>
-      </div>
+      <div class="tview" id="tview"></div>
+      <p class="sum" id="sum"></p>
     </section>
 
-    <section class="panel chart-p" aria-labelledby="ch-t">
-      <div class="ch-hd">
-        <div>
-          <h2 id="ch-t">Net revenue</h2>
-          <p>Daily, after refunds and discounts · AUD</p>
-        </div>
-        <div class="seg" role="group" aria-label="Metric">
-          <button type="button" aria-pressed="true">Revenue</button>
-          <button type="button" aria-pressed="false">Orders</button>
-          <button type="button" aria-pressed="false">Sessions</button>
-        </div>
+    <section class="panel feed" aria-labelledby="ftitle">
+      <div class="ph">
+        <div><h2 id="ftitle">Activity</h2><p>Orders, refunds, payouts and alerts, as they happen</p></div>
+        <button class="pausebtn" id="pause" type="button" aria-pressed="false"><svg class="ico"><use href="#i-pause"/></svg><span>Pause</span></button>
       </div>
-      <div class="legend">
-        <span><i></i>19 Aug – 15 Sep</span>
-        <span class="p"><i></i>22 Jul – 18 Aug</span>
-      </div>
+      <ul class="list" id="feed" aria-live="off"></ul>
+      <div class="feedfoot"><span>Times are relative to now</span><a href="#main">All events</a></div>
+    </section>
+  </div>
 
-      <div class="plot-wrap">
-        <div class="plot">
-          <div class="grid" aria-hidden="true">
-            <span style="top:0"></span><span style="top:25%"></span><span style="top:50%"></span><span style="top:75%"></span><span style="top:100%"></span>
-          </div>
-          <svg viewBox="0 18 848 214" preserveAspectRatio="none" role="img" aria-label="Line chart of daily net revenue over 28 days, rising from about $14,800 to about $20,600 with weekly weekend dips and a peak of $21,480 on 9 September. The previous 28-day period tracks consistently lower.">
-            <defs>
-              <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#53a8b6" stop-opacity=".26"/>
-                <stop offset="1" stop-color="#53a8b6" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <path fill="url(#fill)" stroke="none" d="M0,99.9 C4.8,98.8 21.9,95.4 31.4,92.5 C40.9,89.6 53.3,74.6 62.8,80.6 C72.3,86.6 84.7,122.2 94.2,131.8 C103.7,141.4 116.1,149.7 125.6,144.1 C135.1,138.5 147.5,103.4 157,94.9 C166.5,86.4 178.9,89.1 188.4,88.3 C197.9,87.5 210.4,91.4 219.9,89.9 C229.4,88.4 241.8,81.5 251.3,78.2 C260.8,74.9 273.2,60.8 282.7,67.8 C292.2,74.8 304.6,113.8 314.1,124.5 C323.6,135.2 336,144.3 345.5,138.6 C355,132.9 367.4,97.2 376.9,87.2 C386.4,77.2 398.8,74.1 408.3,72.6 C417.8,71.1 430.2,78.9 439.7,77.4 C449.2,75.9 461.6,66.7 471.1,62.9 C480.6,59.1 493,44.6 502.5,52.4 C512,60.2 524.4,102.6 533.9,114.1 C543.4,125.6 555.8,134.6 565.3,128.2 C574.8,121.8 587.2,82.5 596.7,71.9 C606.2,61.3 618.6,63.1 628.1,58.3 C637.6,53.5 650.1,41.6 659.6,40.5 C669.1,39.4 681.5,52.5 691,50.8 C700.5,49.1 712.9,21.9 722.4,29.1 C731.9,36.3 744.3,85 753.8,98.4 C763.3,111.8 775.7,123.3 785.2,117.5 C794.7,111.7 807.1,70.9 816.6,60.4 C826.1,49.9 843.2,50 848,48.2 L848,232 L0,232 Z"/>
-            <path fill="none" stroke="#6b7691" stroke-width="1.4" stroke-dasharray="5 4" stroke-linecap="round" d="M0,117.7 C4.8,115.7 21.9,106.4 31.4,104.8 C40.9,103.2 53.3,99.4 62.8,106.9 C72.3,114.4 84.7,146.6 94.2,154.2 C103.7,161.8 116.1,163.5 125.6,156.9 C135.1,150.3 147.5,117.1 157,110.6 C166.5,104.1 178.9,113.7 188.4,114.2 C197.9,114.7 210.4,117.1 219.9,113.9 C229.4,110.7 241.8,96.5 251.3,92.9 C260.8,89.3 273.2,81.9 282.7,90.4 C292.2,98.9 304.6,138.9 314.1,148.8 C323.6,158.7 336,162.5 345.5,155.5 C355,148.5 367.4,111.3 376.9,102.3 C386.4,93.3 398.8,95.6 408.3,96.2 C417.8,96.8 430.2,108.4 439.7,106.5 C449.2,104.6 461.6,89 471.1,83.8 C480.6,78.6 493,64.2 502.5,72.5 C512,80.8 524.4,126.6 533.9,138.4 C543.4,150.2 555.8,157.6 565.3,150.3 C574.8,143 587.2,101.4 596.7,90.4 C606.2,79.4 618.6,80.1 628.1,77.9 C637.6,75.7 650.1,75.7 659.6,76 C669.1,76.3 681.5,83.5 691,79.7 C700.5,75.9 712.9,44.3 722.4,50.6 C731.9,56.9 744.3,107.2 753.8,121.3 C763.3,135.4 775.7,148.9 785.2,143.5 C794.7,138.1 807.1,97.5 816.6,85.6 C826.1,73.7 843.2,67.9 848,64.7"/>
-            <path fill="none" stroke="#53a8b6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" d="M0,99.9 C4.8,98.8 21.9,95.4 31.4,92.5 C40.9,89.6 53.3,74.6 62.8,80.6 C72.3,86.6 84.7,122.2 94.2,131.8 C103.7,141.4 116.1,149.7 125.6,144.1 C135.1,138.5 147.5,103.4 157,94.9 C166.5,86.4 178.9,89.1 188.4,88.3 C197.9,87.5 210.4,91.4 219.9,89.9 C229.4,88.4 241.8,81.5 251.3,78.2 C260.8,74.9 273.2,60.8 282.7,67.8 C292.2,74.8 304.6,113.8 314.1,124.5 C323.6,135.2 336,144.3 345.5,138.6 C355,132.9 367.4,97.2 376.9,87.2 C386.4,77.2 398.8,74.1 408.3,72.6 C417.8,71.1 430.2,78.9 439.7,77.4 C449.2,75.9 461.6,66.7 471.1,62.9 C480.6,59.1 493,44.6 502.5,52.4 C512,60.2 524.4,102.6 533.9,114.1 C543.4,125.6 555.8,134.6 565.3,128.2 C574.8,121.8 587.2,82.5 596.7,71.9 C606.2,61.3 618.6,63.1 628.1,58.3 C637.6,53.5 650.1,41.6 659.6,40.5 C669.1,39.4 681.5,52.5 691,50.8 C700.5,49.1 712.9,21.9 722.4,29.1 C731.9,36.3 744.3,85 753.8,98.4 C763.3,111.8 775.7,123.3 785.2,117.5 C794.7,111.7 807.1,70.9 816.6,60.4 C826.1,49.9 843.2,50 848,48.2"/>
-          </svg>
-          <div class="cross" style="left:77.8%" aria-hidden="true"></div>
-          <div class="tip">
-            <b>Wed 9 Sep</b>
-            <div class="row"><span class="sw"></span><em>Net revenue</em><strong class="num">$21,480</strong></div>
-            <div class="row"><span class="sw pv"></span><em>Previous</em><strong class="num">$17,500</strong></div>
-            <div class="d">+22.7% · 132 orders · AOV $162.73</div>
-          </div>
-        </div>
-        <div class="ylab" aria-hidden="true">
-          <span style="top:0">$24k</span><span style="top:25%">$18k</span><span style="top:50%">$12k</span><span style="top:75%">$6k</span><span style="top:100%">$0</span>
-        </div>
-      </div>
-      <p class="peak"><span>Peak · Wed 9 Sep</span><b class="num">$21,480</b><span class="chip up"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1l4 6H1z"/></svg>22.7%</span><span>vs previous</span></p>
-      <div class="xlab" aria-hidden="true"><span>19 Aug</span><span>26 Aug</span><span>2 Sep</span><span>9 Sep</span><span>15 Sep</span></div>
+  <div class="row2">
+    <section class="panel" id="channels" aria-labelledby="chtitle">
+      <div class="ph"><div><h2 id="chtitle">Revenue by channel</h2><p>Last-click attribution. The total row is the headline figure above.</p></div></div>
+      <table class="tbl" id="tbl">
+        <caption class="sr">Sessions, orders, conversion and net revenue by channel, 18 Aug to 14 Sep 2026</caption>
+        <thead><tr><th scope="col">Channel</th><th scope="col" class="hide-m">Sessions</th><th scope="col" class="hide-m">Orders</th><th scope="col" class="hide-m">Conv.</th><th scope="col">Revenue</th><th scope="col">Share</th><th scope="col" class="hide-m">vs prev</th></tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+      <p class="tnote">Paid social brought 48% more sessions than last period but converts at 2.48%, which is most of the drop in the store-wide rate.</p>
     </section>
 
-    <div class="row2">
-      <section class="panel" aria-labelledby="ts-t">
-        <div class="p-hd">
-          <h2 id="ts-t">Traffic sources</h2>
-          <a class="lnk" href="#acquisition">Open acquisition →</a>
-        </div>
-        <table>
-          <thead><tr><th scope="col">Source</th><th scope="col">Sessions</th><th scope="col">Conv.</th><th scope="col">Revenue</th></tr></thead>
-          <tbody>
-            <tr><td><span class="bar" style="width:calc(100% * .967)"></span><span class="src">Organic search</span></td><td class="num">22,418</td><td class="num">4.12%</td><td class="num">$158,940</td></tr>
-            <tr><td><span class="bar" style="width:calc(100% * .630)"></span><span class="src">Direct</span></td><td class="num">14,602</td><td class="num">5.06%</td><td class="num">$134,960</td></tr>
-            <tr><td><span class="bar" style="width:calc(100% * .515)"></span><span class="src">Paid social — Meta</span></td><td class="num">11,940</td><td class="num">2.48%</td><td class="num">$70,480</td></tr>
-            <tr><td><span class="bar" style="width:calc(100% * .273)"></span><span class="src">Email — Klaviyo</span></td><td class="num">6,318</td><td class="num">7.84%</td><td class="num">$57,790</td></tr>
-            <tr><td><span class="bar" style="width:calc(100% * .151)"></span><span class="src">Referral</span></td><td class="num">3,486</td><td class="num">3.31%</td><td class="num">$23,580</td></tr>
-            <tr><td><span class="bar" style="width:calc(100% * .107)"></span><span class="src">Paid search — Google</span></td><td class="num">2,480</td><td class="num">2.94%</td><td class="num">$13,530</td></tr>
-          </tbody>
-        </table>
-        <div class="tfoot"><span><b class="num">61,244</b> sessions</span><span><b class="num">$459,280</b> revenue</span><span>6 of 11 sources shown</span></div>
-      </section>
+    <section class="panel" id="funnel" aria-labelledby="futitle">
+      <div class="ph"><div><h2 id="futitle">Checkout funnel</h2><p>Step rate, with last period marked</p></div></div>
+      <ol class="fun">
+        <li><div class="top2"><span class="nm">Sessions</span><span class="ct">61,244</span></div><div class="rate" aria-hidden="true"><i style="width:100%"></i></div><div class="meta"><span>Every visit</span><span class="mono">53,580 prev</span></div></li>
+        <li><div class="top2"><span class="nm">Added to cart</span><span class="ct">5,818</span></div><div class="rate" aria-hidden="true"><i style="width:9.5%"></i><b style="left:9.5%"></b></div><div class="meta"><span class="mono">9.50% of sessions</span><span class="mono">9.50% prev</span></div></li>
+        <li><div class="top2"><span class="nm">Reached checkout</span><span class="ct">3,540</span></div><div class="rate" aria-hidden="true"><i style="width:60.8%"></i><b style="left:59.5%"></b></div><div class="meta"><span class="mono">60.8% of carts</span><span class="mono">59.5% prev</span></div></li>
+        <li class="bad"><div class="top2"><span class="nm">Ordered</span><span class="ct">2,642</span></div><div class="rate" aria-hidden="true"><i style="width:74.6%"></i><b style="left:79.4%"></b></div><div class="meta"><span class="mono neg">74.6% of checkouts, down 4.8 pt</span><span class="mono">79.4% prev</span></div></li>
+      </ol>
+      <div class="fnote"><svg class="ico"><use href="#i-warn"/></svg><span>Checkout errors on Mobile Safari 17.4 have run above 2% since 5 Sep. That step lost 4.8 points while every other step held.</span></div>
+    </section>
+  </div>
 
-      <section class="panel" aria-labelledby="af-t">
-        <div class="p-hd">
-          <h2 id="af-t">Recent activity</h2>
-          <a class="lnk" href="#alerts">All events →</a>
-        </div>
-        <ul class="feed">
-          <li><span class="ic w"><svg><use href="#i-warn"/></svg></span>
-            <span class="tx"><b>Checkout error rate above 2%</b><span>Mobile Safari 17.4 · 41 failed payments</span></span><time datetime="PT4M">4m</time></li>
-          <li><span class="ic"><svg><use href="#i-bank"/></svg></span>
-            <span class="tx"><b>Payout settled — $38,420.19</b><span>Westpac ending <code>4471</code></span></span><time datetime="PT26M">26m</time></li>
-          <li><span class="ic w"><svg><use href="#i-und"/></svg></span>
-            <span class="tx"><b>Refund issued — $148.00</b><span>Order <code>FW-40218</code> · sizing</span></span><time datetime="PT52M">52m</time></li>
-          <li><span class="ic"><svg><use href="#i-star"/></svg></span>
-            <span class="tx"><b>First order over $1,000</b><span>R. Okonkwo · $1,240 · Sydney</span></span><time datetime="PT2H">2h</time></li>
-          <li><span class="ic"><svg><use href="#i-seg"/></svg></span>
-            <span class="tx"><b>Segment grew to 4,118</b><span>Repeat buyers · AU · +212 this week</span></span><time datetime="PT3H">3h</time></li>
-          <li><span class="ic"><svg><use href="#i-sync"/></svg></span>
-            <span class="tx"><b>Klaviyo sync completed</b><span>12,904 profiles · 0 conflicts</span></span><time datetime="PT5H">5h</time></li>
-        </ul>
-      </section>
-    </div>
-  </main>
-</div>
+  <footer class="foot"><span>Keel, measuring Fernway Supply Co. (Shopify, AU and NZ). Sample data for a fictional store.</span><span class="mono">Refreshed 15 Sep 2026, 10:42 AEST</span></footer>
+</main>
+
+<script>
+(function(){
+var RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(!RM) document.documentElement.classList.add('m');
+var $ = function(s){return document.querySelector(s)};
+
+/* ---------- data (all derived figures are computed, so they agree) ---------- */
+var D0 = Date.UTC(2026,7,18), P0 = Date.UTC(2026,6,21), DAY = 864e5;
+var S = {
+  rev:{cur:[14820,14390,13360,12270,11780,15890,16250,16690,15630,14900,13320,13160,17410,17520,17330,16230,16450,14130,13830,18370,18990,17740,27970,20300,15060,14620,20550,20320],
+       prev:[14880,13720,13310,12170,11330,14300,15410,14210,13590,13050,11850,11840,15110,15800,15610,14910,14510,12360,11780,15380,15560,15010,14350,13490,12230,12190,16430,16940]},
+  ord:{cur:[87,86,73,72,67,95,89,97,92,86,73,74,102,100,98,100,91,79,77,111,113,105,155,116,84,86,121,113],
+       prev:[96,82,81,74,71,87,100,88,85,85,73,75,88,92,95,95,92,72,75,92,94,94,85,87,79,71,98,100]},
+  ses:{cur:[1742,1804,1806,1751,2010,2217,2003,1945,1796,1858,1965,2119,2209,2037,1898,1977,2289,2301,2644,2713,2506,2277,2409,2354,2485,2899,2726,2504],
+       prev:[1715,1747,1706,1819,2089,2120,1778,1704,1781,1703,1874,2017,2072,1831,1776,1874,1866,1963,2066,2111,1992,1948,1894,1779,1888,2205,2221,2041]}
+};
+S.cvr = {cur:S.ord.cur.map(function(o,i){return o/S.ses.cur[i]*100}), prev:S.ord.prev.map(function(o,i){return o/S.ses.prev[i]*100})};
+var META = {
+  rev:{title:'Net revenue by day', sub:'AUD per day. Weekends shaded; Fernway sells most on Sundays and Mondays.', unit:'AUD per day', f:function(v){return '$'+Math.round(v).toLocaleString('en-AU')}, tick:function(v){return v? '$'+v/1000+'k':'$0'}, anno:{i:22, c:'Spring sale email, 155 orders'}},
+  ord:{title:'Orders by day', sub:'Paid orders per day, excluding test and draft orders.', unit:'orders per day', f:function(v){return Math.round(v).toLocaleString('en-AU')}, tick:function(v){return String(v)}, anno:{i:22, c:'Spring sale email sent 7:05 am'}},
+  ses:{title:'Sessions by day', sub:'Sessions per day, all devices. The step up on 3 Sep is the Meta spring campaign.', unit:'sessions per day', f:function(v){return Math.round(v).toLocaleString('en-AU')}, tick:function(v){return v>=1000? v/1000+'k':String(v)}, anno:{i:16, c:'Meta spring campaign starts'}},
+  cvr:{title:'Conversion rate by day', sub:'Orders divided by sessions, per day. Down on 4 of the last 5 weekends.', unit:'% of sessions', f:function(v){return v.toFixed(2)+'%'}, tick:function(v){return v+'%'}, anno:{i:18, c:'Checkout errors begin, Mobile Safari 17.4'}, bad:true}
+};
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dstr(t,long){var d=new Date(t);return (long?DOW[d.getUTCDay()]+' ':'')+d.getUTCDate()+' '+MON[d.getUTCMonth()]}
+function sum(a){return a.reduce(function(x,y){return x+y},0)}
+
+/* ---------- chart ---------- */
+var svg=$('#chart'), box=$('#chartbox'), tip=$('#tip'), anno=$('#anno'), metric='rev', hoverI=-1, geo=null, NS='http://www.w3.org/2000/svg';
+function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function niceMax(m,n){var raw=m/n,p=Math.pow(10,Math.floor(Math.log10(raw))),s=[1,2,2.5,5,10].map(function(x){return x*p}).find(function(x){return x>=raw});return {step:s,max:s*n}}
+function draw(animate){
+  var W=svg.clientWidth||800, H=svg.clientHeight||300, mob=W<560;
+  var pl=mob?40:48, pr=mob?52:62, pt=14, pb=26, iw=W-pl-pr, ih=H-pt-pb;
+  var d=S[metric], M=META[metric], all=d.cur.concat(d.prev), nm=niceMax(Math.max.apply(null,all)*1.08, mob?3:4);
+  var x=function(i){return pl+iw*i/27}, y=function(v){return pt+ih-(v/nm.max)*ih};
+  geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,iw:iw,W:W,H:H};
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var defs=el('defs',{},svg), g=el('linearGradient',{id:'ag',x1:0,y1:0,x2:0,y2:1},defs);
+  var col=M.bad?'#e0695a':'#28a894';
+  el('stop',{offset:0,'stop-color':col,'stop-opacity':.2},g);el('stop',{offset:1,'stop-color':col,'stop-opacity':0},g);
+  // weekends
+  for(var i=0;i<28;i++){var dw=new Date(D0+i*DAY).getUTCDay();if(dw===6){el('rect',{class:'wkend',x:x(i)-iw/54,y:pt,width:Math.min(iw/27*2,W-pr-(x(i)-iw/54)),height:ih},svg)}}
+  var ax=el('g',{class:'axis'},svg);
+  for(var v=0;v<=nm.max+1e-9;v+=nm.step){var yy=Math.round(y(v))+.5;el('line',{class:v?'grid-l':'base-l',x1:pl,x2:W-pr+6,y1:yy,y2:yy},ax);var t=el('text',{x:pl-10,y:yy+4,'text-anchor':'end'},ax);t.textContent=M.tick(+v.toFixed(2))}
+  var xt=mob?[0,14,27]:[0,7,14,21,27];
+  xt.forEach(function(i){var t=el('text',{x:x(i),y:H-6,'text-anchor':i===0?'start':i===27?'end':'middle'},ax);t.textContent=dstr(D0+i*DAY)});
+  var path=function(a){return a.map(function(v,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)}).join('')};
+  var cls=animate&&!RM?' draw':'';
+  el('path',{class:'ln-prev'+cls,d:path(d.prev)},svg);
+  el('path',{class:'area'+cls,d:path(d.cur)+'L'+x(27)+' '+(pt+ih)+'L'+x(0)+' '+(pt+ih)+'Z',fill:'url(#ag)'},svg);
+  var ln=el('path',{class:'ln'+(M.bad?' bad':'')+cls,d:path(d.cur),pathLength:1},svg);
+  if(cls)ln.style.strokeDasharray='1 1';
+  var eg=el('g',{class:'endg'+cls},svg);
+  el('circle',{class:'enddot',cx:x(27),cy:y(d.cur[27]),r:4.5,fill:col},eg);
+  var lt=el('text',{class:'endlab',x:x(27)+10,y:y(d.cur[27])+4},eg);lt.textContent=M.f(d.cur[27]);
+  // annotation (visible at rest)
+  var ai=M.anno.i, adot=el('g',{class:'endg'+cls},svg);
+  el('circle',{cx:x(ai),cy:y(d.cur[ai]),r:5,fill:col,class:'enddot'},adot);
+  anno.className='anno'+cls;
+  anno.innerHTML='';
+  var tt=document.createElement('span');tt.className='t';tt.textContent=dstr(D0+ai*DAY,true);
+  var nn=document.createElement('span');nn.className='n';nn.textContent=M.f(d.cur[ai]);
+  var cc=document.createElement('span');cc.className='c';cc.textContent=M.anno.c;
+  anno.append(tt,nn,cc);
+  var aw=anno.offsetWidth||190, ah=anno.offsetHeight||60, ax0=x(ai)+4, ay0=y(d.cur[ai]);
+  var left = ax0-aw-14 > pl ? ax0-aw-14 : ax0+14, top=Math.max(2,ay0-ah/2-(metric==='cvr'?-ah/2-10:ah/2+2));
+  if(top+ah>pt+ih) top=pt+ih-ah-4;
+  anno.style.left=left+'px'; anno.style.top=top+'px';
+  el('line',{x1:left>ax0?left+4:left+aw+4-4,y1:Math.min(Math.max(ay0,top+10),top+ah-6)+4,x2:x(ai),y2:y(d.cur[ai]),stroke:'#4a5058','stroke-width':1},svg);
+  // hover layer
+  el('line',{class:'xh',id:'xh',y1:pt,y2:pt+ih},svg);
+  el('circle',{class:'hdot',id:'hp',r:4,fill:'#737a84'},svg);
+  el('circle',{class:'hdot',id:'hc',r:4.5,fill:col},svg);
+  svg.setAttribute('aria-label',M.title+', 18 Aug to 14 Sep 2026 against the previous 28 days. Latest '+M.f(d.cur[27])+'. Highest '+M.f(Math.max.apply(null,d.cur))+' on '+dstr(D0+d.cur.indexOf(Math.max.apply(null,d.cur))*DAY,true)+'. Use left and right arrow keys to read each day, or switch to the table view.');
+  $('#ctitle').textContent=M.title; $('#csub').textContent=M.sub;
+  $('#lkey').style.borderTopColor=col;
+  var c=d.cur, tot=metric==='cvr'? (sum(S.ord.cur)/sum(S.ses.cur)*100):sum(c), best=c.indexOf(Math.max.apply(null,c)), worst=c.indexOf(Math.min.apply(null,c));
+  var sm=$('#sum'); sm.innerHTML='';
+  [[metric==='cvr'?'Period rate ':'Total ', M.f(tot)],['Daily average ',M.f(metric==='cvr'?sum(c)/28:tot/28)],['Best day ',dstr(D0+best*DAY,true)],['Lowest ',dstr(D0+worst*DAY,true)]].forEach(function(p){var s=document.createElement('span');s.append(p[0]);var b=document.createElement('b');b.textContent=p[1];s.append(b);sm.append(s)});
+  buildTable();
+  if(hoverI>=0)showTip(hoverI);
+}
+function showTip(i){
+  if(!geo)return; hoverI=i;
+  var d=S[metric],M=META[metric],x=geo.x(i);
+  var xh=$('#xh'),hp=$('#hp'),hc=$('#hc');
+  xh.setAttribute('x1',x);xh.setAttribute('x2',x);xh.style.opacity=1;
+  hp.setAttribute('cx',x);hp.setAttribute('cy',geo.y(d.prev[i]));hp.style.opacity=1;
+  hc.setAttribute('cx',x);hc.setAttribute('cy',geo.y(d.cur[i]));hc.style.opacity=1;
+  var dl=metric==='cvr'? (d.cur[i]-d.prev[i]).toFixed(2)+' pt' : ((d.cur[i]/d.prev[i]-1)*100).toFixed(1)+'%';
+  var up=d.cur[i]>=d.prev[i];
+  tip.innerHTML='';
+  var t=document.createElement('div');t.className='t';t.textContent=dstr(D0+i*DAY,true);tip.append(t);
+  [[d.cur[i],'This period',M.bad?'#e0695a':'#28a894',''],[d.prev[i],dstr(P0+i*DAY,true),'#737a84','4 3']].forEach(function(r){
+    var row=document.createElement('div');row.className='r';
+    row.innerHTML='<svg width="14" height="2" aria-hidden="true"><line x1="0" y1="1" x2="14" y2="1" stroke="'+r[2]+'" stroke-width="2" stroke-dasharray="'+r[3]+'"/></svg>';
+    var b=document.createElement('b');b.textContent=M.f(r[0]);var s=document.createElement('span');s.textContent=r[1];row.append(b,s);tip.append(row)});
+  var dd=document.createElement('div');dd.className='dl '+(up?'pos':'neg');dd.textContent=(up&&dl[0]!=='-'?'+':'')+dl+' vs same weekday';tip.append(dd);
+  tip.classList.add('on'); box.classList.add('hovering');
+  var tw=tip.offsetWidth, th=tip.offsetHeight, tx=x+14; if(tx+tw>geo.W-4) tx=x-tw-14;
+  var ty=Math.max(0,Math.min(geo.y(d.cur[i])-th-12, geo.H-th));
+  tip.style.transform='translate('+tx+'px,'+ty+'px)';
+}
+function hideTip(){hoverI=-1;tip.classList.remove('on');box.classList.remove('hovering');['#xh','#hp','#hc'].forEach(function(s){var e=$(s);if(e)e.style.opacity=0})}
+svg.addEventListener('pointermove',function(e){if(!geo)return;var r=svg.getBoundingClientRect(),px=e.clientX-r.left,i=Math.round((px-geo.pl)/geo.iw*27);if(i<0||i>27){hideTip();return}showTip(i)});
+svg.addEventListener('pointerleave',hideTip);
+svg.addEventListener('focus',function(){showTip(hoverI<0?27:hoverI)});
+svg.addEventListener('blur',hideTip);
+svg.addEventListener('keydown',function(e){if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();showTip(Math.max(0,Math.min(27,(hoverI<0?27:hoverI)+(e.key==='ArrowRight'?1:-1))))}else if(e.key==='Escape')hideTip()});
+
+/* chart table view */
+function buildTable(){
+  var d=S[metric],M=META[metric],h='<table><caption class="sr">'+M.title+'</caption><thead><tr><th scope="col">Day</th><th scope="col">This period</th><th scope="col">Previous</th></tr></thead><tbody>';
+  for(var i=0;i<28;i++)h+='<tr><td>'+dstr(D0+i*DAY,true)+'</td><td class="mono">'+M.f(d.cur[i])+'</td><td class="mono">'+M.f(d.prev[i])+'</td></tr>';
+  $('#tview').innerHTML=h+'</tbody></table>';
+}
+function setView(t){$('#chartpanel').classList.toggle('show-table',t);$('#vtable').setAttribute('aria-pressed',t);$('#vchart').setAttribute('aria-pressed',!t);if(!t)draw(false)}
+$('#vtable').onclick=function(){setView(true)};$('#vchart').onclick=function(){setView(false)};
+
+/* kpi tabs */
+var tabs=[].slice.call(document.querySelectorAll('.kpi'));
+function select(tb,focus){tabs.forEach(function(t){var on=t===tb;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1});metric=tb.dataset.m;hideTip();draw(true);if(focus)tb.focus();$('#chartpanel').setAttribute('aria-labelledby',tb.id)}
+tabs.forEach(function(t,i){t.addEventListener('click',function(){select(t)});t.addEventListener('keydown',function(e){var k=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(k){e.preventDefault();select(tabs[(i+k+4)%4],true)}})});
+
+/* channel table (totals computed from rows) */
+var CH=[['Organic search',22418,967,158940,131040],['Direct',14602,739,134960,116340],['Email, Klaviyo',6318,412,69870,55900],['Paid social, Meta',11940,296,44380,43050],['Paid search, Google',2480,113,27550,23520],['Referral',3486,115,23580,21470]];
+(function(){
+  var T=[0,0,0,0];CH.forEach(function(r){T[0]+=r[1];T[1]+=r[2];T[2]+=r[3];T[3]+=r[4]});
+  var f=function(n){return n.toLocaleString('en-AU')}, max=CH[0][3], tb=$('#tbl tbody'), h='';
+  CH.forEach(function(r){var cv=r[2]/r[1]*100, dv=(r[3]/r[4]-1)*100, sh=r[3]/T[2]*100;
+    h+='<tr><td class="ch">'+r[0]+'<small>'+f(r[1])+' sessions, '+cv.toFixed(2)+'%</small></td><td class="mono hide-m">'+f(r[1])+'</td><td class="mono hide-m">'+f(r[2])+'</td><td class="mono hide-m'+(cv<3?' neg':'')+'">'+cv.toFixed(2)+'%</td><td class="mono">$'+f(r[3])+'</td><td><span class="share"><span class="sb" aria-hidden="true"><i style="width:'+(r[3]/max*100).toFixed(1)+'%"></i></span><span class="mono">'+sh.toFixed(1)+'%</span></span></td><td class="mono hide-m '+(dv>=0?'pos':'neg')+'">'+(dv>=0?'+':'')+dv.toFixed(1)+'%</td></tr>'});
+  tb.innerHTML=h;
+  var td=(T[2]/T[3]-1)*100;
+  $('#tbl tfoot').innerHTML='<tr><td class="ch">Total<small class="mono">'+f(T[0])+' sessions, '+(T[1]/T[0]*100).toFixed(2)+'%</small></td><td class="mono hide-m">'+f(T[0])+'</td><td class="mono hide-m">'+f(T[1])+'</td><td class="mono hide-m">'+(T[1]/T[0]*100).toFixed(2)+'%</td><td class="mono">$'+f(T[2])+'</td><td class="mono">100%</td><td class="mono hide-m pos">+'+td.toFixed(1)+'%</td></tr>';
+})();
+
+/* ---------- live: sessions strip ---------- */
+var track=$('#track'), vals=[], seed=11;
+function rnd(){seed=(seed*9301+49297)%233280;return seed/233280}
+function nextV(){var r=rnd();return r<.12?0:r<.3?1:r<.55?2:r<.78?3:r<.92?4:r<.98?5:6}
+for(var k=0;k<61;k++)vals.push(nextV());
+function bar(v){var b=document.createElement('span');b.className='bar';var i=document.createElement('i');i.style.transform='scaleY('+Math.max(.04,v/7)+')';b.appendChild(i);return b}
+function layoutBars(){var w=$('#bars').clientWidth/60;[].forEach.call(track.children,function(b){b.style.width=w+'px'});return w}
+vals.forEach(function(v){track.appendChild(bar(v))});
+var bw=layoutBars();
+function markRecent(){[].forEach.call(track.children,function(b,i){b.classList.toggle('recent',i>=track.children.length-7)})}
+markRecent();
+function visitors(){return sum(vals.slice(-31,-1))}
+$('#nowv').textContent=visitors();
+function bump(e,t){e.textContent=t;if(RM)return;e.classList.remove('bump');void e.offsetWidth;e.classList.add('bump')}
+var sliding=false;
+function slide(){
+  if(sliding)return;sliding=true;
+  track.style.transition='transform .9s cubic-bezier(.45,0,.2,1)';
+  track.style.transform='translateX('+(-bw)+'px)';
+}
+track.addEventListener('transitionend',function(e){
+  if(e.target!==track)return;
+  track.style.transition='none';track.removeChild(track.firstChild);vals.shift();
+  var v=nextV();vals.push(v);var b=bar(v);b.style.width=bw+'px';track.appendChild(b);
+  track.style.transform='translateX(0)';markRecent();sliding=false;
+  bump($('#nowv'),visitors());
+});
+
+/* ---------- live: activity feed ---------- */
+var ICON={order:'i-bag',refund:'i-ret',alert:'i-warn',payout:'i-bank',stock:'i-box',mail:'i-mail'};
+var EV=[
+  ['order','Order FW-40297','$212.40, Ballarat VIC, 2 items',212.40],
+  ['stock','Low stock: Ridge 2P tent','4 left in Melbourne warehouse'],
+  ['order','Order FW-40298','$89.95, Fremantle WA, Merino 200 crew',89.95],
+  ['mail','Newsletter signup','Hobart TAS, from the spring sale email'],
+  ['order','Order FW-40299','$446.00, Katoomba NSW, 3 items',446.00],
+  ['refund','Refund FW-40251','$64.95 to Visa 0388, wrong size'],
+  ['order','Order FW-40300','$131.90, Bendigo VIC, 2 items',131.90],
+  ['alert','Checkout errors at 2.3%','Mobile Safari 17.4, 9 failed payments today'],
+  ['order','Order FW-40301','$58.00, Newcastle NSW, Trail socks x2',58.00],
+  ['order','Order FW-40302','$298.50, Cairns QLD, Alpine down vest',298.50]
+];
+var INIT=[
+  ['order','Order FW-40296','$174.20, Wanaka NZ, 2 items',12],
+  ['alert','Checkout errors at 2.1%','Mobile Safari 17.4, 8 failed payments today',48],
+  ['order','Order FW-40295','$320.00, Byron Bay NSW, Ridge 2P tent',95],
+  ['payout','Payout settled','$38,420.19 to Westpac account 4471',240],
+  ['refund','Refund FW-40218','$148.00 to Mastercard 1206, sizing',431],
+  ['order','Order FW-40294','$96.40, Launceston TAS, 3 items',660],
+  ['stock','Restocked: Merino 200 crew','120 units, charcoal and forest',905]
+];
+var feed=$('#feed'), T0=Date.now();
+function rel(s){return s<5?'now':s<60?s+'s':s<3600?Math.floor(s/60)+'m':Math.floor(s/3600)+'h'}
+function item(e,ageS){
+  var li=document.createElement('li');li.className='ev '+e[0];li.dataset.t=T0-ageS*1000;
+  li.innerHTML='<span class="ic" aria-hidden="true"><svg class="ico"><use href="#'+ICON[e[0]]+'"/></svg></span><span><span class="tt"></span><span class="mt"></span></span><time class="ts"></time>';
+  li.querySelector('.tt').textContent=e[1];li.querySelector('.mt').textContent=e[2];
+  return li}
+INIT.forEach(function(e){feed.appendChild(item(e,e[3]))});
+function ages(){[].forEach.call(feed.children,function(li){var s=Math.round((Date.now()-li.dataset.t)/1000);li.querySelector('.ts').textContent=rel(s)})}
+ages();
+var evI=0, today=9842.10, orders=57, paused=false;
+function pushEvent(){
+  var e=EV[evI++%EV.length];
+  var rows=[].slice.call(feed.children), first=rows.map(function(r){return r.getBoundingClientRect().top});
+  var li=item(e,0);li.dataset.t=Date.now();feed.insertBefore(li,feed.firstChild);ages();
+  if(!RM){
+    rows.forEach(function(r,i){var dy=first[i]-r.getBoundingClientRect().top;if(!dy)return;r.style.transition='none';r.style.transform='translateY('+dy+'px)';});
+    void feed.offsetWidth;
+    rows.forEach(function(r){r.style.transition='transform .55s cubic-bezier(.16,1,.3,1)';r.style.transform=''});
+    li.classList.add('enter','fresh');
+    requestAnimationFrame(function(){requestAnimationFrame(function(){li.classList.remove('fresh')})});
+  }
+  while(feed.children.length>9)feed.removeChild(feed.lastChild);
+  if(e[0]==='order'){today+=e[3];orders++;bump($('#todayv'),'$'+today.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}));bump($('#ordv'),orders);$('#chkv').textContent=2+Math.floor(rnd()*4)}
+}
+$('#pause').addEventListener('click',function(){paused=!paused;this.setAttribute('aria-pressed',paused);this.querySelector('span').textContent=paused?'Resume':'Pause';this.querySelector('use').setAttribute('href',paused?'#i-play':'#i-pause')});
+
+/* ---------- loop control ---------- */
+var tA=0,tB=0,tC=0;
+function start(){if(RM||tA)return;tA=setInterval(function(){if(!paused)slide()},2000);tB=setInterval(function(){if(!paused)pushEvent()},3400);tC=setInterval(ages,1000);setTimeout(function(){if(!paused)pushEvent()},1500)}
+function stop(){clearInterval(tA);clearInterval(tB);clearInterval(tC);tA=tB=tC=0}
+document.addEventListener('visibilitychange',function(){document.hidden?stop():start()});
+if(RM){$('#pause').hidden=true}
+
+/* ---------- boot ---------- */
+draw(true);
+var rz;window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){bw=layoutBars();draw(false)},120)});
+(document.fonts&&document.fonts.ready||Promise.resolve()).then(function(){draw(false);start()});
+})();
+</script>
 </body>
 </html>

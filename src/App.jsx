@@ -235,7 +235,7 @@ function AppInner() {
   // page before Firebase has finished loading. See utils/sessionHint.js.
   useSessionHint()
   useSmoothScroll()
-  const { message, visible, type, toast, dismiss } = useToast()
+  const { message, visible, type, action: toastAction, toast, dismiss, hold: holdToast, release: releaseToast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
   // WHICH ROUTE IS ON SCREEN, stamped when it COMMITS. React Router navigates
@@ -580,7 +580,7 @@ function AppInner() {
       </main>
 
       <AppFooter />
-      <Toast message={message} visible={visible} type={type} onDismiss={dismiss} />
+      <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />
       <GoogleOneTap />
     </div>
   )

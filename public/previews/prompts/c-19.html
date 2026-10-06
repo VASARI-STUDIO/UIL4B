@@ -1,432 +1,422 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Aldermoor — how a frame gets made</title>
+<title>How a frame gets made · Aldermoor Cycles</title>
+<meta name="description" content="Nine tubes, one drawing, nine joints and eleven days: how an Aldermoor steel frame is built in Sheffield.">
+<meta name="uil4b-capture" content='{"mode":"scroll","stops":[0,0.1,0.22,0.34,0.46,0.58,0.7,0.82,1],"hold":600,"ms":12000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/ibm-plex-sans-condensed.js"></script>
+<script src="../vendor/fonts/ibm-plex-mono.js"></script>
+<script src="../vendor/fonts/newsreader.js"></script>
+<script src="../vendor/fonts/newsreader-italic.js"></script>
 <style>
   :root{
-    --paper:#faf6f0;
-    --paper2:#f2ece3;
-    --ink:#171310;
-    --mid:#57503f;
-    --dim:#8a8172;
-    --rule:#ded5c7;
-    --flame:#c2521c;
-    --steel:#3f4b52;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --ground:#15171a;
+    --raised:#1c1f23;
+    --ink:#e7e2d6;
+    --dim:#aeaba1;
+    --faint:#85837c;
+    --line:rgba(231,226,214,.13);
+    --line-2:rgba(231,226,214,.26);
+    --brass:#d2a857;
+    --steel:#8b9298;
+    --paint:#2f7256;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.6vw,56px);
+    --cond:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    --serif:"Newsreader",Georgia,serif;
+    color-scheme:dark;
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0}
-  html{overflow-x:clip;scroll-behavior:smooth}
-  body{
-    background:var(--paper);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:clip;
-  }
+  html{background:var(--ground);-webkit-text-size-adjust:100%;scrollbar-color:#3a3f45 var(--ground)}
+  body{background:var(--ground);color:var(--ink);font:400 19px/1.62 var(--serif);-webkit-font-smoothing:antialiased;caret-color:var(--brass)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--brass);color:var(--ground)}
   a{color:inherit}
-  ::selection{background:rgba(194,82,28,.22)}
-  :where(a,button):focus-visible{outline:2px solid var(--flame);outline-offset:3px;border-radius:3px}
+  h1,h2,h3,p,dl,dd,figure{margin:0}
+  :focus-visible{outline:2px solid var(--brass);outline-offset:3px;border-radius:3px}
+  .chip{display:inline-flex;align-items:center;gap:8px;font:500 11.5px/1 var(--mono);letter-spacing:.02em;color:var(--brass);border:1px solid rgba(210,168,87,.4);padding:6px 10px;border-radius:999px;align-self:flex-start;justify-self:start}
+  .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .rm-note{display:none}
 
-  .wrap{max-width:1180px;margin:0 auto;padding:0 clamp(18px,4vw,48px)}
-
-  /* ---------- chrome ---------- */
-  .nav{
-    display:flex;align-items:baseline;gap:20px;
-    padding:20px clamp(18px,4vw,48px);
-    max-width:1180px;margin:0 auto;
-    font-size:11.5px;letter-spacing:.17em;text-transform:uppercase;
-  }
-  .nav .mark{font-weight:700;letter-spacing:.22em;text-decoration:none}
-  .nav .set{margin-left:auto;display:flex;gap:20px;color:var(--dim)}
-  .nav .set a{text-decoration:none}
-  .nav .set a:hover{color:var(--ink)}
-
-  /* ---------- the documentation chip ---------- */
-  .chip{
-    display:inline-flex;align-items:center;gap:8px;
-    font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;
-    color:var(--mid);background:var(--paper2);border:1px solid var(--rule);
-    padding:4px 10px;border-radius:999px;
-  }
-  .chip b{color:var(--flame);font-weight:700}
+  /* ---------- masthead ---------- */
+  .top{display:flex;align-items:center;gap:20px;padding:16px var(--gutter);border-bottom:1px solid var(--line);font:500 13px/1 var(--mono)}
+  .logo{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font:700 17px/1 var(--cond);letter-spacing:.14em;text-transform:uppercase;min-height:44px}
+  .top nav{margin-left:auto;display:flex;gap:4px}
+  .top nav a{color:var(--dim);text-decoration:none;padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .top nav a:hover{color:var(--ink);background:rgba(231,226,214,.07)}
 
   /* ---------- hero ---------- */
-  .hero{padding:clamp(12px,2.6vh,30px) 0 clamp(28px,4.5vh,48px)}
-  .kicker{
-    margin:0 0 18px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--dim);
-  }
-  h1{
-    margin:0;max-width:16ch;
-    font-size:clamp(38px,6.6vw,84px);line-height:.95;letter-spacing:-.04em;font-weight:680;
-  }
-  .standfirst{
-    margin:22px 0 0;max-width:52ch;font-size:clamp(16px,1.35vw,19px);color:var(--mid);
-  }
-  .byline{
-    margin:18px 0 0;display:flex;flex-wrap:wrap;gap:6px 18px;
-    font-size:12px;color:var(--dim);font-family:var(--mono);
-  }
+  .hero{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:clamp(20px,4vw,60px);align-items:center;min-height:calc(100vh - 77px);min-height:calc(100svh - 77px);padding:clamp(28px,5vh,60px) var(--gutter)}
+  .kicker{font:500 12.5px/1.4 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--brass)}
+  h1{margin-top:18px;font:700 clamp(58px,8.8vw,148px)/.84 var(--cond);letter-spacing:-.025em;text-transform:uppercase}
+  .stand{margin-top:26px;font-size:clamp(19px,1.55vw,23px);line-height:1.45;color:var(--dim);max-width:30ch}
+  .stand em{color:var(--ink)}
+  .by{margin-top:26px;display:flex;flex-wrap:wrap;gap:6px 22px;font:500 12.5px/1.4 var(--mono);color:var(--faint);padding-top:16px;border-top:1px solid var(--line);max-width:34em}
+  .by b{color:var(--ink);font-weight:500}
+  .hero figure svg{display:block;width:100%;height:auto}
+  .hero figcaption{margin-top:10px;font:500 12px/1.4 var(--mono);color:var(--faint);text-align:right}
 
-  /* ---------- plates (all imagery is CSS) ---------- */
-  .plate{position:relative;width:100%;border-radius:4px;overflow:hidden;background:#241f1a}
-  .plate.wide{aspect-ratio:21/9}
-  .plate.tall{aspect-ratio:4/5}
-  .plate.mid{aspect-ratio:3/2}
-  .plate .cap{
-    position:absolute;left:0;right:0;bottom:0;padding:34px 18px 12px;
-    font-size:11.5px;color:rgba(255,255,255,.82);
-    background:linear-gradient(0deg,rgba(15,11,8,.75),rgba(15,11,8,0));
-    font-family:var(--mono);letter-spacing:.02em;
-  }
-  /* steel tubing: raked metallic bands under a warm workshop light */
-  .steelplate{
-    position:absolute;inset:0;
-    background:
-      radial-gradient(70% 120% at 22% 0%,rgba(255,226,180,.36) 0%,rgba(255,200,140,0) 58%),
-      radial-gradient(130% 100% at 50% 50%,rgba(0,0,0,0) 44%,rgba(6,9,11,.62) 100%),
-      repeating-linear-gradient(99deg,
-        rgba(255,255,255,.07) 0 3px,rgba(0,0,0,.10) 3px 11px,rgba(255,255,255,0) 11px 27px),
-      repeating-linear-gradient(101deg,
-        #0f1418 0 5px,#2a343b 5px 13px,#66757e 13px 17px,#8fa0a8 17px 20px,
-        #4d5960 20px 30px,#171d21 30px 42px,#232c31 42px 49px,#0d1114 49px 61px),
-      linear-gradient(180deg,#2b3439,#14181b);
-  }
-  /* braze: the puddle of filler going bright */
-  .flameplate{
-    position:absolute;inset:0;
-    background:
-      radial-gradient(38% 52% at 40% 56%,#fff6e2 0%,#ffcf6b 18%,#f08a1e 38%,#a83c0c 60%,rgba(60,20,6,0) 82%),
-      radial-gradient(90% 90% at 74% 24%,rgba(255,150,40,.34) 0%,rgba(90,30,10,0) 62%),
-      linear-gradient(200deg,#2a1a12,#120b07);
-  }
-  /* paint: a deep colour field with one gloss sweep */
-  .paintplate{
-    position:absolute;inset:0;
-    background:
-      linear-gradient(118deg,rgba(255,255,255,0) 36%,rgba(255,255,255,.34) 46%,rgba(255,255,255,0) 54%),
-      radial-gradient(120% 80% at 18% 8%,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 52%),
-      linear-gradient(160deg,#1d4f52 0%,#123639 46%,#0b2325 100%);
-  }
-  /* mitre: a machined edge, hard shadow */
-  .mitreplate{
-    position:absolute;inset:0;
-    background:
-      linear-gradient(145deg,rgba(255,255,255,.18) 0 38%,rgba(0,0,0,.42) 38.4% 100%),
-      repeating-linear-gradient(145deg,rgba(255,255,255,.05) 0 2px,rgba(0,0,0,.05) 2px 5px),
-      linear-gradient(120deg,#5c676d,#20262a);
-  }
+  /* ---------- the story ---------- */
+  .story{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(20px,4vw,60px);padding:0 var(--gutter);border-top:1px solid var(--line)}
+  .steps{padding:12vh 0 30vh}
+  .step{min-height:92vh;display:flex;flex-direction:column;justify-content:center;gap:18px;max-width:34em}
+  .step .no{font:700 15px/1 var(--mono);color:var(--faint)}
+  .step h2{font:700 clamp(34px,3.6vw,56px)/.95 var(--cond);letter-spacing:-.015em;text-transform:uppercase}
+  .step p{color:var(--dim)}
+  .step p strong{color:var(--ink);font-weight:500}
+  .facts{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--line);margin-top:6px}
+  .facts div{padding:12px 22px 0 0;margin-right:22px;border-right:1px solid var(--line)}
+  .facts div:last-child{border-right:0}
+  .facts dt{font:500 11px/1.3 var(--mono);color:var(--faint);text-transform:uppercase;letter-spacing:.04em}
+  .facts dd{font:600 22px/1.2 var(--cond);font-variant-numeric:tabular-nums}
+  .fig{position:sticky;top:0;height:100vh;height:100svh;display:flex;flex-direction:column;justify-content:center;gap:16px}
+  .fig svg{display:block;width:100%;height:auto;overflow:visible}
+  .meter{display:flex;justify-content:space-between;gap:16px;font:500 12.5px/1.4 var(--mono);color:var(--faint);border-top:1px solid var(--line);padding-top:12px}
+  .meter b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+  .meter .hot b{color:var(--brass)}
+  .ticks{display:flex;gap:6px}
+  .ticks i{width:28px;height:3px;background:var(--line-2);display:block}
+  .ticks i.on{background:var(--brass)}
 
-  /* ---------- sections ---------- */
-  section{padding:clamp(52px,9vh,104px) 0;border-top:1px solid var(--rule)}
-  .shead{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px 20px;margin-bottom:clamp(26px,4vh,44px)}
-  .snum{font-family:var(--mono);font-size:12px;color:var(--flame);letter-spacing:.1em}
-  h2{margin:0;font-size:clamp(26px,3.4vw,44px);line-height:1.04;letter-spacing:-.03em;font-weight:660;max-width:20ch}
-  .shead .chip{margin-left:auto}
+  /* drawing */
+  .tube{fill:none;stroke:var(--paint);stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+  .part{fill:none;stroke:#c6c3ba;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  .tyre{fill:none;stroke:#2b2f34;stroke-width:12}
+  .rim{fill:none;stroke:#6b7177;stroke-width:3}
+  .spoke{stroke:#50565c;stroke-width:1}
+  .rack line{stroke:var(--steel);stroke-width:8;stroke-linecap:round}
+  .rack text,.ann text{font:500 13px var(--mono);fill:var(--dim)}
+  .ann path,.ann line{fill:none;stroke:var(--brass);stroke-width:1.4}
+  .ann .dash{stroke-dasharray:4 5}
+  .ann text.v{fill:var(--brass);font-size:15px;font-weight:600}
+  .joint{fill:var(--paint)}
+  .letters{font:700 20px var(--cond);letter-spacing:.3em;fill:#efe7d2}
 
-  .cards{display:grid;gap:clamp(16px,2.2vw,28px);grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-  .card h3{margin:16px 0 0;font-size:17px;font-weight:640;letter-spacing:-.015em}
-  .card p{margin:7px 0 0;font-size:14px;color:var(--mid)}
-  .card .spec{
-    margin:10px 0 0;font-family:var(--mono);font-size:11px;color:var(--dim);
-    padding-top:9px;border-top:1px solid var(--rule);
-  }
-
-  .quote{
-    display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(20px,4vw,52px);align-items:center;
-    background:var(--paper2);border:1px solid var(--rule);border-radius:6px;
-    padding:clamp(26px,4vw,48px);
-  }
-  .quote .big{
-    font-size:clamp(52px,8.4vw,116px);line-height:.86;letter-spacing:-.05em;font-weight:700;
-    color:var(--flame);font-variant-numeric:tabular-nums;white-space:nowrap;
-  }
-  .quote .big em{font-style:normal;font-size:.34em;letter-spacing:-.01em;color:var(--mid)}
-  .quote p{margin:0;font-size:clamp(16px,1.5vw,21px);line-height:1.45;max-width:38ch}
-  .quote .src{margin-top:12px;font-family:var(--mono);font-size:11.5px;color:var(--dim);max-width:none}
-
-  .rows{display:flex;flex-direction:column;gap:clamp(20px,3.5vh,40px)}
-  .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(18px,3vw,44px);align-items:center}
-  .row:nth-child(even) .fig{order:2}
-  .row h3{margin:14px 0 0;font-size:clamp(19px,2.1vw,26px);font-weight:640;letter-spacing:-.02em}
-  .row p{margin:10px 0 0;color:var(--mid);font-size:15px;max-width:40ch}
-  .row .lab{font-family:var(--mono);font-size:11px;color:var(--flame);letter-spacing:.1em}
-
-  .closing{text-align:left}
-  .split{
-    margin:0;font-size:clamp(30px,5.4vw,68px);line-height:1.02;letter-spacing:-.036em;font-weight:680;
-    max-width:17ch;
+  /* ---------- transitions (hidden start states only exist once the script has added .js) ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    .js .t-curtain{clip-path:inset(0 50% 0 50%);transition:clip-path 1.2s cubic-bezier(.22,1,.36,1)}
+    .js .t-curtain.in{clip-path:inset(0 0 0 0)}
+    .js .t-stagger > *{opacity:0;transform:translateY(60px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+    .js .t-stagger.in > *{opacity:1;transform:none}
+    .js .t-stagger.in > :nth-child(2){transition-delay:.1s}
+    .js .t-stagger.in > :nth-child(3){transition-delay:.2s}
+    .js .t-stagger.in > :nth-child(4){transition-delay:.3s}
+    .js .t-stagger.in > :nth-child(5){transition-delay:.4s}
+    .js .t-scale{opacity:0;transform:scale(.85);transform-origin:50% 100%;transition:opacity 1s var(--ease),transform 1s var(--ease)}
+    .js .t-scale.in{opacity:1;transform:none}
+    .js .t-slide > *{opacity:0;transform:translateX(-84px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+    .js .t-slide > :nth-child(even){transform:translateX(84px)}
+    .js .t-slide.in > *{opacity:1;transform:none}
+    .js .t-slide.in > :nth-child(3){transition-delay:.08s}
+    .js .t-slide.in > :nth-child(4){transition-delay:.16s}
+    .js .t-slide.in > :nth-child(5){transition-delay:.24s}
+    .js .split .ch{display:inline-block;opacity:0;transform:translateY(40px) rotateX(-40deg);transform-origin:50% 100%;transition:opacity .6s var(--ease),transform .6s var(--ease);transition-delay:calc(var(--i) * 20ms)}
+    .js .split.in .ch{opacity:1;transform:none}
+    .js .split{perspective:600px}
+    .js .hero .rise{animation:rise 1s var(--ease) backwards}
+    .js .hero .rise:nth-child(2){animation-delay:.08s}
+    .js .hero .rise:nth-child(3){animation-delay:.16s}
+    .js .hero .rise:nth-child(4){animation-delay:.24s}
+    @keyframes rise{from{opacity:0;translate:0 18px}}
   }
   .split .w{display:inline-block;white-space:nowrap}
-  .split .c{display:inline-block;transform-origin:50% 100%}
-  .closing .after{margin:30px 0 0;max-width:46ch;color:var(--mid);font-size:16px}
-  .cta{
-    display:inline-flex;align-items:center;gap:.5em;margin-top:26px;
-    text-decoration:none;font-size:14.5px;font-weight:620;
-    padding:13px 22px;border-radius:999px;background:var(--ink);color:var(--paper);
+
+  /* ---------- close ---------- */
+  .close{padding:clamp(80px,12vw,180px) var(--gutter) clamp(50px,7vw,90px);border-top:1px solid var(--line);display:grid;gap:30px}
+  .close h2{font:700 clamp(48px,7.4vw,124px)/.88 var(--cond);letter-spacing:-.02em;text-transform:uppercase;max-width:12em}
+  .close p{color:var(--dim);max-width:40ch;font-size:clamp(19px,1.5vw,22px)}
+  .acts{display:flex;flex-wrap:wrap;gap:10px}
+  .btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 22px;border-radius:999px;text-decoration:none;font:600 16px/1 var(--cond);letter-spacing:.04em;text-transform:uppercase;border:1px solid transparent;
+    transition:background-color .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:scale(.98)}
+  .btn.solid{background:var(--brass);color:#16130c}
+  .btn.solid:hover{background:#e0b968}
+  .btn.line{border-color:var(--line-2)}
+  .btn.line:hover{border-color:var(--ink);background:rgba(231,226,214,.05)}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;padding:22px var(--gutter) 28px;border-top:1px solid var(--line);font:500 12.5px/1.5 var(--mono);color:var(--faint)}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:900px){
+    .top nav{display:none}
+    .hero{grid-template-columns:minmax(0,1fr);min-height:0}
+    .hero figure{order:-1}
+    /* phones: the drawing sticks to the top, the chapters scroll under it */
+    .story{grid-template-columns:minmax(0,1fr);gap:0}
+    .fig{order:-1;height:auto;top:0;z-index:2;background:var(--ground);padding:14px 0 10px;border-bottom:1px solid var(--line)}
+    .fig svg{width:min(100%,58svh);margin:0 auto}
+    .steps{padding:4vh 0 20vh}
+    .step{min-height:70svh}
   }
-  .cta:hover{background:var(--flame)}
-
-  footer{
-    border-top:1px solid var(--rule);margin-top:0;
-    padding:26px clamp(18px,4vw,48px) 44px;max-width:1180px;margin-left:auto;margin-right:auto;
-    display:flex;flex-wrap:wrap;gap:6px 26px;font-size:12px;color:var(--dim);
+  @media (max-width:560px){
+    body{font-size:18px}
+    .facts dd{font-size:19px}
+    .meter .ticks{display:none}
   }
-
-  .rmnote{
-    display:none;margin:0 0 6px;padding:11px 14px;border-radius:6px;
-    background:#f0ece2;border:1px solid var(--rule);color:var(--mid);font-size:13px;
+  @media (max-height:520px) and (min-width:560px){
+    .top{padding-top:6px;padding-bottom:6px}
+    .hero{min-height:0;padding-top:14px;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+    .hero figure{order:0}
+    .hero figcaption{display:none}
+    h1{font-size:clamp(40px,7vw,64px);margin-top:8px}
+    .stand{display:none}
+    .by{margin-top:14px}
   }
-  .rmnote b{color:var(--ink);font-weight:640}
-
-  /* ================= MOTION =================
-     Every element below is authored in its FINISHED state. The start state only
-     ever exists inside a no-preference block, or behind the .js-reveal class the
-     fallback adds. Motion off — or JavaScript off — leaves the page complete. */
-
-  @media (prefers-reduced-motion: no-preference){
-
-    /* the one thing above the fold that moves: the plate opens from a centre
-       band, so it is a deliberate composition at every frame, never empty */
-    .hero .plate .cap,.hero .plate > div{will-change:clip-path}
-    .curtain-load{animation:curtain .85s cubic-bezier(.66,0,.24,1) both}
-    @keyframes curtain{from{clip-path:inset(0 44% 0 44%)}to{clip-path:inset(0 0 0 0)}}
-
-    @supports (animation-timeline: view()){
-      [data-reveal]{animation-timing-function:cubic-bezier(.2,.85,.3,1);animation-fill-mode:both;animation-timeline:view()}
-      [data-reveal="curtain"]{animation-name:curtainIn;animation-range:entry 6% cover 34%}
-      @keyframes curtainIn{from{clip-path:inset(0 50% 0 50%)}to{clip-path:inset(0 0 0 0)}}
-
-      [data-reveal="rise"]{animation-name:riseIn;animation-range:entry calc(4% + var(--n,0) * 6%) cover 42%}
-      @keyframes riseIn{from{opacity:0;transform:translateY(60px)}to{opacity:1;transform:none}}
-
-      [data-reveal="scale"]{animation-name:scaleIn;animation-range:entry 8% cover 40%;transform-origin:center bottom}
-      @keyframes scaleIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
-
-      [data-reveal="slideL"]{animation-name:slideL;animation-range:entry 6% cover 40%}
-      @keyframes slideL{from{opacity:0;transform:translateX(-84px)}to{opacity:1;transform:none}}
-      [data-reveal="slideR"]{animation-name:slideR;animation-range:entry 6% cover 40%}
-      @keyframes slideR{from{opacity:0;transform:translateX(84px)}to{opacity:1;transform:none}}
-
-      .split .c{animation:charIn cubic-bezier(.2,.85,.3,1) both;animation-timeline:view();
-        animation-range:entry calc(2% + var(--n,0) * 1.4%) cover 38%}
-      @keyframes charIn{from{opacity:0;transform:translateY(40px) rotateX(-40deg)}to{opacity:1;transform:none}}
-      .split{perspective:700px}
-    }
-
-    /* IntersectionObserver fallback — only ever switched on by script */
-    .js-reveal [data-reveal]{transition:opacity .85s cubic-bezier(.2,.85,.3,1),transform .85s cubic-bezier(.2,.85,.3,1),clip-path 1.1s cubic-bezier(.66,0,.24,1)}
-    .js-reveal [data-reveal="curtain"]:not(.in){clip-path:inset(0 50% 0 50%)}
-    .js-reveal [data-reveal="rise"]:not(.in){opacity:0;transform:translateY(60px)}
-    .js-reveal [data-reveal="rise"]{transition-delay:calc(var(--n,0) * 90ms)}
-    .js-reveal [data-reveal="scale"]:not(.in){opacity:0;transform:scale(.85)}
-    .js-reveal [data-reveal="slideL"]:not(.in){opacity:0;transform:translateX(-84px)}
-    .js-reveal [data-reveal="slideR"]:not(.in){opacity:0;transform:translateX(84px)}
-    .js-reveal .split .c{transition:opacity .6s ease,transform .6s cubic-bezier(.2,.85,.3,1);
-      transition-delay:calc(var(--n,0) * 22ms)}
-    .js-reveal .split:not(.in) .c{opacity:0;transform:translateY(40px)}
-  }
-
   @media (prefers-reduced-motion: reduce){
-    html{scroll-behavior:auto}
-    .rmnote{display:block}
-  }
-
-  @media (max-width:760px){
-    .row{grid-template-columns:minmax(0,1fr)}
-    .row:nth-child(even) .fig{order:0}
-    .quote{grid-template-columns:minmax(0,1fr);gap:18px}
-    .quote .big{font-size:clamp(46px,17vw,72px)}
-    .shead .chip{margin-left:0}
-    .plate.wide{aspect-ratio:16/10}
-    .nav .set a:nth-child(2){display:none}
+    .rm-note{display:block;font:500 12.5px/1.5 var(--mono);color:var(--faint);padding:14px var(--gutter);border-top:1px solid var(--line)}
+    .fig{position:static;height:auto;padding:40px 0}
+    .story{align-items:start}
+    .step{min-height:0;padding:60px 0}
   }
 </style>
 </head>
 <body>
-
-<header class="nav">
-  <a class="mark" href="#top">Aldermoor</a>
-  <div class="set">
-    <a href="#top">Frames</a><a href="#top">Workshop</a><a href="#top">Order</a>
-  </div>
+<div class="page">
+<header class="top">
+  <a class="logo" href="#h">
+    <svg width="26" height="18" viewBox="0 0 26 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="4.2"/><circle cx="21" cy="12" r="4.2"/><path d="M5 12 11 4h8l2 8M11 4l3 8h7"/></svg>
+    Aldermoor
+  </a>
+  <nav aria-label="Primary"><a href="#story">Frames</a><a href="#story">Fitting</a><a href="#close">Build list</a></nav>
 </header>
 
-<main class="wrap" id="top">
-
-  <div class="hero">
-    <p class="rmnote"><b>Motion is reduced on this device.</b> Every section below is shown in its finished state — this page never hides content behind a scroll animation.</p>
-    <p class="kicker">Workshop notes — no. 14</p>
-    <h1>How a frame gets made</h1>
-    <p class="standfirst">Eleven days, four hundred grams of filler rod, and one measurement we will not compromise on. This is a road frame from tube stack to final coat.</p>
-    <p class="byline"><span>Aldermoor Bicycle Works</span><span>Stroud, Gloucestershire</span><span>11 September 2026</span></p>
+<main>
+<section class="hero" id="h" aria-labelledby="t">
+  <div>
+    <p class="kicker rise">The build, in five parts</p>
+    <h1 id="t" class="rise">How a frame gets made</h1>
+    <p class="stand rise">Nine tubes, one drawing, nine joints and eleven days: <em>what happens between your fitting and the first ride</em>, told by the person who does it.</p>
+    <p class="by rise"><span>By <b>Tom Aldred</b>, who has built 312 of them</span><span>Kelham Island, Sheffield</span><span>8 minute read</span></p>
   </div>
+  <figure id="heroFig" aria-hidden="true"><figcaption>Aldermoor Road, size 56, in Moor Green</figcaption></figure>
+</section>
+<p class="rm-note">Motion is reduced, so every part of the story is shown complete and the drawing stays finished.</p>
 
-  <div class="plate wide curtain-load" style="margin-bottom:10px">
-    <div class="steelplate"></div>
-    <p class="cap">Tube stack for a 56 cm road frame, cut and faced, before mitring</p>
-  </div>
-  <p class="chip" style="margin:0 0 8px"><b>static</b> nothing above the fold animates in</p>
+<section class="story" id="story" aria-label="The build">
+  <div class="steps">
+    <article class="step" data-step="0">
+      <span class="chip">curtain-reveal</span>
+      <div class="t-curtain">
+        <p class="no">01 · Day 1</p>
+        <h2>The tubing arrives straight, and stays that way</h2>
+      </div>
+      <p>Every frame starts as nine lengths of <strong>Columbus Spirit</strong>, cold-drawn in Milan and butted to 0.7 mm at the ends and 0.4 mm in the middle. They come in a cardboard tube, and the first job is to roll each one on a granite plate. About one set in thirty goes back.</p>
+      <dl class="facts"><div><dt>Tubes</dt><dd>9</dd></div><div><dt>Bare weight</dt><dd>1.64 kg</dd></div><div><dt>Thinnest wall</dt><dd>0.4 mm</dd></div></dl>
+    </article>
 
-  <section>
-    <div class="shead">
-      <span class="snum">01</span>
-      <h2>The tubing arrives straight, and stays that way</h2>
-      <span class="chip"><b>parallax-stagger</b> entry 80% · stagger 0.1s</span>
-    </div>
-    <div class="cards">
-      <article class="card" data-reveal="rise" style="--n:0">
-        <div class="plate mid"><div class="steelplate"></div></div>
-        <h3>Halstead 731 chromoly</h3>
-        <p>Heat-treated, air-hardening, and forgiving of a brazing temperature that drifts by twenty degrees.</p>
-        <p class="spec">0.8 / 0.5 / 0.8 butted · 31.7 mm down tube</p>
-      </article>
-      <article class="card" data-reveal="rise" style="--n:1">
-        <div class="plate mid"><div class="mitreplate"></div></div>
-        <h3>Cut on the mill, faced by hand</h3>
-        <p>The saw gets it within half a millimetre. The file closes the rest, because the file can feel it.</p>
-        <p class="spec">73.5° seat · 72.5° head · 410 mm chainstay</p>
-      </article>
-      <article class="card" data-reveal="rise" style="--n:2">
-        <div class="plate mid"><div class="paintplate"></div></div>
-        <h3>Three coats, wet sanded twice</h3>
-        <p>Colour goes on after alignment, never before. A frame that needs cold-setting will need it again.</p>
-        <p class="spec">2K polyurethane · 44 µm dry film</p>
-      </article>
-    </div>
-  </section>
-
-  <section>
-    <div class="shead">
-      <span class="snum">02</span>
+    <article class="step t-stagger" data-step="1">
+      <span class="chip">parallax-stagger</span>
+      <p class="no">02 · Days 2–3</p>
       <h2>The measurement we will not move on</h2>
-      <span class="chip"><b>scale-fade</b> origin center bottom · 1.0s</span>
-    </div>
-    <div class="quote" data-reveal="scale">
-      <p class="big">0.05<em> mm</em></p>
-      <div>
-        <p>The largest gap we will accept between a mitred tube and the joint it sits in. Anything wider and the filler has to bridge instead of wick, and a bridged joint is a joint that will crack in a decade.</p>
-        <p class="src">Tolerance sheet · rev. 9 · every frame, every joint</p>
+      <p>Before anything is cut, the frame is drawn full size from your fitting: inseam, torso, reach, and how you actually ride. The angles come out of that drawing, not a size chart. For most riders it lands near a <strong>72.5° head angle</strong> and a <strong>73.5° seat angle</strong>, with the bottom bracket 70 mm below the axles.</p>
+      <p>Once you have signed the drawing, it does not change.</p>
+    </article>
+
+    <article class="step" data-step="2">
+      <span class="chip">scale-fade</span>
+      <div class="t-scale">
+        <p class="no">03 · Days 4–6</p>
+        <h2>Brazing is a temperature, not a technique</h2>
       </div>
-    </div>
-  </section>
+      <p>Each joint is fillet-brazed with silver-bearing bronze at about <strong>870 °C</strong>: hot enough for the filler to flow, cool enough that a 0.7 mm wall keeps its strength. Too hot and the tube goes soft and grey; too cool and the fillet sits on top instead of wetting in. The seat cluster takes longest, about forty minutes.</p>
+      <dl class="facts"><div><dt>Joints</dt><dd>9</dd></div><div><dt>Brazing heat</dt><dd>870 °C</dd></div><div><dt>Longest joint</dt><dd>40 min</dd></div></dl>
+    </article>
 
-  <section style="overflow:hidden">
-    <div class="shead">
-      <span class="snum">03</span>
-      <h2>Brazing is a temperature, not a technique</h2>
-      <span class="chip"><b>horizontal-slide</b> alternating · 0.9s</span>
-    </div>
-    <div class="rows">
-      <div class="row">
-        <div class="fig" data-reveal="slideL"><div class="plate tall" style="aspect-ratio:16/10"><div class="flameplate"></div><p class="cap">Silver filler wicking into a head tube joint at 650 °C</p></div></div>
-        <div data-reveal="slideR">
-          <p class="lab">650 °C</p>
-          <h3>Silver, not brass</h3>
-          <p>Silver flows three hundred degrees below the point where this tubing loses its heat treatment. Brass is cheaper and needs a heat the tube cannot survive.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="fig" data-reveal="slideR"><div class="plate tall" style="aspect-ratio:16/10"><div class="mitreplate"></div><p class="cap">Post-braze alignment check on the surface table</p></div></div>
-        <div data-reveal="slideL">
-          <p class="lab">± 0.3 mm</p>
-          <h3>Then we check it cold</h3>
-          <p>Every joint pulls as it cools. The frame goes on the surface table twice — once after the front triangle, once after the stays — and gets cold-set until the dial indicator stops arguing.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+    <article class="step t-slide" data-step="3">
+      <span class="chip">horizontal-slide</span>
+      <p class="no">04 · Days 7–10</p>
+      <h2>Paint is the last thing that can go wrong</h2>
+      <p>The frame is shot-blasted, phosphated and sprayed in two coats of <strong>Moor Green</strong>, with clear lacquer over hand-painted lettering. It cures for three days before anyone touches it.</p>
+      <p>A run or a speck of grit means stripping it back to bare steel. That happens about once a month.</p>
+    </article>
 
-  <section>
-    <div class="shead">
-      <span class="snum">04</span>
-      <h2>Eleven days later</h2>
-      <span class="chip"><b>curtain-reveal</b> clip-path inset · 1.2s</span>
-    </div>
-    <div class="plate wide" data-reveal="curtain">
-      <div class="paintplate"></div>
-      <p class="cap">Finished frame, Bramble Green over a grey primer, before the decals go on</p>
-    </div>
-  </section>
+    <article class="step" data-step="4">
+      <span class="chip">text-split-reveal</span>
+      <p class="no">05 · Day 11</p>
+      <h2 class="split">Eleven days later</h2>
+      <p>It is built up with your wheels, bars and saddle, checked for alignment to half a millimetre, and ridden fifty kilometres round the Peak before it is boxed. It ships with the full-size drawing, signed, and a lifetime frame guarantee for the first owner.</p>
+      <dl class="facts"><div><dt>On the bench</dt><dd>11 days</dd></div><div><dt>Test ride</dt><dd>50 km</dd></div><div><dt>Builders</dt><dd>1</dd></div></dl>
+    </article>
+  </div>
 
-  <section class="closing">
-    <div class="shead">
-      <span class="snum">05</span>
-      <span class="chip" style="margin-left:0"><b>text-split-reveal</b> split by chars · stagger 0.02s</span>
+  <figure class="fig" id="fig" aria-label="Drawing of the frame at each stage of the build">
+    <svg id="draw" viewBox="0 0 900 560" role="img" aria-labelledby="drawT">
+      <title id="drawT">A side view of a steel road frame with its wheels, fork, bars and saddle, painted green with cream lettering.</title>
+      <g id="rack" class="rack" opacity="0">
+        <line x1="120" y1="120" x2="640" y2="120"/><line x1="120" y1="158" x2="600" y2="158"/><line x1="120" y1="196" x2="560" y2="196"/>
+        <line x1="120" y1="234" x2="470" y2="234"/><line x1="120" y1="272" x2="470" y2="272"/><line x1="120" y1="310" x2="420" y2="310"/>
+        <line x1="120" y1="348" x2="420" y2="348"/><line x1="120" y1="386" x2="330" y2="386"/><line x1="120" y1="424" x2="200" y2="424"/>
+        <text x="660" y="124">Top tube · 31.8</text><text x="620" y="162">Down tube · 34.9</text><text x="580" y="200">Seat tube · 28.6</text>
+        <text x="490" y="276">Chainstays ×2</text><text x="440" y="352">Seatstays ×2</text><text x="220" y="428">Head tube</text>
+      </g>
+      <g id="wheels" class="wheels">
+        <g transform="translate(190 380)"><circle class="tyre" r="150" pathLength="1"/><circle class="rim" r="138" pathLength="1"/><g class="spokes"></g></g>
+        <g transform="translate(720 380)"><circle class="tyre" r="150" pathLength="1"/><circle class="rim" r="138" pathLength="1"/><g class="spokes"></g></g>
+      </g>
+      <g id="parts">
+        <path class="part" pathLength="1" d="M663 238 L690 318 Q704 360 720 380"/>
+        <path class="part" pathLength="1" d="M348 150 L336 98 M296 92 Q330 86 378 94"/>
+        <path class="part" pathLength="1" d="M644 166 L640 132 L690 128 Q716 128 718 152 Q720 180 700 186"/>
+        <circle class="part" cx="420" cy="398" r="36" pathLength="1"/>
+        <path class="part" pathLength="1" d="M420 398 L446 432 M420 398 L396 366"/>
+      </g>
+      <g id="frame">
+        <path class="tube" pathLength="1" d="M420 398 L352 170"/>
+        <path class="tube" pathLength="1" d="M356 178 L642 172"/>
+        <path class="tube" pathLength="1" d="M420 398 L656 226"/>
+        <path class="tube" pathLength="1" d="M642 166 L662 238"/>
+        <path class="tube" pathLength="1" d="M420 398 L190 380"/>
+        <path class="tube" pathLength="1" d="M360 186 L190 380"/>
+      </g>
+      <text id="letters" class="letters" transform="translate(468 360) rotate(-36.1)" opacity="1">ALDERMOOR</text>
+      <g id="joints">
+        <circle class="joint" cx="356" cy="182" r="13"/><circle class="joint" cx="643" cy="172" r="12"/><circle class="joint" cx="658" cy="232" r="12"/>
+        <circle class="joint" cx="420" cy="398" r="15"/><circle class="joint" cx="190" cy="380" r="11"/>
+      </g>
+      <g id="ann" class="ann" opacity="0">
+        <path d="M662 238 L700 368"/><path class="dash" d="M600 238 H720"/>
+        <path d="M676 238 A 18 18 0 0 0 669 256" /><text class="v" x="690" y="258">72.5°</text>
+        <path class="dash" d="M300 398 H470"/><path d="M393 312 A 90 90 0 0 0 330 398"/><text class="v" x="286" y="330">73.5°</text>
+        <path class="dash" d="M130 380 H250"/><line x1="130" y1="380" x2="130" y2="398"/><path class="dash" d="M130 398 H400"/>
+        <text x="142" y="424">BB drop</text><text class="v" x="142" y="446">70 mm</text>
+        <text x="470" y="150">Top tube 556 mm</text>
+      </g>
+    </svg>
+    <div class="meter" aria-hidden="true">
+      <span>Stage <b id="stage">05 · Finished</b></span>
+      <span class="hot">Joint heat <b id="heat">—</b></span>
+      <span class="ticks"><i></i><i></i><i></i><i></i><i></i></span>
     </div>
-    <h2 class="split" id="split">Built once, by someone whose name is on it.</h2>
-    <p class="after">We build fourteen frames a year. The waiting list is open for spring, and every frame is measured on the person who will ride it, in the workshop, in an afternoon.</p>
-    <a class="cta" href="#top">Join the list for spring <span aria-hidden="true">→</span></a>
-  </section>
+  </figure>
+</section>
 
+<section class="close" id="close" aria-labelledby="close-h">
+  <span class="chip">text-split-reveal</span>
+  <h2 class="split" id="close-h">Built once, by someone whose name is on it.</h2>
+  <p>Frames from £2,450, built to your fitting. The build list is currently fourteen weeks long.</p>
+  <div class="acts">
+    <a class="btn solid" href="#close">Join the build list</a>
+    <a class="btn line" href="#close">Book a fitting in Sheffield</a>
+  </div>
+</section>
 </main>
-
 <footer>
-  <span>Aldermoor Bicycle Works</span>
-  <span>Unit 6, Dunkirk Mills, Stroud GL6 8PL</span>
-  <span>hello@aldermoor.example.com</span>
+  <span>Aldermoor Cycles Ltd · Unit 4, Kelham Island, Sheffield</span>
+  <span>Company no. 11480293</span>
 </footer>
+</div>
 
 <script>
 (function(){
   var root = document.documentElement;
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* split the closing headline into words and characters. Without this script
-     the headline is simply a headline, which is the correct fallback. */
-  var split = document.getElementById('split');
-  if (split && !reduce){
-    var words = split.textContent.split(' ');
-    var n = 0, frag = document.createDocumentFragment();
-    for (var w = 0; w < words.length; w++){
-      var word = document.createElement('span');
-      word.className = 'w';
-      for (var c = 0; c < words[w].length; c++){
-        var ch = document.createElement('span');
-        ch.className = 'c';
-        ch.style.setProperty('--n', n++);
-        ch.textContent = words[w][c];
-        word.appendChild(ch);
-      }
-      frag.appendChild(word);
-      if (w < words.length - 1) frag.appendChild(document.createTextNode(' '));
+  /* spokes: 32 per wheel, drawn once */
+  [].forEach.call(document.querySelectorAll('.spokes'), function(g){
+    var s = '';
+    for (var i = 0; i < 32; i++){ var a = i / 32 * Math.PI * 2, b = a + (i % 2 ? 0.35 : -0.35);
+      s += '<line class="spoke" x1="' + (Math.cos(b) * 14).toFixed(1) + '" y1="' + (Math.sin(b) * 14).toFixed(1) + '" x2="' + (Math.cos(a) * 136).toFixed(1) + '" y2="' + (Math.sin(a) * 136).toFixed(1) + '"/>'; }
+    g.innerHTML = s;
+  });
+
+  /* the hero shows the finished drawing: a copy of the authored figure */
+  var draw = document.getElementById('draw');
+  var heroFig = document.getElementById('heroFig');
+  var copy = draw.cloneNode(true);
+  copy.removeAttribute('id'); copy.removeAttribute('role'); copy.removeAttribute('aria-labelledby');
+  [].forEach.call(copy.querySelectorAll('[id]'), function(n){ n.removeAttribute('id'); });
+  var ct = copy.querySelector('title'); if (ct) ct.remove();
+  copy.querySelector('.ann').setAttribute('opacity', '0');
+  heroFig.insertBefore(copy, heroFig.firstChild);
+
+  /* reduced motion: the story figure stays finished, with the geometry shown */
+  if (reduce){ document.getElementById('ann').setAttribute('opacity', '1'); return; }
+  root.classList.add('js');
+
+  /* split headings into characters, words kept whole so lines break cleanly */
+  [].forEach.call(document.querySelectorAll('.split'), function(h){
+    var i = 0, label = h.textContent;
+    h.innerHTML = label.split(' ').map(function(w){
+      return '<span class="w">' + w.split('').map(function(c){ return '<span class="ch" style="--i:' + (i++) + '">' + c + '</span>'; }).join('') + '</span>';
+    }).join(' ');
+    h.setAttribute('aria-label', label);
+  });
+
+  /* reveals: once each, and anything already on screen is revealed at once */
+  var targets = document.querySelectorAll('.t-curtain,.t-stagger,.t-scale,.t-slide,.split');
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(en){
+      en.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -22% 0px' });
+    [].forEach.call(targets, function(t){ io.observe(t); });
+  } else [].forEach.call(targets, function(t){ t.classList.add('in'); });
+
+  /* ---- the drawing follows the reader through the five chapters ---- */
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  var tubes = [].slice.call(draw.querySelectorAll('#frame .tube'));
+  var parts = [].slice.call(draw.querySelectorAll('#parts .part, #wheels .tyre, #wheels .rim'));
+  var spokes = [].slice.call(draw.querySelectorAll('#wheels .spokes'));
+  var joints = [].slice.call(draw.querySelectorAll('#joints .joint'));
+  var rack = draw.querySelector('#rack'), ann = draw.querySelector('#ann'), letters = draw.querySelector('#letters');
+  var stageEl = document.getElementById('stage'), heatEl = document.getElementById('heat'), ticks = [].slice.call(document.querySelectorAll('.ticks i'));
+  var NAMES = ['01 · Tubing', '02 · Drawing', '03 · Brazing', '04 · Paint', '05 · Finished'];
+
+  function clamp(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function sm(a, b, x){ x = clamp((x - a) / (b - a)); return x * x * (3 - 2 * x); }
+  function mix(c1, c2, t){ return 'rgb(' + [0, 1, 2].map(function(i){ return Math.round(c1[i] + (c2[i] - c1[i]) * t); }).join(',') + ')'; }
+  var STEEL = [139, 146, 152], PAINT = [47, 114, 86];
+  /* the colour steel shows as it heats: dull red, cherry, orange, straw */
+  var HEAT = [[139, 146, 152], [122, 42, 28], [194, 65, 45], [232, 121, 47], [242, 196, 107]];
+  function heatCol(h){ var x = clamp(h) * 4, i = Math.min(3, Math.floor(x)); return mix(HEAT[i], HEAT[i + 1], x - i); }
+  function dash(el, f){ el.style.strokeDasharray = '1'; el.style.strokeDashoffset = (1 - clamp(f)).toFixed(4); }
+
+  function progress(){
+    /* chapter i runs while its block crosses the middle of the screen: P in 0..5 */
+    var mid = innerHeight * 0.55, P = 0;
+    for (var i = 0; i < steps.length; i++){
+      var r = steps[i].getBoundingClientRect();
+      P += clamp((mid - r.top) / r.height);
     }
-    split.textContent = '';
-    split.appendChild(frag);
+    return P;
   }
 
-  if (reduce) return;
-  if (window.CSS && CSS.supports && CSS.supports('animation-timeline', 'view()')) return;
-  if (!('IntersectionObserver' in window)) return;
-
-  /* Only now does anything get hidden — and only because we know an observer
-     is running that will show it again. */
-  root.className += ' js-reveal';
-  var io = new IntersectionObserver(function(entries){
-    for (var i = 0; i < entries.length; i++){
-      if (entries[i].isIntersecting){
-        entries[i].target.className += ' in';
-        io.unobserve(entries[i].target);
-      }
-    }
-  }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
-
-  var targets = document.querySelectorAll('[data-reveal]');
-  for (var t = 0; t < targets.length; t++) io.observe(targets[t]);
-  if (split) io.observe(split);
-
-  /* anything already on screen at load is revealed immediately, not on scroll */
-  requestAnimationFrame(function(){
-    var all = document.querySelectorAll('[data-reveal]');
-    for (var k = 0; k < all.length; k++){
-      var r = all[k].getBoundingClientRect();
-      if (r.top < window.innerHeight * 0.92 && all[k].className.indexOf('in') === -1){
-        all[k].className += ' in';
-        io.unobserve(all[k]);
-      }
-    }
-  });
+  var last = -1, ticking = false;
+  function paint(){
+    ticking = false;
+    var P = progress();
+    if (Math.abs(P - last) < 0.002) return;
+    last = P;
+    rack.setAttribute('opacity', (1 - sm(1.0, 1.45, P)).toFixed(3));
+    var draw1 = sm(0.9, 1.8, P);
+    tubes.forEach(function(t, i){ dash(t, draw1 * 1.6 - i * 0.1); });
+    ann.setAttribute('opacity', (sm(1.35, 1.75, P) * (1 - sm(2.7, 3.05, P))).toFixed(3));
+    var hot = 0;
+    joints.forEach(function(j, i){
+      var c = 2.05 + i * 0.15, h = sm(c - 0.12, c, P) * (1 - sm(c + 0.1, c + 0.35, P));
+      hot = Math.max(hot, h);
+      j.style.fill = P < 1.2 ? 'transparent' : heatCol(h);
+      j.setAttribute('r', j.getAttribute('r'));
+    });
+    var pf = sm(3.1, 3.7, P), col = mix(STEEL, PAINT, pf);
+    tubes.forEach(function(t){ t.style.stroke = col; });
+    joints.forEach(function(j){ if (P > 2.9) j.style.fill = col; });
+    letters.setAttribute('opacity', sm(3.5, 3.85, P).toFixed(3));
+    var fin = sm(4.0, 4.75, P);
+    parts.forEach(function(el, i){ dash(el, fin * 1.4 - (i % 5) * 0.08); });
+    spokes.forEach(function(g){ g.style.opacity = sm(4.45, 4.85, P).toFixed(3); });
+    var s = Math.min(4, Math.floor(P));
+    stageEl.textContent = NAMES[s];
+    heatEl.textContent = hot > 0.02 ? Math.round(20 + hot * 850) + ' °C' : '—';
+    ticks.forEach(function(t, i){ t.classList.toggle('on', i <= s); });
+  }
+  function onScroll(){ if (!ticking){ ticking = true; requestAnimationFrame(paint); } }
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', function(){ last = -1; onScroll(); });
+  paint();
 })();
 </script>
 </body>

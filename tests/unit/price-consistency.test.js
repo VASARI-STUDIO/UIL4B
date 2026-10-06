@@ -206,6 +206,16 @@ const NOT_A_PLAN_PRICE = [
       + 'against, in pounds, and not a tier of UIL4B.',
   },
   {
+    file: 'src/data/communityPrompts.js',
+    // Excused only while the surrounding text says nothing about our own plans:
+    // a prompt that quoted a UIL4B tier would still be checked against the ladder.
+    context: /^(?![\s\S]*(?:UIL4B (?:Pro|plans?)|\/plans\b))/,
+    why: 'Community prompts describe pages for invented businesses (a plumber\'s '
+      + 'call-out fee, a restaurant\'s set menu, a builder\'s contract sums) and '
+      + 'quote those businesses\' prices so the prompt yields a believable page. '
+      + 'They are in the prompt text a user copies, not tiers of UIL4B.',
+  },
+  {
     file: 'src/pages/PaletteBuilder.jsx',
     context: /\.replace\(/,
     why: 'Not money at all: normaliseForFilter uses the character class /[$5]/ and '
