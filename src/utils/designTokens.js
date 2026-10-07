@@ -39,7 +39,7 @@ import { semanticShades, SEMANTIC_ROLES, SEMANTIC_STEPS, SEMANTIC_LABELS } from 
 import { gradientCss } from '../data/gradientGallery.js'
 
 const CREDIT = `Made with UIL4B — ${SITE_ORIGIN}`
-const HEADING_LINE_HEIGHT = 1.1
+export const HEADING_LINE_HEIGHT = 1.1
 
 // The fixed slot names, lower-cased: primary, secondary, accent, subtle, deep.
 const SLOTS = roleLabels('auto').map((r) => r.toLowerCase())
@@ -140,6 +140,8 @@ function cssValue(token) {
     case 'dimension': return `${v.value}${v.unit}`
     case 'fontFamily': return v.map((f, i) => (i === 0 ? `"${String(f).replace(/["\\]/g, '')}"` : f)).join(', ')
     case 'gradient': return gradientCss(v.type, v.angle, v.stops)
+    case 'duration': return `${v.value}${v.unit}`
+    case 'cubicBezier': return `cubic-bezier(${v.join(', ')})`
     default:
       return token.path[0] === 'letter-spacing' ? `${v}em` : String(v)
   }
@@ -155,14 +157,21 @@ const SECTION = {
   'line-height': null,
   'letter-spacing': null,
   gradient: 'Gradient',
+  space: 'Space',
+  radius: 'Radius',
+  duration: 'Motion',
+  ease: null,
 }
 
 /**
  * The tokens as a stylesheet of custom properties on :root.
  * `watermark` adds the free-tier credit as the file's last line.
+ * `extra` appends caller-built tokens of the same shape after the design's own
+ * (the UI kit adds its interface roles, spacing, radii and motion this way); a
+ * token may carry `section` to head its group in the stylesheet.
  */
-export function buildTokensCss(design, { projectName = 'Design System', watermark = true, date = new Date() } = {}) {
-  const tokens = designTokens(design)
+export function buildTokensCss(design, { projectName = 'Design System', watermark = true, date = new Date(), extra = [] } = {}) {
+  const tokens = [...designTokens(design), ...extra]
   const semantic = SEMANTIC_ROLES.map((r) => (r === 'info' ? `info (${SEMANTIC_LABELS[r]})` : r)).join(', ')
   const header = [
     '/*',
@@ -192,7 +201,7 @@ export function buildTokensCss(design, { projectName = 'Design System', watermar
   const lines = [...header, ':root {']
   let section = null
   for (const t of tokens) {
-    const title = SECTION[t.path[0]]
+    const title = t.section || SECTION[t.path[0]]
     if (title && title !== section) {
       if (section) lines.push('')
       lines.push(`  /* ${title} */`)
@@ -238,12 +247,15 @@ function dtcgToken(token) {
 /**
  * The tokens as a DTCG JSON document (a string, two-space indented).
  * `watermark` puts the free-tier credit in the root description.
+ * `extra` appends caller-built tokens, as in buildTokensCss.
+ * `extensions`, when given, becomes the root group's DTCG `$extensions` object.
  */
-export function buildTokensJson(design, { projectName = 'Design System', watermark = true } = {}) {
+export function buildTokensJson(design, { projectName = 'Design System', watermark = true, extra = [], extensions = null } = {}) {
   const doc = {
     $description: `${String(projectName ?? '')} — design tokens.${watermark ? ` ${CREDIT}` : ''}`,
   }
-  for (const t of designTokens(design)) {
+  if (extensions && typeof extensions === 'object') doc.$extensions = extensions
+  for (const t of [...designTokens(design), ...extra]) {
     let node = doc
     t.path.slice(0, -1).forEach((seg) => {
       if (!node[seg]) node[seg] = {}

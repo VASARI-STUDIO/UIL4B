@@ -58,7 +58,7 @@
 .exp-sub{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
 .exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.exp-formats{display:flex;flex-direction:column;gap:8px;padding:8px 24px 20px}
+.exp-formats{display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--border)}
 .exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}
 .exp-fmt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
 .exp-fmt-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
@@ -67,26 +67,66 @@
 /* The footer's two actions: the app's rectangle at the 44px the old
    .ui-pill-md held, so the target does not shrink. */
 .exp-foot .exp-act{min-height:44px;padding:0 18px;justify-content:center}
-.exp-logo-acts .btn-s{min-height:40px;padding:0 14px}
+.exp-logo-acts .btn-s{min-height:40px;padding:0 14px;border-radius:var(--radius-pill)}
 
 
 /* Export panel error. The panel deliberately stays OPEN on a failed export —
    closing it would leave the user with no file and no explanation, which reads
    as the button doing nothing. */
-.exp-error{margin:0 0 12px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:var(--err-strong);background:color-mix(in srgb,var(--err) 7%,transparent);border:1px solid color-mix(in srgb,var(--err) 30%,transparent);border-radius:var(--radius)}
+/* A finished export with something left to say (a font the UI kit could not
+   embed): a status, not an error. A hairline-divided line of the dialog, not a
+   box inside it. */
+.exp-notice{margin:0;padding:14px 24px;font-size:var(--fs-caption);line-height:1.5;color:var(--t1);border-top:1px solid var(--border)}
+
+/* The Pro kit's identity: name and description, then the logo row, as one
+   hairline-divided section directly under the selected kit row, so it is in
+   view when the dialog opens. The format row after it takes the list's
+   hairline back. */
+.exp-identity{display:flex;flex-direction:column;gap:14px;padding:18px 24px 6px;border-top:1px solid var(--border)}
+.exp-identity-title{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.exp-field{display:flex;flex-direction:column;gap:6px}
+.exp-field-label{font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
+.exp-field-opt{margin-left:6px;font-weight:400;color:var(--t2)}
+.exp-field input,.exp-field textarea{width:100%;min-height:40px;font-size:var(--fs-body-s);line-height:1.45}
+.exp-field textarea{min-height:64px;resize:vertical}
+/* 16px on touch screens: smaller field text makes iOS zoom the page on focus. */
+@media (pointer:coarse){.exp-field input{min-height:44px}.exp-field input,.exp-field textarea{font-size:16px}}
+.exp-identity + .exp-logo{border-top:0;padding-top:12px}
+.exp-formats > .exp-logo + .exp-fmt{border-top:1px solid var(--border)}
+/* The action stays in reach while the format list scrolls: on a phone the
+   list is taller than the sheet, and the button was below the fold. */
+.exp-foot{position:sticky;bottom:0;z-index:1}
+@media (pointer:coarse){.exp-close{width:44px;height:44px}}
+/* Buttons are pills; the icon-only close is a circle. */
+.exp-foot .exp-act{border-radius:var(--radius-pill)}
+.exp-close{border-radius:50%}
+@media(max-width:560px){
+  /* One 16px gutter for every row of the dialog on a phone. */
+  .exp-head{padding:20px 16px 12px}
+  .exp-foot{padding:12px 16px}
+  .exp-notice{padding:14px 16px}
+  .exp-identity{padding:16px 16px 6px}
+  /* On a phone every description at once is a wall of text: the list reads as
+     names, and the chosen format explains itself. */
+  .exp-fmt:not(.is-active) .exp-fmt-desc{display:none}
+}
+.exp-error{margin:0;padding:14px 24px;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong);background:color-mix(in srgb,var(--err) 7%,transparent);border-top:1px solid color-mix(in srgb,var(--err) 30%,transparent)}
+@media(max-width:560px){.exp-error{padding:14px 16px}}
 
 /* ── Export panel · the brand logo field ─────────────────────────────────────
    The one place UIL4B accepts an asset it did not generate. It renders only for
    an export format whose document has logo pages (`logo` in
-   src/config/exportFormats.js), and it sits in its OWN bordered block beneath
-   the format list rather than inside the guidelines row — Pitch's "Export as"
-   puts its watermark notice in exactly that slot, and a control nested inside a
-   radio row is a control you cannot reach without selecting the row.
+   src/config/exportFormats.js), in its OWN section beneath the format list
+   rather than inside a format row — Pitch's "Export as" puts its watermark
+   notice in exactly that slot, and a control nested inside a radio row is a
+   control you cannot reach without selecting the row. A Pro UI kit's logo row
+   sits with the kit's identity fields, under the kit row but outside it. A
+   hairline divides it from its neighbours; it is not a box in the dialog.
    Anatomy — thumbnail, label with the one line saying what the file is used
    for, action on the right — is Uvodo's Brand row.
    https://mobbin.com/screens/fe97c269-f702-4dfe-8185-55a1f6cbbf6c
    https://mobbin.com/screens/6f36a615-a60f-4a47-954b-337698f6c86a          */
-.exp-logo{margin:0 24px 20px;padding:14px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l)}
+.exp-logo{margin:0;padding:16px 24px 20px;border-top:1px solid var(--border)}
 .exp-logo-row{display:flex;align-items:flex-start;gap:14px}
 /* The chequer is not decoration: it is the only way the preview can show
    whether the artwork has a transparent ground, which is the exact thing the
@@ -109,9 +149,15 @@
 .exp-logo-error{margin:10px 0 0;font-size:var(--fs-caption);color:var(--err-strong);line-height:1.45}
 
 @media(max-width:560px){
-  .exp-logo{margin:0 16px 16px}
+  .exp-logo{padding:16px 16px 20px}
   /* The action column cannot hold a button and a Remove link beside two lines of
      hint text at 320px; it takes its own row under the label instead. */
   .exp-logo-row{flex-wrap:wrap}
+  /* The label keeps the chip's line; only the actions wrap beneath them. */
+  .exp-logo-text{flex:1 1 0}
   .exp-logo-acts{flex-direction:row;align-items:center;width:100%;margin-left:0;justify-content:flex-start;gap:14px}
+}
+@media (pointer:coarse){
+  .exp-logo-acts .btn-s{min-height:44px}
+  .exp-logo-drop{min-height:44px;padding:0 4px}
 }

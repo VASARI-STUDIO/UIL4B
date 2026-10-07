@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { trackActivation } from '../utils/analytics'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
@@ -9,6 +9,7 @@ import useExportGate from '../hooks/useExportGate'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import BrandLogoField from './BrandLogoField'
+import KitIdentityFields from './KitIdentityFields'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -73,20 +74,31 @@ const PRO_GATE = {
   },
 }
 
+// What the action button says while a kit is being made.
+const BUSY_LABEL = { fonts: 'Embedding fonts…', building: 'Building the kit…' }
+
 export default function ExportPanel({ onClose }) {
   // Mounted only while open: Back closes it (audit A3) and the page is inert (A12).
   useCloseOnBack(true, onClose)
   useInertBehind(true)
-  const [format, setFormat] = useState('html')
+  const [format, setFormat] = useState('kit')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // A finished export that still has something to say (a font it could not
+  // embed). Announced politely, and never styled as an error.
+  const [notice, setNotice] = useState('')
+  // Which step a long export is on, for the button label: 'fonts' | 'building'.
+  const [stage, setStage] = useState('')
+  // An export finished and the panel stayed open to say something about it.
+  // There is nothing left to cancel, so the secondary action reads Close.
+  const [done, setDone] = useState(false)
   const { design } = useProject()
   const { isPro } = useSubscription()
   // A file needs an account; a copy never does. See useExportGate.js.
   const requireExportAccount = useExportGate()
   const navigate = useNavigate()
   const activeFormat = FORMATS.find(f => f.id === format)
-  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', css: 'CSS', json: 'JSON', book: 'book', guidelines: 'guidelines' }
+  const EXPORT_LABEL = { kit: 'UI kit', md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', css: 'CSS', json: 'JSON', book: 'book', guidelines: 'guidelines' }
   // Every gate is explicit rather than silent. The free user is told what
   // they are about to hit BEFORE they click, by the button's own label, rather
   // than finding out from a modal after it.
@@ -173,15 +185,38 @@ export default function ExportPanel({ onClose }) {
     // (sign-in only for saving, exporting and account actions). See
     // src/hooks/useExportGate.js for the map that puts the line here.
     const tokenFile = format === 'css' || format === 'json'
-    if (!(await requireExportAccount(tokenFile ? 'export these design tokens' : 'export this style guide'))) return
+    const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : 'export this style guide'
+    if (!(await requireExportAccount(reason))) return
 
     setBusy(true)
     setError('')
+    setNotice('')
+    setDone(false)
     // Which activation this export completed, and whether the panel may close.
     let activation = 'style-guide'
     let keepOpen = false
     try {
-      if (format === 'book') {
+      if (format === 'kit') {
+        // The kit is built in the browser like everything else here, but it
+        // fetches the selected font files first so the document opens offline.
+        // Loaded on demand: the template and the font fetcher cost nothing to
+        // anyone who never exports a kit. The tier is the live entitlement.
+        const { buildUiKit } = await import('../utils/uiKitAssets')
+        activation = 'ui-kit'
+        const { blob, filename, missing } = await buildUiKit(design, {
+          tier: isPro ? 'pro' : 'free',
+          onStage: setStage,
+        })
+        download(blob, filename)
+        if (missing.length) {
+          // The kit WAS produced and says the same inside itself; the panel
+          // stays open to carry the notice rather than closing over it.
+          setNotice(`Your UI kit downloaded. ${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`)
+          setBusy(false)
+          setStage('')
+          keepOpen = true
+        }
+      } else if (format === 'book') {
         // Loaded on demand: the book generator costs nothing to anyone who
         // never exports one, which keeps it off the homepage's JS budget.
         const { buildDesignSystemBook } = await import('../utils/designSystemBook')
@@ -244,10 +279,12 @@ export default function ExportPanel({ onClose }) {
       // the paid deliverable is not averaged into the free one.
       try { trackActivation(activation, 'export') } catch { /* never break an export */ }
       if (!keepOpen) onClose()
+      else setDone(true)
     } catch (err) {
       // The panel stays open on failure: closing it would leave the user with
       // no file and no explanation, which reads as the button doing nothing.
       setBusy(false)
+      setStage('')
       setError(err?.message || 'The export could not be created. Please try again.')
     }
   }
@@ -309,7 +346,7 @@ export default function ExportPanel({ onClose }) {
             <span className="exp-eyebrow">Export</span>
             <h2 className="exp-title" id="exp-title">Export your design system</h2>
             <p className="exp-sub">
-              The Pro documents, the style guide and the CSS and JSON tokens export for real. The
+              The UI kit, the Pro documents, the style guide and the CSS and JSON tokens export for real. The
               other formats are still on their way and say so.
             </p>
           </div>
@@ -320,26 +357,34 @@ export default function ExportPanel({ onClose }) {
           </button>
         </div>
 
-        <div className="exp-formats" role="radiogroup" aria-label="Export format">
+        {/* A group rather than a radiogroup: the selected kit row carries its
+            identity fields directly beneath it, and a radiogroup may own only
+            radios. */}
+        <div className="exp-formats" role="group" aria-label="Export format">
           {FORMATS.map((f) => {
             const active = f.id === format
             return (
-              <button
-                key={f.id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                className={active ? 'exp-fmt is-active' : 'exp-fmt'}
-                onClick={() => setFormat(f.id)}
-              >
-                <span className="exp-fmt-check" aria-hidden="true" />
-                <span className="exp-fmt-text">
-                  <span className="exp-fmt-name">{f.name}</span>
-                  <span className="exp-fmt-desc">{f.desc}</span>
-                </span>
-                {f.pro && !isPro && <span className="exp-fmt-pro">Pro</span>}
-                {!f.live && <span className="exp-fmt-soon">Soon</span>}
-              </button>
+              <Fragment key={f.id}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  className={active ? 'exp-fmt is-active' : 'exp-fmt'}
+                  onClick={() => setFormat(f.id)}
+                >
+                  <span className="exp-fmt-check" aria-hidden="true" />
+                  <span className="exp-fmt-text">
+                    <span className="exp-fmt-name">{f.name}</span>
+                    <span className="exp-fmt-desc">{f.desc}</span>
+                  </span>
+                  {f.pro && !isPro && <span className="exp-fmt-pro">Pro</span>}
+                  {!f.live && <span className="exp-fmt-soon">Soon</span>}
+                </button>
+                {/* A Pro UI kit is personalised; a free kit carries no identity.
+                    The fields follow the selected kit row, so they are in view
+                    when the panel opens rather than below every other format. */}
+                {active && f.kit && isPro && <KitIdentityFields />}
+              </Fragment>
             )
           })}
         </div>
@@ -352,14 +397,15 @@ export default function ExportPanel({ onClose }) {
         {activeFormat?.logo && <BrandLogoField />}
 
         {error && <p className="exp-error" role="alert">{error}</p>}
+        {notice && <p className="exp-notice" role="status">{notice}</p>}
 
         <div className="exp-foot">
           <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
-            Cancel
+            {done ? 'Close' : 'Cancel'}
           </button>
           {activeFormat?.live ? (
             <button type="button" className="btn btn-accent exp-act" onClick={runExport} disabled={busy}>
-              {busy ? 'Exporting…' : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
+              {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
             </button>
           ) : (
             <button

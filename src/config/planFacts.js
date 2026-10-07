@@ -17,7 +17,7 @@
 
 import { AI_LIMITS, FREE_SAVE_LIMITS } from './plans.js'
 import { COLOUR_SYSTEMS } from './colourSystems.js'
-import { freeFormats, proOnlyFormats } from './exportFormats.js'
+import { freeFormats, proOnlyFormats, styleGuideFormats } from './exportFormats.js'
 import { PLAN_LADDER, formatMoney } from './planLadder.js'
 import { createTools } from '../data/toolTree.js'
 import { BILLED_EVERY } from '../utils/billingCadence.js'
@@ -49,13 +49,15 @@ const listNames = (formats) => {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 export const FREE_EXPORT_NAMES = listNames(freeFormats())
+/** The free formats other than the UI kit, which the Free card names on its own. */
+export const STYLE_GUIDE_EXPORT_NAMES = listNames(styleGuideFormats())
 export const PRO_EXPORT_NAMES = proOnlyFormats().map((f) => f.name).join(' and ')
 
 /** What Free includes — /plans' Free card, in order. */
 export const FREE_POINTS = Object.freeze([
   `All ${numberWord(TOOL_COUNT)} tools`,
   `${AI.free.daily} AI generations a day, ${AI.free.monthly} a month`,
-  `Style guide exports in ${FREE_EXPORT_NAMES}`,
+  `The UI kit, and style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`,
   `${FREE_SAVE_LIMITS.projects} saved projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`,
 ])
 
@@ -66,7 +68,7 @@ export const FREE_EXCLUSION = 'Small mark on exported files'
 export const PRO_POINTS = Object.freeze([
   `${AI.pro.daily} AI generations a day, ${AI.pro.monthly} a month`,
   `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing`,
-  'Style guides with no “Made with UIL4B” line',
+  'Style guides and the UI kit with no “Made with UIL4B” line',
   'Unlimited saved projects and custom icons',
   PRO_EXPORT_NAMES,
 ])

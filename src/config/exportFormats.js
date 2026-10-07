@@ -39,6 +39,11 @@
 //          minus the logo section, and its closing page names what is missing.
 
 export const EXPORT_FORMATS = Object.freeze([
+  // The UI kit: the default export for every plan. Free carries the UIL4B
+  // mark; Pro gets the same kit without it, plus the named identity section.
+  // `kit` marks it for the plan lines, which list it apart from the style
+  // guide formats. Built by utils/uiKitExport.js from src/templates/uiKit.html.
+  Object.freeze({ id: 'kit', name: 'UI kit', desc: 'One HTML file with your palette and tints, semantic colours, type, foundations and component states. Opens offline, prints to A4, and carries its CSS, JSON and font files.', live: true, kit: true }),
   // The two Pro deliverables, listed first because they are the best things the
   // panel makes — and listed as a PAIR because that is the offer. They are not
   // the same document at two paper sizes: the book is an A4 portrait
@@ -60,6 +65,9 @@ export const EXPORT_FORMATS = Object.freeze([
 
 // Built, and available without paying.
 export const freeFormats = () => EXPORT_FORMATS.filter((f) => f.live && !f.pro)
+
+// The free formats other than the UI kit: the style guide files and the tokens.
+export const styleGuideFormats = () => freeFormats().filter((f) => !f.kit)
 
 // Built, and gated. Everything a Pro subscription actually adds to the export
 // offer — if this is ever empty, Pro sells nothing on export and the pricing

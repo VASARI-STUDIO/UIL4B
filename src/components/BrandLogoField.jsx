@@ -121,7 +121,23 @@ async function shrinkRaster(dataUrl) {
   )
 }
 
-export default function BrandLogoField() {
+// What the field says the logo is for, per document. `guidelines` places it on
+// many pages; `kit` shows it once, beside the name, in the identity section.
+const USE_COPY = {
+  guidelines: {
+    set: 'Used on the cover, the mark page, every brand ground and the clear-space rule.',
+    empty: 'Optional. It adds the mark, the mark on every brand ground, and the clear-space rule. Without one those pages are left out, and the last page says so.',
+    grounds: true,
+  },
+  kit: {
+    set: 'Shown as supplied, with your name, in the kit’s identity section.',
+    empty: 'Optional. Shown as supplied, with your name, in the kit’s identity section.',
+    grounds: false,
+  },
+}
+
+export default function BrandLogoField({ use = 'guidelines' }) {
+  const copy = USE_COPY[use] || USE_COPY.guidelines
   const { design, updateDesign } = useProject()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -199,9 +215,7 @@ export default function BrandLogoField() {
         <span className="exp-logo-text">
           <span className="exp-logo-name">{logo ? describeLogo(logo) : 'Your logo'}</span>
           <span className="exp-logo-hint">
-            {logo
-              ? 'Used on the cover, the mark page, every brand ground and the clear-space rule.'
-              : 'Optional. It adds the mark, the mark on every brand ground, and the clear-space rule. Without one those pages are left out, and the last page says so.'}
+            {logo ? copy.set : copy.empty}
           </span>
         </span>
         <span className="exp-logo-acts">
@@ -222,8 +236,7 @@ export default function BrandLogoField() {
       </div>
       <p className="exp-logo-note">
         {ACCEPT_LABEL}, up to {MAX_LOGO_LABEL}. SVG is best: vector, sharp at any size, always fits.
-        Your mark is set on white, on black and on every palette colour, so give it a transparent
-        background.
+        {copy.grounds && ' Your mark is set on white, on black and on every palette colour, so give it a transparent background.'}
       </p>
       {error && <p className="exp-logo-error" role="alert">{error}</p>}
       <input

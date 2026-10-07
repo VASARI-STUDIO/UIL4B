@@ -51,8 +51,8 @@ export const KEY_PURPOSES = Object.freeze({
   // to say so. The prefix rule already EXPORTED it the day it existed; what a
   // stale purpose line breaks is the promise that the table explains what is in
   // the file, which is the half people actually read.
-  'vs-current-design': { purpose: 'Active palette, fonts, type scale and any logo you uploaded', pii: 'local' },
-  'vs-projects': { purpose: 'Saved design projects, including any logo you uploaded', pii: 'local' },
+  'vs-current-design': { purpose: 'Active palette, fonts, type scale, any logo you uploaded and any name or description you gave your UI kit', pii: 'local' },
+  'vs-projects': { purpose: 'Saved design projects, including any logo, UI kit name or description you added', pii: 'local' },
   'vs-project-folders': { purpose: 'Project folder organisation', pii: 'local' },
   'vs-project-icons': { purpose: 'Icons saved into projects', pii: 'local' },
   'vs-custom-icons': { purpose: 'Icons you customised and saved', pii: 'local' },

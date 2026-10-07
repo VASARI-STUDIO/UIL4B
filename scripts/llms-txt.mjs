@@ -147,7 +147,9 @@ export function llmsRoutes() {
  * excuse the numbers that arrive inside a meta description.
  */
 export function llmsClaims() {
-  const free = freeFormats().map(shortName)
+  // The UI kit is named on its own: it is not a style guide format.
+  const kit = freeFormats().filter((f) => f.kit).map(shortName)
+  const free = freeFormats().filter((f) => !f.kit).map(shortName)
   const pro = proOnlyFormats().map((f) => f.name)
   const unbuilt = unbuiltFormats().map((f) => f.name)
   const lead = cheapestPerMonth(resolvePlanLadder())
@@ -158,7 +160,7 @@ export function llmsClaims() {
   return {
     summary: `${line(SURFACE_LINE.llmsSummary)} ${pricingSentence()}`,
     freePlan: `Free: ${AI_LIMITS.free.daily} AI generations a day and ${AI_LIMITS.free.monthly} a month; `
-      + `style guide export in ${listNames(free)}, with a "Made with UIL4B" footer line; `
+      + `${kit.length ? `${listNames(kit)} export, and ` : ''}style guide export in ${listNames(free)}, with a "Made with UIL4B" footer line; `
       + `Brand Starter${beta} ${allowanceSentence('free')}.`,
     proPlan: `Pro, ${proPrice}: ${AI_LIMITS.pro.daily} AI generations a day and ${AI_LIMITS.pro.monthly} a month; `
       + `adds ${listNames(pro)}; removes the footer line; `
