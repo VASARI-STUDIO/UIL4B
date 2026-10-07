@@ -164,7 +164,6 @@ export default function AltTextGenerator({ toast }) {
       base64: null,
       mimeType: null,
       altText: '',
-      truncated: false,
       status: 'pending',
       error: null,
     }))
@@ -213,9 +212,7 @@ export default function AltTextGenerator({ toast }) {
       toast?.(why)
       return false
     }
-    // Clear the truncation flag too, or a retry that succeeds in full still
-    // wears the warning from the attempt before it.
-    setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null, truncated: false } : p))
+    setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null } : p))
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Not signed in')
@@ -229,6 +226,9 @@ export default function AltTextGenerator({ toast }) {
         body: JSON.stringify({ task: 'alt-text', image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined, tone }),
       })
       const data = await r.json().catch(() => ({}))
+      // A failed reply that still used the allowance says so, and is counted
+      // here the same as a success so the local tracker agrees with the server.
+      if (!r.ok && data.quotaSpent === true) recordUsage(ALT_TEXT_TOOL_ID)
       // Every response carries the authoritative counts — including the 429s.
       // Absorbing them here is what makes the meter correct after a refusal,
       // and what surfaces the monthly ceiling the client could not otherwise
@@ -242,10 +242,9 @@ export default function AltTextGenerator({ toast }) {
       }
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       recordUsage(ALT_TEXT_TOOL_ID)
-      // The server flags a response that hit the model's token ceiling. Carry it
-      // onto the item so the card can say the answer is unfinished — a partial
-      // description presented as complete is the bug this whole flag exists for.
-      setItems(prev => prev.map(p => p.id === item.id ? { ...p, altText: data.altText, truncated: Boolean(data.truncated), status: 'done' } : p))
+      // The server answers a reply cut off at the token ceiling with an error,
+      // so any altText that arrives here is a finished answer.
+      setItems(prev => prev.map(p => p.id === item.id ? { ...p, altText: data.altText, status: 'done' } : p))
       return true
     } catch (err) {
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: err.message } : p))
@@ -481,11 +480,6 @@ export default function AltTextGenerator({ toast }) {
                   {it.status === 'error' && <div className="alt-card-error-msg" role="status" aria-live="polite">{it.error}</div>}
                   {it.altText && (
                     <>
-                      {it.truncated && (
-                        <div className="alt-card-warn" role="status">
-                          The AI ran out of room and stopped mid-answer. Finish it below, or retry.
-                        </div>
-                      )}
                       <AutoGrowTextarea
                         className="alt-card-text"
                         aria-label={`Alt text for ${it.name}`}
@@ -501,9 +495,11 @@ export default function AltTextGenerator({ toast }) {
                       </div>
                     </>
                   )}
-                  {!it.altText && it.status !== 'generating' && it.status !== 'error' && (
+                  {/* An error card keeps its own way forward, and its message
+                      says whether the attempt used the allowance. */}
+                  {!it.altText && it.status !== 'generating' && (
                     <button type="button" className="alt-btn" onClick={() => generateOne(it)} disabled={busy || !it.base64}>
-                      Generate
+                      {it.status === 'error' ? 'Retry' : 'Generate'}
                     </button>
                   )}
                 </div>

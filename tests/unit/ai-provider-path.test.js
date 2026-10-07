@@ -67,6 +67,13 @@ import vm from 'node:vm'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 
 import { cleanKey } from '../../api/_lib/env.js'
+import {
+  altTextGenerationConfig,
+  altTextOutcome,
+  altTextCutoffReply,
+  ALT_TEXT_CUTOFF_REFUND_CAP,
+  ALT_TEXT_CUTOFF_ERRORS,
+} from '../../api/_lib/altText.js'
 import { stripJs } from '../helpers/strip-comments.js'
 
 const AI_PATH = 'api/ai.js'
@@ -97,6 +104,7 @@ function loadAi({
   gemini = GEMINI_ANSWER,
   admin = { ok: true },
   credential = null,
+  stubs = {},
 } = {}) {
   let out = aiSource
 
@@ -182,6 +190,12 @@ function loadAi({
     BASE_MIN: 0, BASE_MAX: 0, RATIO_MIN: 0, RATIO_MAX: 0,
     fontChoiceList: () => [], generationBucket: () => ({}), exhaustedError: () => ({}),
     parseStarterJson: () => ({}), sanitizeBrandStarter: () => ({}), runMeteredTask: () => {},
+    altTextGenerationConfig: () => { throw new Error('not modelled here') },
+    altTextOutcome: () => { throw new Error('not modelled here') },
+    altTextCutoffReply: () => { throw new Error('not modelled here') },
+    ALT_TEXT_CUTOFF_REFUND_CAP,
+    // Per-test replacements for the stubs above, for the paths a test drives.
+    ...stubs,
   }
 
   const body = `(function(){\n${out}\n;return { runGeneratePrompt, TASKS, handler, PROVIDER_HEALTH };\n})()`
@@ -346,6 +360,120 @@ test('a rejected key is reported as a rejected key, and a rate limit as a retry'
   const b = (await limited.generate()).res
   assert.equal(b.statusCode, 429)
   assert.equal(b.body.retryAfter, 10)
+})
+
+// ── The alt-text task, EXECUTED ─────────────────────────────────────────────
+
+const ALT_STUBS = { modelFor: () => 'gemini-2.5-flash', altTextGenerationConfig, altTextOutcome, altTextCutoffReply }
+const geminiReply = (finishReason, text) => ok({
+  candidates: [{ content: { parts: text === undefined ? [] : [{ text }], role: 'model' }, finishReason }],
+  usageMetadata: { thoughtsTokenCount: 280, candidatesTokenCount: 20 },
+})
+// `refundCapped` is what runMeteredTask hands the runner; the stub records the
+// call and answers as the daily cap would ('refunded' | 'limit' | 'kept').
+const altText = async (ai, { refund = 'refunded', tone = 'detailed' } = {}) => {
+  const res = ai.response()
+  const body = { task: 'alt-text', image: 'aGVsbG8=', mimeType: 'image/jpeg', tone }
+  const calls = { refundCapped: 0 }
+  const refundCapped = async () => { calls.refundCapped += 1; return refund }
+  const result = await ai.TASKS['alt-text'].run({ body }, res, { plan: { id: 'free' }, limit: 5, used: 1, monthUsed: 3, monthLimit: 60, refundCapped })
+  return { result: result === res ? undefined : result, res, calls }
+}
+
+test('alt-text sends Gemini a capped thinking budget and a generous ceiling', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('STOP', 'A finished sentence.'), stubs: ALT_STUBS })
+  await altText(ai)
+  assert.deepEqual(hosts(ai), ['generativelanguage.googleapis.com'])
+  const cfg = JSON.parse(ai.fetches[0].opts.body).generationConfig
+  assert.deepEqual(cfg.thinkingConfig, { thinkingBudget: 0 },
+    'without this, Gemini 2.5 spends the output ceiling on thinking and the reply stops mid-sentence')
+  assert.ok(cfg.maxOutputTokens >= 1024, `ceiling ${cfg.maxOutputTokens} is too tight for thinking plus answer`)
+})
+
+test('alt-text: a finished reply is the result', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('STOP', 'A finished sentence.'), stubs: ALT_STUBS })
+  const { result } = await altText(ai)
+  assert.equal(result?.altText, 'A finished sentence.')
+  assert.ok(!('truncated' in result), 'a partial-answer flag is on the payload')
+})
+
+test('alt-text: a reply cut off at the ceiling answers as an error and returns no text', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('MAX_TOKENS', 'Two people walk a dog along a'), stubs: ALT_STUBS })
+  const { result, res } = await altText(ai)
+  // Answering through res (result undefined) is what makes the metered unit refund.
+  assert.equal(result, undefined, 'a cut-off reply was returned as a generation')
+  assert.equal(res.statusCode, 502)
+  assert.equal(res.body.finishReason, 'MAX_TOKENS')
+  assert.equal(res.body.quotaSpent, false)
+  assert.doesNotMatch(JSON.stringify(res.body), /walk a dog/, 'the partial text reached the client')
+  assert.ok(ai.errors.some((line) => /token ceiling/.test(line)), 'a cut-off left no trace in the function log')
+})
+
+test('alt-text: a cut-off reply asks for the capped refund, and says what happened to the allowance', async () => {
+  const cut = () => loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('MAX_TOKENS', 'Two people walk a dog along a'), stubs: ALT_STUBS })
+
+  const granted = await altText(cut(), { refund: 'refunded' })
+  assert.equal(granted.calls.refundCapped, 1, 'a cut-off reply must go through the capped refund')
+  assert.equal(granted.res.body.quotaSpent, false)
+  assert.equal(granted.res.body.error, ALT_TEXT_CUTOFF_ERRORS.refunded)
+  assert.match(granted.res.body.error, /Nothing came off your allowance/)
+  assert.ok(!('usage' in granted.res.body), 'a refunded attempt must not report a spent unit')
+
+  const limit = await altText(cut(), { refund: 'limit' })
+  assert.equal(limit.res.statusCode, 502)
+  assert.equal(limit.res.body.quotaSpent, true, 'past the cap the unit stays spent and the reply must say so')
+  assert.equal(limit.res.body.error, ALT_TEXT_CUTOFF_ERRORS.limit)
+  // Round-tripped as it goes over the wire; the object itself is from the vm realm.
+  assert.deepEqual(JSON.parse(JSON.stringify(limit.res.body.usage ?? null)), { used: 2, limit: 5, remaining: 3, monthUsed: 4, monthLimit: 60, monthRemaining: 56 },
+    'a counted attempt must carry the new usage so the meter shows it')
+
+  const kept = await altText(cut(), { refund: 'kept' })
+  assert.equal(kept.res.body.quotaSpent, true)
+  assert.equal(kept.res.body.error, ALT_TEXT_CUTOFF_ERRORS.kept)
+
+  for (const { res } of [limit, kept]) {
+    assert.doesNotMatch(res.body.error, /Nothing came off your allowance/, 'an unrefunded attempt was told it was free')
+  }
+  assert.doesNotMatch(kept.res.body.error, /daily limit/, 'a store failure was blamed on the daily limit')
+})
+
+test('alt-text: MAX_TOKENS with no text is the same cut-off, not an empty response', async () => {
+  // Thinking can use the whole ceiling, leaving no parts at all.
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('MAX_TOKENS', undefined), stubs: ALT_STUBS })
+  const { result, res, calls } = await altText(ai)
+  assert.equal(result, undefined)
+  assert.equal(res.statusCode, 502)
+  assert.equal(calls.refundCapped, 1, 'a cut-off with no text must settle through the capped refund too')
+  assert.equal(res.body.error, ALT_TEXT_CUTOFF_ERRORS.refunded)
+  assert.doesNotMatch(res.body.error, /Empty response/)
+  assert.ok(ai.errors.some((line) => /token ceiling/.test(line)), 'a cut-off with no text left no trace in the function log')
+})
+
+test('alt-text: a tone that is not one of its own modes falls back to concise', async () => {
+  for (const tone of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('STOP', 'A finished sentence.'), stubs: ALT_STUBS })
+    const { result } = await altText(ai, { tone })
+    assert.equal(result?.tone, 'concise', `tone "${tone}" was accepted as a mode`)
+    const sent = JSON.parse(ai.fetches[0].opts.body)
+    assert.equal(sent.generationConfig.temperature, 0.4, `tone "${tone}" sent no temperature`)
+    assert.match(sent.contents[0].parts[0].text, /under 125 characters/, `tone "${tone}" sent no length instruction`)
+  }
+})
+
+test('alt-text: a version-less model alias still gets a thinking cap', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('STOP', 'A finished sentence.'), stubs: { ...ALT_STUBS, modelFor: () => 'gemini-flash-latest' } })
+  await altText(ai)
+  const cfg = JSON.parse(ai.fetches[0].opts.body).generationConfig
+  assert.deepEqual(cfg.thinkingConfig, { thinkingBudget: 512 })
+  assert.match(ai.fetches[0].url, /models\/gemini-flash-latest:generateContent/)
+})
+
+test('alt-text: a refusal that is not a cut-off does not use the capped refund', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('SAFETY', ''), stubs: ALT_STUBS })
+  const { res, calls } = await altText(ai)
+  assert.equal(res.statusCode, 422)
+  assert.equal(calls.refundCapped, 0)
+  assert.equal(res.body.quotaSpent, false)
 })
 
 // ── Which tasks each key unlocks, EXECUTED per configuration ────────────────

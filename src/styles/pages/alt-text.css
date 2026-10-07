@@ -239,16 +239,6 @@
   border-radius: var(--radius-s);
 }
 
-.alt-page .alt-card-warn {
-  padding: 8px 10px;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--warn-strong);
-  background: color-mix(in srgb, var(--warn) 9%, var(--card));
-  border: 1px solid color-mix(in srgb, var(--warn) 26%, transparent);
-  border-radius: var(--radius-s);
-}
-
 .alt-page .alt-card-text {
   max-height: 260px;
   padding: 10px 12px;

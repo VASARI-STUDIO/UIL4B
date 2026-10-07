@@ -44,6 +44,7 @@ import {
   refundQuotaUnit,
   runMeteredTask,
 } from '../../api/_lib/aiGeneration.js'
+import { ALT_TEXT_CUTOFF_REFUND_CAP } from '../../api/_lib/altText.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -357,6 +358,141 @@ test('a Firestore failure is reported as a store error, not as a quota refusal',
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Refunds for a cut-off reply are capped per day
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// A reply cut off at the length ceiling is refunded, at most a fixed number of
+// times per day: the refunds granted are counted on the daily document and
+// stop at the limit. refundCapped answers 'refunded', 'limit' or 'kept'.
+
+const CAP = { ref: null, field: 'altTextCutoffRefunds', limit: 3 }
+const cappedRun = async (store, { cap = true } = {}) => {
+  const meters = both(store.db, 40, 50)
+  const c = cap ? { ...CAP, ref: store.db.doc(DAY) } : undefined
+  let answer
+  await runMeteredTask({
+    db: store.db,
+    meters,
+    cap: c,
+    run: async (_counts, { refundCapped }) => {
+      answer = await refundCapped()
+      return null
+    },
+  })
+  return answer
+}
+
+test('CAP: the first refunds of the day give the unit back on both buckets and are counted', async () => {
+  const store = makeStore()
+  for (let i = 1; i <= 3; i += 1) {
+    assert.equal(await cappedRun(store), 'refunded')
+    assert.equal(store.count(DAY, TOOL), 0, `refund ${i} must give the daily unit back`)
+    assert.equal(store.count(MONTH, TOOL), 0, `refund ${i} must give the monthly unit back`)
+    assert.equal(store.count(DAY, CAP.field), i, 'each refund granted is counted on the daily document')
+  }
+})
+
+test('CAP: after the limit, a cut-off keeps the unit spent on both buckets', async () => {
+  const store = makeStore()
+  for (let i = 0; i < 3; i += 1) await cappedRun(store)
+  assert.equal(await cappedRun(store), 'limit')
+  assert.equal(await cappedRun(store), 'limit')
+  assert.equal(store.count(DAY, TOOL), 2, 'the 4th and 5th cut-offs must count against the daily allowance')
+  assert.equal(store.count(MONTH, TOOL), 2, 'and against the monthly one')
+  assert.equal(store.count(DAY, CAP.field), 3, 'the refund count must not pass its limit')
+})
+
+test('CAP: the count is per document, so a new day starts again', async () => {
+  const store = makeStore()
+  for (let i = 0; i < 4; i += 1) await cappedRun(store)
+  const tomorrow = 'daily-usage/alice_2026-09-08'
+  const meters = [{ ref: store.db.doc(tomorrow), field: TOOL, limit: 50, period: 'day' }]
+  await runMeteredTask({
+    db: store.db, meters, cap: { ...CAP, ref: store.db.doc(tomorrow) },
+    run: async (_c, { refundCapped }) => { assert.equal(await refundCapped(), 'refunded'); return null },
+  })
+  assert.equal(store.count(tomorrow, TOOL), 0)
+})
+
+test('CAP: asking twice in one request settles once', async () => {
+  const store = makeStore()
+  const answers = []
+  await runMeteredTask({
+    db: store.db, meters: both(store.db, 40, 50), cap: { ...CAP, ref: store.db.doc(DAY) },
+    run: async (_c, { refundCapped }) => {
+      answers.push(...await Promise.all([refundCapped(), refundCapped()]))
+      answers.push(await refundCapped())
+      return null
+    },
+  })
+  assert.deepEqual(answers, ['refunded', 'refunded', 'refunded'])
+  assert.equal(store.count(DAY, CAP.field), 1, 'one cut-off took more than one refund')
+  assert.equal(store.count(DAY, TOOL), 0, 'the unit was refunded below zero or not at all')
+  assert.equal(store.count(MONTH, TOOL), 0)
+})
+
+test('CAP: a runner that throws after a capped refund is not refunded again', async () => {
+  const store = makeStore()
+  store.seed(DAY, { [CAP.field]: 3 })
+  await assert.rejects(runMeteredTask({
+    db: store.db, meters: both(store.db, 40, 50), cap: { ...CAP, ref: store.db.doc(DAY) },
+    run: async (_c, { refundCapped }) => { await refundCapped(); throw new Error('later failure') },
+  }), /later failure/)
+  assert.equal(store.count(DAY, TOOL), 1, 'the default refund ran after the cap had refused one')
+})
+
+test('CAP: concurrent cut-offs cannot take more refunds than the limit', async () => {
+  const store = makeStore()
+  const gate = barrier(2)
+  // Both runners finish before either refund commits; the loser re-reads.
+  store.onBeforeCommit(async (attempt) => { if (attempt === 0) await gate.arrive() })
+  store.seed(DAY, { [CAP.field]: 2 })
+  const meters = both(store.db, 40, 50)
+  const cap = { ...CAP, ref: store.db.doc(DAY) }
+  const results = []
+  await Promise.all([0, 1].map(() => runMeteredTask({
+    db: store.db, meters, cap,
+    run: async (_c, { refundCapped }) => { results.push(await refundCapped()); return null },
+  })))
+  assert.deepEqual(results.sort(), ['limit', 'refunded'], 'only one of two racing cut-offs may take the last refund')
+  assert.equal(store.count(DAY, CAP.field), 3)
+})
+
+test('CAP: a store failure while refunding leaves the unit spent, does not throw, and is not called the limit', async () => {
+  const store = makeStore()
+  let seen
+  const flaky = {
+    doc: store.db.doc,
+    runTransaction: (fn) => (seen === undefined ? (seen = 0, store.db.runTransaction(fn)) : Promise.reject(new Error('store down'))),
+  }
+  const meters = both(flaky, 40, 50)
+  const r = await runMeteredTask({
+    db: flaky, meters, cap: { ...CAP, ref: flaky.doc(DAY) },
+    run: async (_c, { refundCapped }) => { assert.equal(await refundCapped(), 'kept'); return null },
+  })
+  assert.equal(r.ok, true)
+  assert.equal(store.count(DAY, TOOL), 1, 'an unrefunded unit stays spent')
+})
+
+test('CAP: with no cap configured, a capped refund is refused and the unit stays spent', async () => {
+  const store = makeStore()
+  assert.equal(await cappedRun(store, { cap: false }), 'kept')
+  assert.equal(store.count(DAY, TOOL), 1, 'without a cap there is nothing to refund against')
+})
+
+test('CAP: the ordinary refund path is unchanged', async () => {
+  const store = makeStore()
+  await runMeteredTask({ db: store.db, meters: both(store.db, 40, 50), run: async () => null })
+  assert.equal(store.count(DAY, TOOL), 0)
+  assert.equal(store.count(DAY, CAP.field), 0)
+})
+
+test('CAP: the alt-text cap is three per day, stored on the daily document', async () => {
+  assert.equal(ALT_TEXT_CUTOFF_REFUND_CAP.limit, 3)
+  assert.equal(ALT_TEXT_CUTOFF_REFUND_CAP.field, CAP.field)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CONTROL 3 — THE WIRING
 // ─────────────────────────────────────────────────────────────────────────────
 //
@@ -411,4 +547,12 @@ test('WIRING: the reservation is transactional, and conditional on the value it 
   assert.match(body, /counts\[i\] \+ 1/, 'the write must be derived from the value the transaction READ')
   assert.doesNotMatch(body.slice(0, body.indexOf('export async function refundQuotaUnit')), /FieldValueIncrement|FieldValue\.increment/,
     'an unconditional increment inside the transaction cannot enforce a cap')
+})
+
+test('WIRING: the alt-text task is given the daily document as its refund cap', async () => {
+  const src = stripComments(aiSrc())
+  assert.match(src, /cutoffRefundCap: ALT_TEXT_CUTOFF_REFUND_CAP/, 'the alt-text task lost its refund cap')
+  assert.match(src, /cap: task\.cutoffRefundCap \? \{ ref: usageRef, \.\.\.task\.cutoffRefundCap \} : undefined/,
+    'the cap must be stored on the daily document that is metered')
+  assert.match(src, /refundCapped\(\)/, 'the alt-text runner no longer asks for the capped refund')
 })

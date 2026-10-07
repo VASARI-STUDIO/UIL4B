@@ -23,6 +23,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { classifyGeminiFinish } from '../../api/_lib/geminiFinish.js'
+import {
+  altTextOutcome, altTextGenerationConfig, thinkingConfigFor, altTextCutoffReply,
+  ALT_TEXT_MAX_OUTPUT_TOKENS, ALIAS_THINKING_BUDGET, ALT_TEXT_CUTOFF_ERRORS,
+} from '../../api/_lib/altText.js'
 import { ALL_CSS } from './appStylesheets.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -103,35 +107,183 @@ test('a genuinely empty response is still an empty response', () => {
   assert.equal(classifyGeminiFinish({}).status, 'empty')
 })
 
-test('the route acts on every verdict rather than only reading it', () => {
-  assert.match(AI, /classifyGeminiFinish\(data\)/, 'the route must run the classifier')
-  assert.match(AI, /verdict\.status === 'blocked'[\s\S]{0,400}?status\(422\)/,
-    'a safety refusal must return its own status, not a generic provider error')
-  assert.match(AI, /verdict\.status === 'recitation'[\s\S]{0,400}?status\(422\)/)
-  assert.match(AI, /const truncated = verdict\.status === 'truncated'/)
-  assert.match(AI, /\n\s*truncated,/, 'the payload must carry the truncated flag to the client')
+// ── Fault 1b · a cut-off reply is an error, never a result ──────────────────
+//
+// Gemini 2.5 charges its thinking tokens against maxOutputTokens, so a small
+// ceiling leaves too little room for the reply. The rules: thinking is capped,
+// the ceiling is generous, and a MAX_TOKENS reply is answered as an error,
+// which refunds the metered unit.
+
+test('a reply cut off at the token ceiling is an error with no text, not a result', () => {
+  const o = altTextOutcome(reply('MAX_TOKENS', 'A line chart of quarterly revenue showing subscriptions climbing from'))
+  assert.equal(o.ok, false, 'half a sentence must never be returned as alt text')
+  assert.equal(o.status, 502)
+  assert.equal(o.finishReason, 'MAX_TOKENS')
+  assert.ok(!('altText' in o), 'the partial text must not travel to the client at all')
+  assert.match(o.error, /try again/i, 'the error must tell the user what to do')
+  assert.equal(o.cutOff, true)
 })
 
-test('no auto-retry was added — free tiers only, and the quota stays the user\'s', () => {
-  // A retry at a higher budget re-uploads the image, roughly doubling the cost
-  // of the most expensive call the tool makes, and spends a second unit of the
-  // user's allowance on something they never asked for.
-  const altBlock = AI.slice(AI.indexOf('async function runAltText'), AI.indexOf('scan-photo ───'))
+test('MAX_TOKENS with no text is a cut-off too, not an empty response', () => {
+  // Thinking can use the whole ceiling, so the reply arrives with no parts.
+  for (const data of [reply('MAX_TOKENS', undefined), reply('MAX_TOKENS', ''), { candidates: [{ finishReason: 'MAX_TOKENS' }] }]) {
+    const o = altTextOutcome(data)
+    assert.equal(o.ok, false)
+    assert.equal(o.status, 502)
+    assert.equal(o.cutOff, true, 'a MAX_TOKENS reply with no text must settle as a cut-off')
+    assert.equal(o.finishReason, 'MAX_TOKENS')
+    assert.doesNotMatch(o.error, /Empty response/)
+  }
+  assert.ok(!altTextOutcome(reply('STOP', '')).cutOff, 'a genuinely empty reply is not a cut-off')
+})
+
+test('the cut-off message says the allowance is untouched only when the refund was granted', () => {
+  assert.deepEqual(altTextCutoffReply('refunded'), { error: ALT_TEXT_CUTOFF_ERRORS.refunded, quotaSpent: false })
+  assert.match(ALT_TEXT_CUTOFF_ERRORS.refunded, /Nothing came off your allowance/)
+  for (const refund of ['limit', 'kept', undefined, true, 'anything else']) {
+    const r = altTextCutoffReply(refund)
+    assert.equal(r.quotaSpent, true, `"${refund}" was reported as refunded`)
+    assert.doesNotMatch(r.error, /Nothing came off/, `"${refund}" was told the attempt was free`)
+  }
+  assert.match(altTextCutoffReply('limit').error, /daily limit/)
+  assert.doesNotMatch(altTextCutoffReply('kept').error, /daily limit/, 'a store failure is not the daily limit')
+  // The default on the outcome itself makes no claim either way.
+  assert.doesNotMatch(altTextOutcome(reply('MAX_TOKENS', 'Half a')).error, /Nothing came off/)
+})
+
+test('a finished reply is returned, with stray markdown stripped', () => {
+  const o = altTextOutcome(reply('STOP', '**Site manager** reviews plans on a tablet.'))
+  assert.deepEqual(o, { ok: true, altText: 'Site manager reviews plans on a tablet.', finishReason: 'STOP' })
+})
+
+test('refusals and empty replies keep their own statuses', () => {
+  assert.equal(altTextOutcome(reply('SAFETY', undefined)).status, 422)
+  assert.equal(altTextOutcome(reply('RECITATION', undefined)).status, 422)
+  assert.equal(altTextOutcome(reply('STOP', '')).status, 502)
+  // Markdown-only output strips to nothing; that is an empty reply, not a result.
+  assert.equal(altTextOutcome(reply('STOP', '# ')).status, 502)
+})
+
+test('thinking is capped at the lowest value each Gemini 2.5 model accepts', () => {
+  assert.deepEqual(thinkingConfigFor('gemini-2.5-flash'), { thinkingBudget: 0 })
+  assert.deepEqual(thinkingConfigFor('gemini-2.5-flash-lite'), { thinkingBudget: 0 })
+  assert.deepEqual(thinkingConfigFor('models/gemini-2.5-flash-preview-09-2025'), { thinkingBudget: 0 })
+  assert.deepEqual(thinkingConfigFor('gemini-2.5-flash-lite-preview-06-17'), { thinkingBudget: 0 })
+  assert.deepEqual(thinkingConfigFor('Gemini-2.5-Flash-Latest'), { thinkingBudget: 0 })
+  assert.deepEqual(thinkingConfigFor('gemini-2.5-pro'), { thinkingBudget: 128 }, '2.5 Pro cannot switch thinking off; 128 is its floor')
+  assert.deepEqual(thinkingConfigFor('gemini-2.5-pro-preview-06-05'), { thinkingBudget: 128 })
+})
+
+test('Gemini 3 and later get the lowest thinking level the whole family supports', () => {
+  for (const id of ['gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite',
+    'gemini-3.6-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash', 'gemini-4-pro', 'gemini-3.8-flash-latest']) {
+    assert.deepEqual(thinkingConfigFor(id), { thinkingLevel: 'LOW' }, id)
+  }
+})
+
+test('a version-less alias gets a budget both generations accept', () => {
+  // The alias can resolve to 2.5 (where thinkingLevel is an error) or to 3+.
+  for (const id of ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-pro-latest', 'models/gemini-flash-latest']) {
+    assert.deepEqual(thinkingConfigFor(id), { thinkingBudget: ALIAS_THINKING_BUDGET }, id)
+  }
+  // Inside every 2.5 range: Flash 0-24576, Flash-Lite 512-24576, Pro 128-32768,
+  // and well under the output ceiling.
+  assert.ok(ALIAS_THINKING_BUDGET >= 512 && ALIAS_THINKING_BUDGET <= ALT_TEXT_MAX_OUTPUT_TOKENS / 2)
+})
+
+test('models that cannot think, and non-text variants, get no thinkingConfig', () => {
+  // generateContent rejects a thinkingConfig for a model without thinking.
+  for (const id of ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash-002',
+    'gemini-2.5-flash-image', 'gemini-2.5-flash-image-preview', 'gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts',
+    'gemini-2.5-flash-native-audio-preview-12-2025', 'gemini-3.1-flash-image', 'gemini-3.1-flash-lite-image', 'gemini-3-pro-image',
+    'gemini-3.8-flash-tts', 'gemini-3.8-live', 'gemini-live-2.5-flash-preview', 'gemini-embedding-001',
+    'gemma-3-27b-it', '', undefined, null]) {
+    assert.equal(thinkingConfigFor(id), null, String(id))
+  }
+  assert.ok(!('thinkingConfig' in altTextGenerationConfig('gemini-2.0-flash', 0.4)))
+  assert.ok(!('thinkingConfig' in altTextGenerationConfig('gemini-2.5-flash-image', 0.4)))
+})
+
+test('the output ceiling is a runaway guard with room for the longest mode', () => {
+  const cfg = altTextGenerationConfig('gemini-2.5-flash', 0.4)
+  assert.deepEqual(cfg.thinkingConfig, { thinkingBudget: 0 })
+  assert.equal(cfg.temperature, 0.4)
+  // 'detailed' asks for up to 300 characters (~100 tokens). The ceiling must
+  // clear that many times over, plus a Pro model's minimum thinking.
+  assert.ok(cfg.maxOutputTokens >= 1024, `ceiling ${cfg.maxOutputTokens} is too tight`)
+  assert.equal(ALT_TEXT_MAX_OUTPUT_TOKENS, cfg.maxOutputTokens)
+})
+
+// A model of the documented Gemini 2.5 behaviour, not a recording: thinking
+// (dynamic unless a budget is given) is spent first, from the same ceiling as
+// the answer. Used to show the mechanism end to end against both configs.
+function simulateGemini25(generationConfig, { dynamicThinking = 450, answer = 'Two people walk a dog along a wet coastal path at dusk, with a lighthouse on the headland behind them.' } = {}) {
+  const words = answer.split(' ')
+  const answerTokens = Math.ceil(answer.length / 4)
+  const budget = generationConfig.thinkingConfig?.thinkingBudget
+  const thoughts = budget === undefined ? dynamicThinking : budget
+  const room = generationConfig.maxOutputTokens - thoughts
+  if (room >= answerTokens) {
+    return { candidates: [{ content: { parts: [{ text: answer }] }, finishReason: 'STOP' }], usageMetadata: { thoughtsTokenCount: thoughts, candidatesTokenCount: answerTokens } }
+  }
+  const kept = words.slice(0, Math.max(0, Math.floor(words.length * room / answerTokens))).join(' ')
+  return { candidates: [{ content: { parts: kept ? [{ text: kept }] : [] }, finishReason: 'MAX_TOKENS' }], usageMetadata: { thoughtsTokenCount: thoughts, candidatesTokenCount: Math.max(0, room) } }
+}
+
+test('reproduction: a 300-token ceiling with default thinking cuts the reply off; the shared budget does not', () => {
+  const before = altTextOutcome(simulateGemini25({ temperature: 0.4, maxOutputTokens: 300 }, { dynamicThinking: 280 }))
+  assert.equal(before.ok, false, 'the model of a 300-token ceiling with default thinking should reproduce the cut-off')
+  assert.equal(before.finishReason, 'MAX_TOKENS')
+
+  const after = altTextOutcome(simulateGemini25(altTextGenerationConfig('gemini-2.5-flash', 0.4), { dynamicThinking: 280 }))
+  assert.equal(after.ok, true)
+  assert.match(after.altText, /headland behind them\.$/, 'the whole sentence arrives')
+})
+
+// Bounded by code, not by the section-header comment: AI is comment-stripped,
+// so a comment marker is not found and the slice runs to the end of the file.
+const ALT_BLOCK = AI.slice(AI.indexOf('async function runAltText'), AI.indexOf('async function runScanPhoto'))
+
+test('the runAltText slice is bounded, so the assertions below are about it alone', () => {
+  assert.ok(AI.indexOf('async function runAltText') > -1 && AI.indexOf('async function runScanPhoto') > -1)
+  assert.ok(ALT_BLOCK.length > 500 && ALT_BLOCK.length < 8000, `runAltText slice is ${ALT_BLOCK.length} chars`)
+})
+
+test('the route builds its request from the shared budget and answers through the outcome', () => {
+  const altBlock = ALT_BLOCK
+  assert.match(altBlock, /generationConfig: altTextGenerationConfig\(model, toneConfig\.temperature\)/,
+    'the request must use the shared budget, including the thinking cap')
+  assert.ok(!/maxOutputTokens/.test(altBlock), 'a per-request ceiling has crept back into the route')
+  assert.ok(!/maxOutputTokens/.test(AI.slice(AI.indexOf('const TONE_CONFIGS'), AI.indexOf('async function runAltText'))),
+    'a per-tone ceiling has crept back — thinking tokens count against it')
+  assert.match(altBlock, /const outcome = altTextOutcome\(data\)/)
+  assert.match(altBlock, /if \(!outcome\.ok\)[\s\S]{0,1000}?res\.status\(outcome\.status\)/,
+    'a failed outcome must answer through res, which is what refunds the unit')
+  assert.match(altBlock, /altText: outcome\.altText/)
+  assert.ok(!/truncated/.test(altBlock), 'the route hands no partial text to the client')
+})
+
+test('the route does not retry on its own — the budget prevents the cut-off, and a retry re-uploads the image', () => {
+  const altBlock = ALT_BLOCK
   assert.ok(!/maxOutputTokens\s*\*\s*\d/.test(altBlock), 'no escalated token budget')
   assert.ok(!/runAltText\(req, res/.test(altBlock.replace(/async function runAltText\(req, res[^)]*\)/, '')),
     'runAltText must not call itself — that is a silent second billed request')
 })
 
-test('the client surfaces truncation instead of swallowing it', () => {
-  assert.match(PAGE, /truncated: Boolean\(data\.truncated\)/,
-    'the flag must be stored on the item')
-  assert.match(PAGE, /it\.truncated && \(/, 'and it must gate a rendered warning')
-  assert.match(PAGE, /alt-card-warn/, 'the warning needs its own treatment, not the error style')
-  assert.match(PAGE, /status: 'generating', error: null, truncated: false/,
-    'a retry must clear the previous attempt\'s truncation flag')
-  // Whitespace-tolerant since the Spectrum pass reformatted alt-text.css and
-  // scoped it under `.alt-page` (2026-09-23); the rule itself must still exist.
-  assert.match(CSS, /\.alt-card-warn\s*\{/, 'the warning class must actually be styled')
+test('the client shows only finished answers, and a failed card can be retried', () => {
+  assert.ok(!/truncated/.test(PAGE), 'the page still carries a half-answer path')
+  assert.ok(!/\.alt-card-warn\s*\{/.test(CSS), 'the half-answer warning style is dead and should go')
+  assert.match(PAGE, /altText: data\.altText, status: 'done'/)
+  // A card in the error state still offers a button to try again.
+  assert.match(PAGE, /\{!it\.altText && it\.status !== 'generating' && \(/)
+  assert.match(PAGE, /\{it\.status === 'error' \? 'Retry' : 'Generate'\}/)
+})
+
+test('a failed reply that used the allowance is counted locally, before the meter reads it', () => {
+  const gen = PAGE.slice(PAGE.indexOf('const generateForItem'), PAGE.indexOf('const generateOne'))
+  const counted = gen.indexOf("if (!r.ok && data.quotaSpent === true) recordUsage(ALT_TEXT_TOOL_ID)")
+  assert.ok(counted > -1, 'a counted cut-off is not recorded in the local tracker')
+  assert.ok(counted < gen.indexOf('quota.absorb(data)'), 'the local count must change before the meter re-reads it')
 })
 
 // ── Fault 2 · the result field fits its content ─────────────────────────────

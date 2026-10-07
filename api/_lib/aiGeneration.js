@@ -164,6 +164,42 @@ export async function refundQuotaUnit(db, meters) {
 }
 
 /**
+ * Give a reserved unit back for a reply that was cut off, at most `cap.limit`
+ * times per `cap.ref` document.
+ *
+ * The count of refunds already granted lives in `cap.field` on `cap.ref`, read
+ * and written in the same transaction as the refund itself, so concurrent
+ * requests cannot both take the last one. Past the limit nothing is written
+ * and the unit stays spent. Resolves true when the unit was given back and
+ * false when the limit was already reached; a store failure rejects.
+ */
+export async function refundQuotaUnitCapped(db, meters, cap) {
+  return db.runTransaction(async (tx) => {
+    const snaps = []
+    for (const m of meters) snaps.push(await tx.get(m.ref))
+    // The cap document is usually one of the meters; read it once either way.
+    const capIndex = meters.findIndex((m) => m.ref.path === cap.ref.path)
+    const capSnap = capIndex === -1 ? await tx.get(cap.ref) : snaps[capIndex]
+    const granted = capSnap.data()?.[cap.field] || 0
+    if (granted >= cap.limit) return false
+
+    // One write per document, so a shared document gets both changes.
+    const patches = new Map()
+    const patchFor = (ref) => {
+      if (!patches.has(ref.path)) patches.set(ref.path, { ref, data: {} })
+      return patches.get(ref.path).data
+    }
+    meters.forEach((m, i) => {
+      const current = snaps[i].data()?.[m.field] || 0
+      patchFor(m.ref)[m.field] = current > 0 ? current - 1 : 0
+    })
+    patchFor(cap.ref)[cap.field] = granted + 1
+    for (const { ref, data } of patches.values()) tx.set(ref, data, { merge: true })
+    return true
+  })
+}
+
+/**
  * Reserve → run → refund-if-nothing-was-produced.
  *
  * The ENTIRE metered path lives here rather than in api/ai.js, so that the
@@ -172,16 +208,27 @@ export async function refundQuotaUnit(db, meters) {
  * spelled out twice in a route handler that needs a signed-in request, a
  * Firestore and a provider key to exercise.
  *
- * `run(counts)` returns the payload on success, or a falsy value when the runner
- * already answered for itself (an error response, a refused model answer). Falsy
- * means nothing was generated, so the unit is refunded.
+ * `run(counts, { refundCapped })` returns the payload on success, or a falsy
+ * value when the runner already answered for itself (an error response, a
+ * refused model answer). Falsy means nothing was generated, so the unit is
+ * refunded.
+ *
+ * A runner whose failure depends on the request's own input (a reply cut off at
+ * the length ceiling) calls `refundCapped()` instead of returning for the
+ * default refund, and the default refund is then skipped. It resolves to
+ *   'refunded'  the unit was given back and counted against `cap`
+ *               ({ ref, field, limit });
+ *   'limit'     the cap for that document is used up, so the unit stays spent;
+ *   'kept'      no cap is configured, or the store could not be written, so
+ *               the unit stays spent.
+ * Calling it again returns the same answer without a second refund.
  *
  * Outcomes, all three distinguishable by the caller:
  *   { storeError }        Firestore could not be read/written  → 500
  *   { ok: false, blocked, counts }  the meter refused          → 429
  *   { ok: true, counts, result }    ran; result may be null    → 200 / already sent
  */
-export async function runMeteredTask({ db, meters, run }) {
+export async function runMeteredTask({ db, meters, run, cap }) {
   let reservation
   try {
     reservation = await reserveQuotaUnit(db, meters)
@@ -191,16 +238,25 @@ export async function runMeteredTask({ db, meters, run }) {
   if (!reservation.ok) {
     return { ok: false, blocked: reservation.blocked, counts: reservation.counts }
   }
+  let settled = null
+  const refundCapped = () => {
+    if (settled === null) {
+      settled = cap
+        ? refundQuotaUnitCapped(db, meters, cap).then((granted) => (granted ? 'refunded' : 'limit'), () => 'kept')
+        : Promise.resolve('kept')
+    }
+    return settled
+  }
   let result
   try {
-    result = await run(reservation.counts)
+    result = await run(reservation.counts, { refundCapped })
   } catch (err) {
     // The refund must not mask the real failure, so its own error is swallowed
     // and the provider's is rethrown.
-    await refundQuotaUnit(db, meters).catch(() => {})
+    if (settled === null) await refundQuotaUnit(db, meters).catch(() => {})
     throw err
   }
-  if (!result) await refundQuotaUnit(db, meters).catch(() => {})
+  if (!result && settled === null) await refundQuotaUnit(db, meters).catch(() => {})
   return { ok: true, counts: reservation.counts, result: result || null }
 }
 
