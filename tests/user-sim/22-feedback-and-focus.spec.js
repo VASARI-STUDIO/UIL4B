@@ -16,7 +16,7 @@
 // colour choice — the background is whatever the user picked, so no single
 // accent passes against all of it.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 
 /** WCAG relative luminance contrast, computed in the page. */
 const CONTRAST_FN = `
@@ -165,5 +165,157 @@ test.describe('focus is visible on controls sitting on a user-chosen colour', ()
     })
     expect(ring.outline, 'the inner ring is white').toMatch(/255,\s*255,\s*255/)
     expect(ring.shadow, 'a dark outer ring backs it').not.toBe('none')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The feedback dialog: one send is one message
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// /api/* does not exist under `vite preview`, so each test stands in for it and
+// records what the dialog posts. A `hold` verdict keeps the request unanswered
+// until the test releases it, which is what makes "slow network" and "double
+// submit" reproducible.
+test.describe('the feedback dialog sends each message once', () => {
+  /** Stand-in for /api/support. `reply(n)` decides the answer to attempt n (1-based). */
+  async function standIn(page, reply = () => ({ status: 200 })) {
+    const posted = []
+    const gates = []
+    await page.route('**/api/support', async (route) => {
+      const body = JSON.parse(route.request().postData() || '{}')
+      posted.push(body)
+      const verdict = reply(posted.length)
+      if (verdict.hold) await new Promise((resolve) => gates.push(resolve))
+      if (verdict.delayMs) await new Promise((r) => setTimeout(r, verdict.delayMs))
+      const status = verdict.status ?? 200
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(status >= 400 ? { error: 'x' } : { ok: true }),
+      })
+    })
+    return { posted, release: () => gates.splice(0).forEach((g) => g()) }
+  }
+
+  async function openDialog(page, text = 'The export button does nothing on my phone.') {
+    await signIn(page, { plan: 'free' })
+    await go(page, '/projects')
+    await page.locator('.global-feedback-btn').click()
+    await expect(page.locator('.fb-modal')).toBeVisible()
+    await page.locator('#fb-message').fill(text)
+  }
+
+  const submit = (page) => page.locator('.fb-modal button[type="submit"]')
+
+  test('a double-click, then Enter, then another click make one request', async ({ page }) => {
+    watch(page, 'an impatient visitor submitting a bug report')
+    const server = await standIn(page, () => ({ delayMs: 700 }))
+    await openDialog(page)
+
+    await submit(page).dblclick()
+    await page.locator('#fb-subject').press('Enter').catch(() => {})
+    await submit(page).click({ force: true, noWaitAfter: true }).catch(() => {})
+    // Two submit events inside one task: nothing can have re-rendered between them.
+    await page.locator('.fb-modal form').evaluate((form) => { form.requestSubmit(); form.requestSubmit() })
+
+    await expect(page.locator('.fb-success')).toBeVisible()
+    expect(server.posted, 'one message must be one request').toHaveLength(1)
+  })
+
+  test('the button turns pending at once and the dialog confirms as soon as the server answers', async ({ page }) => {
+    watch(page, 'a visitor on a slow connection')
+    const server = await standIn(page, () => ({ hold: true }))
+    await openDialog(page)
+
+    const clickedAt = Date.now()
+    await submit(page).click()
+    await expect(submit(page)).toHaveText('Sending...')
+    const pendingMs = Date.now() - clickedAt
+    await expect(submit(page)).toBeDisabled()
+    await expect(submit(page)).toHaveAttribute('aria-busy', 'true')
+    expect(pendingMs, `the pending state took ${pendingMs}ms to appear`).toBeLessThan(500)
+    await expect(page.locator('.fb-success'), 'success must wait for the server').toHaveCount(0)
+
+    // Let the request sit, then answer it.
+    await page.waitForTimeout(1500)
+    await expect(page.locator('.fb-success')).toHaveCount(0)
+    const answeredAt = Date.now()
+    server.release()
+    await expect(page.locator('.fb-success')).toBeVisible()
+    const confirmMs = Date.now() - answeredAt
+    console.log(`feedback-dialog: pending shown in ${pendingMs}ms; confirmed ${confirmMs}ms after the server answered`)
+    expect(confirmMs, `the confirmation took ${confirmMs}ms after the answer`).toBeLessThan(1000)
+    expect(server.posted).toHaveLength(1)
+  })
+
+  test('retrying after a failure reuses the request id, and keeps one local record', async ({ page }) => {
+    watch(page, 'a visitor whose first send failed')
+    const server = await standIn(page, (n) => (n === 1 ? { status: 502 } : { status: 200 }))
+    await openDialog(page)
+
+    await submit(page).click()
+    await expect(page.locator('.fb-error')).toBeVisible()
+    await submit(page).click()
+    await expect(page.locator('.fb-success')).toBeVisible()
+
+    expect(server.posted).toHaveLength(2)
+    const [first, second] = server.posted
+    expect(first.requestId, 'the request carries an id').toMatch(/^fb-[A-Za-z0-9-]{16,}$/)
+    expect(second.requestId, 'a retry of the same message must reuse the id, or the server cannot tell it is a repeat').toBe(first.requestId)
+
+    const local = await page.evaluate(() => JSON.parse(localStorage.getItem('vs-feedback') || '[]'))
+    expect(local, 'one message, one local record').toHaveLength(1)
+    expect(local[0].id, 'the local record shares the id the server stores, so the admin queue lists it once').toBe(first.requestId)
+  })
+
+  test('editing the message after a failure sends it as a new message', async ({ page }) => {
+    watch(page, 'a visitor who corrects their message after an error')
+    const server = await standIn(page, (n) => (n === 1 ? { status: 502 } : { status: 200 }))
+    await openDialog(page, 'First wording.')
+
+    await submit(page).click()
+    await expect(page.locator('.fb-error')).toBeVisible()
+    await page.locator('#fb-message').fill('Second wording, with the detail I forgot.')
+    await submit(page).click()
+    await expect(page.locator('.fb-success')).toBeVisible()
+
+    expect(server.posted[1].requestId, 'a changed message under the old id would be dropped as a repeat').not.toBe(server.posted[0].requestId)
+  })
+
+  test('a request that never answers is abandoned, reported, and can be retried under the same id', async ({ page }) => {
+    watch(page, 'a visitor whose connection stalls')
+    await page.clock.install()
+    const server = await standIn(page, (n) => (n === 1 ? { hold: true } : { status: 200 }))
+    await openDialog(page)
+
+    await submit(page).click()
+    await expect(submit(page)).toHaveText('Sending...')
+    await page.clock.fastForward(16000)
+    await expect(page.locator('.fb-error'), 'a stalled send must end in a visible failure').toBeVisible()
+    await expect(submit(page)).toBeEnabled()
+
+    server.release()
+    await submit(page).click()
+    await expect(page.locator('.fb-success')).toBeVisible()
+    expect(server.posted).toHaveLength(2)
+    expect(server.posted[1].requestId).toBe(server.posted[0].requestId)
+  })
+
+  test('after "Send another", the next message gets its own id', async ({ page }) => {
+    watch(page, 'a visitor sending two reports')
+    const server = await standIn(page)
+    await openDialog(page, 'Same words twice.')
+
+    await submit(page).click()
+    await expect(page.locator('.fb-success')).toBeVisible()
+    await page.getByRole('button', { name: 'Send another' }).click()
+    await page.locator('#fb-message').fill('Same words twice.')
+    await submit(page).click()
+    await expect(page.locator('.fb-success')).toBeVisible()
+
+    expect(server.posted).toHaveLength(2)
+    expect(server.posted[1].requestId, 'a deliberate second send is a second message').not.toBe(server.posted[0].requestId)
+    const local = await page.evaluate(() => JSON.parse(localStorage.getItem('vs-feedback') || '[]'))
+    expect(local).toHaveLength(2)
   })
 })

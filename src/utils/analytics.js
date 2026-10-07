@@ -227,16 +227,27 @@ export function initAnalytics() {
 }
 
 // Feedback storage
+// An entry that carries an `id` is stored under that id, and saving the same id
+// again updates the existing copy instead of adding a second one. The submit
+// path passes the id it also sends to the server, so one message is one local
+// record however many times it is sent, and the admin queue (which merges local
+// and server records by id) lists it once.
 export function saveFeedback(entry) {
   const feedback = load(FEEDBACK_KEY, [])
-  feedback.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    ...entry,
-    status: 'new',
-    adminNotes: '',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  })
+  const now = new Date().toISOString()
+  const existing = entry?.id ? feedback.find(f => f.id === entry.id) : null
+  if (existing) {
+    Object.assign(existing, entry, { updatedAt: now })
+  } else {
+    feedback.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      ...entry,
+      status: 'new',
+      adminNotes: '',
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
   save(FEEDBACK_KEY, feedback)
 }
 
