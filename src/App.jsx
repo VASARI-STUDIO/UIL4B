@@ -571,7 +571,10 @@ function AppInner() {
                   guards, and it still guards it. */}
               <Route path="/projects" element={<Projects toast={toast} />} />
               <Route path="/projects/:id" element={<ProjectDetail toast={toast} />} />
-              <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+              {/* Not behind RequireAuth: the order summary and the period choice
+                  need no account, so the page renders for everyone and asks for
+                  a login only at the payment form, which does. */}
+              <Route path="/checkout" element={<Checkout />} />
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
               <Route path="/settings" element={<Settings toast={toast} />} />
               <Route path="/community" element={<Community toast={toast} />} />

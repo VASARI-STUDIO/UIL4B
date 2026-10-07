@@ -89,11 +89,11 @@ test.describe('nav auth opens over the page you are on', () => {
     await expect(page.getByRole('dialog')).toBeVisible()
 
     // A protected route still bounces a signed-out visitor here rather than
-    // rendering an empty page — and carries the plan it was asked for.
-    await go(page, '/checkout?plan=yearly')
+    // rendering an empty page — and carries the query it was asked for.
+    await go(page, '/checkout/return?session_id=cs_test_resume')
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(new URL(page.url()).pathname).toBe('/login')
-    expect(await resumeTarget(page), 'the chosen plan survives the auth gate').toBe('/checkout?plan=yearly')
+    expect(await resumeTarget(page), 'the query survives the auth gate').toBe('/checkout/return?session_id=cs_test_resume')
   })
 
   // The carry-over risk in moving auth off the /login route: the stash that
