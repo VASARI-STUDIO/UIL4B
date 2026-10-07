@@ -131,7 +131,7 @@ export function altTextOutcome(data) {
       finishReason,
     }
   }
-  if (verdict.status === 'truncated' || finishReason === 'MAX_TOKENS') {
+  if (verdict.status === 'truncated' || verdict.status === 'truncated_empty' || finishReason === 'MAX_TOKENS') {
     return {
       ok: false,
       status: 502,

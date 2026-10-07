@@ -74,6 +74,7 @@ import {
   ALT_TEXT_CUTOFF_REFUND_CAP,
   ALT_TEXT_CUTOFF_ERRORS,
 } from '../../api/_lib/altText.js'
+import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from '../../api/_lib/geminiFinish.js'
 import { stripJs } from '../helpers/strip-comments.js'
 
 const AI_PATH = 'api/ai.js'
@@ -184,7 +185,9 @@ function loadAi({
     dailyLimitFor: () => { throw new Error('not modelled here') },
     monthlyLimitFor: () => { throw new Error('not modelled here') },
     modelFor: () => { throw new Error('not modelled here') },
-    classifyGeminiFinish: () => { throw new Error('not modelled here') },
+    classifyGeminiFinish,
+    emptyReplyError,
+    MAX_TOKENS_EMPTY_MESSAGE,
     BRAND_STARTER_TOOL_ID: 'brand-starter',
     MAX_PROMPT_CHARS: 0, MIN_PROMPT_CHARS: 0, PALETTE_MIN_ROLES: 0, PALETTE_MAX_ROLES: 0,
     BASE_MIN: 0, BASE_MAX: 0, RATIO_MIN: 0, RATIO_MAX: 0,
@@ -474,6 +477,119 @@ test('alt-text: a refusal that is not a cut-off does not use the capped refund',
   assert.equal(res.statusCode, 422)
   assert.equal(calls.refundCapped, 0)
   assert.equal(res.body.quotaSpent, false)
+})
+
+// ── A reply that ran out of room before it wrote anything, EXECUTED ─────────
+
+const openrouterReply = (finishReason, content) => ok({ choices: [{ message: { content }, finish_reason: finishReason }] })
+const NO_ROOM = /ran out of room before it wrote anything\. Try again, or shorten the request\./
+const brandStarter = async (ai) => {
+  const res = ai.response()
+  const result = await ai.TASKS['brand-starter'].run({ body: { description: 'a calm booking app for dog groomers' } }, res, { plan: { id: 'free' }, bucket: { limit: 1, period: 'life' }, used: 0 })
+  return { result: result === res ? undefined : result, res }
+}
+const scanPhoto = async (ai) => {
+  const res = ai.response()
+  const result = await ai.TASKS['scan-photo'].run({ body: { image: 'aGVsbG8=', mimeType: 'image/jpeg' } }, res)
+  return { result: result === res ? undefined : result, res }
+}
+
+test('generate-prompt: Gemini MAX_TOKENS with no text says the model ran out of room', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('MAX_TOKENS', undefined) })
+  const { result, res } = await ai.generate()
+  // Answering through res with no result is what makes the metered unit refund.
+  assert.equal(result, undefined)
+  assert.equal(res.statusCode, 502)
+  assert.equal(res.body.error, MAX_TOKENS_EMPTY_MESSAGE)
+  assert.match(res.body.error, NO_ROOM)
+  assert.equal(res.body.finishReason, 'MAX_TOKENS')
+  assert.doesNotMatch(res.body.error, /unavailable|empty response/i, 'the generic empty-reply text was used')
+})
+
+test('generate-prompt: an empty Gemini reply that is not a cut-off keeps the generic message', async () => {
+  for (const reply of [geminiReply('STOP', ''), geminiReply(undefined, undefined)]) {
+    const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: reply })
+    const { result, res } = await ai.generate()
+    assert.equal(result, undefined)
+    assert.equal(res.statusCode, 502)
+    assert.match(res.body.error, /AI providers unavailable \(Gemini returned empty response\)/)
+    assert.doesNotMatch(res.body.error, NO_ROOM)
+    assert.ok(!('finishReason' in res.body))
+  }
+})
+
+test('generate-prompt: OpenRouter finish_reason length with no content says the same, and Gemini still gets its turn', async () => {
+  const both = loadAi({ openrouter: openrouterReply('length', ''), gemini: geminiReply('MAX_TOKENS', undefined) })
+  const a = await both.generate()
+  assert.equal(a.res.statusCode, 502)
+  assert.equal(a.res.body.error, MAX_TOKENS_EMPTY_MESSAGE)
+  assert.deepEqual(hosts(both), ['openrouter.ai', 'generativelanguage.googleapis.com'])
+
+  // With OpenRouter alone, its own finish reason is what the message rests on.
+  const solo = loadAi({ env: { OPENROUTER_API_KEY: OPENROUTER_KEY }, openrouter: openrouterReply('length', '') })
+  const s = await solo.generate()
+  assert.equal(s.res.body.error, MAX_TOKENS_EMPTY_MESSAGE)
+  assert.equal(s.res.body.finishReason, 'length')
+
+  // A fallback that does produce text is still a success.
+  const recovered = loadAi({ openrouter: openrouterReply('length', '') })
+  const b = await recovered.generate()
+  assert.equal(b.result?.provider, 'gemini')
+
+  // An OpenRouter reply that is empty for another reason is not a cut-off.
+  const plain = loadAi({ openrouter: openrouterReply('stop', ''), gemini: geminiReply('STOP', '') })
+  const c = await plain.generate()
+  assert.match(c.res.body.error, /AI providers unavailable/)
+})
+
+test('generate-prompt: a cut-off reply with some text is still returned as before', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('MAX_TOKENS', 'A red bicycle at dusk, warm') })
+  const { result } = await ai.generate()
+  assert.equal(result?.prompt, 'A red bicycle at dusk, warm')
+})
+
+test('brand-starter: MAX_TOKENS with no text says the model ran out of room and that nothing was used', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('MAX_TOKENS', undefined) })
+  const { result, res } = await brandStarter(ai)
+  assert.equal(result, undefined)
+  assert.equal(res.statusCode, 502)
+  assert.match(res.body.error, NO_ROOM)
+  assert.match(res.body.error, /allowance is untouched/)
+  assert.equal(res.body.quotaSpent, false)
+  assert.doesNotMatch(res.body.error, /could not be reached/)
+
+  const generic = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('STOP', '') })
+  const g = await brandStarter(generic)
+  assert.match(g.res.body.error, /could not be reached/)
+  assert.doesNotMatch(g.res.body.error, NO_ROOM)
+})
+
+test('scan-photo: MAX_TOKENS with no text says the model ran out of room', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('MAX_TOKENS', undefined) })
+  const { result, res } = await scanPhoto(ai)
+  assert.equal(result, undefined)
+  assert.equal(res.statusCode, 502)
+  assert.equal(res.body.error, MAX_TOKENS_EMPTY_MESSAGE)
+  assert.equal(res.body.finishReason, 'MAX_TOKENS')
+  assert.ok(ai.errors.some((line) => /token ceiling/.test(line)), 'the cut-off left no trace in the function log')
+
+  // Any other unreadable reply keeps its own message.
+  const other = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, gemini: geminiReply('STOP', '') })
+  const o = await scanPhoto(other)
+  assert.equal(o.res.body.error, 'Could not parse AI response')
+})
+
+test('the classifier names a no-text MAX_TOKENS reply, and nothing else, truncated_empty', () => {
+  const v = classifyGeminiFinish({ candidates: [{ finishReason: 'MAX_TOKENS', content: { role: 'model' } }] })
+  assert.equal(v.status, 'truncated_empty')
+  assert.equal(v.reason, 'MAX_TOKENS')
+  assert.equal(v.text, '')
+  assert.equal(classifyGeminiFinish({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: ' ' }] } }] }).status, 'truncated_empty')
+  assert.equal(classifyGeminiFinish({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'half a' }] } }] }).status, 'truncated')
+  assert.equal(classifyGeminiFinish({ candidates: [{ finishReason: 'STOP' }] }).status, 'empty')
+  assert.equal(classifyGeminiFinish({ candidates: [{ finishReason: 'SAFETY' }] }).status, 'blocked')
+  assert.equal(emptyReplyError('Gemini').truncatedEmpty, undefined)
+  assert.equal(emptyReplyError('Gemini', { truncatedEmpty: true, finishReason: 'MAX_TOKENS' }).truncatedEmpty, true)
 })
 
 // ── Which tasks each key unlocks, EXECUTED per configuration ────────────────

@@ -26,15 +26,37 @@ export const BLOCKED_FINISH_REASONS = new Set([
   'IMAGE_SAFETY',
 ])
 
+// What a person is told when the model used its whole output budget and wrote
+// nothing. It is the one wording for every tool that surfaces this case, so the
+// tools cannot drift apart on what "ran out of room" means.
+export const MAX_TOKENS_EMPTY_MESSAGE =
+  'The model ran out of room before it wrote anything. Try again, or shorten the request.'
+
+/**
+ * The error a provider call throws when it returns no text. `truncatedEmpty`
+ * marks a reply that stopped at the output-token ceiling, so the route can say
+ * so instead of reporting a generic empty response. `finishReason` keeps the
+ * provider's own spelling ('MAX_TOKENS' from Gemini, 'length' from OpenRouter).
+ */
+export function emptyReplyError(provider, { truncatedEmpty = false, finishReason = '' } = {}) {
+  const err = new Error(`${provider} returned empty response${truncatedEmpty ? ' (output token limit reached)' : ''}`)
+  if (truncatedEmpty) {
+    err.truncatedEmpty = true
+    err.finishReason = finishReason
+  }
+  return err
+}
+
 /**
  * Classify a Gemini generateContent response body.
  *
- * @returns {{status: 'ok'|'truncated'|'blocked'|'recitation'|'empty', reason: string, text: string}}
- *   'ok'         — complete answer, safe to present as finished.
- *   'truncated'  — real text, but the model was still writing. Never present as finished.
- *   'blocked'    — safety filters refused. Not a provider fault; the user needs to hear so.
- *   'recitation' — stopped to avoid reproducing copyrighted text.
- *   'empty'      — no text and no reason that explains it.
+ * @returns {{status: 'ok'|'truncated'|'truncated_empty'|'blocked'|'recitation'|'empty', reason: string, text: string}}
+ *   'ok'              — complete answer, safe to present as finished.
+ *   'truncated'       — real text, but the model was still writing. Never present as finished.
+ *   'truncated_empty' — no text because the model used its whole output budget (MAX_TOKENS).
+ *   'blocked'         — safety filters refused. Not a provider fault; the user needs to hear so.
+ *   'recitation'      — stopped to avoid reproducing copyrighted text.
+ *   'empty'           — no text and no reason that explains it.
  */
 export function classifyGeminiFinish(data) {
   const candidate = data?.candidates?.[0]
@@ -59,6 +81,10 @@ export function classifyGeminiFinish(data) {
   }
   if (finishReason === 'RECITATION') {
     return { status: 'recitation', reason: 'RECITATION', text: '' }
+  }
+  if (!text && finishReason === 'MAX_TOKENS') {
+    // Thinking can use the whole output budget, leaving no visible text.
+    return { status: 'truncated_empty', reason: 'MAX_TOKENS', text: '' }
   }
   if (!text) {
     return { status: 'empty', reason: finishReason || 'unknown', text: '' }
