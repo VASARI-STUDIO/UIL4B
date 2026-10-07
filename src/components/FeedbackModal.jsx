@@ -64,6 +64,22 @@ const TYPES = [
   },
 ]
 
+// How long one attempt may take before it is abandoned and reported as failed.
+// The server bounds its own outbound calls well inside this.
+const SEND_TIMEOUT_MS = 15000
+
+// A random token naming one message, sent with every attempt to send it (see
+// api/support.js). It is also the id of the local copy, so the same message is
+// one record on both sides.
+function newRequestId() {
+  const c = typeof crypto !== 'undefined' ? crypto : null
+  if (c?.randomUUID) return `fb-${c.randomUUID()}`
+  const bytes = new Uint8Array(16)
+  if (c?.getRandomValues) c.getRandomValues(bytes)
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
+  return `fb-${Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')}`
+}
+
 export default function FeedbackModal({ open, onClose, seed = null }) {
   const { user, userProfile } = useAuth()
   // P-002: the report carries where the user was, so acting on it does not
@@ -93,6 +109,18 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   const overlayRef = useRef(null)
   const firstControlRef = useRef(null)
 
+  // Send bookkeeping, held in refs so a second submit in the same tick sees it
+  // (state would still read the old value):
+  //   sendingRef  an attempt is in flight
+  //   attemptRef  the request id in use and the exact content it was made for,
+  //               so a retry of unchanged content reuses the id (the server
+  //               stores it once) and an edited message gets a new one
+  //   genRef      bumped whenever the form is reset, so an attempt that
+  //               finishes after a reset does not touch the new form
+  const sendingRef = useRef(false)
+  const attemptRef = useRef(null)
+  const genRef = useRef(0)
+
   // Has this opening already been initialised? The open effect below depends on
   // every value it captures — which is correct, and what the linter wants — but
   // it must still run only ONCE per opening: re-running it because the user
@@ -121,6 +149,9 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     setSent(false)
     setError(false)
     setSending(false)
+    sendingRef.current = false
+    attemptRef.current = null
+    genRef.current += 1
   }, [])
 
   // Scroll lock, Escape, the focus trap and focus restoration all come from the
@@ -182,8 +213,10 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!message.trim() || sending) return
+    if (!message.trim() || sendingRef.current) return
 
+    sendingRef.current = true
+    const gen = genRef.current
     setSending(true)
     setError(false)
 
@@ -212,27 +245,47 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
       source: 'inline',
     }
 
+    const fingerprint = JSON.stringify(payload)
+    if (attemptRef.current?.fingerprint !== fingerprint) {
+      attemptRef.current = { fingerprint, id: newRequestId() }
+    }
+    const requestId = attemptRef.current.id
+
     // saveFeedback takes a single entry object (a positional call corrupts the
-    // localStorage record — see HelpCentre fix).
-    saveFeedback(payload)
+    // localStorage record — see HelpCentre fix). Keyed by the request id, so
+    // resending the same message updates this record rather than adding another.
+    saveFeedback({ ...payload, id: requestId })
 
     let ok = false
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS)
     try {
       const res = await fetch('/api/support', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, name: userProfile?.displayName || '' }),
+        body: JSON.stringify({ ...payload, name: userProfile?.displayName || '', requestId }),
+        signal: controller.signal,
       })
       ok = res.ok
     } catch {
       ok = false
+    } finally {
+      clearTimeout(timer)
     }
 
+    // The form was reset (reopened, or "Send another") while this was in flight.
+    if (gen !== genRef.current) return
+
+    sendingRef.current = false
     setSending(false)
     // Fail loud: a silently-lost support request is the worst outcome for a
     // feedback channel — only surface success when the request actually landed.
-    if (ok) setSent(true)
-    else setError(true)
+    if (ok) {
+      attemptRef.current = null
+      setSent(true)
+    } else {
+      setError(true)
+    }
   }
 
   const onOverlayClick = (e) => {
@@ -399,7 +452,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
 
             <div className="fb-actions">
               <button type="button" className="btn" onClick={onClose} disabled={sending}>Cancel</button>
-              <button type="submit" className="btn btn-accent" disabled={sending || !message.trim()}>
+              <button type="submit" className="btn btn-accent" disabled={sending || !message.trim()} aria-busy={sending}>
                 {sending ? 'Sending...' : 'Submit'}
               </button>
             </div>

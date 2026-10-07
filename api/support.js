@@ -97,7 +97,32 @@ function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-export default async function handler(req, res) {
+// ── Idempotency ──────────────────────────────────────────────────────────────
+// A client may send `requestId`: a random token it generates once per message
+// and reuses for every attempt at sending that message. It becomes the id of
+// the stored document and is written with create(), which fails if the id
+// already exists, so the same message is stored (and mirrored, and emailed) at
+// most once however many times it arrives. Without a requestId the document
+// gets an automatic id, as before.
+const REQUEST_ID_RE = /^[A-Za-z0-9_-]{16,64}$/
+
+export function parseRequestId(value) {
+  return typeof value === 'string' && REQUEST_ID_RE.test(value) ? value : null
+}
+
+function isAlreadyExists(err) {
+  return err?.code === 6 || err?.code === 'already-exists' || /ALREADY_EXISTS/.test(String(err?.message || ''))
+}
+
+// Bounds each outbound call so one slow service cannot hold the response.
+const OUTBOUND_TIMEOUT_MS = 5000
+
+export default function handler(req, res) {
+  return handleSupport(req, res)
+}
+
+// The handler body, with the database lookup injectable for tests.
+export async function handleSupport(req, res, { getDb = adminDb } = {}) {
   // `Access-Control-Allow-Origin: *` invited every page on the internet to POST
   // here from a visitor's browser. The allowlist is the same one the Stripe
   // flows use. Note what this does and does not buy: CORS is a browser
@@ -118,7 +143,7 @@ export default async function handler(req, res) {
   // Resolved here rather than at module scope so a credential problem surfaces
   // as a logged failure on the request that hit it, not as an import-time
   // crash that takes the whole route down with an opaque FUNCTION_INVOCATION_FAILED.
-  const db = adminDb()
+  const db = getDb()
 
   const ip = clientIp(req)
   for (const window of [BURST, HOURLY]) {
@@ -132,15 +157,17 @@ export default async function handler(req, res) {
     }
   }
 
-  // The server contract: exactly these five fields, everything else dropped.
+  // The message contract: exactly these five fields, everything else dropped.
   // tests/unit/report-context.test.js pins this line — the feedback modal folds
   // its captured context into `message` precisely so the contract never grows.
+  // `requestId` is not message content; it is read on its own below.
   const { type, subject, message, email, source } = req.body || {}
   const validated = validateSupportBody({ type, subject, message, email, source })
   if (validated.error) {
     return res.status(400).json({ error: validated.error })
   }
   const { entry } = validated
+  const requestId = parseRequestId(req.body?.requestId)
 
   // Whether the message actually landed anywhere. A failed Firestore write used
   // to be logged and then answered with `{ ok: true }` — the user was told their
@@ -148,21 +175,32 @@ export default async function handler(req, res) {
   // end is now conditional on this.
   let stored = false
   try {
-    await db.collection('feedback').add(entry)
+    if (requestId) await db.collection('feedback').doc(requestId).create(entry)
+    else await db.collection('feedback').add(entry)
     stored = true
   } catch (err) {
+    if (requestId && isAlreadyExists(err)) {
+      // This message is already stored, and was mirrored and emailed by the
+      // attempt that stored it. Confirm it without repeating either.
+      return res.status(200).json({ ok: true, duplicate: true })
+    }
     console.error('Firestore write failed:', err.message)
   }
+
+  // The two notifications are independent of each other, so they run together
+  // and each is bounded: the response waits for the slower of the two, not
+  // their sum, and never for longer than OUTBOUND_TIMEOUT_MS.
 
   // Append to a Google Sheet via an Apps Script web app (optional).
   // Optional legacy mirror: set the server-only GOOGLE_SHEETS_WEBHOOK_URL and
   // GOOGLE_SHEETS_WEBHOOK_SECRET in Vercel to enable.
   const sheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL
-  if (sheetsWebhook) {
+  const mirrored = sheetsWebhook ? (async () => {
     try {
       await fetch(sheetsWebhook, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
         body: JSON.stringify({
           secret: process.env.GOOGLE_SHEETS_WEBHOOK_SECRET || '',
           createdAt: entry.createdAt,
@@ -177,13 +215,12 @@ export default async function handler(req, res) {
     } catch (err) {
       console.error('Google Sheets append failed:', err.message)
     }
-  }
+  })() : null
 
   const resendKey = process.env.RESEND_API_KEY
   const notifyEmail = process.env.SUPPORT_NOTIFY_EMAIL
 
-  let emailed = false
-  if (resendKey && notifyEmail) {
+  const mailed = resendKey && notifyEmail ? (async () => {
     try {
       const sent = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -191,6 +228,7 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${resendKey}`,
           'Content-Type': 'application/json',
         },
+        signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
         body: JSON.stringify({
           from: mailFrom(),
           // A reply reaches the real mailbox even while `from` is still the
@@ -214,11 +252,14 @@ export default async function handler(req, res) {
           `,
         }),
       })
-      emailed = sent.ok
+      return sent.ok
     } catch (err) {
       console.error('Email send failed:', err.message)
+      return false
     }
-  }
+  })() : null
+
+  const [, emailed] = await Promise.all([mirrored, mailed])
 
   // Every downstream is optional except the record itself, so "delivered" means
   // at least one of them took it. Nothing else in this handler is allowed to
