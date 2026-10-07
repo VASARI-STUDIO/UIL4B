@@ -137,8 +137,9 @@ test.describe('/feedback carries a return address, or says there is none', () =>
 
     expect(posted, 'exactly one submission should have been posted').toHaveLength(1)
     expect(posted[0].email, 'the address the visitor typed did not go up').toBe('maya@example.com')
-    // The contract is unchanged: the same five keys, no more.
-    expect(Object.keys(posted[0]).sort()).toEqual(['email', 'message', 'source', 'subject', 'type'])
+    // The contract: the five fields, plus the id naming this message.
+    expect(Object.keys(posted[0]).sort()).toEqual(['email', 'message', 'requestId', 'source', 'subject', 'type'])
+    expect(posted[0].requestId).toMatch(/^fb-[A-Za-z0-9-]{16,}$/)
   })
 
   // MUTATION: in src/pages/Feedback.jsx replace the whole `{sentTo ? … : …}`

@@ -319,3 +319,140 @@ test.describe('the feedback dialog sends each message once', () => {
     expect(local).toHaveLength(2)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The /feedback page: one send is one message
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Same contract as the dialog above: each message is named by a request id, a
+// retry of identical content reuses it, an edit gets a new one, and a second
+// submit while one is in flight is ignored.
+test.describe('the /feedback page sends each message once', () => {
+  /** Stand-in for /api/support. `reply(n)` decides the answer to attempt n (1-based). */
+  async function standIn(page, reply = () => ({ status: 200 })) {
+    const posted = []
+    const gates = []
+    await page.route('**/api/support', async (route) => {
+      posted.push(JSON.parse(route.request().postData() || '{}'))
+      const verdict = reply(posted.length)
+      if (verdict.hold) await new Promise((resolve) => gates.push(resolve))
+      if (verdict.delayMs) await new Promise((r) => setTimeout(r, verdict.delayMs))
+      const status = verdict.status ?? 200
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(status >= 400 ? { error: 'x' } : { ok: true }),
+      })
+    })
+    return { posted, release: () => gates.splice(0).forEach((g) => g()) }
+  }
+
+  async function openPage(page, text = 'The export button does nothing on my phone.') {
+    await go(page, '/feedback')
+    await page.locator('#fb-message').fill(text)
+  }
+
+  const submit = (page) => page.locator('.fb-submit')
+
+  test('a double submit in one task makes one request', async ({ page }) => {
+    watch(page, 'an impatient visitor on /feedback')
+    const server = await standIn(page, () => ({ delayMs: 700 }))
+    await openPage(page)
+
+    await page.locator('.fb-form').evaluate((form) => { form.requestSubmit(); form.requestSubmit() })
+
+    await expect(page.locator('.fb-done')).toBeVisible()
+    expect(server.posted, 'one message must be one request').toHaveLength(1)
+  })
+
+  test('the button is busy while the request is out, and the id is well formed', async ({ page }) => {
+    watch(page, 'a visitor on a slow connection')
+    const server = await standIn(page, () => ({ hold: true }))
+    await openPage(page)
+
+    await submit(page).click()
+    await expect(submit(page)).toBeDisabled()
+    await expect(submit(page)).toHaveAttribute('aria-busy', 'true')
+    await expect(page.locator('.fb-done')).toHaveCount(0)
+
+    server.release()
+    await expect(page.locator('.fb-done')).toBeVisible()
+    expect(server.posted).toHaveLength(1)
+    expect(server.posted[0].requestId).toMatch(/^fb-[A-Za-z0-9-]{16,}$/)
+  })
+
+  // MUTATION: in src/utils/supportRequest.js make requestIdFor always assign a
+  // fresh id (drop the fingerprint comparison). Goes red on the id equality.
+  test('retrying after a failure reuses the request id, and keeps one local record', async ({ page }) => {
+    watch(page, 'a visitor whose first send failed')
+    const server = await standIn(page, (n) => (n === 1 ? { status: 502 } : { status: 200 }))
+    await openPage(page)
+
+    await submit(page).click()
+    await expect(page.locator('#fb-error')).toBeVisible()
+    await submit(page).click()
+    await expect(page.locator('.fb-done')).toBeVisible()
+
+    expect(server.posted).toHaveLength(2)
+    const [first, second] = server.posted
+    expect(first.requestId, 'the request carries an id').toMatch(/^fb-[A-Za-z0-9-]{16,}$/)
+    expect(second.requestId, 'a retry of the same message must reuse the id, or the server cannot tell it is a repeat').toBe(first.requestId)
+
+    const local = await page.evaluate(() => JSON.parse(localStorage.getItem('vs-feedback') || '[]'))
+    expect(local, 'one message, one local record').toHaveLength(1)
+    expect(local[0].id, 'the local record shares the id the server stores').toBe(first.requestId)
+  })
+
+  // MUTATION: in src/utils/supportRequest.js make requestIdFor keep the old id
+  // whenever one exists (drop the fingerprint comparison). Goes red here.
+  test('editing the message after a failure sends it as a new message', async ({ page }) => {
+    watch(page, 'a visitor who corrects their message after an error')
+    const server = await standIn(page, (n) => (n === 1 ? { status: 502 } : { status: 200 }))
+    await openPage(page, 'First wording.')
+
+    await submit(page).click()
+    await expect(page.locator('#fb-error')).toBeVisible()
+    await page.locator('#fb-message').fill('Second wording, with the detail I forgot.')
+    await submit(page).click()
+    await expect(page.locator('.fb-done')).toBeVisible()
+
+    expect(server.posted[1].requestId, 'a changed message under the old id would be dropped as a repeat').not.toBe(server.posted[0].requestId)
+  })
+
+  test('a request that never answers is abandoned, reported, and can be retried under the same id', async ({ page }) => {
+    watch(page, 'a visitor whose connection stalls')
+    await page.clock.install()
+    const server = await standIn(page, (n) => (n === 1 ? { hold: true } : { status: 200 }))
+    await openPage(page)
+
+    await submit(page).click()
+    await expect(submit(page)).toHaveAttribute('aria-busy', 'true')
+    await page.clock.fastForward(16000)
+    await expect(page.locator('#fb-error'), 'a stalled send must end in a visible failure').toBeVisible()
+    await expect(submit(page)).toBeEnabled()
+
+    server.release()
+    await submit(page).click()
+    await expect(page.locator('.fb-done')).toBeVisible()
+    expect(server.posted).toHaveLength(2)
+    expect(server.posted[1].requestId).toBe(server.posted[0].requestId)
+  })
+
+  test('after "Submit another", the next message gets its own id', async ({ page }) => {
+    watch(page, 'a visitor sending two reports')
+    const server = await standIn(page)
+    await openPage(page, 'Same words twice.')
+
+    await submit(page).click()
+    await expect(page.locator('.fb-done')).toBeVisible()
+    await page.getByRole('button', { name: 'Submit another' }).click()
+    await page.locator('#fb-message').fill('Same words twice.')
+    await submit(page).click()
+    await expect(page.locator('.fb-done')).toBeVisible()
+
+    expect(server.posted).toHaveLength(2)
+    expect(server.posted[1].requestId, 'a deliberate second send is a second message').not.toBe(server.posted[0].requestId)
+    const local = await page.evaluate(() => JSON.parse(localStorage.getItem('vs-feedback') || '[]'))
+    expect(local).toHaveLength(2)
+  })
+})

@@ -3,6 +3,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
+import { requestIdFor, postSupport } from '../utils/supportRequest'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -59,8 +60,9 @@ import '../styles/pages/feedback.css'
 // THE API ALREADY TOOK THE FIELD. `api/support.js` has validated `email`,
 // capped it at 254 and rendered it as the notification's `From:` line since it
 // was written; only the form never offered anywhere to type one. Nothing about
-// the request contract changes here — the same five keys go up, and one of them
-// can now be non-empty when the sender is signed out.
+// the request contract changes here — the same five fields go up (plus the
+// `requestId` every request carries, see utils/supportRequest.js), and one of
+// them can now be non-empty when the sender is signed out.
 //
 // Both branches are now stated rather than implied: the field says what a blank
 // costs BEFORE you submit, and the confirmation says which of the two happened
@@ -91,6 +93,11 @@ export default function Feedback({ toast }) {
   const messageRef = useRef(null)
   const contactRef = useRef(null)
   const typeRefs = useRef({})
+  // Send bookkeeping, in refs so a second submit in the same task sees it:
+  //   sendingRef  an attempt is in flight
+  //   attemptRef  the request id in use and the exact content it was made for
+  const sendingRef = useRef(false)
+  const attemptRef = useRef(null)
   const { t } = useI18n()
   const { user } = useAuth()
 
@@ -116,7 +123,9 @@ export default function Feedback({ toast }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (busy) return
+    // A ref, not `busy`: two submit events in the same task both see the state
+    // from before the first one re-rendered.
+    if (sendingRef.current) return
 
     if (!message.trim()) {
       // Inline, attached to the field, AND focus moved to it — so the reason is
@@ -136,6 +145,7 @@ export default function Feedback({ toast }) {
       return
     }
 
+    sendingRef.current = true
     setError('')
     setContactError('')
     setBusy(true)
@@ -149,22 +159,18 @@ export default function Feedback({ toast }) {
       source: 'feedback-form',
     }
 
+    // One id per message content: a retry of the same content reuses it (the
+    // server stores it once), an edit gets a new one.
+    const requestId = requestIdFor(attemptRef, payload)
+
     // Saved locally first, so a failed request still leaves a record the user's
-    // own data export can return to them.
-    saveFeedback(payload)
+    // own data export can return to them. Keyed by the request id, so resending
+    // the same message updates this record rather than adding another.
+    saveFeedback({ ...payload, id: requestId })
 
-    let ok = false
-    try {
-      const res = await fetch('/api/support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      ok = res.ok
-    } catch {
-      ok = false
-    }
+    const ok = await postSupport({ ...payload, requestId })
 
+    sendingRef.current = false
     setBusy(false)
 
     // Never show success if the request didn't land — a silently-lost support
@@ -176,6 +182,7 @@ export default function Feedback({ toast }) {
       return
     }
 
+    attemptRef.current = null
     toast(t('feedback.thankYou'))
     setMessage('')
     setSubject('')
@@ -299,7 +306,7 @@ export default function Feedback({ toast }) {
 
             {error && <p className="fb-error" id="fb-error" role="alert">{error}</p>}
 
-            <button className="btn btn-accent fb-submit" type="submit" disabled={busy}>
+            <button className="btn btn-accent fb-submit" type="submit" disabled={busy} aria-busy={busy}>
               {busy ? 'Sending…' : t('common.submit')}
             </button>
           </form>
