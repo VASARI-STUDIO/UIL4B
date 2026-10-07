@@ -66,6 +66,7 @@ const NOT_DEPLOYED = new Map([
   ['.firebaserc', 'Firebase CLI project alias — used when publishing rules, not when building'],
   ['firebase.json', 'Firebase CLI config — as above'],
   ['firestore.rules', 'published to Firebase by the CLI, never by a Vercel build'],
+  ['firestore.indexes.json', 'composite indexes, deployed to Firebase by the CLI, never by a Vercel build'],
   ['storage.rules', 'as above'],
   ['playwright.config.js', 'test runner config'],
   // One lane of the acceptance suite, each serving its own dist-<LANE> on its
