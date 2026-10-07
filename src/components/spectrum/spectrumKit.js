@@ -158,7 +158,7 @@ export const FONT_SAMPLE = 'The quick brown fox jumps over the lazy dog. 0123456
 
 // Aspect ratio has no glyph: the design asks for `ph-aspect-ratio`, which
 // Phosphor does not have, so the design's tab renders an empty, zero-width slot.
-export const IMG_MODES = [['Convert', 'file-arrow-up'], ['Compress', 'archive'], ['Video frames', 'film-strip'], ['Aspect ratio', null]]
+export const IMG_MODES = [['Compress', 'archive'], ['Video frames', 'film-strip'], ['Aspect ratio', null]]
 export const IMG_FORMATS = [['WEBP', 'image/webp'], ['JPEG', 'image/jpeg'], ['PNG', 'image/png']]
 export const RATIO_PRESETS = [['16:9', 1920, 1080], ['4:5', 1080, 1350], ['1:1', 1080, 1080], ['21:9', 2560, 1097]]
 export const FRAME_COUNTS = [8, 12, 24]

@@ -110,10 +110,10 @@ export default function BenchConverter() {
   const saving = pct == null ? '…' : pct >= 0 ? `${pct}% smaller` : `${-pct}% larger`
   const [, rw, rh] = RATIO_PRESETS[ratioPreset]
   const stem = pick ? pick.name.replace(/\.[^.]+$/, '') : 'plateau-sunset'
-  const srcName = pick ? pick.name : mode === 2 ? 'plateau-sunset.mp4' : 'plateau-sunset.png'
+  const srcName = pick ? pick.name : mode === 1 ? 'plateau-sunset.mp4' : 'plateau-sunset.png'
   const srcMeta = pick
     ? `${formatBytes(pick.size)}, ready to convert`
-    : mode === 2 ? '1920 × 1080, 0:08, 12.4 MB' : src ? `${src.w} × ${src.h}, ${formatBytes(src.before)}` : 'Measuring…'
+    : mode === 1 ? '1920 × 1080, 0:08, 12.4 MB' : src ? `${src.w} × ${src.h}, ${formatBytes(src.before)}` : 'Measuring…'
   const artUrl = pick?.url || CONVERTER_SOURCE
   const stripLen = Math.min(8, frameCount)
   const strip = Array.from({ length: stripLen }, (_, i) => {
@@ -148,7 +148,7 @@ export default function BenchConverter() {
         <input type="file" accept="image/*,video/*" onChange={(e) => take(e.target.files?.[0])} aria-label="Choose a file to convert" />
       </label>
 
-      {(mode === 0 || mode === 1) && (
+      {mode === 0 && (
         <div className="sp-conv">
           <div className="sp-conv-art">
             {pick?.url
@@ -163,7 +163,7 @@ export default function BenchConverter() {
             </div>
             <div className="sp-bar">
               <div className="sp-bar-row">
-                <small>AFTER {quality}%</small>
+                <small>AFTER</small>
                 <span>{`${stem}.${IMG_FORMATS[fmt][0].toLowerCase()}`}, {formatBytes(out)}</span>
               </div>
               <span className="sp-bar-track">
@@ -182,14 +182,14 @@ export default function BenchConverter() {
           <label className="sp-quality">
             <span>
               <span>{lossless ? 'Lossless, quality ignored' : 'Quality'}</span>
-              <b>{lossless ? (pct === 0 ? 'no loss, no saving' : `no loss, ${saving}`) : `${quality}%, ${saving}`}</b>
+              <b>{lossless ? (pct === 0 ? 'no loss, no saving' : `no loss, ${saving}`) : saving}</b>
             </span>
             <input type="range" min="30" max="100" step="5" value={quality} onChange={(e) => setQuality(parseInt(e.target.value, 10))} aria-label="Compression quality" />
           </label>
         </div>
       )}
 
-      {mode === 3 && (
+      {mode === 2 && (
         <div className="sp-ratio">
           <div className="sp-ratio-stage">
             <img src={CONVERTER_SOURCE} alt="The photograph cropped to the chosen aspect ratio" width="1600" height="900" loading="lazy" decoding="async" style={{ aspectRatio: `${rw} / ${rh}` }} />
@@ -204,7 +204,7 @@ export default function BenchConverter() {
         </div>
       )}
 
-      {mode === 2 && (
+      {mode === 1 && (
         <div className="sp-frames">
           <div className="sp-strip">
             {strip.map((f) => (
