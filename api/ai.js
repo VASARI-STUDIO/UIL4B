@@ -9,6 +9,7 @@ import {
   altTextCutoffReply,
   ALT_TEXT_CUTOFF_REFUND_CAP,
 } from './_lib/altText.js'
+import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from './_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
 import {
   BRAND_STARTER_TOOL_ID,
@@ -346,6 +347,10 @@ async function runScanPhoto(req, res) {
     }
 
     const data = await r.json()
+    if (classifyGeminiFinish(data).status === 'truncated_empty') {
+      console.error('Gemini scan-photo: reply hit the token ceiling with no text', { usage: data?.usageMetadata })
+      return res.status(502).json({ error: MAX_TOKENS_EMPTY_MESSAGE, finishReason: 'MAX_TOKENS' })
+    }
     let raw = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim() || ''
     raw = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
 
@@ -425,7 +430,7 @@ async function callOpenRouter(userMessage, opts = {}) {
     throw err
   }
   const prompt = data?.choices?.[0]?.message?.content?.trim() || ''
-  if (!prompt) throw new Error('OpenRouter returned empty response')
+  if (!prompt) throw emptyReplyError('OpenRouter', { truncatedEmpty: data?.choices?.[0]?.finish_reason === 'length', finishReason: 'length' })
   return prompt
 }
 
@@ -450,7 +455,7 @@ async function callGemini(userMessage, opts = {}) {
   }
   const data = await r.json()
   const prompt = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim() || ''
-  if (!prompt) throw new Error('Gemini returned empty response')
+  if (!prompt) throw emptyReplyError('Gemini', { truncatedEmpty: classifyGeminiFinish(data).status === 'truncated_empty', finishReason: 'MAX_TOKENS' })
   return prompt
 }
 
@@ -829,6 +834,13 @@ async function runBrandStarter(req, res, { plan, bucket, used }) {
         quotaSpent: false,
       })
     }
+    if (lastErr?.truncatedEmpty) {
+      return res.status(502).json({
+        error: `${MAX_TOKENS_EMPTY_MESSAGE} Your allowance is untouched.`,
+        finishReason: lastErr.finishReason,
+        quotaSpent: false,
+      })
+    }
     return res.status(502).json({
       error: 'The AI provider could not be reached, so nothing was generated. Your allowance is untouched — try again shortly.',
       detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200),
@@ -920,6 +932,9 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     // so a misconfigured key is obvious rather than a vague "unavailable".
     if (lastErr?.status === 401 || lastErr?.status === 403) {
       return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check OPENROUTER_API_KEY / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
+    }
+    if (lastErr?.truncatedEmpty) {
+      return res.status(502).json({ error: MAX_TOKENS_EMPTY_MESSAGE, finishReason: lastErr.finishReason })
     }
     return res.status(502).json({ error: `AI providers unavailable (${lastErr?.message || 'unknown error'}).`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
   }
