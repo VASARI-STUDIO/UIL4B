@@ -13,6 +13,7 @@ import { SubscriptionProvider } from './contexts/SubscriptionContext'
 import { I18nProvider } from './contexts/I18nContext'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { installGlobalErrorCapture } from './utils/errorReport'
+import { handlePreloadError } from './utils/lazyRoute'
 import './styles/global.css'
 import { installDownloadObserver } from './utils/downloadObserver'
 
@@ -20,32 +21,21 @@ import { installDownloadObserver } from './utils/downloadObserver'
 // they all pass — an <a download> being clicked. See utils/downloadObserver.js.
 installDownloadObserver()
 
-// After a redeploy, a cached index.html can request lazy chunks whose hashed
-// filenames no longer exist; Vite fires vite:preloadError when that import
-// fails. One hard reload fetches the fresh index.html and the new chunk set.
-// sessionStorage guards against a reload loop if the error persists.
+// A lazy page file that fails to download (a tab open across a redeploy, or a
+// dropped connection) gets one guarded hard reload. The rules, and why pages
+// use lazyRoute() rather than lazy(), are in utils/lazyRoute.js.
 window.addEventListener('vite:preloadError', (event) => {
-  // OFFLINE IS NOT A STALE DEPLOY, and reloading cannot fix it.
-  //
-  // This handler exists for one failure: after a redeploy, a cached index.html
-  // asks for chunk filenames that no longer exist, and one reload fetches the
-  // new index and the new chunk set. Losing connectivity produces the SAME
-  // event for a completely different reason — and there, a reload is the worst
-  // available response. It throws away a working, already-rendered app and
-  // tries to re-fetch everything over a connection that just failed, turning a
-  // recoverable "this panel needs the network" into a blank page.
-  //
-  // Found by the acceptance suite: cutting the network mid-session reloaded the
-  // page out from under the test ("Execution context was destroyed"), which is
-  // exactly what it would do to a user on a train.
+  // Offline is not a stale deploy, and a reload cannot fetch anything: the
+  // error goes through and the page's boundary says the connection is down.
   if (navigator.onLine === false) return
-
-  const key = 'vs-chunk-reload'
-  const last = Number(sessionStorage.getItem(key) || 0)
-  if (Date.now() - last < 30000) return
-  sessionStorage.setItem(key, String(Date.now()))
-  event.preventDefault()
-  window.location.reload()
+  let storage = null
+  try { storage = window.sessionStorage } catch { storage = null }
+  handlePreloadError(event, {
+    online: true,
+    storage,
+    now: Date.now(),
+    reload: () => window.location.reload(),
+  })
 })
 
 // Errors nothing else caught — an event handler, a timer, a rejected promise —

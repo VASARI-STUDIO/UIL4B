@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,6 +13,9 @@ import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
 import '../styles/pages/project.css'
+// `lazy` in this file is lazyRoute, not React's: if the file for the export panel
+// failed to download, it waits for the recovery reload instead of crashing.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 const ExportPanel = lazy(() => import('../components/ExportPanel'))
 

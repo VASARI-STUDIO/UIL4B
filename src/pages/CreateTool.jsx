@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback } from 'react'
+import { Suspense, useCallback } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import AppFooter from '../components/AppFooter'
@@ -10,6 +10,9 @@ import { useClipboard } from '../hooks/useClipboard'
 import { ACTIVATION_EXPORTS } from '../config/activationExports'
 import { trackActivation } from '../utils/analytics'
 import { EVENTS, sendOnce } from '../utils/productEvents'
+// `lazy` in this file is lazyRoute, not React's: a tool file that failed to
+// download waits for the recovery reload instead of crashing the route.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 // The in-tool shell for every Create route. Navigation now lives entirely in the
 // top PillNav (the mega-menus own the tool tree), so this shell is a single,

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
 import { crossRouteHashClick, landOnHash, normPath, onSalesPage, salesHref } from './spectrum/salesLinks'
@@ -8,6 +8,9 @@ import { SEARCH_KEY } from '../config/shortcuts'
 import { useAppearance } from '../contexts/AppearanceContext'
 import ThemeCycle from './nav/ThemeCycle'
 import '../styles/pages/spectrum-chrome.css'
+// `lazy` in this file is lazyRoute, not React's: if the file for an overlay
+// failed to download, it waits for the recovery reload instead of crashing.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 

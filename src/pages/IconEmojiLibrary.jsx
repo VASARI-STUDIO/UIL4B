@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useRef, useState } from 'react'
+import { Suspense, useCallback, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useOnline from '../hooks/useOnline'
 import { useI18n } from '../contexts/I18nContext'
@@ -12,6 +12,9 @@ import '../styles/deferred/tool-shell.css'
 // This page's own sheet — every selector rooted at `.iel-page`, so it wins on
 // specificity rather than on whichever chunk the bundler emits last.
 import '../styles/pages/icon-emoji-library.css'
+// `lazy` in this file is lazyRoute, not React's: if the file for a library tab
+// failed to download, it waits for the recovery reload instead of crashing.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))

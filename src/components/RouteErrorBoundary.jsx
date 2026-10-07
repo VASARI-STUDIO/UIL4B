@@ -1,5 +1,7 @@
 import { Component } from 'react'
 import { openProblemReport, reportError } from '../utils/errorReport'
+import { isChunkLoadError } from '../utils/lazyRoute'
+import useOnline from '../hooks/useOnline'
 
 // What a person sees when a page crashes, instead of a blank screen.
 //
@@ -19,6 +21,39 @@ import { openProblemReport, reportError } from '../utils/errorReport'
 // The class names and the "Something went wrong" sentence are unchanged from
 // the boundary this replaces: tests/user-sim/helpers.js tells a crashed route
 // from a rendered one by `.error-boundary`.
+//
+// A PAGE WHOSE CODE NEVER ARRIVED gets its own card. Its file failed to
+// download and the one automatic reload (utils/lazyRoute.js) did not fix it,
+// so "this page ran into an error" would be untrue: it says the page did not
+// load, and offers to try again. Offline it says the connection is the
+// problem and holds the retry until the browser is back online, because a
+// reload with no connection replaces the page with the browser's own error.
+function LoadFailed({ error }) {
+  const online = useOnline()
+  return (
+    <div className="error-boundary error-boundary--load" role="alert">
+      <div className="error-boundary-card">
+        <h2>This page didn&apos;t load</h2>
+        {online ? (
+          <>
+            <p>Part of this page couldn&apos;t be downloaded. Trying again usually fixes it.</p>
+            <button type="button" onClick={() => window.location.reload()}>Try again</button>
+            {' '}
+            <button
+              type="button"
+              onClick={() => openProblemReport(error, window.location.pathname)}
+            >
+              Report this
+            </button>
+          </>
+        ) : (
+          <p>You&apos;re offline. Reconnect and you can try again.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default class RouteErrorBoundary extends Component {
   constructor(props) {
     super(props)
@@ -31,6 +66,9 @@ export default class RouteErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('ErrorBoundary caught:', error, info)
+    // A download that failed because the browser is offline is not the site's
+    // fault, and the report could not be sent anyway.
+    if (isChunkLoadError(error) && navigator.onLine === false) return
     reportError(error, 'render')
   }
 
@@ -43,6 +81,7 @@ export default class RouteErrorBoundary extends Component {
   render() {
     const { error } = this.state
     if (!error) return this.props.children
+    if (isChunkLoadError(error)) return <LoadFailed error={error} />
     return (
       <div className="error-boundary" role="alert">
         <div className="error-boundary-card">

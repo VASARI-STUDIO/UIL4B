@@ -21,8 +21,16 @@
 // written to the console instead of posted, so a local crash never lands in the
 // admin queue and the acceptance suite never makes a request it did not
 // plan for.
+//
+// A PAGE THAT FAILED TO DOWNLOAD IS NOT A CRASH. While the chunk-recovery
+// reload is in flight (utils/lazyRoute.js) a chunk-load error is the failure
+// that reload is already fixing, so it is not reported. Every other error is,
+// reload or not. A chunk failure that outlives the reload is reported once as
+// "Chunk load failed on <route>", so it is never mistaken for a code crash in
+// the queue.
 
 import { canWriteSharedAnalytics } from './environment.js'
+import { chunkReloadPending, isChunkLoadError } from './lazyRoute.js'
 
 export const SESSION_LIMIT = 2
 export const MIN_INTERVAL_MS = 30 * 1000
@@ -72,8 +80,9 @@ export function describeError(error, { pathname = '/', kind = 'error' } = {}) {
     `Error: ${text}`,
   ]
   if (frames.length) lines.push('Stack:', ...frames.map((f) => `  ${f}`))
+  const what = isChunkLoadError(error) ? 'Chunk load failed on' : 'Crash on'
   return {
-    subject: `Crash on ${route}: ${text}`.slice(0, 200),
+    subject: `${what} ${route}: ${text}`.slice(0, 200),
     message: lines.join('\n').slice(0, 4000),
   }
 }
@@ -97,10 +106,12 @@ function readLog(storage) {
 /**
  * A reporter that decides whether to send, and remembers what it sent in
  * sessionStorage. Every collaborator is injected, so the rules are testable
- * under `node --test` with no browser.
+ * under `node --test` with no browser. `reloadPending` says a reload to
+ * recover a failed chunk is in flight, which holds back chunk-load errors only.
  */
-export function createErrorReporter({ send, storage, now = () => Date.now() }) {
+export function createErrorReporter({ send, storage, now = () => Date.now(), reloadPending = () => false }) {
   return function report(error, context) {
+    if (isChunkLoadError(error) && reloadPending()) return false
     const { subject, message } = describeError(error, context)
     if (isNoise(messageOf(error))) return false
     const key = subject
@@ -143,6 +154,7 @@ function getReporter() {
     reporter = createErrorReporter({
       send: canWriteSharedAnalytics() ? postToSupport : consoleOnly,
       storage,
+      reloadPending: chunkReloadPending,
     })
   }
   return reporter

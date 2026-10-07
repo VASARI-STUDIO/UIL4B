@@ -8,6 +8,7 @@ import {
   SESSION_LIMIT, MIN_INTERVAL_MS,
 } from '../../src/utils/errorReport.js'
 import { validateSupportBody } from '../../api/support.js'
+import { stripJs } from '../helpers/strip-comments.js'
 
 function memoryStorage() {
   const m = new Map()
@@ -87,6 +88,57 @@ test('storage that refuses writes sends nothing rather than sending every time',
   const report = createErrorReporter({ send: (b) => sent.push(b), storage })
   assert.equal(report(new Error('x'), {}), false)
   assert.equal(sent.length, 0)
+})
+
+// A page file that failed to download is not a crash. See src/utils/lazyRoute.js.
+const CHUNK = 'Failed to fetch dynamically imported module: https://example.test/assets/Credits-Bv60jtlr.js'
+
+test('a chunk failure is not reported while the chunk-recovery reload is in flight', () => {
+  const sent = []
+  const storage = memoryStorage()
+  const report = createErrorReporter({
+    send: (b) => sent.push(b), storage, now: () => 1e12, reloadPending: () => true,
+  })
+  assert.equal(report(new TypeError(CHUNK), { pathname: '/credits', kind: 'render' }), false)
+  assert.equal(report(new Error('Unable to preload CSS for /assets/SurfaceIndex-bdUDG-8n.css'), { pathname: '/learn', kind: 'rejection' }), false)
+  assert.equal(sent.length, 0, 'a report was filed for a chunk the reload is already recovering')
+  assert.equal(storage.getItem('uil4b-error-reports'), null, 'the session allowance was spent on a reload')
+})
+
+test('a real crash is reported even while a chunk-recovery reload is in flight', () => {
+  const sent = []
+  const report = createErrorReporter({
+    send: (b) => sent.push(b), storage: memoryStorage(), now: () => 1e12, reloadPending: () => true,
+  })
+  assert.equal(report(new TypeError("Cannot read properties of undefined (reading 'join')"), { pathname: '/admin', kind: 'render' }), true,
+    'a code crash was held back because a reload was pending')
+  assert.equal(sent.length, 1)
+  assert.match(sent[0].subject, /^Crash on \/admin: /)
+})
+
+test('a chunk failure that survives the reload is reported once, and not as a crash', () => {
+  let clock = 1e12
+  const sent = []
+  const report = createErrorReporter({
+    send: (b) => sent.push(b), storage: memoryStorage(), now: () => clock, reloadPending: () => false,
+  })
+  assert.equal(report(new TypeError(CHUNK), { pathname: '/credits?x=1', kind: 'render' }), true)
+  clock += MIN_INTERVAL_MS * 2
+  assert.equal(report(new TypeError(CHUNK), { pathname: '/credits', kind: 'render' }), false, 'reported twice')
+  assert.equal(sent.length, 1)
+  assert.match(sent[0].subject, /^Chunk load failed on \/credits: Failed to fetch dynamically imported module/)
+  assert.ok(!/Crash on/.test(sent[0].subject), sent[0].subject)
+  // A stylesheet that would not preload is the same kind of failure.
+  assert.match(describeError(new Error('Unable to preload CSS for /assets/SurfaceIndex-bdUDG-8n.css'), { pathname: '/learn' }).subject,
+    /^Chunk load failed on \/learn: /)
+  // ...and a crash in code that DID arrive keeps its name.
+  assert.match(describeError(new TypeError("Cannot read properties of undefined (reading 'join')"), { pathname: '/admin' }).subject,
+    /^Crash on \/admin: /)
+})
+
+test('the browser reporter is told when a chunk-recovery reload is in flight', () => {
+  const src = stripJs(fs.readFileSync('src/utils/errorReport.js', 'utf8'))
+  assert.match(src, /reloadPending: chunkReloadPending/)
 })
 
 test('only production posts; everywhere else logs', () => {
