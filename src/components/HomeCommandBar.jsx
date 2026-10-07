@@ -365,8 +365,9 @@ export default function HomeCommandBar({ labelledBy } = {}) {
                 const cat = item.kind === 'tool' ? getCategory(item.category) : null
                 // See categoryPillFor: the pill must not be localised past
                 // the row's own words, or one row reads in two spellings.
+                // A tool with no category (the Learn guides) has no pill.
                 const pill = item.kind === 'tool'
-                  ? (categoryPillFor(item, cat, t) || 'Tool')
+                  ? categoryPillFor(item, cat, t)
                   : t('common.category')
                 return (
                   <li key={`${item.kind}-${item.id}`}>
@@ -380,7 +381,7 @@ export default function HomeCommandBar({ labelledBy } = {}) {
                         <span className="hcmd-row-title">{item.label}</span>
                         <span className="hcmd-row-desc">{item.description}</span>
                       </span>
-                      <span className="hcmd-row-cat">{pill}</span>
+                      {pill && <span className="hcmd-row-cat">{pill}</span>}
                     </Link>
                   </li>
                 )

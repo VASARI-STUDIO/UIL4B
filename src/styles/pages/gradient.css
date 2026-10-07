@@ -32,6 +32,22 @@
   color: var(--tl-dim);
 }
 
+/* The From palette note: one row of text, a pill link to the Palette Builder
+   and a dismiss square. No card or border; it sits on the page like the Pro
+   note above. The wrapper is the always-mounted live region: while it is empty
+   it leaves the flow, so the grid gap above the canvas is not doubled.
+   scroll-margin keeps the note clear of the sticky toolbar when it is scrolled
+   into view. */
+.grd .grd-live:empty { position: absolute; }
+.grd .grd-note--palette {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--tl-ink);
+  scroll-margin-top: calc(var(--chrome-h) + 72px);
+  border-radius: 8px;
+}
+.grd .grd-note--palette:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 4px; }
+
 /* ── Canvas (D:627) ─────────────────────────────────────────────────────── */
 .grd .grd-canvas {
   position: relative;

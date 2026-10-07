@@ -49,7 +49,7 @@ test.describe('the app header', () => {
     await go(page, '/discover/palettes')
     await expect(page.locator('.pnav-logo')).toHaveAttribute('href', '/projects')
     await expect(page.getByRole('link', { name: 'Back to the site' })).toHaveAttribute('href', '/home')
-    await expect(page.getByRole('link', { name: 'Palette library' })).toHaveAttribute('href', '/discover/palettes')
+    await expect(page.getByRole('link', { name: 'Your workspace' })).toHaveAttribute('href', '/projects')
   })
 
   test('"Create a free account" is directly below "Log in" and opens the sign-up form', async ({ page }) => {

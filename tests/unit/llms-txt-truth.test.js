@@ -189,6 +189,18 @@ test('every tool listed is live and prerendered; every Soon tool is under Option
   assert.ok(live.size >= 10)
 })
 
+test('no route is listed twice, in the same section or across sections', () => {
+  const rows = [...COMMITTED.matchAll(/^- \[[^\]]+\]\((https:\/\/uil4b\.com[^)]*)\)/gm)].map((m) => m[1])
+  const dupes = rows.filter((url, i) => rows.indexOf(url) !== i)
+  assert.deepEqual(dupes, [], `listed more than once in llms.txt: ${dupes.join(', ')}`)
+
+  // The sections are built from separate lists, so the lists themselves must
+  // not overlap either.
+  const { tools, learn, browse, more } = llmsRoutes()
+  const all = [...tools.map((t) => t.route), ...learn, ...browse, ...more]
+  assert.equal(new Set(all).size, all.length, 'two sections of llmsRoutes() list the same route')
+})
+
 test('every description is the route’s own meta description, not a second copy', () => {
   // The prose on each row is the routeMetaMap.js entry — the same table every
   // prerendered <meta name="description"> comes from — so a tool description

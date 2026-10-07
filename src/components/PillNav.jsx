@@ -23,6 +23,7 @@ import NavIcon from './NavIcon'
 import ThemeChoice from './ThemeChoice'
 import ThemeCycle from './nav/ThemeCycle'
 import PhoneTabBar from './nav/PhoneTabBar'
+import FoldersGlyph from './nav/FoldersGlyph'
 import SpectrumNav from './SpectrumNav'
 import { AccountSwitcher, SignOutRows } from './nav/AccountSwitcher'
 import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
@@ -37,9 +38,9 @@ const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
 // One 64px row: wordmark · search · theme · Create / Discover / Learn, then at
-// the far end Export · Palette library · Back to the site · Upgrade · avatar.
+// the far end Export · Your workspace · Back to the site · Upgrade · avatar.
 // It NEVER wraps: below 1100px the search field becomes its icon, and below
-// 900px Export, Palette library and Back to the site move into the account
+// 900px Export, Your workspace and Back to the site move into the account
 // popover, where the same three rows are always present.
 //
 // Below 768px it is the compact phone header: wordmark, search, avatar, menu —
@@ -99,7 +100,7 @@ function ExportIcon() {
   )
 }
 
-// Phosphor "bookmark-simple" (App line 120): the Palette library.
+// Phosphor "bookmark-simple": the header icon for Your workspace.
 function BookmarkIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -585,9 +586,9 @@ function AppHeader() {
           <span>Export</span>
         </button>
       )}
-      <Link className="pnav-pop-item pnav-pop-item--fold" to="/discover/palettes" onClick={closeAll}>
-        <BookmarkIcon />
-        <span>Palette library</span>
+      <Link className="pnav-pop-item pnav-pop-item--fold" to="/projects" onClick={closeAll}>
+        <FoldersGlyph size={16} />
+        <span>Your workspace</span>
       </Link>
       <Link className="pnav-pop-item pnav-pop-item--fold" to="/home" onClick={closeAll}>
         <SiteIcon />
@@ -669,7 +670,7 @@ function AppHeader() {
                 <ExportIcon />
               </button>
             )}
-            <Link className="pnav-iconbtn pnav-fold" to="/discover/palettes" aria-label="Palette library" title="Palette library" onClick={closeAll}>
+            <Link className="pnav-iconbtn pnav-fold" to="/projects" aria-label="Your workspace" title="Your workspace" onClick={closeAll}>
               <BookmarkIcon />
             </Link>
             <Link className="pnav-iconbtn pnav-fold" to="/home" aria-label="Back to the site" title="Back to the site" onClick={closeAll}>
@@ -883,8 +884,8 @@ function AppHeader() {
                 <ExportIcon /><span>Export</span>
               </button>
             )}
-            <Link className="pnav-sheet-row" to="/discover/palettes" onClick={closeAll}>
-              <BookmarkIcon /><span>Palette library</span>
+            <Link className="pnav-sheet-row" to="/projects" onClick={closeAll}>
+              <FoldersGlyph size={16} /><span>Your workspace</span>
             </Link>
             <Link className="pnav-sheet-row" to="/home" onClick={closeAll}>
               <SiteIcon /><span>Back to the site</span>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import FoldersGlyph from './FoldersGlyph'
 
 // THE PHONE TAB BAR — the phone mockups in `UIL4B - Spectrum.dc.html`
 // (lines 1432-1437 and 1552-1557) draw the app with a bottom bar of four tabs:
@@ -11,15 +12,6 @@ import { Link, useLocation } from 'react-router-dom'
 // Create is a BUTTON, not a link: the tools have no single page to land on, so
 // it opens the menu sheet on its Create section, which is where every tool is.
 // Visible below 768px only (global.css); from 768 the header carries the menus.
-
-function FoldersGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3.5 8v10a1.5 1.5 0 0 0 1.5 1.5h12.5" />
-      <path d="M7 15.5V5.5A1.5 1.5 0 0 1 8.5 4h3.3l2 2.2H19a1.5 1.5 0 0 1 1.5 1.5V15.5A1.5 1.5 0 0 1 19 17H8.5A1.5 1.5 0 0 1 7 15.5Z" />
-    </svg>
-  )
-}
 
 function PaletteGlyph() {
   return (

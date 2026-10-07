@@ -4,6 +4,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import ColorPickerPop from '../components/ColorPickerPop'
+import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
@@ -542,7 +543,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     [design?.palette?.colors]
   )
   const canRandomFromPalette = paletteHexes.length >= 2
-
+  // Pressing From palette with nothing to draw from says so on the page, with a
+  // way to make a palette, rather than leaving the reason in a tooltip. The
+  // count is how many times it was pressed, so a second press brings the note
+  // back into view; it clears itself once a palette with 2+ colours exists.
+  const [paletteMissing, setPaletteMissing] = useState(0)
+  const showPaletteMissing = paletteMissing > 0 && !canRandomFromPalette
+  const paletteNoteRef = useRef(null)
+  // Once the palette can make a gradient the count goes back to zero, so the
+  // note does not return on its own if the palette later drops below two.
+  useEffect(() => {
+    if (canRandomFromPalette) setPaletteMissing(0)
+  }, [canRandomFromPalette])
   // Like Random, but samples the user's OWN palette instead of random hex, so
   // the result always sits inside their brand colours. Fisher–Yates shuffle →
   // take 2–3 → spread evenly → random type/angle. Falls back to fully-random
@@ -564,6 +576,33 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setFromLibrary(false)
     toast?.('Random gradient from your palette')
   }, [paletteHexes, randomise, rollStops, locks.type, locks.angle, toast])
+
+  const fromPalette = useCallback(() => {
+    if (!canRandomFromPalette) { setPaletteMissing((n) => n + 1); return }
+    setPaletteMissing(0)
+    randomiseFromPalette()
+  }, [canRandomFromPalette, randomiseFromPalette])
+
+  // The note sits above the canvas, which the sticky toolbar can leave off
+  // screen on a phone scrolled down: bring it into view and move focus to it.
+  // Focus goes first with preventScroll so the one scroll is the animated one.
+  useEffect(() => {
+    if (!paletteMissing) return
+    const note = paletteNoteRef.current
+    if (!note) return
+    note.focus({ preventScroll: true })
+    note.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [paletteMissing])
+
+  // Dismiss unmounts the focused button, so focus goes back to what opened the
+  // note: the From palette button, or More when that button has moved into it.
+  const dismissPaletteNote = useCallback(() => {
+    const toolbar = document.querySelector('[data-tool-toolbar]')
+    const origin = toolbar?.querySelector('[data-tl-item="from-palette"] button')
+      || toolbar?.querySelector('[data-tl-more] button')
+    origin?.focus()
+    setPaletteMissing(0)
+  }, [])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
@@ -808,7 +847,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           render: () => (
             <ToolButton
               icon="swatches"
-              onClick={() => canRandomFromPalette && randomiseFromPalette()}
+              onClick={fromPalette}
               aria-disabled={!canRandomFromPalette || undefined}
               aria-label={canRandomFromPalette ? undefined : 'From palette — add 2+ colours in the Palette Builder to use this'}
               title={canRandomFromPalette ? 'Build a random gradient from your current palette' : 'Add 2+ colours in the Palette Builder to use this'}
@@ -819,7 +858,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: {
             label: 'From palette', icon: 'swatches', ariaDisabled: !canRandomFromPalette,
             title: canRandomFromPalette ? 'Build a random gradient from your current palette' : 'Add 2+ colours in the Palette Builder to use this',
-            onSelect: () => canRandomFromPalette && randomiseFromPalette(),
+            onSelect: fromPalette,
           },
         },
         {
@@ -861,6 +900,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               <span>Gallery gradient — free to preview &amp; copy. Editing it is a Pro tool; Reset or Random to start a free, editable one.</span>
             </p>
           )}
+          {/* A live region that is always mounted: one inserted already full
+              is often not announced. */}
+          <div className="grd-live" role="status">
+            {showPaletteMissing && (
+              <div className="grd-note grd-note--palette" ref={paletteNoteRef} tabIndex={-1}>
+                <span>{paletteHexes.length === 1 ? 'Needs a palette with two or more colours.' : 'No palette yet.'}</span>
+                <ToolButton as={Link} to="/create/palette" icon="swatches" className="grd-note-link">
+                  {paletteHexes.length === 1 ? 'Add colours in Palette Builder' : 'Make one in Palette Builder'}
+                </ToolButton>
+                <ToolButton variant="square" icon="x" iconSize={14} onClick={dismissPaletteNote} aria-label="Dismiss" title="Dismiss" className="grd-note-x" />
+              </div>
+            )}
+          </div>
           <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
 
           {/* The stop rail. Press empty rail to drop a stop where you press and

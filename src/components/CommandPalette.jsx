@@ -1,7 +1,7 @@
 import { useState, useEffect, useId, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCategory, localiseTools, localiseCategories } from '../data/tools'
-import { categoryPillFor, queryCommandIndex } from '../data/toolIndex'
+import { categoryPillFor, offerableCategories, queryCommandIndex } from '../data/toolIndex'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -76,7 +76,7 @@ export default function CommandPalette({ open, onClose }) {
       const out = []
       if (recentTools.length) out.push({ label: t('cmd.recent'), items: recentTools.map(tl => ({ kind: 'tool', ...tl })) })
       out.push({ label: t('cmd.allTools'), items: lTools.map(tl => ({ kind: 'tool', ...tl })) })
-      out.push({ label: t('cmd.categories'), items: lCats.map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description })) })
+      out.push({ label: t('cmd.categories'), items: offerableCategories(lCats).map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description })) })
       out.push({ label: t('cmd.actions'), items: quickActions.map(a => ({ kind: 'action', ...a })) })
       return out
     }
@@ -205,9 +205,11 @@ export default function CommandPalette({ open, onClose }) {
                       <span className="cp-item-label">{item.label}</span>
                       {item.description && <span className="cp-item-desc">{item.description}</span>}
                     </div>
-                    <span className="cp-item-cat">
-                      {item.kind === 'tool' ? catLabel : item.kind === 'category' ? t('common.category') : t('common.action')}
-                    </span>
+                    {(item.kind !== 'tool' || catLabel) && (
+                      <span className="cp-item-cat">
+                        {item.kind === 'tool' ? catLabel : item.kind === 'category' ? t('common.category') : t('common.action')}
+                      </span>
+                    )}
                   </button>
                 )
               })}
