@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom'
 // tab uses `summary.users` — the profile cache — as its fallback when the
 // server user list cannot be read, and it says on screen that that is what it
 // is showing. A labelled fallback is not a headline figure.
-import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getAggregateAnalytics, resetPageAnalytics } from '../utils/analytics'
+import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getAggregateAnalytics, resetPageAnalytics, toolUsageRows } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import CommunityQueue from '../components/admin/CommunityQueue'
@@ -198,7 +198,7 @@ function DonutChart({ segments, size = 120 }) {
  * that is only ever handed aggregate rows cannot develop that difference again.
  */
 function TopList({ title, rows, unit, empty }) {
-  const max = rows[0]?.[1] || 1
+  const max = Math.max(1, ...rows.map(r => r[1]))
   return (
     <div className="adm-card">
       <div className="adm-card-header">
@@ -217,6 +217,40 @@ function TopList({ title, rows, unit, empty }) {
             ))}
           </div>
         ) : <div className="adm-empty">{empty}</div>}
+      </div>
+    </div>
+  )
+}
+
+// Per-tool usage as two separate numbers: how often the tool was opened and how
+// often something was then done in it. The bar follows Opened.
+function ToolUsageCard({ rows }) {
+  const max = Math.max(1, ...rows.map(r => r.opened))
+  return (
+    <div className="adm-card" data-testid="adm-tool-usage">
+      <div className="adm-card-header">
+        <span className="adm-card-title">Tools</span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} tools</span>
+      </div>
+      <div className="adm-card-body">
+        {rows.length > 0 ? (
+          <div className="adm-bar">
+            <div className="adm-bar-row" style={{ fontSize: 10, color: 'var(--t3)' }}>
+              <span className="adm-bar-label" style={{ fontFamily: 'inherit' }} />
+              <span style={{ flex: 1 }} />
+              <span className="adm-bar-value" style={{ color: 'inherit', fontFamily: 'inherit', fontWeight: 500 }}>Opened</span>
+              <span className="adm-bar-value" style={{ color: 'inherit', fontFamily: 'inherit', fontWeight: 500 }}>Used</span>
+            </div>
+            {rows.slice(0, 8).map(({ id, opened, used }) => (
+              <div key={id} className="adm-bar-row" data-tool={id}>
+                <span className="adm-bar-label" title={id}>{id}</span>
+                <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(opened / max) * 100}%` }} /></div>
+                <span className="adm-bar-value" data-col="opened"><span className="sr-only">Opened </span>{opened}</span>
+                <span className="adm-bar-value" data-col="used"><span className="sr-only">Used </span>{used}</span>
+              </div>
+            ))}
+          </div>
+        ) : <div className="adm-empty">No tool usage yet</div>}
       </div>
     </div>
   )
@@ -2058,7 +2092,7 @@ export default function Admin({ toast }) {
                 <p className="adm-confirm-lead"><strong>Reset page analytics for everyone?</strong></p>
                 <ul className="adm-confirm-list">
                   <li>Clears the page-view totals and the per-page counts from every daily document in <span className="mono">analytics-daily</span>, for every administrator — not just this browser.</li>
-                  <li>Leaves the tool, icon and icon-pack counts alone, so Top Tools, Top Icons and Top Icon Packs below are unaffected.</li>
+                  <li>Leaves the tool, icon and icon-pack counts alone, so the Tools, Funnel, Top Icons and Top Icon Packs lists below are unaffected.</li>
                   <li>There is no undo and no backup. Deleted counts are gone.</li>
                 </ul>
                 <div className="adm-confirm-actions">
@@ -2086,7 +2120,7 @@ export default function Admin({ toast }) {
                   </div>
                 </div>
               </div>
-            ) : !aggregate || (aggregate.totalViews === 0 && aggregate.byPath.length === 0 && aggregate.byTool.length === 0) ? (
+            ) : !aggregate || (aggregate.totalViews === 0 && aggregate.byPath.length === 0 && aggregate.byTool.length === 0 && aggregate.byOpen.length === 0 && aggregate.funnel.length === 0) ? (
               <div className="adm-card">
                 <div className="adm-card-body">
                   <div className="adm-empty">No aggregate data yet.</div>
@@ -2111,7 +2145,7 @@ export default function Admin({ toast }) {
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.byTool.reduce((s, t) => s + t[1], 0))}</div>
                     <div className="adm-stat-label">Tool Actions</div>
-                    <div className="adm-stat-sub">{aggregate.byTool.length} tool types</div>
+                    <div className="adm-stat-sub">{aggregate.byTool.length} tool types used</div>
                   </div>
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.days.length)}</div>
@@ -2134,9 +2168,14 @@ export default function Admin({ toast }) {
                     empty="No page data yet"
                     rows={aggregate.byPath.map(([path, n]) => [path === 'root' ? '/' : path.replace(/_/g, '/'), n])}
                   />
-                  <TopList title="Top Tools" unit="tools" empty="No tool usage yet" rows={aggregate.byTool} />
+                  <ToolUsageCard rows={toolUsageRows(aggregate)} />
                   <TopList title="Top Icons" unit="icons" empty="No icon copies yet" rows={aggregate.byIcon} />
                   <TopList title="Top Icon Packs" unit="packs" empty="No pack copies yet" rows={aggregate.byPack} />
+                  {/* The funnel counters share the daily document with the tool
+                      counters but are not tool usage, so they get their own list. */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <TopList title="Funnel" unit="stages" empty="No funnel events yet" rows={aggregate.funnel} />
+                  </div>
                 </div>
               </>
             )}
