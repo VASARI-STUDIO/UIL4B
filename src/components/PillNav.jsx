@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
@@ -27,6 +27,9 @@ import FoldersGlyph from './nav/FoldersGlyph'
 import SpectrumNav from './SpectrumNav'
 import { AccountSwitcher, SignOutRows } from './nav/AccountSwitcher'
 import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
+// `lazy` in this file is lazyRoute, not React's: if the file for an overlay
+// failed to download, it waits for the recovery reload instead of crashing.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
 // Discover pane's counts too — the resources list behind one of them is 20 KB

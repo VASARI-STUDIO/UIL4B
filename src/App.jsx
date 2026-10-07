@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
+import { useEffect, useLayoutEffect, useRef, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
@@ -27,6 +27,9 @@ import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { EVENTS, sendEvent } from './utils/productEvents'
+// `lazy` in this file is lazyRoute, not React's: a page file that failed to
+// download waits for the recovery reload instead of crashing the route.
+import { lazyRoute as lazy } from './utils/lazyRoute'
 
 // Static imports — small or always-visited pages (instant load)
 //

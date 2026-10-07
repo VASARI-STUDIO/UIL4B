@@ -10,8 +10,11 @@
 // `fallback={null}` is right rather than lazy: One Tap renders a floating
 // Google prompt over the page, and "not there yet" is what it already looks
 // like for the seconds before Google Identity Services loads.
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { whenFirebaseGate } from '../utils/firebaseAccess'
+// `lazy` in this file is lazyRoute, not React's: if the file for the One Tap prompt
+// failed to download, it waits for the recovery reload instead of crashing.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 const GoogleOneTap = lazy(() => whenFirebaseGate().then(() => import('./GoogleOneTap')))
 
