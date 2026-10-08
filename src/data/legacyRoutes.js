@@ -133,12 +133,14 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/docs-marketing', '/learn'],
   ['/docs-ai', '/learn'],
   ['/design-reference', '/learn'],
+  ['/principles', '/learn/principles'],
+  ['/help', '/learn/help'],
   ['/resources', '/discover'],
   ['/prompts', '/discover/prompts'],
   ['/pricing', '/plans'],
   ['/site-map', '/sitemap'],
-  ['/about', '/help#about'],
-  ['/faq', '/help#faq'],
+  ['/about', '/learn/help#about'],
+  ['/faq', '/learn/help#faq'],
 ])
 
 // A SURFACE ROOT NOBODY EVER BUILT A PAGE FOR.

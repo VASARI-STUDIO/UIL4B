@@ -173,7 +173,7 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
       await signIn(page, { plan: 'free', projects: CAP - 1 })
       await go(page, '/create/palette')
 
-      await page.getByRole('button', { name: 'Save current' }).click()
+      await page.getByRole('button', { name: 'Save or share' }).click()
       const menu = page.locator('.plb-savemenu')
       await expect(menu).toBeVisible()
       const save = menu.getByRole('button', { name: 'Save', exact: true })
@@ -182,14 +182,14 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
       await page.keyboard.press('Escape')
       await expect(menu).toHaveCount(0)
 
-      // The colour system, which a phone reaches in the Tools sheet: the
+      // The colour system, which a phone reaches in the Extra tools sheet: the
       // select must take the tap over the adjust footer, and the choice holds.
       let tools = await openPaletteTools(page)
       const system = tools.getByRole('combobox', { name: 'Colour system' })
       const current = await system.inputValue()
       const pick = COLOUR_SYSTEMS.find((s) => s.free && s.id !== current)
       await expect.poll(() => hitWithin(system, '.tl-sheet').then((h) => h.inside),
-        'a tap on the colour system must reach the Tools sheet, not the adjust footer').toBe(true)
+        'a tap on the colour system must reach the Extra tools sheet, not the adjust footer').toBe(true)
       await system.selectOption(pick.id)
       await expect(tools).toHaveCount(0)
       tools = await openPaletteTools(page)
@@ -203,7 +203,7 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
     watch(page, 'a desktop user opening Save / export')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/create/palette')
-    await page.getByRole('button', { name: 'Save current' }).click()
+    await page.getByRole('button', { name: 'Save or share' }).click()
     const menu = page.locator('.plb-savemenu')
     await expect(menu).toBeVisible()
     const box = await menu.boundingBox()
@@ -225,7 +225,7 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
       watch(page, `a free account at the cap saving a palette (${size[0]}px)`)
       const account = await signIn(page, { plan: 'free', projects: CAP })
       await go(page, '/create/palette')
-      await page.getByRole('button', { name: 'Save current' }).click()
+      await page.getByRole('button', { name: 'Save or share' }).click()
       const menu = page.locator('.plb-savemenu')
       const field = menu.getByLabel('Project name')
       await field.fill('One Too Many')
@@ -252,7 +252,7 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
       // Closing the menu clears it, so a stale refusal cannot greet the next attempt.
       await page.keyboard.press('Escape')
       await expect(menu).toHaveCount(0)
-      await page.getByRole('button', { name: 'Save current' }).click()
+      await page.getByRole('button', { name: 'Save or share' }).click()
       await expect(page.getByTestId('palette-save-refusal')).toHaveCount(0)
       await context.close()
     })
@@ -263,7 +263,7 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
     watch(page, 'a free account with a slot to spare saving a palette')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/create/palette')
-    await page.getByRole('button', { name: 'Save current' }).click()
+    await page.getByRole('button', { name: 'Save or share' }).click()
     await page.locator('.plb-savemenu').getByLabel('Project name').fill('Room To Spare')
     await page.keyboard.press('Enter')
     await expect(page.getByTestId('palette-save-refusal')).toHaveCount(0)
@@ -407,7 +407,7 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
       const { context, page } = await open(browser, PHONE, theme)
       watch(page, `a stranger meeting the sign-in gate on a phone (${theme})`)
       await go(page, '/create/palette')
-      await page.getByRole('button', { name: 'Save current' }).click()
+      await page.getByRole('button', { name: 'Save or share' }).click()
       // The gate moved off the menu opener onto Save, 2026-09-15 — the menu
       // holds three Copy rows and copying is free. See PaletteBuilder's doSave.
       const saveBtn = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
@@ -433,7 +433,7 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
     const { context, page } = await open(browser, PHONE)
     watch(page, 'a first-time visitor on a phone: the gate, then the sign-up pane')
     await go(page, '/create/palette')
-    await page.getByRole('button', { name: 'Save current' }).click()
+    await page.getByRole('button', { name: 'Save or share' }).click()
     // The gate moved off the menu opener onto Save, 2026-09-15 — the menu holds
     // three Copy rows and copying is free forever. See PaletteBuilder's doSave.
     const saveBtn = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })

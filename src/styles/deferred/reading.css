@@ -7,11 +7,11 @@
  *   SiteMap, LearnArticle, NotFound
  *
  * THREE FAMILIES WERE DELETED FROM HERE ON 2026-09-23, and each was proved dead
- * before it went. `.ic-*` (/info), `.hlp-*` (/help) and `.prn-*` (/principles)
+ * before it went. `.ic-*` (/info), `.hlp-*` (/learn/help) and `.prn-*` (/learn/principles)
  * still have markup, but the three pages that render it stopped importing this
  * sheet when they moved to src/styles/pages/info.css, help.css and
  * principles.css. The rules were not harmless leftovers: chunk CSS stays in the
- * document once a route has loaded it, so a visitor who went /learn/… → /help
+ * document once a route has loaded it, so a visitor who went /learn/… → /learn/help
  * got this sheet's old `.hlp-*` values underneath the Spectrum ones — the old
  * type scale, --accent-strong hovers and all. The orphaned Image Converter
  * `.ic-stat-val` block, `.fx-underline`, `.home-anim`, `.spec-frame`,

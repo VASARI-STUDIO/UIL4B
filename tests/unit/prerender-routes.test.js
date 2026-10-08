@@ -20,6 +20,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { rewriteHead } from '../../scripts/prerender.mjs'
+import { applyPricingHtml } from '../../scripts/site-pricing.mjs'
 import { buildRewrites, prerenderRoutes } from '../../scripts/sync-vercel-rewrites.mjs'
 import {
   CREATE_HOMES_THAT_RENDER,
@@ -32,11 +34,24 @@ import {
 } from '../../scripts/route-matrix.mjs'
 import { ORIGIN, advertisedRoutes, buildSitemap } from '../../scripts/sync-sitemap.mjs'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
-import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, resolveTool } from '../../src/data/toolTree.js'
 import { LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 import { canonicalUrl, robotsFor } from '../../src/utils/routeMeta.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
+
+test('Learn reference pages replace the retired roots in prerender and sitemap routes', () => {
+  for (const name of ['principles', 'help']) {
+    const old = `/${name}`
+    const route = `/learn/${name}`
+    assert.equal(classifyRoute(old).prerender, false)
+    assert.equal(classifyRoute(route).prerender, true)
+    assert.ok(prerenderRoutes().includes(route))
+    assert.ok(!prerenderRoutes().includes(old))
+    assert.ok(advertisedRoutes().includes(route))
+    assert.ok(!advertisedRoutes().includes(old))
+  }
+})
 const vercel = () => JSON.parse(read('vercel.json'))
 
 // Routes deliberately prerendered with the HOMEPAGE's own metadata, because
@@ -199,15 +214,10 @@ test('no Soon route is prerendered', () => {
     '/learn has published articles and must be prerendered')
 })
 
-test('CANONICAL AND NOINDEX TRUTH: every prerendered route is one the runtime indexes', () => {
-  // The founder's constraint, checked against the runtime's own functions
-  // rather than a copy of the rule. A route that robotsFor() says is noindex
-  // must never get an indexable shell, and a shell's canonical must be the same
-  // string App.jsx writes after hydration — otherwise the served page and the
-  // rendered page instruct crawlers differently, and the more restrictive one
-  // silently wins.
+test('CANONICAL AND NOINDEX TRUTH: hidden shells are noindex and listed shells are indexable', () => {
+  // Hidden tools still get shells; only listed tools get indexable metadata.
   for (const route of prerenderRoutes()) {
-    assert.equal(robotsFor(route), 'index,follow',
+    assert.equal(robotsFor(route), resolveTool(route).tool?.hidden ? 'noindex,follow' : 'index,follow',
       `${route} is prerendered but the runtime marks it ${robotsFor(route)}`)
     assert.match(canonicalUrl(route), /^https:\/\/uil4b\.com(\/|\/\S+)$/,
       `${route} has no usable canonical`)
@@ -233,10 +243,10 @@ test('the sitemap is a SUBSET of the matrix, and every extra route is explainabl
     assert.ok(routes.includes(route),
       `${route} is advertised in sitemap.xml but gets no prerendered shell`)
   }
-  // Every route in the matrix but not the sitemap has to be a canonical alias —
-  // a page whose canonical points somewhere else. Anything else in this list is
-  // a page we prerender and then forgot to advertise.
+  // Hidden tools keep their shells without being advertised. Other omissions
+  // must be canonical aliases.
   for (const route of unadvertised(routes, sitemap)) {
+    if (resolveTool(route).tool?.hidden) continue
     assert.notEqual(canonicalUrl(route), `https://uil4b.com${route}`,
       `${route} is prerendered, self-canonical and NOT in sitemap.xml — either `
       + 'advertise it or explain why it is prerendered at all')
@@ -263,16 +273,13 @@ test('public/sitemap.xml is exactly what the generator produces — no hand-edit
     'run `npm run sync:sitemap` — public/sitemap.xml has drifted from the route matrix')
 })
 
-test('THE DIRECTION THAT WAS NOT ASSERTED: every self-canonical prerendered route is advertised', async () => {
-  // Containment (below) says everything advertised is prerendered. This is the
-  // other way round and it is the one that lets a real page go missing: a route
-  // that has its own shell, its own title and its own canonical, and which the
-  // sitemap simply never mentions, is a page we built and did not tell anyone
-  // about. Nothing failed for that before — `unadvertised()` was only asked
-  // whether the extras were explainable, one route at a time.
+test('THE DIRECTION THAT WAS NOT ASSERTED: every visible self-canonical prerendered route is advertised', async () => {
+  // Visible, self-canonical shells are advertised; hidden tools keep shells
+  // for direct links without appearing in the sitemap.
   const sitemap = new Set(await sitemapRoutes())
   const missing = prerenderRoutes().filter(
-    (route) => canonicalUrl(route) === `${ORIGIN}${route}` && !sitemap.has(route),
+    (route) => !resolveTool(route).tool?.hidden
+      && canonicalUrl(route) === `${ORIGIN}${route}` && !sitemap.has(route),
   )
   assert.deepEqual(missing, [],
     'these routes are prerendered and self-canonical but are not in sitemap.xml')
@@ -379,4 +386,23 @@ test('classifyRoute gives the FIRST true reason, not just any true one', () => {
   assert.equal(classifyRoute('/create/palette').prerender, true)
   // Trailing slashes and casing must not create a second answer.
   assert.equal(classifyRoute('/Create/Palette/').prerender, true)
+})
+
+test('prerender writes noindex for hidden tools and index for listed tools', () => {
+  const shell = applyPricingHtml(read('index.html'))
+  for (const [route, robots] of [
+    ['/create/auto-builder', 'noindex,follow'],
+    ['/create/palette', 'index,follow'],
+  ]) {
+    const { html, misses } = rewriteHead(shell, {
+      title: PAGE_TITLES[route],
+      description: PAGE_DESCRIPTIONS[route],
+      robots: robotsFor(route),
+      canonical: canonicalUrl(route),
+    })
+    assert.deepEqual(misses, [])
+    assert.ok(html.includes(`<meta name="robots" content="${robots}"`))
+    if (route === '/create/auto-builder') assert.doesNotMatch(html, /<link rel="canonical"/)
+    else assert.ok(html.includes(`<link rel="canonical" href="${canonicalUrl(route)}"`))
+  }
 })

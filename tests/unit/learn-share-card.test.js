@@ -43,9 +43,10 @@ test('THE ONE THAT MATTERS: /learn and every guide unfurl as the Learn card, not
     assert.equal(card.file, 'og-learn.png')
     assert.notEqual(card.id, DEFAULT_CARD.id)
   }
-  // Positive control: a route that is NOT Learn's has not been swept in.
+  // Reference and support pages retain their existing card selection.
   assert.equal(cardFor('/discover').id, 'discover')
-  assert.equal(cardFor('/help').id, DEFAULT_CARD.id)
+  assert.equal(cardFor('/learn/help').id, DEFAULT_CARD.id)
+  assert.equal(cardFor('/learn/principles').id, DEFAULT_CARD.id)
 })
 
 test('the routes, the guide names and the count are derived from the registry, not typed', () => {

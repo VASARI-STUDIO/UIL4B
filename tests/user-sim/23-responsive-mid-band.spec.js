@@ -45,7 +45,7 @@ const settle = async (page) => {
 
 test.describe('Palette Builder toolbar, 961–1080px', () => {
   // The colour system is the drawn System select (D:990). Where the row has
-  // room it sits on the row; where it does not, it is the Tools overflow's
+  // room it sits on the row; where it does not, it is the Extra tools overflow's
   // select. Either way it must take the pointer at every width in the band —
   // the audit found a trigger here that nothing could click.
   test('the colour system is reachable and takes the pointer at every width in the band', async ({ page }) => {
@@ -64,8 +64,8 @@ test.describe('Palette Builder toolbar, 961–1080px', () => {
       let scope = bar
       const inline = bar.getByRole('combobox', { name: 'Colour system' })
       if (!(await inline.count() && await inline.isVisible())) {
-        await bar.getByRole('button', { name: 'Tools' }).click()
-        scope = page.getByRole('dialog', { name: 'Tools' })
+        await bar.getByRole('button', { name: 'Extra tools' }).click()
+        scope = page.getByRole('dialog', { name: 'Extra tools' })
         await expect(scope).toBeVisible()
       }
       const select = scope.getByRole('combobox', { name: 'Colour system' })
@@ -82,13 +82,13 @@ test.describe('Palette Builder toolbar, 961–1080px', () => {
       if (covered.length) failures.push(`${width}px: covered at ${covered.join(', ')}`)
       if (scope !== bar) {
         await page.keyboard.press('Escape')
-        await expect(page.getByRole('dialog', { name: 'Tools' })).toHaveCount(0)
+        await expect(page.getByRole('dialog', { name: 'Extra tools' })).toHaveCount(0)
       }
     }
     expect(failures, `the colour system is unreachable:\n  ${failures.join('\n  ')}`).toEqual([])
   })
 
-  test('the Tools overflow opens as a popover, not a bottom sheet, above 767px', async ({ page }) => {
+  test('the Extra tools overflow opens as a popover, not a bottom sheet, above 767px', async ({ page }) => {
     // What the row cannot hold goes to the overflow, a popover
     // under its button from 768px and a bottom sheet below. Nothing may paint
     // over the open popover.
@@ -99,8 +99,8 @@ test.describe('Palette Builder toolbar, 961–1080px', () => {
     await expect(bar).not.toHaveClass(/is-measuring/)
     await settle(page)
 
-    await bar.getByRole('button', { name: 'Tools' }).click()
-    const menu = page.getByRole('dialog', { name: 'Tools' })
+    await bar.getByRole('button', { name: 'Extra tools' }).click()
+    const menu = page.getByRole('dialog', { name: 'Extra tools' })
     await expect(menu).toBeVisible()
     await expect(menu).toHaveClass(/tl-pop/)
     await expect(page.locator('.tl-sheet')).toHaveCount(0)

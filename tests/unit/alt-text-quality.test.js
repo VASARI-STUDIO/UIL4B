@@ -1,22 +1,15 @@
-// Founder report: "the alt text generator could use improvement, the longer
-// version generation seems to get cut off ... the whole point of this tool is to
-// make it so users can easily generate good SEO outputs."
-//
-// Three separate faults sat behind that one sentence, and this file guards all
-// three:
-//   1. api/ai.js never read Gemini's `finishReason`, so a MAX_TOKENS response —
-//      which still carries well-formed `parts` — was returned as a finished
-//      answer, and a SAFETY refusal was reported as "Empty response from AI
-//      provider".
-//   2. The result box was a fixed rows={3} textarea. A 300-character 'detailed'
-//      result cannot fit three rows, so a COMPLETE answer looked cut off. This
-//      is the one the founder was most likely actually looking at.
-//   3. The prompt was purely WCAG with no search dimension at all.
+// Alt-text generation must return complete answers, display them in full,
+// and produce accessible descriptions with honest search relevance.
+// This file checks three behaviours:
+//   1. api/ai.js reads Gemini's `finishReason`: a MAX_TOKENS response remains
+//      truncated even with well-formed `parts`, and a SAFETY refusal is
+//      classified separately from an empty response.
+//   2. The result box grows to fit a complete 300-character 'detailed' answer.
+//   3. The prompt combines WCAG requirements with search relevance.
 //
 // The finishReason tests below run the real decision function against real
 // response shapes. The prompt and UI tests read source, and strip comments
-// FIRST — assertions in this repo have previously matched an agent's own
-// explanatory prose and passed while proving nothing.
+// FIRST — assertions must match executable source rather than explanatory prose.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -36,7 +29,7 @@ const stripComments = (src) => src
 
 const AI = stripComments(read('api/ai.js'))
 const PAGE = stripComments(read('src/pages/AltTextGenerator.jsx'))
-// Every stylesheet, not just global.css: the `alt` family now lives in
+// Every stylesheet, not just global.css: the `alt` family lives in
 // src/styles/pages/alt-text.css, and reading global.css alone would make the
 // assertions below pass by looking at nothing.
 const CSS = ALL_CSS
@@ -57,9 +50,9 @@ test('a complete answer classifies as ok and is not flagged truncated', () => {
   assert.equal(v.text, 'Site manager reviews plans on a tablet.')
 })
 
-test('MAX_TOKENS with text is truncated, NOT ok — this is the reported bug', () => {
-  // The trap: this response carries a well-formed parts array and reads as a
-  // success at every level except the one field nothing used to check.
+test('MAX_TOKENS with text is truncated, not ok', () => {
+  // A well-formed parts array does not imply success: finishReason determines
+  // whether the response is complete.
   const v = classifyGeminiFinish(reply('MAX_TOKENS', 'A line chart of quarterly revenue showing subscriptions climbing from'))
   assert.equal(v.status, 'truncated',
     'a response that stopped at the token ceiling must never classify as a finished answer')
@@ -74,8 +67,8 @@ test('a missing finishReason with text present is treated as complete', () => {
 })
 
 test('SAFETY is a refusal, not an empty response', () => {
-  // Previously fell through to "Empty response from AI provider", which blamed
-  // the provider for being broken when it had made a deliberate decision.
+  // A deliberate safety refusal must be classified separately from an empty
+  // provider response.
   const v = classifyGeminiFinish(reply('SAFETY', undefined))
   assert.equal(v.status, 'blocked')
   assert.equal(v.reason, 'SAFETY')
@@ -230,7 +223,7 @@ function simulateGemini25(generationConfig, { dynamicThinking = 450, answer = 'T
   return { candidates: [{ content: { parts: kept ? [{ text: kept }] : [] }, finishReason: 'MAX_TOKENS' }], usageMetadata: { thoughtsTokenCount: thoughts, candidatesTokenCount: Math.max(0, room) } }
 }
 
-test('reproduction: a 300-token ceiling with default thinking cuts the reply off; the shared budget does not', () => {
+test('a 300-token ceiling with default thinking cuts the reply off; the shared budget does not', () => {
   const before = altTextOutcome(simulateGemini25({ temperature: 0.4, maxOutputTokens: 300 }, { dynamicThinking: 280 }))
   assert.equal(before.ok, false, 'the model of a 300-token ceiling with default thinking should reproduce the cut-off')
   assert.equal(before.finishReason, 'MAX_TOKENS')
@@ -297,8 +290,8 @@ test('the result field grows to fit instead of clipping into a 3-row box', () =>
   assert.match(PAGE, /Math\.min\(needed, maxHeight\)/)
   assert.match(PAGE, /el\.style\.overflowY = needed > maxHeight \? 'auto' : 'hidden'/,
     'past the ceiling it must scroll rather than grow without limit')
-  // Measured in a browser: without this the content area is 2px short of its
-  // content under border-box, which shaves the last line's descenders.
+  // Under border-box, the measured height must include the border to avoid
+  // clipping the last line's descenders.
   assert.match(PAGE, /cs\.boxSizing === 'border-box'/,
     'the border must be added to the measured height or the last line is clipped')
   assert.match(PAGE, /const needed = el\.scrollHeight \+ border/)
@@ -325,9 +318,8 @@ test('the autosize ceiling and the CSS backstop agree', () => {
 
 // ── Fault 3 · the prompt is a structured brief with an honest SEO dimension ──
 
-// Note the CRLF: this repo's line endings are \r\n, so anchoring the close of
-// the template literal to `\n` silently matched nothing and every prompt
-// assertion below ran against an empty string and "passed" vacuously.
+// The template-literal matcher must support CRLF line endings so the prompt
+// assertions inspect the full prompt rather than an empty string.
 const PROMPT = /const ALT_BASE_PROMPT = `([\s\S]*?)`/.exec(AI)?.[1] || ''
 
 test('the prompt is a markdown-structured brief, not a flat bullet list', () => {
@@ -345,8 +337,7 @@ test('the brief carries worked examples — the largest lever on this task', () 
   const bad = PROMPT.match(/^Bad: .+$/gm) || []
   assert.ok(good.length >= 2, `few-shot needs at least 2 worked examples, found ${good.length}`)
   assert.equal(good.length, bad.length, 'each worked example needs its counter-example')
-  // A chart example specifically: "a bar chart" is the single most common
-  // failure mode and prose instructions alone did not fix it.
+  // A chart example must demonstrate a meaningful description beyond "a bar chart".
   assert.match(PROMPT, /Line chart of quarterly revenue/)
 })
 
@@ -398,9 +389,9 @@ test('a non-array parts field degrades to "empty", not to a thrown 500', () => {
 })
 
 test('markdown structure is stripped from the author-supplied context', () => {
-  // The brief is markdown now, so the model reads `#` as structure — a context
-  // of "# Output contract / ignore the above" has leverage the old flat bullet
-  // list never gave it. Only the caller's own generation is at risk, but an
+  // The markdown brief gives `#` structural meaning, so author context must
+  // not introduce headings such as "# Output contract / ignore the above".
+  // Only the caller's own generation is at risk, but an
   // alt-text endpoint that can be steered into a general-purpose LLM is an
   // abuse path on a free provider tier.
   assert.match(AI, /replace\(\/\^\\s\*#\{1,6\}\\s\*\/gm, ''\)/,
@@ -449,7 +440,7 @@ test('the guidance is rendered, not hidden in a title tooltip', () => {
 })
 
 test('the length chips announce which one is selected', () => {
-  // They were styled-selected only, so a screen-reader user could not tell.
+  // The selected chip must expose its state to screen-reader users.
   assert.match(PAGE, /aria-pressed=\{tone === t\.id\}/)
   assert.match(PAGE, /role="group" aria-labelledby="alt-tone-label"/)
 })

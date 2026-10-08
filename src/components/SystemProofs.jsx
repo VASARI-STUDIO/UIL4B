@@ -1,4 +1,4 @@
-// The proofs that sit beside the claims on /help and /principles.
+// The proofs that sit beside the claims on /learn/help and /learn/principles.
 //
 // EVERY NUMBER ON BOTH PAGES IS PRODUCED HERE, by the same functions the tools
 // themselves run — generateTintScale() from the Colour Studio, contrastRatio()
@@ -49,7 +49,7 @@ const TEXT_MIN = 4.5
 const BOUNDARY_MIN = 3
 
 /**
- * /help's opening visual: the value a new project starts from, the eleven
+ * /learn/help's opening visual: the value a new project starts from, the eleven
  * stops the product generates out of it, and the files those stops can leave
  * as. One colour in, a system out — shown rather than described.
  *
@@ -256,7 +256,7 @@ export function ExportProof() {
 
   // THESE THREE LABELS ARE NOT HEADINGS, and used to be <h4>.
   //
-  // Rendered at 1280 in both themes on 2026-09-11, /principles walked its
+  // Rendered at 1280 in both themes on 2026-09-11, /learn/principles walked its
   // headings as H1, H2, H2, H2, **H4, H4, H4**, H2, H2 — a two-level skip
   // (WCAG 1.3.1), and the only such skip on any marketing surface.
   //

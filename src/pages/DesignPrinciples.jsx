@@ -1,4 +1,4 @@
-// /principles — the rules the product holds to when it builds an interface
+// /learn/principles — the rules the product holds to when it builds an interface
 // system, each one beside the screen that applies it.
 //
 // FOUNDER DIRECTION, verbatim (2026-08-20, group D of the surface batch):

@@ -1,4 +1,4 @@
-// /help — Help & Getting Started.
+// /learn/help — Help & Getting Started.
 //
 // FOUNDER DIRECTION, verbatim (2026-08-20, group D of the surface batch):
 // "these are less documents are more designed like a sales page style of large
@@ -69,7 +69,7 @@
 //
 // ── The three anchors are load-bearing ─────────────────────────────────────
 //
-// src/data/legacyRoutes.js sends /about → /help#about and /faq → /help#faq, and
+// src/data/legacyRoutes.js sends /about → /learn/help#about and /faq → /learn/help#faq, and
 // the old page answered those with tab ids. The sections below carry the same
 // three ids, so both retired URLs still land on the part of the page they name
 // rather than at the top of a page that no longer has that tab.
@@ -107,7 +107,7 @@ export default function HelpCentre() {
           Open any tool. It starts with <mark className="home-mark">something</mark> in it.
         </h1>
         {/* Opens on SURFACE_LINE.helpOpening — the founder's forget-the-app-name
-            sentence, chosen there because a /help visitor arrived looking for a
+            sentence, chosen there because a /learn/help visitor arrived looking for a
             specific tool. Read by id, never typed.
 
             IT IS THE WHOLE LEDE NOW. Two agent sentences used to follow it:
@@ -196,7 +196,7 @@ export default function HelpCentre() {
 
       {/* ── Something wrong ──
           `id="contact"` because the old FAQ's empty state linked to
-          /help#contact. One destination, not a second form. */}
+          /learn/help#contact. One destination, not a second form. */}
       <section className="hlp-band hlp-band--close" id="contact" aria-labelledby="hlp-contact-h">
         <div className="hlp-close" data-reveal>
           <h2 className="hlp-h2" id="hlp-contact-h">Something wrong, or missing?</h2>

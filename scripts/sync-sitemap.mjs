@@ -52,6 +52,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { prerenderRoutes } from './route-matrix.mjs'
 import { canonicalUrl } from '../src/utils/routeMeta.js'
+import { isListedTool, resolveTool } from '../src/data/toolTree.js'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -71,7 +72,9 @@ export const ORIGIN = canonicalUrl('/').replace(/\/$/, '')
  *      a sub-directory — an implementation detail of the build, and no reason
  *      to stop telling Google about the homepage.
  *
- *   2. Everything else must be prerendered AND its own canonical. `/home` is
+ *   2. Hidden tools are excluded while retaining their prerendered shells.
+ *
+ *   3. Everything else must be prerendered AND its own canonical. `/home` is
  *      the case that rule exists for: it is prerendered so the site's
  *      most-linked URL stops unfurling as "Page not found", and routeMeta.js
  *      canonicalises it onto `/`, so advertising it would be asking Google to
@@ -81,7 +84,8 @@ export const ORIGIN = canonicalUrl('/').replace(/\/$/, '')
 export function advertisedRoutes() {
   return [
     '/',
-    ...prerenderRoutes().filter((route) => canonicalUrl(route) === `${ORIGIN}${route}`),
+    ...prerenderRoutes().filter((route) => isListedTool(resolveTool(route)?.tool)
+      && canonicalUrl(route) === `${ORIGIN}${route}`),
   ]
 }
 

@@ -122,12 +122,15 @@ export function isPrivateRoute(pathname) {
   return PRIVATE_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))
 }
 
-// `noindex,follow` rather than `noindex,nofollow` throughout: we still want the
-// crawler to walk the links out of these pages (the 404 offers real
-// destinations), we just don't want the page itself in the index.
+// Hidden tools remain routable but are excluded from search indexing.
+export function isHiddenRoute(pathname) {
+  return !!resolveTool(pathname).tool?.hidden
+}
+
+// Allow crawlers to follow links even when the page itself is not indexed.
 export function robotsFor(pathname) {
   if (isPrivateRoute(pathname)) return 'noindex,follow'
-  if (isSoonRoute(pathname)) return 'noindex,follow'
+  if (isSoonRoute(pathname) || isHiddenRoute(pathname)) return 'noindex,follow'
   if (isUnknownRoute(pathname)) return 'noindex,follow'
   return 'index,follow'
 }
@@ -135,14 +138,14 @@ export function robotsFor(pathname) {
 export function updateRouteMeta({ pathname, title, description }) {
   const url = canonicalUrl(pathname)
 
-  // A URL that resolves to nothing gets NO canonical at all.
+  // Unknown routes and hidden tools omit the canonical, matching their prerendered shells.
   //
   // Self-canonicalising asserts "this is the authoritative version of a real
   // page" in the same head that says "do not index this" — two contradictory
   // instructions, which is exactly the ambiguity Google warns against. Pointing
   // it at `/` instead would be worse: it would funnel every typo's signals into
   // the homepage. Saying nothing is the only honest option.
-  if (isUnknownRoute(pathname)) {
+  if (isUnknownRoute(pathname) || isHiddenRoute(pathname)) {
     document.querySelector('link[rel="canonical"]')?.remove()
   } else {
     upsertLink('canonical', url)

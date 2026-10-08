@@ -442,63 +442,21 @@ test.describe('what the visitor is told about the allowance', () => {
 })
 
 test.describe('the pricing page and the server agree', () => {
-  test('THE ONE THAT MATTERS: /plans prints the numbers api/ai.js enforces', async ({ page }) => {
-    // The rendered half of tests/unit/ai-generation-truth.test.js. A source
-    // assertion cannot see a component that stopped rendering, which is exactly
-    // why 54-plans-truth.spec.js exists alongside plans-truth.test.js.
-    watch(page, 'a visitor pricing the Brand Starter')
+  test('/plans omits the hidden Brand Starter allowance row', async ({ page }) => {
+    watch(page, 'a visitor viewing the listed tools on plans')
     await go(page, '/plans')
     await expectRendered(page, 'the plans page')
-
-    // The design's Pricing screen keeps the design's five-line plan
-    // cards, so the Brand Starter allowance is stated where the design's comparison
-    // table states every per-plan figure: one row, a Free cell and a Pro cell.
     const row = page.locator('.pr-compare-row', { has: page.locator('th', { hasText: 'Brand Starter' }) })
-    await expect(row, 'the comparison does not mention the Brand Starter at all').toHaveCount(1)
-
-    // Both tiers state the SAME sentence the tool states and the server
-    // enforces. Imported, never typed — if the founder changes the allowance,
-    // this follows rather than going stale.
-    //
-    // WHAT THIS ASSERTION CANNOT SEE, stated so nobody tries to make it:
-    // replacing {allowanceSentence('pro')} with the literal string it currently
-    // returns leaves this test GREEN, because the rendered DOM is identical.
-    // Mutation testing confirmed it survives here. That is not a hole — it is
-    // the division of labour tests/unit/plans-truth.test.js already documents:
-    // a DOM assertion cannot see a claim that stopped being derived, and a
-    // source assertion cannot see a component that stopped rendering. The
-    // typed-literal mutation IS killed, by "/plans derives the allowance
-    // instead of typing it" in tests/unit/ai-generation-truth.test.js. Both
-    // halves are needed and neither subsumes the other.
-    await expect(row.locator('td[data-plan="Free"]')).toHaveText(allowanceSentence('free'))
-    await expect(row.locator('td[data-plan="Pro"]')).toHaveText(allowanceSentence('pro'))
-
-    // …and beta is disclosed where the money is, not only on the tool.
-    await expect(row.locator('.beta-badge')).toBeVisible()
-    await expect(row.locator('.beta-badge')).toHaveText('Beta')
+    await expect(row).toHaveCount(0)
   })
 
-  test('the tool is reachable from the AI Studio menu, badged beta', async ({ page }) => {
-    // Where a person would actually look for it. The route is live in the tool
-    // tree, so the nav derives the row — this proves the derivation reaches the
-    // rendered menu rather than stopping at the data.
+  test('the tool is absent from the AI Studio menu', async ({ page }) => {
     watch(page, 'a visitor looking for the AI tools')
-    // ON /discover, NOT ON `/`. This hovered the Create pill on the homepage,
-    // and the homepage is src/pages/Spectrum.jsx now — it mounts SpectrumNav
-    // (`<PillNav variant="spectrum" />`), a marketing pill whose menu is built
-    // from the same registry but wears `.spnav-*` classes, so `.pnav-tool`
-    // matched nothing there. The app header, and the derivation this test is
-    // about, are unchanged on /discover: measured there, the row is 274px wide,
-    // hrefs /create/auto-builder and carries the Beta badge.
     await go(page, '/discover')
     await expectRendered(page, 'the Discover index')
-
     await page.getByRole('button', { name: /^Create/ }).first().hover()
-    const row = page.locator('.pnav-tool', { hasText: 'Brand Starter' }).first()
-    await expect(row).toBeVisible()
-    await expect(row).toHaveAttribute('href', '/create/auto-builder')
-    await expect(row.locator('.beta-badge')).toHaveText('Beta')
-    await expect(row.locator('.soon-badge'), 'a live tool must not also be badged Soon').toHaveCount(0)
+    await expect(page.locator('.pnav-tool', { hasText: 'Brand Starter' })).toHaveCount(0)
+    await expect(page.locator('.pnav-tool[href="/create/auto-builder"]')).toHaveCount(0)
   })
 
   test('the route mounts the tool rather than the workshop placeholder', async ({ page }) => {

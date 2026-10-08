@@ -74,12 +74,6 @@ export const CREATE_GROUPS = [
     tools: [
       { id: 'component-designer', label: 'Component Designer', route: '/create/component-designer', soon: true },
       { id: 'box-shadow', label: 'Box Shadow', route: '/create/box-shadow', soon: true },
-      // `auto-builder` MOVED OUT of this group to AI Studio below. It was filed
-      // here because its dormant alpha rendered a fake UI hero; what it
-      // actually produces is a palette, a font pairing and a type scale, and
-      // src/data/moduleBoard.js has recorded it under area 'AI' the whole time.
-      // The route and the id are unchanged, so no redirect is needed and every
-      // existing link still lands.
     ],
   },
   {
@@ -92,11 +86,8 @@ export const CREATE_GROUPS = [
     tools: [
       { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', soon: false },
       { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', soon: false },
-      // Beta for the reason Brand Starter is: it is live, mounted and fully
-      // usable, and the badge states a limit on the output (what each format
-      // keeps is listed on the page). Beta also keeps it out of TOOL_COUNT in
-      // src/components/spectrum/spectrumFacts.js, so shipping it does not move
-      // the sales page's "Thirteen tools" headline.
+      // Beta marks limits on format output and excludes the tool from
+      // the non-beta tool count. Supported output is listed on the page.
       { id: '3d-converter', label: '3D Model Converter', route: '/create/3d-converter', soon: false, beta: true },
     ],
   },
@@ -105,20 +96,15 @@ export const CREATE_GROUPS = [
     label: 'AI Studio',
     hue: 'ai',
     home: '/create/ai-tools',
-    desc: 'Brand starters, image prompts and alt text.',
+    desc: 'Image prompts and alt text.',
     // Live because Alt Text is live and mounted in CreateTool's LIVE_TOOLS. The
     // three unbuilt siblings now carry their own Soon badge, which is exactly
     // the per-tool behaviour the header comment describes.
     soon: false,
     tools: [
       { id: 'alt-text', label: 'Alt Text', route: '/create/alt-text', soon: false },
-      // ⚠️ `beta: true` is NOT a second `soon`. A Soon tool renders the workshop
-      // state and nobody can use it; a Beta tool is LIVE, mounted, metered and
-      // fully usable, and the badge states a limit on the OUTPUT and the
-      // allowance rather than on the availability. The two flags are read in
-      // different places for that reason: `soon` gates routing, prerendering
-      // and search, while `beta` only ever adds a label.
-      { id: 'auto-builder', label: 'Brand Starter', route: '/create/auto-builder', soon: false, beta: true },
+      // Hidden tools retain their routes but are excluded from tool lists.
+      { id: 'auto-builder', label: 'Brand Starter', route: '/create/auto-builder', soon: false, beta: true, hidden: true },
       { id: 'ai-prompt', label: 'Image Prompt', route: '/create/ai-prompt', soon: true },
       { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/create/landing-prompts', soon: true },
       // Prompt Library is no longer here — it moved to Discover, where the
@@ -185,12 +171,21 @@ export function categoryDestination(groupOrId) {
   return bounces ? first.route : group.home
 }
 
-// Every Create tool the app can actually mount, flattened out of the groups.
+// Listed Create tools, flattened out of the groups. Hidden tools remain
+// available to routing; callers resolving tool identity can include them.
 // `soon` is inherited from the group as well as the tool, because a tool inside
 // a Soon group renders the workshop state whatever its own flag says.
-export function createTools() {
+export function isListedTool(tool) {
+  return !tool?.hidden
+}
+
+export function listedTools(group) {
+  return group.tools.filter(isListedTool)
+}
+
+export function createTools({ includeHidden = false } = {}) {
   return CREATE_GROUPS.flatMap((g) =>
-    g.tools.map((t) => ({
+    (includeHidden ? g.tools : listedTools(g)).map((t) => ({
       id: t.id,
       label: t.label,
       route: t.route,
@@ -209,7 +204,7 @@ export function createTools() {
 // .jsx source and fails if the two ever disagree, which is what turns the
 // "keep the two in sync" comment above into something a build can check.
 export function liveToolRoutes() {
-  return createTools().filter((t) => !t.soon).map((t) => normalise(t.route))
+  return createTools({ includeHidden: true }).filter((t) => !t.soon).map((t) => normalise(t.route))
 }
 
 // ── Homepage: two deliberately separate models ──────────────────────────────
@@ -288,7 +283,7 @@ const HOME_SATELLITE_SPEC = [
 // throws at import, which fails `npm run build` (prerender.mjs imports this
 // module) as well as the unit suite.
 function requireTool(id, where) {
-  const tool = createTools().find((t) => t.id === id)
+  const tool = createTools({ includeHidden: true }).find((t) => t.id === id)
   if (!tool) throw new Error(`${where} names "${id}", which is not a tool in CREATE_GROUPS`)
   return tool
 }
@@ -404,28 +399,15 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from './learnIndex.js'
 
 export const LEARN_GROUPS = [
-  // LIVE, AND IT WAS SAYING SOON. /principles has been a real page for months —
-  // it computes its own contrast ratios on load — and this row pointed at
-  // /learn with a Soon badge, in the mega menu, the mobile sheet and the visual
-  // sitemap. On /sitemap it was worse than a badge: that page ALREADY lists
-  // "Design Principles → /principles" in its own section (SiteMap.jsx:43), so
-  // the Learn column was contradicting a row 200px away. Founder's call,
-  // 2026-09-18: point the row at the live page. See LEARN_TOPIC_ROWS below for
-  // what stops a live row disappearing out of the menu when it leaves the
-  // roadmap.
-  { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/principles', soon: false },
+  // Reference pages share the Learn prefix with published guides.
+  { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/learn/principles', soon: false },
   { id: 'themes', label: 'UI Themes', desc: 'Dark, light and custom theme systems.', route: '/learn/theme-systems', soon: false },
   { id: 'brand', label: 'Brand Colour Guide', desc: 'Choose brand colours with confidence.', route: '/learn/brand-colour', soon: false },
   { id: 'typography', label: 'Typography Guide', desc: 'Type that reads and scales cleanly.', route: '/learn/typeface-metrics', soon: false },
   { id: 'seo', label: 'SEO', desc: 'Small-business and specialist playbooks.', route: '/learn', soon: true },
   { id: 'marketing', label: 'Marketing', desc: 'Positioning, messaging and social.', route: '/learn', soon: true },
   { id: 'ai-assistants', label: 'AI Coding Assistants', desc: 'Ship faster with AI in the loop.', route: '/learn', soon: true },
-  // The conversion-adjacent item — gets the accent-blue dot in the menu.
-  // Same correction, and this one was the most visible of the three: the mobile
-  // sheet's own Learn card carries a "View docs" button to /help about 250px
-  // below the row telling the reader Help is Soon. /sitemap lists it too
-  // (SiteMap.jsx:42).
-  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/help', soon: false, accent: true },
+  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn/help', soon: false, accent: true },
 ]
 
 /**
@@ -523,7 +505,7 @@ const CREATE_MENU_SPEC = [
   [
     { label: 'Icons', ids: ['icons', 'emoji'] },
     { label: 'Media', ids: ['file-converter', 'ratio', '3d-converter'] },
-    { label: 'AI', ids: ['alt-text', 'auto-builder', 'ai-prompt', 'landing-prompts'] },
+    { label: 'AI', ids: ['alt-text', 'ai-prompt', 'landing-prompts'] },
   ],
 ]
 
@@ -726,7 +708,7 @@ export const NAV_SECTIONS = [
       title: 'Understand the why',
       blurb: 'Principles, theme systems and guides that make your interfaces hold up.',
       href: '/learn',
-      docsHref: '/help',
+      docsHref: '/learn/help',
     },
   },
 ]

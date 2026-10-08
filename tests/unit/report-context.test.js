@@ -62,7 +62,7 @@ test('the query string is dropped, because the colour tools encode work into it'
 })
 
 test('the hash is dropped too', () => {
-  assert.equal(buildReportContext({ pathname: '/help#billing' }).route, '/help')
+  assert.equal(buildReportContext({ pathname: '/learn/help#billing' }).route, '/learn/help')
 })
 
 test('nothing in the module reaches for the user\'s content', () => {
@@ -195,10 +195,10 @@ test('every shown field has plain-language wording, not a variable name', () => 
 })
 
 test('the rows shown are the canonical order, skipping what was not captured', () => {
-  const rows = contextRows(buildReportContext({ pathname: '/help', theme: 'dark' }))
+  const rows = contextRows(buildReportContext({ pathname: '/learn/help', theme: 'dark' }))
   assert.deepEqual(rows.map(r => r.key), ['route', 'theme'])
   assert.equal(rows[0].label, 'Page you were on')
-  assert.equal(rows[0].value, '/help')
+  assert.equal(rows[0].value, '/learn/help')
 })
 
 test('unticking a row genuinely drops it from what is sent', () => {

@@ -31,7 +31,7 @@ import '../styles/deferred/tool-shell.css'
 //
 // The four cards used to be hand-written, and two of the four were wrong:
 // "Palette Generator" is not what the product calls /create/palette anywhere
-// else (the tree, the nav, the hero rail and /help all say Palette / Palette
+// else (the tree, the nav, the hero rail and /learn/help all say Palette / Palette
 // Builder), and "Community palettes, gradients and prompts" described Discover
 // with a word that is false — the palettes are curated and brand, and the
 // community half is the group still marked Soon. The one-line descriptions
