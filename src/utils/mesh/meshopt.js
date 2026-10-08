@@ -17,6 +17,7 @@
 // "fallback" buffer, which has a length and no data, and which every
 // compressed view points at for its decoded layout.
 import { fetchVerified } from '../integrity.js'
+import { sharedDownload } from '../sharedDownload.js'
 
 export const MESHOPT_VERSION = '0.25.0'
 export const meshoptEncoderURL = `https://cdn.jsdelivr.net/npm/meshoptimizer@${MESHOPT_VERSION}/meshopt_encoder.module.js`
@@ -27,25 +28,23 @@ const ARRAY_BUFFER = 34962
 const ELEMENT_ARRAY_BUFFER = 34963
 const TRIANGLES = 4
 
-let encoderPromise = null
+// The encoder is fetched once and shared; a caller's signal detaches only that
+// caller (see sharedDownload.js).
+const encoder = sharedDownload(async (report, signal) => {
+  const bytes = await fetchVerified(meshoptEncoderURL, MESHOPT_SHA256, { label: 'The mesh compressor', signal })
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' }))
+  try {
+    const mod = await import(/* @vite-ignore */ url)
+    await mod.MeshoptEncoder.ready
+    return mod.MeshoptEncoder
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+})
 
 /** The verified encoder module's MeshoptEncoder, ready to use. */
 export function loadMeshoptEncoder({ signal } = {}) {
-  if (!encoderPromise) {
-    encoderPromise = (async () => {
-      const bytes = await fetchVerified(meshoptEncoderURL, MESHOPT_SHA256, { label: 'The mesh compressor', signal })
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' }))
-      try {
-        const mod = await import(/* @vite-ignore */ url)
-        await mod.MeshoptEncoder.ready
-        return mod.MeshoptEncoder
-      } finally {
-        URL.revokeObjectURL(url)
-      }
-    })()
-    encoderPromise.catch(() => { encoderPromise = null })
-  }
-  return encoderPromise
+  return encoder({ signal })
 }
 
 const align4 = (n) => (n + 3) & ~3

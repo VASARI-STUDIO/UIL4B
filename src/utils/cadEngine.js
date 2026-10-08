@@ -30,6 +30,7 @@
 // every mesh format still works.
 
 import { fetchVerified } from './integrity.js'
+import { sharedDownload } from './sharedDownload.js'
 import { cadQuality } from './meshFormats.js'
 
 export const OCCT_VERSION = '0.0.23'
@@ -61,10 +62,6 @@ export const CAD_READERS = Object.freeze({ step: 'ReadStepFile', iges: 'ReadIges
 // starts a fresh one, and the browser's HTTP cache makes that refetch cheap.
 let worker = null
 let nextId = 1
-// Whether the current worker has been handed the verified engine. A new
-// worker (after Cancel or a crash) needs it again; the HTTP cache makes the
-// refetch cheap, and the bytes are re-verified every time.
-let engineDelivery = null
 
 function getWorker() {
   if (!worker) {
@@ -79,37 +76,36 @@ function getWorker() {
 function stopWorker() {
   if (worker) worker.terminate()
   worker = null
-  engineDelivery = null
+  deliverEngine.reset()
 }
 
 // Fetch and verify the engine, then hand the verified bytes to the worker.
 // Nothing is posted — and no worker is even started — unless both match.
-function deliverEngine(onStage, signal) {
-  if (engineDelivery) return engineDelivery
-  const onBytes = ({ received, total }) => onStage?.({ stage: 'engine', loaded: received, total })
-  engineDelivery = (async () => {
-    let script, wasm
-    try {
-      ;[script, wasm] = await Promise.all([
-        fetchVerified(occtScriptURL, OCCT_SHA256.js, { label: 'The CAD engine script', signal }),
-        fetchVerified(occtWasmURL, OCCT_SHA256.wasm, { label: 'The CAD engine', signal, onBytes }),
-      ])
-    } catch (err) {
-      if (err?.name === 'IntegrityError' || err?.name === 'AbortError') throw err
-      throw new Error(`the CAD engine could not be fetched (${err?.message || err})`)
-    }
-    let w
-    try {
-      w = getWorker()
-    } catch (err) {
-      throw new Error(`the CAD engine could not start in this browser (${err?.message || err})`)
-    }
-    w.postMessage({ type: 'engine', script, wasm }, [script, wasm])
-    return w
-  })()
-  engineDelivery.catch(() => { engineDelivery = null })
-  return engineDelivery
-}
+// Whether the current worker has been handed the engine is what this shared
+// download records: a new worker (after Cancel or a crash) needs it again, the
+// HTTP cache makes the refetch cheap, and the bytes are re-verified every time.
+// A caller's signal detaches only that caller (see sharedDownload.js), so
+// cancelling the first load does not fail the next.
+const deliverEngine = sharedDownload(async (report, signal) => {
+  let script, wasm
+  try {
+    ;[script, wasm] = await Promise.all([
+      fetchVerified(occtScriptURL, OCCT_SHA256.js, { label: 'The CAD engine script', signal }),
+      fetchVerified(occtWasmURL, OCCT_SHA256.wasm, { label: 'The CAD engine', onBytes: report, signal }),
+    ])
+  } catch (err) {
+    if (err?.name === 'IntegrityError') throw err
+    throw new Error(`the CAD engine could not be fetched (${err?.message || err})`)
+  }
+  let w
+  try {
+    w = getWorker()
+  } catch (err) {
+    throw new Error(`the CAD engine could not start in this browser (${err?.message || err})`)
+  }
+  w.postMessage({ type: 'engine', script, wasm }, [script, wasm])
+  return w
+})
 
 function abortError() {
   const e = new Error('cancelled')
@@ -134,7 +130,7 @@ export async function readCad(bytes, formatId, { quality, onStage, signal } = {}
   onStage?.({ stage: 'engine', loaded: 0, total: 0 })
   let w
   try {
-    w = await deliverEngine(onStage, signal)
+    w = await deliverEngine({ signal, onProgress: ({ received, total }) => onStage?.({ stage: 'engine', loaded: received, total }) })
   } catch (err) {
     if (err?.name === 'AbortError' || signal?.aborted) throw abortError()
     throw err

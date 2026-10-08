@@ -429,11 +429,11 @@ test('only the engine module imports three.js, and the page reaches it only lazi
     }
   })('src')
   assert.ok(files.length > 100, `only ${files.length} source files found`)
-  // The engine and the three helpers it splits into; nothing else.
+  // The engine and the four helpers it splits into; nothing else.
   const importers = files.filter((f) => /from\s+['"]three(\/[^'"]*)?['"]/.test(stripJs(read(f)))).sort()
-  assert.deepEqual(importers, ['src/utils/mesh/cad.js', 'src/utils/mesh/rhino.js', 'src/utils/mesh/transform.js', 'src/utils/meshEngine.js'])
+  assert.deepEqual(importers, ['src/utils/mesh/cad.js', 'src/utils/mesh/rhino.js', 'src/utils/mesh/transform.js', 'src/utils/mesh/zipCap.js', 'src/utils/meshEngine.js'])
   // Each helper is reached only from the engine (statically) or its lazy table.
-  for (const helper of ['cad', 'rhino', 'transform']) {
+  for (const helper of ['cad', 'rhino', 'transform', 'zipCap']) {
     const users = files.filter((f) => f !== `src/utils/mesh/${helper}.js` && new RegExp(`['"]\\./(mesh/)?${helper}\\.js['"]`).test(stripJs(read(f))))
     assert.deepEqual(users, ['src/utils/meshEngine.js'], `mesh/${helper}.js is imported from outside the engine`)
   }

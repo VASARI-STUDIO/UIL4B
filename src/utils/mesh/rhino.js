@@ -13,6 +13,7 @@
 // so. Objects are grouped by layer, as Rhino shows them.
 import { Group, LoadingManager } from 'three'
 import { fetchVerified } from '../integrity.js'
+import { sharedDownload } from '../sharedDownload.js'
 
 export const RHINO_VERSION = '8.32.1'
 const BASE = `https://cdn.jsdelivr.net/npm/rhino3dm@${RHINO_VERSION}`
@@ -26,22 +27,19 @@ export const RHINO_SHA256 = Object.freeze({
 // Rhino's UnitSystem enum, for the ones this tool writes.
 const RHINO_UNITS = { 2: 'mm', 3: 'cm', 4: 'm', 8: 'in', 9: 'ft' }
 
-let libs = null
-
-function verifiedLibs(onStage, signal) {
-  if (!libs) {
-    const onBytes = ({ received, total }) => onStage?.({ stage: 'engine', loaded: received, total })
-    libs = Promise.all([
+// Fetched once and shared; a caller's signal detaches only that caller (see
+// sharedDownload.js), and progress goes to whoever is attached.
+const verifiedLibs = sharedDownload(async (report, signal) => {
+  try {
+    return await Promise.all([
       fetchVerified(rhinoScriptURL, RHINO_SHA256.js, { label: 'The Rhino engine script', signal }),
-      fetchVerified(rhinoWasmURL, RHINO_SHA256.wasm, { label: 'The Rhino engine', signal, onBytes }),
-    ]).catch((err) => {
-      libs = null
-      if (err?.name === 'IntegrityError' || err?.name === 'AbortError') throw err
-      throw new Error(`the Rhino engine could not be fetched (${err?.message || err})`)
-    })
+      fetchVerified(rhinoWasmURL, RHINO_SHA256.wasm, { label: 'The Rhino engine', onBytes: report, signal }),
+    ])
+  } catch (err) {
+    if (err?.name === 'IntegrityError') throw err
+    throw new Error(`the Rhino engine could not be fetched (${err?.message || err})`)
   }
-  return libs
-}
+})
 
 /**
  * A .3dm file's bytes to a Group, with the model's unit when it has one.
@@ -51,22 +49,22 @@ export async function readRhino(buffer, { onStage, signal } = {}) {
   onStage?.({ stage: 'engine', loaded: 0, total: 0 })
   const [{ Rhino3dmLoader }, [script, wasm]] = await Promise.all([
     import('three/examples/jsm/loaders/3DMLoader.js'),
-    verifiedLibs(onStage, signal),
+    verifiedLibs({ signal, onProgress: ({ received, total }) => onStage?.({ stage: 'engine', loaded: received, total }) }),
   ])
   if (signal?.aborted) throw Object.assign(new Error('cancelled'), { name: 'AbortError' })
   onStage?.({ stage: 'parsing' })
-  const urls = {
-    'rhino3dm.js': URL.createObjectURL(new Blob([script], { type: 'text/javascript' })),
-    'rhino3dm.wasm': URL.createObjectURL(new Blob([wasm], { type: 'application/wasm' })),
-  }
-  const manager = new LoadingManager()
-  manager.setURLModifier((url) => urls[String(url).split('/').pop()] || url)
-  const loader = new Rhino3dmLoader(manager)
-  loader.setLibraryPath('verified/')
-  loader.setWorkerLimit(1)
-  const onAbort = () => loader.dispose()
+  const urls = {}
+  let loader = null
+  const onAbort = () => loader?.dispose()
   signal?.addEventListener('abort', onAbort, { once: true })
   try {
+    urls['rhino3dm.js'] = URL.createObjectURL(new Blob([script], { type: 'text/javascript' }))
+    urls['rhino3dm.wasm'] = URL.createObjectURL(new Blob([wasm], { type: 'application/wasm' }))
+    const manager = new LoadingManager()
+    manager.setURLModifier((url) => urls[String(url).split('/').pop()] || url)
+    loader = new Rhino3dmLoader(manager)
+    loader.setLibraryPath('verified/')
+    loader.setWorkerLimit(1)
     const raw = await new Promise((resolve, reject) => loader.parse(buffer.slice(0), resolve, (e) => reject(new Error(e?.message || e?.error || String(e)))))
     if (signal?.aborted) throw Object.assign(new Error('cancelled'), { name: 'AbortError' })
     const settings = raw.userData?.settings || {}
@@ -75,7 +73,7 @@ export async function readRhino(buffer, { onStage, signal } = {}) {
     return { object: byLayer(raw), unit, warnings: rhinoWarnings(raw.userData?.warnings) }
   } finally {
     signal?.removeEventListener('abort', onAbort)
-    loader.dispose()
+    loader?.dispose()
     for (const u of Object.values(urls)) URL.revokeObjectURL(u)
   }
 }
