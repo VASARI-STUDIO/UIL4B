@@ -33,7 +33,7 @@ import {
   noteIsWritten,
   noteParagraphs,
 } from '../../src/data/founderNote.js'
-import { stripJs } from '../helpers/strip-comments.js'
+import { stripJs, stripCss } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 
@@ -181,4 +181,35 @@ test('9 · both animated parts of the panel are flattened under reduced motion',
     assert.match(block, /opacity:1/, 'the clamp cannot reach opacity, so the rule must')
     assert.match(block, /transform:none/, 'the clamp cannot reach transform either')
   }
+})
+
+test('10 · the panel is portalled to <body>, so the footer never changes layer to host it', () => {
+  assert.match(COMPONENT, /import \{ createPortal \} from 'react-dom'/)
+  assert.match(COMPONENT, /open && createPortal\(/, 'the overlay is rendered through a portal while open')
+  assert.match(COMPONENT, /document\.body,\s*\)\}/, 'the portal target is document.body')
+
+  const chrome = stripCss(read('src/styles/pages/spectrum-chrome.css'))
+  assert.ok(!/:has\(\s*\.fnote-overlay\s*\)/.test(chrome),
+    'the footer must not restyle itself while the panel is open')
+  assert.ok(!/\.sp-footer\[data-curtain\]\[data-curtain-near\][^{]*\{[^}]*position:\s*relative/.test(chrome),
+    'the curtain footer must not flip from sticky to relative')
+})
+
+test('11 · the curtain relies on :has() only inside a feature query', () => {
+  const chrome = stripCss(read('src/styles/pages/spectrum-chrome.css'))
+  assert.match(chrome, /@supports selector\(:has\(\*\)\)\s*\{\s*\.sp-footer\[data-curtain\]\[data-curtain-near\]\{position:sticky/,
+    'the sticky curtain is behind @supports selector(:has(*))')
+  const page = stripCss(read('src/styles/pages/spectrum.css')).replace(/\r\n/g, '\n')
+  for (const rule of [/\.spectrum:has\(> \.sp-footer\[data-curtain\]\) > main/, /\.sp-search:has\(\.hcmd-input/]) {
+    const at = page.search(rule)
+    assert.ok(at > -1, `${rule} is expected in spectrum.css`)
+    const before = page.slice(0, at)
+    assert.ok(before.lastIndexOf('@supports selector(:has(*))') > before.lastIndexOf('}\n'),
+      `${rule} must sit directly inside @supports selector(:has(*))`)
+  }
+})
+
+test('12 · the search ghost carries no attribute that nothing reads', () => {
+  const search = stripJs(read('src/components/spectrum/SpectrumSearch.jsx'))
+  assert.ok(!search.includes('data-typing'), 'data-typing is not read by any rule or script')
 })

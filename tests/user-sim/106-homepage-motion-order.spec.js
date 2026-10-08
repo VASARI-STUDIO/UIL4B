@@ -87,7 +87,6 @@ test.describe('hero ghost phrase', () => {
     await page.waitForTimeout(5000)
     const frames = await ghostFrames(page)
     expect(new Set(frames), `the ghost moved under reduced motion: ${JSON.stringify(frames.slice(0, 12))}`).toEqual(new Set([RESTING]))
-    await expect(page.locator('.sp-search-ghost')).not.toHaveAttribute('data-typing', /.*/)
     await ctx.close()
   })
 })
@@ -242,6 +241,66 @@ for (const [label, opts] of [
     await scrollToY(page, Math.min(footerTop - Math.round(opts.height / 2), endY))
     const g = await footerGeometry(page)
     expect(g.atTop, 'the top of the footer is hidden').toBe('footer')
+    await ctx.close()
+  })
+}
+
+// The "About this project" panel is portalled to <body>, so opening it while
+// the page is still sliding off the footer leaves the footer's position and
+// layer alone: no switch for the panel to be covered by. (The scroll lock may
+// shift where a pinned footer paints while the panel is open; it is back where
+// it was on close.)
+for (const [width, height] of [[390, 844], [1440, 900]]) {
+  test(`the About panel opens and closes mid-reveal without changing the footer's layering (${width}x${height})`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width, height })
+    await go(page, '/')
+    const footer = page.locator('footer.sp-footer')
+    const footerH = await footer.evaluate((el) => el.offsetHeight)
+    const endY = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
+    const curtain = await footer.getAttribute('data-curtain')
+    // Mid-reveal where the curtain is on; the same offset otherwise.
+    const y = Math.max(0, endY - Math.round(footerH * 0.3))
+    await scrollToY(page, y)
+
+    const state = () => page.evaluate(() => {
+      const f = document.querySelector('footer.sp-footer')
+      const r = f.getBoundingClientRect()
+      return { position: getComputedStyle(f).position, zIndex: getComputedStyle(f).zIndex, top: Math.round(r.top), bottom: Math.round(r.bottom), scrollY: Math.round(window.scrollY) }
+    })
+    // Focusing a footer control scrolls the page to uncover it (see the
+    // keyboard test above), so take the starting state after that settles.
+    const trigger = page.locator('.app-footer-note')
+    await trigger.focus()
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+    await expect.poll(async () => (await state()).scrollY, { timeout: 5000 }).toBe((await state()).scrollY)
+    const before = await state()
+    await page.keyboard.press('Enter')
+    const dialog = page.locator('.fnote')
+    await expect(dialog).toBeVisible()
+    const during = await page.evaluate(() => {
+      const overlay = document.querySelector('.fnote-overlay')
+      const d = document.querySelector('.fnote')
+      const r = d.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      return {
+        overlayInBody: overlay.parentElement === document.body,
+        insideFooter: !!overlay.closest('footer'),
+        topmost: !!hit && !!hit.closest('.fnote'),
+        focusInside: !!document.activeElement?.closest('.fnote'),
+      }
+    })
+    expect(during, 'the panel is not a top-level, topmost, focused dialog').toEqual({ overlayInBody: true, insideFooter: false, topmost: true, focusInside: true })
+    const shown = await state()
+    expect(shown.position, 'the footer changed position while the panel was open').toBe(before.position)
+    expect(shown.zIndex, 'the footer changed layer while the panel was open').toBe(before.zIndex)
+    expect(shown.scrollY, 'the page scrolled while the panel was open').toBe(before.scrollY)
+    if (curtain === 'true') expect(before.position, 'the curtain is not pinned').toBe('sticky')
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+    expect(await page.evaluate(() => document.activeElement === document.querySelector('.app-footer-note')), 'focus did not return to the trigger').toBe(true)
+    expect(await state(), 'the footer is not where it started once the panel closed').toEqual(before)
     await ctx.close()
   })
 }
