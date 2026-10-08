@@ -107,6 +107,9 @@
 }
 
 .spectrum > main { position: relative; z-index: 2; }
+/* Under the footer's curtain reveal, <main> is the curtain: it has to be
+   opaque, or the footer parked beneath it shows through. */
+.spectrum:has(> .sp-footer[data-curtain]) > main { background: var(--sp-page); }
 
 .sp-shell { max-width: var(--sp-shell); margin-inline: auto; padding-inline: var(--sp-gutter); }
 .sp-section { max-width: var(--sp-shell); margin: 0 auto; padding: var(--sp-sec) var(--sp-gutter) 0; }
@@ -331,7 +334,12 @@
   color: rgba(var(--sp-ink-rgb), .5);
   white-space: nowrap;
 }
-.sp-search-rot { display: inline-block; margin-left: 7px; color: var(--accent-mid); }
+/* The typing caret is the phrase's own right border: always 1px wide and only
+   coloured while SpectrumSearch sets `data-caret`, so it never adds a box that
+   moves as the phrase grows (a moving box is a layout shift). SpectrumSearch
+   blinks it; it carries no animation of its own. */
+.sp-search-rot { display: inline-block; margin-left: 7px; padding-right: 1px; border-right: 1px solid transparent; color: var(--accent-mid); }
+.sp-search-rot[data-caret] { border-right-color: currentColor; }
 .sp-search:has(.hcmd-input:not(:placeholder-shown)) .sp-search-ghost { display: none; }
 @media (max-width: 480px) {
   .sp-search .hcmd-bar { grid-template-columns: auto minmax(0, 1fr) auto; padding-right: 24px; }

@@ -280,6 +280,15 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
    11px gap, 16px under the heading; links in the design's link style above;
    the baseline in 10.5px mono at .1em, faint, over another 9% hairline. */
 .sp-footer{position:relative;z-index:2;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);background:var(--bg-0);color:var(--t0)}
+/* The curtain reveal (SpectrumFooter `reveal`, set only while the whole footer
+   fits the window and it is on the verge of view): stuck to the bottom of the window one layer under the
+   page's <main>, which is opaque there, so scrolling slides the page up off it.
+   Sticky keeps the footer's own box in the flow, so turning it on moves nothing. */
+.sp-footer[data-curtain][data-curtain-near]{position:sticky;bottom:0;z-index:1}
+/* The "About this project" panel is a fixed overlay inside the footer, so it
+   shares the footer's layer: while it is open the footer goes back to its place
+   in the flow, above <main>, or the page would cover the panel. */
+.sp-footer[data-curtain][data-curtain-near]:has(.fnote-overlay){position:relative;z-index:2}
 .sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) clamp(20px,4vw,52px)}
 .sp-footer .sp-footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:36px;align-items:start}
 .sp-footer .sp-footer-links{display:contents}

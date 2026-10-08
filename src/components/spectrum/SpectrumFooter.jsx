@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import { useAppearance } from '../../contexts/AppearanceContext'
 import { categoryDestination } from '../../data/toolTree'
 import FounderNote from '../FounderNote'
 import PhGlyph from './PhGlyph'
@@ -72,6 +74,70 @@ const LEGAL = [
   ['/credits', 'Credits'],
 ]
 
+// THE CURTAIN REVEAL (`reveal`): the footer sits still at the bottom of the
+// window, under <main>, and the page scrolls up off it. Sticky, not fixed, so
+// the footer keeps its own place in the flow and nothing moves when it turns
+// on or off. It runs only while the whole footer fits the window — a taller
+// footer would have its top hidden for good — and never under reduced motion;
+// otherwise the footer is in normal flow. Until the first measurement it is in
+// normal flow too, so the prerendered page never depends on it.
+//
+// A pinned footer counts as on screen to the browser even while <main> covers
+// it, so a click that first scrolls a footer link into view (a script, an
+// assistive tool) would find nothing to scroll and land on the page instead.
+// So the pin (`data-curtain-near`) is applied only once the footer is on the
+// verge of coming into view; further up it is plainly off screen and the
+// browser scrolls to it as usual.
+function pageMain(footer) {
+  return footer.parentElement?.querySelector(':scope > main') || null
+}
+
+function useCurtain(ref, wanted) {
+  const [fits, setFits] = useState(false)
+  useEffect(() => {
+    const footer = ref.current
+    if (!wanted || !footer || typeof ResizeObserver === 'undefined') return undefined
+    const main = pageMain(footer)
+    const place = () => {
+      const near = !!main && main.getBoundingClientRect().bottom < window.innerHeight
+      footer.toggleAttribute('data-curtain-near', near)
+    }
+    const measure = () => { setFits(footer.offsetHeight <= window.innerHeight); place() }
+    const observer = new ResizeObserver(measure)
+    observer.observe(footer)
+    if (main) observer.observe(main)
+    window.addEventListener('resize', measure, { passive: true })
+    window.addEventListener('scroll', place, { passive: true })
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', place)
+      footer.removeAttribute('data-curtain-near')
+      setFits(false)
+    }
+  }, [ref, wanted])
+  return wanted && fits
+}
+
+// Keyboard focus landing in a footer that is still under <main> would be
+// hidden, because the browser sees the sticky footer as already on screen and
+// does not scroll. So focus arriving there scrolls the page to its end, which
+// uncovers the whole footer. A control that is already below the page's edge is
+// left alone: a pointer press focuses it too, and the page must not move
+// between that press and the release, or the release lands somewhere else and
+// the click is lost.
+function uncoverFooter(event) {
+  const footer = event.currentTarget
+  const main = pageMain(footer)
+  if (!main) return
+  // A dialog opened from the footer is a fixed overlay, not part of the footer's box.
+  if (event.target.closest('[role="dialog"]')) return
+  const mainBottom = main.getBoundingClientRect().bottom
+  if (event.target.getBoundingClientRect().top >= mainBottom) return
+  const covered = mainBottom - (window.innerHeight - footer.offsetHeight)
+  if (covered > 0) window.scrollBy({ top: covered, behavior: 'instant' })
+}
+
 function Column({ heading, children }) {
   return (
     <div className="sp-footer-col">
@@ -81,12 +147,20 @@ function Column({ heading, children }) {
   )
 }
 
-export default function SpectrumFooter({ toolkitTo = '/projects' }) {
+export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false }) {
   const year = new Date().getFullYear()
   const { pathname } = useLocation()
+  const { reducedMotion } = useAppearance() || {}
+  const footerRef = useRef(null)
+  const curtain = useCurtain(footerRef, reveal && !reducedMotion)
 
   return (
-    <footer className="sp-footer">
+    <footer
+      ref={footerRef}
+      className="sp-footer"
+      data-curtain={curtain || undefined}
+      onFocus={curtain ? uncoverFooter : undefined}
+    >
       <div className="sp-footer-inner">
         <div className="sp-footer-grid">
           <div className="sp-footer-brand">

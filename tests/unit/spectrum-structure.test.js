@@ -304,15 +304,15 @@ test('the split headline keeps one readable sentence for assistive tech', () => 
 
 test('the landing is the design\'s six blocks in order, and pricing is not one of them', () => {
   // In the design the plan comparison and FAQ live on the Pricing screen,
-  // which is /plans. The landing is hero, bench, discover,
-  // exports (#specimens), the terms band (#index) and the handoff.
+  // which is /plans. The landing is hero, bench, exports (#specimens), the
+  // community library (#discover), the terms band (#index) and the handoff.
   const ids = [...PAGE.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['bench', 'discover', 'specimens'],
-    'the landing sections are no longer bench, discover, specimens in that order')
+  assert.deepEqual(ids, ['bench', 'specimens', 'discover'],
+    'the landing sections are no longer bench, specimens, discover in that order')
   // Then the design's proof band (#index, SpectrumProof.jsx), then the handoff.
   const proofAt = PAGE.indexOf('<SpectrumProof />')
-  assert.ok(proofAt > PAGE.indexOf('id="specimens"') && proofAt < PAGE.indexOf('className="sp-close"'),
-    'the proof band no longer sits between the exports and "Start your first project today."')
+  assert.ok(proofAt > PAGE.indexOf('id="discover"') && proofAt < PAGE.indexOf('className="sp-close"'),
+    'the proof band no longer sits between the library and "Start your first project today."')
   assert.match(stripComments(read('src/components/spectrum/SpectrumProof.jsx')), /<section id="index"/,
     'the proof band lost the #index anchor the footer links to')
   for (const gone of ['id="pricing"', 'id="faq"', '<table', 'sp-compare', 'sp-plans']) {
