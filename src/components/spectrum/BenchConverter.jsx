@@ -62,7 +62,7 @@ export default function BenchConverter() {
   // Release a picked file's object URL when it is replaced or the page goes.
   useEffect(() => () => { if (pick?.url) URL.revokeObjectURL(pick.url) }, [pick])
 
-  // Decode the image being converted and measure its BEFORE size.
+  // Decode the image being compressed and measure its BEFORE size.
   useEffect(() => {
     if (!near || typeof document === 'undefined') return undefined
     const url = pick ? pick.url : CONVERTER_SOURCE
@@ -112,7 +112,7 @@ export default function BenchConverter() {
   const stem = pick ? pick.name.replace(/\.[^.]+$/, '') : 'plateau-sunset'
   const srcName = pick ? pick.name : mode === 1 ? 'plateau-sunset.mp4' : 'plateau-sunset.png'
   const srcMeta = pick
-    ? `${formatBytes(pick.size)}, ready to convert`
+    ? `${formatBytes(pick.size)}, ${mode === 0 ? 'ready to compress' : 'ready'}`
     : mode === 1 ? '1920 × 1080, 0:08, 12.4 MB' : src ? `${src.w} × ${src.h}, ${formatBytes(src.before)}` : 'Measuring…'
   const artUrl = pick?.url || CONVERTER_SOURCE
   const stripLen = Math.min(8, frameCount)
@@ -145,15 +145,15 @@ export default function BenchConverter() {
           <small>{srcMeta}</small>
         </span>
         <span className="sp-drop-btn"><PhIcon name="upload-simple" />{pick ? 'Replace' : 'Choose a file'}</span>
-        <input type="file" accept="image/*,video/*" onChange={(e) => take(e.target.files?.[0])} aria-label="Choose a file to convert" />
+        <input type="file" accept="image/*,video/*" onChange={(e) => take(e.target.files?.[0])} aria-label="Choose a file" />
       </label>
 
       {mode === 0 && (
         <div className="sp-conv">
           <div className="sp-conv-art">
             {pick?.url
-              ? <span role="img" aria-label="The file you chose, ready to convert" style={{ backgroundImage: `url(${pick.url})` }} />
-              : <img src={artUrl} alt="The photograph being converted" width="1600" height="900" loading="lazy" decoding="async" />}
+              ? <span role="img" aria-label="The file you chose, ready to compress" style={{ backgroundImage: `url(${pick.url})` }} />
+              : <img src={artUrl} alt="The photograph being compressed" width="1600" height="900" loading="lazy" decoding="async" />}
             <span className="sp-conv-dims">{src ? `${src.w} × ${src.h}` : '…'}</span>
           </div>
           <div className="sp-bars">

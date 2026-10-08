@@ -294,6 +294,18 @@ test('the bench writes down no route', () => {
     'the four windows no longer open their seven destinations through route()')
 })
 
+test('the Compress panel describes compressing, not converting', () => {
+  // The panel's tabs are Compress / Video frames / Aspect ratio. Only the name
+  // of the File Converter tool it links to may still say "convert".
+  const copy = CONVERTER_SRC
+    .replace(/BenchConverter|CONVERTER_SOURCE/g, '')
+    .replace(/file-converter/g, '')
+    .replace(/Continue in the converter|Open File Converter/g, '')
+  const left = [...copy.matchAll(/[^\n]*convert[^\n]*/gi)].map((m) => m[0].trim())
+  assert.deepEqual(left, [], 'the Compress panel still says "convert"')
+  assert.match(CONVERTER_SRC, /ready to compress/, 'a chosen file is no longer called ready to compress')
+})
+
 test('the split headline keeps one readable sentence for assistive tech', () => {
   assert.ok(WORDS.includes('className="sr-only"'),
     'SpectrumWords no longer carries the whole sentence in a visually-hidden span, so a screen '
