@@ -37,7 +37,6 @@ const TOOLS = [
     actions: [
       { row: 'Pull colours from an image', menu: 'From image' },
       { row: 'Suggest a palette', menu: 'Suggest' },
-      { row: 'Pick a colour from the screen', menu: 'Pick from the screen' },
       'Undo',
       'Redo',
       'Randomise',

@@ -442,40 +442,12 @@ test.describe('what the visitor is told about the allowance', () => {
 })
 
 test.describe('the pricing page and the server agree', () => {
-  test('THE ONE THAT MATTERS: /plans prints the numbers api/ai.js enforces', async ({ page }) => {
-    // The rendered half of tests/unit/ai-generation-truth.test.js. A source
-    // assertion cannot see a component that stopped rendering, which is exactly
-    // why 54-plans-truth.spec.js exists alongside plans-truth.test.js.
-    watch(page, 'a visitor pricing the Brand Starter')
+  test('/plans omits the hidden Brand Starter allowance row', async ({ page }) => {
+    watch(page, 'a visitor viewing the listed tools on plans')
     await go(page, '/plans')
     await expectRendered(page, 'the plans page')
-
-    // The design's Pricing screen keeps the design's five-line plan
-    // cards, so the Brand Starter allowance is stated where the design's comparison
-    // table states every per-plan figure: one row, a Free cell and a Pro cell.
     const row = page.locator('.pr-compare-row', { has: page.locator('th', { hasText: 'Brand Starter' }) })
-    await expect(row, 'the comparison does not mention the Brand Starter at all').toHaveCount(1)
-
-    // Both tiers state the SAME sentence the tool states and the server
-    // enforces. Imported, never typed — if the founder changes the allowance,
-    // this follows rather than going stale.
-    //
-    // WHAT THIS ASSERTION CANNOT SEE, stated so nobody tries to make it:
-    // replacing {allowanceSentence('pro')} with the literal string it currently
-    // returns leaves this test GREEN, because the rendered DOM is identical.
-    // Mutation testing confirmed it survives here. That is not a hole — it is
-    // the division of labour tests/unit/plans-truth.test.js already documents:
-    // a DOM assertion cannot see a claim that stopped being derived, and a
-    // source assertion cannot see a component that stopped rendering. The
-    // typed-literal mutation IS killed, by "/plans derives the allowance
-    // instead of typing it" in tests/unit/ai-generation-truth.test.js. Both
-    // halves are needed and neither subsumes the other.
-    await expect(row.locator('td[data-plan="Free"]')).toHaveText(allowanceSentence('free'))
-    await expect(row.locator('td[data-plan="Pro"]')).toHaveText(allowanceSentence('pro'))
-
-    // …and beta is disclosed where the money is, not only on the tool.
-    await expect(row.locator('.beta-badge')).toBeVisible()
-    await expect(row.locator('.beta-badge')).toHaveText('Beta')
+    await expect(row).toHaveCount(0)
   })
 
   test('the tool is absent from the AI Studio menu', async ({ page }) => {

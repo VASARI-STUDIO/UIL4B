@@ -11,7 +11,6 @@ import { formatMoney } from '../config/planLadder'
 import { COLOUR_SYSTEMS } from '../config/colourSystems'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import { freeFormats, proOnlyFormats } from '../config/exportFormats'
-import { BRAND_STARTER_BETA, allowanceSentence } from '../config/aiGeneration'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // The plan lines, cadences and billed line live in one module that every
 // surface describing Free and Pro reads: Settings, Checkout and the upgrade
@@ -46,7 +45,6 @@ import '../styles/pages/pricing.css'
 // also DRIVES it, so the page cannot drift from the product without a test
 // going red.
 //   AI_LIMITS / FREE_SAVE_LIMITS → src/config/plans.js (api/_lib/plans.js mirror)
-//   allowanceSentence            → src/config/aiGeneration.js (what /api/ai enforces)
 //   COLOUR_SYSTEMS               → what the palette engine gates on
 //   BRAND_PALETTES               → what PaletteBuilder gates on (`b.free`)
 //   export formats               → src/config/exportFormats.js, which renders the buttons
@@ -103,7 +101,6 @@ const COMPARE = [
   ] },
   { group: 'AI AND CONTROLS', rows: [
     { label: 'AI generations', free: `${AI.free.daily} a day, ${AI.free.monthly} a month`, pro: `${AI.pro.daily} a day, ${AI.pro.monthly} a month` },
-    { label: 'Brand Starter', beta: BRAND_STARTER_BETA, free: allowanceSentence('free'), pro: allowanceSentence('pro') },
     { label: 'Colour systems', free: `${SYSTEMS_FREE.length} of ${SYSTEMS_TOTAL}`, pro: `All ${SYSTEMS_TOTAL}, plus HCT editing` },
   ] },
   { group: 'YOUR WORK', rows: [
@@ -428,7 +425,6 @@ export default function Pricing() {
                       <th scope="row" role="rowheader">
                         {row.label}
                         {/* Beta is disclosed where the money is, not only on the tool. */}
-                        {row.beta && <> <span className="beta-badge">Beta</span></>}
                       </th>
                       <td data-plan="Free" role="cell">{row.free}</td>
                       <td data-plan="Pro" className="is-pro" role="cell">{row.pro}</td>

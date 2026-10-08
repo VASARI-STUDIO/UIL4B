@@ -301,13 +301,11 @@ test('no still-building Create route is advertised', async () => {
 
 /* ── No canonical destination serves noindex ──────────────────────────────── */
 
-test('every prerendered route is indexable and serves the runtime\'s own canonical', {
+test('every listed prerendered route is indexable and serves the runtime\'s own canonical', {
   skip: !built && 'run `npm run build` first',
 }, async () => {
-  // THE ONE THAT MATTERS for the migration. A 301 whose destination carries
-  // `noindex` moves the problem rather than fixing it: the old URL stops being
-  // indexed and the new one never starts. Read out of the SERVED html, because
-  // that is what a crawler that runs no JavaScript actually receives.
+  // Listed destinations must remain indexable. Hidden tools keep their shells
+  // for direct links but deliberately opt out of indexing.
   //
   // The canonical is compared against canonicalUrl() rather than against
   // `origin + route`. Those agree on every route but one, and the exception is
@@ -316,6 +314,7 @@ test('every prerendered route is indexable and serves the runtime\'s own canonic
   // Comparing against the function the runtime uses keeps this a check that the
   // SERVED head matches the HYDRATED head, which is what it was always for.
   for (const route of prerenderRoutes()) {
+    if (resolveTool(route).tool?.hidden) continue
     const html = read(`dist${route}/index.html`)
     const robots = html.match(/<meta\s+name="robots"\s+content="([^"]*)"/)?.[1]
     assert.ok(robots, `dist${route}/index.html has no robots tag at all`)
@@ -327,13 +326,28 @@ test('every prerendered route is indexable and serves the runtime\'s own canonic
   }
 })
 
-test('every 301 destination that is prerendered is one of those indexable shells', {
+test('every hidden-tool shell is noindex,follow with no canonical', {
+  skip: !built && 'run `npm run build` first',
+}, () => {
+  const hiddenRoutes = prerenderRoutes().filter((route) => resolveTool(route).tool?.hidden)
+  assert.ok(hiddenRoutes.length > 0, 'no hidden-tool shells were checked')
+  for (const route of hiddenRoutes) {
+    const html = read(`dist${route}/index.html`)
+    const robots = html.match(/<meta\s+name="robots"\s+content="([^"]*)"/)?.[1]
+    assert.equal(robots, 'noindex,follow', `${route} must not be indexed but must allow link following`)
+    assert.doesNotMatch(html, /<link\s+rel="canonical"/,
+      `${route} is hidden and must not assert a canonical`)
+  }
+})
+
+test('every prerendered 301 destination is indexable or a hidden-tool shell', {
   skip: !built && 'run `npm run build` first',
 }, async () => {
   const prerendered = new Set(prerenderRoutes())
   for (const [from, to] of LEGACY_REDIRECTS) {
     const dest = destPath(to)
     if (!prerendered.has(dest)) continue
+    if (resolveTool(dest).tool?.hidden) continue
     const html = read(`dist${dest}/index.html`)
     assert.doesNotMatch(html, /content="[^"]*noindex/,
       `${from} 301s to ${dest}, which is served noindex — the link equity goes nowhere`)

@@ -20,6 +20,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { rewriteHead } from '../../scripts/prerender.mjs'
+import { applyPricingHtml } from '../../scripts/site-pricing.mjs'
 import { buildRewrites, prerenderRoutes } from '../../scripts/sync-vercel-rewrites.mjs'
 import {
   CREATE_HOMES_THAT_RENDER,
@@ -212,15 +214,10 @@ test('no Soon route is prerendered', () => {
     '/learn has published articles and must be prerendered')
 })
 
-test('CANONICAL AND NOINDEX TRUTH: every prerendered route is one the runtime indexes', () => {
-  // The founder's constraint, checked against the runtime's own functions
-  // rather than a copy of the rule. A route that robotsFor() says is noindex
-  // must never get an indexable shell, and a shell's canonical must be the same
-  // string App.jsx writes after hydration — otherwise the served page and the
-  // rendered page instruct crawlers differently, and the more restrictive one
-  // silently wins.
+test('CANONICAL AND NOINDEX TRUTH: hidden shells are noindex and listed shells are indexable', () => {
+  // Hidden tools still get shells; only listed tools get indexable metadata.
   for (const route of prerenderRoutes()) {
-    assert.equal(robotsFor(route), 'index,follow',
+    assert.equal(robotsFor(route), resolveTool(route).tool?.hidden ? 'noindex,follow' : 'index,follow',
       `${route} is prerendered but the runtime marks it ${robotsFor(route)}`)
     assert.match(canonicalUrl(route), /^https:\/\/uil4b\.com(\/|\/\S+)$/,
       `${route} has no usable canonical`)
@@ -389,4 +386,23 @@ test('classifyRoute gives the FIRST true reason, not just any true one', () => {
   assert.equal(classifyRoute('/create/palette').prerender, true)
   // Trailing slashes and casing must not create a second answer.
   assert.equal(classifyRoute('/Create/Palette/').prerender, true)
+})
+
+test('prerender writes noindex for hidden tools and index for listed tools', () => {
+  const shell = applyPricingHtml(read('index.html'))
+  for (const [route, robots] of [
+    ['/create/auto-builder', 'noindex,follow'],
+    ['/create/palette', 'index,follow'],
+  ]) {
+    const { html, misses } = rewriteHead(shell, {
+      title: PAGE_TITLES[route],
+      description: PAGE_DESCRIPTIONS[route],
+      robots: robotsFor(route),
+      canonical: canonicalUrl(route),
+    })
+    assert.deepEqual(misses, [])
+    assert.ok(html.includes(`<meta name="robots" content="${robots}"`))
+    if (route === '/create/auto-builder') assert.doesNotMatch(html, /<link rel="canonical"/)
+    else assert.ok(html.includes(`<link rel="canonical" href="${canonicalUrl(route)}"`))
+  }
 })
