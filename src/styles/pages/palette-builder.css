@@ -106,6 +106,41 @@
   .plb .plb-tool:hover { background: color-mix(in srgb, var(--plb-anti, #fff) 34%, transparent); }
 }
 
+/* Quick tools (Edit in HCT, Swap, Remove): a second stack fanned out to the
+   left of the lock. It is out of flow, so the lock and ⋯ keep the footprint
+   they have at rest and the stack never lengthens the column. At rest the
+   tools are transparent and take no pointer events, but they stay rendered
+   and focusable at every width and pointer type: display:none or
+   visibility:hidden would drop them from the tab order, and the keyboard
+   could not reach them to reveal them. Pointer events are switched on per
+   tool, only where that tool is revealed, so a transparent tool can never be
+   pressed (not at rest, and not beside a revealed sibling). */
+.plb .plb-col-quick {
+  position: absolute;
+  top: 16px;
+  right: 58px;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+.plb .plb-tool--quick {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s ease, transform .14s var(--tl-ease), background .16s ease;
+}
+.plb .plb-swappop { top: 144px; right: 16px; left: auto; transform: none; }
+/* No hover: a tap on the bare swatch (.plb-col--tools) or the keyboard
+   reaching a control in it shows the stack. */
+.plb .plb-col--tools .plb-tool--quick,
+.plb .plb-tool--quick.plb-tool--on { opacity: 1; pointer-events: auto; }
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  .plb .plb-col:hover .plb-tool--quick,
+  .plb .plb-col:focus-within .plb-tool--quick { opacity: 1; pointer-events: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plb .plb-tool--quick { transition: none; }
+}
+
 .plb .plb-ramp {
   display: flex;
   gap: 3px;
@@ -186,6 +221,13 @@
 /* Focus on a user-chosen colour: a white inner ring backed by a near-black
    outer one. Every colour is far from at least one end of that pair, so one
    edge of the indicator always clears 3:1 (WCAG 1.4.11), whatever the seed. */
+/* Its own rule: a list with a selector the browser can't parse is dropped
+   whole. */
+.plb .plb-col:has(:focus-visible) .plb-tool--quick { opacity: 1; pointer-events: auto; }
+@media (max-width: 767px) {
+  .plb .plb-col:has(:focus-visible) { flex-wrap: wrap; }
+}
+
 .plb .plb-tool:focus-visible,
 .plb .plb-ramp:focus-visible,
 .plb .plb-hex:focus-visible,
@@ -311,6 +353,12 @@
     gap: 14px;
   }
   .plb .plb-col-tools { position: static; display: flex; gap: 8px; order: 0; }
+  /* Shown (by a tap, or the keyboard in the swatch), the quick tools take a
+     line of their own under the row; at rest they stay out of flow. */
+  .plb .plb-col--tools { flex-wrap: wrap; }
+  .plb .plb-col--tools .plb-col-quick,
+  .plb .plb-col:has(:focus-visible) .plb-col-quick { position: static; order: 3; flex: 0 0 100%; grid-auto-flow: column; justify-content: end; }
+  .plb .plb-swappop { top: calc(100% + 4px); }
   .plb .plb-ramp { display: none; }
   .plb .plb-col-body { flex: 1; min-width: 0; gap: 4px; order: 1; }
   .plb .plb-aa { margin-top: 0; order: 2; align-self: center; }
@@ -347,13 +395,18 @@
 
 @media (pointer: coarse) {
   .plb .plb-tool { width: 44px; height: 44px; }
+  .plb .plb-col-quick { right: 68px; }
   .plb .plb-hex { min-height: 44px; }
   .plb .plb-aa--locked { min-height: 44px; }
   .plb .plb-float .plb-menu-item,
   .plb .plb-float .plb-varrow-main,
   .plb .plb-float button.plb-varrow { min-height: 44px; }
   .plb .plb-ctx-item { min-height: 44px; }
+  .plb .plb-swapdir { min-height: 44px; }
   .plb .plb-copycss { min-height: 44px; }
+}
+@media (pointer: coarse) and (min-width: 768px) {
+  .plb .plb-swappop { top: 176px; }
 }
 
 :where(html[data-reduced-motion="true"]) .plb .plb-tool,

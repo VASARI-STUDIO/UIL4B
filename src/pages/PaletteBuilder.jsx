@@ -801,6 +801,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
+  const [swapIdx, setSwapIdx] = useState(null)     // column with the swap-direction popover open
+  const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
   const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
@@ -849,6 +851,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [history, setHistory] = useState(loadHistory)
   const resetSnapshotRef = useRef(null)
   const fileRef = useRef(null)
+  const swapTriggerRef = useRef(null) // the open column's Swap button, where focus returns when its menu closes
 
   // Drag-reorder plumbing + the grow-in animation slot for inserted colours.
   const dragFrom = useRef(null)
@@ -1103,6 +1106,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // The rail-fit measurement that lived here is gone: the shared ToolToolbar
   // (components/tool/ToolLayout.jsx) measures its own row and moves what does
   // not fit into the Tools overflow.
+  // The swap-direction popover is dismissed by a press outside it or Escape.
+  useEffect(() => {
+    if (swapIdx == null) return
+    const onDown = (e) => { if (!e.target.closest('.plb-swappop, .plb-tool--swap')) setSwapIdx(null) }
+    // The focused menu item unmounts with the menu, so focus goes back to the
+    // Swap button first.
+    const onEsc = (e) => { if (e.key === 'Escape') { swapTriggerRef.current?.focus(); setSwapIdx(null) } }
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('keydown', onEsc)
+    return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
+  }, [swapIdx])
+
   useEffect(() => {
     if (!anyPopover) return
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
@@ -1197,7 +1212,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const removeCol = (i) => {
     if (colors.length <= 2) { toast?.('A palette needs at least two colours'); return }
     if (outIdx != null) return // let the current close animation finish first
-    setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
+    setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setSwapIdx(null); setToolsIdx(null)
     const drop = () => {
       setColors(prev => prev.filter((_, k) => k !== i))
       setLocked(prev => {
@@ -2250,6 +2265,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               animIdx?.has(i) && 'plb-col--in',
               outIdx === i && 'plb-col--out',
               overIdx === i && dragFrom.current != null && 'plb-col--over',
+              toolsIdx === i && 'plb-col--tools',
             ].filter(Boolean).join(' ')
             const actionsOpen = ctxMenu?.kind === 'swatch' && ctxMenu.i === i
             return (
@@ -2268,6 +2284,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   try { e.dataTransfer.setData('text/plain', String(i)) } catch { /* older engines */ }
                 }}
                 onDragEnd={() => { dragFrom.current = null; setOverIdx(null) }}
+                // A tap on the bare swatch opens its quick tools where there is
+                // no hover to show them. Controls and popovers handle their own
+                // presses.
+                onClick={(e) => {
+                  if (e.target.closest('button, a, input, .plb-pop')) return
+                  setSwapIdx(null)
+                  setToolsIdx(cur => (cur === i ? null : i))
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   setTintsIdx(null); setPickerIdx(null)
@@ -2317,6 +2341,67 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     <ToolIcon name="dots-three" size={15} />
                   </button>
                 </div>
+
+                {/* Quick tools: the three actions people reach for most, one
+                    press from the swatch. They show on hover or keyboard focus
+                    (and on a tap of the swatch where there is no hover); each
+                    is also an item in the Colour actions menu. */}
+                <div className="plb-col-quick">
+                  <button
+                    type="button"
+                    className={pickerIdx === i ? 'plb-tool plb-tool--quick plb-tool--on' : 'plb-tool plb-tool--quick'}
+                    title={isPro ? 'Edit in HCT' : 'Edit in HCT — Pro'}
+                    aria-label={`Edit ${role} in HCT`}
+                    aria-haspopup="dialog"
+                    aria-expanded={pickerIdx === i}
+                    onClick={() => openHctPicker(i)}
+                  >
+                    <ToolIcon name="sliders-horizontal" size={15} />
+                  </button>
+                  {adjusted.length > 1 && (
+                    <button
+                      type="button"
+                      className={swapIdx === i ? 'plb-tool plb-tool--quick plb-tool--swap plb-tool--on' : 'plb-tool plb-tool--quick plb-tool--swap'}
+                      title="Choose a swap direction"
+                      aria-label={`Choose a direction to swap ${role}`}
+                      aria-haspopup="menu"
+                      aria-expanded={swapIdx === i}
+                      ref={swapIdx === i ? swapTriggerRef : undefined}
+                      onClick={() => {
+                        setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
+                        setSwapIdx(cur => (cur === i ? null : i))
+                      }}
+                    >
+                      <ToolIcon name="arrows-left-right" size={15} />
+                    </button>
+                  )}
+                  {adjusted.length > 2 && (
+                    <button
+                      type="button"
+                      className="plb-tool plb-tool--quick"
+                      title="Remove colour"
+                      aria-label={`Remove ${role}`}
+                      onClick={() => removeCol(i)}
+                    >
+                      <ToolIcon name="x" size={15} />
+                    </button>
+                  )}
+                </div>
+
+                {swapIdx === i && (
+                  <div className="plb-pop plb-swappop" role="menu" aria-label={`Swap ${role}`}>
+                    {i > 0 && (
+                      <button type="button" role="menuitem" className="plb-swapdir" onClick={() => { swapTriggerRef.current?.focus(); swapCols(i, 'left'); setSwapIdx(null); setToolsIdx(null) }}>
+                        <IcoArrowLeft /> Swap left
+                      </button>
+                    )}
+                    {i < colors.length - 1 && (
+                      <button type="button" role="menuitem" className="plb-swapdir" onClick={() => { swapTriggerRef.current?.focus(); swapCols(i, 'right'); setSwapIdx(null); setToolsIdx(null) }}>
+                        Swap right <IcoArrowRight />
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* The 5-bar tint strip (D:1022-1026): one button — it opens
                     this colour's tints. */}

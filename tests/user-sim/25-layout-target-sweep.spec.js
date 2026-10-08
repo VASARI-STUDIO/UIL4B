@@ -1138,58 +1138,91 @@ test('Palette Builder swatch tools never reach the swatch content on a short des
 
 const PLB_VIEWPORTS = [[320, 568], [360, 560], [390, 640], [390, 760], [390, 844], [430, 932]]
 
+// Hit-test helper, run in the page. Given the swatch elements to search, it
+// reports the buttons whose centre-line points land on something else. Only
+// controls a person can press are tested: laid out, not transparent, and with
+// pointer events on. The count it skips is returned so the caller can assert it.
+const PLB_HIT = `(roots) => {
+  const label = (el) => {
+    if (!el) return 'null'
+    const c = typeof el.className === 'string' ? el.className : (el.className?.baseVal || '')
+    return c.split(' ')[0] || el.tagName.toLowerCase()
+  }
+  const effOpacity = (el) => { let o = 1; for (let n = el; n && n !== document.body; n = n.parentElement) o *= parseFloat(getComputedStyle(n).opacity); return o }
+  const interactive = (el) => effOpacity(el) > 0 && getComputedStyle(el).pointerEvents !== 'none'
+  const laidOut = (el) => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0 }
+  // The fixed header and phone tab bar are chrome the page scrolls under;
+  // a control behind them is scrolled past, not covered.
+  const shown = (sel) => { const e = document.querySelector(sel); return e && getComputedStyle(e).display !== 'none' ? e.getBoundingClientRect() : null }
+  const top = shown('.pnav')?.bottom ?? 0
+  const bottom = shown('.pnav-tabs')?.top ?? innerHeight
+  const all = roots.flatMap((r) => [...r.querySelectorAll('button')]).filter(laidOut)
+  const controls = all.filter(interactive)
+  const misses = []
+  let tested = 0
+  for (const el of controls) {
+    const b = el.getBoundingClientRect()
+    // Only points actually on screen can be pressed; skip the rest rather
+    // than counting them as either pass or fail.
+    const y = b.top + b.height / 2
+    if (y < top || y > bottom) continue
+    tested++
+    for (const f of [0.2, 0.5, 0.8]) {
+      const hit = document.elementFromPoint(b.left + b.width * f, y)
+      if (!hit || (hit !== el && !el.contains(hit))) {
+        misses.push('"' + (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24) + '" at ' + Math.round(f * 100) + '% hits ' + label(hit))
+        break
+      }
+    }
+  }
+  return { interactive: controls.length, inert: all.length - controls.length, tested, misses }
+}`
+
 test('M1 · every Palette Builder swatch control is tappable on a short phone', async ({ browser }) => {
   budget(PLB_VIEWPORTS.length)
   const damage = []
   for (const [w, h] of PLB_VIEWPORTS) {
     const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')
-    const r = await page.evaluate(() => {
-      const label = (el) => {
-        if (!el) return 'null'
-        const c = typeof el.className === 'string' ? el.className : (el.className?.baseVal || '')
-        return c.split(' ')[0] || el.tagName.toLowerCase()
-      }
-      const cols = [...document.querySelectorAll('.plb-col')]
-      const controls = [...document.querySelectorAll('.plb-col button')]
-        .filter((el) => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0 })
-      const misses = []
-      // The fixed header and phone tab bar are chrome the page scrolls under;
-      // a control behind them is scrolled past, not covered.
-      const shown = (sel) => { const e = document.querySelector(sel); return e && getComputedStyle(e).display !== 'none' ? e.getBoundingClientRect() : null }
-      const top = shown('.pnav')?.bottom ?? 0
-      const bottom = shown('.pnav-tabs')?.top ?? innerHeight
-      for (const el of controls) {
-        const b = el.getBoundingClientRect()
-        // Only points actually on screen can be pressed; skip the rest rather
-        // than counting them as either pass or fail.
-        const y = b.top + b.height / 2
-        if (y < top || y > bottom) continue
-        for (const f of [0.2, 0.5, 0.8]) {
-          const hit = document.elementFromPoint(b.left + b.width * f, y)
-          if (!hit || (hit !== el && !el.contains(hit))) {
-            misses.push(`"${(el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24)}" at ${Math.round(f * 100)}% hits ${label(hit)}`)
-            break
-          }
-        }
-      }
-      return {
-        cols: cols.length,
-        rowH: cols.length ? Math.round(cols[0].getBoundingClientRect().height) : 0,
-        controls: controls.length,
-        misses,
-      }
-    })
-    await ctx.close()
-    expect(r.cols, `${w}x${h}: expected the five palette columns`).toBe(5)
+    const cols = page.locator('.plb-col')
+    const rowH = Math.round((await cols.first().boundingBox()).height)
+
+    // AT REST. The Edit / Swap / Remove quick tools are laid out but transparent
+    // with `pointer-events:none` until the swatch is opened, so they cannot be
+    // pressed and are not hit-tested here; the inert count is asserted below so
+    // the state is checked rather than ignored. Everything a person can press
+    // must hit itself.
+    const r = await page.evaluate(`(${PLB_HIT})([...document.querySelectorAll('.plb-col')])`)
+    expect(await cols.count(), `${w}x${h}: expected the five palette columns`).toBe(5)
     // The floor moved with the row. Each column paints its hex plus Lock, Copy
-    // and More — four buttons — so five columns give 20. It was eight per column
-    // before the <=768 collapse, which is where `> 20` came from. This is a
-    // positive control, not the assertion: it exists so that `r.misses` being
-    // empty cannot mean "nothing rendered to miss".
-    expect(r.controls, `${w}x${h}: expected the per-swatch controls to be rendered`).toBeGreaterThanOrEqual(20)
+    // and More (four buttons), so five columns give 20. It is a positive
+    // control, not the assertion: it exists so that an empty `misses` cannot
+    // mean "nothing rendered to miss".
+    expect(r.interactive, `${w}x${h}: expected the per-swatch controls to be rendered`).toBeGreaterThanOrEqual(20)
+    expect(r.inert, `${w}x${h}: the 15 quick tools are in the layout but inert while closed`).toBe(15)
     if (r.misses.length) {
-      damage.push(`${w}x${h}: ${r.misses.length} of ${r.controls} swatch controls are covered (row is ${r.rowH}px tall) — ${r.misses.slice(0, 3).join('; ')}`)
+      damage.push(`${w}x${h}: ${r.misses.length} of ${r.interactive} swatch controls are covered at rest (row is ${rowH}px tall) - ${r.misses.slice(0, 3).join('; ')}`)
     }
+
+    // REVEALED. Tap each swatch open, bring its tools to the middle of the
+    // screen (the last swatch's tools start behind the tab bar until the page
+    // scrolls), and hit-test the three quick tools. All three must be tested,
+    // so a tool that never appears fails here instead of being skipped.
+    for (let i = 0; i < 5; i++) {
+      const col = cols.nth(i)
+      await col.locator('.plb-name').tap()
+      const quick = col.locator('.plb-col-quick .plb-tool')
+      await expect.poll(
+        async () => (await quick.evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).opacity)))).join(),
+        { message: `${w}x${h}: swatch ${i + 1} tools are revealed by a tap` },
+      ).toBe('1,1,1')
+      await quick.first().evaluate((el) => el.scrollIntoView({ block: 'center' }))
+      const shownTools = await col.evaluate((el, fn) => (0, eval)(fn)([el.querySelector('.plb-col-quick')]), PLB_HIT)
+      if (shownTools.tested !== 3 || shownTools.misses.length) {
+        damage.push(`${w}x${h}: swatch ${i + 1} revealed tools - ${shownTools.tested} of 3 testable, ${shownTools.misses.length} covered ${shownTools.misses.slice(0, 3).join('; ')}`)
+      }
+      await col.locator('.plb-name').tap() // close again
+    }
+    await ctx.close()
   }
   expect(damage, damage.join('\n')).toEqual([])
 })

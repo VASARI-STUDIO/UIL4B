@@ -154,16 +154,37 @@ test.describe('reflow at 320px', () => {
     // 0 WITH pointer-events auto, a live 32x32 hit area painting nothing).
     // `offsetParent` is the cheap test for it and matches how that spec skips
     // zero-box elements.
-    const tools = await page.evaluate(() =>
-      [...document.querySelectorAll('.plb-tool')].filter(t => t.offsetParent !== null).map(t => {
+    //
+    // The Edit / Swap / Remove quick tools are rendered in every column but sit
+    // transparent with `pointer-events:none` until the swatch is hovered,
+    // focused or tapped. A person cannot see or press them at rest, so they are
+    // not counted as usable targets here; their at-rest state is asserted
+    // explicitly below, and their size once revealed is covered by spec 107.
+    const probe = () => page.evaluate(() => {
+      const state = (t) => {
+        let opacity = 1
+        for (let n = t; n && n !== document.body; n = n.parentElement) opacity *= parseFloat(getComputedStyle(n).opacity)
         const r = t.getBoundingClientRect()
-        return { w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) }
-      }))
+        return { quick: !!t.closest('.plb-col-quick'), rendered: t.offsetParent !== null, opacity,
+          pointer: getComputedStyle(t).pointerEvents, w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) }
+      }
+      return [...document.querySelectorAll('.plb-tool')].map(state)
+    })
+    const all = await probe()
+    const quick = all.filter(t => t.quick && t.rendered)
+    // Usable now: laid out, visible, and able to take a pointer.
+    const tools = all.filter(t => t.rendered && t.opacity > 0 && t.pointer !== 'none')
+
+    // The at-rest contract: three quick tools per column (5 x 3 = 15) are in the
+    // layout but neither visible nor pressable.
+    expect(quick.length, 'every column renders its three quick tools').toBe(15)
+    expect(quick.filter(t => t.opacity === 0 && t.pointer === 'none').length, 'quick tools are transparent and inert at rest').toBe(15)
+    expect(tools.some(t => t.quick), 'no quick tool counts as usable while the swatch is closed').toBe(false)
 
     // A floor the filter cannot sneak under: five columns each render a row of
     // tools at this width, so a result that collapsed to a handful would mean
     // the filter ate the population rather than that everything passed.
-    // Five columns x two painted tools (the drawn lock, and the colour's
+    // Five columns x two usable tools (the drawn lock, and the colour's
     // actions menu) = 10; it was three per column before the drawn board.
     expect(tools.length, 'the per-colour tools render').toBeGreaterThan(6)
     expect(tools.length, 'every column contributes its row').toBe(10)
