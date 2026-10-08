@@ -48,8 +48,8 @@
 ## More
 - [Pricing & Plans](https://uil4b.com/plans): Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.
 - [On mobile](https://uil4b.com/mobile): Every tool runs the same on a phone. Pick colours on the train, check contrast in a meeting, then copy the tokens when you get back to your desk.
-- [Help & Getting Started](https://uil4b.com/help): Start with any UI L4B tool without an account or setup. What each tool opens with, what the free plan covers, and where your work is stored.
-- [Design Principles](https://uil4b.com/principles): The rules UI L4B holds to when building an interface system, each one shown beside the tool that enforces it and the measurement that proves it.
+- [Help & Getting Started](https://uil4b.com/learn/help): Start with any UI L4B tool without an account or setup. What each tool opens with, what the free plan covers, and where your work is stored.
+- [Design Principles](https://uil4b.com/learn/principles): The rules UI L4B holds to when building an interface system, each one shown beside the tool that enforces it and the measurement that proves it.
 - [Sitemap](https://uil4b.com/sitemap): The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.
 - [Privacy](https://uil4b.com/privacy): UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.
 - [Terms](https://uil4b.com/terms): UI L4B terms of service. Usage rules, intellectual property, and account policies.

@@ -55,7 +55,7 @@ test.describe('header search · rows land on real pages', () => {
   })
 
   const ROWS = [
-    { label: 'Design Principles', path: '/principles' },
+    { label: 'Design Principles', path: '/learn/principles' },
     { label: 'UI Design Themes', path: '/learn/theme-systems' },
     { label: 'Brand Colour Guide', path: '/learn/brand-colour' },
     { label: 'External Resources', path: '/discover/resources' },

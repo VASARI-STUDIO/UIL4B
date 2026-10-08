@@ -109,7 +109,7 @@ test.describe('route sweep — every public page loads clean', () => {
     '/', '/create/color', '/create/palette', '/create/semantic-color', '/create/tint',
     '/create/gradient', '/create/contrast', '/create/icons', '/create/emoji', '/create/file-converter',
     '/create/aspect-ratio', '/discover', '/discover/gradients', '/learn', '/plans', '/community',
-    '/help', '/info', '/sitemap', '/privacy', '/terms', '/feedback', '/seo',
+    '/learn/help', '/info', '/sitemap', '/privacy', '/terms', '/feedback', '/seo',
     '/login', '/settings',
   ]
   for (const url of ROUTES) {

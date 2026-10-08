@@ -65,19 +65,19 @@ test('the app header: the phone sheet\'s "Start for free" and the tab bar open w
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const page = await context.newPage()
   watch(page, 'a visitor with no account in the app on a phone')
-  await go(page, '/help')
+  await go(page, '/learn/help')
   await page.locator('.pnav-mobile').click()
   const sheet = page.locator('.pnav-sheet')
   await expect(sheet).toBeVisible()
   await sheet.getByRole('link', { name: 'Start for free' }).click()
   await assertOpened(page, 'the sheet\'s "Start for free"')
 
-  await go(page, '/help')
+  await go(page, '/learn/help')
   const tabs = await page.locator('.pnav-tabs a[href]').evaluateAll((els) => els.map((e) => e.getAttribute('href')))
   const free = tabs.filter((h) => /^\/(projects|create|discover)/.test(h))
   expect(free.length, 'the tab bar has no link into the app').toBeGreaterThan(0)
   for (const href of free) {
-    await go(page, '/help')
+    await go(page, '/learn/help')
     await page.locator(`.pnav-tabs a[href="${href}"]`).first().click()
     await assertOpened(page, `the tab bar's ${href}`)
   }
@@ -87,7 +87,7 @@ test('the app header: the phone sheet\'s "Start for free" and the tab bar open w
 test('the app header at 1440: the Create menu opens a tool without an account', async ({ page }) => {
   watch(page, 'a visitor with no account picking a tool from the header')
   await page.setViewportSize({ width: 1440, height: 900 })
-  await go(page, '/help')
+  await go(page, '/learn/help')
   await page.locator('.pnav-trigger', { hasText: 'Create' }).click()
   const tool = page.locator('.pnav-menu a[href^="/create/"]').first()
   await expect(tool).toBeVisible()

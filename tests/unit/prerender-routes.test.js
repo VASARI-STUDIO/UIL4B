@@ -37,6 +37,19 @@ import { LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 import { canonicalUrl, robotsFor } from '../../src/utils/routeMeta.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
+
+test('Learn reference pages replace the retired roots in prerender and sitemap routes', () => {
+  for (const name of ['principles', 'help']) {
+    const old = `/${name}`
+    const route = `/learn/${name}`
+    assert.equal(classifyRoute(old).prerender, false)
+    assert.equal(classifyRoute(route).prerender, true)
+    assert.ok(prerenderRoutes().includes(route))
+    assert.ok(!prerenderRoutes().includes(old))
+    assert.ok(advertisedRoutes().includes(route))
+    assert.ok(!advertisedRoutes().includes(old))
+  }
+})
 const vercel = () => JSON.parse(read('vercel.json'))
 
 // Routes deliberately prerendered with the HOMEPAGE's own metadata, because

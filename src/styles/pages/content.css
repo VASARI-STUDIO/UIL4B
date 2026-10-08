@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    CONTENT — the `cpg` family. The Spectrum design language, for the four
-   content surfaces that never got a design pass: /principles, /help, /info,
+   content surfaces that never got a design pass: /learn/principles, /learn/help, /info,
    /terms and /privacy.
    ═══════════════════════════════════════════════════════════════════════════
 
@@ -36,7 +36,7 @@
    `--accent-strong` is banned here and its absence is the point. It is a
    per-theme LITERAL (#0B5ED7 / #4A90FF and their high-contrast siblings) that
    does not track `--accent` at all, and the sheet this one replaces used it on
-   /principles' call to action, /help's row hover, /info's eyebrow, /info's
+   /learn/principles' call to action, /learn/help's row hover, /info's eyebrow, /info's
    orientation figure and the storage key on /privacy — five elements that
    would have stayed brand-blue on a theme that had moved to green.
 

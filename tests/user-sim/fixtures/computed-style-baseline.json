@@ -1550,7 +1550,7 @@
     ".tl": ["flex","static","rgb(15, 15, 16)","rgba(0, 0, 0, 0)","Geist, system-ui, -apple-system, sans-serif","16px","400","26.4px","normal","start","none","0px","0px","0px","0px","-32px","<len>","-80px","<len>","0px","0px","rgb(15, 15, 16)","0px","normal","none","column","normal","normal","1","none","visible","visible","auto"]
    }
   },
-  "/help": {
+  "/learn/help": {
    "390": {
     ".hlp-run-bar": ["block","static","rgb(15, 15, 16)",null,"Geist, system-ui, -apple-system, sans-serif","16px","400","26.4px","normal","start","none","0px","0px","0px","0px","0px","<len>","0px","<len>","0px","0px","rgb(15, 15, 16)","8px","normal","none","row","normal","normal","1","none","visible","visible","auto"],
     ".hlp-run-stop": ["flex","static","rgb(15, 15, 16)","rgba(0, 0, 0, 0)","Geist, system-ui, -apple-system, sans-serif","16px","400","26.4px","normal","start","none","0px","0px","0px","0px","0px","<len>","0px","<len>","0px","0px","rgb(15, 15, 16)","0px","6px","none","column","normal","normal","1","none","visible","visible","auto"],
@@ -1636,7 +1636,7 @@
     ".pnav-logo": ["flex","static","rgb(18, 20, 24)","rgba(0, 0, 0, 0)","Geist, system-ui, -apple-system, sans-serif","16px","400","26.4px","normal","start","none","4px","2px","4px","2px","0px","<len>","0px","<len>","0px","0px","rgb(18, 20, 24)","8px","normal","none","row","center","normal","1","none","visible","visible","auto"]
    }
   },
-  "/principles": {
+  "/learn/principles": {
    "390": {
     ".prn-body": ["block","static","rgb(80, 80, 74)","rgba(0, 0, 0, 0)","Geist, system-ui, -apple-system, sans-serif","15px","400","25.5px","normal","start","none","0px","0px","0px","0px","0px","<len>","0px","<len>","0px","0px","rgb(80, 80, 74)","0px","normal","none","row","normal","normal","1","none","visible","visible","auto"],
     ".prn-cap": ["block","static","rgb(95, 95, 89)","rgba(0, 0, 0, 0)","Geist, system-ui, -apple-system, sans-serif","12.5px","400","20px","normal","start","none","16px","0px","0px","0px","16px","<len>","0px","<len>","1px","0px","rgb(218, 216, 207)","0px","normal","none","row","normal","normal","1","none","visible","visible","auto"],

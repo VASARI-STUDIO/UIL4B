@@ -55,7 +55,7 @@ export default function StartSomething() {
 
   // THE LIVE RAMP. The design's lead tile shows the Palette Builder's current columns.
   // Ours is the working design: its palette when it has one, otherwise the
-  // eleven-stop ramp the Tint tool builds from its base — the same ramp /help
+  // eleven-stop ramp the Tint tool builds from its base — the same ramp /learn/help
   // shows as "what a new project starts from".
   const ramp = useMemo(() => {
     const colors = (design?.palette?.colors || []).filter(Boolean)

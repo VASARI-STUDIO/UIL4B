@@ -64,7 +64,7 @@ const MASTHEAD_ROUTES = [
 
 // The marketing and wayfinding set this lane owns.
 const MARKETING_ROUTES = [
-  '/', '/plans', '/help', '/info', '/principles', '/privacy', '/terms', '/sitemap',
+  '/', '/plans', '/learn/help', '/info', '/learn/principles', '/privacy', '/terms', '/sitemap',
   '/learn', '/discover', '/community',
 ]
 const LEARN_GUIDES = [

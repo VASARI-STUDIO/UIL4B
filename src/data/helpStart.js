@@ -1,4 +1,4 @@
-// Everything /help asserts about the product, in one place, derived from the
+// Everything /learn/help asserts about the product, in one place, derived from the
 // registries that decide it.
 //
 // WHY THIS IS A MODULE AND NOT COPY INSIDE HelpCentre.jsx. The page it replaced

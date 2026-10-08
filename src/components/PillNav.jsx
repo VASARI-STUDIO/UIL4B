@@ -732,7 +732,7 @@ function AppHeader() {
                       <TagIcon />
                       <span>{isPro ? 'Manage plan' : 'Plans & upgrade'}</span>
                     </Link>
-                    <Link className="pnav-pop-item" to="/help" onClick={closeAll}>
+                    <Link className="pnav-pop-item" to="/learn/help" onClick={closeAll}>
                       <HelpIcon />
                       <span>Help centre</span>
                     </Link>
@@ -777,7 +777,7 @@ function AppHeader() {
                     <p className="pnav-pop-head">Appearance</p>
                     <ThemeSeg />
                     <div className="pnav-pop-sep" />
-                    <Link className="pnav-pop-item" to="/help" onClick={closeAll}>
+                    <Link className="pnav-pop-item" to="/learn/help" onClick={closeAll}>
                       <HelpIcon />
                       <span>Help centre</span>
                     </Link>
@@ -898,7 +898,7 @@ function AppHeader() {
                 <TagIcon /><span>Pricing &amp; plans</span>
               </Link>
             )}
-            <Link className="pnav-sheet-row" to="/help" onClick={closeAll}>
+            <Link className="pnav-sheet-row" to="/learn/help" onClick={closeAll}>
               <HelpIcon /><span>Help centre</span>
             </Link>
             <Link className="pnav-sheet-row" to="/feedback" onClick={closeAll}>
