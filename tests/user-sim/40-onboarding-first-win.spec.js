@@ -33,6 +33,11 @@ import { go, watch } from './helpers.js'
 const API_KEY = 'AIzaSyADQoAyU3qwAls2bUW6rfE1csZa0Ud6EKE'
 
 async function seedSignedIn(page, baseURL) {
+  // The record is written from a static document on the same origin, not from
+  // the running app. A fresh profile's SDK finishes starting up by finding no
+  // user and clearing the persisted-user key; seeded from the loaded page, that
+  // clear can land after the write and the app restores nobody. Written before
+  // the app exists, the SDK's first read of the store finds the user.
   // Firebase VALIDATES a restored user against Google on the next load. A
   // forged token is answered with a 400, and the SDK then DELETES the persisted
   // record and signs out — which is correct of it, and is why simply writing
@@ -49,7 +54,7 @@ async function seedSignedIn(page, baseURL) {
   // of this suite, and falls back to the user it already had.
   await page.route('**://securetoken.googleapis.com/**', (r) => r.abort())
   await page.route('**://identitytoolkit.googleapis.com/**', (r) => r.abort())
-  await go(page, baseURL + '/')
+  await page.goto(baseURL + '/robots.txt')
   const result = await page.evaluate(async (apiKey) => {
     const user = {
       uid: 'usersim-first-win',
@@ -86,14 +91,24 @@ async function seedSignedIn(page, baseURL) {
 
 const firstWinStep = (page) => page.locator('[data-testid="onboarding-first-win"]')
 
+/**
+ * Seed the restorable user, open /onboarding, and wait for the app to have
+ * restored it. The screen only renders once AuthContext has resolved a user,
+ * so waiting on it is waiting on the restore.
+ */
+async function openFirstWin(page, baseURL) {
+  await seedSignedIn(page, baseURL)
+  await go(page, baseURL + '/onboarding')
+  const step = firstWinStep(page)
+  await expect(step, 'the seeded user must be restored and the first-win screen rendered')
+    .toBeVisible()
+  return step
+}
+
 test.describe('the first win is on the path, in place of the pricing step', () => {
   test('a brand-new account is asked what to make, not what to pay', async ({ page, baseURL }) => {
     watch(page, 'a brand-new account reaching onboarding')
-    await seedSignedIn(page, baseURL)
-    await go(page, baseURL + '/onboarding')
-
-    const step = firstWinStep(page)
-    await expect(step, 'the first-win screen must render for a signed-in account').toBeVisible()
+    const step = await openFirstWin(page, baseURL)
     await expect(step.getByRole('heading', { name: 'What do you want to make first?' })).toBeVisible()
 
     // The three starting points are the three the sign-up dialog promises
@@ -116,9 +131,7 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     // App.jsx navigates here with replace:true and manages no focus of its own,
     // so without this a keyboard/AT user is dropped on <body> (audit C5 / QA Q3).
     watch(page, 'reaching onboarding with a keyboard')
-    await seedSignedIn(page, baseURL)
-    await go(page, baseURL + '/onboarding')
-    await expect(firstWinStep(page)).toBeVisible()
+    await openFirstWin(page, baseURL)
 
     await expect
       .poll(() => page.evaluate(() => document.activeElement?.tagName), { timeout: 5000 })
@@ -137,9 +150,7 @@ test.describe('the first win is on the path, in place of the pricing step', () =
   ]) {
     test(`picking "${id}" opens the real tool`, async ({ page, baseURL }) => {
       watch(page, `a new account starting with ${id}`)
-      await seedSignedIn(page, baseURL)
-      await go(page, baseURL + '/onboarding')
-      await expect(firstWinStep(page)).toBeVisible()
+      await openFirstWin(page, baseURL)
 
       await page.locator(`[data-first-win="${id}"]`).click()
 
@@ -169,9 +180,7 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     // account never learned onboarding had happened and it returned forever on
     // every new browser. It must complete, and it must not invent an answer.
     watch(page, 'a new account declining all three starts')
-    await seedSignedIn(page, baseURL)
-    await go(page, baseURL + '/onboarding')
-    await expect(firstWinStep(page)).toBeVisible()
+    await openFirstWin(page, baseURL)
 
     await page.getByRole('button', { name: /Not now/ }).click()
 
@@ -185,9 +194,7 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     // source text: the question is whether a new account is still made to
     // answer them, not whether a string survives somewhere.
     watch(page, 'checking the survey is really gone')
-    await seedSignedIn(page, baseURL)
-    await go(page, baseURL + '/onboarding')
-    await expect(firstWinStep(page)).toBeVisible()
+    await openFirstWin(page, baseURL)
 
     await expect(page.getByText('How did you hear about us?')).toHaveCount(0)
     await expect(page.getByText('What best describes you?')).toHaveCount(0)

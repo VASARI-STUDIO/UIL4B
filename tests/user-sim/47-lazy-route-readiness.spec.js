@@ -26,7 +26,7 @@ import { ASSET_TROUBLE, expectBuildAssetFailures, test, expect } from './base.js
 // goRaw, not go. `go()` now waits for the route to arrive, which is the fix
 // this file exists to prove works - so measuring the moment before it arrives
 // has to bypass it. This is goRaw's only caller, and that is the point.
-import { go, goRaw, ready, renderState, expectRendered } from './helpers.js'
+import { go, goRaw, ready, renderState, renderStateThroughReload, expectRendered } from './helpers.js'
 
 // /privacy is the sharpest case in the app: 421 characters of chrome while the
 // fallback is up against 6537 once it lands, and it is one of the two routes
@@ -110,7 +110,10 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
 
     // The state a visitor is actually in: no fallback, plenty of text, and
     // none of it the page they asked for.
-    await expect.poll(() => renderState(page).then((s) => s.crashed), {
+    // The page reloads itself once before it gives up on the chunk, so a read
+    // can land on the old document as it is replaced; that read is not an
+    // answer, and the poll reads again.
+    await expect.poll(() => renderStateThroughReload(page).then((s) => !!s && s.crashed), {
       message: 'the dropped chunk should reach the ErrorBoundary',
       timeout: 20000,
     }).toBe(true)
@@ -128,6 +131,17 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     // sent a previous investigation at the branch under test rather than at the
     // wait, which cost a day.
     expect(failure).toMatch(/ErrorBoundary card, not the route/)
+  })
+
+  test('a read cut off by the page replacing itself is no reading, and any other fault still throws', async () => {
+    // The page reloads itself once when a chunk fails, so a read that is in
+    // flight at that moment is answered with a destroyed context. That must
+    // read as "try again", and only that: a different error is a real fault.
+    const cutOff = { evaluate: () => Promise.reject(new Error('page.evaluate: Execution context was destroyed, most likely because of a navigation')) }
+    expect(await renderStateThroughReload(cutOff)).toBeNull()
+
+    const broken = { evaluate: () => Promise.reject(new Error('page.evaluate: Target page, context or browser has been closed')) }
+    await expect(renderStateThroughReload(broken)).rejects.toThrow(/has been closed/)
   })
 
   test('a route that never resolves at all fails with a diagnostic, not a false pass', async ({ page }) => {

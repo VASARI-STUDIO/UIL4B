@@ -586,10 +586,29 @@ export function renderState(page) {
       // that had already finished.
       dataLoading: !!document.querySelector('.typ-loading > .fg-loader'),
       crashed: !!document.querySelector('.error-boundary'),
-      body: (document.body.innerText || '').trim().length,
+      body: ((document.body && document.body.innerText) || '').trim().length,
       own: parts.join(' ').trim().length,
     }
   })
+}
+
+/**
+ * `renderState()` for a page that may replace its own document while it is read.
+ *
+ * App code can start a reload of its own accord (the one-shot recovery for a
+ * page chunk that failed to download), and a read that is in flight when the new
+ * document commits does not return a stale answer: it throws because the
+ * old context was destroyed. That says nothing about the page, so it comes back
+ * as `null` for "no reading this time" and the caller reads again. Any other
+ * error is a real fault and is rethrown.
+ */
+export async function renderStateThroughReload(page) {
+  try {
+    return await renderState(page)
+  } catch (err) {
+    if (/Execution context was destroyed/.test(String(err && err.message))) return null
+    throw err
+  }
 }
 
 /**
