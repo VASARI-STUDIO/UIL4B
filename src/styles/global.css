@@ -3356,7 +3356,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
    min-height, so losing them shortens the header rather than leaving a hole:
    #331 is the precedent for what happens when a box keeps a floor its tallest
    child no longer justifies. */
-.tt-panel{display:flex;flex-direction:column;min-width:0;padding:24px;background:var(--card);overflow:hidden}
+.tt-panel{display:flex;flex-direction:column;min-width:0;background:var(--card)}
 .tt-panel.card:hover{border-color:var(--border)}
 /* --brand is #0F6FFF in light theme, which measures 4.43:1 on the white card
    and 3.82:1 on the page ground - under AA for text this size. --accent-strong
