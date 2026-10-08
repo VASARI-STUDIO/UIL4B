@@ -74,12 +74,6 @@ export const CREATE_GROUPS = [
     tools: [
       { id: 'component-designer', label: 'Component Designer', route: '/create/component-designer', soon: true },
       { id: 'box-shadow', label: 'Box Shadow', route: '/create/box-shadow', soon: true },
-      // `auto-builder` MOVED OUT of this group to AI Studio below. It was filed
-      // here because its dormant alpha rendered a fake UI hero; what it
-      // actually produces is a palette, a font pairing and a type scale, and
-      // src/data/moduleBoard.js has recorded it under area 'AI' the whole time.
-      // The route and the id are unchanged, so no redirect is needed and every
-      // existing link still lands.
     ],
   },
   {
@@ -92,11 +86,8 @@ export const CREATE_GROUPS = [
     tools: [
       { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', soon: false },
       { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', soon: false },
-      // Beta for the reason Brand Starter is: it is live, mounted and fully
-      // usable, and the badge states a limit on the output (what each format
-      // keeps is listed on the page). Beta also keeps it out of TOOL_COUNT in
-      // src/components/spectrum/spectrumFacts.js, so shipping it does not move
-      // the sales page's "Thirteen tools" headline.
+      // Beta marks limits on format output and excludes the tool from
+      // the non-beta tool count. Supported output is listed on the page.
       { id: '3d-converter', label: '3D Model Converter', route: '/create/3d-converter', soon: false, beta: true },
     ],
   },
@@ -105,20 +96,15 @@ export const CREATE_GROUPS = [
     label: 'AI Studio',
     hue: 'ai',
     home: '/create/ai-tools',
-    desc: 'Brand starters, image prompts and alt text.',
+    desc: 'Image prompts and alt text.',
     // Live because Alt Text is live and mounted in CreateTool's LIVE_TOOLS. The
     // three unbuilt siblings now carry their own Soon badge, which is exactly
     // the per-tool behaviour the header comment describes.
     soon: false,
     tools: [
       { id: 'alt-text', label: 'Alt Text', route: '/create/alt-text', soon: false },
-      // ⚠️ `beta: true` is NOT a second `soon`. A Soon tool renders the workshop
-      // state and nobody can use it; a Beta tool is LIVE, mounted, metered and
-      // fully usable, and the badge states a limit on the OUTPUT and the
-      // allowance rather than on the availability. The two flags are read in
-      // different places for that reason: `soon` gates routing, prerendering
-      // and search, while `beta` only ever adds a label.
-      { id: 'auto-builder', label: 'Brand Starter', route: '/create/auto-builder', soon: false, beta: true },
+      // Hidden tools retain their routes but are excluded from tool lists.
+      { id: 'auto-builder', label: 'Brand Starter', route: '/create/auto-builder', soon: false, beta: true, hidden: true },
       { id: 'ai-prompt', label: 'Image Prompt', route: '/create/ai-prompt', soon: true },
       { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/create/landing-prompts', soon: true },
       // Prompt Library is no longer here — it moved to Discover, where the
@@ -185,12 +171,21 @@ export function categoryDestination(groupOrId) {
   return bounces ? first.route : group.home
 }
 
-// Every Create tool the app can actually mount, flattened out of the groups.
+// Listed Create tools, flattened out of the groups. Hidden tools remain
+// available to routing; callers resolving tool identity can include them.
 // `soon` is inherited from the group as well as the tool, because a tool inside
 // a Soon group renders the workshop state whatever its own flag says.
-export function createTools() {
+export function isListedTool(tool) {
+  return !tool?.hidden
+}
+
+export function listedTools(group) {
+  return group.tools.filter(isListedTool)
+}
+
+export function createTools({ includeHidden = false } = {}) {
   return CREATE_GROUPS.flatMap((g) =>
-    g.tools.map((t) => ({
+    (includeHidden ? g.tools : listedTools(g)).map((t) => ({
       id: t.id,
       label: t.label,
       route: t.route,
@@ -209,7 +204,7 @@ export function createTools() {
 // .jsx source and fails if the two ever disagree, which is what turns the
 // "keep the two in sync" comment above into something a build can check.
 export function liveToolRoutes() {
-  return createTools().filter((t) => !t.soon).map((t) => normalise(t.route))
+  return createTools({ includeHidden: true }).filter((t) => !t.soon).map((t) => normalise(t.route))
 }
 
 // ── Homepage: two deliberately separate models ──────────────────────────────
@@ -288,7 +283,7 @@ const HOME_SATELLITE_SPEC = [
 // throws at import, which fails `npm run build` (prerender.mjs imports this
 // module) as well as the unit suite.
 function requireTool(id, where) {
-  const tool = createTools().find((t) => t.id === id)
+  const tool = createTools({ includeHidden: true }).find((t) => t.id === id)
   if (!tool) throw new Error(`${where} names "${id}", which is not a tool in CREATE_GROUPS`)
   return tool
 }
@@ -510,7 +505,7 @@ const CREATE_MENU_SPEC = [
   [
     { label: 'Icons', ids: ['icons', 'emoji'] },
     { label: 'Media', ids: ['file-converter', 'ratio', '3d-converter'] },
-    { label: 'AI', ids: ['alt-text', 'auto-builder', 'ai-prompt', 'landing-prompts'] },
+    { label: 'AI', ids: ['alt-text', 'ai-prompt', 'landing-prompts'] },
   ],
 ]
 

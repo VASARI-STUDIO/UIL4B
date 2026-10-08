@@ -574,11 +574,12 @@ test('the failover is shared with the prompt tool, so it is counted and alerted 
     'the page stores the provider but never renders it — the same silence one step later')
 })
 
-test('the page is MOUNTED, on the route the tool tree advertises', () => {
+test('the hidden page remains mounted on its direct route', () => {
   // The lesson this repository paid for with /create/color: a flag said a tool
   // was live while the route rendered a landing page. A config test that never
   // checks the mount is how that shipped.
-  const tool = createTools().find((t) => t.id === 'auto-builder')
+  assert.ok(!createTools().some((t) => t.id === 'auto-builder'))
+  const tool = createTools({ includeHidden: true }).find((t) => t.id === 'auto-builder')
   assert.ok(tool, 'the brand starter is no longer in the tool tree')
   assert.equal(tool.soon, false, 'the tool is Soon again — the route renders the workshop state')
   assert.equal(tool.beta, true, 'the beta flag is gone, so the badge silently stops rendering')

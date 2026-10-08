@@ -281,7 +281,7 @@ test('every live Create tool is advertised in the sitemap', async () => {
   for (const group of CREATE_GROUPS) {
     if (group.soon) continue
     for (const tool of group.tools) {
-      if (tool.soon) continue
+      if (tool.soon || tool.hidden) continue
       assert.ok(advertised.has(tool.route),
         `${tool.route} is live but missing from public/sitemap.xml`)
     }

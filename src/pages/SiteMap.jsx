@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
+import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, listedTools } from '../data/toolTree'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -153,7 +153,7 @@ export default function SiteMap() {
               </div>
               <p className="smap-cat-desc">{group.desc}</p>
               <ul className="smap-links">
-                {group.tools.map((tool) => (
+                {listedTools(group).map((tool) => (
                   <MapLink
                     key={tool.id}
                     label={tool.label}

@@ -32,7 +32,7 @@ import {
 } from '../../scripts/route-matrix.mjs'
 import { ORIGIN, advertisedRoutes, buildSitemap } from '../../scripts/sync-sitemap.mjs'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
-import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, resolveTool } from '../../src/data/toolTree.js'
 import { LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 import { canonicalUrl, robotsFor } from '../../src/utils/routeMeta.js'
 
@@ -246,10 +246,10 @@ test('the sitemap is a SUBSET of the matrix, and every extra route is explainabl
     assert.ok(routes.includes(route),
       `${route} is advertised in sitemap.xml but gets no prerendered shell`)
   }
-  // Every route in the matrix but not the sitemap has to be a canonical alias —
-  // a page whose canonical points somewhere else. Anything else in this list is
-  // a page we prerender and then forgot to advertise.
+  // Hidden tools keep their shells without being advertised. Other omissions
+  // must be canonical aliases.
   for (const route of unadvertised(routes, sitemap)) {
+    if (resolveTool(route).tool?.hidden) continue
     assert.notEqual(canonicalUrl(route), `https://uil4b.com${route}`,
       `${route} is prerendered, self-canonical and NOT in sitemap.xml — either `
       + 'advertise it or explain why it is prerendered at all')
@@ -276,16 +276,13 @@ test('public/sitemap.xml is exactly what the generator produces — no hand-edit
     'run `npm run sync:sitemap` — public/sitemap.xml has drifted from the route matrix')
 })
 
-test('THE DIRECTION THAT WAS NOT ASSERTED: every self-canonical prerendered route is advertised', async () => {
-  // Containment (below) says everything advertised is prerendered. This is the
-  // other way round and it is the one that lets a real page go missing: a route
-  // that has its own shell, its own title and its own canonical, and which the
-  // sitemap simply never mentions, is a page we built and did not tell anyone
-  // about. Nothing failed for that before — `unadvertised()` was only asked
-  // whether the extras were explainable, one route at a time.
+test('THE DIRECTION THAT WAS NOT ASSERTED: every visible self-canonical prerendered route is advertised', async () => {
+  // Visible, self-canonical shells are advertised; hidden tools keep shells
+  // for direct links without appearing in the sitemap.
   const sitemap = new Set(await sitemapRoutes())
   const missing = prerenderRoutes().filter(
-    (route) => canonicalUrl(route) === `${ORIGIN}${route}` && !sitemap.has(route),
+    (route) => !resolveTool(route).tool?.hidden
+      && canonicalUrl(route) === `${ORIGIN}${route}` && !sitemap.has(route),
   )
   assert.deepEqual(missing, [],
     'these routes are prerendered and self-canonical but are not in sitemap.xml')
