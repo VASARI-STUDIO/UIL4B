@@ -176,8 +176,8 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
       const { ctx, page } = await at(browser, 320)
       watch(page, `someone picking ${what} on a small phone`)
       await go(page, route)
-      // A 320px toolbar keeps undo, Randomise, Tools and Save on its row; the
-      // seed chip is then the first row of the Tools sheet, and its picker
+      // A 320px toolbar keeps undo, Randomise, Extra tools and Save on its row; the
+      // seed chip is then the first row of the Extra tools sheet, and its picker
       // opens from there.
       if (route === '/create/palette' && !(await page.locator(trigger).first().isVisible())) {
         await openPaletteTools(page)
@@ -244,7 +244,7 @@ test.describe('/create/palette · Save / export, signed in on a desktop', () => 
       watch(page, `a designer saving a palette at 1440px with ${label}`)
       await signIn(page, { plan: 'free', projects })
       await go(page, '/create/palette')
-      await page.getByRole('button', { name: 'Save current' }).click()
+      await page.getByRole('button', { name: 'Save or share' }).click()
       const menu = page.locator('.plb-savemenu')
       await expect(menu).toBeVisible()
       await expect(menu.getByRole('button', { name: /Submit to the community/ })).toBeVisible()

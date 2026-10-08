@@ -240,13 +240,13 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
     const before = await page.locator('.plb-col .plb-hex').allTextContents()
 
-    // Preview lives in the Tools overflow; both the trigger and the row are
+    // Preview lives in the Extra tools overflow; both the trigger and the row are
     // pressed with Space, and neither may reach the page's randomise.
-    const tools = paletteToolbar(page).getByRole('button', { name: 'Tools' })
+    const tools = paletteToolbar(page).getByRole('button', { name: 'Extra tools' })
     await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
     await tools.focus()
     await page.keyboard.press('Space')
-    const row = page.getByRole('dialog', { name: 'Tools' }).getByRole('button', { name: 'Preview on a UI' })
+    const row = page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview on a UI' })
     await expect(row).toBeVisible()
     expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
     await row.focus()
@@ -466,7 +466,7 @@ test.describe('the Palette Builder opens on a random palette', () => {
     await expect(page.getByRole('button', { name: 'Unlock PRIMARY' })).toHaveCount(1)
     const before = await boardColors(page)
 
-    // Reset is a Tools row ("Reset palette"), next to History.
+    // Reset is an Extra tools row ("Reset palette"), next to History.
     const reset = async () => (await openPaletteTools(page)).getByRole('button', { name: 'Reset palette' }).click()
     await reset()
     const afterFirst = await boardColors(page)

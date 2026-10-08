@@ -97,7 +97,7 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
       // Copy worked signed out. Copying is free forever; the account is asked
       // for at the things that keep or produce something. So the opener now
       // opens, and Save inside it is what asks.
-      const opener = page.getByRole('button', { name: 'Save current' })
+      const opener = page.getByRole('button', { name: 'Save or share' })
       await opener.focus()
       await page.keyboard.press('Enter')
 
@@ -153,7 +153,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       await page.keyboard.press('Enter')
       await expect(page).toHaveURL(/\/create\/palette$/)
 
-      await page.getByRole('button', { name: /^Save current/ }).click()
+      await page.getByRole('button', { name: /^Save or share/ }).click()
       const field = page.locator('.plb-savemenu').getByLabel('Project name')
       await field.fill('Brand v1')
       await page.keyboard.press('Enter')
@@ -223,10 +223,10 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
   // export test in flow 4. Keyboard activation for the reason the phone test
   // above gives.
   async function raiseWall(page) {
-    // The colour system is a select on the toolbar, or in its Tools overflow
+    // The colour system is a select on the toolbar, or in its Extra tools overflow
     // when the row has no room; a Pro system raises the wall.
     const system = page.getByRole('combobox', { name: 'Colour system' }).first()
-    if (!(await system.isVisible())) await page.getByRole('button', { name: /^Tools/ }).click()
+    if (!(await system.isVisible())) await page.getByRole('button', { name: /^Extra tools/ }).click()
     // A person changing a select has it focused; selectOption alone does not.
     await system.focus()
     await system.selectOption({ label: 'Analogous (Pro)' })
@@ -274,7 +274,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
       await signIn(page, { plan: 'free' })
       await go(page, '/create/palette')
-      // On a phone the System select is in the palette's Tools sheet; its
+      // On a phone the System select is in the palette's Extra tools sheet; its
       // paid options read "(Pro)" and choosing one raises the wall.
       const tools = await openPaletteTools(page)
       await tools.getByRole('combobox', { name: 'Colour system' }).selectOption('analogous')
