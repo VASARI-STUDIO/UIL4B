@@ -37,6 +37,17 @@ export function useToast() {
     timer.current = setTimeout(() => setVisible(false), ms)
   }, [])
 
+  // Components with no toast of their own (the header) ask for one with
+  //   window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message, type } }))
+  useEffect(() => {
+    const onToast = (event) => {
+      const { message: msg, type: kind } = event.detail || {}
+      if (msg) toast(msg, kind)
+    }
+    window.addEventListener('uil4b:toast', onToast)
+    return () => window.removeEventListener('uil4b:toast', onToast)
+  }, [toast])
+
   const hold = useCallback(() => { clearTimeout(timer.current) }, [])
   const release = useCallback(() => {
     clearTimeout(timer.current)

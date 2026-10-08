@@ -4,7 +4,7 @@ import FoldersGlyph from './FoldersGlyph'
 
 // THE PHONE TAB BAR — the phone mockups in `UIL4B - Spectrum.dc.html`
 // (lines 1432-1437 and 1552-1557) draw the app with a bottom bar of four tabs:
-// Projects, Create, Discover, You. It shows on app routes.
+// Dashboard, Create, Discover, You. It shows on app routes.
 // Sizes are the mockup's scaled to a real 390px screen (it is drawn inside a
 // 278px screen): a 21px glyph over a 12px label, ink when current and ink-dim
 // otherwise, a hairline above.
@@ -72,7 +72,7 @@ export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, o
     <nav className="pnav-tabs" aria-label="App sections">
       <Link {...tab('projects')} to="/projects" onClick={onNavigate}>
         <FoldersGlyph />
-        <span>Projects</span>
+        <span>Dashboard</span>
       </Link>
       <button
         type="button"

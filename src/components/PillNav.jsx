@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
 import { localiseTools } from '../data/tools'
@@ -9,6 +9,8 @@ import { searchHints } from '../data/toolIndex'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
 import { inkFor, grade } from '../utils/styleGuideExport'
 import usePopover from '../hooks/usePopover'
+import useMediaQuery from '../hooks/useMediaQuery'
+import { isUntouched } from '../utils/accountSync'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 import { guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
 import { getRecentIcons } from '../utils/recentIcons'
@@ -41,14 +43,13 @@ const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
 // One 64px row: wordmark · search · theme · Create / Discover / Learn, then at
-// the far end Export · Your workspace · Back to the site · Upgrade · avatar.
-// It NEVER wraps: below 1100px the search field becomes its icon, and below
-// 900px Export, Your workspace and Back to the site move into the account
-// popover, where the same three rows are always present.
+// the far end Export · Dashboard · Upgrade · avatar. It NEVER wraps: below
+// 1100px the search field becomes its icon, and below 900px Export and
+// Dashboard keep their place as icon-only buttons.
 //
-// Below 768px it is the compact phone header: wordmark, search, avatar, menu —
-// with the bottom tab bar (Projects / Create / Discover / You), and the menu
-// sheet for the rest.
+// Below 768px it is the compact phone header: wordmark, search, Export, avatar,
+// menu — with the bottom tab bar (Dashboard / Create / Discover / You), and
+// the menu sheet for the rest.
 //
 // The mega menus are ONE surface each (no card inside a tray): the columns,
 // the promo content and the foot are separated by hairlines and space, never
@@ -62,6 +63,11 @@ const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
 
 // Routes where there is nothing to export.
 const SALES_PATHS = new Set(['/', '/home', '/plans', '/pricing'])
+
+// How long a pointer rests on a disabled Export before its hint appears.
+const HINT_DELAY_MS = 280
+// A touch on the logo this soon after a route change is ignored.
+const LOGO_GUARD_MS = 600
 
 function Chevron() {
   return (
@@ -80,34 +86,13 @@ function SearchIcon() {
   )
 }
 
-// Phosphor "arrow-square-out" (App line 121): Back to the site.
-function SiteIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 4h6v6" />
-      <path d="M20 4 11 13" />
-      <path d="M18 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4.5" />
-    </svg>
-  )
-}
-
-// Export is not drawn in the file. It used to wear the arrow-square-out glyph
-// that the file gives Back to the site, so it takes an upload tray instead.
+// An upload tray: the glyph for Export.
 function ExportIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 15V4" />
       <path d="m7.5 8.5 4.5-4.5 4.5 4.5" />
       <path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14" />
-    </svg>
-  )
-}
-
-// Phosphor "bookmark-simple": the header icon for Your workspace.
-function BookmarkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M18 21 12 17.2 6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5Z" />
     </svg>
   )
 }
@@ -311,7 +296,7 @@ function AppHeader() {
   const { openLogin } = useLoginPrompt()
   const { isPro } = useSubscription()
   const { reducedMotion } = useAppearance()
-  const { design } = useProject()
+  const { design, projects, loadProject } = useProject()
   const [searchHot, setSearchHot] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -331,6 +316,25 @@ function AppHeader() {
   }
   const path = (location.pathname || '/').replace(/\/+$/, '') || '/'
   const isSalesPage = SALES_PATHS.has(path)
+  const onDashboard = path === '/projects'
+  // Below 900px the labels are hidden, so the icon buttons carry a title.
+  const iconOnly = useMediaQuery('(max-width: 899px)')
+
+  // What Export does here. On a project page it exports that project; on the
+  // dashboard there is no selected project, so it has nothing to act on; on
+  // every other page it exports the working design once that has been changed.
+  const projectId = matchPath('/projects/:id', path)?.params.id
+  const exportTarget = projectId ? projects.find((p) => p.id === projectId) : null
+  const designUntouched = isUntouched('vs-current-design', design)
+  const canExport = projectId ? !!exportTarget : !onDashboard && !designUntouched
+  const exportHint = onDashboard && (projects.length > 0 || !designUntouched)
+    ? 'Open a project to export it'
+    : 'Nothing to export yet'
+  const [hintOpen, setHintOpen] = useState(false)
+  const hintTimer = useRef(null)
+  // A logo tap that lands within this long of a route change is the second half
+  // of a double tap, not a second request.
+  const routeChange = useRef({ path, at: 0 })
   const [open, setOpen] = useState(null) // open mega-menu section id
   const [menu, setMenu] = useState(null) // 'account' | null
   const [sheet, setSheet] = useState(false) // phone menu sheet
@@ -358,6 +362,20 @@ function AppHeader() {
     stateRef.current.menu = menu
     stateRef.current.sheet = sheet
   }, [open, menu, sheet])
+
+  useEffect(() => {
+    if (routeChange.current.path !== path) routeChange.current = { path, at: Date.now() }
+  }, [path])
+
+  // The Export hint is dismissible without moving focus, and its hover delay
+  // never outlives the header.
+  useEffect(() => {
+    if (!hintOpen) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setHintOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [hintOpen])
+  useEffect(() => () => clearTimeout(hintTimer.current), [])
 
   // A3 + A12: the phone sheet is a modal page. Back closes it, and the page
   // behind it is inert while it is open.
@@ -497,7 +515,37 @@ function AppHeader() {
   // mode.
   const startSignup = () => { closeAll(); openLogin({ signup: true }) }
   const openSearch = () => { closeAll(); setSearchOpen(true) }
-  const openExport = () => { closeAll(); setExportOpen(true) }
+  // On a project page the dialog holds that project, as the page's own export
+  // action does.
+  const openExport = () => {
+    if (exportTarget) loadProject(exportTarget.id)
+    closeAll()
+    setExportOpen(true)
+  }
+  // With nothing to export the button explains itself instead of opening the
+  // dialog: a toast on a phone, where there is no hover, the hint beneath the
+  // button everywhere else.
+  const pressExport = () => {
+    if (canExport) { openExport(); return }
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message: exportHint, type: 'info' } }))
+    } else {
+      setHintOpen(true)
+    }
+  }
+  const hintEnter = (e) => {
+    if (canExport || e.pointerType !== 'mouse') return
+    clearTimeout(hintTimer.current)
+    hintTimer.current = setTimeout(() => setHintOpen(true), HINT_DELAY_MS)
+  }
+  const hintLeave = () => { clearTimeout(hintTimer.current); setHintOpen(false) }
+  const onLogoClick = (e) => {
+    if (e.nativeEvent?.pointerType === 'touch' && Date.now() - routeChange.current.at < LOGO_GUARD_MS) {
+      e.preventDefault()
+      return
+    }
+    closeAll()
+  }
   const openSheetAt = (sectionId) => {
     setOpen(null); setMenu(null)
     setSheetSection(sectionId)
@@ -578,29 +626,6 @@ function AppHeader() {
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
   const showUpgrade = !isPro && path !== '/plans'
 
-  // The three header actions that fold into the popover below 900px. The
-  // popover always lists them; CSS shows those rows only while the header's
-  // own buttons are folded away, so there is never a duplicate on screen.
-  const overflowRows = (
-    <>
-      {!isSalesPage && (
-        <button type="button" className="pnav-pop-item pnav-pop-item--fold" aria-haspopup="dialog" onClick={openExport}>
-          <ExportIcon />
-          <span>Export</span>
-        </button>
-      )}
-      <Link className="pnav-pop-item pnav-pop-item--fold" to="/projects" onClick={closeAll}>
-        <FoldersGlyph size={16} />
-        <span>Your workspace</span>
-      </Link>
-      <Link className="pnav-pop-item pnav-pop-item--fold" to="/home" onClick={closeAll}>
-        <SiteIcon />
-        <span>Back to the site</span>
-      </Link>
-      <div className="pnav-pop-sep pnav-pop-item--fold" />
-    </>
-  )
-
   return (
     <>
       <nav
@@ -610,10 +635,15 @@ function AppHeader() {
         onMouseLeave={hoverLeave}
       >
         <div className="pnav-inner">
-          {/* 19px / 600 / -.035em with the "4" in the accent (App line 102),
-              and it goes where the file's goProjects goes: the workspace.
-              /home, the sales page, is the Back to the site button. */}
-          <Link className="pnav-logo" to="/projects" onClick={closeAll} aria-label="UIL4B — your projects">
+          {/* 19px / 600 / -.035em with the "4" in the accent (App line 102).
+              It goes to the dashboard from every app page, and from the
+              dashboard to the sales home page. */}
+          <Link
+            className="pnav-logo"
+            to={onDashboard ? '/home' : '/projects'}
+            onClick={onLogoClick}
+            aria-label={onDashboard ? 'UIL4B, go to the home page' : 'UIL4B, go to your dashboard'}
+          >
             <span className="pnav-word">UIL<span className="pnav-word-mark">4</span>B</span>
           </Link>
 
@@ -661,23 +691,42 @@ function AppHeader() {
 
           <div className="pnav-actions">
             {!isSalesPage && (
-              <button
-                type="button"
-                className="pnav-iconbtn pnav-export pnav-fold"
-                aria-haspopup="dialog"
-                aria-expanded={exportOpen}
-                aria-label="Export"
-                title="Export"
-                onClick={openExport}
+              <span
+                className="pnav-act-wrap"
+                onPointerEnter={hintEnter}
+                onPointerLeave={hintLeave}
               >
-                <ExportIcon />
-              </button>
+                <button
+                  type="button"
+                  className="pnav-act pnav-export"
+                  aria-haspopup="dialog"
+                  aria-expanded={exportOpen}
+                  aria-disabled={canExport ? undefined : 'true'}
+                  aria-describedby={canExport ? undefined : 'pnav-export-hint'}
+                  title={iconOnly && canExport ? 'Export' : undefined}
+                  onClick={pressExport}
+                  onFocus={(e) => { if (!canExport && e.currentTarget.matches(':focus-visible')) setHintOpen(true) }}
+                  onBlur={() => setHintOpen(false)}
+                >
+                  <ExportIcon />
+                  <span className="pnav-act-label">Export</span>
+                </button>
+                {!canExport && (
+                  <span id="pnav-export-hint" role="tooltip" className={'pnav-tip' + (hintOpen ? ' is-open' : '')}>
+                    {exportHint}
+                  </span>
+                )}
+              </span>
             )}
-            <Link className="pnav-iconbtn pnav-fold" to="/projects" aria-label="Your workspace" title="Your workspace" onClick={closeAll}>
-              <BookmarkIcon />
-            </Link>
-            <Link className="pnav-iconbtn pnav-fold" to="/home" aria-label="Back to the site" title="Back to the site" onClick={closeAll}>
-              <SiteIcon />
+            <Link
+              className="pnav-act pnav-act--dash"
+              to="/projects"
+              aria-current={onDashboard ? 'page' : undefined}
+              title={iconOnly ? 'Dashboard' : undefined}
+              onClick={closeAll}
+            >
+              <FoldersGlyph size={16} />
+              <span className="pnav-act-label" data-text="Dashboard">Dashboard</span>
             </Link>
 
             {!user && (
@@ -720,7 +769,6 @@ function AppHeader() {
                   >
                     <AccountSwitcher onDone={closeAccountMenuAndRestoreFocus} />
                     <div className="pnav-pop-sep" />
-                    {overflowRows}
                     <p className="pnav-pop-head">Appearance</p>
                     <ThemeSeg />
                     <div className="pnav-pop-sep" />
@@ -773,7 +821,6 @@ function AppHeader() {
                     aria-label="Menu"
                     tabIndex={-1}
                   >
-                    {overflowRows}
                     <p className="pnav-pop-head">Appearance</p>
                     <ThemeSeg />
                     <div className="pnav-pop-sep" />
@@ -882,17 +929,6 @@ function AppHeader() {
           })}
 
           <div className="pnav-sheet-group">
-            {!isSalesPage && (
-              <button type="button" className="pnav-sheet-row" aria-haspopup="dialog" onClick={openExport}>
-                <ExportIcon /><span>Export</span>
-              </button>
-            )}
-            <Link className="pnav-sheet-row" to="/projects" onClick={closeAll}>
-              <FoldersGlyph size={16} /><span>Your workspace</span>
-            </Link>
-            <Link className="pnav-sheet-row" to="/home" onClick={closeAll}>
-              <SiteIcon /><span>Back to the site</span>
-            </Link>
             {!user && (
               <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
                 <TagIcon /><span>Pricing &amp; plans</span>
