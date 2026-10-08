@@ -50,6 +50,11 @@
 // ticks are the same measurement and cannot disagree — and a counter cannot
 // drift out of step with the work, because there is no counter.
 //
+// One addition to that reading: keeping a step's defaults is a choice too, so a
+// step also counts as built once the person presses Next on it. Which steps
+// they moved past is kept in the flow flag itself (see `acceptStep` below) and
+// is forgotten when the flow ends.
+//
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY IT MUST BE RESUMABLE, AND HOW
 // ─────────────────────────────────────────────────────────────────────────────
@@ -211,15 +216,18 @@ function withDefaults(design) {
  * list the Icon Library already writes and the dashboard rail already reads.
  * Injecting keeps this module DOM-free and lets a test pin the value.
  */
-export function guideSteps(design, { iconsTouched = false } = {}) {
+export function guideSteps(design, { iconsTouched = false, accepted = [] } = {}) {
   const full = withDefaults(design)
   const present = partsPresent(full)
   const artefacts = stepArtefacts(full)
+  const moved = new Set(Array.isArray(accepted) ? accepted : [])
   return BRAND_KIT_STEPS.map((step, index) => ({
     ...step,
     index,
     number: index + 1,
-    done: step.part ? !!present[step.part] : !!iconsTouched,
+    // Built when the design differs from the defaults, or when the person
+    // pressed Next on the step: keeping the defaults is a choice too.
+    done: moved.has(step.id) || (step.part ? !!present[step.part] : !!iconsTouched),
     artefact: artefacts[step.id] || {},
   }))
 }
@@ -260,7 +268,8 @@ export function guideEntry(design, { active = false, ...options } = {}) {
   if (!active) {
     return { resume: false, step: BRAND_KIT_STEPS[0], path: BRAND_KIT_STEPS[0].path }
   }
-  const next = firstIncompleteStep(design, options)
+  const { storage, ...rest } = options
+  const next = firstIncompleteStep(design, { accepted: acceptedSteps(storage), ...rest })
   const step = next || BRAND_KIT_STEPS[0]
   return { resume: true, step, path: step.path }
 }
@@ -294,12 +303,53 @@ function drop(key, storage) {
   try { store(storage)?.removeItem(key) } catch { /* blocked */ }
 }
 
+/* The flag's value is `1` while the flow runs, or `1:` followed by the ids of
+   the steps the person has pressed Next on (`1:color,fonts`). Both read as
+   active, so a flag written before the list existed keeps working. */
+const FLAG_ON = '1'
+
+function readFlag(storage) {
+  const raw = read(GUIDE_KEY, storage)
+  if (raw === FLAG_ON) return { active: true, accepted: [] }
+  if (typeof raw === 'string' && raw.startsWith(`${FLAG_ON}:`)) {
+    const ids = raw.slice(FLAG_ON.length + 1).split(',')
+    return { active: true, accepted: BRAND_KIT_STEPS.map((s) => s.id).filter((id) => ids.includes(id)) }
+  }
+  return { active: false, accepted: [] }
+}
+
+function writeFlag(accepted, storage) {
+  write(GUIDE_KEY, accepted.length ? `${FLAG_ON}:${accepted.join(',')}` : FLAG_ON, storage)
+}
+
 /** Is the visitor part-way through the walkthrough? */
-export const isGuideActive = (storage) => read(GUIDE_KEY, storage) === '1'
-/** Enter the flow. The nav's brand-kit action calls this. */
-export const startGuide = (storage) => write(GUIDE_KEY, '1', storage)
+export const isGuideActive = (storage) => readFlag(storage).active
+/**
+ * Enter the flow. The nav's brand-kit action calls this on a fresh start and on
+ * a resume, so a running flow keeps the steps already moved past.
+ */
+export function startGuide(storage) {
+  if (!readFlag(storage).active) writeFlag([], storage)
+}
 /** Leave it. The card stays "seen" so re-entering does not re-teach. */
 export const endGuide = (storage) => drop(GUIDE_KEY, storage)
+
+/** The ids of the steps the person has pressed Next on, in flow order. */
+export const acceptedSteps = (storage) => readFlag(storage).accepted
+
+/** Record that Next was pressed on this step. Only while the flow runs. */
+export function acceptStep(id, storage) {
+  const flag = readFlag(storage)
+  if (!flag.active || !stepById(id) || flag.accepted.includes(id)) return flag.accepted
+  const next = BRAND_KIT_STEPS.map((s) => s.id).filter((s) => s === id || flag.accepted.includes(s))
+  writeFlag(next, storage)
+  return next
+}
+
+/** Forget the steps moved past, keeping the flow running. A new project starts here. */
+export function clearAcceptedSteps(storage) {
+  if (readFlag(storage).active) writeFlag([], storage)
+}
 /** Has the orientation card already been offered once? */
 export const introSeen = (storage) => read(GUIDE_SEEN_KEY, storage) === '1'
 /** Record that it has. Called when it is DISMISSED, never while rendering. */

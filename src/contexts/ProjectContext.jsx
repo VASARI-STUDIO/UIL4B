@@ -208,7 +208,12 @@ export function ProjectProvider({ children }) {
       throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
     }
     const id = newId()
-    const snapshot = opts.blank ? DEFAULT_DESIGN : design
+    const base = opts.blank ? DEFAULT_DESIGN : design
+    // `identityName` names the kit in the saved copy as well, for callers that
+    // set the working design's identity in the same event.
+    const snapshot = typeof opts.identityName === 'string'
+      ? { ...base, identity: { ...(base.identity || {}), name: opts.identityName } }
+      : base
     const project = {
       id,
       name: name.trim() || `Project ${new Date().toLocaleDateString()}`,
