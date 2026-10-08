@@ -13,6 +13,9 @@ import assert from 'node:assert/strict'
 
 import {
   BRAND_KIT_STEPS,
+  acceptStep,
+  acceptedSteps,
+  clearAcceptedSteps,
   endGuide,
   firstIncompleteStep,
   guideEntry,
@@ -200,6 +203,62 @@ test('a storage that throws is survivable, and reads as a first-time visitor', (
   assert.doesNotThrow(() => startGuide(hostile))
   assert.doesNotThrow(() => markIntroSeen(hostile))
   assert.doesNotThrow(() => endGuide(hostile))
+})
+
+test('pressing Next on a step counts it as built, defaults and all', () => {
+  // Keeping the defaults is a choice. Someone who walks all four steps without
+  // changing a thing has still been through the flow, and must not read 0 of 4.
+  const storage = fakeStorage()
+  startGuide(storage)
+  const untouched = JSON.parse(JSON.stringify(DEFAULT_DESIGN))
+  assert.equal(guideProgress(untouched, { accepted: acceptedSteps(storage) }).done, 0)
+
+  acceptStep('color', storage)
+  const one = guideProgress(untouched, { accepted: acceptedSteps(storage) })
+  assert.equal(one.done, 1)
+  assert.equal(one.steps.find((s) => s.id === 'color').done, true)
+
+  for (const s of BRAND_KIT_STEPS) acceptStep(s.id, storage)
+  const all = guideProgress(untouched, { accepted: acceptedSteps(storage) })
+  assert.equal(all.done, 4)
+  assert.equal(all.complete, true)
+})
+
+test('the moved-past steps live in the flow flag, survive a resume and end with the flow', () => {
+  const storage = fakeStorage()
+  startGuide(storage)
+  acceptStep('fonts', storage)
+  acceptStep('color', storage)
+  assert.equal(storage.getItem('vs-uikit-guide'), '1:color,fonts', 'kept in flow order')
+  assert.equal(isGuideActive(storage), true)
+
+  // The nav's resume calls startGuide again; that must not forget them.
+  startGuide(storage)
+  assert.deepEqual(acceptedSteps(storage), ['color', 'fonts'])
+  // And the resume lands on the first step not yet moved past.
+  assert.equal(guideEntry(DEFAULT_DESIGN, { active: true, storage }).step.id, 'typescale')
+
+  clearAcceptedSteps(storage)
+  assert.deepEqual(acceptedSteps(storage), [])
+  assert.equal(isGuideActive(storage), true, 'a new project keeps the flow running')
+
+  acceptStep('icons', storage)
+  endGuide(storage)
+  assert.deepEqual(acceptedSteps(storage), [])
+  assert.equal(isGuideActive(storage), false)
+})
+
+test('Next outside a running flow, or on a step that does not exist, records nothing', () => {
+  const storage = fakeStorage()
+  acceptStep('color', storage)
+  assert.equal(storage.getItem('vs-uikit-guide'), null)
+  startGuide(storage)
+  acceptStep('nope', storage)
+  assert.equal(storage.getItem('vs-uikit-guide'), '1')
+  // A hand-edited or garbled list keeps only real step ids.
+  storage.setItem('vs-uikit-guide', '1:icons,,bogus,color')
+  assert.deepEqual(acceptedSteps(storage), ['color', 'icons'])
+  assert.equal(isGuideActive(fakeStorage({ 'vs-uikit-guide': '2:color' })), false)
 })
 
 test('a missing or malformed design is read as nothing built, never as a crash', () => {
