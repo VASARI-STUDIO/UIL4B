@@ -203,3 +203,13 @@ test('a library copy of a prompt unsaved on another device is pruned; a later re
   assert.deepEqual(lib.prompts, [MINE])
   assert.deepEqual(getPrompts(storage), [MINE], 'the prune was not written back')
 })
+
+test('a copy edited after the unsave is kept; one with no edit date is judged by when it was saved', () => {
+  const ledger = [{ id: 'c-3', saved: false, at: 2000 }]
+  const editedSince = { id: 1000, sourceId: 'c-3', savedAt: 1000, editedAt: 2500, title: CP.title, text: 'Rewritten.' }
+  const editedBefore = { id: 1000, sourceId: 'c-3', savedAt: 1000, editedAt: 1500, title: CP.title, text: 'Rewritten.' }
+  const neverEdited = { id: 1000, sourceId: 'c-3', savedAt: 1000, title: CP.title, text: CP.text }
+  assert.deepEqual(pruneUnsavedCopies([editedSince], ledger), [editedSince], 'a later edit outranks the older save date')
+  assert.deepEqual(pruneUnsavedCopies([editedBefore], ledger), [], 'an edit older than the unsave does not protect the copy')
+  assert.deepEqual(pruneUnsavedCopies([neverEdited], ledger), [], 'no edit date: the save date decides')
+})

@@ -8,7 +8,7 @@ import {
   renderUiKit, kitPalette, kitSelections, kitFontRequests, esc,
 } from '../../src/utils/uiKitExport.js'
 import { readIdentity, IDENTITY_NAME_MAX, IDENTITY_DESCRIPTION_MAX } from '../../src/utils/kitIdentity.js'
-import { parseGoogleFontCss, loadKitFonts, licenseUrls, googleCssUrl } from '../../src/utils/kitFonts.js'
+import { parseGoogleFontCss, loadKitFonts, licenseUrls, googleCssUrl, LICENSE_SOURCE_COMMIT } from '../../src/utils/kitFonts.js'
 import { EXPORT_FORMATS, freeFormats, styleGuideFormats } from '../../src/config/exportFormats.js'
 import { FREE_POINTS, PRO_POINTS } from '../../src/config/planFacts.js'
 
@@ -259,6 +259,17 @@ const fakeFetch = (routes) => async (url) => {
   if (hit === undefined) return { ok: false }
   return { ok: true, text: async () => hit, arrayBuffer: async () => new TextEncoder().encode(hit).buffer }
 }
+
+test('licence texts are read from a fixed commit, never a branch', () => {
+  assert.match(LICENSE_SOURCE_COMMIT, /^[0-9a-f]{40}$/, 'a full 40-character commit hash')
+  const urls = licenseUrls('Inter')
+  assert.equal(urls.length, 3)
+  for (const { url } of urls) {
+    assert.ok(url.startsWith(`https://cdn.jsdelivr.net/gh/google/fonts@${LICENSE_SOURCE_COMMIT}/`), url)
+    assert.ok(!/@(main|master|latest|HEAD)\b/i.test(url), `${url} follows a moving ref`)
+  }
+  assert.ok(urls[0].url.endsWith('/ofl/inter/OFL.txt'))
+})
 
 test('only the latin and latin-ext faces of a Google stylesheet are kept', () => {
   const faces = parseGoogleFontCss(CSS2)

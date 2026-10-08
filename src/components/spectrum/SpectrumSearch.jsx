@@ -94,7 +94,7 @@ export default function SpectrumSearch({ labelledBy }) {
   return (
     <div className="sp-search" ref={rootRef} onFocus={() => setStopped(true)}>
       <HomeCommandBar labelledBy={labelledBy} demo={false} demoRunning={running} />
-      <span className="sp-search-ghost" aria-hidden="true" data-typing={running || undefined}>
+      <span className="sp-search-ghost" aria-hidden="true">
         Search for<span className="sp-search-rot" data-caret={caret || undefined}>{shown}</span>
       </span>
     </div>

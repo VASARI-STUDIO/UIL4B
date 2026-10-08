@@ -1,4 +1,5 @@
 import { useCallback, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import useModalDialog from '../hooks/useModalDialog'
 import {
@@ -97,7 +98,12 @@ export default function FounderNote() {
         About this project
       </button>
 
-      {open && (
+      {/* The panel renders in <body>, not in the footer. A fixed overlay inside
+          the footer shares the footer's stacking layer, and the footer can sit
+          beneath the page (the curtain reveal), so it would have to change the
+          footer's layering while open. In the body it layers over the page the
+          same way wherever the trigger is. */}
+      {open && createPortal(
         <div
           ref={overlayRef}
           className="fnote-overlay"
@@ -188,7 +194,8 @@ export default function FounderNote() {
               </Link>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )

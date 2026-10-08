@@ -56,10 +56,15 @@ export function googleCssUrl(family, weights = []) {
 /** The Google Fonts source-repository directory name: lower case, no spaces. */
 export const repoId = (family) => String(family).toLowerCase().replace(/[^a-z0-9]/g, '')
 
+// The google/fonts commit the licence texts are read from. A fixed commit keeps
+// the text in a kit identical from one export to the next; a branch name would
+// follow whatever the repository holds that day.
+export const LICENSE_SOURCE_COMMIT = '5e8a3ba899557829a76cfdac30fa512bda91d7ca'
+
 /** Where a Google family's licence text may live, in the order to try. */
 export function licenseUrls(family) {
   const id = repoId(family)
-  return LICENSES.map(([dir, file, name]) => ({ url: `https://cdn.jsdelivr.net/gh/google/fonts@main/${dir}/${id}/${file}`, name }))
+  return LICENSES.map(([dir, file, name]) => ({ url: `https://cdn.jsdelivr.net/gh/google/fonts@${LICENSE_SOURCE_COMMIT}/${dir}/${id}/${file}`, name }))
 }
 
 /**

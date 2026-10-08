@@ -92,8 +92,9 @@ export function markStoredSave(id, saved, { storage, now } = {}) {
  * Drop the library copies an unsave has already removed somewhere else. The
  * two keys sync separately, so a device can receive the unsave (the ledger)
  * together with an older library that still holds the copy. A copy goes only
- * when its source was unsaved AFTER the copy was made; an older copy of the
- * same prompt saved again later stays.
+ * when its source was unsaved AFTER the copy was last touched (`editedAt` when
+ * the person changed it, otherwise `savedAt`); an older copy of the same prompt
+ * saved again later stays, and so does a copy edited since the unsave.
  */
 export function pruneUnsavedCopies(prompts, ledger) {
   const list = Array.isArray(prompts) ? prompts : []
@@ -101,7 +102,7 @@ export function pruneUnsavedCopies(prompts, ledger) {
   if (!unsavedAt.size) return list
   const next = list.filter((p) => {
     if (!p || p.sourceId == null || !unsavedAt.has(String(p.sourceId))) return true
-    const madeAt = Number(p.savedAt ?? p.id)
+    const madeAt = Number(p.editedAt ?? p.savedAt ?? p.id)
     return !(Number.isFinite(madeAt) && madeAt <= unsavedAt.get(String(p.sourceId)))
   })
   return next.length === list.length ? list : next
