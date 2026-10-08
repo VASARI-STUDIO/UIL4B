@@ -25,16 +25,16 @@
 // Plain JS, no JSX: the guard test imports this in bare Node.
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans.js'
 import { proOnlyFormats } from '../config/exportFormats.js'
-import { CREATE_GROUPS } from './toolTree.js'
+import { CREATE_GROUPS, isListedTool } from './toolTree.js'
 
 /** Every Create tool a visitor can actually open today. */
 export const LIVE_TOOLS = CREATE_GROUPS.flatMap((group) => (
-  group.soon ? [] : group.tools.filter((tool) => !tool.soon && !tool.hidden)
+  group.soon ? [] : group.tools.filter((tool) => isListedTool(tool) && !tool.soon)
 ))
 
 /** Every Create tool that is still in the workshop, group-level Soon included. */
 export const SOON_TOOLS = CREATE_GROUPS.flatMap((group) => (
-  group.tools.filter((tool) => !tool.hidden && (group.soon || tool.soon))
+  group.tools.filter((tool) => isListedTool(tool) && (group.soon || tool.soon))
 ))
 
 /**

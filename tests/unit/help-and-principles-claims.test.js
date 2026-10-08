@@ -20,7 +20,7 @@ import { HELP_ANSWERS, HELP_ROUTES, HELP_STARTS, LIVE_TOOLS, SOON_TOOLS, STARTS_
 import { DESIGN_PRINCIPLES, PRINCIPLE_ROUTES } from '../../src/data/designPrinciples.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
 import { EXPORT_FORMATS, freeFormats, proOnlyFormats, unbuiltFormats } from '../../src/config/exportFormats.js'
-import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { isPrivateRoute, isSoonRoute } from '../../src/utils/routeMeta.js'
@@ -72,7 +72,7 @@ test('/principles is a real, indexable route with its own title and description'
 /* ── the counts, against the registry that decides them ──────────────────── */
 
 test('the tool counts on /help partition the registry exactly', () => {
-  const all = CREATE_GROUPS.flatMap((g) => g.tools.filter((t) => !t.hidden))
+  const all = CREATE_GROUPS.flatMap((g) => g.tools.filter(isListedTool))
   assert.equal(
     LIVE_TOOLS.length + SOON_TOOLS.length, all.length,
     'a tool is either counted twice or dropped between the two figures /help prints',
@@ -84,7 +84,7 @@ test('the tool counts on /help partition the registry exactly', () => {
   for (const group of CREATE_GROUPS) {
     for (const tool of group.tools) {
       const live = LIVE_TOOLS.includes(tool)
-      assert.equal(live, !group.soon && !tool.soon && !tool.hidden, `${tool.route} is counted on the wrong side`)
+      assert.equal(live, isListedTool(tool) && !group.soon && !tool.soon, `${tool.route} is counted on the wrong side`)
     }
   }
 })

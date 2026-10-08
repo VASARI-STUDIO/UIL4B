@@ -15,7 +15,7 @@
 // has had the element in view, not on toBeVisible().
 import { test, expect } from './base.js'
 import { expectRendered, go, watch } from './helpers.js'
-import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
 import { contrastRatio, generateTintScale, T_LABELS } from '../../src/utils/colors.js'
@@ -24,8 +24,12 @@ import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 
 /* The two figures /help prints, derived here from the registry itself so the
    page cannot satisfy this by printing its own arithmetic back at us. */
-const LIVE = CREATE_GROUPS.flatMap((g) => (g.soon ? [] : g.tools.filter((t) => !t.soon))).length
-const SOON = CREATE_GROUPS.flatMap((g) => (g.soon ? g.tools : g.tools.filter((t) => t.soon))).length
+const LIVE = CREATE_GROUPS.flatMap((g) => (
+  g.soon ? [] : g.tools.filter((t) => isListedTool(t) && !t.soon)
+)).length
+const SOON = CREATE_GROUPS.flatMap((g) => (
+  g.tools.filter((t) => isListedTool(t) && (g.soon || t.soon))
+)).length
 
 const FREE_FORMATS = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
 const PRO_FORMATS = EXPORT_FORMATS.filter((f) => f.live && f.pro)
