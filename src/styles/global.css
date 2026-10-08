@@ -2727,17 +2727,23 @@ html.lenis{scroll-behavior:auto!important}
 @media(hover:hover){.pnav-act:not([aria-disabled="true"]):hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}}
 .pnav-act[aria-expanded="true"],.pnav-act[aria-current="page"]{background:rgba(var(--ink-rgb),.08);color:rgb(var(--ink-rgb))}
 .pnav-act[aria-current="page"]{font-weight:560}
-.pnav-act[aria-disabled="true"]{background:rgba(var(--ink-rgb),.03);color:rgba(var(--ink-rgb),.4);cursor:default}
+.pnav-act[aria-disabled="true"]{background:rgba(var(--ink-rgb),.03);color:rgba(var(--ink-rgb),.5);cursor:default}
 /* The current page's heavier label would widen the button; an invisible copy
    at that weight reserves the room so nothing shifts between pages. */
 .pnav-act--dash .pnav-act-label{display:inline-grid}
 .pnav-act--dash .pnav-act-label::after{content:attr(data-text);height:0;overflow:hidden;visibility:hidden;font-weight:560}
 /* The hint for a disabled Export. Hidden by visibility, not removed, so the
    button's aria-describedby always has something to read. */
-.pnav-tip{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:130;padding:6px 10px;border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-s);background:var(--card);box-shadow:0 12px 30px -16px rgba(var(--shade-rgb),var(--shade-a));color:rgb(var(--ink-rgb));font-size:12px;font-weight:400;line-height:1.3;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-1)}
+.pnav-tip{position:absolute;top:50%;right:calc(100% + 8px);left:auto;transform:translateY(-50%);z-index:130;padding:6px 10px;border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-s);background:var(--card);box-shadow:0 12px 30px -16px rgba(var(--shade-rgb),var(--shade-a));color:rgb(var(--ink-rgb));font-size:12px;font-weight:400;line-height:1.3;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-1)}
 .pnav-tip.is-open{opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
 /* Carries the pointer across the gap between the button and the hint. */
-.pnav-tip::before{content:"";position:absolute;left:0;right:0;top:-8px;height:8px}
+.pnav-tip::before{content:"";position:absolute;top:0;bottom:0;left:100%;width:8px}
+.pnav-tip--below{top:calc(100% + 8px);right:auto;left:50%;transform:translateX(-50%)}
+.pnav-tip--below::before{top:-8px;bottom:auto;left:0;right:0;width:auto;height:8px}
+@media(max-width:899px){
+  .pnav-tip{top:calc(100% + 8px);right:auto;left:50%;transform:translateX(-50%)}
+  .pnav-tip::before{top:-8px;bottom:auto;left:0;right:0;width:auto;height:8px}
+}
 @media(prefers-reduced-motion:reduce){.pnav-tip{transition:none}}
 /* Signed out there is no avatar; "Log in" sits where the file has none, so it
    is as quiet as a menu trigger. */
@@ -2928,7 +2934,7 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-search-field{width:36px;height:36px;padding:0;justify-content:center;border-radius:var(--radius-pill);border-color:rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
   .pnav-search-ph,.pnav-search-kbd{display:none}
   .pnav-act.pnav-export{width:36px;height:36px;border:1px solid rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
-  .pnav-act.pnav-export[aria-disabled="true"]{color:rgba(var(--ink-rgb),.4)}
+  .pnav-act.pnav-export[aria-disabled="true"]{color:rgba(var(--ink-rgb),.5)}
   .pnav-avatar-btn,.pnav-avatar{width:36px;height:36px}
   .pnav-avatar{font-size:12px}
   .pnav-mobile{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:1px solid rgba(var(--ink-rgb),.14);border-radius:var(--radius-pill);background:transparent;color:rgb(var(--ink-rgb));cursor:pointer}
@@ -2938,6 +2944,9 @@ html.lenis{scroll-behavior:auto!important}
 /* A7: every header control is at least 44px to a finger, whatever it draws. */
 @media(pointer:coarse){
   .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-act,.pnav-mobile,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
+  /* Hit areas extend beyond the compact circles without changing row layout. */
+  .pnav-search-field,.pnav-export,.pnav-avatar-btn,.pnav-mobile,.pnav-logo{overflow:visible}
+  .pnav-search-field::after,.pnav-export::after,.pnav-avatar-btn::after,.pnav-mobile::after,.pnav-logo::after{pointer-events:auto}
   .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-act::after,.pnav-mobile::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pnav-tool,.pnav-pop-item{min-height:44px}
 }

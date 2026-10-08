@@ -99,13 +99,13 @@ test.describe('1 — Export is in the header at every width and the phone sheet 
       const { context, page } = await open(browser, PHONE, theme)
       watch(page, `a phone user looking for Export (${theme})`)
       await signIn(page, { plan: 'free', projects: 1 })
-      await go(page, '/create/palette')
+      await go(page, '/projects')
 
       const header = page.locator('.pnav-export')
       await expect(header).toBeVisible()
       await expect(header).toHaveAttribute('aria-disabled', 'true')
       await header.click({ force: true })
-      await expect(page.locator('.toast.show')).toContainText('Nothing to export yet')
+      await expect(page.locator('.toast.show')).toContainText('Open a project to export it')
       await expect(page.locator('[role="dialog"][aria-labelledby="exp-title"]')).toHaveCount(0)
 
       await page.locator('.pnav-mobile').click()

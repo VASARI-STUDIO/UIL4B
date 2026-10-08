@@ -1,5 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
@@ -644,6 +645,7 @@ const SUBMIT_SURFACE = 'palette'
 // src/config/activationExports.js for why that decision lives in CreateTool.
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
+  const { registerExport, clearExport } = useExport()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   // The brands panel, split before it is rendered rather than styled after it.
@@ -965,6 +967,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // user changes anything the effect re-runs and persists as it always did, and
   // a ?c= link, a hand-off or a saved project still persist on mount.
   const pristineRef = useRef(initial.source === 'random')
+  // Export the adjusted board without persisting an untouched random draw.
+  useEffect(() => {
+    registerExport({
+      path: '/create/palette',
+      design: { ...design, palette: {
+        ...design.palette, ...persistedPalette(colors, adjust),
+        base: seed, harmony, extraColors: adjusted.slice(ROLES.length),
+        locked: [...locked], activeIdx: 0,
+      } },
+    })
+    return clearExport
+  }, [design, colors, adjust, seed, harmony, adjusted, locked, registerExport, clearExport])
   useEffect(() => {
     if (pristineRef.current) { pristineRef.current = false; return }
     const t = setTimeout(() => {

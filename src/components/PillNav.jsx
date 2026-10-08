@@ -10,7 +10,7 @@ import { GALLERY_PALETTES } from '../data/paletteGallery'
 import { inkFor, grade } from '../utils/styleGuideExport'
 import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
-import { isUntouched } from '../utils/accountSync'
+import useExportDesign from '../hooks/useExportDesign'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 import { guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
 import { getRecentIcons } from '../utils/recentIcons'
@@ -68,6 +68,8 @@ const SALES_PATHS = new Set(['/', '/home', '/plans', '/pricing'])
 const HINT_DELAY_MS = 280
 // A touch on the logo this soon after a route change is ignored.
 const LOGO_GUARD_MS = 600
+// Route history survives the header remount between tool and dashboard pages.
+let lastRouteChange = 0
 
 function Chevron() {
   return (
@@ -297,6 +299,7 @@ function AppHeader() {
   const { isPro } = useSubscription()
   const { reducedMotion } = useAppearance()
   const { design, projects, loadProject } = useProject()
+  const exportDesign = useExportDesign()
   const [searchHot, setSearchHot] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -322,19 +325,16 @@ function AppHeader() {
 
   // What Export does here. On a project page it exports that project; on the
   // dashboard there is no selected project, so it has nothing to act on; on
-  // every other page it exports the working design once that has been changed.
+  // tool pages it exports the same live preview the dialog reads.
   const projectId = matchPath('/projects/:id', path)?.params.id
   const exportTarget = projectId ? projects.find((p) => p.id === projectId) : null
-  const designUntouched = isUntouched('vs-current-design', design)
-  const canExport = projectId ? !!exportTarget : !onDashboard && !designUntouched
-  const exportHint = onDashboard && (projects.length > 0 || !designUntouched)
+  const canExport = projectId ? !!exportTarget : !onDashboard && !!exportDesign
+  const exportHint = onDashboard
     ? 'Open a project to export it'
     : 'Nothing to export yet'
   const [hintOpen, setHintOpen] = useState(false)
   const hintTimer = useRef(null)
-  // A logo tap that lands within this long of a route change is the second half
-  // of a double tap, not a second request.
-  const routeChange = useRef({ path, at: 0 })
+  const hintRef = useRef(null)
   const [open, setOpen] = useState(null) // open mega-menu section id
   const [menu, setMenu] = useState(null) // 'account' | null
   const [sheet, setSheet] = useState(false) // phone menu sheet
@@ -364,16 +364,29 @@ function AppHeader() {
   }, [open, menu, sheet])
 
   useEffect(() => {
-    if (routeChange.current.path !== path) routeChange.current = { path, at: Date.now() }
-  }, [path])
+    lastRouteChange = Date.now()
+  }, [location.key])
 
   // The Export hint is dismissible without moving focus, and its hover delay
   // never outlives the header.
   useEffect(() => {
     if (!hintOpen) return undefined
+    const placeHint = () => {
+      const tip = hintRef.current
+      if (!tip) return
+      const button = tip.parentElement.getBoundingClientRect()
+      const learn = triggerRefs.current.learn?.getBoundingClientRect()
+      const leftEdge = learn?.right ?? navRef.current.getBoundingClientRect().left
+      tip.classList.toggle('pnav-tip--below', button.left - leftEdge < tip.offsetWidth + 16)
+    }
+    placeHint()
+    window.addEventListener('resize', placeHint)
     const onKey = (e) => { if (e.key === 'Escape') setHintOpen(false) }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('resize', placeHint)
+    }
   }, [hintOpen])
   useEffect(() => () => clearTimeout(hintTimer.current), [])
 
@@ -523,7 +536,7 @@ function AppHeader() {
     setExportOpen(true)
   }
   // With nothing to export the button explains itself instead of opening the
-  // dialog: a toast on a phone, where there is no hover, the hint beneath the
+  // dialog: a toast on a phone, where there is no hover, a hint beside the
   // button everywhere else.
   const pressExport = () => {
     if (canExport) { openExport(); return }
@@ -540,7 +553,7 @@ function AppHeader() {
   }
   const hintLeave = () => { clearTimeout(hintTimer.current); setHintOpen(false) }
   const onLogoClick = (e) => {
-    if (e.nativeEvent?.pointerType === 'touch' && Date.now() - routeChange.current.at < LOGO_GUARD_MS) {
+    if (window.matchMedia('(pointer: coarse)').matches && Date.now() - lastRouteChange < LOGO_GUARD_MS) {
       e.preventDefault()
       return
     }
@@ -712,7 +725,7 @@ function AppHeader() {
                   <span className="pnav-act-label">Export</span>
                 </button>
                 {!canExport && (
-                  <span id="pnav-export-hint" role="tooltip" className={'pnav-tip' + (hintOpen ? ' is-open' : '')}>
+                  <span ref={hintRef} id="pnav-export-hint" role="tooltip" className={'pnav-tip' + (hintOpen ? ' is-open' : '')}>
                     {exportHint}
                   </span>
                 )}
