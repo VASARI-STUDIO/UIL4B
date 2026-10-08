@@ -1,11 +1,8 @@
 /* checkout.css — /checkout and /checkout/return on the Spectrum ground.
  *
- * STYLING ONLY. Nothing here, and nothing in the two page files that import
- * it, touches the payment path: the plan table, the Stripe embed, the
- * session call, the redirects and every state are exactly what they were.
- * This sheet replaces the `.checkout-*` block that sat in deferred/account.css
- * (shared with six other routes) and the seven inline `style={{}}` objects in
- * the two pages.
+ * STYLING ONLY. Nothing here touches the payment path. This sheet replaces
+ * the `.checkout-*` block that sat in deferred/account.css (shared with six
+ * other routes) and the seven inline `style={{}}` objects in the two pages.
  *
  * Every selector is scoped under `.checkout-page`, the root both pages
  * render, because Vite orders chunk CSS by the dependency graph: tool-shell.css
@@ -23,8 +20,7 @@
  * the structure stays and the surface changes: `UIL4B App.dc.html`'s 18px
  * panels over a hairline with no shadow, the price in the display face with
  * tabular figures, a tick with no tinted chip behind it, the app's rectangle
- * controls. The accent is the derived family — never --accent-strong, which
- * the plan note, the "Compare" link and the primary button all used.        */
+ * controls. The accent is the derived family, never --accent-strong.       */
 
 .checkout-page {
   --co-hair: color-mix(in srgb, var(--t0) 9%, transparent);
@@ -42,7 +38,7 @@
 .checkout-page .btn-accent { min-height: 44px; padding: 0 18px; border-radius: var(--btn-radius); border-color: var(--accent-fill); background: var(--accent-fill); color: var(--accent-ink); font-weight: 560; }
 .checkout-page .btn-accent:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); color: var(--accent-ink); }
 @media (pointer: coarse) {
-  .checkout-page .btn, .checkout-page .btn-s { min-height: 44px; }
+  .checkout-page .btn, .checkout-page .btn-s, .checkout-page .checkout-back { min-height: 44px; }
 }
 
 /* ── Head ───────────────────────────────────────────────────────────────────
@@ -78,20 +74,57 @@
 .checkout-page .checkout-features { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--co-hair); list-style: none; }
 .checkout-page .checkout-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
 .checkout-page .checkout-check { flex-shrink: 0; margin-top: 3px; color: var(--accent-mid); }
-.checkout-page .checkout-switch { margin-top: 16px; }
-.checkout-page .checkout-switch a { display: inline-flex; align-items: center; min-height: 24px; font-size: 13px; font-weight: 560; color: var(--accent-mid); text-decoration: none; }
-.checkout-page .checkout-switch a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.checkout-page .checkout-back { display: inline-flex; align-items: center; align-self: flex-start; min-height: 32px; padding: 0 2px; font-size: 13px; color: var(--t1); text-decoration: none; }
+.checkout-page .checkout-back { display: inline-flex; align-items: center; align-self: flex-start; gap: 6px; min-height: 32px; padding: 0 2px; font-size: 13px; color: var(--t1); text-decoration: none; }
 .checkout-page .checkout-back:hover { color: var(--t0); }
+.checkout-page .checkout-back--plans { margin: 0 0 12px -2px; font-weight: 500; }
+
+/* ── Billing period ──────────────────────────────────────────────────────────
+   One row of equal segments on a tray, the shape /plans uses for the same
+   choice, with its selected state (ink fill, panel-coloured text). The column
+   count follows the options, and every label is a single unbroken line, so
+   the row never wraps; the summary column is never wider than 360px, so this
+   is the one layout at every width. Each segment holds two lines (period and
+   saving) and reserves the second even when it is empty. */
+.checkout-page .checkout-period { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: 0 0 18px; padding: 4px; border: 1px solid var(--co-hair); border-radius: var(--btn-radius); background: var(--co-wash); }
+.checkout-page .checkout-period-opt { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 48px; padding: 6px 4px; border-radius: var(--btn-radius); color: var(--t1); white-space: nowrap; cursor: pointer; transition: background-color var(--dur-1) ease, color var(--dur-1) ease; }
+.checkout-page .checkout-period-opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.checkout-page .checkout-period-label { font-size: 13px; font-weight: 560; line-height: 1.2; }
+.checkout-page .checkout-period-save { min-height: 1.3em; font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; line-height: 1.3; color: var(--t2); font-variant-numeric: tabular-nums; }
+.checkout-page .checkout-period-opt:hover { background: var(--co-wash); color: var(--t0); }
+.checkout-page .checkout-period-opt.is-on { background: var(--t0); color: var(--card); }
+.checkout-page .checkout-period-opt.is-on .checkout-period-save { color: inherit; }
+/* The input is transparent, so its own outline would be invisible: the ring
+   goes on the segment the person sees. */
+.checkout-page .checkout-period-opt:has(input:focus-visible) { outline: 2px solid var(--link, var(--accent-mid)); outline-offset: 2px; }
+/* Locked once payment is submitted: the choice stays visible, nothing in the
+   row responds, and the line below says why. */
+.checkout-page .checkout-period.is-locked .checkout-period-opt { cursor: not-allowed; }
+.checkout-page .checkout-period.is-locked .checkout-period-opt input { cursor: not-allowed; }
+.checkout-page .checkout-period.is-locked .checkout-period-opt:not(.is-on) { opacity: .5; }
+.checkout-page .checkout-period.is-locked .checkout-period-opt:not(.is-on):hover { background: transparent; color: var(--t1); }
+.checkout-page .checkout-period-locked { margin: -10px 0 18px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
 
 /* The Stripe embed's frame. It paints its own contents; this is the panel. */
 .checkout-page .checkout-form { min-height: 420px; padding: 20px; }
+/* Between one form and the next. Emptied, not removed, once the form mounts,
+   so it takes no space beside the form and the next load is announced. */
+.checkout-page .checkout-loading { margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--t1); }
+.checkout-page .checkout-loading:empty { padding: 0; }
 .checkout-page .checkout-error { padding: 24px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--t1); }
 .checkout-page .checkout-error code { padding: 2px 6px; border-radius: var(--radius-xs); background: var(--co-wash); font-family: var(--mono); font-size: 12px; color: var(--t0); }
 .checkout-page .checkout-error-h { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 560; color: var(--t0); }
 .checkout-page .checkout-error-p { font-size: 13px; color: var(--t1); }
 .checkout-page .checkout-error-note { margin-top: 8px; font-size: 12px; color: var(--t2); }
 .checkout-page .checkout-error-retry { margin-top: 12px; }
+
+/* Signed out: the one step on this page that needs an account. Same frame as
+   the panel's other states, with the action as the panel's single control. */
+.checkout-page .checkout-signin { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px; text-align: center; }
+.checkout-page .checkout-signin-h { font-size: 15px; font-weight: 560; color: var(--t0); }
+.checkout-page .checkout-signin-p { max-width: 42ch; font-size: 13px; line-height: 1.6; color: var(--t1); }
+.checkout-page .checkout-signin-btn { margin-top: 8px; }
+/* The copy inside the summary card is for the one-column layout only. */
+.checkout-page .checkout-signin--inline { display: none; }
 
 /* ── The return page, and the invalid-selection state ─────────────────────────
    Left-aligned in one panel, the state carried by the heading's words and a
@@ -123,6 +156,13 @@
 @media (max-width: 760px) {
   .checkout-page .checkout-grid { grid-template-columns: minmax(0, 1fr); }
   .checkout-page .checkout-summary { position: static; }
+  .checkout-page .checkout-back { min-height: 44px; }
+  /* Signed out, the sign-in moves up into the summary card, above the
+     features list, and the panel that held it goes. */
+  .checkout-page .checkout-form.is-signed-out { display: none; }
+  .checkout-page .checkout-signin--inline { display: flex; align-items: stretch; gap: 6px; margin-top: 18px; padding: 18px 0 0; border-top: 1px solid var(--co-hair); text-align: left; }
+  .checkout-page .checkout-signin--inline .checkout-signin-btn { min-height: 44px; }
+  .checkout-page .checkout-signin--inline + .checkout-features { margin-top: 18px; }
 }
 @media (max-width: 420px) {
   .checkout-page .card { padding: 18px; }

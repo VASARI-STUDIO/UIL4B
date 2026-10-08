@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
-import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { PRO_POINTS, BILLING_OPTIONS } from '../config/planFacts'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import { openFirebaseGate } from '../utils/firebaseAccess'
+import { PRO_POINTS, BILLING_OPTIONS, resolveOffers } from '../config/planFacts'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
-import { refreshPrices, useProPrice } from '../hooks/usePrices'
+import { refreshPrices, usePrices, useProPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 // The stylesheet families this surface needs, split out of the one
@@ -72,6 +73,74 @@ const CADENCE_WORDS = (() => {
   return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}` : labels.join('')
 })()
 
+// STRIPE'S EMBEDDED CHECKOUT, ONE INSTANCE AT A TIME.
+//
+// Stripe allows one embedded Checkout per page, and an instance that is still
+// being created (its session request in flight) cannot be destroyed until it
+// exists. Changing the billing period replaces the instance, so each new one
+// waits on this queue until the one before it has been created and destroyed.
+// <EmbeddedCheckoutProvider> cannot be remounted for this: unmounted while its
+// instance is still being created, it never destroys that instance.
+let embedQueue = Promise.resolve()
+
+// A period must stay chosen this long before its session is requested, so
+// stepping through the periods creates one session, not one per step.
+const SESSION_DEBOUNCE_MS = 400
+// An instance waiting behind one that never finishes would wait forever; past
+// this the panel shows the error and its Try again.
+const EMBED_TIMEOUT_MS = 20000
+const EMBED_TIMEOUT_ERROR = 'The payment form is taking too long to load. Check your connection, then try again.'
+const STRIPE_LOAD_ERROR = 'The payment form couldn’t load. Check your connection, then try again.'
+
+function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
+  const nodeRef = useRef(null)
+  useEffect(() => {
+    let live = true
+    let instance = null
+    // Only the instance on screen reports a failure: a request for a period
+    // the buyer has already left fails quietly and leaves the new one alone.
+    const fail = (e) => { if (live) onFail(e?.message || 'Could not start checkout') }
+    const created = embedQueue.then(async () => {
+      if (!live) return
+      let stripe
+      try {
+        stripe = await getStripe()
+      } catch {
+        throw new Error(STRIPE_LOAD_ERROR)
+      }
+      if (!stripe || !live) return
+      instance = await stripe.createEmbeddedCheckoutPage({
+        fetchClientSecret: () => fetchClientSecret().catch((e) => { fail(e); throw e }),
+        // Once payment is submitted the period is fixed, so the instance
+        // taking the payment is never replaced under it. Completion needs no
+        // callback: the session redirects to its return page.
+        onAnalyticsEvent: (event) => {
+          if (!live) return
+          if (event?.eventType === 'checkoutSubmitted') onPaying(true)
+          else if (event?.eventType === 'checkoutSubmitFailed') onPaying(false)
+        },
+      })
+      if (live) {
+        instance.mount(nodeRef.current)
+        onReady(true)
+      } else {
+        instance.destroy()
+      }
+    })
+    embedQueue = created.catch(() => {})
+    const timer = setTimeout(() => fail(new Error(EMBED_TIMEOUT_ERROR)), EMBED_TIMEOUT_MS)
+    created.then(() => clearTimeout(timer), (e) => { clearTimeout(timer); fail(e) })
+    return () => {
+      live = false
+      clearTimeout(timer)
+      onReady(false)
+      onPaying(false)
+      if (instance) instance.destroy()
+    }
+  }, [fetchClientSecret, onReady, onFail, onPaying])
+  return <div ref={nodeRef} className="checkout-embed" />
+}
+
 function Check() {
   return (
     <svg className="checkout-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -80,16 +149,60 @@ function Check() {
   )
 }
 
+function SignInToPay({ className = '', cadence, onClick }) {
+  return (
+    <div className={`checkout-signin ${className}`.trim()}>
+      <strong className="checkout-signin-h">Log in or create an account to pay</strong>
+      <span className="checkout-signin-p">
+        Pro is attached to an account, so the payment form opens once you’re logged in. Your {cadence.toLowerCase()} choice stays selected.
+      </span>
+      <button type="button" className="btn btn-accent checkout-signin-btn" onClick={onClick}>Log in to continue</button>
+    </div>
+  )
+}
+
 export default function Checkout() {
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const { user, loading } = useAuth()
   const { isPro, createCheckoutSession } = useSubscription()
+  const { requireLogin } = useLoginPrompt()
 
   const requestedPlan = params.get('plan')
   const planKey = Object.hasOwn(PLANS, requestedPlan) ? requestedPlan : null
   const plan = PLANS[planKey]
   const proPrice = useProPrice()
+  const { prices } = usePrices()
+  const [error, setError] = useState('')
+  // The plan the payment form is built for. It follows the chosen plan once
+  // the choice has rested for SESSION_DEBOUNCE_MS.
+  const [sessionPlan, setSessionPlan] = useState(planKey)
+  const [formReady, setFormReady] = useState(false)
+  // Payment submitted or complete: the period choice is locked.
+  const [paying, setPaying] = useState(false)
+  const startedSent = useRef(false)
+
+  // The billing-period choices are the ladder's buyable cadences that this
+  // page has a case for, each with the saving /plans prints on its own tab.
+  const periodOptions = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
+    .offers.filter((o) => Object.hasOwn(PLANS, o.checkoutPlan))
+  // /plans reads its cadence from `?billing=<ladder id>`, so going back keeps
+  // the period chosen here.
+  const chosenOption = periodOptions.find((o) => o.checkoutPlan === planKey)
+  const plansHref = chosenOption ? `/plans?billing=${chosenOption.id}` : '/plans'
+
+  // The plan lives in the URL, so a reload, the sign-in hand-off and the
+  // session request all read the same choice. `replace` keeps Back going to
+  // the page before checkout rather than through every period tried.
+  const choosePlan = (next) => {
+    if (paying || next === planKey || !Object.hasOwn(PLANS, next)) return
+    setError('')
+    setParams((prev) => {
+      const nextParams = new URLSearchParams(prev)
+      nextParams.set('plan', next)
+      return nextParams
+    }, { replace: true })
+  }
   const amount = planKey === 'yearly' ? proPrice.yearlyTotal
     : planKey === 'quarterly' ? proPrice.quarterlyTotal
       : proPrice.monthly
@@ -126,29 +239,48 @@ export default function Checkout() {
       // "billed monthly".
       : planKey === 'quarterly' ? `${proPrice.currencyLabel} · ${proPrice.quarterlyPerMonth}/mo · billed every 3 months`
         : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
-  const [error, setError] = useState('')
 
-  const stripePromise = useMemo(() => getStripe(), [])
-
-  const fetchClientSecret = useCallback(() => {
-    if (!plan) return Promise.reject(new Error('Invalid checkout selection'))
-    // Stripe's embedded checkout calls this when it starts, so this is the
-    // moment a checkout began, not a visit to the page.
-    sendEvent(EVENTS.checkoutStarted, { plan: plan.interval })
-    return createCheckoutSession(plan.interval).catch(e => {
-      setError(e?.message || 'Could not start checkout')
-      throw e
-    })
-  }, [createCheckoutSession, plan])
-
-  // Send signed-out users to login, and already-Pro users back to settings.
   useEffect(() => {
-    if (loading) return
-    if (!user) navigate('/login', { state: { from: `/checkout?plan=${planKey || requestedPlan || ''}` }, replace: true })
-    else if (isPro) navigate('/settings', { replace: true })
-  }, [user, loading, isPro, navigate, planKey, requestedPlan])
+    if (sessionPlan === planKey) return undefined
+    const timer = setTimeout(() => setSessionPlan(planKey), SESSION_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [planKey, sessionPlan])
 
-  if (loading || !user || isPro) return null
+  const sessionInterval = PLANS[sessionPlan]?.interval
+  const fetchClientSecret = useCallback(() => {
+    if (!sessionInterval) return Promise.reject(new Error('Invalid checkout selection'))
+    // Stripe's embedded checkout calls this when it starts, so this is the
+    // moment a checkout began, not a visit to the page. A period change starts
+    // a new session, not a new checkout, so it is sent once per visit.
+    if (!startedSent.current) {
+      startedSent.current = true
+      sendEvent(EVENTS.checkoutStarted, { plan: sessionInterval })
+    }
+    return createCheckoutSession(sessionInterval)
+  }, [createCheckoutSession, sessionInterval])
+
+  // The payment panel is waiting on the auth answer, so ask for it now rather
+  // than when the browser is idle. A no-op in a build that loads auth eagerly.
+  useEffect(() => { openFirebaseGate() }, [])
+
+  // A signed-in buyer is headed for the payment form, so Stripe.js starts
+  // loading now rather than once the form mounts. Nothing loads signed out.
+  // A failed load is not cached; the form asks again and reports it.
+  useEffect(() => { if (user) getStripe()?.catch(() => {}) }, [user])
+
+  // Already-Pro accounts have nothing to buy here.
+  useEffect(() => {
+    if (!loading && user && isPro) navigate('/settings', { replace: true })
+  }, [user, loading, isPro, navigate])
+
+  // Choosing a period needs no account; paying does. The popup opens over this
+  // page and resolves in place, so the period in the URL is still the one
+  // chosen when the payment form mounts.
+  const signInToPay = () => {
+    requireLogin('pay for Pro', { reasons: ['Pro is attached to your account, so payment needs one.'] })
+  }
+
+  if (user && isPro) return null
   if (!plan) {
     return (
       <div className="sec checkout-page">
@@ -177,6 +309,9 @@ export default function Checkout() {
             the page's own section, directly above an h1 that names the page,
             on a route the nav already has lit. Hierarchy is a control, not a
             label. */}
+        <NavLink to={plansHref} className="checkout-back checkout-back--plans">
+          <span aria-hidden="true">←</span> Back to Plans
+        </NavLink>
         <h1>Upgrade to Pro</h1>
         <p>Complete your subscription securely. Your payment is processed by Stripe.</p>
       </div>
@@ -185,7 +320,37 @@ export default function Checkout() {
         {/* Order summary */}
         <aside className="checkout-summary">
           <div className="card checkout-summary-card">
-            <div className="checkout-plan-head">
+            {/* Native radios, so arrow keys, Space and the screen reader's
+                "1 of 3" come from the platform. Each input is stretched
+                invisibly over its label, which is the visible target. */}
+            <div className={`checkout-period${paying ? ' is-locked' : ''}`} role="radiogroup" aria-labelledby="checkout-period-label" aria-describedby={paying ? 'checkout-period-locked' : undefined}>
+              <span id="checkout-period-label" className="sr-only">Billing period</span>
+              {periodOptions.map((o) => {
+                const on = o.checkoutPlan === planKey
+                return (
+                  <label key={o.id} className={`checkout-period-opt${on ? ' is-on' : ''}`}>
+                    <input
+                      type="radio"
+                      name="checkout-period"
+                      value={o.checkoutPlan}
+                      checked={on}
+                      disabled={paying}
+                      onChange={() => choosePlan(o.checkoutPlan)}
+                    />
+                    <span className="checkout-period-label">{o.label}</span>
+                    {/* Always rendered, so a saving arriving with the live
+                        prices fills a reserved line instead of growing the row. */}
+                    <span className="checkout-period-save">{o.savingLabel}</span>
+                  </label>
+                )
+              })}
+            </div>
+            {paying && (
+              <p id="checkout-period-locked" className="checkout-period-locked">Payment in progress, so the billing period can’t change now.</p>
+            )}
+
+            {/* Announces the new cadence and price after a period change. */}
+            <div className="checkout-plan-head" aria-live="polite" aria-atomic="true">
               <div>
                 <div className="checkout-plan-name">{plan.name}</div>
                 <div className="checkout-plan-cadence">{plan.cadence} plan</div>
@@ -216,21 +381,28 @@ export default function Checkout() {
               </div>
             )}
 
+            {/* In one column the panel sits below this whole card, so the
+                sign-in comes up here, above the features list; the panel's
+                copy is hidden at that width. */}
+            {!loading && !user && <SignInToPay className="checkout-signin--inline" cadence={plan.cadence} onClick={signInToPay} />}
+
             <ul className="checkout-features">
               {FEATURES.map(f => (
                 <li key={f}><Check /> {f}</li>
               ))}
             </ul>
-
-            <div className="checkout-switch"><NavLink to="/plans">Compare all payment options</NavLink></div>
           </div>
 
-          <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>
+          {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
         </aside>
 
         {/* Embedded Stripe checkout */}
-        <div className="checkout-form card">
-          {!proPrice.loaded ? (
+        <div className={`checkout-form card${!loading && !user ? ' is-signed-out' : ''}`}>
+          {loading ? (
+            <div className="checkout-error">Checking your account…</div>
+          ) : !user ? (
+            <SignInToPay cadence={plan.cadence} onClick={signInToPay} />
+          ) : !proPrice.loaded ? (
             <div className="checkout-error">Checking the live Stripe price…</div>
           ) : !hasStripeKey ? (
             <div className="checkout-error">
@@ -249,9 +421,17 @@ export default function Checkout() {
               <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); }}>Try again</button>
             </div>
           ) : (
-            <EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret }}>
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+            <>
+              {/* From the moment a form is destroyed until the next one
+                  mounts. Kept in the tree and emptied, so each new load is
+                  announced. */}
+              <p className="checkout-loading" role="status">{formReady ? '' : 'Loading payment form…'}</p>
+              {/* A new period destroys the form at once; the next is created
+                  once the choice has rested, with a new session request. */}
+              {sessionPlan === planKey && (
+                <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={setError} onPaying={setPaying} />
+              )}
+            </>
           )}
         </div>
       </div>
