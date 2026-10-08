@@ -1,12 +1,10 @@
-// THE HEADER SEARCH LISTS ONLY PAGES THAT EXIST, AND TWO TOOLBAR BUTTONS SAY
+// THE HEADER SEARCH LISTS ONLY PAGES THAT EXIST, AND THE PALETTE TOOLBAR FITS AND GRADIENT SAYS
 // WHEN THEY CANNOT ACT.
 //
 //   1. Search rows land on the page their label names (the Learn guides and the
 //      curated resources), and a row with no page behind it is not offered —
 //      including in the list shown before anything is typed.
-//   2. Palette "Pick" (the screen eyedropper) is not drawn where the browser has
-//      no EyeDropper, on the row or in the Extra tools menu, and the toolbar still
-//      sits on one line.
+//   2. The Palette toolbar stays on one line across screen widths.
 //   3. Gradient "From palette" with fewer than two palette colours says so on
 //      the page, with a link to the Palette Builder; the note is scrolled into
 //      view and takes focus, and dismissing it returns focus to what opened it.
@@ -16,7 +14,7 @@
 //
 // MUTATION: point `docs-design` at '/docs-design' in toolIndex.js, or drop
 // `offerableCategories` from the empty-query list in CommandPalette.jsx, or
-// render the `pick` item unconditionally in PaletteBuilder.jsx, or make
+// let the Palette toolbar wrap, or make
 // `fromPalette` in GradientGenerator.jsx return without `setPaletteMissing(true)`,
 // or point the header bookmark Link, the popover row or the sheet row in
 // PillNav.jsx back at '/discover/palettes', or give a Learn guide row in
@@ -163,7 +161,7 @@ test.describe('header · Your workspace is one target and one label', () => {
   })
 })
 
-// ── Pick ─────────────────────────────────────────────────────────────────────
+// Palette toolbar
 
 async function oneRow(page) {
   return page.locator('[data-tool-toolbar]').evaluate((bar) => {
@@ -179,29 +177,19 @@ async function oneRow(page) {
   })
 }
 
-test.describe('Palette Builder · Pick needs the browser to have an eyedropper', () => {
-  test.beforeEach(async ({ page }) => { watch(page, 'someone on a browser with no screen eyedropper') })
-
-  test('a browser that has one still shows Pick (control)', async ({ page }) => {
-    await page.addInitScript(() => { if (!('EyeDropper' in window)) window.EyeDropper = class {} })
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/create/palette')
-    await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Pick a colour from the screen' })).toBeVisible()
-  })
+test.describe('Palette Builder toolbar fits on one line', () => {
+  test.beforeEach(async ({ page }) => { watch(page, 'someone using the Palette toolbar') })
 
   for (const width of [390, 768, 1440]) {
-    test(`no EyeDropper: Pick is not drawn at ${width}px and the toolbar stays on one line`, async ({ page }) => {
-      await page.addInitScript(() => { delete window.EyeDropper })
+    test(`the toolbar stays on one line at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
-      expect(await page.evaluate(() => 'EyeDropper' in window), 'the test removed EyeDropper').toBe(false)
       const bar = page.locator('[data-tool-toolbar]')
       await expect(bar).toBeVisible()
       await expect(bar).not.toHaveClass(/is-measuring/)
 
       // POSITIVE CONTROL: the row is the real one, with its siblings on it.
       await expect(bar.getByRole('button', { name: 'Randomise' })).toBeAttached()
-      await expect(bar.getByRole('button', { name: 'Pick a colour from the screen' })).toHaveCount(0)
 
       const row = await oneRow(page)
       expect(row.kids, 'the toolbar rendered its controls').toBeGreaterThanOrEqual(3)
@@ -209,14 +197,13 @@ test.describe('Palette Builder · Pick needs the browser to have an eyedropper',
       expect(row.right, `${width}px: the toolbar runs past the screen`).toBeLessThanOrEqual(row.vw)
       expect(row.height, `${width}px: the toolbar is ${row.height}px tall — a second row`).toBeLessThan(72)
 
-      // The Extra tools menu does not list it either.
+      // Extra tools remains reachable and lists the palette actions.
       const tools = bar.getByRole('button', { name: 'Extra tools', exact: true })
       await expect(tools).toBeVisible()
       await tools.click()
       const panel = page.getByRole('dialog', { name: 'Extra tools' })
       await expect(panel).toBeVisible()
       await expect(panel.getByRole('button', { name: 'Reset palette', exact: true }), 'the menu is the real one').toBeVisible()
-      await expect(panel.getByRole('button', { name: /Pick from the screen/ })).toHaveCount(0)
     })
   }
 })

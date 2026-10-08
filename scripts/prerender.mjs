@@ -90,7 +90,7 @@ const text = (s) => String(s)
  * no-op here would ship the homepage's metadata again while the build stayed
  * green, which is precisely the failure this script exists to end.
  */
-function rewriteHead(html, { title, description, robots, canonical, card, schema = '' }) {
+export function rewriteHead(html, { title, description, robots, canonical, card, schema = '' }) {
   const misses = []
   const sub = (label, re, next) => {
     if (!re.test(html)) { misses.push(label); return }
@@ -333,4 +333,6 @@ async function main() {
   )
 }
 
-main().catch((err) => { console.error('prerender failed:', err); process.exit(1) })
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err) => { console.error('prerender failed:', err); process.exit(1) })
+}

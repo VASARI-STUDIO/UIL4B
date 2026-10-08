@@ -46,7 +46,6 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SURFACE_LINE, line } from '../src/data/positioning.js'
 import { AI_LIMITS } from '../src/config/plans.js'
-import { BRAND_STARTER_BETA, allowanceSentence } from '../src/config/aiGeneration.js'
 import { freeFormats, proOnlyFormats, unbuiltFormats } from '../src/config/exportFormats.js'
 import { cheapestPerMonth, formatMoney, resolvePlanLadder } from '../src/config/planLadder.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../src/data/toolTree.js'
@@ -158,15 +157,12 @@ export function llmsClaims() {
   const proPrice = lead
     ? `from ${formatMoney(lead.perMonth, lead.currency)} ${CURRENCY_CODE} a month`
     : 'priced on the plans page'
-  const beta = BRAND_STARTER_BETA ? ' (beta)' : ''
   return {
     summary: `${line(SURFACE_LINE.llmsSummary)} ${pricingSentence()}`,
     freePlan: `Free: ${AI_LIMITS.free.daily} AI generations a day and ${AI_LIMITS.free.monthly} a month; `
-      + `${kit.length ? `${listNames(kit)} export, and ` : ''}style guide export in ${listNames(free)}, with a "Made with UIL4B" footer line; `
-      + `Brand Starter${beta} ${allowanceSentence('free')}.`,
+      + `${kit.length ? `${listNames(kit)} export, and ` : ''}style guide export in ${listNames(free)}, with a "Made with UIL4B" footer line.`,
     proPlan: `Pro, ${proPrice}: ${AI_LIMITS.pro.daily} AI generations a day and ${AI_LIMITS.pro.monthly} a month; `
-      + `adds ${listNames(pro)}; removes the footer line; `
-      + `Brand Starter${beta} ${allowanceSentence('pro')}. Same AI model as Free.`,
+      + `adds ${listNames(pro)}; removes the footer line. Same AI model as Free.`,
     notBuilt: `Not built, on any plan, and not for sale: ${listNames(unbuilt)}.`,
   }
 }

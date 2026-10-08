@@ -2048,20 +2048,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     }))
 
-  // ── Pick: the design's third labelled tool (D:1159-1162) ──
-  // The EyeDropper API reads any pixel on the screen. Chrome and Edge ship it;
-  // phones, Firefox and Safari do not, and there the Pick control is not drawn
-  // at all (the toolbar row and the Extra tools menu both skip it).
-  const canPickFromScreen = typeof window !== 'undefined' && 'EyeDropper' in window
-  const pickFromScreen = async () => {
-    if (!canPickFromScreen) return
-    try {
-      const { sRGBHex } = await new window.EyeDropper().open()
-      const hex = normaliseHex(sRGBHex)
-      if (hex) { setFromSeedInput(hex); setLiveMsg(`Seed set to ${hex}`) }
-    } catch { /* the person pressed Escape */ }
-  }
-
   const openGallery = (tab) => { closeAllMenus(); setGalleryTab(tab); setGalleryOpen(true) }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
@@ -2112,12 +2098,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     </ToolTray>
   )
 
-  // THE TOOLBAR, as drawn (D:947-1015): back · seed chip · From image /
-  // Suggest / Pick · System · Vision · divider · undo/redo · Randomise, with
-  // "Save or share" as the accent primary. What the drawn row has no room for —
-  // Explore, Preview, the Gradient hand-off, History and Reset, all functions
-  // the previous build had — lives in the Extra tools overflow, and on a phone the
-  // row keeps Randomise, undo/redo, Save and Extra tools.
+  // Secondary actions move into Extra tools when the toolbar runs out of room.
   const toolbarItems = [
     {
       id: 'back', priority: 2,
@@ -2143,11 +2124,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
     },
-    ...(canPickFromScreen ? [{
-      id: 'pick', priority: 1,
-      render: () => <ToolButton icon="eyedropper" collapse onClick={pickFromScreen} aria-label="Pick a colour from the screen" title="Pick a colour from the screen">Pick</ToolButton>,
-      menu: { label: 'Pick from the screen', icon: 'eyedropper', onSelect: pickFromScreen },
-    }] : []),
     { id: 'system', priority: 0, align: 'end', render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
     { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
     { id: 'div', priority: 0, divider: true },
