@@ -99,7 +99,15 @@ test.describe('the Tint page scrolls only when it must', () => {
     await expect(last.locator('.tt-note-step')).toHaveText('950')
     // Scroll as far as the page goes; the note must then be the thing under its
     // own centre (not behind the phone's tab bar) and wholly inside the window.
-    await wheelToRest(page, 6000, 'the Tint page at 390x500')
+    //
+    // A wheel that arrives within Lenis's 250ms resize debounce of the tool
+    // mounting (the page grows 689 -> 1372px about 35ms before this runs) is
+    // clamped to the old limit and comes to rest at 189 of 872px. Wheel again,
+    // as a person would, until the page stops moving at its real end.
+    for (let tries = 0, atEnd = false; !atEnd && tries < 4; tries++) {
+      await wheelToRest(page, 6000, 'the Tint page at 390x500')
+      atEnd = await page.evaluate(() => window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1)
+    }
     const reach = await last.evaluate((el) => {
       const r = el.getBoundingClientRect()
       const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
