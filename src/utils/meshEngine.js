@@ -70,6 +70,7 @@ import { parseDXF, parseOFF } from './mesh/parsers.js'
 import { bakeSimilarity, cloneForExport, disposeExportCopy, upMatrix } from './mesh/transform.js'
 import { describeSignatureProblem, extensionOf, signatureProblem, unitFactor, unitFromMetres } from './meshFormats.js'
 import { decoderURLs } from './mesh/decoders.js'
+import { ARCHIVE_TOO_LARGE, assertArchiveWithinCap } from './mesh/zipCap.js'
 
 export { cadToGroup }
 
@@ -314,6 +315,22 @@ function vtkHasPolygons(buffer) {
   return /\bPOLYGONS\b|\bTRIANGLE_STRIPS\b|<Polys\b|<Strips\b|\bCELLS\b/.test(decode(buffer.slice(0, 1 << 20)))
 }
 
+// Types whose files are zip archives that their loaders inflate in full.
+const ZIP_FORMATS = new Set(['3mf', 'kmz', 'amf', 'usd'])
+
+/**
+ * Wait for a loader chunk and the blob: URLs minted beside it together. The
+ * URLs go onto `cleanups` whichever of the two fails, so a chunk that cannot be
+ * downloaded does not leave them behind.
+ */
+async function withBlobURLs(chunk, urls, cleanups) {
+  const [loaded, minted] = await Promise.allSettled([chunk, urls])
+  if (minted.status === 'fulfilled') cleanups.push(minted.value.revoke)
+  if (loaded.status === 'rejected') throw loaded.reason
+  if (minted.status === 'rejected') throw minted.reason
+  return [loaded.value, minted.value]
+}
+
 const animationNote = (n) => `${n} animation${n === 1 ? '' : 's'} in the file ${n === 1 ? 'is' : 'are'} not played; the model is shown at rest.`
 
 /**
@@ -335,6 +352,7 @@ export async function parseModel(format, buffer, { companions = [], renderer = n
   const cleanups = []
   try {
     let object
+    if (ZIP_FORMATS.has(format.id)) assertArchiveWithinCap(buffer)
     switch (format.id) {
       case 'obj': {
         const loader = new OBJLoader(manager)
@@ -397,8 +415,7 @@ export async function parseModel(format, buffer, { companions = [], renderer = n
         // (mesh/decoders.js); the loaders read them from blob: URLs.
         const ext = gltfExtensions(format.id, buffer)
         if (ext.has('KHR_draco_mesh_compression')) {
-          const [{ DRACOLoader }, files] = await Promise.all([lazy.draco(), decoderURLs('draco', { signal })])
-          cleanups.push(files.revoke)
+          const [{ DRACOLoader }, files] = await withBlobURLs(lazy.draco(), decoderURLs('draco', { signal }), cleanups)
           const draco = new DRACOLoader(manager).setDecoderPath({ js: files.js, wasm: files.wasm })
           loader.setDRACOLoader(draco)
           cleanups.push(() => draco.dispose())
@@ -410,8 +427,7 @@ export async function parseModel(format, buffer, { companions = [], renderer = n
         }
         if (ext.has('KHR_texture_basisu')) {
           if (!renderer) throw new Error('ktx2-needs-viewer')
-          const [KTX2, files] = await Promise.all([lazy.ktx2(), decoderURLs('basis', { signal })])
-          cleanups.push(files.revoke)
+          const [KTX2, files] = await withBlobURLs(lazy.ktx2(), decoderURLs('basis', { signal }), cleanups)
           provide(`${DECODER_PATH}basis_transcoder.js`, files.js)
           provide(`${DECODER_PATH}basis_transcoder.wasm`, files.wasm)
           const ktx2 = new KTX2(manager).setTranscoderPath(DECODER_PATH).detectSupport(renderer)
@@ -424,8 +440,6 @@ export async function parseModel(format, buffer, { companions = [], renderer = n
         break
       }
       case '3mf': {
-        // No cap on the DECOMPRESSED size (a 3MF is a zip): a crafted archive
-        // can only exhaust the memory of the tab that opened it.
         const Loader = await lazy.threeMF()
         object = new Loader(manager).parse(buffer)
         break
@@ -674,6 +688,7 @@ export function describeLoadError(err, format, name) {
   if (msg === 'gltf-missing-buffers') return `${file} keeps its geometry in a separate file that was not dropped with it: ${(err.files || []).join(', ')}. Drop the .gltf and its .bin together.`
   if (msg === 'ktx2-needs-viewer') return `${file} uses KTX2 textures, which need the 3D view to decode. Reload the page and open it again.`
   if (msg.startsWith('signature:')) return describeSignatureProblem(file, format, msg.slice('signature:'.length).trim())
+  if (msg === ARCHIVE_TOO_LARGE) return `${file} is too large once unpacked: ${err.limit || 'it unpacks to more than this tool can hold'}. Export it again with fewer or smaller parts.`
   if (msg.startsWith('empty-model')) return `${file} was read, but it contains nothing to draw: no triangles and no points.`
   if (/FBX version not supported/i.test(msg)) return `${file} is older than FBX 7 (2011). Save it as FBX 2011 or newer and try again.`
   if (/Unknown format|FBX/i.test(msg) && format?.id === 'fbx') return `${file} could not be read as FBX. Save it as FBX 2011 or newer.`

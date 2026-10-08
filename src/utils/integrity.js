@@ -43,37 +43,62 @@ export async function assertIntegrity(bytes, expected, label) {
   }
 }
 
+/** How long a download may go without receiving a byte before it is abandoned. */
+export const STALL_MS = 30000
+
 /**
  * Fetch `url` in full, reporting `onBytes({ received, total })` as it arrives,
  * then verify it against `sha256`. Returns the verified ArrayBuffer.
  *
  * `total` is the Content-Length hint; with compression on it describes the
  * compressed body while the reader yields decompressed bytes, so callers treat
- * it as a hint. Honours `signal` for Cancel.
+ * it as a hint. Honours `signal` for Cancel. A request that goes `stallMs`
+ * without receiving a byte (response headers included) is abandoned with an
+ * error, so a retry starts a fresh request.
  */
-export async function fetchVerified(url, sha256, { label = url, onBytes, signal } = {}) {
-  const resp = await fetch(url, { signal, credentials: 'omit' })
-  if (!resp.ok) throw new Error(`${url}: HTTP ${resp.status}`)
-  const total = Number(resp.headers.get('content-length')) || 0
-  const reader = resp.body?.getReader?.()
+export async function fetchVerified(url, sha256, { label = url, onBytes, signal, stallMs = STALL_MS } = {}) {
+  const ctl = new AbortController()
+  let stalled = false
+  let timer
+  const arm = () => {
+    clearTimeout(timer)
+    timer = setTimeout(() => { stalled = true; ctl.abort() }, stallMs)
+  }
+  const forward = () => ctl.abort()
+  if (signal?.aborted) ctl.abort()
+  else signal?.addEventListener('abort', forward, { once: true })
   let buf
-  if (!reader) {
-    buf = await resp.arrayBuffer()
-    onBytes?.({ received: buf.byteLength, total: buf.byteLength })
-  } else {
-    const chunks = []
-    let received = 0
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-      received += value.length
-      onBytes?.({ received, total })
+  try {
+    arm()
+    const resp = await fetch(url, { signal: ctl.signal, credentials: 'omit' })
+    if (!resp.ok) throw new Error(`${url}: HTTP ${resp.status}`)
+    const total = Number(resp.headers.get('content-length')) || 0
+    const reader = resp.body?.getReader?.()
+    if (!reader) {
+      buf = await resp.arrayBuffer()
+      onBytes?.({ received: buf.byteLength, total: buf.byteLength })
+    } else {
+      const chunks = []
+      let received = 0
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        arm()
+        chunks.push(value)
+        received += value.length
+        onBytes?.({ received, total })
+      }
+      const data = new Uint8Array(received)
+      let at = 0
+      for (const c of chunks) { data.set(c, at); at += c.length }
+      buf = data.buffer
     }
-    const data = new Uint8Array(received)
-    let at = 0
-    for (const c of chunks) { data.set(c, at); at += c.length }
-    buf = data.buffer
+  } catch (err) {
+    if (stalled && !signal?.aborted) throw new Error(`${url}: no data for ${Math.round(stallMs / 1000)} seconds`)
+    throw err
+  } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', forward)
   }
   await assertIntegrity(buf, sha256, label)
   return buf

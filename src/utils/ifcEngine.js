@@ -10,6 +10,7 @@
 // worker. Lengths come back in metres (web-ifc applies the file's own unit),
 // Y up.
 import { fetchVerified } from './integrity.js'
+import { sharedDownload } from './sharedDownload.js'
 
 export const WEBIFC_VERSION = '0.0.78'
 const BASE = `https://cdn.jsdelivr.net/npm/web-ifc@${WEBIFC_VERSION}`
@@ -21,40 +22,35 @@ export const WEBIFC_SHA256 = Object.freeze({
 })
 
 let worker = null
-let delivery = null
 let nextId = 1
 
 function stopWorker() {
   if (worker) worker.terminate()
   worker = null
-  delivery = null
+  deliverEngine.reset()
 }
 
 function abortError() {
   return Object.assign(new Error('cancelled'), { name: 'AbortError' })
 }
 
-function deliverEngine(onStage, signal) {
-  if (delivery) return delivery
-  const onBytes = ({ received, total }) => onStage?.({ stage: 'engine', loaded: received, total })
-  delivery = (async () => {
-    let script, wasm
-    try {
-      ;[script, wasm] = await Promise.all([
-        fetchVerified(ifcScriptURL, WEBIFC_SHA256.js, { label: 'The IFC engine script', signal, onBytes }),
-        fetchVerified(ifcWasmURL, WEBIFC_SHA256.wasm, { label: 'The IFC engine', signal }),
-      ])
-    } catch (err) {
-      if (err?.name === 'IntegrityError' || err?.name === 'AbortError') throw err
-      throw new Error(`the IFC engine could not be fetched (${err?.message || err})`)
-    }
-    if (!worker) worker = new Worker(new URL('./ifcWorker.js', import.meta.url), { type: 'classic' })
-    worker.postMessage({ type: 'engine', script, wasm }, [script, wasm])
-    return worker
-  })()
-  delivery.catch(() => { delivery = null })
-  return delivery
-}
+// A caller's signal detaches only that caller (see sharedDownload.js), so
+// cancelling the first load does not fail the next.
+const deliverEngine = sharedDownload(async (report, signal) => {
+  let script, wasm
+  try {
+    ;[script, wasm] = await Promise.all([
+      fetchVerified(ifcScriptURL, WEBIFC_SHA256.js, { label: 'The IFC engine script', onBytes: report, signal }),
+      fetchVerified(ifcWasmURL, WEBIFC_SHA256.wasm, { label: 'The IFC engine', signal }),
+    ])
+  } catch (err) {
+    if (err?.name === 'IntegrityError') throw err
+    throw new Error(`the IFC engine could not be fetched (${err?.message || err})`)
+  }
+  if (!worker) worker = new Worker(new URL('./ifcWorker.js', import.meta.url), { type: 'classic' })
+  worker.postMessage({ type: 'engine', script, wasm }, [script, wasm])
+  return worker
+})
 
 /**
  * An IFC file's bytes to building elements with world-space triangles.
@@ -65,7 +61,7 @@ export async function readIfc(bytes, { onStage, signal } = {}) {
   onStage?.({ stage: 'engine', loaded: 0, total: 0 })
   let w
   try {
-    w = await deliverEngine(onStage, signal)
+    w = await deliverEngine({ signal, onProgress: ({ received, total }) => onStage?.({ stage: 'engine', loaded: received, total }) })
   } catch (err) {
     if (err?.name === 'AbortError' || signal?.aborted) throw abortError()
     throw err

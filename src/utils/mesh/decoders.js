@@ -13,6 +13,7 @@
 // wasm). vite.config.js blanks the loaders' default paths, so no copy of either
 // decoder is emitted into the build.
 import { fetchVerified } from '../integrity.js'
+import { sharedDownload } from '../sharedDownload.js'
 
 export const THREE_VERSION = '0.186.0'
 const BASE = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/libs`
@@ -38,23 +39,23 @@ export const DECODERS = Object.freeze({
   }),
 })
 
-const pending = {}
+// One shared download per decoder. A caller's signal only detaches that caller
+// (see sharedDownload.js), so cancelling the first load leaves the fetch running
+// for the next one.
+const downloads = {}
 
 /** A decoder's verified { js, wasm } bytes, fetched once per visit. */
 export function decoderBytes(name, { signal } = {}) {
   const d = DECODERS[name]
   if (!d) throw new Error(`no decoder named ${name}`)
-  if (!pending[name]) {
-    pending[name] = Promise.all([
-      fetchVerified(d.js, d.sha256.js, { label: `${d.label} script`, signal }),
-      fetchVerified(d.wasm, d.sha256.wasm, { label: d.label, signal }),
-    ]).then(([js, wasm]) => ({ js, wasm })).catch((err) => {
-      delete pending[name]
-      if (err?.name === 'IntegrityError' || err?.name === 'AbortError') throw err
-      throw new Error(`${d.label.replace(/^The /, 'the ')} could not be fetched (${err?.message || err})`)
-    })
-  }
-  return pending[name]
+  downloads[name] ??= sharedDownload((report, abortSignal) => Promise.all([
+    fetchVerified(d.js, d.sha256.js, { label: `${d.label} script`, signal: abortSignal }),
+    fetchVerified(d.wasm, d.sha256.wasm, { label: d.label, signal: abortSignal }),
+  ]).then(([js, wasm]) => ({ js, wasm })).catch((err) => {
+    if (err?.name === 'IntegrityError') throw err
+    throw new Error(`${d.label.replace(/^The /, 'the ')} could not be fetched (${err?.message || err})`)
+  }))
+  return downloads[name]({ signal })
 }
 
 /**
@@ -73,5 +74,5 @@ export async function decoderURLs(name, options) {
 
 /** Forget cached bytes (tests). */
 export function resetDecoders() {
-  for (const k of Object.keys(pending)) delete pending[k]
+  for (const k of Object.keys(downloads)) delete downloads[k]
 }
