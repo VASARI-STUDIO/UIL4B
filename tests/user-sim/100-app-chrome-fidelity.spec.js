@@ -49,7 +49,7 @@ test.describe('the app header', () => {
     await go(page, '/discover/palettes')
     await expect(page.locator('.pnav-logo')).toHaveAttribute('href', '/projects')
     await expect(page.locator('.pnav-logo')).toHaveAttribute('aria-label', 'UIL4B, go to your dashboard')
-    await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/projects')
+    await expect(page.locator('.pnav-actions').getByRole('link', { name: 'Dashboard', exact: true })).toHaveAttribute('href', '/projects')
     await expect(page.getByText('Back to the site')).toHaveCount(0)
   })
 

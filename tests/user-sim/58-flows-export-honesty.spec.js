@@ -46,6 +46,9 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+// Export is dimmed until there is a design to export, so these load a palette the way a
+// shared link does (?c=) rather than the untouched starting board.
+const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 
 const UNBUILT = EXPORT_FORMATS.filter((f) => !f.live)
 const FREE_BUILT = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
@@ -66,7 +69,7 @@ async function readDownload(download) {
 /** Drive the panel to the HTML style guide and return the downloaded file. */
 async function exportStyleGuide(page, plan) {
   await signIn(page, { plan })
-  await go(page, '/create/palette')
+  await go(page, WORKED_BOARD)
   await openPanel(page)
   await page.getByRole('radio', { name: /Style guide \(HTML\)/i }).click()
   const [download] = await Promise.all([
@@ -80,7 +83,7 @@ test.describe('the export panel, as a free account', () => {
   test('every unbuilt format is badged, and refuses in words when chosen', async ({ page }) => {
     watch(page, 'a designer picking an export format that is not built yet')
     await signIn(page, { plan: 'free' })
-    await go(page, '/create/palette')
+    await go(page, WORKED_BOARD)
     await openPanel(page)
 
     expect(UNBUILT.length, 'this test is vacuous if nothing is unbuilt').toBeGreaterThan(0)

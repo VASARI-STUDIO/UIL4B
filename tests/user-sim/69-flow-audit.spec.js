@@ -58,6 +58,9 @@ import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
+// Export is dimmed until there is a design to export, so these load a palette the way a
+// shared link does (?c=) rather than the untouched starting board.
+const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 
 const CAP = FREE_SAVE_LIMITS.projects
 const WIDTHS = [[390, 844], [1280, 800]]
@@ -507,7 +510,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account exporting every format it is entitled to')
     await signIn(page, { plan: 'free', projects: 1 })
-    await go(page, '/create/palette')
+    await go(page, WORKED_BOARD)
     expect(FREE_LIVE.map((f) => f.id).sort()).toEqual(Object.keys(FILE).sort())
 
     for (const fmt of FREE_LIVE) {
@@ -537,7 +540,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account trying the brand guidelines')
     await signIn(page, { plan: 'free' })
-    await go(page, '/create/palette')
+    await go(page, WORKED_BOARD)
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await page.getByRole('radio', { name: /Brand guidelines/i }).click()
     await expect(page.locator('.exp-foot button').last()).toHaveText('Unlock with Pro')
