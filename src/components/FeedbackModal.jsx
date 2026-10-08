@@ -9,6 +9,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
+import { requestIdFor, postSupport } from '../utils/supportRequest'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -63,22 +64,6 @@ const TYPES = [
     messagePlaceholder: 'What do you need help with?',
   },
 ]
-
-// How long one attempt may take before it is abandoned and reported as failed.
-// The server bounds its own outbound calls well inside this.
-const SEND_TIMEOUT_MS = 15000
-
-// A random token naming one message, sent with every attempt to send it (see
-// api/support.js). It is also the id of the local copy, so the same message is
-// one record on both sides.
-function newRequestId() {
-  const c = typeof crypto !== 'undefined' ? crypto : null
-  if (c?.randomUUID) return `fb-${c.randomUUID()}`
-  const bytes = new Uint8Array(16)
-  if (c?.getRandomValues) c.getRandomValues(bytes)
-  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
-  return `fb-${Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')}`
-}
 
 export default function FeedbackModal({ open, onClose, seed = null }) {
   const { user, userProfile } = useAuth()
@@ -245,33 +230,14 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
       source: 'inline',
     }
 
-    const fingerprint = JSON.stringify(payload)
-    if (attemptRef.current?.fingerprint !== fingerprint) {
-      attemptRef.current = { fingerprint, id: newRequestId() }
-    }
-    const requestId = attemptRef.current.id
+    const requestId = requestIdFor(attemptRef, payload)
 
     // saveFeedback takes a single entry object (a positional call corrupts the
-    // localStorage record — see HelpCentre fix). Keyed by the request id, so
-    // resending the same message updates this record rather than adding another.
+    // localStorage record). Keyed by the request id, so resending the same
+    // message updates this record rather than adding another.
     saveFeedback({ ...payload, id: requestId })
 
-    let ok = false
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS)
-    try {
-      const res = await fetch('/api/support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, name: userProfile?.displayName || '', requestId }),
-        signal: controller.signal,
-      })
-      ok = res.ok
-    } catch {
-      ok = false
-    } finally {
-      clearTimeout(timer)
-    }
+    const ok = await postSupport({ ...payload, name: userProfile?.displayName || '', requestId })
 
     // The form was reset (reopened, or "Send another") while this was in flight.
     if (gen !== genRef.current) return
