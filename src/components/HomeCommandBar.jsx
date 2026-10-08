@@ -115,7 +115,10 @@ function RowIcon({ item }) {
   )
 }
 
-export default function HomeCommandBar({ labelledBy } = {}) {
+// `demo={false}` hands the typing to a wrapper that draws its own aria-hidden
+// ghost (SpectrumSearch): the placeholder then stays at its resting sentence,
+// and `demoRunning` tells the ⌘K keycap whether the wrapper's demo is moving.
+export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = false } = {}) {
   const { t } = useI18n()
   const navigate = useNavigate()
   const { reducedMotion } = useAppearance()
@@ -184,7 +187,8 @@ export default function HomeCommandBar({ labelledBy } = {}) {
   // `query` — the placeholder is not painted at all once there is a value, so
   // the timers would be burning for nothing.
   // `demoDone` — the pass is over, or the visitor already took the bar once.
-  const animating = !reducedMotion && !focused && !query && !demoDone
+  const animating = demo && !reducedMotion && !focused && !query && !demoDone
+  const demoMoving = demo ? animating : demoRunning
 
   // Every setState below happens inside a timer callback, never synchronously in
   // the effect body, and the reset happens in the cleanup. That is what keeps
@@ -336,7 +340,7 @@ export default function HomeCommandBar({ labelledBy } = {}) {
               stop, and goes back to its plain name the moment there is not, so
               it never advertises a control over motion that has already ended. */}
           <span className="sr-only">
-            {animating ? 'Stop the search demo and focus the tool search' : 'Focus the tool search'}
+            {demoMoving ? 'Stop the search demo and focus the tool search' : 'Focus the tool search'}
           </span>
           <kbd aria-hidden="true">⌘K</kbd>
         </button>

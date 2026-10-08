@@ -34,6 +34,28 @@ const settle = (page) => page.waitForFunction(() => {
   return els.every((el) => el && el.getAnimations().every((a) => a.playState === 'finished'))
 }, null, { timeout: 5000 })
 
+/**
+ * Wait until the page has stopped scrolling.
+ *
+ * The smooth-scroll library eases a wheel gesture for about a second after the
+ * last wheel event, and that easing is not on the animation layer, so
+ * `getAnimations()` cannot see it. The scroll position itself is the thing to
+ * watch: it is at rest once it has held the same value for a run of frames.
+ * A click taken before that is aimed at a page that is still moving.
+ */
+const atRest = (page) => page.evaluate(() => new Promise((resolve) => {
+  let last = -1
+  let still = 0
+  const tick = () => {
+    const y = window.scrollY
+    still = y === last ? still + 1 : 0
+    last = y
+    if (still >= 20) resolve(y)
+    else requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}))
+
 /** Read the trigger's state and whether the panel exists, in one go. */
 const probe = (page) => page.evaluate(() => {
   const btn = document.querySelector('.app-footer-note')
@@ -60,7 +82,7 @@ test.describe('the note waits to be asked for', () => {
     await page.waitForLoadState('load').catch(() => {})
     await page.waitForTimeout(1500)
     await page.mouse.wheel(0, 4000)
-    await page.waitForTimeout(600)
+    await atRest(page)
 
     let s = await probe(page)
     expect(s.open, 'the panel must never open by itself').toBe(false)

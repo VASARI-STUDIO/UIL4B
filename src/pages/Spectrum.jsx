@@ -180,6 +180,20 @@ export default function Spectrum() {
           />
         </section>
 
+        {/* ── Studio quality exports ──────────────────────────────────────── */}
+        {/* Straight after the bench, before the community library: the exports
+            show what the bench's seed and family turn into. */}
+        <section id="specimens" className="sp-section" aria-labelledby="sp-spec-h">
+          <div className="sp-spec-head" data-sp-reveal>
+            <h2 id="sp-spec-h"><SpectrumWords text="Studio quality exports." /></h2>
+            <p>
+              Take one piece, take the whole system, or come back to it next month. All three leave
+              the browser looking like a studio made them.
+            </p>
+          </div>
+          <SpectrumExports base={base} font={font} />
+        </section>
+
         {/* ── Discover ────────────────────────────────────────────────────── */}
         <section id="discover" className="sp-section" aria-labelledby="sp-disc-h">
           <div className="sp-disc-head" data-sp-reveal>
@@ -238,18 +252,6 @@ export default function Spectrum() {
           </div>
         </section>
 
-        {/* ── Studio quality exports ──────────────────────────────────────── */}
-        <section id="specimens" className="sp-section" aria-labelledby="sp-spec-h">
-          <div className="sp-spec-head" data-sp-reveal>
-            <h2 id="sp-spec-h"><SpectrumWords text="Studio quality exports." /></h2>
-            <p>
-              Take one piece, take the whole system, or come back to it next month. All three leave
-              the browser looking like a studio made them.
-            </p>
-          </div>
-          <SpectrumExports base={base} font={font} />
-        </section>
-
         {/* ── Don't just take it from us (#index) ────────────────────────────
             The design's proof band, rebuilt as drawn, with four real figures counted
             off the arrays that decide them. See SpectrumProof.jsx. */}
@@ -279,7 +281,7 @@ export default function Spectrum() {
         <SpectrumRamp className="sp-ramp--close" />
       </main>
 
-      <SpectrumFooter toolkitTo="/projects" />
+      <SpectrumFooter toolkitTo="/projects" reveal />
     </div>
   )
 }
