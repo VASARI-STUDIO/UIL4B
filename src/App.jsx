@@ -71,7 +71,7 @@ const SpectrumMobile = lazy(() => import('./pages/SpectrumMobile'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
-// /principles — the product's design positions, each beside the screen that
+// /learn/principles — the product's design positions, each beside the screen that
 // enforces it. Inside the app shell rather than chromeless: it is a reading
 // surface like a Learn article, not a surface landing that mounts its own nav.
 const DesignPrinciples = lazy(() => import('./pages/DesignPrinciples'))
@@ -583,8 +583,8 @@ function AppInner() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/credits" element={<Credits />} />
               <Route path="/sitemap" element={<SiteMap />} />
-              <Route path="/help" element={<HelpCentre />} />
-              <Route path="/principles" element={<DesignPrinciples />} />
+              <Route path="/learn/help" element={<HelpCentre />} />
+              <Route path="/learn/principles" element={<DesignPrinciples />} />
               <Route path="/info" element={<InfoCentre />} />
               <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />

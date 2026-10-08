@@ -2568,7 +2568,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    The homepage was already correct and is why this took finding: it runs
    useHomeMotion, which skips GSAP entirely under reduced motion and leaves all
    eight sections revealed at load. Every OTHER surface runs useReveal —
-   /learn, /discover, /plans, /create/color, /help, /principles.
+   /learn, /discover, /plans, /create/color, /learn/help, /learn/principles.
    `transition:none` as well as the visible state, so nothing eases in on the
    first paint. The selector convention is this file's own, used a few hundred
    lines below on `.hstep`: the app setting wins outright, and the OS preference

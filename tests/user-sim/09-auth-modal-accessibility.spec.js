@@ -87,7 +87,7 @@ test('closing the dialog restores focus even when its opener was in a menu that 
   watch(page, PERSONA)
   // An app-header page (PillNav's "Menu"). /plans is the design's Pricing
   // screen, with the marketing nav, so it cannot serve here.
-  await go(page, '/help')
+  await go(page, '/learn/help')
 
   const more = page.getByRole('button', { name: 'Menu', exact: true })
   await more.click()

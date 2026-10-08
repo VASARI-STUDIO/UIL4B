@@ -79,7 +79,7 @@ test.describe('first-time visitor', () => {
     // default 30s budget when parallel workers make cold chunk loads slow.
     test.setTimeout(150000)
     const fb = watch(page, PERSONA)
-    const surfaces = ['/discover', '/learn', '/community', '/help', '/info', '/sitemap', '/plans', '/login']
+    const surfaces = ['/discover', '/learn', '/community', '/learn/help', '/info', '/sitemap', '/plans', '/login']
     for (const url of surfaces) {
       // Eight of these nine surfaces are `lazy()`, so the reading below has to
       // be of the route rather than of the Suspense fallback's 421 characters

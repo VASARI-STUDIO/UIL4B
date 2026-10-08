@@ -49,8 +49,8 @@ const FLAT_SECTIONS = [
     label: 'Help & community',
     desc: 'Learn the tools and get unstuck.',
     links: [
-      { label: 'Help & Getting Started', route: '/help', note: 'What each tool opens with, and what the free plan covers.' },
-      { label: 'Design Principles', route: '/principles', note: 'The rules the tools enforce, with the measurements beside them.' },
+      { label: 'Help & Getting Started', route: '/learn/help', note: 'What each tool opens with, and what the free plan covers.' },
+      { label: 'Design Principles', route: '/learn/principles', note: 'The rules the tools enforce, with the measurements beside them.' },
       { label: 'Information Centre', route: '/info', note: 'Every tool, shortcuts and a screen inspector.' },
       { label: 'SEO Inspector', route: '/seo', note: 'Live SERP preview and an instant SEO score.' },
       { label: 'Community', route: '/community', note: 'Share designs and find inspiration.' },

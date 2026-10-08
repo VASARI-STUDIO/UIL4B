@@ -1,5 +1,5 @@
 // The 2026-09-11 quality pass over the marketing and wayfinding surfaces —
-// `/`, `/plans`, `/help`, `/info`, `/principles`, `/privacy`, `/terms`,
+// `/`, `/plans`, `/learn/help`, `/info`, `/learn/principles`, `/privacy`, `/terms`,
 // `/sitemap` and the 404 — rated against the shared rubric out of 10 and
 // improved wherever a dimension came in under 8.
 //
@@ -145,7 +145,7 @@ test.describe('/principles has a clean heading outline', () => {
   test('no heading level is skipped', async ({ page }) => {
     watch(page, PERSONA)
     await page.setViewportSize({ width: 1280, height: 900 })
-    await go(page, '/principles')
+    await go(page, '/learn/principles')
     await settle(page)
 
     const levels = await page.evaluate(() => Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'))
@@ -169,7 +169,7 @@ test.describe('/principles has a clean heading outline', () => {
   test('each export column still names its list', async ({ page }) => {
     watch(page, PERSONA)
     await page.setViewportSize({ width: 1280, height: 900 })
-    await go(page, '/principles')
+    await go(page, '/learn/principles')
     await settle(page)
 
     const cols = await page.evaluate(() => Array.from(document.querySelectorAll('.prn-ex-col')).map((col) => {
@@ -207,7 +207,7 @@ test.describe('/principles has a clean heading outline', () => {
 test('/principles keeps every call to action at 24px or more', async ({ page }) => {
   watch(page, PERSONA)
   await page.setViewportSize({ width: 390, height: 844 })
-  await go(page, '/principles')
+  await go(page, '/learn/principles')
   await settle(page)
 
   const tooSmall = await page.evaluate(() => {
