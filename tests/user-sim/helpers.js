@@ -277,6 +277,10 @@ function seedProject(i, design) {
  *              finished it: its document carries an open `onboarding` record
  *              with no completedAt. An account with no record at all owes
  *              nothing; seed that through `docs`.
+ *   lateSignIn start the page signed out and complete the sign-in from the
+ *              spec with `window.__UIL4B_TEST_AUTH__.signInNow()`, without a
+ *              reload. The account's document arrives a moment after the user
+ *              does, as it does for a real sign-in made inside the page.
  *   deny       path substrings this session's Firestore must REFUSE, e.g.
  *              ['sync/projects']. Every read, write and listener whose path
  *              contains one answers with a FirebaseError('permission-denied')
@@ -315,6 +319,7 @@ export async function signIn(page, opts = {}) {
     projectTombstones = null,
     displayName,
     emailVerified = true,
+    lateSignIn = false,
   } = opts
 
   const email = (opts.email || (admin ? TEST_ADMIN_EMAIL : `${plan}.user@uil4b.test`)).toLowerCase()
@@ -342,6 +347,7 @@ export async function signIn(page, opts = {}) {
     photoURL: '',
     provider: 'password',
     emailVerified,
+    lateSignIn,
     claims,
     deny,
     authFail,

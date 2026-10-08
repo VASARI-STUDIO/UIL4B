@@ -95,11 +95,17 @@ export function SubscriptionProvider({ children }) {
   const [subscription, setSubscription] = useState(null)
   const [lifetimeEntitlement, setLifetimeEntitlement] = useState(null)
   const [loading, setLoading] = useState(true)
+  // The account whose entitlement has been answered (a snapshot, or a failure
+  // that settles on the free plan). `loading` is not reset when a person signs
+  // in on the same page, so on its own it cannot say whether `plan` is theirs
+  // yet or the free default.
+  const [settledUid, setSettledUid] = useState(null)
 
   useEffect(() => {
     if (!user?.uid) {
       setSubscription(null)
       setLifetimeEntitlement(null)
+      setSettledUid(null)
       setLoading(false)
       return
     }
@@ -117,13 +123,18 @@ export function SubscriptionProvider({ children }) {
         setSubscription(data?.subscription || null)
         setLifetimeEntitlement(data?.lifetimeEntitlement || null)
         setLoading(false)
+        setSettledUid(user.uid)
       }, () => {
         setLoading(false)
+        setSettledUid(user.uid)
       })
     }).catch(() => {
       // The SDK never arrived. Free plan is the safe answer, and it is the same
       // one a failed snapshot already produces above.
-      if (!cancelled) setLoading(false)
+      if (!cancelled) {
+        setLoading(false)
+        setSettledUid(user.uid)
+      }
     })
 
     return () => { cancelled = true; if (unsub) unsub() }
@@ -137,6 +148,10 @@ export function SubscriptionProvider({ children }) {
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   const plan = isAdmin ? PRO_PLAN : planForSubscription(subscription, lifetimeEntitlement)
   const isPro = plan.id === 'pro'
+  // True once `plan` is the signed-in account's own, not the free default held
+  // while its entitlement is still on the way. A signed-out visitor's plan is
+  // always known.
+  const planKnown = !loading && (!user?.uid || settledUid === user.uid)
 
   // The billing state worth interrupting someone about — failing payment, trial
   // about to end, cancellation scheduled. Everything it reads is written by
@@ -202,7 +217,7 @@ export function SubscriptionProvider({ children }) {
 
   return (
     <SubscriptionContext.Provider value={{
-      subscription, lifetimeEntitlement, plan, isPro, isAdmin, loading,
+      subscription, lifetimeEntitlement, plan, isPro, isAdmin, loading, planKnown,
       billingAlert: alert,
       checkout, createCheckoutSession, getCheckoutStatus, openPortal,
     }}>
