@@ -63,6 +63,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
+import { getPrompts, getSavedIds, savedIdsWithoutCopy, repairMissingCopies } from './promptStore.js'
 
 /** Firestore documents under users/{uid}/sync/. `data` is the one the old hook wrote. */
 export const SYNC_DOCS = Object.freeze(['data', 'library'])
@@ -557,4 +558,51 @@ export function clearMirrors(storage) {
   for (const key of ACCOUNT_MIRROR_KEYS) {
     try { storage?.removeItem(key) } catch { /* nothing to do */ }
   }
+}
+
+// ── After a sync has settled ────────────────────────────────────────────────
+
+// The community prompts are large, so they are fetched only when a repair
+// actually has something to look up.
+const loadCommunityPrompts = () => import('../data/communityPrompts.js').then((m) => m.COMMUNITY_PROMPTS)
+
+/**
+ * The prompt-library step that follows a settled sync. The library and the
+ * saved ids are merged separately, so a saved id can end up without its
+ * library copy; this adds the missing copies (see `repairMissingCopies`) once
+ * the account's data has been applied, never before. It runs on stored data
+ * as it is now, adds only, and is a no-op when nothing is missing. A library
+ * change it makes is synced up like any other edit.
+ *
+ * @param storage      the cache
+ * @param loadCatalog  resolves to the community prompts (overridable for tests)
+ * @returns {Promise<number>} how many copies were added
+ */
+export async function repairPromptLibraryAfterSync(storage, { loadCatalog = loadCommunityPrompts, now, isCurrent = () => true } = {}) {
+  // Nothing to look up when every saved id is already matched by `sourceId`.
+  if (!savedIdsWithoutCopy(getPrompts(storage), getSavedIds(storage)).length) return 0
+  const catalog = await loadCatalog()
+  // The catalog load is async: a sign-out or user switch during it must not
+  // write into whatever cache is current by now.
+  if (!isCurrent()) return 0
+  return repairMissingCopies({ storage, catalog, now }).length
+}
+
+/**
+ * The hook point: what a settle does about the prompt library. Runs the repair
+ * only when the account's data document was part of this read (the library and
+ * its saved ids both live there), and announces the change only when copies
+ * were added and `isCurrent()` still holds. A failure is left for the next
+ * settle. Returns the repair's promise, or null when it did not apply.
+ *
+ * @param remote   the documents just read, keyed by document id
+ * @param storage  the cache
+ * @param opts     `isCurrent` (false once the user signed out or changed),
+ *                 `announce(keys)`, plus the repair's `loadCatalog` and `now`
+ */
+export function repairAfterSettle(remote, storage, { isCurrent = () => true, announce = () => {}, ...repairOpts } = {}) {
+  if (!remote || !Object.hasOwn(remote, 'data')) return null
+  return repairPromptLibraryAfterSync(storage, { ...repairOpts, isCurrent })
+    .then((added) => { if (added && isCurrent()) announce(['vs-prompts']) })
+    .catch(() => { /* the next settle tries again */ })
 }
