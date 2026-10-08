@@ -44,12 +44,13 @@ test.describe('the app header', () => {
     })
   }
 
-  test('the wordmark goes to the workspace and Back to the site goes to /home', async ({ page }) => {
+  test('the wordmark goes to the dashboard and the header offers Dashboard, with no way back to the site', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/discover/palettes')
     await expect(page.locator('.pnav-logo')).toHaveAttribute('href', '/projects')
-    await expect(page.getByRole('link', { name: 'Back to the site' })).toHaveAttribute('href', '/home')
-    await expect(page.getByRole('link', { name: 'Your workspace' })).toHaveAttribute('href', '/projects')
+    await expect(page.locator('.pnav-logo')).toHaveAttribute('aria-label', 'UIL4B, go to your dashboard')
+    await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/projects')
+    await expect(page.getByText('Back to the site')).toHaveCount(0)
   })
 
   test('"Create a free account" is directly below "Log in" and opens the sign-up form', async ({ page }) => {
@@ -101,7 +102,7 @@ test.describe('the phone chrome', () => {
     await go(page, '/projects')
     await expect(page.locator('.pnav-trigger').first()).toBeHidden()
     await expect(page.locator('.pnav-tabs')).toBeVisible()
-    await expect(page.locator('.pnav-tab', { hasText: 'Projects' })).toHaveAttribute('aria-current', 'page')
+    await expect(page.locator('.pnav-tab', { hasText: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
     await page.getByRole('button', { name: 'Open menu' }).click()
     await expect(page.locator('.pnav-sheet')).toBeVisible()
     await expect(page.locator('#main')).toHaveAttribute('inert', '')

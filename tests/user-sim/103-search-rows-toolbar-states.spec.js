@@ -103,60 +103,44 @@ test.describe('header search · rows land on real pages', () => {
   })
 })
 
-// ── Your workspace: header icon, account popover, phone sheet ───────────────
+// ── Dashboard: header button, phone tab ─────────────────────────────────────
 
-test.describe('header · Your workspace is one target and one label', () => {
-  test.beforeEach(async ({ page }) => { watch(page, 'someone pressing the header workspace icon') })
+test.describe('header · Dashboard is one target and one label', () => {
+  test.beforeEach(async ({ page }) => { watch(page, 'someone pressing the header Dashboard button') })
 
-  test('at 1440 the visible header icon lands on /projects', async ({ page }) => {
+  test('at 1440 the labelled header button lands on /projects', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/discover/palettes')
     expect(new URL(page.url()).pathname, 'the test starts away from /projects').toBe('/discover/palettes')
-    const icon = page.locator('.pnav-actions').getByRole('link', { name: 'Your workspace' })
-    // POSITIVE CONTROL: the icon is the visible bookmark in the header row.
-    await expect(icon).toBeVisible()
-    await expect(icon.locator('svg')).toHaveCount(1)
-    await expect(icon).toHaveAttribute('title', 'Your workspace')
-    await icon.click()
-    await expect.poll(() => new URL(page.url()).pathname, 'the bookmark icon landed somewhere else').toBe('/projects')
+    const button = page.locator('.pnav-actions').getByRole('link', { name: 'Dashboard' })
+    await expect(button).toBeVisible()
+    await expect(button.locator('.pnav-act-label')).toBeVisible()
+    await button.click()
+    await expect.poll(() => new URL(page.url()).pathname, 'the Dashboard button landed somewhere else').toBe('/projects')
   })
 
-  test('at 800 the folded row in the account popover is Your workspace and lands on /projects', async ({ page }) => {
+  test('at 800 the Dashboard button stays in the header as an icon, with no popover duplicate', async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 900 })
     await go(page, '/discover/palettes')
-    // Folded: the header's own icon is gone, so the popover is the only way.
-    await expect(page.locator('.pnav-actions').getByRole('link', { name: 'Your workspace' })).toBeHidden()
+    const button = page.locator('.pnav-actions').getByRole('link', { name: 'Dashboard' })
+    await expect(button).toBeVisible()
+    await expect(button).toHaveAttribute('title', 'Dashboard')
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
-    const pop = page.locator('#pnav-account-pop')
-    await expect(pop).toBeVisible()
-    const row = pop.getByRole('link', { name: 'Your workspace' })
-    // POSITIVE CONTROL: the sibling folded rows are there beside it.
-    await expect(pop.getByRole('link', { name: 'Back to the site' })).toBeVisible()
-    await expect(row).toBeVisible()
-    await expect(row).toHaveAttribute('href', '/projects')
-    await expect(pop.getByText('Palette library'), 'the old label is still offered').toHaveCount(0)
-    await row.click()
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/projects')
+    await expect(page.locator('#pnav-account-pop').getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
   })
 
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
-    test('the menu sheet row is Your workspace, lands on /projects and wears the Projects tab glyph', async ({ page }) => {
+    test('the Dashboard tab lands on /projects and the sheet has no Dashboard, Export or Back to the site row', async ({ page }) => {
       await go(page, '/discover/palettes')
-      const glyph = (locator) => locator.locator('svg').first().innerHTML()
-      const tab = await glyph(page.locator('.pnav-tab', { hasText: 'Projects' }))
-      // POSITIVE CONTROL: the tab really drew a glyph.
-      expect(tab).toContain('<path')
+      await expect(page.locator('.pnav-tab', { hasText: 'Dashboard' })).toHaveAttribute('href', '/projects')
       await page.getByRole('button', { name: 'Open menu' }).click()
       const sheet = page.locator('.pnav-sheet')
       await expect(sheet).toBeVisible()
-      const row = sheet.getByRole('link', { name: 'Your workspace' })
-      await expect(row).toHaveAttribute('href', '/projects')
-      await expect(sheet.getByText('Palette library'), 'the old label is still offered').toHaveCount(0)
-      expect(await glyph(row), 'one place, two icons').toBe(tab)
-      await row.click()
-      await expect.poll(() => new URL(page.url()).pathname).toBe('/projects')
+      await expect(sheet.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+      await expect(sheet.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
+      await expect(sheet.getByText('Back to the site')).toHaveCount(0)
     })
   })
 })

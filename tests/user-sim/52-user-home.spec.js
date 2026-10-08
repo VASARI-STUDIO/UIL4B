@@ -82,9 +82,9 @@ test.describe('the front door', () => {
 
     await go(page, '/')
     await expect(page).toHaveURL(/\/projects$/)
-    // The wordmark goes to the workspace now (the App file's goProjects); the
-    // way back to the sales page is the header's Back to the site button.
-    await page.getByRole('link', { name: 'Back to the site' }).first().click()
+    // The wordmark goes to the dashboard from app pages and, on the dashboard,
+    // to the sales page.
+    await page.getByRole('link', { name: 'UIL4B, go to the home page' }).first().click()
     await expect(page, 'the Home control must land on the sales page and stay there').toHaveURL(/\/home$/)
     await expect(page.locator('.spectrum')).toBeVisible()
   })

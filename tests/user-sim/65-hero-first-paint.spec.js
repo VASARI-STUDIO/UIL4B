@@ -278,7 +278,7 @@ async function arriveFromAnotherRoute(page) {
     await page.evaluate(() => !!document.querySelector('#boot-shell')),
     'the boot shell is still on screen after ready() — this reads the wrong page',
   ).toBe(false)
-  await page.getByRole('link', { name: 'Back to the site' }).click()
+  await page.getByRole('link', { name: 'UIL4B, go to the home page' }).click()
   await ready(page, '/home')
 }
 

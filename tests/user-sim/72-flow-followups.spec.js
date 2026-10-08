@@ -93,50 +93,39 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 — Export on a phone
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('1 — the phone sheet carries Export and Saved projects', () => {
+test.describe('1 — Export is in the header at every width and the phone sheet does not repeat it', () => {
   for (const theme of THEMES) {
-    test(`390px ${theme}: the sheet's Export row opens the export panel, by pointer and by keyboard`, async ({ browser }) => {
+    test(`390px ${theme}: the header Export explains itself when there is nothing to export, and the sheet has no Export row`, async ({ browser }) => {
       const { context, page } = await open(browser, PHONE, theme)
       watch(page, `a phone user looking for Export (${theme})`)
       await signIn(page, { plan: 'free', projects: 1 })
       await go(page, '/create/palette')
 
-      // The bar's button is still gone below 769px — the sheet stands in for it.
-      await expect(page.locator('.pnav-export')).toBeHidden()
+      const header = page.locator('.pnav-export')
+      await expect(header).toBeVisible()
+      await expect(header).toHaveAttribute('aria-disabled', 'true')
+      await header.click({ force: true })
+      await expect(page.locator('.toast.show')).toContainText('Nothing to export yet')
+      await expect(page.locator('[role="dialog"][aria-labelledby="exp-title"]')).toHaveCount(0)
+
       await page.locator('.pnav-mobile').click()
       const sheet = page.locator('.pnav-sheet')
       await expect(sheet).toBeVisible()
-      const exportRow = sheet.getByRole('button', { name: 'Export', exact: true })
-      await expect(exportRow).toBeVisible()
-      // Saved projects is the tab bar's first tab.
-      await expect(page.locator('.pnav-tabs').getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/projects')
-
-      await exportRow.click()
-      const panel = page.locator('[role="dialog"][aria-labelledby="exp-title"]')
-      await expect(panel).toBeVisible()
-      await expect(sheet, 'the sheet closes under the panel it opened').toHaveCount(0)
-      await page.keyboard.press('Escape')
-      await expect(panel).toHaveCount(0)
-
-      // Keyboard: the row is a real button.
-      await page.locator('.pnav-mobile').click()
-      await sheet.getByRole('button', { name: 'Export', exact: true }).focus()
-      await page.keyboard.press('Enter')
-      await expect(panel).toBeVisible()
+      await expect(sheet.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
+      // The dashboard is the tab bar's first tab.
+      await expect(page.locator('.pnav-tabs').getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/projects')
       await context.close()
     })
   }
 
-  // From 768 the header is the App file's row, and below 900 it folds Export
-  // into the account popover (the row never wraps).
-  test('768px: Export is in the account popover, where the folded row puts it', async ({ browser }) => {
+  test('768px: Export is a header icon button, not a popover row', async ({ browser }) => {
     const { context, page } = await open(browser, [768, 1024])
     watch(page, 'a tablet user looking for Export')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/create/palette')
+    await expect(page.locator('.pnav-actions .pnav-export')).toBeVisible()
     await page.getByRole('button', { name: 'Account and settings' }).click()
-    await page.locator('#pnav-account-pop').getByRole('button', { name: 'Export', exact: true }).click()
-    await expect(page.locator('[role="dialog"][aria-labelledby="exp-title"]')).toBeVisible()
+    await expect(page.locator('#pnav-account-pop').getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
     await context.close()
   })
 
