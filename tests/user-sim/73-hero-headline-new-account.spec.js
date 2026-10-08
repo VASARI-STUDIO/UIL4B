@@ -88,11 +88,11 @@ const DESK = [1280, 800]
 const WIDTHS = [PHONE, DESK]
 const THEMES = ['light', 'dark']
 
-/** Name and keep the working design from the Palette Builder's Save current
+/** Name and keep the working design from the Palette Builder's Save or share
  *  menu — where a project is saved since New project goes straight into the
  *  builder. */
 async function saveFromBuilder(page, name) {
-  await page.getByRole('button', { name: /^Save current/ }).click()
+  await page.getByRole('button', { name: /^Save or share/ }).click()
   await page.locator('.plb-savemenu').getByLabel('Project name').fill(name)
   await page.keyboard.press('Enter')
 }

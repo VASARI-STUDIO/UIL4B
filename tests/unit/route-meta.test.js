@@ -5,6 +5,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { canonicalUrl, isSoonRoute } from '../../src/utils/routeMeta.js'
+import { PAGE_TITLES, PAGE_DESCRIPTIONS } from '../../src/data/routeMetaMap.js'
+
+test('Learn reference pages have canonical URLs and metadata at their new paths', () => {
+  for (const name of ['principles', 'help']) {
+    const route = `/learn/${name}`
+    assert.equal(canonicalUrl(`${route}/?source=nav#intro`), `https://uil4b.com${route}`)
+    assert.ok(PAGE_TITLES[route])
+    assert.ok(PAGE_DESCRIPTIONS[route])
+    assert.equal(PAGE_TITLES[`/${name}`], undefined)
+    assert.equal(PAGE_DESCRIPTIONS[`/${name}`], undefined)
+  }
+})
 
 test('canonicalUrl never falls back to the homepage for a real route', () => {
   assert.equal(canonicalUrl('/create/palette'), 'https://uil4b.com/create/palette')

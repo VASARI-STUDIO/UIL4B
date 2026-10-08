@@ -233,6 +233,16 @@
       "permanent": true
     },
     {
+      "source": "/principles",
+      "destination": "/learn/principles",
+      "permanent": true
+    },
+    {
+      "source": "/help",
+      "destination": "/learn/help",
+      "permanent": true
+    },
+    {
       "source": "/resources",
       "destination": "/discover",
       "permanent": true
@@ -254,12 +264,12 @@
     },
     {
       "source": "/about",
-      "destination": "/help#about",
+      "destination": "/learn/help#about",
       "permanent": true
     },
     {
       "source": "/faq",
-      "destination": "/help#faq",
+      "destination": "/learn/help#faq",
       "permanent": true
     },
     {
@@ -375,10 +385,6 @@
       "destination": "/feedback/index.html"
     },
     {
-      "source": "/help",
-      "destination": "/help/index.html"
-    },
-    {
       "source": "/home",
       "destination": "/home/index.html"
     },
@@ -407,6 +413,14 @@
       "destination": "/learn/font-loading/index.html"
     },
     {
+      "source": "/learn/help",
+      "destination": "/learn/help/index.html"
+    },
+    {
+      "source": "/learn/principles",
+      "destination": "/learn/principles/index.html"
+    },
+    {
       "source": "/learn/theme-systems",
       "destination": "/learn/theme-systems/index.html"
     },
@@ -425,10 +439,6 @@
     {
       "source": "/plans",
       "destination": "/plans/index.html"
-    },
-    {
-      "source": "/principles",
-      "destination": "/principles/index.html"
     },
     {
       "source": "/privacy",

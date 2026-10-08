@@ -39,7 +39,7 @@ test.describe('signup intent', () => {
     // A page with the APP header, where the CTA is visible immediately. /plans
     // is the design's Pricing screen with the marketing nav; /help is an
     // app-shell page.
-    await go(page, '/help')
+    await go(page, '/learn/help')
 
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
     await page.getByRole('button', { name: 'Create a free account' }).click()
@@ -73,7 +73,7 @@ test.describe('signup intent', () => {
 
   test('"Log in" still opens the sign-in form — the two are not the same button', async ({ page }) => {
     watch(page, 'a returning visitor')
-    await go(page, '/help')           // an app-header page, as above
+    await go(page, '/learn/help')           // an app-header page, as above
 
     await page.getByRole('button', { name: 'Log in' }).first().click()
     await expect(dialogHeading(page)).toHaveText(/welcome back/i)

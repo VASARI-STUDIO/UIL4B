@@ -13,7 +13,7 @@ const STATIC_INDEXABLE_ROUTES = [
   // The Spectrum design's "On mobile" screen, a marketing page like /plans.
   '/mobile',
   '/community',
-  '/help',
+  '/learn/help',
   '/info',
   '/seo',
   '/feedback',
@@ -38,7 +38,7 @@ const STATIC_INDEXABLE_ROUTES = [
   // the page, and each links to a route that is already live — which is what
   // the last test in this file asserts, so a Soon destination cannot arrive on
   // it later without failing here.
-  '/principles',
+  '/learn/principles',
 ]
 
 const LIVE_CREATE_ROUTES = CREATE_GROUPS.flatMap((group) => (

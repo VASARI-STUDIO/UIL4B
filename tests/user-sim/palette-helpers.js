@@ -25,12 +25,12 @@ export async function setSeed(page, hex) {
 /** The palette's toolbar (the shared ToolToolbar, inside the palette root). */
 export const paletteToolbar = (page) => page.locator('.plb [data-tool-toolbar]')
 
-/** Open the "Tools" overflow and return its panel (popover or phone sheet). */
+/** Open the "Extra tools" overflow and return its panel (popover or phone sheet). */
 export async function openPaletteTools(page) {
   const bar = paletteToolbar(page)
   await expect(bar).not.toHaveClass(/is-measuring/)
-  await bar.getByRole('button', { name: 'Tools' }).click()
-  const panel = page.getByRole('dialog', { name: 'Tools' })
+  await bar.getByRole('button', { name: 'Extra tools' }).click()
+  const panel = page.getByRole('dialog', { name: 'Extra tools' })
   await expect(panel).toBeVisible()
   return panel
 }
@@ -39,7 +39,7 @@ const startsWith = (label) => new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g
 
 /**
  * Run an action that may be on the toolbar row or, when the row is too narrow
- * for it, in the "Tools" overflow. `inlineName` is the button's accessible
+ * for it, in the "Extra tools" overflow. `inlineName` is the button's accessible
  * name on the row; `menuLabel` the row it becomes in the overflow.
  */
 export async function clickPaletteAction(page, inlineName, menuLabel = inlineName) {

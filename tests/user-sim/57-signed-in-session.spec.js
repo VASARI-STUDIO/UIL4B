@@ -50,11 +50,11 @@ const CAP = FREE_SAVE_LIMITS.projects
  *  The old /projects page had a "Save Current" form. The design's workspace
  *  sends New project straight into the Palette
  *  Builder, where a project is named as it is saved — so that is where this
- *  saves: the builder's Save current menu, which calls the same saveProject()
+ *  saves: the builder's Save or share menu, which calls the same saveProject()
  *  and holds the same refusal in place (`palette-save-refusal`). */
 async function saveAProject(page, name) {
   await go(page, '/create/palette')
-  await page.getByRole('button', { name: /^Save current/ }).click()
+  await page.getByRole('button', { name: /^Save or share/ }).click()
   await page.locator('.plb-savemenu').getByLabel('Project name').fill(name)
   await page.keyboard.press('Enter')
   // The page answers in words either way — "Project saved", or the refusal

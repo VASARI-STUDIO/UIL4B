@@ -1102,7 +1102,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // The rail-fit measurement that lived here is gone: the shared ToolToolbar
   // (components/tool/ToolLayout.jsx) measures its own row and moves what does
-  // not fit into the Tools overflow.
+  // not fit into the Extra tools overflow.
   useEffect(() => {
     if (!anyPopover) return
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
@@ -2051,7 +2051,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // ── Pick: the design's third labelled tool (D:1159-1162) ──
   // The EyeDropper API reads any pixel on the screen. Chrome and Edge ship it;
   // phones, Firefox and Safari do not, and there the Pick control is not drawn
-  // at all (the toolbar row and the Tools menu both skip it).
+  // at all (the toolbar row and the Extra tools menu both skip it).
   const canPickFromScreen = typeof window !== 'undefined' && 'EyeDropper' in window
   const pickFromScreen = async () => {
     if (!canPickFromScreen) return
@@ -2067,7 +2067,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.free || isPro ? h.label : `${h.label} (Pro)` }))
   const visionOptions = VISION_MODES.map(([id, label]) => ({ value: id, label }))
-  // From the Tools overflow a choice also closes the panel, so that a Pro
+  // From the Extra tools overflow a choice also closes the panel, so that a Pro
   // wall raised by the choice is not opened underneath it.
   const systemSelect = (className, closePanel) => (
     <ToolSelect
@@ -2114,10 +2114,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // THE TOOLBAR, as drawn (D:947-1015): back · seed chip · From image /
   // Suggest / Pick · System · Vision · divider · undo/redo · Randomise, with
-  // "Save current" as the accent primary. What the drawn row has no room for —
+  // "Save or share" as the accent primary. What the drawn row has no room for —
   // Explore, Preview, the Gradient hand-off, History and Reset, all functions
-  // the previous build had — lives in the Tools overflow, and on a phone the
-  // row keeps Randomise, undo/redo, Save and Tools.
+  // the previous build had — lives in the Extra tools overflow, and on a phone the
+  // row keeps Randomise, undo/redo, Save and Extra tools.
   const toolbarItems = [
     {
       id: 'back', priority: 2,
@@ -2177,7 +2177,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       showTitle={false}
       back={false}
       bleed
-      overflowLabel="Tools"
+      overflowLabel="Extra tools"
       overflowIcon="sliders-horizontal"
       items={toolbarItems}
       primary={(
@@ -2192,7 +2192,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             // forever. The account is asked for at the save and at the PNG.
             onClick={() => toggleMenu(saveOpen, setSaveOpen)}
           >
-            Save current
+            Save or share
           </ToolButton>
         </span>
       )}
@@ -2487,10 +2487,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* ── The floating panels: Suggest / Explore, History, Save current ──
+      {/* ── The floating panels: Suggest / Explore, History, Save or share ──
           Fixed under the toolbar (a bottom sheet on a phone) rather than
           anchored to a button, because on a phone the button that opened one
-          may be in the Tools sheet. `.plb-menuwrap` keeps the page's one
+          may be in the Extra tools sheet. `.plb-menuwrap` keeps the page's one
           dismiss layer from closing a panel on a press inside it. */}
       {galleryOpen && (
         <div className="plb-menuwrap plb-float">

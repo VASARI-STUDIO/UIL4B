@@ -54,7 +54,7 @@ export const DEFAULT_DESIGN = {
  * settings — the shape of the `tintScale` memo in src/pages/ColorStudio.jsx.
  *
  * DERIVED HERE RATHER THAN COPIED AT THE CALL SITE for the same reason the rest
- * of this file exists: /help renders the ramp a brand-new project generates, and
+ * of this file exists: /learn/help renders the ramp a brand-new project generates, and
  * the only way that strip can stay true is if it is built from the same object
  * the studio is built from. A hard-coded copy would go on rendering the old ramp
  * on the day the defaults change, and nothing would fail.

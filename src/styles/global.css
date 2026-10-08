@@ -2568,7 +2568,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    The homepage was already correct and is why this took finding: it runs
    useHomeMotion, which skips GSAP entirely under reduced motion and leaves all
    eight sections revealed at load. Every OTHER surface runs useReveal —
-   /learn, /discover, /plans, /create/color, /help, /principles.
+   /learn, /discover, /plans, /create/color, /learn/help, /learn/principles.
    `transition:none` as well as the visible state, so nothing eases in on the
    first paint. The selector convention is this file's own, used a few hundred
    lines below on `.hstep`: the app setting wins outright, and the OS preference
@@ -3876,7 +3876,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    transparent and borderless, and the icon and clear button keep their own
    centring because this is `align-self` on one child, not `align-items` on
    the row. */
-.lbry-search input{align-self:stretch;width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+.lbry-search input{align-self:stretch;width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;box-shadow:none;font-family:var(--font);font-size:13px}
 .lbry-search input::placeholder{color:var(--t3)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */

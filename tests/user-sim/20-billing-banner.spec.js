@@ -77,7 +77,7 @@ async function withFailingCard(page) {
   await signIn(page, { plan: 'pro', subscription: failingCard() })
   // An app-shell page, where the fixed feedback button also sits. /plans is a
   // marketing page (the Pricing screen) that takes no feedback button, like `/`.
-  await go(page, '/help')
+  await go(page, '/learn/help')
 
   const banner = page.locator('.bill-banner')
   await expect(banner, 'the app must raise its own banner for a failing card').toBeVisible()
@@ -200,7 +200,7 @@ test.describe('billing banner layout', () => {
   test('a healthy subscription raises no banner, and a dismissed one stays dismissed', async ({ page }) => {
     watch(page, 'a Pro subscriber whose card is perfectly fine')
     await signIn(page, { plan: 'pro' })
-    await go(page, '/help')   // an app-shell page with the feedback button; see withFailingCard
+    await go(page, '/learn/help')   // an app-shell page with the feedback button; see withFailingCard
     // Something must have rendered, or "no banner" is a statement about a blank
     // page rather than about billing.
     await expect(page.locator('.global-feedback-btn')).toBeVisible()

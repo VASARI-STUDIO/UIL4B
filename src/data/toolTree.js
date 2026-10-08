@@ -399,28 +399,15 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from './learnIndex.js'
 
 export const LEARN_GROUPS = [
-  // LIVE, AND IT WAS SAYING SOON. /principles has been a real page for months —
-  // it computes its own contrast ratios on load — and this row pointed at
-  // /learn with a Soon badge, in the mega menu, the mobile sheet and the visual
-  // sitemap. On /sitemap it was worse than a badge: that page ALREADY lists
-  // "Design Principles → /principles" in its own section (SiteMap.jsx:43), so
-  // the Learn column was contradicting a row 200px away. Founder's call,
-  // 2026-09-18: point the row at the live page. See LEARN_TOPIC_ROWS below for
-  // what stops a live row disappearing out of the menu when it leaves the
-  // roadmap.
-  { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/principles', soon: false },
+  // Reference pages share the Learn prefix with published guides.
+  { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/learn/principles', soon: false },
   { id: 'themes', label: 'UI Themes', desc: 'Dark, light and custom theme systems.', route: '/learn/theme-systems', soon: false },
   { id: 'brand', label: 'Brand Colour Guide', desc: 'Choose brand colours with confidence.', route: '/learn/brand-colour', soon: false },
   { id: 'typography', label: 'Typography Guide', desc: 'Type that reads and scales cleanly.', route: '/learn/typeface-metrics', soon: false },
   { id: 'seo', label: 'SEO', desc: 'Small-business and specialist playbooks.', route: '/learn', soon: true },
   { id: 'marketing', label: 'Marketing', desc: 'Positioning, messaging and social.', route: '/learn', soon: true },
   { id: 'ai-assistants', label: 'AI Coding Assistants', desc: 'Ship faster with AI in the loop.', route: '/learn', soon: true },
-  // The conversion-adjacent item — gets the accent-blue dot in the menu.
-  // Same correction, and this one was the most visible of the three: the mobile
-  // sheet's own Learn card carries a "View docs" button to /help about 250px
-  // below the row telling the reader Help is Soon. /sitemap lists it too
-  // (SiteMap.jsx:42).
-  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/help', soon: false, accent: true },
+  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn/help', soon: false, accent: true },
 ]
 
 /**
@@ -721,7 +708,7 @@ export const NAV_SECTIONS = [
       title: 'Understand the why',
       blurb: 'Principles, theme systems and guides that make your interfaces hold up.',
       href: '/learn',
-      docsHref: '/help',
+      docsHref: '/learn/help',
     },
   },
 ]

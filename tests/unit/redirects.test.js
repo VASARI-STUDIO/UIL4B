@@ -41,7 +41,7 @@ const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const vercel = () => JSON.parse(read('vercel.json'))
 const built = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'))
 
-// Fragment-stripped destination — `/help#about` routes to the page `/help`.
+// Fragment-stripped destination — `/learn/help#about` routes to the page `/learn/help`.
 const destPath = (d) => d.split('#')[0]
 
 // The Create routes as they stood the day before the migration. Frozen on
@@ -54,6 +54,30 @@ const PRE_MIGRATION_CREATE_ROUTES = [
   '/box-shadow', '/auto-builder', '/imagery', '/file-converter', '/ratio',
   '/ai-tools', '/alt-text', '/ai-prompt', '/landing-prompts',
 ]
+
+for (const [from, to, component] of [
+  ['/principles', '/learn/principles', 'DesignPrinciples'],
+  ['/help', '/learn/help', 'HelpCentre'],
+]) {
+  test(`${from} permanently redirects to ${to} at the edge and in the client`, () => {
+    assert.deepEqual(vercel().redirects.filter((r) => r.source === from), [
+      { source: from, destination: to, permanent: true },
+    ])
+    assert.deepEqual(CLIENT_REDIRECT_ROUTES.filter(([source]) => source === from), [[from, to]])
+    const app = read('src/App.jsx')
+    assert.ok(app.includes(`<Route path="${to}" element={<${component} />} />`))
+    assert.ok(!app.includes(`<Route path="${from}"`))
+  })
+}
+
+test('Help fragment aliases redirect directly to the Learn page', () => {
+  for (const [from, to] of [['/about', '/learn/help#about'], ['/faq', '/learn/help#faq']]) {
+    assert.deepEqual(vercel().redirects.find((r) => r.source === from), {
+      source: from, destination: to, permanent: true,
+    })
+    assert.ok(CLIENT_REDIRECT_ROUTES.some(([source, destination]) => source === from && destination === to))
+  }
+})
 
 /* ── The redirects themselves ─────────────────────────────────────────────── */
 

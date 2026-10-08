@@ -60,13 +60,13 @@ test('every route /help and /principles link to is live, public and not retired'
 })
 
 test('/principles is a real, indexable route with its own title and description', () => {
-  assert.ok(PAGE_TITLES['/principles'], '/principles has no title, so it would ship the homepage title')
-  assert.ok(PAGE_DESCRIPTIONS['/principles'], '/principles has no description')
-  assert.ok(!isSoonRoute('/principles'))
-  assert.ok(!isPrivateRoute('/principles'))
+  assert.ok(PAGE_TITLES['/learn/principles'], '/principles has no title, so it would ship the homepage title')
+  assert.ok(PAGE_DESCRIPTIONS['/learn/principles'], '/principles has no description')
+  assert.ok(!isSoonRoute('/learn/principles'))
+  assert.ok(!isPrivateRoute('/learn/principles'))
   // The title is what a browser tab, a bookmark and a share card carry. The old
   // /help title said "Help Centre" for a page that is no longer a centre.
-  assert.match(PAGE_TITLES['/help'], /Getting Started/, '/help still advertises the retired page name')
+  assert.match(PAGE_TITLES['/learn/help'], /Getting Started/, '/help still advertises the retired page name')
 })
 
 /* ── the counts, against the registry that decides them ──────────────────── */
