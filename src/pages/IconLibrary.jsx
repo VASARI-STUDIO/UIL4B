@@ -1109,6 +1109,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
   const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
   const stageIsLight = isColoredPack ? brandTone === 'light' : relativeLuminance(effectiveColor) < 0.35
+  // An un-tinted icon is drawn in the theme's own ink, so its stage is the theme's
+  // own page ground. A chosen colour, or a brand's artwork, keeps the contrast ground.
+  const onThemeGround = !isColoredPack && !color
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1311,7 +1314,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         ) : (
           <>
-            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
+            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${onThemeGround ? ' icust-stage--theme' : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
