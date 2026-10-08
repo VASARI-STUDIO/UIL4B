@@ -4,7 +4,7 @@
 // SpectrumFooter themselves and never mount this component.
 export const FOOTER_ROUTES = new Set([
   '/plans', '/mobile',
-  '/learn', '/principles', '/help', '/info', '/sitemap',
+  '/learn', '/learn/principles', '/learn/help', '/info', '/sitemap',
   '/privacy', '/terms', '/credits',
 ])
 

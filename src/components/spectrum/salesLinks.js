@@ -7,9 +7,7 @@
 // another marketing screen (/mobile, /plans) goes. On the sales page itself the
 // link is a bare hash, which Lenis's anchor handling scrolls smoothly.
 //
-// The landing on arrival from another screen is `landOnHash()`, run once by
-// SpectrumNav when it mounts (the nav is on every marketing screen).
-import { getLenis } from '../../hooks/useSmoothScroll'
+// Hash landing after route changes is handled centrally in App.jsx.
 
 export const SALES_PATHS = new Set(['/', '/home'])
 
@@ -20,37 +18,6 @@ export const onSalesPage = (pathname) => SALES_PATHS.has(normPath(pathname))
 /** `#bench` on the sales page, `/home#bench` anywhere else. */
 export function salesHref(hash, pathname) {
   return onSalesPage(pathname) ? hash : `/home${hash}`
-}
-
-/**
- * Bring `location.hash`'s section to the top, after a route change has reset
- * the scroll (App.jsx). Two frames later, so it runs after that reset.
- *
- * resize() FIRST. Lenis clamps every scrollTo to the scroll limit it last
- * measured, and on arrival that is still the PREVIOUS page's height —
- * measured: /mobile → /home#pricing stopped dead at 1186px (the /mobile page's
- * own limit) with the section 7,800px further down.
- *
- * Returns a cancel function for an effect cleanup.
- */
-export function landOnHash() {
-  const id = window.location.hash.slice(1)
-  if (!id) return () => {}
-  let raf = requestAnimationFrame(() => {
-    raf = requestAnimationFrame(() => {
-      const el = document.getElementById(id)
-      if (!el) return
-      const lenis = getLenis()
-      if (lenis) {
-        lenis.resize()
-        // Lenis reads the target's scroll-margin-top itself.
-        lenis.scrollTo(el, { immediate: true, force: true })
-      } else {
-        el.scrollIntoView({ block: 'start' })
-      }
-    })
-  })
-  return () => cancelAnimationFrame(raf)
 }
 
 /**

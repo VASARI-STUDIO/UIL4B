@@ -4,7 +4,20 @@
 // the PR, not here.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { canonicalUrl, isSoonRoute } from '../../src/utils/routeMeta.js'
+import { canonicalUrl, isSoonRoute, robotsFor } from '../../src/utils/routeMeta.js'
+import { resolveTool } from '../../src/data/toolTree.js'
+import { PAGE_TITLES, PAGE_DESCRIPTIONS } from '../../src/data/routeMetaMap.js'
+
+test('Learn reference pages have canonical URLs and metadata at their new paths', () => {
+  for (const name of ['principles', 'help']) {
+    const route = `/learn/${name}`
+    assert.equal(canonicalUrl(`${route}/?source=nav#intro`), `https://uil4b.com${route}`)
+    assert.ok(PAGE_TITLES[route])
+    assert.ok(PAGE_DESCRIPTIONS[route])
+    assert.equal(PAGE_TITLES[`/${name}`], undefined)
+    assert.equal(PAGE_DESCRIPTIONS[`/${name}`], undefined)
+  }
+})
 
 test('canonicalUrl never falls back to the homepage for a real route', () => {
   assert.equal(canonicalUrl('/create/palette'), 'https://uil4b.com/create/palette')
@@ -38,4 +51,23 @@ test('isSoonRoute is false for shipped Create tools and non-Create routes', () =
   assert.equal(isSoonRoute('/settings'), false)
   assert.equal(isSoonRoute('/plans'), false)
   assert.equal(isSoonRoute('/'), false)
+})
+
+test('hidden tools are noindex while listed tools remain indexable', () => {
+  assert.equal(robotsFor('/create/auto-builder'), 'noindex,follow')
+  assert.equal(robotsFor('/create/palette'), 'index,follow')
+})
+
+test('robots follows the hidden flag for other tools too', () => {
+  const { tool } = resolveTool('/create/palette')
+  const previous = tool.hidden
+  try {
+    tool.hidden = true
+    assert.equal(robotsFor(tool.route), 'noindex,follow')
+    tool.hidden = false
+    assert.equal(robotsFor(tool.route), 'index,follow')
+  } finally {
+    if (previous === undefined) delete tool.hidden
+    else tool.hidden = previous
+  }
 })

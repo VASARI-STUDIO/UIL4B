@@ -6,7 +6,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { TAG_CATEGORIES } from '../data/promptCategories'
-import { getPrompts, setPromptsStore, getSavedIds, markStoredSave, readPromptLibrary, parseTags, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
+import { getPrompts, setPromptsStore, getSavedIds, removeStoredPrompt, readPromptLibrary, parseTags, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
 import { onAccountApplied } from '../utils/accountEvents'
 import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import { LockedPromptCard, LockedTeaseCta } from '../components/library/LockedTease'
@@ -128,16 +128,12 @@ export default function PromptLibrary({ onCopy, toast }) {
 
   const remove = useCallback((e, id) => {
     e.stopPropagation()
-    const current = getPrompts()
-    const gone = current.find(p => p.id === id)
-    const updated = current.filter(p => p.id !== id)
-    setPromptsStore(updated)
-    setPrompts(updated)
-    // Deleting the copy a community Save made also clears that Save, so the
-    // community card does not read "Saved" with nothing in My Prompts.
-    if (gone?.sourceId != null && getSavedIds().has(gone.sourceId)) {
-      setSavedIds(markStoredSave(gone.sourceId, false))
-    }
+    // Deleting the copy a community Save made also clears that Save (found by
+    // `sourceId`, or by title and text for an older copy), so the community
+    // card does not read "Saved" and the repair does not add the copy back.
+    const result = removeStoredPrompt(id, { catalog: COMMUNITY_PROMPTS })
+    setPrompts(result.prompts)
+    setSavedIds(result.savedIds)
     setModalPrompt(null)
     toast(t('promptLibrary.promptDeleted'))
   }, [toast, t])

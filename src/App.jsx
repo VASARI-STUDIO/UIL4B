@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, Suspense } from 'react'
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
 import AppFooter from './components/AppFooter'
@@ -10,6 +10,7 @@ import NoticeStack from './components/NoticeStack'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
+import { landOnHash } from './utils/hashLanding'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { purgeStaleUsage } from './utils/usageTracker'
 import { onboardingDestination, knownProfile, resumeOnboardingTarget, resumeDecisionOwed } from './utils/onboardingState'
@@ -71,7 +72,7 @@ const SpectrumMobile = lazy(() => import('./pages/SpectrumMobile'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
-// /principles — the product's design positions, each beside the screen that
+// /learn/principles — the product's design positions, each beside the screen that
 // enforces it. Inside the app shell rather than chromeless: it is a reading
 // surface like a Learn article, not a surface landing that mounts its own nav.
 const DesignPrinciples = lazy(() => import('./pages/DesignPrinciples'))
@@ -241,6 +242,8 @@ function AppInner() {
   const { message, visible, type, action: toastAction, toast, dismiss, hold: holdToast, release: releaseToast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
+  const navigationType = useNavigationType()
+  const lastScrollLocation = useRef(null)
   // WHICH ROUTE IS ON SCREEN, stamped when it COMMITS. React Router navigates
   // in a transition: the address bar names the new route at once while the old
   // page stays painted until the new tree commits (a frame locally, several on a
@@ -293,6 +296,14 @@ function AppInner() {
   }, [authUser, profileLoaded, userProfile, location.pathname, navigate])
 
   useEffect(() => {
+    const previous = lastScrollLocation.current
+    lastScrollLocation.current = location
+    const isHistoryNavigation = navigationType === 'POP' && previous && previous !== location
+    // Router hash navigation needs a fallback when no anchor action handled it.
+    if (previous && previous.pathname === location.pathname) {
+      if (isHistoryNavigation) return
+      return landOnHash(location.hash, getLenis, true)
+    }
     document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     // Chromeless surfaces (the sales page / Create tools / Discover / Learn) scroll the
     // window itself, not `.main`, so reset it too. When Lenis owns the scroll we
@@ -301,6 +312,12 @@ function AppInner() {
     const lenis = getLenis()
     if (lenis) lenis.scrollTo(0, { immediate: true })
     else window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    // Keep the route reset on back/forward; only hash landing skips POP.
+    if (isHistoryNavigation) return
+    return landOnHash(location.hash, getLenis)
+  }, [location, navigationType])
+
+  useEffect(() => {
     trackPageView(location.pathname)
     trackSessionPage(location.pathname)
     // Titles/descriptions for real destinations only. Legacy redirect-only paths
@@ -583,8 +600,8 @@ function AppInner() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/credits" element={<Credits />} />
               <Route path="/sitemap" element={<SiteMap />} />
-              <Route path="/help" element={<HelpCentre />} />
-              <Route path="/principles" element={<DesignPrinciples />} />
+              <Route path="/learn/help" element={<HelpCentre />} />
+              <Route path="/learn/principles" element={<DesignPrinciples />} />
               <Route path="/info" element={<InfoCentre />} />
               <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />

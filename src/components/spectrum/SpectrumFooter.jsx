@@ -59,10 +59,10 @@ const EXPLORE = [
   ['/discover', 'Discover'],
   ['/learn', 'Learn'],
   ['/community', 'Community'],
-  ['/principles', 'Design principles'],
+  ['/learn/principles', 'Design principles'],
   ['/plans', 'Plans'],
   ['/sitemap', 'Sitemap'],
-  ['/help', 'Help centre'],
+  ['/learn/help', 'Help centre'],
   ['/info', 'Info centre'],
   ['/feedback', 'Send feedback'],
 ]

@@ -54,7 +54,7 @@ const TRIGGER = '.pnav-more'
 // /help is what the two tests above this already use, it renders the app header
 // unchanged, and it is 3048px tall against a 900px viewport — so a 700px and a
 // 900px wheel both have somewhere to go, which is what these measure.
-const SCROLL_ROUTE = '/help'
+const SCROLL_ROUTE = '/learn/help'
 
 // The account panel hangs off the top right (measured: x 1134-1394, y 58-451
 // at 1440x900). This point is well clear of it, so a wheel here is aimed at
@@ -85,7 +85,7 @@ test.describe('one engine per scroller', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a visitor who scrolls') })
 
   test('with motion on, Lenis owns the root and the browser is told not to animate it too', async ({ page }) => {
-    await go(page, '/help')
+    await go(page, '/learn/help')
     // Lenis mounts in an effect, so wait for the engine to actually be there
     // before asking what the rules say about it.
     await expect.poll(async () => (await rootScrollState(page)).lenis, {
@@ -113,7 +113,7 @@ test.describe('one engine per scroller', () => {
     // what 04, 27 and 30 already reach for.
     test('Lenis is never instantiated and the root is still not animated', async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' })
-      await go(page, '/help')
+      await go(page, '/learn/help')
 
       // ASSERT THE PRECONDITION. Without this the whole test passes on a
       // browser that never asked for reduced motion at all — `scroll-behavior`

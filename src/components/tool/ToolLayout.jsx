@@ -95,7 +95,7 @@ export function ToolLayout({
 //   inline: false             overflow only — never on the row (the palette's
 //                             Explore / Preview / History / Reset)
 // primary      node — the one primary action; always on the row
-// overflowLabel 'More' by default (the palette says 'Tools')
+// overflowLabel 'More' by default (the palette says 'Extra tools')
 export function ToolToolbar({
   title, titleId, showTitle = true, back, items = [], primary, overflowLabel = 'More', overflowIcon = 'dots-three', className,
 }) {

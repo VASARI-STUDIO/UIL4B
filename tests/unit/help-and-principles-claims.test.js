@@ -20,7 +20,7 @@ import { HELP_ANSWERS, HELP_ROUTES, HELP_STARTS, LIVE_TOOLS, SOON_TOOLS, STARTS_
 import { DESIGN_PRINCIPLES, PRINCIPLE_ROUTES } from '../../src/data/designPrinciples.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
 import { EXPORT_FORMATS, freeFormats, proOnlyFormats, unbuiltFormats } from '../../src/config/exportFormats.js'
-import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { isPrivateRoute, isSoonRoute } from '../../src/utils/routeMeta.js'
@@ -60,19 +60,19 @@ test('every route /help and /principles link to is live, public and not retired'
 })
 
 test('/principles is a real, indexable route with its own title and description', () => {
-  assert.ok(PAGE_TITLES['/principles'], '/principles has no title, so it would ship the homepage title')
-  assert.ok(PAGE_DESCRIPTIONS['/principles'], '/principles has no description')
-  assert.ok(!isSoonRoute('/principles'))
-  assert.ok(!isPrivateRoute('/principles'))
+  assert.ok(PAGE_TITLES['/learn/principles'], '/principles has no title, so it would ship the homepage title')
+  assert.ok(PAGE_DESCRIPTIONS['/learn/principles'], '/principles has no description')
+  assert.ok(!isSoonRoute('/learn/principles'))
+  assert.ok(!isPrivateRoute('/learn/principles'))
   // The title is what a browser tab, a bookmark and a share card carry. The old
   // /help title said "Help Centre" for a page that is no longer a centre.
-  assert.match(PAGE_TITLES['/help'], /Getting Started/, '/help still advertises the retired page name')
+  assert.match(PAGE_TITLES['/learn/help'], /Getting Started/, '/help still advertises the retired page name')
 })
 
 /* ── the counts, against the registry that decides them ──────────────────── */
 
 test('the tool counts on /help partition the registry exactly', () => {
-  const all = CREATE_GROUPS.flatMap((g) => g.tools)
+  const all = CREATE_GROUPS.flatMap((g) => g.tools.filter(isListedTool))
   assert.equal(
     LIVE_TOOLS.length + SOON_TOOLS.length, all.length,
     'a tool is either counted twice or dropped between the two figures /help prints',
@@ -84,7 +84,7 @@ test('the tool counts on /help partition the registry exactly', () => {
   for (const group of CREATE_GROUPS) {
     for (const tool of group.tools) {
       const live = LIVE_TOOLS.includes(tool)
-      assert.equal(live, !group.soon && !tool.soon, `${tool.route} is counted on the wrong side`)
+      assert.equal(live, isListedTool(tool) && !group.soon && !tool.soon, `${tool.route} is counted on the wrong side`)
     }
   }
 })

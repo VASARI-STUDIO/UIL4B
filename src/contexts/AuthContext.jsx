@@ -31,6 +31,7 @@ import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/fireb
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
 import { needsEmailVerification } from '../utils/emailVerification'
+import { createAccountRetry } from '../utils/accountRetry'
 
 const AuthContext = createContext()
 const PROFILE_CACHE_KEY = 'vs-profile-cache'
@@ -190,7 +191,11 @@ export function AuthProvider({ children }) {
     // nothing could ever detach.
     let cancelled = false
     let unsub = null
+    // The account-read retry for the current session. Every session change
+    // (sign-out, user switch) and unmount cancels it before anything else.
+    let accountRetry = null
     const onAuthUser = (fbUser) => {
+      if (accountRetry) { accountRetry.cancel(); accountRetry = null }
       const authEpoch = ++authEpochRef.current
       setProfileLoaded(false)
       if (fbUser) {
@@ -221,16 +226,17 @@ export function AuthProvider({ children }) {
         // on a slow or failing Firestore read. Hydrate the profile in the
         // background and merge it in once it arrives.
         setLoading(false)
+        // Resolves true when there is nothing left to retry and false when the
+        // account has not answered yet (see utils/accountRetry).
         const hydrate = () => loadProfileFromFirestore(fbUser.uid).then((read) => {
-          if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return
+          if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return true
           // profileRef rather than `initial`: a retry must keep edits made
           // while the read was waiting.
           const plan = planProfileRead(read, profileRef.current || initial, Date.now())
           if (plan.action === 'wait') {
-            // No answer from the account. Keep the cached/initial profile, write
-            // nothing, and read again once the browser is back online.
-            window.addEventListener('online', hydrate, { once: true })
-            return
+            // No answer from the account. Keep the cached/initial profile and
+            // write nothing; the retry reads again.
+            return false
           }
           if (plan.action === 'merge') {
             const fsProfile = read.data
@@ -261,8 +267,10 @@ export function AuthProvider({ children }) {
             })
           }
           setProfileLoaded(true)
-        }).catch(() => { /* keep cached/initial profile; completion stays unknown */ })
-        hydrate()
+          return true
+        }).catch(() => false /* keep cached/initial profile; completion stays unknown */)
+        accountRetry = createAccountRetry({ load: hydrate })
+        accountRetry.start()
       } else {
         setFirebaseUser(null)
         setEmailVerified(false)
@@ -283,7 +291,11 @@ export function AuthProvider({ children }) {
       // is what stops that answer being written down as the truth.
       if (!cancelled) setLoading(false)
     })
-    return () => { cancelled = true; if (unsub) unsub() }
+    return () => {
+      cancelled = true
+      if (accountRetry) { accountRetry.cancel(); accountRetry = null }
+      if (unsub) unsub()
+    }
   }, [])
 
   const user = firebaseUser ? { email: firebaseUser.email, uid: firebaseUser.uid } : null

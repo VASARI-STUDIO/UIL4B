@@ -9,7 +9,7 @@ import {
   SYNC_DOCS, ACCOUNT_KEY_NAMES, LEGACY_STAMP_KEY, keySpec,
   readMeta, writeMeta, readLocal, detectLocalChanges, pendingKeys,
   reconcile, buildDoc, docsForKeys, applyToStorage, releaseCache, clearMirrors,
-  sameValue,
+  sameValue, repairAfterSettle,
 } from '../utils/accountSync'
 import { announceApplied, RESET_EVENT } from '../utils/accountEvents'
 
@@ -170,6 +170,12 @@ export function useFirestoreSync(uid) {
       if (written.length) announceApplied(written)
       if (result.mode === 'switch') announceApplied(['vs-onboarded'])
       if (result.push) pushRef.current?.()
+      // The prompt library and its saved ids merge separately; once the data
+      // document has been applied, add any copy a saved id is missing.
+      repairAfterSettle(remote, ls, {
+        isCurrent: () => !cancelled && uidRef.current === uid,
+        announce: announceApplied,
+      })
     }
 
     const docRef = (fs, id) => fs.doc(fs.db, 'users', uid, 'sync', id)

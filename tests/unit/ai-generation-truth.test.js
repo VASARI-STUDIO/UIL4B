@@ -574,11 +574,12 @@ test('the failover is shared with the prompt tool, so it is counted and alerted 
     'the page stores the provider but never renders it — the same silence one step later')
 })
 
-test('the page is MOUNTED, on the route the tool tree advertises', () => {
+test('the hidden page remains mounted on its direct route', () => {
   // The lesson this repository paid for with /create/color: a flag said a tool
   // was live while the route rendered a landing page. A config test that never
   // checks the mount is how that shipped.
-  const tool = createTools().find((t) => t.id === 'auto-builder')
+  assert.ok(!createTools().some((t) => t.id === 'auto-builder'))
+  const tool = createTools({ includeHidden: true }).find((t) => t.id === 'auto-builder')
   assert.ok(tool, 'the brand starter is no longer in the tool tree')
   assert.equal(tool.soon, false, 'the tool is Soon again — the route renders the workshop state')
   assert.equal(tool.beta, true, 'the beta flag is gone, so the badge silently stops rendering')
@@ -662,36 +663,14 @@ test('a generation requires a session and passes a REAL token', () => {
 
 // ── 6. what /plans promises ──────────────────────────────────────────────────
 
-test('/plans derives the allowance instead of typing it', () => {
-  assert.match(PLANS, /import \{[^}]*allowanceSentence[^}]*\} from '\.\.\/config\/aiGeneration'/,
-    'Pricing.jsx no longer imports the allowance, so its figure is prose again')
+test('/plans omits the hidden Brand Starter allowance row', () => {
   const code = stripJs(PLANS)
-  assert.match(code, /allowanceSentence\('free'\)/, 'the free row does not derive its figure')
-  assert.match(code, /allowanceSentence\('pro'\)/, 'the Pro row does not derive its figure')
-  assert.match(code, /Brand Starter/, 'the plans table does not mention the feature at all')
-  // The beta status is disclosed where the money is, not only on the tool.
-  assert.match(code, /beta-badge/, '/plans sells the Brand Starter without disclosing that it is beta')
+  assert.doesNotMatch(code, /Brand Starter|allowanceSentence|BRAND_STARTER_BETA/)
 })
 
-test('/plans does not hard-code either number', () => {
-  const code = stripJs(PLANS)
-  // Scoped to the two rows rather than the whole file, because the page
-  // legitimately prints other digits.
-  for (const row of code.split('\n').filter((l) => l.includes('Brand Starter'))) {
-    assert.ok(!new RegExp(`\\b${SERVER_PRO}\\b`).test(row),
-      `a Brand Starter row types the literal ${SERVER_PRO}: ${row.trim()}`)
-    assert.ok(!/once per account|a month/.test(row),
-      `a Brand Starter row types the period instead of deriving it: ${row.trim()}`)
-  }
-})
-
-test('the tool prints the same sentence /plans prints', () => {
-  // One function, two surfaces. This is the hop that has broken twice: the page
-  // and the product describing the same capability in two places.
-  assert.match(PAGE_CODE, /allowanceSentence\(planId\)/,
-    'the tool words its own allowance, so it can disagree with the pricing page')
-  assert.match(PAGE_CODE, /exhaustedMessage\(planId, used\)/,
-    'the tool words its own refusal instead of using the shared one')
+test('the tool still derives its allowance and refusal from shared config', () => {
+  assert.match(PAGE_CODE, /allowanceSentence\(planId\)/)
+  assert.match(PAGE_CODE, /exhaustedMessage\(planId, used\)/)
 })
 
 test('the beta label is a word, not a decoration', () => {

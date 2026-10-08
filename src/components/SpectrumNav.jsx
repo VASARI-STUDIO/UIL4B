@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
-import { crossRouteHashClick, landOnHash, normPath, onSalesPage, salesHref } from './spectrum/salesLinks'
+import { crossRouteHashClick, normPath, onSalesPage, salesHref } from './spectrum/salesLinks'
 import { useCloseOnBack } from './spectrum/useCloseOnBack'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { SEARCH_KEY } from '../config/shortcuts'
@@ -142,12 +142,6 @@ export default function SpectrumNav() {
     const t = setTimeout(() => setMenu((m) => (m === 'out' ? 'closed' : m)), reducedMotion ? 0 : MENU_EXIT_MS)
     return () => clearTimeout(t)
   }, [menu, reducedMotion])
-
-  // A section link followed from ANOTHER screen (`/mobile` → `/home#bench`)
-  // arrives here on a freshly mounted page. Mount-only on purpose: a same-page
-  // hash click never remounts the nav, so this never fights Lenis's own smooth
-  // anchor scroll. See salesLinks.js for the Lenis limit it has to reset.
-  useEffect(() => landOnHash(), [])
 
   // Hide-on-scroll. Listener only — no state is set synchronously in the effect
   // body, which is the rule the rest of this codebase's nav follows.

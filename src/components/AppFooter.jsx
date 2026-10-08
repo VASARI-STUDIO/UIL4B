@@ -48,7 +48,7 @@ const FOOTER_GROUPS = [
       // to every tool, and two clicks by way of a sitemap page is a poor way to
       // meet either. Revert by deleting this row and the /info row in Support.
       ['/community', 'Community'],
-      ['/principles', 'Design principles'],
+      ['/learn/principles', 'Design principles'],
       ['/plans', 'Plans'],
       ['/sitemap', 'Sitemap'],
     ],
@@ -56,7 +56,7 @@ const FOOTER_GROUPS = [
   {
     label: 'Support',
     links: [
-      ['/help', 'Help centre'],
+      ['/learn/help', 'Help centre'],
       ['/info', 'Info centre'],
       ['/feedback', 'Send feedback'],
       ['/privacy', 'Privacy'],

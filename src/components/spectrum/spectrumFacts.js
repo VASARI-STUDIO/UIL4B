@@ -69,16 +69,8 @@ const ALL_TOOLS = createTools()
 
 // LIVE, AND NOT BETA.
 //
-// The design says "Thirteen tools" twice and lists exactly thirteen routes, and
-// the thirteen it lists are the live tools MINUS Brand Starter, which
-// toolTree.js marks `beta: true`. That is the honest reading and it is the one
-// kept: a beta tool is disclosed as beta wherever it is named (Plans.jsx does
-// the same), so counting it into a flat "thirteen tools" headline would make the
-// headline quietly wrong the moment a reader opened it.
-//
-// COUNTED, NOT TYPED. Ship the UI Component Builder and this page says fifteen
-// on the next build with no edit here — which is the only reason a derived count
-// is worth the indirection.
+// Count listed, live, non-beta tools. Hidden tools and beta output are
+// excluded from the total; shipping a non-beta tool updates it automatically.
 export const LIVE_TOOLS = ALL_TOOLS.filter((t) => !t.soon && !t.beta)
 export const TOOL_COUNT = LIVE_TOOLS.length
 
@@ -115,7 +107,7 @@ export const BENCH = CREATE_GROUPS
     label: group.label,
     glyph: group.id,
     to: categoryDestination(group.id),
-    tools: group.tools.filter((t) => !t.soon),
+    tools: group.tools.filter((t) => !t.soon && !t.hidden),
   }))
   .filter((panel) => panel.tools.length > 0)
   .map((panel, i) => ({ ...panel, no: String(i + 1).padStart(2, '0') }))

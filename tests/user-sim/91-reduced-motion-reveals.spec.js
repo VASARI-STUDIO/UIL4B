@@ -34,7 +34,7 @@ const PERSONA = 'someone who has turned animation off at the OS level'
 
 // Every surface that runs useReveal. The homepage is included deliberately: it
 // uses a different mechanism and must keep passing for a different reason.
-const ROUTES = ['/learn', '/discover', '/plans', '/create/color', '/help', '/principles', '/']
+const ROUTES = ['/learn', '/discover', '/plans', '/create/color', '/learn/help', '/learn/principles', '/']
 
 test.describe('with reduced motion, nothing waits for a scroll', () => {
   for (const route of ROUTES) {

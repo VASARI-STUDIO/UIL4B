@@ -14,7 +14,7 @@ import { openPaletteTools } from './palette-helpers.js'
  * 961px, and showed full words in the collapsed cluster. The palette's toolbar
  * is now the drawn one (D:947-1015) on the shared ToolToolbar: its buttons
  * carry their words at rest, collapse to icons below 768px, and what does not
- * fit goes to the Tools overflow rather than into a label animation. What those
+ * fit goes to the Extra tools overflow rather than into a label animation. What those
  * tests protected — a single row, nothing clipped, every action reachable by
  * name — is held for every tool by 100-tool-toolbar-one-row.spec.js, and "no
  * blank chip on the row" by 14-palette-slider-toolbar-gradient-stops.spec.js.

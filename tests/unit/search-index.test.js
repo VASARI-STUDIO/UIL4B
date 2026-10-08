@@ -285,7 +285,7 @@ test('search offers no row that lands on a section hub with no page of its own',
   }
   assert.ok(!offered.some((e) => e.id === 'documentation'), 'the Documentation category is offered')
   // POSITIVE CONTROL: the filter removes rows rather than the whole list.
-  assert.ok(offered.some((e) => e.path === '/principles'), 'Design Principles is no longer findable')
+  assert.ok(offered.some((e) => e.path === '/learn/principles'), 'Design Principles is no longer findable')
 })
 
 test('a row is never badged with a category that is not a page', () => {

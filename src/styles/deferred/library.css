@@ -1313,6 +1313,11 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   min-height:44px;padding:0 18px;border-radius:var(--radius-pill);
   background:var(--card);border:1px solid color-mix(in srgb,var(--t0) 10%,transparent);
 }
+/* The rule above is (0,3,0) and comes after the generic focus ring near the top
+   of this file, so it covered that ring's accent border and left only the wash.
+   With the focus state added (0,4,0), the focused search keeps the accent
+   border here too. */
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-search:focus-within{border-color:var(--accent)}
 /* The All/Curated/Brand segment (line 232): a 5% track, 3px in, the chosen
    segment a 9% ink wash in full ink — not the solid ink chip the icon filters
    use, which is a different control in the file. */

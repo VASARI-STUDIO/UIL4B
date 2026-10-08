@@ -101,7 +101,7 @@ function AggregateSection() {
 }
 
 /* Named because src/main.jsx mounts <Analytics /> from @vercel/analytics
-   on every route. This page said nothing about it, and /help once
+   on every route. This page said nothing about it, and /learn/help once
    claimed "no third-party analytics trackers" while it ran. The
    sentence states what Vercel's own privacy page states
    (vercel.com/docs/analytics/privacy-policy, read 2026-09-08) and

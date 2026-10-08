@@ -120,7 +120,7 @@ test.describe('public UI quality release', () => {
   // from the header's Upgrade pill.
   test('reading pages have exactly one footer landmark, app pages none, and /plans stays reachable', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/learn', '/privacy', '/help']) {
+    for (const route of ['/', '/learn', '/privacy', '/learn/help']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
@@ -376,7 +376,7 @@ test.describe('public UI quality release', () => {
     await expect(seed).toHaveText('#FF0000')
     await expect(page.getByRole('button', { name: 'Unlock Primary' })).toBeVisible()
 
-    await expect(page.getByRole('button', { name: 'Save current' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Save or share' })).toBeVisible()
   })
 
   test('community records are scrubbed and unsafe external URLs never become links', async ({ page }) => {

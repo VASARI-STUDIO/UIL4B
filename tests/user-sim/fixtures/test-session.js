@@ -205,10 +205,17 @@ function createFakeAuth(d) {
       auth.notify()
     },
   }
-  auth.currentUser = buildUser(d)
+  // `lateSignIn` starts the page signed out; `signInNow()` (reachable from a
+  // spec as window.__UIL4B_TEST_AUTH__.signInNow) completes the sign-in without
+  // a reload, which is the one thing a form cannot do against this double.
+  auth.currentUser = d.lateSignIn ? null : buildUser(d)
+  auth.signInNow = () => {
+    auth.currentUser = buildUser(d)
+    auth.notify()
+  }
   // What the auth server holds, as distinct from the signed-in User object,
   // and the links it would have emailed. See firebase-auth.js.
-  auth.account = { emailVerified: auth.currentUser.emailVerified }
+  auth.account = { emailVerified: d.emailVerified !== false }
   auth.mail = []
   return auth
 }
@@ -365,5 +372,5 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, signInNow: fakeAuth.signInNow } } catch { /* no window */ }
 }

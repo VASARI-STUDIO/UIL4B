@@ -58,6 +58,7 @@ import { pathToFileURL } from 'node:url'
 import { SITE_ORIGIN } from '../../src/utils/routeMeta.js'
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 import { advertisedRoutes } from '../../scripts/sync-sitemap.mjs'
+import { resolveTool } from '../../src/data/toolTree.js'
 
 const REPO = process.cwd()
 const DIST = path.join(REPO, 'dist')
@@ -184,10 +185,11 @@ test('canonical, og:url, og:image and twitter:image are on the apex in every she
       checked += 1
     }
   }
-  // Three always-present tags per document, + a canonical on all but the 404.
-  // Derived from the document count for the reason recorded above.
-  const total = shippedDocuments().length
-  assert.equal(checked, total * 3 + (total - 1), 'fewer tags were read than the shells contain')
+  // Three always-present tags per document; the 404 and hidden tools omit canonicals.
+  const docs = shippedDocuments()
+  const total = docs.length
+  const hidden = docs.filter(({ route }) => resolveTool(route).tool?.hidden).length
+  assert.equal(checked, total * 3 + (total - 1 - hidden), 'fewer tags were read than the shells contain')
 })
 
 test('every URL in the shipped JSON-LD is on the apex', { skip }, () => {

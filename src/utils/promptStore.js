@@ -108,13 +108,89 @@ export function pruneUnsavedCopies(prompts, ledger) {
   return next.length === list.length ? list : next
 }
 
-/** The library and saved set as stored, with stale copies pruned (and the prune written). */
-export function readPromptLibrary(storage) {
+/**
+ * The saved ids that have no copy in the library, each with its community
+ * prompt from `catalog` (null when the catalog does not hold it or is not
+ * given). With a catalog a copy is found the way saving finds it, by `sourceId`
+ * or, for an older copy, by identical title and text; without one only by
+ * `sourceId`. Pure.
+ */
+export function savedIdsWithoutCopy(prompts, savedIds, catalog) {
+  const list = Array.isArray(prompts) ? prompts : []
+  const bySource = new Map((Array.isArray(catalog) ? catalog : []).map((cp) => [String(cp.id), cp]))
+  const out = []
+  for (const id of savedIds || []) {
+    const source = bySource.get(String(id)) || null
+    const held = source
+      ? libraryCopyIndex(list, source) !== -1
+      : list.some((p) => p && p.sourceId != null && String(p.sourceId) === String(id))
+    if (!held) out.push({ id, source })
+  }
+  return out
+}
+
+// What a read shows for a saved id whose copy is missing: the community prompt
+// itself, flagged `derived` and never stored.
+function derivedCopy(cp) {
+  return { id: `saved:${cp.id}`, derived: true, sourceId: cp.id, title: cp.title, text: cp.text, tags: cp.tags, img: cp.img || '', date: '' }
+}
+
+/**
+ * The library and saved set as stored, with stale copies pruned (and the prune
+ * written).
+ *
+ * A saved id with no library copy never writes one here: this read cannot tell
+ * "never had a copy" from "the library has not synced in yet", and a write on
+ * a read would overwrite one that is still arriving. Instead, when `catalog`
+ * (the community prompts) is given, the id shows as a `derived` entry built
+ * from the community prompt; without it, or when the catalog does not hold the
+ * id, it is left out. `missing` lists those ids. The copy itself is added by
+ * `repairMissingCopies`, after a sync has settled.
+ */
+export function readPromptLibrary(storage, { catalog } = {}) {
   const ledger = getSaveLedger(storage)
   const stored = getPrompts(storage)
   const prompts = pruneUnsavedCopies(stored, ledger)
   if (prompts !== stored) write(storage, PROMPTS_KEY, prompts)
-  return { prompts, savedIds: savedIdsOf(ledger) }
+  const savedIds = savedIdsOf(ledger)
+  const gaps = savedIdsWithoutCopy(prompts, savedIds, catalog)
+  const derived = gaps.filter((g) => g.source).map((g) => derivedCopy(g.source))
+  return {
+    prompts: derived.length ? [...prompts, ...derived] : prompts,
+    savedIds,
+    missing: gaps.map((g) => g.id),
+  }
+}
+
+/**
+ * Add a library copy for each saved id that has none, from `catalog`. Meant to
+ * run once a sync has settled, not on a read. It only ever adds: an existing
+ * entry, including a copy the person edited, is never touched, and an id the
+ * catalog does not hold is left alone (it may be newer than this build). The
+ * library is read fresh and written once, and only when something was added, so
+ * a second run changes nothing. The write is an ordinary edit: it is noticed
+ * and synced up like any other.
+ *
+ * @returns {Array} the copies added (empty when none)
+ */
+export function repairMissingCopies({ storage, catalog, now = Date.now() } = {}) {
+  // A stored library that will not parse is left as it is, not replaced.
+  const raw = store(storage)?.getItem(PROMPTS_KEY)
+  if (raw != null) {
+    try { if (!Array.isArray(JSON.parse(raw))) return [] } catch { return [] }
+  }
+  const list = getPrompts(storage)
+  const gaps = savedIdsWithoutCopy(list, getSavedIds(storage), catalog).filter((g) => g.source)
+  if (!gaps.length) return []
+  let next = list
+  const added = []
+  for (const { source } of gaps) {
+    const copy = newCopy(source, next, now)
+    added.push(copy)
+    next = [copy, ...next]
+  }
+  write(storage, PROMPTS_KEY, next)
+  return added
 }
 
 // ── Saving a community prompt ────────────────────────────────────────────────
@@ -185,6 +261,38 @@ export function toggleCommunitySave({ prompts, savedIds }, cp, now = Date.now())
     undo: { id: cp.id, copy, index: at },
     edited: isCopyEdited(copy, cp),
   }
+}
+
+/**
+ * Delete one library entry by id, against storage, and clear the Save it came
+ * from so the repair never adds it back. The entry's source is its `sourceId`,
+ * or, for a copy saved before `sourceId` existed, each catalog prompt with the
+ * same title and text. Each source that is saved is unsaved (stamped `now`,
+ * synced like any unsave). Reads both keys fresh.
+ *
+ * A copy the person edited before `sourceId` existed matches nothing, and a
+ * saved id left behind by an earlier delete cannot be told apart from one whose
+ * copy has not synced in yet; neither is touched here.
+ *
+ * @returns {{ prompts: Array, savedIds: Set, removed: object|null }}
+ */
+export function removeStoredPrompt(id, { storage, catalog, now = Date.now() } = {}) {
+  const current = getPrompts(storage)
+  const removed = current.find((p) => p && p.id === id) || null
+  const prompts = current.filter((p) => !p || p.id !== id)
+  setPromptsStore(prompts, storage)
+  let savedIds = getSavedIds(storage)
+  if (removed) {
+    const sources = removed.sourceId != null
+      ? [removed.sourceId]
+      : (Array.isArray(catalog) ? catalog : [])
+        .filter((cp) => cp && cp.title === removed.title && cp.text === removed.text)
+        .map((cp) => cp.id)
+    for (const sourceId of sources) {
+      if (savedIds.has(sourceId)) savedIds = markStoredSave(sourceId, false, { storage, now })
+    }
+  }
+  return { prompts, savedIds, removed }
 }
 
 /** Put back what an unsave removed. A copy already present is not duplicated. */

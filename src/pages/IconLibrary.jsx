@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, memo, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -451,14 +451,30 @@ async function loadGlyphBatch(pack, names) {
  * body is Iconify's own markup for the icon; wrapping it in an <svg> root with
  * the right viewBox is all that turns it into a standalone file.
  */
+// 'pack:name' → composed data URI. A body never changes once stored, so the
+// encoded URI is built once rather than on every grid render.
+// Bounded LRU: at most GLYPH_URI_MAX entries, least recently used dropped first.
+const GLYPH_URI_MAX = 3000
+const GLYPH_URI = new Map()
 function glyphDataUri(pack, name) {
   const key = svgKey(pack, name)
+  const hit = GLYPH_URI.get(key)
+  if (hit) {
+    GLYPH_URI.delete(key)
+    GLYPH_URI.set(key, hit)
+    return hit
+  }
   const body = GLYPH_BODY.get(key)
   if (!body) return ''
   const box = GLYPH_BOX.get(key) || { w: 24, h: 24 }
-  return svgToDataUri(
+  const uri = svgToDataUri(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.w} ${box.h}" width="${box.w}" height="${box.h}">${body}</svg>`
   )
+  GLYPH_URI.set(key, uri)
+  while (GLYPH_URI.size > GLYPH_URI_MAX) {
+    GLYPH_URI.delete(GLYPH_URI.keys().next().value)
+  }
+  return uri
 }
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
@@ -603,6 +619,99 @@ function BrandGlyph({ pack, name, src }) {
     </span>
   )
 }
+
+// ── Grid cell ────────────────────────────────────────────────────────────────
+
+// The pack a cell names under its label; see the note at `renderGrid`.
+const packOf = (icon) => (icon.logo ? 'logo.dev' : (icon.custom ? null : icon.pack || null))
+
+// Hover warm-up waits for the pointer to rest. Scrolling drags every cell it
+// passes under the pointer through mouseenter, so warming on enter queued one
+// markup request per cell crossed. One shared timer means only the cell the
+// pointer settles on is fetched. Focus still warms at once (see IconCell).
+const WARM_DELAY_MS = 150
+let warmTimer = 0
+const warmSoon = (icon) => {
+  clearTimeout(warmTimer)
+  warmTimer = setTimeout(() => prefetchIconSvg(icon), WARM_DELAY_MS)
+}
+const warmCancel = () => clearTimeout(warmTimer)
+
+// One glyph renderer for custom (saved), logo, CDN and embedded icons.
+// `src` is the batched CDN data URI, passed in so a cell re-renders only when
+// its own markup lands.
+function cellGlyph(icon, src, onGlyphError) {
+  if (icon.custom) {
+    const img = <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
+    return icon.colored ? <span className="ig-chip">{img}</span> : img
+  }
+  if (icon.logo) {
+    // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
+    // plain light chip always gives enough separation from the card surface.
+    return (
+      <span className="ig-chip">
+        <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
+      </span>
+    )
+  }
+  if (icon.cdn) {
+    if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} />
+    // The batched body, composed into a data: URI. Empty until its tranche
+    // lands, which is a cell that has not painted yet rather than a cell that
+    // failed — so NO per-icon URL fallback here. Falling back would put one
+    // request per cell back on the first paint, and the batch's own refusal is
+    // already handled where it can be read.
+    if (!src) return <span className="ig-glyph-wait" aria-hidden="true" />
+    return <img src={src} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} onError={onGlyphError} />
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} aria-hidden="true">
+      <path d={icon.d} />
+    </svg>
+  )
+}
+
+// Memoised so a grid change re-renders only the cells it touches. Appending a
+// page, a tranche of markup landing or the customizer opening used to re-run
+// every mounted cell; every prop here is a primitive, a stable callback or the
+// icon object itself, which the list keeps by identity.
+//
+// `ghost` (a height in px) is the windowed form of a cell far above the
+// viewport: the same focusable element at its measured height, holding only its
+// name. It stays the same element so focus and find-in-page can still land on
+// it, and scrolling it back into view restores the glyph in place.
+const IconCell = memo(function IconCell({ icon, src, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
+  const pack = showPack ? packOf(icon) : null
+  return (
+    <div
+      className={picked ? 'ic is-picked' : 'ic'}
+      style={ghost ? { height: ghost } : undefined}
+      role="button"
+      tabIndex={0}
+      aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
+      onClick={() => onPick(icon)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(icon) } }}
+      onMouseEnter={() => onWarm(icon, false)}
+      onMouseLeave={warmCancel}
+      onFocus={() => onWarm(icon, true)}
+    >
+      {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError)}</Fragment>}
+      <span key="n">{icon.name}</span>
+      {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
+    </div>
+  )
+})
+
+// Windowing for long grids. Cells scrolled more than this far above the
+// viewport drop their glyph and keep their measured height (see IconCell), so
+// the DOM stops growing with the list while the scroll position and row heights stay
+// exactly where they were. Only rows that have already been laid out are ever
+// swapped, which is what keeps the swap from shifting anything on screen.
+const WINDOW_OVERSCAN_PX = 800
+// Swap in steps of this many cells so a fast scroll commits a few times a
+// second rather than once per row. 24 divides into every column count the
+// grid uses on a phone (3, 4) and keeps a step to a few rows on desktop.
+const GHOST_STEP = 24
 
 // ── Pure helpers (module scope — reused by the customizer + browse fns) ───────
 
@@ -2734,7 +2843,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       const wanted = new Map()
       // The Recent rail is drawn from a separate list that is never part of
       // `icons`, so it has to be named here or its glyphs would wait forever.
-      for (const icon of [...icons.slice(0, visible), ...recents]) {
+      // One page AHEAD of what is drawn, so the markup for the next page is
+      // usually cached before infinite scroll appends it and each new cell
+      // renders once, with its glyph, instead of once empty and again on arrival.
+      for (const icon of [...icons.slice(0, visible + PAGE_SIZE), ...recents]) {
         if (!icon.cdn || icon.custom || icon.logo) continue
         // THE LAST LINE OF DEFENCE, and the only one that is unconditional.
         // Every browse path above already refuses to put a gated pack into
@@ -2877,39 +2989,83 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     navigate('/plans')
   }, [requireLogin, navigate])
 
-  // Shared glyph renderer — one code path for custom (saved), CDN and embedded
-  // icons, reused by the main grid and both My Icons sections.
-  const iconGlyph = (icon) => {
-    if (icon.custom) {
-      const img = <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
-      return icon.colored ? <span className="ig-chip">{img}</span> : img
+  // Stable handlers for IconCell, so its memo holds across renders.
+  // `handleIconClick` closes over most of the page's state; the cell calls it
+  // through a ref that always holds the newest one.
+  const pickRef = useRef(null)
+  useEffect(() => { pickRef.current = handleIconClick })
+  const onPick = useCallback((icon) => pickRef.current?.(icon), [])
+  // The hover prefetch is the customizer's head start, and it is the one
+  // remaining path from a cell to api.iconify.design. A cell for a gated pack
+  // should never be on screen; if one ever is, hovering it must not be what
+  // fetches the markup every other path in this file refused to.
+  const onWarm = useCallback((icon, now) => {
+    if (!canSee(icon.pack)) return
+    if (now) prefetchIconSvg(icon)
+    else warmSoon(icon)
+  }, [canSee])
+
+  // Windowing state for the main grid: cells before `upTo` render as ghosts of
+  // their measured height `h[idx]`, except `keep`, the focused cell, which stays
+  // whole so keyboard focus is never swapped out from under the user. Reset
+  // whenever the list itself is replaced (a new pack, group or query), since
+  // positions then mean different icons.
+  const gridRef = useRef(null)
+  const [win, setWin] = useState({ list: icons, upTo: 0, h: [], keep: -1 })
+  if (win.list !== icons) setWin({ list: icons, upTo: 0, h: [], keep: -1 })
+  const windowed = !isMyIcons && !gated && shown.length > PAGE_SIZE
+  useEffect(() => {
+    const grid = gridRef.current
+    if (!windowed || !grid || win.list !== icons) return
+    let raf = 0
+    let width = grid.clientWidth
+    const update = () => {
+      raf = 0
+      // A new width reflows every row, so every stored height is stale.
+      if (grid.clientWidth !== width) {
+        width = grid.clientWidth
+        if (win.upTo) setWin({ list: icons, upTo: 0, h: [], keep: -1 })
+        return
+      }
+      const kids = grid.children
+      // First cell whose bottom is still inside the overscan above the viewport.
+      let lo = 0
+      let hi = kids.length
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1
+        if (kids[mid].getBoundingClientRect().bottom < -WINDOW_OVERSCAN_PX) lo = mid + 1
+        else hi = mid
+      }
+      const upTo = lo - (lo % GHOST_STEP)
+      // Ghost everything above the window except the focused cell, or keyboard
+      // focus would fall to <body>. (Capping `upTo` at the focused cell instead
+      // left the whole grid whole once cell 0 had been clicked.)
+      const focused = grid.contains(document.activeElement)
+        ? Array.prototype.indexOf.call(kids, document.activeElement.closest('.ig > *'))
+        : -1
+      const keep = focused >= 0 && focused < upTo ? focused : -1
+      if (upTo === win.upTo && keep === win.keep) return
+      if (upTo <= win.upTo) { setWin({ ...win, upTo, keep }); return }
+      // Read every height first, then commit once: one layout, no thrash.
+      const h = win.h.slice()
+      for (let i = win.upTo; i < upTo; i++) h[i] = kids[i].getBoundingClientRect().height
+      setWin({ list: icons, upTo, h, keep })
     }
-    if (icon.logo) {
-      // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
-      // plain light chip always gives enough separation from the card surface.
-      return (
-        <span className="ig-chip">
-          <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
-        </span>
-      )
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(update) }
+    schedule()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    // Focus moving into or out of the ghosted rows changes which cell is kept.
+    grid.addEventListener('focusin', schedule)
+    grid.addEventListener('focusout', schedule)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+      grid.removeEventListener('focusin', schedule)
+      grid.removeEventListener('focusout', schedule)
     }
-    if (icon.cdn) {
-      if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={glyphSrc(icon.pack, icon.name)} />
-      // The batched body, composed into a data: URI. Empty until its tranche
-      // lands, which is a cell that has not painted yet rather than a cell that
-      // failed — so NO per-icon URL fallback here. Falling back would put the
-      // 120 requests this whole change removes straight back on the first paint,
-      // and the batch's own refusal is already handled where it can be read.
-      const src = glyphSrc(icon.pack, icon.name)
-      if (!src) return <span className="ig-glyph-wait" aria-hidden="true" />
-      return <img src={src} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} onError={noteGlyphFailure} />
-    }
-    return (
-      <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} aria-hidden="true">
-        <path d={icon.d} />
-      </svg>
-    )
-  }
+  }, [windowed, win, icons])
 
   // THE PACK LABEL ONLY EARNS ITS LINE WHEN IT DISCRIMINATES.
   // #298 dropped it below 980px; above 980px it was still drawn under EVERY
@@ -2930,23 +3086,28 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // set that actually holds more than one pack, which is where the word tells
   // you something. Which pack is being browsed is already stated by the pack
   // filter in the toolbar above.
-  const packOf = (icon) => (icon.logo ? 'logo.dev' : (icon.custom ? null : icon.pack || null))
-  const renderGrid = (list) => {
-    const showPack = new Set(list.map(packOf).filter(Boolean)).size > 1
-    return list.map((icon, idx) => renderCell(icon, idx, showPack))
+  // `ghosts` is the main grid's windowing state; cells before `ghosts.upTo`
+  // render in their ghost form at their measured height.
+  const renderGrid = (list, ghosts = null) => {
+    let firstPack = null
+    let showPack = false
+    for (const icon of list) {
+      const p = packOf(icon)
+      if (!p) continue
+      if (firstPack === null) firstPack = p
+      else if (p !== firstPack) { showPack = true; break }
+    }
+    const ghostAt = (idx) => (ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0)
+    return list.map((icon, idx) => renderCell(icon, idx, showPack, ghostAt(idx)))
   }
 
-  // The hover prefetch is the customizer's head start, and it is the one
-  // remaining path from a cell to api.iconify.design. A cell for a gated pack
-  // should never be on screen; if one ever is, hovering it must not be what
-  // fetches the markup every other path in this file refused to.
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
   // same identity the customizer's own key is built from below.
   const isPicked = (icon) => !!selected && selected.name === icon.name
     && (selected.pack || null) === (icon.pack || null) && !!selected.custom === !!icon.custom
-  const renderCell = (icon, idx, showPack = false) => (
-    <div
+  const renderCell = (icon, idx, showPack = false, ghost = 0) => (
+    <IconCell
       // THE KEY CARRIES THE POSITION. The built-in set repeats ids across its
       // pages ("flag" is in two of them), and with two pages loaded React met
       // the duplicate and left an orphan cell behind that no later render
@@ -2955,19 +3116,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       // only ever grow at the end (infinite scroll) or are replaced whole (a
       // new pack or query), so a position prefix costs no reconciliation.
       key={`${idx}:${icon.id || icon.key || icon.name || ''}`}
-      className={isPicked(icon) ? 'ic is-picked' : 'ic'}
-      role="button"
-      tabIndex={0}
-      aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
-      onClick={() => handleIconClick(icon)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIconClick(icon) } }}
-      onMouseEnter={() => { if (canSee(icon.pack)) prefetchIconSvg(icon) }}
-      onFocus={() => { if (canSee(icon.pack)) prefetchIconSvg(icon) }}
-    >
-      {iconGlyph(icon)}
-      <span>{icon.name}</span>
-      {showPack && packOf(icon) && <span className="ic-pack">{packOf(icon)}</span>}
-    </div>
+      icon={icon}
+      src={icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
+      showPack={showPack}
+      picked={isPicked(icon)}
+      ghost={ghost}
+      onPick={onPick}
+      onWarm={onWarm}
+      onGlyphError={noteGlyphFailure}
+    />
   )
 
   return (
@@ -3212,7 +3369,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 that failed to fill — the "cell that failed to load" shape this
                 file has been fixed for twice. The wall is the whole answer. */}
             {!gated && (
-              <div className="ig">
+              <div className="ig" ref={gridRef}>
                 {loading && icons.length === 0
                   ? Array.from({ length: 24 }).map((_, i) => (
                     <div key={`skel-${i}`} className="ig-skel" aria-hidden="true">
@@ -3220,7 +3377,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                       <div className="sk ig-skel-label" />
                     </div>
                   ))
-                  : renderGrid(shown)}
+                  : renderGrid(shown, windowed && win.list === icons ? win : null)}
               </div>
             )}
 

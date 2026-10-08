@@ -3,7 +3,7 @@
 // ── Why this module exists ──────────────────────────────────────────────────
 //
 // Every sales surface in this app used to write its own value claim. The hero
-// said one thing, /plans framed it another way, /help opened on a third, and
+// said one thing, /plans framed it another way, /learn/help opened on a third, and
 // public/llms.txt told a machine a fourth. None of them was wrong exactly, but
 // no two agreed, and nothing in the repo could tell you which one the founder
 // had actually approved — so each rewrite of any one of them was a fresh guess.
@@ -118,7 +118,7 @@ export const SURFACE_LINE = Object.freeze({
   // card reads it from there.
   // `plansFraming` is gone: /plans renders the pricing screen's own heading
   // and sub-line, and the landing no longer carries a pricing section.
-  // /help greets somebody who arrived looking for a specific tool, which is
+  // /learn/help greets somebody who arrived looking for a specific tool, which is
   // precisely what `forget-the-app-name` is about.
   helpOpening: 'forget-the-app-name',
   // llms.txt is read by a machine deciding what this product IS.

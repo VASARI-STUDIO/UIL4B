@@ -15,7 +15,7 @@
 // has had the element in view, not on toBeVisible().
 import { test, expect } from './base.js'
 import { expectRendered, go, watch } from './helpers.js'
-import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
 import { contrastRatio, generateTintScale, T_LABELS } from '../../src/utils/colors.js'
@@ -24,8 +24,12 @@ import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 
 /* The two figures /help prints, derived here from the registry itself so the
    page cannot satisfy this by printing its own arithmetic back at us. */
-const LIVE = CREATE_GROUPS.flatMap((g) => (g.soon ? [] : g.tools.filter((t) => !t.soon))).length
-const SOON = CREATE_GROUPS.flatMap((g) => (g.soon ? g.tools : g.tools.filter((t) => t.soon))).length
+const LIVE = CREATE_GROUPS.flatMap((g) => (
+  g.soon ? [] : g.tools.filter((t) => isListedTool(t) && !t.soon)
+)).length
+const SOON = CREATE_GROUPS.flatMap((g) => (
+  g.tools.filter((t) => isListedTool(t) && (g.soon || t.soon))
+)).length
 
 const FREE_FORMATS = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
 const PRO_FORMATS = EXPORT_FORMATS.filter((f) => f.live && f.pro)
@@ -83,8 +87,8 @@ test.describe('Help & Getting Started', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a first-time visitor looking for where to start') })
 
   test('the hero states the main point and counts the tools off the registry', async ({ page }) => {
-    await go(page, '/help')
-    await expectRendered(page, '/help')
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
 
     // POSITIVE CONTROL. Everything below asserts what is on this page; this
     // asserts the page is there at all. Without it a route that rendered
@@ -112,8 +116,8 @@ test.describe('Help & Getting Started', () => {
   })
 
   test('the opening visual paints the ramp the Colour Studio would generate', async ({ page }) => {
-    await go(page, '/help')
-    await expectRendered(page, '/help')
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
     await revealAll(page)
 
     const ramp = generateTintScale(tintConfigFor(DEFAULT_DESIGN))
@@ -141,8 +145,8 @@ test.describe('Help & Getting Started', () => {
   })
 
   test('the revealed content is actually painted, not merely present', async ({ page }) => {
-    await go(page, '/help')
-    await expectRendered(page, '/help')
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
 
     // Before: at least one reveal node is genuinely transparent. This is the
     // control that stops the assertion below passing on a page where the
@@ -157,8 +161,8 @@ test.describe('Help & Getting Started', () => {
   })
 
   test('every destination the page offers is a page a visitor can open', async ({ page }) => {
-    await go(page, '/help')
-    await expectRendered(page, '/help')
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
     await revealAll(page)
 
     const hrefs = await page.locator('.hlp-starts a, .hlp-answers a, .hlp-close a')
@@ -182,8 +186,8 @@ test.describe('Design Principles', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a visitor deciding whether this product has a point of view') })
 
   test('every rule renders with the proof it claims to be beside', async ({ page }) => {
-    await go(page, '/principles')
-    await expectRendered(page, '/principles')
+    await go(page, '/learn/principles')
+    await expectRendered(page, '/learn/principles')
 
     const h1 = page.getByRole('heading', { level: 1 })
     await expect(h1).toBeVisible()
@@ -217,8 +221,8 @@ test.describe('Design Principles', () => {
   })
 
   test('the contrast proof prints the ratio the running stylesheet produces', async ({ page }) => {
-    await go(page, '/principles')
-    await expectRendered(page, '/principles')
+    await go(page, '/learn/principles')
+    await expectRendered(page, '/learn/principles')
     await revealAll(page)
 
     // Read the product's OWN custom properties out of the live document, then
@@ -255,8 +259,8 @@ test.describe('Design Principles', () => {
   })
 
   test('the export and Soon proofs read the same tables the product reads', async ({ page }) => {
-    await go(page, '/principles')
-    await expectRendered(page, '/principles')
+    await go(page, '/learn/principles')
+    await expectRendered(page, '/learn/principles')
     await revealAll(page)
 
     const col = (n) => page.locator('.prn-ex-col').nth(n).locator('li')
@@ -282,8 +286,8 @@ test.describe('Design Principles', () => {
   })
 
   test('every rule links to a screen that opens', async ({ page }) => {
-    await go(page, '/principles')
-    await expectRendered(page, '/principles')
+    await go(page, '/learn/principles')
+    await expectRendered(page, '/learn/principles')
     await revealAll(page)
 
     const hrefs = await page.locator('.prn-go, .prn-hero a')
@@ -317,7 +321,7 @@ for (const theme of ['light', 'dark']) {
         try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
       }, theme)
 
-      for (const route of ['/help', '/principles']) {
+      for (const route of ['/learn/help', '/learn/principles']) {
         await go(page, route)
         await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
         await expectRendered(page, route)
@@ -338,7 +342,7 @@ for (const theme of ['light', 'dark']) {
         // The ramp is eleven columns of type. Below the desktop band it is a
         // scroller inside its own box — which means the BOX must not overflow
         // even though its content does.
-        if (route === '/help') {
+        if (route === '/learn/help') {
           const wide = await page.locator('.hlp-run').evaluate((el) => ({
             box: el.getBoundingClientRect().width,
             parent: el.parentElement.getBoundingClientRect().width,
@@ -358,8 +362,8 @@ test.describe('/help opens on what the founder said', () => {
     // here and looked for in the RENDERED lede, so the wiring is what is under
     // test, not the helper.
     watch(page, 'a first-time visitor looking for where to start')
-    await go(page, '/help')
-    await expectRendered(page, '/help')
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
 
     const lede = page.locator('.hlp-hero .hlp-lede')
     await expect(lede).toHaveCount(1)

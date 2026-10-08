@@ -207,7 +207,7 @@
 .bkit-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .bkit-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
 .bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
-.bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--btn-radius);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
+.bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--btn-radius);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard)}
 .bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 .bkit-card-title{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:8px}
 .bkit-card-body{font-size:13px;color:var(--t1);line-height:1.6;margin-bottom:16px}
@@ -232,7 +232,21 @@
 .bkit-rail-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .bkit-rail-help{border:0;background:transparent;padding:4px 2px;font-size:12px;color:var(--t2);text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap}
 .bkit-rail-help:hover{color:var(--t0)}
-.bkit-rail-close{flex-shrink:0;width:30px;height:30px;border-radius:var(--btn-radius);border:1px solid var(--border);background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
+.bkit-rail-help:focus-visible,.bkit-rail-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bkit-rail-help-icon{display:none}
+
+/* The closing step: the orientation card's surface with one name field. */
+.bkit-name-form{display:flex;flex-direction:column;gap:8px}
+.bkit-name-label{font-size:12px;font-weight:600;color:var(--t1)}
+.bkit-name-row{display:flex;align-items:center;gap:8px}
+.bkit-name-input{flex:1;min-width:0;height:40px;padding:0 12px;font-family:var(--font);font-size:14px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);outline:none;transition:border-color var(--t),box-shadow var(--t)}
+.bkit-name-input:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.bkit-name-input[aria-invalid="true"]{border-color:var(--err-strong)}
+.bkit-name-save{flex-shrink:0;white-space:nowrap}
+.bkit-name-note{margin:0;font-size:12px;line-height:1.5;color:var(--t2)}
+.bkit-name-error{margin:0;font-size:12px;font-weight:500;line-height:1.5;color:var(--err-strong)}
+.bkit-card--name .uh-save-refusal{margin:0}
+.bkit-rail-close{flex-shrink:0;width:30px;height:30px;border-radius:var(--btn-radius);border:1px solid var(--border);background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard)}
 .bkit-rail-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 
 /* Narrow: the rail stacks, the steps keep their own horizontal scroller rather
@@ -243,8 +257,38 @@
   .bkit-rail-actions{margin-left:auto}
   .bkit-card{bottom:150px}
 }
+/* Phones: the fixed tab bar covers the foot of the viewport, so the rail sits
+   above it and its safe-area inset. A card is fixed rather than sticky here: a
+   sticky card cannot rise above the top of the tool it is mounted in, which on
+   a short screen leaves it over the rail. UIKitGuide sets --bkit-dock-bottom to
+   12px above the rail's top edge; the fallback assumes a one-row rail. */
+@media(max-width:767px){
+  html.has-tabbar .bkit-rail{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 12px)}
+  html.has-tabbar .bkit-card{--bkit-dock:var(--bkit-dock-bottom,calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 142px));position:fixed;left:16px;right:16px;width:auto;max-width:440px;bottom:var(--bkit-dock);max-height:calc(100dvh - var(--bkit-dock) - var(--nav-clear));overflow-y:auto}
+  /* Lifted over an on-screen keyboard: the card fits the visual viewport that
+     UIKitGuide measured, below whatever part of the nav is still in it. */
+  html.has-tabbar .bkit-card.is-lifted{max-height:calc(var(--bkit-vv-h,100dvh) - 12px - max(12px, var(--nav-clear) - var(--bkit-vv-top,0px)))}
+  /* The tab bar (z-index above the card) steps aside while the card is lifted
+     for typing: a keyboard that resizes the page lifts the bar to sit over the
+     card's foot, and Save with it. */
+  html.bkit-typing .pnav-tabs{display:none}
+  /* Touch targets: every rail and card control takes a tap across at least
+     44px each way, while the visible controls keep their compact sizes. The
+     step strip clips what overflows it, so it gets the room in its own padding
+     and gives it back with a negative margin. */
+  .bkit-rail-help,.bkit-rail-close,.bkit-card-close,.bkit-step{position:relative}
+  .bkit-rail-help::after,.bkit-rail-close::after,.bkit-card-close::after{content:"";position:absolute;top:50%;left:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .bkit-steps{padding-block:6px;margin-block:-6px}
+  .bkit-step::after{content:"";position:absolute;top:50%;left:0;right:0;height:max(100%,44px);transform:translateY(-50%)}
+  .bkit-name-input{height:44px}
+}
+/* The help trigger keeps its accessible name and becomes an icon button the
+   size of the close button beside it. */
 @media(max-width:520px){
-  .bkit-rail-help{display:none}
+  .bkit-rail-help{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border);border-radius:var(--btn-radius);text-decoration:none;transition:border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard)}
+  .bkit-rail-help:hover{border-color:var(--bh);background:var(--hvr)}
+  .bkit-rail-help-icon{display:block}
+  .bkit-rail-help-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 }
 html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){

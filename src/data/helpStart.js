@@ -1,4 +1,4 @@
-// Everything /help asserts about the product, in one place, derived from the
+// Everything /learn/help asserts about the product, in one place, derived from the
 // registries that decide it.
 //
 // WHY THIS IS A MODULE AND NOT COPY INSIDE HelpCentre.jsx. The page it replaced
@@ -25,16 +25,16 @@
 // Plain JS, no JSX: the guard test imports this in bare Node.
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans.js'
 import { proOnlyFormats } from '../config/exportFormats.js'
-import { CREATE_GROUPS } from './toolTree.js'
+import { CREATE_GROUPS, isListedTool } from './toolTree.js'
 
 /** Every Create tool a visitor can actually open today. */
 export const LIVE_TOOLS = CREATE_GROUPS.flatMap((group) => (
-  group.soon ? [] : group.tools.filter((tool) => !tool.soon)
+  group.soon ? [] : group.tools.filter((tool) => isListedTool(tool) && !tool.soon)
 ))
 
 /** Every Create tool that is still in the workshop, group-level Soon included. */
 export const SOON_TOOLS = CREATE_GROUPS.flatMap((group) => (
-  group.soon ? group.tools : group.tools.filter((tool) => tool.soon)
+  group.tools.filter((tool) => isListedTool(tool) && (group.soon || tool.soon))
 ))
 
 /**

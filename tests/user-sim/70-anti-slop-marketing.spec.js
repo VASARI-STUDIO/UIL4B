@@ -139,8 +139,8 @@ test.describe('the Help centre', () => {
     // a three-part reassurance in the class he retired, and a sentence the
     // "Do I need an account?" answer below already carries.
     watch(page, PERSONA)
-    await go(page, '/help')
-    await expectRendered(page, '/help')
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
 
     const lede = page.locator('.hlp-hero .hlp-lede')
     await expect(lede).toHaveCount(1)
@@ -192,7 +192,7 @@ test.describe('the Plans page reassurance lines', () => {
 test.describe('the footer', () => {
   // /plans renders the marketing footer and app pages draw no site footer, so
   // the reading pages are where the site footer is checked.
-  for (const route of ['/help']) {
+  for (const route of ['/learn/help']) {
     test(`${route} carries the wordmark and no tagline`, async ({ page }) => {
       // Was: "The operating workspace for building, validating and exporting
       // interface foundations." under the wordmark on every page — a tagline,

@@ -39,6 +39,9 @@ import {
   categoryDestination,
   createRoutes,
   createTools,
+  listedTools,
+  NAV_SECTIONS,
+  resolveTool,
 } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
@@ -267,3 +270,59 @@ test('the footer names Create groups rather than typing their URLs', () => {
 //     carry no typed routes either, and tests/unit/spectrum-truth.test.js reads
 //     every figure and route on that page back to the module that owns it.
 
+
+
+test('Brand Starter is hidden from lists while its direct route stays live', async () => {
+  const route = '/create/auto-builder'
+  const { tool, group } = resolveTool(route)
+  assert.equal(tool.hidden, true)
+  assert.equal(group.soon, false)
+  assert.equal(tool.soon, false)
+  assert.ok(createRoutes().includes(route))
+  assert.ok(!createTools().some((t) => t.route === route))
+  const menu = NAV_SECTIONS.find((s) => s.id === 'create')
+  assert.ok(!menu.columns.flat().flatMap((c) => c.tools).some((t) => t.route === route))
+  const { TOOL_ENTRIES, queryCommandIndex } = await import('../../src/data/toolIndex.js')
+  assert.ok(!TOOL_ENTRIES.some((t) => t.path === route))
+  assert.ok(!queryCommandIndex('Brand Starter', { tools: TOOL_ENTRIES }).tools.some((t) => t.path === route))
+  const { LIVE_TOOLS, SOON_TOOLS } = await import('../../src/data/helpStart.js')
+  assert.ok(![...LIVE_TOOLS, ...SOON_TOOLS].some((t) => t.route === route))
+  const { advertisedRoutes } = await import('../../scripts/sync-sitemap.mjs')
+  const { prerenderRoutes } = await import('../../scripts/route-matrix.mjs')
+  assert.ok(!advertisedRoutes().includes(route))
+  assert.ok(prerenderRoutes().includes(route))
+})
+
+test('SiteMap lists visible tools through the shared data helper', () => {
+  const group = CREATE_GROUPS.find((g) => g.id === 'ai')
+  const tools = listedTools(group)
+  assert.ok(tools.some((t) => t.id === 'alt-text'), 'live tools remain listed')
+  assert.ok(tools.some((t) => t.id === 'ai-prompt'), 'visible Soon tools remain listed')
+  assert.ok(!tools.some((t) => t.hidden), 'SiteMap must omit hidden tools')
+  const source = stripComments(read('src/pages/SiteMap.jsx'))
+  assert.match(source, /\{listedTools\(group\)\.map\(/,
+    'SiteMap must render the filtered list from listedTools')
+})
+
+test('Spectrum bench omits hidden live tools', async () => {
+  const { BENCH } = await import('../../src/components/spectrum/spectrumFacts.js')
+  const tools = BENCH.flatMap((panel) => panel.tools)
+  assert.ok(tools.some((t) => t.id === 'alt-text'), 'the AI bench remains populated')
+  assert.ok(!tools.some((t) => t.hidden), 'Spectrum bench must omit hidden tools')
+})
+
+test('llms tool lists omit hidden tools, including hidden Soon tools', async () => {
+  const { llmsRoutes } = await import('../../scripts/llms-txt.mjs')
+  const group = CREATE_GROUPS.find((g) => g.id === 'ai')
+  const fixture = { id: 'hidden-soon', label: 'Hidden Soon', route: '/create/hidden-soon', hidden: true, soon: true }
+  group.tools.push(fixture)
+  try {
+    const { tools, soon } = llmsRoutes()
+    assert.ok(tools.some((t) => t.route === '/create/alt-text'), 'live tools remain listed')
+    assert.ok(soon.some((t) => t.route === '/create/ai-prompt'), 'visible Soon tools remain listed')
+    assert.ok(!tools.some((t) => t.route === '/create/auto-builder'), 'llms live tools must omit Brand Starter')
+    assert.ok(!soon.some((t) => t.route === fixture.route), 'llms Soon tools must omit hidden tools')
+  } finally {
+    group.tools.splice(group.tools.indexOf(fixture), 1)
+  }
+})
