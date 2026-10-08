@@ -29,12 +29,12 @@ import { CREATE_GROUPS } from './toolTree.js'
 
 /** Every Create tool a visitor can actually open today. */
 export const LIVE_TOOLS = CREATE_GROUPS.flatMap((group) => (
-  group.soon ? [] : group.tools.filter((tool) => !tool.soon)
+  group.soon ? [] : group.tools.filter((tool) => !tool.soon && !tool.hidden)
 ))
 
 /** Every Create tool that is still in the workshop, group-level Soon included. */
 export const SOON_TOOLS = CREATE_GROUPS.flatMap((group) => (
-  group.soon ? group.tools : group.tools.filter((tool) => tool.soon)
+  group.tools.filter((tool) => !tool.hidden && (group.soon || tool.soon))
 ))
 
 /**

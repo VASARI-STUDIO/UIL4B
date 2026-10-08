@@ -1,6 +1,6 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, isListedTool } from '../../src/data/toolTree.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 
@@ -44,7 +44,7 @@ const STATIC_INDEXABLE_ROUTES = [
 const LIVE_CREATE_ROUTES = CREATE_GROUPS.flatMap((group) => (
   // A tool's `views` (tabs with their own route, e.g. /create/icons/groups)
   // are live wherever the tool is.
-  group.soon ? [] : group.tools.filter((tool) => !tool.soon).flatMap((tool) => [tool.route, ...(tool.views || [])])
+  group.soon ? [] : group.tools.filter((tool) => !tool.soon && isListedTool(tool)).flatMap((tool) => [tool.route, ...(tool.views || [])])
 ))
 
 const LIVE_DISCOVER_ROUTES = DISCOVER_GROUPS
@@ -69,10 +69,7 @@ const RETIRED_OR_THIN_ROUTES = [
   '/create/color',
   '/create/box-shadow',
   '/create/component-designer',
-  // '/create/auto-builder' was here while it was a workshop placeholder. It
-  // now mounts Brand Starter (beta) and is `soon: false` in the tool tree, so
-  // EXPECTED_CRAWLER_ROUTES derives it above — the same move '/create/alt-text'
-  // made when it shipped.
+  // Hidden tools retain live routes but are excluded from EXPECTED_CRAWLER_ROUTES.
   '/create/ai-prompt',
   '/create/landing-prompts',
   // '/create/alt-text' was here while the tool was staged. It is live again (founder

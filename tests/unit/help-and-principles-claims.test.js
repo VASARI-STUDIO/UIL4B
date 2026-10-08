@@ -72,7 +72,7 @@ test('/principles is a real, indexable route with its own title and description'
 /* ── the counts, against the registry that decides them ──────────────────── */
 
 test('the tool counts on /help partition the registry exactly', () => {
-  const all = CREATE_GROUPS.flatMap((g) => g.tools)
+  const all = CREATE_GROUPS.flatMap((g) => g.tools.filter((t) => !t.hidden))
   assert.equal(
     LIVE_TOOLS.length + SOON_TOOLS.length, all.length,
     'a tool is either counted twice or dropped between the two figures /help prints',
@@ -84,7 +84,7 @@ test('the tool counts on /help partition the registry exactly', () => {
   for (const group of CREATE_GROUPS) {
     for (const tool of group.tools) {
       const live = LIVE_TOOLS.includes(tool)
-      assert.equal(live, !group.soon && !tool.soon, `${tool.route} is counted on the wrong side`)
+      assert.equal(live, !group.soon && !tool.soon && !tool.hidden, `${tool.route} is counted on the wrong side`)
     }
   }
 })

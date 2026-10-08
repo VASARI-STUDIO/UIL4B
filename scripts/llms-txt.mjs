@@ -136,7 +136,7 @@ export function llmsRoutes() {
 
   // Still in the workshop: every tool the tree marks Soon, group Soon included.
   const soon = CREATE_GROUPS.flatMap((g) => (
-    g.soon ? g.tools : g.tools.filter((t) => t.soon)
+    g.tools.filter((t) => !t.hidden && (g.soon || t.soon))
   )).map((t) => ({ label: t.label, route: t.route }))
 
   return { tools, learn, browse, more, soon }
