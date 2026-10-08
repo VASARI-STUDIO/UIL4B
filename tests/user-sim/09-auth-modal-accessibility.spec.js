@@ -36,7 +36,7 @@ test('dismissing an in-place auth prompt restores its persistent opener', async 
   // forever — gating the menu gated those too. What this test is about is
   // unchanged: dismissing an in-place prompt returns focus to the control that
   // raised it. That control is now the Save button inside the menu.
-  const opener = page.getByRole('button', { name: 'Save current' })
+  const opener = page.getByRole('button', { name: 'Save or share' })
   await expect(opener).toBeVisible()
   await opener.click()
   const save = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
@@ -136,7 +136,7 @@ test.describe('on a phone', () => {
     await go(page, '/palette')
 
     // Same move as above: the opener opens the menu, Save raises the gate.
-    const opener = page.getByRole('button', { name: 'Save current' })
+    const opener = page.getByRole('button', { name: 'Save or share' })
     await opener.waitFor({ state: 'visible' })
     await opener.tap()
     const save = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })

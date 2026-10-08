@@ -376,7 +376,7 @@ test.describe('public UI quality release', () => {
     await expect(seed).toHaveText('#FF0000')
     await expect(page.getByRole('button', { name: 'Unlock Primary' })).toBeVisible()
 
-    await expect(page.getByRole('button', { name: 'Save current' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Save or share' })).toBeVisible()
   })
 
   test('community records are scrubbed and unsafe external URLs never become links', async ({ page }) => {

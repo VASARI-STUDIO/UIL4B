@@ -77,7 +77,7 @@ test.describe('the primary action is reachable on a tablet (A4)', () => {
   test.use({ viewport: TABLET })
 
   // The drawn toolbar is one row that never scrolls: what does
-  // not fit goes to the Tools overflow, lowest priority first. Randomise is
+  // not fit goes to the Extra tools overflow, lowest priority first. Randomise is
   // the page's own action, so at 834px it is on the row, whole, at rest.
   test('Randomise is fully visible on the toolbar row at 834px', async ({ page }) => {
     watch(page, 'a designer opening Palette Builder on an iPad')
@@ -195,15 +195,15 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
   // with Undo and Reset alongside it. Save is the only route from a finished
   // palette to a file, and Undo is how a mis-tap is taken back.
   //
-  // The drawn toolbar keeps them on its one row by priority: Save current is
+  // The drawn toolbar keeps them on its one row by priority: Save or share is
   // the primary and never leaves the row, undo/redo are the last actions to
-  // go, then Randomise. Reset palette is a Tools row, one named tap away with
+  // go, then Randomise. Reset palette is an Extra tools row, one named tap away with
   // no swipe. What is asserted is exactly that, at the audit's widths.
   const ON_ROW = [
     ['Randomise', '.plb-random'],
     ['Undo', '.plb-undo'],
     ['Redo', '.plb-redo'],
-    ['Save current', '.plb-save'],
+    ['Save or share', '.plb-save'],
   ]
 
   for (const width of [390, 640, 641, 834]) {
@@ -236,8 +236,8 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
 
       // Reset: the overflow names it, and pressing it resets.
       const before = await page.locator('.plb-col .plb-hex').allTextContents()
-      await bar.getByRole('button', { name: 'Tools' }).click()
-      await page.getByRole('dialog', { name: 'Tools' }).getByRole('button', { name: 'Reset palette' }).click()
+      await bar.getByRole('button', { name: 'Extra tools' }).click()
+      await page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Reset palette' }).click()
       await expect.poll(async () => (await page.locator('.plb-col .plb-hex').allTextContents()).join()).not.toBe(before.join())
     })
   }
@@ -253,7 +253,7 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
     const bar = page.locator('.plb [data-tool-toolbar]')
     await expect(bar).not.toHaveClass(/is-measuring/)
 
-    for (const name of ['Undo', 'Redo', 'Randomise', 'Tools', 'Save current']) {
+    for (const name of ['Undo', 'Redo', 'Randomise', 'Extra tools', 'Save or share']) {
       await expect(bar.getByRole('button', { name, exact: true })).toHaveCount(1)
     }
     const labelHidden = await bar.evaluate((el) => ({
@@ -261,6 +261,6 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
       tools: getComputedStyle(el.querySelector('.tl-more-btn .tl-btn-label')).display,
     }))
     expect(labelHidden.randomise, 'Randomise should be icon-only at 390px').toBe('none')
-    expect(labelHidden.tools, 'Tools should be icon-only at 390px').toBe('none')
+    expect(labelHidden.tools, 'Extra tools should be icon-only at 390px').toBe('none')
   })
 })

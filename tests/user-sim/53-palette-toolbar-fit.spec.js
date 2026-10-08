@@ -23,7 +23,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // The palette's toolbar is the design's drawn one (D:947-1015) on
 // the shared ToolToolbar, which measures its row and moves what does not fit
-// into a "Tools" overflow (a toolbar never wraps and never
+// into a "Extra tools" overflow (a toolbar never wraps and never
 // scrolls). There is no rail, 769–960 swipeable band or utils/toolbarFit.js.
 // The original report is still the test: nothing clipped mid-row at
 // 662px or near it, one row on a laptop, and everything that left the row
@@ -68,7 +68,7 @@ test.describe('palette toolbar fits the row it is given', () => {
       expect(s.controls, `${width}px: the row measured no controls, so this proves nothing`).toBeGreaterThan(3)
       if (s.offRow.length) bad.push(`${width}px: ${s.offRow.join(', ')} past the toolbar's edge`)
       if (s.scrolls) bad.push(`${width}px: the toolbar scrolls`)
-      await expect(page.locator(BAR).getByRole('button', { name: 'Tools' }), `${width}px keeps its overflow`).toBeVisible()
+      await expect(page.locator(BAR).getByRole('button', { name: 'Extra tools' }), `${width}px keeps its overflow`).toBeVisible()
     }
     expect(bad, `controls clipped mid-row:\n  ${bad.join('\n  ')}`).toEqual([])
   })
@@ -79,7 +79,7 @@ test.describe('palette toolbar fits the row it is given', () => {
     // (Mobbin: Substack collapses its editor toolbar to "More"). Below 768px
     // the drawn toolbar drops every button's words for its icon (D:73), and
     // the overflow follows the row it sits on.
-    const trigger = page.locator(BAR).getByRole('button', { name: 'Tools' })
+    const trigger = page.locator(BAR).getByRole('button', { name: 'Extra tools' })
     for (const width of [1000, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
@@ -90,17 +90,17 @@ test.describe('palette toolbar fits the row it is given', () => {
     }
     await page.setViewportSize({ width: 662, height: 900 })
     await settle(page)
-    await expect(trigger, 'the icon keeps its name').toHaveAccessibleName('Tools')
+    await expect(trigger, 'the icon keeps its name').toHaveAccessibleName('Extra tools')
   })
 
-  test('what left the row is in Tools, named, and works', async ({ page }) => {
+  test('what left the row is in Extra tools, named, and works', async ({ page }) => {
     await page.setViewportSize({ width: 662, height: 900 })
     await go(page, '/create/palette')
     await settle(page)
-    await page.locator(BAR).getByRole('button', { name: 'Tools' }).click()
-    const panel = page.getByRole('dialog', { name: 'Tools' })
+    await page.locator(BAR).getByRole('button', { name: 'Extra tools' }).click()
+    const panel = page.getByRole('dialog', { name: 'Extra tools' })
     await expect(panel).toBeVisible()
-    // Always in Tools, at every width.
+    // Always in Extra tools, at every width.
     for (const name of ['Explore palettes', 'Preview on a UI', 'Open in Gradient', 'History', 'Reset palette']) {
       await expect(panel.getByRole('button', { name, exact: true })).toBeVisible()
     }
@@ -109,9 +109,9 @@ test.describe('palette toolbar fits the row it is given', () => {
     const bar = page.locator(BAR)
     for (const name of ['Colour system', 'Colour vision check']) {
       await expect(bar.getByRole('combobox', { name }), `${name} left the row`).toHaveCount(0)
-      await expect(panel.getByRole('combobox', { name }), `${name} is in Tools`).toBeVisible()
+      await expect(panel.getByRole('combobox', { name }), `${name} is in Extra tools`).toBeVisible()
     }
-    // What is in Tools does something: Open in Gradient hands the palette on.
+    // What is in Extra tools does something: Open in Gradient hands the palette on.
     await panel.getByRole('button', { name: 'Open in Gradient', exact: true }).click()
     await expect(page).toHaveURL(/\/create\/gradient/)
   })

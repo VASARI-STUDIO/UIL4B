@@ -5,7 +5,7 @@
 //      curated resources), and a row with no page behind it is not offered —
 //      including in the list shown before anything is typed.
 //   2. Palette "Pick" (the screen eyedropper) is not drawn where the browser has
-//      no EyeDropper, on the row or in the Tools menu, and the toolbar still
+//      no EyeDropper, on the row or in the Extra tools menu, and the toolbar still
 //      sits on one line.
 //   3. Gradient "From palette" with fewer than two palette colours says so on
 //      the page, with a link to the Palette Builder; the note is scrolled into
@@ -209,11 +209,11 @@ test.describe('Palette Builder · Pick needs the browser to have an eyedropper',
       expect(row.right, `${width}px: the toolbar runs past the screen`).toBeLessThanOrEqual(row.vw)
       expect(row.height, `${width}px: the toolbar is ${row.height}px tall — a second row`).toBeLessThan(72)
 
-      // The Tools menu does not list it either.
-      const tools = bar.getByRole('button', { name: 'Tools', exact: true })
+      // The Extra tools menu does not list it either.
+      const tools = bar.getByRole('button', { name: 'Extra tools', exact: true })
       await expect(tools).toBeVisible()
       await tools.click()
-      const panel = page.getByRole('dialog', { name: 'Tools' })
+      const panel = page.getByRole('dialog', { name: 'Extra tools' })
       await expect(panel).toBeVisible()
       await expect(panel.getByRole('button', { name: 'Reset palette', exact: true }), 'the menu is the real one').toBeVisible()
       await expect(panel.getByRole('button', { name: /Pick from the screen/ })).toHaveCount(0)

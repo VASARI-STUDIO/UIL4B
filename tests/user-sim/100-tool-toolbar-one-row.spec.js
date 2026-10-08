@@ -32,8 +32,8 @@ const TOOLS = [
   {
     route: '/create/palette',
     title: 'Palette Generator',
-    primary: /^Save current/,
-    overflow: 'Tools',
+    primary: /^Save or share/,
+    overflow: 'Extra tools',
     actions: [
       { row: 'Pull colours from an image', menu: 'From image' },
       { row: 'Suggest a palette', menu: 'Suggest' },
@@ -204,15 +204,15 @@ test('/create/gradient · an action run from the phone overflow still does its j
   await expect.poll(async () => code.textContent()).not.toBe(before)
 })
 
-test('/create/palette · Reset run from the phone Tools sheet still resets', async ({ page }) => {
+test('/create/palette · Reset run from the phone Extra tools sheet still resets', async ({ page }) => {
   watch(page, 'a designer resetting a palette from the bottom sheet')
   await page.setViewportSize({ width: 390, height: 844 })
   await go(page, '/create/palette')
   const hexes = page.locator('.plb-col .plb-hex')
   await expect(hexes).toHaveCount(5)
   const before = (await hexes.allTextContents()).join()
-  await page.getByRole('button', { name: 'Tools', exact: true }).click()
-  const sheet = page.getByRole('dialog', { name: 'Tools' })
+  await page.getByRole('button', { name: 'Extra tools', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Extra tools' })
   await expect(sheet).toBeVisible()
   const box = await sheet.boundingBox()
   expect(Math.round(box.y + box.height)).toBeGreaterThanOrEqual(843)

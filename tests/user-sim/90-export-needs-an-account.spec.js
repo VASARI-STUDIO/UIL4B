@@ -78,7 +78,7 @@ test.describe('a file needs a free account', () => {
     expect(await page.locator('.plb-col').count(),
       'the palette board did not render').toBeGreaterThan(2)
 
-    await page.getByRole('button', { name: 'Save current' }).click()
+    await page.getByRole('button', { name: 'Save or share' }).click()
     const menu = page.locator('.plb-savemenu')
     await expect(menu, 'the menu asked for an account before it would open. It holds three '
       + 'Copy rows, and copying is free forever.').toBeVisible({ timeout: 10000 })
