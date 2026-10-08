@@ -176,7 +176,7 @@
   left: 0;
   right: 0;
   z-index: 40;
-  max-height: 320px;
+  max-height: var(--arc-pop-max, 320px);
   overflow: auto;
   overscroll-behavior: contain;
   padding: 6px;
@@ -184,6 +184,12 @@
   border-radius: 16px;
   background: var(--tl-card);
   box-shadow: 0 18px 48px -12px rgba(0, 0, 0, .45);
+}
+/* Opened upward when the room below (above the phone tab bar) is short; the
+   side and `--arc-pop-max` are measured in PresetSelect. */
+.arc-page .arc-select-pop[data-pop-side="top"] {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 .arc-page .arc-opt {
   display: block;

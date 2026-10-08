@@ -3876,7 +3876,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    transparent and borderless, and the icon and clear button keep their own
    centring because this is `align-self` on one child, not `align-items` on
    the row. */
-.lbry-search input{align-self:stretch;width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+.lbry-search input{align-self:stretch;width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;box-shadow:none;font-family:var(--font);font-size:13px}
 .lbry-search input::placeholder{color:var(--t3)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */

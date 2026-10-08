@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
 } from '../components/tool/ToolLayout'
@@ -191,6 +191,60 @@ function PresetSelect({ value, placeholder, options, onPick }) {
   const wrap = useRef(null)
   const pop = useRef(null)
   const trigger = useRef(null)
+
+  // Keep the panel inside the part of the viewport that is actually visible.
+  //
+  // Two fixed bars paint over the viewport at a z-index the panel never
+  // reaches: the nav at the top and, on a phone, the tab bar (`.pnav-tabs`) at
+  // the bottom. The shared `placePopover` measures the room below against the
+  // bare viewport edge, so a panel that "fits" there still ran under the tab
+  // bar; the last rows were on screen but untappable. This measures against the
+  // bar's own top edge instead. It opens upward when there is less room below
+  // than the panel needs and more above, and caps the height to the room it
+  // lands in so the list scrolls inside itself rather than off screen.
+  //
+  // The natural height comes from scrollHeight, not the rendered height: the
+  // rendered height is the capped one after the first pass, which would make
+  // every later pass decide from its own previous answer.
+  useLayoutEffect(() => {
+    if (!openSel) return undefined
+    const POP_MAX = 320 // .arc-select-pop's own max-height
+    const GAP = 6 + 8 // the 6px offset from the trigger, and 8px kept from the bar
+    let frame = 0
+    const place = () => {
+      frame = 0
+      const panel = pop.current
+      const anchor = wrap.current?.getBoundingClientRect()
+      if (!panel || !anchor) return
+      const nav = document.querySelector('.pnav')
+      let top = 0
+      if (nav && getComputedStyle(nav).position === 'fixed') {
+        const box = nav.getBoundingClientRect()
+        if (box.top <= 0 && box.bottom > 0) top = box.bottom
+      }
+      const tabs = document.querySelector('.pnav-tabs')
+      const bottom = tabs && getComputedStyle(tabs).display !== 'none'
+        ? Math.min(window.innerHeight, tabs.getBoundingClientRect().top)
+        : window.innerHeight
+      const below = bottom - anchor.bottom - GAP
+      const above = anchor.top - top - GAP
+      const natural = Math.min(POP_MAX, panel.scrollHeight + 2)
+      const side = natural > below && above > below ? 'top' : 'bottom'
+      const room = Math.max(132, Math.min(POP_MAX, Math.floor(side === 'top' ? above : below)))
+      if (panel.dataset.popSide !== side) panel.dataset.popSide = side
+      const maxH = `${room}px`
+      if (panel.style.getPropertyValue('--arc-pop-max') !== maxH) panel.style.setProperty('--arc-pop-max', maxH)
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(place) }
+    place()
+    window.addEventListener('resize', schedule, { passive: true })
+    window.addEventListener('scroll', schedule, { capture: true, passive: true })
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('resize', schedule)
+      window.removeEventListener('scroll', schedule, true)
+    }
+  }, [openSel])
 
   // Move focus among the rows. `to` is an index, clamped rather than wrapped:
   // a list of fourteen devices is a list, and running off the end of a list
