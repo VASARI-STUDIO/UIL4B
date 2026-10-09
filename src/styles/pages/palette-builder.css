@@ -137,8 +137,9 @@
   .plb .plb-col:hover .plb-tool--quick,
   .plb .plb-col:focus-within .plb-tool--quick { opacity: 1; pointer-events: auto; }
 }
+:where(html[data-reduced-motion="true"]) .plb .plb-tool--quick { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  .plb .plb-tool--quick { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-tool--quick { transition: none !important; }
 }
 
 .plb .plb-ramp {
