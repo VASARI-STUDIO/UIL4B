@@ -1232,7 +1232,7 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
     const rowH = Math.round((await cols.first().boundingBox()).height)
 
     // AT REST. Every viewport here is under 768px, where the swatch shows only
-    // its Lock and "more actions" button (product decision, 2026-10-09): the
+    // its Lock and "more actions" button: the
     // Edit / Swap / Remove quick tools are `display:none` and take no space, and
     // the same actions live in the swatch's menu, hit-tested below. Everything a
     // person can press must hit itself.

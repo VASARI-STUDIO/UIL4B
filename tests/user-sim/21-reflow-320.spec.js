@@ -157,7 +157,7 @@ test.describe('reflow at 320px', () => {
     //
     // The Edit / Swap / Remove quick tools are a tablet-and-up feature: below
     // 768px the swatch shows only the lock and the "more actions" button, and
-    // the quick tools are `display:none` (the product decision, 2026-10-09).
+    // the quick tools are `display:none`.
     // They are asserted ABSENT below, and the same three actions are asserted
     // REACHABLE through each swatch's menu, which is what 1.4.10 cares about:
     // nothing a person needs is clipped away or lost at this width.
