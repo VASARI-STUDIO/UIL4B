@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
@@ -401,13 +401,33 @@ function contrastPair(hex) {
 // `colRef` / `barRef` moved to utils/paletteBoard.js — the homepage workbench's
 // Palette mode now renders a real `.plb-board` with these same classes, and two
 // private copies of the property contract is how two boards drift apart.
-// Right-click menu position (clamped to the viewport) through custom props.
-function ctxPosRef(x, y) {
-  return (el) => {
-    if (!el) return
-    el.style.setProperty('--plb-mx', `${Math.min(x, window.innerWidth - 220)}px`)
-    el.style.setProperty('--plb-my', `${Math.min(y, window.innerHeight - 330)}px`)
+// Measure the full menu, including its border, even when it is scroll-capped.
+function placeContextMenu(el, { x, y, triggerTop }) {
+  const visibleRect = (selector) => {
+    const node = document.querySelector(selector)
+    if (!node || !node.getClientRects().length || getComputedStyle(node).visibility === 'hidden') return null
+    return node.getBoundingClientRect()
   }
+  const margin = 8
+  const top = Math.max(0, visibleRect('.pnav')?.bottom ?? 0) + margin
+  const bottom = Math.min(window.innerHeight, visibleRect('.pnav-tabs')?.top ?? window.innerHeight) - margin
+  const available = Math.max(0, bottom - top)
+  const rect = el.getBoundingClientRect()
+  const fullHeight = el.scrollHeight + rect.height - el.clientHeight
+  const height = Math.min(fullHeight, available)
+  const phone = window.innerWidth < 768
+  // Retain the desktop coordinates unless the measured menu crosses a boundary.
+  let left = phone ? x : Math.min(x, window.innerWidth - 220)
+  let menuTop = phone ? y : Math.min(y, window.innerHeight - 330)
+  const above = (triggerTop ?? y) - margin
+  if ((phone || menuTop < top || menuTop + height > bottom) && above - top > bottom - y) {
+    menuTop = above - height
+  }
+  left = Math.max(margin, Math.min(left, window.innerWidth - rect.width - margin))
+  menuTop = Math.max(top, Math.min(menuTop, bottom - height))
+  el.style.setProperty('--plb-mx', `${left}px`)
+  el.style.setProperty('--plb-my', `${menuTop}px`)
+  el.style.setProperty('--plb-menu-max-height', `${available}px`)
 }
 // ── Tiny mono icons (stroke = currentColor, so they inherit the column ink) ──
 function Ico({ size = 15, children }) {
@@ -801,6 +821,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
+  const ctxMenuRef = useRef(null)
+  useLayoutEffect(() => {
+    const el = ctxMenuRef.current
+    if (!ctxMenu || !el) return
+    const place = () => placeContextMenu(el, ctxMenu)
+    place()
+    const observer = new ResizeObserver(place)
+    observer.observe(el)
+    for (const node of document.querySelectorAll('.pnav, .pnav-tabs')) observer.observe(node)
+    window.addEventListener('resize', place)
+    return () => { observer.disconnect(); window.removeEventListener('resize', place) }
+  }, [ctxMenu])
   const [swapIdx, setSwapIdx] = useState(null)     // column with the swap-direction popover open
   const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
   const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
@@ -2311,7 +2343,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     onClick={(e) => {
                       const r = e.currentTarget.getBoundingClientRect()
                       setTintsIdx(null); setPickerIdx(null)
-                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6 })
+                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6, triggerTop: r.top })
                     }}
                   >
                     <ToolIcon name="dots-three" size={15} />
@@ -2457,7 +2489,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                       setTintsIdx(null); setPickerIdx(null)
                       const synthetic = (e.clientX === 0 && e.clientY === 0) || e.detail === 0
                       const pos = synthetic
-                        ? (() => { const r = e.currentTarget.getBoundingClientRect(); return { x: r.left, y: r.bottom } })()
+                        ? (() => { const r = e.currentTarget.getBoundingClientRect(); return { x: r.left, y: r.bottom, triggerTop: r.top } })()
                         : { x: e.clientX, y: e.clientY }
                       setCtxMenu({ kind: 'gap', i, ...pos })
                     }}
@@ -2466,7 +2498,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                       e.preventDefault()
                       setTintsIdx(null); setPickerIdx(null)
                       const r = e.currentTarget.getBoundingClientRect()
-                      setCtxMenu({ kind: 'gap', i, x: r.left, y: r.bottom })
+                      setCtxMenu({ kind: 'gap', i, x: r.left, y: r.bottom, triggerTop: r.top })
                     }}
                   >
                     <span className="plb-gap-dot"><IcoPlus size={13} /></span>
@@ -2485,7 +2517,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
       {/* ── Colour actions / insert menus (right-click and ⋯) ── */}
       {ctxMenu && ctxMenu.kind === 'gap' && (
-        <div className="plb-pop plb-ctx" role="menu" aria-label="Insert colours" ref={ctxPosRef(ctxMenu.x, ctxMenu.y)}>
+        <div className="plb-pop plb-ctx" role="menu" aria-label="Insert colours" ref={ctxMenuRef}>
           {(() => {
             const ceiling = isPro ? HARD_MAX : PRO_MAX
             const room = ceiling - colors.length
@@ -2525,7 +2557,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
       {ctxMenu && ctxMenu.kind !== 'gap' && (
-        <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxPosRef(ctxMenu.x, ctxMenu.y)}>
+        <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxMenuRef}>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoCopy /> Copy hex</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>

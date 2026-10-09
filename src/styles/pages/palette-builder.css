@@ -17,6 +17,11 @@
  * the ink's contrast rather than spending it. */
 
 .plb .plb-file { display: none; }
+.plb .plb-ctx {
+  max-height: var(--plb-menu-max-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .plb .tl-body--bleed { min-height: 0; }
 
 /* The Pro-system notice. */
