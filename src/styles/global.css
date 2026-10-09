@@ -995,6 +995,10 @@ img,svg,video{max-width:100%;height:auto}
 
   /* Toast */
   .toast{left:12px;right:12px;bottom:12px;max-width:none}}
+/* The phone tab bar is fixed over the foot of the screen; a toast sits above it. */
+@media(max-width:767px){
+  html.has-tabbar .toast{bottom:calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom))}
+}
 
 
 /* Small phone (≤480px) */
@@ -2663,8 +2667,7 @@ html.lenis{scroll-behavior:auto!important}
 
    IT NEVER WRAPS. The file's row wraps below ~950px;
    ours folds instead: under 1100px the search field becomes its own icon, and
-   under 900px Export, Palette library and Back to the site move into the
-   account popover, whose matching rows (.pnav-pop-item--fold) show only then.
+   under 900px Export and Dashboard keep their place but lose their labels.
    Below 768px it is the phone header, further down.
 
    The row is 64px because the file's is: 11px + the 41px search field + 11px
@@ -2715,6 +2718,36 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-iconbtn{display:grid;place-items:center;flex:0 0 auto;width:38px;height:38px;padding:0;border:0;border-radius:var(--btn-radius);background:rgba(var(--ink-rgb),.045);color:rgba(var(--ink-rgb),.82);cursor:pointer;text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 @media(hover:hover){.pnav-iconbtn:hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}}
 .pnav-iconbtn[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08);color:rgb(var(--ink-rgb))}
+/* Export and Dashboard: labelled quiet pills on the icon buttons' material (ink
+   .045 under ink .82, ink .07 on hover). 9px of padding round 14px type at 1.2
+   gives the same 34.8px box as Upgrade. */
+.pnav-act-wrap{position:relative;display:inline-flex;flex:0 0 auto}
+.pnav-act{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:9px 14px 9px 12px;border:0;border-radius:var(--radius-pill);background:rgba(var(--ink-rgb),.045);color:rgba(var(--ink-rgb),.82);font-family:var(--font);font-size:14px;font-weight:400;line-height:1.2;white-space:nowrap;cursor:pointer;text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-act svg{flex:0 0 auto}
+@media(hover:hover){.pnav-act:not([aria-disabled="true"]):hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}}
+.pnav-act[aria-expanded="true"],.pnav-act[aria-current="page"]{background:rgba(var(--ink-rgb),.08);color:rgb(var(--ink-rgb))}
+.pnav-act[aria-current="page"]{font-weight:560}
+.pnav-act[aria-disabled="true"]{background:rgba(var(--ink-rgb),.03);color:rgba(var(--ink-rgb),.5);cursor:default}
+/* The current page's heavier label would widen the button; an invisible copy
+   at that weight reserves the room so nothing shifts between pages. */
+.pnav-act--dash .pnav-act-label{display:inline-grid}
+.pnav-act--dash .pnav-act-label::after{content:attr(data-text);height:0;overflow:hidden;visibility:hidden;font-weight:560}
+/* The hint for a disabled Export. Hidden by visibility, not removed, so the
+   button's aria-describedby always has something to read. */
+.pnav-tip{position:absolute;top:50%;right:calc(100% + 8px);left:auto;transform:translateY(-50%);z-index:130;padding:6px 10px;border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-s);background:var(--card);box-shadow:0 12px 30px -16px rgba(var(--shade-rgb),var(--shade-a));color:rgb(var(--ink-rgb));font-size:12px;font-weight:400;line-height:1.3;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-1)}
+.pnav-tip.is-open{opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
+/* Carries the pointer across the gap between the button and the hint. */
+.pnav-tip::before{content:"";position:absolute;top:0;bottom:0;left:100%;width:8px}
+.pnav-tip--below{top:calc(100% + 8px);right:auto;left:50%;transform:translateX(-50%)}
+.pnav-tip--below::before{top:-8px;bottom:auto;left:0;right:0;width:auto;height:8px}
+@media(max-width:899px){
+  .pnav-tip{top:calc(100% + 8px);right:auto;left:50%;transform:translateX(-50%)}
+  .pnav-tip::before{top:-8px;bottom:auto;left:0;right:0;width:auto;height:8px}
+}
+:where(html[data-reduced-motion="true"]) .pnav-tip{transition:none !important}
+@media(prefers-reduced-motion:reduce){
+  :where(html:not([data-reduced-motion="false"])) .pnav-tip{transition:none !important}
+}
 /* Signed out there is no avatar; "Log in" sits where the file has none, so it
    is as quiet as a menu trigger. */
 .pnav-login{padding:9px 10px;border:0;border-radius:var(--btn-radius);background:transparent;color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:14px;font-weight:400;line-height:1.2;white-space:nowrap;cursor:pointer}
@@ -2734,19 +2767,22 @@ html.lenis{scroll-behavior:auto!important}
 @media(hover:hover){.pnav-more:hover{background:rgba(var(--ink-rgb),.07)}}
 .pnav-more[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08)}
 .pnav-mobile{display:none}
-.pnav-trigger:focus-visible,.pnav-search-field:focus-visible,.pnav-theme:focus-visible,.pnav-iconbtn:focus-visible,.pnav-login:focus-visible,.pnav-upgrade:focus-visible,.pnav-avatar-btn:focus-visible,.pnav-more:focus-visible,.pnav-mobile:focus-visible,.pnav-logo:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.pnav-trigger:focus-visible,.pnav-search-field:focus-visible,.pnav-theme:focus-visible,.pnav-iconbtn:focus-visible,.pnav-act:focus-visible,.pnav-login:focus-visible,.pnav-upgrade:focus-visible,.pnav-avatar-btn:focus-visible,.pnav-more:focus-visible,.pnav-mobile:focus-visible,.pnav-logo:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 
 /* Folding, so the row never wraps. Measured in the report. */
-.pnav-pop .pnav-pop-item--fold{display:none}
 @media(max-width:1099px){
   .pnav-search{flex:0 0 auto;max-width:none}
   .pnav-search-field{width:41px;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
 }
+/* Labelled Export and Dashboard take the last of the room signed out, so the
+   groups sit closer together until the row has space again. */
+@media(min-width:900px) and (max-width:979px){
+  .pnav-inner{gap:10px}
+}
 @media(max-width:899px){
-  .pnav-fold{display:none}
-  .pnav-pop .pnav-pop-item--fold{display:flex}
-  .pnav-pop .pnav-pop-sep.pnav-pop-item--fold{display:block}
+  .pnav-act{justify-content:center;gap:0;width:38px;height:38px;padding:0}
+  .pnav-act-label{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 }
 
 /* ── The account popover: kept, on the file's materials ─────────────────── */
@@ -2895,11 +2931,13 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-inner{gap:10px;padding:0 16px}
   .pnav-logo{margin-right:auto}
   .pnav-word{font-size:21px;font-weight:560;letter-spacing:-.01em}
-  .pnav .pnav-theme,.pnav-items,.pnav-fold,.pnav-login,.pnav-inner .pnav-upgrade,.pnav-more-wrap{display:none}
+  .pnav .pnav-theme,.pnav-items,.pnav-act--dash,.pnav-login,.pnav-inner .pnav-upgrade,.pnav-more-wrap,.pnav-tip{display:none}
   .pnav-actions{margin-left:0;gap:10px}
   .pnav-search{flex:0 0 auto;max-width:none}
   .pnav-search-field{width:36px;height:36px;padding:0;justify-content:center;border-radius:var(--radius-pill);border-color:rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
   .pnav-search-ph,.pnav-search-kbd{display:none}
+  .pnav-act.pnav-export{width:36px;height:36px;border:1px solid rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
+  .pnav-act.pnav-export[aria-disabled="true"]{color:rgba(var(--ink-rgb),.5)}
   .pnav-avatar-btn,.pnav-avatar{width:36px;height:36px}
   .pnav-avatar{font-size:12px}
   .pnav-mobile{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:1px solid rgba(var(--ink-rgb),.14);border-radius:var(--radius-pill);background:transparent;color:rgb(var(--ink-rgb));cursor:pointer}
@@ -2908,8 +2946,11 @@ html.lenis{scroll-behavior:auto!important}
 }
 /* A7: every header control is at least 44px to a finger, whatever it draws. */
 @media(pointer:coarse){
-  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-mobile,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
-  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-mobile::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-act,.pnav-mobile,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
+  /* Hit areas extend beyond the compact circles without changing row layout. */
+  .pnav-search-field,.pnav-export,.pnav-avatar-btn,.pnav-mobile,.pnav-logo{overflow:visible}
+  .pnav-search-field::after,.pnav-export::after,.pnav-avatar-btn::after,.pnav-mobile::after,.pnav-logo::after{pointer-events:auto}
+  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-act::after,.pnav-mobile::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pnav-tool,.pnav-pop-item{min-height:44px}
 }
 

@@ -369,9 +369,9 @@ test('/home reaches the sales page without consulting auth at all', () => {
     + 'navigate to specifly /home”.')
 })
 
-test('the nav Home control still points at the sales page', () => {
+test('the nav logo on the dashboard still points at the sales page', () => {
   const nav = read('src/components/PillNav.jsx')
-  assert.match(nav, /to="\/home"/, 'the nav logo / Home link must still reach /home')
+  assert.match(nav, /<Link\s+className="pnav-logo"\s+to=\{onDashboard\s*\?\s*'\/home'\s*:\s*'\/projects'\}/, 'the nav logo must reach /home from the dashboard')
 })
 
 test('the sales page never routes on auth, so nothing about it can flash', () => {

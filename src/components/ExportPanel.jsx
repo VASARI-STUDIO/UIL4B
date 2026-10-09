@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { trackActivation } from '../utils/analytics'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { getLenis } from '../hooks/useSmoothScroll'
-import { useProject } from '../contexts/ProjectContext'
+import useExportDesign from '../hooks/useExportDesign'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import useExportGate from '../hooks/useExportGate'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
@@ -92,7 +92,7 @@ export default function ExportPanel({ onClose }) {
   // An export finished and the panel stayed open to say something about it.
   // There is nothing left to cancel, so the secondary action reads Close.
   const [done, setDone] = useState(false)
-  const { design } = useProject()
+  const design = useExportDesign()
   const { isPro } = useSubscription()
   // A file needs an account; a copy never does. See useExportGate.js.
   const requireExportAccount = useExportGate()

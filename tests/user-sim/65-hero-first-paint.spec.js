@@ -278,7 +278,12 @@ async function arriveFromAnotherRoute(page) {
     await page.evaluate(() => !!document.querySelector('#boot-shell')),
     'the boot shell is still on screen after ready() — this reads the wrong page',
   ).toBe(false)
-  await page.getByRole('link', { name: 'Back to the site' }).click()
+  // The way a visitor leaves a tool for the homepage: the logo takes an app page to
+  // the dashboard, and the logo there takes the dashboard to the homepage. Both are
+  // client-side route changes, so the document (and its frame scan) survives.
+  await page.getByRole('link', { name: 'UIL4B, go to your dashboard' }).click()
+  await expect(page).toHaveURL(/\/projects$/)
+  await page.getByRole('link', { name: 'UIL4B, go to the home page' }).click()
   await ready(page, '/home')
 }
 

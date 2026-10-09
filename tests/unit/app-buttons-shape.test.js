@@ -109,7 +109,7 @@ test('the readers find what they are about (positive control)', () => {
   assert.ok(blocksFor('.ui-pill').length >= 1, '.ui-pill not found')
   const classes = buttonClasses()
   assert.ok(classes.size > 150, `only ${classes.size} button classes read from the JSX`)
-  for (const c of ['btn', 'tl-btn', 'uh-new', 'pnav-iconbtn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
+  for (const c of ['btn', 'tl-btn', 'uh-new', 'pnav-act', 'pnav-export', 'pnav-avatar-btn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
 })
 
 test('the button token is the pill, and the base families read it', () => {
