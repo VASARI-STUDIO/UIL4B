@@ -183,6 +183,7 @@ test.describe('app header touch actions', () => {
     await page.clock.setFixedTime(new Date(+start + 1000))
     await page.locator('.pnav-logo').click()
     await expect(page).toHaveURL(/\/projects$/)
+    await expect(page.locator('.pnav-act--dash')).toHaveAttribute('aria-current', 'page')
     await page.clock.setFixedTime(new Date(+start + 1599))
     await page.locator('.pnav-logo').click()
     await expect(page).toHaveURL(/\/projects$/)
