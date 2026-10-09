@@ -822,16 +822,27 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const ctxMenuRef = useRef(null)
+  const ctxTriggerRef = useRef(null)
   useLayoutEffect(() => {
     const el = ctxMenuRef.current
     if (!ctxMenu || !el) return
-    const place = () => placeContextMenu(el, ctxMenu)
+    const updateScrollCue = () => {
+      el.dataset.scrollMore = String(el.scrollHeight - el.clientHeight - el.scrollTop > 1)
+    }
+    const place = () => { placeContextMenu(el, ctxMenu); updateScrollCue() }
+    el.scrollTop = 0
     place()
+    if (ctxMenu.keyboard) el.querySelector('button[role="menuitem"]')?.focus({ preventScroll: true })
+    el.addEventListener('scroll', updateScrollCue)
     const observer = new ResizeObserver(place)
     observer.observe(el)
     for (const node of document.querySelectorAll('.pnav, .pnav-tabs')) observer.observe(node)
     window.addEventListener('resize', place)
-    return () => { observer.disconnect(); window.removeEventListener('resize', place) }
+    return () => {
+      observer.disconnect()
+      el.removeEventListener('scroll', updateScrollCue)
+      window.removeEventListener('resize', place)
+    }
   }, [ctxMenu])
   const [swapIdx, setSwapIdx] = useState(null)     // column with the swap-direction popover open
   const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
@@ -1161,6 +1172,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
     const onEsc = (e) => {
       if (e.key !== 'Escape') return
+      if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') ctxTriggerRef.current?.focus({ preventScroll: true })
       closeAllMenus(); closePops(); setPreview(null)
     }
     window.addEventListener('pointerdown', onDown)
@@ -2302,6 +2314,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault()
+                  ctxTriggerRef.current = e.currentTarget.querySelector('.plb-tool--more')
                   setTintsIdx(null); setPickerIdx(null)
                   setCtxMenu({ kind: 'swatch', i, x: e.clientX, y: e.clientY })
                 }}
@@ -2342,8 +2355,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     aria-expanded={actionsOpen}
                     onClick={(e) => {
                       const r = e.currentTarget.getBoundingClientRect()
+                      ctxTriggerRef.current = e.currentTarget
                       setTintsIdx(null); setPickerIdx(null)
-                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6, triggerTop: r.top })
+                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6, triggerTop: r.top, keyboard: e.detail === 0 })
                     }}
                   >
                     <ToolIcon name="dots-three" size={15} />
@@ -2557,7 +2571,17 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
       {ctxMenu && ctxMenu.kind !== 'gap' && (
-        <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxMenuRef}>
+        <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxMenuRef}
+          onKeyDown={(e) => {
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+            e.preventDefault()
+            const items = [...e.currentTarget.querySelectorAll('button[role="menuitem"]')]
+            const current = items.indexOf(document.activeElement)
+            const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1
+              : (current + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+            items[next]?.focus({ preventScroll: true })
+            items[next]?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
+          }}>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoCopy /> Copy hex</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
