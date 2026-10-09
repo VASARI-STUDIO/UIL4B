@@ -1266,6 +1266,31 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
   expect(damage, damage.join('\n')).toEqual([])
 })
 
+// The same menu, now that it is the only way to Edit, Swap or Remove a colour on
+// a phone: every item has to be on screen and press itself. The menu is
+// `position:fixed` and not scrollable, so an item below the fold cannot be
+// reached by scrolling the page or the menu.
+test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a short phone', async ({ browser }) => {
+  budget(PLB_VIEWPORTS.length)
+  const damage = []
+  for (const [w, h] of PLB_VIEWPORTS) {
+    const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')
+    const cols = page.locator('.plb-col')
+    expect(await cols.count(), `${w}x${h}: expected the five palette columns`).toBe(5)
+    for (let i = 0; i < 5; i++) {
+      const items = await openSwatchMenu(page, cols, i, `${w}x${h}`)
+      expect(Object.keys(items).length, `${w}x${h}: swatch ${i + 1} offered nothing to test`).toBeGreaterThanOrEqual(3)
+      for (const [name, m] of Object.entries(items)) {
+        if (!m.withinHeight) damage.push(`${w}x${h}: swatch ${i + 1} menu item "${name}" is below the usable screen (bottom ${m.bottom}, usable ${m.usableBottom})`)
+        else if (!m.hitsItself) damage.push(`${w}x${h}: swatch ${i + 1} menu item "${name}" is covered by something else`)
+      }
+      await closeSwatchMenu(page, `${w}x${h}: swatch ${i + 1}`)
+    }
+    await ctx.close()
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
 // THE PACK LABEL UNDER EVERY ICON CELL.
 // The 2026-09-01 audit found /create/icons repeating a tiny pack label under
 // every cell; #298 dropped it below 980px and left it above, where it still
