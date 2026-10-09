@@ -63,6 +63,55 @@ function sanitizeKey(raw) {
   return s || 'root'
 }
 
+// Field-name prefixes on `analytics-daily/{day}`. Every writer builds its field
+// with aggField() and the reader sorts every field with classifyField(), both
+// from this one table. A fragment never contains `__` (sanitizeKey collapses
+// it), so the doubled underscore only ever marks a prefix or a separator.
+export const AGG_PREFIX = Object.freeze({
+  view: 'view__',
+  tool: 'tool__',
+  open: 'open__',
+  icon: 'icon__',
+  pack: 'ipack__',
+})
+
+// Documents written with a single underscore after the prefix are still in the
+// collection and still counted. These are the kinds that exist in that shape.
+const LEGACY_KINDS = Object.freeze(['view', 'tool', 'icon', 'pack'])
+
+/** `prefix` followed by each part sanitised on its own, joined by `__`. */
+export function aggField(prefix, ...parts) {
+  return prefix + parts.map(sanitizeKey).join('__')
+}
+
+/**
+ * Which counter a stored field belongs to, or null for a field that is not a
+ * keyed counter (`day`, `views`, `icon-copies`). The `__` forms are tried
+ * before the single-underscore forms, because `view__x` also starts with
+ * `view_`.
+ */
+export function classifyField(field) {
+  for (const kind of Object.keys(AGG_PREFIX)) {
+    const p = AGG_PREFIX[kind]
+    if (field.startsWith(p) && field.length > p.length) return { kind, key: field.slice(p.length) }
+  }
+  for (const kind of LEGACY_KINDS) {
+    const p = AGG_PREFIX[kind].slice(0, -1)
+    if (field.startsWith(p) && field.length > p.length) return { kind, key: field.slice(p.length) }
+  }
+  return null
+}
+
+// Funnel counters share the `tool__` prefix with real tool actions. They are
+// told apart by their first segment so they never reach the tool lists.
+const FUNNEL_FIELD = /^(gate|activation|firstwin|ttv)_{1,2}(.+)$/
+export const FUNNEL_STAGES = Object.freeze([
+  { id: 'firstwin', label: 'Picked a starting point' },
+  { id: 'activation', label: 'Saved or exported a result' },
+  { id: 'ttv', label: 'Reached first value' },
+  { id: 'gate', label: 'Met an upgrade gate' },
+])
+
 // In-memory accumulator of pending increments, flushed on a debounce. Keyed by
 // Firestore field name → integer count. We coalesce many rapid events into one
 // write to stay well within Firestore's per-document write limits.
@@ -77,12 +126,13 @@ function attachUnloadFlush() {
   window.addEventListener('beforeunload', () => { flushAggregate() })
 }
 
+// `field` arrives fully built (see aggField). It is not sanitised again here:
+// that would collapse the `__` separators.
 function bumpAggregate(field, n = 1) {
   try {
     // Only attempt server writes for signed-in users — rules are auth-only.
     if (!firebaseNow()?.auth?.currentUser) return
-    const key = sanitizeKey(field)
-    pendingIncrements[key] = (pendingIncrements[key] || 0) + n
+    pendingIncrements[field] = (pendingIncrements[field] || 0) + n
     attachUnloadFlush()
     if (flushTimer) return
     flushTimer = setTimeout(() => { flushTimer = null; flushAggregate() }, 5000)
@@ -126,28 +176,32 @@ function flushAggregate() {
 // Record a page view into the daily aggregate doc (total + per-path counter).
 function recordAggregateView(path) {
   bumpAggregate('views', 1)
-  bumpAggregate(`view__${sanitizeKey(path)}`, 1)
+  bumpAggregate(aggField(AGG_PREFIX.view, path), 1)
 }
 
-// Record a tool action into the daily aggregate doc (per-tool counter).
-function recordAggregateTool(id) {
-  bumpAggregate(`tool__${sanitizeKey(id)}`, 1)
+// Record a tool action into the daily aggregate doc (per-tool counter). A `__`
+// in `name` separates segments, each sanitised on its own.
+function recordAggregateTool(name) {
+  bumpAggregate(aggField(AGG_PREFIX.tool, ...String(name).split('__')), 1)
+}
+
+// Record that a tool was opened (per-tool counter).
+function recordAggregateOpen(id) {
+  bumpAggregate(aggField(AGG_PREFIX.open, id), 1)
 }
 
 // Read the last `days` daily docs and sum them into a dashboard-friendly shape.
 // Returns a safe empty shape on any failure (offline, rules, no docs yet).
 export async function getAggregateAnalytics(days = 30) {
-  const empty = { totalViews: 0, byPath: [], byTool: [], byIcon: [], byPack: [], iconCopies: 0, days: [] }
+  const empty = { totalViews: 0, byPath: [], byTool: [], byOpen: [], byIcon: [], byPack: [], funnel: [], iconCopies: 0, days: [] }
   try {
     const fs = await loadFirestore()
     const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(days))
     const snap = await fs.getDocs(q)
     let totalViews = 0
     let iconCopies = 0
-    const pathCounts = {}
-    const toolCounts = {}
-    const iconCounts = {}
-    const packCounts = {}
+    const counts = { view: {}, tool: {}, open: {}, icon: {}, pack: {} }
+    const funnelTotals = {}
     const dayViews = []
     snap.docs.forEach(docSnap => {
       const data = docSnap.data() || {}
@@ -156,25 +210,60 @@ export async function getAggregateAnalytics(days = 30) {
       for (const [field, value] of Object.entries(data)) {
         if (field === 'day') continue
         const count = typeof value === 'number' ? value : 0
-        if (field === 'views') { totalViews += count; viewsForDay = count }
-        else if (field === 'icon-copies') iconCopies += count
-        else if (field.startsWith('view__')) pathCounts[field.slice(6)] = (pathCounts[field.slice(6)] || 0) + count
-        else if (field.startsWith('tool__')) toolCounts[field.slice(6)] = (toolCounts[field.slice(6)] || 0) + count
-        else if (field.startsWith('icon__')) iconCounts[field.slice(6)] = (iconCounts[field.slice(6)] || 0) + count
-        else if (field.startsWith('ipack__')) packCounts[field.slice(7)] = (packCounts[field.slice(7)] || 0) + count
+        if (field === 'views') { totalViews += count; viewsForDay = count; continue }
+        if (field === 'icon-copies') { iconCopies += count; continue }
+        const hit = classifyField(field)
+        if (!hit) continue
+        const funnel = hit.kind === 'tool' ? FUNNEL_FIELD.exec(hit.key) : null
+        if (funnel) {
+          // A time-to-value reading is written twice, as the headline bucket
+          // and again per tool. Only the headline feeds the stage total, or
+          // every reading would count twice.
+          if (funnel[1] !== 'ttv' || !/_/.test(funnel[2])) {
+            funnelTotals[funnel[1]] = (funnelTotals[funnel[1]] || 0) + count
+          }
+          continue
+        }
+        counts[hit.kind][hit.key] = (counts[hit.kind][hit.key] || 0) + count
       }
       dayViews.push({ day: dayId, views: viewsForDay })
     })
-    const byPath = Object.entries(pathCounts).sort((a, b) => b[1] - a[1])
-    const byTool = Object.entries(toolCounts).sort((a, b) => b[1] - a[1])
-    const byIcon = Object.entries(iconCounts).sort((a, b) => b[1] - a[1])
-    const byPack = Object.entries(packCounts).sort((a, b) => b[1] - a[1])
+    const ranked = (map) => Object.entries(map).sort((a, b) => b[1] - a[1])
+    const funnel = FUNNEL_STAGES
+      .filter(stage => funnelTotals[stage.id] > 0)
+      .map(stage => [stage.label, funnelTotals[stage.id]])
     // docs came back newest-first; present the timeline oldest→newest.
     const daysAsc = dayViews.reverse()
-    return { totalViews, byPath, byTool, byIcon, byPack, iconCopies, days: daysAsc }
+    return {
+      totalViews,
+      byPath: ranked(counts.view),
+      byTool: ranked(counts.tool),
+      byOpen: ranked(counts.open),
+      byIcon: ranked(counts.icon),
+      byPack: ranked(counts.pack),
+      funnel,
+      iconCopies,
+      days: daysAsc,
+    }
   } catch {
     return empty
   }
+}
+
+/**
+ * One row per tool for the Overview: how often it was opened and how often
+ * something was done in it. A tool seen on only one side keeps a zero on the
+ * other. Most opened first, then most used.
+ */
+export function toolUsageRows(aggregate) {
+  const rows = new Map()
+  const slot = (id) => {
+    if (!rows.has(id)) rows.set(id, { id, opened: 0, used: 0 })
+    return rows.get(id)
+  }
+  for (const [id, n] of aggregate?.byOpen || []) slot(id).opened += n
+  for (const [id, n] of aggregate?.byTool || []) slot(id).used += n
+  return [...rows.values()].sort((a, b) => (b.opened - a.opened) || (b.used - a.used))
 }
 
 // Page view tracking
@@ -311,17 +400,6 @@ export function trackFontCopy(fontFamily) {
   recordAggregateTool('font-copy')
 }
 
-export function trackColourPick(hex) {
-  if (!hex) return
-  const normalised = hex.toUpperCase().replace(/[^#0-9A-F]/g, '')
-  if (!normalised) return
-  const data = loadDesignAnalytics()
-  data.colourPicks[normalised] = (data.colourPicks[normalised] || 0) + 1
-  saveDesignAnalytics(data)
-  // Additive: also feed the cross-user Firestore aggregate as a tool action.
-  recordAggregateTool('colour-pick')
-}
-
 // ── P-001: the two events that make the funnel answerable ───────────────────
 // Both are APPROVED in docs/PROPOSALS.md - local-only since 2026-09-16 and not
 // in this repository, per .gitignore. Until they existed there was no way
@@ -424,6 +502,8 @@ export function trackFirstWinChoice(winId) {
   recordAggregateTool(`firstwin__${id}`)
 }
 
+// A tool was done something in (the "Used" figure). Called once per open of a
+// tool, on the first pointer or key press inside it.
 export function trackToolAction(toolId) {
   if (!toolId) return
   const data = loadDesignAnalytics()
@@ -431,6 +511,16 @@ export function trackToolAction(toolId) {
   saveDesignAnalytics(data)
   // Additive: also feed the cross-user Firestore aggregate.
   recordAggregateTool(toolId)
+}
+
+// A live Create tool was opened (the "Opened" figure). Called once per open.
+export function trackToolOpen(toolId) {
+  if (!toolId) return
+  const data = loadDesignAnalytics()
+  if (!data.toolOpens) data.toolOpens = {}
+  data.toolOpens[toolId] = (data.toolOpens[toolId] || 0) + 1
+  saveDesignAnalytics(data)
+  recordAggregateOpen(toolId)
 }
 
 // Icon copies — most-copied icons and packs. Locally in the design-analytics
@@ -445,8 +535,8 @@ export function trackIconCopy(pack, name) {
   if (pack) data.packCopies[pack] = (data.packCopies[pack] || 0) + 1
   saveDesignAnalytics(data)
   bumpAggregate('icon-copies', 1)
-  bumpAggregate(`icon__${sanitizeKey(iconKey)}`, 1)
-  if (pack) bumpAggregate(`ipack__${sanitizeKey(pack)}`, 1)
+  bumpAggregate(aggField(AGG_PREFIX.icon, iconKey), 1)
+  if (pack) bumpAggregate(aggField(AGG_PREFIX.pack, pack), 1)
 }
 
 export function getDesignAnalytics() {
@@ -468,8 +558,9 @@ export async function resetPageAnalytics() {
   // Local layer: drop raw views + sessions (this browser).
   try { localStorage.removeItem(ANALYTICS_KEY) } catch { /* ignore */ }
   try { localStorage.removeItem(SESSIONS_KEY) } catch { /* ignore */ }
-  // Aggregate layer: remove `views` + every `view__<path>` field from each
-  // daily doc — retired routes vanish from the dashboard for every admin.
+  // Aggregate layer: remove `views` + every per-path view field (both the `__`
+  // and the single-underscore shapes) from each daily doc — retired routes
+  // vanish from the dashboard for every admin.
   try {
     const fs = await loadFirestore()
     const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(400))
@@ -478,7 +569,7 @@ export async function resetPageAnalytics() {
       const data = docSnap.data() || {}
       const payload = {}
       for (const field of Object.keys(data)) {
-        if (field === 'views' || field.startsWith('view__')) payload[field] = fs.deleteField()
+        if (field === 'views' || classifyField(field)?.kind === 'view') payload[field] = fs.deleteField()
       }
       if (!Object.keys(payload).length) return null
       return fs.setDoc(fs.doc(fs.db, AGGREGATE_COLLECTION, docSnap.id), payload, { merge: true }).catch(() => {})
