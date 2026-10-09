@@ -1178,6 +1178,51 @@ const PLB_HIT = `(roots) => {
   return { interactive: controls.length, inert: all.length - controls.length, tested, misses }
 }`
 
+// Open swatch `i`'s "more actions" menu with a tap and measure the items that
+// phones rely on now the quick tools are gone: Edit, the Swap direction(s) the
+// swatch's position allows (none left of the first, none right of the last)
+// and Remove. A missing item fails the visibility wait rather than being
+// skipped. Returns { [itemName]: { withinWidth, withinHeight, hitsItself,
+// bottom, usableBottom } }, measured against the area between the fixed header
+// and the phone tab bar.
+async function openSwatchMenu(page, cols, i, where) {
+  const more = cols.nth(i).getByRole('button', { name: /^More actions for / })
+  await more.scrollIntoViewIfNeeded()
+  await more.tap()
+  const menu = page.getByRole('menu', { name: 'Colour actions', exact: true })
+  await expect(menu, `${where}: swatch ${i + 1} menu opens`).toBeVisible()
+  const wanted = ['Edit in HCT', ...(i > 0 ? ['Swap left'] : []), ...(i < 4 ? ['Swap right'] : []), 'Remove']
+  const out = {}
+  for (const name of wanted) {
+    const item = menu.getByRole('menuitem', { name, exact: true })
+    await expect(item, `${where}: swatch ${i + 1} menu offers ${name}`).toBeVisible()
+    out[name] = await item.evaluate((el) => {
+      const b = el.getBoundingClientRect()
+      const top = document.querySelector('.pnav')?.getBoundingClientRect().bottom ?? 0
+      const tabs = document.querySelector('.pnav-tabs')
+      const usableBottom = Math.round(tabs && getComputedStyle(tabs).display !== 'none' ? tabs.getBoundingClientRect().top : innerHeight)
+      const y = b.top + b.height / 2
+      const hitsItself = [0.2, 0.5, 0.8].every((f) => {
+        const at = document.elementFromPoint(b.left + b.width * f, y)
+        return !!at && (at === el || el.contains(at))
+      })
+      return {
+        withinWidth: b.left >= -1 && b.right <= innerWidth + 1,
+        withinHeight: y >= top && b.bottom <= usableBottom,
+        hitsItself,
+        bottom: Math.round(b.bottom),
+        usableBottom,
+      }
+    })
+  }
+  return out
+}
+
+async function closeSwatchMenu(page, where) {
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu', { name: 'Colour actions', exact: true }), `${where}: Escape closes the menu`).toBeHidden()
+}
+
 test('M1 · every Palette Builder swatch control is tappable on a short phone', async ({ browser }) => {
   budget(PLB_VIEWPORTS.length)
   const damage = []
@@ -1186,11 +1231,11 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
     const cols = page.locator('.plb-col')
     const rowH = Math.round((await cols.first().boundingBox()).height)
 
-    // AT REST. The Edit / Swap / Remove quick tools are laid out but transparent
-    // with `pointer-events:none` until the swatch is opened, so they cannot be
-    // pressed and are not hit-tested here; the inert count is asserted below so
-    // the state is checked rather than ignored. Everything a person can press
-    // must hit itself.
+    // AT REST. Every viewport here is under 768px, where the swatch shows only
+    // its Lock and "more actions" button (product decision, 2026-10-09): the
+    // Edit / Swap / Remove quick tools are `display:none` and take no space, and
+    // the same actions live in the swatch's menu, hit-tested below. Everything a
+    // person can press must hit itself.
     const r = await page.evaluate(`(${PLB_HIT})([...document.querySelectorAll('.plb-col')])`)
     expect(await cols.count(), `${w}x${h}: expected the five palette columns`).toBe(5)
     // The floor moved with the row. Each column paints its hex plus Lock, Copy
@@ -1198,29 +1243,23 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
     // control, not the assertion: it exists so that an empty `misses` cannot
     // mean "nothing rendered to miss".
     expect(r.interactive, `${w}x${h}: expected the per-swatch controls to be rendered`).toBeGreaterThanOrEqual(20)
-    expect(r.inert, `${w}x${h}: the 15 quick tools are in the layout but inert while closed`).toBe(15)
+    expect(r.inert, `${w}x${h}: nothing laid out is inert - the quick tools are not rendered on a phone`).toBe(0)
+    expect(await page.locator('.plb-tool--quick:visible').count(), `${w}x${h}: no quick tool is rendered`).toBe(0)
     if (r.misses.length) {
       damage.push(`${w}x${h}: ${r.misses.length} of ${r.interactive} swatch controls are covered at rest (row is ${rowH}px tall) - ${r.misses.slice(0, 3).join('; ')}`)
     }
 
-    // REVEALED. Tap each swatch open, bring its tools to the middle of the
-    // screen (the last swatch's tools start behind the tab bar until the page
-    // scrolls), and hit-test the three quick tools. All three must be tested,
-    // so a tool that never appears fails here instead of being skipped.
+    // OPENED. Edit, Swap and Remove are in each swatch's "more actions" menu on a
+    // phone. Tap it open on every swatch: Edit, Remove and the Swap direction(s)
+    // must each be offered, and laid out inside the width of the screen. Whether
+    // the menu also fits the screen's HEIGHT is its own test below, so the two
+    // faults report separately.
     for (let i = 0; i < 5; i++) {
-      const col = cols.nth(i)
-      await col.locator('.plb-name').tap()
-      const quick = col.locator('.plb-col-quick .plb-tool')
-      await expect.poll(
-        async () => (await quick.evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).opacity)))).join(),
-        { message: `${w}x${h}: swatch ${i + 1} tools are revealed by a tap` },
-      ).toBe('1,1,1')
-      await quick.first().evaluate((el) => el.scrollIntoView({ block: 'center' }))
-      const shownTools = await col.evaluate((el, fn) => (0, eval)(fn)([el.querySelector('.plb-col-quick')]), PLB_HIT)
-      if (shownTools.tested !== 3 || shownTools.misses.length) {
-        damage.push(`${w}x${h}: swatch ${i + 1} revealed tools - ${shownTools.tested} of 3 testable, ${shownTools.misses.length} covered ${shownTools.misses.slice(0, 3).join('; ')}`)
+      const items = await openSwatchMenu(page, cols, i, `${w}x${h}`)
+      for (const [name, m] of Object.entries(items)) {
+        if (!m.withinWidth) damage.push(`${w}x${h}: swatch ${i + 1} menu item "${name}" runs past the screen edge`)
       }
-      await col.locator('.plb-name').tap() // close again
+      await closeSwatchMenu(page, `${w}x${h}: swatch ${i + 1}`)
     }
     await ctx.close()
   }
