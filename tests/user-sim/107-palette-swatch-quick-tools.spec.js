@@ -6,9 +6,10 @@
 //
 //   1. a pointer hovering the swatch,
 //   2. the keyboard reaching a control in the swatch (the tools stay rendered
-//      and focusable at rest at every width and pointer type, so focus is what
+//      and focusable at rest from 768px up, so focus is what
 //      shows them — never `visibility:hidden` or `display:none`),
-//   3. a tap on the bare swatch where there is no hover.
+//   3. a tap on the bare swatch where there is no hover, from 768px up.
+// Phones show only Lock and More actions, with quick actions in the menu.
 //
 // EVERY TEST CARRIES A POSITIVE CONTROL. "The tools are hidden at rest" and
 // "nothing overlapped" are both true of a page that never painted, so each test
@@ -225,11 +226,10 @@ test.describe('the per-swatch quick tools', () => {
     await ctx.close()
   })
 
-  // The keyboard on a touch device: the tools are not `display:none` at rest,
-  // so Tab walks Lock, More actions, Edit, Swap, Remove and each one is
-  // painted while it has focus. 390 is a phone, 820 an iPad; neither hovers.
+  // On phones Tab reaches More actions and its menu; wider touch devices
+  // keep Edit, Swap and Remove in the swatch's tab order.
   for (const width of [390, 820]) {
-    test(`Tab walks Lock, More actions, Edit, Swap and Remove, each painted, at ${width}px on a touch device`, async ({ browser }) => {
+    test(`Tab reaches the colour actions at ${width}px on a touch device`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width, { touch: true })
       const col = page.locator('.plb-col').nth(2)
 
@@ -241,6 +241,19 @@ test.describe('the per-swatch quick tools', () => {
       expect(rest.some(painted), 'nothing painted before focus arrives').toBe(false)
 
       await col.getByRole('button', { name: /^(Lock|Unlock) / }).focus()
+      if (width < 768) {
+        await expect(col.locator('.plb-tool--quick')).toHaveCount(3)
+        for (const label of QUICK) await expect(col.getByRole('button', { name: label })).toHaveCount(0)
+        await page.keyboard.press('Tab')
+        await expect(col.getByRole('button', { name: /^More actions for / })).toBeFocused()
+        await page.keyboard.press('Enter')
+        const menu = page.getByRole('menu', { name: 'Colour actions', exact: true })
+        for (const name of ['Edit in HCT', 'Swap left', 'Swap right', 'Remove']) {
+          await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible()
+        }
+        await ctx.close()
+        return
+      }
       const walk = [['More actions', /^More actions for /], ['Edit in HCT', QUICK[0]], ['Swap', QUICK[1]], ['Remove', QUICK[2]]]
       for (const [name, label] of walk) {
         await page.keyboard.press('Tab')
@@ -268,7 +281,7 @@ test.describe('the per-swatch quick tools', () => {
   }
 
   for (const theme of ['light', 'dark']) {
-    test(`a tap on a phone swatch opens 44px quick tools, a second tap closes them (${theme})`, async ({ browser }) => {
+    test(`a phone swatch offers Edit, Swap and Remove through More actions (${theme})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 390, { theme })
       const col = page.locator('.plb-col').nth(1)
 
@@ -279,20 +292,23 @@ test.describe('the per-swatch quick tools', () => {
       expect(rest.some(painted), 'closed on arrival: no quick tool is painted').toBe(false)
 
       await col.locator('.plb-name').tap()
-      await expect.poll(async () => (await quickState(col)).every(painted)).toBe(true)
-      for (const s of await quickState(col)) {
-        expect(s.width, `${s.label} is a 44px target`).toBeGreaterThanOrEqual(44)
-        expect(s.height, `${s.label} is a 44px target`).toBeGreaterThanOrEqual(44)
+      for (const s of await quickState(col)) expect(s.width, `${s.label} takes no space on a phone`).toBe(0)
+      for (const label of QUICK) await expect(col.getByRole('button', { name: label })).toHaveCount(0)
+      await expect(col.locator('.plb-col-tools').getByRole('button')).toHaveCount(2)
+
+      const more = col.getByRole('button', { name: /^More actions for / })
+      await more.tap()
+      const menu = page.getByRole('menu', { name: 'Colour actions', exact: true })
+      for (const name of ['Edit in HCT', 'Swap left', 'Swap right', 'Remove']) {
+        await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible()
       }
-      // Only this swatch opened.
-      expect((await quickState(page.locator('.plb-col').nth(2))).some(painted)).toBe(false)
+      const hexes = () => page.locator('.plb-col .plb-hex').allTextContents()
+      const before = await hexes()
+      await menu.getByRole('menuitem', { name: 'Swap right', exact: true }).tap()
+      await expect.poll(hexes).toEqual([before[0], before[2], before[1], before[3], before[4]])
 
-      await col.locator('.plb-name').tap()
-      await expect.poll(async () => (await quickState(col)).some(painted)).toBe(false)
-
-      // The opened tools act: Remove takes the colour out.
-      await col.locator('.plb-name').tap()
-      await col.getByRole('button', { name: /^Remove / }).tap()
+      await more.tap()
+      await menu.getByRole('menuitem', { name: 'Remove', exact: true }).tap()
       await expect(page.locator('.plb-col')).toHaveCount(4)
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 'no horizontal overflow').toBeLessThanOrEqual(0)
       await ctx.close()

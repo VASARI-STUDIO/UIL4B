@@ -110,9 +110,8 @@
    left of the lock. It is out of flow, so the lock and ⋯ keep the footprint
    they have at rest and the stack never lengthens the column. At rest the
    tools are transparent and take no pointer events, but they stay rendered
-   and focusable at every width and pointer type: display:none or
-   visibility:hidden would drop them from the tab order, and the keyboard
-   could not reach them to reveal them. Pointer events are switched on per
+   and focusable from 768px up, where keyboard focus reveals them. Phones
+   use the Colour actions menu instead. Pointer events are switched on per
    tool, only where that tool is revealed, so a transparent tool can never be
    pressed (not at rest, and not beside a revealed sibling). */
 .plb .plb-col-quick {
@@ -354,11 +353,7 @@
     gap: 14px;
   }
   .plb .plb-col-tools { position: static; display: flex; gap: 8px; order: 0; }
-  /* Shown (by a tap, or the keyboard in the swatch), the quick tools take a
-     line of their own under the row; at rest they stay out of flow. */
-  .plb .plb-col--tools { flex-wrap: wrap; }
-  .plb .plb-col--tools .plb-col-quick,
-  .plb .plb-col:has(:focus-visible) .plb-col-quick { position: static; order: 3; flex: 0 0 100%; grid-auto-flow: column; justify-content: end; }
+  .plb .plb-tool--quick { display: none; }
   .plb .plb-swappop { top: calc(100% + 4px); }
   .plb .plb-ramp { display: none; }
   .plb .plb-col-body { flex: 1; min-width: 0; gap: 4px; order: 1; }
