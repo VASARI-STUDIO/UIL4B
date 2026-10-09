@@ -154,16 +154,42 @@ test.describe('reflow at 320px', () => {
     // 0 WITH pointer-events auto, a live 32x32 hit area painting nothing).
     // `offsetParent` is the cheap test for it and matches how that spec skips
     // zero-box elements.
-    const tools = await page.evaluate(() =>
-      [...document.querySelectorAll('.plb-tool')].filter(t => t.offsetParent !== null).map(t => {
+    //
+    // The Edit / Swap / Remove quick tools are a tablet-and-up feature: below
+    // 768px the swatch shows only the lock and the "more actions" button, and
+    // the quick tools are `display:none`.
+    // They are asserted ABSENT below, and the same three actions are asserted
+    // REACHABLE through each swatch's menu, which is what 1.4.10 cares about:
+    // nothing a person needs is clipped away or lost at this width.
+    const probe = () => page.evaluate(() => {
+      const state = (t) => {
+        let opacity = 1
+        for (let n = t; n && n !== document.body; n = n.parentElement) opacity *= parseFloat(getComputedStyle(n).opacity)
         const r = t.getBoundingClientRect()
-        return { w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) }
-      }))
+        return { quick: !!t.closest('.plb-col-quick'), rendered: t.offsetParent !== null, opacity,
+          pointer: getComputedStyle(t).pointerEvents, w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) }
+      }
+      return [...document.querySelectorAll('.plb-tool')].map(state)
+    })
+    const all = await probe()
+    const quick = all.filter(t => t.quick && t.rendered)
+    // Usable now: laid out, visible, and able to take a pointer.
+    const tools = all.filter(t => t.rendered && t.opacity > 0 && t.pointer !== 'none')
+
+    // The phone contract: no quick tool takes any space, and none is in the
+    // accessibility tree. Both halves matter: `rendered` alone would pass if
+    // the probe had missed the buttons, so the role query checks the same fact
+    // by a different route.
+    expect(quick, 'no quick tool is rendered below 768px').toEqual([])
+    expect(tools.some(t => t.quick), 'no quick tool counts as usable on a phone').toBe(false)
+    for (const label of [/^Edit .+ in HCT$/, /^Choose a direction to swap /, /^Remove /]) {
+      await expect(page.getByRole('button', { name: label }), `${label} is not exposed on a phone`).toHaveCount(0)
+    }
 
     // A floor the filter cannot sneak under: five columns each render a row of
     // tools at this width, so a result that collapsed to a handful would mean
     // the filter ate the population rather than that everything passed.
-    // Five columns x two painted tools (the drawn lock, and the colour's
+    // Five columns x two usable tools (the drawn lock, and the colour's
     // actions menu) = 10; it was three per column before the drawn board.
     expect(tools.length, 'the per-colour tools render').toBeGreaterThan(6)
     expect(tools.length, 'every column contributes its row').toBe(10)
@@ -171,6 +197,32 @@ test.describe('reflow at 320px', () => {
     for (const t of tools) {
       expect(t.right, 'every tool is on screen').toBeLessThanOrEqual(vw + 1)
       expect(Math.min(t.w, t.h), `a tool is ${t.w}x${t.h}, under the 24px minimum`).toBeGreaterThanOrEqual(24)
+    }
+
+    // Edit, Swap and Remove have moved into each swatch's "..." menu. Open it on
+    // every swatch and check the menu is on screen horizontally and offers all
+    // three (Swap is a direction: the first swatch has no left, the last no
+    // right). A menu clipped past the viewport edge, or one missing an item,
+    // would be those actions lost at 320px, not moved.
+    const cols = page.locator('.plb-col')
+    const count = await cols.count()
+    expect(count, 'the five palette columns render').toBe(5)
+    const menu = page.getByRole('menu', { name: 'Colour actions', exact: true })
+    for (let i = 0; i < count; i++) {
+      const more = cols.nth(i).getByRole('button', { name: /^More actions for / })
+      await more.scrollIntoViewIfNeeded()
+      await more.click()
+      await expect(menu, `swatch ${i + 1}: the menu opens`).toBeVisible()
+      const names = (await menu.getByRole('menuitem').allTextContents()).map(s => s.trim())
+      expect(names, `swatch ${i + 1}: Edit is in the menu`).toContain('Edit in HCT')
+      expect(names, `swatch ${i + 1}: Remove is in the menu`).toContain('Remove')
+      expect(names.includes('Swap left'), `swatch ${i + 1}: Swap left is offered unless it is the first`).toBe(i > 0)
+      expect(names.includes('Swap right'), `swatch ${i + 1}: Swap right is offered unless it is the last`).toBe(i < count - 1)
+      const box = await menu.boundingBox()
+      expect(box.x, `swatch ${i + 1}: the menu starts on screen`).toBeGreaterThanOrEqual(-1)
+      expect(box.x + box.width, `swatch ${i + 1}: the menu ends on screen`).toBeLessThanOrEqual(vw + 1)
+      await page.keyboard.press('Escape')
+      await expect(menu, `swatch ${i + 1}: Escape closes the menu`).toBeHidden()
     }
   })
 
