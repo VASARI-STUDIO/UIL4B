@@ -106,8 +106,22 @@
 /* ── HUE AND CHROMA, STEPS, CURVE (D:827-852) ───────────────────────────── */
 .tt .tt-hc { gap: 14px; }
 
-/* ── Contrast notes (D:853-863) ─────────────────────────────────────────── */
-.tt .tt-notes { gap: 9px; }
+/* ── Contrast notes (D:853-863): a card under the chart, laid out as a grid, so
+   the wide column carries them and the page is as tall as the taller column
+   rather than the side card's controls plus eleven list rows. ──────────────── */
+.tt .tt-notes {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+}
+.tt .tt-notes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 4px 8px;
+}
 .tt .tt-note {
   display: flex;
   align-items: center;
@@ -127,6 +141,17 @@
 .tt .tt-note-aa { font-size: 12px; color: color-mix(in srgb, var(--t0) 80%, var(--card)); white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
   .tt .tt-note:hover { background: var(--tl-wash-2); }
+}
+
+/* ── Wide (901px and up): the notes card takes the wide column's second row and
+   the side card spans both rows; stacked, the DOM order (main, controls, notes)
+   is the order. The spare height, if the side card is taller, goes below the
+   notes rather than between the rows. ── */
+@media (min-width: 901px) {
+  .tt .tl-grid { grid-template-rows: auto 1fr; }
+  .tt .tl-main { grid-column: 1; grid-row: 1; }
+  .tt .tt-notes { grid-column: 1; grid-row: 2; }
+  .tt .tt-panel { grid-column: 2; grid-row: 1 / span 2; }
 }
 
 /* ── Phone. The design's phone rule turns [data-col] into 104px rows, which
