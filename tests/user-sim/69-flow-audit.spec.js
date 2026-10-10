@@ -230,7 +230,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     // when the row has no room; a Pro system raises the wall.
     const system = page.getByRole('button', { name: 'Colour system' }).first()
     if (!(await system.isVisible())) await page.getByRole('button', { name: /^Extra tools/ }).click()
-    await chooseMenuOption(page, system, { label: 'Analogous (Pro)' })
+    await chooseMenuOption(page, system, { label: 'Analogous, Pro' })
     const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
     await expect(modal).toBeVisible()
     return modal
@@ -276,7 +276,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await signIn(page, { plan: 'free' })
       await go(page, '/create/palette')
       // On a phone the System select is in the palette's Extra tools sheet; its
-      // paid options read "(Pro)" and choosing one raises the wall.
+      // Paid options carry a Pro mark and choosing one raises the wall.
       const tools = await openPaletteTools(page)
       await chooseMenuOption(page, tools.getByRole('button', { name: 'Colour system' }), 'analogous')
       await expect(tools).toHaveCount(0)

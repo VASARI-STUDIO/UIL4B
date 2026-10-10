@@ -1,6 +1,6 @@
 import { Children, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import usePopover from '../../hooks/usePopover'
+import usePopover, { placePopover } from '../../hooks/usePopover'
 import { flattenOptions, listboxKeyAction, listboxSelection, listboxTarget, selectedOptionIndex, typeaheadTarget } from '../../utils/listboxKeys'
 import ToolIcon from './ToolIcon'
 
@@ -21,11 +21,14 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   const groups = options || childOptions(children)
   const rows = flattenOptions(groups)
   const current = rows.find(option => String(option.value) === String(value))
+  const currentMark = current?.mark || groups.find(option => option.options && flattenOptions([option]).some(row => String(row.value) === String(value)))?.mark
+  const currentLabel = `${current?.label ?? value}${currentMark ? `, ${currentMark}` : ''}`
   const name = ariaLabel || ariaName || label
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   if (disabled && open) setOpen(false)
   const buffer = useRef({ text: '', time: 0 })
+  const scrimRef = useRef(null)
   const { triggerRef, popRef } = usePopover(open, () => {
     triggerRef.current?.focus({ preventScroll: true })
     setOpen(false)
@@ -54,8 +57,30 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       layer = Math.max(layer, (Number.parseInt(getComputedStyle(node).zIndex, 10) || 0) + 1)
     }
     popRef.current?.style.setProperty('--select-layer', String(layer))
+    scrimRef.current?.style.setProperty('--select-layer', String(layer))
     popRef.current?.focus({ preventScroll: true })
   }, [open, popRef, triggerRef])
+  useLayoutEffect(() => {
+    if (!open) return undefined
+    const size = () => {
+      const panel = popRef.current
+      if (!panel) return
+      panel.style.removeProperty('--select-scroll-max-h')
+      placePopover(triggerRef.current, panel)
+      if (panel.scrollHeight <= panel.clientHeight) return
+      // End the scrollport halfway through a row, including grouped lists.
+      const limit = panel.offsetHeight
+      const midpoints = Array.from(panel.querySelectorAll('[role="option"]'), row => row.offsetTop + row.offsetHeight / 2 + panel.clientTop)
+      const height = midpoints.filter(midpoint => midpoint <= limit).at(-1)
+      if (height) {
+        panel.style.setProperty('--select-scroll-max-h', `${height}px`)
+        placePopover(triggerRef.current, panel)
+      }
+    }
+    size()
+    window.addEventListener('resize', size)
+    return () => window.removeEventListener('resize', size)
+  }, [open, options, children, popRef, triggerRef])
   useEffect(() => {
     if (open && active >= 0) popRef.current?.querySelector(`[data-option-index="${active}"]`)?.scrollIntoView({ block: 'nearest' })
   }, [open, active, popRef])
@@ -96,9 +121,9 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     }
   }
   let index = 0
-  const renderRow = option => {
+  const renderRow = (option, groupMark = '') => {
     const rowIndex = index++
-    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
+    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={option.mark || groupMark ? `${option.label}, ${option.mark || groupMark}` : undefined} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
       className={`pop-item menu-select-option${active === rowIndex ? ' is-active' : ''}`} data-option-index={rowIndex} data-value={String(option.value)}
       onPointerMove={() => { if (!option.disabled) setActive(rowIndex) }} onClick={() => choose(rowIndex)}>
       <span className="menu-select-text">{option.label}</span>
@@ -108,20 +133,23 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   }
   return <>
     <button ref={triggerRef} id={triggerId} type="button" className={`menu-select-trigger${toolbar ? ' tl-select' : ''} ${className}`} disabled={disabled}
-      value={value} aria-label={name ? `${name}: ${current?.label ?? value}` : undefined} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
+      value={value} aria-label={name ? `${name}: ${currentLabel}` : undefined} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
       onClick={() => open ? close() : show()} onKeyDown={event => {
         if (listboxKeyAction(event.key, false, disabled) === 'open') { event.preventDefault(); if (!open) show() }
       }}>
       {toolbar && <span className="tl-select-k">{label}</span>}
-      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{current?.label ?? value}</span>
+      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{currentLabel}</span>
       <ToolIcon name="caret-up-down" size={13} className={toolbar ? 'tl-select-caret' : 'menu-select-caret'} />
     </button>
-    {open && !disabled && createPortal(<div ref={popRef} id={listId} role="listbox" tabIndex={-1} aria-label={name} aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
+    {open && !disabled && createPortal(<>
+      <div ref={scrimRef} className="menu-select-scrim" aria-hidden="true" data-pop-trigger={triggerId} data-pop-scrim={listId}
+        onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); close() }} />
+      <div ref={popRef} id={listId} role="listbox" tabIndex={-1} aria-label={name} aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
       className="pop menu-select-list" data-pop-fixed="true" data-pop-trigger={triggerId} onKeyDown={onKey}>
-      {groups.map((option, groupIndex) => option.options ? <div key={groupIndex} role="group" aria-label={option.group}>
-        <div className="pop-head" aria-hidden="true">{option.group}</div>
-        {flattenOptions([option]).map(renderRow)}
+      {groups.map((option, groupIndex) => option.options ? <div key={groupIndex} role="group" aria-label={option.mark ? `${option.group}, ${option.mark}` : option.group}>
+        <div className="pop-head" aria-hidden="true"><span>{option.group}</span>{option.mark && <span className="menu-select-mark">{option.mark}</span>}</div>
+        {flattenOptions([option]).map(row => renderRow(row, option.mark))}
       </div> : renderRow(typeof option === 'string' ? { value: option, label: option } : option))}
-    </div>, document.body)}
+    </div></>, document.body)}
   </>
 }

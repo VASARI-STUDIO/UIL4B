@@ -2065,7 +2065,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const openGallery = (tab) => { closeAllMenus(); setGalleryTab(tab); setGalleryOpen(true) }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
-  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.free || isPro ? h.label : `${h.label} (Pro)` }))
+  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, mark: h.free || isPro ? '' : 'Pro' }))
   const visionOptions = VISION_MODES.map(([id, label]) => ({ value: id, label }))
   // From the Extra tools overflow a choice also closes the panel, so that a Pro
   // wall raised by the choice is not opened underneath it.

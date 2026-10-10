@@ -20,14 +20,14 @@ function fixture(t, anchor, { width = 240, height = 400, viewportWidth = 1280, v
     getAttribute: key => attributes.get(key), setAttribute: (key, value) => attributes.set(key, value),
     style: { setProperty: (key, value) => styles.set(key, value) },
   }
-  placePopover({ getBoundingClientRect: () => anchor }, panel)
-  return { side: attributes.get('data-pop-side'), left: parseFloat(styles.get('--select-left')), top: parseFloat(styles.get('--select-top')), maxHeight: parseFloat(styles.get('--pop-max-h')) }
+  placePopover({ getBoundingClientRect: () => ({ width: anchor.right - anchor.left, ...anchor }) }, panel)
+  return { side: attributes.get('data-pop-side'), left: parseFloat(styles.get('--select-left')), top: parseFloat(styles.get('--select-top')), maxHeight: parseFloat(styles.get('--pop-max-h')), minWidth: parseFloat(styles.get('--select-min-w')) }
 }
 
 test('listboxes flip upward, stay below navigation and clear the bottom tabs', t => {
   const result = fixture(t, { left: 100, right: 220, top: 650, bottom: 686 }, { height: 900, tabsTop: 740 })
   assert.equal(result.side, 'top')
-  assert.equal(result.left, 8)
+  assert.equal(result.left, 100)
   assert.ok(result.top >= 72)
   assert.ok(result.top + result.maxHeight <= 650)
 })
@@ -45,4 +45,27 @@ test('short viewports do not force a minimum height behind the navigation', t =>
   assert.ok(result.maxHeight < 140)
   assert.ok(result.top >= 72)
   assert.ok(result.top + result.maxHeight <= 180)
+})
+
+test('wide fields keep their list aligned to the left at the trigger width', t => {
+  const result = fixture(t, { left: 300, right: 774, top: 100, bottom: 136 }, { width: 180 })
+  assert.equal(result.left, 300)
+  assert.equal(result.minWidth, 474)
+})
+
+test('wide fields clamp using the trigger width rather than the content width', t => {
+  const result = fixture(t, { left: 1000, right: 1474, top: 100, bottom: 136 }, { width: 180 })
+  assert.equal(result.left, 798)
+  assert.equal(result.minWidth, 474)
+})
+
+test('small lists retain a 180px minimum when clamped near the right edge', t => {
+  const result = fixture(t, { left: 1200, right: 1270, top: 100, bottom: 136 }, { width: 100 })
+  assert.equal(result.left, 1092)
+})
+
+test('a trigger wider than the viewport cannot push its list offscreen', t => {
+  const result = fixture(t, { left: 20, right: 600, top: 100, bottom: 136 }, { width: 180, viewportWidth: 320 })
+  assert.equal(result.left, 8)
+  assert.equal(result.minWidth, 304)
 })

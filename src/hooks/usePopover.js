@@ -99,9 +99,11 @@ export function placePopover(trigger, panel) {
     const above = Math.max(0, Math.min(bottom, anchor.top) - top - EDGE_PAD)
     const side = h > below && above > below ? 'top' : 'bottom'
     const maxHeight = Math.max(0, side === 'top' ? above : below)
-    const left = Math.max(EDGE_PAD, Math.min(anchor.right - w, vw - w - EDGE_PAD))
+    const width = Math.min(Math.max(w, anchor.width, 180), vw - EDGE_PAD * 2)
+    const left = Math.max(EDGE_PAD, Math.min(anchor.left, vw - width - EDGE_PAD))
     setIfChanged(panel, 'data-pop-side', side)
     panel.style.setProperty('--pop-max-h', `${maxHeight}px`)
+    panel.style.setProperty('--select-min-w', `${Math.min(anchor.width, vw - EDGE_PAD * 2)}px`)
     panel.style.setProperty('--select-left', `${left}px`)
     panel.style.setProperty('--select-top', `${side === 'top' ? Math.max(top, anchor.top - EDGE_PAD - Math.min(h, maxHeight)) : Math.max(top, anchor.bottom + EDGE_PAD)}px`)
     return
@@ -272,6 +274,7 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
 
     const onDown = (e) => {
       if (panel?.contains(e.target) || triggerRef.current?.contains(e.target)) return
+      if (e.target.closest?.('[data-pop-scrim]')?.getAttribute('data-pop-scrim') === panel?.id) return
       const owner = e.target.closest?.('[data-pop-trigger]')?.getAttribute('data-pop-trigger')
       if (owner && panel?.contains(document.getElementById(owner))) return
       closeRef.current?.()

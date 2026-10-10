@@ -1933,7 +1933,7 @@ function IconPackCredit({ packs }) {
 // 'Log in' is what the nav trigger says — so nothing new is being coined here.
 // A pack the viewer CAN see carries no marker at all: a badge on everything is
 // a badge that says nothing.
-const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefix) === 'paid' ? ' · Pro' : ' · Log in')
+const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefix) === 'paid' ? 'Pro' : 'Log in')
 
 /* ── THE WALL ────────────────────────────────────────────────────────────────
 
@@ -3239,7 +3239,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
                 const uniform = marks.length === 1
                 return {
-                  group: uniform ? g.label + marks[0] : g.label,
+                  group: g.label,
+                  mark: uniform ? marks[0] : '',
                   options: g.packs.map(([value, label]) => ({ value, label, mark: uniform ? '' : lockMark(value, tier) })),
                 }
               }),
