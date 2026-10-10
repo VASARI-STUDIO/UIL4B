@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // THE FLOW AUDIT, 2026-09-09 — six journeys a real person takes, rendered.
 //
 // The founder's standing ask is that every flow "feels intentional" and that
@@ -53,7 +52,7 @@ import { chooseMenuOption } from './helpers.js'
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'

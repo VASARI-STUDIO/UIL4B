@@ -415,6 +415,7 @@ test.describe('the Palette Builder opens on a random palette', () => {
     // being built by `generateHarmony(seed, 'analogous')` — a PAID system. A
     // free user was looking at output they could not themselves produce.
     await expect(page.getByRole('button', { name: 'Colour system' })).toHaveAttribute('value', 'auto')
+    await expect(page.getByRole('button', { name: 'Colour system' })).toHaveAccessibleName(/Colour system: Auto/)
     await expect(page.locator('.plb-collapsed')).toHaveCount(0)
 
     // So this checks the ENGINE, through a signature only the tonal engine
@@ -472,6 +473,7 @@ test.describe('the Palette Builder opens on a random palette', () => {
     const afterFirst = await boardColors(page)
     expect(afterFirst).not.toEqual(before)
     await expect(page.getByRole('button', { name: 'Colour system' })).toHaveAttribute('value', 'auto')
+    await expect(page.getByRole('button', { name: 'Colour system' })).toHaveAccessibleName(/Colour system: Auto/)
     await expect(page.locator('[aria-label^="Unlock "]')).toHaveCount(0)
 
     // Pressing it again draws again: Reset randomises the colour, it does not

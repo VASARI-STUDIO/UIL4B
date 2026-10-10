@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // The defect sweep — the leftovers of the two August 2026 QA audits.
 //
 // The responsive audit (M1, M6, N1–N8) and the mobile audit (S3, S4, S5, S10,
@@ -24,7 +23,7 @@ import { chooseMenuOption } from './helpers.js'
 // viewports, because a desktop Chromium narrowed to 390px still reports
 // `hover: hover` and hides this whole class of defect.
 import { test, expect } from './base.js'
-import { go, restingScrollY, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, restingScrollY, signIn, watch } from './helpers.js'
 import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'

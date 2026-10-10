@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // The Type Scale overhaul, in a browser.
 //
 // #type-scale-ui-overhaul. The founder: "the type scale UI needs a overhaul it
@@ -17,7 +16,7 @@ import { chooseMenuOption } from './helpers.js'
 // have their own unit tests; this file has none of that.
 
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 
 // The visible one. Type Scale keeps a second, hidden ladder in no case, but the
 // rail and the ladder both carry `.seg-label` and `.tsc-select`, and a

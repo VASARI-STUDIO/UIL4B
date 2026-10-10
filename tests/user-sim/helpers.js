@@ -1025,7 +1025,7 @@ export async function keyToRest(page, key, what = 'the page') {
 // Resolve value-based choices to the visible name, then operate by ARIA role.
 export async function chooseMenuOption(page, trigger, choice) {
   await trigger.click()
-  const list = page.getByRole('listbox')
+  const list = page.locator('.menu-select-list[role="listbox"]')
   await list.waitFor({ state: 'visible' })
   const name = typeof choice === 'object'
     ? choice.label

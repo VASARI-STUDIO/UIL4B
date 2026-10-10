@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // The 2026-09-09 breakpoint pass over the media, icon and content tools:
 // /create/icons, /create/emoji, /create/file-converter, /create/alt-text, /seo
 // and /create/semantic-color.
@@ -19,7 +18,7 @@ import { chooseMenuOption } from './helpers.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { fixturePacks, isLiveIconify, refuseIconify } from './iconify-stub.js'
 import { visiblePacks } from '../../src/data/iconPackTiers.js'
 

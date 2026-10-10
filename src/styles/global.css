@@ -4361,9 +4361,11 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 @media(pointer:coarse){.menu-select-option{min-height:44px}}
 @media(max-width:960px){
   .pop.menu-select-list,.pop.menu-select-list[data-pop-side="top"],.pop.menu-select-list[data-pop-align]{left:0;right:0;top:auto;bottom:0;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px,calc(100dvh - var(--chrome-h) - var(--tabbar-h) - 16px));padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:var(--shadow-cmd);animation:menu-select-sheet-in var(--dur-2) var(--ease-entrance)}
-  html.has-tabbar .pop.menu-select-list{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
   .menu-select-list::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:var(--radius-pill);background:var(--border)}
   .menu-select-option{min-height:44px}
+}
+@media(max-width:767px){
+  html.has-tabbar .pop.menu-select-list{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
 }
 @keyframes menu-select-sheet-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 

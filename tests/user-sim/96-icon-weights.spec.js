@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // THE ICON WEIGHTS ARE REAL — Regular / Bold / Fill / Duo.
 //
 // the weight tabs the design's phone mock
@@ -10,7 +9,7 @@ import { chooseMenuOption } from './helpers.js'
 // Served from the Iconify fixture (tests/user-sim/fixtures/iconify), whose
 // Phosphor collection carries a handful of each weight.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 
 const cellNames = (page) => page.evaluate(() =>
   [...document.querySelectorAll('.ig .ic')].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')))

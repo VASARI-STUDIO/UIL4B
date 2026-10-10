@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // /create/3d-converter, walked by someone who has a model and wants another format.
 //
 // What a unit test cannot prove and this does, in a real Chromium:
@@ -17,7 +16,7 @@ import { chooseMenuOption } from './helpers.js'
 // FIXTURES are built here: a binary STL of a 2 x 1 x 1 box (12 triangles),
 // written byte by byte, and a few bytes of junk. Nothing binary is committed.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 
 const PERSONA = 'a designer converting a 3D model for a client'
 const ROUTE = '/create/3d-converter'

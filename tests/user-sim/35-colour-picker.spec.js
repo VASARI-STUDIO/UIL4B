@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // The shared colour picker's new controls, measured in a browser.
 //
 // The picker offers Solid / Gradient / Image tabs, an SV field, hue and alpha
@@ -17,7 +16,7 @@ import { chooseMenuOption } from './helpers.js'
 // tests/unit/recent-colors.test.js. What needs a browser is that the picker is
 // wired to both.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 
 const ROUTE = '/create/gradient'
 const TRIGGER = '.cpk-trigger'
@@ -45,21 +44,25 @@ test.describe('colour picker', () => {
     await list.press('ArrowDown')
     await list.press('Enter')
     await expect(trigger).toHaveAttribute('value', 'rgb')
+    await expect(trigger).toHaveAccessibleName(/Colour notation: RGB/)
     await expect(trigger).toBeFocused()
     await trigger.press('Space')
     await list.press('Home')
     await list.press('Space')
     await expect(trigger).toHaveAttribute('value', 'hex')
+    await expect(trigger).toHaveAccessibleName(/Colour notation: HEX/)
     await trigger.press('ArrowUp')
     await list.press('End')
     await list.press('Escape')
     await expect(trigger).toHaveAttribute('value', 'hex')
+    await expect(trigger).toHaveAccessibleName(/Colour notation: HEX/)
     await expect(trigger).toBeFocused()
     await expect(page.locator(PANEL)).toBeVisible()
     await trigger.press('Enter')
     await list.press('h')
     await list.press('Enter')
     await expect(trigger).toHaveAttribute('value', 'hsl')
+    await expect(trigger).toHaveAccessibleName(/Colour notation: HSL/)
     await trigger.press('Enter')
     await list.press('Tab')
     await expect(list).toHaveCount(0)

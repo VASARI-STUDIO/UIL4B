@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // THE FLOW AUDIT'S FOLLOW-UPS, 2026-09-10 — the eight defects #436 measured in
 // files outside its lane, rendered again on main before anything was changed,
 // then fixed and held here.
@@ -57,7 +56,7 @@ import { chooseMenuOption } from './helpers.js'
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
@@ -184,6 +183,7 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
       await expect(tools).toHaveCount(0)
       tools = await openPaletteTools(page)
       await expect(tools.getByRole('button', { name: 'Colour system' })).toHaveAttribute('value', pick.id)
+      await expect(tools.getByRole('button', { name: 'Colour system' })).toHaveAccessibleName(new RegExp(`Colour system: ${pick.label}`))
       await context.close()
     })
   }

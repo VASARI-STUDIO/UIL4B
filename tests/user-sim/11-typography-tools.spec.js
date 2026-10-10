@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // Personas: DESIGNER choosing a typeface, FRONT-END DEVELOPER shipping tokens,
 // and a KEYBOARD-ONLY visitor.
 //
@@ -11,7 +10,7 @@ import { chooseMenuOption } from './helpers.js'
 // bundled-fallback notice, the retry and the "everything still works" promise
 // are the states most likely to rot, and they are the ones under test.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 
 async function installFontEvidenceMock(page, { fontApi, mode }) {
   await page.addInitScript(({ exposeFontApi, initialMode }) => {

@@ -1,11 +1,10 @@
-import { chooseMenuOption } from './helpers.js'
 // Regression coverage for the second founder-reported Palette Builder batch.
 //
 // Same rule as batch 1 (14-palette-slider-toolbar-gradient-stops.spec.js): each of these
 // shipped once because nothing measured the RENDERED result. These tests
 // measure the rendered result.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
 
 /* ── 1 · DELETED: 'Palette Builder · toolbar labels expand the button' ────────
@@ -94,6 +93,7 @@ test.describe('Palette Builder · colour titles', () => {
     const system = page.getByRole('button', { name: 'Colour system' })
     await chooseMenuOption(page, system, 'monochromatic')
     await expect(system).toHaveAttribute('value', 'monochromatic')
+    await expect(system).toHaveAccessibleName(/Colour system: Monochromatic/)
     await expect.poll(async () => (await hexes.allInnerTexts()).join()).not.toBe(before.hexes.join())
 
     // Read both in ONE evaluation, so a title can never be compared against a

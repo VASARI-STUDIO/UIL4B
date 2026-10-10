@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // THE ANIMATION BUILDER, DRIVEN END TO END, AND ITS OUTPUT READ BACK.
 //
 // Founder request, 2026-09-16: frames in → animated WebP / GIF / APNG / MP4 /
@@ -16,7 +15,7 @@ import { chooseMenuOption } from './helpers.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 
 const PERSONA = 'someone turning exported frames into a looping animation'
 const CORE_DIR = path.join(process.cwd(), 'node_modules', '@ffmpeg', 'core', 'dist', 'esm')

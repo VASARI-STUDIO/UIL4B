@@ -2759,8 +2759,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
          more slack than 1180 has.
      A gate that reshapes the page for the people it gates is a gate that
      punishes them for being gated, so the marker went where it is free: the
-     pack <select>, which offers every pack individually, spells the tier out in
-     its optgroup labels and has a 220px cap the browser honours.
+     pack menu, which offers every pack individually, spells the tier out in
+     its group labels and has a 220px trigger cap.
 
      Nothing is a dead end without it. Choosing a locked chip costs no request
      and answers immediately with a wall that names the group and the tier — the
@@ -3230,6 +3230,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               toolbar's quick row) exactly where the design's phone mock draws it; the
               pack menu and the collection chips go to the Filters sheet. */}
           <IconWeightSeg value={weight} stateOf={weightState} onChange={handleWeight} />
+          {/* Locked packs stay selectable so choosing one can show the access gate. */}
           <MenuSelect className="lbry-select" value={selectValue} onChange={handlePackChange} ariaLabel="Icon pack"
             options={[
               { value: 'all', label: 'All packs' },

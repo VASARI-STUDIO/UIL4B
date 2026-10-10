@@ -1,9 +1,8 @@
-import { chooseMenuOption } from './helpers.js'
 // Adversarial acceptance coverage for the Gradient and Semantic Colour tools.
 // These flows deliberately use invalid values, repeated actions, keyboard-only
 // adjustments, and narrow screens so the workbenches fail safely under pressure.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 import { normalizeClipboardText } from '../../src/hooks/useClipboard.js'
 
 test.describe('Gradient Generator workbench resilience', () => {
@@ -232,6 +231,7 @@ test.describe('Semantic Colour system workflow', () => {
     await go(page, '/create/semantic-color')
     const success = page.getByRole('button', { name: 'Success preset' })
     await expect(success).toHaveAttribute('value', '1')
+    await expect(success).toHaveAccessibleName(/Success preset: Green/)
     await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Green')
     await chooseMenuOption(page, success, { label: 'Teal' })
     await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Teal')

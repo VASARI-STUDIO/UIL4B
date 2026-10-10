@@ -1,4 +1,3 @@
-import { chooseMenuOption } from './helpers.js'
 // THE ICON CATALOGUE COMES FROM A FIXTURE, AND THE PAGE IS PROVEN TO USE IT.
 //
 // WHAT WAS HAPPENING
@@ -35,7 +34,7 @@ import { chooseMenuOption } from './helpers.js'
 //     fails on the label count;
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { fixturePacks, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
