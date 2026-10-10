@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // THE FLOW AUDIT'S FOLLOW-UPS, 2026-09-10 — the eight defects #436 measured in
 // files outside its lane, rendered again on main before anything was changed,
 // then fixed and held here.
@@ -174,15 +175,15 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
       // The colour system, which a phone reaches in the Extra tools sheet: the
       // select must take the tap over the adjust footer, and the choice holds.
       let tools = await openPaletteTools(page)
-      const system = tools.getByRole('combobox', { name: 'Colour system' })
-      const current = await system.inputValue()
+      const system = tools.getByRole('button', { name: 'Colour system' })
+      const current = await system.getAttribute('value')
       const pick = COLOUR_SYSTEMS.find((s) => s.free && s.id !== current)
       await expect.poll(() => hitWithin(system, '.tl-sheet').then((h) => h.inside),
         'a tap on the colour system must reach the Extra tools sheet, not the adjust footer').toBe(true)
-      await system.selectOption(pick.id)
+      await chooseMenuOption(page, system, pick.id)
       await expect(tools).toHaveCount(0)
       tools = await openPaletteTools(page)
-      await expect(tools.getByRole('combobox', { name: 'Colour system' })).toHaveValue(pick.id)
+      await expect(tools.getByRole('button', { name: 'Colour system' })).toHaveAttribute('value', pick.id)
       await context.close()
     })
   }

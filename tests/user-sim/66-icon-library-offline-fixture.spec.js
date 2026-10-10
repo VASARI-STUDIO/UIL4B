@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // THE ICON CATALOGUE COMES FROM A FIXTURE, AND THE PAGE IS PROVEN TO USE IT.
 //
 // WHAT WAS HAPPENING
@@ -244,8 +245,10 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
   // the built-in set rather than a grid still loading.
   await expect(page.getByText(/Showing \d+ of \d+ · Built-in icons/)).toBeVisible({ timeout: 15000 })
 
-  const select = page.locator('select').first()
-  const packs = await select.locator('option').evaluateAll((os) => os.map((o) => o.value))
+  const select = page.getByRole('button', { name: 'Icon pack' })
+  await select.click()
+  const packs = await page.getByRole('listbox').getByRole('option').evaluateAll(rows => rows.map(row => row.dataset.value))
+  await page.keyboard.press('Escape')
   const selectable = packs.filter((p) => p && p !== 'custom' && p !== 'logodev' && p !== 'all')
 
   // POSITIVE CONTROL. Everything below is per-pack, so an empty or broken pack
@@ -256,7 +259,7 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
   const silent = []
   let emptied = 0
   for (const pack of selectable) {
-    await select.selectOption(pack)
+    await chooseMenuOption(page, select, pack)
     // The browse is debounced and then swaps the grid, so wait for it to settle
     // into EITHER cells or an empty state — but do not assert on that wait.
     //
@@ -465,7 +468,7 @@ test('choosing a Pro pack costs nothing, and says so in its own words', async ({
 
   // Counted from the moment of the click, so the default browse is not in the way.
   const after = iconifyUrlLog(page)
-  await page.locator('.lbry-select').selectOption('simple-icons')
+  await chooseMenuOption(page, page.locator('.lbry-select'), 'simple-icons')
   await page.waitForTimeout(2500)
 
   expect(after, `picking a Pro pack made ${after.length} request(s): ${after.slice(0, 3).join(' ')}`).toEqual([])
@@ -518,7 +521,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
     'only the recent the visitor may still have is drawn').toBe(1)
 
   // The visitor's own icons, at the narrowest tier there is.
-  await page.locator('.lbry-select').selectOption('custom')
+  await chooseMenuOption(page, page.locator('.lbry-select'), 'custom')
   await page.waitForTimeout(1500)
   await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible()
@@ -530,7 +533,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   // one left open.
   const logos = []
   page.on('request', (r) => { if (r.url().includes('img.logo.dev')) logos.push(r.url()) })
-  await page.locator('.lbry-select').selectOption('logodev')
+  await chooseMenuOption(page, page.locator('.lbry-select'), 'logodev')
   await page.waitForTimeout(2500)
   expect(logos, 'a gated Logo.dev must not resolve a single brand image').toEqual([])
   await expect(page.locator('.ig-gate')).toBeVisible()

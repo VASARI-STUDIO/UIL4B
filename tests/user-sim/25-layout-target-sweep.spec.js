@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // The defect sweep — the leftovers of the two August 2026 QA audits.
 //
 // The responsive audit (M1, M6, N1–N8) and the mobile audit (S3, S4, S5, S10,
@@ -1241,7 +1242,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // the first screen at 1280, so a second page (Tabler) now loads on arrival
   // and the set genuinely mixes packs. Choosing Lucide is the state the rule
   // is about, and it cannot drift with the layout.
-  await page.locator('select[aria-label="Icon pack"]').selectOption('lucide')
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
   await expect.poll(async () => (await read()).cells, { timeout: 20000 }).toBeGreaterThan(20)
   const single = await read()
   expect(single.cells, 'the Lucide grid should be populated').toBeGreaterThan(20)
@@ -1250,7 +1251,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
 
   // Brand logos genuinely mixes packs - logo.dev marks alongside glyph packs.
   // It is a cross-pack collection, so the pack menu goes back to All first.
-  await page.locator('select[aria-label="Icon pack"]').selectOption('all')
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'all')
   // At this width the group is its one-line trigger (the toolbar never wraps),
   // so the chip lives in the menu it opens.
   const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })

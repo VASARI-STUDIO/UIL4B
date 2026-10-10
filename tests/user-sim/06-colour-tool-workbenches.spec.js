@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // Adversarial acceptance coverage for the Gradient and Semantic Colour tools.
 // These flows deliberately use invalid values, repeated actions, keyboard-only
 // adjustments, and narrow screens so the workbenches fail safely under pressure.
@@ -159,7 +160,7 @@ test.describe('Semantic Colour system workflow', () => {
     await expect(page.locator('[data-role="success"] .stc-cell.is-base')).toHaveAttribute('aria-label', /^Copy 600, /)
 
     // Custom: a hue slider, and a pasted hex rotated into the role's arc.
-    await page.getByRole('combobox', { name: 'Success preset' }).selectOption('custom')
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Success preset' }), 'custom')
     await expect(page.getByRole('slider', { name: 'success custom hue' })).toBeVisible()
     const successHex = page.getByRole('textbox', { name: 'Import a hex colour for success' })
     await successHex.fill('bad')
@@ -225,14 +226,14 @@ test.describe('Semantic Colour system workflow', () => {
       .not.toHaveProperty('pending')
   })
 
-  // The chosen preset is a real select, so a screen reader hears its value.
+  // The preset trigger announces its current value.
   test('each role says which preset is on, and it follows a change', async ({ page }) => {
     watch(page, 'a designer on a screen reader choosing a success green')
     await go(page, '/create/semantic-color')
-    const success = page.getByRole('combobox', { name: 'Success preset' })
-    await expect(success).toHaveValue('1')
+    const success = page.getByRole('button', { name: 'Success preset' })
+    await expect(success).toHaveAttribute('value', '1')
     await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Green')
-    await success.selectOption({ label: 'Teal' })
+    await chooseMenuOption(page, success, { label: 'Teal' })
     await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Teal')
     // The bundle no longer matches, so no bundle claims the selection.
     await expect(page.locator('.stc-bundles [aria-checked="true"]')).toHaveCount(0)

@@ -1021,3 +1021,15 @@ export async function keyToRest(page, key, what = 'the page') {
   await page.keyboard.press(key)
   return restAfterMove(page, before, what)
 }
+
+// Resolve value-based choices to the visible name, then operate by ARIA role.
+export async function chooseMenuOption(page, trigger, choice) {
+  await trigger.click()
+  const list = page.getByRole('listbox')
+  await list.waitFor({ state: 'visible' })
+  const name = typeof choice === 'object'
+    ? choice.label
+    : await list.getByRole('option').evaluateAll((rows, value) => rows.find(row => row.dataset.value === String(value))?.textContent?.trim(), choice)
+  if (!name) throw new Error(`No listbox option for ${String(choice)}`)
+  await list.getByRole('option', { name, exact: true }).click()
+}

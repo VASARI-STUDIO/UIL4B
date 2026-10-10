@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // The Type Scale overhaul, in a browser.
 //
 // #type-scale-ui-overhaul. The founder: "the type scale UI needs a overhaul it
@@ -82,7 +83,7 @@ test.describe('Type Scale · the overhaul', () => {
     await expect(range).toHaveText('10px – 61px')
     await expect(largest).toContainText('61px')
 
-    await page.getByLabel('Scale ratio').selectOption('1.5')
+    await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
     await expect(range).toHaveText('7px – 182.5px')
     await expect(largest).toContainText('182.5px')
 
@@ -167,7 +168,7 @@ test.describe('Type Scale · the overhaul', () => {
     await expect(visible(page, '.tsc-mode-btn')).toHaveCount(2)
 
     // And it still drives the maths from in there.
-    await page.getByLabel('Rounding').selectOption('none')
+    await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
     await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('61.04px')
   })
 })

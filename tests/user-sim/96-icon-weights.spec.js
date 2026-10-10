@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // THE ICON WEIGHTS ARE REAL — Regular / Bold / Fill / Duo.
 //
 // the weight tabs the design's phone mock
@@ -42,7 +43,7 @@ test.describe('the icon weight segment', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-    await page.locator('select[aria-label="Icon pack"]').selectOption('lucide')
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
     const seg = page.getByRole('group', { name: 'Icon weight' })
     const bold = seg.getByRole('button', { name: /^Bold/ })
     await expect(bold).toHaveAttribute('aria-disabled', 'true')

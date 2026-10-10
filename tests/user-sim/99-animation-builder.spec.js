@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // THE ANIMATION BUILDER, DRIVEN END TO END, AND ITS OUTPUT READ BACK.
 //
 // Founder request, 2026-09-16: frames in → animated WebP / GIF / APNG / MP4 /
@@ -138,7 +139,7 @@ test.describe('the animation builder', () => {
     // 4. Timing and loop: 5 fps, play twice.
     await page.getByLabel('Frame rate (fps)').fill('5')
     await page.getByLabel('Frame rate (fps)').blur()
-    await page.getByLabel('Loop').selectOption({ label: 'Play twice' })
+    await chooseMenuOption(page, page.getByLabel('Loop'), { label: 'Play twice' })
     await expect(page.locator('.fc-inspector')).toContainText('4 frames · 0.8 s · 200 ms each')
 
     // Watch what the status line says while a build runs.
@@ -157,7 +158,7 @@ test.describe('the animation builder', () => {
       ['APNG', 'image/png'],
     ]
     for (const [label, type] of images) {
-      await page.getByLabel('Output format').selectOption({ label })
+      await chooseMenuOption(page, page.getByLabel('Output format'), { label })
       await page.getByRole('button', { name: `Build ${label}` }).click()
       const alt = `${label} result`
       await expect(page.locator(`img[alt="${alt}"]`), `no ${label} came out`).toBeVisible({ timeout: 120_000 })
@@ -175,7 +176,7 @@ test.describe('the animation builder', () => {
 
     // 5. A settings change marks the last result out of date instead of passing
     //    it off as current.
-    await page.getByLabel('Loop').selectOption({ label: 'Loop forever' })
+    await chooseMenuOption(page, page.getByLabel('Loop'), { label: 'Loop forever' })
     await expect(page.locator('.fc-result')).toContainText(/changed since this was built/)
     await page.getByRole('button', { name: 'Build APNG' }).click()
     await expect(page.locator('.fc-result')).not.toContainText(/changed since this was built/, { timeout: 60_000 })
@@ -183,7 +184,7 @@ test.describe('the animation builder', () => {
 
     // 6. The video formats: the file's own metadata, read by a <video>.
     for (const label of ['MP4 (H.264)', 'WebM (VP8)']) {
-      await page.getByLabel('Output format').selectOption({ label })
+      await chooseMenuOption(page, page.getByLabel('Output format'), { label })
       await expect(page.getByLabel('Loop'), `${label} has no loop field to set`).toBeDisabled()
       await page.getByRole('button', { name: `Build ${label}` }).click()
       const vid = page.locator(`video[aria-label="${label} result"]`)
@@ -241,7 +242,7 @@ test.describe('the animation builder', () => {
         return real.apply(this, arguments)
       }
     })
-    await page.getByLabel('Output format').selectOption({ label: 'Animated WebP' })
+    await chooseMenuOption(page, page.getByLabel('Output format'), { label: 'Animated WebP' })
     await page.getByRole('button', { name: 'Build Animated WebP' }).click()
     await page.getByRole('button', { name: 'Download Animated WebP' }).click({ timeout: 120_000 })
     await expect.poll(() => page.evaluate(() => window.__dl)).toEqual(['animation.webp'])

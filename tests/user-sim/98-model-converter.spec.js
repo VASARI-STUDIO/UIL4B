@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // /create/3d-converter, walked by someone who has a model and wants another format.
 //
 // What a unit test cannot prove and this does, in a real Chromium:
@@ -206,7 +207,7 @@ test.describe('3D Model Converter', () => {
     await signIn(page)
     await go(page, ROUTE)
     await openBox(page)
-    await page.getByRole('combobox', { name: 'Model units' }).selectOption('mm')
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Model units' }), 'mm')
     await expect(fact(page, 'extent')).toContainText('2 × 1 × 1 mm')
     await page.getByRole('radio', { name: /^GLB \(/ }).check()
     await page.getByTestId('v3d-convert').click()

@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // THE FLOW AUDIT, 2026-09-09 — six journeys a real person takes, rendered.
 //
 // The founder's standing ask is that every flow "feels intentional" and that
@@ -228,11 +229,9 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
   async function raiseWall(page) {
     // The colour system is a select on the toolbar, or in its Extra tools overflow
     // when the row has no room; a Pro system raises the wall.
-    const system = page.getByRole('combobox', { name: 'Colour system' }).first()
+    const system = page.getByRole('button', { name: 'Colour system' }).first()
     if (!(await system.isVisible())) await page.getByRole('button', { name: /^Extra tools/ }).click()
-    // A person changing a select has it focused; selectOption alone does not.
-    await system.focus()
-    await system.selectOption({ label: 'Analogous (Pro)' })
+    await chooseMenuOption(page, system, { label: 'Analogous (Pro)' })
     const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
     await expect(modal).toBeVisible()
     return modal
@@ -280,7 +279,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       // On a phone the System select is in the palette's Extra tools sheet; its
       // paid options read "(Pro)" and choosing one raises the wall.
       const tools = await openPaletteTools(page)
-      await tools.getByRole('combobox', { name: 'Colour system' }).selectOption('analogous')
+      await chooseMenuOption(page, tools.getByRole('button', { name: 'Colour system' }), 'analogous')
       await expect(tools).toHaveCount(0)
       const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
       await expect(modal).toBeVisible()

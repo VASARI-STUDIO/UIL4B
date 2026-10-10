@@ -1,3 +1,4 @@
+import { chooseMenuOption } from './helpers.js'
 // The shared colour picker's new controls, measured in a browser.
 //
 // The picker offers Solid / Gradient / Image tabs, an SV field, hue and alpha
@@ -33,15 +34,64 @@ async function openPicker(page) {
 test.describe('colour picker', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'designer mixing a colour') })
 
+  test('notation listbox supports keyboard selection, type-ahead and dismissal', async ({ page }) => {
+    await openPicker(page)
+    const trigger = page.getByRole('button', { name: 'Colour notation' })
+    const list = page.getByRole('listbox', { name: 'Colour notation', exact: true })
+    await trigger.focus()
+    await trigger.press('ArrowDown')
+    await expect(list).toBeFocused()
+    await expect(list.getByRole('option', { name: 'HEX', exact: true })).toHaveAttribute('aria-selected', 'true')
+    await list.press('ArrowDown')
+    await list.press('Enter')
+    await expect(trigger).toHaveAttribute('value', 'rgb')
+    await expect(trigger).toBeFocused()
+    await trigger.press('Space')
+    await list.press('Home')
+    await list.press('Space')
+    await expect(trigger).toHaveAttribute('value', 'hex')
+    await trigger.press('ArrowUp')
+    await list.press('End')
+    await list.press('Escape')
+    await expect(trigger).toHaveAttribute('value', 'hex')
+    await expect(trigger).toBeFocused()
+    await expect(page.locator(PANEL)).toBeVisible()
+    await trigger.press('Enter')
+    await list.press('h')
+    await list.press('Enter')
+    await expect(trigger).toHaveAttribute('value', 'hsl')
+    await trigger.press('Enter')
+    await list.press('Tab')
+    await expect(list).toHaveCount(0)
+    await expect(page.locator(PANEL)).toBeVisible()
+  })
+
+  test('notation sheet stays inside a phone viewport and closes on an outside tap', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await openPicker(page)
+    await page.getByRole('button', { name: 'Colour notation' }).click()
+    const list = page.getByRole('listbox', { name: 'Colour notation', exact: true })
+    await expect(list).toBeVisible()
+    const bounds = await list.boundingBox()
+    expect(bounds.x).toBeGreaterThanOrEqual(0)
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(390)
+    for (const option of await list.getByRole('option').all()) {
+      expect((await option.boundingBox()).height).toBeGreaterThanOrEqual(44)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    await page.mouse.click(4, 100)
+    await expect(list).toHaveCount(0)
+  })
+
   test('the notation dropdown rewrites the field without changing the colour', async ({ page }) => {
     await openPicker(page)
     const swatch = page.locator('.grd-pick-swatch .cpk-trigger-chip').first()
     const before = await swatch.evaluate(el => getComputedStyle(el).backgroundColor)
 
     await expect(page.locator(FIELD)).toHaveValue(/^#[0-9a-f]{6}$/i)
-    await page.locator(FORMAT).selectOption('rgb')
+    await chooseMenuOption(page, page.locator(FORMAT), 'rgb')
     await expect(page.locator(FIELD)).toHaveValue(/^rgb\(\d+ \d+ \d+\)$/)
-    await page.locator(FORMAT).selectOption('hsl')
+    await chooseMenuOption(page, page.locator(FORMAT), 'hsl')
     await expect(page.locator(FIELD)).toHaveValue(/^hsl\(\d+ \d+% \d+%\)$/)
 
     // A lens, not a second value: the colour itself never moved.

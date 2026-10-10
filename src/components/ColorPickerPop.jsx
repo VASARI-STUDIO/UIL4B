@@ -1,3 +1,4 @@
+import MenuSelect from './tool/MenuSelect'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import usePopover from '../hooks/usePopover'
 import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
@@ -430,12 +431,12 @@ export default function ColorPickerPop({
               onBlur={applyTypedColor}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyTypedColor() } }}
             />
-            <select
+            <MenuSelect
               className="cpk-format"
               value={format}
               aria-label="Colour notation"
-              onChange={(e) => {
-                const next = e.target.value
+              onChange={nextValue => {
+                const next = nextValue
                 setFormat(next)
                 // Rewrite what is on screen immediately. Waiting for the next
                 // commit would leave the field showing hex under a dropdown
@@ -446,7 +447,7 @@ export default function ColorPickerPop({
               {COLOR_FORMATS.map((f) => (
                 <option key={f} value={f}>{f.toUpperCase()}</option>
               ))}
-            </select>
+            </MenuSelect>
           </div>
 
           {/* Two labelled sections rather than two bare grids. Canva, Adobe

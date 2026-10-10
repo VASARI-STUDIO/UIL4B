@@ -108,8 +108,8 @@ test.describe('palette toolbar fits the row it is given', () => {
     // System and Vision selects (priority 0) are here, not on the row.
     const bar = page.locator(BAR)
     for (const name of ['Colour system', 'Colour vision check']) {
-      await expect(bar.getByRole('combobox', { name }), `${name} left the row`).toHaveCount(0)
-      await expect(panel.getByRole('combobox', { name }), `${name} is in Extra tools`).toBeVisible()
+      await expect(bar.getByRole('button', { name }), `${name} left the row`).toHaveCount(0)
+      await expect(panel.getByRole('button', { name }), `${name} is in Extra tools`).toBeVisible()
     }
     // What is in Extra tools does something: Open in Gradient hands the palette on.
     await panel.getByRole('button', { name: 'Open in Gradient', exact: true }).click()

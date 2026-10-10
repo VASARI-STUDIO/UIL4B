@@ -1,3 +1,4 @@
+import MenuSelect from '../components/tool/MenuSelect'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
@@ -575,18 +576,18 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               <span className="tsc-scale-x" aria-hidden="true">&times;</span>
               <div className="tsc-scale-term tsc-scale-term--ratio">
                 <label className="tl-sec-label" htmlFor="tsc-ratio">Scale ratio</label>
-                <select
+                <MenuSelect label="Scale ratio"
                   id="tsc-ratio"
                   className="tsc-select tsc-scale-select"
                   value={ratioId}
-                  onChange={e => changeRatioId(e.target.value)}
+                  onChange={nextValue => changeRatioId(nextValue)}
                 >
                   {RATIOS.map(r => (
                     <option key={r.id} value={r.id}>
                       {r.label}{r.value ? ` — ${r.value}` : ''}
                     </option>
                   ))}
-                </select>
+                </MenuSelect>
               </div>
               {ratioId === 'custom' && (
                 <div className="tsc-scale-term tsc-scale-custom">
@@ -866,18 +867,18 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                 </div>
                 <div className="tsc-slider-row">
                   <label className="tsc-slider-k" htmlFor="tsc-mratio">Ratio</label>
-                  <select
+                  <MenuSelect label="Ratio"
                     id="tsc-mratio"
                     className="tsc-select"
                     value={mobileRatioId}
-                    onChange={e => setMobileRatioId(e.target.value)}
+                    onChange={nextValue => setMobileRatioId(nextValue)}
                   >
                     {RATIOS.map(r => (
                       <option key={r.id} value={r.id}>
                         {r.label}{r.value ? ` — ${r.value}` : ''}
                       </option>
                     ))}
-                  </select>
+                  </MenuSelect>
                 </div>
                 {mobileRatioId === 'custom' && (
                   <div className="tsc-slider-row">
@@ -975,14 +976,14 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
               <div className="tsc-bp">
                 <label className="tl-sec-label" htmlFor="tsc-round">Rounding</label>
-                <select
+                <MenuSelect label="Rounding"
                   id="tsc-round"
                   className="tsc-select"
                   value={rounding}
-                  onChange={e => setRounding(e.target.value)}
+                  onChange={nextValue => setRounding(nextValue)}
                 >
                   {ROUNDING.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-                </select>
+                </MenuSelect>
                 <p className="tsc-hint">
                   An unrounded modular scale produces values like 40.96px. Rounding is a
                   decision — make it here rather than in the stylesheet.
