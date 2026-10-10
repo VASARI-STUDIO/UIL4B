@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import { placePopover } from '../../src/hooks/usePopover.js'
+import { stripCss, stripJs } from '../helpers/strip-comments.js'
 
 function fixture(t, anchor, { width = 240, height = 400, viewportWidth = 1280, viewportHeight = 800, navBottom = 64, tabsTop = 800 } = {}) {
   const previous = Object.fromEntries(['window', 'document', 'getComputedStyle'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
@@ -68,4 +70,43 @@ test('a trigger wider than the viewport cannot push its list offscreen', t => {
   const result = fixture(t, { left: 20, right: 600, top: 100, bottom: 136 }, { width: 180, viewportWidth: 320 })
   assert.equal(result.left, 8)
   assert.equal(result.minWidth, 304)
+})
+
+for (const [viewportWidth, viewportHeight] of [[768, 1024], [834, 1112], [960, 1024], [1440, 1024]]) {
+  for (const side of ['bottom', 'top']) {
+    test(`${viewportWidth}px listboxes stay anchored when opening ${side}`, t => {
+      const top = side === 'top' ? viewportHeight - 180 : 100
+      const result = fixture(t, { left: 240, right: 360, top, bottom: top + 36 }, { width: 180, height: 220, viewportWidth, viewportHeight, tabsTop: viewportHeight })
+      assert.equal(result.side, side)
+      assert.equal(result.left, 240)
+      assert.equal(result.top, side === 'top' ? top - 8 - 220 : top + 36 + 8)
+      assert.equal(result.minWidth, 120)
+    })
+  }
+}
+
+test('select sheets and dimmed scrims apply only through 767px', () => {
+  const css = stripCss(readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8'))
+  const responsive = css.slice(css.indexOf('@media(max-width:960px){', css.indexOf('.menu-select-scrim{display:none}')), css.indexOf('@keyframes menu-select-sheet-in'))
+  const [tablet, phone] = responsive.split('@media(max-width:767px){')
+  assert.match(tablet, /^@media\(max-width:960px\)\{/)
+  assert.match(tablet, /\.menu-select-scrim\{[^}]*display:block;[^}]*z-index:calc\(var\(--select-layer,130\) - 1\);background:transparent;animation:none/)
+  assert.match(tablet, /\.menu-select-option\{min-height:44px\}/)
+  assert.doesNotMatch(tablet, /\.pop\.menu-select-list|::before|menu-select-sheet-in/)
+  assert.ok(phone)
+  assert.match(phone, /\.menu-select-scrim\{background:var\(--scrim\);animation:cp-fade/)
+  assert.match(phone, /\.pop\.menu-select-list[^{}]*\{left:0;right:0;top:auto;bottom:0;[^}]*max-height:[^}]*animation:menu-select-sheet-in/)
+  assert.match(phone, /\.menu-select-list::before\{content:'';display:block/)
+  assert.match(phone, /html\.has-tabbar \.pop\.menu-select-list\{bottom:calc\(var\(--tabbar-h\) \+ env\(safe-area-inset-bottom\)\)\}/)
+  assert.match(css, /@media\(pointer:coarse\)\{\.menu-select-option\{min-height:44px\}\}/)
+})
+
+test('select scrims retain their dismissal and parent-popover ownership', () => {
+  const select = stripJs(readFileSync(new URL('../../src/components/tool/MenuSelect.jsx', import.meta.url), 'utf8'))
+  const popover = stripJs(readFileSync(new URL('../../src/hooks/usePopover.js', import.meta.url), 'utf8'))
+  assert.match(select, /data-pop-trigger=\{triggerId\} data-pop-scrim=\{listId\}/)
+  assert.match(select, /onPointerDown=\{event => event\.stopPropagation\(\)\} onClick=\{event => \{ event\.stopPropagation\(\); close\(\) \}\}/)
+  assert.match(popover, /getAttribute\('data-pop-scrim'\) === panel\?\.id\) return/)
+  assert.match(popover, /if \(owner && panel\?\.contains\(document\.getElementById\(owner\)\)\) return/)
+  assert.doesNotMatch(select + popover, /matchMedia\([^)]*960/)
 })
