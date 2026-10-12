@@ -2666,8 +2666,10 @@ html.lenis{scroll-behavior:auto!important}
 
 /* ══ THE APP HEADER — `UIL4B App.dc.html` lines 100-124 ══════════════════════
    Built to the file. One 64px row,
-   in the file's order: wordmark · search · theme · the three menus, then at the
-   far end the right cluster. Every wash and hairline is an alpha of the ink,
+   in the file's order: wordmark · search · the three menus, then at the
+   far end the right cluster, which ends with the theme switch directly left of
+   the account control (the file draws it after the search; this deliberately
+   differs). Every wash and hairline is an alpha of the ink,
    as in the file (--ink-rgb / --page-rgb, declared with the accent family).
 
    IT NEVER WRAPS. The file's row wraps below ~950px;
@@ -2705,7 +2707,8 @@ html.lenis{scroll-behavior:auto!important}
 @keyframes pnav-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
 .pnav-search-kbd{flex:0 0 auto;padding:3px 7px;border-radius:var(--radius-xs);border:1px solid rgba(var(--ink-rgb),.06);background:rgba(var(--ink-rgb),.07);color:rgba(var(--ink-rgb),var(--ink-faint));font-family:var(--mono);font-size:10px;font-weight:400;line-height:1.2}
 
-/* The theme cycle (App line 108): 36px, 12px radius, ink .06, no border. */
+/* The theme cycle (App line 108): 36px, 12px radius, ink .06, no border. It
+   sits in the right cluster, directly left of the account control. */
 .pnav .pnav-theme{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:0;border-radius:var(--btn-radius);background:rgba(var(--ink-rgb),.06);color:rgb(var(--ink-rgb));cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
 @media(hover:hover){.pnav .pnav-theme:hover{background:rgba(var(--ink-rgb),.12)}}
 
