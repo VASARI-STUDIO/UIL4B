@@ -382,12 +382,11 @@ export default function LibraryFilterGroup({
       {option.label}
       {option.count != null && <span className="lbry-filter-count" aria-hidden="true">{option.count}</span>}
       {/* `lock` is the tier word a gated option carries ("Pro", "Log in").
-          On a chip it is a padlock BADGE on the corner, positioned rather than
-          laid out, so it adds no width: the tray's intrinsic width — and with
-          it the collapse decision in `fit` below — is identical for a gated
-          viewer and a Pro one. A gate that changed the toolbar's shape for the
-          people it gates is the thing IconLibrary's note on the group tray
-          measured and refused. The word itself rides the accessible name. */}
+          On a chip it is a padlock inside the chip's right padding, positioned
+          rather than laid out, so it adds no width: the tray's intrinsic width,
+          and with it the collapse decision in `fit` below, is identical for a
+          gated viewer and a Pro one. The word itself rides the accessible
+          name. */}
       {option.lock && (
         <span className="lbry-filter-lock">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>

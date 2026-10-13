@@ -1111,35 +1111,29 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 
 
 /* ── The tier marker on a locked group chip ────────────────────────────────
-   The follow-up SPECTRUM-REVIEW left on the icons page: "when the toolbar is
-   rebuilt with slack, put a marker back on the locked group chips — that is
-   the one place the gate is currently discovered by clicking rather than
-   announced." The word ("Pro" / "Log in") is in the accessible name; what a
-   sighted viewer gets is a padlock badge on the chip's corner.
+   A gated chip carries a padlock so the gate is visible before the chip is
+   clicked. The word ("Pro" / "Log in") is in the accessible name; a sighted
+   viewer gets the padlock, drawn in the chip's own colour inside its right
+   padding.
 
-   POSITIONED, NOT LAID OUT, and that is the whole design: a badge adds no
-   width, so the tray's intrinsic width — which LibraryFilterGroup's `fit`
-   uses to decide chips-or-menu — is the same for a gated viewer as for a Pro
-   one. A laid-out marker measured +186px on this row once, and wrapped the
-   toolbar for exactly the people the gate was already costing.
-
-   It straddles the chip's TOP edge, inset from the right, rather than
-   hanging off the corner: a badge past the chip's right side is content past
-   the tray's right side on the row's last chip, and 25-layout-target-sweep's S4
-   check reads that as the row turning back into a horizontal scroller
-   (measured 4px over at 320, 390 and 1180). Upward overflow is not
-   scrollable overflow, and the 6px row gap clears it.
+   POSITIONED, NOT LAID OUT: the padlock is absolutely placed, so it adds no
+   width. The tray's intrinsic width, which LibraryFilterGroup's `fit` uses to
+   decide chips-or-menu, is therefore the same for a gated viewer as for a Pro
+   one. It sits wholly inside the chip's box, so it adds no scrollable
+   overflow and nothing straddles the border. A gated chip takes 4px of its
+   left padding and adds it to the right, leaving room for the padlock beside
+   the label without changing the chip's width.
 
    In the collapsed MENU a row has room, so the padlock sits inline at the
    row's end like the count does there. */
 .lib-surface .lbry-filter-lock{
-  position:absolute;top:-7px;right:8px;z-index:2;
-  display:grid;place-items:center;width:18px;height:18px;
-  border:1px solid var(--bh);border-radius:50%;
-  background:var(--card);color:var(--t1);pointer-events:none;
+  position:absolute;top:50%;right:5px;transform:translateY(-50%);
+  display:grid;place-items:center;width:10px;height:10px;
+  color:inherit;opacity:.75;pointer-events:none;
 }
+.lib-surface .lbry-filters .lbry-filter:has(.lbry-filter-lock){padding-left:11px;padding-right:19px}
 .lib-surface .lbry-filter-lock svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.lib-surface .lbry-filtermenu .lbry-filter-lock{position:static;margin-left:auto;border:0;background:none;width:auto;height:auto}
+.lib-surface .lbry-filtermenu .lbry-filter-lock{position:static;transform:none;margin-left:auto;opacity:1;width:auto;height:auto}
 .lib-surface .lbry-filtermenu .lbry-filter-lock svg{width:12px;height:12px}
 
 
