@@ -1,3 +1,4 @@
+import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { COMMUNITY_DESIGNS, COMMUNITY_CATEGORIES } from '../data/communityDesigns'
 import CommunityCard from '../components/discover/CommunityCard'
@@ -104,9 +105,9 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
             </label>
             <label className="ui-field">
               <span>Category</span>
-              <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+              <MenuSelect label="Category" value={form.category} onChange={nextValue => setForm(f => ({ ...f, category: nextValue }))}>
                 {COMMUNITY_CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              </MenuSelect>
             </label>
             {error && <div className="ui-modal-err">{error}</div>}
             {/* This note used to say submissions were saved to this browser

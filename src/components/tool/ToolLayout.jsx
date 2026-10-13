@@ -29,6 +29,7 @@ import { Link } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
+import MenuSelect from './MenuSelect'
 import '../../styles/pages/tool-layout.css'
 
 const cx = (...parts) => parts.filter(Boolean).join(' ')
@@ -347,26 +348,11 @@ export function ToolButton({
 }
 
 // ── ToolSelect ────────────────────────────────────────────────────────────
-// The drawn "System Auto ⇅" control: a muted label, the value in 540, a caret,
-// and the native <select> laid over the whole thing at opacity 0 so the OS
-// picker, keyboard and screen reader all get a real select.
-// options: [{ value, label, disabled }] | string[]
+// A labelled toolbar trigger backed by the shared listbox.
 export function ToolSelect({ label, value, options, onChange, ariaLabel, className, disabled }) {
-  const opts = (options || []).map((o) => (typeof o === 'string' ? { value: o, label: o } : o))
-  const current = opts.find((o) => o.value === value)
-  return (
-    <label className={cx('tl-select', className)}>
-      <span className="tl-select-k">{label}</span>
-      <span className="tl-select-v">{current ? current.label : value}</span>
-      <ToolIcon name="caret-up-down" size={13} className="tl-select-caret" />
-      <select value={value} onChange={(e) => onChange?.(e.target.value)} aria-label={ariaLabel || label} disabled={disabled}>
-        {opts.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
-      </select>
-    </label>
-  )
+  return <MenuSelect toolbar label={label} value={value} options={options} onChange={onChange} ariaLabel={ariaLabel} className={className} disabled={disabled} />
 }
 
-// ── ToolTray ──────────────────────────────────────────────────────────────
 // The r14 tray the palette draws around undo/redo.
 export function ToolTray({ label, className, children }) {
   return <div className={cx('tl-tray', className)} role="group" aria-label={label}>{children}</div>

@@ -1,3 +1,4 @@
+import MenuSelect from '../tool/MenuSelect'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ColorPickerPop from '../ColorPickerPop'
 import DropZone from './DropZone'
@@ -440,9 +441,9 @@ export default function AnimationBuilder({ toast }) {
       <aside className="fc-inspector" aria-label="Animation settings">
         <div className="fc-insp-sec">
           <label className="fc-eyebrow" htmlFor="fc-an-format">Output format</label>
-          <select id="fc-an-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={busy}>
+          <MenuSelect label="Output format" id="fc-an-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
             {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-          </select>
+          </MenuSelect>
           {fmt.id === 'gif' && <p className="fc-note">GIF keeps transparency as on/off only — soft edges come out hard</p>}
           {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency — clear areas take the background colour</p>}
         </div>
@@ -457,9 +458,9 @@ export default function AnimationBuilder({ toast }) {
             </div>
             <div>
               <label className="fc-eyebrow" htmlFor="fc-an-loop">Loop</label>
-              <select id="fc-an-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={e => setPlays(+e.target.value)} disabled={busy || !fmt.loops}>
+              <MenuSelect label="Loop" id="fc-an-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={nextValue => setPlays(+nextValue)} disabled={busy || !fmt.loops}>
                 {PLAY_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
+              </MenuSelect>
             </div>
           </div>
           {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
@@ -491,9 +492,9 @@ export default function AnimationBuilder({ toast }) {
 
         <div className="fc-insp-sec">
           <label className="fc-eyebrow" htmlFor="fc-an-quality">Quality</label>
-          <select id="fc-an-quality" className="fc-field" value={quality} onChange={e => setQuality(e.target.value)} disabled={busy || fmt.id === 'apng'}>
+          <MenuSelect label="Quality" id="fc-an-quality" className="fc-field" value={quality} onChange={nextValue => setQuality(nextValue)} disabled={busy || fmt.id === 'apng'}>
             {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
-          </select>
+          </MenuSelect>
           {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
         </div>
 

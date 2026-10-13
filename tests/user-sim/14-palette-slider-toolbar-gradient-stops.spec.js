@@ -135,7 +135,7 @@ test.describe('Palette Builder · toolbar controls', () => {
       const bar = page.locator('.plb [data-tool-toolbar]')
       await expect(bar).not.toHaveClass(/is-measuring/)
       const rows = await bar.locator('button:visible, a:visible').evaluateAll((els) => els.map((el) => {
-        const words = [...el.querySelectorAll('.tl-btn-label, .plb-seedchip-hex')]
+        const words = [...el.querySelectorAll('.tl-btn-label, .plb-seedchip-hex, .tl-select-k, .tl-select-v')]
           .filter((n) => n.getBoundingClientRect().width > 0)
           .map((n) => n.textContent.trim()).join(' ')
         return { name: el.getAttribute('aria-label') || el.textContent.trim(), words, title: el.getAttribute('title') || '' }

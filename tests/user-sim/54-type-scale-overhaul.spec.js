@@ -16,7 +16,7 @@
 // have their own unit tests; this file has none of that.
 
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 
 // The visible one. Type Scale keeps a second, hidden ladder in no case, but the
 // rail and the ladder both carry `.seg-label` and `.tsc-select`, and a
@@ -82,7 +82,7 @@ test.describe('Type Scale · the overhaul', () => {
     await expect(range).toHaveText('10px – 61px')
     await expect(largest).toContainText('61px')
 
-    await page.getByLabel('Scale ratio').selectOption('1.5')
+    await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
     await expect(range).toHaveText('7px – 182.5px')
     await expect(largest).toContainText('182.5px')
 
@@ -167,7 +167,7 @@ test.describe('Type Scale · the overhaul', () => {
     await expect(visible(page, '.tsc-mode-btn')).toHaveCount(2)
 
     // And it still drives the maths from in there.
-    await page.getByLabel('Rounding').selectOption('none')
+    await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
     await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('61.04px')
   })
 })

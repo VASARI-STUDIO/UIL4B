@@ -1,3 +1,4 @@
+import MenuSelect from './tool/MenuSelect'
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -119,7 +120,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // set of facts while a different set is sent.
   const rows = contextRows(capture)
 
-  // The <select> shows the first option when untouched, so the payload must
+  // The control shows the first option when untouched, so the payload must
   // resolve to that same value rather than an empty string.
   const selectedValue = (key) => {
     const sel = activeType.selects.find(s => s.key === key)
@@ -320,14 +321,14 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
               {activeType.selects.map(sel => (
                 <div className="fb-field" key={sel.key}>
                   <label className="fb-label" htmlFor={`fb-${sel.key}`}>{sel.label}</label>
-                  <select
+                  <MenuSelect label={sel.label}
                     id={`fb-${sel.key}`}
                     className="fb-select"
                     value={selections[sel.key] ?? sel.options[0]}
-                    onChange={e => setSelections(prev => ({ ...prev, [sel.key]: e.target.value }))}
+                    onChange={nextValue => setSelections(prev => ({ ...prev, [sel.key]: nextValue }))}
                   >
                     {sel.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
+                  </MenuSelect>
                 </div>
               ))}
             </div>

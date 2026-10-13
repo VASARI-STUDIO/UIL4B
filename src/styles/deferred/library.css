@@ -858,7 +858,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   background:color-mix(in srgb,var(--t0) 4.5%,transparent);
 }
 .lib-surface .lbry-search input{font-size:15px}
-/* The Icon Library's pack `<select>` shares the filter row with the chips, so
+/* The Icon Library's pack menu trigger shares the filter row with the chips, so
    it takes their height and their hairline. NOT their 999px radius: this one
    opens a list, and the design keeps 999px for things that toggle. */
 .lib-surface .lbry-select{

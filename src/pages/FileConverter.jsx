@@ -1,3 +1,4 @@
+import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import JSZip from 'jszip'
@@ -597,9 +598,9 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
           <aside className="fc-inspector" aria-label="Output settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
-              <select id="fc-img-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={busy}>
+              <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
                 {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
+              </MenuSelect>
               {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
               {format === 'image/jpeg' && (
                 <div className="fc-row">
@@ -635,15 +636,15 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 <div className="fc-pair">
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
-                    <select id="fc-img-size" className="fc-field" value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} aria-label="Output size limit">
+                    <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy} aria-label="Output size limit">
                       {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
+                    </MenuSelect>
                   </div>
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-scale">Export scale</label>
-                    <select id="fc-img-scale" className="fc-field" value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} aria-label="Export render scale">
+                    <MenuSelect label="Export render scale" id="fc-img-scale" className="fc-field" value={renderScale} onChange={nextValue => setRenderScale(+nextValue)} disabled={busy} aria-label="Export render scale">
                       {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
+                    </MenuSelect>
                   </div>
                 </div>
 
@@ -928,9 +929,9 @@ function VideoConvert({ toast }) {
           <aside className="fc-inspector" aria-label="Conversion settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-vid-format">Output format</label>
-              <select id="fc-vid-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={working}>
+              <MenuSelect label="Output format" id="fc-vid-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={working}>
                 {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
+              </MenuSelect>
               <p className="fc-note">Sound is removed</p>
             </div>
             <div className="fc-insp-sec">
@@ -952,15 +953,15 @@ function VideoConvert({ toast }) {
               <div className="fc-pair">
                 <div>
                   <label className="fc-eyebrow" htmlFor="fc-vid-quality">Quality</label>
-                  <select id="fc-vid-quality" className="fc-field" value={quality} onChange={e => setQuality(e.target.value)} disabled={working || fmt.id === 'apng'}>
+                  <MenuSelect label="Quality" id="fc-vid-quality" className="fc-field" value={quality} onChange={nextValue => setQuality(nextValue)} disabled={working || fmt.id === 'apng'}>
                     {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
-                  </select>
+                  </MenuSelect>
                 </div>
                 <div>
                   <label className="fc-eyebrow" htmlFor="fc-vid-loop">Loop</label>
-                  <select id="fc-vid-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={e => setPlays(+e.target.value)} disabled={working || !fmt.loops}>
+                  <MenuSelect label="Loop" id="fc-vid-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={nextValue => setPlays(+nextValue)} disabled={working || !fmt.loops}>
                     {PLAY_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
+                  </MenuSelect>
                 </div>
               </div>
               {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
@@ -1197,20 +1198,20 @@ function VideoFrames({ toast }) {
                   </div>
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-fr-scale">Scale</label>
-                    <select id="fc-fr-scale" className="fc-field" value={scale} onChange={e => setScale(+e.target.value)} disabled={extracting}>
+                    <MenuSelect label="Scale" id="fc-fr-scale" className="fc-field" value={scale} onChange={nextValue => setScale(+nextValue)} disabled={extracting}>
                       <option value={1}>100% (Original)</option>
                       <option value={0.75}>75%</option>
                       <option value={0.5}>50%</option>
                       <option value={0.25}>25%</option>
-                    </select>
+                    </MenuSelect>
                   </div>
                 </div>
               </div>
               <div className="fc-insp-sec">
                 <label className="fc-eyebrow" htmlFor="fc-fr-format">Output format</label>
-                <select id="fc-fr-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={extracting}>
+                <MenuSelect label="Output format" id="fc-fr-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={extracting}>
                   {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
+                </MenuSelect>
                 <span className="fc-eyebrow fc-eyebrow--sub">Quality</span>
                 <SnapSlider
                   min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}

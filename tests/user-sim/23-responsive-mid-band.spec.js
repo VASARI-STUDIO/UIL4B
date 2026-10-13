@@ -62,13 +62,13 @@ test.describe('Palette Builder toolbar, 961–1080px', () => {
       await expect(bar).not.toHaveClass(/is-measuring/)
       await page.waitForTimeout(150)
       let scope = bar
-      const inline = bar.getByRole('combobox', { name: 'Colour system' })
+      const inline = bar.getByRole('button', { name: 'Colour system' })
       if (!(await inline.count() && await inline.isVisible())) {
         await bar.getByRole('button', { name: 'Extra tools' }).click()
         scope = page.getByRole('dialog', { name: 'Extra tools' })
         await expect(scope).toBeVisible()
       }
-      const select = scope.getByRole('combobox', { name: 'Colour system' })
+      const select = scope.getByRole('button', { name: 'Colour system' })
       // Five points across the drawn control must all land on it.
       const covered = await select.evaluate((el) => {
         const box = el.closest('.tl-select').getBoundingClientRect()

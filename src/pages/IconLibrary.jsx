@@ -1,3 +1,4 @@
+import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useRef, useEffect, useMemo, memo, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -1932,7 +1933,7 @@ function IconPackCredit({ packs }) {
 // 'Log in' is what the nav trigger says — so nothing new is being coined here.
 // A pack the viewer CAN see carries no marker at all: a badge on everything is
 // a badge that says nothing.
-const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefix) === 'paid' ? ' · Pro' : ' · Log in')
+const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefix) === 'paid' ? 'Pro' : 'Log in')
 
 /* ── THE WALL ────────────────────────────────────────────────────────────────
 
@@ -2606,8 +2607,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // Search text, pack and collection chip are three independent filters that
   // compose — changing one never clears the others (My Icons excepted: it's a
   // local store, not a CDN scope).
-  const handlePackChange = (e) => {
-    const p = e.target.value
+  const handlePackChange = (p) => {
     clearTimeout(timer.current)
     if (p === 'custom') { setQuery(''); browseCustom(); return }
     const nextPack = p === 'all' ? '' : p
@@ -2759,8 +2759,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
          more slack than 1180 has.
      A gate that reshapes the page for the people it gates is a gate that
      punishes them for being gated, so the marker went where it is free: the
-     pack <select>, which offers every pack individually, spells the tier out in
-     its optgroup labels and has a 220px cap the browser honours.
+     pack menu, which offers every pack individually, spells the tier out in
+     its group labels and has a 220px trigger cap.
 
      Nothing is a dead end without it. Choosing a locked chip costs no request
      and answers immediately with a wall that names the group and the tier — the
@@ -3230,52 +3230,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               toolbar's quick row) exactly where the design's phone mock draws it; the
               pack menu and the collection chips go to the Filters sheet. */}
           <IconWeightSeg value={weight} stateOf={weightState} onChange={handleWeight} />
-          <select className="lbry-select" value={selectValue} onChange={handlePackChange} aria-label="Icon pack">
-            <option value="all">All packs</option>
-            <optgroup label="Yours">
-              <option value="custom">My Icons</option>
-            </optgroup>
-            {/* THE MENU SAYS WHAT A SET COSTS BEFORE IT IS CHOSEN.
-                Jasper's library (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd)
-                badges the CATEGORY in its left-hand list, not only the locked
-                cards inside it — so the visitor learns the boundary from the
-                control rather than from a wall they walked into. That is the
-                whole reason the marker is here and not only on the panel below.
-
-                THE LOCKED OPTIONS ARE STILL SELECTABLE, deliberately. `disabled`
-                would be tidier and it would be a dead end: a control that
-                cannot be operated cannot explain itself, and there would be
-                nowhere to put the way out. Choosing one costs no request (see
-                browsePack) and answers with the panel that names the tier and
-                carries the button. */}
-            {PACK_MENU.map(g => {
-              /* THE MARKER RIDES THE OPTGROUP WHEN THE WHOLE GROUP AGREES, AND
-                 THAT IS A WIDTH DECISION AS MUCH AS A READING ONE.
-
-                 `.lbry-select` is capped at 220px and the longest option —
-                 "Real brand logos (Logo.dev)" — already sits just under it.
-                 MEASURED: appending " · Pro" to that option took the control to
-                 the cap and wrapped the whole toolbar row to two lines at 641px
-                 (118px against the 68px this surface holds everywhere else).
-                 A browser sizes a closed <select> on its widest OPTION, not on
-                 its group labels, so saying it once on the group costs nothing
-                 and reads better besides: five "· Pro"s down one list is noise.
-
-                 MIXED GROUPS FALL BACK TO PER-OPTION, and that branch is not
-                 hypothetical housekeeping — it is what keeps this honest the
-                 first time the founder moves one pack in iconPackTiers.js and
-                 a group stops agreeing with itself. */
-              const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
-              const uniform = marks.length === 1
-              return (
-                <optgroup key={g.label} label={uniform ? g.label + marks[0] : g.label}>
-                  {g.packs.map(([value, label]) => (
-                    <option key={value} value={value}>{label}{uniform ? '' : lockMark(value, tier)}</option>
-                  ))}
-                </optgroup>
-              )
-            })}
-          </select>
+          {/* Locked packs stay selectable so choosing one can show the access gate. */}
+          <MenuSelect className="lbry-select" value={selectValue} onChange={handlePackChange} ariaLabel="Icon pack"
+            options={[
+              { value: 'all', label: 'All packs' },
+              { group: 'Yours', options: [{ value: 'custom', label: 'My Icons' }] },
+              ...PACK_MENU.map(g => {
+                const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
+                const uniform = marks.length === 1
+                return {
+                  group: g.label,
+                  mark: uniform ? marks[0] : '',
+                  options: g.packs.map(([value, label]) => ({ value, label, mark: uniform ? '' : lockMark(value, tier) })),
+                }
+              }),
+            ]}
+          />
           <LibraryFilterGroup
             label="Filter by icon group"
             triggerLabel="Group"

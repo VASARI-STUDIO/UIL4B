@@ -9,7 +9,7 @@
 // Served from the Iconify fixture (tests/user-sim/fixtures/iconify), whose
 // Phosphor collection carries a handful of each weight.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 
 const cellNames = (page) => page.evaluate(() =>
   [...document.querySelectorAll('.ig .ic')].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')))
@@ -42,7 +42,7 @@ test.describe('the icon weight segment', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-    await page.locator('select[aria-label="Icon pack"]').selectOption('lucide')
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
     const seg = page.getByRole('group', { name: 'Icon weight' })
     const bold = seg.getByRole('button', { name: /^Bold/ })
     await expect(bold).toHaveAttribute('aria-disabled', 'true')

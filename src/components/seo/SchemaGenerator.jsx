@@ -1,3 +1,4 @@
+import MenuSelect from '../tool/MenuSelect'
 import { useState, useMemo } from 'react'
 
 // Structured-data (JSON-LD) generator. Pick a schema type, fill the fields, and
@@ -109,9 +110,9 @@ export default function SchemaGenerator({ onCopy, toast }) {
       <div className="seo-inputs">
         <label className="seo-field">
           <span className="seo-field-label">Schema type</span>
-          <select value={type} onChange={e => setType(e.target.value)}>
+          <MenuSelect label="Schema type" value={type} onChange={nextValue => setType(nextValue)}>
             {TYPES.map(tp => <option key={tp.id} value={tp.id}>{tp.label}</option>)}
-          </select>
+          </MenuSelect>
         </label>
 
         {type === 'WebSite' && (

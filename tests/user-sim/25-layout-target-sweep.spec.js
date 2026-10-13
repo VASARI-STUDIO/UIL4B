@@ -23,7 +23,7 @@
 // viewports, because a desktop Chromium narrowed to 390px still reports
 // `hover: hover` and hides this whole class of defect.
 import { test, expect } from './base.js'
-import { go, restingScrollY, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, restingScrollY, signIn, watch } from './helpers.js'
 import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -1241,7 +1241,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // the first screen at 1280, so a second page (Tabler) now loads on arrival
   // and the set genuinely mixes packs. Choosing Lucide is the state the rule
   // is about, and it cannot drift with the layout.
-  await page.locator('select[aria-label="Icon pack"]').selectOption('lucide')
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
   await expect.poll(async () => (await read()).cells, { timeout: 20000 }).toBeGreaterThan(20)
   const single = await read()
   expect(single.cells, 'the Lucide grid should be populated').toBeGreaterThan(20)
@@ -1250,7 +1250,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
 
   // Brand logos genuinely mixes packs - logo.dev marks alongside glyph packs.
   // It is a cross-pack collection, so the pack menu goes back to All first.
-  await page.locator('select[aria-label="Icon pack"]').selectOption('all')
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'all')
   // At this width the group is its one-line trigger (the toolbar never wraps),
   // so the chip lives in the menu it opens.
   const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })

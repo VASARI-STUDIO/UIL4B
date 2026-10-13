@@ -16,7 +16,7 @@
 // FIXTURES are built here: a binary STL of a 2 x 1 x 1 box (12 triangles),
 // written byte by byte, and a few bytes of junk. Nothing binary is committed.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 
 const PERSONA = 'a designer converting a 3D model for a client'
 const ROUTE = '/create/3d-converter'
@@ -206,7 +206,7 @@ test.describe('3D Model Converter', () => {
     await signIn(page)
     await go(page, ROUTE)
     await openBox(page)
-    await page.getByRole('combobox', { name: 'Model units' }).selectOption('mm')
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Model units' }), 'mm')
     await expect(fact(page, 'extent')).toContainText('2 × 1 × 1 mm')
     await page.getByRole('radio', { name: /^GLB \(/ }).check()
     await page.getByTestId('v3d-convert').click()

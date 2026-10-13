@@ -52,7 +52,7 @@
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
@@ -228,11 +228,9 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
   async function raiseWall(page) {
     // The colour system is a select on the toolbar, or in its Extra tools overflow
     // when the row has no room; a Pro system raises the wall.
-    const system = page.getByRole('combobox', { name: 'Colour system' }).first()
+    const system = page.getByRole('button', { name: 'Colour system' }).first()
     if (!(await system.isVisible())) await page.getByRole('button', { name: /^Extra tools/ }).click()
-    // A person changing a select has it focused; selectOption alone does not.
-    await system.focus()
-    await system.selectOption({ label: 'Analogous (Pro)' })
+    await chooseMenuOption(page, system, { label: 'Analogous, Pro' })
     const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
     await expect(modal).toBeVisible()
     return modal
@@ -278,9 +276,9 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await signIn(page, { plan: 'free' })
       await go(page, '/create/palette')
       // On a phone the System select is in the palette's Extra tools sheet; its
-      // paid options read "(Pro)" and choosing one raises the wall.
+      // Paid options carry a Pro mark and choosing one raises the wall.
       const tools = await openPaletteTools(page)
-      await tools.getByRole('combobox', { name: 'Colour system' }).selectOption('analogous')
+      await chooseMenuOption(page, tools.getByRole('button', { name: 'Colour system' }), 'analogous')
       await expect(tools).toHaveCount(0)
       const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
       await expect(modal).toBeVisible()

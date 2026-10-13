@@ -56,7 +56,7 @@
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
@@ -174,15 +174,16 @@ test.describe('2 — the save menu and the colour-system menu take the tap at 39
       // The colour system, which a phone reaches in the Extra tools sheet: the
       // select must take the tap over the adjust footer, and the choice holds.
       let tools = await openPaletteTools(page)
-      const system = tools.getByRole('combobox', { name: 'Colour system' })
-      const current = await system.inputValue()
+      const system = tools.getByRole('button', { name: 'Colour system' })
+      const current = await system.getAttribute('value')
       const pick = COLOUR_SYSTEMS.find((s) => s.free && s.id !== current)
       await expect.poll(() => hitWithin(system, '.tl-sheet').then((h) => h.inside),
         'a tap on the colour system must reach the Extra tools sheet, not the adjust footer').toBe(true)
-      await system.selectOption(pick.id)
+      await chooseMenuOption(page, system, pick.id)
       await expect(tools).toHaveCount(0)
       tools = await openPaletteTools(page)
-      await expect(tools.getByRole('combobox', { name: 'Colour system' })).toHaveValue(pick.id)
+      await expect(tools.getByRole('button', { name: 'Colour system' })).toHaveAttribute('value', pick.id)
+      await expect(tools.getByRole('button', { name: 'Colour system' })).toHaveAccessibleName(new RegExp(`Colour system: ${pick.label}`))
       await context.close()
     })
   }

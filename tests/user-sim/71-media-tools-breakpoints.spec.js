@@ -18,7 +18,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { fixturePacks, isLiveIconify, refuseIconify } from './iconify-stub.js'
 import { visiblePacks } from '../../src/data/iconPackTiers.js'
 
@@ -347,10 +347,12 @@ test('/seo · Structured data · every "Remove question" control is at least 24p
     await page.getByRole('tab', { name: 'Structured data' }).click()
     const panel = page.locator('#seo-panel-schema')
     await expect(panel).toBeVisible()
-    const type = panel.locator('select').first()
-    const faq = (await type.locator('option').allTextContents()).find((o) => /faq/i.test(o))
+    const type = panel.getByRole('button', { name: 'Schema type' })
+    await type.click()
+    const faq = (await page.getByRole('listbox').getByRole('option').allTextContents()).find(o => /faq/i.test(o))
+    await page.keyboard.press('Escape')
     expect(faq, 'the schema type list offers FAQ').toBeTruthy()
-    await type.selectOption({ label: faq })
+    await chooseMenuOption(page, type, { label: faq })
     await panel.getByRole('button', { name: 'Add question' }).click()
     const dels = panel.locator('.seo-faq-del')
     await expect(dels.first()).toBeVisible()
@@ -381,7 +383,7 @@ test('/create/semantic-color · the custom-hue slider is a 24px control that sti
   await go(page, '/create/semantic-color')
   // The role's preset is a select on this screen, and the
   // slider is the shared tool slider (a 24px control over the drawn 6px track).
-  await page.getByRole('combobox', { name: 'Success preset' }).selectOption('custom')
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Success preset' }), 'custom')
   const slider = page.locator('.stc-hue input[type=range]').first()
   await slider.scrollIntoViewIfNeeded()
   await expect(slider).toBeVisible()

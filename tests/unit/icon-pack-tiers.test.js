@@ -40,7 +40,7 @@ function groupPacks() {
     .flatMap((m) => m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)))]
 }
 
-/** The prefixes the pack <select> offers as individual packs, PACK_MENU's first column. */
+/** The prefixes the pack menu offers as individual packs, PACK_MENU's first column. */
 function menuPacks() {
   const src = read(PAGE)
   const menu = src.match(/const PACK_MENU = \[[\s\S]*?\n\]/)?.[0]
