@@ -85,14 +85,15 @@ for (const [viewportWidth, viewportHeight] of [[768, 1024], [834, 1112], [960, 1
   }
 }
 
-test('select sheets and dimmed scrims apply only through 767px', () => {
+test('select scrims catch outside presses at every width and dim only through 767px', () => {
   const css = stripCss(readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8'))
-  const responsive = css.slice(css.indexOf('@media(max-width:960px){', css.indexOf('.menu-select-scrim{display:none}')), css.indexOf('@keyframes menu-select-sheet-in'))
+  assert.match(css, /\.menu-select-scrim\{display:block;position:fixed;inset:0;z-index:calc\(var\(--select-layer,130\) - 1\);background:transparent;animation:none\}/)
+  assert.doesNotMatch(css, /\.menu-select-scrim\{display:none\}/)
+  const responsive = css.slice(css.indexOf('@media(max-width:960px){', css.indexOf('.menu-select-scrim{')), css.indexOf('@keyframes menu-select-sheet-in'))
   const [tablet, phone] = responsive.split('@media(max-width:767px){')
   assert.match(tablet, /^@media\(max-width:960px\)\{/)
-  assert.match(tablet, /\.menu-select-scrim\{[^}]*display:block;[^}]*z-index:calc\(var\(--select-layer,130\) - 1\);background:transparent;animation:none/)
   assert.match(tablet, /\.menu-select-option\{min-height:44px\}/)
-  assert.doesNotMatch(tablet, /\.pop\.menu-select-list|::before|menu-select-sheet-in/)
+  assert.doesNotMatch(tablet, /\.menu-select-scrim|\.pop\.menu-select-list|::before|menu-select-sheet-in/)
   assert.ok(phone)
   assert.match(phone, /\.menu-select-scrim\{background:var\(--scrim\);animation:cp-fade/)
   assert.match(phone, /\.pop\.menu-select-list[^{}]*\{left:0;right:0;top:auto;bottom:0;[^}]*max-height:[^}]*animation:menu-select-sheet-in/)

@@ -4355,7 +4355,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-option.is-active{background:var(--hvr);color:var(--t0)}
 .pop.menu-select-list:focus-visible{outline:none}
 .menu-select-list:focus-visible .menu-select-option.is-active{outline:2px solid var(--link);outline-offset:-2px}
-.menu-select-scrim{display:none}
+.menu-select-scrim{display:block;position:fixed;inset:0;z-index:calc(var(--select-layer,130) - 1);background:transparent;animation:none}
 .menu-select-list .pop-head{display:flex;justify-content:space-between;gap:var(--s-2)}
 .menu-select-option[aria-selected="true"]{color:var(--accent-text)}
 .menu-select-option[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
@@ -4364,7 +4364,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-option[aria-selected="true"] .menu-select-check{visibility:visible}
 @media(pointer:coarse){.menu-select-option{min-height:44px}}
 @media(max-width:960px){
-  .menu-select-scrim{display:block;position:fixed;inset:0;z-index:calc(var(--select-layer,130) - 1);background:transparent;animation:none}
   .menu-select-option{min-height:44px}
 }
 @media(max-width:767px){
