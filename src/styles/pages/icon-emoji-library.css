@@ -149,10 +149,11 @@
 
 
 /* ── The weight segment: Regular / Bold / Fill / Duo ───────────────────────
-   Drawn from the design's phone mock (Spectrum "On mobile", the icon screen): a pill
-   track at a 6% ink wash with 3px of padding, each segment flex:1, the chosen
-   one lifted onto the card ground in full ink, the rest dim. On a phone it is
-   the toolbar's quick row, full width under the search; on a wider screen it
+   A pill track at a 6% ink wash with 3px of padding; the chosen segment is
+   lifted onto the card ground in full ink, the rest are dim. Segments size to
+   their label. Where the track is full width (the toolbar's quick row under
+   the search, the filter panel) they share the width equally, centre their
+   labels and never shrink below the label's width. On a wider screen the track
    sits in the toolbar row with the pack menu. */
 .iel-page .ig-weight{
   display:flex;flex:0 0 auto;gap:2px;padding:3px;
