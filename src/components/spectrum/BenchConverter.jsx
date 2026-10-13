@@ -196,6 +196,19 @@ export default function BenchConverter() {
   // came from; a result that is not smaller is drawn in a neutral fill.
   const top = Math.max(before || 0, out || 0) || 1
   const notSmaller = pct != null && pct <= 0
+  // "name, size". The size sits in a box as wide as a full-width figure (the
+  // hidden pad), so the name never moves. The figure itself is remounted per
+  // value (the key): a new node has no previous position, so the browser has no
+  // text start to count as having moved when "…" becomes "1.40 MB".
+  const barValue = (name, bytes) => (
+    <span>
+      <span className="sp-bar-name">{name},</span>
+      <span className="sp-bar-size">
+        <span className="sp-bar-pad" aria-hidden="true">0000 KB</span>
+        <span className="sp-bar-num" key={bytes ?? 'wait'}>{formatBytes(bytes)}</span>
+      </span>
+    </span>
+  )
   const paneProps = (id) => ({
     role: 'tabpanel',
     id: `${uid}-pane-${id}`,
@@ -256,13 +269,13 @@ export default function BenchConverter() {
           </p>
           <div className="sp-bars">
             <div className="sp-bar">
-              <div className="sp-bar-row"><small>BEFORE</small><span>{imageName}, {formatBytes(before)}</span></div>
+              <div className="sp-bar-row"><small>BEFORE</small>{barValue(imageName, before)}</div>
               <span className="sp-bar-track"><span className="sp-bar-fill" style={{ width: before ? `${Math.round((before / top) * 100)}%` : '100%' }} /></span>
             </div>
             <div className="sp-bar">
               <div className="sp-bar-row">
                 <small>AFTER</small>
-                <span>{`${stem}.${IMG_FORMATS[fmt][0].toLowerCase()}`}, {formatBytes(out)}</span>
+                {barValue(`${stem}.${IMG_FORMATS[fmt][0].toLowerCase()}`, out)}
               </div>
               <span className="sp-bar-track">
                 <span
