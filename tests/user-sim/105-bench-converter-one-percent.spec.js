@@ -4,6 +4,11 @@
 // % on screen is the saving line above the bars. A quality figure on the label
 // would contradict a bar drawn at the size of the file that is left.
 //
+// Both bars share one scale, the larger of the two files. A result that is not
+// smaller is drawn in a plain fill (`is-plain`). PNG output is lossless, so it
+// comes out the same size: the line reads "No loss" / "PNG keeps every pixel" in
+// plain ink (`is-noloss`) with no % at all, and the quality slider is disabled.
+//
 // The tabs are Compress, 3D model, Video frames, Aspect ratio. Every pane stays
 // mounted and the hidden ones are `visibility: hidden`, so the locators below
 // are scoped to the pane that is on.
@@ -25,13 +30,21 @@ const panelOf = (page) => page.locator('.sp-panel-body:has(.sp-modes)')
 /** Every % token in the converter panel's visible text. */
 const percentTokens = (page) => panelOf(page).evaluate((el) => el.innerText.match(/\d+\s*%/g) || [])
 
-const compressPane = (page) => panelOf(page).locator('.sp-cv-pane.sp-conv.is-on')
+// The pane that is on. Every locator below hangs off it, so a hidden pane's
+// copy of the same class can never satisfy an assertion.
+const compressPane = (page) => panelOf(page).locator('.sp-cv-pane.is-on')
 
-/** Wait for the saving line to state a figure, i.e. a conversion has finished. */
+/** Wait for the saving line to state a result, i.e. a conversion has finished. */
 const settled = (page) => expect(
   compressPane(page).locator('.sp-saving'),
   'the converter never finished measuring the photograph',
-).toHaveText(/^\d+%\s*(smaller|larger)/, { timeout: 15000 })
+).toHaveText(/^(\d+%\s*(smaller|larger)|No loss)/, { timeout: 15000 })
+
+/** Drawn width of each bar's fill as a percentage of its track. */
+const barWidths = (page) => compressPane(page).locator('.sp-bar').evaluateAll((bars) => bars.map((bar) => {
+  const fill = bar.querySelector('.sp-bar-fill').getBoundingClientRect().width
+  return (fill / bar.querySelector('.sp-bar-track').getBoundingClientRect().width) * 100
+}))
 
 for (const theme of THEMES) {
   for (const width of WIDTHS) {
@@ -74,17 +87,21 @@ for (const theme of THEMES) {
       expect.soft(row, 'the saving line is not a figure and its words').toMatch(/^\d+% (smaller|larger)/)
       expect.soft(await compressPane(page).locator('.sp-quality b').count(), 'the Quality row prints a figure').toBe(0)
 
-      // BAR vs LABEL: the AFTER bar is drawn as wide as the file that is left.
+      // BAR vs LABEL: both bars use the larger file as 100%, so with a saving the
+      // BEFORE bar is full and the AFTER bar is as wide as the file that is left.
       const saved = parseInt(row, 10) * (/larger/.test(row) ? -1 : 1)
+      expect(saved, 'the photograph did not compress to WebP at the default quality').toBeGreaterThan(0)
       // The fill eases to its width, so read it once it has stopped moving.
-      const drawnNow = () => compressPane(page).locator('.sp-bar').nth(1).evaluate((bar) => {
-        const fill = bar.querySelector('.sp-bar-fill').getBoundingClientRect().width
-        return (fill / bar.querySelector('.sp-bar-track').getBoundingClientRect().width) * 100
-      })
-      await expect.poll(async () => Math.abs((await drawnNow()) - (100 - saved)), {
-        message: `AFTER bar is not drawn as wide as the file that is left (a saving of ${saved}%)`,
+      await expect.poll(async () => {
+        const [b, a] = await barWidths(page)
+        return Math.max(Math.abs(b - 100), Math.abs(a - (100 - saved)))
+      }, {
+        message: `the bars are not drawn to one scale (a saving of ${saved}%)`,
         timeout: 3000,
       }).toBeLessThan(2.5)
+      await expect(compressPane(page).locator('.sp-bar').nth(1).locator('.sp-bar-fill'), 'a smaller result is drawn in the plain fill').not.toHaveClass(/is-plain/)
+      await expect(compressPane(page).locator('.sp-saving-num'), 'a saving is not drawn as a win').not.toHaveClass(/is-(plain|noloss)/)
+      await expect(compressPane(page).locator('.sp-quality input[type="range"]'), 'the slider is disabled for a lossy format').toBeEnabled()
 
       // A QUALITY CHANGE: the old figure stays until the new one lands, so the
       // panel still shows exactly one % straight after the change and once settled.
@@ -102,14 +119,28 @@ for (const theme of THEMES) {
       await settled(page)
       expect.soft(await percentTokens(page), 'a second % under JPEG').toHaveLength(1)
 
-      // Lossless: the saving line says no quality is lost, and there is still
-      // at most the one figure.
+      // Lossless: PNG comes out the size of the original, so the line says
+      // "No loss" in plain ink, the panel shows no % at all, the quality slider is
+      // disabled, and both bars are drawn full with the AFTER bar plain.
       await panel.getByRole('button', { name: 'PNG', exact: true }).click()
-      await page.waitForTimeout(700)
-      await settled(page)
-      expect.soft((await percentTokens(page)).length, 'more than one % under PNG').toBeLessThanOrEqual(1)
-      expect.soft((await compressPane(page).locator('.sp-saving').innerText()).replace(/\s+/g, ' ').trim(), 'the lossless line states more than the saving').toMatch(/^\d+% (smaller, no quality lost|larger than the original)$/)
+      const saving = compressPane(page).locator('.sp-saving')
+      await expect(saving.locator('.sp-saving-num'), 'PNG output does not read "No loss"').toHaveText('No loss', { timeout: 15000 })
+      await expect(saving.locator('.sp-saving-num'), 'the "No loss" figure is not in plain ink').toHaveClass(/is-noloss/)
+      await expect(saving.locator('.sp-saving-word'), 'the lossless line does not say PNG keeps every pixel').toHaveText('PNG keeps every pixel')
+      expect.soft(await percentTokens(page), 'a % is shown under PNG').toHaveLength(0)
+      await expect(compressPane(page).locator('.sp-quality input[type="range"]'), 'the quality slider is enabled for PNG').toBeDisabled()
       await expect(compressPane(page).locator('.sp-quality > span'), 'the lossless row does not say quality is ignored').toHaveText('Lossless, quality ignored')
+      await expect(compressPane(page).locator('.sp-bar').nth(1).locator('.sp-bar-fill'), 'a result that is not smaller is not drawn in the plain fill').toHaveClass(/is-plain/)
+      await expect(compressPane(page).locator('.sp-bar').nth(0).locator('.sp-bar-fill'), 'the BEFORE bar took the plain fill').not.toHaveClass(/is-plain/)
+      await expect.poll(async () => {
+        const [b, a] = await barWidths(page)
+        return Math.max(Math.abs(b - 100), Math.abs(a - 100))
+      }, { message: 'under PNG both bars are not drawn full width', timeout: 3000 }).toBeLessThan(2.5)
+
+      // Back to a lossy format: the slider and the win colour come back.
+      await panel.getByRole('button', { name: 'JPEG', exact: true }).click()
+      await expect(compressPane(page).locator('.sp-saving-num'), 'the saving did not return after leaving PNG').toHaveText(/^\d+%$/, { timeout: 15000 })
+      await expect(compressPane(page).locator('.sp-quality input[type="range"]'), 'the slider stayed disabled after leaving PNG').toBeEnabled()
 
       // The whole run never showed more than one.
       const counts = await page.evaluate(() => window.__pctCounts)
