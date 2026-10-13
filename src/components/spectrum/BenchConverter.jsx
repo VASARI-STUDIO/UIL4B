@@ -1,30 +1,38 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PhIcon from './PhIcon'
+import { prefersReducedMotion } from './reducedMotion'
 import { route } from './spectrumFacts'
 import {
   CONVERTER_SOURCE,
   FRAME_COUNTS,
   IMG_FORMATS,
   IMG_MODES,
+  MODEL_OUTPUTS,
+  MODEL_PREVIEW,
+  MODEL_SOURCE,
   RATIO_PRESETS,
   formatBytes,
 } from './spectrumKit'
 
 // 04 · FILE CONVERTER — the design's window, with its Tasmanian sunset photograph.
 //
-// THE SIZES ARE MEASURED, NOT TABLED. The design carried a hard-coded table of
-// KB per quality step ("measured in-browser" once, then frozen). Here the photo
-// is drawn to a canvas and encoded with `canvas.toBlob` at the format and
-// quality on screen, and the BEFORE and AFTER bars print what the browser
-// actually produced — the same encoder path the File Converter uses. BEFORE is
-// the photo as a lossless PNG (the design's "plateau-sunset.png"), or the real
-// size of a file the visitor drops in; AFTER is that image re-encoded.
+// THE SIZES ARE MEASURED, NOT TABLED. The photo is drawn to a canvas and
+// encoded with `canvas.toBlob` at the format and quality on screen, and the
+// BEFORE and AFTER bars print what the browser actually produced — the same
+// encoder path the File Converter uses. BEFORE is the photo as a lossless PNG
+// (the design's "plateau-sunset.png"), or the real size of a file the visitor
+// drops in; AFTER is that image re-encoded. The saving above the bars is the
+// one percentage the panel prints.
 //
 // Nothing runs until the window is near the screen, and each re-encode is
 // debounced, so a visitor dragging the quality slider costs one encode at the
 // end rather than fifteen on the way. Nothing is uploaded: the file never
 // leaves the tab.
+//
+// THE FOUR PANES SHARE ONE GRID CELL. The inactive ones are hidden and inert
+// rather than unmounted, so the panel is as tall as its tallest pane and a tab
+// switch moves nothing below the tab row.
 
 function useInView(ref, margin = '600px') {
   const [seen, setSeen] = useState(() => typeof IntersectionObserver === 'undefined')
@@ -40,24 +48,55 @@ function useInView(ref, margin = '600px') {
   return seen
 }
 
+/** True while the element is on screen (not one-shot, unlike useInView). */
+function useOnScreen(ref, active) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !active || typeof IntersectionObserver === 'undefined') return undefined
+    const io = new IntersectionObserver((entries) => setOn(entries.some((e) => e.isIntersecting)))
+    io.observe(el)
+    return () => { io.disconnect(); setOn(false) }
+  }, [ref, active])
+  return on
+}
+
 const encode = (canvas, type, q) => new Promise((resolve) => {
   try { canvas.toBlob((b) => resolve(b ? b.size : null), type, q) } catch { resolve(null) }
 })
 
+const isImage = (file) => (file?.type || '').startsWith('image/')
+
+/** The saving line: [number, words, tone]. Tone 'win' is the accent. */
+function savingOf(pct, lossless) {
+  if (pct == null) return ['…', 'smaller', 'wait']
+  if (pct < 0) return [`${-pct}%`, 'larger than the original', 'plain']
+  return [`${pct}%`, lossless ? 'smaller, no quality lost' : 'smaller', pct > 0 ? 'win' : 'plain']
+}
+
 export default function BenchConverter() {
+  const uid = useId()
   const root = useRef(null)
+  const stageRef = useRef(null)
+  const tabRefs = useRef([])
   const near = useInView(root)
-  const [mode, setMode] = useState(0)
+  const [mode, setMode] = useState('compress')
+  const [modelOpened, setModelOpened] = useState(false)
   const [fmt, setFmt] = useState(0)
+  const [outFmt, setOutFmt] = useState(0)
   const [quality, setQuality] = useState(75)
   const [ratioPreset, setRatioPreset] = useState(0)
   const [frameCount, setFrameCount] = useState(12)
-  const [dragging, setDragging] = useState(false)
+  const [dragging, setDragging] = useState(null)
   const [pick, setPick] = useState(null)
+  const [clip, setClip] = useState(null)
+  const [failed, setFailed] = useState(false)
+  const [loopReady, setLoopReady] = useState(false)
   // { w, h, before } for the image being measured, and the latest AFTER size.
   const [src, setSrc] = useState(null)
   const [out, setOut] = useState(null)
   const canvasRef = useRef(null)
+  const modelOn = useOnScreen(stageRef, mode === 'model')
 
   // Release a picked file's object URL when it is replaced or the page goes.
   useEffect(() => () => { if (pick?.url) URL.revokeObjectURL(pick.url) }, [pick])
@@ -66,7 +105,6 @@ export default function BenchConverter() {
   useEffect(() => {
     if (!near || typeof document === 'undefined') return undefined
     const url = pick ? pick.url : CONVERTER_SOURCE
-    if (!url) { canvasRef.current = null; return undefined }
     let cancelled = false
     const img = new Image()
     img.decoding = 'async'
@@ -80,7 +118,7 @@ export default function BenchConverter() {
       canvasRef.current = canvas
       const before = pick ? pick.size : await encode(canvas, 'image/png')
       if (!cancelled) setSrc({ w: img.naturalWidth, h: img.naturalHeight, before })
-    }).catch(() => { if (!cancelled) setSrc(null) })
+    }).catch(() => { if (!cancelled) { setSrc(null); if (pick) setFailed(true) } })
     return () => { cancelled = true }
   }, [near, pick])
 
@@ -96,69 +134,124 @@ export default function BenchConverter() {
     return () => { cancelled = true; clearTimeout(timer) }
   }, [src, fmt, quality])
 
-  const take = (file) => {
+  // The turntable plays only while its tab is open, the stage is on screen and
+  // motion is allowed; otherwise the poster stands in, so nothing keeps decoding.
+  const playing = mode === 'model' && modelOn && !prefersReducedMotion()
+  useEffect(() => {
+    if (!playing || loopReady) return undefined
+    let cancelled = false
+    const img = new Image()
+    img.src = MODEL_PREVIEW.loop
+    img.decode().then(() => { if (!cancelled) setLoopReady(true) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [playing, loopReady])
+
+  const takeImage = (file) => {
     if (!file) return
-    const isImage = (file.type || '').startsWith('image/')
     setOut(null)
     setSrc(null)
-    setPick({ name: file.name, size: file.size, url: isImage ? URL.createObjectURL(file) : '' })
+    if (!isImage(file)) { setFailed(true); return }
+    setFailed(false)
+    setPick({ name: file.name, size: file.size, url: URL.createObjectURL(file) })
   }
+  const takeClip = (file) => { if (file) setClip({ name: file.name, size: file.size }) }
+
+  const select = (id) => {
+    setMode(id)
+    if (id === 'model') setModelOpened(true)
+  }
+  const onTabKey = (e, i) => {
+    const n = IMG_MODES.length
+    const keys = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }
+    if (!(e.key in keys)) return
+    e.preventDefault()
+    select(IMG_MODES[keys[e.key]][0])
+    tabRefs.current[keys[e.key]]?.focus()
+  }
+
+  const dropProps = (kind, take) => ({
+    onDragOver: (e) => { e.preventDefault(); if (dragging !== kind) setDragging(kind) },
+    onDragLeave: () => setDragging(null),
+    onDrop: (e) => { e.preventDefault(); setDragging(null); take(e.dataTransfer?.files?.[0]) },
+  })
+  const fileButton = (kind, chosen) => (dragging === kind ? 'Drop to replace' : chosen ? 'Replace' : 'Choose a file')
 
   const lossless = IMG_FORMATS[fmt][0] === 'PNG'
   const before = src?.before ?? null
   const pct = before && out != null ? Math.round(100 - (out / before) * 100) : null
-  const saving = pct == null ? '…' : pct >= 0 ? `${pct}% smaller` : `${-pct}% larger`
+  const [numText, wordText, tone] = savingOf(pct, lossless)
   const [, rw, rh] = RATIO_PRESETS[ratioPreset]
   const stem = pick ? pick.name.replace(/\.[^.]+$/, '') : 'plateau-sunset'
-  const srcName = pick ? pick.name : mode === 1 ? 'plateau-sunset.mp4' : 'plateau-sunset.png'
-  const srcMeta = pick
-    ? `${formatBytes(pick.size)}, ${mode === 0 ? 'ready to compress' : 'ready'}`
-    : mode === 1 ? '1920 × 1080, 0:08, 12.4 MB' : src ? `${src.w} × ${src.h}, ${formatBytes(src.before)}` : 'Measuring…'
-  const artUrl = pick?.url || CONVERTER_SOURCE
+  const imageName = pick ? pick.name : 'plateau-sunset.png'
+  const clipName = clip ? clip.name : 'plateau-sunset.mp4'
   const stripLen = Math.min(8, frameCount)
   const strip = Array.from({ length: stripLen }, (_, i) => {
     const k = i / Math.max(1, stripLen - 1)
     return { pos: `${Math.round(k * 100)}% 50%`, time: `0:0${Math.min(8, Math.round(k * 8))}` }
   })
+  const target = MODEL_OUTPUTS[outFmt]
+  const fileConverter = route('file-converter')
+  const paneProps = (id) => ({
+    role: 'tabpanel',
+    id: `${uid}-pane-${id}`,
+    'aria-labelledby': `${uid}-tab-${id}`,
+    inert: mode !== id,
+  })
+  const paneClass = (id, cls) => `sp-cv-pane ${cls}${mode === id ? ' is-on' : ''}`
 
   return (
-    <div className="sp-panel-body sp-panel-body--pad" ref={root}>
-      <div className="sp-modes" role="group" aria-label="Mode">
-        {IMG_MODES.map(([label, icon], i) => (
-          <button key={label} type="button" className="sp-utab" aria-pressed={mode === i} onClick={() => setMode(i)}>
-            {icon ? <PhIcon name={icon} /> : <span aria-hidden="true" />}{label}
+    <div className="sp-panel-body sp-panel-body--pad sp-cv" ref={root}>
+      <div className="sp-modes" role="tablist" aria-label="Mode">
+        {IMG_MODES.map(([id, label, icon, short], i) => (
+          <button
+            key={id}
+            ref={(el) => { tabRefs.current[i] = el }}
+            type="button"
+            role="tab"
+            id={`${uid}-tab-${id}`}
+            aria-controls={`${uid}-pane-${id}`}
+            aria-selected={mode === id}
+            aria-label={label}
+            tabIndex={mode === id ? 0 : -1}
+            className="sp-utab"
+            onClick={() => select(id)}
+            onKeyDown={(e) => onTabKey(e, i)}
+          >
+            {icon ? <PhIcon name={icon} /> : <span aria-hidden="true" />}
+            <span className={short ? 'sp-mode-long' : undefined}>{label}</span>
+            {short ? <span className="sp-mode-short" aria-hidden="true">{short}</span> : null}
           </button>
         ))}
       </div>
 
-      <label
-        className={dragging ? 'sp-drop is-drag' : 'sp-drop'}
-        onDragOver={(e) => { e.preventDefault(); if (!dragging) setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); take(e.dataTransfer?.files?.[0]) }}
-      >
-        {pick?.url
-          ? <span className="sp-drop-thumb" aria-hidden="true" style={{ backgroundImage: `url(${pick.url})` }} />
-          : <img className="sp-drop-thumb" src={CONVERTER_SOURCE} alt="" width="240" height="135" loading="lazy" decoding="async" />}
-        <span className="sp-drop-say">
-          <b>{srcName}</b>
-          <small>{srcMeta}</small>
-        </span>
-        <span className="sp-drop-btn"><PhIcon name="upload-simple" />{pick ? 'Replace' : 'Choose a file'}</span>
-        <input type="file" accept="image/*,video/*" onChange={(e) => take(e.target.files?.[0])} aria-label="Choose a file" />
-      </label>
-
-      {mode === 0 && (
-        <div className="sp-conv">
-          <div className="sp-conv-art">
-            {pick?.url
+      <div className="sp-cv-panes">
+        <div className={paneClass('compress', 'sp-conv')} {...paneProps('compress')}>
+          <label className={dragging === 'image' ? 'sp-conv-art sp-art is-drag' : 'sp-conv-art sp-art'} {...dropProps('image', takeImage)}>
+            {pick
               ? <span role="img" aria-label="The file you chose, ready to compress" style={{ backgroundImage: `url(${pick.url})` }} />
-              : <img src={artUrl} alt="The photograph being compressed" width="1600" height="900" loading="lazy" decoding="async" />}
-            <span className="sp-conv-dims">{src ? `${src.w} × ${src.h}` : '…'}</span>
-          </div>
+              : <img src={CONVERTER_SOURCE} alt="The photograph being compressed" width="1600" height="900" loading="lazy" decoding="async" />}
+            <span className="sp-art-over" aria-hidden="true">
+              <span className="sp-art-name">{imageName}</span>
+              <span className="sp-art-btn"><PhIcon name="upload-simple" />{fileButton('image', pick)}</span>
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => { takeImage(e.target.files?.[0]); e.target.value = '' }}
+              aria-label={pick ? `Replace ${pick.name}` : 'Choose an image to compress'}
+            />
+          </label>
+          <p className="sp-saving" aria-live="polite">
+            {failed
+              ? <span className="sp-saving-word">That file is not supported. Try a JPG, PNG or WebP.</span>
+              : <>
+                <b className={tone === 'win' ? 'sp-saving-num' : `sp-saving-num is-${tone}`}>{numText}</b>
+                <span className="sp-saving-word">{wordText}</span>
+              </>}
+          </p>
           <div className="sp-bars">
             <div className="sp-bar">
-              <div className="sp-bar-row"><small>BEFORE</small><span>{srcName}, {formatBytes(before)}</span></div>
+              <div className="sp-bar-row"><small>BEFORE</small><span>{imageName}, {formatBytes(before)}</span></div>
               <span className="sp-bar-track"><span className="sp-bar-fill" style={{ width: '100%' }} /></span>
             </div>
             <div className="sp-bar">
@@ -180,17 +273,81 @@ export default function BenchConverter() {
             ))}
           </div>
           <label className="sp-quality">
-            <span>
-              <span>{lossless ? 'Lossless, quality ignored' : 'Quality'}</span>
-              <b>{lossless ? (pct === 0 ? 'no loss, no saving' : `no loss, ${saving}`) : saving}</b>
-            </span>
-            <input type="range" min="30" max="100" step="5" value={quality} onChange={(e) => setQuality(parseInt(e.target.value, 10))} aria-label="Compression quality" />
+            <span>{lossless ? 'Lossless, quality ignored' : 'Quality'}</span>
+            <input
+              type="range"
+              min="30"
+              max="100"
+              step="5"
+              value={quality}
+              onChange={(e) => setQuality(parseInt(e.target.value, 10))}
+              aria-label="Compression quality"
+              aria-valuetext={`${quality}% quality`}
+            />
           </label>
         </div>
-      )}
 
-      {mode === 2 && (
-        <div className="sp-ratio">
+        <div className={paneClass('model', 'sp-model')} {...paneProps('model')}>
+          <div className="sp-model-stage" ref={stageRef}>
+            {modelOpened
+              ? <img
+                src={playing && loopReady ? MODEL_PREVIEW.loop : MODEL_PREVIEW.poster}
+                alt={`A machined bracket turning, converted from ${MODEL_SOURCE.label} to ${target.label}.`}
+                width={MODEL_PREVIEW.width}
+                height={MODEL_PREVIEW.height}
+                decoding="async"
+              />
+              : null}
+            <span className="sp-model-tag">Sample model</span>
+          </div>
+          <div className="sp-model-conv">
+            <span className="sp-model-chip">{MODEL_SOURCE.label}</span>
+            <span className="sp-model-wire" aria-hidden="true"><PhIcon name="arrow-right" /></span>
+            <span className="sp-model-chip is-out">{target.label}</span>
+            <span className="sp-model-unit">{target.metres ? `${MODEL_SOURCE.unit} → m` : `${MODEL_SOURCE.unit} → your unit`}</span>
+          </div>
+          <div className="sp-fmtrow" role="group" aria-label="Output format">
+            {MODEL_OUTPUTS.map(({ id, label }, i) => (
+              <button key={id} type="button" className="sp-utab" aria-pressed={outFmt === i} onClick={() => setOutFmt(i)}>{label}</button>
+            ))}
+          </div>
+          <p className="sp-model-say">
+            {target.metres
+              ? 'Millimetres in, metres out, so it opens in Blender at the right size.'
+              : 'Millimetres in, written in the unit you pick.'}
+          </p>
+        </div>
+
+        <div className={paneClass('frames', 'sp-frames')} {...paneProps('frames')}>
+          <label className={dragging === 'video' ? 'sp-strip sp-art is-drag' : 'sp-strip sp-art'} {...dropProps('video', takeClip)}>
+            {strip.map((f) => (
+              <span key={f.pos}>
+                <img src={CONVERTER_SOURCE} alt="" width="1600" height="900" loading="lazy" decoding="async" style={{ objectPosition: f.pos }} />
+                <small>{f.time}</small>
+              </span>
+            ))}
+            <span className="sp-art-over" aria-hidden="true">
+              <span className="sp-art-name">{clipName}</span>
+              <span className="sp-art-btn"><PhIcon name="upload-simple" />{fileButton('video', clip)}</span>
+            </span>
+            <input
+              type="file"
+              accept="video/*"
+              onChange={(e) => { takeClip(e.target.files?.[0]); e.target.value = '' }}
+              aria-label={clip ? `Replace ${clip.name}` : 'Choose a video'}
+            />
+          </label>
+          <div className="sp-frames-row">
+            <div role="group" aria-label="Frame count">
+              {FRAME_COUNTS.map((n) => (
+                <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} FRAMES</button>
+              ))}
+            </div>
+            <small>{frameCount > 8 ? `Eight of ${frameCount} frames, evenly sampled` : `${frameCount} frames`}</small>
+          </div>
+        </div>
+
+        <div className={paneClass('ratio', 'sp-ratio')} {...paneProps('ratio')}>
           <div className="sp-ratio-stage">
             <img src={CONVERTER_SOURCE} alt="The photograph cropped to the chosen aspect ratio" width="1600" height="900" loading="lazy" decoding="async" style={{ aspectRatio: `${rw} / ${rh}` }} />
             <span className="sp-ratio-size">{rw} × {rh}</span>
@@ -202,35 +359,24 @@ export default function BenchConverter() {
           </div>
           <span className="sp-ratio-half">{Math.round(rw / 2)} × {Math.round(rh / 2)} at 0.5×</span>
         </div>
-      )}
-
-      {mode === 1 && (
-        <div className="sp-frames">
-          <div className="sp-strip">
-            {strip.map((f) => (
-              <span key={f.pos}>
-                <img src={CONVERTER_SOURCE} alt="" width="1600" height="900" loading="lazy" decoding="async" style={{ objectPosition: f.pos }} />
-                <small>{f.time}</small>
-              </span>
-            ))}
-          </div>
-          <div className="sp-frames-row">
-            <div role="group" aria-label="Frame count">
-              {FRAME_COUNTS.map((n) => (
-                <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} FRAMES</button>
-              ))}
-            </div>
-            <small>{frameCount > 8 ? `Eight of ${frameCount} frames, evenly sampled` : `${frameCount} frames`}</small>
-          </div>
-        </div>
-      )}
+      </div>
 
       <div className="sp-conv-foot">
-        <Link className="sp-pill" to={route('file-converter')}>
-          <span>{pick ? 'Continue in the converter' : 'Open File Converter'}</span>
-          <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-        </Link>
-        <Link className="sp-ghost" to={route('ratio')}>Aspect &amp; Resolution</Link>
+        {mode === 'model'
+          ? <>
+            <Link className="sp-pill" to={route('3d-converter')}>
+              <span>Open 3D Model Converter</span>
+              <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
+            </Link>
+            <Link className="sp-ghost" to={fileConverter}>File Converter</Link>
+          </>
+          : <>
+            <Link className="sp-pill" to={fileConverter}>
+              <span>{pick || clip ? 'Continue in the converter' : 'Open File Converter'}</span>
+              <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
+            </Link>
+            <Link className="sp-ghost" to={route('ratio')}>Aspect &amp; Resolution</Link>
+          </>}
       </div>
     </div>
   )

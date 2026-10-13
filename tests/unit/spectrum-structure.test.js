@@ -20,7 +20,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
-import { EX_FILES, ICONS, IMG_MODES } from '../../src/components/spectrum/spectrumKit.js'
+import { EX_FILES, ICONS, IMG_MODES, MODEL_OUTPUTS, MODEL_PREVIEW, MODEL_SOURCE } from '../../src/components/spectrum/spectrumKit.js'
+import { OUTPUT_FORMATS } from '../../src/utils/meshFormats.js'
 import { PH_REGULAR } from '../../src/components/spectrum/phosphorRegular.js'
 import { PH_WEIGHTS } from '../../src/components/spectrum/phosphorWeights.js'
 import { CREATE_GROUPS, categoryDestination } from '../../src/data/toolTree.js'
@@ -237,7 +238,7 @@ test('every glyph the page asks for is one the page ships', () => {
     for (const m of src.matchAll(/PhIcon name="([^"]+)"/g)) asked.add(m[1])
   }
   // The tables the windows draw their icons from, checked the same way.
-  for (const [, icon] of IMG_MODES) if (icon) asked.add(icon)
+  for (const [, , icon] of IMG_MODES) if (icon) asked.add(icon)
   for (const [icon] of EX_FILES) asked.add(icon)
   for (const [slug] of ICONS) asked.add(slug)
   assert.ok(asked.size >= 30, `only ${asked.size} glyph names found — the extractor is blind`)
@@ -290,20 +291,62 @@ test('the bench writes down no route', () => {
     assert.ok(!/to="\/discover\//.test(src), `${file} carries a literal /discover/ route`)
   }
   const called = [...(BENCH_SRC + CONVERTER_SRC).matchAll(/route\('([a-z-]+)'\)/g)].map((m) => m[1]).sort()
-  assert.deepEqual(called, ['file-converter', 'font-gallery', 'font-pair', 'gradient', 'icons', 'palette', 'ratio'],
-    'the four windows no longer open their seven destinations through route()')
+  assert.deepEqual(called, ['3d-converter', 'file-converter', 'font-gallery', 'font-pair', 'gradient', 'icons', 'palette', 'ratio'],
+    'the four windows no longer open their eight destinations through route()')
 })
 
 test('the Compress panel describes compressing, not converting', () => {
-  // The panel's tabs are Compress / Video frames / Aspect ratio. Only the name
-  // of the File Converter tool it links to may still say "convert".
+  // Only the names of the tools the panel links to, and the 3D tab's own
+  // preview (which is a conversion), may say "convert".
   const copy = CONVERTER_SRC
     .replace(/BenchConverter|CONVERTER_SOURCE/g, '')
-    .replace(/file-converter/g, '')
-    .replace(/Continue in the converter|Open File Converter/g, '')
+    .replace(/file-converter|3d-converter/g, '')
+    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter</g, '')
+    .replace(/A machined bracket turning, converted from/g, '')
   const left = [...copy.matchAll(/[^\n]*convert[^\n]*/gi)].map((m) => m[0].trim())
   assert.deepEqual(left, [], 'the Compress panel still says "convert"')
   assert.match(CONVERTER_SRC, /ready to compress/, 'a chosen file is no longer called ready to compress')
+})
+
+test('the converter tabs are keyed by id, and every id opens its own pane', () => {
+  const ids = IMG_MODES.map(([id]) => id)
+  assert.deepEqual(ids, ['compress', 'model', 'frames', 'ratio'], 'the tabs are not Compress, 3D model, Video frames, Aspect ratio')
+  assert.equal(new Set(ids).size, ids.length, 'two converter tabs share an id')
+  assert.deepEqual(IMG_MODES.map(([, label]) => label), ['Compress', '3D model', 'Video frames', 'Aspect ratio'])
+  for (const [, label, , short] of IMG_MODES) {
+    if (short) assert.ok(label.toLowerCase().includes(short.toLowerCase()), `the short label "${short}" is not part of "${label}"`)
+  }
+  for (const id of ids) {
+    assert.match(CONVERTER_SRC, new RegExp(`paneClass\\('${id}'[^)]*\\)} \\{\\.\\.\\.paneProps\\('${id}'\\)\\}`),
+      `BenchConverter renders no pane for the "${id}" tab`)
+  }
+  assert.ok(!/mode === \d/.test(CONVERTER_SRC), 'BenchConverter branches on a tab index again')
+})
+
+test('the 3D tab offers only outputs the 3D Model Converter writes, and loads its preview on demand', () => {
+  assert.deepEqual(MODEL_OUTPUTS.map((f) => f.id), ['glb', 'obj', 'stl', 'usdz'])
+  for (const f of MODEL_OUTPUTS) assert.ok(OUTPUT_FORMATS.some((o) => o.id === f.id), `${f.id} is not in meshFormats.js`)
+  // "mm → m" is printed only for outputs whose format fixes metres.
+  assert.equal(MODEL_SOURCE.unit, 'mm')
+  for (const f of MODEL_OUTPUTS) assert.equal(f.metres, OUTPUT_FORMATS.find((o) => o.id === f.id).unit === 'm')
+  // The preview files exist, within budget, and are only named behind the
+  // flag the tab sets on first open.
+  assert.ok(fs.statSync(`public${MODEL_PREVIEW.loop}`).size <= 400 * 1024, 'the turntable loop is over 400 KB')
+  assert.ok(fs.statSync(`public${MODEL_PREVIEW.poster}`).size <= 40 * 1024, 'the turntable poster is over 40 KB')
+  assert.match(CONVERTER_SRC, /\{modelOpened\s*\?\s*<img/, 'the 3D preview image is no longer gated on the tab being opened')
+})
+
+test('the dashed file row and the image sub-info are gone; the saving has one home', () => {
+  for (const gone of ['sp-drop', 'sp-conv-dims']) {
+    assert.ok(!CONVERTER_SRC.includes(gone), `BenchConverter still renders .${gone}`)
+    assert.ok(!CSS.includes(`.${gone}`), `spectrum.css still styles .${gone}`)
+  }
+  assert.ok(!/1920 × 1080, 0:08/.test(CONVERTER_SRC), 'the video fixture meta is back')
+  assert.match(CONVERTER_SRC, /className="sp-saving" aria-live="polite"/)
+  assert.ok(!/sp-quality[\s\S]{0,200}<b>/.test(CONVERTER_SRC), 'the Quality row prints a figure again')
+  // The overlay is never hidden with visibility, so the input it pictures can always take focus.
+  const over = /\.sp-art-over \{[^}]*\}/.exec(CSS)?.[0] || ''
+  assert.ok(over && !/visibility|display:\s*none/.test(over), 'the stage overlay is hidden with visibility or display')
 })
 
 test('the split headline keeps one readable sentence for assistive tech', () => {
