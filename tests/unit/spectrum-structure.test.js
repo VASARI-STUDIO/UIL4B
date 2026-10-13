@@ -290,7 +290,7 @@ test('the bench writes down no route', () => {
     assert.ok(!/to="\/create\//.test(src), `${file} carries a literal /create/ route`)
     assert.ok(!/to="\/discover\//.test(src), `${file} carries a literal /discover/ route`)
   }
-  const called = [...(BENCH_SRC + CONVERTER_SRC).matchAll(/route\('([a-z-]+)'\)/g)].map((m) => m[1]).sort()
+  const called = [...(BENCH_SRC + CONVERTER_SRC).matchAll(/route\('([a-z0-9-]+)'\)/g)].map((m) => m[1]).sort()
   assert.deepEqual(called, ['3d-converter', 'file-converter', 'font-gallery', 'font-pair', 'gradient', 'icons', 'palette', 'ratio'],
     'the four windows no longer open their eight destinations through route()')
 })

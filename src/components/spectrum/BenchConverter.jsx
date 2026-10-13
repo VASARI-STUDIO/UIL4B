@@ -71,6 +71,7 @@ const isImage = (file) => (file?.type || '').startsWith('image/')
 function savingOf(pct, lossless) {
   if (pct == null) return ['…', 'smaller', 'wait']
   if (pct < 0) return [`${-pct}%`, 'larger than the original', 'plain']
+  if (lossless && pct === 0) return ['No loss', 'PNG keeps every pixel', 'noloss']
   return [`${pct}%`, lossless ? 'smaller, no quality lost' : 'smaller', pct > 0 ? 'win' : 'plain']
 }
 
@@ -190,7 +191,11 @@ export default function BenchConverter() {
     return { pos: `${Math.round(k * 100)}% 50%`, time: `0:0${Math.min(8, Math.round(k * 8))}` }
   })
   const target = MODEL_OUTPUTS[outFmt]
-  const fileConverter = route('file-converter')
+  const fileToolHref = route('file-converter')
+  // Both bars share one scale, so a file that grew draws longer than the one it
+  // came from; a result that is not smaller is drawn in a neutral fill.
+  const top = Math.max(before || 0, out || 0) || 1
+  const notSmaller = pct != null && pct <= 0
   const paneProps = (id) => ({
     role: 'tabpanel',
     id: `${uid}-pane-${id}`,
@@ -252,7 +257,7 @@ export default function BenchConverter() {
           <div className="sp-bars">
             <div className="sp-bar">
               <div className="sp-bar-row"><small>BEFORE</small><span>{imageName}, {formatBytes(before)}</span></div>
-              <span className="sp-bar-track"><span className="sp-bar-fill" style={{ width: '100%' }} /></span>
+              <span className="sp-bar-track"><span className="sp-bar-fill" style={{ width: before ? `${Math.round((before / top) * 100)}%` : '100%' }} /></span>
             </div>
             <div className="sp-bar">
               <div className="sp-bar-row">
@@ -261,8 +266,8 @@ export default function BenchConverter() {
               </div>
               <span className="sp-bar-track">
                 <span
-                  className="sp-bar-fill sp-bar-fill--out"
-                  style={{ width: before && out != null ? `${Math.min(100, Math.max(4, Math.round((out / before) * 100)))}%` : '4%' }}
+                  className={notSmaller ? 'sp-bar-fill sp-bar-fill--out is-plain' : 'sp-bar-fill sp-bar-fill--out'}
+                  style={{ width: before && out != null ? `${Math.max(4, Math.round((out / top) * 100))}%` : '4%' }}
                 />
               </span>
             </div>
@@ -283,6 +288,7 @@ export default function BenchConverter() {
               onChange={(e) => setQuality(parseInt(e.target.value, 10))}
               aria-label="Compression quality"
               aria-valuetext={`${quality}% quality`}
+              disabled={lossless}
             />
           </label>
         </div>
@@ -298,7 +304,6 @@ export default function BenchConverter() {
                 decoding="async"
               />
               : null}
-            <span className="sp-model-tag">Sample model</span>
           </div>
           <div className="sp-model-conv">
             <span className="sp-model-chip">{MODEL_SOURCE.label}</span>
@@ -368,10 +373,10 @@ export default function BenchConverter() {
               <span>Open 3D Model Converter</span>
               <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
             </Link>
-            <Link className="sp-ghost" to={fileConverter}>File Converter</Link>
+            <Link className="sp-ghost" to={fileToolHref}>File Converter</Link>
           </>
           : <>
-            <Link className="sp-pill" to={fileConverter}>
+            <Link className="sp-pill" to={fileToolHref}>
               <span>{pick || clip ? 'Continue in the converter' : 'Open File Converter'}</span>
               <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
             </Link>

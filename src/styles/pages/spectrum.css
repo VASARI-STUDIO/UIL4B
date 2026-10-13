@@ -595,6 +595,9 @@
 .sp-modes .sp-utab { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 0; margin-right: 18px; flex: 0 0 auto; font-size: 13px; letter-spacing: 0; }
 .sp-modes .sp-utab[aria-selected="true"] { border-bottom-color: var(--sp-ink); color: var(--sp-ink); font-weight: 560; }
 .sp-modes .sp-ph { font-size: 14px; }
+/* The row clips its overflow and each tab fills its height, so the ring is
+   drawn inside the tab rather than outside it. */
+.spectrum .sp-modes .sp-utab:focus-visible { outline-offset: -2px; }
 .sp-mode-short { display: none; }
 /* Too narrow for four full labels: four equal columns, short text labels. */
 @container sp-cv (max-width: 479px) {
@@ -648,20 +651,26 @@
 .sp-conv-art img, .sp-conv-art > span[role="img"] { display: block; width: 100%; height: 100%; object-fit: cover; background-size: cover; background-position: center; }
 
 /* The saving: the one percentage, and the panel's focal figure. */
-.sp-saving { display: flex; align-items: baseline; gap: 8px; margin: 0; min-height: 1em; font-size: clamp(1.75rem, 1.2rem + 1.2vw, 2.25rem); line-height: 1; }
-.sp-saving-num { min-width: 3.2ch; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--accent-text); }
-.sp-saving-num.is-plain { color: var(--sp-ink); }
+.sp-saving { display: flex; align-items: baseline; gap: 8px; margin: 0; min-height: 1em; font-size: 2.25rem; line-height: 1; }
+/* 2.05em holds "92%" at any size, so the word beside it does not move when the
+   first measurement lands. */
+.sp-saving-num { min-width: 2.05em; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--accent-text); }
+.sp-saving-num.is-plain, .sp-saving-num.is-noloss { color: var(--sp-ink); }
 .sp-saving-num.is-wait { color: var(--sp-faint); }
-.sp-saving-word { font-size: .8125rem; font-weight: 400; letter-spacing: 0; color: var(--sp-dim); }
+.sp-saving-word { font-size: .9375rem; font-weight: 500; letter-spacing: 0; color: var(--sp-ink); }
 
 .sp-bars { display: grid; gap: 9px; }
 .sp-bar { display: grid; gap: 6px; }
 .sp-bar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.sp-bar-row small { font-size: 10px; letter-spacing: .12em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-bar-row small { flex: none; font-size: 10px; letter-spacing: .12em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 11.5px; color: var(--sp-dim); }
+/* The value fills the rest of the row and is right-aligned inside it, so its
+   box keeps one size while the measured figure arrives. */
+.sp-bar-row > span { flex: 1 1 0; min-width: 0; text-align: end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .sp-bar-track { height: 10px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
 .sp-bar-fill { display: block; height: 100%; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .42); }
 .sp-bar-fill--out { background: var(--accent); transition: width .3s var(--sp-ease); }
+.sp-bar-fill--out.is-plain { background: rgba(var(--sp-ink-rgb), .42); }
 .sp-fmtrow { display: flex; flex-wrap: nowrap; gap: 18px; padding-top: 2px; }
 .sp-fmtrow .sp-utab { padding: 5px 0; }
 .sp-quality { display: grid; gap: 8px; }
@@ -670,7 +679,6 @@
 /* The 3D tab: the same skeleton as Compress, so the footer never moves. */
 .sp-model-stage { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--sp-hair); background: var(--sp-page); }
 .sp-model-stage img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.sp-model-tag { position: absolute; left: 12px; top: 10px; font-size: 12px; color: var(--sp-dim); }
 .sp-model-conv { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .sp-model-chip { flex: none; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sp-line-strong); color: var(--sp-dim); font-size: 10.5px; letter-spacing: .1em; }
 .sp-model-chip.is-out { border-color: var(--accent-border); color: var(--accent-text); }
@@ -678,6 +686,14 @@
 .sp-model-wire .sp-ph { font-size: 13px; margin-right: -2px; }
 .sp-model-unit { font-size: 11px; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sp-model-say { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--sp-dim); }
+/* Wide enough to hold a mouse: the from → to row is the tab's answer, so it is
+   drawn larger than a caption. */
+@media (min-width: 761px) {
+  .sp-model-chip { padding: 8px 16px; font-size: .9375rem; font-weight: 600; letter-spacing: .06em; line-height: 1.2; }
+  .sp-model-wire { max-width: 160px; }
+  .sp-model-wire .sp-ph { font-size: 16px; }
+  .sp-model-unit { font-size: .9375rem; font-weight: 500; color: var(--sp-ink); }
+}
 
 .sp-ratio { display: grid; align-content: start; gap: 12px; }
 .sp-ratio-stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); background: var(--sp-page); display: grid; place-items: center; padding: 10px; }
@@ -695,29 +711,47 @@
 .sp-frames-row > small { font-size: 10px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-conv-foot { margin-top: auto; flex: none; display: flex; gap: 8px; flex-wrap: wrap; }
 
+.sp-quality input[type="range"]:disabled { opacity: .4; }
+
 /* Phones and small tablets: the panel grows to its tallest pane instead of
-   scrolling inside a fixed height, the stages take a 16:9 box, and every
-   control reaches a 44px target with no text under 12px. */
+   scrolling inside a fixed height. Compress sets that height; the other panes
+   stretch to it, and their stage takes the spare room. */
 @media (max-width: 760px) {
   .sp-panel:has(.sp-cv) { height: auto; }
   .sp-cv { overflow: visible; }
   .sp-cv-panes { flex: none; grid-template-rows: auto; }
-  .sp-conv-art, .sp-model-stage { flex: none; min-height: 0; aspect-ratio: 16 / 9; }
+  .sp-conv-art { flex: none; min-height: 0; aspect-ratio: 16 / 9; }
+  .sp-model { flex: 1 1 auto; }
+  .sp-model-stage { aspect-ratio: auto; flex: 1 1 auto; min-height: 179px; }
+  .sp-model-stage img { position: absolute; inset: 0; }
+  .sp-frames, .sp-ratio { display: flex; flex-direction: column; }
+  .sp-strip, .sp-ratio-stage { flex: 1 1 auto; }
+  .sp-ratio-stage { min-height: 140px; }
+  .sp-strip > span:not(.sp-art-over) { height: auto; min-height: 152px; }
   .sp-saving { min-height: 40px; font-size: clamp(36px, 10vw, 40px); }
-  .sp-saving-num { min-width: 4ch; }
-  .sp-saving-word { font-size: 15px; font-weight: 500; color: var(--sp-ink); }
+  .sp-saving-num.is-noloss { font-size: 28px; }
+  .sp-cv .sp-fmtrow { gap: 20px; }
+  .sp-model-chip, .sp-model-unit { font-size: 12px; }
+  .sp-conv-foot { flex-direction: column; }
+  .sp-conv-foot .sp-pill { justify-content: space-between; }
+  .sp-conv-foot .sp-ghost { justify-content: center; }
+}
+
+/* Touch metrics follow the pointer as well as the width, so a tablet gets the
+   same 44px targets and 12px text floor as a phone. */
+@media (max-width: 760px), (pointer: coarse) {
+  .sp-modes .sp-utab { min-height: 48px; }
   .sp-bar-row small { font-size: 12px; letter-spacing: .08em; }
   .sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 13px; }
-  .sp-cv .sp-fmtrow { gap: 20px; }
   .sp-cv .sp-fmtrow .sp-utab, .sp-frames-row .sp-utab { padding: 12px 0; min-height: 44px; font-size: 13px; }
   .sp-quality > span, .sp-model-say { font-size: 13px; }
   .sp-quality input[type="range"] { height: 44px; touch-action: manipulation; }
   .sp-quality input[type="range"]::-webkit-slider-thumb { margin-top: -10px; width: 24px; height: 24px; }
   .sp-quality input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; }
-  .sp-model-chip, .sp-model-unit, .sp-model-tag, .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small, .sp-strip small { font-size: 12px; }
-  .sp-conv-foot { flex-direction: column; }
-  .sp-conv-foot .sp-pill { min-height: 48px; justify-content: space-between; }
-  .sp-conv-foot .sp-ghost { min-height: 44px; justify-content: center; }
+  .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small, .sp-strip small { font-size: 12px; }
+  .sp-strip small { bottom: auto; top: 7px; }
+  .sp-conv-foot .sp-pill { min-height: 48px; }
+  .sp-conv-foot .sp-ghost { min-height: 44px; }
 }
 
 /* ── discover ─────────────────────────────────────────────────────────────── */
