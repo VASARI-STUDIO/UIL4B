@@ -50,10 +50,12 @@ async function supportAttempt(body) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS)
   try {
+    const serialized = JSON.stringify(body)
     const res = await fetch('/api/support', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: serialized,
+      keepalive: new TextEncoder().encode(serialized).byteLength < 60 * 1024,
       signal: controller.signal,
     })
     return { ok: res.ok, status: res.status }
@@ -65,13 +67,39 @@ async function supportAttempt(body) {
 }
 
 /** Retry transient failures once, keeping the exact message and request id. */
-export async function postSupportWithRetry(body) {
+export async function postSupportWithRetry(body, { retry = true } = {}) {
   let result = await supportAttempt(body)
-  if (!result.ok && (!result.status || result.status >= 500 || result.status === 408 || result.status === 429)) {
+  if (retry && !result.ok && (!result.status || result.status >= 500 || result.status === 408)) {
     await new Promise(resolve => setTimeout(resolve, 1500))
     result = await supportAttempt(body)
   }
   return result
+}
+
+/** Claim the send synchronously so rapid submits cannot start a second request. */
+export function startSupportSend(sendingRef, body, options) {
+  if (sendingRef.current || !body) return null
+  sendingRef.current = true
+  return postSupportWithRetry(body, options).finally(() => { sendingRef.current = false })
+}
+
+/** Return to the filled form, retaining its id unless a new seed replaces it. */
+export function recoverFeedbackDraft(bodyRef, attemptRef, seed = null) {
+  const preserve = !!attemptRef.current && !seed
+  bodyRef.current = null
+  if (seed) attemptRef.current = null
+  return preserve
+}
+
+/** Register only while delivery is pending or a final failure is undismissed. */
+export function guardSupportUnload(active, target = window) {
+  if (!active) return undefined
+  const guard = event => {
+    event.preventDefault()
+    event.returnValue = ''
+  }
+  target.addEventListener('beforeunload', guard)
+  return () => target.removeEventListener('beforeunload', guard)
 }
 
 export function supportError(status) {

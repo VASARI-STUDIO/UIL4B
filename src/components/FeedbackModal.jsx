@@ -10,7 +10,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { requestIdFor, postSupportWithRetry, supportError } from '../utils/supportRequest'
+import { requestIdFor, startSupportSend, recoverFeedbackDraft, guardSupportUnload, supportError } from '../utils/supportRequest'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -106,10 +106,17 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   const bodyRef = useRef(null)
   const mountedRef = useRef(false)
   const genRef = useRef(0)
+  const overlayDownRef = useRef(false)
+  const overlaySuppressedRef = useRef(false)
+  const overlayTimerRef = useRef(null)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false }
+    return () => {
+      mountedRef.current = false
+      clearTimeout(overlayTimerRef.current)
+    }
   }, [])
+  useEffect(() => guardSupportUnload(sending || (open && !!error)), [sending, open, error])
 
   // Has this opening already been initialised? The open effect below depends on
   // every value it captures — which is correct, and what the linter wants — but
@@ -117,6 +124,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // flipped the theme mid-sentence would reset every field and wipe what they
   // had written. The flag turns a value-change re-run into a no-op.
   const initialisedRef = useRef(false)
+  const seedRef = useRef(seed)
 
   const activeType = TYPES.find(t => t.id === typeId) || TYPES[0]
   // Label/value rows in the canonical order, straight from the same module
@@ -133,7 +141,8 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   }
 
   const resetFields = useCallback(() => {
-    if (bodyRef.current) return
+    if (sendingRef.current) return
+    bodyRef.current = null
     setSelections({})
     setSubject('')
     setMessage('')
@@ -159,10 +168,17 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // and focus the first control.
   useEffect(() => {
     if (!open) { initialisedRef.current = false; return undefined }
-    if (initialisedRef.current) return undefined
+    if (initialisedRef.current && seedRef.current === seed) return undefined
+    if (sendingRef.current) return undefined
     initialisedRef.current = true
+    seedRef.current = seed
     // Closing must neither cancel delivery nor discard a failed message.
-    if (bodyRef.current) return undefined
+    if (recoverFeedbackDraft(bodyRef, attemptRef, seed)) {
+      setError(false)
+      setSent(false)
+      const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
+      return () => cancelAnimationFrame(raf)
+    }
     // A right-click on something broken already told us this is a bug report;
     // making the user say so again is a step for nothing.
     setTypeId(seed?.typeId || 'feedback')
@@ -194,7 +210,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     // dialog is announced, then the first control takes focus.
     const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
     return () => cancelAnimationFrame(raf)
-  }, [open, seed, resetFields, location.pathname, theme, reducedMotion, isPro, user])
+  }, [open, seed, resetFields, location.pathname, theme, reducedMotion, isPro, user, sending])
 
   if (!open) return null
 
@@ -204,16 +220,18 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     setError(false)
   }
 
-  const send = async (body) => {
-    if (sendingRef.current) return
-    sendingRef.current = true
+  const send = async (body, retry = true) => {
+    const pending = startSupportSend(sendingRef, body, { retry })
+    if (!pending) return
+    overlaySuppressedRef.current = true
+    clearTimeout(overlayTimerRef.current)
+    overlayTimerRef.current = setTimeout(() => { overlaySuppressedRef.current = false }, 400)
     const gen = genRef.current
     setSending(true)
     setError(false)
     setSent(true)
 
-    const result = await postSupportWithRetry(body)
-    sendingRef.current = false
+    const result = await pending
     if (!mountedRef.current || gen !== genRef.current) return
     setSending(false)
     if (result.ok) {
@@ -268,14 +286,16 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   }
 
   const onOverlayClick = (e) => {
-    if (e.target === overlayRef.current) onClose()
+    if (overlayDownRef.current && e.target === overlayRef.current && !overlaySuppressedRef.current) onClose()
+    overlayDownRef.current = false
   }
 
   return (
     <div
       ref={overlayRef}
       className="fb-overlay"
-      onMouseDown={onOverlayClick}
+      onMouseDown={e => { overlayDownRef.current = e.target === overlayRef.current }}
+      onClick={onOverlayClick}
     >
       <div
         className="fb-modal"
@@ -298,13 +318,17 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
           <div className="fb-success">
             <p className="fb-error" role="alert">{error}</p>
             <textarea className="fb-textarea" aria-label="Your message" value={message} readOnly />
-            <div className="fb-success-actions">
-              <button type="button" className="btn btn-accent" onClick={() => { void send(bodyRef.current) }}>Try again</button>
-              <button type="button" className="btn" onClick={onClose}>Close</button>
+            <div className="fb-success-actions fb-again">
+              <button type="button" className="btn btn-accent" onClick={() => { void send(bodyRef.current, false) }}>Try again</button>
+              <button type="button" className="btn" onClick={() => {
+                recoverFeedbackDraft(bodyRef, attemptRef)
+                setError(false)
+                requestAnimationFrame(() => firstControlRef.current?.focus())
+              }}>Edit message</button>
             </div>
           </div>
         ) : sent ? (
-          <div className="fb-success">
+          <div className="fb-success" role="status" aria-live="polite">
             <div className="fb-success-icon">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />

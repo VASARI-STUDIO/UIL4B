@@ -3,7 +3,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
-import { requestIdFor, postSupportWithRetry, supportError } from '../utils/supportRequest'
+import { requestIdFor, startSupportSend, recoverFeedbackDraft, guardSupportUnload, supportError } from '../utils/supportRequest'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -104,6 +104,7 @@ export default function Feedback({ toast }) {
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
+  useEffect(() => guardSupportUnload(busy || !!sendError), [busy, sendError])
   const { t } = useI18n()
   const { user } = useAuth()
 
@@ -127,17 +128,16 @@ export default function Feedback({ toast }) {
     typeRefs.current[id]?.focus()
   }
 
-  const send = async (body) => {
-    if (sendingRef.current) return
-    sendingRef.current = true
+  const send = async (body, retry = true) => {
+    const pending = startSupportSend(sendingRef, body, { retry })
+    if (!pending) return
     setBusy(true)
     setError('')
     setSendError('')
     setSentTo(body.email)
     setSubmitted(true)
 
-    const result = await postSupportWithRetry(body)
-    sendingRef.current = false
+    const result = await pending
     if (!mountedRef.current) return
     setBusy(false)
     if (!result.ok) {
@@ -213,7 +213,14 @@ export default function Feedback({ toast }) {
           <div className="fb-done">
             <p className="fb-error" role="alert">{sendError}</p>
             <textarea className="fb-textarea" aria-label="Your message" value={message} readOnly />
-            <button type="button" className="btn btn-accent fb-again" onClick={() => { void send(bodyRef.current) }}>Try again</button>
+            <div className="fb-success-actions fb-again">
+              <button type="button" className="btn btn-accent" onClick={() => { void send(bodyRef.current, false) }}>Try again</button>
+              <button type="button" className="btn" onClick={() => {
+                recoverFeedbackDraft(bodyRef, attemptRef)
+                setSendError('')
+                requestAnimationFrame(() => messageRef.current?.focus())
+              }}>Edit message</button>
+            </div>
           </div>
         ) : submitted ? (
           <div className="fb-done" role="status">
