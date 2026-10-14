@@ -14,8 +14,14 @@
 // MUTATIONS: give `.ic img.ig-glyph-pending` an opaque background in
 // library.css and the alpha assertions fail; stop removing the class on load in
 // MonoGlyph and the final assertion fails.
+//
+// A COLOURED-PACK GLYPH (a flag, a brand logo) sits in a transparent slot
+// (`ig-chip`), so its skeleton is the slot itself: while `ig-chip--wait` the slot
+// is the same faint tint, and once the glyph loads it is transparent again.
+// MUTATION: drop the `.ig-chip.ig-chip--wait` selector from the skeleton rule in
+// library.css and the pending-slot test fails (the slot is then invisible).
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer opening the icon library on a slow connection'
@@ -116,5 +122,45 @@ test.describe('the icon grid while glyph images are still loading', () => {
     expect(after.total, 'the grid drew glyphs').toBeGreaterThan(8)
     expect(after.painted, 'every glyph that is no longer pending has decoded').toBe(after.total)
     await expect(page.locator('.ig .ic .ig-glyph-wait')).toHaveCount(0)
+  })
+})
+
+test.describe('the icon grid while a coloured pack is still loading', () => {
+  test.skip(isLiveIconify(), 'the live API decides how long a glyph takes; this spec controls it')
+
+  test('a pending coloured glyph slot is a faint tint, and a loaded one is transparent', async ({ page }) => {
+    watch(page, PERSONA)
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+
+    // Hold only the flag pack's glyph batches, so the pack picker itself still works.
+    let release
+    const held = new Promise((resolve) => { release = resolve })
+    let heldRequests = 0
+    await page.route(
+      (u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/circle-flags.json' && u.search.includes('icons='),
+      async (route) => {
+        heldRequests += 1
+        await held
+        await route.fallback()
+      },
+    )
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'circle-flags')
+    await expect.poll(() => heldRequests, { timeout: 20_000 }).toBeGreaterThan(0)
+
+    const slot = page.locator('.ig .ic .ig-chip.ig-chip--wait').first()
+    await expect(slot).toBeVisible({ timeout: 20_000 })
+    const waiting = await slot.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(alphaOf(waiting), `the pending slot paints ${waiting}`).toBeLessThan(MAX_SKELETON_ALPHA)
+    expect(alphaOf(waiting), 'the pending slot is a tint, not nothing').toBeGreaterThan(0)
+
+    release()
+
+    // A slot whose glyph has loaded is a transparent slot, not a box.
+    const loaded = page.locator('.ig .ic .ig-chip:not(.ig-chip--wait):has(img)').first()
+    await expect(loaded).toBeVisible({ timeout: 20_000 })
+    const resting = await loaded.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(alphaOf(resting), `a loaded slot paints ${resting}`).toBe(0)
   })
 })

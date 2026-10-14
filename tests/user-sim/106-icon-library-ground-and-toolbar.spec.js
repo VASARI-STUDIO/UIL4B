@@ -12,6 +12,7 @@
 //    say), and on a coarse pointer every control is at least 44px both ways.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { ICONIFY_STUB_HEADER } from './iconify-stub.js'
 
 const WIDTHS = [320, 360, 390, 640, 641, 768, 961, 999, 1440]
 
@@ -65,11 +66,13 @@ test.describe('the customizer preview ground', () => {
 // The grid used to wrap every coloured-pack glyph in a white chip, and the
 // customizer kept its contrast gradient for them. Circle Flags is a paid pack,
 // so the viewer is Pro; the fixture serves its names, and the chip is drawn
-// whether or not the artwork has arrived, which is why the grid check does not
-// wait for an image.
+// whether or not the artwork has arrived. While it is pending the chip is a faint
+// tint (spec 113 owns that), so the paint checks below look at chips whose
+// glyph has loaded: that is the resting state a reader sees.
 
 // On a phone the pack control lives in the toolbar's Filters sheet; wider, it is
-// on the row. Either way, leave the sheet closed so the grid is what is on screen.
+// on the row. Either way, close the sheet with Done, as a reader does, so the grid
+// is what is on screen.
 const choosePack = async (page, pack) => {
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
@@ -79,8 +82,8 @@ const choosePack = async (page, pack) => {
     await expect(sheet).toBeVisible()
   }
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), pack)
-  if (inSheet && await sheet.isVisible()) {
-    await page.keyboard.press('Escape')
+  if (inSheet) {
+    await sheet.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(sheet).toBeHidden()
   }
 }
@@ -93,18 +96,24 @@ const openFlagGrid = async (browser, scheme, width) => {
   const page = await ctx.newPage()
   watch(page, `someone browsing flags at ${width}px in ${scheme} mode`)
   await signIn(page, { plan: 'pro' })
+  // The fixture's own glyph is a currentColor stroke an <img> paints black; flags
+  // are coloured, so serve coloured bodies (otherwise they sample as near-black ink).
+  await serveInk(page)
   await go(page, '/create/icons')
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
   await choosePack(page, 'circle-flags')
-  await expect(page.locator('.ig .ic .ig-chip').first()).toBeVisible({ timeout: 20000 })
+  await expect(page.locator(LOADED_CHIP).first()).toBeVisible({ timeout: 20000 })
   return { ctx, page }
 }
 
-const chipPaint = (page) => page.evaluate(() => [...document.querySelectorAll('.ig .ic .ig-chip')].map((c) => {
+// A chip whose glyph has arrived: it has left the pending skeleton (--wait).
+const LOADED_CHIP = '.ig .ic .ig-chip:not(.ig-chip--wait):has(img)'
+
+const chipPaint = (page) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map((c) => {
   const s = getComputedStyle(c)
   const r = c.getBoundingClientRect()
   return { bg: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow, w: Math.round(r.width), h: Math.round(r.height) }
-}))
+}), LOADED_CHIP)
 
 test.describe('coloured icons sit on the page, not in a white box', () => {
   for (const [scheme, width] of [['light', 1440], ['dark', 1440], ['light', 390], ['dark', 390]]) {
@@ -187,7 +196,8 @@ const serveInk = (page) => page.route(/\/[^/]+\.json\?.*icons=/, (route) => {
   return route.fulfill({
     status: 200,
     contentType: 'application/json',
-    headers: { 'access-control-allow-origin': '*' },
+    // Stamped so the suite's Iconify audit counts this as the fixture, not a leak.
+    headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
     body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {} }),
   })
 })
@@ -237,7 +247,7 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
   test('flags are never given a halo in either theme', async ({ browser }) => {
     for (const scheme of ['dark', 'light']) {
       const { ctx, page } = await openFlagGrid(browser, scheme, 1440)
-      await expect(page.locator('.ig .ic .ig-chip img').first()).toBeVisible({ timeout: 20000 })
+      await expect(page.locator(`${LOADED_CHIP} img`).first()).toBeVisible({ timeout: 20000 })
       expect(await page.locator('.ig .ic .ig-chip[class*="halo"]').count(), `a flag got a halo in ${scheme}`).toBe(0)
       await ctx.close()
     }
