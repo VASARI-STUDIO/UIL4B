@@ -5,7 +5,8 @@
 //    chosen colour keeps a contrast ground.
 //    Coloured icons (flags, brand and colour packs) always sit on that same page
 //    ground, and the grid draws them with no white box behind: the chip around
-//    a coloured glyph is a transparent slot in both themes.
+//    a coloured glyph is a transparent slot in both themes. Ink that matches the
+//    page ground (near-black on dark, near-white on light) gets a hairline halo.
 // 2. The toolbar above the grid stays on one row at every width, each control
 //    is whole (a visible control is never narrower than its glyph and padding
 //    say), and on a coarse pointer every control is at least 44px both ways.
@@ -61,12 +62,29 @@ test.describe('the customizer preview ground', () => {
 
 // COLOURED ICONS: NO WHITE BOX.
 //
-// Dylan, 14 Oct: "even with coloured icons it shows this white box, remove the
-// box." The grid wrapped every coloured-pack glyph in a white chip, and the
+// The grid used to wrap every coloured-pack glyph in a white chip, and the
 // customizer kept its contrast gradient for them. Circle Flags is a paid pack,
 // so the viewer is Pro; the fixture serves its names, and the chip is drawn
 // whether or not the artwork has arrived, which is why the grid check does not
 // wait for an image.
+
+// On a phone the pack control lives in the toolbar's Filters sheet; wider, it is
+// on the row. Either way, leave the sheet closed so the grid is what is on screen.
+const choosePack = async (page, pack) => {
+  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  const sheet = page.getByRole('dialog', { name: 'Filters' })
+  const inSheet = await filters.isVisible()
+  if (inSheet) {
+    await filters.click()
+    await expect(sheet).toBeVisible()
+  }
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), pack)
+  if (inSheet && await sheet.isVisible()) {
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+  }
+}
+
 const openFlagGrid = async (browser, scheme, width) => {
   const touch = width <= 768
   const ctx = await browser.newContext({
@@ -77,7 +95,7 @@ const openFlagGrid = async (browser, scheme, width) => {
   await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'circle-flags')
+  await choosePack(page, 'circle-flags')
   await expect(page.locator('.ig .ic .ig-chip').first()).toBeVisible({ timeout: 20000 })
   return { ctx, page }
 }
@@ -147,6 +165,127 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     expect(m.inv, 'a mono icon lost its dark-mode ink').toBe(true)
     await ctx.close()
   })
+})
+
+// The batched glyph endpoint answers one body per name. These bodies are coloured
+// (the fixture's own is a currentColor stroke, which an <img> paints black), so the
+// ink tone under test is the one the test chose: github-icon and vercel-icon are
+// near-black, apple is white, everything else is orange or red.
+const coloured = '<path fill="#fc6d26" d="M3 3h18v18H3z"/><path fill="#e24329" d="M8 8h8v8H8z"/>'
+const INK = {
+  'github-icon': '<path fill="#181717" d="M3 3h18v18H3z"/>',
+  'vercel-icon': '<path fill="#000" d="M12 3l10 18H2z"/>',
+  apple: '<path fill="#fff" d="M3 3h18v18H3z"/>',
+}
+const serveInk = (page) => page.route(/\/[^/]+\.json\?.*icons=/, (route) => {
+  const url = new URL(route.request().url())
+  const prefix = url.pathname.replace(/^\//, '').replace(/\.json$/, '')
+  const icons = {}
+  for (const n of (url.searchParams.get('icons') || '').split(',').filter(Boolean)) {
+    icons[n] = { body: prefix === 'logos' && INK[n] ? INK[n] : coloured }
+  }
+  return route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {} }),
+  })
+})
+
+const openLogos = async (browser, scheme) => {
+  const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, `someone browsing brand logos in ${scheme} mode`)
+  await signIn(page, { plan: 'pro' })
+  await serveInk(page)
+  await go(page, '/create/icons')
+  await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+  await choosePack(page, 'logos')
+  await expect(page.locator('.ig .ic[aria-label="Customise github-icon"] .ig-chip img')).toBeVisible({ timeout: 20000 })
+  return { ctx, page }
+}
+const chipOf = (page, name) => page.locator(`.ig .ic[aria-label="Customise ${name}"] .ig-chip`)
+
+test.describe('ink that matches the page ground gets a halo, never a box', () => {
+  test('dark theme: near-black marks get the light halo, white and coloured ones do not', async ({ browser }) => {
+    const { ctx, page } = await openLogos(browser, 'dark')
+    await expect(chipOf(page, 'github-icon')).toHaveClass(/ig-chip--halo-light/)
+    await expect(chipOf(page, 'vercel-icon')).toHaveClass(/ig-chip--halo-light/)
+    await expect(chipOf(page, 'apple')).not.toHaveClass(/halo/)
+    await expect(chipOf(page, 'gitlab')).not.toHaveClass(/halo/)
+    // The halo is a filter on the glyph; the slot itself is still not a box.
+    const m = await page.evaluate(() => {
+      const c = document.querySelector('.ig .ic[aria-label="Customise github-icon"] .ig-chip')
+      return { filter: getComputedStyle(c.querySelector('img')).filter, bg: getComputedStyle(c).backgroundImage }
+    })
+    expect(m.filter, 'the near-black mark has no halo').toContain('drop-shadow')
+    expect(m.bg, 'the halo mark got a box').toBe('none')
+    // The customiser stage carries the same halo for the same mark.
+    await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
+    await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--halo-light/, { timeout: 20000 })
+    await ctx.close()
+  })
+
+  test('light theme: white marks get the dark halo, near-black ones do not', async ({ browser }) => {
+    const { ctx, page } = await openLogos(browser, 'light')
+    await expect(chipOf(page, 'apple')).toHaveClass(/ig-chip--halo-dark/)
+    await expect(chipOf(page, 'github-icon')).not.toHaveClass(/halo/)
+    await expect(chipOf(page, 'gitlab')).not.toHaveClass(/halo/)
+    await ctx.close()
+  })
+
+  test('flags are never given a halo in either theme', async ({ browser }) => {
+    for (const scheme of ['dark', 'light']) {
+      const { ctx, page } = await openFlagGrid(browser, scheme, 1440)
+      await expect(page.locator('.ig .ic .ig-chip img').first()).toBeVisible({ timeout: 20000 })
+      expect(await page.locator('.ig .ic .ig-chip[class*="halo"]').count(), `a flag got a halo in ${scheme}`).toBe(0)
+      await ctx.close()
+    }
+  })
+})
+
+// SAVED ICONS. A saved true multicolour pack glyph sits on the page like its grid
+// cell; a saved mono icon that was given a colour keeps its light tile, so a black
+// or white one stays visible.
+test.describe('saved icons', () => {
+  const record = (over) => ({
+    key: `vs-custom-icons:1:${over.name}`, ts: 1, base: 'bolt', iteration: 1, projectId: null,
+    size: 24, stroke: 2, absStroke: true, cap: 'round', join: 'round', isStroke: true, strokeUnit: 'px',
+    ...over,
+  })
+  const svg = (fill) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="${fill}" d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>`
+  const seeded = [
+    record({ name: 'Custom (mono 1)', pack: 'lucide', cdn: true, color: '#000000', colored: true, svg: svg('#000') }),
+    record({ name: 'Custom (flag 1)', pack: 'circle-flags', cdn: true, color: '', colored: true, svg: svg('#d52b1e') }),
+  ]
+
+  for (const scheme of ['light', 'dark']) {
+    test(`a saved coloured mono icon keeps its tile; a saved pack glyph has none, ${scheme}`, async ({ browser }) => {
+      const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
+      const page = await ctx.newPage()
+      watch(page, `someone with saved icons in ${scheme} mode`)
+      await signIn(page, { plan: 'pro' })
+      await go(page, '/create/icons')
+      await page.evaluate((list) => localStorage.setItem('vs-custom-icons', JSON.stringify(list)), seeded)
+      await go(page, '/create/icons')
+      await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+      await choosePack(page, 'custom')
+      const mono = page.locator('.ig .ic', { hasText: 'Custom (mono 1)' }).locator('.ig-chip')
+      const flag = page.locator('.ig .ic', { hasText: 'Custom (flag 1)' }).locator('.ig-chip')
+      await expect(mono).toBeVisible({ timeout: 20000 })
+      const paint = (loc) => loc.evaluate((c) => {
+        const s = getComputedStyle(c)
+        return { image: s.backgroundImage, shadow: s.boxShadow }
+      })
+      const monoPaint = await paint(mono)
+      expect(monoPaint.image, 'a saved black icon lost its light tile').not.toBe('none')
+      await expect(mono).toHaveClass(/ig-chip--tile/)
+      const flagPaint = await paint(flag)
+      expect(flagPaint.image, 'a saved multicolour glyph kept a box').toBe('none')
+      expect(flagPaint.shadow).toBe('none')
+      await ctx.close()
+    })
+  }
 })
 
 const measureToolbar = (page) => page.evaluate(() => {

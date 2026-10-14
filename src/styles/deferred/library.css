@@ -424,14 +424,19 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
 .ig-inv{filter:var(--icon-inv)}
 /* Brand-glyph slot — colored/brand artwork keeps its own colours and sits straight
-   on the tile/page background, no box (Dylan, 14 Oct: "remove the box"). The chip
-   stays as a transparent 36px slot so its sizing, overflow and positioning (and
-   the glyph-shape maths that rely on them) are unchanged, and so a glyph that has
-   not arrived yet is an empty slot rather than a blank square. */
+   on the tile/page background, no box. The chip stays as a transparent 36px slot so
+   its sizing, overflow and positioning (and the glyph-shape maths that rely on
+   them) are unchanged, and so a glyph that has not arrived yet is an empty slot
+   rather than a blank square. */
 .ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:none;box-shadow:none}
-/* logo.dev marks are opaque PNGs with their own backdrop, so they keep the light
+/* Opaque logo.dev PNGs and saved mono icons with a chosen colour keep the light
    tile that separates them from the card surface. */
-.ig-chip--logo{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
+.ig-chip--tile{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
+/* Ink that matches the page ground (near-black on dark, near-white on light) would
+   vanish with no box behind it. A hairline halo outlines the shape; the artwork's
+   own colours are untouched. */
+.ig-chip--halo-light img,.icust-stage--halo-light .icust-stage-img{filter:drop-shadow(0 0 1px rgba(255,255,255,.6))}
+.ig-chip--halo-dark img,.icust-stage--halo-dark .icust-stage-img{filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
 /* object-fit, because the request now asks the API for a HEIGHT rather than a
    box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
    4:3 intrinsic size, and pinning both sides of a 24px box without `contain`

@@ -151,13 +151,16 @@ test.describe('the icon grid when only one pack batch fails', () => {
     const seen = await failFirstPack(page, 1)
     await go(page, '/create/icons')
 
+    // POSITIVE CONTROL. Before the retry, the failed pack's cells really are blank
+    // (a placeholder, or a coloured slot with no artwork). Without this, the
+    // "none blank" check below would also pass for a grid that never had any.
+    const blank = () => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
+    await expect.poll(() => seen.requests, { timeout: 20_000 }).toBeGreaterThan(0)
+    await expect.poll(blank, { timeout: 2_000, message: 'the failed pack left no blank cells to recover' }).toBeGreaterThan(0)
     // Asked again after the cool-down, without anyone scrolling or clicking.
     await expect.poll(() => seen.requests, { timeout: 20_000, message: 'the failed pack was never asked again' }).toBeGreaterThan(1)
     // And the cells that were blank are filled in.
-    await expect.poll(
-      () => page.evaluate(() => document.querySelectorAll('.ig .ic .ig-glyph-wait').length),
-      { timeout: 20_000, message: 'cells are still waiting on the pack that failed once' },
-    ).toBe(0)
+    await expect.poll(blank, { timeout: 20_000, message: 'cells are still waiting on the pack that failed once' }).toBe(0)
     await expect(page.getByText(/couldn.t reach the icon service/i), 'one failed pack is not an outage').toHaveCount(0)
   })
 

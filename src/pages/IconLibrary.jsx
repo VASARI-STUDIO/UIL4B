@@ -495,12 +495,11 @@ function glyphDataUri(pack, name) {
 // is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
 // flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
 // so scrolling or reopening never re-samples.
-const glyphCache = new Map() // 'pack:name' → { ar, cap } (ink aspect + wide-slot cap)
+const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wide-slot cap, ink tone)
 
 // A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
 //
-// Founder, 2026-09-04: "check our rendering for alot of the icons, alot of the
-// icons are not rendering correctly". Measured on /create/icons under the Brand
+// Reported as many icons not rendering correctly. Measured on /create/icons under the Brand
 // logos filter at 1440x900: `logos/aerospike` painted 24 x 2.1px inside its
 // 24 x 24 box and `logos/active-campaign` 24 x 2.4px. Illegible - and NOT a
 // fetch failure: all 120 mounted tiles loaded, every one the real artwork.
@@ -513,25 +512,31 @@ const glyphCache = new Map() // 'pack:name' → { ar, cap } (ink aspect + wide-s
 //   b) `devicon` ships 422 `-wordmark` entries on a SQUARE 128 x 128 canvas with
 //      a horizontal lockup drawn small inside it. The aspect ratio is honest and
 //      no viewBox handling can reach it - the artwork's own margins are the
-//      problem. These are the entries the founder named: adonisjs-wordmark,
+//      problem. Examples: adonisjs-wordmark,
 //      aerospike-wordmark, aframe-wordmark, akka-wordmark, algolia-wordmark.
 //
 // So the signal is the INK, not the box: the bounding box of the opaque pixels.
 // That number is wide for (a) and for (b) alike.
 //
 // Colored/brand artwork keeps its own colours and sits straight on the page
-// ground: the chip around it is a transparent slot, not a box (Dylan, 14 Oct:
-// "remove the box"). The measurement is remembered per icon, so scrolling or
-// reopening never re-samples.
+// ground: the chip around it is a transparent slot, not a box. Artwork whose ink
+// is near-black (or near-white in the light theme) would vanish on that ground,
+// so the sampled ink tone also picks a faint halo (`ig-chip--halo-*`) that never
+// touches the artwork's colours. The measurement is remembered per icon, so
+// scrolling or reopening never re-samples.
 
-// The aspect ratio of the box the glyph's opaque pixels occupy. Any failure
-// (CORS taint, decode error) falls back to a square ink box - which is exactly
+// The aspect ratio of the box the glyph's opaque pixels occupy, plus the tone of
+// that ink (average relative luminance: near-black -> 'dark', near-white ->
+// 'light', anything else 'mid'). Any failure
+// (CORS taint, decode error) falls back to a square mid-tone ink box - which is exactly
 // the treatment every icon had before this measurement existed, so a sampling
 // failure degrades to the old behaviour rather than to a broken one.
 //
 // S is 64 rather than 24 because a 10:1 lockup occupies two rows of a 24px
 // raster: enough to see, not enough to measure. At 64 it is a six-row band and
 // the ratio is stable.
+const INK_DARK_MAX = 0.05 // linear luminance: GitHub / Vercel / Apple black sit well under this
+const INK_LIGHT_MIN = 0.82
 function sampleGlyph(img) {
   try {
     const S = 64
@@ -541,10 +546,13 @@ function sampleGlyph(img) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     ctx.drawImage(img, 0, 0, S, S)
     const { data } = ctx.getImageData(0, 0, S, S)
+    const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+    let sum = 0
     let n = 0
     let x0 = S, y0 = S, x1 = -1, y1 = -1
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 64) continue
+      sum += 0.2126 * toLin(data[i]) + 0.7152 * toLin(data[i + 1]) + 0.0722 * toLin(data[i + 2])
       n++
       const p = i / 4
       const px = p % S
@@ -554,7 +562,7 @@ function sampleGlyph(img) {
       if (py < y0) y0 = py
       if (py > y1) y1 = py
     }
-    if (n === 0) return { ar: 1, cap: 1 }
+    if (n === 0) return { ar: 1, cap: 1, ink: 'mid' }
     // The raster is SQUARE and drawImage stretched the art to fill it, so the
     // measured ink box is the true one divided by the image own aspect. Undoing
     // that is what makes one number cover both causes: a square-canvas devicon
@@ -568,14 +576,15 @@ function sampleGlyph(img) {
       inkH: y1 - y0 + 1,
       raster: S,
     })
-    return { ar, cap }
-  } catch { return { ar: 1, cap: 1 } }
+    const lum = sum / n
+    return { ar, cap, ink: lum < INK_DARK_MAX ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid' }
+  } catch { return { ar: 1, cap: 1, ink: 'mid' } }
 }
 
 
 // Iconify-served brand glyph in a transparent slot. logo.dev images must NOT
 // use this component (unknown CORS policy, and they are opaque PNG marks), so
-// they keep a plain light chip of their own (`ig-chip--logo`).
+// they keep a plain light chip of their own (`ig-chip--tile`).
 //
 // THE REQUEST ASKS FOR A HEIGHT, NOT A BOX. `?width=24&height=24` pinned both
 // dimensions and left the viewBox alone, so the API returned a 24 x 24 SVG that
@@ -592,9 +601,14 @@ function sampleGlyph(img) {
 // not taint a canvas, so `getImageData` no longer depends on the CDN returning
 // a permissive `Access-Control-Allow-Origin`. `crossOrigin` goes with it — it
 // was only ever there to make that sampling legal.
+// Which halo (if any) keeps ink that matches the page ground readable: near-black
+// ink on the dark theme gets a light halo, near-white ink on the light theme a dark one.
+const haloFor = (ink, theme) => (ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : '')
+
 function BrandGlyph({ pack, name, src }) {
   const key = svgKey(pack, name)
-  const [shape, setShape] = useState(() => glyphCache.get(key) || { ar: 1, cap: 1 })
+  const { theme } = useTheme()
+  const [shape, setShape] = useState(() => glyphCache.get(key) || { ar: 1, cap: 1, ink: 'mid' })
   const cached = glyphCache.get(key)
   if (cached && cached !== shape) setShape(cached)
   const onLoad = (e) => {
@@ -604,9 +618,10 @@ function BrandGlyph({ pack, name, src }) {
     setShape(next)
   }
   const wide = shape.ar > WIDE_INK
+  const halo = haloFor(shape.ink, theme)
   return (
     <span
-      className={`ig-chip${wide ? ' ig-chip--wide' : ''}`}
+      className={`ig-chip${wide ? ' ig-chip--wide' : ''}${halo ? ` ig-chip--${halo}` : ''}`}
       style={wide ? { '--ig-wide-cap': shape.cap } : undefined}
     >
       {src && (
@@ -644,13 +659,18 @@ const warmCancel = () => clearTimeout(warmTimer)
 function cellGlyph(icon, src, onGlyphError) {
   if (icon.custom) {
     const img = <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
-    return icon.colored ? <span className="ig-chip">{img}</span> : img
+    if (!icon.colored) return img
+    // A saved multicolour pack glyph sits on the page like its grid cell does; a
+    // saved mono icon with a chosen colour (or pasted artwork) keeps its light tile
+    // so a black or white one stays visible.
+    const multicolour = icon.cdn && !icon.color && COLORED_PACKS.has(icon.pack)
+    return <span className={multicolour ? 'ig-chip' : 'ig-chip ig-chip--tile'}>{img}</span>
   }
   if (icon.logo) {
     // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
     // plain light chip always gives enough separation from the card surface.
     return (
-      <span className="ig-chip ig-chip--logo">
+      <span className="ig-chip ig-chip--tile">
         <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
       </span>
     )
@@ -1199,7 +1219,23 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [activeIcon, size, color, isColoredPack, themeInk, rotate, flipH, flipV])
 
   // Brand/colored artwork keeps its own colours and sits on the page ground, like
-  // an un-tinted mono icon (Dylan, 14 Oct: no white box behind coloured icons).
+  // an un-tinted mono icon. Near-page-ink artwork gets the same faint halo as its
+  // grid cell; the tone comes from the shared cache, refined by the stage image's
+  // own onLoad sampling if the grid has not measured it.
+  const brandKey = activeIcon?.cdn && !activeIcon.custom && isColoredPack ? svgKey(activeIcon.pack, activeIcon.name) : null
+  const [brandInk, setBrandInk] = useState(() => (brandKey && glyphCache.get(brandKey)?.ink) || 'mid')
+  const [prevBrandKey, setPrevBrandKey] = useState(brandKey)
+  if (brandKey !== prevBrandKey) {
+    // Derive-during-render on icon change (no effect → no cascading-render lint).
+    setPrevBrandKey(brandKey)
+    setBrandInk((brandKey && glyphCache.get(brandKey)?.ink) || 'mid')
+  }
+  const onStageImgLoad = (e) => {
+    if (!brandKey) return
+    if (!glyphCache.has(brandKey)) glyphCache.set(brandKey, sampleGlyph(e.currentTarget))
+    setBrandInk(glyphCache.get(brandKey).ink)
+  }
+  const stageHalo = isColoredPack ? haloFor(brandInk, theme) : ''
   const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
   const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
   // An un-tinted icon is drawn in the theme's own ink, so its stage is the theme's
@@ -1408,7 +1444,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         ) : (
           <>
-            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${onThemeGround ? ' icust-stage--theme' : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
+            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${onThemeGround ? ' icust-stage--theme' : ''}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
@@ -1421,6 +1457,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   width={size}
                   height={size}
                   alt={activeIcon.name}
+                  crossOrigin={isColoredPack ? 'anonymous' : undefined}
+                  onLoad={isColoredPack ? onStageImgLoad : undefined}
                 />
               )}
             </div>
@@ -2805,9 +2843,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // cells wanting one of them, and not a single <img>, because every
   // `setGlyphTick` was skipped by a guard that thought the page had gone.
   const mountedRef = useRef(true)
+  const retryTimerRef = useRef(0)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false }
+    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current) }
   }, [])
   // `icons` and `visible`, NOT `shown`. `shown` is a fresh array on every render,
   // so depending on it re-runs this body for every unrelated state change in the
@@ -2891,7 +2930,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             GLYPH_RETRY_AFTER.set(job.pack, Date.now() + GLYPH_RETRY_MS)
           })
           if (retry) {
-            setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
+            clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
           }
         }
         if (refusing) {
