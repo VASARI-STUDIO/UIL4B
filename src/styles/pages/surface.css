@@ -205,8 +205,12 @@
 .srf .lidx-card:focus-visible { outline-offset: 0; }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 1024px) {
+@media (min-width: 1025px) {
+  .srf .surface-grid > .surface-card:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
+}
+@media (min-width: 561px) and (max-width: 1024px) {
   .srf .surface-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .srf .surface-grid > .surface-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
   .srf .surface-grid { grid-template-columns: minmax(0, 1fr); }

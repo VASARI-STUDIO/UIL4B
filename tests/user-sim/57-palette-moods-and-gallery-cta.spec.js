@@ -229,7 +229,6 @@ const GALLERIES = [
   { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
   { route: '/discover/gradients', card: '.grg-card', action: 'Create and submit your own', href: '/create/gradient' },
   { route: '/discover/prompts', card: '.pl-card', action: 'Create and submit your own', href: null },
-  { route: '/discover/resources', card: '.cur-row, .cur-lead', action: 'Suggest a resource', href: '/feedback' },
   { route: '/community', card: '.ch-card', action: 'Create and submit your own', href: null },
 ]
 

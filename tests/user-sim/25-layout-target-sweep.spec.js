@@ -380,7 +380,7 @@ const FILTER_TRAYS = [
 //   · and whatever left the row is still reachable: a phone has a Filters
 //     control whenever it has a group that is not on the quick row.
 // Font Gallery is on the shared tool toolbar now; 100-tool-toolbar-one-row holds it.
-const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons', '/discover/prompts', '/discover/resources']
+const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons', '/discover/prompts']
 const NO_WRAP_WIDTHS = [320, 390, 1024, 1180, 1440]
 
 test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost', async ({ browser }) => {

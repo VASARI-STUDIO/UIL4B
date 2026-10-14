@@ -91,14 +91,14 @@ test('every retired URL redirects exactly once', () => {
   assert.equal(sources.length, LEGACY_REDIRECTS.length)
 })
 
-test('every redirect is a 301, never a 302', () => {
-  // Vercel spells 301 as `permanent: true`. It is NOT the default: omit it, or
+test('every redirect is permanent', () => {
+  // Vercel spells 308 as `permanent: true`. It is NOT the default: omit it, or
   // set it false, and Vercel emits a 307/302, which tells Google the old URL is
   // still the canonical one and to keep it indexed — the exact opposite of what
   // a permanent rename needs, and a failure that looks identical in a browser.
   for (const r of vercel().redirects) {
     assert.equal(r.permanent, true,
-      `${r.source} is not permanent — it would ship as a 302 and Google would keep the old URL`)
+      `${r.source} is not permanent — it would keep the old URL indexed`)
   }
 })
 
