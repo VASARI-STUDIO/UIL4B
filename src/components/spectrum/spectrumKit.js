@@ -6,6 +6,8 @@
 // for line; where the design states something the product cannot back, the
 // value is changed and the reason is written beside it.
 
+import { INPUT_FORMATS, OUTPUT_FORMATS } from '../../utils/meshFormats.js'
+
 /* ── colour maths (the design's own functions) ─────────────────────────────── */
 
 export function oklchToHex(L, C, hDeg) {
@@ -156,9 +158,28 @@ export const FONT_SAMPLE = 'The quick brown fox jumps over the lazy dog. 0123456
 
 /* ── the converter panel ───────────────────────────────────────────────────── */
 
+// [id, label, icon, short label]. The panel branches on the id, never the
+// index. The short label is drawn when the panel is too narrow for four full
+// labels; it is always contained in the full one, which stays the tab's name.
 // Aspect ratio has no glyph: the design asks for `ph-aspect-ratio`, which
 // Phosphor does not have, so the design's tab renders an empty, zero-width slot.
-export const IMG_MODES = [['Compress', 'archive'], ['Video frames', 'film-strip'], ['Aspect ratio', null]]
+export const IMG_MODES = [
+  ['compress', 'Compress', 'archive', null],
+  ['model', '3D model', 'cube', null],
+  ['frames', 'Video frames', 'film-strip', 'Frames'],
+  ['ratio', 'Aspect ratio', null, 'Ratio'],
+]
+// The 3D tab's output row: the formats the 3D Model Converter really writes,
+// read off its own table and kept to these four, in this order.
+const MODEL_OUTPUT_IDS = ['glb', 'obj', 'stl', 'usdz']
+export const MODEL_OUTPUTS = MODEL_OUTPUT_IDS
+  .map((id) => OUTPUT_FORMATS.find((f) => f.id === id))
+  .filter(Boolean)
+  .map((f) => ({ id: f.id, label: f.label, metres: f.unit === 'm' }))
+// The sample model's input format and its unit, from the same table.
+export const MODEL_SOURCE = INPUT_FORMATS.find((f) => f.id === 'step')
+/** The pre-rendered turntable of the sample part (scripts/model-turntable.mjs). */
+export const MODEL_PREVIEW = { loop: '/spectrum/model-turn.webp', poster: '/spectrum/model-poster.webp', width: 1280, height: 720 }
 export const IMG_FORMATS = [['WEBP', 'image/webp'], ['JPEG', 'image/jpeg'], ['PNG', 'image/png']]
 export const RATIO_PRESETS = [['16:9', 1920, 1080], ['4:5', 1080, 1350], ['1:1', 1080, 1080], ['21:9', 2560, 1097]]
 export const FRAME_COUNTS = [8, 12, 24]
