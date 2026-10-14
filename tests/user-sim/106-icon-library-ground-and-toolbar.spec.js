@@ -3,11 +3,14 @@
 // 1. With the default icon colour the customizer's preview sits on the page's
 //    own background in both themes, not on a fixed dark or white gradient. A
 //    chosen colour keeps a contrast ground.
+//    Coloured icons (flags, brand and colour packs) always sit on that same page
+//    ground, and the grid draws them with no white box behind: the chip around
+//    a coloured glyph is a transparent slot in both themes.
 // 2. The toolbar above the grid stays on one row at every width, each control
 //    is whole (a visible control is never narrower than its glyph and padding
 //    say), and on a coarse pointer every control is at least 44px both ways.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 
 const WIDTHS = [320, 360, 390, 640, 641, 768, 961, 999, 1440]
 
@@ -52,6 +55,96 @@ test.describe('the customizer preview ground', () => {
     await page.getByRole('button', { name: 'Default', exact: true }).click()
     const back = await stageAndPage(page)
     expect(back.bg).toBe(back.page)
+    await ctx.close()
+  })
+})
+
+// COLOURED ICONS: NO WHITE BOX.
+//
+// Dylan, 14 Oct: "even with coloured icons it shows this white box, remove the
+// box." The grid wrapped every coloured-pack glyph in a white chip, and the
+// customizer kept its contrast gradient for them. Circle Flags is a paid pack,
+// so the viewer is Pro; the fixture serves its names, and the chip is drawn
+// whether or not the artwork has arrived, which is why the grid check does not
+// wait for an image.
+const openFlagGrid = async (browser, scheme, width) => {
+  const touch = width <= 768
+  const ctx = await browser.newContext({
+    colorScheme: scheme, viewport: { width, height: 900 }, hasTouch: touch, isMobile: touch,
+  })
+  const page = await ctx.newPage()
+  watch(page, `someone browsing flags at ${width}px in ${scheme} mode`)
+  await signIn(page, { plan: 'pro' })
+  await go(page, '/create/icons')
+  await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'circle-flags')
+  await expect(page.locator('.ig .ic .ig-chip').first()).toBeVisible({ timeout: 20000 })
+  return { ctx, page }
+}
+
+const chipPaint = (page) => page.evaluate(() => [...document.querySelectorAll('.ig .ic .ig-chip')].map((c) => {
+  const s = getComputedStyle(c)
+  const r = c.getBoundingClientRect()
+  return { bg: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow, w: Math.round(r.width), h: Math.round(r.height) }
+}))
+
+test.describe('coloured icons sit on the page, not in a white box', () => {
+  for (const [scheme, width] of [['light', 1440], ['dark', 1440], ['light', 390], ['dark', 390]]) {
+    test(`flag grid chip is transparent and the stage is the page ground, ${scheme} ${width}`, async ({ browser }) => {
+      const { ctx, page } = await openFlagGrid(browser, scheme, width)
+
+      const chips = await chipPaint(page)
+      expect(chips.length, 'no coloured-pack slots in the grid').toBeGreaterThan(0)
+      for (const c of chips) {
+        expect(c.bg, 'a coloured glyph still has a fill behind it').toBe('rgba(0, 0, 0, 0)')
+        expect(c.image, 'a coloured glyph still has a gradient behind it').toBe('none')
+        expect(c.shadow, 'a coloured glyph still has an outline box').toBe('none')
+      }
+      // The slot keeps its footprint, so nothing in the grid moves.
+      expect(chips[0].h, 'the slot lost its height').toBe(36)
+
+      await page.locator('.ig .ic').first().click()
+      await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
+      await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
+      const { bg, image, page: pageBg } = await stageAndPage(page)
+      expect(image, 'the flag stage is painting a gradient').toBe('none')
+      expect(bg, 'the flag stage is not the page background').toBe(pageBg)
+      await ctx.close()
+    })
+  }
+
+  test('copying a coloured icon adds no background and forces no colour', async ({ browser }) => {
+    const { ctx, page } = await openFlagGrid(browser, 'dark', 1440)
+    await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+    await page.locator('.ig .ic').first().click()
+    await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
+    // The Colour row is replaced by a note: there is nothing to tint.
+    await expect(page.getByText(/original colours preserved/i)).toBeVisible()
+    // The markup is fetched on open; copying before it lands would copy nothing.
+    await expect(page.locator('.icust-code code')).toContainText('<svg', { timeout: 20000 })
+    const copy = page.getByRole('button', { name: /^Copy SVG$/ })
+    await copy.click()
+    await expect(page.getByRole('button', { name: /Copied!/ })).toBeVisible()
+    const out = await page.evaluate(() => navigator.clipboard.readText())
+    const root = out.match(/<svg[^>]*>/)?.[0] || ''
+    expect(root, 'no svg root in the copied markup').not.toBe('')
+    expect(out, 'a background rect was added').not.toMatch(/<rect[^>]*(width|height)="100%"/)
+    expect(root, 'a colour was forced onto the root').not.toMatch(/\s(color|fill)=/)
+    await ctx.close()
+  })
+
+  test('a mono icon keeps its own tile: no slot, inverted ink in dark', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+    const page = await ctx.newPage()
+    watch(page, 'someone browsing the default mono icons')
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    const m = await page.evaluate(() => {
+      const img = document.querySelector('.ig .ic img')
+      return { chip: !!img.closest('.ig-chip'), inv: img.classList.contains('ig-inv') }
+    })
+    expect(m.chip, 'a mono icon is wrapped in a coloured-icon slot').toBe(false)
+    expect(m.inv, 'a mono icon lost its dark-mode ink').toBe(true)
     await ctx.close()
   })
 })
