@@ -22,10 +22,14 @@ const json = (a) => JSON.parse(a.body)
 
 test('every pack IconLibrary.jsx browses on first paint has a fixture file', () => {
   const page = read('src/pages/IconLibrary.jsx')
-  const groups = page.match(/const ICON_GROUPS = \{[\s\S]*?\n\}/)?.[0]
-  assert.ok(groups, 'ICON_GROUPS is gone from IconLibrary.jsx — the fixture no longer knows what the page requests')
-  const packs = [...new Set([...groups.matchAll(/packs:\s*\[([^\]]*)\]/g)]
-    .flatMap((m) => m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)))]
+  const start = page.indexOf('const ICON_GROUPS =')
+  const end = page.indexOf("// The group tray", start)
+  assert.ok(start >= 0 && end > start, 'the catalogue declarations must be available')
+  const { packs, groups } = new Function(`${page.slice(start, end)}; return { packs: ALL_PACKS, groups: Object.keys(ICON_GROUPS) }`)()
+  assert.deepEqual(groups, ['coloured', 'brands', 'flags', 'emoji'])
+  for (const pack of ['lucide', 'ph', 'mdi', 'heroicons', 'solar']) {
+    assert.ok(packs.includes(pack), `${pack} remains available without style chips`)
+  }
   assert.ok(packs.length >= 20, `expected the page to browse many packs; parsed ${packs.length}`)
   const have = new Set(fixturePacks())
   const missing = packs.filter((p) => !have.has(p))

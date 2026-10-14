@@ -77,20 +77,19 @@ const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
 // "Coloured" shows colour icons from ALL colour packs, not just one — same for
 // the other styles. `packs` are real Iconify prefixes.
 const ICON_GROUPS = {
-  outlined: { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
-  solid: { label: 'Solid', packs: ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs'] },
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
   brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
   emoji: { label: 'Emoji', packs: ['twemoji', 'fluent-emoji', 'noto', 'openmoji'] },
 }
-const GROUP_ORDER = ['outlined', 'solid', 'coloured', 'brands', 'flags', 'emoji']
+const GROUP_ORDER = ['coloured', 'brands', 'flags', 'emoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const ALL_PACKS = [...new Set(GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs))]
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs']
+const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs)])]
 
 // The group tray's options were built HERE, at module scope, so that
 // LibraryFilterGroup was not handed a new array identity on every keystroke —
@@ -108,7 +107,7 @@ const ALL_PACKS = [...new Set(GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs))]
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
 // Packs whose default style is genuinely stroke-based (the stroke slider applies).
-const STROKE_PACKS = new Set(ICON_GROUPS.outlined.packs)
+const STROKE_PACKS = new Set(['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'])
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
 
@@ -203,37 +202,17 @@ function writeStickyStroke(v) {
   try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
 }
 
-// ── Style coherence ──────────────────────────────────────────────────────────
-// Several Iconify prefixes ship MULTIPLE styles under one prefix, so a raw
-// /collection dump mixes stroked and filled glyphs. That is why "Outlined" was
-// showing filled icons: Phosphor (`ph`) carries `-fill`/`-duotone` weights,
-// Heroicons/Iconoir carry `-solid`, Tabler carries `-filled`. These per-pack,
-// suffix-anchored matchers keep only the names whose glyph matches the chosen
-// style, so a style filter shows ONE coherent look (never a filled icon under
-// "Outlined"). Packs absent here are single-style — every name is kept.
-const STYLE_RULES = {
-  ph:                 { outlined: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n) },
-  heroicons:          { outlined: n => !/-solid$/.test(n) },
-  iconoir:            { outlined: n => !/-solid$/.test(n) },
-  tabler:             { outlined: n => !/-filled$/.test(n) },
-  mdi:                { solid: n => !/-outline$/.test(n) },
-  'material-symbols': { solid: n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n) },
-  solar:              { solid: n => /-bold(?:-duotone)?$/.test(n) },
+// Each pack's Regular weight excludes its alternate glyph variants.
+const REGULAR_RULES = {
+  ph: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n),
+  heroicons: n => !/-solid$/.test(n),
+  iconoir: n => !/-solid$/.test(n),
+  tabler: n => !/-filled$/.test(n),
+  mdi: n => !/-outline$/.test(n),
+  'material-symbols': n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n),
+  solar: n => /-bold(?:-duotone)?$/.test(n),
 }
-// The style a single pack browses in — so picking "Phosphor" under Interface
-// (outlined) directly never dumps its fill weights either.
-const PACK_STYLE = {
-  lucide: 'outlined', tabler: 'outlined', iconoir: 'outlined', heroicons: 'outlined', ph: 'outlined',
-  mdi: 'solid', 'material-symbols': 'solid', solar: 'solid', 'fa6-solid': 'solid', bxs: 'solid',
-}
-const matchesStyle = (pack, name, style) => {
-  const rule = STYLE_RULES[pack]?.[style]
-  return rule ? rule(name) : true
-}
-const keepStyle = (pack, names, style) => {
-  const rule = STYLE_RULES[pack]?.[style]
-  return rule ? names.filter(rule) : names
-}
+const matchesRegular = (pack, name) => REGULAR_RULES[pack]?.(name) ?? true
 
 // ── Weights: Regular / Bold / Fill / Duo ─────────────────────────────────────
 // the Regular/Bold/Fill/Duo tabs
@@ -272,15 +251,14 @@ const WEIGHT_RULES = {
 }
 const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
-// The names one pack shows at one weight. A collection chip (groupKey) is a
-// style of its own and wins; Regular is the pack's own browse style.
+// Collections use the pack's Regular artwork; other scopes honour the weight.
 const keepWeight = (pack, names, weight, groupKey = null) => {
-  if (groupKey || weight === 'regular') return keepStyle(pack, names, groupKey || PACK_STYLE[pack])
+  if (groupKey || weight === 'regular') return names.filter(name => matchesRegular(pack, name))
   const rule = WEIGHT_RULES[weight]?.[pack]
   return rule ? names.filter(rule) : []
 }
-const matchesWeight = (pack, name, weight, style) => (
-  weight === 'regular' ? matchesStyle(pack, name, style) : !!WEIGHT_RULES[weight]?.[pack]?.(name)
+const matchesWeight = (pack, name, weight) => (
+  weight === 'regular' ? matchesRegular(pack, name) : !!WEIGHT_RULES[weight]?.[pack]?.(name)
 )
 
 function buildSvgUrl(host, pack, name, params = {}) {
@@ -479,56 +457,10 @@ function glyphDataUri(pack, name) {
   return uri
 }
 
-// ── Brand-glyph contrast chips ───────────────────────────────────────────────
-// Colored/brand artwork keeps its own colours, so the grid can't tint it for
-// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
-// on a chip using the Stage's light gradient by default; if the artwork itself
-// is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
-// flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
-// so scrolling or reopening never re-samples.
-const glyphCache = new Map() // 'pack:name' → { tone, ar } (chip tone + ink aspect)
+// Cache ink bounds so wide brand lockups keep their readable grid sizing.
+const glyphCache = new Map() // 'pack:name' -> { ar, cap }
 
-// A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
-//
-// Founder, 2026-09-04: "check our rendering for alot of the icons, alot of the
-// icons are not rendering correctly". Measured on /create/icons under the Brand
-// logos filter at 1440x900: `logos/aerospike` painted 24 x 2.1px inside its
-// 24 x 24 box and `logos/active-campaign` 24 x 2.4px. Illegible - and NOT a
-// fetch failure: all 120 mounted tiles loaded, every one the real artwork.
-//
-// TWO CAUSES, ONE SYMPTOM, and one measurement reaches both:
-//   a) `logos` ships genuinely wide viewBoxes. Censused against the Iconify API:
-//      839 of 1,880 (45%) are off-square, 625 (33%) exceed 2:1, worst `rolldown`
-//      at 11.8:1 (512 x 43.39). Requesting ?width=24&height=24 pins the box and
-//      leaves the viewBox alone, so the art letterboxes to a thin strip.
-//   b) `devicon` ships 422 `-wordmark` entries on a SQUARE 128 x 128 canvas with
-//      a horizontal lockup drawn small inside it. The aspect ratio is honest and
-//      no viewBox handling can reach it - the artwork's own margins are the
-//      problem. These are the entries the founder named: adonisjs-wordmark,
-//      aerospike-wordmark, aframe-wordmark, akka-wordmark, algolia-wordmark.
-//
-// So the signal is the INK, not the box: the bounding box of the opaque pixels.
-// That number is wide for (a) and for (b) alike. This canvas pass already ran on
-// every one of these glyphs to choose the chip tone, so the extra cost is one
-// comparison per pixel and no extra decode.
-//
-// Colored/brand artwork keeps its own colours, so the grid can't tint it for
-// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
-// on a chip using the Stage's light gradient by default; if the artwork itself
-// is near-white (Apple, OpenAI, GitHub-in-dark...) we flip that icon's chip to
-// the dark Stage gradient. Both facts are remembered per icon, so scrolling or
-// reopening never re-samples.
-
-// Average relative luminance of the glyph's opaque pixels, plus the aspect ratio
-// of the box those pixels occupy. Near-white artwork (avg > .82) needs the dark
-// chip. Any failure (CORS taint, decode error) falls back to a light chip and a
-// square ink box - which is exactly the treatment every icon had before this
-// measurement existed, so a sampling failure degrades to the old behaviour
-// rather than to a broken one.
-//
-// S is 64 rather than 24 because a 10:1 lockup occupies two rows of a 24px
-// raster: enough to see, not enough to measure. At 64 it is a six-row band and
-// the ratio is stable.
+// Measure opaque ink bounds on a square raster, then restore the image aspect.
 function sampleGlyph(img) {
   try {
     const S = 64
@@ -538,13 +470,10 @@ function sampleGlyph(img) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     ctx.drawImage(img, 0, 0, S, S)
     const { data } = ctx.getImageData(0, 0, S, S)
-    const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
-    let sum = 0
     let n = 0
     let x0 = S, y0 = S, x1 = -1, y1 = -1
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 64) continue
-      sum += 0.2126 * toLin(data[i]) + 0.7152 * toLin(data[i + 1]) + 0.0722 * toLin(data[i + 2])
       n++
       const p = i / 4
       const px = p % S
@@ -554,7 +483,7 @@ function sampleGlyph(img) {
       if (py < y0) y0 = py
       if (py > y1) y1 = py
     }
-    if (n === 0) return { tone: 'light', ar: 1, cap: 1 }
+    if (n === 0) return { ar: 1, cap: 1 }
     // The raster is SQUARE and drawImage stretched the art to fill it, so the
     // measured ink box is the true one divided by the image own aspect. Undoing
     // that is what makes one number cover both causes: a square-canvas devicon
@@ -568,34 +497,15 @@ function sampleGlyph(img) {
       inkH: y1 - y0 + 1,
       raster: S,
     })
-    return { tone: sum / n > 0.82 ? 'dark' : 'light', ar, cap }
-  } catch { return { tone: 'light', ar: 1, cap: 1 } }
+    return { ar, cap }
+  } catch { return { ar: 1, cap: 1 } }
 }
 
 
-// Iconify-served brand glyph on a tone-aware chip. crossOrigin is safe here —
-// the same API already answers CORS fetches in fetchSvgText — but logo.dev
-// images must NOT use this component (unknown CORS policy; a crossOrigin
-// failure would blank the image entirely), so they get a plain light chip.
-//
-// THE REQUEST ASKS FOR A HEIGHT, NOT A BOX. `?width=24&height=24` pinned both
-// dimensions and left the viewBox alone, so the API returned a 24 x 24 SVG that
-// letterboxed a 512 x 45 lockup into a 2px strip. `?height=48` lets the width
-// follow the artwork, so the element's intrinsic aspect is finally the truth
-// about the art. Square glyphs are unaffected - the CSS still paints them in a
-// 24px box - and 48 gives the wide chip resolution to scale from.
-// `src` is the batched data: URI from the grid (see the batching note above).
-// It arrives empty on the render before this icon's tranche lands, and the chip
-// is drawn anyway — the chip IS the placeholder, so the cell does not resize
-// under the reader when the artwork appears.
-//
-// The sampling below is unchanged and is now on firmer ground: a data: URI does
-// not taint a canvas, so `getImageData` no longer depends on the CDN returning
-// a permissive `Access-Control-Allow-Origin`. `crossOrigin` goes with it — it
-// was only ever there to make that sampling legal.
+// Reserve glyph space while batched markup loads, preserving wide ink bounds.
 function BrandGlyph({ pack, name, src }) {
   const key = svgKey(pack, name)
-  const [shape, setShape] = useState(() => glyphCache.get(key) || { tone: 'light', ar: 1, cap: 1 })
+  const [shape, setShape] = useState(() => glyphCache.get(key) || { ar: 1, cap: 1 })
   const cached = glyphCache.get(key)
   if (cached && cached !== shape) setShape(cached)
   const onLoad = (e) => {
@@ -607,7 +517,7 @@ function BrandGlyph({ pack, name, src }) {
   const wide = shape.ar > WIDE_INK
   return (
     <span
-      className={`ig-chip${shape.tone === 'dark' ? ' ig-chip--dark' : ''}${wide ? ' ig-chip--wide' : ''}`}
+      className={`ig-chip${wide ? ' ig-chip--wide' : ''}`}
       style={wide ? { '--ig-wide-cap': shape.cap } : undefined}
     >
       {src && (
@@ -648,8 +558,6 @@ function cellGlyph(icon, src, onGlyphError) {
     return icon.colored ? <span className="ig-chip">{img}</span> : img
   }
   if (icon.logo) {
-    // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
-    // plain light chip always gives enough separation from the card surface.
     return (
       <span className="ig-chip">
         <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
@@ -1045,7 +953,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (!activeIcon) return false
     if (activeIcon.custom) return !!activeIcon.isStroke
     if (activeIcon.svg) return detectPastedStroke(activeIcon.svg)
-    if (activeIcon.cdn) return STROKE_PACKS.has(activeIcon.pack) && matchesStyle(activeIcon.pack, activeIcon.name, 'outlined')
+    if (activeIcon.cdn) return STROKE_PACKS.has(activeIcon.pack) && matchesRegular(activeIcon.pack, activeIcon.name)
     return !activeIcon.filled
   }, [activeIcon])
   const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
@@ -1199,30 +1107,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
   }, [activeIcon, size, color, isColoredPack, themeInk, rotate, flipH, flipV])
 
-  // Brand/colored artwork: the Stage tone follows the same sampled per-icon tone
-  // as the grid chips — light gradient unless the artwork is near-white. Seeded
-  // from the shared cache (usually already populated by the grid), refined by
-  // the stage image's own onLoad sampling if not.
-  const brandKey = activeIcon?.cdn && !activeIcon.custom ? svgKey(activeIcon.pack, activeIcon.name) : null
-  const [brandTone, setBrandTone] = useState(() => (brandKey && glyphCache.get(brandKey)?.tone) || 'light')
-  const [prevBrandKey, setPrevBrandKey] = useState(brandKey)
-  if (brandKey !== prevBrandKey) {
-    // Derive-during-render on icon change (no effect → no cascading-render lint).
-    setPrevBrandKey(brandKey)
-    setBrandTone((brandKey && glyphCache.get(brandKey)?.tone) || 'light')
-  }
-  const onStageImgLoad = (e) => {
-    if (!isColoredPack) return
-    const key = svgKey(activeIcon.pack, activeIcon.name)
-    if (!glyphCache.has(key)) glyphCache.set(key, sampleGlyph(e.currentTarget))
-    setBrandTone(glyphCache.get(key).tone)
-  }
-
-  const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
-  const stageIsLight = isColoredPack ? brandTone === 'light' : relativeLuminance(effectiveColor) < 0.35
-  // An un-tinted icon is drawn in the theme's own ink, so its stage is the theme's
-  // own page ground. A chosen colour, or a brand's artwork, keeps the contrast ground.
-  const onThemeGround = !isColoredPack && !color
+  // Reuse the grid's cached markup, resolving currentColor for standalone images.
+  const previewSvg = useMemo(() => serializeCustomizedSvg(baseSvgText, {
+    size, color: isColoredPack ? undefined : (color || themeInk),
+    stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+  }), [baseSvgText, size, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
+  const previewSrc = previewSvg ? svgToDataUri(previewSvg) : stageImgUrl
+  const [previewImage, setPreviewImage] = useState({ src: null, loaded: false, error: false })
+  const imageLoaded = previewImage.src === previewSrc && previewImage.loaded
+  const imageError = previewImage.src === previewSrc && previewImage.error
+  const isDuotone = activeIcon?.pack === 'ph' && /-duotone$/.test(activeIcon.name)
+  const effectiveColor = color || themeInk
+  const onThemeGround = isColoredPack || !color
+  const stageIsLight = !onThemeGround && relativeLuminance(effectiveColor) < 0.35
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1429,18 +1326,23 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && <span className="icust-stage-msg">{loadErr ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
+                  {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
                 </>
               ) : (
-                <img
-                  className="icust-stage-img"
-                  src={stageImgUrl}
-                  width={size}
-                  height={size}
-                  alt={activeIcon.name}
-                  crossOrigin={isColoredPack ? 'anonymous' : undefined}
-                  onLoad={isColoredPack ? onStageImgLoad : undefined}
-                />
+                <>
+                  <img
+                    key={previewSrc}
+                    className="icust-stage-img"
+                    src={previewSrc}
+                    width={size}
+                    height={size}
+                    alt={activeIcon.name}
+                    style={{ visibility: imageLoaded ? 'visible' : 'hidden' }}
+                    onLoad={() => setPreviewImage({ src: previewSrc, loaded: true, error: false })}
+                    onError={() => setPreviewImage({ src: previewSrc, loaded: false, error: true })}
+                  />
+                  {!imageLoaded && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
+                </>
               )}
             </div>
 
@@ -1470,11 +1372,16 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <div className="icust-row">
                 <label>Colour</label>
                 {isColoredPack ? (
-                  <span className="icust-note">Original colours preserved</span>
+                  <>
+                    <div className="icust-seg">
+                      <button type="button" className="active" aria-pressed="true">Default</button>
+                    </div>
+                    <span className="icust-note icust-original">Original colours</span>
+                  </>
                 ) : (
                   <>
                     <div className="icust-seg">
-                      <button type="button" className={!color ? 'active' : ''} onClick={() => { setColor(''); markDirty() }}>Default</button>
+                      {isDuotone && <button type="button" className={!color ? 'active' : ''} onClick={() => { setColor(''); markDirty() }}>Default</button>}
                       <button type="button" className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); markDirty() }}>Black</button>
                       <button type="button" className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); markDirty() }}>White</button>
                     </div>
@@ -2298,6 +2205,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // Browse one pack, optionally narrowed by an active collection chip — pack
   // and chip are independent filters that compose (chip = style within pack).
   const browsePack = useCallback((packFilter, groupKey = null, manualRetry = false) => {
+    groupKey = ICON_GROUPS[groupKey] ? groupKey : null
     setSource('pack'); setGroup(groupKey || null)
     // "All packs" first: the empty string is not a pack and must never be put
     // to the tier table, which would read it as an unknown prefix and refuse it.
@@ -2341,7 +2249,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // round-robin interleave them so the grid mixes packs.
   const browseGroup = useCallback((groupKey, manualRetry = false) => {
     const g = ICON_GROUPS[groupKey]
-    if (!g) return
+    if (!g) { browseAll(); return }
     // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
     // and a free viewer may have none of them, so the chip is a wall; a mixed
     // group would fetch only the members the viewer is entitled to and say so
@@ -2358,7 +2266,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setLoading(true); setLoadError(false); glyphFails.current = 0
     Promise.all(packs.map(p =>
       getCollectionNames(p, { manualRetry })
-        .then(({ names }) => ({ names: keepStyle(p, names, groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
+        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
@@ -2380,7 +2288,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capList, needFor, refuseScope])
+  }, [renderLocal, canSee, capList, needFor, refuseScope, browseAll])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -2404,7 +2312,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   const doSearch = useCallback((q, scope = {}) => {
     q = (q || '').trim()
-    const { pack: packFilter = '', group: groupKey = null } = scope
+    const { pack: packFilter = '', group: requestedGroup = null } = scope
+    const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
     // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
     // Iconify registry — type "apple" signed out and the old code would have
     // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
@@ -2431,7 +2340,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setSource('search')
     setLoading(true); setLoadError(false); glyphFails.current = 0
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
-    // the STYLE of the results (matchesStyle below); chip alone fans out to the
+    // the collection of results; chip alone fans out to the
     // whole collection's packs.
     const params = new URLSearchParams()
     if (packFilter) params.set('prefix', packFilter)
@@ -2453,7 +2362,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           renderLocal(q, packFilter)
           return
         }
-        const style = groupKey || PACK_STYLE[packFilter]
         // THE SECOND CHECK, on the way back. `prefixes` above is a request the
         // API is asked to honour; this is the one we enforce. A proxy that drops
         // the parameter, a future API that widens it, a cached answer from a
@@ -2464,7 +2372,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         const items = capList(d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
-          .filter(ic => (groupKey ? matchesStyle(ic.pack, ic.name, style) : matchesWeight(ic.pack, ic.name, weightRef.current, style))))
+          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current)))
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
@@ -2633,11 +2541,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const handleGroupToggle = (key) => {
     clearTimeout(timer.current)
     const q = query.trim()
-    const nextGroup = group === key ? null : key
+    const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
-    // A collection chip ("Outlined", "Solid", …) is a style of its own, so
-    // choosing one puts the weight back to Regular rather than composing two
-    // style answers into an empty grid.
+    // Collections browse their original artwork at Regular weight.
     if (nextGroup) { weightRef.current = 'regular'; setWeight('regular') }
     if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
     else if (pack) browsePack(pack, nextGroup)

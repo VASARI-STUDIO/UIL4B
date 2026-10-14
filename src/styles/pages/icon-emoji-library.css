@@ -227,3 +227,8 @@
   .iel-page.lib-surface .lib-switch-btn>svg,
   .iel-page.lib-surface .lib-switch-btn>.lib-switch-emoji{display:none}
 }
+
+/* Coloured glyphs share the grid ground; the wrapper only reserves ink space. */
+.iel-page .ig-chip{background:transparent;box-shadow:none}
+.iel-page .icust-original{white-space:nowrap}
+.iel-page .ig-toolbar .lbry-toolbar-row{flex-wrap:nowrap}
