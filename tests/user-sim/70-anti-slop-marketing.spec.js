@@ -84,7 +84,7 @@ test.describe('the homepage below the hero', () => {
 
     const text = (await page.locator('main').first().evaluate((el) => el.textContent || ''))
       .replace(/\s+/g, ' ')
-    expect(text).toContain(`${AI_LIMITS.pro.daily} AI generations a day`)
+    expect(text).toContain(`${AI_LIMITS.pro.daily} a day, ${AI_LIMITS.pro.monthly} a month`)
     expect(text).toContain(`${AI_LIMITS.pro.monthly} a month`)
 
     const lower = text.toLowerCase()
@@ -162,7 +162,7 @@ test.describe('the Plans page reassurance lines', () => {
     await go(page, '/plans')
     await expectRendered(page, '/plans')
 
-    const note = page.locator('.pr-plan--free .pr-plan-note')
+    const note = page.locator('.pr-head--free .pr-note')
     await expect(note).toHaveText('Free because the tools cost us nothing to run.')
     const text = (await page.locator('.pricing main').innerText()).toLowerCase()
     for (const phrase of ['no trial clock', 'no card', 'ready today', 'upgrade when your workflow']) {

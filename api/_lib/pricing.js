@@ -35,18 +35,13 @@ export const BASE_CURRENCY = 'usd'
 //     this repository; .gitignore records the decision.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// USD follows the founder-approved ladder — $7 monthly · $18 quarterly ·
-// $48 yearly — recorded as decision 2 in
-// docs/build-plan/founder-batch-2026-08-20.md (2026-08-20), which supersedes
-// the old $4.99 / $39.99 defaults. src/config/planLadder.js carries the same
+// USD is $7 monthly · $48 yearly. src/config/planLadder.js carries the same
 // USD ladder as `approvedTotal` for the client, and
-// tests/unit/price-ladder.test.js fails the build if the two ever drift again.
+// tests/unit/price-ladder.test.js fails the build if the two ever drift.
 //
-// Non-USD amounts are DERIVED, not invented. Each interval keeps the
-// per-currency multiplier its own previous defaults already implied
-// (old amount ÷ old USD amount); quarterly, which had no row at all, takes the
-// midpoint of the monthly and yearly multipliers. Results are rounded to whole
-// units to match the USD ladder's whole-number convention.
+// Non-USD amounts are DERIVED, not invented, from each interval's
+// per-currency multiplier and rounded to whole units to match the USD ladder's
+// whole-number convention.
 //
 // Pro is sold as a subscription only. There is no one-off price: every entry
 // below is a recurring interval.
@@ -55,24 +50,18 @@ export const BASE_CURRENCY = 'usd'
 // shown before anything is saved to Stripe.
 export const DEFAULT_PRICES = {
   monthly:   { usd: 7,  eur: 7,  gbp: 6,  aud: 11, nzd: 13,  cad: 10, sgd: 10, chf: 7 },
-  quarterly: { usd: 18, eur: 18, gbp: 15, aud: 32, nzd: 36,  cad: 26, sgd: 26, chf: 18 },
   yearly:    { usd: 48, eur: 48, gbp: 42, aud: 96, nzd: 108, cad: 72, sgd: 72, chf: 48 },
 }
 
 export const LOOKUP_KEYS = {
   monthly: 'uil4b_pro_monthly',
-  quarterly: 'uil4b_pro_quarterly',
   yearly: 'uil4b_pro_yearly',
 }
 
-// Stripe’s `recurring.interval`. Quarterly is a three-MONTH recurrence, so
-// 'month' is only half of its definition — Stripe also needs
-// `recurring.interval_count: 3`, which is INTERVAL_COUNTS below. setup-stripe.js
-// DOES send it, for every recurring interval rather than as a quarterly special
-// case, since 2026-09-15; before that a quarterly price would have billed $18 a
-// MONTH. Quarterly joined BILLING_INTERVALS on the same date.
-export const INTERVAL_MAP = { monthly: 'month', quarterly: 'month', yearly: 'year' }
-export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, quarterly: 3, yearly: 1 })
+// Stripe’s `recurring.interval`. Stripe also needs `recurring.interval_count`
+// (INTERVAL_COUNTS below); setup-stripe.js sends it for every recurring interval.
+export const INTERVAL_MAP = { monthly: 'month', yearly: 'year' }
+export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, yearly: 1 })
 
 /**
  * Whether a Stripe price may be sold for a billing interval: it must be active
@@ -91,7 +80,6 @@ export function priceIsSellable(price, interval) {
 
 export const PRICE_ENV_KEYS = {
   monthly: 'STRIPE_PRICE_MONTHLY',
-  quarterly: 'STRIPE_PRICE_QUARTERLY',
   yearly: 'STRIPE_PRICE_YEARLY',
 }
 
@@ -101,11 +89,8 @@ export const PRICE_ENV_KEYS = {
 // page and the promise Stripe actually honoured were two separate literals in
 // two files with nothing holding them together.
 //
-// Founder, 2026-09-15: the trial is EARNED BY THE CADENCE. Monthly bills
-// today and says so; quarterly and yearly each get seven days. That is the
-// friction his own conversion note argues for — a card is taken either way,
-// so the trial filters for intent — while the free tier stays the
-// no-commitment way in.
+// The trial is earned by the cadence: monthly bills today, yearly gets seven
+// days.
 //
 // src/config/planLadder.js carries the same numbers for the UI, and
 // tests/unit/trial-cadence.test.js fails if the two ever disagree. A CTA that
@@ -113,7 +98,6 @@ export const PRICE_ENV_KEYS = {
 // because it only surfaces on the card statement.
 export const TRIAL_DAYS = Object.freeze({
   monthly: 0,
-  quarterly: 7,
   yearly: 7,
 })
 
@@ -127,25 +111,18 @@ export function trialDaysFor(interval) {
 // loop /api/get-prices publishes, and the loop /api/setup-stripe creates Stripe
 // prices from — so adding a key here is a decision to sell that interval.
 //
-// QUARTERLY WAS SWITCHED ON 2026-09-15, on the founder's instruction and with
-// his explicit approval for the gated payment files. The four things this
-// comment used to list as missing were done in that one commit, in this order,
-// because the third one is a way to charge somebody wrongly:
+// Every table in this file that is keyed by interval holds exactly these keys,
+// and tests/unit/billing-intervals-drift.test.js pins that. A subscription
+// already billing on a retired interval keeps Pro: entitlement follows the
+// subscription's status (plans.js), not this list.
 //
-//   1. PRICE_ENV_KEYS.quarterly            above
-//   2. src/pages/Checkout.jsx case         so the CTA has somewhere to go
-//   3. `interval_count` in setup-stripe.js  THE ONE THAT MATTERS. Stripe reads
-//      `recurring.interval` alone as a MONTHLY price. Creating quarterly
-//      without `interval_count: 3` produces an $18-per-month subscription —
-//      three times the intended charge, on a real card, and only visible on a
-//      statement. The count comes from INTERVAL_COUNTS above.
-//   4. this list
+// `interval_count` (INTERVAL_COUNTS) is sent for every recurring price, so a
+// multi-month interval can never be created as a monthly one.
 //
 // The Stripe price itself is created in the DASHBOARD and is not in this
 // repository. Until it exists, resolvePrice returns null and create-checkout
-// answers 503 with "the quarterly price is temporarily unavailable" rather
-// than charging anyone anything.
-export const BILLING_INTERVALS = Object.freeze(['monthly', 'quarterly', 'yearly'])
+// answers 503 rather than charging anyone anything.
+export const BILLING_INTERVALS = Object.freeze(['monthly', 'yearly'])
 
 export function toCents(amount) { return Math.round(Number(amount) * 100) }
 export function fromCents(cents) { return Math.round(Number(cents)) / 100 }

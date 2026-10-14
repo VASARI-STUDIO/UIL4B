@@ -8,7 +8,8 @@
 //   · at 390px the group is one row of targets at least 44px tall
 //   · signed out, the page renders and only the payment form asks for a login;
 //     at 390px that ask sits above the features list
-//   · stepping through periods makes one session request and one
+//   · a quick monthly, yearly, monthly ends on one live monthly form, asks for
+//     no session for the monthly it passed through, and sends one
 //     checkout_started; a failed request for a period already left is ignored
 //   · "Loading payment form…" fills the panel between one form and the next
 //   · once payment is submitted the period radios are locked
@@ -77,37 +78,41 @@ test.describe('changing billing period at checkout', () => {
     await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
     await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('yearly'))
 
-    await period(page, LADDER.quarterly.label).click()
-    await expect(page).toHaveURL(/\/checkout\?plan=quarterly$/)
-    await expect(period(page, LADDER.quarterly.label)).toBeChecked()
-    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Quarterly plan')
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('quarterly'))
-    await expect(summary.locator('.checkout-plan-per')).toHaveText('per quarter')
-    await expect(summary.locator('.checkout-trial')).toContainText(`${LADDER.quarterly.trialDays}-day free trial`)
+    await expect(summary.locator('.checkout-plan-per')).toHaveText('per year')
+    await expect(summary.locator('.checkout-trial')).toContainText(`${LADDER.yearly.trialDays}-day free trial`)
 
-    // Native radios: an arrow key moves the choice and the focus together.
-    await page.keyboard.press('ArrowLeft')
+    await period(page, LADDER.monthly.label).click()
     await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
     await expect(period(page, LADDER.monthly.label)).toBeChecked()
-    await expect(period(page, LADDER.monthly.label)).toBeFocused()
     await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Monthly plan')
     await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('monthly'))
+    await expect(summary.locator('.checkout-plan-per')).toHaveText('per month')
     // Monthly carries no trial in the ladder, so the summary promises none.
     expect(LADDER.monthly.trialDays).toBe(0)
     await expect(summary.locator('.checkout-trial')).toHaveCount(0)
+
+    // Native radios: an arrow key moves the choice and the focus together.
+    await page.keyboard.press('ArrowRight')
+    await expect(page).toHaveURL(/\/checkout\?plan=yearly$/)
+    await expect(period(page, LADDER.yearly.label)).toBeChecked()
+    await expect(period(page, LADDER.yearly.label)).toBeFocused()
+    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
+    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('yearly'))
+    await expect(summary.locator('.checkout-trial')).toContainText(`${LADDER.yearly.trialDays}-day free trial`)
   })
 
   test('Back to Plans opens /plans with the chosen period selected', async ({ page }) => {
     await openCheckout(page, 'yearly')
-    await period(page, LADDER.quarterly.label).click()
-    await expect(page).toHaveURL(/\/checkout\?plan=quarterly$/)
+    await period(page, LADDER.monthly.label).click()
+    await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
 
     const back = page.getByRole('link', { name: 'Back to Plans' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/plans\?billing=quarterly$/)
+    await expect(page).toHaveURL(/\/plans\?billing=monthly$/)
     await expectRendered(page)
-    await expect(page.getByRole('tab', { name: new RegExp(`^${LADDER.quarterly.label}`) })).toHaveAttribute('aria-selected', 'true')
+    // Yearly is /plans' default, so Monthly being selected came from the link.
+    await expect(page.getByRole('radiogroup', { name: 'Billing' }).getByRole('radio', { name: /^Monthly/ })).toBeChecked()
   })
 
   test('at 390px the group is one row of 44px targets, and Back to Plans is one too', async ({ page }) => {
@@ -150,11 +155,11 @@ test.describe('changing billing period at checkout', () => {
 
     await expect(page, 'a signed-out visitor was sent away from checkout').toHaveURL(/\/checkout\?plan=yearly$/)
     await expect(period(page, LADDER.yearly.label)).toBeChecked()
-    await period(page, LADDER.quarterly.label).click()
-    await expect(page).toHaveURL(/\/checkout\?plan=quarterly$/)
+    await period(page, LADDER.monthly.label).click()
+    await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
     const summary = page.locator('.checkout-summary-card')
-    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Quarterly plan')
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('quarterly'))
+    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Monthly plan')
+    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('monthly'))
 
     await expect(page.locator('.checkout-form')).toContainText('Log in or create an account to pay')
     const login = page.locator('.checkout-form').getByRole('button', { name: 'Log in to continue' })
@@ -162,7 +167,7 @@ test.describe('changing billing period at checkout', () => {
     await login.click()
     await expect(page.getByRole('dialog', { name: 'Log in to continue' })).toBeVisible()
     // The popup opens over the page: the chosen period is still the URL's.
-    await expect(page).toHaveURL(/\/checkout\?plan=quarterly$/)
+    await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
     expect(sessionRequests, 'a payment session was requested without an account').toHaveLength(0)
     expect(stripeScripts, 'Stripe.js was fetched without an account').toHaveLength(0)
   })
@@ -226,19 +231,27 @@ test.describe('changing billing period at checkout', () => {
     expect(await page.evaluate(() => window.__stubEmbeds)).toEqual({ live: 1, refused: 0 })
   })
 
-  test('stepping through periods requests one session and sends checkout_started once', async ({ page }) => {
+  test('a quick monthly, yearly, monthly ends on one monthly form and sends checkout_started once', async ({ page }) => {
     const intervals = await answerSessions(page)
     await stubStripe(page)
     await openCheckout(page, 'yearly', { ownStubs: true })
     const mounted = await embedOrSkip(page)
     await expect(mounted).toHaveAttribute('data-stub-session', 'cs_test_stub_yearly')
 
-    // Two changes in quick succession: only the one the buyer stops on gets a session.
-    await period(page, LADDER.quarterly.label).click()
+    // Back on the period the form was built for, the form is mounted again at
+    // once (a new yearly session); the monthly passed through is never built.
+    await period(page, LADDER.monthly.label).click()
+    await period(page, LADDER.yearly.label).click()
     await period(page, LADDER.monthly.label).click()
     await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
     await expect(mounted).toHaveAttribute('data-stub-session', 'cs_test_stub_monthly')
-    expect(intervals, 'a session was requested for a period passed through').toEqual(['yearly', 'monthly'])
+    await expect(page.locator('.checkout-form'), 'a period passed through showed a failure').not.toContainText('Checkout unavailable')
+    expect(intervals[0], 'the first session was not for the period the page opened on').toBe('yearly')
+    expect(intervals.at(-1), 'the last session was not for the period the buyer stopped on').toBe('monthly')
+    expect(intervals.filter((i) => i === 'monthly'), 'a session was requested for the monthly passed through').toHaveLength(1)
+    expect(intervals.slice(0, -1).every((i) => i === 'yearly'), 'a session was requested for a period nobody stopped on').toBe(true)
+    expect(intervals.length, 'more sessions were requested than periods the form was built for').toBeLessThanOrEqual(3)
+    expect(await page.evaluate(() => window.__stubEmbeds), 'a second embedded Checkout was refused or one was left behind').toEqual({ live: 1, refused: 0 })
 
     const started = await page.evaluate(() => (window.vaq || [])
       .filter((q) => q[0] === 'event' && q[1]?.name === 'checkout_started'))

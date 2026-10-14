@@ -40,13 +40,6 @@ const PLANS = {
     per: 'per month',
     trial: trialLine('monthly'),
   },
-  quarterly: {
-    interval: 'quarterly',
-    name: 'UIL4B Pro',
-    cadence: 'Quarterly',
-    per: 'per quarter',
-    trial: trialLine('quarterly'),
-  },
   yearly: {
     interval: 'yearly',
     name: 'UIL4B Pro',
@@ -65,7 +58,7 @@ const PLANS = {
 // where money changes hands described a different Pro from the step before it.
 const FEATURES = PRO_POINTS
 
-// "Monthly, Quarterly or Yearly" — read off the buyable cadences, never typed.
+// "Monthly or Yearly" — read off the buyable cadences, never typed.
 // Built without a regex replacement: the price guard reads `$1` in source as
 // a dollar amount.
 const CADENCE_WORDS = (() => {
@@ -203,9 +196,7 @@ export default function Checkout() {
       return nextParams
     }, { replace: true })
   }
-  const amount = planKey === 'yearly' ? proPrice.yearlyTotal
-    : planKey === 'quarterly' ? proPrice.quarterlyTotal
-      : proPrice.monthly
+  const amount = planKey === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly
   // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and until
   // 2026-09-11 it rendered it as a lie. `useProPrice` returns `loaded: true`
   // the moment the fetch SETTLES — including when it settled by failing — and
@@ -235,10 +226,7 @@ export default function Checkout() {
       ? `No ${proPrice.currencyLabel} price for this billing period right now`
     : planKey === 'yearly'
       ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · save ${proPrice.savingsPct}%` : ''}`
-      // Quarterly has its own note, so a quarterly buyer is never told
-      // "billed monthly".
-      : planKey === 'quarterly' ? `${proPrice.currencyLabel} · ${proPrice.quarterlyPerMonth}/mo · billed every 3 months`
-        : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
+      : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
 
   useEffect(() => {
     if (sessionPlan === planKey) return undefined
@@ -288,8 +276,7 @@ export default function Checkout() {
           <div className="card checkout-return-card">
             <div className="checkout-error-icon" aria-hidden="true">!</div>
             <h1>Invalid checkout selection</h1>
-            {/* The cadences are read, not typed: this said "Monthly or Yearly"
-                after quarterly went on sale. */}
+            {/* The cadences are read from the plan ladder, not typed. */}
             <p>Choose {CADENCE_WORDS} from Plans. No payment session was created.</p>
             <NavLink to="/plans" className="btn btn-accent">Back to Plans</NavLink>
           </div>

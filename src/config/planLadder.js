@@ -5,8 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE AMOUNTS BELOW ARE DISPLAY FALLBACKS. THEY ARE NOT WHAT STRIPE CHARGES.
 //
-//     `approvedTotal` below is the approved ladder: $7 monthly · $18
-//     quarterly · $48 yearly.
+//     `approvedTotal` below is the approved ladder: $7 monthly · $48 yearly.
 //
 // api/_lib/pricing.js holds the same USD fallbacks; tests/unit/price-ladder.test.js fails if they differ.
 //
@@ -22,7 +21,7 @@
 //          do not charge. `approvedTotal` is only the pre-settle fallback.
 //       2. A tier with no `checkoutPlan` is NOT rendered by the upgrade modal.
 //          src/pages/Checkout.jsx only accepts the plans in its own table
-//          (monthly, quarterly, yearly); offering anything else would dead-end
+//          (monthly, yearly); offering anything else would dead-end
 //          on "Invalid checkout selection".
 //       3. The "from $X/month" headline is COMPUTED from whatever is actually
 //          renderable, never typed. If the ladder changes, the headline follows.
@@ -40,9 +39,8 @@ import { PRICE_SYMBOLS } from '../utils/currency.js'
 // server is the same lie with an extra step, which is why
 // tests/unit/trial-cadence.test.js compares the two tables.
 //
-// THE TRIAL IS EARNED BY THE CADENCE. Monthly bills today
-// and says so; quarterly and yearly each get seven days. Yearly granted 7
-// before this change and grants 7 after it, so no promise already made moved.
+// THE TRIAL IS EARNED BY THE CADENCE. Monthly bills today and says so;
+// yearly gets seven days.
 export const PLAN_LADDER = Object.freeze([
   Object.freeze({
     id: 'monthly',
@@ -53,25 +51,6 @@ export const PLAN_LADDER = Object.freeze([
     checkoutPlan: 'monthly',
     approvedTotal: 7,
     trialDays: 0,
-  }),
-  Object.freeze({
-    id: 'quarterly',
-    label: 'Quarterly',
-    cadence: 'billed every 3 months',
-    months: 3,
-    liveKey: 'quarterly',
-    // Quarterly is buyable. It relies on BILLING_INTERVALS, PRICE_ENV_KEYS,
-    // the Checkout.jsx case, useProPrice.quarterlyTotal, the trial, and
-    // `interval_count` in setup-stripe. The Stripe price has the lookup key
-    // `uil4b_pro_quarterly` and recurs { interval: 'month', interval_count: 3 },
-    // so it bills once a quarter. /api/get-prices resolves it the same way
-    // create-checkout does. Pro is granted by subscription status, not price id
-    // (api/_lib/plans.js planForSubscription), so a quarterly subscriber gets
-    // Pro exactly as a monthly or yearly one does.
-    // tests/unit/price-ladder.test.js keeps the preconditions pinned.
-    checkoutPlan: 'quarterly',
-    approvedTotal: 18,
-    trialDays: 7,
   }),
   Object.freeze({
     id: 'yearly',

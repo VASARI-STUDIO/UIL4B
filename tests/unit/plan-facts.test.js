@@ -69,7 +69,7 @@ test('the cadences are exactly the buyable rungs of the ladder, yearly first cho
 })
 
 test('prices, savings, trials and the billed line come out as /plans prints them', () => {
-  const prices = { monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 } }
+  const prices = { monthly: { usd: 7 }, yearly: { usd: 48 } }
   const { offers, priceServiceDown } = resolveOffers({ prices, currency: 'usd', loaded: true })
   assert.equal(priceServiceDown, false)
   const by = Object.fromEntries(offers.map((o) => [o.id, o]))
@@ -78,12 +78,8 @@ test('prices, savings, trials and the billed line come out as /plans prints them
   assert.equal(by.yearly.amountLabel, '$4')
   assert.equal(by.yearly.savingLabel, '43% off')
   assert.equal(by.yearly.billedNote, 'Billed $48 yearly, 7-day free trial, cancel any time. Keep every export you made.')
-  if (by.quarterly) {
-    // Quarterly is on once planLadder gives it a checkout.
-    assert.equal(by.quarterly.amountLabel, '$6')
-    assert.equal(by.quarterly.savingLabel, '14% off')
-    assert.equal(by.quarterly.billedNote, 'Billed $18 every three months, 7-day free trial, cancel any time. Keep every export you made.')
-  }
+  assert.deepEqual(offers.map((o) => o.id), ['monthly', 'yearly'], 'the sellable offers are monthly and yearly, nothing else')
+  assert.equal(by.quarterly, undefined, 'quarterly is no longer an offer')
   for (const o of offers) {
     const rung = PLAN_LADDER.find((p) => p.id === o.id)
     assert.equal(o.trialDays, rung.trialDays || 0, `${o.id}: the trial disagrees with the ladder (and so with the server)`)
