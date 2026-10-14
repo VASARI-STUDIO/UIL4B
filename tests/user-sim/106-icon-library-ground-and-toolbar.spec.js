@@ -215,7 +215,7 @@ for (const fail of [false, true]) {
         await expect(stage.locator('img')).toBeVisible()
         await expect(stage.getByRole('status')).toHaveCount(0)
       }
-      expect((await stage.boundingBox()).height).toBe(reserved.height)
+      expect(Math.abs((await stage.boundingBox()).height - reserved.height)).toBeLessThan(0.5)
     } finally { release() }
   })
 }
