@@ -10,7 +10,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { requestIdFor, postSupport } from '../utils/supportRequest'
+import { requestIdFor, postSupportWithRetry, supportError } from '../utils/supportRequest'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -98,14 +98,18 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // Send bookkeeping, held in refs so a second submit in the same tick sees it
   // (state would still read the old value):
   //   sendingRef  an attempt is in flight
-  //   attemptRef  the request id in use and the exact content it was made for,
-  //               so a retry of unchanged content reuses the id (the server
-  //               stores it once) and an edited message gets a new one
+  //   attemptRef  the request id in use; bodyRef freezes the submitted payload
   //   genRef      bumped whenever the form is reset, so an attempt that
   //               finishes after a reset does not touch the new form
   const sendingRef = useRef(false)
   const attemptRef = useRef(null)
+  const bodyRef = useRef(null)
+  const mountedRef = useRef(false)
   const genRef = useRef(0)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   // Has this opening already been initialised? The open effect below depends on
   // every value it captures — which is correct, and what the linter wants — but
@@ -129,6 +133,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   }
 
   const resetFields = useCallback(() => {
+    if (bodyRef.current) return
     setSelections({})
     setSubject('')
     setMessage('')
@@ -156,6 +161,8 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     if (!open) { initialisedRef.current = false; return undefined }
     if (initialisedRef.current) return undefined
     initialisedRef.current = true
+    // Closing must neither cancel delivery nor discard a failed message.
+    if (bodyRef.current) return undefined
     // A right-click on something broken already told us this is a bug report;
     // making the user say so again is a step for nothing.
     setTypeId(seed?.typeId || 'feedback')
@@ -197,14 +204,32 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     setError(false)
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!message.trim() || sendingRef.current) return
-
+  const send = async (body) => {
+    if (sendingRef.current) return
     sendingRef.current = true
     const gen = genRef.current
     setSending(true)
     setError(false)
+    setSent(true)
+
+    const result = await postSupportWithRetry(body)
+    sendingRef.current = false
+    if (!mountedRef.current || gen !== genRef.current) return
+    setSending(false)
+    if (result.ok) {
+      attemptRef.current = null
+      bodyRef.current = null
+      setSubject('')
+      setMessage('')
+    } else {
+      setSent(false)
+      setError(supportError(result.status))
+    }
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!message.trim() || sendingRef.current) return
 
     const email = user?.email || ''
     const payload = {
@@ -238,21 +263,8 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     // message updates this record rather than adding another.
     saveFeedback({ ...payload, id: requestId })
 
-    const ok = await postSupport({ ...payload, name: userProfile?.displayName || '', requestId })
-
-    // The form was reset (reopened, or "Send another") while this was in flight.
-    if (gen !== genRef.current) return
-
-    sendingRef.current = false
-    setSending(false)
-    // Fail loud: a silently-lost support request is the worst outcome for a
-    // feedback channel — only surface success when the request actually landed.
-    if (ok) {
-      attemptRef.current = null
-      setSent(true)
-    } else {
-      setError(true)
-    }
+    bodyRef.current = { ...payload, name: userProfile?.displayName || '', requestId }
+    void send(bodyRef.current)
   }
 
   const onOverlayClick = (e) => {
@@ -282,7 +294,16 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
           </button>
         </div>
 
-        {sent ? (
+        {error ? (
+          <div className="fb-success">
+            <p className="fb-error" role="alert">{error}</p>
+            <textarea className="fb-textarea" aria-label="Your message" value={message} readOnly />
+            <div className="fb-success-actions">
+              <button type="button" className="btn btn-accent" onClick={() => { void send(bodyRef.current) }}>Try again</button>
+              <button type="button" className="btn" onClick={onClose}>Close</button>
+            </div>
+          </div>
+        ) : sent ? (
           <div className="fb-success">
             <div className="fb-success-icon">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -292,7 +313,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
             <h3 className="fb-success-title">Thanks — we&apos;ve got it</h3>
             <p className="fb-success-text">Your {activeType.label.toLowerCase()} submission has been received and will be reviewed.</p>
             <div className="fb-success-actions">
-              <button type="button" className="btn" onClick={resetFields}>Send another</button>
+              <button type="button" className="btn" onClick={resetFields} disabled={sending}>Send another</button>
               <button type="button" className="btn btn-accent" onClick={onClose}>Close</button>
             </div>
           </div>
@@ -410,12 +431,6 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
             )}
 
             {user && <div className="fb-sending-as">Sending as {user.email}</div>}
-
-            {error && (
-              <div role="alert" className="fb-error">
-                Something went wrong sending that. Please check your connection and try again.
-              </div>
-            )}
 
             <div className="fb-actions">
               <button type="button" className="btn" onClick={onClose} disabled={sending}>Cancel</button>

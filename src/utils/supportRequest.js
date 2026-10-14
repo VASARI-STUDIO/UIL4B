@@ -43,6 +43,10 @@ export function requestIdFor(attemptRef, payload) {
  * SEND_TIMEOUT_MS all resolve false. Never throws.
  */
 export async function postSupport(body) {
+  return (await supportAttempt(body)).ok
+}
+
+async function supportAttempt(body) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS)
   try {
@@ -52,10 +56,26 @@ export async function postSupport(body) {
       body: JSON.stringify(body),
       signal: controller.signal,
     })
-    return res.ok
+    return { ok: res.ok, status: res.status }
   } catch {
-    return false
+    return { ok: false, status: 0 }
   } finally {
     clearTimeout(timer)
   }
+}
+
+/** Retry transient failures once, keeping the exact message and request id. */
+export async function postSupportWithRetry(body) {
+  let result = await supportAttempt(body)
+  if (!result.ok && (!result.status || result.status >= 500 || result.status === 408 || result.status === 429)) {
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    result = await supportAttempt(body)
+  }
+  return result
+}
+
+export function supportError(status) {
+  return status === 429
+    ? 'Too many messages just now. Try again in a minute.'
+    : "Your message didn't send."
 }

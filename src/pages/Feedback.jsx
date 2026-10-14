@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
-import { requestIdFor, postSupport } from '../utils/supportRequest'
+import { requestIdFor, postSupportWithRetry, supportError } from '../utils/supportRequest'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -37,8 +37,7 @@ import '../styles/pages/feedback.css'
 // The audit also reported the submit itself failing. That was an artefact of
 // testing against `vite preview`, which does not run the Vercel functions, so
 // /api/support was a 404 there. The server path validates correctly; the client
-// already refuses to claim success on a failed request, which is the important
-// half and is kept.
+// now acknowledges immediately, then shows a recoverable error if delivery fails.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHAT WAS WRONG (2026-09-11 quality pass, purpose & content scored 6)
@@ -90,6 +89,7 @@ export default function Feedback({ toast }) {
   const [sentTo, setSentTo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [sendError, setSendError] = useState('')
   const messageRef = useRef(null)
   const contactRef = useRef(null)
   const typeRefs = useRef({})
@@ -98,6 +98,12 @@ export default function Feedback({ toast }) {
   //   attemptRef  the request id in use and the exact content it was made for
   const sendingRef = useRef(false)
   const attemptRef = useRef(null)
+  const bodyRef = useRef(null)
+  const mountedRef = useRef(false)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
   const { t } = useI18n()
   const { user } = useAuth()
 
@@ -121,7 +127,33 @@ export default function Feedback({ toast }) {
     typeRefs.current[id]?.focus()
   }
 
-  const submit = async (e) => {
+  const send = async (body) => {
+    if (sendingRef.current) return
+    sendingRef.current = true
+    setBusy(true)
+    setError('')
+    setSendError('')
+    setSentTo(body.email)
+    setSubmitted(true)
+
+    const result = await postSupportWithRetry(body)
+    sendingRef.current = false
+    if (!mountedRef.current) return
+    setBusy(false)
+    if (!result.ok) {
+      setSubmitted(false)
+      setSendError(supportError(result.status))
+      return
+    }
+    attemptRef.current = null
+    bodyRef.current = null
+    setMessage('')
+    setSubject('')
+    setContact('')
+    toast(t('feedback.thankYou'))
+  }
+
+  const submit = (e) => {
     e.preventDefault()
     // A ref, not `busy`: two submit events in the same task both see the state
     // from before the first one re-rendered.
@@ -145,10 +177,8 @@ export default function Feedback({ toast }) {
       return
     }
 
-    sendingRef.current = true
     setError('')
     setContactError('')
-    setBusy(true)
 
     const email = accountEmail || contact.trim()
     const payload = {
@@ -168,26 +198,8 @@ export default function Feedback({ toast }) {
     // the same message updates this record rather than adding another.
     saveFeedback({ ...payload, id: requestId })
 
-    const ok = await postSupport({ ...payload, requestId })
-
-    sendingRef.current = false
-    setBusy(false)
-
-    // Never show success if the request didn't land — a silently-lost support
-    // request is the worst failure mode for a feedback channel.
-    if (!ok) {
-      const msg = t('feedback.submitError') || 'Something went wrong sending that. Please check your connection and try again.'
-      setError(msg)
-      toast(msg)
-      return
-    }
-
-    attemptRef.current = null
-    toast(t('feedback.thankYou'))
-    setMessage('')
-    setSubject('')
-    setSentTo(email)
-    setSubmitted(true)
+    bodyRef.current = { ...payload, requestId }
+    void send(bodyRef.current)
   }
 
   return (
@@ -197,7 +209,13 @@ export default function Feedback({ toast }) {
         <p>{t('feedback.subtitle')}</p>
       </div>
       <div className="card fb-card">
-        {submitted ? (
+        {sendError ? (
+          <div className="fb-done">
+            <p className="fb-error" role="alert">{sendError}</p>
+            <textarea className="fb-textarea" aria-label="Your message" value={message} readOnly />
+            <button type="button" className="btn btn-accent fb-again" onClick={() => { void send(bodyRef.current) }}>Try again</button>
+          </div>
+        ) : submitted ? (
           <div className="fb-done" role="status">
             <div className="fb-done-mark" aria-hidden="true">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -218,7 +236,7 @@ export default function Feedback({ toast }) {
             {/* Was on a 4s timer that swapped the form back underneath you.
                 Leaving it up until dismissed means the confirmation is still
                 there when you look back at the screen. */}
-            <button className="btn btn-s fb-again" onClick={() => setSubmitted(false)}>Submit another</button>
+            <button className="btn btn-s fb-again" disabled={busy} onClick={() => setSubmitted(false)}>Submit another</button>
           </div>
         ) : (
           <form onSubmit={submit} className="fb-form" noValidate>
