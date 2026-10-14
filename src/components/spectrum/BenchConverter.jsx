@@ -149,9 +149,10 @@ export default function BenchConverter() {
 
   const takeImage = (file) => {
     if (!file) return
+    // A rejected file leaves the current image and its measurements untouched.
+    if (!isImage(file)) { setFailed(true); return }
     setOut(null)
     setSrc(null)
-    if (!isImage(file)) { setFailed(true); return }
     setFailed(false)
     setPick({ name: file.name, size: file.size, url: URL.createObjectURL(file) })
   }
