@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -6,6 +6,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getRecentIcons } from '../utils/recentIcons'
 import { IDENTITY_NAME_MAX } from '../utils/kitIdentity'
 import SaveRefusal from './SaveRefusal'
+import { hasOpenOverlays, suspendGuideForOverlays } from '../utils/openOverlays'
 import {
   BRAND_KIT_STEPS,
   NEW_PROJECT_STATE,
@@ -131,7 +132,7 @@ export default function UIKitGuide({ step }) {
   useEffect(() => {
     if (!showIntro) return undefined
     openedByRef.current = document.activeElement
-    cardRef.current?.focus()
+    if (!hasOpenOverlays(document.body)) cardRef.current?.focus()
     // Copied into the effect's own scope rather than read off the ref inside the
     // cleanup: by the time cleanup runs the ref may point at a different node,
     // and this is the fallback that has to still BE the trigger.
@@ -254,7 +255,7 @@ export default function UIKitGuide({ step }) {
     if (!showName) return undefined
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
     const first = coarse ? nameTitleRef.current : nameInputRef.current
-    first?.focus()
+    if (!hasOpenOverlays(document.body)) first?.focus()
     const trigger = nameTriggerRef.current
     return () => { if (trigger && trigger.isConnected) trigger.focus() }
   }, [showName])
@@ -362,6 +363,13 @@ export default function UIKitGuide({ step }) {
     if (c.right > s.right) strip.scrollLeft += c.right - s.right
     else if (c.left < s.left) strip.scrollLeft -= s.left - c.left
   }, [active, step])
+
+  // Keep the cards mounted so opening a tool menu cannot consume the intro or
+  // discard a name draft. Observe portals too, including the phone sheets.
+  useLayoutEffect(() => {
+    if (!active || (!showIntro && !showName)) return undefined
+    return suspendGuideForOverlays(document, [cardRef.current, nameCardRef.current].filter(Boolean))
+  }, [active, showIntro, showName])
 
   if (!active || !current) return null
 
