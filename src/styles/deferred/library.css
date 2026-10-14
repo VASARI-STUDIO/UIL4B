@@ -385,11 +385,30 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    name but not its artwork. This holds the exact 24x24 the <img> will occupy —
    `.ic svg,.ic img` in global.css and `.ig-rail-item img,.ig-rail-item svg`
    above — so the label underneath does not jump when the tranche lands.
-   Deliberately no shimmer: at 120 cells a pulsing placeholder is a screen of
-   flashing boxes, and the wait is usually one network round trip. It is
-   aria-hidden in the markup, so nothing is announced for a box with no meaning.
-   `--icon-inv` is not applied: there is no ink here to invert. */
-.ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px;background:var(--bg-2)}
+   The box is a faint tint of the text colour (6%), so it sits just off the
+   surface in both themes rather than reading as a solid tile, and it pulses
+   slowly in opacity. Every skeleton shares one keyframe and one clock, so a
+   page of them breathes together instead of flickering. It is aria-hidden in
+   the markup, so nothing is announced for a box with no meaning.
+   `--icon-inv` is not applied: there is no ink here to invert.
+   The same skeleton paints on the colour-pack chip (`.ig-chip--wait`) and on
+   the mono <img> itself (`.ig-glyph-pending`) until the image has loaded. */
+@keyframes ig-skel-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes ig-glyph-in{from{opacity:0}to{opacity:1}}
+.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:color-mix(in oklab,var(--t1) 6%,transparent);box-shadow:none;animation:ig-skel-pulse 1.4s ease-in-out infinite}
+.ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
+/* The <img> is the skeleton box, so it must not take the invert filter that
+   would flip the tint, and its own artwork stays unpainted until it loads. */
+.ic img.ig-glyph-pending{border-radius:6px;filter:none}
+/* Loaded glyphs fade in from the skeleton. */
+.ic img.ig-glyph-in,.ig-chip.ig-chip--in{animation:ig-glyph-in var(--dur-2) var(--ease-out) both}
+/* The chip's tile is withheld while it waits; the artwork never shows on a
+   bare skeleton. */
+.ig-chip--wait img{opacity:0}
+html[data-reduced-motion="true"] :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait,.ic img.ig-glyph-in,.ig-chip.ig-chip--in){animation:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait,.ic img.ig-glyph-in,.ig-chip.ig-chip--in){animation:none}
+}
 .ig-rail-badge{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;border:2px solid var(--bg-0);color:#fff}
 .ig-rail-badge svg{width:9px;height:9px}
 .ig-rail-badge--edit{background:var(--accent)}
