@@ -52,7 +52,6 @@ export const PAGE_TITLES = {
   '/create/ai-tools': 'UI L4B | AI Tools',
   '/create/landing-prompts': 'UI L4B | AI Landing Page Prompts',
   '/discover/prompts': 'UI L4B | Prompt Library',
-  '/discover/resources': 'UI L4B | Curated Resources',
   '/create/emoji': 'UI L4B | Emoji Library',
   '/create/aspect-ratio': 'UI L4B | Aspect & Resolution Calculator',
   '/create/box-shadow': 'UI L4B | Box Shadow',
@@ -125,32 +124,7 @@ export const PAGE_DESCRIPTIONS = {
   '/create/icons/groups': 'Sets of icons from multiple packs that follow a similar style and fit a theme or task. Recolour a whole set and export it in one go.',
   '/create/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
   '/create/icons-emoji': 'Search icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
-  // AWAITING THE FOUNDER'S WORD (proposed 2026-09-13, shipped so the false one
-  // is not live while he reads it). The sentence this replaces said "The best
-  // external design resources - gradients, palettes, fonts and inspiration -
-  // with a one-tap hand-off into the UI L4B tools that use them", and three
-  // parts of it were false. Seven of the EIGHT groups DISCOVER_SPEC renders are
-  // UI L4B's own libraries, not external resources - only Curated Resources is
-  // external. `inspiration` carries soon:true and the page badges it Soon, as
-  // does `collections`, so neither is a resource anyone can reach. And this is
-  // the sentence Google prints under the result and every share card shows.
-  // The replacement names the eight and claims nothing: no "best", no adjective
-  // of quality, no urgency. 142 chars, inside what Google renders.
-  '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, plus a page of external resources. Collections is marked Soon.',
-  // THE SAME TWO FALSEHOODS AS THE LINE ABOVE, ON ITS OWN CHILD, LEFT BEHIND BY
-  // THE FIX THAT CAUGHT THE PARENT. It read "A curated library of the best
-  // gradient resources on the web" — but this route renders GALLERY_GRADIENTS,
-  // which is a hundred of UI L4B's OWN gradients (the page's live region says
-  // "100 gradients"), not links to resources elsewhere; that is /discover/
-  // resources, a different page. And "the best" is the quality superlative the
-  // /discover rewrite above removed by name, two lines away, on the same day.
-  //
-  // The replacement is its SIBLING'S sentence with the nouns changed — the
-  // palettes line below, which is already the accepted shape — so no new voice
-  // was written. Every claim in it is checked: filtering and copying the CSS
-  // are what gradientGallery.js documents the page as doing, and the hand-off
-  // is gradientToolUrl(). Awaiting the founder's word on the same terms as the
-  // line above: shipped so the false one is not live while he reads it.
+  '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, and community inspiration. Collections is marked Soon.',
   '/discover/gradients': 'Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
   '/learn': 'Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.',
@@ -159,7 +133,6 @@ export const PAGE_DESCRIPTIONS = {
   '/create/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
   '/create/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
   '/discover/prompts': 'A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.',
-  '/discover/resources': 'Hand-picked design and dev tools from outside UI L4B — inspiration, components, free assets and developer utilities.',
   '/create/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
   '/create/aspect-ratio': 'Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.',
   '/create/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',

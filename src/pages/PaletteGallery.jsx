@@ -254,17 +254,7 @@ export default function PaletteGallery({ toast }) {
   // (every card really is a brand system), and no mood on its own can ever make
   // it say a collection name, because a mood does not touch `group`.
   //
-  // Shape follows CuratedResources.jsx, the other Discover library that browses
-  // in bands and narrows to a flat list: when it bands, its eyebrow is a claim
-  // about scope ("Hand-picked, not scraped") precisely so it cannot restate the
-  // band headings; when it narrows, it names what was matched.
-  // THE DESIGN'S HEADING, NO EYEBROW (UIL4B App.dc.html, palettes screen,
-  // line 252: an h2 and the count over a hairline). The h2 is the design's
-  // `galHeading` for the collection filter; the eyebrow that sat above it is
-  // gone, which also retires the "taxonomy label restating the heading under
-  // it" problem the note above describes — there is no label left to restate.
-  // A mood alone reaches into both collections, so only the collection filter
-  // may rename the heading.
+  // Only the collection filter names the heading; moods span collections.
   const heading = group === 'brand' ? 'Brand palettes'
     : group === 'curated' ? 'Curated collection'
       : 'Colours worth building with'
