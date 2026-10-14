@@ -22,7 +22,6 @@
 // return from the From palette note: the matching test below goes red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { CATEGORY_ENTRIES, offerableCategories } from '../../src/data/toolIndex.js'
 
 async function openSearch(page) {
   await page.locator('.pnav-search-field:visible').first().click()
@@ -40,23 +39,46 @@ const rowByLabel = (dialog, label) => dialog.locator('.cp-item').filter({
 test.describe('header search · rows land on real pages', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'someone using the header search') })
 
-  test('the empty-query list offers no category that is not a page', async ({ page }) => {
+  // Today no category is a page you can be sent to (every Create group home
+  // bounces to its first tool and /docs lands on the Learn hub), so the list
+  // offers no category row at all. The expected count is a fixed 0, not read
+  // from the data, so a category that gains a page has to be added here on
+  // purpose. A category row is the one with the "Category" pill.
+  const categoryRows = (dialog) => dialog.locator('.cp-item').filter({
+    has: dialog.page().locator('.cp-item-cat', { hasText: /^Category$/ }),
+  })
+
+  test('the empty-query list offers no category row, because no category is a page', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/palette')
     const dialog = await openSearch(page)
     const labels = await dialog.locator('.cp-item-label').allTextContents()
-    // Positive control: the empty-query list contains real tool rows.
+    // POSITIVE CONTROL: the list is really there, with real tool rows.
     expect(labels.length, 'the empty-query list rendered').toBeGreaterThan(10)
-    expect(labels).toContain('Palette Builder')
-    const categories = dialog.locator('.cp-item').filter({
-      has: page.locator('.cp-item-cat', { hasText: /^Category$/ }),
-    })
-    expect(await categories.locator('.cp-item-label').allTextContents()).toEqual(
-      offerableCategories(CATEGORY_ENTRIES).map(category => category.label),
-    )
+    expect(labels, 'a real tool is still offered').toContain('Palette')
+    await expect(categoryRows(dialog), 'a category row is offered although no category is a page').toHaveCount(0)
     expect(labels, 'UI Builder has no page and must not be offered').not.toContain('UI Builder')
     expect(labels, 'Documentation only reaches a hub and must not be offered').not.toContain('Documentation')
     await expect(dialog.getByRole('option', { name: /^UI Builder/ })).toHaveCount(0)
+  })
+
+  test('typing a page-less or retired category name offers no category row and no Resources row', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/palette')
+    const dialog = await openSearch(page)
+    const input = dialog.locator('.cp-input')
+    // POSITIVE CONTROL: a typed query that should match does show a tool row.
+    await input.fill('palette')
+    await expect(rowByLabel(dialog, 'Palette').first()).toBeVisible()
+    for (const query of ['typography', 'imagery', 'icons', 'alt text', 'documentation', 'ui builder', 'resources']) {
+      await input.fill(query)
+      await expect(input).toHaveValue(query)
+      await expect(categoryRows(dialog), `"${query}" offered a category row`).toHaveCount(0)
+      await expect(
+        dialog.locator('.cp-item-label').filter({ hasText: /^(External )?Resources$/ }),
+        `"${query}" offered a Resources row, and that page is gone`,
+      ).toHaveCount(0)
+    }
   })
 
   const ROWS = [
