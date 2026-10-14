@@ -58,12 +58,12 @@ export function buildRewrites(routes, clientOnly = clientOnlyRoutes()) {
   ]
 }
 
-// `permanent: true` is Vercel's spelling of **301**. It is not a default and it
-// is not cosmetic: `permanent: false` emits a 307/302, which tells Google the
-// old URL is still the real one and to keep it indexed. Every entry in
-// legacyRoutes.js is a permanent rename, so every entry gets a 301.
+// Permanent redirects use Vercel's 308 default unless a route requires 301.
 export function buildRedirects(pairs = LEGACY_REDIRECTS) {
-  return pairs.map(([source, destination]) => ({ source, destination, permanent: true }))
+  return pairs.map(([source, destination]) => ({
+    source, destination,
+    ...(source === '/discover/resources' ? { statusCode: 301 } : { permanent: true }),
+  }))
 }
 
 // Run directly (not when imported by the test, which only wants the helpers).

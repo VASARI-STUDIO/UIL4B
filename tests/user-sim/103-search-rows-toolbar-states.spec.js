@@ -56,8 +56,6 @@ test.describe('header search · rows land on real pages', () => {
     { label: 'Design Principles', path: '/learn/principles' },
     { label: 'UI Design Themes', path: '/learn/theme-systems' },
     { label: 'Brand Colour Guide', path: '/learn/brand-colour' },
-    { label: 'External Resources', path: '/discover/resources' },
-    { label: 'Resources', path: '/discover/resources' },
   ]
   for (const { label, path } of ROWS) {
     test(`"${label}" opens ${path}`, async ({ page }) => {

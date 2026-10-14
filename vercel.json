@@ -248,6 +248,11 @@
       "permanent": true
     },
     {
+      "source": "/discover/resources",
+      "destination": "/discover",
+      "statusCode": 301
+    },
+    {
       "source": "/prompts",
       "destination": "/discover/prompts",
       "permanent": true
@@ -375,10 +380,6 @@
     {
       "source": "/discover/prompts",
       "destination": "/discover/prompts/index.html"
-    },
-    {
-      "source": "/discover/resources",
-      "destination": "/discover/resources/index.html"
     },
     {
       "source": "/feedback",

@@ -4,7 +4,7 @@
  * homepage its bytes without ever being used there. It now travels with the
  * lazy route chunks that can actually reach it:
  *
- *   IconLibrary, EmojiLibrary, IconEmojiLibrary, PromptLibrary, CuratedResources
+ *   IconLibrary, EmojiLibrary, IconEmojiLibrary, PromptLibrary
  *
  * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
  * in global.css, so the cascade between any two of them is the one that was
@@ -555,8 +555,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
    ColorStudio's named-library switch) still render it. */
 .pl-chips{max-width:100%}
-/* The Curated Resources rules that sat here moved to
-   src/styles/pages/curated-resources.css, rooted at the page. */
 
 
 /* ══════════════════════════════════════════════════════════════════════════
