@@ -22,6 +22,7 @@ const TYPES = [
 ]
 
 export default function Feedback({ toast }) {
+  const { t } = useI18n()
   const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
   const sentHeadingRef = useRef(null)
   const retryRef = useRef(null)
@@ -75,7 +76,6 @@ export default function Feedback({ toast }) {
     else if (delivery.status === 'sending' || delivery.status === 'sent') sentHeadingRef.current?.focus()
   }, [delivery.status])
 
-  const { t } = useI18n()
   const { user } = useAuth()
 
   // Signed in, the account's address goes up and always has. Signed out, the
@@ -169,7 +169,7 @@ export default function Feedback({ toast }) {
         <div role="status" className="sr-only">{submitted ? t('feedback.sent') : ''}</div>
         {sendError ? (
           <div className="fb-done">
-            <p className="fb-error" role="alert">{sendError}</p>
+            <p className="fb-error" role="alert" style={{ marginBottom: 'var(--s-3)' }}>{sendError}</p>
             <textarea className="fb-textarea" aria-label={t('feedback.yourMessage')} value={message} readOnly />
             <div className="fb-success-actions fb-again">
               <button type="button" className="btn btn-accent" ref={retryRef} onClick={() => { void send(bodyRef.current, false) }}>{t('feedback.tryAgain')}</button>

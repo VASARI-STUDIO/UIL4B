@@ -104,6 +104,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
 
   const overlayRef = useRef(null)
   const firstControlRef = useRef(null)
+  const messageRef = useRef(null)
 
   // Send bookkeeping, held in refs so a second submit in the same tick sees it
   // (state would still read the old value):
@@ -327,7 +328,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
               <button type="button" className="btn" onClick={() => {
                 recoverFeedbackDraft(bodyRef, attemptRef)
                 modalFeedbackSend.edit()
-                requestAnimationFrame(() => firstControlRef.current?.focus())
+                requestAnimationFrame(() => messageRef.current?.focus())
               }}>{t('feedback.editMessage')}</button>
             </div>
           </div>
@@ -402,6 +403,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
               </label>
               <textarea
                 id="fb-message"
+                ref={messageRef}
                 className="fb-textarea"
                 value={message}
                 onChange={e => setMessage(e.target.value)}
