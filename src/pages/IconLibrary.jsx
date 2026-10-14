@@ -585,9 +585,12 @@ function sampleGlyph(img) {
 // about the art. Square glyphs are unaffected - the CSS still paints them in a
 // 24px box - and 48 gives the wide chip resolution to scale from.
 // `src` is the batched data: URI from the grid (see the batching note above).
-// It arrives empty on the render before this icon's tranche lands, and the chip
-// is drawn anyway — the chip IS the placeholder, so the cell does not resize
-// under the reader when the artwork appears.
+// It arrives empty on the render before this icon's tranche lands. Until the
+// <img> has fired `load` the chip is a faint pulsing skeleton of the same box
+// (`ig-chip--wait`), so the cell does not resize under the reader when the
+// artwork appears; the tile background is only painted once there is artwork to
+// sit on, and the chip fades in with it (`ig-chip--in`). A failed image drops
+// the skeleton and shows the plain tile.
 //
 // The sampling below is unchanged and is now on firmer ground: a data: URI does
 // not taint a canvas, so `getImageData` no longer depends on the CDN returning
@@ -598,16 +601,28 @@ function BrandGlyph({ pack, name, src }) {
   const [shape, setShape] = useState(() => glyphCache.get(key) || { tone: 'light', ar: 1, cap: 1 })
   const cached = glyphCache.get(key)
   if (cached && cached !== shape) setShape(cached)
+  // 'wait' until the <img> loads, 'in' for a load that was watched (it fades),
+  // 'ready' for artwork already measured on an earlier mount (no fade), 'fail'
+  // when the image errored. Reset when the cell is handed a different icon.
+  const [load, setLoad] = useState(() => ({ key, phase: cached ? 'ready' : 'wait' }))
+  let phase = load.phase
+  if (load.key !== key) {
+    phase = cached ? 'ready' : 'wait'
+    setLoad({ key, phase })
+  }
   const onLoad = (e) => {
+    setLoad((l) => (l.key === key && l.phase === 'wait' ? { key, phase: 'in' } : l))
     if (glyphCache.has(key)) return
     const next = sampleGlyph(e.currentTarget)
     glyphCache.set(key, next)
     setShape(next)
   }
+  const onError = () => setLoad({ key, phase: 'fail' })
   const wide = shape.ar > WIDE_INK
+  const waiting = !src || phase === 'wait'
   return (
     <span
-      className={`ig-chip${shape.tone === 'dark' ? ' ig-chip--dark' : ''}${wide ? ' ig-chip--wide' : ''}`}
+      className={`ig-chip${shape.tone === 'dark' ? ' ig-chip--dark' : ''}${wide ? ' ig-chip--wide' : ''}${waiting ? ' ig-chip--wait' : phase === 'in' ? ' ig-chip--in' : ''}`}
       style={wide ? { '--ig-wide-cap': shape.cap } : undefined}
     >
       {src && (
@@ -616,9 +631,44 @@ function BrandGlyph({ pack, name, src }) {
           loading="lazy"
           alt={name}
           onLoad={onLoad}
+          onError={onError}
         />
       )}
     </span>
+  )
+}
+
+// A mono glyph from the batched data: URI. The <img> itself is the skeleton box
+// until it has fired `load` (same 24px box, so nothing moves), then fades in.
+// A source already painted once skips the fade so a cell that scrolls back into
+// view does not flash. A failed image drops the skeleton class and leaves the
+// browser's own broken-image rendering.
+const paintedSrc = new Set()
+function MonoGlyph({ src, className, alt, onError }) {
+  const [phase, setPhase] = useState(() => (paintedSrc.has(src) ? 'ready' : 'wait'))
+  const [seen, setSeen] = useState(src)
+  if (seen !== src) {
+    setSeen(src)
+    setPhase(paintedSrc.has(src) ? 'ready' : 'wait')
+  }
+  const state = phase === 'wait' ? 'ig-glyph-pending' : phase === 'in' ? 'ig-glyph-in' : ''
+  return (
+    <img
+      src={src}
+      width="24"
+      height="24"
+      className={[className, state].filter(Boolean).join(' ')}
+      loading="lazy"
+      alt={alt}
+      onLoad={() => {
+        paintedSrc.add(src)
+        setPhase((p) => (p === 'wait' ? 'in' : p))
+      }}
+      onError={(e) => {
+        setPhase('fail')
+        if (onError) onError(e)
+      }}
+    />
   )
 }
 
@@ -664,7 +714,7 @@ function cellGlyph(icon, src, onGlyphError) {
     // request per cell back on the first paint, and the batch's own refusal is
     // already handled where it can be read.
     if (!src) return <span className="ig-glyph-wait" aria-hidden="true" />
-    return <img src={src} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} onError={onGlyphError} />
+    return <MonoGlyph src={src} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
   }
   return (
     <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} aria-hidden="true">
