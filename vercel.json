@@ -250,7 +250,7 @@
     {
       "source": "/discover/resources",
       "destination": "/discover",
-      "statusCode": 301
+      "permanent": true
     },
     {
       "source": "/prompts",

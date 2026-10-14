@@ -2668,8 +2668,7 @@ html.lenis{scroll-behavior:auto!important}
    Built to the file. One 64px row,
    in the file's order: wordmark · search · the three menus, then at the
    far end the right cluster, which ends with the theme switch directly left of
-   the account control (the file draws it after the search; this deliberately
-   differs). Every wash and hairline is an alpha of the ink,
+   the account control. Every wash and hairline is an alpha of the ink,
    as in the file (--ink-rgb / --page-rgb, declared with the accent family).
 
    IT NEVER WRAPS. The file's row wraps below ~950px;
@@ -2902,6 +2901,7 @@ html.lenis{scroll-behavior:auto!important}
 /* Discover: the file's 2×2 of counts, without the four boxes — each count is
    a hairline, a swatch strip, the number and its label. */
 .pnav-dcounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px}
+.pnav-dcount:last-child:nth-child(odd){grid-column:1/-1}
 .pnav-dcounts--wait{min-height:170px}
 .pnav-dcount{display:grid;align-content:start;gap:7px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
 .pnav-dcount-strip{display:flex;height:22px;border-radius:var(--radius-xs);overflow:hidden}

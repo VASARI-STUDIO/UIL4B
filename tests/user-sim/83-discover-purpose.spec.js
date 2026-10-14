@@ -18,7 +18,7 @@
 //
 //        navigation("Primary") | main | contentinfo | navigation("Footer")
 //
-//      The <section> holding the eight library cards — the block
+//      The <section> holding the library cards — the block
 //      SurfaceLanding.jsx's own comment calls "the page" — carried no
 //      accessible name, and a <section> without one computes to `generic`.
 //      Both galleries BENEATH this surface already named their results

@@ -2,7 +2,7 @@
 // WHEN THEY CANNOT ACT.
 //
 //   1. Search rows land on the page their label names (the Learn guides and the
-//      curated resources), and a row with no page behind it is not offered —
+//      brand guides), and a row with no page behind it is not offered —
 //      including in the list shown before anything is typed.
 //   2. The Palette toolbar stays on one line across screen widths.
 //   3. Gradient "From palette" with fewer than two palette colours says so on
@@ -22,6 +22,7 @@
 // return from the From palette note: the matching test below goes red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { CATEGORY_ENTRIES, offerableCategories } from '../../src/data/toolIndex.js'
 
 async function openSearch(page) {
   await page.locator('.pnav-search-field:visible').first().click()
@@ -44,9 +45,15 @@ test.describe('header search · rows land on real pages', () => {
     await go(page, '/create/palette')
     const dialog = await openSearch(page)
     const labels = await dialog.locator('.cp-item-label').allTextContents()
-    // POSITIVE CONTROL: the list is really there, categories included.
+    // Positive control: the empty-query list contains real tool rows.
     expect(labels.length, 'the empty-query list rendered').toBeGreaterThan(10)
-    expect(labels, 'a real category is still offered').toContain('Resources')
+    expect(labels).toContain('Palette Builder')
+    const categories = dialog.locator('.cp-item').filter({
+      has: page.locator('.cp-item-cat', { hasText: /^Category$/ }),
+    })
+    expect(await categories.locator('.cp-item-label').allTextContents()).toEqual(
+      offerableCategories(CATEGORY_ENTRIES).map(category => category.label),
+    )
     expect(labels, 'UI Builder has no page and must not be offered').not.toContain('UI Builder')
     expect(labels, 'Documentation only reaches a hub and must not be offered').not.toContain('Documentation')
     await expect(dialog.getByRole('option', { name: /^UI Builder/ })).toHaveCount(0)

@@ -58,11 +58,11 @@ export function buildRewrites(routes, clientOnly = clientOnlyRoutes()) {
   ]
 }
 
-// Permanent redirects use Vercel's 308 default unless a route requires 301.
+// Permanent redirects use Vercel's 308 status.
 export function buildRedirects(pairs = LEGACY_REDIRECTS) {
   return pairs.map(([source, destination]) => ({
     source, destination,
-    ...(source === '/discover/resources' ? { statusCode: 301 } : { permanent: true }),
+    permanent: true,
   }))
 }
 
