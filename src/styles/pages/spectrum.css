@@ -663,8 +663,10 @@
 .sp-saving-num { flex: none; white-space: nowrap; }
 .sp-saving-num + .sp-saving-word { min-width: 0; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.sp-bars { display: grid; gap: 9px; }
-.sp-bar { display: grid; gap: 6px; }
+/* minmax(0, 1fr) + min-width:0 stop a long picked filename widening the grid: the
+   row's min-content would otherwise be the full name, so it overflowed, not ellipsised. */
+.sp-bars { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; min-width: 0; }
+.sp-bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
 .sp-bar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .sp-bar-row small { flex: none; font-size: 10px; letter-spacing: .12em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 11.5px; color: var(--sp-dim); }
@@ -673,7 +675,7 @@
    real figure right-aligned over it, so the name's start never moves when the
    measured size arrives. Only the name gives way (ellipsis) in a narrow row. */
 .sp-bar-row > span { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: baseline; column-gap: .3em; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.sp-bar-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sp-bar-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-bar-size { flex: none; display: grid; justify-items: end; }
 .sp-bar-size > span { grid-area: 1 / 1; }
 .sp-bar-pad { visibility: hidden; }
