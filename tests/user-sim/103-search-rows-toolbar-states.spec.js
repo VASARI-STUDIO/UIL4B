@@ -57,6 +57,7 @@ test.describe('header search · rows land on real pages', () => {
     expect(labels.length, 'the empty-query list rendered').toBeGreaterThan(10)
     expect(labels, 'a real tool is still offered').toContain('Palette')
     await expect(categoryRows(dialog), 'a category row is offered although no category is a page').toHaveCount(0)
+    await expect(dialog.locator('.cp-section-label', { hasText: /^Categories$/ }), 'an empty Categories section is rendered').toHaveCount(0)
     expect(labels, 'UI Builder has no page and must not be offered').not.toContain('UI Builder')
     expect(labels, 'Documentation only reaches a hub and must not be offered').not.toContain('Documentation')
     await expect(dialog.getByRole('option', { name: /^UI Builder/ })).toHaveCount(0)
