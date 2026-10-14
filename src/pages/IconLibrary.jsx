@@ -17,6 +17,7 @@ import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
+import { createCollectionLoader } from '../utils/iconifyCollectionCache'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
   STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
@@ -1730,40 +1731,19 @@ function collectionToNames(d) {
 }
 
 // ── Collection cache ──────────────────────────────────────────────────────────
-// Module-level (survives remounts) cache of parsed /collection responses, keyed by
-// Iconify prefix. Every browse path (All packs / single pack / cross-pack group /
-// search-clear) funnels through getCollectionNames, so a pack is fetched from the
-// CDN at most ONCE per session. Switching packs or collections — or bouncing back
-// to "All packs" — then paints from memory with no network round-trip. Caches the
-// RAW de-duped name list + title; each caller still applies its own style filter.
+// Parsed catalogues survive remounts in memory and reloads in localStorage.
+// Each caller applies its own style filter to the unfiltered names.
 const COLLECTION_CACHE = new Map()
 
-/* ── `&info=1`, AND IT COSTS NOTHING ────────────────────────────────────────
- *
- * The bare `/collection?prefix=x` response carries the names and the title and
- * no licence at all. `&info=1` adds an `info` block with the set's author and
- * its licence as { title, spdx, url } — MEASURED against the live API on
- * 2026-09-23 — on the SAME request. No second round trip, no new host, no extra
- * entry in the rate-limit budget this page was rescued from on 2026-09-18.
- *
- * That matters because a licence table typed into this repository goes stale on
- * the day a pack relicenses, silently, in the direction of us making a claim
- * about somebody else's terms that they have withdrawn. Read from the registry,
- * the credit under the grid is whatever the registry is publishing today.
- *
- * src/data/iconPackCredits.js is the floor under it — the committed fixtures
- * the acceptance suite serves carry no `info` block, and neither does the
- * refused/offline state, and an attribution that only appears when a third
- * party is up is not an attribution. */
-async function getCollectionNames(pack) {
-  const hit = COLLECTION_CACHE.get(pack)
-  if (hit) return hit
-  const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
-  const d = await r.json()
-  const entry = { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
-  COLLECTION_CACHE.set(pack, entry)
-  return entry
-}
+// info=1 includes registry attribution in the same catalogue request.
+const getCollectionNames = createCollectionLoader({
+  cache: COLLECTION_CACHE,
+  fetchEntry: async (pack) => {
+    const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
+    const d = await r.json()
+    return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
+  },
+})
 
 /** The licence the registry answered for this pack, or null if it never has. */
 const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
@@ -2180,9 +2160,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // parallel but append per-pack as each resolves (never Promise.all-block), and
   // round-robin merge so the grid stays mixed. Skeleton shows until the first
   // pack lands; a total failure surfaces the retry banner + built-in icons.
-  const browseAll = useCallback(() => {
+  const browseAll = useCallback((manualRetry = false) => {
     const rid = ++reqId.current
-    retryRef.current = browseAll
+    retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
     setLoadError(false)
     setVisible(PAGE_SIZE); setMode('')
@@ -2212,7 +2192,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     let settled = 0
     let okCount = 0
     allowedPacks.forEach((p, idx) => {
-      getCollectionNames(p)
+      getCollectionNames(p, { manualRetry })
         .then(({ names: raw }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
@@ -2317,11 +2297,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // Browse an entire icon set via the /collection endpoint.
   // Browse one pack, optionally narrowed by an active collection chip — pack
   // and chip are independent filters that compose (chip = style within pack).
-  const browsePack = useCallback((packFilter, groupKey = null) => {
+  const browsePack = useCallback((packFilter, groupKey = null, manualRetry = false) => {
     setSource('pack'); setGroup(groupKey || null)
     // "All packs" first: the empty string is not a pack and must never be put
     // to the tier table, which would read it as an unknown prefix and refuse it.
-    if (!packFilter) { browseAll(); return }
+    if (!packFilter) { browseAll(manualRetry); return }
     // BEFORE the logodev branch and before any fetch. Logo.dev makes no Iconify
     // request, but it does resolve 48 <img> from img.logo.dev — a payload for a
     // paid pack, on a commercial API keyed to our token. Same gate, same place.
@@ -2329,9 +2309,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setGated(null)
     if (packFilter === 'logodev') { browseLogos(); return }
     const rid = ++reqId.current
-    retryRef.current = () => browsePack(packFilter, groupKey)
+    retryRef.current = () => browsePack(packFilter, groupKey, true)
     setLoading(true); setLoadError(false); glyphFails.current = 0
-    getCollectionNames(packFilter)
+    getCollectionNames(packFilter, { manualRetry })
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
@@ -2359,7 +2339,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
-  const browseGroup = useCallback((groupKey) => {
+  const browseGroup = useCallback((groupKey, manualRetry = false) => {
     const g = ICON_GROUPS[groupKey]
     if (!g) return
     // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
@@ -2373,11 +2353,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const packs = g.packs.filter(canSee)
     if (!packs.length) { setSource('group'); setGroup(groupKey); setPack(''); refuseScope(g.label, needFor(g.packs)); return }
     const rid = ++reqId.current
-    retryRef.current = () => browseGroup(groupKey)
+    retryRef.current = () => browseGroup(groupKey, true)
     setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
     setLoading(true); setLoadError(false); glyphFails.current = 0
     Promise.all(packs.map(p =>
-      getCollectionNames(p)
+      getCollectionNames(p, { manualRetry })
         .then(({ names }) => ({ names: keepStyle(p, names, groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))

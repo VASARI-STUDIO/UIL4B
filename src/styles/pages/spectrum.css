@@ -513,6 +513,7 @@
 .sp-find input { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 14px; box-shadow: none; }
 .sp-find input::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
 .sp-find:focus-within { box-shadow: inset 0 -2px 0 var(--sp-link); }
+.sp-find input:focus { box-shadow: none; }
 .sp-find input:focus-visible { outline-color: transparent; }
 .sp-tabs-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .sp-tabs-row .sp-utab { padding: 13px 0; font-size: 12.5px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }

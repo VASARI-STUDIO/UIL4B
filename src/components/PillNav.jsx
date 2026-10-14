@@ -42,14 +42,15 @@ const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
 
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
-// One 64px row: wordmark · search · theme · Create / Discover / Learn, then at
-// the far end Export · Dashboard · Upgrade · avatar. It NEVER wraps: below
-// 1100px the search field becomes its icon, and below 900px Export and
-// Dashboard keep their place as icon-only buttons.
+// One 64px row: wordmark · search · Create / Discover / Learn, then at the far
+// end Export · Dashboard · Upgrade · theme · avatar. The theme switch sits
+// directly left of the account control: the avatar signed in, "Log in" signed
+// out. It NEVER wraps: below 1100px the search field becomes its icon, and
+// below 900px Export and Dashboard keep their place as icon-only buttons.
 //
 // Below 768px it is the compact phone header: wordmark, search, Export, avatar,
 // menu — with the bottom tab bar (Dashboard / Create / Discover / You), and
-// the menu sheet for the rest.
+// the menu sheet for the rest (the theme switch lives there, in Appearance).
 //
 // The mega menus are ONE surface each (no card inside a tray): the columns,
 // the promo content and the foot are separated by hairlines and space, never
@@ -573,7 +574,11 @@ function AppHeader() {
   const focusAfterTrigger = (id) => {
     const index = visibleSections.findIndex((s) => s.id === id)
     const next = visibleSections[index + 1]
-    const target = next ? triggerRefs.current[next.id] : accountBtnRef.current || mobileBtnRef.current
+    // After the last menu, the next stop is the first control of the right
+    // cluster (Export, or Dashboard where there is no Export), in the order
+    // they are drawn.
+    const firstAction = navRef.current?.querySelector('.pnav-actions :is(button, a[href]):not([disabled])')
+    const target = next ? triggerRefs.current[next.id] : firstAction || accountBtnRef.current || mobileBtnRef.current
     target?.focus()
   }
   const onTriggerKeyDown = (event, id, index) => {
@@ -679,8 +684,6 @@ function AppHeader() {
             </button>
           </div>
 
-          <ThemeCycle />
-
           <div className="pnav-items">
             {visibleSections.map((section, index) => (
               <button
@@ -742,10 +745,16 @@ function AppHeader() {
               <span className="pnav-act-label" data-text="Dashboard">Dashboard</span>
             </Link>
 
+            {/* The theme switch is the control directly left of the account
+                one: before "Log in" signed out, before the avatar signed in
+                (below, after Upgrade). */}
             {!user && (
-              <button type="button" className="pnav-login" aria-haspopup="dialog" onClick={startLogin}>
-                Log in
-              </button>
+              <>
+                <ThemeCycle />
+                <button type="button" className="pnav-login" aria-haspopup="dialog" onClick={startLogin}>
+                  Log in
+                </button>
+              </>
             )}
             {/* A pill, as the app design draws it, and every upgrade CTA goes
                 to /plans. */}
@@ -754,6 +763,8 @@ function AppHeader() {
                 Upgrade
               </Link>
             )}
+
+            {user && <ThemeCycle />}
 
             {user ? (
               <div className="pnav-pop-wrap">

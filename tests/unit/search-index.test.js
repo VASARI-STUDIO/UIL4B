@@ -53,7 +53,6 @@ import {
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
-  DISCOVER_GROUPS,
   LEARN_GROUPS,
   NAV_SECTIONS,
   createRoutes,
@@ -247,16 +246,14 @@ test('nothing search offers is a retired URL', () => {
 
 test('each row that names a page the tree lists lands on the tree own route', () => {
   // Not being a retired URL is not enough: /docs-design, /docs-themes,
-  // /docs-brand and /resources redirect to a hub (/learn, /discover) even
+  // /docs-brand redirect to /learn even
   // though the pages those rows name are real. So the expected side is read
   // from toolTree.js, never typed here.
   const learn = (id) => LEARN_GROUPS.find((g) => g.id === id)
-  const discover = (id) => DISCOVER_GROUPS.find((g) => g.id === id)
   const expected = [
     ['docs-design', learn('principles')],
     ['docs-themes', learn('themes')],
     ['docs-brand', learn('brand')],
-    ['resources', discover('curated')],
   ]
   for (const [rowId, treeRow] of expected) {
     assert.ok(treeRow && !treeRow.soon, `the tree has no live row for the "${rowId}" search row`)
@@ -264,9 +261,6 @@ test('each row that names a page the tree lists lands on the tree own route', ()
     assert.ok(entry, `the "${rowId}" search row is gone`)
     assert.equal(entry.path, treeRow.route, `"${entry.label}" opens ${entry.path}, not the tree route ${treeRow.route}`)
   }
-  // The Resources category row is the same page.
-  const cat = CATEGORY_ENTRIES.find((c) => c.id === 'resources')
-  assert.equal(cat.path, discover('curated').route, 'the Resources category opens a different page from External Resources')
 })
 
 test('search offers no row that lands on a section hub with no page of its own', () => {
@@ -321,7 +315,7 @@ test('the empty-query category list drops the same rows the typed query does', (
   assert.ok(ui && ui.destination === false, 'UI Builder is expected to be a non-destination')
   const offered = offerableCategories(CATEGORY_ENTRIES).map((c) => c.id)
   assert.ok(!offered.includes('ui-builder'), 'UI Builder is offered in the empty-query list')
-  assert.ok(offered.includes('resources'), 'the Resources category must stay offered')
+  assert.ok(!offered.includes('resources'), 'the removed Resources category must not be offered')
   const typed = queryCommandIndex('ui builder', { tools: [], categories: CATEGORY_ENTRIES }).categories
   assert.deepEqual(typed.filter((c) => !offered.includes(c.id)), [], 'a typed query offers a row the empty list refuses')
   // And the component really calls it, comments stripped.
