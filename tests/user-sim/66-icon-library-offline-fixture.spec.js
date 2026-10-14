@@ -602,7 +602,10 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
   for (const open of ['My Icons']) {
     expect(anon.chips.find((c) => c.name.startsWith(open)).badge, `${open} is open signed out`).toBe(false)
   }
-  expect(locked(free).length, 'an account opens groups, so it sees fewer locks').toBeLessThan(locked(anon).length)
+  expect(locked(anon).map((c) => c.name), 'signed out, every group but My Icons is locked and asks for Pro').toEqual(
+    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro', 'Emoji · Pro'],
+  )
+  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same four stay locked').toEqual(locked(anon).map((c) => c.name))
   expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
   expect(locked(pro), 'Pro sees no locks at all').toEqual([])
   // The width half only means something for the TRAY: it is what the toolbar's

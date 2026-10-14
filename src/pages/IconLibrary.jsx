@@ -1112,11 +1112,25 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     size, color: isColoredPack ? undefined : (color || themeInk),
     stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
   }), [baseSvgText, size, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
-  const previewSrc = previewSvg ? svgToDataUri(previewSvg) : stageImgUrl
-  const [previewImage, setPreviewImage] = useState({ src: null, loaded: false, error: false })
-  const imageLoaded = previewImage.src === previewSrc && previewImage.loaded
-  const imageError = previewImage.src === previewSrc && previewImage.error
-  const isDuotone = activeIcon?.pack === 'ph' && /-duotone$/.test(activeIcon.name)
+  const previewSrc = useMemo(() => (previewSvg ? svgToDataUri(previewSvg) : stageImgUrl), [previewSvg, stageImgUrl])
+  // The frame on screen is the last one that decoded for THIS icon. A new size,
+  // rotation or colour decodes off-screen and swaps in, so the picture never
+  // blanks between frames; "Loading…" only covers an icon's first paint.
+  const [frame, setFrame] = useState({ id: null, src: '', failed: false })
+  useEffect(() => {
+    if (!previewSrc) return undefined
+    let live = true
+    const probe = new Image()
+    probe.onload = () => { if (live) setFrame({ id: currentId, src: previewSrc, failed: false }) }
+    probe.onerror = () => { if (live) setFrame(f => ({ id: currentId, src: f.id === currentId ? f.src : '', failed: true })) }
+    probe.src = previewSrc
+    return () => { live = false; probe.onload = null; probe.onerror = null }
+  }, [previewSrc, currentId])
+  const shownSrc = frame.id === currentId ? frame.src : ''
+  const imageError = frame.id === currentId && frame.failed
+  // Duotone artwork (Phosphor, Solar `-bold-duotone`, and any other `-duotone`
+  // name) keeps its own two-tone treatment when no colour is picked.
+  const isDuotone = /-duotone$/.test(activeIcon?.name || '')
   const effectiveColor = color || themeInk
   const onThemeGround = isColoredPack || !color
   const stageIsLight = !onThemeGround && relativeLuminance(effectiveColor) < 0.35
@@ -1330,18 +1344,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </>
               ) : (
                 <>
-                  <img
-                    key={previewSrc}
-                    className="icust-stage-img"
-                    src={previewSrc}
-                    width={size}
-                    height={size}
-                    alt={activeIcon.name}
-                    style={{ visibility: imageLoaded ? 'visible' : 'hidden' }}
-                    onLoad={() => setPreviewImage({ src: previewSrc, loaded: true, error: false })}
-                    onError={() => setPreviewImage({ src: previewSrc, loaded: false, error: true })}
-                  />
-                  {!imageLoaded && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
+                  {shownSrc ? (
+                    <img
+                      className="icust-stage-img"
+                      src={shownSrc}
+                      width={size}
+                      height={size}
+                      alt={activeIcon.name}
+                      style={imageError ? { visibility: 'hidden' } : undefined}
+                    />
+                  ) : (
+                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
+                  )}
+                  {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
                 </>
               )}
             </div>
@@ -1374,7 +1389,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 {isColoredPack ? (
                   <>
                     <div className="icust-seg">
-                      <button type="button" className="active" aria-pressed="true">Default</button>
+                      <span className="icust-seg-static active">Default</span>
                     </div>
                     <span className="icust-note icust-original">Original colours</span>
                   </>

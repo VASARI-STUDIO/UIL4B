@@ -129,7 +129,19 @@ const openAdobeGrid = async (page) => {
   await signIn(page, { plan: 'pro' })
   await adobeCatalogue(page)
   await go(page, '/create/icons')
-  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'logos')
+  // On a phone the pack menu sits inside the toolbar's Filters sheet.
+  const pack = page.getByRole('button', { name: 'Icon pack' })
+  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  await expect(pack.or(filters).first()).toBeVisible({ timeout: 20000 })
+  if (await filters.isVisible()) {
+    await filters.click()
+    const sheet = page.getByRole('dialog', { name: 'Filters' })
+    await chooseMenuOption(page, sheet.getByRole('button', { name: 'Icon pack' }), 'logos')
+    await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+  } else {
+    await chooseMenuOption(page, pack, 'logos')
+  }
   await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', 'Customise adobe')
 }
 
@@ -154,8 +166,10 @@ for (const scheme of ['dark', 'light']) {
         expect(stage.image).toBe('none')
         await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
         await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--light/)
-        await expect(page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg button')).toHaveText(['Default'])
-        await expect(page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg button')).toHaveClass(/active/)
+        const colourSeg = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg')
+        await expect(colourSeg.getByRole('button')).toHaveCount(0)
+        await expect(colourSeg).toHaveText('Default')
+        await expect(colourSeg.locator('.active')).toHaveCount(1)
         expect(await page.locator('.icust-stage-img').getAttribute('src')).toMatch(/^data:/)
       } finally { await ctx.close() }
     })
