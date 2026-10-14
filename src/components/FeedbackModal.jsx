@@ -1,5 +1,8 @@
+import Toast from './Toast'
+import { useToast } from '../hooks/useToast'
+import { useI18n } from '../contexts/I18nContext'
 import MenuSelect from './tool/MenuSelect'
-import { useState, useRef, useEffect, useCallback, useId } from 'react'
+import { useState, useRef, useEffect, useSyncExternalStore, useCallback, useId } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { buildReportContext, withReportContext, contextRows, omitContext } from '../utils/reportContext'
@@ -10,7 +13,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { requestIdFor, startSupportSend, recoverFeedbackDraft, guardSupportUnload, supportError } from '../utils/supportRequest'
+import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, modalFeedbackSend } from '../utils/supportRequest'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -74,23 +77,30 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   const { isPro } = useSubscription()
   const { theme } = useTheme()
   const { reducedMotion } = useAppearance()
+  const delivery = useSyncExternalStore(modalFeedbackSend.subscribe, modalFeedbackSend.getSnapshot)
+  const sentHeadingRef = useRef(null)
+  const retryRef = useRef(null)
+  const visibleRef = useRef(false)
+  useEffect(() => { visibleRef.current = open }, [open])
+  const { t } = useI18n()
+  const notification = useToast()
   const titleId = useId()
   const capId = useId()
 
-  const [typeId, setTypeId] = useState('feedback')
-  const [selections, setSelections] = useState({}) // { category, severity }
-  const [subject, setSubject] = useState('')
-  const [message, setMessage] = useState('')
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState(false)
+  const [typeId, setTypeId] = useState(() => delivery.status === 'sent' ? 'feedback' : delivery.draft?.typeId ?? 'feedback')
+  const [selections, setSelections] = useState(() => delivery.status === 'sent' ? {} : delivery.draft?.selections ?? {}) // { category, severity }
+  const [subject, setSubject] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.subject ?? '')
+  const [message, setMessage] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.message ?? '')
+  const sending = delivery.status === 'sending'
+  const sent = sending || delivery.status === 'sent'
+  const error = delivery.status === 'failed' ? t(delivery.result.status === 429 ? 'feedback.rateLimit' : 'feedback.submitError') : ''
   // What we propose to attach, frozen at the moment the dialog opened, and the
   // keys the user has switched off. Frozen rather than recomputed at submit
   // time so the list they approved is byte-for-byte the list that is sent —
   // a disclosure that can drift between being read and being acted on is not
   // a disclosure.
-  const [capture, setCapture] = useState({})
-  const [removed, setRemoved] = useState([])
+  const [capture, setCapture] = useState(() => delivery.status === 'sent' ? {} : delivery.draft?.capture ?? {})
+  const [removed, setRemoved] = useState(() => delivery.status === 'sent' ? [] : delivery.draft?.removed ?? [])
 
   const overlayRef = useRef(null)
   const firstControlRef = useRef(null)
@@ -99,25 +109,38 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // (state would still read the old value):
   //   sendingRef  an attempt is in flight
   //   attemptRef  the request id in use; bodyRef freezes the submitted payload
-  //   genRef      bumped whenever the form is reset, so an attempt that
-  //               finishes after a reset does not touch the new form
-  const sendingRef = useRef(false)
-  const attemptRef = useRef(null)
-  const bodyRef = useRef(null)
-  const mountedRef = useRef(false)
-  const genRef = useRef(0)
+  const sendingRef = useRef(delivery.status === 'sending')
+  const attemptRef = useRef(delivery.status === 'sent' ? null : delivery.draft?.attempt || null)
+  const bodyRef = useRef(delivery.body)
   const overlayDownRef = useRef(false)
   const overlaySuppressedRef = useRef(false)
   const overlayTimerRef = useRef(null)
   useEffect(() => {
-    mountedRef.current = true
     return () => {
-      mountedRef.current = false
+      visibleRef.current = false
       clearTimeout(overlayTimerRef.current)
     }
   }, [])
   useEffect(() => guardSupportUnload(sending || (open && !!error)), [sending, open, error])
 
+  useEffect(() => modalFeedbackSend.subscribe(() => {
+    const current = modalFeedbackSend.getSnapshot()
+    const draft = current.draft
+    bodyRef.current = current.body
+    sendingRef.current = current.status === 'sending'
+    attemptRef.current = current.status === 'sent' ? null : draft?.attempt || null
+    if (draft && current.status !== 'sent') {
+      setTypeId(draft.typeId)
+      setSelections(draft.selections)
+      setCapture(draft.capture)
+      setRemoved(draft.removed)
+      setSubject(draft.subject)
+      setMessage(draft.message)
+    } else if (current.status === 'sent') {
+      setSubject('')
+      setMessage('')
+    }
+  }), [])
   // Has this opening already been initialised? The open effect below depends on
   // every value it captures — which is correct, and what the linter wants — but
   // it must still run only ONCE per opening: re-running it because the user
@@ -146,19 +169,12 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     setSelections({})
     setSubject('')
     setMessage('')
-    setSent(false)
-    setError(false)
-    setSending(false)
+    modalFeedbackSend.reset()
     sendingRef.current = false
     attemptRef.current = null
-    genRef.current += 1
   }, [])
 
-  // Scroll lock, Escape, the focus trap and focus restoration all come from the
-  // shared hook. This modal had the first two and neither of the last two: it
-  // declared aria-modal="true" while Tab walked straight out of it, and closing
-  // dropped focus to the top of the document rather than back to the button
-  // that opened it — from a dialog reachable on every page in the app.
+  // Share scroll locking, focus trapping and focus restoration with other dialogs.
   const dialogRef = useModalDialog(onClose, { enabled: open })
   // Back closes the dialog (audit A3) and the page behind it is inert (A12).
   useCloseOnBack(!!open, onClose)
@@ -169,13 +185,14 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   useEffect(() => {
     if (!open) { initialisedRef.current = false; return undefined }
     if (initialisedRef.current && seedRef.current === seed) return undefined
-    if (sendingRef.current) return undefined
+    if (delivery.status !== 'idle') {
+      initialisedRef.current = true
+      return undefined
+    }
     initialisedRef.current = true
     seedRef.current = seed
     // Closing must neither cancel delivery nor discard a failed message.
     if (recoverFeedbackDraft(bodyRef, attemptRef, seed)) {
-      setError(false)
-      setSent(false)
       const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
       return () => cancelAnimationFrame(raf)
     }
@@ -210,39 +227,32 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     // dialog is announced, then the first control takes focus.
     const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
     return () => cancelAnimationFrame(raf)
-  }, [open, seed, resetFields, location.pathname, theme, reducedMotion, isPro, user, sending])
+  }, [open, seed, resetFields, location.pathname, theme, reducedMotion, isPro, user, delivery.status])
 
-  if (!open) return null
+  useEffect(() => {
+    if (!open) return
+    if (delivery.status === 'failed') retryRef.current?.focus()
+    else if (delivery.status === 'sending' || delivery.status === 'sent') sentHeadingRef.current?.focus()
+  }, [delivery.status, open])
 
   const selectType = (id) => {
     setTypeId(id)
     setSelections({}) // routing dropdowns are type-specific
-    setError(false)
   }
 
-  const send = async (body, retry = true) => {
-    const pending = startSupportSend(sendingRef, body, { retry })
-    if (!pending) return
+  const send = (body, retry = true) => {
+    const draft = { typeId, selections, subject, message, capture, removed, attempt: attemptRef.current }
     overlaySuppressedRef.current = true
     clearTimeout(overlayTimerRef.current)
     overlayTimerRef.current = setTimeout(() => { overlaySuppressedRef.current = false }, 400)
-    const gen = genRef.current
-    setSending(true)
-    setError(false)
-    setSent(true)
-
-    const result = await pending
-    if (!mountedRef.current || gen !== genRef.current) return
-    setSending(false)
-    if (result.ok) {
-      attemptRef.current = null
-      bodyRef.current = null
-      setSubject('')
-      setMessage('')
-    } else {
-      setSent(false)
-      setError(supportError(result.status))
-    }
+    return modalFeedbackSend.send(body, draft, {
+      retry,
+      visible: () => visibleRef.current,
+      notify: (status, onAction) => notification.toast(
+        t(status === 429 ? 'feedback.rateLimit' : 'feedback.submitError'), 'error',
+        { action: { label: t('feedback.tryAgain'), onAction } },
+      ),
+    })
   }
 
   const handleSubmit = (e) => {
@@ -255,16 +265,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
       category: selectedValue('category'),
       ...(typeId === 'bug' ? { severity: selectedValue('severity') } : {}),
       subject: subject.trim(),
-      // P-002: every report now carries WHERE the user was. Without it a report
-      // arrives as free text with no route, no tool and no state, so acting on
-      // one means asking "which page were you on?" — and most people never
-      // reply to that. It is also the proposal's own mitigation for low-quality
-      // volume: capture the context so the user need not describe it.
-      //
-      // `omitContext` is applied HERE, at the only point where anything leaves
-      // the browser, so an unticked row is absent from the request body, from
-      // the localStorage copy below and from the store — not merely hidden in
-      // the panel above.
+      // Omitted context stays out of the request and the local copy.
       message: withReportContext(message.trim(), omitContext(capture, removed)),
       email,
       // 'inline' is a value api/support.js actually accepts. 'feedback-modal'
@@ -291,7 +292,9 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   }
 
   return (
-    <div
+    <>
+      <Toast {...notification} onDismiss={notification.dismiss} onHold={notification.hold} onRelease={notification.release} />
+      {open && <div
       ref={overlayRef}
       className="fb-overlay"
       onMouseDown={e => { overlayDownRef.current = e.target === overlayRef.current }}
@@ -314,28 +317,29 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
           </button>
         </div>
 
+        <div role="status" className="sr-only">{sent ? t('feedback.sent') : ''}</div>
         {error ? (
           <div className="fb-success">
             <p className="fb-error" role="alert">{error}</p>
-            <textarea className="fb-textarea" aria-label="Your message" value={message} readOnly />
+            <textarea className="fb-textarea" aria-label={t('feedback.yourMessage')} value={message} readOnly />
             <div className="fb-success-actions fb-again">
-              <button type="button" className="btn btn-accent" onClick={() => { void send(bodyRef.current, false) }}>Try again</button>
+              <button type="button" className="btn btn-accent" ref={retryRef} onClick={() => { void send(bodyRef.current, false) }}>{t('feedback.tryAgain')}</button>
               <button type="button" className="btn" onClick={() => {
                 recoverFeedbackDraft(bodyRef, attemptRef)
-                setError(false)
+                modalFeedbackSend.edit()
                 requestAnimationFrame(() => firstControlRef.current?.focus())
-              }}>Edit message</button>
+              }}>{t('feedback.editMessage')}</button>
             </div>
           </div>
         ) : sent ? (
-          <div className="fb-success" role="status" aria-live="polite">
+          <div className="fb-success">
             <div className="fb-success-icon">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h3 className="fb-success-title">Thanks — we&apos;ve got it</h3>
-            <p className="fb-success-text">Your {activeType.label.toLowerCase()} submission has been received and will be reviewed.</p>
+            <h3 className="fb-success-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h3>
+            <p className="fb-success-text">{t('feedback.sendingMessage')}</p>
             <div className="fb-success-actions">
               <button type="button" className="btn" onClick={resetFields} disabled={sending}>Send another</button>
               <button type="button" className="btn btn-accent" onClick={onClose}>Close</button>
@@ -465,6 +469,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
           </form>
         )}
       </div>
-    </div>
+    </div>}
+    </>
   )
 }

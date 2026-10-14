@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   requestIdFor, postSupportWithRetry, startSupportSend, recoverFeedbackDraft,
-  guardSupportUnload, supportError,
+  guardSupportUnload, supportError, createSupportHolder,
 } from '../../src/utils/supportRequest.js'
 
 const PAYLOAD = { type: 'bug', subject: 'Export', message: 'The export did nothing.', email: '', source: 'inline' }
@@ -117,4 +117,58 @@ test('beforeunload guard is absent when inactive and removed when dismissed', ()
   assert.equal(event.returnValue, '')
   cleanup()
   assert.equal(handlers.size, 0)
+})
+
+
+test('holder keeps the failure and draft after unsubscribe and its toast retries the exact body once', async t => {
+  const calls = network(t, [{ ok: false, status: 502 }, { ok: false, status: 502 }, { ok: true, status: 200 }])
+  const holder = createSupportHolder()
+  const { body, attempt } = makeDraft()
+  const draft = { ...PAYLOAD, attempt: attempt.current }
+  let visible = true
+  let notified = null
+  let updates = 0
+  const unsubscribe = holder.subscribe(() => { updates++ })
+  const pending = holder.send(body.current, draft, {
+    visible: () => visible,
+    notify: (status, retry) => { notified = { status, retry } },
+  })
+  assert.equal(holder.getSnapshot().status, 'sending')
+  assert.equal(holder.send(body.current, draft), null, 'rapid submits share the holder lock')
+  holder.reset()
+  assert.equal(holder.getSnapshot().status, 'sending', 'reset cannot discard an active delivery')
+  visible = false
+  unsubscribe()
+  await pending
+  assert.equal(updates, 1, 'delivery finishes without a mounted subscriber')
+  assert.equal(holder.getSnapshot().status, 'failed')
+  assert.deepEqual(holder.getSnapshot().draft, draft)
+  assert.equal(notified.status, 502)
+  assert.equal(calls.length, 2)
+  await notified.retry()
+  assert.equal(calls.length, 3)
+  assert.deepEqual(calls.map(call => call.parsed), [body.current, body.current, body.current])
+  assert.equal(holder.getSnapshot().status, 'sent')
+})
+
+test('holder preserves visible failures on reopening and Edit message retains the draft', async t => {
+  const calls = network(t, [{ ok: false, status: 429 }])
+  const holder = createSupportHolder()
+  const { body, attempt } = makeDraft()
+  const draft = { ...PAYLOAD, attempt: attempt.current }
+  let notifications = 0
+  await holder.send(body.current, draft, { visible: () => true, notify: () => { notifications++ } })
+  assert.equal(calls.length, 1)
+  assert.equal(notifications, 0)
+  let restored = null
+  const unsubscribe = holder.subscribe(() => { restored = holder.getSnapshot() })
+  assert.equal(holder.getSnapshot().status, 'failed')
+  holder.edit()
+  assert.equal(restored.status, 'editing')
+  assert.equal(restored.draft, draft)
+  assert.equal(restored.body.requestId, body.current.requestId)
+  unsubscribe()
+  holder.reset()
+  assert.equal(holder.getSnapshot().status, 'idle')
+  assert.equal(holder.getSnapshot().draft, null)
 })

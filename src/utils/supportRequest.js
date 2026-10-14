@@ -107,3 +107,33 @@ export function supportError(status) {
     ? 'Too many messages just now. Try again in a minute.'
     : "Your message didn't send."
 }
+
+/** Retain delivery and its draft across surface closure and route unmounts. */
+export function createSupportHolder() {
+  let state = { status: 'idle', body: null, draft: null, result: null }
+  const listeners = new Set()
+  const sending = { current: false }
+  const publish = next => { state = next; listeners.forEach(listener => listener()) }
+  const holder = {
+    getSnapshot: () => state,
+    subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
+    reset: () => { if (!sending.current) publish({ status: 'idle', body: null, draft: null, result: null }) },
+    edit: () => { if (!sending.current) publish({ ...state, status: 'editing' }) },
+    send(body, draft, { retry = true, visible, notify } = {}) {
+      const pending = startSupportSend(sending, body, { retry })
+      if (!pending) return null
+      publish({ status: 'sending', body, draft, result: null })
+      return pending.then(result => {
+        publish({ ...state, status: result.ok ? 'sent' : 'failed', result })
+        if (!result.ok && !visible?.()) {
+          notify?.(result.status, () => holder.send(body, draft, { retry: false, visible, notify }))
+        }
+        return result
+      })
+    },
+  }
+  return holder
+}
+
+export const modalFeedbackSend = createSupportHolder()
+export const pageFeedbackSend = createSupportHolder()

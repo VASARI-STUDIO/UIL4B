@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
-import { requestIdFor, startSupportSend, recoverFeedbackDraft, guardSupportUnload, supportError } from '../utils/supportRequest'
+import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend } from '../utils/supportRequest'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -13,62 +13,7 @@ import '../styles/deferred/tool-shell.css'
 // by its scoping, not its position.
 import '../styles/pages/feedback.css'
 
-// The feedback form. Four surfaces across the app point here as THE way to
-// report a problem — including, now, the 404 page — so this is the last place
-// that should quietly fail or be hard to use.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT WAS WRONG (2026-08-11 site audit, P2 — see CHANGELOG.md)
-// ─────────────────────────────────────────────────────────────────────────────
-// Measured on the rendered page: ZERO <label> elements. The three `.seg-label`
-// divs look like labels and are not — so neither the subject nor the message
-// had an accessible name, and a screen-reader user met two unnamed fields with
-// only a placeholder, which is not a name and disappears the moment you type.
-//
-// The four type buttons carried no role, no aria-pressed and no aria-checked.
-// Which one was selected was conveyed by a CSS class and nothing else, so it
-// was invisible to assistive tech and to anyone who cannot distinguish the
-// active style (WCAG 1.4.1).
-//
-// An empty submit produced a toast — transient, unattached to the field, gone
-// before a slow reader reaches it — with no aria-invalid, no inline message and
-// no focus move.
-//
-// The audit also reported the submit itself failing. That was an artefact of
-// testing against `vite preview`, which does not run the Vercel functions, so
-// /api/support was a 404 there. The server path validates correctly; the client
-// now acknowledges immediately, then shows a recoverable error if delivery fails.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT WAS WRONG (2026-09-11 quality pass, purpose & content scored 6)
-// ─────────────────────────────────────────────────────────────────────────────
-// A SIGNED-OUT SUBMISSION COULD NOT BE ANSWERED, AND NOTHING ON THE PAGE SAID
-// SO. The payload was built from `user?.email`, the form had no contact field,
-// and the confirmation read "Your submission has been received and will be
-// reviewed." Rendered signed out and captured off the real request, the body
-// was:
-//
-//   {"type":"feature","subject":"[feature] Submission","message":"…",
-//    "email":"","source":"feedback-form"}
-//
-// Nothing in those five fields identifies the sender. So a person who picked
-// the form's own "Help Request" type — a category that only makes sense if an
-// answer can come back — wrote a question into a channel that had no return
-// path, and was thanked as though a conversation had started.
-//
-// THE API ALREADY TOOK THE FIELD. `api/support.js` has validated `email`,
-// capped it at 254 and rendered it as the notification's `From:` line since it
-// was written; only the form never offered anywhere to type one. Nothing about
-// the request contract changes here — the same five fields go up (plus the
-// `requestId` every request carries, see utils/supportRequest.js), and one of
-// them can now be non-empty when the sender is signed out.
-//
-// Both branches are now stated rather than implied: the field says what a blank
-// costs BEFORE you submit, and the confirmation says which of the two happened
-// AFTER. A signed-in submitter gets "Sending as <email>", which is the sentence
-// FeedbackModal.jsx already shows in the same situation — one vocabulary for
-// one fact, rather than a second way of saying it.
-
+// Delivery acknowledges submission immediately and preserves failed drafts for retry.
 const TYPES = [
   { id: 'feature', labelKey: 'feedback.featureRequest' },
   { id: 'bug', labelKey: 'feedback.bugReport' },
@@ -77,34 +22,59 @@ const TYPES = [
 ]
 
 export default function Feedback({ toast }) {
-  const [type, setType] = useState('feature')
-  const [message, setMessage] = useState('')
-  const [subject, setSubject] = useState('')
-  const [contact, setContact] = useState('')
+  const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
+  const sentHeadingRef = useRef(null)
+  const retryRef = useRef(null)
+  const visibleRef = useRef(false)
+  useEffect(() => { visibleRef.current = true }, [])
+  const [type, setType] = useState(() => delivery.status === 'sent' ? 'feature' : delivery.draft?.type ?? 'feature')
+  const [message, setMessage] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.message ?? '')
+  const [subject, setSubject] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.subject ?? '')
+  const [contact, setContact] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.contact ?? '')
   const [contactError, setContactError] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-  // The address the LAST successful submission actually carried, so the
-  // confirmation reports what was sent rather than what is currently typed in a
-  // field that has since been cleared.
-  const [sentTo, setSentTo] = useState('')
-  const [busy, setBusy] = useState(false)
+  const submitted = delivery.status === 'sending' || delivery.status === 'sent'
+  // The address carried by the submitted message.
+  const [sentTo, setSentTo] = useState(() => delivery.body?.email || '')
+  const busy = delivery.status === 'sending'
   const [error, setError] = useState('')
-  const [sendError, setSendError] = useState('')
+  const sendError = delivery.status === 'failed' ? t(delivery.result.status === 429 ? 'feedback.rateLimit' : 'feedback.submitError') : ''
   const messageRef = useRef(null)
   const contactRef = useRef(null)
   const typeRefs = useRef({})
   // Send bookkeeping, in refs so a second submit in the same task sees it:
   //   sendingRef  an attempt is in flight
   //   attemptRef  the request id in use and the exact content it was made for
-  const sendingRef = useRef(false)
-  const attemptRef = useRef(null)
-  const bodyRef = useRef(null)
-  const mountedRef = useRef(false)
+  const sendingRef = useRef(delivery.status === 'sending')
+  const attemptRef = useRef(delivery.status === 'sent' ? null : delivery.draft?.attempt || null)
+  const bodyRef = useRef(delivery.body)
   useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
+    return () => { visibleRef.current = false }
   }, [])
   useEffect(() => guardSupportUnload(busy || !!sendError), [busy, sendError])
+  useEffect(() => pageFeedbackSend.subscribe(() => {
+    const current = pageFeedbackSend.getSnapshot()
+    const draft = current.draft
+    bodyRef.current = current.body
+    sendingRef.current = current.status === 'sending'
+    attemptRef.current = current.status === 'sent' ? null : draft?.attempt || null
+    if (draft && current.status !== 'sent') {
+      setType(draft.type)
+      setContact(draft.contact)
+      setSubject(draft.subject)
+      setMessage(draft.message)
+    } else if (current.status === 'sent') {
+      setSubject('')
+      setMessage('')
+      setContact('')
+    }
+    if (current.body) setSentTo(current.body.email)
+  }), [])
+  useEffect(() => {
+    if (!visibleRef.current) return
+    if (delivery.status === 'failed') retryRef.current?.focus()
+    else if (delivery.status === 'sending' || delivery.status === 'sent') sentHeadingRef.current?.focus()
+  }, [delivery.status])
+
   const { t } = useI18n()
   const { user } = useAuth()
 
@@ -128,29 +98,16 @@ export default function Feedback({ toast }) {
     typeRefs.current[id]?.focus()
   }
 
-  const send = async (body, retry = true) => {
-    const pending = startSupportSend(sendingRef, body, { retry })
-    if (!pending) return
-    setBusy(true)
-    setError('')
-    setSendError('')
-    setSentTo(body.email)
-    setSubmitted(true)
-
-    const result = await pending
-    if (!mountedRef.current) return
-    setBusy(false)
-    if (!result.ok) {
-      setSubmitted(false)
-      setSendError(supportError(result.status))
-      return
-    }
-    attemptRef.current = null
-    bodyRef.current = null
-    setMessage('')
-    setSubject('')
-    setContact('')
-    toast(t('feedback.thankYou'))
+  const send = (body, retry = true) => {
+    const draft = { type, subject, message, contact, attempt: attemptRef.current }
+    return pageFeedbackSend.send(body, draft, {
+      retry,
+      visible: () => visibleRef.current,
+      notify: (status, onAction) => toast(
+        t(status === 429 ? 'feedback.rateLimit' : 'feedback.submitError'), 'error',
+        { action: { label: t('feedback.tryAgain'), onAction } },
+      ),
+    })
   }
 
   const submit = (e) => {
@@ -209,41 +166,39 @@ export default function Feedback({ toast }) {
         <p>{t('feedback.subtitle')}</p>
       </div>
       <div className="card fb-card">
+        <div role="status" className="sr-only">{submitted ? t('feedback.sent') : ''}</div>
         {sendError ? (
           <div className="fb-done">
             <p className="fb-error" role="alert">{sendError}</p>
-            <textarea className="fb-textarea" aria-label="Your message" value={message} readOnly />
+            <textarea className="fb-textarea" aria-label={t('feedback.yourMessage')} value={message} readOnly />
             <div className="fb-success-actions fb-again">
-              <button type="button" className="btn btn-accent" onClick={() => { void send(bodyRef.current, false) }}>Try again</button>
+              <button type="button" className="btn btn-accent" ref={retryRef} onClick={() => { void send(bodyRef.current, false) }}>{t('feedback.tryAgain')}</button>
               <button type="button" className="btn" onClick={() => {
                 recoverFeedbackDraft(bodyRef, attemptRef)
-                setSendError('')
+                pageFeedbackSend.edit()
                 requestAnimationFrame(() => messageRef.current?.focus())
-              }}>Edit message</button>
+              }}>{t('feedback.editMessage')}</button>
             </div>
           </div>
         ) : submitted ? (
-          <div className="fb-done" role="status">
+          <div className="fb-done">
             <div className="fb-done-mark" aria-hidden="true">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 className="fb-done-title">{t('feedback.thankYou')}</h2>
-            <p className="fb-done-sub">Your submission has been received and will be reviewed.</p>
+            <h2 className="fb-done-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h2>
+            <p className="fb-done-sub">{t('feedback.sendingMessage')}</p>
             {/* Which of the two things just happened. Neither line promises a
                 reply — whether one is written is a person's decision, not the
                 code's — they state whether one is POSSIBLE, which is a fact
                 about the five fields that were sent. */}
             <p className="fb-done-reply">
               {sentTo
-                ? <>A reply can reach you at <strong>{sentTo}</strong>.</>
-                : 'No email address went with it, so this one is one-way.'}
+                ? t('feedback.replyAddress', { email: sentTo })
+                : t('feedback.noReplyAddress')}
             </p>
-            {/* Was on a 4s timer that swapped the form back underneath you.
-                Leaving it up until dismissed means the confirmation is still
-                there when you look back at the screen. */}
-            <button className="btn btn-s fb-again" disabled={busy} onClick={() => setSubmitted(false)}>Submit another</button>
+            <button className="btn btn-s fb-again" disabled={busy} onClick={() => pageFeedbackSend.reset()}>{t('feedback.submitAnother')}</button>
           </div>
         ) : (
           <form onSubmit={submit} className="fb-form" noValidate>
