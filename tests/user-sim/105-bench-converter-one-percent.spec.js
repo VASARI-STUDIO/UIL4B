@@ -18,6 +18,7 @@
 // bar against the saving it states.
 // Run at 390 / 768 / 1440 in both themes, in the settled state and across a
 // quality change, a format change and a switch to the lossless format.
+import zlib from 'node:zlib'
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -173,3 +174,161 @@ for (const theme of THEMES) {
     })
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A picked file that is not an image, a very long picked filename, and the 3D
+// tab's images.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A real PNG of pseudo-random pixels (size x size), so the encoders give different sizes. */
+function makePng(size, seed) {
+  const crcTable = (() => {
+    const t = []
+    for (let n = 0; n < 256; n++) {
+      let c = n
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+      t[n] = c >>> 0
+    }
+    return t
+  })()
+  const crc = (buf) => {
+    let c = 0xffffffff
+    for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8)
+    return (c ^ 0xffffffff) >>> 0
+  }
+  const chunk = (type, data) => {
+    const body = Buffer.concat([Buffer.from(type), data])
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length)
+    const sum = Buffer.alloc(4); sum.writeUInt32BE(crc(body))
+    return Buffer.concat([len, body, sum])
+  }
+  const head = Buffer.alloc(13)
+  head.writeUInt32BE(size, 0); head.writeUInt32BE(size, 4)
+  head[8] = 8; head[9] = 2 // 8-bit RGB
+  const raw = Buffer.alloc(size * (size * 3 + 1))
+  let x = seed
+  for (let i = 0; i < raw.length; i++) {
+    x = (Math.imul(x, 1103515245) + 12345) & 0x7fffffff
+    raw[i] = i % (size * 3 + 1) === 0 ? 0 : (x >>> 16) & 0xff
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', head),
+    chunk('IDAT', zlib.deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ])
+}
+
+const imageFile = (name, seed = 7) => ({ name, mimeType: 'image/png', buffer: makePng(300, seed) })
+const barNum = (page, nth) => compressPane(page).locator('.sp-bar').nth(nth).locator('.sp-bar-num')
+const barName = (page, nth) => compressPane(page).locator('.sp-bar').nth(nth).locator('.sp-bar-name')
+
+async function openHome(browser, width) {
+  const ctx = await browser.newContext({ viewport: { width, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, 'a visitor trying the homepage converter')
+  await go(page, '/')
+  await panelOf(page).locator('.sp-modes').scrollIntoViewIfNeeded()
+  return { ctx, page }
+}
+
+test('a file that is not an image keeps the photo and its measurements, and a valid image clears the message', async ({ browser }) => {
+  const { ctx, page } = await openHome(browser, 1440)
+  const input = compressPane(page).locator('input[type="file"]')
+  const message = compressPane(page).locator('.sp-saving')
+
+  await input.setInputFiles(imageFile('first-photo.png', 7))
+  await expect(barName(page, 0), 'the chosen photo is not named in the BEFORE row').toHaveText('first-photo.png,')
+  await settled(page)
+  const beforeText = await barNum(page, 0).innerText()
+  const afterWebp = await barNum(page, 1).innerText()
+  expect(beforeText, 'the BEFORE size is not a figure').toMatch(/\d/)
+
+  await input.setInputFiles({ name: 'notes.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 example') })
+  await expect(message, 'a file that is not an image gets no message').toContainText('That file is not supported')
+  await expect(input, 'the earlier photo is no longer the one on offer').toHaveAttribute('aria-label', 'Replace first-photo.png')
+  await expect(barName(page, 0)).toHaveText('first-photo.png,')
+  await expect(barNum(page, 0), 'the BEFORE size was wiped by the rejected file').toHaveText(beforeText)
+  await expect(barNum(page, 1), 'the AFTER size was wiped by the rejected file').toHaveText(afterWebp)
+  await expect(compressPane(page).locator('.sp-art-btn'), 'the photo no longer says Replace').toHaveText('Replace')
+
+  // Measuring still works: a format button changes the AFTER size.
+  await panelOf(page).getByRole('button', { name: 'JPEG', exact: true }).click()
+  await expect(barName(page, 1)).toHaveText('first-photo.jpeg,')
+  await expect(barNum(page, 1), 'the AFTER size did not follow the format button after a rejected file').not.toHaveText(afterWebp, { timeout: 15000 })
+  await expect(barNum(page, 1)).toHaveText(/\d/)
+  await expect(message, 'the message went away on its own').toContainText('That file is not supported')
+
+  await input.setInputFiles(imageFile('second-photo.png', 99))
+  await expect(message, 'a valid image did not clear the message').not.toContainText('not supported', { timeout: 15000 })
+  await expect(barName(page, 0)).toHaveText('second-photo.png,')
+  await settled(page)
+
+  await ctx.close()
+})
+
+for (const width of [390, 1440]) {
+  test(`a 100-character filename stays inside the BEFORE and AFTER rows (${width})`, async ({ browser }) => {
+    const { ctx, page } = await openHome(browser, width)
+    const longName = `${'long-file-name-'.repeat(7).slice(0, 96)}.png`
+    expect(longName).toHaveLength(100)
+
+    await compressPane(page).locator('input[type="file"]').setInputFiles(imageFile(longName))
+    await expect(barName(page, 0)).toHaveText(`${longName},`)
+    await settled(page)
+
+    const geometry = await compressPane(page).evaluate((pane) => {
+      const edge = pane.getBoundingClientRect().right
+      return [...pane.querySelectorAll('.sp-bar-row')].map((row) => {
+        const name = row.querySelector('.sp-bar-name')
+        const box = row.getBoundingClientRect()
+        return {
+          rowOverflow: row.scrollWidth - row.clientWidth,
+          rowPastPane: Math.round(box.right - edge),
+          nameClipped: name.scrollWidth > name.clientWidth,
+          nameStyle: getComputedStyle(name).textOverflow,
+        }
+      })
+    })
+    expect(geometry, 'expected a BEFORE row and an AFTER row').toHaveLength(2)
+    for (const [i, g] of geometry.entries()) {
+      expect(g.rowOverflow, `row ${i} content is wider than the row`).toBeLessThanOrEqual(0)
+      expect(g.rowPastPane, `row ${i} runs past the converter pane`).toBeLessThanOrEqual(1)
+      expect(g.nameClipped, `row ${i}: a 100-character name was not cut short`).toBe(true)
+      expect(g.nameStyle, `row ${i}: the cut name has no ellipsis`).toBe('ellipsis')
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+      'a long filename pushed the page sideways',
+    ).toBe(0)
+
+    await ctx.close()
+  })
+}
+
+test('the 3D model images are requested only after the 3D tab is first opened', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, 'a visitor trying the homepage converter')
+  const asked = new Set()
+  page.on('request', (req) => {
+    const m = req.url().match(/\/spectrum\/(model-poster|model-turn)\.webp/)
+    if (m) asked.add(m[1])
+  })
+  await go(page, '/')
+  const panel = panelOf(page)
+  await panel.locator('.sp-modes').scrollIntoViewIfNeeded()
+  // The Compress pane has measured the sample photo, so the page has done its
+  // lazy work for the panel in view; the 3D images must still be unasked for.
+  await settled(page)
+  await page.waitForLoadState('load')
+  expect([...asked], 'a 3D image was requested before the 3D tab was opened').toEqual([])
+
+  await panel.getByRole('tab', { name: '3D model', exact: true }).click()
+  await expect.poll(() => [...asked].sort(), {
+    message: 'opening the 3D tab did not request both the poster and the loop',
+    timeout: 15000,
+  }).toEqual(['model-poster', 'model-turn'])
+
+  await ctx.close()
+})
