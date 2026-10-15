@@ -66,12 +66,10 @@
 
 
 /* Tints and HCT panels use measured, viewport-clamped coordinates relative
-   to their column from 768px up. Phones retain the sheet below the swatch. */
+   to their column, clamped between the header and phone tab bar. */
 .plb-tintpop,.plb-picker{position:absolute;top:var(--plb-pop-y,16px);left:var(--plb-pop-x,8px);bottom:auto;z-index:45;width:206px;padding:10px}
 .plb-picker{width:248px}
-@media(min-width:768px){
-  .plb-tintpop,.plb-picker{max-width:calc(100vw - 16px);max-height:var(--plb-pop-max-height,calc(100dvh - 16px));overflow-y:auto;overscroll-behavior:contain}
-}
+.plb-tintpop,.plb-picker{max-width:calc(100vw - 16px);max-height:var(--plb-pop-max-height,calc(100dvh - 16px));overflow-y:auto;overscroll-behavior:contain}
 .plb-tintopen{width:100%;justify-content:center;margin-top:8px}
 .plb-swappop{position:absolute;top:58px;left:50%;z-index:46;display:flex;gap:4px;width:max-content;padding:5px;transform:translateX(-50%)}
 .plb-modal-body{display:grid;grid-template-columns:1fr;gap:14px}
@@ -164,7 +162,7 @@
 
 
 @media(max-width:767px){
-  .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
+  .plb-tintpop,.plb-picker{left:var(--plb-pop-x,12px);right:auto;width:calc(100% - 24px);transform:none;bottom:auto;top:var(--plb-pop-y,calc(100% + 4px));z-index:46}
 }
 
 /* Inside the popup the wall is narrow, so the button drops below the copy

@@ -76,6 +76,15 @@ import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBo
 // When this is filled in, add /create/palette to that spec's LEDES table so
 // the sentence is pinned the same way the other three are.
 const PALETTE_LEDE = ''
+
+// Pointer-opened menus must not leave a keyboard reveal latched on Escape.
+function returnMenuFocus(el, pointer) {
+  if (!el) return
+  if (!pointer) { el.focus({ preventScroll: true }); return }
+  let supported = false
+  el.focus({ preventScroll: true, get focusVisible() { supported = true; return false } })
+  if (!supported || el.matches(':focus-visible')) el.blur()
+}
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -837,7 +846,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (!panel) return
     const place = () => {
       for (const name of ['--plb-pop-x', '--plb-pop-y', '--plb-pop-max-height']) panel.style.removeProperty(name)
-      if (window.innerWidth < 768) return
       const margin = 8
       const visibleRect = (selector) => {
         const node = document.querySelector(selector)
@@ -852,7 +860,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       const available = Math.max(0, bottom - top)
       panel.style.setProperty('--plb-pop-max-height', `${available}px`)
       const rect = panel.getBoundingClientRect()
-      const left = Math.max(margin, Math.min(tools.right - rect.width, window.innerWidth - rect.width - margin))
+      const anchorLeft = window.innerWidth < 768 ? bounds.left + 12 : tools.right - rect.width
+      const left = Math.max(margin, Math.min(anchorLeft, window.innerWidth - rect.width - margin))
       const y = Math.max(top, Math.min(trigger.bottom + margin, bottom - rect.height))
       panel.style.setProperty('--plb-pop-x', `${left - bounds.left}px`)
       panel.style.setProperty('--plb-pop-y', `${y - bounds.top}px`)
@@ -862,6 +871,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     observer.observe(panel)
     observer.observe(column)
     observer.observe(column.querySelector('.plb-col-tools'))
+    for (const node of document.querySelectorAll('.pnav, .pnav-tabs')) observer.observe(node)
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, true)
     return () => {
@@ -945,6 +955,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const resetSnapshotRef = useRef(null)
   const fileRef = useRef(null)
   const swapTriggerRef = useRef(null) // the open column's Swap button, where focus returns when its menu closes
+  const swapPointerRef = useRef(false)
 
   // Drag-reorder plumbing + the grow-in animation slot for inserted colours.
   const dragFrom = useRef(null)
@@ -1217,7 +1228,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const onDown = (e) => { if (!e.target.closest('.plb-swappop, .plb-tool--swap')) setSwapIdx(null) }
     // The focused menu item unmounts with the menu, so focus goes back to the
     // Swap button first.
-    const onEsc = (e) => { if (e.key === 'Escape') { swapTriggerRef.current?.focus(); setSwapIdx(null) } }
+    const onEsc = (e) => { if (e.key === 'Escape') { returnMenuFocus(swapTriggerRef.current, swapPointerRef.current); setSwapIdx(null) } }
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
@@ -1234,13 +1245,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
     const onEsc = (e) => {
       if (e.key !== 'Escape') return
-      if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') ctxTriggerRef.current?.focus({ preventScroll: true })
+      if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') returnMenuFocus(ctxTriggerRef.current, !ctxMenu?.keyboard)
       closeAllMenus(); closePops(); setPreview(null)
     }
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
-  }, [anyPopover, toolsIdx, closeAllMenus])
+  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu])
 
   // Record the board into palette history. Debounced so slider scrubs and
   // rapid randomises collapse into one entry; identical heads are skipped.
@@ -2435,7 +2446,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                         aria-haspopup="menu"
                         aria-expanded={swapIdx === i}
                         ref={swapIdx === i ? swapTriggerRef : undefined}
-                        onClick={() => {
+                        onClick={(e) => {
+                          swapPointerRef.current = e.detail > 0
                           setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
                           setSwapIdx(cur => (cur === i ? null : i))
                         }}
