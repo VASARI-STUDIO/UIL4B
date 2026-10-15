@@ -305,15 +305,22 @@ test.describe('Brand kit walkthrough', () => {
     await expect(card(page)).toBeHidden()
   })
 
-  test('leaving the walkthrough ends it and lands on the review', async ({ page }) => {
+  test('leaving the walkthrough ends it where the person is', async ({ page }) => {
     watch(page, 'designer stopping part-way through')
     await fresh(page)
     await go(page, MENU_ROUTE)
     await pressBrandKit(page)
     await page.keyboard.press('Escape')
 
+    const before = page.url()
     await page.getByRole('button', { name: 'Leave the walkthrough' }).click()
-    await expect(page).toHaveURL(/\/projects$/)
+
+    // The X closes the rail in place (Dylan, 15 Oct): same page, work untouched,
+    // nothing sent to /projects.
+    await expect(rail(page)).toBeHidden()
+    expect(page.url()).toBe(before)
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expect(page.locator('.plb-seedchip')).toBeVisible()
 
     // The rail is gone from the tools until the flow is started again.
     await go(page, '/create/palette')

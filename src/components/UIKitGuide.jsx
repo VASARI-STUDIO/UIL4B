@@ -162,14 +162,26 @@ export default function UIKitGuide({ step }) {
     markIntroSeen()
   }, [])
 
+  // The X ends the walkthrough in place: no navigation (Dylan, 15 Oct). Both
+  // cards are closed with it, so a lifted name card cannot leave the phone tab
+  // bar hidden behind it (`bkit-typing` follows showName).
+  const leftInPlaceRef = useRef(false)
   const exit = useCallback(() => {
+    leftInPlaceRef.current = true
     endGuide()
     setActive(false)
-    // /projects, not /dashboard: /dashboard is a legacy redirect to it (see
-    // data/legacyRoutes.js), and /projects is the User Home that already renders
-    // this system's four-part progress — so "review" lands on the review.
-    navigate('/projects')
-  }, [navigate])
+    setShowIntro(false)
+    setShowName(false)
+  }, [])
+
+  // The X unmounts with the rail, so focus would fall to <body>. It goes to the
+  // page's own main landmark (App's skip-link target, tabIndex -1). An effect on
+  // `active`, so it runs after the card-close cleanups above, not before them.
+  useEffect(() => {
+    if (active || !leftInPlaceRef.current) return
+    leftInPlaceRef.current = false
+    document.getElementById('main')?.focus({ preventScroll: true })
+  }, [active])
 
   // Next counts the step as built, defaults and all, then moves on. On the last
   // tool it opens the closing step instead of leaving.
