@@ -9,15 +9,19 @@ const MAX_SKELETON_ALPHA = 0.2
 async function choosePack(page, pack) {
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const inSheet = await filters.isVisible()
-  if (inSheet) {
+  const inPanel = await filters.isVisible()
+  const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
+  if (inPanel) {
     await filters.click()
-    await expect(sheet).toBeVisible()
+    await expect(panel).toBeVisible()
   }
-  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), pack)
-  if (inSheet) {
+  await chooseMenuOption(page, (inPanel ? panel : page).getByRole('button', { name: 'Icon pack' }), pack)
+  if (await sheet.isVisible()) {
     await sheet.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(sheet).toBeHidden()
+  } else if (inPanel) {
+    await filters.click()
+    await expect(panel).toBeHidden()
   }
 }
 
@@ -362,6 +366,17 @@ for (const scheme of ['light', 'dark']) {
           await page.setViewportSize({ width, height: 900 })
           await page.emulateMedia({ colorScheme: scheme })
           if (signedIn) await signIn(page, { plan: 'pro' })
+          if (signedIn && width === 1440) {
+            // Keep this measurement on page one even with a short fixture pack.
+            await page.addInitScript(() => {
+              const NativeObserver = window.IntersectionObserver
+              window.IntersectionObserver = class extends NativeObserver {
+                observe(target) {
+                  if (!target.matches('.ig-sentinel')) super.observe(target)
+                }
+              }
+            })
+          }
           let release
           const held = new Promise(resolve => { release = resolve })
           await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection',
@@ -385,6 +400,7 @@ for (const scheme of ['light', 'dark']) {
               }).observe({ type: 'layout-shift' })
             })
             expect(before.count).toBeGreaterThanOrEqual(before.columns * 4)
+            expect(before.count).toBe(signedIn ? 120 : 60)
             expect(alphaOf(before.background)).toBeCloseTo(0.06, 3)
             release()
             await expect(page.locator('.ig-skel')).toHaveCount(0)

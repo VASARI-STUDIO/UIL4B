@@ -1890,6 +1890,10 @@ const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
 
 const PAGE_SIZE = 120
 
+function firstPageReady(count, settled, total, pageSize, timedOut = false) {
+  return timedOut || count >= pageSize || settled >= total
+}
+
 /* ── THE PACK MENU, AS DATA ──────────────────────────────────────────────────
 
    It was twenty-four hand-written <option> elements. Tiering it that way would
@@ -2298,8 +2302,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Load EVERY pack by default, progressively. Fire all /collection requests in
   // parallel but append per-pack as each resolves (never Promise.all-block), and
-  // round-robin merge so the grid stays mixed. Skeleton shows until the first
-  // pack lands; a total failure surfaces the retry banner + built-in icons.
+  // keep pack order as lists arrive. Hold the skeleton until a page is ready
+  // or all packs settle, with a timeout for slow packs.
   const browseAll = useCallback((manualRetry = false) => {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
@@ -2331,6 +2335,16 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setIcons([])
     let settled = 0
     let okCount = 0
+    const pageSize = Math.min(PAGE_SIZE, perPackCap * allowedPacks.length)
+    const reveal = (timedOut = false) => {
+      if (rid !== reqId.current) return
+      const count = lists.reduce((sum, list) => sum + list.length, 0)
+      if (firstPageReady(count, settled, allowedPacks.length, pageSize, timedOut)) {
+        clearTimeout(safetyTimer)
+        setLoading(false)
+      }
+    }
+    const safetyTimer = setTimeout(() => reveal(true), 2500)
     allowedPacks.forEach((p, idx) => {
       getCollectionNames(p, { manualRetry })
         .then(({ names: raw }) => {
@@ -2353,14 +2367,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           setIcons(merged)
           const sets = lists.filter(l => l.length).length
           setMode(scopeLine(merged.length, sets))
-          if (merged.length) setLoading(false)
         })
         .catch(() => { /* this pack failed — others may still resolve */ })
         .finally(() => {
           if (rid !== reqId.current) return
           settled++
+          reveal()
           if (settled === allowedPacks.length) {
-            setLoading(false)
             if (okCount === 0) { cdnOk.current = false; setLoadError(true); renderLocal('', '') }
           }
         })
