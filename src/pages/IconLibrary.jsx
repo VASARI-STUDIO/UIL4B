@@ -627,6 +627,7 @@ function BrandGlyph({ pack, name, src, gone = false }) {
       {src && (
         <img
           src={src}
+          className={phase === 'wait' ? 'ig-glyph-pending' : phase === 'in' ? 'ig-glyph-in' : ''}
           loading="lazy"
           alt={name}
           onLoad={onLoad}
@@ -671,6 +672,17 @@ function MonoGlyph({ src, className, alt, onError }) {
 
 // The pack a cell names under its label; see the note at `renderGrid`.
 const packOf = (icon) => (icon.logo ? 'logo.dev' : (icon.custom ? null : icon.pack || null))
+
+const gridShowsPack = (list) => {
+  let firstPack = null
+  for (const icon of list) {
+    const pack = packOf(icon)
+    if (!pack) continue
+    if (firstPack === null) firstPack = pack
+    else if (pack !== firstPack) return true
+  }
+  return false
+}
 
 // Hover warm-up waits for the pointer to rest. Scrolling drags every cell it
 // passes under the pointer through mouseenter, so warming on enter queued one
@@ -3262,17 +3274,18 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // `ghosts` is the main grid's windowing state; cells before `ghosts.upTo`
   // render in their ghost form at their measured height.
   const renderGrid = (list, ghosts = null) => {
-    let firstPack = null
-    let showPack = false
-    for (const icon of list) {
-      const p = packOf(icon)
-      if (!p) continue
-      if (firstPack === null) firstPack = p
-      else if (p !== firstPack) { showPack = true; break }
-    }
+    const showPack = gridShowsPack(list)
     const ghostAt = (idx) => (ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0)
     return list.map((icon, idx) => renderCell(icon, idx, showPack, ghostAt(idx)))
   }
+
+  // Reserve the first page's count and pack layout before catalogue names arrive.
+  const firstPageSize = capped ? Math.min(PAGE_SIZE, ANON_ICON_CAP) : PAGE_SIZE
+  const pendingPacks = pack ? [pack] : group ? ICON_GROUPS[group].packs.filter(canSee) : allowedPacks
+  const skeletonIcons = Array.from({ length: firstPageSize }, (_, idx) => ({
+    pack: pendingPacks[(source === 'group' || source === 'search' ? idx : Math.floor(idx / perPackCap)) % pendingPacks.length],
+  }))
+  const skeletonShowPack = gridShowsPack(skeletonIcons)
 
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
@@ -3515,14 +3528,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             {!gated && (
               <div className="ig" ref={gridRef}>
                 {loading && icons.length === 0
-                  ? Array.from({ length: 80 }).map((_, i) => (
+                  ? skeletonIcons.map((icon, i) => (
                     <div key={`skel-${i}`} className="ic ig-skel" aria-hidden="true">
-                      <div className={pack && !COLORED_PACKS.has(pack) ? 'ig-skel-slot ig-skel-slot--mono' : 'ig-skel-slot'}>
+                      <div className={!COLORED_PACKS.has(icon.pack) ? 'ig-skel-slot ig-skel-slot--mono' : 'ig-skel-slot'}>
                         <div className="sk ig-skel-glyph" />
                       </div>
-                      <div className={pack ? 'ig-skel-labels ig-skel-labels--single' : 'ig-skel-labels'}>
+                      <div className={skeletonShowPack ? 'ig-skel-labels' : 'ig-skel-labels ig-skel-labels--single'}>
                         <div className="sk ig-skel-label" />
-                        {!pack && <div className="sk ig-skel-pack" />}
+                        {skeletonShowPack && <div className="sk ig-skel-pack" />}
                       </div>
                     </div>
                   ))

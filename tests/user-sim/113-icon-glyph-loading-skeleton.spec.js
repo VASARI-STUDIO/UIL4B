@@ -6,6 +6,21 @@ import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, answerIconify, isLiveIconify } from
 const PERSONA = 'a designer opening the icon library on a slow connection'
 const MAX_SKELETON_ALPHA = 0.2
 
+async function choosePack(page, pack) {
+  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  const sheet = page.getByRole('dialog', { name: 'Filters' })
+  const inSheet = await filters.isVisible()
+  if (inSheet) {
+    await filters.click()
+    await expect(sheet).toBeVisible()
+  }
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), pack)
+  if (inSheet) {
+    await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    await expect(sheet).toBeHidden()
+  }
+}
+
 /** Alpha channel of a computed CSS colour, whatever colour space it came back in. */
 function alphaOf(css) {
   if (css === 'transparent') return 0
@@ -129,6 +144,16 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
   test('a pending coloured glyph slot is transparent, and a loaded one is transparent', async ({ page }) => {
     watch(page, PERSONA)
     await signIn(page, { plan: 'pro' })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.addInitScript(() => {
+      window.__flagLoadOpacity = []
+      document.addEventListener('load', event => {
+        const img = event.target
+        if (img.matches?.('.ig-chip img.ig-glyph-pending')) {
+          window.__flagLoadOpacity.push(getComputedStyle(img).opacity)
+        }
+      }, true)
+    })
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
 
@@ -144,7 +169,7 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
         await route.fallback()
       },
     )
-    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'circle-flags')
+    await choosePack(page, 'circle-flags')
     await expect.poll(() => heldRequests, { timeout: 20_000 }).toBeGreaterThan(0)
 
     const slot = page.locator('.ig .ic .ig-chip.ig-chip--wait').first()
@@ -160,6 +185,11 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
     await expect(loaded).toBeVisible({ timeout: 20_000 })
     const resting = await loaded.evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(alphaOf(resting), `a loaded slot paints ${resting}`).toBe(0)
+    await expect(loaded.locator('img')).toHaveCSS('opacity', '1')
+    await expect(loaded.locator('img')).toHaveCSS('transition-duration', '0.16s')
+    const atLoad = await page.evaluate(() => window.__flagLoadOpacity)
+    expect(atLoad.length).toBeGreaterThan(0)
+    expect(atLoad.every(opacity => opacity === '0'), 'flags remain hidden until their image load event').toBe(true)
   })
 })
 
@@ -204,7 +234,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
 
     const missing = await answerWithMissing(page, 'logos', (names) => names.find((n) => n === 'arrow-kit'))
-    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'logos')
+    await choosePack(page, 'logos')
     const cell = page.locator('.ig .ic[aria-label="Customise arrow-kit"]')
     const slot = cell.locator('.ig-chip')
 
@@ -229,7 +259,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
 
     const missing = await answerWithMissing(page, 'lucide', (names) => names[0])
-    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
+    await choosePack(page, 'lucide')
     await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible({ timeout: 20_000 })
     await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
     missing.release()
@@ -261,7 +291,7 @@ test.describe('the customiser while its artwork is loading', () => {
       await route.fallback()
     })
     try {
-      await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'logos')
+      await choosePack(page, 'logos')
       await page.locator('.ig .ic').first().click()
       const stage = page.locator('.icust-stage')
       const placeholder = stage.locator('.icust-stage-wait')
@@ -302,7 +332,7 @@ test.describe('the customiser while its artwork is loading', () => {
   test('cached markup opens without a loading frame', async ({ page }) => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
-    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'logos')
+    await choosePack(page, 'logos')
     const cell = page.locator('.ig .ic').first()
     await expect.poll(() => cell.locator('img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
     await page.evaluate(() => {
@@ -324,51 +354,54 @@ test.describe('the customiser while its artwork is loading', () => {
 })
 
 for (const scheme of ['light', 'dark']) {
-  for (const width of [390, 1440]) {
+  for (const width of [390, 768, 1440]) {
     test.describe('waiting slots in ' + scheme + ' at ' + width, () => {
       test.skip(isLiveIconify(), 'this test holds glyph batches')
-      test('the catalogue skeleton matches loaded row spacing', async ({ page }) => {
-        await page.setViewportSize({ width, height: 900 })
-        await page.emulateMedia({ colorScheme: scheme })
-        await signIn(page, { plan: 'pro' })
-        let release
-        const held = new Promise(resolve => { release = resolve })
-        await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection',
-          async route => { await held; await route.fallback() })
-        try {
-          await go(page, '/create/icons')
-          await expect(page.locator('.ig-skel').first()).toBeVisible()
-          const before = await page.locator('.ig').evaluate(grid => {
-            const cells = [...grid.children]
-            const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length
-            const glyph = cells[columns].querySelector('.ig-skel-glyph').getBoundingClientRect()
-            return { columns, count: cells.length, y: glyph.y, height: cells[columns].getBoundingClientRect().height,
-              background: getComputedStyle(cells[0].querySelector('.sk')).backgroundColor }
-          })
-          await page.evaluate(() => {
-            window.__iconCls = 0
-            new PerformanceObserver(list => {
-              for (const entry of list.getEntries()) {
-                if (!entry.hadRecentInput) window.__iconCls += entry.value
-              }
-            }).observe({ type: 'layout-shift' })
-          })
-          expect(before.count).toBeGreaterThanOrEqual(before.columns * 4)
-          expect(alphaOf(before.background)).toBeCloseTo(0.06, 3)
-          release()
-          await expect(page.locator('.ig-skel')).toHaveCount(0)
-          await expect(page.locator('.ig .ic img').nth(before.columns)).toBeVisible()
-          await expect(page.locator('.ig .ig-glyph-wait,.ig .ig-chip--wait')).toHaveCount(0)
-          const after = await page.locator('.ig').evaluate((grid, columns) => {
-            const cell = grid.children[columns]
-            return { y: cell.querySelector('img,svg').getBoundingClientRect().y, height: cell.getBoundingClientRect().height }
-          }, before.columns)
-          expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(2)
-          expect(after.height).toBeCloseTo(before.height, 1)
-          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-          expect(await page.evaluate(() => window.__iconCls)).toBeLessThanOrEqual(0.1)
-        } finally { release() }
-      })
+      for (const signedIn of [false, true]) {
+        test(`the catalogue skeleton matches loaded row spacing ${signedIn ? 'signed in' : 'signed out'}`, async ({ page }) => {
+          await page.setViewportSize({ width, height: 900 })
+          await page.emulateMedia({ colorScheme: scheme })
+          if (signedIn) await signIn(page, { plan: 'pro' })
+          let release
+          const held = new Promise(resolve => { release = resolve })
+          await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection',
+            async route => { await held; await route.fallback() })
+          try {
+            await go(page, '/create/icons')
+            await expect(page.locator('.ig-skel').first()).toBeVisible()
+            const before = await page.locator('.ig').evaluate(grid => {
+              const cells = [...grid.children]
+              const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length
+              const glyph = cells[columns].querySelector('.ig-skel-glyph').getBoundingClientRect()
+              return { columns, count: cells.length, y: glyph.y, height: cells[columns].getBoundingClientRect().height,
+                background: getComputedStyle(cells[0].querySelector('.sk')).backgroundColor }
+            })
+            await page.evaluate(() => {
+              window.__iconCls = 0
+              new PerformanceObserver(list => {
+                for (const entry of list.getEntries()) {
+                  if (!entry.hadRecentInput) window.__iconCls += entry.value
+                }
+              }).observe({ type: 'layout-shift' })
+            })
+            expect(before.count).toBeGreaterThanOrEqual(before.columns * 4)
+            expect(alphaOf(before.background)).toBeCloseTo(0.06, 3)
+            release()
+            await expect(page.locator('.ig-skel')).toHaveCount(0)
+            await expect(page.locator('.ig .ic')).toHaveCount(before.count)
+            await expect(page.locator('.ig .ic img').nth(before.columns)).toBeVisible()
+            await expect(page.locator('.ig .ig-glyph-wait,.ig .ig-chip--wait')).toHaveCount(0)
+            const after = await page.locator('.ig').evaluate((grid, columns) => {
+              const cell = grid.children[columns]
+              return { y: cell.querySelector('img,svg').getBoundingClientRect().y, height: cell.getBoundingClientRect().height }
+            }, before.columns)
+            expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(2)
+            expect(after.height).toBeCloseTo(before.height, 1)
+            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+            expect(await page.evaluate(() => window.__iconCls)).toBeLessThanOrEqual(0.1)
+          } finally { release() }
+        })
+      }
       test('regular, flags and Groups reserve transparent space', async ({ page }) => {
         await page.setViewportSize({ width, height: 900 })
         await page.emulateMedia({ colorScheme: scheme })
@@ -398,10 +431,35 @@ for (const scheme of ['light', 'dark']) {
             }
           }
           await check('.ig .ic .ig-glyph-wait')
-          await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'circle-flags')
+          await choosePack(page, 'circle-flags')
           await check('.ig .ic .ig-chip--wait')
           await go(page, '/create/icons/groups?group=wayfinding')
           await check('.igp-grid .igp-wait')
+          await page.emulateMedia({ reducedMotion: 'no-preference' })
+          await page.evaluate(() => {
+            window.__groupLoadOpacity = []
+            document.addEventListener('load', event => {
+              const img = event.target
+              if (img.matches?.('.igp-grid img.igp-glyph-pending')) {
+                window.__groupLoadOpacity.push(getComputedStyle(img).opacity)
+              }
+            }, true)
+          })
+          release()
+          const glyph = page.locator('.igp-grid img').first()
+          await expect(glyph).toHaveCSS('opacity', '1')
+          await expect(glyph).toHaveCSS('transition-property', 'opacity')
+          await expect(glyph).toHaveCSS('transition-duration', '0.16s')
+          const atLoad = await page.evaluate(() => window.__groupLoadOpacity)
+          expect(atLoad.length).toBeGreaterThan(0)
+          expect(atLoad.every(opacity => opacity === '0')).toBe(true)
+          await page.emulateMedia({ reducedMotion: 'reduce' })
+          await expect(glyph).toHaveCSS('transition-property', 'none')
+          await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'false' })
+          await expect(glyph).toHaveCSS('transition-property', 'opacity')
+          await page.emulateMedia({ reducedMotion: 'no-preference' })
+          await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
+          await expect(glyph).toHaveCSS('transition-property', 'none')
         } finally { release() }
       })
     })

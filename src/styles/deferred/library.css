@@ -396,7 +396,7 @@ html[data-reduced-motion="true"] .icust-stage-wait{animation:none}
 /* Loaded glyphs fade without moving. */
 .ic img,.ig-chip img{transition:opacity 160ms cubic-bezier(0.23,1,0.32,1)}
 .ic img.ig-glyph-in,.ig-chip--in img{opacity:1}
-.ic img.ig-glyph-pending{opacity:0}
+.ic img.ig-glyph-pending{opacity:0;transition:none}
 /* The artwork stays hidden while the chip waits, so it never shows on a bare
    skeleton. */
 .ig-chip--wait img{opacity:0}

@@ -72,3 +72,21 @@ test('cells above the focused one are still windowed', () => {
   // had been clicked: the DOM never shrank.
   assert.doesNotMatch(src, /upTo = Math\.min\(upTo, focused/)
 })
+
+test('the initial skeleton fits the signed-out cap and the signed-in first page', () => {
+  // Run the sizing expressions with catalogue-sized packs, without mounting React.
+  const labels = src.slice(src.indexOf('const packOf ='), src.indexOf('const warmSoon ='))
+  const sizing = block('const firstPageSize =', 'const skeletonShowPack = gridShowsPack(skeletonIcons)')
+  const pageSize = Number(src.match(/const PAGE_SIZE = (\d+)/)[1])
+  const capSource = readFileSync(new URL('../../src/data/iconPackTiers.js', import.meta.url), 'utf8')
+  const cap = Number(capSource.match(/ANON_ICON_CAP = (\d+)/)[1])
+  const size = new Function('capped', 'perPackCap', 'allowedPacks', 'PAGE_SIZE', 'ANON_ICON_CAP', `
+    const pack = '', group = null, source = 'all'
+    ${labels}
+    ${sizing}
+    return { count: skeletonIcons.length, showPack: skeletonShowPack }
+  `)
+  const packs = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
+  assert.deepEqual(size(true, cap / packs.length, packs, pageSize, cap), { count: cap, showPack: true })
+  assert.deepEqual(size(false, 250, packs, pageSize, cap), { count: pageSize, showPack: false })
+})
