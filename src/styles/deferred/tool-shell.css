@@ -842,7 +842,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
      one-line title read as a masthead without making a two-line one read as a
      hole; the dark slab, the radius and the padding are what carry it, and they
      are the same at every width. Measured after: /discover/palettes is 92px at
-     320 and 227px at 1440, /discover/resources 198px and 394px - the box now
+     320 and 227px at 1440 - the box now
      varies because its contents do.
      NOT A DEFECT, checked and recorded so it is not re-reported: .dgh-hero
      reports scrollWidth - clientWidth of 36px at 390 and 61px at 641, scaling
