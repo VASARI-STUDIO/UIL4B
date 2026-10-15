@@ -135,6 +135,26 @@ test.describe('changing billing period at checkout', () => {
     expect(overflow, 'the page scrolls sideways at 390px').toBeLessThanOrEqual(0)
   })
 
+  test('a period with no saving shows no empty saving line and its switch stays 48px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await openCheckout(page, 'monthly')
+    const save = (label) => period(page, label).locator('xpath=ancestor::label').locator('.checkout-period-save')
+
+    // Control: a period that does carry a saving shows it, so "empty" below is
+    // a real state and not just a missing element.
+    await expect(save(LADDER.yearly.label)).toBeVisible()
+    await expect(save(LADDER.yearly.label)).toHaveText(/^Save \d+%$/)
+
+    // Monthly has no saving: its line is in the DOM, empty, and takes no space.
+    const monthlySave = save(LADDER.monthly.label)
+    await expect(monthlySave).toHaveCount(1)
+    await expect(monthlySave).toBeEmpty()
+    await expect(monthlySave).toHaveCSS('display', 'none')
+
+    const monthlyBox = await period(page, LADDER.monthly.label).locator('xpath=ancestor::label').boundingBox()
+    expect(monthlyBox.height, 'the Monthly switch is not 48px tall').toBeCloseTo(48, 0)
+  })
+
   test('signed out, the summary and period choice work and only payment asks for a login', async ({ page }) => {
     const sessionRequests = []
     await page.route('**/api/create-checkout', (route) => {
