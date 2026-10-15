@@ -357,6 +357,43 @@ test.describe('the customiser while its artwork is loading', () => {
   })
 })
 
+test('slow catalogues keep the skeleton and loading message until icons arrive', async ({ page }) => {
+  test.skip(isLiveIconify(), 'this test controls catalogue arrival times')
+  await page.addInitScript(() => {
+    window.__sawEmptyIcons = false
+    new MutationObserver(() => {
+      if (document.querySelector('.pl-empty')?.textContent.includes('No icons to show')) {
+        window.__sawEmptyIcons = true
+      }
+    }).observe(document, { childList: true, subtree: true })
+  })
+  let release
+  const held = new Promise(resolve => { release = resolve })
+  let arrivals = 0
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection', async route => {
+    await held
+    await new Promise(resolve => setTimeout(resolve, 4000))
+    arrivals += 1
+    await route.fallback()
+  })
+  try {
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig-skel')).toHaveCount(60)
+    release()
+    // Cross the first-page timeout while every catalogue response is held.
+    await page.waitForTimeout(3000)
+    expect(arrivals).toBe(0)
+    await expect(page.locator('.pl-empty')).toHaveCount(0)
+    await expect(page.getByText('No icons to show', { exact: true })).toHaveCount(0)
+    await expect(page.locator('.ig-skel')).toHaveCount(60)
+    await expect(page.locator('.ig-status')).toHaveText('Loading icons\u2026')
+    await expect(page.locator('.ig-status')).toBeVisible()
+    await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
+    await expect(page.locator('.ig .ic').first()).toBeVisible()
+    expect(await page.evaluate(() => window.__sawEmptyIcons)).toBe(false)
+  } finally { release() }
+})
+
 test('staggered catalogues keep the signed-out first page intact at 768', async ({ page }) => {
   test.skip(isLiveIconify(), 'this test controls catalogue arrival times')
   await page.setViewportSize({ width: 768, height: 900 })
@@ -434,10 +471,26 @@ for (const scheme of ['light', 'dark']) {
             const before = await page.locator('.ig').evaluate(grid => {
               const cells = [...grid.children]
               const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length
-              const glyph = cells[columns].querySelector('.ig-skel-glyph').getBoundingClientRect()
-              return { columns, count: cells.length, y: glyph.y, height: cells[columns].getBoundingClientRect().height,
+              const slot = cells[columns].querySelector('.ig-skel-slot').getBoundingClientRect()
+              return { columns, count: cells.length, y: slot.y + (slot.height - 24) / 2, height: cells[columns].getBoundingClientRect().height,
                 background: getComputedStyle(cells[0].querySelector('.sk')).backgroundColor }
             })
+            await expect(page.locator('.ig-skel-glyph')).toHaveCount(0)
+            await expect(page.locator('.ig-skel-label')).toHaveCount(before.count)
+            const slots = await page.locator('.ig-skel-slot').evaluateAll(els => els.map(el => {
+              const css = getComputedStyle(el)
+              return { children: el.childElementCount, background: css.backgroundColor,
+                image: css.backgroundImage, shadow: css.boxShadow, animation: css.animationName,
+                height: el.getBoundingClientRect().height }
+            }))
+            for (const slot of slots) {
+              expect(slot.children).toBe(0)
+              expect(alphaOf(slot.background)).toBe(0)
+              expect(slot.image).toBe('none')
+              expect(slot.shadow).toBe('none')
+              expect(slot.animation).toBe('none')
+              expect(slot.height).toBe(24)
+            }
             await page.evaluate(() => {
               window.__iconCls = 0
               new PerformanceObserver(list => {

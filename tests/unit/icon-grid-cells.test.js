@@ -91,7 +91,7 @@ test('the initial skeleton fits the signed-out cap and the signed-in first page'
   assert.deepEqual(size(false, 250, packs, pageSize, cap), { count: pageSize, showPack: false })
 })
 
-test('the catalogue skeleton holds until a page fills, every pack settles, or the timeout fires', () => {
+test('the catalogue skeleton holds until a page fills, every pack settles, or a nonempty page times out', () => {
   const helper = block('function firstPageReady(', '\n}')
   const ready = new Function(`${helper}; return firstPageReady`)()
   // Signed out: one pack is only 12 of the reserved 60 cells.
@@ -105,7 +105,10 @@ test('the catalogue skeleton holds until a page fills, every pack settles, or th
   assert.equal(ready(119, 1, 25, 120), false)
   assert.equal(ready(120, 1, 25, 120), true)
   assert.equal(ready(214, 1, 25, 120), true)
-  // A slow or stalled pack cannot strand even an empty skeleton.
+  // The timeout can reveal a partial page, but cannot announce an empty page
+  // while any catalogue is still loading.
   assert.equal(ready(12, 1, 5, 60, true), true)
-  assert.equal(ready(0, 0, 5, 60, true), true)
+  assert.equal(ready(0, 0, 5, 60, true), false)
+  assert.equal(ready(0, 4, 5, 60, true), false)
+  assert.equal(ready(0, 5, 5, 60, true), true)
 })

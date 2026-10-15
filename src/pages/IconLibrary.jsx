@@ -1891,7 +1891,7 @@ const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
 const PAGE_SIZE = 120
 
 function firstPageReady(count, settled, total, pageSize, timedOut = false) {
-  return timedOut || count >= pageSize || settled >= total
+  return (timedOut && count > 0) || count >= pageSize || settled >= total
 }
 
 /* ── THE PACK MENU, AS DATA ──────────────────────────────────────────────────
@@ -3554,9 +3554,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 {loading && icons.length === 0
                   ? skeletonIcons.map((icon, i) => (
                     <div key={`skel-${i}`} className="ic ig-skel" aria-hidden="true">
-                      <div className={!COLORED_PACKS.has(icon.pack) ? 'ig-skel-slot ig-skel-slot--mono' : 'ig-skel-slot'}>
-                        <div className="sk ig-skel-glyph" />
-                      </div>
+                      <div className={!COLORED_PACKS.has(icon.pack) ? 'ig-skel-slot ig-skel-slot--mono' : 'ig-skel-slot'} />
                       <div className={skeletonShowPack ? 'ig-skel-labels' : 'ig-skel-labels ig-skel-labels--single'}>
                         <div className="sk ig-skel-label" />
                         {skeletonShowPack && <div className="sk ig-skel-pack" />}

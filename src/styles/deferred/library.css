@@ -440,7 +440,6 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .ig-skel-pack{width:40%;max-width:36px;height:8px;border-radius:var(--radius-pill)}
 @media(max-width:980px){.ig-skel-labels{height:25px}.ig-skel-pack{display:none}}
 @media(max-width:640px){.ig-skel-labels{height:12.5px}}
-.ig-skel-glyph{width:24px;height:24px;border-radius:var(--radius-xs)}
 .ig-skel-label{width:60%;max-width:52px;height:8px;border-radius:var(--radius-pill)}
 .ig-sentinel{width:100%;height:1px}
 .ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
