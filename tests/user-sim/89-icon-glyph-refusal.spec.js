@@ -20,7 +20,7 @@
 // per-spec route that drifted would refuse differently from the outage.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { isLiveIconify, refuseIconifyGlyphs } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify, refuseIconifyGlyphs } from './iconify-stub.js'
 
 const PERSONA = 'a designer looking for an icon on a shared office connection, where the icon API has rate-limited the whole building'
 
@@ -107,5 +107,81 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
     expect(m.painted, 'the grid drew no glyphs at all').toBeGreaterThan(8)
     expect(m.notFromBatch, 'a cell is still fetching its own glyph instead of using the batch').toBe(0)
     expect(m.waiting, 'cells are still waiting for markup that never arrived').toBe(0)
+  })
+})
+
+// ONE PACK'S BATCH FAILS WHILE THE OTHERS LAND.
+//
+// The notice above is for the service refusing everything. When only one pack's
+// request fails (a big flag pack timing out under the 8s cap, say) the other
+// packs paint, and the failed names come back out of the asked set and are
+// retried, at most twice, after a short cool-down so a rate-limited API is not
+// hammered.
+//
+// The victim is whichever pack is asked for first, so the spec does not depend
+// on which packs the default grid happens to carry. Everything else keeps
+// answering from the fixture (route.fallback hands the request to the context
+// route), and a refused answer is stamped REFUSED_VALUE so the audit counts it
+// as deliberate.
+const BATCH = (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/[^/]+\.json$/.test(u.pathname) && u.search.includes('icons=')
+
+const failFirstPack = async (page, failures) => {
+  const seen = { pack: null, requests: 0 }
+  await page.route(BATCH, (route) => {
+    const pack = new URL(route.request().url()).pathname.slice(1, -'.json'.length)
+    if (!seen.pack) seen.pack = pack
+    if (pack !== seen.pack) return route.fallback()
+    seen.requests += 1
+    if (seen.requests > failures) return route.fallback()
+    return route.fulfill({
+      status: 429, contentType: 'text/plain', body: 'Too Many Requests',
+      headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE },
+    })
+  })
+  return seen
+}
+
+test.describe('the icon grid when only one pack batch fails', () => {
+  test.skip(isLiveIconify(), 'the live API decides what it serves; this spec pins the failure shape')
+
+  test('a failed pack is asked again and its cells paint, with no outage notice', async ({ page }) => {
+    test.setTimeout(60_000)
+    watch(page, PERSONA)
+    const seen = await failFirstPack(page, 1)
+    await go(page, '/create/icons')
+
+    // POSITIVE CONTROL. While the retry is pending, the failed pack's cells really are blank
+    // (a placeholder, or a coloured slot with no artwork). Without this, the
+    // "none blank" check below would also pass for a grid that never had any.
+    const blank = () => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
+    await expect.poll(() => seen.requests, { timeout: 20_000 }).toBeGreaterThan(0)
+    await expect.poll(blank, { timeout: 2_000, message: 'the failed pack left no blank cells to recover' }).toBeGreaterThan(0)
+    // Asked again after the cool-down, without anyone scrolling or clicking.
+    await expect.poll(() => seen.requests, { timeout: 20_000, message: 'the failed pack was never asked again' }).toBeGreaterThan(1)
+    // And the cells that were blank are filled in.
+    await expect.poll(blank, { timeout: 20_000, message: 'cells are still waiting on the pack that failed once' }).toBe(0)
+    await expect(page.getByText(/couldn.t reach the icon service/i), 'one failed pack is not an outage').toHaveCount(0)
+  })
+
+  test('a pack that keeps failing is retried twice and then left alone', async ({ page }) => {
+    test.setTimeout(60_000)
+    watch(page, PERSONA)
+    const seen = await failFirstPack(page, Infinity)
+    await go(page, '/create/icons')
+
+    // 1 first ask + 2 retries.
+    await expect.poll(() => seen.requests, { timeout: 25_000 }).toBe(3)
+    // Well past another cool-down: no request storm, no fourth ask.
+    await page.waitForTimeout(5_000)
+    expect(seen.requests, 'the failed pack is being asked again without a bound').toBe(3)
+    // The packs that answered still painted, and the page did not fall over.
+    const painted = await page.evaluate(() => [...document.querySelectorAll('.ig .ic img')].filter((i) => i.complete && i.naturalWidth > 0).length)
+    expect(painted, 'the packs that answered did not paint').toBeGreaterThan(8)
+    await expect(page.getByText(/couldn.t reach the icon service/i), 'a retry failing must not raise the outage notice').toHaveCount(0)
+    // Names given up on are quiet empty slots, not skeletons that pulse for the
+    // session. The positive control is that those cells exist: still no artwork.
+    const blankCells = await page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
+    expect(blankCells, 'the failed pack left no empty cells, so there is nothing to check').toBeGreaterThan(0)
+    await expect(page.locator('.ig .ic :is(.ig-glyph-wait, .ig-chip--wait)'), 'a given-up name is still a loading skeleton').toHaveCount(0)
   })
 })

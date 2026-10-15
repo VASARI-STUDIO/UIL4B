@@ -55,7 +55,6 @@ export function useProPrice(requestedCurrency) {
   const { prices, settled } = usePrices()
   return useMemo(() => {
     const monthlyAmount = prices?.monthly?.[currency]
-    const quarterlyAmount = prices?.quarterly?.[currency]
     const yearlyAmount = prices?.yearly?.[currency]
     const hasRecurring = typeof monthlyAmount === 'number' && typeof yearlyAmount === 'number'
     const savingsPct = hasRecurring
@@ -68,19 +67,15 @@ export function useProPrice(requestedCurrency) {
       loaded: settled,
       serviceAvailable: !!prices,
       monthly: settled && typeof monthlyAmount === 'number' ? formatPrice(monthlyAmount, currency) : null,
-      quarterlyTotal: settled && typeof quarterlyAmount === 'number' ? formatPrice(quarterlyAmount, currency) : null,
-      quarterlyPerMonth: settled && typeof quarterlyAmount === 'number' ? formatPrice(quarterlyAmount / 3, currency) : null,
       yearlyPerMonth: settled && typeof yearlyAmount === 'number' ? formatPrice(yearlyAmount / 12, currency) : null,
       yearlyTotal: settled && typeof yearlyAmount === 'number' ? formatPrice(yearlyAmount, currency) : null,
       savingsPct,
       availability: {
         monthly: !!currencyAvailability.monthly?.[currency],
-        quarterly: !!currencyAvailability.quarterly?.[currency],
         yearly: !!currencyAvailability.yearly?.[currency],
       },
       source: {
         monthly: prices?.source?.monthly || 'unavailable',
-        quarterly: prices?.source?.quarterly || 'unavailable',
         yearly: prices?.source?.yearly || 'unavailable',
       },
     }
