@@ -161,7 +161,7 @@ test.describe('Brand kit walkthrough', () => {
 
     // And the flow is actually running on it.
     await expect(rail(page)).toBeVisible()
-    await expect(rail(page)).toContainText('0 of 4 built')
+    await expect(rail(page)).toContainText('0 of 4 parts')
     await inView(rail(page))
     await settle(rail(page))
 
@@ -254,7 +254,7 @@ test.describe('Brand kit walkthrough', () => {
 
     // Do real work in step one, through the tool's own control.
     await setSeed(page, '#B5179E')
-    await expect(rail(page)).toContainText('1 of 4 built')
+    await expect(rail(page)).toContainText('1 of 4 parts')
 
     // Walk forward with the rail's own Next, the way the flow is meant to run.
     await page.getByRole('button', { name: /^Next: Fonts/ }).click()
@@ -264,12 +264,29 @@ test.describe('Brand kit walkthrough', () => {
     // Jump to the last step. The colour step still reads as done AND still
     // shows its swatches — that is the whole point of a guided flow rather than
     // four bookmarks, and it is carried by the saved design, not by a cursor.
+    // From 1024px the bar itself shows no swatches (one 55px row of count,
+    // steps and buttons); the colours step one built are in the help card.
     await page.getByRole('link', { name: /Icons/ }).first().click()
     await expect(page).toHaveURL(/\/create\/icons$/)
     const colourChip = rail(page).getByRole('link', { name: /Colours/ })
     await expect(colourChip).toHaveClass(/is-done/)
-    await expect(colourChip.locator('.bkit-step-swatch').first()).toBeVisible()
-    await expect(rail(page)).toContainText(/[1-9] of 4 built/)
+    // Read in one go from the DOM: the rail remounts while the Icons step
+    // arrives, and a locator-level toBeHidden() passes in that empty moment.
+    // 'absent' is not 'hidden', so only swatches that exist AND are not
+    // displayed satisfy this.
+    await expect.poll(() => rail(page).evaluate((el) => {
+      const sw = [...el.querySelectorAll('.bkit-step-swatches')]
+      if (!sw.length) return 'absent'
+      return sw.every((s) => getComputedStyle(s).display === 'none') ? 'hidden' : 'shown'
+    }), { message: 'the bar still shows swatches; from 1024px they live in the help card' }).toBe('hidden')
+    await page.getByRole('button', { name: /What.s this\?/ }).click()
+    await expect(card(page)).toBeVisible()
+    const built = await page.evaluate((k) => (JSON.parse(localStorage.getItem(k) || '{}').palette?.colors || []).length, DESIGN_KEY)
+    expect(built, 'step one saved no colours').toBeGreaterThan(0)
+    await expect(card(page).locator('.bkit-card-artefact .bkit-step-swatch')).toHaveCount(built)
+    await page.keyboard.press('Escape')
+    await expect(card(page)).toBeHidden()
+    await expect(rail(page)).toContainText(/[1-9] of 4 parts/)
     // The rail has to be ON SCREEN here, on the tallest page in the flow — this
     // is the claim that it is always to hand, not merely always rendered.
     await inView(rail(page))
@@ -299,7 +316,7 @@ test.describe('Brand kit walkthrough', () => {
     // reading "Build a brand kit" that then drops you at step two has lied.
     expect(label).toBe('Resume: Fonts')
     await expect(page).toHaveURL(/\/create\/font-pair$/)
-    await expect(rail(page)).toContainText('1 of 4 built')
+    await expect(rail(page)).toContainText('1 of 4 parts')
 
     // And it does NOT re-teach: the card is not thrown up again on resume.
     await expect(card(page)).toBeHidden()
@@ -318,6 +335,52 @@ test.describe('Brand kit walkthrough', () => {
     // The rail is gone from the tools until the flow is started again.
     await go(page, '/create/palette')
     await expect(rail(page)).toBeHidden()
+  })
+
+  // The desktop bar is chrome, not a card: full-bleed, 55px, fixed flush to the
+  // foot of the viewport, with no radius or shadow. Measured, not read from the
+  // stylesheet, so a rule that stops applying fails here.
+  test('1440px: the bar is a flush 55px strip with no radius or shadow, and on Colours it sits on the Adjust-all row', async ({ page }) => {
+    watch(page, 'designer on a desktop with the walkthrough bar up')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(([g, s]) => {
+      try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* ignore */ }
+    }, [GUIDE_KEY, SEEN_KEY])
+
+    // A ToolLayout step first: the bar alone, against the viewport.
+    await go(page, '/create/font-pair')
+    await expect(rail(page)).toBeVisible()
+    const bar = await rail(page).evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      const cs = getComputedStyle(el)
+      return {
+        height: r.height,
+        bottomGap: window.innerHeight - r.bottom,
+        left: r.left,
+        right: window.innerWidth - r.right,
+        position: cs.position,
+        radius: cs.borderRadius,
+        shadow: cs.boxShadow,
+      }
+    })
+    expect(bar).toEqual({ height: 55, bottomGap: 0, left: 0, right: 0, position: 'fixed', radius: '0px', shadow: 'none' })
+
+    // Colours: the Adjust-all row is the toolbar the bar rides on, so the bar's
+    // bottom edge is the toolbar's top edge.
+    await go(page, '/create/palette')
+    await expect(rail(page)).toBeVisible()
+    const toolbar = page.locator('.plb-adjust')
+    await expect(toolbar).toBeVisible()
+    await expect.poll(async () => {
+      const b = await rail(page).boundingBox()
+      const t = await toolbar.boundingBox()
+      return Math.abs((b.y + b.height) - t.y) <= 1
+    }, { message: 'the bar is not directly above the Adjust-all row', timeout: 5000 }).toBe(true)
+    const colours = await rail(page).evaluate((el) => ({
+      height: el.getBoundingClientRect().height,
+      toolbarBottomGap: window.innerHeight - document.querySelector('.plb-adjust').getBoundingClientRect().bottom,
+    }))
+    expect(colours).toEqual({ height: 55, toolbarBottomGap: 0 })
   })
 
   test('the Palette page no longer offers Build UI system to anyone', async ({ page }) => {

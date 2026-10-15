@@ -311,8 +311,8 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
    a ToolLayout page. Below 1024px none of this applies. */
 @media(min-width:1024px){
   :root{--bkit-h:55px}
-  html.has-kitbar{scroll-padding-block-end:var(--bkit-h)}
-  html.has-kitbar .toast{bottom:calc(24px + var(--bkit-h))}
+  html.has-kitbar{scroll-padding-block-end:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
+  html.has-kitbar .toast{bottom:calc(24px + var(--bkit-h) + var(--bkit-toolbar-h,0px))}
 
   .bkit-rail{
     --bkit-hair:color-mix(in srgb,var(--t0) 9%,transparent);
@@ -333,8 +333,10 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
   /* ToolLayout hosts line up with the toolbar's back button and primary;
      Colours with its Adjust-all row. */
   .tl .bkit-rail{padding-inline:var(--tl-pad)}
-  .plb .bkit-rail{padding-inline:clamp(12px,2vw,20px)}
+  .plb .bkit-rail{bottom:var(--bkit-toolbar-h,0px);padding-inline:clamp(12px,2vw,20px)}
+  html.has-kitbar .plb .plb-adjust{position:fixed;inset-inline:0;bottom:0;z-index:40}
   .bkit-rail-space{display:block;flex:0 0 auto;height:var(--bkit-h)}
+  .plb .bkit-rail-space{height:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
 
   .bkit-rail-head{flex-direction:row;align-items:baseline;gap:8px;flex:0 0 auto}
   .bkit-rail-eyebrow{font-family:var(--font);font-size:.8125rem;font-weight:540;line-height:1.2;letter-spacing:normal;text-transform:none;color:var(--t0);white-space:nowrap}
@@ -364,6 +366,12 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
      opened them. UIKitGuide measures both; the fallbacks are the unmeasured
      first frame. It floats, so it keeps its shadow. */
   .bkit-card{position:fixed;left:auto;right:var(--bkit-dock-end,16px);bottom:calc(var(--bkit-dock-bottom,calc(var(--bkit-h) + 12px)) - 4px);width:min(400px,100vw - 32px);margin:0;max-height:calc(100dvh - var(--chrome-h) - var(--bkit-h) - 16px);overflow-y:auto;overscroll-behavior:contain}
+  .plb .bkit-card{max-height:calc(100dvh - var(--chrome-h) - var(--bkit-h) - var(--bkit-toolbar-h,0px) - 16px)}
+  .bkit-card{font-family:var(--font);font-size:13px;font-weight:400;letter-spacing:normal;text-transform:none}
+  .bkit-card-eyebrow,.bkit-card-title,.bkit-name-label,.bkit-card .btn{font-family:var(--font);font-size:13px;font-weight:540;letter-spacing:normal;text-transform:none}
+  .bkit-card-body,.bkit-card-steps li,.bkit-card-steps li.is-current,.bkit-name-input,.bkit-name-note,.bkit-name-error,.bkit-card .uh-save-refusal{font-size:13px;font-weight:400;letter-spacing:normal;text-transform:none}
+  .bkit-card-steps strong{font-weight:540}
+  .bkit-card-num{font-family:var(--font);font-size:12px;font-weight:560;letter-spacing:normal;text-transform:none;font-variant-numeric:tabular-nums}
   .bkit-card-artefact{display:block;margin-top:4px}
   .bkit-card-artefact .bkit-step-swatches{gap:4px;height:12px}
   .bkit-card-artefact .bkit-step-swatch{width:12px;height:12px;border-radius:3px}

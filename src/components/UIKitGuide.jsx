@@ -284,6 +284,28 @@ export default function UIKitGuide({ step }) {
   const nameCardRef = useRef(null)
   const nameRowRef = useRef(null)
   const [dock, setDock] = useState(null)
+  const shown = active && !!current
+  useLayoutEffect(() => {
+    if (!shown) return undefined
+    const root = document.documentElement
+    root.classList.add('has-kitbar')
+    const toolbar = step === 'color' ? railRef.current?.closest('.plb')?.querySelector('.plb-adjust') : null
+    const desktop = window.matchMedia('(min-width:1024px)')
+    const measure = () => {
+      if (toolbar && desktop.matches) root.style.setProperty('--bkit-toolbar-h', `${toolbar.getBoundingClientRect().height}px`)
+      else root.style.removeProperty('--bkit-toolbar-h')
+    }
+    measure()
+    const observer = toolbar && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    observer?.observe(toolbar)
+    desktop.addEventListener('change', measure)
+    return () => {
+      observer?.disconnect()
+      desktop.removeEventListener('change', measure)
+      root.style.removeProperty('--bkit-toolbar-h')
+      root.classList.remove('has-kitbar')
+    }
+  }, [shown, step])
   const cardOpen = showIntro || showName
   useLayoutEffect(() => {
     const rail = railRef.current
@@ -313,6 +335,8 @@ export default function UIKitGuide({ step }) {
     // (a web font arriving) moves the button the card hangs from.
     const actions = rail.querySelector('.bkit-rail-actions')
     if (actions) observer?.observe(actions)
+    const toolbar = step === 'color' ? rail.closest('.plb')?.querySelector('.plb-adjust') : null
+    if (toolbar) observer?.observe(toolbar)
     window.addEventListener('scroll', schedule, { passive: true, capture: true })
     window.addEventListener('resize', schedule)
     document.addEventListener('focusin', schedule)
@@ -338,16 +362,6 @@ export default function UIKitGuide({ step }) {
         ...(lifted ? { '--bkit-vv-h': `${dock.room}px`, '--bkit-vv-top': `${dock.top}px` } : null),
       }
     : undefined
-
-  // While the bar is up the page knows it: from 1024px the bar is fixed over
-  // the foot of the viewport, so focus scrolling and the toast stack clear it.
-  const shown = active && !!current
-  useEffect(() => {
-    if (!shown) return undefined
-    const root = document.documentElement
-    root.classList.add('has-kitbar')
-    return () => root.classList.remove('has-kitbar')
-  }, [shown])
 
   // A lifted card can be shorter than its content; keep the field and Save in
   // view inside it.
