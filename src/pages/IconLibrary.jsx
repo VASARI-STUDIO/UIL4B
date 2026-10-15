@@ -2220,6 +2220,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const [addMode, setAddMode] = useState(false)
   const [recents, setRecents] = useState(() => getRecentIcons())
   const timer = useRef(null)
+  const firstPageTimer = useRef(null)
+  const [firstPageTimeout, setFirstPageTimeout] = useState(null)
+  useEffect(() => {
+    if (!firstPageTimeout) return
+    firstPageTimer.current = setTimeout(firstPageTimeout, 2500)
+    return () => clearTimeout(firstPageTimer.current)
+  }, [firstPageTimeout])
   const cdnOk = useRef(null)
   const reqId = useRef(0)            // guards against out-of-order async responses
   const didInit = useRef(false)
@@ -2335,16 +2342,19 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setIcons([])
     let settled = 0
     let okCount = 0
+    let holding = true
     const pageSize = Math.min(PAGE_SIZE, perPackCap * allowedPacks.length)
     const reveal = (timedOut = false) => {
       if (rid !== reqId.current) return
       const count = lists.reduce((sum, list) => sum + list.length, 0)
       if (firstPageReady(count, settled, allowedPacks.length, pageSize, timedOut)) {
-        clearTimeout(safetyTimer)
+        clearTimeout(firstPageTimer.current)
+        holding = false
+        setIcons(capList(lists.flat()))
         setLoading(false)
       }
     }
-    const safetyTimer = setTimeout(() => reveal(true), 2500)
+    setFirstPageTimeout(() => () => reveal(true))
     allowedPacks.forEach((p, idx) => {
       getCollectionNames(p, { manualRetry })
         .then(({ names: raw }) => {
@@ -2364,7 +2374,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           // to introduce. `perPackCap` is 12 for a signed-out viewer, so all
           // five land inside the cap.
           const merged = capList(lists.flat())
-          setIcons(merged)
+          // Keep the reserved skeleton intact until reveal exposes the first page.
+          if (!holding) setIcons(merged)
           const sets = lists.filter(l => l.length).length
           setMode(scopeLine(merged.length, sets))
         })

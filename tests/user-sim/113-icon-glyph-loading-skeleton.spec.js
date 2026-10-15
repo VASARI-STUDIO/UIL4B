@@ -7,7 +7,7 @@ const PERSONA = 'a designer opening the icon library on a slow connection'
 const MAX_SKELETON_ALPHA = 0.2
 
 async function choosePack(page, pack) {
-  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  const filters = page.getByRole('button', { name: /^Filters\b/ })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
   const inPanel = await filters.isVisible()
   const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
@@ -355,6 +355,53 @@ test.describe('the customiser while its artwork is loading', () => {
     expect(paints.length).toBeGreaterThan(0)
     expect(paints.every(p => !p.waiting && p.image)).toBe(true)
   })
+})
+
+test('staggered catalogues keep the signed-out first page intact at 768', async ({ page }) => {
+  test.skip(isLiveIconify(), 'this test controls catalogue arrival times')
+  await page.setViewportSize({ width: 768, height: 900 })
+  let release
+  const held = new Promise(resolve => { release = resolve })
+  const packs = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
+  const arrivals = []
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection', async route => {
+    await held
+    const pack = new URL(route.request().url()).searchParams.get('prefix')
+    const index = packs.indexOf(pack)
+    expect(index, 'only signed-out packs are requested').toBeGreaterThanOrEqual(0)
+    await new Promise(resolve => setTimeout(resolve, 150 + index * 200))
+    arrivals.push(pack)
+    await route.fallback()
+  })
+  try {
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig-skel')).toHaveCount(60)
+    await page.evaluate(() => {
+      window.__iconCls = 0
+      window.__iconCellCounts = []
+      new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) {
+          if (!entry.hadRecentInput) window.__iconCls += entry.value
+        }
+      }).observe({ type: 'layout-shift' })
+      // Observe every grid change so even a single partial frame is recorded.
+      new MutationObserver(() => {
+        const grid = document.querySelector('.ig')
+        if (grid) window.__iconCellCounts.push(grid.children.length)
+      }).observe(document.querySelector('.ig'), { childList: true })
+    })
+    release()
+    await expect(page.locator('.ig-skel')).toHaveCount(0)
+    await expect(page.locator('.ig .ic')).toHaveCount(60)
+    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    await expect(page.locator('.ig .ig-glyph-wait')).toHaveCount(0)
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    expect(new Set(arrivals).size).toBe(packs.length)
+    const counts = await page.evaluate(() => window.__iconCellCounts)
+    expect(counts.length, 'the observer recorded the reveal').toBeGreaterThan(0)
+    expect(Math.min(...counts), 'no partial grid replaces the 60-cell skeleton').toBeGreaterThanOrEqual(60)
+    expect(await page.evaluate(() => window.__iconCls)).toBeLessThanOrEqual(0.1)
+  } finally { release() }
 })
 
 for (const scheme of ['light', 'dark']) {
