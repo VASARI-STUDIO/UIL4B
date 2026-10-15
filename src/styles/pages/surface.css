@@ -141,7 +141,7 @@
    centred 560px island under a centred headline. */
 .srf .lidx-tools { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 24px; max-width: none; margin: 0 0 4px; }
 .srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; min-height: 44px; border-radius: var(--radius); border-color: var(--srf-hair-2); background: var(--card); box-shadow: none; }
-.srf .lidx-tools .lbry-search:focus-within { border-color: var(--bh); box-shadow: none; }
+.srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
 .srf .lidx-topics { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 18px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
 .srf .lidx-topics a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--t1); text-decoration: none; border-bottom: 1px solid transparent; }
 .srf .lidx-topics a:hover { color: var(--t0); border-bottom-color: var(--t0); }
@@ -199,11 +199,18 @@
 .srf .lidx-reset:hover { background: var(--srf-wash); border-color: var(--bh); }
 
 .srf :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The search wrapper is the visible box and draws the ring (`:focus-within`),
+   so the inner input paints none. Beats the rule above on specificity. */
+.srf .lbry-search input:focus-visible { outline: none; }
 .srf .lidx-card:focus-visible { outline-offset: 0; }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 1024px) {
+@media (min-width: 1025px) {
+  .srf .surface-grid > .surface-card:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
+}
+@media (min-width: 561px) and (max-width: 1024px) {
   .srf .surface-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .srf .surface-grid > .surface-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
   .srf .surface-grid { grid-template-columns: minmax(0, 1fr); }

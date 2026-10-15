@@ -52,7 +52,6 @@
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
-  DISCOVER_GROUPS,
   LEARN_GROUPS,
   createTools,
 } from './toolTree.js'
@@ -92,7 +91,6 @@ function treeRoute(rows, id) {
 const ROUTE_PRINCIPLES = treeRoute(LEARN_GROUPS, 'principles')
 const ROUTE_THEMES = treeRoute(LEARN_GROUPS, 'themes')
 const ROUTE_BRAND_COLOUR = treeRoute(LEARN_GROUPS, 'brand')
-const ROUTE_RESOURCES = treeRoute(DISCOVER_GROUPS, 'curated')
 
 // ── Categories ──────────────────────────────────────────────────────────────
 //
@@ -172,14 +170,6 @@ const CATEGORY_DEFS = [
     descKey: 'categories.documentation.description',
     label: 'Documentation',
     description: 'Design principles and marketing references.',
-  },
-  {
-    id: 'resources',
-    path: ROUTE_RESOURCES,
-    labelKey: 'categories.resources.label',
-    descKey: 'categories.resources.description',
-    label: 'Resources',
-    description: 'Curated external tools, fonts, colours, and inspiration.',
   },
 ]
 
@@ -309,9 +299,8 @@ const CREATE_TOOL_ENTRIES = createTools().map((tool) => {
 // ── Surfaces outside the Create tree ────────────────────────────────────────
 //
 // toolTree.js does not own the Create-tree identity of these, so they are
-// declared. Where toolTree.js does list the page (the Learn guides and the
-// curated resources), the route is READ from it with treeRoute() rather than
-// typed again, so a row can never sit on a retired path or on a hub when the
+// declared. Where toolTree.js lists a Learn guide, its route is read with
+// treeRoute() rather than typed again, so a row can never sit on a retired path or on a hub when the
 // page it names exists. Every path still goes through liveDestination().
 //
 // A row is only listed when a page stands behind it. Learn topics that are
@@ -327,7 +316,6 @@ const STATIC_TOOL_DEFS = [
   { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
   { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
   { id: 'seo', label: 'SEO Specialist', path: '/seo', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Live SERP + social preview, scored checklist, copy-ready meta tags, and a JSON-LD structured-data generator.', keywords: ['seo', 'meta', 'serp', 'title', 'description', 'snippet', 'preview', 'open graph', 'social', 'score', 'inspector', 'specialist', 'schema', 'json-ld', 'structured data'] },
-  { id: 'resources', label: 'External Resources', path: ROUTE_RESOURCES, category: 'resources', description: 'Curated links to fonts, colours, AI tools, and inspiration.', keywords: ['resources', 'links', 'external', 'google fonts', 'tailwind', 'framer', 'awwwards'] },
 ]
 
 const STATIC_TOOL_ENTRIES = STATIC_TOOL_DEFS.map((tool) => ({
@@ -355,7 +343,6 @@ export const TOOL_I18N_MAP = {
   'alt-text': 'tools.altText',
   prompts: 'tools.promptLibrary',
   'docs-design': 'tools.docsDesign',
-  resources: 'tools.externalResources',
 }
 
 export function localiseWith(list, t, map) {

@@ -168,12 +168,7 @@ const PREVIEWS = {
 // line, then every tool as name + one sentence + its own link, and nothing
 // after the grid. https://mobbin.com/sites/sections/0b61affd-faef-4b8c-b6fd-983b94de9a77
 
-// How many Discover libraries a visitor can actually open today. DERIVED, not
-// typed: the hint used to read "Four curated libraries are ready now — palettes,
-// gradients, fonts and icons", and it had been wrong since the Prompt Library
-// shipped and wrong again since /discover/resources did. A hand-typed count on
-// a page generated from a list is a claim that goes stale on somebody else's
-// commit.
+// Count live and upcoming libraries from the same groups as the cards.
 const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
 const DISCOVER_SOON = DISCOVER_GROUPS.length - DISCOVER_LIVE
 
@@ -187,7 +182,7 @@ const SURFACES = {
   // "Find" to a rejected line does not un-reject it. The lede under it
   // ("…the outside tools that earn a tab — most of them one click from the
   // tool that uses them.") was agent copy built on "earn a tab", an idiom
-  // that had spread to the nav promo, the Curated Resources hero and two grid
+  // that had spread to the nav promo, the library heroes and two grid
   // headings — a motif by repetition, not a UIL4B signature.
   //
   // Neither is replaced with a new sentence, because there is no founder line

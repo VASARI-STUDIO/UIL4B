@@ -128,10 +128,6 @@
       "label": "Principios de diseño",
       "description": "Jerarquía visual, equilibrio y psicología del diseño."
     },
-    "externalResources": {
-      "label": "Recursos externos",
-      "description": "Enlaces seleccionados a fuentes, colores, herramientas de IA e inspiración."
-    },
     "promptLibrary": {
       "label": "Biblioteca de prompts",
       "description": "Guardar prompts de generación de imágenes con IA con vistas previas."

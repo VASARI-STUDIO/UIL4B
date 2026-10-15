@@ -54,9 +54,8 @@ import { openPaletteTools } from './palette-helpers.js'
  * palettes to the builder — Spectrum's Discover cards and
  * `PaletteGalleryGrid` both open it through `paletteBuilderUrl()`, a URL rather
  * than a staged slot, which is immune to (b) by construction because a new tab
- * carries the URL with it. That path is asserted by
- * tests/unit/discover-handoff.test.js, and rendered on this very page by the
- * colour-titles test below, which loads its fixed board through `?c=`.
+ * carries the URL with it. The colour-titles test below renders that path,
+ * loading its fixed board through `?c=`.
  *
  * The SLOT's own contract — versioned, bounded, consumed exactly once, TTL —
  * is still proved in full by tests/unit/board-handoff.test.js and
