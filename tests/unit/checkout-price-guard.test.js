@@ -84,8 +84,8 @@ test('a configured price on the wrong recurrence is not sold for that interval',
 
 test('a configured price Stripe cannot find falls back, and a failed lookup is unavailable', async (t) => {
   quiet(t)
-  const missing = fakeStripe({ lookup: { [LOOKUP_KEYS.quarterly]: price('price_q', { recurring: { interval: 'month', interval_count: 3 } }) } })
-  assert.equal(await resolvePrice(missing, 'quarterly', { env: env('quarterly', 'price_gone'), cache: new Map(), now: NOW }), 'price_q')
+  const missing = fakeStripe({ lookup: { [LOOKUP_KEYS.yearly]: price('price_y', { recurring: { interval: 'year', interval_count: 1 } }) } })
+  assert.equal(await resolvePrice(missing, 'yearly', { env: env('yearly', 'price_gone'), cache: new Map(), now: NOW }), 'price_y')
 
   const down = fakeStripe({ retrieveError: new Error('Stripe is down'), listError: new Error('Stripe is down') })
   assert.equal(await resolvePrice(down, 'monthly', { env: env('monthly', 'price_env'), cache: new Map(), now: NOW }), null)
@@ -127,9 +127,7 @@ test('an unresolvable price is not cached, so fixing the configuration takes eff
 })
 
 test('priceIsSellable: active, and on the interval\'s recurrence', () => {
-  const quarterly = { recurring: { interval: 'month', interval_count: 3 } }
   assert.equal(priceIsSellable(price('p'), 'monthly'), true)
-  assert.equal(priceIsSellable(price('p', quarterly), 'quarterly'), true)
   assert.equal(priceIsSellable(price('p', { active: false }), 'monthly'), false)
   assert.equal(priceIsSellable(price('p'), 'yearly'), false)
   assert.equal(priceIsSellable(price('p', { recurring: { interval: 'year', interval_count: 1 } }), 'yearly'), true)
@@ -139,19 +137,22 @@ test('priceIsSellable: active, and on the interval\'s recurrence', () => {
   assert.equal(priceIsSellable(price('p'), 'weekly'), false)
 })
 
-// Monthly and quarterly share the 'month' unit; only interval_count tells them apart.
-test('priceIsSellable: a monthly price is not sellable as quarterly', () => {
-  assert.equal(priceIsSellable(price('p'), 'quarterly'), false)
-})
-
+// A three-month Stripe price shares the 'month' unit with a monthly one; only
+// interval_count tells them apart. Quarterly is no longer sold, but a stray
+// three-month price (an old dashboard row) must never be sold as monthly.
 test('priceIsSellable: a quarterly price is not sellable as monthly', () => {
   assert.equal(priceIsSellable(price('p', { recurring: { interval: 'month', interval_count: 3 } }), 'monthly'), false)
 })
 
-test('a monthly price configured for quarterly is not sold as quarterly', async (t) => {
+test('quarterly is not an interval anyone can buy: no price is sellable for it and Stripe is not asked', async (t) => {
   quiet(t)
-  const stripe = fakeStripe({ prices: { price_monthly: price('price_monthly') } })
-  assert.equal(await resolvePrice(stripe, 'quarterly', { env: env('quarterly', 'price_monthly'), cache: new Map(), now: NOW }), null)
+  const threeMonths = { recurring: { interval: 'month', interval_count: 3 } }
+  assert.equal(priceIsSellable(price('p', threeMonths), 'quarterly'), false)
+  assert.equal(priceIsSellable(price('p'), 'quarterly'), false)
+  const stripe = fakeStripe({ prices: { price_q: price('price_q', threeMonths) } })
+  const env = { STRIPE_PRICE_QUARTERLY: 'price_q' }
+  assert.equal(await resolvePrice(stripe, 'quarterly', { env, cache: new Map(), now: NOW }), null)
+  assert.deepEqual([stripe.calls.retrieve, stripe.calls.list], [[], []])
 })
 
 test('the price list and checkout choose prices by the same rule', () => {
