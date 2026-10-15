@@ -124,16 +124,15 @@ test.describe('signup intent', () => {
     await expect(nameField(page), 'a sign-in form does not').toHaveCount(0)
   })
 
-  // /plans is the design's Pricing screen: its Free card says "Open the
-  // toolkit", and a signed-out visitor goes straight into the app with no
-  // sign-up gate. What still means
-  // sign-up on /plans is the Pro CTA, which opens the sign-in flow and carries
-  // the checkout as its destination — 101-pricing-screen.spec.js walks that.
+  // The Free column on /plans reads "Open the toolkit". This spec checks that it
+  // links to /projects, that following it lands there, and that no dialog opens
+  // on the way. The Pro CTA is the one that leads to sign-in, with the checkout
+  // as its destination — 99-pricing-screen.spec.js walks that.
   test('the Plans free tier opens the toolkit without a sign-up gate', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/plans')
 
-    const free = page.locator('.pr-plan--free').getByRole('link', { name: 'Open the toolkit' })
+    const free = page.locator('.pr-head--free').getByRole('link', { name: 'Open the toolkit' })
     await expect(free).toHaveAttribute('href', '/projects')
     await free.click()
     await expect(page).toHaveURL(/\/projects$/)
