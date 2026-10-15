@@ -322,6 +322,35 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     await ctx.close()
   })
 
+  // MUTATION: let the customiser stage sample whatever it is showing (drop the
+  // `data:` check in `onStageImgLoad`) and this fails: while the markup is still
+  // on its way the stage shows the remote image, which cannot be read back, so a
+  // near-black mark is cached as mid-tone and never gets its halo.
+  test('a near-black logo opened before its markup arrives still gets the halo', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+    const page = await ctx.newPage()
+    watch(page, 'someone opening a logo before its markup has loaded')
+    await signIn(page, { plan: 'pro' })
+    await serveInk(page)
+    let release
+    const held = new Promise((resolve) => { release = resolve })
+    // Registered after serveInk, so it sees the request first and hands it on.
+    await page.route(/\/logos\.json\?.*icons=/, async (route) => { await held; await route.fallback() })
+    try {
+      await go(page, '/create/icons')
+      await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+      await choosePack(page, 'logos')
+      await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
+      const stage = page.locator('.icust-stage')
+      await expect(stage).toBeVisible({ timeout: 20000 })
+      // The remote image has loaded and been looked at before the markup is released.
+      await expect.poll(() => stage.locator('.icust-stage-img').evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 20000 }).toBe(true)
+      await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+      release()
+      await expect(stage, 'the near-black logo lost its halo').toHaveClass(/icust-stage--halo-light/, { timeout: 20000 })
+    } finally { release(); await ctx.close() }
+  })
+
   test('light theme: white marks get the dark halo, near-black ones do not', async ({ browser }) => {
     const { ctx, page } = await openLogos(browser, 'light')
     await expect(chipOf(page, 'apple')).toHaveClass(/ig-chip--halo-dark/)
