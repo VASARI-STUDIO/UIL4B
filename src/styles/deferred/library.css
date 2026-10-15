@@ -460,8 +460,8 @@ html[data-reduced-motion="true"] :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig
 /* Ink that matches the page ground (near-black on dark, near-white on light) would
    vanish with no box behind it. A hairline halo outlines the shape; the artwork's
    own colours are untouched. */
-.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(255,255,255,.6))}
-.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
+.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 .5px rgba(255,255,255,.85)) drop-shadow(0 0 .75px rgba(255,255,255,.55))}
+.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 .5px rgba(6,6,7,.75)) drop-shadow(0 0 .75px rgba(6,6,7,.45))}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
 .ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
 /* Copy, save and download wait for the icon's markup. */
