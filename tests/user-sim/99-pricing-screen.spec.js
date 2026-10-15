@@ -541,6 +541,44 @@ test.describe('the Pro CTA starts the real upgrade', () => {
   })
 })
 
+// A page in AUD where one cadence has an AUD price and the other has only USD.
+// The missing cadence's amount may still be named inside the other cadence's
+// note, but only as an explicit US$ figure, and a cross-sell line must never
+// point at a cadence that cannot be bought in the page's currency.
+test.describe('when one cadence has no price in the page currency', () => {
+  test.use({ locale: 'en-AU' })
+
+  test('the USD amount named in the Yearly note is labelled US$, never a bare $ or A$', async ({ page }) => {
+    watch(page, 'an Australian visitor when Monthly has no AUD price')
+    await stubPrices(page, {
+      source: { monthly: 'live', yearly: 'live' },
+      monthly: { usd: 7 },
+      yearly: { usd: 48, aud: 75 },
+    })
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(pro(page).locator('.pr-amt')).toHaveText('A$6.25')
+    await expect(note(page)).toContainText('A$75 billed once a year, or US$7 billed monthly.')
+    await expect(note(page), 'the USD amount is not shown as an AUD one').not.toContainText(/A\$7(?!\d)/)
+  })
+
+  test('with Yearly unbuyable in AUD, the Monthly page has no "Yearly works out at" line', async ({ page }) => {
+    watch(page, 'an Australian visitor when Yearly has no AUD price')
+    await stubPrices(page, {
+      source: { monthly: 'live', yearly: 'live' },
+      monthly: { usd: 7, aud: 11 },
+      yearly: { usd: 48 },
+    })
+    await go(page, '/plans?billing=monthly')
+    await expectRendered(page)
+
+    await expect(pro(page).locator('.pr-amt')).toHaveText('A$11')
+    await expect(under(page), 'no cross-sell for a cadence that cannot be bought here').toHaveText('')
+    await expect(pro(page)).not.toContainText('works out at')
+  })
+})
+
 test.describe('when the price service cannot answer', () => {
   test('the page says so, starts no checkout, and recovers on retry', async ({ page }) => {
     watch(page, 'a visitor on a bad connection')
