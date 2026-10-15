@@ -43,9 +43,9 @@ import { LIBRARY_PALETTES } from '../../data/paletteLibrary.js'
 //   "$4 / month", "was $4"                $7 monthly · $48 yearly, i.e. $4 a
 //                                         month on the yearly cadence.
 //                                         planLadder.js#approvedTotal
-//   Quarterly at $3.60 a month            Quarterly has `checkoutPlan: null` —
-//                                         buying it dead-ends on "Invalid
-//                                         selection". It is not offered here.
+//   Offered billing cadences             Monthly and Yearly, derived from
+//                                         planLadder.js. Quarterly is absent
+//                                         from the offered ladder.
 //   "Cancel Pro any time" · "Cancel? From  The Stripe Customer Portal has no
 //   the dashboard, in two clicks"          cancellation flow enabled
 //                                         ([stripe-retention-config]); /plans
@@ -134,9 +134,8 @@ export const LIBRARY_COUNTS = {
  * fetch for a panel five screens down. This page is the front door.
  */
 const RESOLVED = resolvePlanLadder()
-/** Only the cadences something can accept the click for. Quarterly is absent by
- *  construction — it has no `checkoutPlan` — rather than by being deleted from a
- *  second list somebody has to remember to keep in step. */
+/** Monthly and Yearly are the offered cadences. The purchasable filter keeps
+ *  this list limited to plans with a checkout destination. */
 export const LADDER = purchasablePlans(RESOLVED)
 /** The honest headline figure: the cheapest per-month price among the tiers we
  *  will actually sell. planLadder.js: "Never typed into copy." */

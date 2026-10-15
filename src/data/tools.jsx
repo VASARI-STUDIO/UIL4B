@@ -80,12 +80,6 @@ const CATEGORY_ICONS = {
       <line x1="8" y1="17" x2="12" y2="17" />
     </>
   ),
-  resources: (
-    <>
-      <path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5" />
-      <path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.5-1.5" />
-    </>
-  ),
 }
 
 // Keyed by the tool id in toolTree.js (Create tools) or in toolIndex.js
@@ -119,7 +113,6 @@ const TOOL_ICONS = {
   seo: (<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></>),
   'docs-marketing': (<><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></>),
   'docs-ai': (<><path d="M12 2a4 4 0 014 4v1h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a4 4 0 014-4z"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></>),
-  resources: (<><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.5-1.5"/></>),
 }
 
 export const CATEGORIES = CATEGORY_ENTRIES.map(cat => ({ ...cat, icon: CATEGORY_ICONS[cat.id] }))

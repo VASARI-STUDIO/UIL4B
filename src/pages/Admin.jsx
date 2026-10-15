@@ -535,7 +535,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
 // Snap an auto-filled amount to the SHAPE OF ITS OWN DEFAULT, rather than to
 // .99 always.
 //
-// The ladder is whole dollars — $7 monthly, $18 quarterly, $48 yearly
+// The offered ladder uses whole dollars: $7 Monthly and $48 Yearly
 // (api/_lib/pricing.js). Snapping $7 to $6.99 would overwrite a configured
 // price with a different one every time auto-fill runs.
 //

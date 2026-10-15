@@ -40,8 +40,10 @@ test('the server fallback quotes the same USD ladder the client does', () => {
   // src/config/planLadder.js would display and the amount api/_lib/pricing.js
   // would serve are the same number.
   const shared = LADDER_INTERVALS.filter((key) => DEFAULT_PRICES[key])
-  assert.ok(shared.length >= 3,
-    `expected the ladder's intervals to exist in DEFAULT_PRICES, found only: ${shared.join(', ') || '(none)'}`)
+  // Every rung must have a server row (not a bare count: the ladder is Monthly
+  // and Yearly now, and a count would pass a ladder that lost a rung).
+  assert.ok(shared.length >= 2 && shared.length === PLAN_LADDER.length,
+    `expected every ladder interval to exist in DEFAULT_PRICES, found only: ${shared.join(', ') || '(none)'}`)
 
   for (const plan of PLAN_LADDER) {
     const server = DEFAULT_PRICES[plan.liveKey]
@@ -94,40 +96,13 @@ test('a longer commitment is never worse value, in any currency', () => {
   }
 })
 
-test('quarterly is fully wired and still not offered for sale', () => {
-  // A TRIPWIRE ON ONE FIELD, rewritten 2026-09-15.
-  //
-  // It used to guard three preconditions. All three were built that day with
-  // the founder's approval for the gated payment files, and each is now
-  // asserted POSITIVELY in tests/unit/trial-cadence.test.js rather than as an
-  // absence here:
-  //
-  //   1. setup-stripe sends `recurring.interval_count` from INTERVAL_COUNTS, so
-  //      quarterly is a genuine three-month recurrence and not an $18-per-MONTH
-  //      price. That was the one that could overcharge a real customer.
-  //   2. PRICE_ENV_KEYS.quarterly exists, and quarterly is in BILLING_INTERVALS.
-  //   3. src/pages/Checkout.jsx has a quarterly case, so the buyer no longer
-  //      lands on "Invalid selection".
-  //
-  // ONE THING IS STILL NOT TRUE: the Stripe price does not exist. It is created
-  // in the dashboard, not in this repository. `checkoutPlan` is what publishes
-  // a machine-readable Offer in index.html and puts the cadence in front of a
-  // buyer, and an Offer for a price create-checkout would answer 503 for is the
-  // same class of false claim about money as the wrong amount — which is what
-  // index-html-pricing.test.js#"no tier that cannot reach checkout" enforces.
-  //
-  // Quarterly is offered. The live Stripe price: lookup key uil4b_pro_quarterly, US$18, recurring
-  // month × 3, on the Pro product — see the note on the ladder entry. The test
-  // stays, turned around: quarterly is offered, and the path it depends on is
-  // still whole. If any precondition below regresses, turn quarterly OFF.
-  const quarterly = PLAN_LADDER.find((p) => p.id === 'quarterly')
-  assert.equal(quarterly.checkoutPlan, 'quarterly',
-    'quarterly is no longer offered — if that is deliberate, restore the null switch and its note')
-
-  // The preconditions, asserted so that the switch above cannot stand on a
-  // half-built path.
-  assert.ok(BILLING_INTERVALS.includes('quarterly'), 'quarterly can no longer reach create-checkout')
-  assert.ok(PRICE_ENV_KEYS.quarterly, 'the quarterly price env key has gone')
-  assert.equal(INTERVAL_COUNTS.quarterly, 3,
-    'quarterly must be recorded as a 3-month recurrence, or a price created from it bills monthly')
+test('quarterly is not sold anywhere', () => {
+  // The ladder is Monthly and Yearly. Quarterly was removed from the ladder, the
+  // server's interval list, the price tables and Checkout together, so a stale
+  // `?plan=quarterly` or `billing=quarterly` can only fall back, never buy.
+  assert.equal(PLAN_LADDER.find((p) => p.id === 'quarterly'), undefined, 'quarterly is back on the ladder')
+  assert.deepEqual(PLAN_LADDER.filter((p) => p.checkoutPlan).map((p) => p.id), ['monthly', 'yearly'])
+  assert.ok(!BILLING_INTERVALS.includes('quarterly'), 'create-checkout still accepts quarterly')
+  assert.ok(!PRICE_ENV_KEYS.quarterly, 'a quarterly price env key is still configured')
+  assert.equal(INTERVAL_COUNTS.quarterly, undefined, 'the quarterly interval count is still recorded')
 })

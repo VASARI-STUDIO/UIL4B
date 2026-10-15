@@ -7,6 +7,9 @@
 //   3. The logo goes to the dashboard from an app page, and to the sales home
 //      page from the dashboard, and its name says which.
 //   4. The header never wraps from 320 to 1920.
+//   5. The theme switch is the control directly left of the account control
+//      (avatar signed in, Log in signed out) at desktop widths; below 768 it is
+//      not in the bar and stays in the menu sheet.
 //
 // MUTATION: point the logo back at '/projects' on the dashboard, or put the Back
 // to the site link back into PillNav.jsx, or drop aria-disabled from the empty
@@ -37,7 +40,7 @@ test.describe('app header actions', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'someone using the app header') })
 
   for (const width of [900, 1100, 1440, 1920]) {
-    test(`at ${width} the top right reads Export, Dashboard, Upgrade, avatar, labelled, and nothing says Back to the site`, async ({ page }) => {
+    test(`at ${width} the top right reads Export, Dashboard, Upgrade, theme, avatar, labelled, and nothing says Back to the site`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 })
       await signIn(page, { plan: 'free', projects: 1 })
       await go(page, '/create/palette')
@@ -48,9 +51,24 @@ test.describe('app header actions', () => {
       await expect(dashboard).toBeVisible()
       await expect(exportBtn.locator('.pnav-act-label')).toBeVisible()
       await expect(dashboard.locator('.pnav-act-label')).toBeVisible()
-      const order = await actions.evaluate((el) => [...el.querySelectorAll('.pnav-export, .pnav-act--dash, .pnav-upgrade, .pnav-avatar-btn')]
-        .map((n) => n.className.split(' ').find((c) => /^pnav-(export|act--dash|upgrade|avatar-btn)$/.test(c))))
-      expect(order).toEqual(['pnav-export', 'pnav-act--dash', 'pnav-upgrade', 'pnav-avatar-btn'])
+      const order = await actions.evaluate((el) => [...el.querySelectorAll('.pnav-export, .pnav-act--dash, .pnav-upgrade, .pnav-theme, .pnav-avatar-btn')]
+        .map((n) => n.className.split(' ').find((c) => /^pnav-(export|act--dash|upgrade|theme|avatar-btn)$/.test(c))))
+      expect(order).toEqual(['pnav-export', 'pnav-act--dash', 'pnav-upgrade', 'pnav-theme', 'pnav-avatar-btn'])
+      // Directly left of the account icon, on screen and in the DOM, and 36px.
+      const gap = await page.evaluate(() => {
+        const theme = document.querySelector('.pnav-actions .pnav-theme')
+        const avatar = document.querySelector('.pnav-actions .pnav-avatar-btn')
+        const a = theme.getBoundingClientRect(), b = avatar.getBoundingClientRect()
+        return { between: b.left - a.right, sameRow: Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)),
+          adjacent: theme.nextElementSibling === avatar.parentElement, width: a.width, height: a.height }
+      })
+      expect(gap.adjacent, 'nothing sits between the theme switch and the avatar').toBe(true)
+      expect(gap.between, 'the theme switch is left of the avatar').toBeGreaterThanOrEqual(0)
+      expect(gap.between, 'only the cluster gap separates them').toBeLessThanOrEqual(12)
+      expect(gap.sameRow).toBeLessThan(1)
+      expect(Math.min(gap.width, gap.height), 'the theme switch is no smaller than before').toBeGreaterThanOrEqual(36)
+      // The theme switch is no longer beside the search or the section menus.
+      expect(await page.evaluate(() => !!document.querySelector('.pnav-inner > .pnav-theme'))).toBe(false)
       const heights = await page.evaluate(() => ['.pnav-export', '.pnav-act--dash', '.pnav-inner .pnav-upgrade']
         .map((s) => document.querySelector(s).getBoundingClientRect().height))
       expect(Math.abs(heights[0] - heights[2]), 'Export is as tall as Upgrade').toBeLessThanOrEqual(0.5)
@@ -159,6 +177,53 @@ test.describe('app header actions', () => {
     await expect(page).toHaveURL(/\/home$/)
   })
 
+  for (const width of [900, 1440]) {
+    test(`signed out at ${width} the theme switch sits directly left of Log in`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/create/palette')
+      const read = await page.evaluate(() => {
+        const actions = document.querySelector('.pnav-actions')
+        const order = [...actions.querySelectorAll('.pnav-theme, .pnav-login, .pnav-upgrade, .pnav-more')]
+          .map((n) => n.className.split(' ').find((c) => /^pnav-(theme|login|upgrade|more)$/.test(c)))
+        const theme = actions.querySelector('.pnav-theme'), login = actions.querySelector('.pnav-login')
+        const a = theme.getBoundingClientRect(), b = login.getBoundingClientRect()
+        return { order, adjacent: theme.nextElementSibling === login, between: b.left - a.right,
+          sameRow: Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) }
+      })
+      expect(read.order).toEqual(['pnav-theme', 'pnav-login', 'pnav-upgrade', 'pnav-more'])
+      expect(read.adjacent, 'nothing sits between the theme switch and Log in').toBe(true)
+      expect(read.between).toBeGreaterThanOrEqual(0)
+      expect(read.between).toBeLessThanOrEqual(12)
+      expect(read.sameRow).toBeLessThan(1)
+    })
+  }
+
+  test('keyboard order follows the drawn order: Upgrade, theme switch, avatar', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await signIn(page, { plan: 'free', projects: 1 })
+    await go(page, '/create/palette')
+    const theme = page.locator('.pnav-actions .pnav-theme')
+    await theme.focus()
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Account and settings' })).toBeFocused()
+    await page.keyboard.press('Shift+Tab')
+    await expect(theme).toBeFocused()
+    await page.keyboard.press('Shift+Tab')
+    await expect(page.locator('.pnav-actions .pnav-upgrade')).toBeFocused()
+  })
+
+  test('the moved theme switch still changes the theme', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/palette')
+    const theme = page.locator('.pnav-actions .pnav-theme')
+    const labelBefore = await theme.getAttribute('aria-label')
+    const stored = () => page.evaluate(() => localStorage.getItem('vs-t'))
+    const storedBefore = await stored()
+    await theme.click()
+    await expect(theme).not.toHaveAttribute('aria-label', labelBefore)
+    await expect.poll(stored).not.toBe(storedBefore)
+  })
+
   for (const signed of [true, false]) {
     test(`the header never wraps from 320 to 1920 (${signed ? 'signed in' : 'signed out'})`, async ({ page }) => {
       if (signed) await signIn(page, { plan: 'free', projects: 1 })
@@ -242,6 +307,17 @@ test.describe('app header touch actions', () => {
       }
       const overflow = await page.locator('.pnav-inner').evaluate((el) => el.scrollWidth - el.clientWidth)
       expect(overflow).toBeLessThanOrEqual(0)
+    })
+  }
+
+  for (const width of [320, 390, 767]) {
+    test(`at ${width} the theme switch is not in the bar and stays reachable in the menu`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 })
+      await signIn(page, { plan: 'free', projects: 1 })
+      await go(page, '/create/palette')
+      await expect(page.locator('.pnav-actions .pnav-theme')).toBeHidden()
+      await page.getByRole('button', { name: 'Open menu' }).click()
+      await expect(page.locator('.pnav-sheet-theme .theme-seg')).toBeVisible()
     })
   }
 })

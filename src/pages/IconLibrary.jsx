@@ -17,6 +17,7 @@ import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
+import { createCollectionLoader } from '../utils/iconifyCollectionCache'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
   STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
@@ -76,20 +77,19 @@ const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
 // "Coloured" shows colour icons from ALL colour packs, not just one — same for
 // the other styles. `packs` are real Iconify prefixes.
 const ICON_GROUPS = {
-  outlined: { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
-  solid: { label: 'Solid', packs: ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs'] },
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
   brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
   emoji: { label: 'Emoji', packs: ['twemoji', 'fluent-emoji', 'noto', 'openmoji'] },
 }
-const GROUP_ORDER = ['outlined', 'solid', 'coloured', 'brands', 'flags', 'emoji']
+const GROUP_ORDER = ['coloured', 'brands', 'flags', 'emoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const ALL_PACKS = [...new Set(GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs))]
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs']
+const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs)])]
 
 // The group tray's options were built HERE, at module scope, so that
 // LibraryFilterGroup was not handed a new array identity on every keystroke —
@@ -107,7 +107,7 @@ const ALL_PACKS = [...new Set(GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs))]
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
 // Packs whose default style is genuinely stroke-based (the stroke slider applies).
-const STROKE_PACKS = new Set(ICON_GROUPS.outlined.packs)
+const STROKE_PACKS = new Set(['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'])
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
 
@@ -202,37 +202,17 @@ function writeStickyStroke(v) {
   try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
 }
 
-// ── Style coherence ──────────────────────────────────────────────────────────
-// Several Iconify prefixes ship MULTIPLE styles under one prefix, so a raw
-// /collection dump mixes stroked and filled glyphs. That is why "Outlined" was
-// showing filled icons: Phosphor (`ph`) carries `-fill`/`-duotone` weights,
-// Heroicons/Iconoir carry `-solid`, Tabler carries `-filled`. These per-pack,
-// suffix-anchored matchers keep only the names whose glyph matches the chosen
-// style, so a style filter shows ONE coherent look (never a filled icon under
-// "Outlined"). Packs absent here are single-style — every name is kept.
-const STYLE_RULES = {
-  ph:                 { outlined: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n) },
-  heroicons:          { outlined: n => !/-solid$/.test(n) },
-  iconoir:            { outlined: n => !/-solid$/.test(n) },
-  tabler:             { outlined: n => !/-filled$/.test(n) },
-  mdi:                { solid: n => !/-outline$/.test(n) },
-  'material-symbols': { solid: n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n) },
-  solar:              { solid: n => /-bold(?:-duotone)?$/.test(n) },
+// Each pack's Regular weight excludes its alternate glyph variants.
+const REGULAR_RULES = {
+  ph: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n),
+  heroicons: n => !/-solid$/.test(n),
+  iconoir: n => !/-solid$/.test(n),
+  tabler: n => !/-filled$/.test(n),
+  mdi: n => !/-outline$/.test(n),
+  'material-symbols': n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n),
+  solar: n => /-bold(?:-duotone)?$/.test(n),
 }
-// The style a single pack browses in — so picking "Phosphor" under Interface
-// (outlined) directly never dumps its fill weights either.
-const PACK_STYLE = {
-  lucide: 'outlined', tabler: 'outlined', iconoir: 'outlined', heroicons: 'outlined', ph: 'outlined',
-  mdi: 'solid', 'material-symbols': 'solid', solar: 'solid', 'fa6-solid': 'solid', bxs: 'solid',
-}
-const matchesStyle = (pack, name, style) => {
-  const rule = STYLE_RULES[pack]?.[style]
-  return rule ? rule(name) : true
-}
-const keepStyle = (pack, names, style) => {
-  const rule = STYLE_RULES[pack]?.[style]
-  return rule ? names.filter(rule) : names
-}
+const matchesRegular = (pack, name) => REGULAR_RULES[pack]?.(name) ?? true
 
 // ── Weights: Regular / Bold / Fill / Duo ─────────────────────────────────────
 // the Regular/Bold/Fill/Duo tabs
@@ -271,15 +251,14 @@ const WEIGHT_RULES = {
 }
 const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
-// The names one pack shows at one weight. A collection chip (groupKey) is a
-// style of its own and wins; Regular is the pack's own browse style.
+// Collections use the pack's Regular artwork; other scopes honour the weight.
 const keepWeight = (pack, names, weight, groupKey = null) => {
-  if (groupKey || weight === 'regular') return keepStyle(pack, names, groupKey || PACK_STYLE[pack])
+  if (groupKey || weight === 'regular') return names.filter(name => matchesRegular(pack, name))
   const rule = WEIGHT_RULES[weight]?.[pack]
   return rule ? names.filter(rule) : []
 }
-const matchesWeight = (pack, name, weight, style) => (
-  weight === 'regular' ? matchesStyle(pack, name, style) : !!WEIGHT_RULES[weight]?.[pack]?.(name)
+const matchesWeight = (pack, name, weight) => (
+  weight === 'regular' ? matchesRegular(pack, name) : !!WEIGHT_RULES[weight]?.[pack]?.(name)
 )
 
 function buildSvgUrl(host, pack, name, params = {}) {
@@ -400,6 +379,20 @@ const askedFor = (pack) => {
   return s
 }
 
+// A batch that fails while the others succeed (one big flag pack timing out, say)
+// must not leave its cells blank for the session. Its names come out of the asked
+// set so a later pass asks again, but bounded: a name is retried at most
+// GLYPH_RETRY_MAX times, and a pack is not re-asked inside GLYPH_RETRY_MS of its
+// last failure, because Iconify rate-limits and a storm would make it worse.
+const GLYPH_RETRY_MAX = 2
+// 'pack:name' → the service has no icon of that name, or never answered for it in
+// GLYPH_RETRY_MAX + 1 tries. Such a cell draws a quiet empty slot, not the loading
+// skeleton, which would pulse for the rest of the session.
+const GLYPH_MISSING = new Set()
+const GLYPH_RETRY_MS = 3000
+const GLYPH_FAILS = new Map() // 'pack:name' → failed attempts so far
+const GLYPH_RETRY_AFTER = new Map() // pack → earliest time it may be asked again
+
 /**
  * Fetch one pack's worth of glyph bodies in a single request and fill the
  * caches. Resolves true when the request was answered, false when the service
@@ -424,8 +417,8 @@ async function loadGlyphBatch(pack, names) {
   const bodyOf = (n) => {
     // A requested name can be an alias; the parent carries the markup. Iconify
     // allows an alias chain, so walk it with a hop cap rather than trusting it
-    // to be one deep. Without this, `lucide:home` (an alias of `house` as of
-    // 2026-09-18) would cache as missing and fall back to its own request.
+    // to be one deep. An alias such as `lucide:home` (of `house`) would
+    // otherwise be recorded as missing.
     let cur = n
     for (let hop = 0; hop < 8; hop++) {
       if (data.icons && data.icons[cur]) return { icon: data.icons[cur], key: cur }
@@ -437,8 +430,9 @@ async function loadGlyphBatch(pack, names) {
   }
   for (const n of names) {
     const found = bodyOf(n)
-    if (!found || typeof found.icon.body !== 'string') continue
     const key = svgKey(pack, n)
+    if (!found || typeof found.icon.body !== 'string') { GLYPH_MISSING.add(key); continue }
+    GLYPH_MISSING.delete(key)
     GLYPH_BODY.set(key, found.icon.body)
     const w = found.icon.width || defW
     const h = found.icon.height || defH
@@ -457,6 +451,14 @@ async function loadGlyphBatch(pack, names) {
 // Bounded LRU: at most GLYPH_URI_MAX entries, least recently used dropped first.
 const GLYPH_URI_MAX = 3000
 const GLYPH_URI = new Map()
+// The standalone SVG markup for a batched glyph, or '' when its body has not arrived.
+function glyphSvgText(pack, name) {
+  const key = svgKey(pack, name)
+  const body = GLYPH_BODY.get(key)
+  if (!body) return ''
+  const box = GLYPH_BOX.get(key) || { w: 24, h: 24 }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.w} ${box.h}" width="${box.w}" height="${box.h}">${body}</svg>`
+}
 function glyphDataUri(pack, name) {
   const key = svgKey(pack, name)
   const hit = GLYPH_URI.get(key)
@@ -465,12 +467,9 @@ function glyphDataUri(pack, name) {
     GLYPH_URI.set(key, hit)
     return hit
   }
-  const body = GLYPH_BODY.get(key)
-  if (!body) return ''
-  const box = GLYPH_BOX.get(key) || { w: 24, h: 24 }
-  const uri = svgToDataUri(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.w} ${box.h}" width="${box.w}" height="${box.h}">${body}</svg>`
-  )
+  const text = glyphSvgText(pack, name)
+  if (!text) return ''
+  const uri = svgToDataUri(text)
   GLYPH_URI.set(key, uri)
   while (GLYPH_URI.size > GLYPH_URI_MAX) {
     GLYPH_URI.delete(GLYPH_URI.keys().next().value)
@@ -485,12 +484,11 @@ function glyphDataUri(pack, name) {
 // is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
 // flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
 // so scrolling or reopening never re-samples.
-const glyphCache = new Map() // 'pack:name' → { tone, ar } (chip tone + ink aspect)
+const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wide-slot cap, ink tone)
 
 // A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
 //
-// Founder, 2026-09-04: "check our rendering for alot of the icons, alot of the
-// icons are not rendering correctly". Measured on /create/icons under the Brand
+// Reported as many icons not rendering correctly. Measured on /create/icons under the Brand
 // logos filter at 1440x900: `logos/aerospike` painted 24 x 2.1px inside its
 // 24 x 24 box and `logos/active-campaign` 24 x 2.4px. Illegible - and NOT a
 // fetch failure: all 120 mounted tiles loaded, every one the real artwork.
@@ -503,31 +501,31 @@ const glyphCache = new Map() // 'pack:name' → { tone, ar } (chip tone + ink as
 //   b) `devicon` ships 422 `-wordmark` entries on a SQUARE 128 x 128 canvas with
 //      a horizontal lockup drawn small inside it. The aspect ratio is honest and
 //      no viewBox handling can reach it - the artwork's own margins are the
-//      problem. These are the entries the founder named: adonisjs-wordmark,
+//      problem. Examples: adonisjs-wordmark,
 //      aerospike-wordmark, aframe-wordmark, akka-wordmark, algolia-wordmark.
 //
 // So the signal is the INK, not the box: the bounding box of the opaque pixels.
-// That number is wide for (a) and for (b) alike. This canvas pass already ran on
-// every one of these glyphs to choose the chip tone, so the extra cost is one
-// comparison per pixel and no extra decode.
+// That number is wide for (a) and for (b) alike.
 //
-// Colored/brand artwork keeps its own colours, so the grid can't tint it for
-// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
-// on a chip using the Stage's light gradient by default; if the artwork itself
-// is near-white (Apple, OpenAI, GitHub-in-dark...) we flip that icon's chip to
-// the dark Stage gradient. Both facts are remembered per icon, so scrolling or
-// reopening never re-samples.
+// Colored/brand artwork keeps its own colours and sits straight on the page
+// ground: the chip around it is a transparent slot, not a box. Artwork whose ink
+// is near-black (or near-white in the light theme) would vanish on that ground,
+// so the sampled ink tone also picks a faint halo (`ig-chip--halo-*`) that never
+// touches the artwork's colours. The measurement is remembered per icon, so
+// scrolling or reopening never re-samples.
 
-// Average relative luminance of the glyph's opaque pixels, plus the aspect ratio
-// of the box those pixels occupy. Near-white artwork (avg > .82) needs the dark
-// chip. Any failure (CORS taint, decode error) falls back to a light chip and a
-// square ink box - which is exactly the treatment every icon had before this
-// measurement existed, so a sampling failure degrades to the old behaviour
-// rather than to a broken one.
+// The aspect ratio of the box the glyph's opaque pixels occupy, plus the tone of
+// that ink (average relative luminance: near-black -> 'dark', near-white ->
+// 'light', anything else 'mid'). Any failure
+// (CORS taint, decode error) falls back to a square mid-tone ink box - which is exactly
+// the treatment every icon had before this measurement existed, so a sampling
+// failure degrades to the old behaviour rather than to a broken one.
 //
 // S is 64 rather than 24 because a 10:1 lockup occupies two rows of a 24px
 // raster: enough to see, not enough to measure. At 64 it is a six-row band and
 // the ratio is stable.
+const INK_DARK_MAX = 0.05 // linear luminance: GitHub / Vercel / Apple black sit well under this
+const INK_LIGHT_MIN = 0.82
 function sampleGlyph(img) {
   try {
     const S = 64
@@ -553,7 +551,7 @@ function sampleGlyph(img) {
       if (py < y0) y0 = py
       if (py > y1) y1 = py
     }
-    if (n === 0) return { tone: 'light', ar: 1, cap: 1 }
+    if (n === 0) return { ar: 1, cap: 1, ink: 'mid' }
     // The raster is SQUARE and drawImage stretched the art to fill it, so the
     // measured ink box is the true one divided by the image own aspect. Undoing
     // that is what makes one number cover both causes: a square-canvas devicon
@@ -567,15 +565,15 @@ function sampleGlyph(img) {
       inkH: y1 - y0 + 1,
       raster: S,
     })
-    return { tone: sum / n > 0.82 ? 'dark' : 'light', ar, cap }
-  } catch { return { tone: 'light', ar: 1, cap: 1 } }
+    const lum = sum / n
+    return { ar, cap, ink: lum < INK_DARK_MAX ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid' }
+  } catch { return { ar: 1, cap: 1, ink: 'mid' } }
 }
 
 
-// Iconify-served brand glyph on a tone-aware chip. crossOrigin is safe here —
-// the same API already answers CORS fetches in fetchSvgText — but logo.dev
-// images must NOT use this component (unknown CORS policy; a crossOrigin
-// failure would blank the image entirely), so they get a plain light chip.
+// Iconify-served brand glyph in a transparent slot. logo.dev images must NOT
+// use this component (unknown CORS policy, and they are opaque PNG marks), so
+// they keep a plain light chip of their own (`ig-chip--tile`).
 //
 // THE REQUEST ASKS FOR A HEIGHT, NOT A BOX. `?width=24&height=24` pinned both
 // dimensions and left the viewBox alone, so the API returned a 24 x 24 SVG that
@@ -584,29 +582,71 @@ function sampleGlyph(img) {
 // about the art. Square glyphs are unaffected - the CSS still paints them in a
 // 24px box - and 48 gives the wide chip resolution to scale from.
 // `src` is the batched data: URI from the grid (see the batching note above).
-// It arrives empty on the render before this icon's tranche lands, and the chip
-// is drawn anyway — the chip IS the placeholder, so the cell does not resize
-// under the reader when the artwork appears.
+// It arrives empty on the render before this icon's tranche lands. Until the
+// <img> has fired `load` the chip is a faint pulsing skeleton of the same box
+// (`ig-chip--wait`), so the cell does not resize under the reader when the
+// artwork appears; once there is artwork the chip is a transparent slot again and
+// fades in with it (`ig-chip--in`). A failed image drops the skeleton and leaves
+// the empty slot, and so does a name the service has no icon for (`gone`).
 //
 // The sampling below is unchanged and is now on firmer ground: a data: URI does
 // not taint a canvas, so `getImageData` no longer depends on the CDN returning
 // a permissive `Access-Control-Allow-Origin`. `crossOrigin` goes with it — it
 // was only ever there to make that sampling legal.
-function BrandGlyph({ pack, name, src }) {
+// Which halo (if any) keeps ink that matches the page ground readable: near-black
+// ink on the dark theme gets a light halo, near-white ink on the light theme a dark one.
+// A flag never gets one: its average tone says little about its edge, and a flag's
+// outline is part of the artwork.
+const FLAG_PACKS = new Set(ICON_GROUPS.flags.packs)
+const haloFor = (ink, theme, pack) => {
+  if (FLAG_PACKS.has(pack)) return ''
+  return ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : ''
+}
+
+// Ink tone already known for an icon in the customiser or My Icons: the grid's
+// measurement of the same pack glyph, else one taken from the saved markup.
+const SAVED_INK = new Map() // saved-icon key → 'dark' | 'light' | 'mid'
+function measuredInk(icon, brandKey) {
+  if (brandKey) return glyphCache.get(brandKey)?.ink || null
+  if (icon?.custom) return glyphCache.get(svgKey(icon.pack, icon.base))?.ink || SAVED_INK.get(icon.key) || null
+  return null
+}
+// Ink tone of standalone SVG markup, read through an off-screen image.
+function sampleSvgInk(svgText, done) {
+  const img = new Image()
+  img.onload = () => done(sampleGlyph(img).ink)
+  img.src = svgToDataUri(svgText)
+}
+
+function BrandGlyph({ pack, name, src, gone = false }) {
   const key = svgKey(pack, name)
-  const [shape, setShape] = useState(() => glyphCache.get(key) || { tone: 'light', ar: 1, cap: 1 })
+  const { theme } = useTheme()
+  const [shape, setShape] = useState(() => glyphCache.get(key) || { ar: 1, cap: 1, ink: 'mid' })
   const cached = glyphCache.get(key)
   if (cached && cached !== shape) setShape(cached)
+  // 'wait' until the <img> loads, 'in' for a load that was watched (it fades),
+  // 'ready' for artwork already measured on an earlier mount (no fade), 'fail'
+  // when the image errored. Reset when the cell is handed a different icon.
+  const [load, setLoad] = useState(() => ({ key, phase: cached ? 'ready' : 'wait' }))
+  let phase = load.phase
+  if (load.key !== key) {
+    phase = cached ? 'ready' : 'wait'
+    setLoad({ key, phase })
+  }
   const onLoad = (e) => {
+    setLoad((l) => (l.key === key && l.phase === 'wait' ? { key, phase: 'in' } : l))
     if (glyphCache.has(key)) return
     const next = sampleGlyph(e.currentTarget)
     glyphCache.set(key, next)
     setShape(next)
   }
+  const onError = () => setLoad({ key, phase: 'fail' })
   const wide = shape.ar > WIDE_INK
+  const halo = haloFor(shape.ink, theme, pack)
+  const waiting = !gone && (!src || phase === 'wait')
   return (
     <span
-      className={`ig-chip${shape.tone === 'dark' ? ' ig-chip--dark' : ''}${wide ? ' ig-chip--wide' : ''}`}
+      className={`ig-chip${wide ? ' ig-chip--wide' : ''}${halo ? ` ig-chip--${halo}` : ''}${waiting ? ' ig-chip--wait' : phase === 'in' ? ' ig-chip--in' : ''}`}
       style={wide ? { '--ig-wide-cap': shape.cap } : undefined}
     >
       {src && (
@@ -615,9 +655,44 @@ function BrandGlyph({ pack, name, src }) {
           loading="lazy"
           alt={name}
           onLoad={onLoad}
+          onError={onError}
         />
       )}
     </span>
+  )
+}
+
+// A mono glyph from the batched data: URI. The <img> itself is the skeleton box
+// until it has fired `load` (same 24px box, so nothing moves), then fades in.
+// A source already painted once skips the fade so a cell that scrolls back into
+// view does not flash. A failed image drops the skeleton class and leaves the
+// browser's own broken-image rendering.
+const paintedSrc = new Set()
+function MonoGlyph({ src, className, alt, onError }) {
+  const [phase, setPhase] = useState(() => (paintedSrc.has(src) ? 'ready' : 'wait'))
+  const [seen, setSeen] = useState(src)
+  if (seen !== src) {
+    setSeen(src)
+    setPhase(paintedSrc.has(src) ? 'ready' : 'wait')
+  }
+  const state = phase === 'wait' ? 'ig-glyph-pending' : phase === 'in' ? 'ig-glyph-in' : ''
+  return (
+    <img
+      src={src}
+      width="24"
+      height="24"
+      className={[className, state].filter(Boolean).join(' ')}
+      loading="lazy"
+      alt={alt}
+      onLoad={() => {
+        paintedSrc.add(src)
+        setPhase((p) => (p === 'wait' ? 'in' : p))
+      }}
+      onError={(e) => {
+        setPhase('fail')
+        if (onError) onError(e)
+      }}
+    />
   )
 }
 
@@ -638,32 +713,56 @@ const warmSoon = (icon) => {
 }
 const warmCancel = () => clearTimeout(warmTimer)
 
+// Saved artwork uses a transparent slot, with a halo from its chosen colour
+// or measured ink tone when it matches the page ground.
+function SavedPackGlyph({ icon }) {
+  const { theme } = useTheme()
+  const [measured, setMeasured] = useState(null)
+  const luminance = icon.color ? relativeLuminance(icon.color) : null
+  const ink = luminance !== null
+    ? (luminance < INK_DARK_MAX ? 'dark' : luminance > INK_LIGHT_MIN ? 'light' : 'mid')
+    : measuredInk(icon, null) || measured || 'mid'
+  const onLoad = (e) => {
+    if (measuredInk(icon, null)) return
+    const next = sampleGlyph(e.currentTarget).ink
+    if (icon.key) SAVED_INK.set(icon.key, next)
+    setMeasured(next)
+  }
+  const halo = haloFor(ink, theme, icon.pack)
+  return (
+    <span className={halo ? `ig-chip ig-chip--${halo}` : 'ig-chip'}>
+      <img src={svgToDataUri(icon.svg)} width="24" height="24" loading="lazy" alt={icon.name} onLoad={onLoad} />
+    </span>
+  )
+}
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
-function cellGlyph(icon, src, onGlyphError) {
+function cellGlyph(icon, src, onGlyphError, gone) {
   if (icon.custom) {
-    const img = <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
-    return icon.colored ? <span className="ig-chip">{img}</span> : img
+    if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) {
     // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
     // plain light chip always gives enough separation from the card surface.
     return (
-      <span className="ig-chip">
+      <span className="ig-chip ig-chip--tile">
         <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
       </span>
     )
   }
   if (icon.cdn) {
-    if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} />
+    if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} gone={gone} />
     // The batched body, composed into a data: URI. Empty until its tranche
     // lands, which is a cell that has not painted yet rather than a cell that
     // failed — so NO per-icon URL fallback here. Falling back would put one
     // request per cell back on the first paint, and the batch's own refusal is
-    // already handled where it can be read.
-    if (!src) return <span className="ig-glyph-wait" aria-hidden="true" />
-    return <img src={src} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} onError={onGlyphError} />
+    // already handled where it can be read. A name the service has no icon for
+    // is an empty slot, not a skeleton.
+    if (!src) return <span className={gone ? 'ig-glyph-gone' : 'ig-glyph-wait'} aria-hidden="true" />
+    return <MonoGlyph src={src} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
   }
   return (
     <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} aria-hidden="true">
@@ -681,7 +780,7 @@ function cellGlyph(icon, src, onGlyphError) {
 // viewport: the same focusable element at its measured height, holding only its
 // name. It stays the same element so focus and find-in-page can still land on
 // it, and scrolling it back into view restores the glyph in place.
-const IconCell = memo(function IconCell({ icon, src, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
   const pack = showPack ? packOf(icon) : null
   return (
     <div
@@ -696,7 +795,7 @@ const IconCell = memo(function IconCell({ icon, src, showPack, picked, ghost = 0
       onMouseLeave={warmCancel}
       onFocus={() => onWarm(icon, true)}
     >
-      {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError)}</Fragment>}
+      {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n">{icon.name}</span>
       {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
     </div>
@@ -1044,7 +1143,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (!activeIcon) return false
     if (activeIcon.custom) return !!activeIcon.isStroke
     if (activeIcon.svg) return detectPastedStroke(activeIcon.svg)
-    if (activeIcon.cdn) return STROKE_PACKS.has(activeIcon.pack) && matchesStyle(activeIcon.pack, activeIcon.name, 'outlined')
+    if (activeIcon.cdn) return STROKE_PACKS.has(activeIcon.pack) && matchesRegular(activeIcon.pack, activeIcon.name)
     return !activeIcon.filled
   }, [activeIcon])
   const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
@@ -1109,12 +1208,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const similarList = similar.id === currentId ? similar.list : []
   const fetchedBase = fetched.id === currentId ? fetched.svg : null
   const loadErr = fetched.id === currentId ? fetched.err : false
-  // Synchronous seed from the module cache — an icon whose markup was already
-  // resolved (grid hover prefetch, or opened before) paints on the very first
-  // frame instead of flashing "Loading…" while the effect round-trips.
+  // Synchronous seed from the module caches — an icon whose markup was already
+  // resolved (the grid's batched glyphs, hover prefetch, or opened before) paints
+  // on the very first frame instead of flashing "Loading…" while the effect
+  // round-trips.
   const cachedCdnBase = useMemo(() => {
     if (!activeIcon?.cdn || activeIcon.custom) return null
-    const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name))
+    const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name)) || glyphSvgText(activeIcon.pack, activeIcon.name)
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
   const baseSvgText = localBase || fetchedBase || cachedCdnBase
@@ -1183,8 +1283,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [onClose])
 
   const serializedOutput = useMemo(
-    () => serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
-    [baseSvgText, size, color, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
+    () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
+    [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
   )
 
   const stageImgUrl = useMemo(() => {
@@ -1198,30 +1298,70 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
   }, [activeIcon, size, color, isColoredPack, themeInk, rotate, flipH, flipV])
 
-  // Brand/colored artwork: the Stage tone follows the same sampled per-icon tone
-  // as the grid chips — light gradient unless the artwork is near-white. Seeded
-  // from the shared cache (usually already populated by the grid), refined by
-  // the stage image's own onLoad sampling if not.
-  const brandKey = activeIcon?.cdn && !activeIcon.custom ? svgKey(activeIcon.pack, activeIcon.name) : null
-  const [brandTone, setBrandTone] = useState(() => (brandKey && glyphCache.get(brandKey)?.tone) || 'light')
-  const [prevBrandKey, setPrevBrandKey] = useState(brandKey)
-  if (brandKey !== prevBrandKey) {
+  // Reuse the grid's cached markup, resolving currentColor for standalone images.
+  const previewSvg = useMemo(() => serializeCustomizedSvg(baseSvgText, {
+    size, color: isColoredPack ? undefined : (color || themeInk),
+    stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+  }), [baseSvgText, size, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
+  const previewSrc = useMemo(() => (previewSvg ? svgToDataUri(previewSvg) : stageImgUrl), [previewSvg, stageImgUrl])
+  // The frame on screen is the last one that decoded for THIS icon. A new size,
+  // rotation or colour decodes off-screen and swaps in, so the picture never
+  // blanks between frames; "Loading…" only covers an icon's first paint.
+  const [frame, setFrame] = useState(() => ({ id: currentId, src: previewSvg ? previewSrc : '', failed: false }))
+  useEffect(() => {
+    if (!previewSrc) return undefined
+    let live = true
+    const probe = new Image()
+    probe.onload = () => { if (live) setFrame({ id: currentId, src: previewSrc, failed: false }) }
+    probe.onerror = () => { if (live) setFrame(f => ({ id: currentId, src: f.id === currentId ? f.src : '', failed: true })) }
+    probe.src = previewSrc
+    return () => { live = false; probe.onload = null; probe.onerror = null }
+  }, [previewSrc, currentId])
+  const shownSrc = (frame.id === currentId && frame.src) || (previewSvg ? previewSrc : '')
+  const imageError = frame.id === currentId && frame.failed
+  // Duotone artwork (Phosphor, Solar `-bold-duotone`, and any other `-duotone`
+  // name) keeps its own two-tone treatment when no colour is picked.
+  const isDuotone = /-duotone$/.test((activeIcon?.custom ? activeIcon.base : activeIcon?.name) || '')
+  // Brand/colored artwork keeps its own colours and sits on the page ground, like
+  // an un-tinted mono icon. Near-page-ink artwork gets the same faint halo as its
+  // grid cell; the tone comes from the shared cache, refined by the stage image's
+  // own onLoad sampling if the grid has not measured it.
+  // A saved pack glyph has no stage <img> to sample (it is drawn inline), so its
+  // tone comes from the grid's measurement of the same glyph, else from its markup.
+  const brandKey = activeIcon?.cdn && !activeIcon.custom && isColoredPack ? svgKey(activeIcon.pack, activeIcon.name) : null
+  const savedPack = !!(activeIcon?.custom && isColoredPack)
+  const inkKey = brandKey || (savedPack ? `saved:${activeIcon.key}` : null)
+  const [brandInk, setBrandInk] = useState(() => measuredInk(activeIcon, brandKey) || 'mid')
+  const [prevInkKey, setPrevInkKey] = useState(inkKey)
+  if (inkKey !== prevInkKey) {
     // Derive-during-render on icon change (no effect → no cascading-render lint).
-    setPrevBrandKey(brandKey)
-    setBrandTone((brandKey && glyphCache.get(brandKey)?.tone) || 'light')
+    setPrevInkKey(inkKey)
+    setBrandInk(measuredInk(activeIcon, brandKey) || 'mid')
   }
+  useEffect(() => {
+    if (!savedPack || !baseSvgText || measuredInk(activeIcon, null)) return
+    let cancelled = false
+    sampleSvgInk(baseSvgText, (ink) => {
+      if (cancelled) return
+      if (activeIcon.key) SAVED_INK.set(activeIcon.key, ink)
+      setBrandInk(ink)
+    })
+    return () => { cancelled = true }
+  }, [savedPack, baseSvgText, activeIcon])
   const onStageImgLoad = (e) => {
-    if (!isColoredPack) return
-    const key = svgKey(activeIcon.pack, activeIcon.name)
-    if (!glyphCache.has(key)) glyphCache.set(key, sampleGlyph(e.currentTarget))
-    setBrandTone(glyphCache.get(key).tone)
+    // Only a data: frame can be read back; the remote fallback shown before the
+    // markup arrives would taint the canvas and cache a wrong measurement.
+    if (!brandKey || !e.currentTarget.currentSrc.startsWith('data:')) return
+    if (!glyphCache.has(brandKey)) glyphCache.set(brandKey, sampleGlyph(e.currentTarget))
+    setBrandInk(glyphCache.get(brandKey).ink)
   }
-
+  const stageHalo = isColoredPack ? haloFor(brandInk, theme, activeIcon?.pack) : ''
   const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
-  const stageIsLight = isColoredPack ? brandTone === 'light' : relativeLuminance(effectiveColor) < 0.35
+  const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
   // An un-tinted icon is drawn in the theme's own ink, so its stage is the theme's
-  // own page ground. A chosen colour, or a brand's artwork, keeps the contrast ground.
-  const onThemeGround = !isColoredPack && !color
+  // own page ground. A coloured pack always uses it; a chosen mono colour keeps
+  // the contrast ground.
+  const onThemeGround = isColoredPack || !color
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1234,7 +1374,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
   // Free-tier daily cap: gate BEFORE the clipboard write, so a capped copy is a
   // pure no-op that opens the upgrade prompt — nothing lands on the clipboard.
+  // Copy, save and download need the icon's real markup. A coloured-pack stage is
+  // an <img> that paints before that markup arrives, so these wait for it (their
+  // buttons are disabled meanwhile) rather than send an empty string.
   const handleCopySvg = async () => {
+    if (!baseSvgText) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
@@ -1247,6 +1391,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   const handleCopyCode = async () => {
+    if (!baseSvgText) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
@@ -1294,12 +1439,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const base = activeIcon.custom ? activeIcon.base : (activeIcon.cdn || activeIcon.d ? activeIcon.name : 'icon')
     const { iteration, name } = nextCustomName(base, existing)
     const colored = isColoredPack || !!color || (activeIcon.pasted === true && !isStroke)
-    const svg = serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV })
+    const svg = serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV })
     const record = {
       ...newCustomIconStamp(),
       base, iteration, name, projectId,
       pack: activeIcon.pack || null, cdn: !!activeIcon.cdn,
-      svg, color: color || '', size, stroke, absStroke, cap, join, isStroke, colored,
+      svg, color: isColoredPack ? '' : (color || ''), size, stroke, absStroke, cap, join, isStroke, colored,
       // Stamp the unit. Records without it predate the pixel fix and stored
       // `stroke` in viewBox units; `customIconStrokePx` converts those on read,
       // and this marker is what stops a converted value being converted twice.
@@ -1424,22 +1569,30 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         ) : (
           <>
-            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${onThemeGround ? ' icust-stage--theme' : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
+            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${onThemeGround ? ' icust-stage--theme' : ''}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && <span className="icust-stage-msg">{loadErr ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
+                  {!baseSvgText && !loadErr && <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />}
+                  {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               ) : (
-                <img
-                  className="icust-stage-img"
-                  src={stageImgUrl}
-                  width={size}
-                  height={size}
-                  alt={activeIcon.name}
-                  crossOrigin={isColoredPack ? 'anonymous' : undefined}
-                  onLoad={isColoredPack ? onStageImgLoad : undefined}
-                />
+                <>
+                  {shownSrc ? (
+                    <img
+                      className="icust-stage-img"
+                      src={shownSrc}
+                      width={size}
+                      height={size}
+                      alt={activeIcon.name}
+                      onLoad={brandKey ? onStageImgLoad : undefined}
+                      style={imageError ? { visibility: 'hidden' } : undefined}
+                    />
+                  ) : (
+                    <span className={imageError ? 'icust-stage-img' : 'icust-stage-img icust-stage-wait'} style={{ width: size, height: size }} aria-hidden="true" />
+                  )}
+                  {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
+                </>
               )}
             </div>
 
@@ -1469,11 +1622,16 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <div className="icust-row">
                 <label>Colour</label>
                 {isColoredPack ? (
-                  <span className="icust-note">Original colours preserved</span>
+                  <>
+                    <div className="icust-seg">
+                      <span className="icust-seg-static active">Default</span>
+                    </div>
+                    <span className="icust-note icust-original">Original colours</span>
+                  </>
                 ) : (
                   <>
                     <div className="icust-seg">
-                      <button type="button" className={!color ? 'active' : ''} onClick={() => { setColor(''); markDirty() }}>Default</button>
+                      {isDuotone && <button type="button" className={!color ? 'active' : ''} onClick={() => { setColor(''); markDirty() }}>Default</button>}
                       <button type="button" className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); markDirty() }}>Black</button>
                       <button type="button" className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); markDirty() }}>White</button>
                     </div>
@@ -1572,14 +1730,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
             <div className="icust-code">
               <div className="icust-code-label">SVG</div>
-              <button type="button" className="icust-code-box" onClick={handleCopyCode}>
-                <span className="icust-code-hint">{copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
+              <button type="button" className="icust-code-box" onClick={handleCopyCode} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
+                <span className="icust-code-hint">{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
                 <code>{serializedOutput}</code>
               </button>
             </div>
 
             <div className="icust-foot">
-              <button type="button" className="lib-btn lib-btn--primary" onClick={handleCopySvg}>
+              <button type="button" className="lib-btn lib-btn--primary" onClick={handleCopySvg} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
                 {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
               </button>
 
@@ -1587,6 +1745,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 type="button"
                 className="lib-btn"
                 onClick={handleSave}
+                disabled={!baseSvgText}
+                aria-busy={!baseSvgText && !loadErr}
                 onMouseEnter={() => setSaveHover(true)}
                 onMouseLeave={() => setSaveHover(false)}
                 onFocus={() => setSaveHover(true)}
@@ -1595,7 +1755,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 {saveLabel}
               </button>
 
-              <button type="button" className="lib-btn" onClick={handleDownload}>Download</button>
+              <button type="button" className="lib-btn" onClick={handleDownload} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>Download</button>
 
               <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset to default</button>
             </div>
@@ -1730,40 +1890,19 @@ function collectionToNames(d) {
 }
 
 // ── Collection cache ──────────────────────────────────────────────────────────
-// Module-level (survives remounts) cache of parsed /collection responses, keyed by
-// Iconify prefix. Every browse path (All packs / single pack / cross-pack group /
-// search-clear) funnels through getCollectionNames, so a pack is fetched from the
-// CDN at most ONCE per session. Switching packs or collections — or bouncing back
-// to "All packs" — then paints from memory with no network round-trip. Caches the
-// RAW de-duped name list + title; each caller still applies its own style filter.
+// Parsed catalogues survive remounts in memory and reloads in localStorage.
+// Each caller applies its own style filter to the unfiltered names.
 const COLLECTION_CACHE = new Map()
 
-/* ── `&info=1`, AND IT COSTS NOTHING ────────────────────────────────────────
- *
- * The bare `/collection?prefix=x` response carries the names and the title and
- * no licence at all. `&info=1` adds an `info` block with the set's author and
- * its licence as { title, spdx, url } — MEASURED against the live API on
- * 2026-09-23 — on the SAME request. No second round trip, no new host, no extra
- * entry in the rate-limit budget this page was rescued from on 2026-09-18.
- *
- * That matters because a licence table typed into this repository goes stale on
- * the day a pack relicenses, silently, in the direction of us making a claim
- * about somebody else's terms that they have withdrawn. Read from the registry,
- * the credit under the grid is whatever the registry is publishing today.
- *
- * src/data/iconPackCredits.js is the floor under it — the committed fixtures
- * the acceptance suite serves carry no `info` block, and neither does the
- * refused/offline state, and an attribution that only appears when a third
- * party is up is not an attribution. */
-async function getCollectionNames(pack) {
-  const hit = COLLECTION_CACHE.get(pack)
-  if (hit) return hit
-  const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
-  const d = await r.json()
-  const entry = { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
-  COLLECTION_CACHE.set(pack, entry)
-  return entry
-}
+// info=1 includes registry attribution in the same catalogue request.
+const getCollectionNames = createCollectionLoader({
+  cache: COLLECTION_CACHE,
+  fetchEntry: async (pack) => {
+    const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
+    const d = await r.json()
+    return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
+  },
+})
 
 /** The licence the registry answered for this pack, or null if it never has. */
 const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
@@ -2180,9 +2319,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // parallel but append per-pack as each resolves (never Promise.all-block), and
   // round-robin merge so the grid stays mixed. Skeleton shows until the first
   // pack lands; a total failure surfaces the retry banner + built-in icons.
-  const browseAll = useCallback(() => {
+  const browseAll = useCallback((manualRetry = false) => {
     const rid = ++reqId.current
-    retryRef.current = browseAll
+    retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
     setLoadError(false)
     setVisible(PAGE_SIZE); setMode('')
@@ -2212,7 +2351,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     let settled = 0
     let okCount = 0
     allowedPacks.forEach((p, idx) => {
-      getCollectionNames(p)
+      getCollectionNames(p, { manualRetry })
         .then(({ names: raw }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
@@ -2317,11 +2456,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // Browse an entire icon set via the /collection endpoint.
   // Browse one pack, optionally narrowed by an active collection chip — pack
   // and chip are independent filters that compose (chip = style within pack).
-  const browsePack = useCallback((packFilter, groupKey = null) => {
+  const browsePack = useCallback((packFilter, groupKey = null, manualRetry = false) => {
+    groupKey = ICON_GROUPS[groupKey] ? groupKey : null
     setSource('pack'); setGroup(groupKey || null)
     // "All packs" first: the empty string is not a pack and must never be put
     // to the tier table, which would read it as an unknown prefix and refuse it.
-    if (!packFilter) { browseAll(); return }
+    if (!packFilter) { browseAll(manualRetry); return }
     // BEFORE the logodev branch and before any fetch. Logo.dev makes no Iconify
     // request, but it does resolve 48 <img> from img.logo.dev — a payload for a
     // paid pack, on a commercial API keyed to our token. Same gate, same place.
@@ -2329,9 +2469,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setGated(null)
     if (packFilter === 'logodev') { browseLogos(); return }
     const rid = ++reqId.current
-    retryRef.current = () => browsePack(packFilter, groupKey)
+    retryRef.current = () => browsePack(packFilter, groupKey, true)
     setLoading(true); setLoadError(false); glyphFails.current = 0
-    getCollectionNames(packFilter)
+    getCollectionNames(packFilter, { manualRetry })
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
@@ -2359,9 +2499,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
-  const browseGroup = useCallback((groupKey) => {
+  const browseGroup = useCallback((groupKey, manualRetry = false) => {
     const g = ICON_GROUPS[groupKey]
-    if (!g) return
+    if (!g) { browseAll(); return }
     // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
     // and a free viewer may have none of them, so the chip is a wall; a mixed
     // group would fetch only the members the viewer is entitled to and say so
@@ -2373,12 +2513,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const packs = g.packs.filter(canSee)
     if (!packs.length) { setSource('group'); setGroup(groupKey); setPack(''); refuseScope(g.label, needFor(g.packs)); return }
     const rid = ++reqId.current
-    retryRef.current = () => browseGroup(groupKey)
+    retryRef.current = () => browseGroup(groupKey, true)
     setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
     setLoading(true); setLoadError(false); glyphFails.current = 0
     Promise.all(packs.map(p =>
-      getCollectionNames(p)
-        .then(({ names }) => ({ names: keepStyle(p, names, groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
+      getCollectionNames(p, { manualRetry })
+        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
@@ -2400,7 +2540,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capList, needFor, refuseScope])
+  }, [renderLocal, canSee, capList, needFor, refuseScope, browseAll])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -2424,7 +2564,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   const doSearch = useCallback((q, scope = {}) => {
     q = (q || '').trim()
-    const { pack: packFilter = '', group: groupKey = null } = scope
+    const { pack: packFilter = '', group: requestedGroup = null } = scope
+    const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
     // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
     // Iconify registry — type "apple" signed out and the old code would have
     // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
@@ -2451,7 +2592,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setSource('search')
     setLoading(true); setLoadError(false); glyphFails.current = 0
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
-    // the STYLE of the results (matchesStyle below); chip alone fans out to the
+    // the collection of results; chip alone fans out to the
     // whole collection's packs.
     const params = new URLSearchParams()
     if (packFilter) params.set('prefix', packFilter)
@@ -2473,7 +2614,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           renderLocal(q, packFilter)
           return
         }
-        const style = groupKey || PACK_STYLE[packFilter]
         // THE SECOND CHECK, on the way back. `prefixes` above is a request the
         // API is asked to honour; this is the one we enforce. A proxy that drops
         // the parameter, a future API that widens it, a cached answer from a
@@ -2484,7 +2624,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         const items = capList(d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
-          .filter(ic => (groupKey ? matchesStyle(ic.pack, ic.name, style) : matchesWeight(ic.pack, ic.name, weightRef.current, style))))
+          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current)))
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
@@ -2653,11 +2793,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const handleGroupToggle = (key) => {
     clearTimeout(timer.current)
     const q = query.trim()
-    const nextGroup = group === key ? null : key
+    const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
-    // A collection chip ("Outlined", "Solid", …) is a style of its own, so
-    // choosing one puts the weight back to Regular rather than composing two
-    // style answers into an empty grid.
+    // Collections browse their original artwork at Regular weight.
     if (nextGroup) { weightRef.current = 'regular'; setWeight('regular') }
     if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
     else if (pack) browsePack(pack, nextGroup)
@@ -2799,6 +2937,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // once a tranche lands — the caches are plain module Maps, so nothing else
   // would tell React the cells can paint.
   const [glyphTick, setGlyphTick] = useState(0)
+  // Bumped once a failed pack's cool-down is over, so the effect below runs again
+  // without waiting for a scroll. See GLYPH_RETRY_MAX.
+  const [retryTick, setRetryTick] = useState(0)
   // MOUNTED, NOT PER-RUN. An `alive` flag cleared by this effect's own cleanup
   // looks like the right way to drop a stale response, and here it silently ate
   // every glyph on the page. `browseAll` appends a pack at a time, so `icons`
@@ -2820,9 +2961,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // cells wanting one of them, and not a single <img>, because every
   // `setGlyphTick` was skipped by a guard that thought the page had gone.
   const mountedRef = useRef(true)
+  const retryTimerRef = useRef(0)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false }
+    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current) }
   }, [])
   // `icons` and `visible`, NOT `shown`. `shown` is a fresh array on every render,
   // so depending on it re-runs this body for every unrelated state change in the
@@ -2861,6 +3003,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!canSee(icon.pack)) continue
         const key = svgKey(icon.pack, icon.name)
         if (GLYPH_BODY.has(key)) continue
+        // A pack that just failed waits out its cool-down; a name that has
+        // failed GLYPH_RETRY_MAX + 1 times is left alone for the session.
+        if (Date.now() < (GLYPH_RETRY_AFTER.get(icon.pack) || 0)) continue
+        if ((GLYPH_FAILS.get(key) || 0) > GLYPH_RETRY_MAX) continue
         const asked = askedFor(icon.pack)
         if (asked.has(icon.name)) continue
         asked.add(icon.name)
@@ -2871,17 +3017,43 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       const jobs = []
       for (const [pack, names] of wanted) {
         for (let i = 0; i < names.length; i += GLYPH_BATCH) {
-          jobs.push(loadGlyphBatch(pack, names.slice(i, i + GLYPH_BATCH)))
+          const slice = names.slice(i, i + GLYPH_BATCH)
+          jobs.push({ pack, names: slice, done: loadGlyphBatch(pack, slice) })
         }
       }
-      Promise.all(jobs).then((results) => {
+      Promise.all(jobs.map(j => j.done)).then((results) => {
         if (!mountedRef.current) return
         setGlyphTick(n => n + 1)
         // EVERY request refused is the service refusing, not an icon missing.
-        // A partial failure is left alone: the cells whose bodies did arrive
-        // paint, and the ones that did not keep their placeholder, which is
-        // the honest picture of a pack the API would not hand over.
-        if (results.length && results.every(ok => ok === false)) {
+        // A partial failure keeps the cells whose bodies did arrive, and hands
+        // the failed batches' names back so a bounded retry can fill the rest.
+        // A RETRY run that fails is a partial failure too, however many jobs it
+        // held: one flag pack timing out twice must not swap the whole grid for
+        // the built-in set, so only a first-time total refusal raises the notice.
+        const allRefused = results.length > 0 && results.every(ok => ok === false)
+        const isRetryRun = jobs.every(j => j.names.some(n => GLYPH_FAILS.has(svgKey(j.pack, n))))
+        const refusing = allRefused && !isRetryRun
+        if (results.some(ok => ok === false) && !refusing) {
+          let retry = false
+          jobs.forEach((job, i) => {
+            if (results[i] !== false) return
+            const asked = askedFor(job.pack)
+            for (const n of job.names) {
+              asked.delete(n)
+              const key = svgKey(job.pack, n)
+              const fails = (GLYPH_FAILS.get(key) || 0) + 1
+              GLYPH_FAILS.set(key, fails)
+              if (fails <= GLYPH_RETRY_MAX) retry = true
+              else GLYPH_MISSING.add(key)
+            }
+            GLYPH_RETRY_AFTER.set(job.pack, Date.now() + GLYPH_RETRY_MS)
+          })
+          if (retry) {
+            clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
+          }
+        }
+        if (refusing) {
           // Names that were never answered must not stay marked as asked, or
           // the retry button would find nothing left to request.
           for (const [pack, names] of wanted) {
@@ -2895,7 +3067,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       })
     }, 120)
     return () => clearTimeout(t)
-  }, [icons, visible, recents, renderLocal, canSee])
+  }, [icons, visible, recents, renderLocal, canSee, retryTick])
 
   // The one read of `glyphTick`. The caches above are module-level Maps, so a
   // tranche landing changes nothing React can see; tying this callback's
@@ -3118,6 +3290,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       key={`${idx}:${icon.id || icon.key || icon.name || ''}`}
       icon={icon}
       src={icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
+      gone={!!icon.cdn && !icon.custom && !icon.logo && GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
       showPack={showPack}
       picked={isPicked(icon)}
       ghost={ghost}
