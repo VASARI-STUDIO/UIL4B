@@ -265,8 +265,6 @@
   box-shadow: 0 0 0 4px rgba(10, 10, 11, .9);
 }
 
-/* Raise the containing column so its popovers cover neighbouring swatches. */
-.plb .plb-col:has(.plb-picker, .plb-tintpop, .plb-swappop) { z-index: 4; }
 /* The popovers a column opens stay anchored to it. */
 .plb .plb-col .plb-pop { cursor: default; color: var(--t0); }
 

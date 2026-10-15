@@ -340,8 +340,9 @@ const focusedLabel = (page) => page.evaluate(() => document.activeElement?.getAt
 /** A signed-in Pro session (the test Firebase double grants it through the
  *  same subscription document the product reads), grown to `colours` swatches.
  *  Edit in HCT opens a Pro modal for a free account, and 9-10 colours are Pro. */
-async function proBoard(browser, width, { colours = 5, height = 900 } = {}) {
+async function proBoard(browser, width, { colours = 5, height = 900, theme } = {}) {
   const ctx = await browser.newContext({ viewport: { width, height } })
+  if (theme) await ctx.addInitScript((t) => localStorage.setItem('vs-t', t), theme)
   const page = await ctx.newPage()
   watch(page, `Pro palette designer at ${width}px`)
   await signIn(page, { plan: 'pro' })
@@ -379,9 +380,19 @@ const settledBox = (page, selector) => page.evaluate((sel) => new Promise((resol
 const expectPopoverHits = async (panel) => {
   await expect.poll(() => panel.evaluate((el) => {
     const r = el.getBoundingClientRect()
-    return [r.left + r.width / 2, r.right - 8].map((x) =>
-      el.contains(document.elementFromPoint(x, r.top + r.height / 2)))
-  }), { message: 'the popover takes the pointer at its centre and near its right edge' }).toEqual([true, true])
+    const points = [
+      ['centre', r.left + r.width / 2, r.top + r.height / 2],
+      ['right edge', r.right - 8, r.top + r.height / 2],
+      ['header', r.left + r.width / 2, r.top + 12],
+    ]
+    const close = el.querySelector('.plb-pop-x')
+    if (close) {
+      const c = close.getBoundingClientRect()
+      points.push(['Close button', c.left + c.width / 2, c.top + c.height / 2])
+    }
+    return points.filter(([, x, y]) => !el.contains(document.elementFromPoint(x, y)))
+      .map(([name]) => name)
+  }), { message: 'the popover is topmost at its centre, right edge, header and Close button when present' }).toEqual([])
 }
 
 test.describe('the ordered column', () => {
@@ -521,10 +532,8 @@ test.describe('the ordered column', () => {
     await ctx.close()
   })
 
-  // (e) MUTATION: remove the --plb-pop-x assignment in the popover placement
-  // effect in PaletteBuilder.jsx and the panel's default position runs off
-  // screen; remove the .plb-col:has(.plb-picker, .plb-tintpop, .plb-swappop)
-  // z-index rule in palette-builder.css and neighbouring swatches cover it.
+  // (e) The HCT panels stay on screen at both ends of the board. The first
+  // swatch's HCT and Swap popovers take the pointer at the sampled points.
   for (const width of [768, 1440]) {
     for (const [which, index] of [['first', 0], ['last', 4]]) {
       test(`the Edit in HCT popover of the ${which} swatch is fully on screen at ${width}`, async ({ browser }) => {
@@ -557,6 +566,22 @@ test.describe('the ordered column', () => {
       })
     }
   }
+
+  // The short viewport places the picker header and Close button over the
+  // sticky toolbar; both remain above it and take the pointer.
+  test('667x375 light: the first swatch HCT picker is topmost over the toolbar', async ({ browser }) => {
+    const { ctx, page } = await proBoard(browser, 667, { height: 375, theme: 'light' })
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await page.locator('.plb-col').first().getByRole('button', { name: MORE }).click()
+    await page.getByRole('menu', { name: 'Colour actions', exact: true })
+      .getByRole('menuitem', { name: 'Edit in HCT', exact: true }).click()
+    const panel = page.locator('.plb-picker')
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'Close editor', exact: true })).toBeVisible()
+    await settledBox(page, '.plb-picker')
+    await expectPopoverHits(panel)
+    await ctx.close()
+  })
 
   // MUTATION: remove the internal-scroll guard in the popover placement
   // effect and resetting the height cap resets the picker's scroll position.
