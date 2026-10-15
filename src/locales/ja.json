@@ -128,10 +128,6 @@
       "label": "デザイン原則",
       "description": "視覚的階層、バランス、デザイン心理学。"
     },
-    "externalResources": {
-      "label": "外部リソース",
-      "description": "フォント、カラー、AI ツール、インスピレーションへの厳選リンク集。"
-    },
     "promptLibrary": {
       "label": "プロンプトライブラリ",
       "description": "AI画像生成プロンプトをプレビュー付きで保存。"

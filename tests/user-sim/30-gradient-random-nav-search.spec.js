@@ -101,7 +101,7 @@ test.describe('nav search hover', () => {
   // the right; CI's slower runner read them 73px into the slide. So: every
   // frame from the hover until the field's own width transition has finished
   // (the animation layer, not a stopwatch), the largest drift of the menus AND
-  // of the theme cycle beside them — and the expansion is proven to have
+  // of the theme cycle at the far end of the row — and the expansion is proven to have
   // happened, or "nothing moved" would be true of a hover that did nothing.
   test('the three centre menus do not move when it expands', async ({ page }) => {
     await go(page, ROUTE)

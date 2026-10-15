@@ -249,27 +249,6 @@ test.describe('the 404', () => {
   })
 })
 
-test.describe('the gallery mastheads', () => {
-  // THE PALETTE AND GRADIENT LIBRARY MASTHEAD SENTENCES WERE DELETED AND PUT
-  // BACK, in the same audit. "…with a point of view … make it yours." is one
-  // sentence with the nouns swapped, and it is on the founder's list to
-  // rewrite — but three standing contracts pin the masthead as title +
-  // description (15-discover-library-parity, 34-palette-library-sections),
-  // and without the sentence the 390px masthead is 183px of dead space, the
-  // exact defect 40-gallery-hero was written for. A hole is worse than a
-  // templated line, so the line stays until he writes its replacement. The
-  // audit's only gallery-chrome change is the one below.
-
-  test('the Curated Resources grid heading has no "not scraped" label above it', async ({ page }) => {
-    watch(page, PERSONA)
-    await go(page, '/discover/resources')
-    await expectRendered(page, '/discover/resources')
-    const heading = page.locator('#cur-bands-heading')
-    await expect(heading).toHaveCount(1)
-    await expect(heading.locator('xpath=..').locator('span')).toHaveCount(0)
-  })
-})
-
 test.describe('the share cards', () => {
   test('no section card falls back to a "Design toolkit" eyebrow', async () => {
     // The generator used to print "Design toolkit" above every section name

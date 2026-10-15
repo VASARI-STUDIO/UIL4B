@@ -47,7 +47,7 @@ function resolve(p) {
     return { status: 308, to: p.replace(/\/+$/, '') }
   }
   const redirect = (config.redirects || []).find((r) => r.source === p)
-  if (redirect) return { status: redirect.permanent ? 301 : 307, to: redirect.destination }
+  if (redirect) return { status: redirect.statusCode ?? (redirect.permanent ? 308 : 307), to: redirect.destination }
   if (p === '/' || isStaticFile(p)) return { status: 200, file: p }
   for (const r of config.rewrites || []) {
     if (r.source === '/p/:code' ? /^\/p\/[^/]+$/.test(p) : r.source === p) {
@@ -91,7 +91,7 @@ test('every route the app renders is still served a shell', () => {
   assert.ok(known.length >= 60, `only ${known.length} routes were enumerated`)
   for (const route of known) {
     const r = resolve(route)
-    assert.ok(r.status === 200 || r.status === 301,
+    assert.ok(r.status === 200 || r.status === 301 || r.status === 308,
       `${route} answers ${r.status} — a real page would be served the 404 page`)
   }
   // The private and flow pages by name, so this cannot pass by agreeing with a
