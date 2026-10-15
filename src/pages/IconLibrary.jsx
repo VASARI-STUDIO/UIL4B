@@ -407,6 +407,10 @@ const askedFor = (pack) => {
 // GLYPH_RETRY_MAX times, and a pack is not re-asked inside GLYPH_RETRY_MS of its
 // last failure, because Iconify rate-limits and a storm would make it worse.
 const GLYPH_RETRY_MAX = 2
+// 'pack:name' → the service has no icon of that name, or never answered for it in
+// GLYPH_RETRY_MAX + 1 tries. Such a cell draws a quiet empty slot, not the loading
+// skeleton, which would pulse for the rest of the session.
+const GLYPH_MISSING = new Set()
 const GLYPH_RETRY_MS = 3000
 const GLYPH_FAILS = new Map() // 'pack:name' → failed attempts so far
 const GLYPH_RETRY_AFTER = new Map() // pack → earliest time it may be asked again
@@ -435,8 +439,8 @@ async function loadGlyphBatch(pack, names) {
   const bodyOf = (n) => {
     // A requested name can be an alias; the parent carries the markup. Iconify
     // allows an alias chain, so walk it with a hop cap rather than trusting it
-    // to be one deep. Without this, `lucide:home` (an alias of `house` as of
-    // 2026-09-18) would cache as missing and fall back to its own request.
+    // to be one deep. An alias such as `lucide:home` (of `house`) would
+    // otherwise be recorded as missing.
     let cur = n
     for (let hop = 0; hop < 8; hop++) {
       if (data.icons && data.icons[cur]) return { icon: data.icons[cur], key: cur }
@@ -448,8 +452,9 @@ async function loadGlyphBatch(pack, names) {
   }
   for (const n of names) {
     const found = bodyOf(n)
-    if (!found || typeof found.icon.body !== 'string') continue
     const key = svgKey(pack, n)
+    if (!found || typeof found.icon.body !== 'string') { GLYPH_MISSING.add(key); continue }
+    GLYPH_MISSING.delete(key)
     GLYPH_BODY.set(key, found.icon.body)
     const w = found.icon.width || defW
     const h = found.icon.height || defH
@@ -468,6 +473,14 @@ async function loadGlyphBatch(pack, names) {
 // Bounded LRU: at most GLYPH_URI_MAX entries, least recently used dropped first.
 const GLYPH_URI_MAX = 3000
 const GLYPH_URI = new Map()
+// The standalone SVG markup for a batched glyph, or '' when its body has not arrived.
+function glyphSvgText(pack, name) {
+  const key = svgKey(pack, name)
+  const body = GLYPH_BODY.get(key)
+  if (!body) return ''
+  const box = GLYPH_BOX.get(key) || { w: 24, h: 24 }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.w} ${box.h}" width="${box.w}" height="${box.h}">${body}</svg>`
+}
 function glyphDataUri(pack, name) {
   const key = svgKey(pack, name)
   const hit = GLYPH_URI.get(key)
@@ -476,12 +489,9 @@ function glyphDataUri(pack, name) {
     GLYPH_URI.set(key, hit)
     return hit
   }
-  const body = GLYPH_BODY.get(key)
-  if (!body) return ''
-  const box = GLYPH_BOX.get(key) || { w: 24, h: 24 }
-  const uri = svgToDataUri(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.w} ${box.h}" width="${box.w}" height="${box.h}">${body}</svg>`
-  )
+  const text = glyphSvgText(pack, name)
+  if (!text) return ''
+  const uri = svgToDataUri(text)
   GLYPH_URI.set(key, uri)
   while (GLYPH_URI.size > GLYPH_URI_MAX) {
     GLYPH_URI.delete(GLYPH_URI.keys().next().value)
@@ -599,7 +609,7 @@ function sampleGlyph(img) {
 // (`ig-chip--wait`), so the cell does not resize under the reader when the
 // artwork appears; once there is artwork the chip is a transparent slot again and
 // fades in with it (`ig-chip--in`). A failed image drops the skeleton and leaves
-// the empty slot.
+// the empty slot, and so does a name the service has no icon for (`gone`).
 //
 // The sampling below is unchanged and is now on firmer ground: a data: URI does
 // not taint a canvas, so `getImageData` no longer depends on the CDN returning
@@ -607,9 +617,30 @@ function sampleGlyph(img) {
 // was only ever there to make that sampling legal.
 // Which halo (if any) keeps ink that matches the page ground readable: near-black
 // ink on the dark theme gets a light halo, near-white ink on the light theme a dark one.
-const haloFor = (ink, theme) => (ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : '')
+// A flag never gets one: its average tone says little about its edge, and a flag's
+// outline is part of the artwork.
+const FLAG_PACKS = new Set(ICON_GROUPS.flags.packs)
+const haloFor = (ink, theme, pack) => {
+  if (FLAG_PACKS.has(pack)) return ''
+  return ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : ''
+}
 
-function BrandGlyph({ pack, name, src }) {
+// Ink tone already known for an icon in the customiser or My Icons: the grid's
+// measurement of the same pack glyph, else one taken from the saved markup.
+const SAVED_INK = new Map() // saved-icon key → 'dark' | 'light' | 'mid'
+function measuredInk(icon, brandKey) {
+  if (brandKey) return glyphCache.get(brandKey)?.ink || null
+  if (icon?.custom) return glyphCache.get(svgKey(icon.pack, icon.base))?.ink || SAVED_INK.get(icon.key) || null
+  return null
+}
+// Ink tone of standalone SVG markup, read through an off-screen image.
+function sampleSvgInk(svgText, done) {
+  const img = new Image()
+  img.onload = () => done(sampleGlyph(img).ink)
+  img.src = svgToDataUri(svgText)
+}
+
+function BrandGlyph({ pack, name, src, gone = false }) {
   const key = svgKey(pack, name)
   const { theme } = useTheme()
   const [shape, setShape] = useState(() => glyphCache.get(key) || { ar: 1, cap: 1, ink: 'mid' })
@@ -633,8 +664,8 @@ function BrandGlyph({ pack, name, src }) {
   }
   const onError = () => setLoad({ key, phase: 'fail' })
   const wide = shape.ar > WIDE_INK
-  const halo = haloFor(shape.ink, theme)
-  const waiting = !src || phase === 'wait'
+  const halo = haloFor(shape.ink, theme, pack)
+  const waiting = !gone && (!src || phase === 'wait')
   return (
     <span
       className={`ig-chip${wide ? ' ig-chip--wide' : ''}${halo ? ` ig-chip--${halo}` : ''}${waiting ? ' ig-chip--wait' : phase === 'in' ? ' ig-chip--in' : ''}`}
@@ -704,18 +735,47 @@ const warmSoon = (icon) => {
 }
 const warmCancel = () => clearTimeout(warmTimer)
 
+// A saved multicolour pack glyph in My Icons: a transparent slot like the grid's
+// own, with the halo its ink tone calls for.
+function SavedPackGlyph({ icon }) {
+  const { theme } = useTheme()
+  const [measured, setMeasured] = useState(null)
+  const ink = measuredInk(icon, null) || measured || 'mid'
+  const onLoad = (e) => {
+    if (measuredInk(icon, null)) return
+    const next = sampleGlyph(e.currentTarget).ink
+    if (icon.key) SAVED_INK.set(icon.key, next)
+    setMeasured(next)
+  }
+  const halo = haloFor(ink, theme, icon.pack)
+  return (
+    <span className={halo ? `ig-chip ig-chip--${halo}` : 'ig-chip'}>
+      <img src={svgToDataUri(icon.svg)} width="24" height="24" loading="lazy" alt={icon.name} onLoad={onLoad} />
+    </span>
+  )
+}
+
+// Relative luminance from which a saved mono colour sits on the dark tile (the
+// same cut the customiser stage uses to swap to its light ground).
+const TILE_FLIP_LUM = 0.35
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
-function cellGlyph(icon, src, onGlyphError) {
+function cellGlyph(icon, src, onGlyphError, gone) {
   if (icon.custom) {
-    const img = <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
-    if (!icon.colored) return img
-    // A saved multicolour pack glyph sits on the page like its grid cell does; a
-    // saved mono icon with a chosen colour (or pasted artwork) keeps its light tile
-    // so a black or white one stays visible.
-    const multicolour = icon.cdn && !icon.color && COLORED_PACKS.has(icon.pack)
-    return <span className={multicolour ? 'ig-chip' : 'ig-chip ig-chip--tile'}>{img}</span>
+    if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    // A saved multicolour pack glyph sits on the page like its grid cell does,
+    // with the same ink-tone halo.
+    if (icon.cdn && !icon.color && COLORED_PACKS.has(icon.pack)) return <SavedPackGlyph icon={icon} />
+    // A saved mono icon with a chosen colour (or pasted artwork) sits on a tile
+    // that contrasts with that colour, so a white icon is as visible as a black one.
+    const flip = !!icon.color && relativeLuminance(icon.color) >= TILE_FLIP_LUM
+    return (
+      <span className={flip ? 'ig-chip ig-chip--tile ig-chip--tile-dark' : 'ig-chip ig-chip--tile'}>
+        <img src={svgToDataUri(icon.svg)} width="24" height="24" loading="lazy" alt={icon.name} />
+      </span>
+    )
   }
   if (icon.logo) {
     // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
@@ -727,13 +787,14 @@ function cellGlyph(icon, src, onGlyphError) {
     )
   }
   if (icon.cdn) {
-    if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} />
+    if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} gone={gone} />
     // The batched body, composed into a data: URI. Empty until its tranche
     // lands, which is a cell that has not painted yet rather than a cell that
     // failed — so NO per-icon URL fallback here. Falling back would put one
     // request per cell back on the first paint, and the batch's own refusal is
-    // already handled where it can be read.
-    if (!src) return <span className="ig-glyph-wait" aria-hidden="true" />
+    // already handled where it can be read. A name the service has no icon for
+    // is an empty slot, not a skeleton.
+    if (!src) return <span className={gone ? 'ig-glyph-gone' : 'ig-glyph-wait'} aria-hidden="true" />
     return <MonoGlyph src={src} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
   }
   return (
@@ -752,7 +813,7 @@ function cellGlyph(icon, src, onGlyphError) {
 // viewport: the same focusable element at its measured height, holding only its
 // name. It stays the same element so focus and find-in-page can still land on
 // it, and scrolling it back into view restores the glyph in place.
-const IconCell = memo(function IconCell({ icon, src, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
   const pack = showPack ? packOf(icon) : null
   return (
     <div
@@ -767,7 +828,7 @@ const IconCell = memo(function IconCell({ icon, src, showPack, picked, ghost = 0
       onMouseLeave={warmCancel}
       onFocus={() => onWarm(icon, true)}
     >
-      {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError)}</Fragment>}
+      {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n">{icon.name}</span>
       {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
     </div>
@@ -1180,12 +1241,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const similarList = similar.id === currentId ? similar.list : []
   const fetchedBase = fetched.id === currentId ? fetched.svg : null
   const loadErr = fetched.id === currentId ? fetched.err : false
-  // Synchronous seed from the module cache — an icon whose markup was already
-  // resolved (grid hover prefetch, or opened before) paints on the very first
-  // frame instead of flashing "Loading…" while the effect round-trips.
+  // Synchronous seed from the module caches — an icon whose markup was already
+  // resolved (the grid's batched glyphs, hover prefetch, or opened before) paints
+  // on the very first frame instead of flashing "Loading…" while the effect
+  // round-trips.
   const cachedCdnBase = useMemo(() => {
     if (!activeIcon?.cdn || activeIcon.custom) return null
-    const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name))
+    const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name)) || glyphSvgText(activeIcon.pack, activeIcon.name)
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
   const baseSvgText = localBase || fetchedBase || cachedCdnBase
@@ -1273,20 +1335,34 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // an un-tinted mono icon. Near-page-ink artwork gets the same faint halo as its
   // grid cell; the tone comes from the shared cache, refined by the stage image's
   // own onLoad sampling if the grid has not measured it.
+  // A saved pack glyph has no stage <img> to sample (it is drawn inline), so its
+  // tone comes from the grid's measurement of the same glyph, else from its markup.
   const brandKey = activeIcon?.cdn && !activeIcon.custom && isColoredPack ? svgKey(activeIcon.pack, activeIcon.name) : null
-  const [brandInk, setBrandInk] = useState(() => (brandKey && glyphCache.get(brandKey)?.ink) || 'mid')
-  const [prevBrandKey, setPrevBrandKey] = useState(brandKey)
-  if (brandKey !== prevBrandKey) {
+  const savedPack = !!(activeIcon?.custom && isColoredPack)
+  const inkKey = brandKey || (savedPack ? `saved:${activeIcon.key}` : null)
+  const [brandInk, setBrandInk] = useState(() => measuredInk(activeIcon, brandKey) || 'mid')
+  const [prevInkKey, setPrevInkKey] = useState(inkKey)
+  if (inkKey !== prevInkKey) {
     // Derive-during-render on icon change (no effect → no cascading-render lint).
-    setPrevBrandKey(brandKey)
-    setBrandInk((brandKey && glyphCache.get(brandKey)?.ink) || 'mid')
+    setPrevInkKey(inkKey)
+    setBrandInk(measuredInk(activeIcon, brandKey) || 'mid')
   }
+  useEffect(() => {
+    if (!savedPack || !baseSvgText || measuredInk(activeIcon, null)) return
+    let cancelled = false
+    sampleSvgInk(baseSvgText, (ink) => {
+      if (cancelled) return
+      if (activeIcon.key) SAVED_INK.set(activeIcon.key, ink)
+      setBrandInk(ink)
+    })
+    return () => { cancelled = true }
+  }, [savedPack, baseSvgText, activeIcon])
   const onStageImgLoad = (e) => {
     if (!brandKey) return
     if (!glyphCache.has(brandKey)) glyphCache.set(brandKey, sampleGlyph(e.currentTarget))
     setBrandInk(glyphCache.get(brandKey).ink)
   }
-  const stageHalo = isColoredPack ? haloFor(brandInk, theme) : ''
+  const stageHalo = isColoredPack ? haloFor(brandInk, theme, activeIcon?.pack) : ''
   const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
   const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
   // An un-tinted icon is drawn in the theme's own ink, so its stage is the theme's
@@ -1305,7 +1381,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
   // Free-tier daily cap: gate BEFORE the clipboard write, so a capped copy is a
   // pure no-op that opens the upgrade prompt — nothing lands on the clipboard.
+  // Copy, save and download need the icon's real markup. A coloured-pack stage is
+  // an <img> that paints before that markup arrives, so these wait for it (their
+  // buttons are disabled meanwhile) rather than send an empty string.
   const handleCopySvg = async () => {
+    if (!baseSvgText) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
@@ -1318,6 +1398,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   const handleCopyCode = async () => {
+    if (!baseSvgText) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
@@ -1643,14 +1724,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
             <div className="icust-code">
               <div className="icust-code-label">SVG</div>
-              <button type="button" className="icust-code-box" onClick={handleCopyCode}>
-                <span className="icust-code-hint">{copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
+              <button type="button" className="icust-code-box" onClick={handleCopyCode} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
+                <span className="icust-code-hint">{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
                 <code>{serializedOutput}</code>
               </button>
             </div>
 
             <div className="icust-foot">
-              <button type="button" className="lib-btn lib-btn--primary" onClick={handleCopySvg}>
+              <button type="button" className="lib-btn lib-btn--primary" onClick={handleCopySvg} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
                 {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
               </button>
 
@@ -1658,6 +1739,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 type="button"
                 className="lib-btn"
                 onClick={handleSave}
+                disabled={!baseSvgText}
+                aria-busy={!baseSvgText && !loadErr}
                 onMouseEnter={() => setSaveHover(true)}
                 onMouseLeave={() => setSaveHover(false)}
                 onFocus={() => setSaveHover(true)}
@@ -1666,7 +1749,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 {saveLabel}
               </button>
 
-              <button type="button" className="lib-btn" onClick={handleDownload}>Download</button>
+              <button type="button" className="lib-btn" onClick={handleDownload} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>Download</button>
 
               <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset to default</button>
             </div>
@@ -2956,6 +3039,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               const fails = (GLYPH_FAILS.get(key) || 0) + 1
               GLYPH_FAILS.set(key, fails)
               if (fails <= GLYPH_RETRY_MAX) retry = true
+              else GLYPH_MISSING.add(key)
             }
             GLYPH_RETRY_AFTER.set(job.pack, Date.now() + GLYPH_RETRY_MS)
           })
@@ -3201,6 +3285,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       key={`${idx}:${icon.id || icon.key || icon.name || ''}`}
       icon={icon}
       src={icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
+      gone={!!icon.cdn && !icon.custom && !icon.logo && GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
       showPack={showPack}
       picked={isPicked(icon)}
       ghost={ghost}

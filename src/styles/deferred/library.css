@@ -451,11 +451,18 @@ html[data-reduced-motion="true"] :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig
 /* Opaque logo.dev PNGs and saved mono icons with a chosen colour keep the light
    tile that separates them from the card surface. */
 .ig-chip--tile{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
+/* The same tile in the customiser stage's dark ground, for a saved light colour. */
+.ig-chip--tile-dark{background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
 /* Ink that matches the page ground (near-black on dark, near-white on light) would
    vanish with no box behind it. A hairline halo outlines the shape; the artwork's
    own colours are untouched. */
-.ig-chip--halo-light img,.icust-stage--halo-light .icust-stage-img{filter:drop-shadow(0 0 1px rgba(255,255,255,.6))}
-.ig-chip--halo-dark img,.icust-stage--halo-dark .icust-stage-img{filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
+.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(255,255,255,.6))}
+.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
+/* A glyph slot for a name the service has no icon for: same box, nothing in it. */
+.ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
+/* Copy, save and download wait for the icon's markup. */
+.icust-foot .lib-btn:disabled,.icust-code-box:disabled{opacity:.5;cursor:not-allowed}
+.icust-code-box:disabled:hover{border-color:var(--border)}
 /* object-fit, because the request now asks the API for a HEIGHT rather than a
    box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
    4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
