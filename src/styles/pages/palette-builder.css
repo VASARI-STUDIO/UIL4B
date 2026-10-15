@@ -66,6 +66,7 @@
 }
 .plb .plb-board { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; align-items: stretch; }
 .plb .plb-col {
+  container-type: inline-size;
   position: relative;
   flex: 1 1 0;
   min-width: 0;
@@ -103,32 +104,29 @@
   background: color-mix(in srgb, var(--plb-anti, #fff) 22%, transparent);
   color: var(--plb-ink, currentColor);
   cursor: pointer;
-  transition: transform .14s var(--tl-ease), background .16s ease;
+  transition: opacity .14s ease, transform .14s var(--tl-ease), background .16s ease;
 }
 .plb .plb-tool:active { transform: scale(.97); }
 .plb .plb-tool--on { background: color-mix(in srgb, var(--plb-anti, #fff) 40%, transparent); }
 @media (hover: hover) and (pointer: fine) {
   .plb .plb-tool--more { opacity: 0; }
   .plb .plb-col:hover .plb-tool--more,
-  .plb .plb-col:focus-within .plb-tool--more,
+  .plb .plb-col:has(:focus-visible) .plb-tool--more,
   .plb .plb-tool--more.plb-tool--on { opacity: 1; }
   .plb .plb-tool:hover { background: color-mix(in srgb, var(--plb-anti, #fff) 34%, transparent); }
 }
 
-/* Quick tools (Edit in HCT, Swap, Remove): a second stack fanned out to the
-   left of the lock. It is out of flow, so the lock and ⋯ keep the footprint
-   they have at rest and the stack never lengthens the column. At rest the
+/* Quick tools (Edit in HCT, Swap, Remove) sit between Lock and More in the
+   tools column, with 8px within the group and 16px between groups. At rest the
    tools are transparent and take no pointer events, but they stay rendered
    and focusable from 768px up, where keyboard focus reveals them. Phones
    use the Colour actions menu instead. Pointer events are switched on per
    tool, only where that tool is revealed, so a transparent tool can never be
    pressed (not at rest, and not beside a revealed sibling). */
 .plb .plb-col-quick {
-  position: absolute;
-  top: 16px;
-  right: 58px;
   display: grid;
   gap: 8px;
+  margin-block: 8px;
   pointer-events: none;
 }
 .plb .plb-tool--quick {
@@ -136,14 +134,23 @@
   pointer-events: none;
   transition: opacity .14s ease, transform .14s var(--tl-ease), background .16s ease;
 }
-.plb .plb-swappop { top: 144px; right: 16px; left: auto; transform: none; }
+.plb .plb-swappop { top: calc(100% + 8px); right: 0; left: auto; transform: none; }
 /* No hover: a tap on the bare swatch (.plb-col--tools) or the keyboard
    reaching a control in it shows the stack. */
 .plb .plb-col--tools .plb-tool--quick,
 .plb .plb-tool--quick.plb-tool--on { opacity: 1; pointer-events: auto; }
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
-  .plb .plb-col:hover .plb-tool--quick,
-  .plb .plb-col:focus-within .plb-tool--quick { opacity: 1; pointer-events: auto; }
+  .plb .plb-col:hover .plb-tool--quick { opacity: 1; pointer-events: auto; }
+}
+/* Size containment leaves flex sizing intact (basis and min-width are zero).
+   Narrow swatches use More instead of exposing the quick stack. */
+@container (width < 80px) {
+  .plb .plb-col-quick { display: none; }
+}
+@media (pointer: coarse) {
+  @container (width < 90px) {
+    .plb .plb-col-quick { display: none; }
+  }
 }
 :where(html[data-reduced-motion="true"]) .plb .plb-tool--quick { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
@@ -362,6 +369,7 @@
     gap: 14px;
   }
   .plb .plb-col-tools { position: static; display: flex; gap: 8px; order: 0; }
+  .plb .plb-col-quick { display: none; }
   .plb .plb-tool--quick { display: none; }
   .plb .plb-swappop { top: calc(100% + 4px); }
   .plb .plb-ramp { display: none; }
@@ -400,7 +408,6 @@
 
 @media (pointer: coarse) {
   .plb .plb-tool { width: 44px; height: 44px; }
-  .plb .plb-col-quick { right: 68px; }
   .plb .plb-hex { min-height: 44px; }
   .plb .plb-aa--locked { min-height: 44px; }
   .plb .plb-float .plb-menu-item,
@@ -409,9 +416,6 @@
   .plb .plb-ctx-item { min-height: 44px; }
   .plb .plb-swapdir { min-height: 44px; }
   .plb .plb-copycss { min-height: 44px; }
-}
-@media (pointer: coarse) and (min-width: 768px) {
-  .plb .plb-swappop { top: 176px; }
 }
 
 :where(html[data-reduced-motion="true"]) .plb .plb-tool,

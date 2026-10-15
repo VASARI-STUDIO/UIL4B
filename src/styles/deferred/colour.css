@@ -65,17 +65,13 @@
 .plb-scrolllist{display:flex;flex-direction:column;gap:2px;max-height:min(50vh,380px);overflow-y:auto;overscroll-behavior:contain}
 
 
-/* Tints panel + per-column HCT picker (anchored inside the column) */
-/* Centred on the column, but never past the board's edge: on the FIRST column
-   a centred 206px panel sat at x=-10 at 1024px and x=-2 at 1097px, cutting the
-   T95/T90 labels. clamp() keeps 8px inside the column
-   on either side; a column narrower than the panel resolves to the left bound,
-   which is the edge a person can actually see past (the Add rail is to the
-   right). Mobbin: Runway and Magnific shift an anchored colour panel inward
-   rather than let it leave the canvas. <=768 replaces this with a full-width
-   sheet below. */
-.plb-tintpop,.plb-picker{position:absolute;bottom:96px;left:clamp(8px,calc(50% - 103px),calc(100% - 214px));z-index:45;width:206px;padding:10px}
-.plb-picker{width:248px;left:clamp(8px,calc(50% - 124px),calc(100% - 256px))}
+/* Tints and HCT panels use measured, viewport-clamped coordinates relative
+   to their column from 768px up. Phones retain the sheet below the swatch. */
+.plb-tintpop,.plb-picker{position:absolute;top:var(--plb-pop-y,16px);left:var(--plb-pop-x,8px);bottom:auto;z-index:45;width:206px;padding:10px}
+.plb-picker{width:248px}
+@media(min-width:768px){
+  .plb-tintpop,.plb-picker{max-width:calc(100vw - 16px);max-height:var(--plb-pop-max-height,calc(100dvh - 16px));overflow-y:auto;overscroll-behavior:contain}
+}
 .plb-tintopen{width:100%;justify-content:center;margin-top:8px}
 .plb-swappop{position:absolute;top:58px;left:50%;z-index:46;display:flex;gap:4px;width:max-content;padding:5px;transform:translateX(-50%)}
 .plb-modal-body{display:grid;grid-template-columns:1fr;gap:14px}
@@ -162,11 +158,14 @@
   .plb-modal-tab{flex:1;text-align:center}
   .plb-pvb-head{font-size:24px}
   .plb-pvg-title{font-size:36px}
-  .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
   .plb-swappop{top:calc(100% + 4px)}
 
 }
 
+
+@media(max-width:767px){
+  .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
+}
 
 /* Inside the popup the wall is narrow, so the button drops below the copy
    instead of sitting beside it — at ~300px a side-by-side row leaves the

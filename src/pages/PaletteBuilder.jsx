@@ -822,6 +822,54 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const skipVarInvalidate = useRef(false)
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
+  const columnRefs = useRef([])
+  const removeFocusRef = useRef(null)
+  useLayoutEffect(() => {
+    if (removeFocusRef.current == null) return
+    columnRefs.current[removeFocusRef.current]?.querySelector('.plb-tool--key')?.focus({ preventScroll: true })
+    removeFocusRef.current = null
+  }, [colors.length])
+  // Absolute coordinates remain relative to the size-contained column. Measure
+  // in viewport space first so even the edge columns keep the whole panel visible.
+  useLayoutEffect(() => {
+    const column = columnRefs.current[pickerIdx ?? tintsIdx]
+    const panel = column?.querySelector(pickerIdx != null ? '.plb-picker' : '.plb-tintpop')
+    if (!panel) return
+    const place = () => {
+      for (const name of ['--plb-pop-x', '--plb-pop-y', '--plb-pop-max-height']) panel.style.removeProperty(name)
+      if (window.innerWidth < 768) return
+      const margin = 8
+      const visibleRect = (selector) => {
+        const node = document.querySelector(selector)
+        if (!node || !node.getClientRects().length || getComputedStyle(node).visibility === 'hidden') return null
+        return node.getBoundingClientRect()
+      }
+      const bounds = column.getBoundingClientRect()
+      const tools = column.querySelector('.plb-col-tools').getBoundingClientRect()
+      const trigger = pickerIdx != null ? tools : column.querySelector('.plb-ramp').getBoundingClientRect()
+      const top = Math.max(0, visibleRect('.pnav')?.bottom ?? 0) + margin
+      const bottom = Math.min(window.innerHeight, visibleRect('.pnav-tabs')?.top ?? window.innerHeight) - margin
+      const available = Math.max(0, bottom - top)
+      panel.style.setProperty('--plb-pop-max-height', `${available}px`)
+      const rect = panel.getBoundingClientRect()
+      const left = Math.max(margin, Math.min(tools.right - rect.width, window.innerWidth - rect.width - margin))
+      const y = Math.max(top, Math.min(trigger.bottom + margin, bottom - rect.height))
+      panel.style.setProperty('--plb-pop-x', `${left - bounds.left}px`)
+      panel.style.setProperty('--plb-pop-y', `${y - bounds.top}px`)
+    }
+    place()
+    const observer = new ResizeObserver(place)
+    observer.observe(panel)
+    observer.observe(column)
+    observer.observe(column.querySelector('.plb-col-tools'))
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [pickerIdx, tintsIdx, colors.length])
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const ctxMenuRef = useRef(null)
   const ctxTriggerRef = useRef(null)
@@ -1176,13 +1224,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }, [swapIdx])
 
   useEffect(() => {
-    if (!anyPopover) return
-    const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
+    if (!anyPopover && toolsIdx == null) return
+    const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setToolsIdx(null) }
     const onDown = (e) => {
       // The image dialog is a modal of its own (it closes on its scrim), so a
       // drag inside it is not an outside press.
       if (!e.target.closest('.plb-menuwrap, .plb-modal')) closeAllMenus()
-      if (!e.target.closest('.plb-pop')) closePops()
+      if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) closePops()
     }
     const onEsc = (e) => {
       if (e.key !== 'Escape') return
@@ -1192,7 +1240,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
-  }, [anyPopover, closeAllMenus])
+  }, [anyPopover, toolsIdx, closeAllMenus])
 
   // Record the board into palette history. Debounced so slider scrubs and
   // rapid randomises collapse into one entry; identical heads are skipped.
@@ -1267,11 +1315,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setLiveMsg(`Colour moved to position ${to + 1}`)
   }
 
-  const removeCol = (i) => {
+  const removeCol = (i, event) => {
     if (colors.length <= 2) { toast?.('A palette needs at least two colours'); return }
     if (outIdx != null) return // let the current close animation finish first
+    const keyboard = event?.detail === 0
+    if (!keyboard) document.activeElement?.blur()
     setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setSwapIdx(null); setToolsIdx(null)
     const drop = () => {
+      if (keyboard) removeFocusRef.current = Math.min(i, colors.length - 2)
       setColors(prev => prev.filter((_, k) => k !== i))
       setLocked(prev => {
         const next = new Set()
@@ -2307,7 +2358,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 role="group"
                 key={i}
                 className={colClass}
-                ref={(el) => { colRef(c, ink, sim)(el); if (el) el.style.setProperty('--plb-anti', anti) }}
+                ref={(el) => { columnRefs.current[i] = el; colRef(c, ink, sim)(el); if (el) el.style.setProperty('--plb-anti', anti) }}
                 aria-label={`${role} ${adjusted[i]}`}
                 // Whole-swatch drag reorders; off while a tints or HCT popover
                 // is open on this column so slider drags aren't hijacked.
@@ -2323,6 +2374,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 // presses.
                 onClick={(e) => {
                   if (e.target.closest('button, a, input, .plb-pop')) return
+                  if (!window.matchMedia('(hover: none)').matches) return
                   setSwapIdx(null)
                   setToolsIdx(cur => (cur === i ? null : i))
                 }}
@@ -2345,10 +2397,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   setOverIdx(null)
                 }}
               >
-                {/* The drawn lock (D:1021), always visible, and beneath it
-                    the one control this build adds: every other action on a
-                    colour (HCT edit, tints, swap, insert, remove, use as seed)
-                    is in its Colour actions menu. */}
+                {/* Lock, quick actions, then More share one visual and Tab
+                    order. Phones keep Lock and More; the menu holds every action. */}
                 <div className="plb-col-tools">
                   <button
                     type="button"
@@ -2360,6 +2410,51 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   >
                     <ToolIcon name={isLocked ? 'lock-simple' : 'lock-simple-open'} size={15} />
                   </button>
+                  {/* Quick tools: the three actions people reach for most, one
+                      press from the swatch. They show on hover or keyboard focus
+                      (and on a tap of the swatch where there is no hover); each
+                      is also an item in the Colour actions menu. */}
+                  <div className="plb-col-quick">
+                    <button
+                      type="button"
+                      className={pickerIdx === i ? 'plb-tool plb-tool--quick plb-tool--on' : 'plb-tool plb-tool--quick'}
+                      title={isPro ? 'Edit in HCT' : 'Edit in HCT — Pro'}
+                      aria-label={`Edit ${role} in HCT`}
+                      aria-haspopup="dialog"
+                      aria-expanded={pickerIdx === i}
+                      onClick={() => openHctPicker(i)}
+                    >
+                      <ToolIcon name="sliders-horizontal" size={15} />
+                    </button>
+                    {adjusted.length > 1 && (
+                      <button
+                        type="button"
+                        className={swapIdx === i ? 'plb-tool plb-tool--quick plb-tool--swap plb-tool--on' : 'plb-tool plb-tool--quick plb-tool--swap'}
+                        title="Choose a swap direction"
+                        aria-label={`Choose a direction to swap ${role}`}
+                        aria-haspopup="menu"
+                        aria-expanded={swapIdx === i}
+                        ref={swapIdx === i ? swapTriggerRef : undefined}
+                        onClick={() => {
+                          setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
+                          setSwapIdx(cur => (cur === i ? null : i))
+                        }}
+                      >
+                        <ToolIcon name="arrows-left-right" size={15} />
+                      </button>
+                    )}
+                    {adjusted.length > 2 && (
+                      <button
+                        type="button"
+                        className="plb-tool plb-tool--quick"
+                        title="Remove colour"
+                        aria-label={`Remove ${role}`}
+                        onClick={(e) => removeCol(i, e)}
+                      >
+                        <ToolIcon name="x" size={15} />
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className={actionsOpen ? 'plb-tool plb-tool--more plb-tool--on' : 'plb-tool plb-tool--more'}
@@ -2376,68 +2471,21 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   >
                     <ToolIcon name="dots-three" size={15} />
                   </button>
-                </div>
-
-                {/* Quick tools: the three actions people reach for most, one
-                    press from the swatch. They show on hover or keyboard focus
-                    (and on a tap of the swatch where there is no hover); each
-                    is also an item in the Colour actions menu. */}
-                <div className="plb-col-quick">
-                  <button
-                    type="button"
-                    className={pickerIdx === i ? 'plb-tool plb-tool--quick plb-tool--on' : 'plb-tool plb-tool--quick'}
-                    title={isPro ? 'Edit in HCT' : 'Edit in HCT — Pro'}
-                    aria-label={`Edit ${role} in HCT`}
-                    aria-haspopup="dialog"
-                    aria-expanded={pickerIdx === i}
-                    onClick={() => openHctPicker(i)}
-                  >
-                    <ToolIcon name="sliders-horizontal" size={15} />
-                  </button>
-                  {adjusted.length > 1 && (
-                    <button
-                      type="button"
-                      className={swapIdx === i ? 'plb-tool plb-tool--quick plb-tool--swap plb-tool--on' : 'plb-tool plb-tool--quick plb-tool--swap'}
-                      title="Choose a swap direction"
-                      aria-label={`Choose a direction to swap ${role}`}
-                      aria-haspopup="menu"
-                      aria-expanded={swapIdx === i}
-                      ref={swapIdx === i ? swapTriggerRef : undefined}
-                      onClick={() => {
-                        setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
-                        setSwapIdx(cur => (cur === i ? null : i))
-                      }}
-                    >
-                      <ToolIcon name="arrows-left-right" size={15} />
-                    </button>
-                  )}
-                  {adjusted.length > 2 && (
-                    <button
-                      type="button"
-                      className="plb-tool plb-tool--quick"
-                      title="Remove colour"
-                      aria-label={`Remove ${role}`}
-                      onClick={() => removeCol(i)}
-                    >
-                      <ToolIcon name="x" size={15} />
-                    </button>
+                  {swapIdx === i && (
+                    <div className="plb-pop plb-swappop" role="menu" aria-label={`Swap ${role}`}>
+                      {i > 0 && (
+                        <button type="button" role="menuitem" className="plb-swapdir" onClick={() => { swapTriggerRef.current?.focus(); swapCols(i, 'left'); setSwapIdx(null); setToolsIdx(null) }}>
+                          <IcoArrowLeft /> Swap left
+                        </button>
+                      )}
+                      {i < colors.length - 1 && (
+                        <button type="button" role="menuitem" className="plb-swapdir" onClick={() => { swapTriggerRef.current?.focus(); swapCols(i, 'right'); setSwapIdx(null); setToolsIdx(null) }}>
+                          Swap right <IcoArrowRight />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-
-                {swapIdx === i && (
-                  <div className="plb-pop plb-swappop" role="menu" aria-label={`Swap ${role}`}>
-                    {i > 0 && (
-                      <button type="button" role="menuitem" className="plb-swapdir" onClick={() => { swapTriggerRef.current?.focus(); swapCols(i, 'left'); setSwapIdx(null); setToolsIdx(null) }}>
-                        <IcoArrowLeft /> Swap left
-                      </button>
-                    )}
-                    {i < colors.length - 1 && (
-                      <button type="button" role="menuitem" className="plb-swapdir" onClick={() => { swapTriggerRef.current?.focus(); swapCols(i, 'right'); setSwapIdx(null); setToolsIdx(null) }}>
-                        Swap right <IcoArrowRight />
-                      </button>
-                    )}
-                  </div>
-                )}
 
                 {/* The 5-bar tint strip (D:1022-1026): one button — it opens
                     this colour's tints. */}
@@ -2613,7 +2661,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertAt(ctxMenu.i, midColor(colors[Math.max(0, ctxMenu.i - 1)], colors[ctxMenu.i])); setCtxMenu(null) }}><IcoPlus size={15} /> Insert left</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertBetween(ctxMenu.i); setCtxMenu(null) }}><IcoPlus size={15} /> Insert right</button>
           {colors.length > 2 && (
-            <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={() => { removeCol(ctxMenu.i); setCtxMenu(null) }}><IcoX /> Remove</button>
+            <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={(e) => { removeCol(ctxMenu.i, e); setCtxMenu(null) }}><IcoX /> Remove</button>
           )}
         </div>
       )}
