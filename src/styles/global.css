@@ -1760,6 +1760,29 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    it, because the tick is a statement about the SYSTEM, not about the cursor. */
 .bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-text)}
 .bkit-rail-next{flex-shrink:0}
+/* From 1024px the steps are links in a flush bar, not pills. The mark answers
+   one question (built or not: a tick on an accent wash, or an outlined
+   numeral), and the label plus a 2px accent line on the bar's top edge answer
+   the other (where you are). The line sits 10px above the link: the bar's 9px
+   padding plus its 1px top rule, so it covers the rule exactly. The --bkit-*
+   aliases are declared on .bkit-rail in tool-shell.css. */
+@media(min-width:1024px){
+  .bkit-step{position:relative;display:inline-flex;height:36px;padding:0 10px;border:0;border-radius:var(--btn-radius);color:var(--bkit-dim);transition:background-color 150ms ease,color 150ms ease}
+  .bkit-step.is-current{background:transparent;color:var(--t0)}
+  .bkit-step.is-current::before{content:"";position:absolute;inset-inline:10px;top:-10px;height:2px;border-radius:0 0 2px 2px;background:var(--accent-fill)}
+  .bkit-step-mark{box-sizing:border-box;background:transparent;border:1.5px solid var(--bkit-mark-line);color:var(--t2);font-family:var(--font);font-size:.75rem;font-weight:560;line-height:1;font-variant-numeric:tabular-nums}
+  .bkit-step.is-current .bkit-step-mark{background:transparent;color:var(--t2)}
+  .bkit-step.is-done .bkit-step-mark{background:var(--accent-bg);border-color:transparent;color:var(--accent-text)}
+  .bkit-step-mark svg{stroke-width:2.5}
+  .bkit-step:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
+}
+@media(min-width:1024px) and (hover:hover) and (pointer:fine){
+  .bkit-step.is-current:hover{background:var(--hvr)}
+}
+@media(min-width:1024px) and (forced-colors:active){
+  .bkit-step.is-current::before{background:Highlight}
+  .bkit-step-mark{border-color:CanvasText}
+}
 
 
 /* ci-fade — retained: the Slice-1 colour-info popup CSS (.ci-*) was removed in
