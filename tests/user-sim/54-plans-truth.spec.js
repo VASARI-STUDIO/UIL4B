@@ -36,34 +36,53 @@ import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
 import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
 
-// /plans IS THE DESIGN'S PRICING SCREEN (src/pages/Pricing.jsx,
-// built from "UIL4B - Spectrum.dc.html"). Every guard below keeps the intent it
-// had against the legacy page; the selectors are the new page's:
-//   .sub-tier-list → .pr-plan-list      .plans-free-card → .pr-plan--free
-//   .plans-page    → .pricing main      .plans-excludes  → the Free card's minus line
+// /plans is the plan ledger (src/pages/Pricing.jsx): one table whose columns are
+// Free and Pro. The selectors below are its own:
+//   the ledger             .pr-table
+//   a plan's head cell     .pr-head--free, .pr-head--pro
+//   a comparison row       .pr-row (th label, td.pr-c--free, td.pr-c--pro)
+//   what both plans share  .pr-row--same
 
 const PERSONA = 'someone deciding whether this is worth paying for'
 
+// A cell's words as a reader gets them: the small "Free" / "Pro" tag that
+// labels a cell on a narrow screen is chrome, not part of the answer.
+const cellText = (cell) => cell.evaluate((td) => {
+  const copy = td.cloneNode(true)
+  copy.querySelectorAll('.pr-tag').forEach((n) => n.remove())
+  return copy.textContent.trim()
+})
+// The suite's preview has no serverless functions. Without an answer from
+// /api/get-prices the Pro button is disabled (and dimmed) and the Pro note reads
+// "Checking the live price…", so the tests about what a buyer is offered
+// answer it with production's own shape.
+const stubPrices = (page) => page.route('**/api/get-prices', (route) => route.fulfill({
+  status: 200,
+  contentType: 'application/json',
+  body: JSON.stringify({ source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } }),
+}))
+const ledgerRow = (page, label) =>
+  page.locator('.pr-row', { has: page.locator('th', { hasText: new RegExp(`^${label}$`) }) })
+
 test.describe('/plans advertises only what the product has', () => {
   test('no unbuilt export format is offered as a plan benefit', async ({ page }) => {
-    // THE CENTRAL GUARD, at the DOM. `.pr-plan-list` is what a buyer reads as
-    // "this is what I get". An unbuilt format appearing in one is the exact
+    // THE CENTRAL GUARD, at the DOM. The ledger is what a buyer reads as
+    // "this is what I get". An unbuilt format appearing in it is the exact
     // shape of the defect that shipped: "full design JSON" sold on a plan card
     // while `json` has never carried `live: true`.
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page)
 
-    const benefitText = await page.evaluate(() =>
-      [...document.querySelectorAll('.pr-plan-list')].map((ul) => ul.innerText).join('\n'))
+    const benefitText = await page.evaluate(() => document.querySelector('.pr-table')?.innerText ?? '')
 
-    expect(benefitText.length, 'the plan benefit lists rendered empty — this test would pass vacuously')
+    expect(benefitText.length, 'the ledger rendered empty — this test would pass vacuously')
       .toBeGreaterThan(80)
 
     for (const format of unbuiltFormats()) {
       expect(
         benefitText.includes(format.name),
-        `the plan cards offer "${format.name}", which is not built — it renders a Soon badge over a disabled button for everyone, on every plan`,
+        `the ledger offers "${format.name}", which is not built — it renders a Soon badge over a disabled button for everyone, on every plan`,
       ).toBe(false)
     }
 
@@ -120,13 +139,16 @@ test.describe('/plans advertises only what the product has', () => {
       expect(text, `${what} on the page does not match the enforced configuration`).toContain(value)
     }
 
-    // The paywall is stated as the cap itself now (the design's comparison has
-    // a "Saved projects" row), so the Free cell of that row must BE the cap —
-    // a digit that merely appears somewhere on the page is not enough.
-    const saved = page.locator('.pr-compare-row', { has: page.locator('th', { hasText: /^Saved projects$/ }) })
-    await expect(saved.locator('td[data-plan="Free"]'), 'the page states the wrong free project cap')
-      .toHaveText(String(FREE_SAVE_LIMITS.projects))
-    await expect(saved.locator('td[data-plan="Pro"]')).toHaveText('Unlimited')
+    // The paywall is stated as the cap itself (the ledger has a "Saved projects"
+    // row), so the Free cell of that row must BE the cap — a digit that merely
+    // appears somewhere on the page is not enough.
+    const saved = ledgerRow(page, 'Saved projects')
+    expect(await cellText(saved.locator('td.pr-c--free')), 'the page states the wrong free project cap')
+      .toBe(String(FREE_SAVE_LIMITS.projects))
+    expect(await cellText(saved.locator('td.pr-c--pro'))).toBe('Unlimited')
+    const icons = ledgerRow(page, 'Custom icons')
+    expect(await cellText(icons.locator('td.pr-c--free')), 'the page states the wrong free custom-icon cap')
+      .toBe(String(FREE_SAVE_LIMITS.customIcons))
   })
 
   test('the free tier is not described as having more export formats than it has', async ({ page }) => {
@@ -134,21 +156,34 @@ test.describe('/plans advertises only what the product has', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    const freeCard = await page.locator('.pr-plan--free').innerText()
-    // Every format the free card names must be one a free user can produce.
-    for (const format of EXPORT_FORMATS) {
+    // Everything the page says about what a free account gets: the Free cell of
+    // each row, and the line for what both plans share. A Pro-only export has a
+    // row of its own whose Free cell is a dash, so it never reaches this text.
+    const freeCells = await page.locator('.pr-row td.pr-c--free').evaluateAll((cells) => cells.map((td) => {
+      const copy = td.cloneNode(true)
+      copy.querySelectorAll('.pr-tag').forEach((n) => n.remove())
+      return copy.textContent
+    }))
+    const shared = await page.locator('.pr-row--same .pr-c--same').innerText()
+    const freeSide = [...freeCells, shared].join('\n')
+    expect(freeSide.length, 'nothing was read from the Free side — this test would pass vacuously')
+      .toBeGreaterThan(80)
+
+    const named = (text, format) => {
       const shortName = /\(([^)]+)\)\s*$/.exec(format.name)?.[1] || format.name
-      const named = new RegExp(`\\b${shortName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(freeCard)
-      if (!named) continue
-      const isFree = freeFormats().some((f) => f.id === format.id)
-      // A format may appear in the card's minus line — the design's exclusion
-      // row — which is the honest reason a non-free name would be there.
-      const excluded = await page.locator('.pr-plan--free .pr-plan-list li.is-off').innerText()
-      const inExclusions = excluded.includes(format.name) || excluded.includes(shortName)
+      return new RegExp(`\\b${shortName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(text)
+    }
+    for (const format of EXPORT_FORMATS) {
+      if (freeFormats().some((f) => f.id === format.id)) continue
       expect(
-        isFree || inExclusions,
-        `the Free card names "${shortName}" outside its exclusions block, but a free user cannot produce it`,
-      ).toBe(true)
+        named(freeSide, format),
+        `the Free side names "${format.name}", but a free user cannot produce it`,
+      ).toBe(false)
+    }
+    // …and the formats a free account does get are named in the shared line,
+    // so the loop above is reading the right text.
+    for (const format of freeFormats().filter((f) => !f.kit)) {
+      expect(named(shared, format), `the shared line no longer names the free "${format.name}" export`).toBe(true)
     }
   })
 
@@ -158,16 +193,17 @@ test.describe('/plans advertises only what the product has', () => {
     // every other check missed: toBeVisible() passed, .innerText() returned the
     // copy, and .click() worked — on a block no human could see.
     //
-    // The design's Pricing screen has no closing SystemCTA; its ways in are
-    // the two plan buttons and the footer's "Open the toolkit". Each one, and
+    // The page has no closing call to action; its ways in are the two plan
+    // buttons and the footer's "Open the toolkit". Each one, and
     // every ancestor it paints through, must be opaque after a scroll to it.
     watch(page, PERSONA)
+    await stubPrices(page)
     await go(page, '/plans')
     await expectRendered(page)
 
     const ctas = [
-      page.locator('.pr-plan--free .pr-cta'),
-      page.locator('.pr-plan--pro .pr-cta'),
+      page.locator('.pr-head--free .pr-cta'),
+      page.locator('.pr-head--pro .pr-cta'),
       page.getByRole('contentinfo').getByRole('link', { name: /Open the toolkit/ }),
     ]
     for (const cta of ctas) {
@@ -211,28 +247,24 @@ test.describe('/plans advertises only what the product has', () => {
   })
 })
 
-test.describe('/plans says what the design says', () => {
-  test('the hero carries the design’s pricing h1 and sub-line, with the facts derived', async ({ page }) => {
-    // The design's pricing h1 and sub-line, from
-    // "UIL4B - Spectrum.dc.html" (D:1085-1086), with the false clauses
-    // corrected. The expected sub-line is COMPUTED here from the modules that
-    // enforce the numbers, so a page that types "six" or "eight" goes red the
-    // day the config moves.
+test.describe('/plans says what it claims', () => {
+  test('the hero carries the coffee headline and a sub-line whose facts are derived', async ({ page }) => {
+    // The expected sub-line is COMPUTED here from the modules that enforce the
+    // numbers, so a page that types "six" or "forty" goes red the day the
+    // config moves.
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page)
 
     await expect(page.getByRole('heading', { level: 1 }))
       .toHaveText('Improve your design systems for less than 1 coffee per month.')
-    await expect(page.locator('.pr-h1 em')).toHaveText('less than 1 coffee')
 
-    const multiple = AI_LIMITS.pro.daily / AI_LIMITS.free.daily
     await expect(page.locator('.pr-hero .pr-sub')).toHaveText(
-      `Pro gives you the controls real client work needs: ${numberWord(multiple)} times the AI generations, `
-      + `all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, unlimited projects and clean, unmarked exports.`,
+      `Pro lifts AI from ${AI_LIMITS.free.daily} to ${AI_LIMITS.pro.daily} generations a day, `
+      + `opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, and gives you unlimited projects and exports without the UIL4B mark.`,
     )
-    // The Free card's first tick counts the real tools.
-    await expect(page.locator('.pr-plan--free .pr-plan-list li').first()).toHaveText(`All ${numberWord(TOOL_COUNT)} tools`)
+    // The line for what both plans share counts the real tools.
+    await expect(page.locator('.pr-row--same .pr-c--same')).toContainText(`All ${numberWord(TOOL_COUNT)} tools.`)
   })
 
   test('the retired lines are nowhere on the page; cancelling is stated once', async ({ page }) => {
@@ -241,6 +273,7 @@ test.describe('/plans says what the design says', () => {
     // true (Settings opens the billing portal's cancellation flow), but "in
     // two clicks" is a count nobody has measured.
     watch(page, PERSONA)
+    await stubPrices(page)
     await go(page, '/plans')
     await expectRendered(page)
     const text = (await page.locator('body').innerText()).toLowerCase()
@@ -253,7 +286,9 @@ test.describe('/plans says what the design says', () => {
     const main = await page.locator('.pricing main').innerText()
     expect(main.replace(/\bUI kit\b/g, ''), 'the pricing page calls a saved project a "kit"').not.toMatch(/\bkits?\b/i)
     expect(main, 'the pricing page no longer names the unit at all').toMatch(/\bprojects\b/)
-    // Positive control: the design's assurances minus the retired one, in order.
-    await expect(page.locator('.pr-assure li')).toHaveText(['Cancel Pro any time', 'Files stay in your browser'])
+    // Positive control: the assurances are present, and cancelling is said in
+    // one place (the Pro note), not repeated down the page.
+    expect(text.split('cancel pro any time').length - 1, 'cancelling is not stated exactly once').toBe(1)
+    await expect(page.locator('.pr-row--same .pr-c--same')).toContainText('Files stay in your browser')
   })
 })

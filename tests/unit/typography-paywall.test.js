@@ -318,7 +318,9 @@ test('3 · every export and copy action stays ungated', () => {
   // array that renders the buttons. It is deliberately NOT restated here: this
   // file is about the typography paywall, and a copy of that rule living in two
   // places is how the two drift apart.
-  assert.match(PLANS, /label: 'Number of exports', free: 'Unlimited'/,
+  // The ledger states it on its "Same on both plans" row, so it is a claim about
+  // both plans at once: Pro does not get more exports, Free does not get fewer.
+  assert.match(PLANS, /const SAME_ON_BOTH = `[^`]*Style guide exports in \$\{FREE_EXPORT_NAMES\}, as often as you like/,
     'the page no longer states that the NUMBER of exports is unlimited on Free — '
     + 'that is the half of the export promise this test depends on')
 })

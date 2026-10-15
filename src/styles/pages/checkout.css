@@ -83,13 +83,15 @@
    choice, with its selected state (ink fill, panel-coloured text). The column
    count follows the options, and every label is a single unbroken line, so
    the row never wraps; the summary column is never wider than 360px, so this
-   is the one layout at every width. Each segment holds two lines (period and
-   saving) and reserves the second even when it is empty. */
+   is the one layout at every width. A segment with a saving holds two lines
+   (period and saving); one without it drops the empty line, so its label sits
+   centred and the 48px floor keeps the row the same height either way. */
 .checkout-page .checkout-period { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: 0 0 18px; padding: 4px; border: 1px solid var(--co-hair); border-radius: var(--btn-radius); background: var(--co-wash); }
 .checkout-page .checkout-period-opt { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 48px; padding: 6px 4px; border-radius: var(--btn-radius); color: var(--t1); white-space: nowrap; cursor: pointer; transition: background-color var(--dur-1) ease, color var(--dur-1) ease; }
 .checkout-page .checkout-period-opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .checkout-page .checkout-period-label { font-size: 13px; font-weight: 560; line-height: 1.2; }
 .checkout-page .checkout-period-save { min-height: 1.3em; font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; line-height: 1.3; color: var(--t2); font-variant-numeric: tabular-nums; }
+.checkout-page .checkout-period-save:empty { display: none; }
 .checkout-page .checkout-period-opt:hover { background: var(--co-wash); color: var(--t0); }
 .checkout-page .checkout-period-opt.is-on { background: var(--t0); color: var(--card); }
 .checkout-page .checkout-period-opt.is-on .checkout-period-save { color: inherit; }

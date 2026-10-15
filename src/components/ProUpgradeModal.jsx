@@ -16,7 +16,7 @@ import { showsColourRail } from '../utils/proGateProof'
 
 // The Pro upgrade modal — a funnel surface, and the only one in the app.
 //
-// The founder's requirement, in order: clicking a Pro tool shows this popup ·
+// The upgrade flow: clicking a Pro tool shows this popup ·
 // the CTA is an Upgrade button · it shows the plans · the user can start a
 // trial, which begins create-account → checkout.
 //
@@ -33,16 +33,8 @@ import { showsColourRail } from '../utils/proGateProof'
 //     the day money moves. WHICH plans carry it is no longer a fact this file
 //     knows — it reads `trialDays` off the resolved ladder, which mirrors
 //     api/_lib/pricing.js#TRIAL_DAYS, which is what Stripe is actually told.
-//     (This comment used to say "the YEARLY plan only". That stopped being
-//     true on 2026-09-15 when the founder made the trial earned by the
-//     CADENCE — monthly bills today, quarterly and yearly each get seven days.)
-//
-// ── 2026-09-15, founder ─────────────────────────────────────────────────────
-// "review its UI for AI slop feeling and pricing, and make it slightly unique
-//  for each different pro upgrade one, also include quarterly pricing, improve
-//  heigrachy, the 7 day free trial on the yearly needs to be more obvious."
-//
-// What that turned into, and why:
+//     Monthly bills immediately; Yearly carries a seven-day trial.
+//     The purchasable ladder offers Monthly and Yearly.
 //
 //  · THE PRICE WAS PRINTED THREE TIMES before the button — a 40px "from
 //    $X/month" headline, then the same number again on the tile below it, then
@@ -54,15 +46,8 @@ import { showsColourRail } from '../utils/proGateProof'
 //    on top of "we couldn't load current prices". A price that does not exist
 //    cannot contradict an error.
 //
-//  · THE PLANS WERE SIDE-BY-SIDE TILES, at minmax(180px,1fr) in a ~400px
-//    column. That fits two. Quarterly makes three, and three would have
-//    wrapped 2-then-1 — a broken-looking grid on the one surface that asks for
-//    money. They are stacked rows now, which is what Riverside, Adobe and
-//    Behance all do once there are three billing periods to choose between
-//    (mobbin.com/screens/725a3c3e-5c4f-455c-8d4c-8d4f2abb4b4b,
-//     .../28ac7aa0-7aca-4a92-9a6c-c8ab4272d103,
-//     .../c90bc8de-b312-4771-866e-93f6d002dbcb). A row also has somewhere to
-//    put the trial that is not a footnote.
+//  Monthly and Yearly use stacked plan rows, with each rate, billing total
+//  and trial shown together.
 //
 //  · THE TRIAL WAS THE SMALLEST TEXT ON THE SURFACE — 11.5px, under the total,
 //    on one tile. It is the strongest thing on the offer and it read like a
@@ -157,8 +142,8 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
 
   // Every Pro/upgrade CTA goes to /plans — never to a login popup, never
   // straight to checkout. The main button hands the visitor to the plans page,
-  // which is where the account and payment steps start. The chosen cadence rides along as `?plan=` for when /plans reads it
-  // (today it does not, so nothing depends on it).
+  // which is where the account and payment steps start. The chosen cadence
+  // rides along as `?plan=`, which /plans reads to preselect that cadence.
   const goCheckout = () => {
     if (!choice || starting) return
     setStarting(true)
@@ -199,7 +184,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
             to read promise -> proof -> price, and on a phone the proof is
             ~500px of strips, so the price — or the "we couldn't load prices"
             block and its buttons — sat a full screen or more below the fold
-            (measured 2026-09-09 at 320/390/430 from the palette's colour-
+            (at 320/390/430px from the palette's colour-
             system gate). The rail has no focusable control, so the DOM order
             stays and only the paint order changes; see global.css. */}
         {showColourRail && <ProHarmonyPreview seed={seed} />}
@@ -258,15 +243,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                     <span className="ui-pro-plan-main">
                       <span className="ui-pro-plan-id">
                         <span className="ui-pro-plan-name">{plan.label}</span>
-                        {save > 0 && <span className="ui-pro-plan-save">Save {save}%</span>}
-                        {/* THE TRIAL, PROMOTED. This was 11.5px of accent text
-                            under the total — the quietest thing in the tile,
-                            for the loudest thing in the offer. It is a filled
-                            chip on the identity line now, which is where the
-                            eye already is when it reads the plan's name. */}
-                        {plan.trialDays > 0 && (
-                          <span className="ui-pro-plan-trial">{plan.trialDays}-day free trial</span>
-                        )}
+                        {save > 0 && <span className="ui-pro-plan-save"> · Save {save}%</span>}
                       </span>
                       <span className="ui-pro-plan-rate">
                         <span className="ui-pro-plan-amount">{plan.perMonthLabel}</span>
@@ -275,6 +252,8 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                     </span>
                     <span className="ui-pro-plan-total">
                       {plan.totalLabel} {plan.cadence}
+                      {/* The trial lives here and in the button, not in a chip. */}
+                      {plan.trialDays > 0 && ` · ${plan.trialDays}-day free trial`}
                     </span>
                   </label>
                 )
@@ -312,10 +291,9 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                   implying the product is free. The trial label is not a
                   return to that: it names the action the button performs, on
                   the cadences that genuinely carry a trial, and reverts to
-                  "Upgrade to Pro" on the one that bills today. The founder
-                  asked for the trial to be more obvious; a
-                  disclaimer under a tile was not that, and the button is
-                  where Riverside, Adobe and Behance all put it. */}
+                  "Upgrade to Pro" on the one that bills today. A disclaimer
+                  under a tile makes the trial easy to miss; the button is
+                  where it is seen. */}
               <div className="ui-pro-cta">
                 <button
                   type="button"
