@@ -844,7 +844,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const column = columnRefs.current[pickerIdx ?? tintsIdx]
     const panel = column?.querySelector(pickerIdx != null ? '.plb-picker' : '.plb-tintpop')
     if (!panel) return
-    const place = () => {
+    const place = (event) => {
+      // Internal scrolling keeps the panel's height cap and scroll position.
+      if (event?.type === 'scroll' && event.target instanceof Node && panel.contains(event.target)) return
       for (const name of ['--plb-pop-x', '--plb-pop-y', '--plb-pop-max-height']) panel.style.removeProperty(name)
       const margin = 8
       const visibleRect = (selector) => {
@@ -854,7 +856,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       }
       const bounds = column.getBoundingClientRect()
       const tools = column.querySelector('.plb-col-tools').getBoundingClientRect()
-      const trigger = pickerIdx != null ? tools : column.querySelector('.plb-ramp').getBoundingClientRect()
+      const ramp = column.querySelector('.plb-ramp').getBoundingClientRect()
+      const trigger = pickerIdx != null || (ramp.width === 0 && ramp.height === 0) ? tools : ramp
       const top = Math.max(0, visibleRect('.pnav')?.bottom ?? 0) + margin
       const bottom = Math.min(window.innerHeight, visibleRect('.pnav-tabs')?.top ?? window.innerHeight) - margin
       const available = Math.max(0, bottom - top)

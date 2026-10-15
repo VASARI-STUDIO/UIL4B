@@ -376,6 +376,14 @@ const settledBox = (page, selector) => page.evaluate((sel) => new Promise((resol
   tick()
 }), selector)
 
+const expectPopoverHits = async (panel) => {
+  await expect.poll(() => panel.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    return [r.left + r.width / 2, r.right - 8].map((x) =>
+      el.contains(document.elementFromPoint(x, r.top + r.height / 2)))
+  }), { message: 'the popover takes the pointer at its centre and near its right edge' }).toEqual([true, true])
+}
+
 test.describe('the ordered column', () => {
   // (a) MUTATION: put `tabIndex={-1}` on the Swap button in PaletteBuilder.jsx
   // (Tab then skips it) and the order reads Lock, Edit, Remove, More; add
@@ -513,9 +521,10 @@ test.describe('the ordered column', () => {
     await ctx.close()
   })
 
-  // (e) MUTATION: in PaletteBuilder.jsx change `if (window.innerWidth < 768) return`
-  // in the popover placement effect to `< 5000` and the panel keeps its default
-  // spot, so the last swatch's runs off the right edge at 768.
+  // (e) MUTATION: remove the --plb-pop-x assignment in the popover placement
+  // effect in PaletteBuilder.jsx and the panel's default position runs off
+  // screen; remove the .plb-col:has(.plb-picker, .plb-tintpop, .plb-swappop)
+  // z-index rule in palette-builder.css and neighbouring swatches cover it.
   for (const width of [768, 1440]) {
     for (const [which, index] of [['first', 0], ['last', 4]]) {
       test(`the Edit in HCT popover of the ${which} swatch is fully on screen at ${width}`, async ({ browser }) => {
@@ -535,10 +544,63 @@ test.describe('the ordered column', () => {
         expect(box.right, `${where}: ends inside the right edge`).toBeLessThanOrEqual(box.vw)
         expect(box.top, `${where}: starts below the header`).toBeGreaterThanOrEqual(box.navBottom)
         expect(box.bottom, `${where}: ends above the bottom edge`).toBeLessThanOrEqual(box.vh)
+        if (index === 0) {
+          await expectPopoverHits(page.locator('.plb-picker'))
+          await page.getByRole('button', { name: 'Close editor', exact: true }).click()
+          await col.hover()
+          await col.getByRole('button', { name: SWAP }).click()
+          await expect(col.locator('.plb-swappop')).toBeVisible()
+          await settledBox(page, '.plb-swappop')
+          await expectPopoverHits(col.locator('.plb-swappop'))
+        }
         await ctx.close()
       })
     }
   }
+
+  // MUTATION: remove the internal-scroll guard in the popover placement
+  // effect and resetting the height cap resets the picker's scroll position.
+  test('667x375: scrolling a capped HCT picker preserves its scroll position', async ({ browser }) => {
+    const { ctx, page } = await proBoard(browser, 667, { height: 375 })
+    await page.locator('.plb-col').first().getByRole('button', { name: MORE }).click()
+    await page.getByRole('menu', { name: 'Colour actions', exact: true })
+      .getByRole('menuitem', { name: 'Edit in HCT', exact: true }).click()
+    const panel = page.locator('.plb-picker')
+    await expect(panel).toBeVisible()
+    await settledBox(page, '.plb-picker')
+    expect(await panel.evaluate((el) => el.scrollHeight - el.clientHeight), 'the picker has scrollable content').toBeGreaterThan(0)
+    const scrollTop = await panel.evaluate(async (el) => {
+      el.scrollTop = 100
+      el.dispatchEvent(new Event('scroll'))
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      return el.scrollTop
+    })
+    expect(scrollTop, 'internal scrolling keeps its position after placement listeners run').toBeGreaterThan(0)
+    await ctx.close()
+  })
+
+  // MUTATION: always use the ramp rect for tints, including when it has no
+  // box, and the phone panel moves away from the fourth swatch to the header.
+  test('390x844: View tints stays near the fourth swatch and above the tab bar', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 390, { height: 844 })
+    const col = page.locator('.plb-col').nth(3)
+    await col.getByRole('button', { name: MORE }).tap()
+    await page.getByRole('menu', { name: 'Colour actions', exact: true })
+      .getByRole('menuitem', { name: 'View tints', exact: true }).tap()
+    await expect(col.locator('.plb-tintpop')).toBeVisible()
+    const box = await settledBox(page, '.plb-tintpop')
+    const row = await col.boundingBox()
+    const tabs = await page.locator('.pnav-tabs').boundingBox()
+    expect(row.height, 'the fourth swatch has a row').toBeGreaterThan(0)
+    expect(tabs.height, 'the bottom tab bar is rendered').toBeGreaterThan(0)
+    expect(box.height, 'the tints panel has content').toBeGreaterThan(100)
+    expect(box.top).toBeGreaterThanOrEqual(box.navBottom)
+    expect(box.top).toBeLessThan(box.vh)
+    expect(box.bottom).toBeLessThanOrEqual(tabs.y)
+    expect(box.top, 'the panel overlaps or sits just below its row').toBeLessThanOrEqual(row.y + row.height + 8)
+    expect(box.bottom, 'the panel overlaps or sits just above its row').toBeGreaterThanOrEqual(row.y - 8)
+    await ctx.close()
+  })
 
   // (f) MUTATION: delete the two phone rules `.plb .plb-col-quick { display: none; }`
   // and `.plb .plb-tool--quick { display: none; }` in the max-width:767 block and
