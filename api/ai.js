@@ -1165,6 +1165,18 @@ export default async function handler(req, res) {
   // question with the same gate; see serveBacklog above for why it lives here.
   if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
 
+  // ── The Pro libraries ─────────────────────────────────────────────────────
+  // GET /api/ai?library=palettes|gradients|prompts. Token + planForUser, like
+  // the tasks below; see api/_lib/library/serve.js. Imported on demand so the
+  // library data does not ride in this function's cold start.
+  if (req.method === 'GET' && 'library' in (req.query || {})) {
+    const { serveLibrary } = await import('./_lib/library/serve.js')
+    return serveLibrary(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
   // ── Config health check ───────────────────────────────────────────────────
   // GET /api/ai?diag=1 reports whether the AI keys and the Firebase credential
   // are present and valid — presence and length only, never a value.

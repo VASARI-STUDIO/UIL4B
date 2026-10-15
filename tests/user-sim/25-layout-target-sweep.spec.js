@@ -24,7 +24,7 @@
 // `hover: hover` and hides this whole class of defect.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, restingScrollY, signIn, watch } from './helpers.js'
-import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'

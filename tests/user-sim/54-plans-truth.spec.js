@@ -33,7 +33,7 @@ import {
 } from '../../src/config/exportFormats.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
-import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
 
 // /plans is the plan ledger (src/pages/Pricing.jsx): one table whose columns are

@@ -4844,6 +4844,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .lockt-cta-head{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--t0)}
 .lockt-cta-body{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .lockt-cta-btn{white-space:nowrap;flex:0 0 auto}
+/* A Pro viewer's library is on its way (or failed): the same footprint as the
+   upsell it replaces, with the accent fill taken out so it reads as a status. */
+.lockt-cta.lockt-status{background:none;border-color:var(--border)}
+.lockt-status .lockt-cta-btn{width:auto}
 @media(max-width:640px){
   .lockt-cta{gap:12px;padding:16px}
   .lockt-cta-btn{width:100%}

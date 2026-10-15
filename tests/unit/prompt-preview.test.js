@@ -16,7 +16,7 @@ import path from 'node:path'
 import {
   PREVIEW_CHARS_PER_SECOND, PREVIEW_MAX_SECONDS, PREVIEW_MIN_SECONDS, previewDuration,
 } from '../../src/utils/promptPreview.js'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { hasPromptPreview, hasPromptAnim } from '../../src/data/promptPreviewAssets.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
