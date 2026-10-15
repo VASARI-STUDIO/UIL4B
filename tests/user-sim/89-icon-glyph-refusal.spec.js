@@ -114,10 +114,9 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 //
 // The notice above is for the service refusing everything. When only one pack's
 // request fails (a big flag pack timing out under the 8s cap, say) the other
-// packs paint and that pack's names used to stay in the asked set for the whole
-// session: its cells stayed blank and nothing ever asked again. Now the failed
-// names come back out of the asked set and are retried, at most twice, after a
-// short cool-down so a rate-limited API is not hammered.
+// packs paint, and the failed names come back out of the asked set and are
+// retried, at most twice, after a short cool-down so a rate-limited API is not
+// hammered.
 //
 // The victim is whichever pack is asked for first, so the spec does not depend
 // on which packs the default grid happens to carry. Everything else keeps
@@ -151,7 +150,7 @@ test.describe('the icon grid when only one pack batch fails', () => {
     const seen = await failFirstPack(page, 1)
     await go(page, '/create/icons')
 
-    // POSITIVE CONTROL. Before the retry, the failed pack's cells really are blank
+    // POSITIVE CONTROL. While the retry is pending, the failed pack's cells really are blank
     // (a placeholder, or a coloured slot with no artwork). Without this, the
     // "none blank" check below would also pass for a grid that never had any.
     const blank = () => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
@@ -179,5 +178,10 @@ test.describe('the icon grid when only one pack batch fails', () => {
     const painted = await page.evaluate(() => [...document.querySelectorAll('.ig .ic img')].filter((i) => i.complete && i.naturalWidth > 0).length)
     expect(painted, 'the packs that answered did not paint').toBeGreaterThan(8)
     await expect(page.getByText(/couldn.t reach the icon service/i), 'a retry failing must not raise the outage notice').toHaveCount(0)
+    // Names given up on are quiet empty slots, not skeletons that pulse for the
+    // session. The positive control is that those cells exist: still no artwork.
+    const blankCells = await page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
+    expect(blankCells, 'the failed pack left no empty cells, so there is nothing to check').toBeGreaterThan(0)
+    await expect(page.locator('.ig .ic :is(.ig-glyph-wait, .ig-chip--wait)'), 'a given-up name is still a loading skeleton').toHaveCount(0)
   })
 })

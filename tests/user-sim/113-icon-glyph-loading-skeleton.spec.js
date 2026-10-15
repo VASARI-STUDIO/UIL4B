@@ -20,9 +20,14 @@
 // is the same faint tint, and once the glyph loads it is transparent again.
 // MUTATION: drop the `.ig-chip.ig-chip--wait` selector from the skeleton rule in
 // library.css and the pending-slot test fails (the slot is then invisible).
+//
+// A NAME THE SERVICE HAS NO ICON FOR stops being a skeleton once the batch has
+// answered: the API lists it under `not_found`, and its cell is an empty slot.
+// MUTATION: ignore the missing set when a cell is drawn (`gone` always false)
+// and the cell keeps pulsing, so both not_found tests fail.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, isLiveIconify } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, answerIconify, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer opening the icon library on a slow connection'
 const MAX_SKELETON_ALPHA = 0.2
@@ -162,5 +167,85 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
     await expect(loaded).toBeVisible({ timeout: 20_000 })
     const resting = await loaded.evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(alphaOf(resting), `a loaded slot paints ${resting}`).toBe(0)
+  })
+})
+
+// A batch answered with one name under `not_found`. The answer is built from the
+// fixture's own (every other name keeps its body), held until the test releases it
+// so the pulsing state can be seen first.
+const batchOf = (pack) => (u) => ICONIFY_HOSTS.includes(u.hostname)
+  && u.pathname === `/${pack}.json` && u.search.includes('icons=')
+
+async function answerWithMissing(page, pack, pick) {
+  let release
+  const held = new Promise((resolve) => { release = resolve })
+  const state = { name: null, requests: 0, release }
+  await page.route(batchOf(pack), async (route) => {
+    state.requests += 1
+    await held
+    const answer = answerIconify(route.request().url())
+    const data = JSON.parse(answer.body)
+    const drop = state.name ? null : pick(Object.keys(data.icons))
+    if (drop) {
+      state.name = drop
+      delete data.icons[drop]
+      data.not_found = [drop]
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
+      body: JSON.stringify(data),
+    })
+  })
+  return state
+}
+
+test.describe('the icon grid for a name the service does not have', () => {
+  test.skip(isLiveIconify(), 'the live API decides what it serves; this spec controls the answer')
+
+  test('a coloured name listed under not_found stops pulsing once the batch returns', async ({ page }) => {
+    watch(page, PERSONA)
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+
+    const missing = await answerWithMissing(page, 'logos', (names) => names.find((n) => n === 'arrow-kit'))
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'logos')
+    const cell = page.locator('.ig .ic[aria-label="Customise arrow-kit"]')
+    const slot = cell.locator('.ig-chip')
+
+    // POSITIVE CONTROL. Before the answer the name pulses like every other cell, so
+    // the absence of the skeleton afterwards is the answer's doing, not the cell's
+    // having never been waiting.
+    await expect(slot).toHaveClass(/ig-chip--wait/, { timeout: 20_000 })
+    await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
+    missing.release()
+
+    // Its neighbours drew their artwork; the missing name did not, and does not pulse.
+    await expect(page.locator('.ig .ic[aria-label="Customise github-icon"] .ig-chip img')).toBeVisible({ timeout: 20_000 })
+    expect(missing.name, 'the answer never listed arrow-kit as not found').toBe('arrow-kit')
+    await expect(slot, 'a name the service does not have is still a loading skeleton').not.toHaveClass(/ig-chip--wait/)
+    await expect(slot.locator('img'), 'a missing name drew artwork').toHaveCount(0)
+    await expect(cell.locator('.ig-glyph-wait')).toHaveCount(0)
+  })
+
+  test('a mono name listed under not_found is an empty slot, not the wait box', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+
+    const missing = await answerWithMissing(page, 'lucide', (names) => names[0])
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
+    await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible({ timeout: 20_000 })
+    await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
+    missing.release()
+
+    await expect(page.locator('.ig .ic img').nth(8)).toBeVisible({ timeout: 20_000 })
+    expect(missing.name, 'the answer listed nothing as not found').toBeTruthy()
+    const cell = page.locator(`.ig .ic[aria-label="Customise ${missing.name}"]`)
+    await expect(cell.locator('.ig-glyph-gone'), 'the missing name has no empty slot').toHaveCount(1)
+    await expect(cell.locator('.ig-glyph-wait'), 'the missing name still pulses').toHaveCount(0)
+    await expect(page.locator('.ig .ic .ig-glyph-wait'), 'something is still waiting after the batch returned').toHaveCount(0)
   })
 })

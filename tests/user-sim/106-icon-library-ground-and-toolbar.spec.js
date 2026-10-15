@@ -12,7 +12,7 @@
 //    say), and on a coarse pointer every control is at least 44px both ways.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_STUB_HEADER } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER } from './iconify-stub.js'
 
 const WIDTHS = [320, 360, 390, 640, 641, 768, 961, 999, 1440]
 
@@ -63,12 +63,12 @@ test.describe('the customizer preview ground', () => {
 
 // COLOURED ICONS: NO WHITE BOX.
 //
-// The grid used to wrap every coloured-pack glyph in a white chip, and the
-// customizer kept its contrast gradient for them. Circle Flags is a paid pack,
-// so the viewer is Pro; the fixture serves its names, and the chip is drawn
-// whether or not the artwork has arrived. While it is pending the chip is a faint
-// tint (spec 113 owns that), so the paint checks below look at chips whose
-// glyph has loaded: that is the resting state a reader sees.
+// A coloured-pack glyph sits in a transparent slot, and the customizer shows it
+// on the page ground. Circle Flags is a paid pack, so the viewer is Pro; the
+// fixture serves its names, and the slot is drawn whether or not the artwork has
+// arrived. While it is pending the slot is a faint tint (spec 113 owns that), so
+// the paint checks below look at slots whose glyph has loaded: that is the
+// resting state a reader sees.
 
 // On a phone the pack control lives in the toolbar's Filters sheet; wider, it is
 // on the row. Either way, close the sheet with Done, as a reader does, so the grid
@@ -160,6 +160,81 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     await ctx.close()
   })
 
+  // COPY, SAVE AND DOWNLOAD NEED THE REAL MARKUP. A coloured-pack stage paints from
+  // an <img> before the icon's own markup is in hand, so the actions that send the
+  // markup somewhere wait for it: disabled and busy, then live once it lands, and
+  // the clipboard is never written with an empty string. Both the grid batch and the
+  // single-icon request are held, so the customiser has no markup to start from.
+  // MUTATION: drop `disabled={!baseSvgText}` from Copy SVG, Save or Download (or
+  // from the code box) and the matching assertion below fails.
+  test('copy, save and download wait for the icon markup, then work', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+    await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+    const page = await ctx.newPage()
+    watch(page, 'someone copying a flag the instant the panel opens')
+    await signIn(page, { plan: 'pro' })
+    // Every clipboard write the page makes, in order.
+    await page.addInitScript(() => {
+      window.__clipboardWrites = []
+      const orig = navigator.clipboard.writeText.bind(navigator.clipboard)
+      navigator.clipboard.writeText = (text) => { window.__clipboardWrites.push(text); return orig(text) }
+    })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+
+    let releaseBatch
+    let releaseSvg
+    const heldBatch = new Promise((resolve) => { releaseBatch = resolve })
+    const heldSvg = new Promise((resolve) => { releaseSvg = resolve })
+    let heldSvgRequests = 0
+    await page.route(
+      (u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/circle-flags.json' && u.search.includes('icons='),
+      async (route) => { await heldBatch; await route.fallback() },
+    )
+    await page.route(
+      (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/circle-flags\/[^/]+\.svg$/.test(u.pathname),
+      async (route) => { heldSvgRequests += 1; await heldSvg; await route.fallback() },
+    )
+    try {
+      await choosePack(page, 'circle-flags')
+      await expect(page.locator('.ig .ic .ig-chip.ig-chip--wait').first()).toBeVisible({ timeout: 20000 })
+      await page.locator('.ig .ic').first().click()
+      await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
+      await expect.poll(() => heldSvgRequests, { timeout: 20000 }).toBeGreaterThan(0)
+
+      const actions = {
+        'Copy SVG': page.getByRole('button', { name: 'Copy SVG', exact: true }),
+        Save: page.getByRole('button', { name: 'Save to project', exact: true }),
+        Download: page.getByRole('button', { name: 'Download', exact: true }),
+        'the code box': page.locator('.icust-code-box'),
+      }
+      for (const [label, button] of Object.entries(actions)) {
+        await expect(button, `${label} is live with no markup`).toBeDisabled()
+        await expect(button, `${label} does not say it is busy`).toHaveAttribute('aria-busy', 'true')
+      }
+      // A click that lands anyway (force skips the actionability wait) does nothing.
+      await actions['Copy SVG'].click({ force: true, timeout: 2000 }).catch(() => {})
+      await actions['the code box'].click({ force: true, timeout: 2000 }).catch(() => {})
+      await expect(page.getByRole('button', { name: /Copied!/ }), 'it claimed to copy nothing').toHaveCount(0)
+      expect(await page.evaluate(() => window.__clipboardWrites), 'the clipboard was written with no markup').toEqual([])
+
+      releaseSvg()
+      for (const [label, button] of Object.entries(actions)) {
+        await expect(button, `${label} never came alive`).toBeEnabled({ timeout: 20000 })
+        await expect(button).not.toHaveAttribute('aria-busy', 'true')
+      }
+      await actions['Copy SVG'].click()
+      await expect(page.getByRole('button', { name: /Copied!/ }).first()).toBeVisible()
+      const writes = await page.evaluate(() => window.__clipboardWrites)
+      expect(writes.length, 'one copy, one write').toBe(1)
+      expect(writes[0], 'the copied markup is empty or not an svg').toMatch(/^<svg[\s\S]+<\/svg>$/)
+    } finally {
+      releaseBatch()
+      releaseSvg()
+      await ctx.close()
+    }
+  })
+
   test('a mono icon keeps its own tile: no slot, inverted ink in dark', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
     const page = await ctx.newPage()
@@ -179,19 +254,27 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
 // The batched glyph endpoint answers one body per name. These bodies are coloured
 // (the fixture's own is a currentColor stroke, which an <img> paints black), so the
 // ink tone under test is the one the test chose: github-icon and vercel-icon are
-// near-black, apple is white, everything else is orange or red.
+// near-black, apple is white, everything else is orange or red. Two flags carry
+// the opposite extremes on purpose: Japan's body is near-white and Germany's is
+// near-black, so a halo rule that ignored the pack would give them a halo (dark
+// on the light theme, light on the dark one) and the flag test below would fail.
 const coloured = '<path fill="#fc6d26" d="M3 3h18v18H3z"/><path fill="#e24329" d="M8 8h8v8H8z"/>'
 const INK = {
   'github-icon': '<path fill="#181717" d="M3 3h18v18H3z"/>',
   'vercel-icon': '<path fill="#000" d="M12 3l10 18H2z"/>',
   apple: '<path fill="#fff" d="M3 3h18v18H3z"/>',
 }
+const FLAG_INK = {
+  jp: '<path fill="#fefefe" d="M3 3h18v18H3z"/>',
+  de: '<path fill="#050505" d="M3 3h18v18H3z"/>',
+}
 const serveInk = (page) => page.route(/\/[^/]+\.json\?.*icons=/, (route) => {
   const url = new URL(route.request().url())
   const prefix = url.pathname.replace(/^\//, '').replace(/\.json$/, '')
   const icons = {}
   for (const n of (url.searchParams.get('icons') || '').split(',').filter(Boolean)) {
-    icons[n] = { body: prefix === 'logos' && INK[n] ? INK[n] : coloured }
+    const body = (prefix === 'logos' && INK[n]) || (prefix === 'circle-flags' && FLAG_INK[n]) || coloured
+    icons[n] = { body }
   }
   return route.fulfill({
     status: 200,
@@ -244,19 +327,32 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     await ctx.close()
   })
 
+  // MUTATION: make `haloFor` ignore its pack argument and this fails: Japan's
+  // near-white body takes the dark halo on the light theme, Germany's near-black
+  // body the light halo on the dark one.
   test('flags are never given a halo in either theme', async ({ browser }) => {
     for (const scheme of ['dark', 'light']) {
       const { ctx, page } = await openFlagGrid(browser, scheme, 1440)
-      await expect(page.locator(`${LOADED_CHIP} img`).first()).toBeVisible({ timeout: 20000 })
+      for (const name of ['jp', 'de', 'gb']) {
+        await expect(page.locator(`.ig .ic[aria-label="Customise ${name}"] .ig-chip img`), `${name} never drew`).toBeVisible({ timeout: 20000 })
+        await expect(chipOf(page, name), `the ${name} flag got a halo in ${scheme}`).not.toHaveClass(/halo/)
+      }
       expect(await page.locator('.ig .ic .ig-chip[class*="halo"]').count(), `a flag got a halo in ${scheme}`).toBe(0)
+      // The customiser stage carries none either, for the flag whose body is the
+      // extreme of the current theme.
+      await page.locator(`.ig .ic[aria-label="Customise ${scheme === 'dark' ? 'de' : 'jp'}"]`).click()
+      await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
+      await expect.poll(() => page.locator('.icust-stage-img').evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 20000 }).toBe(true)
+      await expect(page.locator('.icust-stage')).not.toHaveClass(/halo/)
       await ctx.close()
     }
   })
 })
 
 // SAVED ICONS. A saved true multicolour pack glyph sits on the page like its grid
-// cell; a saved mono icon that was given a colour keeps its light tile, so a black
-// or white one stays visible.
+// cell and takes the same ink-tone halo (a flag never does); a saved mono icon
+// that was given a colour sits on a tile chosen from that colour, so a black or a
+// white one is visible in both themes.
 test.describe('saved icons', () => {
   const record = (over) => ({
     key: `vs-custom-icons:1:${over.name}`, ts: 1, base: 'bolt', iteration: 1, projectId: null,
@@ -267,10 +363,19 @@ test.describe('saved icons', () => {
   const seeded = [
     record({ name: 'Custom (mono 1)', pack: 'lucide', cdn: true, color: '#000000', colored: true, svg: svg('#000') }),
     record({ name: 'Custom (flag 1)', pack: 'circle-flags', cdn: true, color: '', colored: true, svg: svg('#d52b1e') }),
+    // A white mono icon, a near-black and a white brand logo, and a near-white flag.
+    record({ name: 'Custom (white 1)', pack: 'lucide', cdn: true, color: '#ffffff', colored: true, svg: svg('#fff') }),
+    record({ name: 'Custom (github 1)', base: 'github-icon', pack: 'logos', cdn: true, color: '', colored: true, svg: svg('#181717') }),
+    record({ name: 'Custom (apple 1)', base: 'apple', pack: 'logos', cdn: true, color: '', colored: true, svg: svg('#ffffff') }),
+    record({ name: 'Custom (jp 1)', base: 'jp', pack: 'circle-flags', cdn: true, color: '', colored: true, svg: svg('#fefefe') }),
+    record({ name: 'Custom (de 1)', base: 'de', pack: 'circle-flags', cdn: true, color: '', colored: true, svg: svg('#050505') }),
   ]
 
   for (const scheme of ['light', 'dark']) {
-    test(`a saved coloured mono icon keeps its tile; a saved pack glyph has none, ${scheme}`, async ({ browser }) => {
+    // MUTATIONS: pick the tile from nothing (always light) and the white icon is
+    // white on white; drop the halo from SavedPackGlyph and the saved logos lose
+    // theirs; let haloFor ignore the pack and the near-white saved flag takes one.
+    test(`saved icons stay visible and flags take no halo, ${scheme}`, async ({ browser }) => {
       const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
       const page = await ctx.newPage()
       watch(page, `someone with saved icons in ${scheme} mode`)
@@ -293,6 +398,45 @@ test.describe('saved icons', () => {
       const flagPaint = await paint(flag)
       expect(flagPaint.image, 'a saved multicolour glyph kept a box').toBe('none')
       expect(flagPaint.shadow).toBe('none')
+      await expect(mono).not.toHaveClass(/tile-dark/)
+
+      // A saved white icon is on the dark tile in both themes, never white on white.
+      const white = page.locator('.ig .ic', { hasText: 'Custom (white 1)' }).locator('.ig-chip')
+      await expect(white).toHaveClass(/ig-chip--tile-dark/)
+      const whitePaint = await paint(white)
+      expect(whitePaint.image, 'a saved white icon has no tile').not.toBe('none')
+      const [r, g, b] = await white.evaluate((c) => {
+        // The dark tile's first gradient stop, read back from the computed paint.
+        const m = getComputedStyle(c).backgroundImage.match(/rgb\((\d+), (\d+), (\d+)\)/)
+        return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [255, 255, 255]
+      })
+      expect(Math.max(r, g, b), 'the tile behind a white icon is light').toBeLessThan(64)
+
+      // Saved brand logos take the grid's halo for their ink tone, never a box.
+      const github = page.locator('.ig .ic', { hasText: 'Custom (github 1)' }).locator('.ig-chip')
+      const apple = page.locator('.ig .ic', { hasText: 'Custom (apple 1)' }).locator('.ig-chip')
+      await expect(github).toBeVisible()
+      if (scheme === 'dark') {
+        await expect(github, 'near-black saved logo is invisible on the dark page').toHaveClass(/ig-chip--halo-light/)
+        await expect(apple).not.toHaveClass(/halo/)
+      } else {
+        await expect(apple, 'white saved logo is invisible on the light page').toHaveClass(/ig-chip--halo-dark/)
+        await expect(github).not.toHaveClass(/halo/)
+      }
+      for (const c of [github, apple]) expect((await paint(c)).image, 'a saved logo got a box').toBe('none')
+      // A near-white and a near-black saved flag: once their ink has been measured
+      // (the image has decoded and two frames have passed) neither has a halo.
+      for (const flagName of ['Custom (jp 1)', 'Custom (de 1)']) {
+        const flagChip = page.locator('.ig .ic', { hasText: flagName }).locator('.ig-chip')
+        await expect.poll(() => flagChip.locator('img').evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true)
+        await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+        await expect(flagChip, `${flagName} got a halo`).not.toHaveClass(/halo/)
+      }
+
+      // The customiser stage carries the halo for the same saved logo.
+      const pick = scheme === 'dark' ? 'Custom (github 1)' : 'Custom (apple 1)'
+      await page.locator('.ig .ic', { hasText: pick }).click()
+      await expect(page.locator('.icust-stage')).toHaveClass(scheme === 'dark' ? /icust-stage--halo-light/ : /icust-stage--halo-dark/, { timeout: 20000 })
       await ctx.close()
     })
   }
