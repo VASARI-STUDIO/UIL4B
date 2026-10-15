@@ -38,7 +38,8 @@ test.describe('the customizer preview ground', () => {
       const page = await ctx.newPage()
       watch(page, `someone opening an icon in ${scheme} mode`)
       await openCustomizer(page)
-      await expect(page.getByRole('button', { name: 'Default', exact: true })).toHaveClass(/active/)
+      await expect(page.locator('.icust-panel').getByRole('button', { name: 'Default', exact: true })).toHaveCount(0)
+      await expect(page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg button.active')).toHaveCount(0)
       const { bg, image, page: pageBg } = await stageAndPage(page)
       expect(image, 'the stage is painting a gradient').toBe('none')
       expect(bg, 'the stage is not the page background').toBe(pageBg)
@@ -46,7 +47,7 @@ test.describe('the customizer preview ground', () => {
     })
   }
 
-  test('a chosen colour keeps a contrast ground, and Default brings the page ground back', async ({ browser }) => {
+  test('a chosen colour keeps a contrast ground, and Reset brings the page ground back', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1440, height: 900 } })
     const page = await ctx.newPage()
     watch(page, 'someone picking white for an icon')
@@ -54,7 +55,7 @@ test.describe('the customizer preview ground', () => {
     await page.getByRole('button', { name: 'White', exact: true }).click()
     const picked = await stageAndPage(page)
     expect(picked.image, 'white on the page ground would be invisible').not.toBe('none')
-    await page.getByRole('button', { name: 'Default', exact: true }).click()
+    await page.getByRole('button', { name: 'Reset to default', exact: true }).click()
     const back = await stageAndPage(page)
     expect(back.bg).toBe(back.page)
     await ctx.close()
@@ -145,8 +146,8 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
     await page.locator('.ig .ic').first().click()
     await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
-    // The Colour row is replaced by a note: there is nothing to tint.
-    await expect(page.getByText(/original colours preserved/i)).toBeVisible()
+    // The Colour row has nothing to tint: a fixed Default and a note.
+    await expect(page.getByText('Original colours', { exact: true })).toBeVisible()
     // The markup is fetched on open; copying before it lands would copy nothing.
     await expect(page.locator('.icust-code code')).toContainText('<svg', { timeout: 20000 })
     const copy = page.getByRole('button', { name: /^Copy SVG$/ })
@@ -480,6 +481,8 @@ test.describe('the icon toolbar', () => {
         await go(page, '/create/icons')
         await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
         await expect(page.locator('.ig-addbtn')).toBeVisible()
+        await expect(page.locator('.ig-toolbar').getByRole('button', { name: /^Outlined/ })).toHaveCount(0)
+        await expect(page.locator('.ig-toolbar').getByRole('button', { name: /^Solid/ })).toHaveCount(0)
         const m = await measureToolbar(page)
 
         // One row: no control starts below another's bottom edge on the row.
@@ -508,3 +511,105 @@ test.describe('the icon toolbar', () => {
     }
   }
 })
+
+const adobeCatalogue = async (page) => {
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({
+    contentType: 'application/json', headers: { [ICONIFY_STUB_HEADER]: '1' },
+    body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: 1, uncategorized: ['adobe'] }),
+  }))
+}
+
+const openAdobeGrid = async (page) => {
+  await signIn(page, { plan: 'pro' })
+  await adobeCatalogue(page)
+  await go(page, '/create/icons')
+  // On a phone the pack menu sits inside the toolbar's Filters sheet.
+  const pack = page.getByRole('button', { name: 'Icon pack' })
+  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  await expect(pack.or(filters).first()).toBeVisible({ timeout: 20000 })
+  if (await filters.isVisible()) {
+    await filters.click()
+    const sheet = page.getByRole('dialog', { name: 'Filters' })
+    await chooseMenuOption(page, sheet.getByRole('button', { name: 'Icon pack' }), 'logos')
+    await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+  } else {
+    await chooseMenuOption(page, pack, 'logos')
+  }
+  await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', 'Customise adobe')
+}
+
+for (const scheme of ['dark', 'light']) {
+  for (const width of [390, 1440, 1920]) {
+    test(`coloured grid and adobe preview use the page ground at ${width} ${scheme}`, async ({ browser }) => {
+      const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width, height: 900 } })
+      try {
+        const page = await ctx.newPage()
+        await openAdobeGrid(page)
+        const glyph = page.locator('.ig .ig-chip').first()
+        await expect(glyph.locator('img')).toBeVisible()
+        const plate = await glyph.evaluate(e => {
+          const s = getComputedStyle(e)
+          return { bg: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow }
+        })
+        expect(plate).toEqual({ bg: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none' })
+        await page.locator('.ig .ic').first().click()
+        await expect(page.locator('.icust-stage-img')).toBeVisible()
+        const stage = await stageAndPage(page)
+        expect(stage.bg).toBe(stage.page)
+        expect(stage.image).toBe('none')
+        await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
+        await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--light/)
+        const colourSeg = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg')
+        await expect(colourSeg.getByRole('button')).toHaveCount(0)
+        await expect(colourSeg).toHaveText('Default')
+        await expect(colourSeg.locator('.active')).toHaveCount(1)
+        expect(await page.locator('.icust-stage-img').getAttribute('src')).toMatch(/^data:/)
+      } finally { await ctx.close() }
+    })
+  }
+}
+
+for (const weight of ['Regular', 'Bold', 'Fill', 'Duo']) {
+  test(`Default colour is offered only for Duo, when browsing ${weight}`, async ({ page }) => {
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    const seg = page.getByRole('group', { name: 'Icon weight' })
+    await seg.getByRole('button', { name: new RegExp(`^${weight}`) }).click()
+    await expect(page.locator('.ig .ic').first()).toBeVisible()
+    if (weight !== 'Regular') {
+      await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', weight === 'Duo' ? /-duotone$/ : weight === 'Bold' ? /-bold$/ : /-(fill|solid|filled)$/)
+    }
+    await page.locator('.ig .ic').first().click()
+    const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+    await expect(colour.getByRole('button', { name: 'Default', exact: true })).toHaveCount(weight === 'Duo' ? 1 : 0)
+    if (weight !== 'Duo') await expect(colour.locator('.icust-seg button.active')).toHaveCount(0)
+  })
+}
+
+for (const fail of [false, true]) {
+  test(`an uncached coloured preview shows a loading indicator${fail ? ' and an error' : ' until its image loads'}`, async ({ page }) => {
+    let release
+    const pending = new Promise(resolve => { release = resolve })
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || /\/logos\/.*\.svg$/.test(u.pathname)), async route => {
+      await pending
+      if (fail) await route.fulfill({ status: 404, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: 'refused' }, body: 'Missing' })
+      else await route.fallback()
+    })
+    try {
+      await openAdobeGrid(page)
+      await page.locator('.ig .ic').first().click()
+      const stage = page.locator('.icust-stage')
+      await expect(stage.getByRole('status')).toHaveText('Loading\u2026')
+      await expect(stage.getByRole('status')).toBeVisible()
+      const reserved = await stage.boundingBox()
+      release()
+      if (fail) await expect(stage.getByRole('status')).toHaveText('Couldn\u2019t load this icon.')
+      else {
+        await expect(stage.locator('img')).toBeVisible()
+        await expect(stage.getByRole('status')).toHaveCount(0)
+      }
+      expect(Math.abs((await stage.boundingBox()).height - reserved.height)).toBeLessThan(0.5)
+    } finally { release() }
+  })
+}
