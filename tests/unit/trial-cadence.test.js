@@ -18,7 +18,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { PLAN_LADDER } from '../../src/config/planLadder.js'
-import { CADENCE_LABEL } from '../../src/config/planFacts.js'
+import { CADENCE_LABEL, subscriptionCadence } from '../../src/config/planFacts.js'
 import {
   TRIAL_DAYS, trialDaysFor, BILLING_INTERVALS, PRICE_ENV_KEYS, LOOKUP_KEYS, INTERVAL_COUNTS, INTERVAL_MAP, DEFAULT_PRICES,
 } from '../../api/_lib/pricing.js'
@@ -81,6 +81,14 @@ test('a subscription already billing quarterly is still recognised', () => {
   // Not selling it is not the same as forgetting it: existing subscribers keep
   // Pro and keep an honest cadence label, never "Billed monthly".
   // billing-cadence.test.js pins the wording itself.
+  for (const record of [
+    { interval: 'month', intervalCount: 3 },
+    { interval: 'month', interval_count: 3 },
+    { billingInterval: 'quarterly' },
+  ]) {
+    assert.equal(subscriptionCadence(record), 'quarterly', `${JSON.stringify(record)} is not recognised as quarterly`)
+  }
+  assert.equal(subscriptionCadence({ interval: 'month', intervalCount: 1 }), 'monthly', 'a one-month record read as quarterly')
   assert.ok(CADENCE_LABEL.quarterly, 'a quarterly subscriber would be shown no cadence at all')
   assert.match(CADENCE_LABEL.quarterly, /3|three/i)
   assert.notEqual(CADENCE_LABEL.quarterly, CADENCE_LABEL.monthly)

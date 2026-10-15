@@ -65,11 +65,13 @@ export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, yearly: 1 })
 
 /**
  * Whether a Stripe price may be sold for a billing interval: it must be active
- * and recurring on the interval's unit AND count. Monthly and quarterly share
- * the 'month' unit, so the count is what keeps one from being sold as the
- * other. A one-off (non-recurring) price is never sellable. The price list and
- * checkout both apply this one check, so the price a visitor is shown and the
- * price a checkout charges are chosen by the same rule.
+ * and recurring on the interval's unit AND count. Only Monthly and Yearly are
+ * on sale; a three-month price shares the 'month' unit, so the count is what
+ * keeps it from being sold as Monthly. (A three-month subscription is still
+ * recognised when it already exists.) A one-off (non-recurring) price is never
+ * sellable. The price list and checkout both apply this one check, so the price
+ * a visitor is shown and the price a checkout charges are chosen by the same
+ * rule.
  */
 export function priceIsSellable(price, interval) {
   if (!price?.active) return false

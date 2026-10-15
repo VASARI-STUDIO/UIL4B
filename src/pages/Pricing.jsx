@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { refreshPrices, usePrices, useProPrice } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
-import { formatMoney } from '../config/planLadder'
+import { APPROVED_CURRENCY, formatMoney } from '../config/planLadder'
 import { COLOUR_SYSTEMS } from '../config/colourSystems'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import { freeFormats, proOnlyFormats } from '../config/exportFormats'
@@ -314,13 +314,16 @@ export default function Pricing() {
   // Every state's note sits in one grid cell and the inactive ones are hidden,
   // so the slot is always as tall as the tallest note and nothing moves when the
   // switch is used or the price arrives. Until the live price lands, the hidden
-  // notes are sized with the ladder's fallback amounts; they are never shown.
+  // notes are sized with the ladder's fallback amounts. A cadence with no live
+  // price in the visitor's currency can still be named inside the active note
+  // (the other cadence's price), so its fallback is an approved USD amount shown
+  // as USD, the way resolvePlanLadder quotes it, never as the visitor's currency.
   const sized = offers.map((o) => {
     const fallback = OFFER_BY_ID[o.id]
     return {
       ...o,
-      totalLabel: o.totalLabel || formatMoney(fallback.approvedTotal, currency),
-      amountLabel: o.amountLabel || formatMoney(perMonth(fallback.approvedTotal, fallback.months), currency),
+      totalLabel: o.totalLabel || formatMoney(fallback.approvedTotal, APPROVED_CURRENCY),
+      amountLabel: o.amountLabel || formatMoney(perMonth(fallback.approvedTotal, fallback.months), APPROVED_CURRENCY),
     }
   })
   const sizedBest = sized.find((o) => o.id === DEFAULT_BILLING)
