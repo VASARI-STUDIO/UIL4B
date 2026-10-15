@@ -381,10 +381,8 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
   })
 })
 
-// SAVED ICONS. A saved true multicolour pack glyph sits on the page like its grid
-// cell and takes the same ink-tone halo (a flag never does); a saved mono icon
-// that was given a colour sits on a tile chosen from that colour, so a black or a
-// white one is visible in both themes.
+// Saved artwork sits on the page ground. Near-black and near-white ink take
+// the same theme-aware halo as the browse grid; flags never take a halo.
 test.describe('saved icons', () => {
   const record = (over) => ({
     key: `vs-custom-icons:1:${over.name}`, ts: 1, base: 'bolt', iteration: 1, projectId: null,
@@ -404,9 +402,6 @@ test.describe('saved icons', () => {
   ]
 
   for (const scheme of ['light', 'dark']) {
-    // MUTATIONS: pick the tile from nothing (always light) and the white icon is
-    // white on white; drop the halo from SavedPackGlyph and the saved logos lose
-    // theirs; let haloFor ignore the pack and the near-white saved flag takes one.
     test(`saved icons stay visible and flags take no halo, ${scheme}`, async ({ browser }) => {
       const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
       const page = await ctx.newPage()
@@ -422,27 +417,17 @@ test.describe('saved icons', () => {
       await expect(mono).toBeVisible({ timeout: 20000 })
       const paint = (loc) => loc.evaluate((c) => {
         const s = getComputedStyle(c)
-        return { image: s.backgroundImage, shadow: s.boxShadow }
+        return { background: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow }
       })
-      const monoPaint = await paint(mono)
-      expect(monoPaint.image, 'a saved black icon lost its light tile').not.toBe('none')
-      await expect(mono).toHaveClass(/ig-chip--tile/)
-      const flagPaint = await paint(flag)
-      expect(flagPaint.image, 'a saved multicolour glyph kept a box').toBe('none')
-      expect(flagPaint.shadow).toBe('none')
-      await expect(mono).not.toHaveClass(/tile-dark/)
-
-      // A saved white icon is on the dark tile in both themes, never white on white.
       const white = page.locator('.ig .ic', { hasText: 'Custom (white 1)' }).locator('.ig-chip')
-      await expect(white).toHaveClass(/ig-chip--tile-dark/)
-      const whitePaint = await paint(white)
-      expect(whitePaint.image, 'a saved white icon has no tile').not.toBe('none')
-      const [r, g, b] = await white.evaluate((c) => {
-        // The dark tile's first gradient stop, read back from the computed paint.
-        const m = getComputedStyle(c).backgroundImage.match(/rgb\((\d+), (\d+), (\d+)\)/)
-        return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [255, 255, 255]
-      })
-      expect(Math.max(r, g, b), 'the tile behind a white icon is light').toBeLessThan(64)
+      for (const chip of [mono, white, flag]) {
+        expect(await paint(chip), 'saved artwork kept a box').toEqual({
+          background: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none',
+        })
+        await expect(chip).not.toHaveClass(/ig-chip--tile/)
+      }
+      await expect(mono).toHaveClass(scheme === 'dark' ? /ig-chip--halo-light/ : /^ig-chip$/)
+      await expect(white).toHaveClass(scheme === 'light' ? /ig-chip--halo-dark/ : /^ig-chip$/)
 
       // Saved brand logos take the grid's halo for their ink tone, never a box.
       const github = page.locator('.ig .ic', { hasText: 'Custom (github 1)' }).locator('.ig-chip')
@@ -469,6 +454,11 @@ test.describe('saved icons', () => {
       const pick = scheme === 'dark' ? 'Custom (github 1)' : 'Custom (apple 1)'
       await page.locator('.ig .ic', { hasText: pick }).click()
       await expect(page.locator('.icust-stage')).toHaveClass(scheme === 'dark' ? /icust-stage--halo-light/ : /icust-stage--halo-dark/, { timeout: 20000 })
+      await page.keyboard.press('Escape')
+      await choosePack(page, 'logodev')
+      const logo = page.locator('.ig .ic .ig-chip').first()
+      await expect(logo).toHaveClass(/ig-chip--tile/)
+      expect((await paint(logo)).image, 'a logo.dev PNG lost its tile').not.toBe('none')
       await ctx.close()
     })
   }
@@ -630,7 +620,8 @@ for (const fail of [false, true]) {
       await page.locator('.ig .ic').first().click()
       const stage = page.locator('.icust-stage')
       await expect(stage.getByRole('status')).toHaveText('Loading\u2026')
-      await expect(stage.getByRole('status')).toBeVisible()
+      await expect(stage.locator('.icust-stage-wait')).toBeVisible()
+      await expect(stage.getByRole('status').locator('.sr-only')).toHaveCSS('clip', 'rect(0px, 0px, 0px, 0px)')
       const reserved = await stage.boundingBox()
       release()
       if (fail) await expect(stage.getByRole('status')).toHaveText('Couldn\u2019t load this icon.')
@@ -642,3 +633,29 @@ for (const fail of [false, true]) {
     } finally { release() }
   })
 }
+
+test('a saved duotone icon reopens with the Default colour button', async ({ page }) => {
+  await signIn(page, { plan: 'pro' })
+  await go(page, '/create/icons')
+  await page.getByRole('group', { name: 'Icon weight' }).getByRole('button', { name: /^Duo/ }).click()
+  const cell = page.locator('.ig .ic').first()
+  await expect(cell).toHaveAttribute('aria-label', /-duotone$/)
+  await cell.click()
+  const save = page.getByRole('button', { name: 'Save to project', exact: true })
+  await expect(save).toBeEnabled()
+  await save.click()
+  const picker = page.getByRole('dialog', { name: 'Save to a project' })
+  await picker.getByRole('button', { name: /New project/ }).click()
+  await picker.getByRole('textbox', { name: 'New project name' }).fill('Icon styles')
+  await picker.getByRole('button', { name: 'Create & save', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-custom-icons') || '[]')
+    .some(icon => /-duotone$/.test(icon.base)))).toBe(true)
+  await page.keyboard.press('Escape')
+  await choosePack(page, 'custom')
+  const saved = page.locator('.ig-mysec').filter({ has: page.getByRole('heading', { name: 'Saved', exact: true }) }).locator('.ic').first()
+  await expect(saved).toContainText(/Custom \(.*-duotone 1\)/)
+  await saved.click()
+  const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+  await expect(colour.getByRole('button', { name: 'Default', exact: true })).toBeVisible()
+})

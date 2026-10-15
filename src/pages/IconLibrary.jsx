@@ -713,12 +713,15 @@ const warmSoon = (icon) => {
 }
 const warmCancel = () => clearTimeout(warmTimer)
 
-// A saved multicolour pack glyph in My Icons: a transparent slot like the grid's
-// own, with the halo its ink tone calls for.
+// Saved artwork uses a transparent slot, with a halo from its chosen colour
+// or measured ink tone when it matches the page ground.
 function SavedPackGlyph({ icon }) {
   const { theme } = useTheme()
   const [measured, setMeasured] = useState(null)
-  const ink = measuredInk(icon, null) || measured || 'mid'
+  const luminance = icon.color ? relativeLuminance(icon.color) : null
+  const ink = luminance !== null
+    ? (luminance < INK_DARK_MAX ? 'dark' : luminance > INK_LIGHT_MIN ? 'light' : 'mid')
+    : measuredInk(icon, null) || measured || 'mid'
   const onLoad = (e) => {
     if (measuredInk(icon, null)) return
     const next = sampleGlyph(e.currentTarget).ink
@@ -733,27 +736,13 @@ function SavedPackGlyph({ icon }) {
   )
 }
 
-// Relative luminance from which a saved mono colour sits on the dark tile (the
-// same cut the customiser stage uses to swap to its light ground).
-const TILE_FLIP_LUM = 0.35
-
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
 function cellGlyph(icon, src, onGlyphError, gone) {
   if (icon.custom) {
     if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
-    // A saved multicolour pack glyph sits on the page like its grid cell does,
-    // with the same ink-tone halo.
-    if (icon.cdn && !icon.color && COLORED_PACKS.has(icon.pack)) return <SavedPackGlyph icon={icon} />
-    // A saved mono icon with a chosen colour (or pasted artwork) sits on a tile
-    // that contrasts with that colour, so a white icon is as visible as a black one.
-    const flip = !!icon.color && relativeLuminance(icon.color) >= TILE_FLIP_LUM
-    return (
-      <span className={flip ? 'ig-chip ig-chip--tile ig-chip--tile-dark' : 'ig-chip ig-chip--tile'}>
-        <img src={svgToDataUri(icon.svg)} width="24" height="24" loading="lazy" alt={icon.name} />
-      </span>
-    )
+    return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) {
     // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
@@ -1318,7 +1307,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // The frame on screen is the last one that decoded for THIS icon. A new size,
   // rotation or colour decodes off-screen and swaps in, so the picture never
   // blanks between frames; "Loading…" only covers an icon's first paint.
-  const [frame, setFrame] = useState({ id: null, src: '', failed: false })
+  const [frame, setFrame] = useState(() => ({ id: currentId, src: previewSvg ? previewSrc : '', failed: false }))
   useEffect(() => {
     if (!previewSrc) return undefined
     let live = true
@@ -1328,11 +1317,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     probe.src = previewSrc
     return () => { live = false; probe.onload = null; probe.onerror = null }
   }, [previewSrc, currentId])
-  const shownSrc = frame.id === currentId ? frame.src : ''
+  const shownSrc = (frame.id === currentId && frame.src) || (previewSvg ? previewSrc : '')
   const imageError = frame.id === currentId && frame.failed
   // Duotone artwork (Phosphor, Solar `-bold-duotone`, and any other `-duotone`
   // name) keeps its own two-tone treatment when no colour is picked.
-  const isDuotone = /-duotone$/.test(activeIcon?.name || '')
+  const isDuotone = /-duotone$/.test((activeIcon?.custom ? activeIcon.base : activeIcon?.name) || '')
   // Brand/colored artwork keeps its own colours and sits on the page ground, like
   // an un-tinted mono icon. Near-page-ink artwork gets the same faint halo as its
   // grid cell; the tone comes from the shared cache, refined by the stage image's
@@ -1584,7 +1573,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
+                  {!baseSvgText && !loadErr && <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />}
+                  {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               ) : (
                 <>
@@ -1599,9 +1589,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       style={imageError ? { visibility: 'hidden' } : undefined}
                     />
                   ) : (
-                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
+                    <span className={imageError ? 'icust-stage-img' : 'icust-stage-img icust-stage-wait'} style={{ width: size, height: size }} aria-hidden="true" />
                   )}
-                  {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
+                  {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
             </div>

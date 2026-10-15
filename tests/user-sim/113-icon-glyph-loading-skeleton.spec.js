@@ -249,3 +249,83 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect(page.locator('.ig .ic .ig-glyph-wait'), 'something is still waiting after the batch returned').toHaveCount(0)
   })
 })
+
+test.describe('the customiser while its artwork is loading', () => {
+  test.skip(isLiveIconify(), 'this spec controls when the artwork arrives')
+
+  test('a cold preview pulses until the held artwork arrives', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible()
+    let release
+    const held = new Promise(resolve => { release = resolve })
+    let requests = 0
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname)
+      && (u.pathname === '/logos.json' || /^\/logos\/[^/]+\.svg$/.test(u.pathname)), async route => {
+      requests += 1
+      await held
+      await route.fallback()
+    })
+    try {
+      await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'logos')
+      await page.locator('.ig .ic').first().click()
+      const stage = page.locator('.icust-stage')
+      const placeholder = stage.locator('.icust-stage-wait')
+      await expect(placeholder).toBeVisible()
+      await expect.poll(() => requests).toBeGreaterThan(0)
+      await expect(placeholder).toHaveClass(/icust-stage-wait/)
+      await expect(placeholder).toHaveCSS('animation-name', 'ig-skel-pulse')
+      const paint = await placeholder.evaluate(el => {
+        const css = getComputedStyle(el)
+        const r = el.getBoundingClientRect()
+        const stage = el.parentElement.getBoundingClientRect()
+        return { background: css.backgroundColor, width: r.width, height: r.height,
+          dx: r.x + r.width / 2 - stage.x - stage.width / 2,
+          dy: r.y + r.height / 2 - stage.y - stage.height / 2 }
+      })
+      expect(alphaOf(paint.background)).toBeGreaterThan(0)
+      expect(alphaOf(paint.background)).toBeLessThan(MAX_SKELETON_ALPHA)
+      expect(paint.width).toBe(48)
+      expect(paint.height).toBe(48)
+      expect(Math.abs(paint.dx)).toBeLessThan(1)
+      expect(Math.abs(paint.dy)).toBeLessThan(1)
+      await expect(placeholder).toHaveCSS('border-radius', '8px')
+      const status = stage.getByRole('status')
+      await expect(status).toHaveText('Loading\u2026')
+      // The loading string is clipped for sighted readers but remains announced.
+      await expect(status.getByText('Loading\u2026', { exact: true })).toHaveClass('sr-only')
+      await expect(status.locator('.sr-only')).toHaveCSS('clip', 'rect(0px, 0px, 0px, 0px)')
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await expect(placeholder).toHaveCSS('animation-name', 'none')
+      release()
+      await expect(stage.locator('img.icust-stage-img')).toBeVisible()
+      await expect.poll(() => stage.locator('img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+      await expect(placeholder).toHaveCount(0)
+      await expect(status).toHaveCount(0)
+    } finally { release() }
+  })
+
+  test('cached markup opens without a loading frame', async ({ page }) => {
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'logos')
+    const cell = page.locator('.ig .ic').first()
+    await expect.poll(() => cell.locator('img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+    await page.evaluate(() => {
+      window.__stagePaints = []
+      new MutationObserver(() => {
+        const stage = document.querySelector('.icust-stage')
+        if (stage) window.__stagePaints.push({
+          waiting: !!stage.querySelector('.icust-stage-wait, [role="status"]'),
+          image: !!stage.querySelector('img[src^="data:"]'),
+        })
+      }).observe(document.body, { childList: true, subtree: true })
+    })
+    await cell.click()
+    await expect(page.locator('.icust-stage img')).toBeVisible()
+    const paints = await page.evaluate(() => window.__stagePaints)
+    expect(paints.length).toBeGreaterThan(0)
+    expect(paints.every(p => !p.waiting && p.image)).toBe(true)
+  })
+})
