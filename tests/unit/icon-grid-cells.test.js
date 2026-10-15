@@ -56,7 +56,7 @@ test('a windowed cell is the same element, still focusable, still named', () => 
   assert.match(body, /tabIndex=\{0\}/)
   assert.match(body, /role="button"/)
   // The name is rendered unconditionally — ghost or not — so find-in-page finds it.
-  assert.match(body, /\n\s*<span key="n">\{icon\.name\}<\/span>/)
+  assert.match(body, /\n\s*<span key="n" className="ic-name">\{icon\.name\}<\/span>/)
 })
 
 test('the focused cell is never windowed out', () => {

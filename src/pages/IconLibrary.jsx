@@ -571,32 +571,7 @@ function sampleGlyph(img) {
 }
 
 
-// Iconify-served brand glyph in a transparent slot. logo.dev images must NOT
-// use this component (unknown CORS policy, and they are opaque PNG marks), so
-// they keep a plain light chip of their own (`ig-chip--tile`).
-//
-// THE REQUEST ASKS FOR A HEIGHT, NOT A BOX. `?width=24&height=24` pinned both
-// dimensions and left the viewBox alone, so the API returned a 24 x 24 SVG that
-// letterboxed a 512 x 45 lockup into a 2px strip. `?height=48` lets the width
-// follow the artwork, so the element's intrinsic aspect is finally the truth
-// about the art. Square glyphs are unaffected - the CSS still paints them in a
-// 24px box - and 48 gives the wide chip resolution to scale from.
-// `src` is the batched data: URI from the grid (see the batching note above).
-// It arrives empty on the render before this icon's tranche lands. Until the
-// <img> has fired `load` the chip is a faint pulsing skeleton of the same box
-// (`ig-chip--wait`), so the cell does not resize under the reader when the
-// artwork appears; once there is artwork the chip is a transparent slot again and
-// fades in with it (`ig-chip--in`). A failed image drops the skeleton and leaves
-// the empty slot, and so does a name the service has no icon for (`gone`).
-//
-// The sampling below is unchanged and is now on firmer ground: a data: URI does
-// not taint a canvas, so `getImageData` no longer depends on the CDN returning
-// a permissive `Access-Control-Allow-Origin`. `crossOrigin` goes with it — it
-// was only ever there to make that sampling legal.
-// Which halo (if any) keeps ink that matches the page ground readable: near-black
-// ink on the dark theme gets a light halo, near-white ink on the light theme a dark one.
-// A flag never gets one: its average tone says little about its edge, and a flag's
-// outline is part of the artwork.
+// Brand artwork keeps its colours in a transparent, fixed-size slot.
 const FLAG_PACKS = new Set(ICON_GROUPS.flags.packs)
 const haloFor = (ink, theme, pack) => {
   if (FLAG_PACKS.has(pack)) return ''
@@ -662,11 +637,7 @@ function BrandGlyph({ pack, name, src, gone = false }) {
   )
 }
 
-// A mono glyph from the batched data: URI. The <img> itself is the skeleton box
-// until it has fired `load` (same 24px box, so nothing moves), then fades in.
-// A source already painted once skips the fade so a cell that scrolls back into
-// view does not flash. A failed image drops the skeleton class and leaves the
-// browser's own broken-image rendering.
+// Previously painted sources skip the loading fade on remount.
 const paintedSrc = new Set()
 function MonoGlyph({ src, className, alt, onError }) {
   const [phase, setPhase] = useState(() => (paintedSrc.has(src) ? 'ready' : 'wait'))
@@ -745,10 +716,8 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) {
-    // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
-    // plain light chip always gives enough separation from the card surface.
     return (
-      <span className="ig-chip ig-chip--tile">
+      <span className="ig-chip">
         <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
       </span>
     )
@@ -796,7 +765,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
       onFocus={() => onWarm(icon, true)}
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
-      <span key="n">{icon.name}</span>
+      <span key="n" className="ic-name">{icon.name}</span>
       {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
     </div>
   )
@@ -3183,6 +3152,38 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // whenever the list itself is replaced (a new pack, group or query), since
   // positions then mean different icons.
   const gridRef = useRef(null)
+  const [waitingStatus, setWaitingStatus] = useState(false)
+  useEffect(() => {
+    const grid = gridRef.current
+    if (!grid) return
+    let timer = null
+    const scan = () => {
+      const waiting = [...grid.querySelectorAll('.ig-glyph-wait,.ig-glyph-pending,.ig-chip--wait')]
+        .some(el => {
+          const rect = el.getBoundingClientRect()
+          return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth
+        })
+      if (!waiting) {
+        clearTimeout(timer)
+        timer = null
+        setWaitingStatus(false)
+      } else if (timer === null) {
+        timer = setTimeout(() => setWaitingStatus(true), 600)
+      }
+    }
+    const observer = new MutationObserver(scan)
+    observer.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+    window.addEventListener('scroll', scan, { passive: true })
+    window.addEventListener('resize', scan)
+    scan()
+    return () => {
+      observer.disconnect()
+      clearTimeout(timer)
+      setWaitingStatus(false)
+      window.removeEventListener('scroll', scan)
+      window.removeEventListener('resize', scan)
+    }
+  }, [gated, source])
   const [win, setWin] = useState({ list: icons, upTo: 0, h: [], keep: -1 })
   if (win.list !== icons) setWin({ list: icons, upTo: 0, h: [], keep: -1 })
   const windowed = !isMyIcons && !gated && shown.length > PAGE_SIZE
@@ -3514,15 +3515,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             {!gated && (
               <div className="ig" ref={gridRef}>
                 {loading && icons.length === 0
-                  ? Array.from({ length: 24 }).map((_, i) => (
-                    <div key={`skel-${i}`} className="ig-skel" aria-hidden="true">
-                      <div className="sk ig-skel-glyph" />
-                      <div className="sk ig-skel-label" />
+                  ? Array.from({ length: 80 }).map((_, i) => (
+                    <div key={`skel-${i}`} className="ic ig-skel" aria-hidden="true">
+                      <div className={pack && !COLORED_PACKS.has(pack) ? 'ig-skel-slot ig-skel-slot--mono' : 'ig-skel-slot'}>
+                        <div className="sk ig-skel-glyph" />
+                      </div>
+                      <div className={pack ? 'ig-skel-labels ig-skel-labels--single' : 'ig-skel-labels'}>
+                        <div className="sk ig-skel-label" />
+                        {!pack && <div className="sk ig-skel-pack" />}
+                      </div>
                     </div>
                   ))
                   : renderGrid(shown, windowed && win.list === icons ? win : null)}
               </div>
             )}
+
+            {waitingStatus && !gated && <p className="ig-status" aria-live="polite">Loading icons…</p>}
 
             {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
 

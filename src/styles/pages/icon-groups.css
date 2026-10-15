@@ -37,7 +37,7 @@
 }
 .iel-page .igp-page .igp-card-name{font-size:14px;font-weight:560;letter-spacing:-.01em;color:var(--t0)}
 .iel-page .igp-page .igp-card-meta{font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.iel-page .igp-page .igp-wait{display:block;border-radius:6px;background:color-mix(in srgb,var(--t0) 6%,transparent)}
+.iel-page .igp-page .igp-wait{display:block;border-radius:6px;background:none;animation:none}
 
 /* The locked group card: the libraries' blurred locked card, with a row of
    neutral outline shapes in place of the palette stripes. No transition or
