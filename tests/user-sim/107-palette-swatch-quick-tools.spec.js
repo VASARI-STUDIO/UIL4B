@@ -1,21 +1,32 @@
 // The per-swatch quick tools on the Palette Builder: Edit in HCT, Swap, Remove.
 //
-// They sit beside the lock on each swatch, one press from the colour, and each
-// is also an item in the "Colour actions" menu. They are revealed three ways,
-// and each way has its own test because each is its own piece of CSS or code:
+// From 768px up they sit in ONE ordered column with the lock and the actions
+// button: Lock, Edit in HCT, Swap, Remove, "...". Each is also an item in the
+// "Colour actions" menu. They are revealed three ways, and each way has its own
+// test because each is its own piece of CSS or code:
 //
 //   1. a pointer hovering the swatch,
-//   2. the keyboard reaching a control in the swatch (the tools stay rendered
-//      and focusable at rest from 768px up, so focus is what
-//      shows them — never `visibility:hidden` or `display:none`),
-//   3. a tap on the bare swatch where there is no hover, from 768px up.
-// Phones show only Lock and More actions, with quick actions in the menu.
+//   2. keyboard focus VISIBLY inside the swatch (`:has(:focus-visible)`; the
+//      tools stay rendered and focusable at rest from 768px up, so focus is
+//      what shows them — never `visibility:hidden` or `display:none`). A mouse
+//      press leaves focus on a button but is not focus-visible, so it does not
+//      latch the stack open,
+//   3. a tap on the bare swatch where there is no hover (`(hover: none)`), from
+//      768px up.
+// Columns under 80px wide (a 10-colour board at 768) hide the stack, and the
+// Colour actions menu still holds every action. Phones (767 and under) show
+// only Lock and More actions.
+//
+// The second half of the file ("the ordered column") pins the behaviour of the
+// ordered column itself: Tab order, no focus latch, focus after a keyboard
+// Remove, narrow columns, the HCT popover staying on screen, and the phone
+// layout. Each of those has a MUTATION line saying what to break to see it red.
 //
 // EVERY TEST CARRIES A POSITIVE CONTROL. "The tools are hidden at rest" and
 // "nothing overlapped" are both true of a page that never painted, so each test
 // first proves five swatches were drawn and the tools exist in the DOM.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -23,10 +34,10 @@ const QUICK = [/^Edit .+ in HCT$/, /^Choose a direction to swap /, /^Remove /]
 
 /** A context at an exact width: touch metrics on a phone, a mouse above it
  *  (or touch at any width with `touch`, as on an iPad). */
-async function at(browser, width, { theme = 'light', touch = false } = {}) {
+async function at(browser, width, { theme = 'light', touch = false, height } = {}) {
   const ctx = await browser.newContext(width < 700 || touch
-    ? { viewport: { width, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: IOS_UA }
-    : { viewport: { width, height: 900 } })
+    ? { viewport: { width, height: height ?? 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: IOS_UA }
+    : { viewport: { width, height: height ?? 900 } })
   await ctx.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* private mode */ } }, theme)
   const page = await ctx.newPage()
   watch(page, `palette visitor at ${width}px`)
@@ -99,8 +110,7 @@ test.describe('the per-swatch quick tools', () => {
     expect(rest.some(painted), 'quick tools are not painted before focus arrives').toBe(false)
 
     await col.getByRole('button', { name: /^(Lock|Unlock) / }).focus()
-    await page.keyboard.press('Tab') // More actions
-    await page.keyboard.press('Tab') // Edit in HCT — the first quick tool
+    await page.keyboard.press('Tab') // Edit in HCT — the first quick tool, straight after the lock
     const focused = await page.evaluate(() => {
       const el = document.activeElement
       return { label: el.getAttribute('aria-label'), visibility: getComputedStyle(el).visibility }
@@ -216,6 +226,7 @@ test.describe('the per-swatch quick tools', () => {
       await page.keyboard.press('Enter')
       await expect(page.getByRole('menu', { name: /^Swap / })).toBeVisible()
       await page.keyboard.press('Tab') // Remove
+      await page.keyboard.press('Tab') // More actions — the menu is built after it
       await page.keyboard.press('Tab') // the first direction
       expect(await page.evaluate(() => document.activeElement?.getAttribute('role')), 'focus is on a menu item').toBe('menuitem')
 
@@ -227,7 +238,8 @@ test.describe('the per-swatch quick tools', () => {
   })
 
   // On phones Tab reaches More actions and its menu; wider touch devices
-  // keep Edit, Swap and Remove in the swatch's tab order.
+  // keep Edit, Swap and Remove in the swatch's tab order, between the lock and
+  // More actions.
   for (const width of [390, 820]) {
     test(`Tab reaches the colour actions at ${width}px on a touch device`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width, { touch: true })
@@ -254,7 +266,7 @@ test.describe('the per-swatch quick tools', () => {
         await ctx.close()
         return
       }
-      const walk = [['More actions', /^More actions for /], ['Edit in HCT', QUICK[0]], ['Swap', QUICK[1]], ['Remove', QUICK[2]]]
+      const walk = [['Edit in HCT', QUICK[0]], ['Swap', QUICK[1]], ['Remove', QUICK[2]], ['More actions', /^More actions for /]]
       for (const [name, label] of walk) {
         await page.keyboard.press('Tab')
         const focused = () => page.evaluate(() => {
@@ -311,6 +323,259 @@ test.describe('the per-swatch quick tools', () => {
       await menu.getByRole('menuitem', { name: 'Remove', exact: true }).tap()
       await expect(page.locator('.plb-col')).toHaveCount(4)
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 'no horizontal overflow').toBeLessThanOrEqual(0)
+      await ctx.close()
+    })
+  }
+})
+
+// ── The ordered column ─────────────────────────────────────────────────────
+// Lock, Edit in HCT, Swap, Remove, "..." in one column. Each test below has a
+// MUTATION line: the small change to the product that must turn it red.
+
+const LOCK = /^(Lock|Unlock) /
+const MORE = /^More actions for /
+const SWAP = QUICK[1]
+const focusedLabel = (page) => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName)
+
+/** A signed-in Pro session (the test Firebase double grants it through the
+ *  same subscription document the product reads), grown to `colours` swatches.
+ *  Edit in HCT opens a Pro modal for a free account, and 9-10 colours are Pro. */
+async function proBoard(browser, width, { colours = 5, height = 900 } = {}) {
+  const ctx = await browser.newContext({ viewport: { width, height } })
+  const page = await ctx.newPage()
+  watch(page, `Pro palette designer at ${width}px`)
+  await signIn(page, { plan: 'pro' })
+  await go(page, '/create/palette')
+  await expect(page.locator('.plb-col')).toHaveCount(5)
+  for (let n = 5; n < colours; n++) {
+    await page.getByRole('button', { name: 'Add a colour' }).click()
+    await expect(page.locator('.plb-col')).toHaveCount(n + 1)
+  }
+  return { ctx, page }
+}
+
+/** The box of an element once it has stopped moving (the popover is placed by a
+ *  ResizeObserver after it mounts), with the viewport and the header it must
+ *  clear. Waits on frames holding still, not on a timer. */
+const settledBox = (page, selector) => page.evaluate((sel) => new Promise((resolve, reject) => {
+  const key = (r) => [r.left, r.top, r.right, r.bottom].map(Math.round).join()
+  let last = ''; let same = 0; let frames = 0
+  const tick = () => {
+    const el = document.querySelector(sel)
+    if (!el) { reject(new Error(`${sel} is not on the page`)); return }
+    const r = el.getBoundingClientRect()
+    same = key(r) === last ? same + 1 : 0
+    last = key(r)
+    if (same >= 6) {
+      const nav = document.querySelector('.pnav')
+      resolve({ left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height,
+        vw: innerWidth, vh: innerHeight, navBottom: nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0 })
+    } else if (++frames > 600) reject(new Error(`${sel} never held still`))
+    else requestAnimationFrame(tick)
+  }
+  tick()
+}), selector)
+
+test.describe('the ordered column', () => {
+  // (a) MUTATION: put `tabIndex={-1}` on the Swap button in PaletteBuilder.jsx
+  // (Tab then skips it) and the order reads Lock, Edit, Remove, More; add
+  // `order:-1` to `.plb .plb-tool--more` and the column is drawn with More first.
+  test('Tab walks Lock, Edit in HCT, Swap, Remove, More actions, and the column is drawn in that order at 1440', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    const col = page.locator('.plb-col').nth(2)
+    const order = [LOCK, QUICK[0], SWAP, QUICK[2], MORE]
+
+    await col.getByRole('button', { name: LOCK }).focus()
+    const walked = [await focusedLabel(page)]
+    for (let k = 1; k < order.length; k++) {
+      await page.keyboard.press('Tab')
+      walked.push(await focusedLabel(page))
+    }
+    order.forEach((re, k) => expect(walked[k], `stop ${k + 1} of the tab order (walked: ${walked.join(' > ')})`).toMatch(re))
+
+    // The drawn order is the Tab order: one column, each tool below the last,
+    // with no tool on top of another. The stack is revealed by the focus that
+    // is still inside the swatch, so every box is real.
+    const boxes = await col.evaluate((el, sources) => sources.map((source) => {
+      const t = [...el.querySelectorAll('.plb-col-tools .plb-tool')].find((b) => new RegExp(source).test(b.getAttribute('aria-label') || ''))
+      const r = t.getBoundingClientRect()
+      return { label: t.getAttribute('aria-label'), top: r.top, bottom: r.bottom, centre: r.left + r.width / 2, width: r.width }
+    }), order.map((re) => re.source))
+    for (const b of boxes) expect(b.width, `${b.label} is drawn`).toBeGreaterThan(0)
+    for (let k = 1; k < boxes.length; k++) {
+      expect(boxes[k].top, `${boxes[k].label} sits below ${boxes[k - 1].label}`).toBeGreaterThanOrEqual(boxes[k - 1].bottom)
+      expect(Math.abs(boxes[k].centre - boxes[0].centre), `${boxes[k].label} is in the same column as the lock`).toBeLessThanOrEqual(1)
+    }
+    await ctx.close()
+  })
+
+  // (b) MUTATION: in palette-builder.css change the rule
+  // `.plb .plb-col:has(:focus-visible) .plb-tool--quick` to `.plb-col:focus-within`
+  // (the old latch) and the clicked swatch keeps its whole stack, so two show.
+  test('after a mouse click on Swap, hovering another swatch leaves exactly one swatch showing its quick tools', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    const cols = page.locator('.plb-col')
+    const clicked = cols.nth(1)
+    const hovered = cols.nth(3)
+
+    await clicked.hover()
+    await expect.poll(async () => (await quickState(clicked)).every(painted), { message: 'hover reveals the clicked swatch stack' }).toBe(true)
+    await clicked.getByRole('button', { name: SWAP }).click()
+    await expect(page.getByRole('menu', { name: /^Swap / })).toBeVisible()
+    // POSITIVE CONTROL: the mouse press did leave focus on the Swap button, so
+    // the old focus-within latch has something to hold on to.
+    expect(await focusedLabel(page), 'the click left focus on Swap').toMatch(SWAP)
+
+    await hovered.hover()
+    await expect.poll(async () => (await quickState(hovered)).every(painted), { message: 'hover reveals the hovered swatch stack' }).toBe(true)
+    const showing = []
+    for (let k = 0; k < 5; k++) showing.push((await quickState(cols.nth(k))).every(painted))
+    expect(showing, 'which swatches show their whole quick stack').toEqual([false, false, false, true, false])
+    // The clicked swatch keeps only the pressed Swap lit (its menu is open).
+    expect((await quickState(clicked)).map(painted)).toEqual([false, true, false])
+    await ctx.close()
+  })
+
+  // (c) MUTATION: delete the line `if (keyboard) removeFocusRef.current = ...`
+  // in removeCol (PaletteBuilder.jsx) and focus falls to the page.
+  test('Enter on Remove takes out exactly that colour and focus lands on a Lock', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    const cols = page.locator('.plb-col')
+    const hexes = () => page.locator('.plb-col .plb-hex').allTextContents()
+    const before = await hexes()
+    expect(before).toHaveLength(5)
+
+    await cols.nth(2).getByRole('button', { name: LOCK }).focus()
+    let label = await focusedLabel(page)
+    for (let k = 0; k < 6 && !QUICK[2].test(label); k++) {
+      await page.keyboard.press('Tab')
+      label = await focusedLabel(page)
+    }
+    expect(label, 'Tab from the lock reaches Remove').toMatch(QUICK[2])
+    await page.keyboard.press('Enter')
+
+    await expect(cols).toHaveCount(4)
+    await expect.poll(hexes, { message: 'the other four colours are untouched, in order' })
+      .toEqual([before[0], before[1], before[3], before[4]])
+    await expect.poll(() => page.evaluate(() => {
+      const el = document.activeElement
+      return { label: el?.getAttribute('aria-label') ?? el?.tagName, inSwatch: !!el?.closest('.plb-col') }
+    }), { message: 'focus is on a swatch Lock, not lost to the page' })
+      .toEqual({ label: expect.stringMatching(LOCK), inSwatch: true })
+    await expect(cols, 'one press removed one colour, not two').toHaveCount(4)
+    await ctx.close()
+  })
+
+  // (d) MUTATION: in palette-builder.css change `@container (width < 80px)` to
+  // `(width < 0px)` and the narrow columns draw a stack again (first message);
+  // also put `.plb-col-quick` back to `position:absolute; top:16px; right:58px`
+  // and the stack leaves its column (second message).
+  test('a 10-colour board at 768: no tool spills out of its own column and the stack is hidden where it cannot fit', async ({ browser }) => {
+    const { ctx, page } = await proBoard(browser, 768, { colours: 10 })
+    const cols = page.locator('.plb-col')
+    await expect(cols).toHaveCount(10)
+    const damage = []
+    let measured = 0
+
+    for (let i = 0; i < 10; i++) {
+      await cols.nth(i).hover()
+      // The More button is the hover-revealed control: once it is painted the
+      // swatch is in its hovered state.
+      await expect.poll(() => cols.nth(i).locator('.plb-tool--more').evaluate((b) => parseFloat(getComputedStyle(b).opacity)), { message: `swatch ${i + 1} reveals on hover` }).toBe(1)
+      const m = await cols.nth(i).evaluate((col) => {
+        const c = col.getBoundingClientRect()
+        const tools = [...col.querySelectorAll('.plb-tool')].map((t) => {
+          const r = t.getBoundingClientRect()
+          const hit = r.width ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null
+          return { label: t.getAttribute('aria-label'), quick: !!t.closest('.plb-col-quick'), drawn: r.width > 0,
+            left: r.left - c.left, right: r.right - c.right, top: r.top - c.top, bottom: r.bottom - c.bottom,
+            takesPointer: getComputedStyle(t).pointerEvents !== 'none', hitsItself: !!hit && t.contains(hit) }
+        })
+        return { width: c.width, tools }
+      })
+      for (const t of m.tools) {
+        if (!t.drawn) continue
+        measured++
+        const where = `swatch ${i + 1} (${Math.round(m.width)}px wide) "${t.label}"`
+        if (t.left < -0.5 || t.right > 0.5 || t.top < -0.5 || t.bottom > 0.5) damage.push(`${where} spills out of its column (left ${t.left.toFixed(1)}, right ${t.right.toFixed(1)}, top ${t.top.toFixed(1)}, bottom ${t.bottom.toFixed(1)})`)
+        if (t.takesPointer && !t.hitsItself) damage.push(`${where} is covered by something else at its centre`)
+      }
+      if (m.width < 80) {
+        const shown = m.tools.filter((t) => t.quick && t.drawn).map((t) => t.label)
+        if (shown.length) damage.push(`swatch ${i + 1} is ${Math.round(m.width)}px wide, under the 80px floor, and still draws ${shown.join(', ')}`)
+      }
+      // POSITIVE CONTROL for this column: the lock and More are drawn, so an
+      // empty `damage` is not a board that never painted.
+      expect(m.tools.filter((t) => !t.quick && t.drawn).length, `swatch ${i + 1}: Lock and More are drawn`).toBe(2)
+    }
+    expect(measured, 'tools were measured on all ten swatches').toBeGreaterThanOrEqual(20)
+    expect(damage.slice(0, 6), `${damage.length} faults on the 10-colour board, first six shown`).toEqual([])
+    await ctx.close()
+  })
+
+  // (e) MUTATION: in PaletteBuilder.jsx change `if (window.innerWidth < 768) return`
+  // in the popover placement effect to `< 5000` and the panel keeps its default
+  // spot, so the last swatch's runs off the right edge at 768.
+  for (const width of [768, 1440]) {
+    for (const [which, index] of [['first', 0], ['last', 4]]) {
+      test(`the Edit in HCT popover of the ${which} swatch is fully on screen at ${width}`, async ({ browser }) => {
+        const { ctx, page } = await proBoard(browser, width)
+        const col = page.locator('.plb-col').nth(index)
+        await col.hover()
+        await expect.poll(async () => (await quickState(col)).every(painted), { message: 'hover reveals the stack' }).toBe(true)
+        await col.getByRole('button', { name: QUICK[0] }).click()
+        await expect(page.locator('.plb-picker'), 'the HCT editor opened (a Pro account, so no upgrade modal)').toBeVisible()
+
+        const box = await settledBox(page, '.plb-picker')
+        // POSITIVE CONTROL: a real, full-size panel was measured.
+        expect(box.width, 'the panel has its width').toBeGreaterThan(200)
+        expect(box.height, 'the panel has its height').toBeGreaterThan(100)
+        const where = `picker at ${Math.round(box.left)},${Math.round(box.top)} to ${Math.round(box.right)},${Math.round(box.bottom)} in ${box.vw}x${box.vh}`
+        expect(box.left, `${where}: starts inside the left edge`).toBeGreaterThanOrEqual(0)
+        expect(box.right, `${where}: ends inside the right edge`).toBeLessThanOrEqual(box.vw)
+        expect(box.top, `${where}: starts below the header`).toBeGreaterThanOrEqual(box.navBottom)
+        expect(box.bottom, `${where}: ends above the bottom edge`).toBeLessThanOrEqual(box.vh)
+        await ctx.close()
+      })
+    }
+  }
+
+  // (f) MUTATION: delete the two phone rules `.plb .plb-col-quick { display: none; }`
+  // and `.plb .plb-tool--quick { display: none; }` in the max-width:767 block and
+  // the stack is back (first half, both heights); in placeContextMenu change
+  // `bottom` to `window.innerHeight - margin` and the last swatch's menu runs
+  // under the tab bar (second half, 390x667 only: on a tall phone the menu is
+  // short enough to clear the bar either way).
+  for (const height of [844, 667]) {
+    test(`390x${height}: a swatch has only Lock and More actions, and the last swatch menu sits above the tab bar`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, 390, { touch: true, height })
+      const cols = page.locator('.plb-col')
+      const last = cols.nth(4)
+      await last.scrollIntoViewIfNeeded()
+
+      // POSITIVE CONTROL: the three quick buttons are in the markup but take no
+      // space, so "none" below is a hidden stack and not a page that failed to render.
+      const rest = await quickState(last)
+      expect(rest.every(Boolean), 'the quick tools exist in the DOM').toBe(true)
+      for (const s of rest) expect(s.width, `${s.label} takes no space on a phone`).toBe(0)
+      const tools = last.locator('.plb-col-tools').getByRole('button')
+      await expect(tools).toHaveCount(2)
+      await expect(tools.nth(0)).toHaveAccessibleName(LOCK)
+      await expect(tools.nth(1)).toHaveAccessibleName(MORE)
+      for (const label of QUICK) await expect(last.getByRole('button', { name: label })).toHaveCount(0)
+
+      await last.getByRole('button', { name: MORE }).tap()
+      const menu = page.getByRole('menu', { name: 'Colour actions', exact: true })
+      for (const name of ['Edit in HCT', 'Swap left', 'Remove']) await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible()
+      const box = await settledBox(page, '.plb-ctx')
+      const tabs = await page.evaluate(() => {
+        const bar = document.querySelector('.pnav-tabs')
+        const r = bar?.getBoundingClientRect()
+        return { shown: !!bar && getComputedStyle(bar).display !== 'none' && r.height > 0, top: r?.top ?? innerHeight }
+      })
+      expect(tabs.shown, 'POSITIVE CONTROL: the tab bar is on screen at 390').toBe(true)
+      expect(box.bottom, `the menu ends at ${Math.round(box.bottom)}, above the tab bar at ${Math.round(tabs.top)}`).toBeLessThanOrEqual(tabs.top)
+      expect(box.top, 'and starts below the header').toBeGreaterThanOrEqual(box.navBottom)
       await ctx.close()
     })
   }
