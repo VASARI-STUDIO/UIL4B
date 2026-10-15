@@ -509,6 +509,10 @@
 }
 .pricing .pr-pro .pr-price { min-height: 48px; margin-top: var(--s-3); }
 .pricing .pr-pro .pr-amt { font-size: 48px; }
+/* The word that stands in for a price keeps its small size: this rule has one
+   more class than the price sizes here and in the 768 to 1023 block, so it wins
+   at every width and "Unavailable" stays inside its column. */
+.pricing .pr-pro .pr-amt.is-word { font-size: 28px; letter-spacing: -.02em; }
 .pricing .pr-pro .pr-note { margin-top: var(--s-2); }
 .pricing .pr-pro .pr-cta { margin-top: var(--s-4); }
 .pricing .pr-pro .pr-under { margin-top: var(--s-3); text-align: center; }

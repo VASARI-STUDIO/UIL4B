@@ -73,9 +73,13 @@ export const APPROVED_CURRENCY = 'usd'
 // always renders two decimals, which is right on an invoice and wrong on a
 // 44px headline number — "$4.00/month" makes the eye check the cents. Whole
 // amounts lose the cents here; anything with real cents keeps them.
-export function formatMoney(amount, currency = APPROVED_CURRENCY) {
+//
+// A bare "$" reads as the page's own dollar. When the amount is USD but the page
+// is in another currency, pass `qualify` and it prints "US$", the way the other
+// dollar currencies already carry their prefix.
+export function formatMoney(amount, currency = APPROVED_CURRENCY, { qualify = false } = {}) {
   if (typeof amount !== 'number' || !Number.isFinite(amount)) return null
-  const symbol = PRICE_SYMBOLS[currency] || `${currency.toUpperCase()} `
+  const symbol = qualify && currency === 'usd' ? 'US$' : (PRICE_SYMBOLS[currency] || `${currency.toUpperCase()} `)
   const isWhole = Math.abs(amount - Math.round(amount)) < 0.005
   return `${symbol}${isWhole ? Math.round(amount) : amount.toFixed(2)}`
 }

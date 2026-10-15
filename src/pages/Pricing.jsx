@@ -141,10 +141,13 @@ function billedLine(offer, monthlyOffer) {
 const unitOf = (offer) => (offer.months === 12 ? 'year' : 'month')
 
 // The line under the Pro button: the trial's terms when the cadence has one,
-// otherwise what the best cadence works out at.
-function underLine(offer, bestOffer) {
+// otherwise what the best cadence works out at. That second line is only said
+// when the best cadence can be bought in the page's currency (`bestLive`); a
+// fallback amount would point the visitor at something they cannot choose, so
+// the line stays empty and its slot keeps its height.
+function underLine(offer, bestOffer, bestLive) {
   if (offer.trialDays && offer.totalLabel) return `Free for ${offer.trialDays} days, then ${offer.totalLabel} a ${unitOf(offer)}.`
-  if (bestOffer?.amountLabel && bestOffer.id !== offer.id) return `${bestOffer.label} works out at ${bestOffer.amountLabel} a month.`
+  if (bestLive && bestOffer?.amountLabel && bestOffer.id !== offer.id) return `${bestOffer.label} works out at ${bestOffer.amountLabel} a month.`
   return ''
 }
 
@@ -154,8 +157,8 @@ function cardLines(offer) {
   return {
     billed: `${offer.totalLabel} billed ${BILLED_EVERY[offer.id]}`,
     trial: offer.trialDays
-      ? `${offer.trialDays}-day free trial, then ${offer.totalLabel}/${unitOf(offer)}`
-      : `No free trial. Billed ${BILLED_EVERY[offer.id]}.`,
+      ? `${offer.trialDays}-day free trial, then ${offer.totalLabel} a ${unitOf(offer)}`
+      : 'No free trial; billing starts today.',
   }
 }
 
@@ -318,21 +321,25 @@ export default function Pricing() {
   // price in the visitor's currency can still be named inside the active note
   // (the other cadence's price), so its fallback is an approved USD amount shown
   // as USD, the way resolvePlanLadder quotes it, never as the visitor's currency.
+  // On a page in another currency it carries "US$", so a bare "$" never reads as
+  // the page's own dollar.
+  const qualify = currency !== APPROVED_CURRENCY
   const sized = offers.map((o) => {
     const fallback = OFFER_BY_ID[o.id]
     return {
       ...o,
-      totalLabel: o.totalLabel || formatMoney(fallback.approvedTotal, APPROVED_CURRENCY),
-      amountLabel: o.amountLabel || formatMoney(perMonth(fallback.approvedTotal, fallback.months), APPROVED_CURRENCY),
+      totalLabel: o.totalLabel || formatMoney(fallback.approvedTotal, APPROVED_CURRENCY, { qualify }),
+      amountLabel: o.amountLabel || formatMoney(perMonth(fallback.approvedTotal, fallback.months), APPROVED_CURRENCY, { qualify }),
     }
   })
   const sizedBest = sized.find((o) => o.id === DEFAULT_BILLING)
   const sizedMonthly = sized.find((o) => o.id === 'monthly')
+  const bestLive = !!offers.find((o) => o.id === DEFAULT_BILLING)?.amountLabel
   const noteStates = [
     ...sized.map((o) => ({
       id: o.id,
       lines: [billedLine(o, sizedMonthly), CANCEL_LINE].filter(Boolean),
-      under: underLine(o, sizedBest),
+      under: underLine(o, sizedBest, bestLive),
     })),
     { id: 'loading', lines: ['Checking the live price…'], under: '' },
   ]
@@ -348,12 +355,12 @@ export default function Pricing() {
     { id: 'loading', billed: 'Checking the live price…', trial: '' },
   ]
 
-  // The saving, derived from the ladder and never typed. On the cadence that
-  // saves it reads as a fact about this plan; on the other it names the cadence
-  // that does, so a monthly arrival still sees it.
+  // The saving, derived from the ladder and never typed. It reads the
+  // same on both cadences and names the one that saves, so a monthly arrival
+  // still sees it.
   const savingOffer = offers.find((o) => o.id === DEFAULT_BILLING)
   const savingLine = price.loaded && savingOffer?.saving > 0
-    ? (billing === savingOffer.id ? `Save ${savingOffer.saving}% vs monthly` : `${savingOffer.label} saves ${savingOffer.saving}%`)
+    ? `Save ${savingOffer.saving}% with ${savingOffer.label}`
     : ''
 
   // The closing "Choose Pro" is the same destination as the Pro button, so a

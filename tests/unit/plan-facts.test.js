@@ -12,7 +12,7 @@ import {
   FREE_POINTS, PRO_POINTS, FREE_EXCLUSION, BILLING_OPTIONS, DEFAULT_BILLING, TOOL_COUNT,
   resolveOffers, subscriptionCadence, CADENCE_LABEL,
 } from '../../src/config/planFacts.js'
-import { PLAN_LADDER } from '../../src/config/planLadder.js'
+import { PLAN_LADDER, formatMoney } from '../../src/config/planLadder.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { TOOL_COUNT as LANDING_TOOL_COUNT } from '../../src/components/spectrum/spectrumFacts.js'
 
@@ -76,7 +76,7 @@ test('prices, savings, trials and the billed line come out as /plans prints them
   assert.equal(by.monthly.amountLabel, '$7')
   assert.equal(by.monthly.billedNote, 'Billed monthly, cancel any time. Keep every export you made.')
   assert.equal(by.yearly.amountLabel, '$4')
-  assert.equal(by.yearly.savingLabel, '43% off')
+  assert.equal(by.yearly.savingLabel, 'Save 43%')
   assert.equal(by.yearly.billedNote, 'Billed $48 yearly, 7-day free trial, cancel any time. Keep every export you made.')
   assert.deepEqual(offers.map((o) => o.id), ['monthly', 'yearly'], 'the sellable offers are monthly and yearly, nothing else')
   assert.equal(by.quarterly, undefined, 'quarterly is no longer an offer')
@@ -84,6 +84,13 @@ test('prices, savings, trials and the billed line come out as /plans prints them
     const rung = PLAN_LADDER.find((p) => p.id === o.id)
     assert.equal(o.trialDays, rung.trialDays || 0, `${o.id}: the trial disagrees with the ladder (and so with the server)`)
   }
+})
+
+test('a USD amount on a page in another currency is labelled US$, never a bare $', () => {
+  assert.equal(formatMoney(7, 'usd'), '$7')
+  assert.equal(formatMoney(7, 'usd', { qualify: true }), 'US$7')
+  assert.equal(formatMoney(75, 'aud'), 'A$75')
+  assert.equal(formatMoney(75, 'aud', { qualify: true }), 'A$75', 'only USD takes the label')
 })
 
 test('no price means no amount, never a guess', () => {

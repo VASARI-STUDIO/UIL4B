@@ -225,7 +225,7 @@ export default function Checkout() {
     : proPrice.loaded && !amount
       ? `No ${proPrice.currencyLabel} price for this billing period right now`
     : planKey === 'yearly'
-      ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · save ${proPrice.savingsPct}%` : ''}`
+      ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · Save ${proPrice.savingsPct}%` : ''}`
       : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
 
   useEffect(() => {
@@ -325,8 +325,9 @@ export default function Checkout() {
                       onChange={() => choosePlan(o.checkoutPlan)}
                     />
                     <span className="checkout-period-label">{o.label}</span>
-                    {/* Always rendered, so a saving arriving with the live
-                        prices fills a reserved line instead of growing the row. */}
+                    {/* Always rendered; empty, it takes no line (see the sheet),
+                        and the row's 48px floor means a saving arriving with
+                        the live prices does not grow it. */}
                     <span className="checkout-period-save">{o.savingLabel}</span>
                   </label>
                 )

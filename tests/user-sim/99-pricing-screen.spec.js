@@ -258,9 +258,9 @@ test.describe('phones and the docked plan bar', () => {
     await stubPrices(page)
     await go(page, '/plans')
     await expectRendered(page)
-    await expect(page.locator('.pr-save')).toHaveText(`Save ${SAVING}% vs monthly`)
+    await expect(page.locator('.pr-save')).toHaveText(`Save ${SAVING}% with Yearly`)
     await choose(page, 'Monthly')
-    await expect(page.locator('.pr-save')).toHaveText(`Yearly saves ${SAVING}%`)
+    await expect(page.locator('.pr-save')).toHaveText(`Save ${SAVING}% with Yearly`)
   })
 
   test('the docked bar hides at the closing band, whose Choose Pro goes to checkout on the selected cadence', async ({ page }) => {
