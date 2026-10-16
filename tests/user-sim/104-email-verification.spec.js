@@ -170,6 +170,13 @@ test.describe('the "Verify your email" bar', () => {
 
 test.describe('coming back from the link', () => {
   const toast = (page) => page.locator('.toast.show')
+  // "No toast" must be read once, now. `toHaveCount(0)` retries until the count
+  // IS zero, and a toast hides itself after a few seconds, so it would pass on
+  // a toast that did appear (seen: the unverified-account mutation stayed green).
+  const expectNoToast = async (page) => {
+    await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+    expect(await toast(page).count()).toBe(0)
+  }
 
   test('a verified account lands on its Account section with a toast, and the address is tidied', async ({ page }) => {
     watch(page, 'a person who clicked the link in the same browser')
@@ -188,7 +195,7 @@ test.describe('coming back from the link', () => {
     await expect(page).toHaveURL(/\/settings\/?$/)
     await go(page, '/settings')
     await expect(page.locator('#settab-account')).toBeVisible()
-    await expect(toast(page)).toHaveCount(0)
+    await expectNoToast(page)
   })
 
   test('signed out, it says so and what to do next', async ({ page }) => {
@@ -205,6 +212,9 @@ test.describe('coming back from the link', () => {
     await expect(page.locator('#set-account')).toBeVisible()
     await expect(page).toHaveURL(/\/settings\/?$/)
     await expect(page.locator('#set-account').getByText('Not verified')).toBeVisible()
-    await expect(toast(page)).toHaveCount(0)
+    // Zero is only evidence once the account has been re-read and the toast had
+    // its chance: wait for the re-read, then read the count without retrying.
+    await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_AUTH__.reloads)).toBeGreaterThan(0)
+    await expectNoToast(page)
   })
 })

@@ -156,6 +156,7 @@ export function verifyBeforeUpdateEmail(user, newEmail, settings) {
 export function reload(user) {
   if (!isFakeUser(user)) return realReload(user)
   user.emailVerified = fakeAuth.account.emailVerified === true
+  fakeAuth.reloads += 1
   return Promise.resolve()
 }
 
