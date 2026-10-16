@@ -15,7 +15,7 @@
 // what matters is what the browser was handed.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS } from '../../src/data/promptPreviewAssets.js'
 
 const withPreview = COMMUNITY_PROMPTS.filter((p) => PROMPT_PREVIEW_IDS.includes(p.id))
