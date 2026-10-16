@@ -1,6 +1,6 @@
 // The brand kit walkthrough on a phone, and its closing step.
 //
-//   · On a phone the rail and the docked card sit above the fixed tab bar, so a
+//   · On a phone the rail takes the bottom edge (the tab bar is hidden) and the card docks above it, so a
 //     tap on any of their controls lands on that control, across at least 44px.
 //   · On a touch screen the name card does not raise the keyboard by itself,
 //     and once the field is focused Save stays above the keyboard.
@@ -103,19 +103,21 @@ async function railControlsAllLand(page) {
   await expectHitArea(r.locator('.bkit-rail-next'), 'Next')
   await expectHitArea(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
   await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
-  // The rail clears the tab bar outright, and its action row has not wrapped.
+  // The walkthrough hides the tab bar and the rail takes the bottom edge; its
+  // action row has not wrapped.
   const geo = await page.evaluate(() => {
     const railBox = document.querySelector('.bkit-rail').getBoundingClientRect()
-    const bar = document.querySelector('.pnav-tabs')?.getBoundingClientRect()
+    const bar = document.querySelector('.pnav-tabs')
     const tops = [...document.querySelectorAll('.bkit-rail-actions > *')].map((n) => n.getBoundingClientRect())
     return {
       railBottom: railBox.bottom,
-      barTop: bar ? bar.top : null,
+      viewportBottom: window.innerHeight,
+      barDisplay: bar ? getComputedStyle(bar).display : 'none',
       spread: Math.max(...tops.map((b) => b.top + b.height / 2)) - Math.min(...tops.map((b) => b.top + b.height / 2)),
     }
   })
-  expect(geo.barTop, 'the phone tab bar is not on screen').not.toBeNull()
-  expect(geo.railBottom, 'the rail runs under the tab bar').toBeLessThanOrEqual(geo.barTop)
+  expect(geo.barDisplay, 'the phone tab bar is still showing').toBe('none')
+  expect(Math.abs(geo.railBottom - geo.viewportBottom), 'the rail is not on the bottom edge').toBeLessThan(1)
   expect(geo.spread, 'the rail actions wrapped onto two lines').toBeLessThan(4)
 }
 

@@ -1758,35 +1758,46 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .bkit-card-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:700}
 .bkit-card-steps li.is-current .bkit-card-num{background:var(--accent-fill);color:var(--accent-fg)}
 .bkit-card-go{width:100%;justify-content:center}
-.bkit-step{display:flex;align-items:center;gap:8px;min-width:0;height:100%;padding:6px 9px;border-radius:var(--radius-s);border:1px solid transparent;color:var(--t2);text-decoration:none;transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
-.bkit-step:hover{background:var(--hvr);color:var(--t0)}
-.bkit-step.is-current{border-color:var(--border);background:var(--bg-2);color:var(--t0)}
+.bkit-step{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;height:44px;padding:2px 0;border:0;border-radius:var(--btn-radius);color:var(--t2);text-align:center;text-decoration:none;transition:background-color 150ms ease,color 150ms ease}
+/* A built step reads one step brighter than one not reached yet. */
+.bkit-step.is-done{color:var(--t1)}
+.bkit-step.is-current{color:var(--t0)}
+@media(hover:hover){
+  .bkit-step:hover{background:var(--hvr);color:var(--t0)}
+}
+.bkit-step:focus-visible{outline:2px solid var(--bkit-focus,var(--accent));outline-offset:-2px}
 .bkit-step-mark{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:10.5px;font-weight:700}
 .bkit-step.is-current .bkit-step-mark{background:var(--accent-fill);color:var(--accent-fg)}
 /* Done beats current: a step you have built keeps its tick while you stand on
    it, because the tick is a statement about the SYSTEM, not about the cursor. */
 .bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-text)}
 .bkit-rail-next{flex-shrink:0}
-/* From 1024px the steps are links in a flush bar, not pills. The mark answers
-   one question (built or not: a tick on an accent wash, or an outlined
-   numeral), and the label plus a 2px accent line on the bar's top edge answer
-   the other (where you are). The line sits 10px above the link: the bar's 9px
-   padding plus its 1px top rule, so it covers the rule exactly. The --bkit-*
+/* Where you are: a 2px accent line, under the step on a phone and on the bar's
+   top edge from 768px. */
+.bkit-step.is-current::before{content:"";position:absolute;inset-inline:12px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--accent-fill)}
+/* From 768px the steps are links in a flush bar, not stacked cells. The mark
+   answers one question (built or not: a tick on an accent wash, or an
+   outlined numeral), and the label plus the 2px accent line on the bar's top
+   edge answer the other (where you are). The line sits 9px above the link on
+   the tablet bar (8px padding plus its 1px top rule) and 10px above it from
+   1024px (9px padding), so it covers the rule exactly. The --bkit-*
    aliases are declared on .bkit-rail in tool-shell.css. */
-@media(min-width:1024px){
-  .bkit-step{position:relative;display:inline-flex;height:36px;padding:0 10px;border:0;border-radius:var(--btn-radius);color:var(--bkit-dim);transition:background-color 150ms ease,color 150ms ease}
+@media(min-width:768px){
+  .bkit-step{flex-direction:row;justify-content:flex-start;gap:8px;padding:0 10px;text-align:start;color:var(--bkit-dim)}
+  .bkit-step.is-done{color:var(--t1)}
   .bkit-step.is-current{background:transparent;color:var(--t0)}
-  .bkit-step.is-current::before{content:"";position:absolute;inset-inline:10px;top:-10px;height:2px;border-radius:0 0 2px 2px;background:var(--accent-fill)}
+  .bkit-step.is-current::before{inset-inline:10px;bottom:auto;top:-9px;border-radius:0 0 2px 2px}
   .bkit-step-mark{box-sizing:border-box;background:transparent;border:1.5px solid var(--bkit-mark-line);color:var(--t2);font-family:var(--font);font-size:.75rem;font-weight:560;line-height:1;font-variant-numeric:tabular-nums}
   .bkit-step.is-current .bkit-step-mark{background:transparent;color:var(--t2)}
   .bkit-step.is-done .bkit-step-mark{background:var(--accent-bg);border-color:transparent;color:var(--accent-text)}
   .bkit-step-mark svg{stroke-width:2.5}
-  .bkit-step:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
+  .bkit-step:focus-visible{outline-offset:2px}
 }
-@media(min-width:1024px) and (hover:hover) and (pointer:fine){
-  .bkit-step.is-current:hover{background:var(--hvr)}
+@media(min-width:1024px){
+  .bkit-step{height:36px}
+  .bkit-step.is-current::before{top:-10px}
 }
-@media(min-width:1024px) and (forced-colors:active){
+@media(forced-colors:active){
   .bkit-step.is-current::before{background:Highlight}
   .bkit-step-mark{border-color:CanvasText}
 }
