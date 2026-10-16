@@ -123,18 +123,35 @@ test('6 · nothing about the note is remembered, so nothing can throw reading it
   }
 })
 
-test('7 · the one action reuses the feedback channel the app already has', () => {
+test('7 · the footer offers feedback and support, each a route the app already has', () => {
   // Not a second channel wearing the same name, and not email: the transactional
   // email work is blocked on a key that does not exist, and nothing here waits
   // on it.
-  assert.match(COMPONENT, /to="\/feedback"/, 'the action must point at the existing feedback route')
   assert.ok(!/mailto:/.test(COMPONENT), 'the note must not invent an email channel')
-  assert.match(FOOTER, /'\/feedback', 'Send feedback'/, 'and it must be the same destination the footer already offers')
+  assert.match(FOOTER, /'\/feedback', 'Send feedback'/, 'and feedback must be the same destination the footer already offers')
 
-  // One action, not a row of them. Framer's beta notice is the reference: state
-  // the state, offer exactly one way to answer.
-  const links = COMPONENT.match(/<Link\b/g) || []
-  assert.equal(links.length, 1, `the panel offers exactly one destination, found ${links.length}`)
+  // Two actions, no more: answer the note, or support the project. Each one is a
+  // router Link, so it works from every page that renders the footer.
+  const links = COMPONENT.match(/<Link\s[^>]*>[\s\S]*?<\/Link>/g) || []
+  assert.equal(links.length, 2, `the panel offers exactly two destinations, found ${links.length}`)
+
+  const feedback = links.find((l) => /to="\/feedback"/.test(l))
+  const support = links.find((l) => /to="\/plans"/.test(l))
+  assert.ok(feedback, 'one action must point at the existing feedback route')
+  assert.ok(support, 'the other action must point at the Plans page')
+  assert.match(feedback, /Send feedback/)
+  assert.match(support, /Support this project/)
+
+  // Feedback is the primary action and Support the secondary one: the accent
+  // style appears exactly once, and it is on feedback.
+  const accented = links.filter((l) => /className="[^"]*\bbtn-accent\b/.test(l))
+  assert.equal(accented.length, 1, `btn-accent must appear on exactly one action, found ${accented.length}`)
+  assert.equal(accented[0], feedback, 'the accent belongs to Send feedback')
+
+  // Both close the popup as the route changes, so it is not left over the page.
+  for (const l of links) {
+    assert.match(l, /onClick=\{close\}/, 'every action closes the popup on click')
+  }
 })
 
 test('8 · the trigger is actually mounted, and the panel is a real dialog', () => {
