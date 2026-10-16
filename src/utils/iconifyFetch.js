@@ -30,8 +30,11 @@
 // A 429 MAY NOT BE READABLE AT ALL. If the refusal page carries no CORS header the
 // browser rejects the fetch instead of handing back a 429. A run of NET_FAIL_LIMIT
 // such rejections inside NET_FAIL_WINDOW, on requests with nothing cached to fall
-// back on, starts the same cool-down. Timeouts and a browser that reports itself
-// offline do not count, and one good answer clears the run.
+// back on, starts a short pause of NET_COOLDOWN. It is not the 429 ladder: it is
+// held in memory only, and the browser's `online` event ends it, so a flaky
+// connection that comes back is not locked out for a quarter of an hour. Timeouts
+// and a browser that reports itself offline do not count, and one good answer
+// clears the run.
 //
 // ONLY A GOOD ANSWER IS KEPT. A 200 is stored only when its content type and body
 // fit the URL (JSON that parses for the catalogue, search and glyph files; SVG for
@@ -58,6 +61,7 @@ const MAX_PARALLEL = 6
 export const STRIKE_MEMORY = 2 * HOUR
 export const NET_FAIL_LIMIT = 3
 export const NET_FAIL_WINDOW = 10 * 1000
+export const NET_COOLDOWN = 30 * 1000
 
 /**
  * Does a 200 answer look like what `url` asks for? A catalogue, search or glyph
@@ -112,8 +116,13 @@ export function createIconifyFetch(opts = {}) {
   }
 
   const isOnline = opts.isOnline || (() => globalThis.navigator?.onLine !== false)
+  // Calls `cb` when the connection returns. Tests pass their own.
+  const listenOnline = opts.listenOnline || ((cb) => {
+    try { globalThis.addEventListener?.('online', cb) } catch { /* no event target */ }
+  })
 
   let until = 0
+  let netUntil = 0
   let strikes = 0
   let netFails = []
   const inflight = new Map()
@@ -149,7 +158,7 @@ export function createIconifyFetch(opts = {}) {
   function forgetOldCooldown() {
     if ((until || strikes) && now() > until + STRIKE_MEMORY) { until = 0; strikes = 0; saveCooldown() }
   }
-  const cooling = () => { syncCooldown(); forgetOldCooldown(); return now() < until }
+  const cooling = () => { syncCooldown(); forgetOldCooldown(); return now() < Math.max(until, netUntil) }
 
   function noteRateLimited(retryAfter) {
     syncCooldown()
@@ -176,8 +185,9 @@ export function createIconifyFetch(opts = {}) {
     const t = now()
     netFails = netFails.filter((at) => t - at < NET_FAIL_WINDOW)
     netFails.push(t)
-    if (netFails.length >= NET_FAIL_LIMIT) { netFails = []; noteRateLimited(null) }
+    if (netFails.length >= NET_FAIL_LIMIT) { netFails = []; netUntil = t + NET_COOLDOWN }
   }
+  listenOnline(() => { netFails = []; netUntil = 0 })
 
   // ── persistent cache ───────────────────────────────────────────────────────
   function openCache() {
@@ -319,11 +329,11 @@ export function createIconifyFetch(opts = {}) {
   return {
     get,
     /** Epoch ms the cool-down ends, or 0 when not cooling. */
-    cooldownUntil: () => (cooling() ? until : 0),
+    cooldownUntil: () => (cooling() ? Math.max(until, netUntil) : 0),
     /** The visitor pressed "Try again": forget the cool-down and ask once more. */
-    clearCooldown: () => { until = 0; strikes = 0; saveCooldown() },
+    clearCooldown: () => { until = 0; strikes = 0; netUntil = 0; netFails = []; saveCooldown() },
     /** Test hook: drop in-memory state (not Cache Storage). */
-    reset: () => { until = 0; strikes = 0; netFails = []; inflight.clear(); waiting.length = 0; active = 0; cachePromise = null; swept = false },
+    reset: () => { until = 0; strikes = 0; netUntil = 0; netFails = []; inflight.clear(); waiting.length = 0; active = 0; cachePromise = null; swept = false },
   }
 }
 

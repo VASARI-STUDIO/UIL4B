@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  BASE_COOLDOWN, MAX_COOLDOWN, NET_FAIL_WINDOW, STRIKE_MEMORY, TTL_DEFAULT, TTL_SEARCH,
+  BASE_COOLDOWN, MAX_COOLDOWN, NET_COOLDOWN, NET_FAIL_WINDOW, STRIKE_MEMORY, TTL_DEFAULT, TTL_SEARCH,
   createIconifyFetch, fitsUrl, parseRetryAfter, ttlFor,
 } from '../../src/utils/iconifyFetch.js'
 // Loaded here, by its real specifier, so a missing ".js" in its own import of
@@ -354,15 +354,41 @@ test('an entry that no longer fits its URL is dropped on read, so Try again reac
 const boom = () => { throw new TypeError('Failed to fetch') }
 const collectionOf = (p) => `${HOST}/collection?prefix=${p}`
 
-test('three network rejections in a row start the same cool-down a 429 would', async () => {
-  const { api, net, clock } = rig({ answer: boom })
+test('three network rejections in a row start a short pause, not the 429 cool-down', async () => {
+  const { api, net, clock, storage } = rig({ answer: boom })
   for (const p of ['a', 'b']) await assert.rejects(api.get(collectionOf(p)), TypeError)
   assert.equal(api.cooldownUntil(), 0, 'two are just a bad connection')
   await assert.rejects(api.get(collectionOf('c')), TypeError)
-  assert.equal(api.cooldownUntil() - clock.t, BASE_COOLDOWN, 'the third starts it, on the same ladder')
+  assert.equal(api.cooldownUntil() - clock.t, NET_COOLDOWN, 'the third starts the short pause')
+  assert.ok(NET_COOLDOWN <= 30_000 && NET_COOLDOWN < BASE_COOLDOWN, 'short, nothing like the 429 wait')
+  assert.equal(storage.map.size, 0, 'and it is not saved, so a reload does not inherit it')
   const held = await api.get(collectionOf('d'))
   assert.equal(held.status, 429)
-  assert.equal(net.calls.length, 3, 'and nothing more is sent')
+  assert.equal(net.calls.length, 3, 'nothing more is sent during the pause')
+  clock.t += NET_COOLDOWN + 1
+  assert.equal(api.cooldownUntil(), 0, 'it lapses on its own within seconds')
+  await assert.rejects(api.get(collectionOf('e')), TypeError)
+  assert.equal(net.calls.length, 4, 'and requests go out again')
+})
+
+test('the browser coming back online ends the pause at once', async () => {
+  let back = () => {}
+  const { api, net, clock } = rig({ answer: boom, opts: { listenOnline: (cb) => { back = cb } } })
+  for (const p of ['a', 'b', 'c']) await assert.rejects(api.get(collectionOf(p)), TypeError)
+  assert.ok(api.cooldownUntil() > clock.t, 'positive control: the pause is running')
+  back()
+  assert.equal(api.cooldownUntil(), 0)
+  await assert.rejects(api.get(collectionOf('d')), TypeError)
+  assert.equal(net.calls.length, 4, 'the next request is sent, not answered with a synthetic 429')
+})
+
+test('a real 429 still starts the long cool-down, and the online event does not end it', async () => {
+  let back = () => {}
+  const { api, clock } = rig({ answer: () => limited(null), opts: { listenOnline: (cb) => { back = cb } } })
+  await api.get(COLLECTION)
+  assert.equal(api.cooldownUntil() - clock.t, BASE_COOLDOWN)
+  back()
+  assert.equal(api.cooldownUntil() - clock.t, BASE_COOLDOWN, 'only the pause from rejections clears on online')
 })
 
 test('one good answer clears the run of rejections', async () => {
