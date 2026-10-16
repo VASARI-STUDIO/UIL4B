@@ -298,8 +298,15 @@ async function openSettled(browser, route, width, selectors) {
  * `.hlp-start-go` above, so this one property on this one element is not
  * compared. Every other property of the element still is, and the list is
  * per-selector on purpose: widening it to every `margin-top` would blind the
- * snapshot to authored vertical spacing everywhere. */
-const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'] }
+ * snapshot to authored vertical spacing everywhere.
+ *
+ * `.plb-col-tools` is the same case: from 768px up the Palette Builder swatch's
+ * tool stack is `margin-bottom: auto` in the swatch's flex column, which pins
+ * it to the top and leaves the name and contrast badge anchored at the bottom.
+ * The computed value (270.312px here) is the height the column's text left
+ * over, not a number anyone wrote. Its `position`, `display`, `gap` and the
+ * swatch's own padding are still compared. */
+const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'], '.plb-col-tools': ['margin-bottom'] }
 
 const updated = {}
 

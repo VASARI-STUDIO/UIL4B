@@ -456,12 +456,7 @@ export default function PromptLibrary({ onCopy, toast }) {
         </div>
       ) : (
         isCommunity ? (
-          /* The shared Library empty state, as used by the Palette, Gradient,
-             Font and Curated Resources galleries. This page was the last one
-             still rendering its own: a <p> with no control and no role, so the
-             grid emptying was announced to nobody and the only way back was to
-             work out by hand which of the search, sort and category controls
-             was still set. Both halves are LibraryEmpty's stated job. */
+          /* LibraryEmpty announces empty results and lets visitors clear filters. */
           <LibraryEmpty
             className="pl-empty"
             title="No prompts match your search"

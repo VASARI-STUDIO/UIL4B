@@ -18,7 +18,7 @@
 //
 //        navigation("Primary") | main | contentinfo | navigation("Footer")
 //
-//      The <section> holding the eight library cards — the block
+//      The <section> holding the library cards — the block
 //      SurfaceLanding.jsx's own comment calls "the page" — carried no
 //      accessible name, and a <section> without one computes to `generic`.
 //      Both galleries BENEATH this surface already named their results
@@ -113,6 +113,30 @@ async function arrived(page, h1) {
 test.describe('the Discover surfaces say what they are made of', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
+  })
+
+  test('/discover fills the last row when only one card remains', async ({ page }) => {
+    watch(page, 'someone browsing the Discover grid')
+    for (const width of [768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/discover')
+      await arrived(page, 'Discover')
+      const grid = page.locator('.srf .surface-grid')
+      await expect(grid.locator(':scope > .surface-card')).toHaveCount(7)
+      const edges = await grid.evaluate(async (el) => {
+        await document.fonts.ready
+        const cards = [...el.children].map((card) => card.getBoundingClientRect())
+        const last = cards.at(-1)
+        return {
+          rowCount: cards.filter((card) => Math.abs(card.top - last.top) < 1).length,
+          lastRight: last.right,
+          gridRight: el.getBoundingClientRect().right,
+        }
+      })
+      expect(edges.rowCount, `${width}px: the last card must be alone in its row`).toBe(1)
+      expect(edges.lastRight, `${width}px: the lone card must reach the grid's right edge`)
+        .toBeCloseTo(edges.gridRight, 0)
+    }
   })
 
   // ── THE CONTROL ──────────────────────────────────────────────────────────

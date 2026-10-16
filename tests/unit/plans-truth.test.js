@@ -299,16 +299,27 @@ test('/plans does not ship the design’s untrue claims', () => {
   }
 })
 
-test('/plans derives the numbers inside the design’s sub-line', () => {
-  // "six times the AI generations, all eight colour systems" — both numbers
-  // are computed, and the multiple is only a fair "times" if it is whole.
-  assert.match(PLANS, /AI\.pro\.daily \/ AI\.free\.daily/, 'the AI multiple is typed rather than computed')
-  assert.match(PLANS, /numberWord\(SYSTEMS_TOTAL\)/, 'the colour-system count in the sub-line is typed')
-  assert.ok(!/\bsix times\b|\beight colour systems\b/.test(stripComments(PLANS)),
-    'the sub-line types a number the config owns')
+test('/plans derives the numbers inside the sub-line', () => {
+  // "Pro lifts AI from 5 to 30 generations a day, opens all eight colour
+  // systems…" — every number is read from the config that enforces it. The line
+  // quotes the two ends of the daily limit rather than a multiple, because
+  // "six times" is true of the daily ceiling and false of the monthly one
+  // (300 against 40).
+  const code = stripComments(PLANS)
+  const sub = /const HERO_SUB = `([^`]*)`/.exec(code)
+  assert.ok(sub, 'the sub-line constant was not found')
+  assert.match(sub[1], /AI from \$\{AI\.free\.daily\} to \$\{AI\.pro\.daily\} generations a day/,
+    'the AI ends of the sub-line are typed rather than read from AI_LIMITS')
+  assert.match(sub[1], /\$\{numberWord\(SYSTEMS_TOTAL\)\} colour systems/, 'the colour-system count in the sub-line is typed')
+  assert.ok(!/\btimes\b/.test(sub[1]), 'the sub-line claims a multiple, which the monthly ceiling does not bear out')
+  assert.ok(!/\d/.test(sub[1].replace(/\$\{[^}]*\}/g, '').replace(/UIL4B/g, '')), 'the sub-line types a digit the config owns')
+  assert.ok(!/\bsix times\b|\beight colour systems\b/.test(code), 'the page types a number the config owns')
+  assert.match(code, /const AI = AI_LIMITS\b/, 'the sub-line no longer reads AI_LIMITS')
+  // The numbers the line prints are the numbers the AI gate enforces, and they
+  // are real ceilings: Pro above Free, on the day and on the month.
   const { AI_LIMITS } = PLAN_CONFIG
-  assert.ok(Number.isInteger(AI_LIMITS.pro.daily / AI_LIMITS.free.daily),
-    'Pro’s daily ceiling is no longer a whole multiple of Free’s; "N times the AI generations" would round a fact')
+  assert.ok(AI_LIMITS.pro.daily > AI_LIMITS.free.daily, 'Pro’s daily AI ceiling is not above Free’s')
+  assert.ok(AI_LIMITS.pro.monthly > AI_LIMITS.free.monthly, 'Pro’s monthly AI ceiling is not above Free’s')
 })
 
 test('/plans offers only the cadences checkout accepts, from the one ladder', () => {

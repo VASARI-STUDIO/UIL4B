@@ -135,7 +135,12 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/design-reference', '/learn'],
   ['/principles', '/learn/principles'],
   ['/help', '/learn/help'],
+  // Not a retired page: /support never existed. It is a support link set outside
+  // the repo (failed-payment emails), so it needs to land on the contact page.
+  // Vercel keeps the query string on a redirect, so a ?-tagged link survives.
+  ['/support', '/feedback'],
   ['/resources', '/discover'],
+  ['/discover/resources', '/discover'],
   ['/prompts', '/discover/prompts'],
   ['/pricing', '/plans'],
   ['/site-map', '/sitemap'],

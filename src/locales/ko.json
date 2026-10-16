@@ -128,10 +128,6 @@
       "label": "디자인 원칙",
       "description": "시각적 계층 구조, 균형, 디자인 심리학."
     },
-    "externalResources": {
-      "label": "외부 리소스",
-      "description": "폰트, 색상, AI 도구, 영감 관련 엄선된 링크 모음."
-    },
     "promptLibrary": {
       "label": "프롬프트 라이브러리",
       "description": "AI 이미지 생성 프롬프트를 미리보기와 함께 저장."

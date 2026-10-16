@@ -62,6 +62,7 @@ const DISCOVER_TABS = [
     id: 'palettes',
     label: 'Palettes',
     count: `${LIBRARY_COUNTS.palettes} PALETTES`,
+    to: '/discover/palettes',
     items: CURATED_LIBRARY_PALETTES.slice(0, 5).map((p) => ({
       id: p.id,
       name: p.name,
@@ -73,6 +74,7 @@ const DISCOVER_TABS = [
     id: 'gradients',
     label: 'Gradients',
     count: `${LIBRARY_COUNTS.gradients} GRADIENTS`,
+    to: '/discover/gradients',
     // The design's meta style ("Linear, 135 deg"), read off each row.
     items: GALLERY_GRADIENTS.slice(0, 5).map((g) => ({
       id: g.id,
