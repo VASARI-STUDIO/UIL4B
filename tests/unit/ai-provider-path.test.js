@@ -285,6 +285,34 @@ test('OpenRouter is the primary: it is tried first, and Gemini only if nothing c
     'Gemini must be attempted AFTER OpenRouter fails, and only then')
 })
 
+test('OpenRouter is used when the key is stored under the OPEN_ROUTER_API name', async () => {
+  // OPEN_ROUTER_API is an accepted alias for the key. Without it the key reads as
+  // absent and generation falls through to Gemini.
+  const ai = loadAi({ env: { OPEN_ROUTER_API: OPENROUTER_KEY, GEMINI_API_KEY: GEMINI_KEY } })
+  const { result } = await ai.generate()
+  assert.equal(result.provider, 'openrouter', 'the OPEN_ROUTER_API alias was not picked up')
+  assert.deepEqual(hosts(ai), ['openrouter.ai'])
+  assert.equal(ai.fetches[0].opts.headers.Authorization, `Bearer ${OPENROUTER_KEY}`)
+
+  // The canonical name still wins when both are set.
+  const both = loadAi({ env: { OPENROUTER_API_KEY: OPENROUTER_KEY, OPEN_ROUTER_API: 'sk-or-v1-other' } })
+  await both.generate()
+  assert.equal(both.fetches[0].opts.headers.Authorization, `Bearer ${OPENROUTER_KEY}`)
+})
+
+test('the OpenRouter request keeps prompts on an allowlist of US zero-retention hosts', async () => {
+  const ai = loadAi()
+  await ai.generate()
+  const sent = JSON.parse(ai.fetches[0].opts.body)
+  // The exact object: widening the allowlist, dropping a privacy flag or going
+  // back to a denylist (`ignore`) all fail here.
+  assert.deepEqual(sent.provider, { only: ['deepinfra'], data_collection: 'deny', zdr: true })
+  assert.deepEqual(sent.provider.only, ['deepinfra'], 'only the US host may be routed to')
+  assert.equal(sent.provider.data_collection, 'deny')
+  assert.equal(sent.provider.zdr, true)
+  assert.equal('ignore' in sent.provider, false, 'a denylist must not return')
+})
+
 test('a missing OpenRouter key is not a failover, it is a configuration', async () => {
   // Only Gemini is configured: the tool still works, the response still names
   // its provider, and nothing is counted as a FAILURE — no primary was tried.

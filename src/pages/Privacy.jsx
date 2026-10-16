@@ -185,7 +185,7 @@ export default function Privacy() {
                   <>
                     <p className="lgl-p">
                       {t('privacy.s7Text')}{' '}
-                      <a className="lgl-a" href="mailto:privacy@uil4b.com">privacy@uil4b.com</a>
+                      <a className="lgl-a" href="mailto:support@uil4b.com">support@uil4b.com</a>
                     </p>
                     <p className="lgl-p">
                       {t('privacy.s7Complaint')}{' '}

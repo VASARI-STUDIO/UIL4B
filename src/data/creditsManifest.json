@@ -112,6 +112,10 @@
       "licence": "MIT"
     },
     {
+      "name": "@vercel/functions",
+      "licence": "Apache-2.0"
+    },
+    {
       "name": "firebase",
       "licence": "Apache-2.0"
     },
