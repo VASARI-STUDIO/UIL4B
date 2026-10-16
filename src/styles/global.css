@@ -3176,9 +3176,12 @@ html.lenis{scroll-behavior:auto!important}
    properties. It is reachable by anyone who has copied an icon — the rail is
    the "recently used" strip — so it is converted rather than only recorded. */
 .ig-rail-track{display:flex;gap:8px;padding-bottom:4px}
-/* Transparent marks keep their edges; baked-in square tiles get app-icon corners. */
+/* Transparent marks keep their edges; baked-in square plates get app-icon corners
+   and one even hairline on the plate's own edge (an outline paints over the image
+   and follows the radius, so no side can come out heavier than another). */
 .ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:0}
-.ic img.ig-logo--square{border-radius:6px}
+.ic img.ig-logo--square{border-radius:6px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px}
+[data-theme="dark"] .ic img.ig-logo--square{outline-color:oklch(1 0 0 / .1)}
 /* THE PACK LABEL IS NOW RENDERED ONLY WHEN THE RESULT SET IS MIXED, and the
    decision moved into IconLibrary.jsx because it depends on the results, not
    on the width. Read the note there for the Mobbin evidence.

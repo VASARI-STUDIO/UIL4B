@@ -6,7 +6,8 @@
 //    Coloured icons (flags, brand and colour packs) always sit on that same page
 //    ground, and the grid draws them with no white box behind: the chip around
 //    a coloured glyph is a transparent slot in both themes. Ink that matches the
-//    page ground (near-black on dark, near-white on light) gets a hairline halo.
+//    page ground (near-black on dark, near-white on light) gets a hairline halo;
+//    a baked-in square logo plate gets a 1px outline on its own edge instead.
 // 2. The toolbar above the grid stays on one row at every width, each control
 //    is whole (a visible control is never narrower than its glyph and padding
 //    say), and on a coarse pointer every control is at least 44px both ways.
@@ -150,8 +151,8 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
   for (const { scheme, square, fill, halo } of [
     { scheme: 'dark', square: false, fill: '#080808', halo: 'light' },
     { scheme: 'light', square: false, fill: '#ffffff', halo: 'dark' },
-    { scheme: 'dark', square: true, fill: '#080808', halo: 'light' },
-    { scheme: 'light', square: true, fill: '#ffffff', halo: 'dark' },
+    { scheme: 'dark', square: true, fill: '#080808', halo: null },
+    { scheme: 'light', square: true, fill: '#ffffff', halo: null },
   ]) {
     test(`Logo.dev samples ${square ? 'opaque squares' : 'transparent marks'} on ${scheme} ground`, async ({ browser }) => {
       const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
@@ -167,12 +168,22 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
         await choosePack(page, 'logodev')
         const chip = page.locator('.ig .ic .ig-chip:has(img.ig-logo)').first()
         const logo = chip.locator('img')
-        await expect(chip).toHaveClass(new RegExp(`ig-chip--halo-${halo}`))
-        await expect(chip).not.toHaveClass(/ig-chip--tile/)
         if (square) await expect(logo).toHaveClass(/ig-logo--square/)
-        else await expect(logo).not.toHaveClass(/ig-logo--square/)
+        else await expect(chip).toHaveClass(new RegExp(`ig-chip--halo-${halo}`))
+        await expect(chip).not.toHaveClass(/ig-chip--tile/)
         await expect(logo).toHaveCSS('border-radius', square ? '6px' : '0px')
-        await expect(logo).toHaveCSS('filter', new RegExp(`#ig-edge-${halo}`))
+        if (square) {
+          // A baked plate gets one even hairline on its own edge, not the preview ring.
+          await expect(chip).not.toHaveClass(/halo/)
+          await expect(logo).toHaveCSS('filter', 'none')
+          await expect(logo).toHaveCSS('outline-style', 'solid')
+          await expect(logo).toHaveCSS('outline-width', '1px')
+          await expect(logo).toHaveCSS('outline-offset', '-1px')
+          await expect(logo).toHaveCSS('outline-color', scheme === 'dark' ? /oklch\(1 0 0 \/ 0\.1\)|rgba\(255, 255, 255, 0\.1\)/ : /oklch\(0 0 0 \/ 0\.1\)|rgba\(0, 0, 0, 0\.1\)/)
+        } else {
+          await expect(logo).toHaveCSS('filter', new RegExp(`#ig-edge-${halo}`))
+          await expect(logo).toHaveCSS('outline-style', 'none')
+        }
         await expect(chip).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
         await expect(chip).toHaveCSS('background-image', 'none')
         await expect(chip).toHaveCSS('box-shadow', 'none')
@@ -181,6 +192,49 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
       } finally { await ctx.close() }
     })
   }
+
+  // Dark theme: a theme variant that is a light plate falls back to the default
+  // variant when that one is a darker plate. Transparent marks keep following the theme.
+  test('Logo.dev swaps a light dark-theme plate for a darker default plate', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+    try {
+      const page = await ctx.newPage()
+      await signIn(page, { plan: 'pro' })
+      await page.route('https://img.logo.dev/**', route => {
+        const themed = new URL(route.request().url()).searchParams.has('theme')
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="${themed ? '#ffffff' : '#080808'}" d="M0 0h28v28H0z"/></svg>`,
+        })
+      })
+      await go(page, '/create/icons')
+      await choosePack(page, 'logodev')
+      const logo = page.locator('.ig .ic .ig-chip img.ig-logo').first()
+      await expect(logo).toHaveClass(/ig-logo--square/)
+      await expect.poll(async () => new URL(await logo.getAttribute('src')).searchParams.has('theme'), 'still showing the light plate').toBe(false)
+    } finally { await ctx.close() }
+  })
+
+  // A response the browser refuses for CORS must still show the art, plain.
+  test('Logo.dev art still shows when the response is not CORS-readable', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1440, height: 900 } })
+    try {
+      const page = await ctx.newPage()
+      await signIn(page, { plan: 'pro' })
+      await page.route('https://img.logo.dev/**', route => route.fulfill({
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="#0078d4" d="M0 0h28v28H0z"/></svg>',
+      }))
+      await go(page, '/create/icons')
+      await choosePack(page, 'logodev')
+      const logo = page.locator('.ig .ic img.ig-logo').first()
+      await expect(logo).not.toHaveAttribute('crossorigin', /.*/)
+      await expect.poll(() => logo.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+      await expect(logo).not.toHaveClass(/ig-logo--square/)
+      await expect(logo).toHaveCSS('filter', 'none')
+    } finally { await ctx.close() }
+  })
 
   for (const [scheme, width] of [['light', 1440], ['dark', 1440], ['light', 390], ['dark', 390]]) {
     test(`flag grid chip is transparent and the stage is the page ground, ${scheme} ${width}`, async ({ browser }) => {

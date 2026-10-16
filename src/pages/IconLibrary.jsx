@@ -511,7 +511,8 @@ const glyphCache = new Map() // 'pack:name' or 'logodev:ref:theme' → artwork m
 
 // The aspect ratio of the box the glyph's opaque pixels occupy, plus the tone of
 // that ink (substantial dark neutral ink -> 'dark', near-white average ->
-// 'light', anything else 'mid'). Any failure
+// 'light', anything else 'mid'), and the plate tone when four opaque corners say the
+// art is a baked-in square (else null). Any failure
 // (CORS taint, decode error) falls back to a square mid-tone ink box - which is exactly
 // the treatment every icon had before this measurement existed, so a sampling
 // failure degrades to the old behaviour rather than to a broken one.
@@ -519,7 +520,13 @@ const glyphCache = new Map() // 'pack:name' or 'logodev:ref:theme' → artwork m
 // S is 64 rather than 24 because a 10:1 lockup occupies two rows of a 24px
 // raster: enough to see, not enough to measure. At 64 it is a six-row band and
 // the ratio is stable.
-const INK_DARK_MAX = 0.05 // linear luminance: GitHub / Vercel / Apple black sit well under this
+// Linear luminance below which a chosen icon colour counts as near-black (a saved
+// icon's colour; sampleGlyph reads pixels and uses INK_DARK_NEUTRAL_MAX instead).
+const INK_DARK_MAX = 0.05
+// Per-pixel ceiling for the dark-neutral share in sampleGlyph. Dark greys through
+// #5a5a5a (linear 0.10) sit under it; a mid-grey such as #666 (0.13) already has
+// enough contrast on a dark page and gets no edge.
+const INK_DARK_NEUTRAL_MAX = 0.11
 const INK_LIGHT_MIN = 0.82
 function sampleGlyph(img) {
   try {
@@ -542,7 +549,7 @@ function sampleGlyph(img) {
       sum += lum
       // Dark lettering can dominate a lockup whose coloured mark lifts its
       // average luminance. Ignore saturated ink and tiny dark details.
-      if (lum < 0.18 && Math.max(r, g, b) - Math.min(r, g, b) <= 48) darkNeutral++
+      if (lum < INK_DARK_NEUTRAL_MAX && Math.max(r, g, b) - Math.min(r, g, b) <= 48) darkNeutral++
       n++
       const p = i / 4
       const px = p % S
@@ -552,7 +559,7 @@ function sampleGlyph(img) {
       if (py < y0) y0 = py
       if (py > y1) y1 = py
     }
-    if (n === 0) return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false }
+    if (n === 0) return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false, plate: null }
     // The raster is SQUARE and drawImage stretched the art to fill it, so the
     // measured ink box is the true one divided by the image own aspect. Undoing
     // that is what makes one number cover both causes: a square-canvas devicon
@@ -567,9 +574,14 @@ function sampleGlyph(img) {
       raster: S,
     })
     const lum = sum / n
-    const opaqueCorners = [0, S - 1, S * (S - 1), S * S - 1].every(p => data[p * 4 + 3] === 255)
-    return { ar, cap, ink: darkNeutral / n >= 0.25 ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid', opaqueCorners }
-  } catch { return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false } }
+    const corners = [0, S - 1, S * (S - 1), S * S - 1]
+    const opaqueCorners = corners.every(p => data[p * 4 + 3] === 255)
+    // A baked-in square's plate tone: the corners are plate, never artwork.
+    const plate = opaqueCorners
+      ? corners.reduce((t, p) => t + 0.2126 * toLin(data[p * 4]) + 0.7152 * toLin(data[p * 4 + 1]) + 0.0722 * toLin(data[p * 4 + 2]), 0) / 4
+      : null
+    return { ar, cap, ink: darkNeutral / n >= 0.25 ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid', opaqueCorners, plate }
+  } catch { return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false, plate: null } }
 }
 
 
@@ -725,30 +737,60 @@ function SavedPackGlyph({ icon }) {
   )
 }
 
-// Sample each logo variant once. Only baked-in opaque corners get rounded;
-// the slot stays transparent and the halo follows the artwork's ink.
+// A baked light plate stands out hard on the dark page. When the theme variant
+// comes back as one, the default variant is sometimes a darker plate, so it is
+// sampled once off-screen and used instead when it is clearly darker.
+const PLATE_LIGHT_MIN = 0.5
+const PLATE_DARKER_BY = 0.25
+function probeDefaultPlate(ref, themePlate, done) {
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    const next = sampleGlyph(img)
+    if (next.opaqueCorners && next.plate !== null && next.plate < themePlate - PLATE_DARKER_BY) done({ ...next, useDefault: true })
+  }
+  img.src = logodevUrl(ref, 64)
+}
+
+// Sample each logo variant once. Only baked-in opaque corners get rounded, with
+// a hairline on the plate's own edge (CSS) in place of the halo; transparent
+// marks stay unrounded and the halo follows the artwork's ink. A load the
+// browser refuses for CORS is shown plain: no sampling, so no halo or rounding.
 function LogoDevGlyph({ icon }) {
   const { theme } = useTheme()
   const key = `logodev:${icon.ref}:${theme}`
   const [measured, setMeasured] = useState(null)
-  const shape = glyphCache.get(key) || (measured?.key === key ? measured.shape : null)
-  const halo = haloFor(shape?.ink, theme, 'logodev')
+  const [plainKey, setPlainKey] = useState(null)
+  const plain = plainKey === key
+  const shape = plain ? null : glyphCache.get(key) || (measured?.key === key ? measured.shape : null)
+  const halo = shape?.opaqueCorners ? '' : haloFor(shape?.ink, theme, 'logodev')
   const onLoad = (e) => {
-    if (!glyphCache.has(key)) glyphCache.set(key, sampleGlyph(e.currentTarget))
+    if (plain) return
+    if (!glyphCache.has(key)) {
+      const next = sampleGlyph(e.currentTarget)
+      glyphCache.set(key, next)
+      if (theme !== 'light' && next.opaqueCorners && next.plate > PLATE_LIGHT_MIN) {
+        probeDefaultPlate(icon.ref, next.plate, (darker) => {
+          glyphCache.set(key, darker)
+          setMeasured({ key, shape: darker })
+        })
+      }
+    }
     setMeasured({ key, shape: glyphCache.get(key) })
   }
   return (
     <span className={`ig-chip${halo ? ` ig-chip--${halo}` : ''}`}>
       <img
-        key={key}
-        crossOrigin="anonymous"
-        src={logodevUrl(icon.ref, 64, theme)}
+        key={plain ? `${key}:plain` : key}
+        {...(plain ? {} : { crossOrigin: 'anonymous' })}
+        src={logodevUrl(icon.ref, 64, shape?.useDefault ? undefined : theme)}
         width="28"
         height="28"
         className={`ig-logo${shape?.opaqueCorners ? ' ig-logo--square' : ''}`}
         loading="lazy"
         alt={icon.name}
         onLoad={onLoad}
+        onError={plain ? undefined : () => setPlainKey(key)}
       />
     </span>
   )

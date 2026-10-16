@@ -34,6 +34,17 @@ test('mixed orange/yellow marks retain visibility for substantial dark lettering
   }
 })
 
+test('mid-greys already readable on a dark page get no edge', () => {
+  // #666 and lighter have about 3.4:1 against the dark page; the dark-neutral
+  // ceiling sits between grey 90 (above) and #666 (here).
+  for (const grey of [0x66, 0x80, 0x99]) {
+    assert.equal(sample([
+      [255, 202, 40, 255], [255, 62, 0, 255],
+      [grey, grey, grey, 255], [grey, grey, grey, 255],
+    ]).ink, 'mid', `grey ${grey}`)
+  }
+})
+
 test('saturated-only art and tiny dark details do not trigger an edge', () => {
   assert.equal(sample([[180, 0, 0, 255], [0, 0, 160, 255]]).ink, 'mid')
   assert.equal(sample([
@@ -60,6 +71,18 @@ test('only four fully opaque corners identify a baked-in square', () => {
   }
   assert.equal(sample(pixels, true).opaqueCorners, false)
   assert.equal(sample(Array.from({ length: 64 * 64 }, () => [0, 0, 0, 0])).opaqueCorners, false)
+})
+
+test('a baked-in square reports its plate tone from the corners, transparent art none', () => {
+  const plate = (rgb) => {
+    const pixels = Array.from({ length: 64 * 64 }, () => [...rgb, 255])
+    pixels[64 * 32 + 32] = [30, 120, 220, 255] // artwork in the middle never counts
+    return sample(pixels).plate
+  }
+  assert.ok(plate([255, 255, 255]) > 0.99, 'white plate')
+  assert.ok(plate([0, 0, 0]) < 0.01, 'black plate')
+  assert.equal(sample([[0, 0, 0, 0]]).plate, null)
+  assert.equal(sample([[255, 255, 255, 255]], true).plate, null)
 })
 
 test('flag packs and Twemoji never receive an edge in either theme', () => {
