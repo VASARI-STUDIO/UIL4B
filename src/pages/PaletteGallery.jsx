@@ -298,6 +298,15 @@ export default function PaletteGallery({ toast }) {
   // placeholders belong here too — see the report note.
   const anonymous = tier === 'anonymous'
   const proPending = pro.active && !ready
+
+  // A collection this viewer has no open row of at all, while palettes are
+  // still withheld: the tier cap fell before it. No mood or search can fill it,
+  // so "no palettes match" would be false; the state says it is gated instead.
+  // Keyed off the rows rather than the chip, so it ends by itself the day a
+  // free row of that kind exists.
+  const gatedKind = group !== 'all' && !proPending && lockedCount > 0
+    && !browsable.some((palette) => palette.kind === group)
+  const gatedNoun = group === 'brand' ? 'Brand' : 'Curated'
   const lockedBlock = proPending ? null : lockedCount > 0 ? (
     anonymous ? (
       // Same shape and the same stylesheet as LockedTeaseCta, with the one
@@ -482,6 +491,32 @@ export default function PaletteGallery({ toast }) {
               </>
             )}
           </>
+        ) : gatedKind ? (
+          // A collection emptied by the tier cap says why and where to go, in
+          // place of the "no match" state and the placeholder wall: one offer,
+          // and the bottom close below stands down.
+          anonymous ? (
+            <div className="lockt-cta">
+              <div className="lockt-cta-copy">
+                <p className="lockt-cta-head">{`${gatedNoun} palettes open with an account`}</p>
+                <p className="lockt-cta-body">Create a free account to see more of the library. Pro opens all of it.</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-accent lockt-cta-btn"
+                onClick={() => requireLogin('browse more of the palette library', { free: true, signup: true })}
+              >
+                Create your free account
+              </button>
+            </div>
+          ) : (
+            <LockedTeaseCta
+              gate="palette-library-brand-chip"
+              heading={`${gatedNoun} palettes are part of Pro`}
+              body={`Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
+              action="See what Pro includes"
+            />
+          )
         ) : (
           <>
             <LibraryEmpty
@@ -490,10 +525,9 @@ export default function PaletteGallery({ toast }) {
               detail="Try a broader search, or reset the mood and collection filters."
               onClear={clear}
             />
-            {/* A collection can now be empty because the cap fell before it —
-                pick Brand signed out and every brand system is still withheld.
-                The empty state alone would read as "there are none", which is
-                false, so the wall stays and says how many there are. */}
+            {/* Reached only when this collection has open rows that the mood or
+                search filtered out (a gated collection is handled above), so the
+                wall is the unnarrowed view's offer and nothing more. */}
             {mood === 'all' && !query.trim() && lockedBlock}
           </>
         )}
@@ -532,7 +566,7 @@ export default function PaletteGallery({ toast }) {
           action="Create and submit your own"
           to="/create/palette"
         />
-      ) : !(mood === 'all' && !query.trim()) && lockedCount > 0 ? (
+      ) : !(mood === 'all' && !query.trim()) && lockedCount > 0 && !gatedKind ? (
         <GalleryCloseCta
           className="pgl-cta"
           detail={`Free covers ${browsable.length} of the ${rows.length}. Pro opens all of them.`}
