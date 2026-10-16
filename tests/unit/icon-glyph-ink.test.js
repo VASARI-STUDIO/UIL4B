@@ -48,6 +48,20 @@ test('near-black, near-white and transparent art keep their tone and safe fallba
   assert.equal(sample([[0, 0, 0, 255]], true).ink, 'mid')
 })
 
+test('only four fully opaque corners identify a baked-in square', () => {
+  const pixels = Array.from({ length: 64 * 64 }, () => [20, 20, 20, 255])
+  assert.equal(sample(pixels).opaqueCorners, true)
+  for (const corner of [0, 63, 64 * 63, 64 * 64 - 1]) {
+    for (const alpha of [0, 64, 254]) {
+      const partial = pixels.slice()
+      partial[corner] = [20, 20, 20, alpha]
+      assert.equal(sample(partial).opaqueCorners, false)
+    }
+  }
+  assert.equal(sample(pixels, true).opaqueCorners, false)
+  assert.equal(sample(Array.from({ length: 64 * 64 }, () => [0, 0, 0, 0])).opaqueCorners, false)
+})
+
 test('flag packs and Twemoji never receive an edge in either theme', () => {
   const groupsStart = source.indexOf('const ICON_GROUPS =')
   const groupsEnd = source.indexOf('\nconst GROUP_ORDER', groupsStart)
@@ -61,4 +75,8 @@ test('flag packs and Twemoji never receive an edge in either theme', () => {
   }
   assert.equal(halo('dark', 'dark', 'logos'), 'halo-light')
   assert.equal(halo('light', 'light', 'logos'), 'halo-dark')
+  assert.equal(halo('dark', 'dark', 'logodev'), 'halo-light')
+  assert.equal(halo('light', 'light', 'logodev'), 'halo-dark')
+  assert.equal(halo('dark', 'light', 'logodev'), '')
+  assert.equal(halo('light', 'dark', 'logodev'), '')
 })

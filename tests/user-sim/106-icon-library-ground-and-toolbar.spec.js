@@ -125,13 +125,18 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
       await signIn(page, { plan: 'pro' })
       await page.route('https://img.logo.dev/**', route => route.fulfill({
         contentType: 'image/svg+xml',
-        body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><path fill="#0078d4" d="M0 0h28v28H0z"/></svg>',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="#0078d4" d="M4 4h20v20H4z"/></svg>',
       }))
       await go(page, '/create/icons')
       await choosePack(page, 'logodev')
       const logo = page.locator('.ig .ic img.ig-logo').first()
       await expect(logo).toBeVisible({ timeout: 20000 })
       await expect.poll(() => logo.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+      await expect(logo.locator('..')).not.toHaveClass(/ig-chip--tile/)
+      await expect(logo).toHaveAttribute('crossorigin', 'anonymous')
+      expect(new URL(await logo.getAttribute('src')).searchParams.get('theme')).toBe(scheme)
+      await expect(logo).not.toHaveClass(/ig-logo--square/)
       const paint = await logo.evaluate(img => {
         const slot = getComputedStyle(img.parentElement)
         const art = getComputedStyle(img)
@@ -139,6 +144,41 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
       })
       expect(paint).toEqual({ bg: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none', radius: '0px', filter: 'none' })
       await ctx.close()
+    })
+  }
+
+  for (const { scheme, square, fill, halo } of [
+    { scheme: 'dark', square: false, fill: '#080808', halo: 'light' },
+    { scheme: 'light', square: false, fill: '#ffffff', halo: 'dark' },
+    { scheme: 'dark', square: true, fill: '#080808', halo: 'light' },
+    { scheme: 'light', square: true, fill: '#ffffff', halo: 'dark' },
+  ]) {
+    test(`Logo.dev samples ${square ? 'opaque squares' : 'transparent marks'} on ${scheme} ground`, async ({ browser }) => {
+      const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
+      try {
+        const page = await ctx.newPage()
+        await signIn(page, { plan: 'pro' })
+        await page.route('https://img.logo.dev/**', route => route.fulfill({
+          contentType: 'image/svg+xml',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="${fill}" d="${square ? 'M0 0h28v28H0z' : 'M4 4h20v20H4z'}"/></svg>`,
+        }))
+        await go(page, '/create/icons')
+        await choosePack(page, 'logodev')
+        const chip = page.locator('.ig .ic .ig-chip:has(img.ig-logo)').first()
+        const logo = chip.locator('img')
+        await expect(chip).toHaveClass(new RegExp(`ig-chip--halo-${halo}`))
+        await expect(chip).not.toHaveClass(/ig-chip--tile/)
+        if (square) await expect(logo).toHaveClass(/ig-logo--square/)
+        else await expect(logo).not.toHaveClass(/ig-logo--square/)
+        await expect(logo).toHaveCSS('border-radius', square ? '6px' : '0px')
+        await expect(logo).toHaveCSS('filter', new RegExp(`#ig-edge-${halo}`))
+        await expect(chip).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+        await expect(chip).toHaveCSS('background-image', 'none')
+        await expect(chip).toHaveCSS('box-shadow', 'none')
+        await expect(chip).toHaveCSS('filter', 'none')
+        expect(new URL(await logo.getAttribute('src')).searchParams.get('theme')).toBe(scheme)
+      } finally { await ctx.close() }
     })
   }
 

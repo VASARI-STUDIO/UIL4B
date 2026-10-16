@@ -123,10 +123,10 @@ const CUSTOM_KEY = 'vs-custom-icons'
 const LOGODEV_TOKEN = import.meta.env.VITE_LOGODEV_KEY || 'pk_L_3nxFHHQrOLmFuS16PsFQ'
 // Build a logo image URL. `ref` is a domain (stripe.com) or a plain brand name;
 // names are resolved through the /name/ path. Retina PNG so it stays crisp.
-const logodevUrl = (ref, size = 128) => {
+const logodevUrl = (ref, size = 128, theme) => {
   const clean = String(ref || '').trim()
   const path = clean.includes('.') ? encodeURIComponent(clean) : `name/${encodeURIComponent(clean)}`
-  return `https://img.logo.dev/${path}?token=${LOGODEV_TOKEN}&size=${size}&format=png&retina=true`
+  return `https://img.logo.dev/${path}?token=${LOGODEV_TOKEN}&size=${size}&format=png&retina=true${theme ? `&theme=${theme === 'light' ? 'light' : 'dark'}` : ''}`
 }
 // Curated popular brands for the browse grid — domains give the most reliable
 // match. Grouped loosely (tech · dev · social · finance · commerce · media).
@@ -479,7 +479,7 @@ function glyphDataUri(pack, name) {
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
 // Remember artwork measurements so scrolling or reopening never re-samples.
-const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wide-slot cap, ink tone)
+const glyphCache = new Map() // 'pack:name' or 'logodev:ref:theme' → artwork measurements
 
 // A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
 //
@@ -552,7 +552,7 @@ function sampleGlyph(img) {
       if (py < y0) y0 = py
       if (py > y1) y1 = py
     }
-    if (n === 0) return { ar: 1, cap: 1, ink: 'mid' }
+    if (n === 0) return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false }
     // The raster is SQUARE and drawImage stretched the art to fill it, so the
     // measured ink box is the true one divided by the image own aspect. Undoing
     // that is what makes one number cover both causes: a square-canvas devicon
@@ -567,13 +567,13 @@ function sampleGlyph(img) {
       raster: S,
     })
     const lum = sum / n
-    return { ar, cap, ink: darkNeutral / n >= 0.25 ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid' }
-  } catch { return { ar: 1, cap: 1, ink: 'mid' } }
+    const opaqueCorners = [0, S - 1, S * (S - 1), S * S - 1].every(p => data[p * 4 + 3] === 255)
+    return { ar, cap, ink: darkNeutral / n >= 0.25 ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid', opaqueCorners }
+  } catch { return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false } }
 }
 
 
-// Iconify-served brand glyph in a transparent slot. Logo.dev images use a plain
-// transparent slot without pixel sampling, since their CORS policy is unknown.
+// Iconify-served brand glyph in a transparent slot.
 //
 // THE REQUEST ASKS FOR A HEIGHT, NOT A BOX. `?width=24&height=24` pinned both
 // dimensions and left the viewBox alone, so the API returned a 24 x 24 SVG that
@@ -736,6 +736,35 @@ function SavedPackGlyph({ icon }) {
   )
 }
 
+// Sample each logo variant once. Only baked-in opaque corners get rounded;
+// the slot stays transparent and the halo follows the artwork's ink.
+function LogoDevGlyph({ icon }) {
+  const { theme } = useTheme()
+  const key = `logodev:${icon.ref}:${theme}`
+  const [measured, setMeasured] = useState(null)
+  const shape = glyphCache.get(key) || (measured?.key === key ? measured.shape : null)
+  const halo = haloFor(shape?.ink, theme, 'logodev')
+  const onLoad = (e) => {
+    if (!glyphCache.has(key)) glyphCache.set(key, sampleGlyph(e.currentTarget))
+    setMeasured({ key, shape: glyphCache.get(key) })
+  }
+  return (
+    <span className={`ig-chip${halo ? ` ig-chip--${halo}` : ''}`}>
+      <img
+        key={key}
+        crossOrigin="anonymous"
+        src={logodevUrl(icon.ref, 64, theme)}
+        width="28"
+        height="28"
+        className={`ig-logo${shape?.opaqueCorners ? ' ig-logo--square' : ''}`}
+        loading="lazy"
+        alt={icon.name}
+        onLoad={onLoad}
+      />
+    </span>
+  )
+}
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
@@ -744,14 +773,7 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
     return <SavedPackGlyph icon={icon} />
   }
-  if (icon.logo) {
-    // Preserve the raster's own alpha and edges without adding a tile or filter.
-    return (
-      <span className="ig-chip">
-        <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
-      </span>
-    )
-  }
+  if (icon.logo) return <LogoDevGlyph icon={icon} />
   if (icon.cdn) {
     if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} gone={gone} />
     // The batched body, composed into a data: URI. Empty until its tranche
