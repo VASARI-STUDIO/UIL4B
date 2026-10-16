@@ -3565,7 +3565,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               </div>
             )}
 
-            {waitingStatus && !gated && <p className="ig-status" aria-live="polite">Loading icons…</p>}
+            {(waitingStatus || (loading && icons.length === 0)) && !gated && <p className="ig-status" aria-live="polite">Loading icons…</p>}
 
             {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
 
