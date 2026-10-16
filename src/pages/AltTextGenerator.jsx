@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
 } from '../components/tool/ToolLayout'
@@ -146,6 +147,17 @@ export default function AltTextGenerator({ toast }) {
   // Gemini terms); the server says so and the page swaps the dropzone for why.
   const region = useAiRegion()
   const regionBlocked = region.blocked
+  // Set when a Generate request is refused. The button the visitor pressed goes
+  // away with the block, so focus moves to the card heading; a block found on
+  // first load leaves focus alone.
+  const regionHeadingRef = useRef(null)
+  const focusRegionRef = useRef(false)
+  useEffect(() => {
+    if (regionBlocked && focusRegionRef.current) {
+      focusRegionRef.current = false
+      regionHeadingRef.current?.focus()
+    }
+  }, [regionBlocked])
   // The tool opens signed out. An account is asked for only when a generation
   // is requested, because that is the step that sends the image to /api/ai and
   // spends an allowance the server meters per account.
@@ -237,6 +249,7 @@ export default function AltTextGenerator({ toast }) {
       // The server refuses this region before it takes anything from the
       // allowance, so there is nothing to record or retry.
       if (isRegionRefusal(r.status, data)) {
+        focusRegionRef.current = true
         region.markBlocked()
         setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: data.error || AI_REGION_TITLE } : p))
         return false
@@ -409,15 +422,17 @@ export default function AltTextGenerator({ toast }) {
           {!regionBlocked && <QuotaMeter quota={quota} className="quota--tool" />}
           {regionBlocked ? (
             <section className="alt-region" role="status" aria-labelledby="alt-region-title" data-testid="ai-region-blocked">
-              <span className="alt-dropzone-ico" aria-hidden="true">
+              <span className="alt-region-ico" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="9" />
                   <path d="M3 12h18" />
                   <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" />
                 </svg>
               </span>
-              <h2 className="alt-region-title" id="alt-region-title">{AI_REGION_TITLE}</h2>
+              <h2 className="alt-region-title" id="alt-region-title" ref={regionHeadingRef} tabIndex={-1}>{AI_REGION_TITLE}</h2>
               <p className="alt-region-body">{AI_REGION_ALT_BODY}</p>
+              <p className="alt-region-note">{AI_REGION_PANEL}</p>
+              <Link to="/create" className="alt-btn alt-region-link">Browse other tools</Link>
             </section>
           ) : (
           <>
@@ -456,7 +471,7 @@ export default function AltTextGenerator({ toast }) {
           </>
           )}
 
-          {items.length === 0 && (
+          {(regionBlocked || items.length === 0) && (
             <section className="alt-examples" aria-labelledby="alt-examples-title">
               <h2 className="tl-sec-label" id="alt-examples-title">What good alt text looks like</h2>
               <div className="alt-examples-grid">
@@ -474,7 +489,7 @@ export default function AltTextGenerator({ toast }) {
               <ul className="alt-tips">
                 <li>Keep it under ~125 characters — screen readers cut off long descriptions.</li>
                 <li>Don&rsquo;t start with “image of” or “picture of” — that&rsquo;s already announced.</li>
-                <li>Add <strong>page context</strong> for sharper results (e.g. the article topic).</li>
+                {!regionBlocked && <li>Add <strong>page context</strong> for sharper results (e.g. the article topic).</li>}
                 <li>For purely decorative images, leave alt text empty (<code>alt=&quot;&quot;</code>).</li>
                 {/* The honest version, stated where a user forms their mental model
                     of what this tool is for. A stuffing tool would promise the
@@ -542,13 +557,10 @@ export default function AltTextGenerator({ toast }) {
           </div>}
         </ToolMain>
 
+        {/* No panel while blocked: it would hold no settings. The reassurance
+            line lives inside the region card instead. */}
+        {!regionBlocked && (
         <ToolPanel label="Alt text settings" className="alt-panel">
-          {regionBlocked ? (
-            <ToolSection label="About" className="alt-about">
-              <p className="alt-field-help">{AI_REGION_PANEL}</p>
-            </ToolSection>
-          ) : (
-          <>
           <ToolSection label="Page context" className="alt-context">
             <label className="sr-only" htmlFor="alt-context-input">Page context (optional)</label>
             <input
@@ -599,9 +611,8 @@ export default function AltTextGenerator({ toast }) {
               Batch-upload images and generate WCAG-compliant alt text that also earns search relevance — by describing images accurately, not by stuffing keywords. {isPro ? 'Pro capacity active.' : 'Pro raises your daily and monthly generation limits.'}
             </p>
           </ToolSection>
-          </>
-          )}
         </ToolPanel>
+        )}
       </ToolGrid>
     </ToolLayout>
   )
