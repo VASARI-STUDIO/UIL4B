@@ -79,6 +79,113 @@ export const MAX_ANIMATION_SIDE = 1920
 export const frameName = (i) => `f${String(i + 1).padStart(4, '0')}.png`
 export const FRAME_PATTERN = 'f%04d.png'
 
+// ── The video editor's choices (Video tab) ───────────────────────────────────
+export const CROP_SHAPES = [
+  { id: 'original', label: 'Original', ratio: null },
+  { id: '1:1', label: '1:1', ratio: [1, 1] },
+  { id: '4:5', label: '4:5', ratio: [4, 5] },
+  { id: '16:9', label: '16:9', ratio: [16, 9] },
+  { id: '9:16', label: '9:16', ratio: [9, 16] },
+]
+/** Degrees clockwise. */
+export const TURNS = [
+  { id: 0, label: 'None' },
+  { id: 90, label: '90° right' },
+  { id: 180, label: '180°' },
+  { id: 270, label: '90° left' },
+]
+export const SPEEDS = [
+  { id: 0.25, label: '¼×', name: 'Quarter speed' },
+  { id: 0.5, label: '½×', name: 'Half speed' },
+  { id: 1, label: '1×', name: 'Normal speed' },
+  { id: 1.5, label: '1.5×', name: '1.5 times speed' },
+  { id: 2, label: '2×', name: 'Double speed' },
+  { id: 4, label: '4×', name: '4 times speed' },
+]
+export const DIRECTIONS = [
+  { id: 'forward', label: 'Forward' },
+  { id: 'reverse', label: 'Reverse' },
+  { id: 'boomerang', label: 'Boomerang' },
+]
+export const DITHERS = [
+  { id: 'none', label: 'None', filter: 'none' },
+  { id: 'pattern', label: 'Pattern', filter: 'bayer:bayer_scale=2' }, // today's GIF default
+  { id: 'diffusion', label: 'Diffusion', filter: 'floyd_steinberg' },
+]
+export const GIF_COLOURS_MIN = 2
+export const GIF_COLOURS_MAX = 256
+export const MAX_VIDEO_WIDTH = 2000
+// Reverse holds every decoded frame in memory. This budget is 300 frames at
+// 640 x 640. A judgement, not a measurement: not yet run on the pinned core.
+export const REVERSE_MAX_PIXELS = 300 * 640 * 640
+
+const floorEven = (n) => 2 * Math.floor(n / 2)
+const clampColours = (n) => Math.max(GIF_COLOURS_MIN, Math.min(GIF_COLOURS_MAX, Math.round(Number(n) || GIF_COLOURS_MAX)))
+
+/**
+ * The part of a source a shape keeps: `{ w, h, x, y, axis }` in source pixels,
+ * all even, or null when there is nothing to cut. `anchor` is 'start' |
+ * 'centre' | 'end'; `axis` is 'x' when the sides are cut, 'y' for top/bottom.
+ */
+export function cropRect(srcW, srcH, shapeId, anchor = 'centre') {
+  const shape = CROP_SHAPES.find((s) => s.id === shapeId)
+  if (!shape || !shape.ratio || !(srcW > 0 && srcH > 0)) return null
+  const [a, b] = shape.ratio
+  const w = floorEven(Math.min(srcW, (srcH * a) / b))
+  const h = floorEven(Math.min(srcH, (srcW * b) / a))
+  if (w >= srcW - 1 && h >= srcH - 1) return null
+  const place = (full, part) => (anchor === 'start' ? 0 : anchor === 'end' ? floorEven(full - part) : floorEven((full - part) / 2))
+  return { w, h, x: place(srcW, w), y: place(srcH, h), axis: w < srcW - 1 ? 'x' : 'y' }
+}
+
+/** Filters for a turn in degrees clockwise. */
+export function turnFilters(turn) {
+  if (turn === 90) return ['transpose=1']
+  if (turn === 270) return ['transpose=2']
+  if (turn === 180) return ['hflip', 'vflip']
+  return []
+}
+
+// Labels fw, bw and rv stay clear of s0, s1 and p, which the GIF palette uses.
+// start_frame=1 drops the reversed copy's first frame (the forward run's last)
+// so the turn-around frame is not shown twice.
+const BOOMERANG = 'split[fw][bw];[bw]reverse,trim=start_frame=1,setpts=PTS-STARTPTS[rv];[fw][rv]concat=n=2:v=1:a=0'
+export function directionFilter(direction) {
+  if (direction === 'reverse') return 'reverse'
+  if (direction === 'boomerang') return BOOMERANG
+  return ''
+}
+
+/** The size that comes out, mirroring ffmpeg's `scale=W:-2` rounding. */
+export function outputSize(srcW, srcH, { crop = null, turn = 0, width = 480 } = {}) {
+  let iw = crop ? crop.w : srcW
+  let ih = crop ? crop.h : srcH
+  if (!(iw > 0 && ih > 0)) return { w: 0, h: 0 }
+  if (turn === 90 || turn === 270) [iw, ih] = [ih, iw]
+  const w = Math.max(16, Math.min(MAX_VIDEO_WIDTH, Math.round(Number(width) || 480)))
+  return { w, h: 2 * Math.round((w * ih) / (iw * 2)) }
+}
+
+/** How many frames come out. A boomerang runs forward then back, sharing the turn-around frame. */
+export function outputFrames(clipSeconds, speed, fps, direction) {
+  const n = Math.max(1, Math.round((clipSeconds / (speed || 1)) * clampFps(fps)))
+  return direction === 'boomerang' ? 2 * n - 1 : n
+}
+
+export const reverseFits = (forwardFrames, w, h) => forwardFrames * w * h <= REVERSE_MAX_PIXELS
+
+/**
+ * A number field's value once the visitor leaves it. An empty or non-numeric
+ * draft returns `fallback` (the last good value) rather than a floor.
+ */
+export function commitNumber(raw, { min, max, fallback, decimals = 0 }) {
+  const text = String(raw ?? '').trim()
+  const n = text === '' ? NaN : Number(text)
+  if (!Number.isFinite(n)) return fallback
+  const f = 10 ** decimals
+  return Math.max(min, Math.min(max, Math.round(n * f) / f))
+}
+
 /**
  * The container flag for "plays this many times" (0 = forever), or [] for a
  * format that has no loop field. See the measured table at the top.
@@ -101,12 +208,20 @@ const VP8_CRF = { low: 40, medium: 24, high: 10 }
  * then the output name. `palette` is the GIF palette chain appended to any
  * filter that came before it.
  */
-function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transparentGif = false }) {
+function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transparentGif = false, gif = null }) {
   const q = QUALITY_LEVELS.some((l) => l.id === quality) ? quality : 'medium'
   const out = `output.${fmt.ext}`
   if (fmt.id === 'gif') {
-    const gen = transparentGif ? 'palettegen=reserve_transparent=1' : 'palettegen'
-    const chain = [...filters, 'split[s0][s1]'].join(',') + `;[s0]${gen}[p];[s1][p]paletteuse=dither=${GIF_DITHER[q]}`
+    // `gif` (Colours + Dither, from the video editor) replaces the Quality
+    // mapping; without it the output is exactly what Quality has always made.
+    let gen = transparentGif ? 'palettegen=reserve_transparent=1' : 'palettegen'
+    let dither = GIF_DITHER[q]
+    if (gif) {
+      const colours = clampColours(gif.colours)
+      gen = colours === GIF_COLOURS_MAX ? 'palettegen' : `palettegen=max_colors=${colours}`
+      dither = (DITHERS.find((d) => d.id === gif.dither) || DITHERS[1]).filter
+    }
+    const chain = [...filters, 'split[s0][s1]'].join(',') + `;[s0]${gen}[p];[s1][p]paletteuse=dither=${dither}`
     return ['-vf', chain, ...loopArgs('gif', plays), out]
   }
   const vf = filters.length ? ['-vf', filters.join(',')] : []
@@ -141,16 +256,40 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
  * a length of 0 means "to the end". Width is clamped, and the height is left
  * to ffmpeg as `-2`: the aspect ratio held and the result rounded to an even
  * number, which H.264 in yuv420p requires and every other format tolerates.
+ *
+ * Both trim flags sit BEFORE -i, so they limit how much of the source is read.
+ * As an output option, -t would cap the length of what comes out, which is
+ * wrong the moment speed changes: at half speed a 3 s clip is 6 s long.
+ *
+ * Filter order (each step is left out when it does nothing): speed, fps, crop,
+ * turn, flips, scale, direction. Speed and fps come first so every later filter
+ * only touches the frames that end up in the file; crop precedes the turn (the
+ * crop box is drawn on the unturned picture); scale follows the turn so Width is
+ * the width of what comes out; reverse runs last, on the smallest frames,
+ * because it buffers all of them.
  */
-export function videoToAnimationArgs({ format, input, fps, width, plays = 0, quality = 'medium', start = 0, length = 0 }) {
+export function videoToAnimationArgs({
+  format, input, fps, width, plays = 0, quality = 'medium', start = 0, length = 0,
+  crop = null, turn = 0, flipH = false, flipV = false, speed = 1, direction = 'forward',
+  colours = GIF_COLOURS_MAX, dither = 'pattern',
+}) {
   const fmt = findFormat(format)
-  const w = Math.max(16, Math.min(2000, Math.round(Number(width) || 480)))
+  const w = Math.max(16, Math.min(MAX_VIDEO_WIDTH, Math.round(Number(width) || 480)))
   const args = []
   if (start > 0) args.push('-ss', String(start))
-  args.push('-i', input)
   if (length > 0) args.push('-t', String(length))
-  const filters = [`fps=${clampFps(fps)}`, `scale=${w}:-2:flags=lanczos`]
-  return [...args, ...encoderArgs(fmt, { quality, plays, filters })]
+  args.push('-i', input)
+  const filters = []
+  if (speed && speed !== 1) filters.push(`setpts=PTS/${speed}`)
+  filters.push(`fps=${clampFps(fps)}`)
+  if (crop) filters.push(`crop=${crop.w}:${crop.h}:${crop.x}:${crop.y}`)
+  filters.push(...turnFilters(turn))
+  if (flipH) filters.push('hflip')
+  if (flipV) filters.push('vflip')
+  filters.push(`scale=${w}:-2:flags=lanczos`)
+  const dir = directionFilter(direction)
+  if (dir) filters.push(dir)
+  return [...args, ...encoderArgs(fmt, { quality, plays, filters, gif: fmt.id === 'gif' ? { colours, dither } : null })]
 }
 
 /** ffmpeg's progress lines: "frame=   12 fps=… time=00:00:01.39 …". */
