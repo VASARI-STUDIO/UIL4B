@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, memo } from 'react'
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore, memo } from 'react'
 
 // The Emoji Library's windowed grid, kept in its own component so the scroll
 // state (which row range is mounted, which cell just copied) re-renders THIS
@@ -20,19 +20,7 @@ const cellMin = () => (typeof window !== 'undefined' && window.matchMedia?.('(po
 const CELL_GAP = 4
 const HEAD_H = 42         // section header row (text + bottom breathing room)
 const SECTION_GAP = 24    // extra space above each section after the first
-// The window is kept at least this far beyond the viewport each way. A cell
-// costs a layout and a paint whether or not anyone sees it, so the margin is
-// small.
-const OVERSCAN_PX = 150
-// When the margin runs out the window is refilled to this distance rather than
-// extended by one row, so the grid commits a few rows every few frames instead
-// of one row every frame. Many small commits keep invalidating the painted
-// tiles next to the viewport; fewer, larger ones do not. Measured: refilling to
-// 600 or more brought the repaint cost back.
-const REFILL_PX = 400
-// A commit that needs more than this many NEW cells is split: the rows in the
-// viewport mount at once, the overscan follows a few frames later.
-const FRAME_CELLS = 200
+const OVERSCAN_PX = 500   // render this much beyond the viewport each way
 
 // Insert the tone right after the base code point, dropping an emoji-presentation
 // selector (U+FE0F) that must not sit between the base and its modifier.
@@ -43,17 +31,217 @@ function toneOf(emoji, tone) {
   return cps[0] + tone + rest.join('')
 }
 
-// One memoised cell so a copy (which flips `copied` on the grid) re-renders
-// only the two affected cells, not the whole visible window. Props are compared
-// by value, so `shown` only changes when the skin tone actually changes.
-const EmojiCell = memo(function EmojiCell({ emoji, tone, shown, isCopied, onCopy }) {
+// ─── Glyph bitmaps ───────────────────────────────────────────────────────────
+// WHY: a colour emoji glyph is not cached by the browser between paints. Every
+// time a cell's text is painted (a search result swaps in, a row scrolls into
+// view, a tile is re-rastered) each glyph is drawn again from its font, about
+// 2.5 ms apiece on a software raster, so 450 cells cost about a second per
+// commit. Drawing each glyph ONCE into a bitmap and painting that bitmap makes
+// every later paint an image blit.
+//
+// HOW: a worker draws the glyphs, with the same system font the cell would use,
+// into a sheet (OffscreenCanvas, at the screen's pixel ratio), encodes it as a
+// PNG and hands it back; a cell then shows its glyph as a CSS background cut
+// from that sheet. Nothing about the main thread changes while a sheet is being
+// drawn. Until a glyph has a bitmap, or if the browser cannot make one, the
+// cell shows the real text exactly as before, so this only ever adds a faster
+// path. The text stays in the cell (hidden while the bitmap shows) so the label,
+// the title and the hover all keep working from the real character.
+const SLOT = 36           // css px each glyph is drawn into (24px font plus its overhang)
+const SHEET_COLS = 12
+const URGENT_CHUNK = 48   // glyphs on screen: small sheets, so they arrive quickly
+const BACKGROUND_CHUNK = 96
+
+const WORKER_SOURCE = `
+self.onmessage = async (e) => {
+  const { gen, id, chars, scale, font, baseline, slot, slotH, cols } = e.data
+  try {
+    const rows = Math.ceil(chars.length / cols)
+    const canvas = new OffscreenCanvas(Math.round(cols * slot * scale), Math.round(rows * slotH * scale))
+    const ctx = canvas.getContext('2d')
+    ctx.scale(scale, scale)
+    ctx.font = font
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'alphabetic'
+    for (let i = 0; i < chars.length; i++) {
+      ctx.fillText(chars[i], (i % cols) * slot + slot / 2, Math.floor(i / cols) * slotH + baseline)
+    }
+    const blob = await canvas.convertToBlob({ type: 'image/png' })
+    self.postMessage({ gen, id, blob, rows })
+  } catch (err) {
+    self.postMessage({ gen, id, error: String(err) })
+  }
+}`
+
+const atlas = {
+  gen: 0,             // bumped whenever the drawing setup changes; older replies are dropped
+  config: null,       // { key, scale, font, baseline } once measured from a real cell
+  dpr: 0,             // the pixel ratio that config was measured at
+  sprites: new Map(), // glyph string -> { style }
+  sheets: [],         // object URLs, revoked on reset
+  queue: [],          // chunks waiting for the worker, front first
+  current: null,      // the chunk the worker is drawing
+  worker: null,
+  failed: false,
+  version: 0,
+  listeners: new Set(),
+}
+
+const atlasSupported = () => (
+  typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && typeof URL !== 'undefined'
+  && typeof URL.createObjectURL === 'function' && typeof Blob !== 'undefined'
+  && typeof OffscreenCanvas.prototype.convertToBlob === 'function'
+)
+
+function atlasEmit() {
+  atlas.version++
+  atlas.listeners.forEach(fn => fn())
+}
+const atlasSubscribe = (fn) => { atlas.listeners.add(fn); return () => atlas.listeners.delete(fn) }
+const atlasVersion = () => atlas.version
+
+function atlasFail() {
+  atlas.failed = true
+  atlasReset()
+  if (atlas.worker) { atlas.worker.terminate(); atlas.worker = null }
+}
+
+function atlasReset() {
+  atlas.gen++
+  atlas.sheets.forEach(url => URL.revokeObjectURL(url))
+  atlas.sheets = []
+  atlas.sprites = new Map()
+  atlas.queue = []
+  atlas.current = null
+  atlasEmit()
+}
+
+function atlasWorker() {
+  if (atlas.worker) return atlas.worker
+  const url = URL.createObjectURL(new Blob([WORKER_SOURCE], { type: 'text/javascript' }))
+  const worker = new Worker(url)
+  URL.revokeObjectURL(url)
+  worker.onmessage = (e) => {
+    const { gen, blob, rows, error } = e.data
+    const job = atlas.current
+    if (gen !== atlas.gen || !job) { if (gen === atlas.gen) atlas.current = null; atlasPump(); return }
+    atlas.current = null
+    if (error || !blob) { atlasFail(); return }
+    const url = URL.createObjectURL(blob)
+    atlas.sheets.push(url)
+    const backgroundImage = `url("${url}")`
+    const { slotH } = atlas.config
+    const backgroundSize = `${SHEET_COLS * SLOT}px ${rows * slotH}px`
+    job.chars.forEach((ch, i) => {
+      atlas.sprites.set(ch, {
+        style: {
+          backgroundImage,
+          backgroundSize,
+          backgroundPosition: `${-(i % SHEET_COLS) * SLOT}px ${-Math.floor(i / SHEET_COLS) * slotH}px`,
+          height: `${slotH}px`,
+        },
+      })
+    })
+    atlasEmit()
+    atlasPump()
+  }
+  worker.onerror = () => atlasFail()
+  atlas.worker = worker
+  return worker
+}
+
+function atlasPump() {
+  if (atlas.current || atlas.failed || !atlas.config || !atlas.queue.length) return
+  const job = atlas.queue.shift()
+  atlas.current = job
+  const { scale, font, baseline, slotH } = atlas.config
+  try {
+    atlasWorker().postMessage({ gen: atlas.gen, id: job.id, chars: job.chars, scale, font, baseline, slot: SLOT, slotH, cols: SHEET_COLS })
+  } catch {
+    atlasFail()
+  }
+}
+
+let jobId = 0
+// Queue glyphs for drawing. `urgent` puts them ahead of everything waiting (they
+// are on screen now); anything already drawn or in flight is skipped, and a
+// glyph still sitting in a waiting background chunk is pulled forward.
+function atlasWant(chars, urgent) {
+  if (atlas.failed || !atlas.config) return
+  const flying = atlas.current ? new Set(atlas.current.chars) : null
+  const seen = new Set()
+  const missing = []
+  for (const ch of chars) {
+    if (atlas.sprites.has(ch) || seen.has(ch) || (flying && flying.has(ch))) continue
+    seen.add(ch)
+    missing.push(ch)
+  }
+  if (!missing.length) return
+  if (urgent) {
+    atlas.queue = atlas.queue
+      .map(job => ({ ...job, chars: job.chars.filter(ch => !seen.has(ch)) }))
+      .filter(job => job.chars.length)
+    const jobs = []
+    for (let i = 0; i < missing.length; i += URGENT_CHUNK) jobs.push({ id: ++jobId, chars: missing.slice(i, i + URGENT_CHUNK) })
+    atlas.queue = [...jobs, ...atlas.queue]
+  } else {
+    const queued = new Set()
+    atlas.queue.forEach(job => job.chars.forEach(ch => queued.add(ch)))
+    const rest = missing.filter(ch => !queued.has(ch))
+    for (let i = 0; i < rest.length; i += BACKGROUND_CHUNK) atlas.queue.push({ id: ++jobId, chars: rest.slice(i, i + BACKGROUND_CHUNK) })
+  }
+  atlasPump()
+}
+
+// Measure how a real cell lays its glyph out, so the bitmap lands on the same
+// pixels: the font the cell resolves to, and where its baseline sits inside the
+// glyph's box. A zero-size inline-block rests on the baseline, which reads it
+// back without guessing at font metrics. Called once the grid has a width, and
+// again when the pixel ratio or a web font changes the answer.
+function atlasConfigure(host) {
+  if (atlas.failed || !host || !atlasSupported()) return
+  const probe = document.createElement('button')
+  probe.className = 'emoji-cell'
+  probe.tabIndex = -1
+  probe.setAttribute('aria-hidden', 'true')
+  probe.style.cssText = 'position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;transition:none'
+  probe.innerHTML = '<span class="emoji-char">\u{1F600}<i style="display:inline-block;width:0;height:0"></i></span>'
+  host.appendChild(probe)
+  const span = probe.firstChild
+  const style = getComputedStyle(span)
+  const spanRect = span.getBoundingClientRect()
+  const markRect = span.firstElementChild.getBoundingClientRect()
+  const fontSize = parseFloat(style.fontSize)
+  const family = style.fontFamily
+  host.removeChild(probe)
+  if (!spanRect.height || !fontSize) return
+  const dpr = window.devicePixelRatio || 1
+  const scale = Math.round(SLOT * dpr) / SLOT
+  // The bitmap box is the text's own line box plus a whole 2px margin above and
+  // below, so a cell centres it with the same fractional offset it centres the
+  // text with and the two round onto the pixel grid the same way. A box of any
+  // other height lands a row up or down from the text it replaces.
+  const slotH = Math.round(spanRect.height) + 4
+  const baseline = markRect.bottom - spanRect.top + 2
+  const font = `${fontSize}px ${family}`
+  const key = `${scale}|${font}|${baseline.toFixed(2)}|${slotH}`
+  atlas.dpr = dpr
+  if (atlas.config && atlas.config.key === key) return
+  atlas.config = { key, scale, font, baseline, slotH }
+  atlasReset()
+}
+
+// Text → bitmap cell. `sprite` is null until the glyph has been drawn.
+const EmojiCell = memo(function EmojiCell({ emoji, tone, shown, sprite, isCopied, onCopy }) {
   return (
     <button
-      className={`emoji-cell${isCopied ? ' copied' : ''}`}
+      className={`emoji-cell${isCopied ? ' copied' : ''}${sprite ? ' has-bitmap' : ''}`}
       onClick={() => onCopy(emoji, tone)}
       title={`Copy ${shown}`}
+      aria-label={sprite ? shown : undefined}
     >
       <span className="emoji-char">{shown}</span>
+      {sprite && <span className="emoji-bitmap" style={sprite.style} aria-hidden="true" />}
     </button>
   )
 })
@@ -68,92 +256,18 @@ function windowOf(rows, minY, maxY) {
 }
 
 const NO_WINDOW = { layout: null, start: 0, end: 0 }
-const NO_ROWS = []
-
-// ─── Idle glyph warm-up ───
-// The first time a glyph is laid out the browser has to find a font for it and
-// shape it, about 0.6 ms each. A category switch or a long search result mounts
-// hundreds of glyphs nobody has laid out yet, and that cost lands inside one
-// commit. Laying the same glyphs out early, a few at a time in idle time and in
-// a box nobody sees, moves the cost out of the commit. Glyphs already done this
-// session are remembered, so each is shaped once.
-const WARM_BATCH = 8
-const warmedGlyphs = new Set()
-
-// requestIdleCallback where it exists, a short timer otherwise. Both hand the
-// callback a `timeRemaining()` so the loop stops when the slice is spent.
-function scheduleIdle(callback) {
-  if (typeof window.requestIdleCallback === 'function') {
-    const id = window.requestIdleCallback(callback, { timeout: 2000 })
-    return () => window.cancelIdleCallback(id)
-  }
-  const id = setTimeout(() => {
-    const end = performance.now() + 8
-    callback({ timeRemaining: () => Math.max(0, end - performance.now()) })
-  }, 60)
-  return () => clearTimeout(id)
-}
-
-// What the glyphs mounted next will be, in the order they are likely to be
-// wanted: the groups on screen first (a scroll reaches them next), then the
-// rest of the catalogue (a category switch or a search can reach any of it).
-function useGlyphWarmup(hostRef, groups, catalogue, active) {
-  useEffect(() => {
-    const host = hostRef.current
-    if (!active || !host) return undefined
-    let queue = null
-    let at = 0
-    let cancel = null
-
-    const pump = (deadline) => {
-      if (!queue) {
-        queue = []
-        const seen = new Set()
-        for (const list of [groups, catalogue]) {
-          for (const group of list) {
-            for (const item of group.items) {
-              if (warmedGlyphs.has(item.char) || seen.has(item.char)) continue
-              seen.add(item.char)
-              queue.push(item.char)
-            }
-          }
-        }
-      }
-      while (at < queue.length) {
-        const batch = queue.slice(at, at + WARM_BATCH)
-        at += batch.length
-        // Space-separated so each glyph is its own word, the unit the browser
-        // caches shaping by, exactly as a cell holds it.
-        host.textContent = batch.join(' ')
-        // Reading a size is what forces the layout that shapes the batch.
-        void host.offsetWidth
-        for (const char of batch) warmedGlyphs.add(char)
-        if (deadline.timeRemaining() <= 6) break
-      }
-      host.textContent = ''
-      cancel = at < queue.length ? scheduleIdle(pump) : null
-    }
-
-    cancel = scheduleIdle(pump)
-    return () => {
-      if (cancel) cancel()
-      host.textContent = ''
-    }
-  }, [hostRef, groups, catalogue, active])
-}
 
 export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
   const [copied, setCopied] = useState(null)
   const [gridW, setGridW] = useState(0)
   // Which rows are mounted, tagged with the layout they were measured against.
-  // A layout change (new search, new category, new width) renders no rows until
-  // the layout effect below has measured the new one, in the same commit and
-  // before paint, so a stale range is never mounted against rows it does not
-  // describe.
   const [win, setWin] = useState(NO_WINDOW)
   const winRef = useRef(win)
-  const virtRef = useRef(null)
-  const warmRef = useRef(null)
+  // The container is held in state (a callback ref), not a ref object, because the
+  // window below is worked out DURING render and needs its position.
+  const [virtEl, setVirtEl] = useState(null)
+  useSyncExternalStore(atlasSubscribe, atlasVersion)
+  const atlasGen = atlas.gen
 
   // Column count + square cell size from the measured container width — the
   // same result the old CSS grid produced with repeat(auto-fill, minmax(42px,1fr)).
@@ -186,7 +300,7 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
 
   // Track the container width (also fires when the keep-alive tab un-hides).
   useEffect(() => {
-    const el = virtRef.current
+    const el = virtEl
     if (!el) return
     const ro = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width
@@ -194,79 +308,91 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [virtEl])
+
+  // A new layout (a search, a category, a new width) gets its window in the SAME
+  // render, from the scroll position as it is right now, rather than rendering
+  // nothing and mounting rows in a second commit. React re-runs this render with
+  // the stored value before anything reaches the screen.
+  let current = win
+  if (win.layout !== layout) {
+    const el = virtEl
+    let band = { start: 0, end: 0 }
+    if (el && layout.rows.length) {
+      const top = -el.getBoundingClientRect().top
+      band = windowOf(layout.rows, top - OVERSCAN_PX, top + window.innerHeight + OVERSCAN_PX)
+    }
+    current = { layout, ...band }
+    setWin(current)
+  }
+  useLayoutEffect(() => { winRef.current = win }, [win])
 
   // Window the rows against the page scroll position (rAF-throttled).
-  //
-  // Scrolling by a row or two mounts the new rows in one commit. A jump (a new
-  // layout, a long drag) would mount a whole screen plus overscan in one go, so
-  // that case commits the rows inside the viewport first and lets the overscan
-  // grow outward a few rows per frame until it reaches the target.
   useLayoutEffect(() => {
-    const el = virtRef.current
+    const el = virtEl
     if (!el || !layout.rows.length) return undefined
     const rows = layout.rows
-    const perFrame = Math.max(3, Math.ceil(FRAME_CELLS / Math.max(1, cols)))
-    let scrollRaf = 0
-    let growRaf = 0
-
-    const commit = (start, end) => {
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const top = -el.getBoundingClientRect().top
+      const need = windowOf(rows, top - OVERSCAN_PX, top + window.innerHeight + OVERSCAN_PX)
       const cur = winRef.current
-      // Same range, same layout: keep the identity so the tick re-renders nothing.
-      if (cur.layout === layout && cur.start === start && cur.end === end) return
-      const next = { layout, start, end }
+      if (cur.layout === layout && cur.start === need.start && cur.end === need.end) return
+      const next = { layout, ...need }
       winRef.current = next
       setWin(next)
     }
-
-    const grow = (target) => {
-      growRaf = 0
-      const cur = winRef.current
-      if (cur.layout !== layout) return
-      const step = Math.ceil(perFrame / 2)
-      const start = Math.max(target.start, cur.start - step)
-      const end = Math.min(target.end, cur.end + step)
-      commit(start, end)
-      if (start > target.start || end < target.end) growRaf = requestAnimationFrame(() => grow(target))
-    }
-
-    const update = () => {
-      scrollRaf = 0
-      if (growRaf) { cancelAnimationFrame(growRaf); growRaf = 0 }
-      const top = -el.getBoundingClientRect().top
-      const vh = window.innerHeight
-      const cur = winRef.current
-      const need = windowOf(rows, top - OVERSCAN_PX, top + vh + OVERSCAN_PX)
-      if (cur.layout === layout && cur.start <= need.start && cur.end >= need.end) return
-      const target = windowOf(rows, top - REFILL_PX, top + vh + REFILL_PX)
-      let mounted = 0
-      if (cur.layout === layout) {
-        mounted = Math.max(0, Math.min(cur.end, target.end) - Math.max(cur.start, target.start))
-      }
-      if (target.end - target.start - mounted <= perFrame) {
-        commit(target.start, target.end)
-        return
-      }
-      const core = windowOf(rows, top, top + vh)
-      const start = Math.min(Math.max(core.start, target.start), target.end)
-      const end = Math.max(start, Math.min(core.end, target.end))
-      commit(start, end)
-      growRaf = requestAnimationFrame(() => grow(target))
-    }
-
-    const onScroll = () => { if (!scrollRaf) scrollRaf = requestAnimationFrame(update) }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
     update()
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
     return () => {
-      if (scrollRaf) cancelAnimationFrame(scrollRaf)
-      if (growRaf) cancelAnimationFrame(growRaf)
+      if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
-  }, [layout, cols])
+  }, [layout, virtEl])
 
-  useGlyphWarmup(warmRef, groups, catalogue, cols > 0)
+  // Bitmaps: measure a real cell once the grid has a width (and again if a web
+  // font lands or the pixel ratio changes, either of which can move the glyph).
+  useLayoutEffect(() => {
+    const host = virtEl
+    if (!host || !cols) return undefined
+    atlasConfigure(host)
+    const reconfigure = () => atlasConfigure(host)
+    // A resize fires constantly on a phone (the address bar); only a change of
+    // pixel ratio (browser zoom, moving between screens) needs a new measure.
+    const onResize = () => { if ((window.devicePixelRatio || 1) !== atlas.dpr) atlasConfigure(host) }
+    window.addEventListener('resize', onResize)
+    document.fonts?.addEventListener?.('loadingdone', reconfigure)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      document.fonts?.removeEventListener?.('loadingdone', reconfigure)
+    }
+  }, [cols, cellW, virtEl])
+
+  const shownOf = useCallback((item) => (item.tone && skinTone ? toneOf(item.char, skinTone) : item.char), [skinTone])
+
+  const visible = useMemo(() => layout.rows.slice(current.start, current.end), [layout, current.start, current.end])
+
+  // What is on screen gets drawn first; the rest of the catalogue follows in the
+  // background so a search or a category switch finds its bitmaps ready.
+  useEffect(() => {
+    if (!atlas.config) return
+    const chars = []
+    for (const row of visible) {
+      if (row.type === 'cells') for (const item of row.items) chars.push(shownOf(item))
+    }
+    atlasWant(chars, true)
+  }, [visible, shownOf, atlasGen])
+
+  useEffect(() => {
+    if (!atlas.config) return
+    const chars = []
+    for (const group of catalogue) for (const item of group.items) chars.push(shownOf(item))
+    atlasWant(chars, false)
+  }, [catalogue, shownOf, atlasGen])
 
   const handleCopy = useCallback((emoji, tone) => {
     const text = tone ? toneOf(emoji, skinTone) : emoji
@@ -276,45 +402,43 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     setTimeout(() => setCopied(null), 1200)
   }, [onCopy, skinTone])
 
-  const visible = win.layout === layout ? layout.rows.slice(win.start, win.end) : NO_ROWS
-
   return (
-    <>
-      {/* Windowed list: a relative container at full scroll height; only rows
-          inside the viewport (± overscan) are mounted, absolutely positioned. */}
-      <div
-        className="emoji-virt"
-        ref={virtRef}
-        style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
-      >
-        {/* THE CATEGORY HEADINGS ARE h2, NOT h3. They are the only section
-            headings under this page's h1, so an h3 would step h1 to h3 with no
-            h2 between it (WCAG 1.3.1). Paint is unchanged: `.emoji-vhead h2`
-            sets the size, weight and tracking explicitly. */}
-        {visible.map(row =>
-          row.type === 'head' ? (
-            <div key={row.key} className="emoji-vhead" style={{ top: row.top, height: row.h }}>
-              <h2>{row.cat}</h2>
-              <span className="emoji-section-count">{row.count}</span>
-            </div>
-          ) : (
-            <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
-              {row.items.map((item, i) => (
+    // Windowed list: a relative container at full scroll height; only rows
+    // inside the viewport (± overscan) are mounted, absolutely positioned.
+    <div
+      className="emoji-virt"
+      ref={setVirtEl}
+      style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
+    >
+      {/* THE CATEGORY HEADINGS ARE h2, NOT h3. They are the only section
+          headings under this page's h1, so an h3 would step h1 to h3 with no
+          h2 between it (WCAG 1.3.1). Paint is unchanged: `.emoji-vhead h2`
+          sets the size, weight and tracking explicitly. */}
+      {visible.map(row =>
+        row.type === 'head' ? (
+          <div key={row.key} className="emoji-vhead" style={{ top: row.top, height: row.h }}>
+            <h2>{row.cat}</h2>
+            <span className="emoji-section-count">{row.count}</span>
+          </div>
+        ) : (
+          <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
+            {row.items.map((item, i) => {
+              const shown = shownOf(item)
+              return (
                 <EmojiCell
                   key={i}
                   emoji={item.char}
                   tone={item.tone}
-                  shown={item.tone && skinTone ? toneOf(item.char, skinTone) : item.char}
+                  shown={shown}
+                  sprite={atlas.sprites.get(shown) || null}
                   isCopied={copied === item.char}
                   onCopy={handleCopy}
                 />
-              ))}
-            </div>
-          )
-        )}
-      </div>
-      {/* Where the idle warm-up lays glyphs out. Never seen, never read. */}
-      <div className="emoji-warm" ref={warmRef} aria-hidden="true" />
-    </>
+              )
+            })}
+          </div>
+        )
+      )}
+    </div>
   )
 }
