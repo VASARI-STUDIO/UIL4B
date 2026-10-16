@@ -1,3 +1,9 @@
+// SERVER-ONLY. The full set of brand palettes behind the Palette Builder's Brands
+// panel and the Palette Library. Nothing under src/ may import this file: the
+// browser gets the seven free brands and name-only stubs for the rest from
+// src/data/paletteLibrary.js, and a Pro account gets the whole set from
+// GET /api/ai?library=palettes (api/_lib/library/serve.js).
+//
 // Publicly documented brand colour palettes for the Palette Builder's "Brands"
 // panel. These are public identity colours, not proprietary data. `free` marks
 // the rows visible without Pro (the rest render locked). `system` is the colour

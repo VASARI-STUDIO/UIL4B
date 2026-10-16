@@ -236,9 +236,9 @@ test('no file under /api holds an email address any more', () => {
   // is Resend's own sandbox sender.
   const PUBLISHED = new Set([
     'admin@uil4b.com',
+    'hello@uil4b.com',
+    'help@uil4b.com',
     'support@uil4b.com',
-    'legal@uil4b.com',
-    'privacy@uil4b.com',
     'onboarding@resend.dev',
   ])
 

@@ -78,7 +78,7 @@ export async function resolvePrice(stripe, interval, { env = process.env, cache 
 export function intervalRefusal(rawInterval) {
   if (parseBillingInterval(rawInterval)) return null
   if (rawInterval === 'lifetime') {
-    return { status: 400, error: 'Pro is sold as a monthly, quarterly or yearly subscription. There is no one-off purchase. No payment session was created.' }
+    return { status: 400, error: 'Pro is sold as a monthly or yearly subscription. There is no one-off purchase. No payment session was created.' }
   }
   return { status: 400, error: `interval must be one of: ${BILLING_INTERVALS.join(', ')}` }
 }
@@ -174,9 +174,7 @@ export default async function handler(req, res) {
     // whose only symptom is a card statement, so both now read the same table
     // and tests/unit/trial-cadence.test.js fails if they drift.
     //
-    // Founder, 2026-09-15: monthly bills today, quarterly and yearly each get
-    // seven days. Yearly is unchanged by this commit — it granted 7 before and
-    // grants 7 now — so no existing promise moved.
+    // The rule: monthly bills today; yearly gets a seven-day trial.
     const subscriptionData = { metadata: { firebaseUid: uid } }
     const trialDays = trialDaysFor(interval)
     if (trialDays > 0) {

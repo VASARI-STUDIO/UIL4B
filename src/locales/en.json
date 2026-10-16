@@ -117,10 +117,6 @@
     "ai": {
       "label": "AI Tools",
       "description": "AI-powered generators for images, alt text, and more."
-    },
-    "resources": {
-      "label": "Resources",
-      "description": "Curated external tools, fonts, colours, and inspiration."
     }
   },
   "tools": {
@@ -147,10 +143,6 @@
     "docsDesign": {
       "label": "Design Principles",
       "description": "Visual hierarchy, balance, and design psychology."
-    },
-    "externalResources": {
-      "label": "External Resources",
-      "description": "Curated links to fonts, colours, AI tools, and inspiration."
     },
     "promptLibrary": {
       "label": "Prompt Library",
