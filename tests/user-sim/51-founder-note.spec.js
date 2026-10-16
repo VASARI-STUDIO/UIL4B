@@ -310,15 +310,82 @@ test('a wheel over the note scrolls the note, not the page behind it', async ({ 
   expect(Math.abs(after.page - before.page), 'and must not move the page behind it').toBeLessThan(4)
 })
 
-test('the one action is the feedback channel the app already has', async ({ page }) => {
+test('Send feedback is the feedback channel the app already has', async ({ page }) => {
   watch(page, 'a reader who decides to send feedback')
   await go(page, '/')
   await page.locator('.app-footer-note').click()
-  const action = page.locator('.fnote-action')
-  await expect(action).toHaveAttribute('href', '/feedback')
+  const action = page.locator('.fnote-actions a[href="/feedback"]')
+  await expect(action).toHaveCount(1)
+  await expect(action).toHaveText('Send feedback')
   await action.click()
   await expect(page).toHaveURL(/\/feedback$/)
   await expect(page.locator('.fnote')).toHaveCount(0)
+})
+
+test('Support this project sits beside Send feedback and opens the Plans page', async ({ page }) => {
+  watch(page, 'a reader who wants to support the project')
+  await go(page, '/')
+  await page.locator('.app-footer-note').click()
+  await expect(page.locator('.fnote')).toBeVisible()
+
+  const actions = page.locator('.fnote-actions .fnote-action')
+  await expect(actions, 'the footer offers exactly two actions').toHaveCount(2)
+  await expect(actions.nth(0), 'feedback comes first').toHaveText('Send feedback')
+  await expect(actions.nth(1), 'support comes second').toHaveText('Support this project')
+
+  const support = page.locator('.fnote-actions a[href="/plans"]')
+  await expect(support).toHaveCount(1)
+  await expect(support).toHaveText('Support this project')
+  await support.click()
+  await expect(page).toHaveURL(/\/plans$/)
+  await expect(page.locator('.fnote'), 'the popup closes when it is followed').toHaveCount(0)
+})
+
+test('each footer action closes the popup by itself, not as a side effect of the page changing', async ({ page }) => {
+  // Following a link usually unmounts the footer on the way to the next page,
+  // which would close the popup whether or not the action asked it to. So the
+  // navigation is cancelled at the anchor (the router checks defaultPrevented
+  // and stands down) and only the action's own click handler is left to close it.
+  watch(page, 'a reader who presses an action that does not navigate')
+  await go(page, '/')
+  const start = page.url()
+  for (const href of ['/feedback', '/plans']) {
+    await page.locator('.app-footer-note').click()
+    await expect(page.locator('.fnote')).toBeVisible()
+    const action = page.locator(`.fnote-actions a[href="${href}"]`)
+    await action.evaluate((el) => el.addEventListener('click', (e) => e.preventDefault()))
+    await action.click()
+    await expect(page.locator('.fnote'), `${href} must close the popup itself`).toHaveCount(0)
+    expect(page.url(), `${href} navigation was cancelled for this check`).toBe(start)
+  }
+})
+
+/** Geometry of both footer actions, measured in one go. */
+const actionGeometry = (page) => page.evaluate(() => {
+  const feedback = document.querySelector('.fnote-actions a[href="/feedback"]')
+  const support = document.querySelector('.fnote-actions a[href="/plans"]')
+  const read = (el) => {
+    const r = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    const text = range.getBoundingClientRect()
+    return {
+      top: Math.round(r.top),
+      width: Math.round(r.width),
+      height: Math.round(r.height),
+      // scrollWidth and clientWidth are rounded to whole pixels, so a label that
+      // fits with room to spare can still read one apart. `overflow` is that
+      // rounded figure; `spill` is the label's own measured edge against the
+      // button's padded content box, which has no rounding in it.
+      overflow: el.scrollWidth - el.clientWidth,
+      spill: Math.max(
+        r.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft) - text.left,
+        text.right - (r.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight)),
+      ),
+    }
+  }
+  return { feedback: read(feedback), support: read(support) }
 })
 
 test('at 390px the note is a sheet that fits, and nothing scrolls sideways', async ({ browser }) => {
@@ -333,13 +400,11 @@ test('at 390px the note is a sheet that fits, and nothing scrolls sideways', asy
   const m = await page.evaluate(() => {
     const panel = document.querySelector('.fnote')
     const r = panel.getBoundingClientRect()
-    const action = document.querySelector('.fnote-action').getBoundingClientRect()
     return {
       left: Math.round(r.left),
       right: Math.round(r.right),
       bottom: Math.round(r.bottom),
       height: Math.round(r.height),
-      actionWidth: Math.round(action.width),
       docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       inner: window.innerWidth,
     }
@@ -348,7 +413,36 @@ test('at 390px the note is a sheet that fits, and nothing scrolls sideways', asy
   expect(m.right).toBe(m.inner)
   expect(Math.abs(m.bottom - 844), 'it sits on the bottom edge').toBeLessThan(2)
   expect(m.height, 'and must not exceed the viewport').toBeLessThanOrEqual(844)
-  expect(m.actionWidth, 'the action goes full width on a phone').toBeGreaterThan(280)
   expect(m.docOverflow, 'nothing may push the page sideways').toBeLessThanOrEqual(0)
+
+  const g = await actionGeometry(page)
+  expect(g.feedback.top, 'both actions sit on one row').toBe(g.support.top)
+  for (const [name, a] of Object.entries(g)) {
+    expect(a.width, `${name} is wide enough to hit`).toBeGreaterThanOrEqual(120)
+    expect(a.height, `${name} is a full touch target`).toBeGreaterThanOrEqual(44)
+    expect(a.height, `${name} label stays on one line`).toBeLessThanOrEqual(48)
+  }
+  await ctx.close()
+})
+
+test('at 320px neither action label wraps or spills out of its button', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 })
+  const page = await ctx.newPage()
+  watch(page, 'a reader on the narrowest phone')
+  await go(page, '/')
+  await page.locator('.app-footer-note').click()
+  await expect(page.locator('.fnote')).toBeVisible()
+  await settle(page)
+
+  const g = await actionGeometry(page)
+  expect(g.feedback.top, 'both actions still sit on one row').toBe(g.support.top)
+  for (const [name, a] of Object.entries(g)) {
+    expect(a.spill, `${name} label spills past its padding`).toBeLessThanOrEqual(0)
+    expect(a.overflow, `${name} label overflows its button`).toBeLessThanOrEqual(1)
+    expect(a.height, `${name} label wrapped onto a second line`).toBeLessThanOrEqual(48)
+    expect(a.height, `${name} is a full touch target`).toBeGreaterThanOrEqual(44)
+  }
+  const docOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(docOverflow, 'nothing may push the page sideways').toBeLessThanOrEqual(0)
   await ctx.close()
 })
