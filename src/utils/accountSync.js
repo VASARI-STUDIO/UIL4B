@@ -174,6 +174,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-state-shades': { scope: 'cache', why: 'Derived from the working design' },
   'vs-gf-catalog': { scope: 'cache', why: 'Google Fonts catalogue' },
   'vs-billing-dismissed': { scope: 'session', why: 'Billing notice dismissed for this tab session' },
+  'vs-verify-dismissed': { scope: 'session', why: 'Verify-your-email bar dismissed for this tab session (vs-verify-dismissed:<uid>)' },
   'vs-resume-after-onboarding': { scope: 'session', why: 'Where to go after onboarding, this tab only' },
   'vs-chunk-reload': { scope: 'session', why: 'Reload-loop guard after a deploy' },
   'vs-sync-meta': { scope: 'bookkeeping', why: 'Owner, per-key stamps and fingerprints for this module' },
