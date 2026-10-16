@@ -183,7 +183,7 @@ export default function ColorPickerPop({
   // Land on the saturation/value pad, not the panel: this popover's whole
   // purpose is that one control, and anything else costs a keyboard user a tab
   // every single time they open it.
-  const { triggerRef, popRef } = usePopover(open, close, { initialFocus: '.cpk-pad' })
+  const { triggerRef, popRef } = usePopover(open, close, { initialFocus: '.cpk-pad', portalled: portal })
 
   useLayoutEffect(() => {
     if (!open || !portal) return

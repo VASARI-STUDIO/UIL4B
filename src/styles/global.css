@@ -3063,6 +3063,10 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-pop{display:flex;flex-direction:column;gap:var(--s-2);width:244px}
 .pop.cpk-pop{padding:var(--s-3)}
 .pop.cpk-pop[data-pop-fixed="true"]{position:fixed;inset:auto;left:var(--select-left,8px);top:var(--select-top,0px);z-index:var(--cpk-layer,130)}
+/* Opened upward: pin the BOTTOM edge to the line above the trigger, so a panel
+   that grows after it opens (the Recent row) grows up, never over its trigger.
+   `translate` is its own property, so the entry animation's transform is kept. */
+.pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"]{top:var(--select-anchor-top,0px);translate:0 -100%}
 /* Which colour is being edited, in the shared .pop-head voice. */
 .cpk-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);padding:0}
 .cpk-head-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
