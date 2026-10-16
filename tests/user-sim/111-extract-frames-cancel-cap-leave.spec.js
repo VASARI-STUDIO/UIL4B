@@ -30,8 +30,11 @@
 //     gone and seeks keep counting).
 //   - cancelExtract(): delete `abortRef.current.abort('cancel')`
 //     -> both Cancel tests go red (no toast, controls stay disabled).
-//   - extract(): change `Math.min(MAX_FRAMES, total + 1)` to `total + 1`
+//   - extract(): change `Math.min(MAX_FRAMES, wanted)` to `wanted`
 //     -> the cap test goes red (600 frames made, not 500).
+//   - abandoned(): change `disposedRef.current.has(ac)` back to
+//     `signal.aborted && signal.reason !== 'cancel'` (commit 36e7a90e)
+//     -> "Cancel, then switching mode" goes red (a toast fires after the tab is gone).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -54,7 +57,15 @@ function collectNoise(page) {
 /** Replace the video's length and seeking with something the test controls. */
 async function fakeTheClock(page) {
   await page.addInitScript(() => {
-    window.__fake = { duration: 10, seekMs: 0, seeks: 0 }
+    window.__fake = { duration: 10, seekMs: 0, seeks: 0, encodeMs: 0 }
+    // encodeMs > 0 holds each toBlob result back, like a slow encode that
+    // cannot be interrupted: the one place a Cancel is still "in flight".
+    const realToBlob = HTMLCanvasElement.prototype.toBlob
+    HTMLCanvasElement.prototype.toBlob = function (cb, ...rest) {
+      const ms = window.__fake.encodeMs
+      if (!ms) return realToBlob.call(this, cb, ...rest)
+      return realToBlob.call(this, (b) => setTimeout(() => cb(b), ms), ...rest)
+    }
     const proto = HTMLVideoElement.prototype
     Object.defineProperty(proto, 'duration', { configurable: true, get() { return window.__fake.duration } })
     Object.defineProperty(proto, 'currentTime', {
@@ -206,6 +217,7 @@ test.describe('Extract frames: the 500-frame cap', () => {
     // 300 s at the default 2 fps: 600 frames, 100 over the cap.
     await openWithClip(page, { duration: 300, seekMs: 0 })
     await expect(page.locator('.fc-note').filter({ hasText: /frames/ }).first()).toContainText('~600 frames')
+    await expect(page.getByText(`${MAX_FRAMES} (capped)`, { exact: true }), 'the Est. frames stat shows the uncapped number').toBeVisible()
     await extractBtn(page).click()
 
     const toast = page.locator('.toast.show')
@@ -216,6 +228,18 @@ test.describe('Extract frames: the 500-frame cap', () => {
     await expect(page.locator('.fc-grid li').last().locator('.fc-name')).toHaveText('frame-0500.png')
     await expect(extractBtn(page)).toBeEnabled()
     expect(noise).toEqual([])
+  })
+
+  test('an estimate of exactly 500 is not capped: no note, no cap toast', async ({ page }) => {
+    watch(page, PERSONA)
+    test.setTimeout(90_000)
+    // 250 s at the default 2 fps: exactly 500 frames, nothing dropped.
+    await openWithClip(page, { duration: 250, seekMs: 0 })
+    const note = page.locator('.fc-note').filter({ hasText: /frames/ }).first()
+    await expect(note).toContainText('~500 frames')
+    await expect(note, 'the cap note shows for a run that fits').not.toContainText('capped')
+    await extractBtn(page).click()
+    await expect(page.locator('.toast.show')).toHaveText(/^Extracted 500 frames$/, { timeout: 60000 })
   })
 
   test('a run under the cap finishes with the plain "Extracted N frames" toast', async ({ page }) => {
@@ -251,5 +275,29 @@ test.describe('Extract frames: leaving mid-run', () => {
     expect(await toasts(page), 'a toast fired from a run nobody can see').toEqual([])
     expect(noise, 'console errors or warnings after leaving mid-run').toEqual([])
 
+  })
+
+  test('Cancel, then switching mode before the in-flight encode returns, stays silent', async ({ page }) => {
+    watch(page, PERSONA)
+    const noise = collectNoise(page)
+    // The first frame's encode takes 1.5 s and cannot be interrupted. Cancel
+    // lands inside it, then the tab changes before it returns. An AbortController
+    // keeps its FIRST reason ('cancel'), so a check on the reason alone would
+    // treat the run as merely cancelled and toast + set state on a gone page.
+    await openWithClip(page, { duration: 10, seekMs: 0 })
+    await page.evaluate(() => { window.__fake.encodeMs = 1500 })
+    await extractBtn(page).click()
+    await expect(cancelBtn(page)).toBeVisible()
+    await expect.poll(() => seeks(page), { message: 'the run never reached its first seek' }).toBeGreaterThanOrEqual(1)
+
+    await cancelBtn(page).click()
+    await page.getByRole('tab', { name: 'Image', exact: true }).click()
+    await expect(page.locator('.fc-drop').first()).toBeVisible()
+
+    // Absence check: wait past the 1.5 s encode so the late result has landed.
+    await page.waitForTimeout(2500)
+
+    expect(await toasts(page), 'a toast fired from a run that was cancelled and then left').toEqual([])
+    expect(noise, 'console errors or warnings after Cancel then leave').toEqual([])
   })
 })
