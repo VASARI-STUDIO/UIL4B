@@ -92,6 +92,30 @@ function perMonthOf(total, months) {
   return Math.round((total / months) * 100) / 100
 }
 
+/**
+ * The amount Stripe will actually charge for `liveKey` in `currency`, or
+ * undefined when the price service has no live price for that pair.
+ *
+ * /api/get-prices fills EVERY cadence and currency, from DEFAULT_PRICES when
+ * Stripe has nothing, and says so beside the numbers: `source[cadence]` is
+ * 'live' or 'fallback', and `currencyAvailability[cadence][currency]` is true
+ * only when the live Stripe price carries that currency. A fallback amount is
+ * a display default, not a price, so it is never returned here: showing it
+ * buys a trial button that ends in a 503 at checkout.
+ *
+ * A payload with neither field is the older bare shape (a test stub); its
+ * amounts are read as given. The route always sends both.
+ */
+export function livePriceOf(prices, liveKey, currency) {
+  const amount = prices?.[liveKey]?.[currency]
+  if (typeof amount !== 'number' || !Number.isFinite(amount)) return undefined
+  const source = prices?.source?.[liveKey]
+  if (source !== undefined && source !== 'live') return undefined
+  const availability = prices?.currencyAvailability
+  if (availability && availability[liveKey]?.[currency] !== true) return undefined
+  return amount
+}
+
 // Resolve the ladder against whatever the live price service returned.
 //
 // `prices` is the raw payload from usePrices() — { monthly: { usd: 4.99 }, … } —
@@ -100,8 +124,8 @@ function perMonthOf(total, months) {
 // and callers should hold a skeleton rather than flash the fallback.
 export function resolvePlanLadder({ prices, currency = APPROVED_CURRENCY } = {}) {
   return PLAN_LADDER.map((plan) => {
-    const live = prices?.[plan.liveKey]?.[currency]
-    const isLive = typeof live === 'number' && Number.isFinite(live)
+    const live = livePriceOf(prices, plan.liveKey, currency)
+    const isLive = typeof live === 'number'
     const total = isLive ? live : plan.approvedTotal
     const planCurrency = isLive ? currency : APPROVED_CURRENCY
     const perMonth = perMonthOf(total, plan.months)
@@ -139,6 +163,9 @@ export function cheapestPerMonth(resolved) {
 export function savingsVsMonthly(plan, resolved) {
   const monthly = resolved.find((p) => p.id === 'monthly')
   if (!monthly?.perMonth || !plan?.perMonth || plan.id === 'monthly') return 0
+  // Two rates in two currencies (a live A$ yearly beside the US$ monthly
+  // fallback) are not comparable, so there is no saving to state.
+  if (monthly.currency !== plan.currency) return 0
   const pct = Math.round((1 - plan.perMonth / monthly.perMonth) * 100)
   return pct >= 5 ? pct : 0
 }

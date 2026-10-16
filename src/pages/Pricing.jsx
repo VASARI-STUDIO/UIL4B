@@ -317,12 +317,12 @@ export default function Pricing() {
   // Every state's note sits in one grid cell and the inactive ones are hidden,
   // so the slot is always as tall as the tallest note and nothing moves when the
   // switch is used or the price arrives. Until the live price lands, the hidden
-  // notes are sized with the ladder's fallback amounts. A cadence with no live
-  // price in the visitor's currency can still be named inside the active note
-  // (the other cadence's price), so its fallback is an approved USD amount shown
-  // as USD, the way resolvePlanLadder quotes it, never as the visitor's currency.
-  // On a page in another currency it carries "US$", so a bare "$" never reads as
-  // the page's own dollar.
+  // notes are sized with the ladder's fallback amounts, shown as the approved USD
+  // amounts the way resolvePlanLadder quotes them, never as the visitor's
+  // currency. On a page in another currency they carry "US$", so a bare "$"
+  // never reads as the page's own dollar. Once the prices have landed the notes
+  // name only live amounts: the monthly price a longer cadence is set beside
+  // (`monthlyForNote`) is the live one in this currency, or it is left out.
   const qualify = currency !== APPROVED_CURRENCY
   const sized = offers.map((o) => {
     const fallback = OFFER_BY_ID[o.id]
@@ -335,10 +335,11 @@ export default function Pricing() {
   const sizedBest = sized.find((o) => o.id === DEFAULT_BILLING)
   const sizedMonthly = sized.find((o) => o.id === 'monthly')
   const bestLive = !!offers.find((o) => o.id === DEFAULT_BILLING)?.amountLabel
+  const monthlyForNote = price.loaded ? offers.find((o) => o.id === 'monthly') : sizedMonthly
   const noteStates = [
     ...sized.map((o) => ({
       id: o.id,
-      lines: [billedLine(o, sizedMonthly), CANCEL_LINE].filter(Boolean),
+      lines: [billedLine(o, monthlyForNote), CANCEL_LINE].filter(Boolean),
       under: underLine(o, sizedBest, bestLive),
     })),
     { id: 'loading', lines: ['Checking the live price…'], under: '' },

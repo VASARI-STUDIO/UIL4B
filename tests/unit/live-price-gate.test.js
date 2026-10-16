@@ -1,0 +1,249 @@
+// A price that is not live from Stripe is never shown as buyable, and a
+// checkout never changes the currency the buyer was shown.
+//
+// /api/get-prices fills every cadence and currency, from DEFAULT_PRICES when
+// Stripe has nothing, and flags the difference in `source` and
+// `currencyAvailability`. These tests hold the surfaces to those flags:
+//
+//   1. a fallback or unavailable cadence has no amount and is not offered
+//   2. the saving and the monthly price beside it only compare live prices in
+//      one currency
+//   3. /checkout reads its amount and note off the ladder, not a two-way ternary
+//   4. a currency Stripe cannot honour is a refusal, never a retry without it
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { read, stripComments } from './helpers/source-text.js'
+import {
+  BILLING_OPTIONS, BILLED_EVERY, resolveOffers,
+} from '../../src/config/planFacts.js'
+import { livePriceOf, resolvePlanLadder, savingsVsMonthly } from '../../src/config/planLadder.js'
+import { CURRENCY_CODES } from '../../api/_lib/pricing.js'
+import { createSessionInCurrency, currencyRefusal, intervalRefusal } from '../../api/create-checkout.js'
+
+// /api/get-prices' own answer shape, built the way api/get-prices.js builds it.
+function payload({ live = {}, currencies = ['usd', 'aud'] } = {}) {
+  const response = { availability: {}, currencyAvailability: {}, source: {} }
+  for (const interval of ['monthly', 'yearly']) {
+    const map = live[interval] || null
+    response[interval] = map || { usd: 7, aud: 11 }
+    response.availability[interval] = !!map
+    response.source[interval] = map ? 'live' : 'fallback'
+    response.currencyAvailability[interval] = Object.fromEntries(
+      currencies.map((c) => [c, !!map && map[c] != null]),
+    )
+  }
+  return response
+}
+const offerOf = (offers, id) => offers.find((o) => o.id === id)
+
+// ── 1. fallback prices are not offered ───────────────────────────────────────
+
+test('a cadence served from the fallback table has no amount and is not available', () => {
+  const prices = payload({ live: { monthly: { usd: 7, aud: 11 } } })
+  const { offers, priceServiceDown } = resolveOffers({ prices, currency: 'aud', loaded: true })
+  assert.equal(priceServiceDown, false, 'one cadence is live, so the service is not down')
+  const yearly = offerOf(offers, 'yearly')
+  assert.equal(yearly.available, false)
+  assert.equal(yearly.amountLabel, null, 'a fallback default was printed as a price')
+  assert.equal(yearly.totalLabel, null)
+  assert.equal(yearly.billedNote, null)
+  assert.match(yearly.unavailableNote, /^No AUD price for this billing period/)
+  assert.equal(offerOf(offers, 'monthly').available, true)
+  assert.equal(offerOf(offers, 'monthly').unavailableNote, null)
+})
+
+test('a currency the live Stripe price does not carry is unavailable, even though the table has a number', () => {
+  // Monthly is live in USD only; the response still carries DEFAULT_PRICES' aud.
+  const prices = payload({ live: { monthly: { usd: 7 }, yearly: { usd: 48, aud: 96 } } })
+  assert.equal(prices.monthly.aud, undefined, 'the fixture should have no aud on the live monthly price')
+  prices.monthly.aud = 11
+  assert.equal(prices.currencyAvailability.monthly.aud, false)
+  const { offers } = resolveOffers({ prices, currency: 'aud', loaded: true })
+  assert.equal(offerOf(offers, 'monthly').amountLabel, null)
+  assert.equal(offerOf(offers, 'monthly').available, false)
+  assert.equal(livePriceOf(prices, 'monthly', 'aud'), undefined)
+  assert.equal(livePriceOf(prices, 'monthly', 'usd'), 7)
+})
+
+test('when no cadence is live the service counts as down', () => {
+  const { offers, priceServiceDown } = resolveOffers({ prices: payload(), currency: 'usd', loaded: true })
+  assert.equal(priceServiceDown, true)
+  assert.ok(offers.every((o) => !o.available && o.amountLabel === null))
+})
+
+test('livePriceOf reads the payload flags, and still takes the bare shape a stub sends', () => {
+  assert.equal(livePriceOf({ yearly: { usd: 48 }, source: { yearly: 'fallback' } }, 'yearly', 'usd'), undefined)
+  assert.equal(livePriceOf({ yearly: { usd: 48 }, source: { yearly: 'live' } }, 'yearly', 'usd'), 48)
+  assert.equal(livePriceOf({ yearly: { usd: 48 }, currencyAvailability: { yearly: { usd: false } } }, 'yearly', 'usd'), undefined)
+  assert.equal(livePriceOf({ yearly: { usd: 48 } }, 'yearly', 'usd'), 48)
+  assert.equal(livePriceOf(null, 'yearly', 'usd'), undefined)
+})
+
+test('the price hook and the ladder resolve through livePriceOf', () => {
+  const hook = stripComments(read('src/hooks/usePrices.js'))
+  assert.match(hook, /livePriceOf\(prices, 'yearly', currency\)/,
+    'useProPrice reads raw amounts again — a fallback default would print as a price')
+  assert.match(hook, /livePriceOf\(prices, 'monthly', currency\)/)
+  const aud = resolvePlanLadder({ prices: payload({ live: { yearly: { usd: 48, aud: 96 } } }), currency: 'aud' })
+  assert.equal(aud.find((p) => p.id === 'monthly').isLive, false, 'a fallback monthly price was marked live')
+  assert.equal(aud.find((p) => p.id === 'yearly').isLive, true)
+})
+
+test('/plans takes its amounts and button state from resolveOffers', () => {
+  const page = stripComments(read('src/pages/Pricing.jsx'))
+  assert.match(page, /resolveOffers\(\{ prices, currency, loaded: price\.loaded \}\)/)
+  assert.doesNotMatch(page, /prices\?\.\[[^\]]+\]\?\.\[currency\]/, '/plans reads a raw price again')
+  assert.match(page, /const hasAmount = !!offer\.amountLabel/)
+  assert.match(page, /const priceServiceDown = price\.loaded && !hasAmount/)
+  // The unavailable button comes before the Link that starts a trial.
+  const disabled = page.indexOf('} else if (priceServiceDown) {')
+  const trial = page.indexOf('to={proTo}', disabled)
+  assert.ok(disabled > 0, 'an unavailable cadence no longer gets the unavailable button')
+  assert.ok(trial > disabled, 'the trial button is reachable without a live amount')
+  assert.match(page.slice(disabled, trial), /aria-disabled="true"/)
+})
+
+test('Quarterly stays off sale', () => {
+  assert.deepEqual(BILLING_OPTIONS.map((o) => o.id), ['monthly', 'yearly'])
+  assert.deepEqual(resolveOffers({ prices: payload(), currency: 'usd' }).offers.map((o) => o.id), ['monthly', 'yearly'])
+  assert.equal(intervalRefusal('quarterly').status, 400)
+})
+
+// ── 2. the compare note names a live monthly price in the same currency ──────
+
+test('no saving unless the monthly price is live in the same currency', () => {
+  // Yearly is live in AUD; monthly has no live price at all.
+  const noMonthly = resolveOffers({
+    prices: payload({ live: { yearly: { usd: 48, aud: 36 } } }), currency: 'aud', loaded: true,
+  }).offers
+  assert.equal(offerOf(noMonthly, 'yearly').available, true)
+  assert.equal(offerOf(noMonthly, 'yearly').savingLabel, '', 'a fallback monthly price was compared with a live yearly one')
+  assert.equal(offerOf(noMonthly, 'yearly').saving, 0)
+
+  // Monthly is live in USD only, yearly in AUD: not comparable.
+  const crossCurrency = resolveOffers({
+    prices: payload({ live: { monthly: { usd: 7 }, yearly: { usd: 48, aud: 36 } } }), currency: 'aud', loaded: true,
+  }).offers
+  assert.equal(offerOf(crossCurrency, 'monthly').available, false)
+  assert.equal(offerOf(crossCurrency, 'yearly').savingLabel, '')
+
+  // Both live in AUD: a saving is stated.
+  const both = resolveOffers({
+    prices: payload({ live: { monthly: { usd: 7, aud: 11 }, yearly: { usd: 48, aud: 96 } } }), currency: 'aud', loaded: true,
+  }).offers
+  assert.match(offerOf(both, 'yearly').savingLabel, /^Save \d+%$/)
+})
+
+test('the Yearly note names the monthly price only when it is the live one', () => {
+  const page = stripComments(read('src/pages/Pricing.jsx'))
+  assert.match(page, /const monthlyForNote = price\.loaded \? offers\.find\(\(o\) => o\.id === 'monthly'\) : sizedMonthly/)
+  assert.match(page, /billedLine\(o, monthlyForNote\)/, 'the note reads the sized fallback monthly price again')
+})
+
+test('the upgrade modal states no saving across two currencies', () => {
+  // A live A$36 yearly beside a US$7 monthly fallback would read as 57% off.
+  const ladder = resolvePlanLadder({ prices: payload({ live: { yearly: { usd: 48, aud: 36 } } }), currency: 'aud' })
+  const yearly = ladder.find((p) => p.id === 'yearly')
+  const monthly = ladder.find((p) => p.id === 'monthly')
+  assert.notEqual(yearly.currency, monthly.currency, 'the fixture should mix currencies')
+  assert.equal(savingsVsMonthly(yearly, ladder), 0)
+})
+
+// ── 3. checkout reads the ladder ─────────────────────────────────────────────
+
+test('/checkout reads its amount and note from the ladder, with no per-cadence ternary', () => {
+  const page = stripComments(read('src/pages/Checkout.jsx'))
+  assert.doesNotMatch(page, /planKey === '(monthly|quarterly|yearly)'/, 'a per-cadence ternary is back')
+  assert.doesNotMatch(page, /proPrice\.(yearlyTotal|monthly|yearlyPerMonth|savingsPct)\b/)
+  assert.match(page, /const amount = chosenOption\?\.available \? formatPrice\(chosenOption\.total, proPrice\.currency\) : null/)
+  assert.match(page, /BILLED_EVERY\[chosenOption/)
+})
+
+test('/checkout opens no payment form for a cadence with no live price', () => {
+  const page = stripComments(read('src/pages/Checkout.jsx'))
+  const gate = page.indexOf(') : !amount ? (')
+  const embed = page.indexOf('<CheckoutEmbed fetchClientSecret')
+  assert.ok(gate > 0, 'the unavailable-price branch is gone')
+  assert.ok(gate < embed, 'the payment form is reachable without a live amount')
+  assert.match(page.slice(gate, embed), /Checkout unavailable/)
+})
+
+test('every buyable cadence resolves an amount, a per-month rate and a billing line from the ladder', () => {
+  const live = { monthly: { usd: 7 }, yearly: { usd: 48 } }
+  const { offers } = resolveOffers({ prices: payload({ live }), currency: 'usd', loaded: true })
+  assert.deepEqual(offers.map((o) => o.id), BILLING_OPTIONS.map((o) => o.id))
+  for (const o of offers) {
+    assert.equal(o.total, live[o.id].usd)
+    assert.ok(BILLED_EVERY[o.id], `${o.id} has no billing wording`)
+    assert.ok(o.billedNote.includes('cancel any time'))
+  }
+  assert.equal(offerOf(offers, 'yearly').amountLabel, '$4')
+})
+
+// ── 4. a currency failure never becomes another currency ─────────────────────
+
+const currencyFailure = () => Object.assign(
+  new Error('You cannot combine currencies on a single customer. This customer has an active subscription, subscription schedule, discount, quote, or invoice item with currency usd.'),
+  { type: 'StripeInvalidRequestError', param: 'currency' },
+)
+function fakeSessions(failures = []) {
+  const calls = []
+  return {
+    calls,
+    checkout: {
+      sessions: {
+        async create(params) {
+          calls.push(params)
+          const failure = failures.shift()
+          if (failure) throw failure
+          return { id: 'cs_test', client_secret: 'secret' }
+        },
+      },
+    },
+  }
+}
+const quiet = (t) => t.mock.method(console, 'error', () => {})
+
+test('a currency Stripe refuses is a clear 409, and no session opens without the currency', async (t) => {
+  quiet(t)
+  const stripe = fakeSessions([currencyFailure()])
+  const result = await createSessionInCurrency(stripe, { mode: 'subscription' }, 'aud')
+  assert.equal(result.session, undefined, 'a session was opened after the currency failed')
+  assert.equal(result.refusal.status, 409)
+  assert.match(result.refusal.error, /AUD/)
+  assert.match(result.refusal.error, /No payment session was created/)
+  assert.equal(stripe.calls.length, 1, 'the request was retried')
+  assert.equal(stripe.calls[0].currency, 'aud')
+})
+
+test('the requested currency is the one sent', async () => {
+  const stripe = fakeSessions()
+  const result = await createSessionInCurrency(stripe, { mode: 'subscription' }, 'nzd')
+  assert.equal(result.session.id, 'cs_test')
+  assert.equal(stripe.calls.length, 1)
+  assert.equal(stripe.calls[0].currency, 'nzd')
+})
+
+test('an error that is not about the currency is thrown, not retried', async () => {
+  const outage = Object.assign(new Error('Stripe is down'), { type: 'StripeAPIError' })
+  const stripe = fakeSessions([outage])
+  await assert.rejects(createSessionInCurrency(stripe, { mode: 'subscription' }, 'aud'), /Stripe is down/)
+  assert.equal(stripe.calls.length, 1)
+})
+
+test('create-checkout no longer retries a failed session without its currency', () => {
+  const route = stripComments(read('api/create-checkout.js'))
+  assert.doesNotMatch(route, /delete sessionParams\.currency/)
+  assert.match(route, /createSessionInCurrency\(stripe, sessionParams, wantCurrency\)/)
+  assert.match(route, /currencyRefusal\(req\.body\?\.currency\)/, 'the handler no longer refuses an unknown currency')
+})
+
+test('a currency the route does not sell is a 400, not dropped', () => {
+  assert.equal(currencyRefusal(undefined), null)
+  assert.equal(currencyRefusal(null), null)
+  for (const code of CURRENCY_CODES) assert.equal(currencyRefusal(code), null)
+  assert.equal(currencyRefusal('AUD'), null)
+  assert.equal(currencyRefusal('jpy').status, 400)
+  assert.equal(currencyRefusal(7).status, 400)
+  assert.equal(currencyRefusal('').status, 400)
+})
