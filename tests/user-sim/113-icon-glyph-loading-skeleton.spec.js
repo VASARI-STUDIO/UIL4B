@@ -569,22 +569,39 @@ for (const scheme of ['light', 'dark']) {
           const atLoad = await page.evaluate(() => window.__groupLoadOpacity)
           expect(atLoad.length).toBeGreaterThan(0)
           expect(atLoad.every(opacity => opacity === '0')).toBe(true)
-          // The app follows the OS setting and writes its answer to
-          // html[data-reduced-motion] a render after the media change. Wait for
-          // that write before setting the attribute by hand, or it lands after
-          // the test's value and overwrites it.
-          const html = page.locator('html')
-          await page.emulateMedia({ reducedMotion: 'reduce' })
-          await expect(html).toHaveAttribute('data-reduced-motion', 'true')
+          // The app follows the OS setting live and rewrites html[data-reduced-motion]
+          // from a media-query change event, then announces it with
+          // vs-appearance-changed. Wait for that announcement before overriding the
+          // attribute by hand, or the late rewrite can overwrite the override.
+          // Only an announcement carrying the target value counts: a late account
+          // sync can announce an unrelated change first. If none arrives in 5 s the
+          // wait fails with a clear message instead of hanging to the test timeout.
+          const emulateAndSettle = async reducedMotion => {
+            await page.evaluate(want => {
+              window.__appearanceApplied = new Promise((resolve, reject) => {
+                const onChange = e => {
+                  if (e.detail?.reducedMotion !== want) return
+                  clearTimeout(timer)
+                  window.removeEventListener('vs-appearance-changed', onChange)
+                  resolve()
+                }
+                const timer = setTimeout(() => {
+                  window.removeEventListener('vs-appearance-changed', onChange)
+                  reject(new Error(`vs-appearance-changed with reducedMotion=${want} did not fire within 5 s`))
+                }, 5000)
+                window.addEventListener('vs-appearance-changed', onChange)
+              })
+              // A rejection before it is awaited must not count as unhandled.
+              window.__appearanceApplied.catch(() => {})
+            }, reducedMotion === 'reduce')
+            await page.emulateMedia({ reducedMotion })
+            await page.evaluate(() => window.__appearanceApplied)
+          }
+          await emulateAndSettle('reduce')
           await expect(glyph).toHaveCSS('transition-property', 'none')
           await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'false' })
           await expect(glyph).toHaveCSS('transition-property', 'opacity')
-          // The attribute is 'false' here already, so waiting for 'false' after the
-          // change would pass before the app has written anything. Park it on
-          // 'true' first, so the only way to see 'false' is the app's own write.
-          await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
-          await page.emulateMedia({ reducedMotion: 'no-preference' })
-          await expect(html).toHaveAttribute('data-reduced-motion', 'false')
+          await emulateAndSettle('no-preference')
           await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
           await expect(glyph).toHaveCSS('transition-property', 'none')
         } finally { release() }
