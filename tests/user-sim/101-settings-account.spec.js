@@ -98,7 +98,7 @@ test.describe('settings — billing', () => {
     await expect(alert).toContainText('nothing about your plan has changed')
   })
 
-  test('checkout never prints "null" when the price list lacks this currency', async ({ page }) => {
+  test('checkout with no live price in this currency says pricing is unreachable, never "null"', async ({ page }) => {
     watch(page, 'a buyer whose currency the price service does not list')
     await page.route('**/api/get-prices*', (r) => r.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({ monthly: {}, quarterly: {}, yearly: {} }),
@@ -108,7 +108,21 @@ test.describe('settings — billing', () => {
     const note = page.locator('.checkout-plan-note')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
+    await expect(note).toContainText('Live pricing is unreachable')
+  })
+
+  test('checkout for a cadence with no live price says so while another cadence is live', async ({ page }) => {
+    watch(page, 'a buyer whose yearly price is not live')
+    await page.route('**/api/get-prices*', (r) => r.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability({ monthly: { usd: 7 }, quarterly: {}, yearly: {} })),
+    }))
+    await signIn(page, { plan: 'free' })
+    await go(page, '/checkout?plan=yearly')
+    const note = page.locator('.checkout-plan-note')
+    await expect(note).toBeVisible()
+    await expect(note).not.toContainText('null')
     await expect(note).toContainText('price for this billing period')
+    await expect(note).not.toContainText('unreachable')
   })
 
   test('a quarterly-or-monthly subscription is never called "Billed monthly" on a guess', async ({ page }) => {

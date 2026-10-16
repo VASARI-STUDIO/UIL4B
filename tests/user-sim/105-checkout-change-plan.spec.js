@@ -514,6 +514,12 @@ test.describe('a cadence with no live price', () => {
     test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
 
     await expect(refused).toContainText('Checkout unavailable')
+    // The refusal is announced and focused, so it is not missed below the fold.
+    const alert = page.getByRole('alert').filter({ hasText: 'nothing was charged' })
+    await expect(alert).toBeVisible()
+    await expect(alert, 'the refusal was not given focus').toBeFocused()
+    await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible()
+    expect((await alert.getByRole('button', { name: 'Try again' }).boundingBox()).height, 'Try again is under 44px').toBeGreaterThanOrEqual(44)
     await expect(page.locator('.checkout-form [data-stub-session]')).toHaveCount(0)
     expect(bodies.length, 'the refused session was requested again').toBe(1)
   })
