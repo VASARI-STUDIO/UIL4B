@@ -47,3 +47,18 @@ test('near-black, near-white and transparent art keep their tone and safe fallba
   assert.equal(sample([[0, 0, 0, 0]]).ink, 'mid')
   assert.equal(sample([[0, 0, 0, 255]], true).ink, 'mid')
 })
+
+test('flag packs and Twemoji never receive an edge in either theme', () => {
+  const groupsStart = source.indexOf('const ICON_GROUPS =')
+  const groupsEnd = source.indexOf('\nconst GROUP_ORDER', groupsStart)
+  const haloStart = source.indexOf('const FLAG_PACKS =')
+  const haloEnd = source.indexOf('\n}', source.indexOf('const haloFor =', haloStart)) + 2
+  assert.ok(groupsStart >= 0 && groupsEnd > groupsStart && haloStart >= 0 && haloEnd > haloStart)
+  const halo = vm.runInNewContext(`${source.slice(groupsStart, groupsEnd)}; ${source.slice(haloStart, haloEnd)}; haloFor`)
+  for (const pack of ['circle-flags', 'flag', 'flagpack', 'cif', 'twemoji']) {
+    assert.equal(halo('dark', 'dark', pack), '', pack)
+    assert.equal(halo('light', 'light', pack), '', pack)
+  }
+  assert.equal(halo('dark', 'dark', 'logos'), 'halo-light')
+  assert.equal(halo('light', 'light', 'logos'), 'halo-dark')
+})

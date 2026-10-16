@@ -182,6 +182,7 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     const root = out.match(/<svg[^>]*>/)?.[0] || ''
     expect(root, 'no svg root in the copied markup').not.toBe('')
     expect(out, 'a background rect was added').not.toMatch(/<rect[^>]*(width|height)="100%"/)
+    expect(out, 'preview edge definitions or references leaked into the export').not.toMatch(/ig-edge-/)
     expect(root, 'a colour was forced onto the root').not.toMatch(/\s(color|fill)=/)
     await ctx.close()
   })
@@ -496,8 +497,8 @@ test.describe('saved icons', () => {
       await page.keyboard.press('Escape')
       await choosePack(page, 'logodev')
       const logo = page.locator('.ig .ic .ig-chip').first()
-      await expect(logo).toHaveClass(/ig-chip--tile/)
-      expect((await paint(logo)).image, 'a logo.dev PNG lost its tile').not.toBe('none')
+      await expect(logo).not.toHaveClass(/ig-chip--tile/)
+      expect((await paint(logo)).image, 'a logo.dev PNG got a box').toBe('none')
       await ctx.close()
     })
   }

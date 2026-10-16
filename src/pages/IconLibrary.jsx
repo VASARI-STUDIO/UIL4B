@@ -597,7 +597,7 @@ function sampleGlyph(img) {
 // ink on the dark theme gets a light halo, near-white ink on the light theme a dark one.
 // A flag never gets one: its average tone says little about its edge, and a flag's
 // outline is part of the artwork.
-const FLAG_PACKS = new Set(ICON_GROUPS.flags.packs)
+const FLAG_PACKS = new Set([...ICON_GROUPS.flags.packs, 'twemoji'])
 const haloFor = (ink, theme, pack) => {
   if (FLAG_PACKS.has(pack)) return ''
   return ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : ''
