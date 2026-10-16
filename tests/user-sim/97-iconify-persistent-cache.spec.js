@@ -1,0 +1,233 @@
+// THE ICON LIBRARY ASKS THE API ONCE, NOT ONCE PER RELOAD.
+//
+// WHAT WAS HAPPENING
+// api.iconify.design answered one IP with HTTP 429 (Retry-After 3555 seconds)
+// after about two loads of /create/icons, roughly twenty requests, and the page
+// sat on "Couldn't reach the icon service" for the hour. Every cache the page
+// had lived in memory, so each reload re-sent the catalogue, and an office
+// behind one address hit the limit together.
+//
+// src/utils/iconifyFetch.js is now the one door to the API: answers are kept in
+// Cache Storage (a day for the catalogue, tranches and SVGs; an hour for a
+// search), concurrent identical requests share one round trip, and a 429 starts
+// a cool-down that a reload honours, during which cached answers (even expired
+// ones) keep the page working.
+//
+// THE COUNT IS TAKEN AT THE STUB. 66-icon-library-offline-fixture counts what
+// the page asked the fixture for; this does the same across reloads, so "the
+// second load sent nothing" is read off the requests, not inferred from a grid
+// that happens to be full.
+//
+// MUTATIONS (each seen red before this landed; see the handback):
+//   - make readEntry() in iconifyFetch.js return null: every reload test fails
+//     on a non-zero count and the cool-down test on the first reload's ledger;
+//   - make cooling() return false: the "different query" step sends a request;
+//   - drop the clearIconifyCooldown() call from the Try again handler in
+//     IconLibrary.jsx: the last step never recovers.
+import { test, expect } from './base.js'
+import { chooseMenuOption, go, ready, signIn, watch } from './helpers.js'
+import { fixturePacks, iconifyRequests, isIconifyUrl, isLiveIconify, limitIconify } from './iconify-stub.js'
+
+const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
+// helpers.js drops the console lines Chromium logs for deliberate 429s for this
+// persona and these hosts only.
+const REFUSED = 'visitor whose icon catalogue is refused'
+
+const GROUPS = '/create/icons/groups'
+
+/** The icon grid has drawn its glyphs, not only its cells. */
+async function paint(page) {
+  await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
+  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+}
+
+/** Let the debounced glyph tranches and any prefetch land before a count is read. */
+const settle = (page) => page.waitForTimeout(2000)
+
+/** Every request this page makes to an Iconify host, in order. */
+function iconifyUrlLog(page) {
+  const urls = []
+  page.on('request', (r) => { if (isIconifyUrl(r.url())) urls.push(r.url()) })
+  return urls
+}
+
+/** The tally as plain numbers, so a before/after difference can be taken. */
+function mark(ctx) {
+  const { collection, batch, search, svg } = iconifyRequests(ctx)
+  return { collection, batch, search, svg }
+}
+function since(ctx, before) {
+  const now = mark(ctx)
+  return Object.fromEntries(Object.keys(now).map((k) => [k, now[k] - before[k]]))
+}
+const NOTHING = { collection: 0, batch: 0, search: 0, svg: 0 }
+
+async function reload(page, route) {
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await ready(page, route)
+}
+
+/** Pack switches that revisit packs: the second time round must be free. */
+const SWITCHES = ['tabler', 'mdi', 'lucide', 'tabler', 'all']
+async function switchPacks(page) {
+  const select = page.locator('.lbry-select')
+  for (const pack of SWITCHES) {
+    await chooseMenuOption(page, select, pack)
+    await page.waitForTimeout(1000)
+    await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 15000 }).toBeGreaterThan(0)
+  }
+}
+
+test('reloading /create/icons twice and switching packs sends the catalogue once', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  test.setTimeout(120_000)
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+  const page = await ctx.newPage()
+  watch(page, 'designer reloading the icon library')
+  // Pro, so "All packs" is the full twenty-five-pack load that rate-limited the page.
+  await signIn(page, { plan: 'pro' })
+  const urls = iconifyUrlLog(page)
+
+  await go(page, '/create/icons')
+  await paint(page)
+  await settle(page)
+  await switchPacks(page)
+  await settle(page)
+
+  // POSITIVE CONTROL: the first visit did go to the fixture. Without it, "the
+  // reloads sent nothing" is true of a page that never asked.
+  const first = mark(ctx)
+  expect(first.collection, 'load 1 fetched one /collection per pack').toBe(fixturePacks().length)
+  expect(first.batch, 'load 1 fetched its glyph tranches').toBeGreaterThan(0)
+  const afterFirst = urls.length
+
+  for (const n of [2, 3]) {
+    const before = mark(ctx)
+    await reload(page, '/create/icons')
+    await paint(page)
+    await settle(page)
+    await switchPacks(page)
+    await settle(page)
+    expect(since(ctx, before), `load ${n} went back to the API for something load 1 already had`).toEqual(NOTHING)
+  }
+  expect(urls.length, 'not one more request across both reloads').toBe(afterFirst)
+  expect(new Set(urls).size, 'no URL was asked for twice, a tranche included, across reloads and pack switches')
+    .toBe(urls.length)
+  await ctx.close()
+})
+
+test('a 429 starts a cool-down: cached packs stay up, nothing is sent, and a total failure still says so', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  test.setTimeout(120_000)
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+  const page = await ctx.newPage()
+  watch(page, REFUSED)
+  const notice = page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
+  const select = page.locator('.lbry-select')
+
+  // Warm the cache with a visit that includes a second pack.
+  await go(page, '/create/icons')
+  await paint(page)
+  for (const pack of ['tabler', 'lucide', 'all']) {
+    await chooseMenuOption(page, select, pack)
+    await page.waitForTimeout(1000)
+  }
+  await paint(page)
+  await settle(page)
+
+  // From here the API refuses every request, with Retry-After 3555 like the live one.
+  const ledger = await limitIconify(page, { after: 0, retryAfter: 3555 })
+
+  // 1. A reload while the API is refusing: everything is in the cache, so the
+  //    page neither asks nor shows a banner.
+  await reload(page, '/create/icons')
+  await paint(page)
+  await settle(page)
+  await expect(notice).toHaveCount(0)
+  expect(ledger.urls, 'a reload with everything cached asked the API').toEqual([])
+
+  // 2. Something never fetched does meet the API, is refused, and says so: a
+  //    total failure stays visible.
+  await page.locator('.lbry-search input').first().fill('arrow')
+  await expect(notice).toBeVisible({ timeout: 15000 })
+  expect(ledger.refused, 'the search was the request that met the 429').toBeGreaterThan(0)
+  const sent = ledger.urls.length
+
+  // 3. Reload: the cool-down is remembered across the page load. The cached
+  //    packs are on screen and there is no banner.
+  await reload(page, '/create/icons')
+  await paint(page)
+  await settle(page)
+  await expect(notice).toHaveCount(0)
+  expect(ledger.urls.length, 'the reload sent a request during the cool-down').toBe(sent)
+
+  // 4. A query that is not cached cannot be answered, and does not leave the
+  //    building: the page says so instead of retrying into the limit.
+  await page.locator('.lbry-search input').first().fill('home')
+  await expect(notice).toBeVisible({ timeout: 15000 })
+  expect(ledger.urls.length, 'a new search was sent during the cool-down').toBe(sent)
+
+  // 5. Clearing the search and moving between cached packs is free and clean.
+  await page.locator('.lbry-search input').first().fill('')
+  await expect(notice).toHaveCount(0, { timeout: 15000 })
+  for (const pack of ['tabler', 'lucide', 'all']) {
+    await chooseMenuOption(page, select, pack)
+    await page.waitForTimeout(1000)
+    await expect(notice, `switching to cached ${pack} raised the banner`).toHaveCount(0)
+    await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 15000 }).toBeGreaterThan(0)
+  }
+  expect(ledger.urls.length, 'a cached pack switch was sent during the cool-down').toBe(sent)
+
+  // 6. Try again is the visitor asking on purpose: it clears the cool-down and
+  //    asks, and when the API answers again the page recovers.
+  await page.locator('.lbry-search input').first().fill('arrow')
+  await expect(notice).toBeVisible({ timeout: 15000 })
+  expect(ledger.urls.length).toBe(sent)
+  await page.unrouteAll()
+  await notice.getByRole('button', { name: 'Try again' }).click()
+  await expect(notice).toHaveCount(0, { timeout: 20000 })
+  await expect(page.getByText(/[\d,]+ matches/)).toBeVisible({ timeout: 15000 })
+  await ctx.close()
+})
+
+test('/create/icons-emoji and its Groups tab load from the cache on a reload', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  test.setTimeout(120_000)
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+  const page = await ctx.newPage()
+  watch(page, 'designer opening the icons and emoji page')
+
+  // The page at /create/icons-emoji forwards to its first tab; the Groups tab
+  // draws from the same API through a different module (iconGroupGlyphs.js).
+  const open = async () => {
+    await go(page, '/create/icons-emoji')
+    await paint(page)
+    await settle(page)
+    await page.locator('#lib-tab-groups').click()
+    await expect(page).toHaveURL(new RegExp(`${GROUPS}$`))
+    await expect.poll(() => page.locator('.igp-grid .ic img').count(), { timeout: 20000 }).toBeGreaterThan(0)
+    await settle(page)
+    // The emoji tab is built in and asks the API for nothing.
+    await page.locator('#lib-tab-emoji').click()
+    await page.waitForTimeout(500)
+  }
+
+  await open()
+  const first = mark(ctx)
+  expect(first.collection, 'load 1 fetched the catalogue for the Icons tab').toBeGreaterThan(0)
+  expect(first.batch, 'load 1 fetched glyph tranches').toBeGreaterThan(0)
+
+  for (const n of [2, 3]) {
+    const before = mark(ctx)
+    await open()
+    expect(since(ctx, before), `load ${n} of /create/icons-emoji went back to the API`).toEqual(NOTHING)
+  }
+
+  // And a reload that lands directly on the Groups tab.
+  const before = mark(ctx)
+  await go(page, GROUPS)
+  await expect.poll(() => page.locator('.igp-grid .ic img').count(), { timeout: 20000 }).toBeGreaterThan(0)
+  await settle(page)
+  expect(since(ctx, before), 'a direct load of the Groups tab went back to the API').toEqual(NOTHING)
+  await ctx.close()
+})

@@ -33,6 +33,7 @@ import {
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
 import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
+import { iconifyFetch, clearIconifyCooldown } from '../utils/iconifyFetch'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -298,7 +299,7 @@ function buildSvgUrl(host, pack, name, params = {}) {
 async function fetchWithFallback(path, timeout = 4000) {
   for (const host of API_HOSTS) {
     try {
-      const r = await fetch(`${host}${path}`, { signal: AbortSignal.timeout(timeout) })
+      const r = await iconifyFetch(`${host}${path}`, { timeout })
       if (r.ok) return r
     } catch { /* try next host */ }
   }
@@ -322,7 +323,7 @@ function fetchSvgText(pack, name, params = {}) {
     for (const host of API_HOSTS) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
-        const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
+        const r = await iconifyFetch(url, { timeout: 3000, persist: cacheable })
         if (r.ok) return await r.text()
       } catch { /* try next host */ }
     }
@@ -411,7 +412,7 @@ async function loadGlyphBatch(pack, names) {
   const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
   let data
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    const r = await iconifyFetch(url, { timeout: 8000 })
     // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
     // as a broken image nobody can see.
     if (!r.ok) return false
@@ -3320,7 +3321,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // library connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
-                <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
               </div>
             )}
 

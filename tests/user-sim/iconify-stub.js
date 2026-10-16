@@ -119,6 +119,48 @@ export async function refuseIconifyGlyphs(page) {
     }),
   )
 }
+/**
+ * Let `after` Iconify requests through to the fixture, then answer every one
+ * after that with 429 and a Retry-After, the way the live API did when one IP
+ * reloaded /create/icons a couple of times (3555 seconds, measured). Stamped
+ * REFUSED_VALUE so the audit counts it as deliberate.
+ *
+ * Returns a live ledger — `{ served, refused, urls }` — because the page route
+ * outranks the context route, so the context tally no longer sees these
+ * requests: this ledger is the count "at the stub" for anything after the call.
+ * Read it with a before/after difference.
+ *
+ * `expose` adds Access-Control-Expose-Headers: retry-after, which the real API
+ * does not send; without it the page cannot read the header and must fall back
+ * to its own default cool-down. Both shapes are worth a test.
+ */
+export async function limitIconify(page, { after = 0, retryAfter = 3555, expose = false } = {}) {
+  const ledger = { served: 0, refused: 0, urls: [] }
+  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname), (route) => {
+    const url = route.request().url()
+    ledger.urls.push(url)
+    if (ledger.urls.length <= after) {
+      ledger.served += 1
+      const answer = answerIconify(url)
+      return route.fulfill({ status: answer.status, contentType: answer.contentType, headers: CORS, body: answer.body })
+        .catch(() => { /* context torn down mid-flight */ })
+    }
+    ledger.refused += 1
+    return route.fulfill({
+      status: 429,
+      contentType: 'text/plain',
+      headers: {
+        [ICONIFY_STUB_HEADER]: REFUSED_VALUE,
+        'access-control-allow-origin': '*',
+        'retry-after': String(retryAfter),
+        ...(expose ? { 'access-control-expose-headers': 'retry-after' } : {}),
+      },
+      body: 'Too Many Requests',
+    }).catch(() => { /* context torn down mid-flight */ })
+  })
+  return ledger
+}
+
 /** Set this (to anything non-empty) to bypass the fixture and hit the live API. */
 export const LIVE_ICONIFY_ENV = 'UIL4B_LIVE_ICONIFY'
 

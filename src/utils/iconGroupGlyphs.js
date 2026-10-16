@@ -7,7 +7,11 @@
 // what keeps a locked group's glyphs, and a gated pack, off the network.
 //
 // Bodies are cached for the session at module scope, so reopening a group or
-// returning to the index costs nothing.
+// returning to the index costs nothing; the requests themselves go through
+// iconifyFetch, so they survive a reload and honour the shared rate-limit
+// cool-down.
+
+import { iconifyFetch } from './iconifyFetch'
 
 const HOST = 'https://api.iconify.design'
 const BATCH = 100
@@ -45,7 +49,11 @@ function store(pack, names, data) {
 async function requestBatch(pack, names, fetchImpl) {
   const url = `${HOST}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
   try {
-    const r = await fetchImpl(url, { signal: AbortSignal.timeout(8000) })
+    // An injected fetchImpl (the unit tests') is called directly: those tests
+    // count calls, which a shared cache and cool-down would swallow.
+    const r = fetchImpl
+      ? await fetchImpl(url, { signal: AbortSignal.timeout(8000) })
+      : await iconifyFetch(url, { timeout: 8000 })
     if (!r.ok) return false
     store(pack, names, await r.json())
     return true
@@ -60,7 +68,7 @@ async function requestBatch(pack, names, fetchImpl) {
  * the caller shows the refused state rather than a grid of empty cells.
  * A refused batch is forgotten, so a retry asks again.
  */
-export async function loadGroupGlyphs(plan, { fetchImpl = globalThis.fetch } = {}) {
+export async function loadGroupGlyphs(plan, { fetchImpl = null } = {}) {
   const waits = []
   for (const [pack, names] of plan || []) {
     const fresh = names.filter((n) => !BODIES.has(key(pack, n)) && !ASKED.has(key(pack, n)))
