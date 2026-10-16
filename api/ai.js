@@ -61,8 +61,9 @@ const GEMINI_KEY = cleanKey(
 
 // Primary text-prompt provider is OpenRouter (OpenAI-compatible gateway). It
 // lets us swap the underlying model with a single env var and keeps one billing
-// account across providers. OPENROUTER_MODEL overrides the default.
-const OPENROUTER_KEY = cleanKey(process.env.OPENROUTER_API_KEY)
+// account across providers. OPENROUTER_MODEL overrides the default. The key is
+// read from OPENROUTER_API_KEY, or OPEN_ROUTER_API as an accepted alias.
+const OPENROUTER_KEY = cleanKey(process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API)
 const OPENROUTER_MODEL = (process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat').trim()
 const OPENROUTER_REFERER = process.env.OPENROUTER_SITE_URL || 'https://uil4b.com'
 const GEMINI_MODEL = 'gemini-2.0-flash'
@@ -399,6 +400,9 @@ async function callOpenRouter(userMessage, opts = {}) {
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
+      // Keep prompts on US-hosted endpoints: skip the China-hosted one. Other
+      // providers stay eligible, so routing can still fail over between them.
+      provider: { ignore: ['streamlake'] },
       messages: [
         // `opts.system` defaults to the image-prompt brief, so every existing
         // caller is unchanged — the parameter exists only so a second task can
@@ -565,7 +569,7 @@ async function alertFirstFailoverOfDay(db, date, summary) {
     `HTTP status from OpenRouter: ${summary.lastFailoverStatus || '(none — the request never completed)'}`,
     `Error: ${summary.lastFailoverMessage || '(none)'}`,
     '',
-    '401 or 403 means OPENROUTER_API_KEY is wrong or revoked. 429 means rate-limited or out of credit. A 5xx is an OpenRouter outage and there is nothing to do but wait.',
+    '401 or 403 means OPENROUTER_API_KEY (or OPEN_ROUTER_API) is wrong or revoked. 429 means rate-limited or out of credit. A 5xx is an OpenRouter outage and there is nothing to do but wait.',
     '',
     'Seven-day counts are on Admin -> Overview, under AI provider health.',
     'This mail is sent at most once a day.',
@@ -931,7 +935,7 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     // 401/403 from a provider means the key was rejected — surface that plainly
     // so a misconfigured key is obvious rather than a vague "unavailable".
     if (lastErr?.status === 401 || lastErr?.status === 403) {
-      return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check OPENROUTER_API_KEY / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
+      return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check OPENROUTER_API_KEY (or OPEN_ROUTER_API) / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
     }
     if (lastErr?.truncatedEmpty) {
       return res.status(502).json({ error: MAX_TOKENS_EMPTY_MESSAGE, finishReason: lastErr.finishReason })
@@ -969,7 +973,7 @@ const TASKS = {
   'generate-prompt': {
     toolId: 'prompts-ai',
     limitError: 'Daily limit reached',
-    configError: 'AI is not configured on the server: set OPENROUTER_API_KEY (and/or GEMINI_API_KEY) in the deployment environment.',
+    configError: 'AI is not configured on the server: set OPENROUTER_API_KEY (or OPEN_ROUTER_API) and/or GEMINI_API_KEY in the deployment environment.',
     configured: () => Boolean(OPENROUTER_KEY || GEMINI_KEY),
     run: runGeneratePrompt,
   },
@@ -982,7 +986,7 @@ const TASKS = {
     // generationBucket() in _lib/aiGeneration.js.
     quota: 'generation',
     limitError: 'Brand Starter allowance used',
-    configError: 'AI is not configured on the server: set OPENROUTER_API_KEY (and/or GEMINI_API_KEY) in the deployment environment.',
+    configError: 'AI is not configured on the server: set OPENROUTER_API_KEY (or OPEN_ROUTER_API) and/or GEMINI_API_KEY in the deployment environment.',
     configured: () => Boolean(OPENROUTER_KEY || GEMINI_KEY),
     run: runBrandStarter,
   },
