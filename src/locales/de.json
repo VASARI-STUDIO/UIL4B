@@ -128,10 +128,6 @@
       "label": "Designprinzipien",
       "description": "Visuelle Hierarchie, Balance und Designpsychologie."
     },
-    "externalResources": {
-      "label": "Externe Ressourcen",
-      "description": "Kuratierte Links zu Schriften, Farben, KI-Werkzeugen und Inspiration."
-    },
     "promptLibrary": {
       "label": "Prompt-Bibliothek",
       "description": "KI-Bildgenerierungs-Prompts mit Vorschau speichern."

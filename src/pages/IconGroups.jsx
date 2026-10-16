@@ -42,14 +42,17 @@ function useGroupGlyphs(groups, tier, limit) {
 function Glyph({ iconRef, color, stroke }) {
   const glyph = glyphFor(iconRef)
   const { name } = parseIconRef(iconRef)
+  const src = glyph ? groupIconDataUri(glyph, { color, stroke }) : ''
+  const [loadedSrc, setLoadedSrc] = useState('')
   if (!glyph) return <span className="igp-wait" aria-hidden="true" />
   return (
     <img
-      src={groupIconDataUri(glyph, { color, stroke })}
+      src={src}
       width="24"
       height="24"
       alt={name}
-      className={color ? '' : 'ig-inv'}
+      className={`${color ? '' : 'ig-inv '}${loadedSrc === src ? 'igp-glyph-in' : 'igp-glyph-pending'}`}
+      onLoad={() => setLoadedSrc(src)}
     />
   )
 }

@@ -4,7 +4,7 @@
  * homepage its bytes without ever being used there. It now travels with the
  * lazy route chunks that can actually reach it:
  *
- *   IconLibrary, EmojiLibrary, IconEmojiLibrary, PromptLibrary, CuratedResources
+ *   IconLibrary, EmojiLibrary, IconEmojiLibrary, PromptLibrary
  *
  * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
  * in global.css, so the cascade between any two of them is the one that was
@@ -291,12 +291,14 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    converts it once (src/utils/iconStroke.js, strokeAttrForPx) for both the Stage
    and the export, so the preview cannot disagree with the download. The literal
    2 below is the pre-paint fallback and equals the 4px default at size 48. ══ */
+/* Rises without scaling, so the Stage measures the same size all the way through the entrance. */
+@keyframes icust-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade var(--dur-1) var(--ease-entrance)}
 /* Panel clips to its rounded corners; the header is fixed and a single inner
    .icust-body owns the scroll — so the scrollbar lives INSIDE the panel, never
    in the scrim. Height caps to the padded overlay box so the overlay itself
    never needs a second scrollbar. */
-.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - 32px));max-height:min(880px,calc(100dvh - max(6vh,48px) - 32px));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - 32px));max-height:min(880px,calc(100dvh - max(6vh,48px) - 32px));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:icust-rise var(--dur-2) var(--ease-entrance)}
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -312,6 +314,8 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-err{font-size:var(--fs-caption);color:var(--err-strong)}
 .icust-stage--light{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .icust-stage-img{display:block;max-width:100%;height:auto}
+/* A selected state with nothing to switch to: reads like .icust-seg button.active. */
+.icust-seg-static{flex:1;padding:6px 8px;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-align:center;color:var(--t0);background:var(--bg-0);box-shadow:var(--shadow-xs);cursor:default}
 .icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:rgba(244,244,245,.55)}
 .icust-stage--light .icust-stage-msg{color:rgba(10,10,11,.5)}
 .icust-note{flex:1;font-size:var(--fs-caption);color:var(--t2);font-style:italic}
@@ -379,17 +383,27 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail-item:active{transform:scale(.94)}
 .ig-rail-item img,.ig-rail-item svg{width:24px;height:24px}
 .ig-rail-item svg{color:var(--t0);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
-/* THE CELL RESERVES ITS GLYPH'S SPACE BEFORE THE GLYPH ARRIVES.
-   Grid markup now arrives one batched request per pack rather than one per icon
-   (see the batching note in IconLibrary.jsx), so for one frame a cell knows its
-   name but not its artwork. This holds the exact 24x24 the <img> will occupy —
-   `.ic svg,.ic img` in global.css and `.ig-rail-item img,.ig-rail-item svg`
-   above — so the label underneath does not jump when the tranche lands.
-   Deliberately no shimmer: at 120 cells a pulsing placeholder is a screen of
-   flashing boxes, and the wait is usually one network round trip. It is
-   aria-hidden in the markup, so nothing is announced for a box with no meaning.
-   `--icon-inv` is not applied: there is no ink here to invert. */
-.ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px;background:var(--bg-2)}
+/* Waiting glyph slots keep their dimensions without painting a square. */
+@keyframes ig-skel-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.icust-stage-wait{background:color-mix(in oklab,var(--t1) 6%,transparent);box-shadow:none;animation:ig-skel-pulse 1.4s ease-in-out infinite}
+.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:none;box-shadow:none;animation:none}
+.icust-stage-wait{position:absolute;inset:0;margin:auto;border-radius:8px;flex-shrink:0}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .icust-stage-wait{animation:none}}
+html[data-reduced-motion="true"] .icust-stage-wait{animation:none}
+.ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
+/* Keep pending artwork hidden until it has decoded. */
+.ic img.ig-glyph-pending{border-radius:6px;filter:none}
+/* Loaded glyphs fade without moving. */
+.ic img,.ig-chip img{transition:opacity 160ms cubic-bezier(0.23,1,0.32,1)}
+.ic img.ig-glyph-in,.ig-chip--in img{opacity:1}
+.ic img.ig-glyph-pending{opacity:0;transition:none}
+/* The artwork stays hidden while the chip waits, so it never shows on a bare
+   skeleton. */
+.ig-chip--wait img{opacity:0}
+html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.ic img,.ig-chip img){transition:none}
+}
 .ig-rail-badge{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;border:2px solid var(--bg-0);color:#fff}
 .ig-rail-badge svg{width:9px;height:9px}
 .ig-rail-badge--edit{background:var(--accent)}
@@ -417,18 +431,35 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Fetch-fallback notice, skeletons, status line, sentinel, CDN invert, pack tag */
 .ig-notice{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--warn) 40%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--warn) 8%,var(--bg-1));font-size:var(--fs-body-s);color:var(--t1)}
 .ig-notice span{flex:1;min-width:180px}
-.ig-skel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;padding:16px 6px 12px}
-.ig-skel-glyph{width:24px;height:24px;border-radius:var(--radius-xs)}
+.ig-skel{pointer-events:none}
+.ig-skel-slot{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0}
+.ig-skel-slot--mono{width:24px;height:24px}
+.ig-skel .sk{background:color-mix(in oklab,var(--t1) 6%,transparent)}
+.ig-skel-labels{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:calc(34px + var(--fs-micro));flex-shrink:0}
+.ig-skel-labels--single{height:25px}
+.ig-skel-pack{width:40%;max-width:36px;height:8px;border-radius:var(--radius-pill)}
+@media(max-width:980px){.ig-skel-labels{height:25px}.ig-skel-pack{display:none}}
+@media(max-width:640px){.ig-skel-labels{height:12.5px}}
 .ig-skel-label{width:60%;max-width:52px;height:8px;border-radius:var(--radius-pill)}
 .ig-sentinel{width:100%;height:1px}
 .ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
 .ig-inv{filter:var(--icon-inv)}
-/* Brand-glyph contrast chip — colored/brand artwork can't be tinted for contrast,
-   so it sits on a miniature of the customizer Stage: the light radial gradient by
-   default, flipped to the dark Stage gradient (.ig-chip--dark) when pixel sampling
-   finds the artwork itself is near-white. */
-.ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
-.ig-chip--dark{background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+/* Brand-glyph slot — colored/brand artwork keeps its own colours and sits straight
+   on the tile/page background, no box. The chip stays as a transparent 36px slot so
+   its sizing, overflow and positioning (and the glyph-shape maths that rely on
+   them) are unchanged, and so a glyph that has not arrived yet is an empty slot
+   rather than a blank square. */
+.ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:none;box-shadow:none}
+/* Ink that matches the page ground (near-black on dark, near-white on light) would
+   vanish with no box behind it. A hairline halo outlines the shape; the artwork's
+   own colours are untouched. */
+.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(255,255,255,.6))}
+.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
+/* A glyph slot for a name the service has no icon for: same box, nothing in it. */
+.ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
+/* Copy, save and download wait for the icon's markup. */
+.icust-foot .lib-btn:disabled,.icust-code-box:disabled{opacity:.5;cursor:not-allowed}
+.icust-code-box:disabled:hover{border-color:var(--border)}
 /* object-fit, because the request now asks the API for a HEIGHT rather than a
    box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
    4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
@@ -555,8 +586,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
    ColorStudio's named-library switch) still render it. */
 .pl-chips{max-width:100%}
-/* The Curated Resources rules that sat here moved to
-   src/styles/pages/curated-resources.css, rooted at the page. */
 
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -685,10 +714,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    on a #060607 toolbar in dark (1.08:1; #191A1D on #101012, 1.09:1, on the
    ramp this was measured on), #F6F5F1 on #EFEEE9 in light (1.06:1). So the
    rail is under a tenth of contrast and the options themselves paint nothing at
-   all. On /create/icons all SEVEN options read `data-active="false"` on
+   all. On /create/icons all five options read `data-active="false"` on
    arrival, so there is not even a selected sibling to imply the row is a
-   control: "My Icons · Outlined · Solid · Coloured · Brand logos · Flags ·
-   Emoji" is seven adjacent words. One shared class, six surfaces.
+   control: "My Icons · Coloured · Brand logos · Flags · Emoji" is five
+   adjacent words. One shared class, six surfaces.
 
    THE FIX IS THE DESIGN'S OWN ANSWER, not an invention. `UIL4B App.dc.html`
    line 307 gives every icon filter `border:1px solid {{ f.border }}` where the
@@ -1099,6 +1128,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   border:1px solid transparent;border-radius:var(--radius-2xl);
   background:transparent;
 }
+.lib-surface .ig .ic-name{min-height:25px}
+.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:calc(113px + var(--fs-micro))}
+@media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:104px}}
 .lib-surface .ic:hover{background:var(--hvr);border-color:transparent}
 .lib-surface .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
 .lib-surface .ic:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
@@ -1107,6 +1139,8 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
   .lib-surface .ic{gap:6px;min-height:72px;padding:12px 4px;border-radius:var(--radius)}
   .lib-surface .ic>span:not(.ic-pack){-webkit-line-clamp:1;line-clamp:1}
+  .lib-surface .ig .ic-name{min-height:12.5px}
+  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:80.5px}
 }
 
 

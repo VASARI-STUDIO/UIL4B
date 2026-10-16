@@ -136,6 +136,7 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/principles', '/learn/principles'],
   ['/help', '/learn/help'],
   ['/resources', '/discover'],
+  ['/discover/resources', '/discover'],
   ['/prompts', '/discover/prompts'],
   ['/pricing', '/plans'],
   ['/site-map', '/sitemap'],

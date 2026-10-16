@@ -211,7 +211,7 @@ test.describe('the Prompt Library empty state', () => {
   // components/library/LibraryEmpty.jsx says it in its own header comment: "an
   // empty grid whose only escape is for the user to work out which of three
   // filters they set is the dead end murphys-law.md exists to forbid." The
-  // Palette, Gradient, Font and Curated Resources galleries all adopted it. The
+  // Palette, Gradient and Font galleries all adopted it. The
   // Prompt Library rendered a bare <p> with no control and no role, so the grid
   // emptying was announced to NOBODY — measured: its role="status" region was
   // present and rendered the empty string — and there was no way back out.
@@ -269,7 +269,7 @@ test.describe('the Prompt Library empty state', () => {
   // the same rank as the CTA it precedes.
   test('the heading levels never skip a step', async ({ page }) => {
     watch(page, PERSONA)
-    for (const route of ['/discover/prompts', '/discover/palettes', '/discover/gradients', '/discover/resources', '/community', '/learn']) {
+    for (const route of ['/discover/prompts', '/discover/palettes', '/discover/gradients', '/community', '/learn']) {
       await go(page, route)
       await expectRendered(page)
       const levels = await page.evaluate(() => [...document.querySelectorAll('main h1, main h2, main h3, main h4, .sec h1, .sec h2, .sec h3, .sec h4')]
@@ -284,28 +284,6 @@ test.describe('the Prompt Library empty state', () => {
           `${route} jumps h${levels[i - 1].level} "${levels[i - 1].text}" -> h${levels[i].level} "${levels[i].text}"`,
         ).toBeLessThanOrEqual(levels[i - 1].level + 1)
       }
-    }
-  })
-})
-
-test.describe('Curated Resources', () => {
-  // ── The defect this replaces ──
-  // .cur-lead-title holds nothing but its link, so SC 2.5.8's Inline exception
-  // does not apply (the sibling .cur-row-title's does — it also carries a
-  // PriceTag). At the 16px the lead title drops to below 640px, seven of those
-  // links measured 23.0px: one pixel under, at 320 and 390 only.
-  test('the lead resource links clear 24px on a phone', async ({ page }) => {
-    watch(page, PERSONA)
-    for (const width of [320, 390, 768]) {
-      await page.setViewportSize({ width, height: 900 })
-      await go(page, '/discover/resources')
-      await expectRendered(page)
-      const res = await page.evaluate(UNDER_24)
-      // POSITIVE CONTROL: the lead cards rendered. Zero lead links means zero
-      // failures, and the assertion below would pass on an empty page.
-      const leads = await page.locator('.cur-lead-title .cur-link').count()
-      expect(leads, `no lead resources rendered at ${width}`).toBeGreaterThan(3)
-      expect(res.tooSmall, `/discover/resources @${width}`).toEqual([])
     }
   })
 })
@@ -353,8 +331,8 @@ test.describe('route metadata', () => {
 // satisfies that, vacuously. /community and /discover/prompts were both in that
 // state: the cards are what each page is for, and each grid was a bare <div>,
 // so a reader navigating by landmark found the header and the footer and
-// nothing naming the twelve items between them. Their three sibling libraries
-// (Palette, Gradient, Curated Resources) all render DiscoverResultHead, which
+// nothing naming the twelve items between them. Their sibling libraries
+// (Palette and Gradient) all render DiscoverResultHead, which
 // is a labelled section plus a live count; these two had neither.
 //
 // The count matters as much as the name: the category filters can take the grid

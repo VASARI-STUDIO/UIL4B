@@ -463,11 +463,7 @@
 }
 
 /* ── the closing CTA ──────────────────────────────────────────────────────────
-   `GalleryCloseCta` is shared with /discover/resources, so its own rules are
-   untouched and only its proportions on this ground move. It keeps its
-   `<section>`, its `aria-labelledby` heading and its single action — all three
-   are asserted by `57-palette-moods-and-gallery-cta.spec.js`, which also
-   requires it to sit below the lowest card and to clear 60px of height. */
+   GalleryCloseCta provides the heading and action; this page sets its spacing. */
 .ch-spectrum .ch-cta {
   margin-top: clamp(40px, 6vw, 72px);
   padding-top: clamp(28px, 4vw, 44px);

@@ -44,14 +44,13 @@ test.describe('the Pro column is reachable on a phone (A2)', () => {
     watch(page, 'someone deciding whether to pay, on their phone')
     await go(page, '/plans')
     await expectRendered(page)
-    // The design's comparison stacks each row below 760px, the
-    // way the design does, so the table itself is the box that must not scroll.
-    await expect(page.locator('.pr-compare')).toBeVisible()
+    // The phone comparison keeps both plans inside the table without scrolling.
+    await expect(page.locator('.pr-dtable')).toBeVisible()
 
     const report = await page.evaluate(() => {
-      const wrap = document.querySelector('.pr-compare')
+      const wrap = document.querySelector('.pr-dtable')
       const vw = document.documentElement.clientWidth
-      const cells = [...document.querySelectorAll('.pr-compare td.is-pro')]
+      const cells = [...wrap.querySelectorAll('td.is-pro')]
       return {
         // The table needs no horizontal scroll at all any more.
         needsScroll: wrap.scrollWidth > wrap.clientWidth + 1,
