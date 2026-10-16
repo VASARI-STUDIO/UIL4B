@@ -666,7 +666,7 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
     // someone tries to email a customer.
     sender: sendingDomainConfigured()
       ? `${mailFrom()} — a verified uil4b.com sender`
-      : `${mailFrom()} — SANDBOX. Resend will only deliver this to the account owner. Set MAIL_FROM to "UIL4B <admin@uil4b.com>" in Vercel once uil4b.com is verified (OWNER-ACTIONS §4.10). Replies already reach ${REPLY_TO}.`,
+      : `${mailFrom()} — SANDBOX. Resend will only deliver this to the account owner. Set MAIL_FROM to "UIL4B <support@uil4b.com>" in Vercel once uil4b.com is verified. Replies already reach ${REPLY_TO}.`,
     alerting: alerting
       ? 'on — the first OpenRouter failure of each day is emailed to SUPPORT_NOTIFY_EMAIL'
       : 'OFF — set RESEND_API_KEY and SUPPORT_NOTIFY_EMAIL in Vercel to be emailed the first time OpenRouter fails on any day. Until then this panel is the only place a failover surfaces.',
