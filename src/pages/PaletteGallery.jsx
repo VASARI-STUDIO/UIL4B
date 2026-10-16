@@ -307,6 +307,10 @@ export default function PaletteGallery({ toast }) {
   const gatedKind = group !== 'all' && !proPending && lockedCount > 0
     && !browsable.some((palette) => palette.kind === group)
   const gatedNoun = group === 'brand' ? 'Brand' : 'Curated'
+  const gatedEmpty = gatedKind && visible.length === 0
+  // Brand systems are flagged Pro outright (see LIBRARY_RULES), so no account
+  // opens them; a curated collection hidden by the cap does open with one.
+  const brandNeedsPro = group === 'brand'
   const lockedBlock = proPending ? null : lockedCount > 0 ? (
     anonymous ? (
       // Same shape and the same stylesheet as LockedTeaseCta, with the one
@@ -434,12 +438,24 @@ export default function PaletteGallery({ toast }) {
           sat in no landmark at all. Nothing here is new copy — the same
           head, the same empty state, one element moved. */}
       <section aria-labelledby="pgl-grid-heading">
-        <DiscoverResultHead
-          title={heading}
-          count={visible.length}
-          noun="palette"
-          id="pgl-grid-heading"
-        />
+        {gatedEmpty ? (
+          // The shared head's count is a live region of its own; here "0
+          // palettes" would be read out on the same tap as the gated message
+          // below, so the head stands down to its heading and the status node
+          // is the one announcer.
+          <div className="drh-head">
+            <div>
+              <h2 id="pgl-grid-heading">{heading}</h2>
+            </div>
+          </div>
+        ) : (
+          <DiscoverResultHead
+            title={heading}
+            count={visible.length}
+            noun="palette"
+            id="pgl-grid-heading"
+          />
+        )}
 
         {visible.length ? (
           <>
@@ -491,17 +507,36 @@ export default function PaletteGallery({ toast }) {
               </>
             )}
           </>
-        ) : gatedKind ? (
-          // A collection emptied by the tier cap says why and where to go, in
-          // place of the "no match" state and the placeholder wall: one offer,
-          // and the bottom close below stands down. The plain wrapper is a polite
-          // live region (the old empty state had one), so a chip tap is announced
-          // for both tiers; it adds no box of its own to the block flow.
-          <div role="status">
-            {anonymous ? (
+        ) : gatedKind ? null : (
+          <>
+            <LibraryEmpty
+              className="pgl-empty"
+              title="No palettes match that combination."
+              detail="Try a broader search, or reset the mood and collection filters."
+              onClear={clear}
+            />
+            {/* The generic empty arm: reached for group `all`, while Pro is still
+                loading, and when nothing is withheld (a collection emptied by
+                the tier cap is handled by the status node below). The wall is
+                the unnarrowed view's offer and nothing more. */}
+            {mood === 'all' && !query.trim() && lockedBlock}
+          </>
+        )}
+        {/* A collection emptied by the tier cap says why and where to go, in
+            place of the "no match" state and the placeholder wall: one offer,
+            and the bottom close below stands down. The polite live region is
+            mounted empty and filled on the tap, because a region that arrives
+            already holding its text is not reliably announced. It is the only
+            live region in this state (the head's count steps aside above) and
+            adds no box of its own to the block flow. */}
+        <div role="status">
+          {gatedEmpty && (
+            anonymous && !brandNeedsPro ? (
+              // A curated collection emptied by the anonymous cap really does
+              // open with a free account, so that is the offer here.
               <div className="lockt-cta">
                 <div className="lockt-cta-copy">
-                  <p className="lockt-cta-head">{`${gatedNoun} palettes are part of Pro`}</p>
+                  <p className="lockt-cta-head">{`${gatedNoun} palettes need an account`}</p>
                   <p className="lockt-cta-body">Create a free account to see more of the library. Pro opens all of it.</p>
                 </div>
                 <button
@@ -516,26 +551,14 @@ export default function PaletteGallery({ toast }) {
               <LockedTeaseCta
                 gate="palette-library-brand-chip"
                 heading={`${gatedNoun} palettes are part of Pro`}
-                body={`Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
+                body={anonymous
+                  ? `${gatedNoun} palettes need Pro. ${accountAdds > 0 ? `A free account opens ${accountAdds} more curated palettes; ` : ''}Pro opens all ${rows.length}.`
+                  : `Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
                 action="See what Pro includes"
               />
-            )}
-          </div>
-        ) : (
-          <>
-            <LibraryEmpty
-              className="pgl-empty"
-              title="No palettes match that combination."
-              detail="Try a broader search, or reset the mood and collection filters."
-              onClear={clear}
-            />
-            {/* The generic empty arm: reached for group `all`, while Pro is still
-                loading, and when nothing is withheld (a collection emptied by
-                the tier cap is handled above). The wall is the unnarrowed
-                view's offer and nothing more. */}
-            {mood === 'all' && !query.trim() && lockedBlock}
-          </>
-        )}
+            )
+          )}
+        </div>
       </section>
 
       {/* A Pro viewer's stand-in for the upsell, whatever the filters: the rest
