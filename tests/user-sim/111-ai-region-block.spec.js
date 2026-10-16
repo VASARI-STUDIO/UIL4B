@@ -91,10 +91,13 @@ for (const width of [390, 768, 1440]) {
     await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ })).toHaveCount(0)
     await expect(page.locator('#alt-ai-consent')).toHaveCount(0)
 
-    // The guide on writing it by hand is still there, and so is the explanation
-    // in the side panel.
+    // The guide on writing it by hand is still there. There is no side panel
+    // while blocked (nothing in it can be used), so the "every other tool works"
+    // line lives inside the card, with the way out.
     await expect(page.getByRole('heading', { name: 'What good alt text looks like' })).toBeVisible()
-    await expect(page.getByText('Every other UIL4B tool works as normal where you are.')).toBeVisible()
+    await expect(page.locator('.alt-panel')).toHaveCount(0)
+    await expect(card.getByText('Every other UIL4B tool works as normal where you are.')).toBeVisible()
+    await expect(card.getByRole('link', { name: 'Browse other tools' })).toHaveAttribute('href', '/create')
 
     // The card sits inside the screen.
     const box = await card.boundingBox()
@@ -128,6 +131,10 @@ for (const [what, answer] of OPEN_ANSWERS) {
     await expect(page.getByTestId('ai-region-blocked')).toHaveCount(0)
     await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ })).toBeVisible()
     await expect(page.locator('#alt-ai-consent')).toBeVisible()
+    // The side panel is there when open, so its absence while blocked is a
+    // statement about the block and not about a panel that never renders.
+    await expect(page.locator('.alt-panel')).toBeVisible()
+    await expect(page.locator('.alt-examples').getByText('Add page context')).toBeVisible()
 
     if (what === 'the server says blocked:false') await shot(page, 'alt-text-open-1440.png')
   })
@@ -188,3 +195,105 @@ test('1440px · Alt Text: a signed-in visitor the server refuses with 451 is sho
     .map(([, v]) => Number(v)))
   expect(spent.every((n) => !n), `a refused request was counted against the allowance: ${spent}`).toBe(true)
 })
+
+/** Signed in, region check says open, two images added, Generate pressed, the
+ *  server answers 451. Resolves once the card is showing. */
+async function refusedWith451(page) {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await signIn(page, { plan: 'free' })
+  const asked = await stubRegion(page, { body: { blocked: false } })
+  await page.route(isAiPost, (route) => route.fulfill({ status: 451, contentType: 'application/json', body: JSON.stringify(REFUSAL) }))
+  await go(page, '/create/alt-text')
+  await settled(page, asked)
+  const png = await pngBytes(page)
+  await page.locator('.alt-dropzone input[type="file"]').setInputFiles([
+    { name: 'one.png', mimeType: 'image/png', buffer: png },
+    { name: 'two.png', mimeType: 'image/png', buffer: png },
+  ])
+  await expect(page.locator('.alt-card-ready')).toHaveCount(2, { timeout: 10000 })
+  await page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ }).click()
+  await expect(page.getByTestId('ai-region-blocked')).toBeVisible()
+}
+
+const activeId = (page) => page.evaluate(() => document.activeElement?.id || document.activeElement?.tagName || '')
+
+test('1440px · Alt Text: after a 451 on Generate, focus moves to the card heading', async ({ page }) => {
+  watch(page, 'a signed-in visitor whose Generate press is refused with 451')
+  await refusedWith451(page)
+  // The press removed the button that had focus; without this the keyboard
+  // user is left on <body> with the explanation somewhere above them.
+  await expect.poll(() => activeId(page), { message: 'focus did not land on the region heading' }).toBe('alt-region-title')
+})
+
+test('1440px · Alt Text: a block known on first load does not steal focus', async ({ page }) => {
+  watch(page, 'a visitor in a Gemini-excluded region opening the page')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const asked = await stubRegion(page, BLOCKED)
+  await go(page, '/create/alt-text')
+  await expect(page.getByTestId('ai-region-blocked')).toBeVisible()
+  await settled(page, asked)
+  expect(await activeId(page), 'the page moved focus to the heading on first load').not.toBe('alt-region-title')
+  // The heading is still reachable by script, so this is not a heading that
+  // simply cannot take focus.
+  await page.locator('#alt-region-title').focus()
+  expect(await activeId(page)).toBe('alt-region-title')
+})
+
+test('1440px · Alt Text: after a 451 with images added, the guide is shown and the page-context tip is not', async ({ page }) => {
+  watch(page, 'a signed-in visitor with two images queued whose Generate is refused with 451')
+  await refusedWith451(page)
+  const guide = page.locator('.alt-examples')
+  await expect(guide).toBeVisible()
+  await expect(guide.getByRole('heading', { name: 'What good alt text looks like' })).toBeVisible()
+  await expect(guide.getByText('Add page context')).toHaveCount(0)
+  // The queued cards are gone with the rest of the tool.
+  await expect(page.locator('.alt-card')).toHaveCount(0)
+  await expect(page.locator('.alt-panel')).toHaveCount(0)
+})
+
+test('390px · Alt Text: the Browse other tools link goes to /create and is a 44px target', async ({ page }) => {
+  watch(page, 'a visitor in a Gemini-excluded region on a phone')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await stubRegion(page, BLOCKED)
+  await go(page, '/create/alt-text')
+  const link = page.getByTestId('ai-region-blocked').getByRole('link', { name: 'Browse other tools' })
+  await expect(link).toBeVisible()
+  await expect(link).toHaveAttribute('href', '/create')
+  const box = await link.boundingBox()
+  expect(box.height, `the link is ${box.height}px tall`).toBeGreaterThanOrEqual(44)
+  await link.click()
+  // /create is a router entry that forwards to the default tool (the palette
+  // today), so the destination is "left this page, still under /create".
+  await expect(page).toHaveURL(/\/create(\/(?!alt-text)|$)/)
+  await expect(page.getByTestId('ai-region-blocked')).toHaveCount(0)
+})
+
+for (const [width, theme] of [[390, 'dark'], [320, 'light']]) {
+  test(`${width}px ${theme} · Alt Text: the blocked card fits, reads and keeps its link`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width, height: 844 }, colorScheme: theme })
+    await ctx.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* private mode */ } }, theme)
+    const page = await ctx.newPage()
+    try {
+      watch(page, `a visitor in a Gemini-excluded region on a ${width}px ${theme} screen`)
+      const asked = await stubRegion(page, BLOCKED)
+      await go(page, '/create/alt-text')
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+      const card = page.getByTestId('ai-region-blocked')
+      await expect(card).toBeVisible()
+      await settled(page, asked)
+      await expect(card.getByRole('link', { name: 'Browse other tools' })).toBeVisible()
+
+      const box = await card.boundingBox()
+      expect(box.x, 'the card starts off the left edge').toBeGreaterThanOrEqual(0)
+      expect(box.x + box.width, 'the card runs off the right edge').toBeLessThanOrEqual(width + 1)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+      expect(overflow, 'the page scrolls sideways').toBeLessThanOrEqual(0)
+
+      const dir = process.env.REGION_SHOTS_DIR
+      const name = theme === 'dark' ? `alt-text-region-dark-${width}.png` : `alt-text-region-${width}.png`
+      if (dir) await page.screenshot({ path: path.join(dir, name) })
+    } finally {
+      await ctx.close()
+    }
+  })
+}
