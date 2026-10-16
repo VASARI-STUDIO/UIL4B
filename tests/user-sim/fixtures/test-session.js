@@ -217,6 +217,7 @@ function createFakeAuth(d) {
   // and the links it would have emailed. See firebase-auth.js.
   auth.account = { emailVerified: d.emailVerified !== false }
   auth.mail = []
+  auth.verifySends = []
   // How many times the account was re-read. A spec that proves a toast did NOT
   // appear waits on this first, so it cannot pass before the re-read has finished.
   auth.reloads = 0
@@ -375,5 +376,5 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow } } catch { /* no window */ }
 }

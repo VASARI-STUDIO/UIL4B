@@ -138,8 +138,17 @@ export function updateEmail(user, newEmail) {
  * flag; only `reload()` brings it onto the user, as the real SDK does. */
 export function sendEmailVerification(user, settings) {
   if (!isFakeUser(user)) return realSendEmailVerification(user, settings)
+  // `sendEmailVerificationWithReturn` refuses only a send that carries a return
+  // address, as Firebase does for a domain it has not authorised; the plain
+  // send that follows is let through.
+  const refusedReturn = settings ? authFailFor('sendEmailVerificationWithReturn') : null
+  if (refusedReturn) {
+    fakeAuth.verifySends.push({ withReturn: true, refused: true })
+    return Promise.reject(refusedReturn)
+  }
   const refused = authFailFor('sendEmailVerification')
   if (refused) return Promise.reject(refused)
+  fakeAuth.verifySends.push({ withReturn: !!settings, refused: false })
   fakeAuth.mail.push({ kind: 'verify-email', to: user.email })
   return Promise.resolve()
 }

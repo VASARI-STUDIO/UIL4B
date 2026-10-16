@@ -34,6 +34,20 @@ test.describe('settings — email verification', () => {
     await expect(section.getByRole('status')).toContainText(`Link sent to ${account.email}`)
     const mail = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)
     expect(mail).toEqual([{ kind: 'verify-email', to: account.email }])
+    // The link asks to come back to Settings; nothing refused it, so no fallback was needed.
+    const sends = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.verifySends)
+    expect(sends).toEqual([{ withReturn: true, refused: false }])
+  })
+
+  test('Settings falls back to the plain link when the return address is refused', async ({ page }) => {
+    watch(page, 'a person on a domain the auth console has not authorised yet')
+    const account = await signIn(page, { plan: 'free', emailVerified: false, authFail: { sendEmailVerificationWithReturn: 'auth/invalid-continue-uri' } })
+    const section = await openAccount(page)
+    await section.getByRole('button', { name: 'Send verification link' }).click()
+    await expect(section.getByRole('status')).toContainText(`Link sent to ${account.email}`)
+    await expect(section.getByRole('alert')).toHaveCount(0)
+    const sends = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.verifySends)
+    expect(sends).toEqual([{ withReturn: true, refused: true }, { withReturn: false, refused: false }])
   })
 
   test('a verification link that could not be sent says so', async ({ page }) => {
@@ -90,6 +104,78 @@ test.describe('the "Verify your email" bar', () => {
     await expect(bar(page).getByRole('button', { name: 'Resend link' })).toHaveCount(0)
     const mail = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)
     expect(mail).toEqual([{ kind: 'verify-email', to: account.email }])
+  })
+
+  test('a keyboard user who pressed Resend lands on Dismiss, not on the page', async ({ page }) => {
+    watch(page, 'a person who works the bar with the keyboard')
+    await signIn(page, { plan: 'free', emailVerified: false })
+    await go(page, '/projects')
+    const resend = bar(page).getByRole('button', { name: 'Resend link' })
+    await resend.focus()
+    await expect(resend).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(bar(page)).toContainText('Link sent to')
+    await expect(resend).toHaveCount(0)
+    await expect(bar(page).getByRole('button', { name: 'Dismiss verification reminder' })).toBeFocused()
+  })
+
+  test('the message is the live region, and a failed send is a separate alert', async ({ page }) => {
+    watch(page, 'a person using a screen reader')
+    await signIn(page, { plan: 'free', emailVerified: false, authFail: { sendEmailVerification: 'auth/too-many-requests' } })
+    await go(page, '/projects')
+    // The wrapper holding the buttons is not a live region, or every state change reads the buttons out too.
+    await expect(bar(page)).not.toHaveAttribute('role', /.+/)
+    await expect(bar(page).getByRole('status')).toContainText('Verify your email.')
+    await bar(page).getByRole('button', { name: 'Resend link' }).click()
+    await expect(bar(page).getByRole('alert')).toContainText('Too many links sent')
+    await expect(bar(page).getByRole('status')).toHaveCount(0)
+  })
+
+  // The hit area is an ::after pad on the button, which boundingBox() cannot see,
+  // so ask the page what a thumb would land on, just outside the visible button.
+  async function dismissHitsAround(page) {
+    const dismiss = bar(page).getByRole('button', { name: 'Dismiss verification reminder' })
+    const box = await dismiss.boundingBox()
+    return dismiss.evaluate((el, b) => {
+      const hit = (x, y) => document.elementFromPoint(x, y) === el
+      const midX = b.x + b.width / 2
+      const midY = b.y + b.height / 2
+      return {
+        above: hit(midX, b.y - 8), below: hit(midX, b.y + b.height + 8),
+        right: hit(b.x + b.width + 12, midY), left: hit(b.x - 4, midY),
+      }
+    }, box)
+  }
+
+  test('on a phone the Dismiss target is 44px tall without growing the bar', async ({ page }) => {
+    watch(page, 'a person tapping Dismiss with a thumb')
+    await page.setViewportSize({ width: 390, height: 800 })
+    await signIn(page, { plan: 'free', emailVerified: false })
+    await go(page, '/projects')
+    await expect(bar(page)).toBeVisible()
+    expect(await dismissHitsAround(page)).toEqual({ above: true, below: true, right: true, left: true })
+  })
+
+  test('on a desktop the Dismiss button keeps its own small footprint (control)', async ({ page }) => {
+    watch(page, 'a person with a mouse')
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, { plan: 'free', emailVerified: false })
+    await go(page, '/projects')
+    await expect(bar(page)).toBeVisible()
+    const hits = await dismissHitsAround(page)
+    expect(hits.above).toBe(false)
+    expect(hits.below).toBe(false)
+  })
+
+  test('a return address Firebase refuses falls back to the plain link, and says it was sent', async ({ page }) => {
+    watch(page, 'a person on a domain the auth console has not authorised yet')
+    const account = await signIn(page, { plan: 'free', emailVerified: false, authFail: { sendEmailVerificationWithReturn: 'auth/unauthorized-continue-uri' } })
+    await go(page, '/projects')
+    await bar(page).getByRole('button', { name: 'Resend link' }).click()
+    await expect(bar(page)).toContainText(`Link sent to ${account.email}.`)
+    await expect(bar(page).getByRole('alert')).toHaveCount(0)
+    const sends = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.verifySends)
+    expect(sends).toEqual([{ withReturn: true, refused: true }, { withReturn: false, refused: false }])
   })
 
   test('a link that could not be sent says why and keeps the button', async ({ page }) => {
