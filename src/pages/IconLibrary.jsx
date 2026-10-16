@@ -478,12 +478,7 @@ function glyphDataUri(pack, name) {
 }
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
-// Colored/brand artwork keeps its own colours, so the grid can't tint it for
-// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
-// on a chip using the Stage's light gradient by default; if the artwork itself
-// is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
-// flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
-// so scrolling or reopening never re-samples.
+// Remember artwork measurements so scrolling or reopening never re-samples.
 const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wide-slot cap, ink tone)
 
 // A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
@@ -510,12 +505,12 @@ const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wi
 // Colored/brand artwork keeps its own colours and sits straight on the page
 // ground: the chip around it is a transparent slot, not a box. Artwork whose ink
 // is near-black (or near-white in the light theme) would vanish on that ground,
-// so the sampled ink tone also picks a faint halo (`ig-chip--halo-*`) that never
+// so the sampled ink tone also picks a one-pixel edge (`ig-chip--halo-*`) that never
 // touches the artwork's colours. The measurement is remembered per icon, so
 // scrolling or reopening never re-samples.
 
 // The aspect ratio of the box the glyph's opaque pixels occupy, plus the tone of
-// that ink (average relative luminance: near-black -> 'dark', near-white ->
+// that ink (substantial dark neutral ink -> 'dark', near-white average ->
 // 'light', anything else 'mid'). Any failure
 // (CORS taint, decode error) falls back to a square mid-tone ink box - which is exactly
 // the treatment every icon had before this measurement existed, so a sampling
@@ -538,10 +533,16 @@ function sampleGlyph(img) {
     const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
     let sum = 0
     let n = 0
+    let darkNeutral = 0
     let x0 = S, y0 = S, x1 = -1, y1 = -1
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 64) continue
-      sum += 0.2126 * toLin(data[i]) + 0.7152 * toLin(data[i + 1]) + 0.0722 * toLin(data[i + 2])
+      const [r, g, b] = [data[i], data[i + 1], data[i + 2]]
+      const lum = 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b)
+      sum += lum
+      // Dark lettering can dominate a lockup whose coloured mark lifts its
+      // average luminance. Ignore saturated ink and tiny dark details.
+      if (lum < 0.18 && Math.max(r, g, b) - Math.min(r, g, b) <= 48) darkNeutral++
       n++
       const p = i / 4
       const px = p % S
@@ -566,14 +567,13 @@ function sampleGlyph(img) {
       raster: S,
     })
     const lum = sum / n
-    return { ar, cap, ink: lum < INK_DARK_MAX ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid' }
+    return { ar, cap, ink: darkNeutral / n >= 0.25 ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid' }
   } catch { return { ar: 1, cap: 1, ink: 'mid' } }
 }
 
 
-// Iconify-served brand glyph in a transparent slot. logo.dev images must NOT
-// use this component (unknown CORS policy, and they are opaque PNG marks), so
-// they keep a plain light chip of their own (`ig-chip--tile`).
+// Iconify-served brand glyph in a transparent slot. Logo.dev images use a plain
+// transparent slot without pixel sampling, since their CORS policy is unknown.
 //
 // THE REQUEST ASKS FOR A HEIGHT, NOT A BOX. `?width=24&height=24` pinned both
 // dimensions and left the viewBox alone, so the API returned a 24 x 24 SVG that
@@ -745,10 +745,9 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) {
-    // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
-    // plain light chip always gives enough separation from the card surface.
+    // Preserve the raster's own alpha and edges without adding a tile or filter.
     return (
-      <span className="ig-chip ig-chip--tile">
+      <span className="ig-chip">
         <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
       </span>
     )
@@ -3302,6 +3301,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   return (
     <div className="sec">
+      {/* Preview-only shape edges; these definitions never enter copied artwork. */}
+      <svg className="ig-edge-filters" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          {['light', 'dark'].map(tone => (
+            <filter key={tone} id={`ig-edge-${tone}`} x="-100%" y="-100%" width="300%" height="300%" colorInterpolationFilters="sRGB">
+              <feMorphology in="SourceAlpha" operator="dilate" radius="1" result="edge" />
+              <feFlood floodColor={tone === 'light' ? '#f4f4f5' : '#060607'} floodOpacity={tone === 'light' ? '.85' : '.75'} result="colour" />
+              <feComposite in="colour" in2="edge" operator="in" result="outline" />
+              <feMerge>
+                <feMergeNode in="outline" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          ))}
+        </defs>
+      </svg>
       {/* NO STANDALONE MASTHEAD. Both libraries used to carry one behind
           `{!embedded && ...}` — an eyebrow, an h1 and the subtitle — for a
           route that has not existed since the two were merged: the ONLY import

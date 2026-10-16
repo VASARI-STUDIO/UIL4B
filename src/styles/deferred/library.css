@@ -455,13 +455,12 @@ html[data-reduced-motion="true"] :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig
    them) are unchanged, and so a glyph that has not arrived yet is an empty slot
    rather than a blank square. */
 .ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:none;box-shadow:none}
-/* Opaque logo.dev PNGs keep a light tile to separate them from the surface. */
-.ig-chip--tile{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 /* Ink that matches the page ground (near-black on dark, near-white on light) would
-   vanish with no box behind it. A hairline halo outlines the shape; the artwork's
-   own colours are untouched. */
-.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 .5px rgba(255,255,255,.85)) drop-shadow(0 0 .75px rgba(255,255,255,.55))}
-.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 .5px rgba(6,6,7,.75)) drop-shadow(0 0 .75px rgba(6,6,7,.45))}
+   vanish with no box behind it. Dilate alpha by one CSS pixel, without blur,
+   then paint the original artwork over the edge. This stays crisp at 1x. */
+.ig-edge-filters{position:absolute;width:0;height:0;pointer-events:none}
+.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-light)}
+.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-dark)}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
 .ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
 /* Copy, save and download wait for the icon's markup. */

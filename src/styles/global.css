@@ -3174,9 +3174,8 @@ html.lenis{scroll-behavior:auto!important}
    properties. It is reachable by anyone who has copied an icon — the rail is
    the "recently used" strip — so it is converted rather than only recorded. */
 .ig-rail-track{display:flex;gap:8px;padding-bottom:4px}
-/* Logo.dev brand marks are raster and already coloured — size a touch larger
-   than glyph icons, keep their own colours (no invert), and round the corners. */
-.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
+/* Logo.dev raster marks keep their colours, alpha and original corner pixels. */
+.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:0}
 /* THE PACK LABEL IS NOW RENDERED ONLY WHEN THE RESULT SET IS MIXED, and the
    decision moved into IconLibrary.jsx because it depends on the results, not
    on the width. Read the note there for the Mobbin evidence.
