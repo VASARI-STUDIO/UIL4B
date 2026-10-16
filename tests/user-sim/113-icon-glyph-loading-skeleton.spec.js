@@ -573,12 +573,27 @@ for (const scheme of ['light', 'dark']) {
           // from a media-query change event, then announces it with
           // vs-appearance-changed. Wait for that announcement before overriding the
           // attribute by hand, or the late rewrite can overwrite the override.
+          // Only an announcement carrying the target value counts: a late account
+          // sync can announce an unrelated change first. If none arrives in 5 s the
+          // wait fails with a clear message instead of hanging to the test timeout.
           const emulateAndSettle = async reducedMotion => {
-            await page.evaluate(() => {
-              window.__appearanceApplied = new Promise(resolve => {
-                window.addEventListener('vs-appearance-changed', resolve, { once: true })
+            await page.evaluate(want => {
+              window.__appearanceApplied = new Promise((resolve, reject) => {
+                const onChange = e => {
+                  if (e.detail?.reducedMotion !== want) return
+                  clearTimeout(timer)
+                  window.removeEventListener('vs-appearance-changed', onChange)
+                  resolve()
+                }
+                const timer = setTimeout(() => {
+                  window.removeEventListener('vs-appearance-changed', onChange)
+                  reject(new Error(`vs-appearance-changed with reducedMotion=${want} did not fire within 5 s`))
+                }, 5000)
+                window.addEventListener('vs-appearance-changed', onChange)
               })
-            })
+              // A rejection before it is awaited must not count as unhandled.
+              window.__appearanceApplied.catch(() => {})
+            }, reducedMotion === 'reduce')
             await page.emulateMedia({ reducedMotion })
             await page.evaluate(() => window.__appearanceApplied)
           }
