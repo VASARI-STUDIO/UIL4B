@@ -66,6 +66,8 @@ const GEMINI_KEY = cleanKey(
 const OPENROUTER_KEY = cleanKey(process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API)
 const OPENROUTER_MODEL = (process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat').trim()
 const OPENROUTER_REFERER = process.env.OPENROUTER_SITE_URL || 'https://uil4b.com'
+// Allowlist, not a denylist: prompts only reach these US-based, zero-retention hosts, so a new host never gets them by default.
+const OPENROUTER_PROVIDER = { only: ['deepinfra'], data_collection: 'deny', zdr: true }
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
 // `daysAgo` days back, as YYYY-MM-DD. The provider-health window reads a fixed
@@ -400,9 +402,9 @@ async function callOpenRouter(userMessage, opts = {}) {
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
-      // Keep prompts on US-hosted endpoints: skip the China-hosted one. Other
-      // providers stay eligible, so routing can still fail over between them.
-      provider: { ignore: ['streamlake'] },
+      // If no allowed host can serve the model, OpenRouter errors and the caller
+      // falls over to Gemini.
+      provider: OPENROUTER_PROVIDER,
       messages: [
         // `opts.system` defaults to the image-prompt brief, so every existing
         // caller is unchanged — the parameter exists only so a second task can

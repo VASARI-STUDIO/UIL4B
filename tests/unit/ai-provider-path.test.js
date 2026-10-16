@@ -295,15 +295,17 @@ test('OpenRouter is used when the key is stored under the OPEN_ROUTER_API name',
   assert.equal(both.fetches[0].opts.headers.Authorization, `Bearer ${OPENROUTER_KEY}`)
 })
 
-test('the OpenRouter request keeps prompts off the China-hosted endpoint', async () => {
+test('the OpenRouter request keeps prompts on an allowlist of US zero-retention hosts', async () => {
   const ai = loadAi()
   await ai.generate()
   const sent = JSON.parse(ai.fetches[0].opts.body)
-  assert.ok(Array.isArray(sent.provider?.ignore), 'the request carries no provider.ignore list')
-  assert.ok(sent.provider.ignore.includes('streamlake'), 'streamlake is not excluded from routing')
-  // Excluding one endpoint must not turn off failover between the rest.
-  assert.notEqual(sent.provider.allow_fallbacks, false)
-  assert.equal(sent.provider.only, undefined)
+  // The exact object: widening the allowlist, dropping a privacy flag or going
+  // back to a denylist (`ignore`) all fail here.
+  assert.deepEqual(sent.provider, { only: ['deepinfra'], data_collection: 'deny', zdr: true })
+  assert.deepEqual(sent.provider.only, ['deepinfra'], 'only the US host may be routed to')
+  assert.equal(sent.provider.data_collection, 'deny')
+  assert.equal(sent.provider.zdr, true)
+  assert.equal('ignore' in sent.provider, false, 'a denylist must not return')
 })
 
 test('a missing OpenRouter key is not a failover, it is a configuration', async () => {
