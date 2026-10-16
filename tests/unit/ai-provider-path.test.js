@@ -281,8 +281,8 @@ test('OpenRouter is the primary: it is tried first, and Gemini only if nothing c
 })
 
 test('OpenRouter is used when the key is stored under the OPEN_ROUTER_API name', async () => {
-  // The deployment variable is named OPEN_ROUTER_API. Before the alias was read,
-  // the key looked absent and every generation silently ran on Gemini.
+  // OPEN_ROUTER_API is an accepted alias for the key. Without it the key reads as
+  // absent and generation falls through to Gemini.
   const ai = loadAi({ env: { OPEN_ROUTER_API: OPENROUTER_KEY, GEMINI_API_KEY: GEMINI_KEY } })
   const { result } = await ai.generate()
   assert.equal(result.provider, 'openrouter', 'the OPEN_ROUTER_API alias was not picked up')
