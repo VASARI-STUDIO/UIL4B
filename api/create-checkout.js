@@ -56,6 +56,33 @@ export async function checkoutRateLimit(db, { uid, ip, now = Date.now() }) {
 export const PRICE_CACHE_TTL_MS = 5 * 60 * 1000
 const priceCache = new Map()
 
+/** Forget the cached price for `interval` (or every interval), so the next checkout re-reads Stripe. */
+export function forgetCachedPrice(interval = null, cache = priceCache) {
+  if (interval == null) cache.clear()
+  else cache.delete(interval)
+}
+
+/**
+ * Whether a Stripe error from creating a session says the PRICE cannot be sold:
+ * archived, on an inactive product, or gone. That is a price that was sellable
+ * when it was cached and is not now, so the customer is told it is unavailable
+ * instead of seeing a generic failure. Stripe reports it as an
+ * invalid_request_error whose `param` points at the line item's price, or whose
+ * message says the price or product is inactive. Any other error is not this.
+ */
+export function isUnsellablePriceError(err) {
+  if (!err) return false
+  const invalidRequest = err.type === 'StripeInvalidRequestError' || err.rawType === 'invalid_request_error'
+  if (!invalidRequest) return false
+  if (typeof err.param === 'string' && /price/i.test(err.param)) return true
+  const message = typeof err.message === 'string' ? err.message : ''
+  return /\b(price|product)\b[^.]*\b(inactive|archived|not active|no longer active)\b/i.test(message)
+    || /\b(inactive|archived)\b[^.]*\b(price|product)\b/i.test(message)
+}
+
+const priceUnavailableMessage = (interval) =>
+  `The ${interval} price is temporarily unavailable. No payment session was created.`
+
 /**
  * The Stripe price a checkout for `interval` charges, or null when there is no
  * sellable one.
@@ -78,7 +105,7 @@ export async function resolvePrice(stripe, interval, { env = process.env, cache 
   const envPrice = env[envKey]
   if (envPrice) {
     try {
-      const price = await stripe.prices.retrieve(envPrice)
+      const price = await stripe.prices.retrieve(envPrice, { expand: ['product'] })
       if (priceIsSellable(price, key)) {
         cache.set(key, { id: envPrice, at: now })
         return envPrice
@@ -94,7 +121,7 @@ export async function resolvePrice(stripe, interval, { env = process.env, cache 
   }
 
   try {
-    const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1 })
+    const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1, expand: ['data.product'] })
     const price = found?.data?.[0]
     if (!priceIsSellable(price, key)) return null
     cache.set(key, { id: price.id, at: now })
@@ -312,7 +339,7 @@ export default async function handler(req, res) {
     const priceId = await resolvePrice(stripe, interval)
     if (!priceId) {
       console.error('create-checkout: no Stripe price resolved for interval', interval)
-      return res.status(503).json({ error: `The ${interval} price is temporarily unavailable. No payment session was created.` })
+      return res.status(503).json({ error: priceUnavailableMessage(interval) })
     }
 
     const userDoc = await adminDb().collection('users').doc(uid).get()
@@ -389,12 +416,22 @@ export default async function handler(req, res) {
       mode: sessionParams.mode,
     })
   } catch (err) {
+    const failedInterval = parseBillingInterval(req.body?.interval)
+    if (isUnsellablePriceError(err)) {
+      // The price was sellable when it was cached and Stripe now refuses it.
+      // Drop it so the next request resolves a live price (or reports none).
+      forgetCachedPrice(failedInterval)
+      console.error('create-checkout: Stripe refused the resolved price — dropped it from the cache', {
+        uid, interval: failedInterval, error: err?.message, param: err?.param ?? null,
+      })
+      return res.status(503).json({ error: priceUnavailableMessage(failedInterval) })
+    }
     return failRequest(res, {
       status: 500,
       scope: 'create-checkout',
       message: 'Could not start checkout. No payment was taken — please try again, or contact support with the reference below.',
       err,
-      context: { uid, interval: parseBillingInterval(req.body?.interval) },
+      context: { uid, interval: failedInterval },
     })
   }
 }
