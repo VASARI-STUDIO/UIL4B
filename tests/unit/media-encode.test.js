@@ -214,7 +214,7 @@ test('reverse to MP4 puts speed first and reverse last', () => {
   assert.equal(after(args, '-vf'), 'setpts=PTS/0.5,fps=30,scale=720:-2:flags=lanczos,reverse')
 })
 
-test('GIF Colours and Dither replace Quality for video; defaults match the old medium output', () => {
+test('GIF Colours and Dither replace Quality for video; defaults match the Quality medium output', () => {
   const gif = (o) => after(videoToAnimationArgs({ format: 'gif', input: 'i.mp4', fps: 10, width: 480, ...o }), '-vf')
   assert.match(gif({ colours: 256 }), /\[s0\]palettegen\[p\]/)
   assert.match(gif({ colours: 1 }), /palettegen=max_colors=2\[p\]/, 'clamped up to 2')

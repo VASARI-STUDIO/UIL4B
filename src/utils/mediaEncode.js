@@ -109,14 +109,14 @@ export const DIRECTIONS = [
 ]
 export const DITHERS = [
   { id: 'none', label: 'None', filter: 'none' },
-  { id: 'pattern', label: 'Pattern', filter: 'bayer:bayer_scale=2' }, // today's GIF default
+  { id: 'pattern', label: 'Pattern', filter: 'bayer:bayer_scale=2' },
   { id: 'diffusion', label: 'Diffusion', filter: 'floyd_steinberg' },
 ]
 export const GIF_COLOURS_MIN = 2
 export const GIF_COLOURS_MAX = 256
 export const MAX_VIDEO_WIDTH = 2000
 // Reverse holds every decoded frame in memory. This budget is 300 frames at
-// 640 x 640. A judgement, not a measurement: not yet run on the pinned core.
+// 640 x 640. A judgement, not a measurement.
 export const REVERSE_MAX_PIXELS = 300 * 640 * 640
 
 const floorEven = (n) => 2 * Math.floor(n / 2)
