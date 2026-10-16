@@ -538,7 +538,7 @@ test.describe('saved icons', () => {
       await choosePack(page, 'logodev')
       const logo = page.locator('.ig .ic .ig-chip').first()
       await expect(logo).not.toHaveClass(/ig-chip--tile/)
-      expect((await paint(logo)).image, 'a logo.dev PNG got a box').toBe('none')
+      expect((await paint(logo)).image, 'a logo.dev slot paints a tile').toBe('none')
       await ctx.close()
     })
   }
