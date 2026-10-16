@@ -164,7 +164,7 @@ export default function UIKitGuide({ step }) {
     markIntroSeen()
   }, [])
 
-  // The X ends the walkthrough in place: no navigation (Dylan, 15 Oct). Both
+  // The X ends the walkthrough in place: no navigation. Both
   // cards are closed with it, so a lifted name card cannot leave the phone tab
   // bar hidden behind it (`bkit-typing` follows showName).
   const leftInPlaceRef = useRef(false)

@@ -152,7 +152,7 @@ test.describe('Brand kit walkthrough', () => {
     // of links. Step one has to be the tool.
     await expect(page).toHaveURL(/\/create\/palette$/)
     // The h1 is sr-only while the page's lede is unwritten (founder struck the
-    // visible "Palette Generator" on 2026-09-14), so this asserts it is
+    // visible "Palette Generator"), so this asserts it is
     // ATTACHED rather than visible — it still names the board via
     // aria-labelledby, and the visible proof that the right route arrived is
     // the seed chip below.
@@ -332,7 +332,7 @@ test.describe('Brand kit walkthrough', () => {
     const before = page.url()
     await page.getByRole('button', { name: 'Leave the walkthrough' }).click()
 
-    // The X closes the rail in place (Dylan, 15 Oct): same page, work untouched,
+    // The X closes the rail in place: same page, work untouched,
     // nothing sent to /projects.
     await expect(rail(page)).toBeHidden()
     expect(page.url()).toBe(before)
