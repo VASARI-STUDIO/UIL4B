@@ -634,7 +634,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    below ~336px `calc(100%/3)` still takes over and holds three columns. */
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(112px,calc(100%/3)),1fr));gap:4px}
 .ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
-.ic:hover{background:var(--bg-2);border-color:var(--border)}
+@media (hover:hover){.ic:hover{background:var(--bg-2);border-color:var(--border)}}
 .ic:active{transform:scale(.95)}
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}

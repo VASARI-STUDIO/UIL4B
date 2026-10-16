@@ -217,15 +217,22 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
   })
 
   // A response the browser refuses for CORS must still show the art, plain.
+  // A fulfilled response is never CORS-checked in Chromium, so the first load of
+  // each URL (the crossorigin one) is aborted and the plain retry is fulfilled.
   test('Logo.dev art still shows when the response is not CORS-readable', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1440, height: 900 } })
     try {
       const page = await ctx.newPage()
       await signIn(page, { plan: 'pro' })
-      await page.route('https://img.logo.dev/**', route => route.fulfill({
-        contentType: 'image/svg+xml',
-        body: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="#0078d4" d="M0 0h28v28H0z"/></svg>',
-      }))
+      const seen = new Set()
+      await page.route('https://img.logo.dev/**', route => {
+        const url = route.request().url()
+        if (!seen.has(url)) { seen.add(url); return route.abort('failed') }
+        return route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="#0078d4" d="M0 0h28v28H0z"/></svg>',
+        })
+      })
       await go(page, '/create/icons')
       await choosePack(page, 'logodev')
       const logo = page.locator('.ig .ic img.ig-logo').first()
