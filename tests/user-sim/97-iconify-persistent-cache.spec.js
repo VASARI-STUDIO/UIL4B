@@ -61,8 +61,8 @@ function since(ctx, before) {
   return Object.fromEntries(Object.keys(now).map((k) => [k, now[k] - before[k]]))
 }
 const NOTHING = { collection: 0, batch: 0, search: 0, svg: 0 }
-/** Glyph tranches a reload of the 25-pack view may still send; see the stopgap note in test 1. */
-const MAX_NEW_TRANCHES = 2
+/** Glyph tranches a reload may send: none. A tranche is a fixed slice of its pack (glyphChunkPlan), so a cache load and a network load ask for the same URLs. */
+const MAX_NEW_TRANCHES = 0
 
 async function reload(page, route) {
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -115,18 +115,14 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
     const asked = urls.slice(seen).join(' ')
     expect(catalogue, `load ${n} went back to the API for something load 1 already had: ${asked}`)
       .toEqual({ collection: 0, search: 0, svg: 0 })
-    // NAMED STOPGAP, MEASURED (3 failures in 7 runs of the strict version, one
-    // solar.json tranche each time): a glyph tranche's URL is its exact name
-    // list, and which names are on screen when the debounce fires depends on the
-    // order the packs landed, which the network decides on load 1 and the cache
-    // decides on load 2. So a reload can ask for a tranche load 1 never did. It
-    // is a different URL, not a cache miss on the same one. Product fix: key
-    // tranches by a canonical split, not by the visible set. Until then the
-    // count is bounded rather than zero; the 25 /collection requests that
-    // rate-limited the page are still held to exactly none.
-    expect(batch, `load ${n} sent more glyph tranches than ordering jitter explains: ${asked}`).toBeLessThanOrEqual(MAX_NEW_TRANCHES)
+    // A tranche's URL used to be the exact list of names on screen when the
+    // debounce fired, which depends on the order the packs landed (the network
+    // decides it on load 1, the cache on load 2), so a reload could ask for a
+    // tranche load 1 never did (3 failures in 7 runs, one solar.json each time).
+    // Tranches are now fixed slices of their pack, so the count is exactly zero.
+    expect(batch, `load ${n} sent glyph tranches load 1 already had: ${asked}`).toBeLessThanOrEqual(MAX_NEW_TRANCHES)
   }
-  expect(urls.length - afterFirst, 'across both reloads, at most the jittered tranches')
+  expect(urls.length - afterFirst, 'across both reloads, nothing at all')
     .toBeLessThanOrEqual(2 * MAX_NEW_TRANCHES)
   expect(new Set(urls).size, 'no URL was asked for twice, a tranche included, across reloads and pack switches')
     .toBe(urls.length)

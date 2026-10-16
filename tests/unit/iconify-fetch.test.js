@@ -11,9 +11,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  BASE_COOLDOWN, MAX_COOLDOWN, TTL_DEFAULT, TTL_SEARCH,
-  createIconifyFetch, parseRetryAfter, ttlFor,
+  BASE_COOLDOWN, MAX_COOLDOWN, NET_FAIL_WINDOW, STRIKE_MEMORY, TTL_DEFAULT, TTL_SEARCH,
+  createIconifyFetch, fitsUrl, parseRetryAfter, ttlFor,
 } from '../../src/utils/iconifyFetch.js'
+// Loaded here, by its real specifier, so a missing ".js" in its own import of
+// iconifyFetch fails this whole file under Node ESM, not just the groups tests.
+import { GLYPH_CHUNK, glyphChunkPlan } from '../../src/utils/iconGroupGlyphs.js'
 
 const HOST = 'https://api.iconify.design'
 const COLLECTION = `${HOST}/collection?prefix=lucide&info=1`
@@ -58,11 +61,11 @@ const limited = (retryAfter) => new Response('Too Many Requests', {
   status: 429, headers: retryAfter == null ? {} : { 'retry-after': String(retryAfter) },
 })
 
-function rig({ answer = () => ok(), caches = fakeCaches(), storage = fakeStorage(), maxParallel } = {}) {
+function rig({ answer = () => ok(), caches = fakeCaches(), storage = fakeStorage(), maxParallel, opts = {} } = {}) {
   const clock = { t: 1_000_000 }
   const net = scriptedFetch(answer)
   const make = (over = {}) => createIconifyFetch({
-    fetchImpl: net.fetchImpl, caches: caches.caches, storage, now: () => clock.t, maxParallel, ...over,
+    fetchImpl: net.fetchImpl, caches: caches.caches, storage, now: () => clock.t, maxParallel, ...opts, ...over,
   })
   return { clock, net, caches, storage, make, api: make() }
 }
@@ -249,8 +252,13 @@ test('a 404 is an answer: returned as it came, and not kept', async () => {
   assert.equal(net.calls.length, 2)
 })
 
+const SVG_OK = () => new Response('<svg xmlns="http://www.w3.org/2000/svg"></svg>', { status: 200, headers: { 'content-type': 'image/svg+xml' } })
+
 test('persist: false keeps an answer out of Cache Storage', async () => {
-  const { api, caches } = rig()
+  const kept = rig({ answer: SVG_OK })
+  await kept.api.get(`${HOST}/lucide/home.svg?width=24`)
+  assert.equal(kept.caches.store.size, 1, 'positive control: the same good answer is stored by default')
+  const { api, caches } = rig({ answer: SVG_OK })
   await api.get(`${HOST}/lucide/home.svg?width=24`, { persist: false })
   assert.equal(caches.store.size, 0)
 })
@@ -283,6 +291,169 @@ test('Try again can clear the cool-down', async () => {
   assert.equal(net.calls.length, 2)
 })
 
+// ── an answer that is not what was asked for is never kept ───────────────────
+const reply = (body, type) => new Response(body, { status: 200, headers: { 'content-type': type } })
+const STAMP = 'x-uil4b-stored-at'
+
+test('fitsUrl: JSON must parse for the catalogue, search and glyph files; SVG for an icon file', () => {
+  const json = 'application/json; charset=utf-8'
+  assert.equal(fitsUrl(COLLECTION, json, '{"a":1}'), true)
+  assert.equal(fitsUrl(COLLECTION, 'text/html', '<html></html>'), false)
+  assert.equal(fitsUrl(COLLECTION, json, '{"a":'), false, 'cut off')
+  assert.equal(fitsUrl(SEARCH, 'text/plain', '{"a":1}'), false)
+  assert.equal(fitsUrl(`${HOST}/lucide.json?icons=a`, json, 'Too Many Requests'), false)
+  assert.equal(fitsUrl(`${HOST}/lucide/home.svg`, 'image/svg+xml', '<svg></svg>'), true)
+  assert.equal(fitsUrl(`${HOST}/lucide/home.svg`, 'text/plain', '<?xml version="1.0"?><svg viewBox="0 0 1 1"/>'), true, 'an svg body is enough')
+  assert.equal(fitsUrl(`${HOST}/lucide/home.svg`, 'text/html', '<html><svg></svg></html>'), false)
+  assert.equal(fitsUrl(`${HOST}/lucide/home.svg`, json, '{"a":1}'), false)
+})
+
+test('a 200 that is not what was asked for reaches the caller but is not stored', async () => {
+  const cases = [
+    [COLLECTION, 'text/html', '<html>Sign in to the wifi</html>'],
+    [COLLECTION, 'application/json', '{"prefix":"luc'],
+    [`${HOST}/lucide.json?icons=a,b`, 'text/html', '<html></html>'],
+    [SEARCH, 'text/plain', '{"icons":[]}'],
+    [`${HOST}/lucide/home.svg`, 'text/html', '<html><body>nope</body></html>'],
+    [`${HOST}/lucide/home.svg`, 'application/json', '{"a":1}'],
+  ]
+  for (const [url, type, body] of cases) {
+    const { api, net, caches } = rig({ answer: () => reply(body, type) })
+    const r = await api.get(url)
+    assert.equal(r.status, 200, `${url}: the caller still gets what came back`)
+    assert.equal(caches.store.size, 0, `${url} (${type}) was kept`)
+    await api.get(url)
+    assert.equal(net.calls.length, 2, `${url}: nothing was cached, so it is asked again`)
+  }
+  const svg = rig({ answer: () => reply('<svg xmlns="http://www.w3.org/2000/svg"/>', 'text/plain') })
+  await svg.api.get(`${HOST}/lucide/home.svg`)
+  assert.equal(svg.caches.store.size, 1, 'positive control: an svg body is kept')
+})
+
+test('a refresh that comes back as the wrong thing does not replace a good old answer', async () => {
+  let bad = false
+  const { api, clock } = rig({ answer: () => (bad ? reply('<html>portal</html>', 'text/html') : ok('{"v":3}')) })
+  await api.get(COLLECTION)
+  clock.t += TTL_DEFAULT + 1
+  bad = true
+  assert.deepEqual(await (await api.get(COLLECTION)).json(), { v: 3 })
+})
+
+test('an entry that no longer fits its URL is dropped on read, so Try again reaches the network', async () => {
+  const r = rig()
+  r.caches.store.set(COLLECTION, new Response('<html>portal</html>', {
+    status: 200, headers: { 'content-type': 'text/html', [STAMP]: String(r.clock.t) },
+  }))
+  const res = await r.api.get(COLLECTION)
+  assert.deepEqual(await res.json(), { ok: true }, 'the bad body was not served')
+  assert.equal(r.net.calls.length, 1, 'fresh by the clock, but it went to the network')
+  assert.equal(await r.caches.store.get(COLLECTION).clone().text(), '{"ok":true}', 'and the good answer replaced it')
+})
+
+// ── a refusal the browser will not let us read ───────────────────────────────
+const boom = () => { throw new TypeError('Failed to fetch') }
+const collectionOf = (p) => `${HOST}/collection?prefix=${p}`
+
+test('three network rejections in a row start the same cool-down a 429 would', async () => {
+  const { api, net, clock } = rig({ answer: boom })
+  for (const p of ['a', 'b']) await assert.rejects(api.get(collectionOf(p)), TypeError)
+  assert.equal(api.cooldownUntil(), 0, 'two are just a bad connection')
+  await assert.rejects(api.get(collectionOf('c')), TypeError)
+  assert.equal(api.cooldownUntil() - clock.t, BASE_COOLDOWN, 'the third starts it, on the same ladder')
+  const held = await api.get(collectionOf('d'))
+  assert.equal(held.status, 429)
+  assert.equal(net.calls.length, 3, 'and nothing more is sent')
+})
+
+test('one good answer clears the run of rejections', async () => {
+  let down = true
+  const { api } = rig({ answer: () => (down ? boom() : ok()) })
+  for (const p of ['a', 'b']) await assert.rejects(api.get(collectionOf(p)), TypeError)
+  down = false
+  await api.get(collectionOf('c'))
+  down = true
+  for (const p of ['d', 'e']) await assert.rejects(api.get(collectionOf(p)), TypeError)
+  assert.equal(api.cooldownUntil(), 0, 'two and two, with a success between, is not three in a row')
+})
+
+test('rejections spread out over time, timeouts and an offline browser do not start a cool-down', async () => {
+  const slow = rig({ answer: boom })
+  for (const p of ['a', 'b', 'c', 'd']) {
+    await assert.rejects(slow.api.get(collectionOf(p)), TypeError)
+    slow.clock.t += NET_FAIL_WINDOW + 1
+  }
+  assert.equal(slow.api.cooldownUntil(), 0, 'not within the window')
+
+  const timeout = () => { throw Object.assign(new Error('timed out'), { name: 'TimeoutError' }) }
+  const slowNet = rig({ answer: timeout })
+  for (const p of ['a', 'b', 'c', 'd']) await assert.rejects(slowNet.api.get(collectionOf(p)))
+  assert.equal(slowNet.api.cooldownUntil(), 0, 'a timeout is a slow network, not a refusal')
+
+  const offline = rig({ answer: boom, opts: { isOnline: () => false } })
+  for (const p of ['a', 'b', 'c', 'd']) await assert.rejects(offline.api.get(collectionOf(p)), TypeError)
+  assert.equal(offline.api.cooldownUntil(), 0, 'offline is not rate limiting')
+})
+
+test('rejections with an old answer to fall back on do not start a cool-down', async () => {
+  let down = false
+  const { api, clock } = rig({ answer: () => (down ? boom() : ok()) })
+  const urls = ['a', 'b', 'c'].map(collectionOf)
+  for (const u of urls) await api.get(u)
+  clock.t += TTL_DEFAULT + 1
+  down = true
+  for (const u of urls) assert.equal((await api.get(u)).status, 200)
+  assert.equal(api.cooldownUntil(), 0)
+})
+
+test('a back-off count from long ago, or one the visitor cleared, starts again at the base', async () => {
+  const old = rig({ answer: () => limited(null) })
+  await old.api.get(COLLECTION)
+  old.clock.t += BASE_COOLDOWN
+  await old.api.get(OTHER)
+  assert.equal(old.api.cooldownUntil() - old.clock.t, BASE_COOLDOWN * 2, 'positive control: the ladder had climbed')
+  old.clock.t += BASE_COOLDOWN * 2 + STRIKE_MEMORY + 1
+  await old.api.get(COLLECTION)
+  assert.equal(old.api.cooldownUntil() - old.clock.t, BASE_COOLDOWN, 'the count was forgotten once the cool-down was long over')
+
+  const cleared = rig({ answer: () => limited(null) })
+  await cleared.api.get(COLLECTION)
+  cleared.clock.t += BASE_COOLDOWN
+  await cleared.api.get(OTHER)
+  cleared.api.clearCooldown()
+  await cleared.api.get(COLLECTION)
+  assert.equal(cleared.api.cooldownUntil() - cleared.clock.t, BASE_COOLDOWN, 'Try again starts the ladder over')
+})
+
+// ── glyph tranches: one icon, one URL ────────────────────────────────────────
+const nm = (n) => Array.from({ length: n }, (_, i) => `n${i}`)
+const refsOf = (pack, names) => names.map((name) => ({ pack, name }))
+
+test('glyph tranches are cut by position in the pack, so an icon always lands in the same request', () => {
+  const lists = new Map([['solar', nm(250)], ['lucide', nm(40)]])
+  const alone = glyphChunkPlan(lists, refsOf('solar', ['n3']))
+  const crowd = glyphChunkPlan(lists, [...refsOf('solar', nm(19)), ...refsOf('lucide', ['n0'])])
+  assert.equal(alone.length, 1)
+  assert.deepEqual(alone[0].names, nm(GLYPH_CHUNK), 'the whole first chunk, not just the visible name')
+  assert.deepEqual(crowd.find((c) => c.pack === 'solar'), alone[0], 'the same request whatever else is on screen')
+
+  const [second] = glyphChunkPlan(lists, refsOf('solar', ['n150']))
+  assert.deepEqual(second.names, nm(200).slice(100), 'n150 is in the second chunk')
+  const [last] = glyphChunkPlan(lists, refsOf('solar', ['n249']))
+  assert.deepEqual(last.names, nm(250).slice(200), 'the last chunk is the remainder')
+
+  assert.equal(glyphChunkPlan(lists, refsOf('solar', ['n99', 'n100'])).length, 2, 'either side of a boundary')
+  assert.equal(glyphChunkPlan(lists, refsOf('solar', ['n1', 'n2', 'n1'])).length, 1, 'a chunk is asked once')
+  assert.deepEqual(glyphChunkPlan(lists, refsOf('solar', ['n5']), 2)[0].names, ['n4', 'n5'], 'the size is a parameter')
+})
+
+test('icons outside the pack listing are sorted and chunked on their own, so the same set gives the same request', () => {
+  const lists = new Map([['a', nm(5)]])
+  const one = glyphChunkPlan(lists, refsOf('a', ['zz', 'bb', 'n1']))
+  const two = glyphChunkPlan(lists, refsOf('a', ['n1', 'bb', 'zz']))
+  assert.deepEqual(one, two)
+  assert.deepEqual(one.map((c) => c.names), [nm(5), ['bb', 'zz']])
+})
+
 test('every Iconify GET in the library goes through iconifyFetch', () => {
   // Comment-blind, so the note explaining the change cannot satisfy the rule.
   const code = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -293,4 +464,11 @@ test('every Iconify GET in the library goes through iconifyFetch', () => {
   }
   assert.match(code('src/pages/IconLibrary.jsx'), /iconifyFetch\(/)
   assert.match(code('src/utils/iconGroupGlyphs.js'), /iconifyFetch\(/)
+})
+
+test('the grid cuts its glyph tranches with glyphChunkPlan, not from the visible names', () => {
+  const lib = fs.readFileSync(path.join(ROOT, 'src/pages/IconLibrary.jsx'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  assert.match(lib, /glyphChunkPlan\(/)
+  assert.doesNotMatch(lib, /names\.slice\(i, i \+ GLYPH_BATCH\)/)
 })

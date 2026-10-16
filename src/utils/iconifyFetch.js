@@ -26,6 +26,17 @@
 // Access-Control-Expose-Headers, so a cross-origin page sees the 429 but not the
 // header. With no readable value the cool-down is BASE_COOLDOWN, doubling for each
 // 429 that follows without a success between, capped at MAX_COOLDOWN.
+//
+// A 429 MAY NOT BE READABLE AT ALL. If the refusal page carries no CORS header the
+// browser rejects the fetch instead of handing back a 429. A run of NET_FAIL_LIMIT
+// such rejections inside NET_FAIL_WINDOW, on requests with nothing cached to fall
+// back on, starts the same cool-down. Timeouts and a browser that reports itself
+// offline do not count, and one good answer clears the run.
+//
+// ONLY A GOOD ANSWER IS KEPT. A 200 is stored only when its content type and body
+// fit the URL (JSON that parses for the catalogue, search and glyph files; SVG for
+// an icon file). A captive portal or a truncated body is returned to the caller but
+// never written, and an entry that no longer fits is dropped when it is read.
 
 export const ICONIFY_HOST = 'https://api.iconify.design'
 
@@ -42,6 +53,32 @@ const KEEP_MAX = 7 * 24 * HOUR
 export const MAX_COOLDOWN = HOUR
 export const BASE_COOLDOWN = 15 * 60 * 1000
 const MAX_PARALLEL = 6
+// After a cool-down has been over this long, the next refusal starts the ladder
+// again at BASE_COOLDOWN instead of continuing from a weeks-old count.
+export const STRIKE_MEMORY = 2 * HOUR
+export const NET_FAIL_LIMIT = 3
+export const NET_FAIL_WINDOW = 10 * 1000
+
+/**
+ * Does a 200 answer look like what `url` asks for? A catalogue, search or glyph
+ * file must be JSON that parses; an icon file must be SVG. Any other path is not
+ * ours to judge. Used before storing an answer and again when reading one back.
+ */
+export function fitsUrl(url, type, body) {
+  let path
+  try { path = new URL(url).pathname } catch { return true }
+  const kind = String(type || '').toLowerCase()
+  const text = typeof body === 'string' ? body : ''
+  if (path.endsWith('.svg')) {
+    return kind.includes('image/svg') || (!kind.includes('html') && /^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)?(<!doctype[^>]*>\s*)?<svg[\s>/]/i.test(text.slice(0, 2048)))
+  }
+  if (path === '/collection' || path === '/search' || path.endsWith('.json')) {
+    if (!kind.includes('json')) return false
+    try { JSON.parse(text) } catch { return false }
+    return true
+  }
+  return true
+}
 
 /** Freshness window for a URL: a search goes stale in an hour, the rest in a day. */
 export function ttlFor(url) {
@@ -74,8 +111,11 @@ export function createIconifyFetch(opts = {}) {
     try { return globalThis.localStorage || null } catch { return null }
   }
 
+  const isOnline = opts.isOnline || (() => globalThis.navigator?.onLine !== false)
+
   let until = 0
   let strikes = 0
+  let netFails = []
   const inflight = new Map()
   const waiting = []
   let active = 0
@@ -104,10 +144,16 @@ export function createIconifyFetch(opts = {}) {
       else store.removeItem(COOLDOWN_KEY)
     } catch { /* quota or private mode */ }
   }
-  const cooling = () => { syncCooldown(); return now() < until }
+  // A cool-down that ended long ago is history: forget it (and its count) so a
+  // refusal weeks later starts at BASE_COOLDOWN, not at a stale doubling.
+  function forgetOldCooldown() {
+    if ((until || strikes) && now() > until + STRIKE_MEMORY) { until = 0; strikes = 0; saveCooldown() }
+  }
+  const cooling = () => { syncCooldown(); forgetOldCooldown(); return now() < until }
 
   function noteRateLimited(retryAfter) {
     syncCooldown()
+    forgetOldCooldown()
     const asked = parseRetryAfter(retryAfter, now())
     // Refusals from one burst arrive together: only the first starts a new
     // round of back-off, or six stragglers would double the wait six times.
@@ -120,6 +166,17 @@ export function createIconifyFetch(opts = {}) {
   // while it is still running is a straggler from before the refusal.
   function noteOk() {
     if (strikes && now() >= until) { strikes = 0; until = 0; saveCooldown() }
+  }
+  // A refusal the browser would not let us read arrives as a rejected fetch.
+  // One or two are just a bad connection; a quick run of them, with nothing
+  // cached to fall back on, is treated as the rate limit it most likely is.
+  function noteNetworkFailure(err) {
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') return
+    if (!isOnline()) return
+    const t = now()
+    netFails = netFails.filter((at) => t - at < NET_FAIL_WINDOW)
+    netFails.push(t)
+    if (netFails.length >= NET_FAIL_LIMIT) { netFails = []; noteRateLimited(null) }
   }
 
   // ── persistent cache ───────────────────────────────────────────────────────
@@ -158,7 +215,14 @@ export function createIconifyFetch(opts = {}) {
       if (!res) return null
       const storedAt = Number(res.headers.get(STAMP_HEADER))
       if (!Number.isFinite(storedAt)) return null
-      return { status: res.status, body: await res.text(), type: res.headers.get('content-type') || '', storedAt }
+      const entry = { status: res.status, body: await res.text(), type: res.headers.get('content-type') || '', storedAt }
+      if (!fitsUrl(url, entry.type, entry.body)) {
+        // Stored by an earlier version, or damaged since: forget it, so the next
+        // read (and "Try again") goes to the network instead of this body again.
+        await cache.delete(url).catch(() => {})
+        return null
+      }
+      return entry
     } catch { return null }
   }
 
@@ -207,6 +271,7 @@ export function createIconifyFetch(opts = {}) {
         if (res.ok) body = await res.text()
       } catch (err) {
         if (entry) return entry
+        noteNetworkFailure(err)
         throw err
       }
       if (res.status === 429) noteRateLimited(res.headers?.get?.('retry-after'))
@@ -215,8 +280,15 @@ export function createIconifyFetch(opts = {}) {
         if (entry && (res.status === 429 || res.status >= 500)) return entry
         return { status: res.status, body: await res.text().catch(() => ''), type: '', synthetic: false }
       }
+      netFails = []
+      const type = res.headers.get('content-type') || ''
+      const fresh = { status: res.status, body, type, storedAt: now() }
+      if (!fitsUrl(url, type, body)) {
+        // A 200 that is not what was asked for (a portal page, a cut-off body):
+        // not an all-clear, not kept. An older good answer beats it.
+        return entry || fresh
+      }
       noteOk()
-      const fresh = { status: res.status, body, type: res.headers.get('content-type') || '', storedAt: now() }
       if (persist) await writeEntry(url, fresh)
       return fresh
     })
@@ -251,7 +323,7 @@ export function createIconifyFetch(opts = {}) {
     /** The visitor pressed "Try again": forget the cool-down and ask once more. */
     clearCooldown: () => { until = 0; strikes = 0; saveCooldown() },
     /** Test hook: drop in-memory state (not Cache Storage). */
-    reset: () => { until = 0; strikes = 0; inflight.clear(); waiting.length = 0; active = 0; cachePromise = null; swept = false },
+    reset: () => { until = 0; strikes = 0; netFails = []; inflight.clear(); waiting.length = 0; active = 0; cachePromise = null; swept = false },
   }
 }
 

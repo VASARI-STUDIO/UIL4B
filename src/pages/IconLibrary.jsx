@@ -34,6 +34,7 @@ import {
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
 import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
 import { iconifyFetch, clearIconifyCooldown } from '../utils/iconifyFetch'
+import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -391,9 +392,10 @@ const GLYPH_BOX = new Map()
 // that re-renders the same cells never re-asks for them.
 const GLYPH_ASKED = new Map()
 
-// One request carries this many names. 60 measured at ~15KB; 100 keeps the URL
-// well inside every proxy's limit and still lands under 30KB for a stroke pack.
-const GLYPH_BATCH = 100
+// One request carries up to GLYPH_CHUNK names (src/utils/iconGroupGlyphs.js).
+// 60 measured at ~15KB; 100 keeps the URL well inside every proxy's limit and
+// still lands under 30KB for a stroke pack. Which names share a request is
+// fixed by position in the pack's listing, so a reload asks for the same URLs.
 
 const askedFor = (pack) => {
   let s = GLYPH_ASKED.get(pack)
@@ -2841,7 +2843,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     // wasted requests for names nobody was looking at any more. One frame's
     // worth of settling is under the network round trip that follows it.
     const t = setTimeout(() => {
-      const wanted = new Map()
+      // Each pack's full listing, in order: the tranches are cut from this, by
+      // position, so an icon always belongs to the same request (see
+      // glyphChunkPlan). Built from `icons`, which only ever holds packs the
+      // viewer may see; `canSee` below is still checked for every one.
+      const lists = new Map()
+      const listed = new Set()
+      for (const icon of icons) {
+        if (!icon.cdn || icon.custom || icon.logo) continue
+        if (!canSee(icon.pack)) continue
+        const key = svgKey(icon.pack, icon.name)
+        if (listed.has(key)) continue
+        listed.add(key)
+        if (!lists.has(icon.pack)) lists.set(icon.pack, [])
+        lists.get(icon.pack).push(icon.name)
+      }
+      const refs = []
       // The Recent rail is drawn from a separate list that is never part of
       // `icons`, so it has to be named here or its glyphs would wait forever.
       // One page AHEAD of what is drawn, so the markup for the next page is
@@ -2860,21 +2877,19 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // yesterday has simple-icons names in there today, and without this
         // line the rail would fetch them.
         if (!canSee(icon.pack)) continue
-        const key = svgKey(icon.pack, icon.name)
-        if (GLYPH_BODY.has(key)) continue
-        const asked = askedFor(icon.pack)
-        if (asked.has(icon.name)) continue
-        asked.add(icon.name)
-        if (!wanted.has(icon.pack)) wanted.set(icon.pack, [])
-        wanted.get(icon.pack).push(icon.name)
+        // Only a cell that still needs its markup sends a request. The request
+        // that covers it is the whole chunk, though, not just this cell.
+        if (GLYPH_BODY.has(svgKey(icon.pack, icon.name)) || askedFor(icon.pack).has(icon.name)) continue
+        refs.push({ pack: icon.pack, name: icon.name })
       }
-      if (!wanted.size) return
-      const jobs = []
-      for (const [pack, names] of wanted) {
-        for (let i = 0; i < names.length; i += GLYPH_BATCH) {
-          jobs.push(loadGlyphBatch(pack, names.slice(i, i + GLYPH_BATCH)))
-        }
+      const wanted = []
+      for (const chunk of glyphChunkPlan(lists, refs)) {
+        const asked = askedFor(chunk.pack)
+        chunk.names.forEach((n) => asked.add(n))
+        wanted.push(chunk)
       }
+      if (!wanted.length) return
+      const jobs = wanted.map((chunk) => loadGlyphBatch(chunk.pack, chunk.names))
       Promise.all(jobs).then((results) => {
         if (!mountedRef.current) return
         setGlyphTick(n => n + 1)
@@ -2885,7 +2900,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (results.length && results.every(ok => ok === false)) {
           // Names that were never answered must not stay marked as asked, or
           // the retry button would find nothing left to request.
-          for (const [pack, names] of wanted) {
+          for (const { pack, names } of wanted) {
             const asked = askedFor(pack)
             for (const n of names) asked.delete(n)
           }
