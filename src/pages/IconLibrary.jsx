@@ -3194,7 +3194,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (!grid) return
     let timer = null
     const scan = () => {
-      const waiting = [...grid.querySelectorAll('.ig-glyph-wait,.ig-glyph-pending,.ig-chip--wait')]
+      const waiting = [...grid.querySelectorAll('.ig-skel,.ig-glyph-wait,.ig-glyph-pending,.ig-chip--wait')]
         .some(el => {
           const rect = el.getBoundingClientRect()
           return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth
@@ -3565,7 +3565,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               </div>
             )}
 
-            {(waitingStatus || (loading && icons.length === 0)) && !gated && <p className="ig-status" aria-live="polite">Loading icons…</p>}
+            {waitingStatus && !gated && <p className="ig-status" aria-live="polite">Loading icons…</p>}
 
             {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
 

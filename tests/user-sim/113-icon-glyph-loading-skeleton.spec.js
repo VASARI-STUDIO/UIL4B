@@ -62,7 +62,7 @@ test.describe('the icon grid while glyph images are still loading', () => {
         node.querySelectorAll?.('img.ig-glyph-pending').forEach(sample)
       }
       new MutationObserver((records) => {
-        if (window.__waitStarted === null && document.querySelector('.ig-glyph-wait')) window.__waitStarted = performance.now()
+        if (window.__waitStarted === null && document.querySelector('.ig-skel,.ig-glyph-wait')) window.__waitStarted = performance.now()
         if (window.__statusStarted === null && document.querySelector('.ig-status[aria-live="polite"]')) window.__statusStarted = performance.now()
         for (const r of records) {
           if (r.type === 'attributes') scan(r.target)
