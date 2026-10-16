@@ -172,7 +172,6 @@ export default function Feedback({ toast }) {
         <p>{t('feedback.subtitle')}</p>
       </div>
       <div className="card fb-card">
-        <div role="status" className="sr-only">{submitted ? t('feedback.sent') : ''}</div>
         {sendError ? (
           <div className="fb-done">
             <p className="fb-error" role="alert" style={{ marginBottom: 'var(--s-3)' }}>{sendError}</p>
@@ -187,7 +186,7 @@ export default function Feedback({ toast }) {
             </div>
           </div>
         ) : submitted ? (
-          <div className="fb-done">
+          <div className="fb-done" role="status">
             <div className="fb-done-mark" aria-hidden="true">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />

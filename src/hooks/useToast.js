@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { toastDuration } from '../utils/toastDuration'
 
-export function useToast() {
+export function useToast({ listen = true } = {}) {
   const [message, setMessage] = useState('')
   const [type, setType] = useState('success')
   const [visible, setVisible] = useState(false)
@@ -39,14 +39,20 @@ export function useToast() {
 
   // Components with no toast of their own (the header) ask for one with
   //   window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message, type } }))
+  // `detail.action` ({ label, onAction }) adds the action button, and the
+  // listener marks `detail.handled` so a sender can tell a toast was shown.
+  // `listen: false` is for a caller that shows its own toast on demand.
   useEffect(() => {
+    if (!listen) return undefined
     const onToast = (event) => {
-      const { message: msg, type: kind } = event.detail || {}
-      if (msg) toast(msg, kind)
+      const { message: msg, type: kind, action: act } = event.detail || {}
+      if (!msg) return
+      event.detail.handled = true
+      toast(msg, kind, act ? { action: act } : null)
     }
     window.addEventListener('uil4b:toast', onToast)
     return () => window.removeEventListener('uil4b:toast', onToast)
-  }, [toast])
+  }, [toast, listen])
 
   const hold = useCallback(() => { clearTimeout(timer.current) }, [])
   const release = useCallback(() => {

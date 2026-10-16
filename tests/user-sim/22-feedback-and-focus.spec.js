@@ -161,7 +161,7 @@ for (const modal of [true, false]) {
         await go(page, '/projects')
         await page.locator('.global-feedback-btn').click()
       } else await go(page, '/feedback')
-      await expect(surface(page).getByRole('status')).toBeEmpty()
+      await expect(surface(page).getByRole('status')).toHaveCount(0)
       await surface(page).locator('#fb-message').fill(message)
     }
 
@@ -193,7 +193,7 @@ for (const modal of [true, false]) {
       await submit(page).click()
       await expect(heading(page)).toBeVisible()
       await expect(heading(page)).toBeFocused()
-      await expect(surface(page).getByRole('status')).toHaveText('Sent')
+      await expect(surface(page).getByRole('status')).toContainText('Sent')
       await expect(surface(page).getByText('Thanks — sending your message now.')).toBeVisible()
       await expect(surface(page).getByRole('button', { name: modal ? 'Send another' : 'Submit another' })).toBeDisabled()
       await expect.poll(() => server.posted.length).toBe(1)

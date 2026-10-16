@@ -141,7 +141,7 @@ function SoonState({ title, isPro }) {
 export default function CreateTool() {
   const location = useLocation()
   const { isPro } = useSubscription()
-  const { message, visible, type, toast } = useToast()
+  const { message, visible, type, action: toastAction, toast, dismiss: dismissToast, hold: holdToast, release: releaseToast } = useToast()
   // Live tools that copy values (ColorStudio) call onCopy(value) to WRITE the
   // clipboard + toast; the icon/emoji libraries write the clipboard themselves
   // and use onCopy purely as a notification (harmless idempotent re-write here).
@@ -239,7 +239,7 @@ export default function CreateTool() {
       </div>
 
       <AppFooter compact />
-      <Toast message={message} visible={visible} type={type} />
+      <Toast message={message} visible={visible} type={type} action={toastAction} onDismiss={toastAction ? dismissToast : undefined} onHold={holdToast} onRelease={releaseToast} />
     </>
   )
 }

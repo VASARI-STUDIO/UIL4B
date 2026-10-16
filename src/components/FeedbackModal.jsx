@@ -86,7 +86,16 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   const visibleRef = useRef(false)
   useEffect(() => { visibleRef.current = open }, [open])
   const { t } = useI18n()
-  const notification = useToast()
+  // Own toast only for a failure that lands where the page has none (the
+  // chromeless routes), and only while it shows: every other page keeps the
+  // app's single toast.
+  const notification = useToast({ listen: false })
+  const [ownToast, setOwnToast] = useState(false)
+  useEffect(() => {
+    if (!ownToast || notification.visible) return undefined
+    const id = setTimeout(() => setOwnToast(false), 400)
+    return () => clearTimeout(id)
+  }, [ownToast, notification.visible])
   const titleId = useId()
   const capId = useId()
 
@@ -276,10 +285,17 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     return modalFeedbackSend.send(body, draft, {
       retry,
       visible: () => visibleRef.current,
-      notify: (status, onAction) => notification.toast(
-        t(status === 429 ? 'feedback.rateLimit' : 'feedback.submitError'), 'error',
-        { action: { label: t('feedback.tryAgain'), onAction } },
-      ),
+      notify: (status, onAction) => {
+        const detail = {
+          message: t(status === 429 ? 'feedback.rateLimit' : 'feedback.submitError'),
+          type: 'error',
+          action: { label: t('feedback.tryAgain'), onAction },
+        }
+        window.dispatchEvent(new CustomEvent('uil4b:toast', { detail }))
+        if (detail.handled) return
+        setOwnToast(true)
+        notification.toast(detail.message, 'error', { action: detail.action })
+      },
     })
   }
 
@@ -321,7 +337,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
 
   return (
     <>
-      <Toast {...notification} onDismiss={notification.dismiss} onHold={notification.hold} onRelease={notification.release} />
+      {ownToast && <Toast {...notification} onDismiss={notification.dismiss} onHold={notification.hold} onRelease={notification.release} />}
       {open && <div
       ref={overlayRef}
       className="fb-overlay"
@@ -345,7 +361,6 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
           </button>
         </div>
 
-        <div role="status" className="sr-only">{sent ? t('feedback.sent') : ''}</div>
         {error ? (
           <div className="fb-success">
             <p className="fb-error" role="alert">{error}</p>
@@ -360,7 +375,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
             </div>
           </div>
         ) : sent ? (
-          <div className="fb-success">
+          <div className="fb-success" role="status">
             <div className="fb-success-icon">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
