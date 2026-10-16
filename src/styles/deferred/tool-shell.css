@@ -248,6 +248,8 @@
 .bkit-card--name .uh-save-refusal{margin:0}
 .bkit-rail-close{flex-shrink:0;width:30px;height:30px;border-radius:var(--btn-radius);border:1px solid var(--border);background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard)}
 .bkit-rail-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
+/* Desktop-only parts (see the 1024px block below). */
+.bkit-rail-space,.bkit-card-artefact{display:none}
 
 /* Narrow: the rail stacks, the steps keep their own horizontal scroller rather
    than wrapping into a four-line block that would eat the tool. */
@@ -293,6 +295,97 @@
 html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .bkit-card{animation:none;opacity:1;transform:none}
+}
+
+/* ─── Brand kit walkthrough, 1024px and up ───
+   The rail stops being a card over the tool and becomes part of its chrome: a
+   full-bleed, opaque 55px bar fixed to the foot of the viewport, built like the
+   tool toolbar it mirrors (9px block padding, 36px pill controls, the 9% ink
+   hairline, here on the top edge). One row, no boxes: count, four step links,
+   What's this?, the one filled Next, and a close circle. Every word is 13px;
+   only the numerals inside the step marks are 12px. No mono, no caps, no
+   radius, shadow or blur. The bar never animates: each tool mounts its own
+   copy, so an entrance would replay on every Next.
+   An in-flow spacer of the bar's height keeps the end of the tool clear of it.
+   The aliases use the same formulas as .tl's, because the Icon Library is not
+   a ToolLayout page. Below 1024px none of this applies. */
+@media(min-width:1024px){
+  :root{--bkit-h:55px}
+  html.has-kitbar{scroll-padding-block-end:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
+  html.has-kitbar .toast{bottom:calc(24px + var(--bkit-h) + var(--bkit-toolbar-h,0px))}
+
+  .bkit-rail{
+    --bkit-hair:color-mix(in srgb,var(--t0) 9%,transparent);
+    --bkit-line:color-mix(in srgb,var(--t0) 10%,transparent);
+    --bkit-dim:color-mix(in srgb,var(--t0) 62%,var(--bg-0));
+    --bkit-mark-line:color-mix(in srgb,var(--t0) 30%,transparent);
+    --bkit-focus:var(--link,var(--accent-text));
+    --bkit-ease:cubic-bezier(.23,1,.32,1);
+    position:fixed;left:0;right:0;bottom:0;z-index:40;isolation:isolate;
+    box-sizing:border-box;width:auto;height:var(--bkit-h);margin:0;
+    flex-wrap:nowrap;gap:24px;
+    /* Page hosts (the Icon Library) line up with the 1400px .sec column. */
+    padding:9px max(var(--page-inline),calc((100% - 1400px) / 2));
+    background:var(--bg-0);border:0;border-top:1px solid var(--bkit-hair);border-radius:0;box-shadow:none;
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+  }
+  [data-theme="light"] .bkit-rail{--bkit-dim:color-mix(in srgb,var(--t0) 80%,var(--bg-0))}
+  /* ToolLayout hosts line up with the toolbar's back button and primary;
+     Colours with its Adjust-all row. */
+  .tl .bkit-rail{padding-inline:var(--tl-pad)}
+  .plb .bkit-rail{bottom:var(--bkit-toolbar-h,0px);padding-inline:clamp(12px,2vw,20px)}
+  html.has-kitbar .plb .plb-adjust{position:fixed;inset-inline:0;bottom:0;z-index:40}
+  .bkit-rail-space{display:block;flex:0 0 auto;height:var(--bkit-h)}
+  .plb .bkit-rail-space{height:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
+
+  .bkit-rail-head{flex-direction:row;align-items:baseline;gap:8px;flex:0 0 auto}
+  .bkit-rail-eyebrow{font-family:var(--font);font-size:.8125rem;font-weight:540;line-height:1.2;letter-spacing:normal;text-transform:none;color:var(--t0);white-space:nowrap}
+  .bkit-rail-count{font-size:.8125rem;font-weight:400;line-height:1.2;color:var(--bkit-dim)}
+
+  /* Visible overflow, not a scroller: the current-step line sits above the
+     list's box, and nothing in this row scrolls at any desktop width. */
+  .bkit-steps{align-items:center;gap:4px;flex:0 1 auto;overflow:visible}
+  .bkit-steps li{display:flex}
+  .bkit-step-label{font-size:.8125rem;font-weight:400;line-height:1.2;overflow:visible}
+  .bkit-step.is-current .bkit-step-label{font-weight:540}
+  .bkit-rail .bkit-step-swatches,.bkit-rail .bkit-step-value{display:none}
+
+  .bkit-rail-actions{margin-inline-start:auto;gap:8px}
+  .bkit-rail-help,.bkit-rail .bkit-rail-next,.bkit-rail-close{height:36px;transition:background-color 150ms ease,border-color 150ms ease,color 150ms ease,transform 140ms var(--bkit-ease)}
+  .bkit-rail-help{display:inline-flex;align-items:center;gap:8px;padding:0 14px;border:1px solid var(--bkit-line);border-radius:var(--btn-radius);background:transparent;font-family:var(--font);font-size:.8125rem;font-weight:400;line-height:1.2;color:var(--t0);text-decoration:none}
+  .bkit-rail-help-icon{display:block;flex:0 0 auto;width:16px;height:16px}
+  .bkit-rail .bkit-rail-next{gap:8px;padding:0 15px;border:0;font-size:.8125rem;font-weight:540;line-height:1.2;letter-spacing:normal;white-space:nowrap}
+  .bkit-rail-close{width:36px;border-color:var(--bkit-line);border-radius:50%;color:var(--t1)}
+  .bkit-rail-close svg{stroke-width:2}
+  .bkit-rail-help:active,.bkit-rail .bkit-rail-next:active,.bkit-rail-close:active{transform:scale(.97)}
+  .bkit-rail-help:focus-visible,.bkit-rail .bkit-rail-next:focus-visible,.bkit-rail-close:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
+  [dir="rtl"] .bkit-rail-next svg{transform:scaleX(-1)}
+
+  /* The orientation and name cards become popovers over the bar: 8px above
+     its top rule, trailing edge on the trailing edge of the button that
+     opened them. UIKitGuide measures both; the fallbacks are the unmeasured
+     first frame. It floats, so it keeps its shadow. */
+  .bkit-card{position:fixed;left:auto;right:var(--bkit-dock-end,16px);bottom:calc(var(--bkit-dock-bottom,calc(var(--bkit-h) + 12px)) - 4px);width:min(400px,100vw - 32px);margin:0;max-height:calc(100dvh - var(--chrome-h) - var(--bkit-h) - 16px);overflow-y:auto;overscroll-behavior:contain}
+  .plb .bkit-card{max-height:calc(100dvh - var(--chrome-h) - var(--bkit-h) - var(--bkit-toolbar-h,0px) - 16px)}
+  .bkit-card{font-family:var(--font);font-size:13px;font-weight:400;letter-spacing:normal;text-transform:none}
+  .bkit-card-eyebrow,.bkit-card-title,.bkit-name-label,.bkit-card .btn{font-family:var(--font);font-size:13px;font-weight:540;letter-spacing:normal;text-transform:none}
+  .bkit-card-body,.bkit-card-steps li,.bkit-card-steps li.is-current,.bkit-name-input,.bkit-name-note,.bkit-name-error,.bkit-card .uh-save-refusal{font-size:13px;font-weight:400;letter-spacing:normal;text-transform:none}
+  .bkit-card-steps strong{font-weight:540}
+  .bkit-card-num{font-family:var(--font);font-size:12px;font-weight:560;letter-spacing:normal;text-transform:none;font-variant-numeric:tabular-nums}
+  .bkit-card-artefact{display:block;margin-top:4px}
+  .bkit-card-artefact .bkit-step-swatches{gap:4px;height:12px}
+  .bkit-card-artefact .bkit-step-swatch{width:12px;height:12px;border-radius:3px}
+  .bkit-card-artefact .bkit-step-value{font-family:var(--font);font-size:.8125rem;font-weight:400;line-height:1.5;color:var(--t2)}
+}
+@media(min-width:1024px) and (hover:hover) and (pointer:fine){
+  .bkit-rail-help:hover{background:var(--hvr);border-color:var(--bkit-line)}
+}
+@media(min-width:1024px) and (forced-colors:active){
+  .bkit-rail{border-top-color:CanvasText}
+}
+html[data-reduced-motion="true"] :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close):active{transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close):active{transform:none}
 }
 /* SnapSlider — shared range control: snap points, double-click reset, and a
    click-to-edit value readout for custom values beyond the track range. */
@@ -842,7 +935,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
      one-line title read as a masthead without making a two-line one read as a
      hole; the dark slab, the radius and the padding are what carry it, and they
      are the same at every width. Measured after: /discover/palettes is 92px at
-     320 and 227px at 1440, /discover/resources 198px and 394px - the box now
+     320 and 227px at 1440 - the box now
      varies because its contents do.
      NOT A DEFECT, checked and recorded so it is not re-reported: .dgh-hero
      reports scrollWidth - clientWidth of 36px at 390 and 61px at 641, scaling

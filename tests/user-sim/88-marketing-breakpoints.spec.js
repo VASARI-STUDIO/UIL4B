@@ -29,14 +29,7 @@
 //    /create/emoji measured 94px at 768 and 82px at 834 that way. Hence
 //    `emptyAboveH1` beside `dead`: two numbers because there are two mechanisms.
 //
-// 3. SC 2.5.8 ON TWO SURFACES THIS SUITE HAD NEVER MEASURED. /discover/resources
-//    painted 19 row-title links and 5 hand-off links at 19.8px at EVERY width,
-//    and all seven /learn guides painted their breadcrumb's "Learn" link — the
-//    only way back to the index from the top of the article — at 36.3x18.1px.
-//    The written reason the row title was exempt was that it "also carries a
-//    PriceTag", and that is not what the Inline exception says: a link beside a
-//    badge in a flex container is not in a sentence and its line box is not set
-//    by non-target text.
+// 3. Check Learn breadcrumb links against the minimum target size.
 //
 // 4. A LANDMARK IS WHAT THE ACCESSIBILITY TREE SAYS IT IS. A named <section>
 //    is a region; an unnamed one is `generic` and takes no accessible name at
@@ -57,7 +50,6 @@ const MASTHEAD_ROUTES = [
   '/discover/palettes',
   '/discover/gradients',
   '/discover/prompts',
-  '/discover/resources',
   '/create/icons',
   '/create/emoji',
 ]
@@ -235,10 +227,8 @@ test.describe('every standalone control on the marketing set clears 24px', () =>
       const page = await ctx.newPage()
       const bad = []
       let examined = 0
-      // The two surfaces that were failing, plus the pages that carry the most
-      // controls. /discover/resources is the whole outbound half of a page;
-      // /learn/colour-contrast is the guide with the most citations.
-      for (const route of ['/discover/resources', '/learn/colour-contrast', '/learn/brand-colour',
+      // Check citation-heavy guides and pages with many controls.
+      for (const route of ['/learn/colour-contrast', '/learn/brand-colour',
         '/discover', '/sitemap', '/plans']) {
         await go(page, route)
         await page.waitForTimeout(140)

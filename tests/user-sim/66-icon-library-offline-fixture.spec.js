@@ -35,7 +35,7 @@
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { fixturePacks, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
+import { answerIconify, fixturePacks, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 
@@ -593,16 +593,19 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
 
   const locked = (r) => r.chips.filter((c) => c.badge)
   // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
-  expect(anon.chips.length, 'the group tray rendered').toBe(7)
+  expect(anon.chips.length, 'the group tray rendered').toBe(5)
   expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
   for (const c of anon.chips) {
     expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
       .toBe(/ · (Pro|Log in)$/.test(c.name))
   }
-  for (const open of ['My Icons', 'Outlined']) {
+  for (const open of ['My Icons']) {
     expect(anon.chips.find((c) => c.name.startsWith(open)).badge, `${open} is open signed out`).toBe(false)
   }
-  expect(locked(free).length, 'an account opens groups, so it sees fewer locks').toBeLessThan(locked(anon).length)
+  expect(locked(anon).map((c) => c.name), 'signed out, every group but My Icons is locked and asks for Pro').toEqual(
+    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro', 'Emoji · Pro'],
+  )
+  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same four stay locked').toEqual(locked(anon).map((c) => c.name))
   expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
   expect(locked(pro), 'Pro sees no locks at all').toEqual([])
   // The width half only means something for the TRAY: it is what the toolbar's
@@ -611,4 +614,92 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
   if (anon.form === 'tray') {
     expect(Math.abs(anon.width - pro.width), `the tray is ${anon.width}px signed out and ${pro.width}px for Pro`).toBeLessThanOrEqual(1)
   }
+})
+
+const refusedNotice = page => page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
+
+test('reloading retains all five packs without new collection requests', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  try {
+    const page = await ctx.newPage()
+    watch(page, 'visitor reloading cached icon collections')
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    const firstCount = iconifyRequests(ctx).collection
+    expect(firstCount).toBeGreaterThan(0)
+    expect(firstCount).toBe(5)
+    const packs = await page.locator('.ic .ic-pack').allTextContents()
+    expect(new Set(packs).size).toBe(5)
+
+    await page.reload()
+    await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    expect(await page.locator('.ic .ic-pack').allTextContents()).toEqual(packs)
+    expect(iconifyRequests(ctx).collection - firstCount).toBe(0)
+    await expect(refusedNotice(page)).toHaveCount(0)
+    expect(iconifyRequests(ctx).escaped).toEqual([])
+  } finally { await ctx.close() }
+})
+
+test('an expired collection keeps its pack available when collection requests fail', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  try {
+    const page = await ctx.newPage()
+    watch(page, 'visitor whose icon catalogue is refused')
+    const collection = JSON.parse(answerIconify('https://api.iconify.design/collection?prefix=lucide&info=1').body)
+    const names = [...new Set([...(collection.uncategorized || []), ...Object.values(collection.categories || {}).flat()])]
+    const at = Date.now() - 8 * 24 * 60 * 60 * 1000
+    await page.addInitScript(({ names, title, at }) => {
+      localStorage.setItem('uil4b:iconify:collection:lucide', JSON.stringify({ v: 1, at, data: { names, title, credit: null } }))
+    }, { names, title: collection.title, at })
+    let requests = 0
+    await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
+      requests++
+      return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
+    })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig-status').filter({ hasText: /1 sets$/ })).toBeVisible()
+    await expect.poll(() => requests).toBe(5)
+    const shown = await page.locator('.ig .ic > span').allTextContents()
+    expect(shown.length).toBeGreaterThan(0)
+    expect(shown.every(name => names.includes(name))).toBe(true)
+    await expect(refusedNotice(page)).toHaveCount(0)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('uil4b:iconify:collection:lucide')).at)).toBe(at)
+    expect(iconifyRequests(ctx).escaped).toEqual([])
+  } finally { await ctx.close() }
+})
+
+test('Try again sends at most one collection request per pack on each click', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  try {
+    const page = await ctx.newPage()
+    watch(page, 'visitor whose icon catalogue is refused')
+    const requests = []
+    let refusing = true
+    await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
+      requests.push(new URL(route.request().url()).searchParams.get('prefix'))
+      if (!refusing) return route.fallback()
+      return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
+    })
+    await go(page, '/create/icons')
+    const notice = refusedNotice(page)
+    await expect(notice).toBeVisible({ timeout: 20000 })
+    expect(requests).toHaveLength(5)
+    await notice.getByRole('button', { name: 'Try again' }).click()
+    await expect.poll(() => requests.length).toBe(10)
+    await expect(notice).toBeVisible()
+    expect(new Set(requests.slice(5)).size).toBe(5)
+    refusing = false
+    await notice.getByRole('button', { name: 'Try again' }).click()
+    await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
+    expect(requests).toHaveLength(15)
+    expect(new Set(requests.slice(10)).size).toBe(5)
+    await expect(notice).toHaveCount(0)
+    expect(iconifyRequests(ctx).escaped).toEqual([])
+  } finally { await ctx.close() }
 })

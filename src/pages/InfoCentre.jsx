@@ -14,11 +14,9 @@ import SpectrumIcon from '../components/spectrum/SpectrumIcon'
 // The keys the app actually binds. Printed from here so this page cannot
 // document a chord the handlers ignore — which is exactly what it did.
 import { SEARCH_KEY, DOCUMENTED_SHORTCUTS } from '../config/shortcuts'
-// The guides that exist and the one Discover group that is external resources,
-// read from the registries so this page cannot name a guide that is still a
-// roadmap row — which is exactly what it did (see the docs section).
+// Read published guides and topics from the registry.
 import { LEARN_ARTICLES, TOPICS } from '../data/learnIndex'
-import { DISCOVER_GROUPS, toolRoute } from '../data/toolTree'
+import { toolRoute } from '../data/toolTree'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,
@@ -66,12 +64,6 @@ const LEARN_TOPICS = (() => {
   const names = TOPICS.map((t) => t.toLowerCase())
   return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join('')
 })()
-
-// The Discover group that IS external resources. Its label and route are the
-// ones /discover and /sitemap render; the old link here went to /resources,
-// which legacyRoutes.js answers with a 301 to /discover — the landing, not
-// the resources page.
-const CURATED = DISCOVER_GROUPS.find((g) => g.id === 'curated')
 
 const SECTIONS = [
   {
@@ -164,20 +156,10 @@ const SECTIONS = [
   // need a feature to describe; the section comes back with the tools.
   {
     id: 'docs',
-    title: 'Documentation & Resources',
+    title: 'Documentation',
     body: (
       <>
-        {/* DERIVED, NOT TYPED. This read "Reference guides on design
-            principles, UI themes, brand colour, SEO, and marketing. The
-            Resources directory curates the best external fonts, colour tools,
-            and inspiration galleries." Three of the five topics are roadmap
-            rows (LEARN_GROUPS: principles, seo and marketing all soon:true);
-            the link went to a retired URL; and "the best" is the superlative
-            the /discover description deleted by name. What is left is the
-            frame of the sentence with every noun read from the registry:
-            the topics from TOPICS, the guides from LEARN_ARTICLES, the
-            resources page from DISCOVER_GROUPS. */}
-        <p>Reference guides on {LEARN_TOPICS}, and <Link to={CURATED.route}>{CURATED.label}</Link>.</p>
+        <p>Reference guides on {LEARN_TOPICS}.</p>
         <ul>
           {LEARN_ARTICLES.map((a) => (
             <li key={a.slug}><Link to={`/learn/${a.slug}`}>{a.title}</Link></li>
