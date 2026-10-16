@@ -199,7 +199,7 @@ export default function Onboarding() {
             now" that does the identical thing is two names for one action. */}
         <div className="onb-step onb-firstwin-step" data-testid="onboarding-first-win">
           <div className="onb-greeting">You're in, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
-          {verifyLine && <p className="onb-greeting" role="status" data-testid="onboarding-verify-line">{verifyLine}</p>}
+          {verifyLine && <p className={`onb-greeting onb-verify-line${signupVerification === 'failed' ? ' onb-verify-line--failed' : ''}`} role="status" data-testid="onboarding-verify-line">{verifyLine}</p>}
           <h1 className="onb-q" ref={headingRef} tabIndex={-1}>What do you want to make first?</h1>
           <p className="onb-sub">
             Whichever you pick opens next. You can switch at any time — nothing here is locked in.

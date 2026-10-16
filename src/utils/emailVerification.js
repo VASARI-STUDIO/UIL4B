@@ -26,6 +26,29 @@ export function verifyLinkSettings(origin) {
   return { url: `${origin}/settings?verified=1` }
 }
 
+// Firebase refuses a return address it does not accept: a domain missing from
+// the console's authorised list, or a malformed url. The person still needs the
+// link, so those three codes fall back to the plain send, which ends on the auth
+// server's own page, as it did before the return address existed.
+export const CONTINUE_URI_ERRORS = [
+  'auth/unauthorized-continue-uri',
+  'auth/invalid-continue-uri',
+  'auth/missing-continue-uri',
+]
+
+/**
+ * The one place a verification link is sent from. `A` is the loaded auth SDK.
+ * Any other error is thrown for the caller to report.
+ */
+export async function sendVerificationLink(A, user, origin) {
+  try {
+    await A.sendEmailVerification(user, verifyLinkSettings(origin))
+  } catch (error) {
+    if (!CONTINUE_URI_ERRORS.includes(error?.code)) throw error
+    await A.sendEmailVerification(user)
+  }
+}
+
 // Firebase's refusals, in words. The reminder bar and Settings send the same
 // link, so they share this copy.
 export const VERIFY_ERRORS = {

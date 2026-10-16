@@ -86,6 +86,17 @@ function VerifyNotice() {
     return () => clearTimeout(timer)
   }, [verifiedUid])
 
+  // Resend unmounts once the link is sent. If it held focus, the Dismiss button
+  // next to it takes over, so a keyboard user is not dropped to the document.
+  const resendRef = useRef(null)
+  const dismissRef = useRef(null)
+  const resendHadFocus = useRef(false)
+  useEffect(() => {
+    if (state !== 'sent' || !resendHadFocus.current) return
+    resendHadFocus.current = false
+    dismissRef.current?.focus()
+  }, [state])
+
   const confirmed = !!uid && verifiedUid === uid
   const shown = verifyBarVisible({ owed: owed || confirmed, pathname, online })
   useVerificationRecheck(refreshEmailVerified, owed && shown)
@@ -94,6 +105,8 @@ function VerifyNotice() {
   if (!confirmed && (dismissedUid === uid || readVerifyDismissed(uid))) return null
 
   const resend = async () => {
+    // Read before the button disables itself, which can drop focus.
+    resendHadFocus.current = document.activeElement === resendRef.current
     setState('sending')
     try {
       await sendVerificationEmail()
@@ -113,14 +126,14 @@ function VerifyNotice() {
 
   let message
   if (confirmed) {
-    message = <p className="sync-notice-msg">Email verified.</p>
+    message = <p className="sync-notice-msg" role="status">Email verified.</p>
   } else if (state === 'sent') {
-    message = <p className="sync-notice-msg">Link sent to {email}. Check your inbox and spam folder.</p>
+    message = <p className="sync-notice-msg" role="status">Link sent to {email}. Check your inbox and spam folder.</p>
   } else if (state === 'failed') {
     message = <p className="sync-notice-msg" role="alert">{error}</p>
   } else {
     message = (
-      <p className="sync-notice-msg">
+      <p className="sync-notice-msg" role="status">
         <strong>Verify your email.</strong>{' '}
         <span className="sync-notice-detail">Check {email} for the link, or send a new one.</span>
       </p>
@@ -132,20 +145,19 @@ function VerifyNotice() {
       className="sync-notice sync-notice--info verify-notice"
       data-testid="verify-notice"
       data-verify-state={confirmed ? 'verified' : state}
-      role="status"
-      aria-live="polite"
     >
       <span className="sync-notice-ico"><Envelope /></span>
       {message}
       <div className="sync-notice-actions">
         {!confirmed && state !== 'sent' && (
-          <button type="button" className="btn btn-s" onClick={resend} disabled={state === 'sending'}>
+          <button type="button" className="btn btn-s" ref={resendRef} onClick={resend} disabled={state === 'sending'}>
             {state === 'sending' ? 'Sending…' : 'Resend link'}
           </button>
         )}
         <button
           type="button"
           className="sync-notice-dismiss"
+          ref={dismissRef}
           aria-label="Dismiss verification reminder"
           onClick={dismiss}
         >

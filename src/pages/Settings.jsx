@@ -769,10 +769,10 @@ export default function Settings({ toast }) {
   // /settings?verified=1 (see verifyLinkSettings), so the person lands where the
   // address is shown. The account is re-read rather than assumed: the flag is
   // only true here if the link really verified this account. Signed out (the
-  // link was opened in another browser) there is nothing to read, so the toast
-  // says what happened and what to do next; a different, unverified account
-  // gets none. Waits for auth to settle, then removes the parameter so a reload
-  // or a back-step does not repeat it.
+  // link was opened in another browser) there is nothing to read and the
+  // parameter is anyone's to type, so nothing is claimed; a different,
+  // unverified account gets no toast either. Waits for auth to settle, then
+  // removes the parameter so a reload or a back-step does not repeat it.
   const navigate = useNavigate()
   const verifiedReturn = useRef(false)
   useEffect(() => {
@@ -782,10 +782,9 @@ export default function Settings({ toast }) {
     params.delete('verified')
     const search = params.toString()
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true, state: location.state })
-    if (!user) {
-      toast?.('Email verified. Sign in to carry on.')
-      return
-    }
+    // Anyone can open this address, so a signed-out visit proves nothing: no
+    // claim of verification, just the parameter removed.
+    if (!user) return
     setActive('account')
     setPhoneView('section')
     refreshEmailVerified().then((verified) => {

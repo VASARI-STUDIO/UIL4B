@@ -11,7 +11,8 @@
 //     bar with Resend, which stays out of onboarding and Settings, clears itself
 //     when the account is verified, and is never shown to Google or verified
 //     accounts;
-//   · the link brings the person back to /settings?verified=1, which says so.
+//   · the link brings the person back to /settings?verified=1, which says so
+//     only to a signed-in account that the re-read shows verified.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
@@ -198,11 +199,12 @@ test.describe('coming back from the link', () => {
     await expectNoToast(page)
   })
 
-  test('signed out, it says so and what to do next', async ({ page }) => {
+  test('signed out, it claims nothing: the parameter is anyone\'s to type', async ({ page }) => {
     watch(page, 'a person who opened the link in a browser they are not signed in on')
     await go(page, '/settings?verified=1')
-    await expect(toast(page)).toContainText('Email verified. Sign in to carry on.')
     await expect(page).toHaveURL(/\/settings\/?$/)
+    await expectNoToast(page)
+    await expect(page.getByText('Email verified')).toHaveCount(0)
   })
 
   test('an account the link did not verify gets no toast', async ({ page }) => {

@@ -30,7 +30,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
-import { needsEmailVerification, verifyLinkSettings } from '../utils/emailVerification'
+import { needsEmailVerification, sendVerificationLink } from '../utils/emailVerification'
 import { createAccountRetry } from '../utils/accountRetry'
 
 const AuthContext = createContext()
@@ -334,11 +334,15 @@ export function AuthProvider({ children }) {
     // that fails does not fail the signup: Settings keeps offering the link
     // until the address is verified.
     setSignupVerification('pending')
-    A.sendEmailVerification(cred.user, verifyLinkSettings(window.location.origin)).then(() => {
-      setSignupVerification('sent')
+    // The result is dropped if the account changed or signed out while the send
+    // was in flight: it belongs to the account that asked.
+    const sentFor = cred.user.uid
+    const stillSentFor = () => A.auth.currentUser?.uid === sentFor
+    sendVerificationLink(A, cred.user, window.location.origin).then(() => {
+      if (stillSentFor()) setSignupVerification('sent')
     }).catch((error) => {
       console.error('AuthContext: verification email was not sent', { code: error?.code })
-      setSignupVerification('failed')
+      if (stillSentFor()) setSignupVerification('failed')
     })
     const p ={ ...DEFAULT_PROFILE, displayName: displayName || '', email, onboarding: openOnboardingRecord(Date.now()) }
     setCachedProfile(cred.user.uid, p)
@@ -467,7 +471,7 @@ export function AuthProvider({ children }) {
   const sendVerificationEmail = useCallback(async () => {
     if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
     const A = await loadAuthSdk()
-    await A.sendEmailVerification(firebaseUser, verifyLinkSettings(window.location.origin))
+    await sendVerificationLink(A, firebaseUser, window.location.origin)
   }, [firebaseUser])
 
   // The link is opened in another tab or on another device, so the flag here
