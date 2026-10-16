@@ -243,6 +243,11 @@
       "permanent": true
     },
     {
+      "source": "/support",
+      "destination": "/feedback",
+      "permanent": true
+    },
+    {
       "source": "/resources",
       "destination": "/discover",
       "permanent": true
