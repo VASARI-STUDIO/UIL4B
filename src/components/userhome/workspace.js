@@ -20,7 +20,7 @@
 // Plain module, no JSX, so the unit tests can import it under `node --test`.
 
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../config/plans.js'
-import { resolveOffers } from '../../config/planFacts.js'
+import { BILLING_OPTIONS, resolveOffers } from '../../config/planFacts.js'
 import { BILLED_EVERY } from '../../utils/billingCadence.js'
 import { createTools } from '../../data/toolTree.js'
 import { projectDigest, relativeTime } from '../../utils/userHome.js'
@@ -79,6 +79,24 @@ export function projectSlots(count, limit) {
 
 const NO_OFFER = Object.freeze({ label: 'See Pro', billed: '' })
 
+// /api/get-prices fills every cadence from its fallback table when Stripe has none,
+// so an amount counts only if Stripe priced it in this currency: a finite number,
+// `source` not 'fallback', and `currencyAvailability[cadence][currency] === true`
+// (missing availability fails closed).
+function livePricesOnly(prices, currency) {
+  if (!prices || typeof prices !== 'object') return prices
+  const out = { source: prices.source, currencyAvailability: prices.currencyAvailability }
+  for (const { liveKey } of BILLING_OPTIONS) {
+    const amount = prices[liveKey]?.[currency]
+    const source = prices.source?.[liveKey]
+    const live = Number.isFinite(amount)
+      && (source === undefined || source === 'live')
+      && prices.currencyAvailability?.[liveKey]?.[currency] === true
+    if (live) out[liveKey] = { [currency]: amount }
+  }
+  return out
+}
+
 /**
  * The Pro button's label and billed line, from the LIVE price in the visitor's
  * own currency: "Upgrade for A$4/mo" / "Billed yearly". The cheapest per-month
@@ -92,7 +110,7 @@ const NO_OFFER = Object.freeze({ label: 'See Pro', billed: '' })
  * `prices` is usePrices().prices; `currency` and `loaded` are useProPrice()'s.
  */
 export function upgradeOffer({ prices, currency, loaded } = {}) {
-  const { offers } = resolveOffers({ prices, currency, loaded })
+  const { offers } = resolveOffers({ prices: livePricesOnly(prices, currency), currency, loaded })
   let best = null
   for (const o of offers) {
     if (!o.amountLabel || !(o.total > 0)) continue

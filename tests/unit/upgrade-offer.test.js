@@ -6,12 +6,31 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { upgradeOffer } from '../../src/components/userhome/workspace.js'
+import { CURRENCY_CODES, DEFAULT_PRICES } from '../../api/_lib/pricing.js'
 
-const LIVE = {
+// The shape /api/get-prices returns (responseFromLive): a cadence Stripe has no
+// price for carries the DEFAULT_PRICES table, `source: 'fallback'` and every
+// currency unavailable; a live one carries Stripe's currency map.
+const CADENCES = ['monthly', 'quarterly', 'yearly']
+function payload(live = {}) {
+  const out = { availability: {}, currencyAvailability: {}, source: {} }
+  for (const cadence of CADENCES) {
+    const map = live[cadence] || null
+    out[cadence] = map || DEFAULT_PRICES[cadence]
+    out.availability[cadence] = !!map
+    out.source[cadence] = map ? 'live' : 'fallback'
+    out.currencyAvailability[cadence] = Object.fromEntries(
+      CURRENCY_CODES.map((c) => [c, !!map && map[c] != null]),
+    )
+  }
+  return out
+}
+
+const LIVE = payload({
   monthly: { usd: 4.99, aud: 6.99 },
   quarterly: { usd: 13 },
   yearly: { usd: 48, aud: 59 },
-}
+})
 
 test('live AUD prices print the cheapest per-month figure with the A$ label', () => {
   const offer = upgradeOffer({ prices: LIVE, currency: 'aud', loaded: true })
@@ -21,9 +40,41 @@ test('live AUD prices print the cheapest per-month figure with the A$ label', ()
 })
 
 test('only a monthly price live: it is the cheapest on offer, billed monthly', () => {
-  const offer = upgradeOffer({ prices: { monthly: { aud: 6.99 } }, currency: 'aud', loaded: true })
+  const offer = upgradeOffer({ prices: payload({ monthly: { aud: 6.99 } }), currency: 'aud', loaded: true })
   assert.equal(offer.label, 'Upgrade for A$6.99/mo')
   assert.equal(offer.billed, 'Billed monthly')
+})
+
+test('monthly live and yearly on the fallback table: the fallback figure is never offered', () => {
+  const prices = payload({ monthly: { usd: 4.99, aud: 6.99 } })
+  assert.equal(prices.source.yearly, 'fallback')
+  assert.equal(prices.yearly.aud, DEFAULT_PRICES.yearly.aud, 'fixture: the fallback table fills AUD')
+  const offer = upgradeOffer({ prices, currency: 'aud', loaded: true })
+  assert.equal(offer.label, 'Upgrade for A$6.99/mo')
+  assert.equal(offer.billed, 'Billed monthly')
+})
+
+test('every cadence on the fallback table: no amount and no billed line', () => {
+  const prices = payload()
+  for (const currency of ['aud', 'usd']) {
+    const offer = upgradeOffer({ prices, currency, loaded: true })
+    assert.equal(offer.label, 'See Pro', currency)
+    assert.equal(offer.billed, '', currency)
+  }
+})
+
+test('a payload without currencyAvailability fails closed: no amount', () => {
+  const { currencyAvailability, ...bare } = LIVE
+  const offer = upgradeOffer({ prices: bare, currency: 'aud', loaded: true })
+  assert.equal(offer.label, 'See Pro')
+  assert.equal(offer.billed, '')
+})
+
+test('a live cadence is not offered in a currency Stripe has not priced it in', () => {
+  const prices = payload({ monthly: { usd: 4.99 }, yearly: { usd: 48 } })
+  prices.monthly.aud = 6.99 // an amount present while currencyAvailability.aud is false
+  const offer = upgradeOffer({ prices, currency: 'aud', loaded: true })
+  assert.equal(offer.label, 'See Pro')
 })
 
 test('no prices, or prices not loaded: no amount and no billed line', () => {
@@ -41,7 +92,7 @@ test('no prices, or prices not loaded: no amount and no billed line', () => {
 })
 
 test('prices only in USD while the visitor is on AUD: no amount, never the USD figure', () => {
-  const offer = upgradeOffer({ prices: { monthly: { usd: 4.99 }, yearly: { usd: 48 } }, currency: 'aud', loaded: true })
+  const offer = upgradeOffer({ prices: payload({ monthly: { usd: 4.99 }, yearly: { usd: 48 } }), currency: 'aud', loaded: true })
   assert.equal(offer.label, 'See Pro')
   assert.equal(offer.billed, '')
 })
