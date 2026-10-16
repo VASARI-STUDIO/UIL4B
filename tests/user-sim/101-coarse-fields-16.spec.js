@@ -9,8 +9,16 @@
 import { test, expect } from './base.js'
 import { go, signIn } from './helpers.js'
 
-const ROUTES = ['/projects', '/create/palette', '/create/gradient', '/create/type-scale', '/create/tint',
-  '/create/icons', '/create/font-gallery', '/discover/palettes', '/discover/prompts', '/feedback', '/create/alt-text', '/settings']
+// [route, text-like controls that route shows on a touch screen once it has settled].
+// The counts are hand-checked (390 and 820 agree) and are what the walk WAITS for
+// before it measures: `go()` returns when the route has committed, but a field
+// can mount a moment later (the icon library's search arrives with its toolbar),
+// and a walk that measures at that instant sees one field fewer and fails the
+// blind-walk floor below while the page is fine. A route with 0 has no field on
+// a touch screen, so there is nothing to wait for.
+const ROUTES = [['/projects', 0], ['/create/palette', 0], ['/create/gradient', 1], ['/create/type-scale', 1],
+  ['/create/tint', 1], ['/create/icons', 1], ['/create/font-gallery', 2], ['/discover/palettes', 1],
+  ['/discover/prompts', 1], ['/feedback', 2], ['/create/alt-text', 1], ['/settings', 0]]
 const TEXTLIKE = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])'
   + ':not([type=button]):not([type=submit]):not([type=reset]):not([type=image]):not([type=hidden]),select,textarea'
 
@@ -22,8 +30,11 @@ for (const width of [390, 820]) {
       await signIn(page, { projects: 1 })
       const small = []
       let seen = 0
-      for (const route of ROUTES) {
+      for (const [route, expected] of ROUTES) {
         await go(page, route)
+        await expect.poll(() => page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((el) => el.getClientRects().length).length, TEXTLIKE), {
+          message: `${route} never showed its ${expected} text field(s)`, timeout: 15000,
+        }).toBeGreaterThanOrEqual(expected)
         const rows = await page.evaluate((sel) => [...document.querySelectorAll(sel)]
           .filter((el) => el.getClientRects().length)
           .map((el) => ({ sig: `${el.tagName.toLowerCase()}[${el.type || ''}].${String(el.className).split(' ')[0]}`, px: parseFloat(getComputedStyle(el).fontSize) })), TEXTLIKE)
