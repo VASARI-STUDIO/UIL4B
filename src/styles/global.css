@@ -634,7 +634,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    below ~336px `calc(100%/3)` still takes over and holds three columns. */
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(112px,calc(100%/3)),1fr));gap:4px}
 .ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
-.ic:hover{background:var(--bg-2);border-color:var(--border)}
+@media (hover:hover){.ic:hover{background:var(--bg-2);border-color:var(--border)}}
 .ic:active{transform:scale(.95)}
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
@@ -3176,9 +3176,12 @@ html.lenis{scroll-behavior:auto!important}
    properties. It is reachable by anyone who has copied an icon — the rail is
    the "recently used" strip — so it is converted rather than only recorded. */
 .ig-rail-track{display:flex;gap:8px;padding-bottom:4px}
-/* Logo.dev brand marks are raster and already coloured — size a touch larger
-   than glyph icons, keep their own colours (no invert), and round the corners. */
-.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
+/* Transparent marks keep their edges; baked-in square plates get app-icon corners
+   and one even hairline on the plate's own edge (an outline paints over the image
+   and follows the radius, so no side can come out heavier than another). */
+.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:0}
+.ic img.ig-logo--square{border-radius:6px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px}
+[data-theme="dark"] .ic img.ig-logo--square{outline-color:oklch(1 0 0 / .1)}
 /* THE PACK LABEL IS NOW RENDERED ONLY WHEN THE RESULT SET IS MIXED, and the
    decision moved into IconLibrary.jsx because it depends on the results, not
    on the width. Read the note there for the Mobbin evidence.
