@@ -594,10 +594,73 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
       paymentFailedAt: failedAt,
       // Hosted invoice page the customer can use to retry payment.
       hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+      // Which invoice the failure belongs to, so a later invoice.paid only clears
+      // the failure it actually settles (clearPaymentFailure). Unlike
+      // paymentFailedAt this follows the NEWEST failing invoice.
+      failedInvoiceId: invoice.id || null,
       updatedAt: Date.now(),
     },
   }, { merge: true })
   return 'flagged'
+}
+
+/**
+ * Clear the payment-failure flag when an invoice is paid, but only if that
+ * payment settles the failure on record. invoice.paid can arrive late: a paid
+ * event for an older invoice delivered after a newer invoice failed must not
+ * wipe the newer failure, or the customer keeps Pro with no grace countdown.
+ *
+ * Returns 'no_account', 'nothing_to_clear', 'cleared' or 'kept_newer_failure'.
+ *
+ * · Paid invoice is the one that failed: clear.
+ * · A different failed invoice is on record: ask Stripe about it and clear only
+ *   if it is paid or void. If Stripe cannot be read this THROWS, so the delivery
+ *   fails, the claim is released (processStripeEvent) and Stripe retries it;
+ *   guessing either way risks a wrongly cleared or a wrongly kept failure.
+ * · Legacy record (a failure stored before failedInvoiceId existed): clear unless
+ *   the invoice was paid before the failure began. No paid_at: clear, as before.
+ */
+export async function clearPaymentFailure(stripe, invoice, db = null) {
+  const database = db || adminDb()
+  const uid = await uidForCustomer(invoice.customer, database)
+  if (!uid) return 'no_account'
+  const ref = database.collection('users').doc(uid)
+
+  const existing = (await ref.get()).data()?.subscription
+  if (existing?.paymentFailed !== true) return 'nothing_to_clear'
+
+  const failedInvoiceId = typeof existing.failedInvoiceId === 'string' && existing.failedInvoiceId
+    ? existing.failedInvoiceId
+    : null
+
+  if (failedInvoiceId && failedInvoiceId !== invoice.id) {
+    const failed = await stripe.invoices.retrieve(failedInvoiceId)
+    if (failed?.status !== 'paid' && failed?.status !== 'void') {
+      console.warn('stripe-webhook: invoice.paid left the payment failure in place — a different invoice is still unpaid', {
+        uid, paidInvoiceId: invoice.id, failedInvoiceId, failedInvoiceStatus: failed?.status ?? null,
+      })
+      return 'kept_newer_failure'
+    }
+  } else if (!failedInvoiceId) {
+    const paidAt = invoice.status_transitions?.paid_at
+    if (Number.isFinite(paidAt) && Number.isFinite(existing.paymentFailedAt) && paidAt * 1000 < existing.paymentFailedAt) {
+      console.warn('stripe-webhook: invoice.paid left the payment failure in place — it was paid before the failure began', {
+        uid, paidInvoiceId: invoice.id, paidAt: paidAt * 1000, paymentFailedAt: existing.paymentFailedAt,
+      })
+      return 'kept_newer_failure'
+    }
+  }
+
+  await ref.set({
+    // Clear the grace anchor and the retry link too, or a customer who
+    // has paid keeps being shown a "fix your card" banner pointing at a
+    // settled invoice.
+    subscription: {
+      paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null,
+      updatedAt: Date.now(),
+    },
+  }, { merge: true })
+  return 'cleared'
 }
 
 async function flagTrialEnding(subscription) {
@@ -667,7 +730,7 @@ export async function processStripeEvent(event, { db, stripe, dispatch = dispatc
   if (claim !== 'claimed') return claim
 
   try {
-    await dispatch(stripe, event)
+    await dispatch(stripe, event, { db })
   } catch (err) {
     try {
       await releaseStripeEvent(db, event.id)
@@ -691,7 +754,10 @@ export async function processStripeEvent(event, { db, stripe, dispatch = dispatc
   return 'processed'
 }
 
-async function dispatchStripeEvent(stripe, event) {
+// `db` is the handler's database, passed through by processStripeEvent so the
+// invoice handlers (and their tests) use the same one the claim was written to.
+// Every other case still opens its own, as before.
+async function dispatchStripeEvent(stripe, event, { db = null } = {}) {
   switch (event.type) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
@@ -760,23 +826,12 @@ async function dispatchStripeEvent(stripe, event) {
       break
     }
     case 'invoice.payment_failed': {
-      await flagPaymentFailed(stripe, event.data.object)
+      await flagPaymentFailed(stripe, event.data.object, db)
       break
     }
     case 'invoice.paid': {
-      // A successful (re)payment clears any prior failure flag.
-      const uid = await uidForCustomer(event.data.object.customer)
-      if (uid) {
-        await adminDb().collection('users').doc(uid).set({
-          // Clear the grace anchor and the retry link too, or a customer who
-          // has paid keeps being shown a "fix your card" banner pointing at a
-          // settled invoice.
-          subscription: {
-            paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null,
-            updatedAt: Date.now(),
-          },
-        }, { merge: true })
-      }
+      // A successful (re)payment clears the failure it settles, and only that one.
+      await clearPaymentFailure(stripe, event.data.object, db)
       break
     }
     case 'customer.subscription.trial_will_end': {
