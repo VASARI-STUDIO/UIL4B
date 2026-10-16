@@ -136,12 +136,13 @@ const addressPattern = () => new RegExp(ADDRESS_SOURCE, 'g')
 // Nothing here can receive mail, which is the entire point of using them.
 const UNROUTABLE = /(?:^|\.)(?:example\.(?:com|net|org)|example|invalid|test|localhost)$/i
 
-// EXACT addresses, not a uil4b.com wildcard. These two are role addresses
-// published on purpose in the Terms and Privacy pages; `someone@uil4b.com` would
-// still fail.
+// EXACT addresses, not a uil4b.com wildcard. These three are the role aliases
+// that exist (hello@, help@, support@); Terms and Privacy publish support@.
+// `someone@uil4b.com` would still fail.
 const PUBLISHED_ON_PURPOSE = new Set([
-  'legal@uil4b.com',
-  'privacy@uil4b.com',
+  'hello@uil4b.com',
+  'help@uil4b.com',
+  'support@uil4b.com',
 ])
 
 function allowed(address) {
