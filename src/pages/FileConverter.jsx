@@ -28,8 +28,8 @@ import {
 import Segmented from '../components/converter/Segmented'
 import {
   ANIMATION_FORMATS, CROP_SHAPES, DIRECTIONS, DITHERS, FPS_MAX, FPS_MIN, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
-  MAX_VIDEO_WIDTH, PLAY_OPTIONS, QUALITY_LEVELS, SPEEDS, TURNS,
-  clampFps, commitNumber, cropRect, findFormat, formatBytes, formatTime, outputFrames, outputSize,
+  MAX_VIDEO_WIDTH, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TURNS,
+  animatedImageSeconds, clampFps, commitNumber, cropRect, findFormat, formatBytes, formatTime, outputFrames, outputSize,
   reverseFits, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
@@ -719,7 +719,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
  * ratio, so the crop overlay's percentages land on the picture and not on
  * letterbox bars. Without it (Extract frames) it is the plain player.
  */
-function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, busy, editor }) {
+function VideoSource({ srcUrl, videoRef, onLoadedMetadata, onError, facts, onReplace, busy, editor }) {
   const size = editor?.size
   const crop = editor?.crop
   return (
@@ -731,9 +731,10 @@ function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, bus
               src={srcUrl}
               alt="Animation preview"
               onLoad={e => editor.onImageLoad(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)}
+              onError={onError}
             />
           ) : (
-            <video ref={videoRef} src={srcUrl} controls muted playsInline aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} />
+            <video ref={videoRef} src={srcUrl} controls muted playsInline aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} onError={onError} />
           )}
           {crop && size && (
             <div
@@ -817,6 +818,11 @@ const ANCHOR_LABELS = {
 }
 const FLIP_ID = { h: 'fc-vid-flip-h', v: 'fc-vid-flip-v' }
 const REVERSE_OFF_NOTE = 'Reverse keeps every frame in memory, so it’s off for a clip this long. Shorten the clip, lower the frame rate or make it narrower.'
+const REVERSE_UNKNOWN_NOTE = 'Reverse needs to know how long the clip is, and this file doesn’t say, so it’s off.'
+const NO_PREVIEW_NOTE = 'Can’t preview this file, so crop is unavailable. Convert still works.'
+// A file the browser can’t play (an AVI, say) may never report its size. After
+// this long the panel stops saying "Reading the file…"; a late answer still wins.
+const READ_TIMEOUT_MS = 5000
 
 // ── Mode 3: Video → an animated file ─────────────────────────────────────────
 // This was "Video → GIF". The engine it already loaded writes four more
@@ -837,6 +843,8 @@ function VideoConvert({ toast }) {
   const [srcUrl, setSrcUrl] = useState(null)
   const [isImage, setIsImage] = useState(false) // a GIF or animated WebP, shown as an <img>
   const [srcSize, setSrcSize] = useState(null) // { w, h } once the file has said
+  const [srcFailed, setSrcFailed] = useState(false) // the browser errored, or said nothing for READ_TIMEOUT_MS
+  const [imageLen, setImageLen] = useState(null) // seconds read from a GIF/WebP's own header; null = still reading, 0 = can't tell
   const [format, setFormat] = useState('gif')
   const [fps, setFps] = useState(10)
   const [width, setWidth] = useState(480)
@@ -894,6 +902,25 @@ function VideoConvert({ toast }) {
   }, [speed])
   useEffect(() => { applyRate() }, [applyRate, srcUrl])
 
+  // A file the browser can't play never fires loadedmetadata, and some browsers
+  // fire no error either, so a timer ends the wait.
+  useEffect(() => {
+    if (!srcUrl || srcSize) return undefined
+    const t = setTimeout(() => setSrcFailed(true), READ_TIMEOUT_MS)
+    return () => clearTimeout(t)
+  }, [srcUrl, srcSize])
+
+  // An <img> hides its length, so a GIF or animated WebP is read for it (header
+  // bytes only). Reverse needs the length to stay inside the memory budget.
+  useEffect(() => {
+    if (!file || !isImage) return undefined
+    let live = true
+    ;(file.size > PROBE_MAX_BYTES ? Promise.resolve(0) : file.arrayBuffer().then(animatedImageSeconds))
+      .catch(() => 0)
+      .then(s => { if (live) setImageLen(s) })
+    return () => { live = false }
+  }, [file, isImage])
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
@@ -907,6 +934,8 @@ function VideoConvert({ toast }) {
     setSrcUrl(URL.createObjectURL(f))
     setIsImage(animImage)
     setSrcSize(null)
+    setSrcFailed(false)
+    setImageLen(null)
     setResult(null)
     setDuration(0)
     setTrimStart(0)
@@ -924,13 +953,25 @@ function VideoConvert({ toast }) {
 
   const crop = srcSize ? cropRect(srcSize.w, srcSize.h, shape, anchor) : null
   const outSize = srcSize ? outputSize(srcSize.w, srcSize.h, { crop, turn, width }) : null
-  const forwardFrames = clipLen > 0 ? outputFrames(clipLen, speed, fps, 'forward') : 0
-  const reverseOk = !(clipLen > 0 && outSize) || reverseFits(forwardFrames, outSize.w, outSize.h)
+  const unreadable = srcFailed && !srcSize
+  // The length Reverse is measured against: the clip for a video, the header's
+  // sum of frame delays for a GIF or WebP. 0 means it is not known.
+  const secs = clipLen > 0 ? clipLen : isImage ? imageLen || 0 : 0
+  const forwardFrames = secs > 0 ? outputFrames(secs, speed, fps, 'forward') : 0
+  // Reverse is on only when the clip is measured and fits. An unknown length is
+  // treated as over budget (a long GIF would run the tab out of memory), and
+  // while the file is still being read it stays off without a note.
+  const lengthPending = !unreadable && (!srcSize || (isImage && imageLen === null))
+  const reverseWhy = trimInvalid ? null
+    : lengthPending ? 'pending'
+      : secs <= 0 || !outSize ? 'unknown'
+        : reverseFits(forwardFrames, outSize.w, outSize.h) ? null : 'long'
+  const reverseOk = reverseWhy === null
   const dir = reverseOk ? direction : 'forward'
   // A direction that no longer fits falls back to Forward (adjusted during
   // render, the supported way to derive state from a change in other state).
   if (!reverseOk && direction !== 'forward') setDirection('forward')
-  const frames = clipLen > 0 ? outputFrames(clipLen, speed, fps, dir) : 0
+  const frames = secs > 0 ? outputFrames(secs, speed, fps, dir) : 0
   const outSeconds = frames / clampFps(fps)
   const isGif = fmt.id === 'gif'
 
@@ -1053,8 +1094,8 @@ function VideoConvert({ toast }) {
   )
 
   const consequence = !srcSize
-    ? 'Reading the file…'
-    : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
+    ? (unreadable ? NO_PREVIEW_NOTE : 'Reading the file…')
+    :`${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
 
   return (
     <>
@@ -1073,6 +1114,7 @@ function VideoConvert({ toast }) {
               videoRef={videoRef}
               // A recorded WebM often reports Infinity until it is played
               // through; treat that as unknown rather than as a length.
+              onError={() => setSrcFailed(true)}
               onLoadedMetadata={e => {
                 const v = e.target
                 setDuration(Number.isFinite(v.duration) ? v.duration : 0)
@@ -1133,7 +1175,7 @@ function VideoConvert({ toast }) {
                     className="fc-field fc-field--num" inputMode="decimal" disabled={working}
                     aria-label="Trim start (seconds)"
                     shown={trimStart}
-                    onCommit={raw => setTrimStart(commitNumber(raw, { min: 0, max: duration, fallback: 0, decimals: 1 }))}
+                    onCommit={raw => setTrimStart(commitNumber(raw, { min: 0, max: duration, fallback: trimStart, decimals: 1 }))}
                   />
                   <span className="fc-range-arrow" aria-hidden="true">→</span>
                   <DraftNumber
@@ -1157,7 +1199,7 @@ function VideoConvert({ toast }) {
                 id="fc-vid-shape" label="Shape" options={shapeOptions} value={shape} onChange={setShape}
                 disabled={working || !srcSize} className="fc-seg--shape"
               />
-              {!srcSize && <p className="fc-note">Reading the file…</p>}
+              {!srcSize && <p className="fc-note">{unreadable ? NO_PREVIEW_NOTE : 'Reading the file…'}</p>}
               {shape !== 'original' && (
                 <>
                   <Segmented
@@ -1182,8 +1224,10 @@ function VideoConvert({ toast }) {
                 id="fc-vid-direction" label="Direction" options={DIRECTIONS} value={dir} onChange={setDirection} disabled={working}
                 isOptionDisabled={o => o.id !== 'forward' && !reverseOk}
               />
-              {!reverseOk ? (
+              {reverseWhy === 'long' ? (
                 <p className="fc-note">{REVERSE_OFF_NOTE}</p>
+              ) : reverseWhy === 'unknown' ? (
+                <p className="fc-note">{REVERSE_UNKNOWN_NOTE}</p>
               ) : dir !== 'forward' ? (
                 <p className="fc-note">Shows in the result, not the preview.</p>
               ) : null}

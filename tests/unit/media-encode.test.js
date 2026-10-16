@@ -15,7 +15,7 @@ import {
   framesToAnimationArgs, videoToAnimationArgs, parseFrame, parseTime, moveItem,
   animationSize, fitContain, describeTiming, frameName, FRAME_PATTERN, findFormat,
   cropRect, turnFilters, directionFilter, outputSize, outputFrames, reverseFits, commitNumber,
-  REVERSE_MAX_PIXELS,
+  REVERSE_MAX_PIXELS, animatedImageSeconds,
 } from '../../src/utils/mediaEncode.js'
 
 const after = (args, flag) => args[args.indexOf(flag) + 1]
@@ -252,4 +252,47 @@ test('a number field that is cleared falls back, and never snaps to its floor', 
   assert.equal(commitNumber('12.7', { min: 1, max: 50, fallback: 10 }), 13)
   assert.equal(commitNumber('2.35', { min: 0, max: 10, fallback: 0, decimals: 1 }), 2.4)
   assert.equal(commitNumber('0', { min: 16, max: 2000, fallback: 480 }), 16)
+})
+
+// ── Reading a GIF's or WebP's length from its own header ─────────────────────
+const ascii = (s) => [...s].map((c) => c.charCodeAt(0))
+const gifOf = (delaysCs) => new Uint8Array([
+  ...ascii('GIF89a'), 2, 0, 2, 0, 0, 0, 0,
+  ...delaysCs.flatMap((d) => [
+    0x21, 0xf9, 4, 0, d & 255, d >> 8, 0, 0, // graphic control: delay in hundredths of a second
+    0x2c, 0, 0, 0, 0, 2, 0, 2, 0, 0, // image descriptor, no local palette
+    2, 2, 0x44, 0x01, 0, // LZW size, one data block, terminator
+  ]),
+  0x3b,
+])
+const u32 = (n) => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255]
+const webpOf = (delaysMs) => {
+  const chunks = delaysMs.flatMap((d) => {
+    const body = [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, d & 255, (d >> 8) & 255, d >> 16, 0, ...ascii('VP8L'), ...u32(2), 0, 0]
+    return [...ascii('ANMF'), ...u32(body.length), ...body]
+  })
+  return new Uint8Array([...ascii('RIFF'), ...u32(4 + chunks.length), ...ascii('WEBP'), ...chunks])
+}
+
+test('animatedImageSeconds sums a GIF\'s frame delays', () => {
+  assert.equal(animatedImageSeconds(gifOf([10, 10, 30])), 0.5)
+  // A delay under 2 hundredths plays at 0.1 s, as browsers and ffmpeg do.
+  assert.equal(animatedImageSeconds(gifOf([0, 1, 20])), 0.4)
+})
+
+test('animatedImageSeconds sums an animated WebP\'s frame durations', () => {
+  assert.equal(animatedImageSeconds(webpOf([100, 100, 300])), 0.5)
+  assert.equal(animatedImageSeconds(webpOf([0, 100])), 0.11)
+})
+
+test('animatedImageSeconds says 0 (cannot tell) for anything else', () => {
+  assert.equal(animatedImageSeconds(gifOf([10])), 0) // one frame is not an animation
+  assert.equal(animatedImageSeconds(webpOf([100])), 0)
+  assert.equal(animatedImageSeconds(new Uint8Array(40)), 0) // not a GIF or WebP
+  assert.equal(animatedImageSeconds(new Uint8Array(0)), 0)
+  assert.equal(animatedImageSeconds(gifOf([10, 10]).slice(0, 30)), 0) // cut off inside the first frame
+})
+
+test('commitNumber reads a comma as a decimal point', () => {
+  assert.equal(commitNumber('1,5', { min: 0, max: 10, fallback: 0, decimals: 1 }), 1.5)
 })

@@ -174,12 +174,80 @@ export function outputFrames(clipSeconds, speed, fps, direction) {
 
 export const reverseFits = (forwardFrames, w, h) => forwardFrames * w * h <= REVERSE_MAX_PIXELS
 
+// A file bigger than this is not read to find its length; Reverse stays off for it.
+export const PROBE_MAX_BYTES = 100 * 1024 * 1024
+// A frame delay below this many hundredths of a second plays at 0.1 s, as in
+// browsers and in ffmpeg's GIF reader.
+const GIF_MIN_DELAY_CS = 2
+
+/**
+ * How long an animated GIF or animated WebP runs, in seconds, read from the
+ * file's own frame delays. 0 means "cannot tell" (not animated, truncated or
+ * some other format), never "zero length". Only headers are walked; no frame is
+ * decoded. A <img> exposes no duration, which is why this exists: Reverse needs
+ * the length to know whether every frame will fit in memory.
+ */
+export function animatedImageSeconds(bytes) {
+  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || 0)
+  const tag = (at, text) => text.split('').every((c, i) => b[at + i] === c.charCodeAt(0))
+  if (b.length > 12 && tag(0, 'GIF8')) return gifSeconds(b)
+  if (b.length > 12 && tag(0, 'RIFF') && tag(8, 'WEBP')) return webpSeconds(b, tag)
+  return 0
+}
+
+function gifSeconds(b) {
+  let p = 13
+  if (b[10] & 0x80) p += 3 * 2 ** ((b[10] & 7) + 1)
+  const skipBlocks = () => { while (p < b.length && b[p] !== 0) p += b[p] + 1; p += 1 }
+  let delayCs = 0
+  let pending = 0
+  let frames = 0
+  while (p < b.length) {
+    const kind = b[p++]
+    if (kind === 0x3b) break
+    if (kind === 0x21) {
+      const label = b[p++]
+      if (label === 0xf9 && b[p] >= 4) pending = b[p + 2] | (b[p + 3] << 8)
+      skipBlocks()
+    } else if (kind === 0x2c) {
+      if (p + 9 > b.length) return 0
+      const packed = b[p + 8]
+      p += 9
+      if (packed & 0x80) p += 3 * 2 ** ((packed & 7) + 1)
+      p += 1
+      skipBlocks()
+      frames += 1
+      delayCs += pending < GIF_MIN_DELAY_CS ? 10 : pending
+      pending = 0
+    } else {
+      return 0
+    }
+  }
+  return frames > 1 ? delayCs / 100 : 0
+}
+
+function webpSeconds(b, tag) {
+  let p = 12
+  let ms = 0
+  let frames = 0
+  while (p + 8 <= b.length) {
+    const size = (b[p + 4] | (b[p + 5] << 8) | (b[p + 6] << 16) | (b[p + 7] << 24)) >>> 0
+    if (tag(p, 'ANMF') && p + 8 + 15 <= b.length) {
+      const d = b[p + 8 + 12] | (b[p + 8 + 13] << 8) | (b[p + 8 + 14] << 16)
+      ms += Math.max(d, 10)
+      frames += 1
+    }
+    p += 8 + size + (size & 1)
+  }
+  return frames > 1 ? ms / 1000 : 0
+}
+
 /**
  * A number field's value once the visitor leaves it. An empty or non-numeric
  * draft returns `fallback` (the last good value) rather than a floor.
  */
 export function commitNumber(raw, { min, max, fallback, decimals = 0 }) {
-  const text = String(raw ?? '').trim()
+  const text = String(raw ?? '').trim().replace(',', '.') // "1,5" is 1.5 for a comma-decimal keyboard
   const n = text === '' ? NaN : Number(text)
   if (!Number.isFinite(n)) return fallback
   const f = 10 ** decimals
@@ -212,8 +280,9 @@ function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transpa
   const q = QUALITY_LEVELS.some((l) => l.id === quality) ? quality : 'medium'
   const out = `output.${fmt.ext}`
   if (fmt.id === 'gif') {
-    // `gif` (Colours + Dither, from the video editor) replaces the Quality
-    // mapping; without it the output is exactly what Quality has always made.
+    // `gif` (Colours + Dither) replaces the Quality mapping. The Video tab
+    // always passes it, so Quality does not apply there; without it (the
+    // image-sequence tab) the output is exactly what Quality has always made.
     let gen = transparentGif ? 'palettegen=reserve_transparent=1' : 'palettegen'
     let dither = GIF_DITHER[q]
     if (gif) {
