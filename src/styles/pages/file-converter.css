@@ -325,10 +325,12 @@
 
 .fc .fc-seg-glyph { width: 16px; height: 16px; flex: none; }
 
-.fc .fc-toggle { font-weight: 500; }
+/* Chained with .fc-btn so it outranks the button's own weight and hover. */
+.fc .fc-btn.fc-toggle { font-weight: 500; }
 
 /* The same selected look as a segmented option: ground, hairline and ink. */
-.fc .fc-toggle[aria-pressed="true"] {
+.fc .fc-toggle[aria-pressed="true"],
+.fc .fc-toggle[aria-pressed="true"]:hover:not(:disabled) {
   color: var(--t0);
   background: var(--bg-1);
   border-color: transparent;
