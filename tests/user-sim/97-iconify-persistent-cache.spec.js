@@ -18,7 +18,7 @@
 // second load sent nothing" is read off the requests, not inferred from a grid
 // that happens to be full.
 //
-// MUTATIONS (each seen red before this landed; see the handback):
+// MUTATIONS (each seen red before this landed):
 //   - make readEntry() in iconifyFetch.js return null: every reload test fails
 //     on a non-zero count and the cool-down test on the first reload's ledger;
 //   - make cooling() return false: the "different query" step sends a request;
