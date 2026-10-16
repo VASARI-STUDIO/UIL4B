@@ -505,6 +505,7 @@
     "submitError": "Your message didn't send.",
     "sent": "Sent",
     "sendingMessage": "Thanks — sending your message now.",
+    "sentMessage": "Thanks, we've got it.",
     "tryAgain": "Try again",
     "editMessage": "Edit message",
     "yourMessage": "Your message",

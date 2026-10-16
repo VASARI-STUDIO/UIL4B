@@ -13,7 +13,10 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, modalFeedbackSend } from '../utils/supportRequest'
+import {
+  requestIdFor, recoverFeedbackDraft, guardSupportUnload, staleDelivery, forgetSupportSenders,
+  modalFeedbackSend, SUPPORT_MESSAGE_MAX,
+} from '../utils/supportRequest'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -123,6 +126,12 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     }
   }, [])
   useEffect(() => guardSupportUnload(sending || (open && !!error)), [sending, open, error])
+  // Signing out drops whatever a send still holds (it carries the address).
+  const signedInRef = useRef(!!user)
+  useEffect(() => {
+    if (signedInRef.current && !user) forgetSupportSenders()
+    signedInRef.current = !!user
+  }, [user])
 
   useEffect(() => modalFeedbackSend.subscribe(() => {
     const current = modalFeedbackSend.getSnapshot()
@@ -175,6 +184,12 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     attemptRef.current = null
   }, [])
 
+  // Back to a fresh form, with focus in the message field rather than lost to the page.
+  const sendAnother = () => {
+    resetFields()
+    requestAnimationFrame(() => messageRef.current?.focus())
+  }
+
   // Share scroll locking, focus trapping and focus restoration with other dialogs.
   const dialogRef = useModalDialog(onClose, { enabled: open })
   // Back closes the dialog (audit A3) and the page behind it is inert (A12).
@@ -184,8 +199,20 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // Fully reset (including the chosen type) whenever the modal is freshly opened,
   // and focus the first control.
   useEffect(() => {
-    if (!open) { initialisedRef.current = false; return undefined }
+    if (!open) {
+      initialisedRef.current = false
+      // A landed message does not outlive its dialog, including one that lands
+      // after the dialog was closed.
+      modalFeedbackSend.settle()
+      return undefined
+    }
     if (initialisedRef.current && seedRef.current === seed) return undefined
+    // Opening onto a landed message (or a seed over an old failure) starts
+    // clean; the reset changes the status, which re-runs this effect.
+    if (staleDelivery(delivery.status, seed)) {
+      modalFeedbackSend.reset()
+      return undefined
+    }
     if (delivery.status !== 'idle') {
       initialisedRef.current = true
       return undefined
@@ -340,9 +367,9 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
               </svg>
             </div>
             <h3 className="fb-success-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h3>
-            <p className="fb-success-text">{t('feedback.sendingMessage')}</p>
+            <p className="fb-success-text">{sending ? t('feedback.sendingMessage') : t('feedback.sentMessage')}</p>
             <div className="fb-success-actions">
-              <button type="button" className="btn" onClick={resetFields} disabled={sending}>Send another</button>
+              <button type="button" className="btn" onClick={sendAnother} disabled={sending}>Send another</button>
               <button type="button" className="btn btn-accent" onClick={onClose}>Close</button>
             </div>
           </div>
@@ -409,6 +436,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
                 onChange={e => setMessage(e.target.value)}
                 placeholder={activeType.messagePlaceholder}
                 rows={5}
+                maxLength={SUPPORT_MESSAGE_MAX}
                 required
               />
             </div>

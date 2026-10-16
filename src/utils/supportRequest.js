@@ -9,6 +9,9 @@
 /** How long one attempt may take before it is abandoned and reported as failed. */
 export const SEND_TIMEOUT_MS = 15000
 
+/** The longest message /api/support accepts (MESSAGE_MAX there); fields cap input to match. */
+export const SUPPORT_MESSAGE_MAX = 5000
+
 /**
  * A random token naming one message. Also usable as the id of the local copy,
  * so the same message is one record on both sides.
@@ -91,6 +94,16 @@ export function recoverFeedbackDraft(bodyRef, attemptRef, seed = null) {
   return preserve
 }
 
+/**
+ * Whether a surface opening now must discard the delivery it holds: a landed
+ * message never greets the next opening, and a seeded opening (a crash report,
+ * a right-click report) always shows its own content, not an earlier failure.
+ * A send still in flight is never discarded.
+ */
+export function staleDelivery(status, seeded) {
+  return status === 'sent' || (!!seeded && (status === 'failed' || status === 'editing'))
+}
+
 /** Register only while delivery is pending or a final failure is undismissed. */
 export function guardSupportUnload(active, target = window) {
   if (!active) return undefined
@@ -118,6 +131,8 @@ export function createSupportHolder() {
     getSnapshot: () => state,
     subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     reset: () => { if (!sending.current) publish({ status: 'idle', body: null, draft: null, result: null }) },
+    // A landed message is done with: drop it (and the address it carried).
+    settle: () => { if (state.status === 'sent') holder.reset() },
     edit: () => { if (!sending.current) publish({ ...state, status: 'editing' }) },
     send(body, draft, { retry = true, visible, notify } = {}) {
       const pending = startSupportSend(sending, body, { retry })
@@ -137,3 +152,9 @@ export function createSupportHolder() {
 
 export const modalFeedbackSend = createSupportHolder()
 export const pageFeedbackSend = createSupportHolder()
+
+/** On sign-out, drop what both holders keep (a sender's address rides in the held body). */
+export function forgetSupportSenders() {
+  modalFeedbackSend.reset()
+  pageFeedbackSend.reset()
+}

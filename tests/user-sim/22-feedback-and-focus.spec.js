@@ -290,9 +290,69 @@ for (const modal of [true, false]) {
       await toast.getByRole('button', { name: 'Try again' }).click()
       await expect.poll(() => server.posted.length).toBe(3)
       expect(server.posted[2]).toEqual(server.posted[0])
-      if (modal) await page.locator('.global-feedback-btn').click()
+      if (modal) {
+        // It landed while the dialog was closed, so nothing is left to show.
+        await page.locator('.global-feedback-btn').click()
+        await expect(heading(page)).toHaveCount(0)
+        await expect(surface(page).locator('#fb-message')).toHaveValue('')
+      } else {
+        await expect(heading(page)).toBeVisible()
+        await expect(surface(page).getByRole('button', { name: 'Submit another' })).toBeEnabled()
+      }
+    })
+
+    test('a sent message clears: coming back shows a fresh form, not the old Sent panel', async ({ page }) => {
+      const server = await standIn(page)
+      await open(page)
+      await submit(page).click()
       await expect(heading(page)).toBeVisible()
-      await expect(surface(page).getByRole('button', { name: modal ? 'Send another' : 'Submit another' })).toBeEnabled()
+      await expect(surface(page).getByText("Thanks, we've got it.")).toBeVisible()
+      if (modal) {
+        await surface(page).getByRole('button', { name: 'Close', exact: true }).click()
+        await expect(surface(page)).toHaveCount(0)
+        await page.locator('.global-feedback-btn').click()
+      } else {
+        await page.locator('a[href="/projects"]').first().click()
+        await expect(surface(page)).toHaveCount(0)
+        await page.evaluate(() => { history.pushState({}, '', '/feedback'); dispatchEvent(new PopStateEvent('popstate')) })
+      }
+      await expect(surface(page).locator('form')).toBeVisible()
+      await expect(heading(page)).toHaveCount(0)
+      await expect(surface(page).locator('#fb-message')).toHaveValue('')
+      expect(server.posted).toHaveLength(1)
+    })
+
+    test('Send another puts focus back in the message field', async ({ page }) => {
+      await standIn(page)
+      await open(page)
+      await submit(page).click()
+      const another = surface(page).getByRole('button', { name: modal ? 'Send another' : 'Submit another' })
+      await expect(another).toBeEnabled()
+      await another.click()
+      await expect(surface(page).locator('#fb-message')).toBeFocused()
+      await expect(surface(page).locator('#fb-message')).toHaveValue('')
+    })
+
+    test('the message field stops at the 5000 characters the server accepts', async ({ page }) => {
+      await standIn(page)
+      await open(page)
+      await expect(surface(page).locator('#fb-message')).toHaveAttribute('maxlength', '5000')
+    })
+
+    if (modal) test('a crash report opens with its own content after an earlier message was sent', async ({ page }) => {
+      await standIn(page)
+      await open(page)
+      await submit(page).click()
+      await expect(heading(page)).toBeVisible()
+      await surface(page).getByRole('button', { name: 'Close', exact: true }).click()
+      await expect(surface(page)).toHaveCount(0)
+      await page.evaluate(() => window.dispatchEvent(new CustomEvent('uil4b:report-problem', {
+        cancelable: true,
+        detail: { typeId: 'bug', subject: 'Crash on /projects', message: 'Seeded crash text.' },
+      })))
+      await expect(heading(page)).toHaveCount(0)
+      await expect(surface(page).locator('#fb-message')).toHaveValue('Seeded crash text.')
+      await expect(surface(page).locator('#fb-subject')).toHaveValue('Crash on /projects')
     })
 
     if (modal) test('reopening during sending preserves the error when delivery fails', async ({ page }) => {

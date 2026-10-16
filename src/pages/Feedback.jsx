@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
-import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend } from '../utils/supportRequest'
+import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend, SUPPORT_MESSAGE_MAX } from '../utils/supportRequest'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -27,7 +27,13 @@ export default function Feedback({ toast }) {
   const sentHeadingRef = useRef(null)
   const retryRef = useRef(null)
   const visibleRef = useRef(false)
-  useEffect(() => { visibleRef.current = true }, [])
+  // A landed message is not kept for the next visit: drop it on arriving (it may
+  // have landed while the page was away) and on leaving.
+  useLayoutEffect(() => {
+    visibleRef.current = true
+    pageFeedbackSend.settle()
+    return () => { pageFeedbackSend.settle() }
+  }, [])
   const [type, setType] = useState(() => delivery.status === 'sent' ? 'feature' : delivery.draft?.type ?? 'feature')
   const [message, setMessage] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.message ?? '')
   const [subject, setSubject] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.subject ?? '')
@@ -188,7 +194,7 @@ export default function Feedback({ toast }) {
               </svg>
             </div>
             <h2 className="fb-done-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h2>
-            <p className="fb-done-sub">{t('feedback.sendingMessage')}</p>
+            <p className="fb-done-sub">{busy ? t('feedback.sendingMessage') : t('feedback.sentMessage')}</p>
             {/* Which of the two things just happened. Neither line promises a
                 reply — whether one is written is a person's decision, not the
                 code's — they state whether one is POSSIBLE, which is a fact
@@ -198,7 +204,10 @@ export default function Feedback({ toast }) {
                 ? t('feedback.replyAddress', { email: sentTo })
                 : t('feedback.noReplyAddress')}
             </p>
-            <button className="btn btn-s fb-again" disabled={busy} onClick={() => pageFeedbackSend.reset()}>{t('feedback.submitAnother')}</button>
+            <button className="btn btn-s fb-again" disabled={busy} onClick={() => {
+              pageFeedbackSend.reset()
+              requestAnimationFrame(() => messageRef.current?.focus())
+            }}>{t('feedback.submitAnother')}</button>
           </div>
         ) : (
           <form onSubmit={submit} className="fb-form" noValidate>
@@ -279,6 +288,7 @@ export default function Feedback({ toast }) {
                 value={message}
                 onChange={e => { setMessage(e.target.value); if (error) setError('') }}
                 placeholder={t('feedback.messagePlaceholder')}
+                maxLength={SUPPORT_MESSAGE_MAX}
                 aria-invalid={!!error}
                 aria-describedby={error ? 'fb-error' : undefined}
               />

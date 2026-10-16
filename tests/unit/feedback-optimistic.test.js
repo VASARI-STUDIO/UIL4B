@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   requestIdFor, postSupportWithRetry, startSupportSend, recoverFeedbackDraft,
-  guardSupportUnload, supportError, createSupportHolder,
+  guardSupportUnload, supportError, createSupportHolder, staleDelivery, forgetSupportSenders,
+  modalFeedbackSend, pageFeedbackSend,
 } from '../../src/utils/supportRequest.js'
 
 const PAYLOAD = { type: 'bug', subject: 'Export', message: 'The export did nothing.', email: '', source: 'inline' }
@@ -67,14 +68,16 @@ test('Try again sends exactly one request with the same requestId, even on 5xx',
 
 test('edit after failure and reopening retain the filled draft and requestId', () => {
   const { body, attempt } = makeDraft()
-  const draft = { ...PAYLOAD }
   const id = body.current.requestId
   assert.equal(recoverFeedbackDraft(body, attempt), true)
   assert.equal(body.current, null, 'the failed frozen body must not block the editable form')
-  assert.deepEqual(draft, PAYLOAD)
-  assert.equal(requestIdFor(attempt, draft), id)
+  assert.equal(requestIdFor(attempt, PAYLOAD), id, 'unchanged content keeps its id')
   assert.equal(recoverFeedbackDraft(body, attempt), true, 'closing after editing must still preserve the draft')
-  assert.equal(requestIdFor(attempt, draft), id)
+  assert.equal(requestIdFor(attempt, PAYLOAD), id)
+  assert.notEqual(requestIdFor(attempt, { ...PAYLOAD, message: 'Changed after the failure.' }), id, 'an edit gets a new id')
+  attempt.current = null
+  assert.equal(recoverFeedbackDraft(body, attempt), false, 'nothing to preserve once the attempt is cleared')
+  assert.notEqual(requestIdFor(attempt, PAYLOAD), id)
 })
 
 test('changing text after failure creates a new requestId', () => {
@@ -82,15 +85,6 @@ test('changing text after failure creates a new requestId', () => {
   const id = body.current.requestId
   recoverFeedbackDraft(body, attempt)
   assert.notEqual(requestIdFor(attempt, { ...PAYLOAD, message: 'Export is still broken.' }), id)
-})
-
-test('a new seed replaces a failed draft and starts a new requestId', () => {
-  const { body, attempt } = makeDraft()
-  const id = body.current.requestId
-  assert.equal(recoverFeedbackDraft(body, attempt, { typeId: 'bug', message: 'New report' }), false)
-  assert.equal(body.current, null)
-  assert.equal(attempt.current, null)
-  assert.notEqual(requestIdFor(attempt, PAYLOAD), id)
 })
 
 test('keepalive uses UTF-8 bytes and is enabled only below 60 KB', async t => {
@@ -171,4 +165,66 @@ test('holder preserves visible failures on reopening and Edit message retains th
   holder.reset()
   assert.equal(holder.getSnapshot().status, 'idle')
   assert.equal(holder.getSnapshot().draft, null)
+})
+
+test('a landed message is dropped by settle, with the address it carried', async t => {
+  network(t, [{ ok: true, status: 200 }])
+  const holder = createSupportHolder()
+  const { body } = makeDraft()
+  const withEmail = { ...body.current, email: 'someone@example.com' }
+  await holder.send(withEmail, { ...PAYLOAD })
+  assert.equal(holder.getSnapshot().status, 'sent')
+  assert.equal(holder.getSnapshot().body.email, 'someone@example.com')
+  holder.settle()
+  assert.deepEqual(holder.getSnapshot(), { status: 'idle', body: null, draft: null, result: null })
+})
+
+test('settle keeps what is not finished: a send in flight and a failed draft', async t => {
+  const calls = network(t, [{ ok: false, status: 400 }])
+  const holder = createSupportHolder()
+  const { body, attempt } = makeDraft()
+  const draft = { ...PAYLOAD, attempt: attempt.current }
+  const pending = holder.send(body.current, draft, { retry: false })
+  holder.settle()
+  assert.equal(holder.getSnapshot().status, 'sending', 'an in-flight send is never dropped')
+  await pending
+  holder.settle()
+  assert.equal(holder.getSnapshot().status, 'failed', 'a failed draft survives for retry')
+  assert.equal(holder.getSnapshot().draft, draft)
+  assert.equal(calls.length, 1)
+})
+
+test('after a landed message the next send is a fresh request, not a duplicate', async t => {
+  const calls = network(t, [{ ok: true, status: 200 }, { ok: true, status: 200 }])
+  const holder = createSupportHolder()
+  const attempt = { current: null }
+  await holder.send({ ...PAYLOAD, requestId: requestIdFor(attempt, PAYLOAD) }, {})
+  holder.settle()
+  attempt.current = null
+  assert.notEqual(holder.send({ ...PAYLOAD, requestId: requestIdFor(attempt, PAYLOAD) }, {}), null, 'the holder accepts a new send')
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(calls.length, 2)
+  assert.notEqual(calls[1].parsed.requestId, calls[0].parsed.requestId)
+})
+
+test('an opening discards a landed message, and a seed also discards an old failure', () => {
+  assert.equal(staleDelivery('sent', false), true)
+  assert.equal(staleDelivery('sent', { subject: 'Crash' }), true)
+  assert.equal(staleDelivery('failed', false), false, 'a failed draft may persist for a plain opening')
+  assert.equal(staleDelivery('editing', false), false)
+  assert.equal(staleDelivery('failed', { subject: 'Crash' }), true)
+  assert.equal(staleDelivery('editing', { subject: 'Crash' }), true)
+  assert.equal(staleDelivery('sending', { subject: 'Crash' }), false, 'an in-flight send is never discarded')
+  assert.equal(staleDelivery('idle', { subject: 'Crash' }), false)
+})
+
+test('signing out clears a landed message and its address from both holders', async t => {
+  network(t, [{ ok: true, status: 200 }])
+  const { body } = makeDraft()
+  const withEmail = { ...body.current, email: 'someone@example.com' }
+  await pageFeedbackSend.send(withEmail, {})
+  assert.equal(pageFeedbackSend.getSnapshot().body.email, 'someone@example.com')
+  forgetSupportSenders()
+  assert.equal(pageFeedbackSend.getSnapshot().body, null)
+  assert.equal(modalFeedbackSend.getSnapshot().status, 'idle')
 })
