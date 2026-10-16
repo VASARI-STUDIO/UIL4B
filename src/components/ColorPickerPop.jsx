@@ -1,5 +1,6 @@
 import MenuSelect from './tool/MenuSelect'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import usePopover from '../hooks/usePopover'
 import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
@@ -156,6 +157,7 @@ export default function ColorPickerPop({
   onDisabledClick,
   triggerClassName = '',
   triggerChildren,
+  portal = false,
 }) {
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState('hex')
@@ -182,6 +184,18 @@ export default function ColorPickerPop({
   // purpose is that one control, and anything else costs a keyboard user a tab
   // every single time they open it.
   const { triggerRef, popRef } = usePopover(open, close, { initialFocus: '.cpk-pad' })
+
+  useLayoutEffect(() => {
+    if (!open || !portal) return
+    // A portalled picker must clear every stacking context around its trigger.
+    let layer = 130
+    for (let node = triggerRef.current; node; node = node.parentElement) {
+      layer = Math.max(layer, (Number.parseInt(getComputedStyle(node).zIndex, 10) || 0) + 1)
+    }
+    popRef.current?.style.setProperty('--cpk-layer', String(layer))
+  }, [open, portal, popRef, triggerRef])
+
+  const renderPopover = panel => portal ? createPortal(panel, document.body) : panel
 
   // Re-seed the working state each time the popover opens (or the outside value
   // changes while closed) so it always starts from the live colour.
@@ -312,8 +326,8 @@ export default function ColorPickerPop({
         )}
       </button>
 
-      {open && (
-        <div className="pop cpk-pop" ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
+      {open && renderPopover(
+        <div className="pop cpk-pop" data-pop-fixed={portal || undefined} ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
           {/* The panel says which colour it is editing, in the shared .pop-head
               voice. Near-free on a surface with one picker; the difference
               between usable and guesswork on a gradient with five stops, a
