@@ -569,11 +569,24 @@ for (const scheme of ['light', 'dark']) {
           const atLoad = await page.evaluate(() => window.__groupLoadOpacity)
           expect(atLoad.length).toBeGreaterThan(0)
           expect(atLoad.every(opacity => opacity === '0')).toBe(true)
-          await page.emulateMedia({ reducedMotion: 'reduce' })
+          // The app follows the OS setting live and rewrites html[data-reduced-motion]
+          // from a media-query change event, then announces it with
+          // vs-appearance-changed. Wait for that announcement before overriding the
+          // attribute by hand, or the late rewrite can overwrite the override.
+          const emulateAndSettle = async reducedMotion => {
+            await page.evaluate(() => {
+              window.__appearanceApplied = new Promise(resolve => {
+                window.addEventListener('vs-appearance-changed', resolve, { once: true })
+              })
+            })
+            await page.emulateMedia({ reducedMotion })
+            await page.evaluate(() => window.__appearanceApplied)
+          }
+          await emulateAndSettle('reduce')
           await expect(glyph).toHaveCSS('transition-property', 'none')
           await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'false' })
           await expect(glyph).toHaveCSS('transition-property', 'opacity')
-          await page.emulateMedia({ reducedMotion: 'no-preference' })
+          await emulateAndSettle('no-preference')
           await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
           await expect(glyph).toHaveCSS('transition-property', 'none')
         } finally { release() }
