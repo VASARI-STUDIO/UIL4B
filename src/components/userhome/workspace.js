@@ -14,12 +14,14 @@
 //     Tints, which it does store.
 //   · the AI meter reads the same per-browser counter the AI tools write
 //     (utils/usageTracker.js), against the plan's daily limit.
-//   · the price is planLadder.js's cheapest per-month figure, never "$4".
+//   · the price is the live cheapest per-month figure in the visitor's own
+//     currency (upgradeOffer), never "$4"; with none live there is no amount.
 //
 // Plain module, no JSX, so the unit tests can import it under `node --test`.
 
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../config/plans.js'
-import { cheapestPerMonth, resolvePlanLadder } from '../../config/planLadder.js'
+import { resolveOffers } from '../../config/planFacts.js'
+import { BILLED_EVERY } from '../../utils/billingCadence.js'
 import { createTools } from '../../data/toolTree.js'
 import { projectDigest, relativeTime } from '../../utils/userHome.js'
 
@@ -75,14 +77,33 @@ export function projectSlots(count, limit) {
 
 /* ── The Pro panel ────────────────────────────────────────────────────────── */
 
-const LADDER = resolvePlanLadder()
-const CHEAPEST = cheapestPerMonth(LADDER)
+const NO_OFFER = Object.freeze({ label: 'See Pro', billed: '' })
 
-/** "Upgrade for $4/mo" with the $4 derived; "Billed yearly" from the same tier. */
-export const UPGRADE = Object.freeze({
-  label: CHEAPEST?.perMonthLabel ? `Upgrade for ${CHEAPEST.perMonthLabel}/mo` : 'See Pro',
-  billed: CHEAPEST?.id === 'yearly' ? 'Billed yearly' : CHEAPEST?.id === 'monthly' ? 'Billed monthly' : '',
-})
+/**
+ * The Pro button's label and billed line, from the LIVE price in the visitor's
+ * own currency: "Upgrade for A$4/mo" / "Billed yearly". The cheapest per-month
+ * cadence that has a live amount wins.
+ *
+ * With no live price (not loaded yet, the price service down, or none in this
+ * currency) there is no amount at all: "See Pro" and no billed line. It never
+ * falls back to the USD ladder, which would print another currency's figure
+ * as if it were theirs.
+ *
+ * `prices` is usePrices().prices; `currency` and `loaded` are useProPrice()'s.
+ */
+export function upgradeOffer({ prices, currency, loaded } = {}) {
+  const { offers } = resolveOffers({ prices, currency, loaded })
+  let best = null
+  for (const o of offers) {
+    if (!o.amountLabel || !(o.total > 0)) continue
+    if (!best || o.total / o.months < best.total / best.months) best = o
+  }
+  if (!best) return NO_OFFER
+  return {
+    label: `Upgrade for ${best.amountLabel}/mo`,
+    billed: BILLED_EVERY[best.id] ? `Billed ${BILLED_EVERY[best.id]}` : '',
+  }
+}
 
 /** The design's line was "Pro lifts the three-project limit and keeps ninety days of
  *  version history." There is no version history anywhere in this product;
