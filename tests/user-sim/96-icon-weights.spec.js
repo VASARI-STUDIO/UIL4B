@@ -11,15 +11,21 @@
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
 
-const cellNames = (page) => page.evaluate(() =>
-  [...document.querySelectorAll('.ig .ic')].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')))
+// A REAL cell, not the loading skeleton: while the catalogue is in flight the
+// grid draws `.ic.ig-skel` placeholders that are visible but carry no
+// aria-label and no glyph, so waiting for "the first .ic" returns on them and
+// the names read next are nothing to do with a weight.
+const REAL_CELL = '.ig .ic:not(.ig-skel)'
+
+const cellNames = (page) => page.evaluate((sel) =>
+  [...document.querySelectorAll(sel)].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')), REAL_CELL)
 
 test.describe('the icon weight segment', () => {
   test('Bold, Fill and Duo each show only the glyphs a pack drew at that weight', async ({ page }) => {
     watch(page, 'someone switching the icon library to Bold')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
     const seg = page.getByRole('group', { name: 'Icon weight' })
     await expect(seg.getByRole('button', { name: 'Regular', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
@@ -41,7 +47,7 @@ test.describe('the icon weight segment', () => {
     watch(page, 'someone browsing Lucide and reaching for Bold')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
     await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
     const seg = page.getByRole('group', { name: 'Icon weight' })
     const bold = seg.getByRole('button', { name: /^Bold/ })
@@ -63,10 +69,10 @@ test.describe('the icon weight segment', () => {
     const box = await seg.boundingBox()
     expect(box.y + box.height, 'the weight segment is below the fold').toBeLessThan(844)
     // Four columns, and the first icons on the first screen.
-    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
     const cols = await page.evaluate(() => getComputedStyle(document.querySelector('.ig')).gridTemplateColumns.split(' ').length)
     expect(cols).toBe(4)
-    const firstTop = await page.locator('.ig .ic').first().evaluate((e) => e.getBoundingClientRect().top)
+    const firstTop = await page.locator(REAL_CELL).first().evaluate((e) => e.getBoundingClientRect().top)
     expect(firstTop, 'the first icon sits below the fold on a phone').toBeLessThan(844)
   })
 
@@ -76,7 +82,7 @@ test.describe('the icon weight segment', () => {
     watch(page, 'someone customising an icon on a phone')
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/icons')
-    await page.locator('.ig .ic').first().click({ timeout: 20000 })
+    await page.locator(REAL_CELL).first().click({ timeout: 20000 })
     const copy = page.locator('.icust-panel').getByRole('button', { name: /^Copy SVG$/ })
     await expect(copy).toBeVisible()
     const hit = await copy.evaluate((el) => {
