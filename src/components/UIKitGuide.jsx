@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -33,7 +33,9 @@ import {
 //      base and ratio. That is the difference between a guided flow and four
 //      bookmarks: standing on Icons you can see the palette you drew on
 //      Colours. Every value comes off the saved design, so the rail cannot show
-//      a system the tools did not build.
+//      a system the tools did not build. From 1024px the rail is a flush bar
+//      docked to the foot of the viewport (tool-shell.css) and the artefacts
+//      move into the orientation card's list.
 //
 //   2. THE ORIENTATION CARD. Docked above the rail, over a working tool.
 //
@@ -284,12 +286,40 @@ export default function UIKitGuide({ step }) {
   // screen is taken to mean the keyboard is up. The dock is recomputed on the
   // next frame rather than in the focus handler, so a tap that moves focus from
   // the field to Save still lands on Save.
+  //
+  // From 1024px a card is a popover over the docked bar, its trailing edge on
+  // the trailing edge of the button that opened it (What's this? or, on the
+  // last step, Name your kit). That edge is measured here too, and the first
+  // measure runs before paint so the card never appears in one place and then
+  // jumps to another.
   const railRef = useRef(null)
   const nameCardRef = useRef(null)
   const nameRowRef = useRef(null)
   const [dock, setDock] = useState(null)
+  const shown = active && !!current
+  useLayoutEffect(() => {
+    if (!shown) return undefined
+    const root = document.documentElement
+    root.classList.add('has-kitbar')
+    const toolbar = step === 'color' ? railRef.current?.closest('.plb')?.querySelector('.plb-adjust') : null
+    const desktop = window.matchMedia('(min-width:1024px)')
+    const measure = () => {
+      if (toolbar && desktop.matches) root.style.setProperty('--bkit-toolbar-h', `${toolbar.getBoundingClientRect().height}px`)
+      else root.style.removeProperty('--bkit-toolbar-h')
+    }
+    measure()
+    const observer = toolbar && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    observer?.observe(toolbar)
+    desktop.addEventListener('change', measure)
+    return () => {
+      observer?.disconnect()
+      desktop.removeEventListener('change', measure)
+      root.style.removeProperty('--bkit-toolbar-h')
+      root.classList.remove('has-kitbar')
+    }
+  }, [shown, step])
   const cardOpen = showIntro || showName
-  useEffect(() => {
+  useLayoutEffect(() => {
     const rail = railRef.current
     if (!cardOpen || !rail) return undefined
     const vv = window.visualViewport
@@ -302,15 +332,23 @@ export default function UIKitGuide({ step }) {
       const focused = document.activeElement
       const inForm = !!focused && !!nameRowRef.current?.contains(focused)
       const lifted = inForm && (keyboard > 0 || (coarse && focused === nameInputRef.current))
+      const anchor = showName ? nameTriggerRef.current : introTriggerRef.current
+      const end = anchor ? Math.round(document.documentElement.clientWidth - anchor.getBoundingClientRect().right) : null
       const next = lifted
-        ? { bottom: keyboard + 12, room: Math.round(vv ? vv.height : window.innerHeight), top: Math.round(vv ? vv.offsetTop : 0) }
-        : { bottom: railLift + 12 }
-      setDock((prev) => (prev && prev.bottom === next.bottom && prev.room === next.room && prev.top === next.top ? prev : next))
+        ? { bottom: keyboard + 12, room: Math.round(vv ? vv.height : window.innerHeight), top: Math.round(vv ? vv.offsetTop : 0), end }
+        : { bottom: railLift + 12, end }
+      setDock((prev) => (prev && prev.bottom === next.bottom && prev.room === next.room && prev.top === next.top && prev.end === next.end ? prev : next))
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
-    schedule()
+    measure()
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
     observer?.observe(rail)
+    // The actions sit at the bar's trailing end, so a change in their width
+    // (a web font arriving) moves the button the card hangs from.
+    const actions = rail.querySelector('.bkit-rail-actions')
+    if (actions) observer?.observe(actions)
+    const toolbar = step === 'color' ? rail.closest('.plb')?.querySelector('.plb-adjust') : null
+    if (toolbar) observer?.observe(toolbar)
     window.addEventListener('scroll', schedule, { passive: true, capture: true })
     window.addEventListener('resize', schedule)
     document.addEventListener('focusin', schedule)
@@ -327,11 +365,12 @@ export default function UIKitGuide({ step }) {
       vv?.removeEventListener('resize', schedule)
       vv?.removeEventListener('scroll', schedule)
     }
-  }, [cardOpen, active, step])
+  }, [cardOpen, showName, active, step])
   const lifted = !!dock?.room
   const dockStyle = dock && (lifted || dock.bottom > 12)
     ? {
         '--bkit-dock-bottom': `${dock.bottom}px`,
+        ...(dock.end != null ? { '--bkit-dock-end': `${dock.end}px` } : null),
         ...(lifted ? { '--bkit-vv-h': `${dock.room}px`, '--bkit-vv-top': `${dock.top}px` } : null),
       }
     : undefined
@@ -411,7 +450,12 @@ export default function UIKitGuide({ step }) {
             {steps.map((s) => (
               <li key={s.id} className={s.id === step ? 'is-current' : ''}>
                 <span className="bkit-card-num" aria-hidden="true">{s.number}</span>
-                <span><strong>{s.label}</strong> — {s.blurb}</span>
+                <span>
+                  <strong>{s.label}</strong> — {s.blurb}
+                  {/* From 1024px the bar shows no artefacts; what each step
+                      produced is shown here instead. */}
+                  {s.done && <span className="bkit-card-artefact"><StepArtefact step={s} /></span>}
+                </span>
               </li>
             ))}
           </ol>
@@ -483,7 +527,7 @@ export default function UIKitGuide({ step }) {
           <span className="bkit-rail-eyebrow">Brand kit</span>
           {/* The count is the same reading the project card shows, so the two
               surfaces can never report different progress for one system. */}
-          <span className="bkit-rail-count">{done} of {total} built</span>
+          <span className="bkit-rail-count" aria-live="polite">{done} of {total} parts</span>
         </div>
 
         {/* Real links, not buttons: the rail is a map of the flow, so
@@ -509,6 +553,7 @@ export default function UIKitGuide({ step }) {
                   <span className="bkit-step-label">{s.label}</span>
                   <StepArtefact step={s} />
                 </span>
+                <span className="sr-only">{s.done ? ', done' : ', not started'}</span>
               </Link>
             </li>
           ))}
@@ -544,7 +589,7 @@ export default function UIKitGuide({ step }) {
               aria-controls={showName ? nameCardId : undefined}
               ref={nameTriggerRef}
             >
-              Next: Name your kit
+              Name your kit
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
             </button>
           )}
@@ -553,6 +598,10 @@ export default function UIKitGuide({ step }) {
           </button>
         </div>
       </div>
+      {/* From 1024px the bar is fixed to the foot of the viewport; this keeps
+          its height in the page so the end of the tool scrolls clear of it.
+          Not displayed below 1024px, where the bar is in the flow. */}
+      <div className="bkit-rail-space" aria-hidden="true" />
     </>
   )
 }

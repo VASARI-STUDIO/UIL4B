@@ -7,9 +7,8 @@
 // Pro from $4.99 AUD/month". #277 tied every price ON SCREEN to
 // src/config/planLadder.js, but nothing reaches into index.html — so the only
 // price a crawler, an LLM, or a visitor without JavaScript could read was the
-// pre-ladder one. The approved ladder ($7 · $18 · $48 USD, CHANGELOG.md
-// decision 2 of 2026-08-20) had been live on every rendered surface for weeks
-// while the machine-readable copy still said $4.99 AUD.
+// pre-ladder one. The ladder ($7 monthly, $48 yearly, USD) was live on every
+// rendered surface while the machine-readable copy still said $4.99 AUD.
 //
 // THE DEFECT WAS NEVER THE DIGITS. Typing "7" into index.html would have been
 // correct for exactly as long as the ladder stayed still, and would have
@@ -93,12 +92,12 @@ const text = (s) => String(s)
 /**
  * The ladder as schema.org Offers.
  *
- * ONLY PURCHASABLE TIERS. Quarterly is defined in the ladder but has no
- * `checkoutPlan` and no Stripe price, so Checkout.jsx dead-ends on "Invalid
- * selection" — the upgrade modal already refuses to render it. Advertising a
- * machine-readable Offer for something nobody can buy is the same class of
- * false claim about money as quoting the wrong amount, so it is filtered out by
- * the ladder's own `purchasable` flag rather than by a list here.
+ * ONLY PURCHASABLE TIERS. The ladder is two offers, Monthly and Yearly, and
+ * both have a `checkoutPlan`. A tier without one would dead-end Checkout.jsx on
+ * "Invalid selection", and a machine-readable Offer for something nobody can
+ * buy is the same class of false claim about money as quoting the wrong amount.
+ * It is filtered out by the ladder's own `purchasable` flag rather than by a
+ * list here.
  *
  * `priceSpecification` carries the billing period. Without it "price: 48" is
  * ambiguous between $48 a year and $48 once, and the ambiguity is in our

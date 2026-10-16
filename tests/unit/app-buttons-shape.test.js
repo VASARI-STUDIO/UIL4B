@@ -56,6 +56,10 @@ const KEEP = {
   switch: ['toggle-switch', 'aipg-rule'],
   // previews of the user's own design system, drawn at the user's radius
   preview: ['uis-demo-button', 'uis-scene-tab'],
+  // a state modifier the sweep reads off the phone tab bar's buttons; it is not a button, and the
+  // walkthrough bar's current-step indicator (.bkit-step.is-current::before) is a bar on a pseudo-element.
+  // A rule that also names a real button class is still checked through that class.
+  state: ['is-current'],
 }
 const KEEP_SET = new Set(Object.values(KEEP).flat())
 // Menu rows that reuse the filter-chip class inside a filter menu.

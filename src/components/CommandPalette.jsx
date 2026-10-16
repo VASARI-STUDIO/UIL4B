@@ -76,7 +76,8 @@ export default function CommandPalette({ open, onClose }) {
       const out = []
       if (recentTools.length) out.push({ label: t('cmd.recent'), items: recentTools.map(tl => ({ kind: 'tool', ...tl })) })
       out.push({ label: t('cmd.allTools'), items: lTools.map(tl => ({ kind: 'tool', ...tl })) })
-      out.push({ label: t('cmd.categories'), items: offerableCategories(lCats).map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description })) })
+      const cats = offerableCategories(lCats).map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description }))
+      if (cats.length) out.push({ label: t('cmd.categories'), items: cats })
       out.push({ label: t('cmd.actions'), items: quickActions.map(a => ({ kind: 'action', ...a })) })
       return out
     }
