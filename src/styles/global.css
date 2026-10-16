@@ -1772,6 +1772,10 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    it, because the tick is a statement about the SYSTEM, not about the cursor. */
 .bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-text)}
 .bkit-rail-next{flex-shrink:0}
+/* A tap pad: the chip draws pill-shaped, and a pill is not hit-tested in its
+   corners, so the pad is a plain box at least 44px tall, over the whole chip. It
+   stays inside the 4px gap between chips and rows. */
+.bkit-step::after{content:"";position:absolute;inset:-4px 0}
 /* Where you are: a 2px accent line, under the step on a phone and on the bar's
    top edge from 768px. */
 .bkit-step.is-current::before{content:"";position:absolute;inset-inline:12px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--accent-fill)}

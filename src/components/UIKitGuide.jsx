@@ -167,9 +167,8 @@ export default function UIKitGuide({ step }) {
     markIntroSeen()
   }, [])
 
-  // The X ends the walkthrough in place: no navigation. Both
-  // cards are closed with it, so a lifted name card cannot leave the phone tab
-  // bar hidden behind it (`bkit-typing` follows showName).
+  // The X ends the walkthrough in place: no navigation. Both cards are closed
+  // with it.
   const leftInPlaceRef = useRef(false)
   const exit = useCallback(() => {
     leftInPlaceRef.current = true
@@ -399,20 +398,6 @@ export default function UIKitGuide({ step }) {
     if (r.bottom > c.bottom) card.scrollTop += r.bottom - c.bottom + 4
     else if (r.top < c.top) card.scrollTop -= c.top - r.top + 4
   }, [lifted, dock])
-
-  // While the card is lifted for typing, the phone tab bar steps aside. Where the
-  // keyboard shrinks the layout viewport the bar rides up on top of it, above the
-  // card, and on a short landscape screen it sits right over Save. Where the
-  // keyboard only shrinks the visual viewport the bar is under the keyboard
-  // already, so nothing visible changes.
-  // `dock` outlives the card, so the card has to be open too.
-  const typing = showName && lifted
-  useEffect(() => {
-    if (!typing) return undefined
-    const root = document.documentElement
-    root.classList.add('bkit-typing')
-    return () => root.classList.remove('bkit-typing')
-  }, [typing])
 
   // The current step's chip is scrolled into the strip, so on a narrow screen
   // the step the person is on is the one they can see. Only the strip scrolls.

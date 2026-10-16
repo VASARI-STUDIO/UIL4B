@@ -266,7 +266,6 @@ test.describe('Brand kit walkthrough on a phone', () => {
     expect(page.url()).toBe(before)
     await expect(page).toHaveURL(/\/create\/palette$/)
     await expect(page.locator('.pnav-tabs')).toBeVisible()
-    await expect(page.locator('html')).not.toHaveClass(/bkit-typing/)
     // Focus lands on the page's main landmark, not <body>.
     await expect(page.locator('#main')).toBeFocused()
   })

@@ -268,7 +268,7 @@
 /* Help and Close draw at 36px and answer a 44px tap: the pad is wider than the
    control and still clear of Next (12px gap on a phone, 8px beside it). */
 .bkit-rail-actions{display:contents}
-.bkit-rail-help,.bkit-rail-close{position:relative;flex:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:36px;height:36px;padding:0;border:1px solid var(--bkit-line);border-radius:var(--btn-radius);background:transparent;color:var(--t1);font-family:var(--font);font-size:.8125rem;font-weight:400;line-height:1.2;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background-color 150ms ease,border-color 150ms ease,color 150ms ease,transform 140ms var(--bkit-ease)}
+.bkit-rail-help,.bkit-rail-close{position:relative;flex:none;align-self:center;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:36px;height:36px;padding:0;border:1px solid var(--bkit-line);border-radius:var(--btn-radius);background:transparent;color:var(--t1);font-family:var(--font);font-size:.8125rem;font-weight:400;line-height:1.2;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background-color 150ms ease,border-color 150ms ease,color 150ms ease,transform 140ms var(--bkit-ease)}
 .bkit-rail-help{grid-row:3;grid-column:1}
 .bkit-rail-close{grid-row:3;grid-column:3;border-radius:50%}
 .bkit-rail-help::after,.bkit-rail-close::after{content:"";position:absolute;top:50%;left:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
@@ -320,6 +320,10 @@
 @media(max-width:767px){
   html.bkit-on{--tabbar-h:0px}
   html.bkit-on .pnav-tabs{display:none}
+  /* --bkit-h already holds the safe-area inset and the in-flow spacer carries it,
+     so the tab bar's body and scroll padding must not add it a second time. */
+  html.bkit-on.has-tabbar body{padding-bottom:0}
+  html.bkit-on.has-tabbar{scroll-padding-bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
 }
 html.bkit-on{scroll-padding-block-end:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
 html.bkit-on body .toast{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 12px)}
@@ -340,7 +344,8 @@ html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,
   .bkit-step-body{flex-direction:row}
   .bkit-rail-actions{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex-shrink:0}
   .bkit-rail-help,.bkit-rail-close{grid-row:auto;grid-column:auto}
-  .bkit-rail .bkit-rail-next{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;padding:0 15px;overflow:visible}
+  /* min-width is the longest label, "Next: Type scale", so Help stays put between steps. */
+  .bkit-rail .bkit-rail-next{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-width:157px;padding:0 15px;overflow:visible}
   .bkit-rail .bkit-rail-next svg{margin-left:0}
   /* A tool's own bottom toolbar keeps the screen's bottom edge and the bar sits
      directly on it, as one stack. Colours' Adjust row is that toolbar: it is
