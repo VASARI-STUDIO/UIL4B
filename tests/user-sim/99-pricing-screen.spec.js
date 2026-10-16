@@ -548,7 +548,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
 test.describe('when one cadence has no price in the page currency', () => {
   test.use({ locale: 'en-AU' })
 
-  test('the USD amount named in the Yearly note is labelled US$, never a bare $ or A$', async ({ page }) => {
+  test('the Yearly note names no monthly price when Monthly has none in AUD, and never a USD one', async ({ page }) => {
     watch(page, 'an Australian visitor when Monthly has no AUD price')
     await stubPrices(page, {
       source: { monthly: 'live', yearly: 'live' },
@@ -559,8 +559,55 @@ test.describe('when one cadence has no price in the page currency', () => {
     await expectRendered(page)
 
     await expect(pro(page).locator('.pr-amt')).toHaveText('A$6.25')
-    await expect(note(page)).toContainText('A$75 billed once a year, or US$7 billed monthly.')
-    await expect(note(page), 'the USD amount is not shown as an AUD one').not.toContainText(/A\$7(?!\d)/)
+    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page), 'a USD monthly price was set beside an AUD yearly one').not.toContainText(/billed monthly|US\$|A\$7(?!\d)/)
+    await expect(page.locator('.pr-billing-save'), 'a saving was stated across two currencies').toHaveCount(0)
+  })
+
+  test('the Yearly note names a monthly price that is live in AUD', async ({ page }) => {
+    watch(page, 'an Australian visitor when both cadences have an AUD price')
+    await stubPrices(page, {
+      source: { monthly: 'live', yearly: 'live' },
+      monthly: { usd: 7, aud: 11 },
+      yearly: { usd: 48, aud: 75 },
+    })
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(note(page)).toContainText('A$75 billed once a year, or A$11 billed monthly.')
+  })
+
+  test('a live price with no option for AUD is not offered in AUD, whatever number the table carries', async ({ page }) => {
+    watch(page, 'an Australian visitor when the live Monthly price has no AUD option')
+    await stubPrices(page, {
+      source: { monthly: 'live', yearly: 'live' },
+      currencyAvailability: { monthly: { usd: true, aud: false }, yearly: { usd: true, aud: true } },
+      monthly: { usd: 7, aud: 11 },
+      yearly: { usd: 48, aud: 75 },
+    })
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page), 'an AUD figure with no live AUD price behind it was named').not.toContainText(/billed monthly|A\$11/)
+    await go(page, '/plans?billing=monthly')
+    await expectRendered(page)
+    await expect(pro(page).locator('.pr-amt')).toHaveText('Unavailable')
+    await expect(pro(page).getByRole('link', { name: /Upgrade to Pro|free trial/ })).toHaveCount(0)
+  })
+
+  test('the Yearly note does not name a monthly price the service serves from its fallback table', async ({ page }) => {
+    watch(page, 'an Australian visitor when Monthly is only a fallback default')
+    await stubPrices(page, {
+      source: { monthly: 'fallback', yearly: 'live' },
+      monthly: { usd: 7, aud: 11 },
+      yearly: { usd: 48, aud: 75 },
+    })
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page), 'a fallback default was named as a price').not.toContainText(/billed monthly|A\$11/)
   })
 
   test('with Yearly unbuyable in AUD, the Monthly page has no "Yearly works out at" line', async ({ page }) => {

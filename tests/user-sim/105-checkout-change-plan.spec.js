@@ -457,3 +457,63 @@ async function embedOrSkip(page) {
   test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
   return mounted
 }
+
+// A price the service only serves from its fallback table is not a price: the
+// summary says so and the payment form is never built, so no session is asked
+// for and nothing is charged that the buyer was not shown.
+test.describe('a cadence with no live price', () => {
+  test('opens no payment form and asks for no session', async ({ page }) => {
+    let sessionRequests = 0
+    await page.route('**/api/create-checkout', async (route) => {
+      sessionRequests += 1
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clientSecret: 'cs_test_stub_monthly' }) })
+    })
+    await stubStripe(page)
+    watch(page, PERSONA)
+    await signIn(page, { plan: 'free' })
+    await page.route('**/api/get-prices', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...PRICES,
+        source: { ...PRICES.source, [LADDER.monthly.liveKey]: 'fallback' },
+        [LADDER.monthly.liveKey]: { usd: 7 },
+      }),
+    }))
+    await go(page, '/checkout?plan=monthly')
+    await expectRendered(page)
+
+    const summary = page.locator('.checkout-summary-card')
+    await expect(summary.locator('.checkout-plan-amount')).toHaveText('Unavailable')
+    await expect(summary).toContainText('No USD price for this billing period right now')
+    await expect(page.locator('.checkout-form')).toContainText('Checkout unavailable')
+    await expect(page.locator('.checkout-form [data-stub-session]'), 'a payment form opened with no live price').toHaveCount(0)
+    // The other cadence is live and still buyable.
+    await period(page, LADDER.yearly.label).click()
+    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('yearly'))
+    await expect(page.locator('.checkout-form')).not.toContainText('Checkout unavailable')
+    expect(sessionRequests, 'a session was requested for the cadence with no live price').toBe(0)
+  })
+
+  test('a currency Stripe refuses (409) is shown as the refusal, not retried', async ({ page }) => {
+    const bodies = []
+    await page.route('**/api/create-checkout', async (route) => {
+      bodies.push(JSON.parse(route.request().postData() || '{}'))
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Checkout cannot be opened in AUD for this account right now. No payment session was created and nothing was charged.' }),
+      })
+    })
+    await stubStripe(page)
+    await openCheckout(page, 'yearly', { ownStubs: true })
+    const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
+    const refused = page.locator('.checkout-form', { hasText: 'nothing was charged' })
+    await expect(notConfigured.or(refused)).toBeVisible()
+    test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
+
+    await expect(refused).toContainText('Checkout unavailable')
+    await expect(page.locator('.checkout-form [data-stub-session]')).toHaveCount(0)
+    expect(bodies.length, 'the refused session was requested again').toBe(1)
+  })
+})
