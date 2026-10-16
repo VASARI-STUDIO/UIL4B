@@ -6,12 +6,12 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { upgradeOffer } from '../../src/components/userhome/workspace.js'
-import { CURRENCY_CODES, DEFAULT_PRICES } from '../../api/_lib/pricing.js'
+import { BILLING_INTERVALS, CURRENCY_CODES, DEFAULT_PRICES } from '../../api/_lib/pricing.js'
 
 // The shape /api/get-prices returns (responseFromLive): a cadence Stripe has no
 // price for carries the DEFAULT_PRICES table, `source: 'fallback'` and every
 // currency unavailable; a live one carries Stripe's currency map.
-const CADENCES = ['monthly', 'quarterly', 'yearly']
+const CADENCES = BILLING_INTERVALS
 function payload(live = {}) {
   const out = { availability: {}, currencyAvailability: {}, source: {} }
   for (const cadence of CADENCES) {
@@ -46,11 +46,14 @@ test('only a monthly price live: it is the cheapest on offer, billed monthly', (
 })
 
 test('monthly live and yearly on the fallback table: the fallback figure is never offered', () => {
-  const prices = payload({ monthly: { usd: 4.99, aud: 6.99 } })
+  // Live monthly must be dearer per month than the fallback yearly, or the fallback
+  // would lose the "cheapest" pick anyway and this case could not catch it being offered.
+  const prices = payload({ monthly: { usd: 9, aud: 12 } })
   assert.equal(prices.source.yearly, 'fallback')
   assert.equal(prices.yearly.aud, DEFAULT_PRICES.yearly.aud, 'fixture: the fallback table fills AUD')
+  assert.ok(DEFAULT_PRICES.yearly.aud / 12 < 12,'fixture: the fallback yearly per-month figure undercuts the live monthly')
   const offer = upgradeOffer({ prices, currency: 'aud', loaded: true })
-  assert.equal(offer.label, 'Upgrade for A$6.99/mo')
+  assert.equal(offer.label, 'Upgrade for A$12/mo')
   assert.equal(offer.billed, 'Billed monthly')
 })
 
