@@ -569,11 +569,22 @@ for (const scheme of ['light', 'dark']) {
           const atLoad = await page.evaluate(() => window.__groupLoadOpacity)
           expect(atLoad.length).toBeGreaterThan(0)
           expect(atLoad.every(opacity => opacity === '0')).toBe(true)
+          // The app follows the OS setting and writes its answer to
+          // html[data-reduced-motion] a render after the media change. Wait for
+          // that write before setting the attribute by hand, or it lands after
+          // the test's value and overwrites it.
+          const html = page.locator('html')
           await page.emulateMedia({ reducedMotion: 'reduce' })
+          await expect(html).toHaveAttribute('data-reduced-motion', 'true')
           await expect(glyph).toHaveCSS('transition-property', 'none')
           await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'false' })
           await expect(glyph).toHaveCSS('transition-property', 'opacity')
+          // The attribute is 'false' here already, so waiting for 'false' after the
+          // change would pass before the app has written anything. Park it on
+          // 'true' first, so the only way to see 'false' is the app's own write.
+          await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
           await page.emulateMedia({ reducedMotion: 'no-preference' })
+          await expect(html).toHaveAttribute('data-reduced-motion', 'false')
           await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
           await expect(glyph).toHaveCSS('transition-property', 'none')
         } finally { release() }
