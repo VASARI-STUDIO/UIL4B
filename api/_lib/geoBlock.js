@@ -1,10 +1,10 @@
 // Region gate for the Gemini-backed AI tools. Pure: no imports, no I/O.
 //
 // Google's Gemini API terms don't let the free tier serve users in the EEA, the
-// UK or Switzerland. The founder chose to block those regions on 16 Oct 2026
-// rather than move to paid billing. The country comes from Vercel's
-// x-vercel-ip-country header; a missing or malformed header means NOT blocked
-// (local dev, a non-Vercel host, a proxy that strips it), so the gate fails open.
+// UK or Switzerland, so these tasks refuse those regions. The country comes from
+// Vercel's x-vercel-ip-country header; a missing or malformed header means NOT
+// blocked (local dev, a non-Vercel host, a proxy that strips it), so the gate
+// fails open.
 
 // EU 27 plus Iceland, Liechtenstein and Norway.
 export const EEA_COUNTRIES = Object.freeze([

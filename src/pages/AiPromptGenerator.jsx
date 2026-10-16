@@ -50,6 +50,8 @@ export default function AiPromptGenerator({ toast }) {
   // In the UK, Switzerland and the EEA the photo scan is off (Google's Gemini
   // terms); the text prompt tools keep working.
   const region = useAiRegion()
+  // Stable across renders, unlike the `region` object, so callbacks can depend on it.
+  const { markBlocked } = region
 
   // JSON builder state
   const [subject, setSubject] = useState('')
@@ -95,7 +97,7 @@ export default function AiPromptGenerator({ toast }) {
         body: JSON.stringify({ task: 'scan-photo', image: base64, mimeType: refImage.type }),
       })
       const data = await r.json().catch(() => ({}))
-      if (isRegionRefusal(r.status, data)) region.markBlocked()
+      if (isRegionRefusal(r.status, data)) markBlocked()
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       const rules = data.rules || []
       setScannedRules(rules)
@@ -106,7 +108,7 @@ export default function AiPromptGenerator({ toast }) {
     } finally {
       setScanning(false)
     }
-  }, [refImage, toast, region])
+  }, [refImage, toast, markBlocked])
 
   const applyScannedRules = useCallback(() => {
     const allRuleIds = RULE_CATEGORIES.flatMap(c => c.rules.map(r => r.id))
