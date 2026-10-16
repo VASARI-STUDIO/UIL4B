@@ -257,7 +257,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await seed(page)
     await go(page, '/create/palette')
     await expect(rail(page)).toBeVisible()
-    await expect(page.locator('.pnav-tabs')).toBeVisible()
+    await expect(page.locator('.pnav-tabs'), 'the tab bar is hidden while the walkthrough is on').toBeHidden()
 
     const before = page.url()
     await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).click()
