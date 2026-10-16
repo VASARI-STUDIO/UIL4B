@@ -1230,7 +1230,7 @@ function VideoFrames({ toast }) {
       if (signal.aborted) toast(out.length ? `Extraction cancelled — kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
       else if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
       else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
-      else if (wanted > MAX_FRAMES && idx >= MAX_FRAMES) toast(`Extracted ${out.length} frames (stopped at the ${MAX_FRAMES}-frame cap)`, 'info')
+      else if (wanted > MAX_FRAMES && idx >= MAX_FRAMES) toast(`Extracted ${out.length} frames, the most one run makes`, 'info')
       else toast(`Extracted ${out.length} frames`)
     } finally {
       releaseVideo(video)
@@ -1276,7 +1276,7 @@ function VideoFrames({ toast }) {
                 ['Size', formatBytes(file?.size)],
                 ['Duration', formatTime(meta.duration)],
                 ['Resolution', `${meta.width}×${meta.height}px`],
-                ['Est. frames', est > MAX_FRAMES ? `${MAX_FRAMES} (capped)` : est.toLocaleString()],
+                ['Est. frames', est > MAX_FRAMES ? `${MAX_FRAMES} of ~${est.toLocaleString()}` : est.toLocaleString()],
               ] : [['File', file?.name], ['Size', formatBytes(file?.size)]]}
             />
           </div>
@@ -1331,8 +1331,12 @@ function VideoFrames({ toast }) {
                 </div>
                 <p className="fc-note">
                   {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} · ~{est.toLocaleString()} frames
-                  {est > MAX_FRAMES && ` · capped at ${MAX_FRAMES} — lower the FPS or shorten the range`}
                 </p>
+                {est > MAX_FRAMES && (
+                  <p className="fc-note fc-note--warn">
+                    Stops at {MAX_FRAMES} frames, at {formatTime(estFrom + MAX_FRAMES / fps)}. Lower the FPS or shorten the range to get the rest.
+                  </p>
+                )}
               </div>
             </aside>
             <div className="fc-actionbar fc-actions">

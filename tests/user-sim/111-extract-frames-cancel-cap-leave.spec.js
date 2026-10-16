@@ -7,8 +7,8 @@
 //      made, says so in a toast ("Extraction cancelled — kept N frames", or
 //      "Extraction cancelled" when there are none), and gives the controls
 //      back.
-//   2. MAX_FRAMES = 500. The estimate line says "capped at 500" when the
-//      estimate is higher, and a run stops at 500 and says so.
+//   2. MAX_FRAMES = 500. A separate warning ("Stops at 500 frames, at m:ss.")
+//      shows when the estimate is higher, and a run stops at 500 and says so.
 //   3. Leaving the tab mid-run (switching converter mode) aborts the run via
 //      the unmount effect: no toast, no further seeks, no console noise.
 //
@@ -192,22 +192,25 @@ test.describe('Extract frames: Cancel', () => {
 })
 
 test.describe('Extract frames: the 500-frame cap', () => {
-  test('an estimate over 500 says "capped at 500", and an estimate under it does not', async ({ page }) => {
+  test('an estimate over 500 shows the "Stops at 500 frames" warning, and an estimate under it does not', async ({ page }) => {
     watch(page, PERSONA)
     // 100 s at the default 2 fps: 200 frames. No cap wording.
     await openWithClip(page, { duration: 100, seekMs: 0 })
     const note = page.locator('.fc-note').filter({ hasText: /frames/ }).first()
     await expect(note).toContainText('~200 frames')
-    await expect(note, 'the cap is mentioned for a run that is under it').not.toContainText('capped')
+    const capNote = page.locator('.fc-note--warn')
+    await expect(capNote, 'the cap is mentioned for a run that is under it').toHaveCount(0)
 
-    // 20 fps over 100 s: 2,000 frames.
+    // 20 fps over 100 s: 2,000 frames. The meta line stays a plain count; the cap is its own warning.
     await page.locator('#fc-fr-fps').fill('20')
     await expect(note).toContainText('~2,000 frames')
-    await expect(note).toContainText(`capped at ${MAX_FRAMES}`)
+    await expect(note, 'the cap leaked back into the grey meta line').not.toContainText('Stops at')
+    await expect(capNote).toHaveText(`Stops at ${MAX_FRAMES} frames, at 0:25. Lower the FPS or shorten the range to get the rest.`)
+    await expect(page.getByText(`${MAX_FRAMES} of ~2,000`, { exact: true }), 'the Est. frames stat should read "500 of ~2,000"').toBeVisible()
     // And the way out the wording offers works: a shorter range clears it.
     await page.getByLabel('Range end (seconds)').fill('10')
     await expect(note).toContainText('~200 frames')
-    await expect(note).not.toContainText('capped')
+    await expect(capNote).toHaveCount(0)
   })
 
   test('a run whose estimate is over 500 stops at exactly 500 frames and says so', async ({ page }) => {
@@ -217,11 +220,12 @@ test.describe('Extract frames: the 500-frame cap', () => {
     // 300 s at the default 2 fps: 600 frames, 100 over the cap.
     await openWithClip(page, { duration: 300, seekMs: 0 })
     await expect(page.locator('.fc-note').filter({ hasText: /frames/ }).first()).toContainText('~600 frames')
-    await expect(page.getByText(`${MAX_FRAMES} (capped)`, { exact: true }), 'the Est. frames stat shows the uncapped number').toBeVisible()
+    await expect(page.getByText(`${MAX_FRAMES} of ~600`, { exact: true }), 'the Est. frames stat shows the uncapped number').toBeVisible()
+    await expect(page.locator('.fc-note--warn')).toContainText(`Stops at ${MAX_FRAMES} frames, at 4:10.`)
     await extractBtn(page).click()
 
     const toast = page.locator('.toast.show')
-    await expect(toast).toContainText(`Extracted ${MAX_FRAMES} frames (stopped at the ${MAX_FRAMES}-frame cap)`, { timeout: 60000 })
+    await expect(toast).toContainText(`Extracted ${MAX_FRAMES} frames, the most one run makes`, { timeout: 60000 })
     await expect(page.getByRole('heading', { name: `Extracted frames (${MAX_FRAMES})` })).toBeVisible()
     await expect(page.locator('.fc-grid li')).toHaveCount(MAX_FRAMES)
     // Frame numbering is contiguous, so the last one made is frame-0500.
@@ -237,7 +241,7 @@ test.describe('Extract frames: the 500-frame cap', () => {
     await openWithClip(page, { duration: 250, seekMs: 0 })
     const note = page.locator('.fc-note').filter({ hasText: /frames/ }).first()
     await expect(note).toContainText('~500 frames')
-    await expect(note, 'the cap note shows for a run that fits').not.toContainText('capped')
+    await expect(page.locator('.fc-note--warn'), 'the cap note shows for a run that fits').toHaveCount(0)
     await extractBtn(page).click()
     await expect(page.locator('.toast.show')).toHaveText(/^Extracted 500 frames$/, { timeout: 60000 })
   })
