@@ -98,8 +98,11 @@ export function currencyRefusal(rawCurrency) {
 // Stripe refuses a currency it cannot honour on this session: the price has no
 // option for it, or the customer is locked to another currency by an earlier
 // subscription. Both name the currency.
+// Stripe's own `param` decides when it names one; the message is read only when
+// it does not, so an error about another field never counts as a currency one.
 function isCurrencyError(err) {
-  return err?.param === 'currency' || /currenc/i.test(String(err?.message || ''))
+  if (typeof err?.param === 'string' && err.param) return err.param === 'currency'
+  return /currenc/i.test(String(err?.message || ''))
 }
 
 /**

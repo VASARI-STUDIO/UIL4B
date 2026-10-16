@@ -25,6 +25,7 @@
 // session tests skip in a keyless build.
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import { PLAN_LADDER } from '../../src/config/planLadder.js'
 import { formatCurrency } from '../../src/utils/currency.js'
 
@@ -42,7 +43,7 @@ test.use({ locale: 'en-US' })
 
 async function stubPrices(page) {
   await page.route('**/api/get-prices', (route) => route.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify(PRICES),
+    status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(PRICES)),
   }))
 }
 
@@ -474,11 +475,11 @@ test.describe('a cadence with no live price', () => {
     await page.route('**/api/get-prices', (route) => route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
+      body: JSON.stringify(withAvailability({
         ...PRICES,
         source: { ...PRICES.source, [LADDER.monthly.liveKey]: 'fallback' },
         [LADDER.monthly.liveKey]: { usd: 7 },
-      }),
+      })),
     }))
     await go(page, '/checkout?plan=monthly')
     await expectRendered(page)

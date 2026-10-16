@@ -103,16 +103,16 @@ function perMonthOf(total, months) {
  * a display default, not a price, so it is never returned here: showing it
  * buys a trial button that ends in a 503 at checkout.
  *
- * A payload with neither field is the older bare shape (a test stub); its
- * amounts are read as given. The route always sends both.
+ * It fails closed: a payload that does not say the pair is live (no
+ * `currencyAvailability`, or false for it) has no live price. The route always
+ * sends both fields.
  */
 export function livePriceOf(prices, liveKey, currency) {
   const amount = prices?.[liveKey]?.[currency]
   if (typeof amount !== 'number' || !Number.isFinite(amount)) return undefined
   const source = prices?.source?.[liveKey]
   if (source !== undefined && source !== 'live') return undefined
-  const availability = prices?.currencyAvailability
-  if (availability && availability[liveKey]?.[currency] !== true) return undefined
+  if (prices?.currencyAvailability?.[liveKey]?.[currency] !== true) return undefined
   return amount
 }
 
@@ -150,11 +150,22 @@ export function purchasablePlans(resolved) {
   return resolved.filter((p) => p.purchasable)
 }
 
+// Only the tiers whose amount is the live price Stripe will charge.
+export function livePlans(resolved) {
+  return purchasablePlans(resolved).filter((p) => p.isLive)
+}
+
 // The honest headline: the cheapest per-month figure among the tiers we will
 // actually sell. Never typed into copy.
+//
+// Rates are compared in one currency only. When any tier is live, only live
+// tiers compete (a US$ fallback never undercuts an A$ price Stripe charges);
+// with none live, as on the static pages, the approved ladder competes as it is.
 export function cheapestPerMonth(resolved) {
-  const candidates = purchasablePlans(resolved).filter((p) => typeof p.perMonth === 'number')
-  if (!candidates.length) return null
+  const priced = purchasablePlans(resolved).filter((p) => typeof p.perMonth === 'number')
+  const pool = priced.some((p) => p.isLive) ? priced.filter((p) => p.isLive) : priced
+  if (!pool.length) return null
+  const candidates = pool.filter((p) => p.currency === pool[0].currency)
   return candidates.reduce((low, p) => (p.perMonth < low.perMonth ? p : low), candidates[0])
 }
 

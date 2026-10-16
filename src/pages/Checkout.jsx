@@ -174,11 +174,21 @@ export default function Checkout() {
   // Payment submitted or complete: the period choice is locked.
   const [paying, setPaying] = useState(false)
   const startedSent = useRef(false)
+  const errorRef = useRef(null)
+
+  // A refusal arrives after the buyer has been looking at the form, and on a
+  // phone the panel can sit below the fold: bring it into view and focus it so
+  // it is not missed.
+  useEffect(() => {
+    if (!error || !errorRef.current) return
+    errorRef.current.focus({ preventScroll: true })
+    errorRef.current.scrollIntoView?.({ block: 'center' })
+  }, [error])
 
   // The billing-period choices are the ladder's buyable cadences that this
   // page has a case for, each with the saving /plans prints on its own tab.
-  const periodOptions = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
-    .offers.filter((o) => Object.hasOwn(PLANS, o.checkoutPlan))
+  const resolved = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
+  const periodOptions = resolved.offers.filter((o) => Object.hasOwn(PLANS, o.checkoutPlan))
   // /plans reads its cadence from `?billing=<ladder id>`, so going back keeps
   // the period chosen here.
   const chosenOption = periodOptions.find((o) => o.checkoutPlan === planKey)
@@ -218,19 +228,26 @@ export default function Checkout() {
   // src/pages/Pricing.jsx — the step immediately before this one — already
   // answers this exact outage, and these are ITS sentences, not new ones. Two
   // steps of one funnel must not describe one outage two ways.
-  const priceServiceDown = proPrice.loaded && !proPrice.serviceAvailable
-  const note = priceServiceDown
-    ? 'Live pricing is unreachable · no price can be shown right now'
-    // THE SERVICE ANSWERED, BUT NOT WITH A LIVE PRICE FOR THIS CADENCE IN THIS
-    // CURRENCY (a fallback default is not one). Without this branch the line
-    // would print "GBP · null/mo". Settings' sentence for the same state.
-    : proPrice.loaded && !amount
-      ? (chosenOption?.unavailableNote || `No ${proPrice.currencyLabel} price for this billing period right now`)
-      : chosenOption?.months > 1
-        // A cadence longer than a month names its per-month rate, how often it
-        // bills, and its saving when it has one.
-        ? `${proPrice.currencyLabel} · ${formatPrice(chosenOption.total / chosenOption.months, proPrice.currency)}/mo · billed ${BILLED_EVERY[chosenOption.id]}${chosenOption.saving > 0 ? ` · Save ${chosenOption.saving}%` : ''}`
-        : `${proPrice.currencyLabel} · billed ${BILLED_EVERY[chosenOption?.id] || 'monthly'} · cancel anytime`
+  //
+  // "Down" is "no cadence has a live price in this currency", not "the request
+  // failed": a Stripe outage still answers 200, with every cadence a fallback.
+  const priceServiceDown = resolved.priceServiceDown
+  const note = !proPrice.loaded
+    // Not settled: no rate yet, because there is no offer to take it from.
+    ? 'Checking the live price…'
+    : priceServiceDown
+      ? 'Live pricing is unreachable · no price can be shown right now'
+      // THE SERVICE ANSWERED FOR OTHER CADENCES, BUT NOT WITH A LIVE PRICE FOR
+      // THIS ONE IN THIS CURRENCY (a fallback default is not one). Without this
+      // branch the line would print "GBP · null/mo". Settings' sentence for the
+      // same state.
+      : !amount
+        ? (chosenOption?.unavailableNote || `No ${proPrice.currencyLabel} price for this billing period right now`)
+        : chosenOption.months > 1
+          // A cadence longer than a month names its per-month rate, how often it
+          // bills, and its saving when it has one.
+          ? `${proPrice.currencyLabel} · ${formatPrice(chosenOption.total / chosenOption.months, proPrice.currency)}/mo · billed ${BILLED_EVERY[chosenOption.id]}${chosenOption.saving > 0 ? ` · Save ${chosenOption.saving}%` : ''}`
+          : `${proPrice.currencyLabel} · billed ${BILLED_EVERY[chosenOption.id] || 'monthly'} · cancel anytime`
 
   useEffect(() => {
     if (sessionPlan === planKey) return undefined
@@ -409,7 +426,7 @@ export default function Checkout() {
               Payments aren’t configured yet. Set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in your environment to enable checkout.
             </div>
           ) : error ? (
-            <div className="checkout-error">
+            <div className="checkout-error" role="alert" tabIndex={-1} ref={errorRef}>
               <strong className="checkout-error-h">Checkout unavailable</strong>
               <span className="checkout-error-p">{error}</span>
               {error.includes('Server configuration') && (

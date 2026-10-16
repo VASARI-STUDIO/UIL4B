@@ -344,10 +344,22 @@ export default function Pricing() {
     })),
     { id: 'loading', lines: ['Checking the live price…'], under: '' },
   ]
-  const activeNote = price.loaded ? offer.id : 'loading'
+  const activeNote = !price.loaded ? 'loading' : priceServiceDown ? 'unavailable' : offer.id
   const noPriceNote = otherOffer
     ? `There is no ${price.currencyLabel} price for ${offer.label} right now, so no checkout will be started. ${otherOffer.label} is available, and everything on Free keeps working.`
     : `We can’t reach Stripe to confirm the ${price.currencyLabel} price, so no checkout will be started. Everything on Free keeps working.`
+  // The unavailable note and its Retry are one more state of the note slot, so
+  // the Pro button stays put when a cadence lands unavailable. Hidden, it sizes
+  // the slot; shown, it is the only one that is. Only the shown one carries the
+  // id the disabled button points at, and the hidden Retry is out of the tab order.
+  const unavailableState = (
+    <div key="unavailable" className={priceServiceDown ? undefined : 'is-ghost'} aria-hidden={priceServiceDown ? undefined : 'true'}>
+      <p className={`pr-note${priceServiceDown ? '' : ' is-ghost'}`} id={priceServiceDown ? 'pricing-noprice' : undefined}>{noPriceNote}</p>
+      <button type="button" className="pr-retry" tabIndex={priceServiceDown ? undefined : -1} onClick={() => refreshPrices()}>
+        Retry live pricing
+      </button>
+    </div>
+  )
 
   // The offer-first layout's two lines above the Pro button, sized the same way:
   // every state shares one cell, so nothing moves when the switch is used.
@@ -465,26 +477,18 @@ export default function Pricing() {
                           </span>
                           {hasAmount && <span className="pr-per">/ month</span>}
                         </p>
-                        {priceServiceDown ? (
-                          <>
-                            <p className="pr-note" id="pricing-noprice">{noPriceNote}</p>
-                            <button type="button" className="pr-retry" onClick={() => refreshPrices()}>
-                              Retry live pricing
-                            </button>
-                          </>
-                        ) : (
-                          <div className="pr-stack">
-                            {noteStates.map((state) => (
-                              <p
-                                key={state.id}
-                                className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
-                                aria-hidden={state.id === activeNote ? undefined : 'true'}
-                              >
-                                {state.lines.map((line) => <span key={line}>{line}</span>)}
-                              </p>
-                            ))}
-                          </div>
-                        )}
+                        <div className="pr-stack">
+                          {noteStates.map((state) => (
+                            <p
+                              key={state.id}
+                              className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
+                              aria-hidden={state.id === activeNote ? undefined : 'true'}
+                            >
+                              {state.lines.map((line) => <span key={line}>{line}</span>)}
+                            </p>
+                          ))}
+                          {unavailableState}
+                        </div>
                       </div>
                     </div>
                     {proCta}
@@ -592,27 +596,19 @@ export default function Pricing() {
                         </span>
                         {hasAmount && <span className="pr-per">/ month</span>}
                       </p>
-                      {priceServiceDown ? (
-                        <>
-                          <p className="pr-note" id="pricing-noprice">{noPriceNote}</p>
-                          <button type="button" className="pr-retry" onClick={() => refreshPrices()}>
-                            Retry live pricing
-                          </button>
-                        </>
-                      ) : (
-                        <div className="pr-stack">
-                          {cardStates.map((state) => (
-                            <p
-                              key={state.id}
-                              className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
-                              aria-hidden={state.id === activeNote ? undefined : 'true'}
-                            >
-                              <span>{state.billed}</span>
-                              {state.trial && <span>{state.trial}</span>}
-                            </p>
-                          ))}
-                        </div>
-                      )}
+                      <div className="pr-stack">
+                        {cardStates.map((state) => (
+                          <p
+                            key={state.id}
+                            className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
+                            aria-hidden={state.id === activeNote ? undefined : 'true'}
+                          >
+                            <span>{state.billed}</span>
+                            {state.trial && <span>{state.trial}</span>}
+                          </p>
+                        ))}
+                        {unavailableState}
+                      </div>
                     </div>
                   </div>
                   {proCta}

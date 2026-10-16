@@ -16,7 +16,9 @@ import { read, stripComments } from './helpers/source-text.js'
 import {
   BILLING_OPTIONS, BILLED_EVERY, resolveOffers,
 } from '../../src/config/planFacts.js'
-import { livePriceOf, resolvePlanLadder, savingsVsMonthly } from '../../src/config/planLadder.js'
+import {
+  cheapestPerMonth, livePlans, livePriceOf, resolvePlanLadder, savingsVsMonthly,
+} from '../../src/config/planLadder.js'
 import { CURRENCY_CODES } from '../../api/_lib/pricing.js'
 import { createSessionInCurrency, currencyRefusal, intervalRefusal } from '../../api/create-checkout.js'
 
@@ -71,11 +73,18 @@ test('when no cadence is live the service counts as down', () => {
   assert.ok(offers.every((o) => !o.available && o.amountLabel === null))
 })
 
-test('livePriceOf reads the payload flags, and still takes the bare shape a stub sends', () => {
-  assert.equal(livePriceOf({ yearly: { usd: 48 }, source: { yearly: 'fallback' } }, 'yearly', 'usd'), undefined)
-  assert.equal(livePriceOf({ yearly: { usd: 48 }, source: { yearly: 'live' } }, 'yearly', 'usd'), 48)
+test('livePriceOf fails closed: a price is live only when the payload says so for that currency', () => {
+  const avail = { yearly: { usd: true } }
+  assert.equal(livePriceOf({ yearly: { usd: 48 }, source: { yearly: 'fallback' }, currencyAvailability: avail }, 'yearly', 'usd'), undefined)
+  assert.equal(livePriceOf({ yearly: { usd: 48 }, source: { yearly: 'live' }, currencyAvailability: avail }, 'yearly', 'usd'), 48)
   assert.equal(livePriceOf({ yearly: { usd: 48 }, currencyAvailability: { yearly: { usd: false } } }, 'yearly', 'usd'), undefined)
-  assert.equal(livePriceOf({ yearly: { usd: 48 } }, 'yearly', 'usd'), 48)
+  // Live by `source`, but no availability flags at all: not a price.
+  assert.equal(livePriceOf({ yearly: { usd: 48 }, source: { yearly: 'live' } }, 'yearly', 'usd'), undefined,
+    'a bare payload with source "live" and no currencyAvailability counted as live')
+  assert.equal(livePriceOf({ yearly: { usd: 48 } }, 'yearly', 'usd'), undefined)
+  // Flags for another cadence or currency do not carry over.
+  assert.equal(livePriceOf({ yearly: { usd: 48 }, currencyAvailability: { monthly: { usd: true } } }, 'yearly', 'usd'), undefined)
+  assert.equal(livePriceOf({ yearly: { usd: 48, aud: 75 }, currencyAvailability: avail }, 'yearly', 'aud'), undefined)
   assert.equal(livePriceOf(null, 'yearly', 'usd'), undefined)
 })
 
@@ -149,7 +158,81 @@ test('the upgrade modal states no saving across two currencies', () => {
   assert.equal(savingsVsMonthly(yearly, ladder), 0)
 })
 
+// The upgrade modal lists `livePlans(ladder)`, so these three cases are the
+// three rows it can show: none, one, or a mix of live and fallback cadences.
+test('the upgrade modal lists no row when no cadence is live', () => {
+  for (const prices of [payload(), null]) {
+    const ladder = resolvePlanLadder({ prices, currency: 'aud' })
+    assert.deepEqual(livePlans(ladder), [], 'a fallback row would be listed and offered')
+    assert.equal(cheapestPerMonth(livePlans(ladder)), null, 'a headline was chosen with nothing live')
+  }
+  const page = stripComments(read('src/components/ProUpgradeModal.jsx'))
+  assert.match(page, /const plans = useMemo\(\(\) => livePlans\(ladder\), \[ladder\]\)/, 'the modal lists rows that are not live')
+  assert.match(page, /const priceUnavailable = settled && plans\.length === 0/,
+    'a 200 made only of fallback prices no longer shows the prices-unavailable state')
+})
+
+test('the upgrade modal lists the one live row, in the currency shown', () => {
+  const ladder = resolvePlanLadder({ prices: payload({ live: { yearly: { usd: 48, aud: 36 } } }), currency: 'aud' })
+  const plans = livePlans(ladder)
+  assert.deepEqual(plans.map((p) => p.id), ['yearly'], 'the fallback Monthly row was listed')
+  assert.equal(plans[0].currency, 'aud')
+  assert.equal(plans[0].totalLabel, 'A$36')
+  assert.equal(cheapestPerMonth(plans).id, 'yearly')
+  assert.equal(savingsVsMonthly(plans[0], plans), 0, 'a saving was stated with no live Monthly price beside it')
+})
+
+test('a mix of live and fallback cadences lists and compares only the live ones', () => {
+  // Monthly live in USD, Yearly a fallback: the $4 fallback rate must not become the headline.
+  const usd = resolvePlanLadder({ prices: payload({ live: { monthly: { usd: 7, aud: 11 } } }), currency: 'usd' })
+  assert.deepEqual(livePlans(usd).map((p) => p.id), ['monthly'])
+  assert.equal(cheapestPerMonth(usd).id, 'monthly', 'a fallback rate undercut the live one')
+  assert.equal(cheapestPerMonth(livePlans(usd)).id, 'monthly')
+
+  // Both live: the cheaper per-month rate wins and the saving is stated.
+  const both = resolvePlanLadder({
+    prices: payload({ live: { monthly: { usd: 7, aud: 11 }, yearly: { usd: 48, aud: 75 } } }), currency: 'aud',
+  })
+  assert.deepEqual(livePlans(both).map((p) => p.id), ['monthly', 'yearly'])
+  assert.equal(cheapestPerMonth(both).id, 'yearly')
+  assert.ok(savingsVsMonthly(livePlans(both)[1], livePlans(both)) > 0)
+
+  // Two currencies never compete, whatever is passed in.
+  const mixed = [
+    { id: 'monthly', purchasable: true, isLive: true, currency: 'usd', perMonth: 7 },
+    { id: 'yearly', purchasable: true, isLive: true, currency: 'aud', perMonth: 3 },
+  ]
+  assert.equal(cheapestPerMonth(mixed).id, 'monthly', 'rates in two currencies were compared')
+})
+
+test('the approved ladder still has a headline when no prices are passed (the static pages)', () => {
+  const fallback = resolvePlanLadder()
+  assert.ok(fallback.every((p) => !p.isLive))
+  assert.equal(cheapestPerMonth(fallback).id, 'yearly')
+})
+
 // ── 3. checkout reads the ladder ─────────────────────────────────────────────
+
+test('/checkout prints no rate until the chosen offer is available', () => {
+  const page = stripComments(read('src/pages/Checkout.jsx'))
+  const note = page.slice(page.indexOf('const note ='), page.indexOf('const sessionInterval'))
+  assert.ok(note.length > 50, 'the note block was not found')
+  assert.match(note, /^const note = !proPrice\.loaded/, 'the note no longer waits for the prices to settle')
+  assert.doesNotMatch(note, /chosenOption\?\.months/, 'the rate branch is guarded by months alone again — "A$0.00/mo" before the prices land')
+  assert.ok(note.indexOf('!amount') < note.indexOf('chosenOption.months'), 'the rate branch comes before the available check')
+})
+
+test('/checkout and Settings call the outage from "no cadence is live", with the Retry', () => {
+  for (const file of ['src/pages/Checkout.jsx', 'src/pages/Settings.jsx']) {
+    const page = stripComments(read(file))
+    assert.doesNotMatch(page, /serviceAvailable/, `${file} still treats a 200 as "the service is up"`)
+    assert.match(page, /priceServiceDown[\s\S]{0,40}= resolveOffers|priceServiceDown\s*}\s*=\s*resolveOffers|= resolved\.priceServiceDown/, `${file} does not take the outage from resolveOffers`)
+    assert.match(page, /\{priceServiceDown && \(\s*<button[\s\S]{0,160}?refreshPrices\(\)/, `${file} shows the outage without a Retry`)
+  }
+  // The response that dead-ended both pages: 200, every cadence a fallback.
+  const { priceServiceDown } = resolveOffers({ prices: payload(), currency: 'aud', loaded: true })
+  assert.equal(priceServiceDown, true)
+})
 
 test('/checkout reads its amount and note from the ladder, with no per-cadence ternary', () => {
   const page = stripComments(read('src/pages/Checkout.jsx'))
@@ -229,6 +312,30 @@ test('an error that is not about the currency is thrown, not retried', async () 
   const stripe = fakeSessions([outage])
   await assert.rejects(createSessionInCurrency(stripe, { mode: 'subscription' }, 'aud'), /Stripe is down/)
   assert.equal(stripe.calls.length, 1)
+})
+
+test('Stripe\'s `param` decides whether a failure is about the currency; the message is only the fallback', async (t) => {
+  quiet(t)
+  const otherField = Object.assign(new Error('Invalid value for currency preference on this customer'), { type: 'StripeInvalidRequestError', param: 'customer' })
+  await assert.rejects(createSessionInCurrency(fakeSessions([otherField]), { mode: 'subscription' }, 'aud'), /currency preference/,
+    'an error about another field was answered as a currency refusal')
+  const noParam = Object.assign(new Error('You cannot combine currencies on a single customer.'), { type: 'StripeInvalidRequestError' })
+  const result = await createSessionInCurrency(fakeSessions([noParam]), { mode: 'subscription' }, 'aud')
+  assert.equal(result.refusal.status, 409, 'with no param the message still identifies a currency failure')
+})
+
+test('/plans keeps the unavailable note and its Retry inside the note slot, so the Pro button does not move', () => {
+  const page = stripComments(read('src/pages/Pricing.jsx'))
+  assert.doesNotMatch(page, /<p className="pr-note" id="pricing-noprice">/, 'the unavailable note is outside the slot again')
+  assert.equal(page.split('{unavailableState}').length - 1, 2, 'both layouts put the unavailable state in their note stack')
+  assert.match(page, /const activeNote = !price\.loaded \? 'loading' : priceServiceDown \? 'unavailable' : offer\.id/)
+  assert.match(page, /id=\{priceServiceDown \? 'pricing-noprice' : undefined\}/, 'the hidden copy would duplicate the id')
+})
+
+test('/checkout announces a refusal and brings it into view', () => {
+  const page = stripComments(read('src/pages/Checkout.jsx'))
+  assert.match(page, /className="checkout-error" role="alert" tabIndex=\{-1\} ref=\{errorRef\}/)
+  assert.match(page, /errorRef\.current\.scrollIntoView/)
 })
 
 test('create-checkout no longer retries a failed session without its currency', () => {

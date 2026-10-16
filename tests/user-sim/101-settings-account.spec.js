@@ -8,6 +8,7 @@
 //   · at 390 the section tabs never wrap into a grid.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 async function openSection(page, id) {
   await page.locator(`#settab-${id}`).click()
@@ -156,7 +157,7 @@ test.describe('settings — mobile first', () => {
   test('the billing cadence row never wraps, even at 320', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 })
     watch(page, 'a free account comparing cadences on a small phone')
-    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 } }) }))
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability({ monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 } })) }))
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
     await openSection(page, 'support')

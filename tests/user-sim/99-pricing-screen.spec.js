@@ -23,6 +23,7 @@
 // pricing page that cannot name a price must not start a checkout.
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 // Production's /api/get-prices answer, trimmed to the currency under test.
 const LIVE = {
@@ -41,7 +42,7 @@ test.use({ locale: 'en-US' })
 
 async function stubPrices(page, body = LIVE, status = 200) {
   await page.route('**/api/get-prices', (route) => route.fulfill({
-    status, contentType: 'application/json', body: JSON.stringify(body),
+    status, contentType: 'application/json', body: JSON.stringify(status === 200 ? withAvailability(body) : body),
   }))
 }
 
