@@ -16,3 +16,58 @@ export function needsEmailVerification(user, emailVerified = user?.emailVerified
   if (emailVerified === true) return false
   return accountProviderIds(user).includes('password')
 }
+
+/**
+ * Where a verification link brings the person back to. Settings reads the
+ * `verified` flag, re-reads the account and says so. Both send calls pass this,
+ * so the link no longer ends on the auth server's own page.
+ */
+export function verifyLinkSettings(origin) {
+  return { url: `${origin}/settings?verified=1` }
+}
+
+// Firebase's refusals, in words. The reminder bar and Settings send the same
+// link, so they share this copy.
+export const VERIFY_ERRORS = {
+  'auth/too-many-requests': 'Too many links sent. Wait a few minutes and try again.',
+  'auth/network-request-failed': 'You appear to be offline. Try again when you are connected.',
+}
+export const VERIFY_ERROR_FALLBACK = 'The verification link could not be sent. Please try again.'
+
+export function verifyErrorText(error) {
+  return VERIFY_ERRORS[error?.code] || VERIFY_ERROR_FALLBACK
+}
+
+// Whether the reminder bar is shown, apart from whether the account owes a
+// verification. It stays out of the way on the surfaces that already deal with
+// the address: onboarding, which carries its own line, and Settings, whose
+// Email row offers the same link. It also waits while offline.
+export const VERIFY_BAR_HIDDEN_PATHS = ['/onboarding', '/settings']
+
+export function verifyBarVisible({ owed, pathname, online }) {
+  if (!owed || !online) return false
+  const path = (pathname || '').replace(/\/+$/, '') || '/'
+  return !VERIFY_BAR_HIDDEN_PATHS.includes(path)
+}
+
+const DISMISS_PREFIX = 'vs-verify-dismissed:'
+
+// Per visit, not per device: sessionStorage, so the bar comes back next time,
+// and keyed on the account so switching accounts does not inherit a dismissal.
+export function readVerifyDismissed(uid) {
+  if (!uid) return false
+  try {
+    return sessionStorage.getItem(DISMISS_PREFIX + uid) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function writeVerifyDismissed(uid) {
+  if (!uid) return
+  try {
+    sessionStorage.setItem(DISMISS_PREFIX + uid, '1')
+  } catch {
+    /* the bar still closes for this render; it returns on reload */
+  }
+}

@@ -5079,3 +5079,20 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .sync-notice-msg{flex:1 1 calc(100% - 37px)}
   .sync-notice-actions{margin-left:auto}
 }
+/* THE VERIFY-YOUR-EMAIL ROW reuses the sync notice and changes only what an
+   address needs. It sits third in the strip, so a hairline separates it from a
+   row above. The address can be long and has no break points: it wraps
+   anywhere rather than pushing the button off the row. */
+.notice-stack>.verify-notice:not(:first-child){border-top:1px solid var(--bh)}
+.verify-notice{align-items:center}
+.verify-notice .sync-notice-msg{overflow-wrap:anywhere}
+/* ON A PHONE THE ROW STAYS ON ONE LINE. The wrap above exists for a server
+   sentence of unknown length; this row's copy is known, so the second sentence
+   goes and the first takes the space beside the button instead of the full
+   row above it. */
+@media (max-width:520px){
+  .verify-notice{flex-wrap:nowrap}
+  .verify-notice .sync-notice-detail{display:none}
+  .verify-notice .sync-notice-msg{flex:1 1 auto}
+  .verify-notice .sync-notice-actions{margin-left:0}
+}
