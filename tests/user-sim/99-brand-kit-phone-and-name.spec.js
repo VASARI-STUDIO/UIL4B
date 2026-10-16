@@ -176,7 +176,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
       await expectHitArea(nameCard(page).getByRole('button', { name: 'Save project' }), 'Save project')
       await railControlsAllLand(page)
 
-      // At the end of the page the rail rises off the tab bar; the card follows it.
+      // At the end of the page the card still sits clear of the rail.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
       await expectCardClearsRail(page, nameCard(page), 'at the end of the page the name card overlaps the rail')
     })
