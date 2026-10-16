@@ -35,6 +35,7 @@ import {
 import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
 import { iconifyFetch, clearIconifyCooldown } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
+import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -1757,12 +1758,21 @@ const COLLECTION_CACHE = new Map()
  * src/data/iconPackCredits.js is the floor under it — the committed fixtures
  * the acceptance suite serves carry no `info` block, and neither does the
  * refused/offline state, and an attribution that only appears when a third
- * party is up is not an attribution. */
+ * party is up is not an attribution.
+ *
+ * WHERE THE ANSWER COMES FROM. The same /collection answer, recorded under
+ * public/iconify/collections/ by scripts/snapshot-icon-collections.mjs and
+ * served from this site, so a first visit with an empty cache asks Iconify for
+ * no pack lists at all. A pack with no snapshot (added after the last run) falls
+ * through to the live request below, with iconifyFetch's cache and back-off. */
 async function getCollectionNames(pack) {
   const hit = COLLECTION_CACHE.get(pack)
   if (hit) return hit
-  const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
-  const d = await r.json()
+  let d = await fetchCollectionSnapshot(pack)
+  if (!d) {
+    const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
+    d = await r.json()
+  }
   const entry = { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
   COLLECTION_CACHE.set(pack, entry)
   return entry
