@@ -33,7 +33,7 @@ const REQUIRED = [
 ]
 // Parts of the EU that report their own ISO code.
 const TERRITORIES = ['AX', 'GF', 'GP', 'MQ', 'RE', 'YT', 'MF']
-// Open on purpose: Oscar ruled these are NOT blocked.
+// Open on purpose: these are not blocked.
 const OPEN = ['AU', 'US', 'NZ', 'JP', 'TR', 'UA', 'RS', 'AD', 'MC', 'SM', 'VA', 'GI', 'IM', 'JE', 'GG', 'XX']
 
 test('the hand-written list is 32 distinct countries', () => {
@@ -60,7 +60,7 @@ test('the EEA list has 30 countries and no duplicates', () => {
   assert.equal(EU_TERRITORIES.length, 7)
 })
 
-test('countries Oscar ruled open are not blocked', () => {
+test('countries left open on purpose are not blocked', () => {
   for (const code of OPEN) {
     assert.equal(geminiRegionBlocked(header(code)), false, `${code} is blocked`)
   }
@@ -86,8 +86,17 @@ test('the header is normalised: case, spaces, arrays and lists', () => {
   assert.equal(geminiRegionBlocked(header(' de ')), true)
   assert.equal(geminiRegionBlocked(header(['DE'])), true)
   assert.equal(geminiRegionBlocked(header('DE, US')), true)
-  // Only the first entry counts: a list led by an open country is open.
-  assert.equal(geminiRegionBlocked(header('US, DE')), false)
+  // Any blocked entry in a list blocks, wherever it sits.
+  assert.equal(geminiRegionBlocked(header('US, DE')), true)
+  assert.equal(geminiRegionBlocked(header(' us , de ')), true)
+  assert.equal(geminiRegionBlocked(header(['US', 'DE'])), true)
+})
+
+test('a list of only open countries is open', () => {
+  assert.equal(geminiRegionBlocked(header('US, AU, NZ')), false)
+  assert.equal(geminiRegionBlocked(header(['US', 'JP'])), false)
+  // Malformed entries are skipped, not treated as blocked.
+  assert.equal(geminiRegionBlocked(header('US, DEU, 12')), false)
 })
 
 test('UK and EL are read as GB and GR', () => {

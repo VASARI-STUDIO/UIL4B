@@ -21,21 +21,33 @@ export const GEMINI_BLOCKED_COUNTRIES = new Set([...EEA_COUNTRIES, 'GB', 'CH', .
 // Common non-ISO spellings of a country code.
 const ALIASES = { UK: 'GB', EL: 'GR' }
 
-export function countryFromHeaders(headers) {
+// Every valid country code in the header, in order. The header is normally one
+// code, but if it ever arrives as a comma list (or an array) each entry counts.
+export function countriesFromHeaders(headers) {
   const raw = headers?.['x-vercel-ip-country']
-  const first = Array.isArray(raw) ? raw[0] : raw
-  if (typeof first !== 'string') return null
-  const code = first.split(',')[0].trim().toUpperCase()
-  if (!/^[A-Z]{2}$/.test(code)) return null
-  return ALIASES[code] || code
+  const parts = (Array.isArray(raw) ? raw : [raw]).filter((v) => typeof v === 'string')
+  const codes = []
+  for (const part of parts) {
+    for (const entry of part.split(',')) {
+      const code = entry.trim().toUpperCase()
+      if (/^[A-Z]{2}$/.test(code)) codes.push(ALIASES[code] || code)
+    }
+  }
+  return codes
+}
+
+// The first valid country code, or null when there is none.
+export function countryFromHeaders(headers) {
+  return countriesFromHeaders(headers)[0] ?? null
 }
 
 export function isGeminiBlockedCountry(code) {
   return typeof code === 'string' && GEMINI_BLOCKED_COUNTRIES.has(code)
 }
 
+// Blocked when ANY entry in the header is a blocked country.
 export function geminiRegionBlocked(headers) {
-  return isGeminiBlockedCountry(countryFromHeaders(headers))
+  return countriesFromHeaders(headers).some(isGeminiBlockedCountry)
 }
 
 export const REGION_BLOCKED_STATUS = 451
