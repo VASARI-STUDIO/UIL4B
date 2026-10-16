@@ -4,7 +4,7 @@
 //
 // Writes public/iconify/collections/<pack>.json for every Iconify pack the icon
 // library offers (the keys of ICON_PACK_TIERS, less logodev, which is not an
-// Iconify set). Each file is the answer to Iconify's
+// Iconify set, and fluent-emoji, which is live-only). Each file is the answer to Iconify's
 // `/collection?prefix=<pack>&info=1`, the request IconLibrary.jsx makes, so the
 // page reads the same names, categories, title and licence it would read live.
 // With pack names, only those files are rewritten (a pack added later, or one
@@ -20,10 +20,9 @@
 // packs are rebuilt from the @iconify-json/<pack> package on jsdelivr, which is the
 // data the API serves (visible icons not in a category are `uncategorized`; the
 // package's metadata.json holds the categories). A pack too large for the CDN
-// (fluent-emoji) cannot be rebuilt that way: its committed file is kept, and
-// `node scripts/snapshot-icon-collections.mjs fluent-emoji` refreshes it alone
-// once the API allows requests again. Nothing is written unless every requested
-// pack has an answer. Rerun it, commit the diff.
+// (fluent-emoji) cannot be rebuilt that way, so it has no snapshot and the page
+// asks Iconify for it live. Nothing is written unless every requested pack has an
+// answer. Rerun it, commit the diff.
 
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -34,12 +33,19 @@ import { COLLECTION_SNAPSHOT_PATH, isCollectionAnswer } from '../src/utils/iconC
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_DIR = path.join(root, 'public', ...COLLECTION_SNAPSHOT_PATH.split('/').filter(Boolean))
 const NOT_ICONIFY = new Set(['logodev'])
+// Too large for the CDN route, so it has no snapshot and the page asks Iconify live.
+const LIVE_ONLY = new Set(['fluent-emoji'])
 const PAUSE_MS = 3000
 
-const offered = Object.keys(ICON_PACK_TIERS).filter((p) => !NOT_ICONIFY.has(p)).sort()
+const offered = Object.keys(ICON_PACK_TIERS).filter((p) => !NOT_ICONIFY.has(p) && !LIVE_ONLY.has(p)).sort()
 const args = process.argv.slice(2)
 const fromPackages = args.includes('--from-packages')
 const asked = args.filter((a) => !a.startsWith('--'))
+const liveOnly = asked.filter((p) => LIVE_ONLY.has(p))
+if (liveOnly.length) {
+  console.error(`${liveOnly.join(', ')} is served live and has no snapshot`)
+  process.exit(1)
+}
 const unknown = asked.filter((p) => !offered.includes(p))
 if (unknown.length) {
   console.error(`not an Iconify pack the library offers: ${unknown.join(', ')}`)

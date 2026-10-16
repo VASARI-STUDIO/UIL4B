@@ -23,7 +23,9 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const DIR = path.join(ROOT, 'public', ...COLLECTION_SNAPSHOT_PATH.split('/').filter(Boolean))
-const ICONIFY_PACKS = Object.keys(ICON_PACK_TIERS).filter((p) => p !== 'logodev')
+// fluent-emoji is too large for the snapshot route and stays a live request.
+const LIVE_ONLY = ['fluent-emoji']
+const ICONIFY_PACKS = Object.keys(ICON_PACK_TIERS).filter((p) => p !== 'logodev' && !LIVE_ONLY.includes(p))
 
 const answer = (body, init = {}) => new Response(typeof body === 'string' ? body : JSON.stringify(body), {
   status: 200, headers: { 'content-type': 'application/json' }, ...init,
@@ -40,6 +42,13 @@ test('every Iconify pack the library offers has a committed snapshot the page ca
     const names = [...(d.uncategorized || []), ...Object.values(d.categories || {}).flat()]
     assert.ok(names.length > 0, `${pack}.json lists no icons`)
     assert.ok(typeof d.title === 'string' && d.title, `${pack}.json has no title`)
+  }
+})
+
+test('the live-only packs are still offered, and have no snapshot to go stale', () => {
+  for (const pack of LIVE_ONLY) {
+    assert.ok(pack in ICON_PACK_TIERS, `${pack} is no longer offered: drop it from LIVE_ONLY here and in the script`)
+    assert.ok(!fs.existsSync(path.join(DIR, `${pack}.json`)), `${pack} has a snapshot: drop it from LIVE_ONLY here and in the script`)
   }
 })
 
