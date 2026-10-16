@@ -1163,9 +1163,14 @@ const PLB_HIT = `(roots) => {
   for (const el of controls) {
     const b = el.getBoundingClientRect()
     // Only points actually on screen can be pressed; skip the rest rather
-    // than counting them as either pass or fail.
+    // than counting them as either pass or fail. The test is made one pixel
+    // inside each bar's edge: the browser hit-tests the bar a fraction of a
+    // pixel beyond its box, so a centre-line that lands within a pixel of the
+    // phone tab bar already reads the bar, not the control. Which row lands
+    // there changes with how the rows above wrap, so without the pixel the
+    // result depends on the palette and the fonts, not on the page.
     const y = b.top + b.height / 2
-    if (y < top || y > bottom) continue
+    if (y < top + 1 || y > bottom - 1) continue
     tested++
     for (const f of [0.2, 0.5, 0.8]) {
       const hit = document.elementFromPoint(b.left + b.width * f, y)
