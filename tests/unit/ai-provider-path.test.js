@@ -75,6 +75,9 @@ import {
   ALT_TEXT_CUTOFF_ERRORS,
 } from '../../api/_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from '../../api/_lib/geminiFinish.js'
+import {
+  geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
+} from '../../api/_lib/geoBlock.js'
 import { stripJs } from '../helpers/strip-comments.js'
 
 const AI_PATH = 'api/ai.js'
@@ -197,6 +200,8 @@ function loadAi({
     altTextOutcome: () => { throw new Error('not modelled here') },
     altTextCutoffReply: () => { throw new Error('not modelled here') },
     ALT_TEXT_CUTOFF_REFUND_CAP,
+    // api/_lib/geoBlock.js — the real, pure region gate.
+    geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
     // Per-test replacements for the stubs above, for the paths a test drives.
     ...stubs,
   }

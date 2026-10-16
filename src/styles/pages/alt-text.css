@@ -101,6 +101,14 @@
 
 .alt-page .alt-dropzone-sub { font-size: 12px; color: var(--t2); }
 
+/* ── Region card: stands in for the dropzone where Gemini can't be used ───── */
+
+.alt-page .alt-region { display: grid; justify-items: center; gap: 10px; padding: clamp(28px, 5vw, 52px) 20px; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-2xl); }
+
+.alt-page .alt-region-title { margin: 0; font-size: 14.5px; font-weight: 540; letter-spacing: -.01em; color: var(--t0); }
+
+.alt-page .alt-region-body { margin: 0; max-width: 52ch; font-size: 13px; line-height: 1.55; color: var(--t1); }
+
 /* ── Side card: page context, length ──────────────────────────────────────── */
 
 .alt-page .alt-field {
@@ -267,6 +275,7 @@
 @media (max-width: 560px) {
   .alt-page .alt-examples-grid { grid-template-columns: 1fr; }
   .alt-page .alt-dropzone { padding: 22px 16px; }
+  .alt-page .alt-region { padding: 22px 16px; }
 }
 
 @media (pointer: coarse) {
