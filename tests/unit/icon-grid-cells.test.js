@@ -56,7 +56,7 @@ test('a windowed cell is the same element, still focusable, still named', () => 
   assert.match(body, /tabIndex=\{0\}/)
   assert.match(body, /role="button"/)
   // The name is rendered unconditionally — ghost or not — so find-in-page finds it.
-  assert.match(body, /\n\s*<span key="n">\{icon\.name\}<\/span>/)
+  assert.match(body, /\n\s*<span key="n" className="ic-name">\{icon\.name\}<\/span>/)
 })
 
 test('the focused cell is never windowed out', () => {
@@ -71,4 +71,44 @@ test('cells above the focused one are still windowed', () => {
   // Capping the window at the focused cell left every cell whole once cell 0
   // had been clicked: the DOM never shrank.
   assert.doesNotMatch(src, /upTo = Math\.min\(upTo, focused/)
+})
+
+test('the initial skeleton fits the signed-out cap and the signed-in first page', () => {
+  // Run the sizing expressions with catalogue-sized packs, without mounting React.
+  const labels = src.slice(src.indexOf('const packOf ='), src.indexOf('const warmSoon ='))
+  const sizing = block('const firstPageSize =', 'const skeletonShowPack = gridShowsPack(skeletonIcons)')
+  const pageSize = Number(src.match(/const PAGE_SIZE = (\d+)/)[1])
+  const capSource = readFileSync(new URL('../../src/data/iconPackTiers.js', import.meta.url), 'utf8')
+  const cap = Number(capSource.match(/ANON_ICON_CAP = (\d+)/)[1])
+  const size = new Function('capped', 'perPackCap', 'allowedPacks', 'PAGE_SIZE', 'ANON_ICON_CAP', `
+    const pack = '', group = null, source = 'all'
+    ${labels}
+    ${sizing}
+    return { count: skeletonIcons.length, showPack: skeletonShowPack }
+  `)
+  const packs = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
+  assert.deepEqual(size(true, cap / packs.length, packs, pageSize, cap), { count: cap, showPack: true })
+  assert.deepEqual(size(false, 250, packs, pageSize, cap), { count: pageSize, showPack: false })
+})
+
+test('the catalogue skeleton holds until a page fills, every pack settles, or a nonempty page times out', () => {
+  const helper = block('function firstPageReady(', '\n}')
+  const ready = new Function(`${helper}; return firstPageReady`)()
+  // Signed out: one pack is only 12 of the reserved 60 cells.
+  assert.equal(ready(12, 1, 5, 60), false)
+  assert.equal(ready(48, 4, 5, 60), false)
+  assert.equal(ready(60, 4, 5, 60), true)
+  // Settled includes failures; a partial or wholly failed page can finish.
+  assert.equal(ready(36, 5, 5, 60), true)
+  assert.equal(ready(0, 5, 5, 60), true)
+  // Signed in: a full first page need not wait for every catalogue.
+  assert.equal(ready(119, 1, 25, 120), false)
+  assert.equal(ready(120, 1, 25, 120), true)
+  assert.equal(ready(214, 1, 25, 120), true)
+  // The timeout can reveal a partial page, but cannot announce an empty page
+  // while any catalogue is still loading.
+  assert.equal(ready(12, 1, 5, 60, true), true)
+  assert.equal(ready(0, 0, 5, 60, true), false)
+  assert.equal(ready(0, 4, 5, 60, true), false)
+  assert.equal(ready(0, 5, 5, 60, true), true)
 })

@@ -383,38 +383,26 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail-item:active{transform:scale(.94)}
 .ig-rail-item img,.ig-rail-item svg{width:24px;height:24px}
 .ig-rail-item svg{color:var(--t0);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
-/* THE CELL RESERVES ITS GLYPH'S SPACE BEFORE THE GLYPH ARRIVES.
-   Grid markup now arrives one batched request per pack rather than one per icon
-   (see the batching note in IconLibrary.jsx), so for one frame a cell knows its
-   name but not its artwork. This holds the exact 24x24 the <img> will occupy —
-   `.ic svg,.ic img` in global.css and `.ig-rail-item img,.ig-rail-item svg`
-   above — so the label underneath does not jump when the tranche lands.
-   The box is a faint tint of the text colour (6%), so it sits just off the
-   surface in both themes rather than reading as a solid tile, and it pulses
-   slowly in opacity. Every skeleton shares one keyframe and one clock, so a
-   page of them breathes together instead of flickering. It is aria-hidden in
-   the markup, so nothing is announced for a box with no meaning.
-   `--icon-inv` is not applied: there is no ink here to invert.
-   The same skeleton paints on the colour-pack chip (`.ig-chip--wait`) and on
-   the mono <img> itself (`.ig-glyph-pending`) until the image has loaded. */
+/* Waiting glyph slots keep their dimensions without painting a square. */
 @keyframes ig-skel-pulse{0%,100%{opacity:1}50%{opacity:.5}}
-@keyframes ig-glyph-in{from{opacity:0}to{opacity:1}}
-.icust-stage-wait,.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:color-mix(in oklab,var(--t1) 6%,transparent);box-shadow:none;animation:ig-skel-pulse 1.4s ease-in-out infinite}
+.icust-stage-wait{background:color-mix(in oklab,var(--t1) 6%,transparent);box-shadow:none;animation:ig-skel-pulse 1.4s ease-in-out infinite}
+.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:none;box-shadow:none;animation:none}
 .icust-stage-wait{position:absolute;inset:0;margin:auto;border-radius:8px;flex-shrink:0}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .icust-stage-wait{animation:none}}
 html[data-reduced-motion="true"] .icust-stage-wait{animation:none}
 .ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
-/* The <img> is the skeleton box, so it must not take the invert filter that
-   would flip the tint, and its own artwork stays unpainted until it loads. */
+/* Keep pending artwork hidden until it has decoded. */
 .ic img.ig-glyph-pending{border-radius:6px;filter:none}
-/* Loaded glyphs fade in from the skeleton. */
-.ic img.ig-glyph-in,.ig-chip.ig-chip--in{animation:ig-glyph-in var(--dur-2) var(--ease-out) both}
+/* Loaded glyphs fade without moving. */
+.ic img,.ig-chip img{transition:opacity 160ms cubic-bezier(0.23,1,0.32,1)}
+.ic img.ig-glyph-in,.ig-chip--in img{opacity:1}
+.ic img.ig-glyph-pending{opacity:0;transition:none}
 /* The artwork stays hidden while the chip waits, so it never shows on a bare
    skeleton. */
 .ig-chip--wait img{opacity:0}
-html[data-reduced-motion="true"] :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait,.ic img.ig-glyph-in,.ig-chip.ig-chip--in){animation:none}
+html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait,.ic img.ig-glyph-in,.ig-chip.ig-chip--in){animation:none}
+  html:not([data-reduced-motion="false"]) :is(.ic img,.ig-chip img){transition:none}
 }
 .ig-rail-badge{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;border:2px solid var(--bg-0);color:#fff}
 .ig-rail-badge svg{width:9px;height:9px}
@@ -443,8 +431,15 @@ html[data-reduced-motion="true"] :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig
 /* Fetch-fallback notice, skeletons, status line, sentinel, CDN invert, pack tag */
 .ig-notice{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--warn) 40%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--warn) 8%,var(--bg-1));font-size:var(--fs-body-s);color:var(--t1)}
 .ig-notice span{flex:1;min-width:180px}
-.ig-skel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;padding:16px 6px 12px}
-.ig-skel-glyph{width:24px;height:24px;border-radius:var(--radius-xs)}
+.ig-skel{pointer-events:none}
+.ig-skel-slot{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0}
+.ig-skel-slot--mono{width:24px;height:24px}
+.ig-skel .sk{background:color-mix(in oklab,var(--t1) 6%,transparent)}
+.ig-skel-labels{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:calc(34px + var(--fs-micro));flex-shrink:0}
+.ig-skel-labels--single{height:25px}
+.ig-skel-pack{width:40%;max-width:36px;height:8px;border-radius:var(--radius-pill)}
+@media(max-width:980px){.ig-skel-labels{height:25px}.ig-skel-pack{display:none}}
+@media(max-width:640px){.ig-skel-labels{height:12.5px}}
 .ig-skel-label{width:60%;max-width:52px;height:8px;border-radius:var(--radius-pill)}
 .ig-sentinel{width:100%;height:1px}
 .ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
@@ -455,8 +450,6 @@ html[data-reduced-motion="true"] :is(.ig-glyph-wait,.ic img.ig-glyph-pending,.ig
    them) are unchanged, and so a glyph that has not arrived yet is an empty slot
    rather than a blank square. */
 .ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:none;box-shadow:none}
-/* Opaque logo.dev PNGs keep a light tile to separate them from the surface. */
-.ig-chip--tile{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 /* Ink that matches the page ground (near-black on dark, near-white on light) would
    vanish with no box behind it. A hairline halo outlines the shape; the artwork's
    own colours are untouched. */
@@ -1135,6 +1128,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   border:1px solid transparent;border-radius:var(--radius-2xl);
   background:transparent;
 }
+.lib-surface .ig .ic-name{min-height:25px}
+.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:calc(113px + var(--fs-micro))}
+@media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:104px}}
 .lib-surface .ic:hover{background:var(--hvr);border-color:transparent}
 .lib-surface .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
 .lib-surface .ic:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
@@ -1143,6 +1139,8 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
   .lib-surface .ic{gap:6px;min-height:72px;padding:12px 4px;border-radius:var(--radius)}
   .lib-surface .ic>span:not(.ic-pack){-webkit-line-clamp:1;line-clamp:1}
+  .lib-surface .ig .ic-name{min-height:12.5px}
+  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:80.5px}
 }
 
 

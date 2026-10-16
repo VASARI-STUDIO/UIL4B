@@ -249,6 +249,26 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await expect(help).toBeFocused()
   })
 
+  test('390px: the X closes the rail in place and the tab bar is there', async ({ page }) => {
+    watch(page, 'designer leaving the walkthrough on a phone')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await seed(page)
+    await go(page, '/create/palette')
+    await expect(rail(page)).toBeVisible()
+    await expect(page.locator('.pnav-tabs')).toBeVisible()
+
+    const before = page.url()
+    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).click()
+
+    await expect(rail(page)).toBeHidden()
+    expect(page.url()).toBe(before)
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expect(page.locator('.pnav-tabs')).toBeVisible()
+    await expect(page.locator('html')).not.toHaveClass(/bkit-typing/)
+    // Focus lands on the page's main landmark, not <body>.
+    await expect(page.locator('#main')).toBeFocused()
+  })
+
   test('390px: the current step is the chip in view', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await seed(page)
