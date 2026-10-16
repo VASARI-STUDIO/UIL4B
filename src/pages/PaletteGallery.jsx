@@ -333,7 +333,7 @@ export default function PaletteGallery({ toast }) {
           height note above .dgh-hero in global.css. */}
       <DiscoverGalleryHero
         title="Palette Library"
-        description={`${LIBRARY_PALETTES.length} palettes, named for the job they do. Open one and it lands in the builder with every stop editable.`}
+        description={`${isPro === true ? `${LIBRARY_PALETTES.length} palettes` : 'Palettes'}, named for the job they do. Open one and it lands in the builder with every stop editable.`}
       />
 
       <LibraryToolbar
