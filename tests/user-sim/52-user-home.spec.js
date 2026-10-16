@@ -277,7 +277,9 @@ test.describe('the plan strip reads the real plan', () => {
     await expect(pro).toBeVisible()
     // The price is the live one in the visitor's currency, so this run (no
     // price service) shows no amount; it must never show the USD fallback.
-    const cta = pro.getByRole('link', { name: /^(See Pro|Upgrade for \S+\/mo)$/ })
+    // Exactly "See Pro": a looser pattern (Upgrade for \S+/mo) would also pass the
+    // bare "$4" of the USD fallback, which is the fault this guards.
+    const cta = pro.getByRole('link', { name: 'See Pro', exact: true })
     await expect(cta, 'every upgrade CTA goes to /plans').toHaveAttribute('href', '/plans')
     const text = await pro.innerText()
     expect(text, 'there is no version history').not.toMatch(/version history/i)
