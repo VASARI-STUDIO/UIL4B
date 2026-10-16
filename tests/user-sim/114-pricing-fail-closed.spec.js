@@ -45,7 +45,7 @@ test.describe('/checkout before the prices settle', () => {
       await answer(withAvailability(LIVE))(route)
     })
     await signIn(page, { plan: 'free' })
-    await page.goto('/checkout?plan=yearly', { waitUntil: 'domcontentloaded' })
+    await go(page, '/checkout?plan=yearly')
 
     const note = page.locator('.checkout-plan-note')
     await expect(note).toHaveText('Checking the live price…')
