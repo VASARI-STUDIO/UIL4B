@@ -59,7 +59,7 @@ self.onmessage = async (e) => {
     const W = Math.round(cols * slot * scale)
     const H = Math.round(rows * slotH * scale)
     const canvas = new OffscreenCanvas(W, H)
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    const ctx = canvas.getContext('2d', { willReadFrequently: false })
     ctx.scale(scale, scale)
     ctx.font = font
     // A rejected font string leaves the default 10px sans-serif in place.
@@ -121,7 +121,7 @@ self.onmessage = async (e) => {
       const bmp = await createImageBitmap(blob)
       if (bmp.width !== W || bmp.height !== H) throw new Error('sheet size')
       const back = new OffscreenCanvas(W, H)
-      const bctx = back.getContext('2d', { willReadFrequently: true })
+      const bctx = back.getContext('2d', { willReadFrequently: false })
       bctx.drawImage(bmp, 0, 0)
       if (bmp.close) bmp.close()
       const d = bctx.getImageData(0, 0, W, H).data
