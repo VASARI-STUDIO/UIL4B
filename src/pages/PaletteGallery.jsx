@@ -494,29 +494,33 @@ export default function PaletteGallery({ toast }) {
         ) : gatedKind ? (
           // A collection emptied by the tier cap says why and where to go, in
           // place of the "no match" state and the placeholder wall: one offer,
-          // and the bottom close below stands down.
-          anonymous ? (
-            <div className="lockt-cta">
-              <div className="lockt-cta-copy">
-                <p className="lockt-cta-head">{`${gatedNoun} palettes open with an account`}</p>
-                <p className="lockt-cta-body">Create a free account to see more of the library. Pro opens all of it.</p>
+          // and the bottom close below stands down. The plain wrapper is a polite
+          // live region (the old empty state had one), so a chip tap is announced
+          // for both tiers; it adds no box of its own to the block flow.
+          <div role="status">
+            {anonymous ? (
+              <div className="lockt-cta">
+                <div className="lockt-cta-copy">
+                  <p className="lockt-cta-head">{`${gatedNoun} palettes are part of Pro`}</p>
+                  <p className="lockt-cta-body">Create a free account to see more of the library. Pro opens all of it.</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-accent lockt-cta-btn"
+                  onClick={() => requireLogin('browse more of the palette library', { free: true, signup: true })}
+                >
+                  Create your free account
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn btn-accent lockt-cta-btn"
-                onClick={() => requireLogin('browse more of the palette library', { free: true, signup: true })}
-              >
-                Create your free account
-              </button>
-            </div>
-          ) : (
-            <LockedTeaseCta
-              gate="palette-library-brand-chip"
-              heading={`${gatedNoun} palettes are part of Pro`}
-              body={`Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
-              action="See what Pro includes"
-            />
-          )
+            ) : (
+              <LockedTeaseCta
+                gate="palette-library-brand-chip"
+                heading={`${gatedNoun} palettes are part of Pro`}
+                body={`Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
+                action="See what Pro includes"
+              />
+            )}
+          </div>
         ) : (
           <>
             <LibraryEmpty
@@ -525,9 +529,10 @@ export default function PaletteGallery({ toast }) {
               detail="Try a broader search, or reset the mood and collection filters."
               onClear={clear}
             />
-            {/* Reached only when this collection has open rows that the mood or
-                search filtered out (a gated collection is handled above), so the
-                wall is the unnarrowed view's offer and nothing more. */}
+            {/* The generic empty arm: reached for group `all`, while Pro is still
+                loading, and when nothing is withheld (a collection emptied by
+                the tier cap is handled above). The wall is the unnarrowed
+                view's offer and nothing more. */}
             {mood === 'all' && !query.trim() && lockedBlock}
           </>
         )}
