@@ -25,10 +25,19 @@ async function pngBytes(page) {
   return Buffer.from(b64, 'base64')
 }
 
-/** Every /api/ai request the page makes, answered with a refusal so none can succeed. */
+/**
+ * Every /api/ai POST the page makes, answered with a refusal so none can
+ * succeed. The page also asks GET /api/ai?region=1 on load (is this visitor in
+ * a region the Gemini terms exclude?); that is not an AI call, so it is
+ * answered "open" and not counted. A glob like '**\/api/ai' would not even
+ * match it, because the query string is part of the URL being matched.
+ */
 async function countAi(page) {
   const calls = []
-  await page.route('**/api/ai', (route) => {
+  await page.route((u) => u.pathname === '/api/ai', (route) => {
+    if (route.request().method() !== 'POST') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"blocked":false}' })
+    }
     calls.push(route.request().url())
     return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"no session"}' })
   })
