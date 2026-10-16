@@ -123,10 +123,10 @@ const CUSTOM_KEY = 'vs-custom-icons'
 const LOGODEV_TOKEN = import.meta.env.VITE_LOGODEV_KEY || 'pk_L_3nxFHHQrOLmFuS16PsFQ'
 // Build a logo image URL. `ref` is a domain (stripe.com) or a plain brand name;
 // names are resolved through the /name/ path. Retina PNG so it stays crisp.
-const logodevUrl = (ref, size = 128) => {
+const logodevUrl = (ref, size = 128, theme) => {
   const clean = String(ref || '').trim()
   const path = clean.includes('.') ? encodeURIComponent(clean) : `name/${encodeURIComponent(clean)}`
-  return `https://img.logo.dev/${path}?token=${LOGODEV_TOKEN}&size=${size}&format=png&retina=true`
+  return `https://img.logo.dev/${path}?token=${LOGODEV_TOKEN}&size=${size}&format=png&retina=true${theme ? `&theme=${theme === 'light' ? 'light' : 'dark'}` : ''}`
 }
 // Curated popular brands for the browse grid — domains give the most reliable
 // match. Grouped loosely (tech · dev · social · finance · commerce · media).
@@ -478,13 +478,8 @@ function glyphDataUri(pack, name) {
 }
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
-// Colored/brand artwork keeps its own colours, so the grid can't tint it for
-// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
-// on a chip using the Stage's light gradient by default; if the artwork itself
-// is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
-// flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
-// so scrolling or reopening never re-samples.
-const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wide-slot cap, ink tone)
+// Remember artwork measurements so scrolling or reopening never re-samples.
+const glyphCache = new Map() // 'pack:name' or 'logodev:ref:theme' → artwork measurements
 
 // A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
 //
@@ -510,13 +505,14 @@ const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wi
 // Colored/brand artwork keeps its own colours and sits straight on the page
 // ground: the chip around it is a transparent slot, not a box. Artwork whose ink
 // is near-black (or near-white in the light theme) would vanish on that ground,
-// so the sampled ink tone also picks a faint halo (`ig-chip--halo-*`) that never
+// so the sampled ink tone also picks a one-pixel edge (`ig-chip--halo-*`) that never
 // touches the artwork's colours. The measurement is remembered per icon, so
 // scrolling or reopening never re-samples.
 
 // The aspect ratio of the box the glyph's opaque pixels occupy, plus the tone of
-// that ink (average relative luminance: near-black -> 'dark', near-white ->
-// 'light', anything else 'mid'). Any failure
+// that ink (substantial dark neutral ink -> 'dark', near-white average ->
+// 'light', anything else 'mid'), and the plate tone when four opaque corners say the
+// art is a baked-in square (else null). Any failure
 // (CORS taint, decode error) falls back to a square mid-tone ink box - which is exactly
 // the treatment every icon had before this measurement existed, so a sampling
 // failure degrades to the old behaviour rather than to a broken one.
@@ -524,7 +520,13 @@ const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wi
 // S is 64 rather than 24 because a 10:1 lockup occupies two rows of a 24px
 // raster: enough to see, not enough to measure. At 64 it is a six-row band and
 // the ratio is stable.
-const INK_DARK_MAX = 0.05 // linear luminance: GitHub / Vercel / Apple black sit well under this
+// Linear luminance below which a chosen icon colour counts as near-black (a saved
+// icon's colour; sampleGlyph reads pixels and uses INK_DARK_NEUTRAL_MAX instead).
+const INK_DARK_MAX = 0.05
+// Per-pixel ceiling for the dark-neutral share in sampleGlyph. Dark greys through
+// #5a5a5a (linear 0.10) sit under it; a mid-grey such as #666 (0.13) already has
+// enough contrast on a dark page and gets no edge.
+const INK_DARK_NEUTRAL_MAX = 0.11
 const INK_LIGHT_MIN = 0.82
 function sampleGlyph(img) {
   try {
@@ -538,10 +540,16 @@ function sampleGlyph(img) {
     const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
     let sum = 0
     let n = 0
+    let darkNeutral = 0
     let x0 = S, y0 = S, x1 = -1, y1 = -1
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 64) continue
-      sum += 0.2126 * toLin(data[i]) + 0.7152 * toLin(data[i + 1]) + 0.0722 * toLin(data[i + 2])
+      const [r, g, b] = [data[i], data[i + 1], data[i + 2]]
+      const lum = 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b)
+      sum += lum
+      // Dark lettering can dominate a lockup whose coloured mark lifts its
+      // average luminance. Ignore saturated ink and tiny dark details.
+      if (lum < INK_DARK_NEUTRAL_MAX && Math.max(r, g, b) - Math.min(r, g, b) <= 48) darkNeutral++
       n++
       const p = i / 4
       const px = p % S
@@ -551,7 +559,7 @@ function sampleGlyph(img) {
       if (py < y0) y0 = py
       if (py > y1) y1 = py
     }
-    if (n === 0) return { ar: 1, cap: 1, ink: 'mid' }
+    if (n === 0) return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false, plate: null }
     // The raster is SQUARE and drawImage stretched the art to fill it, so the
     // measured ink box is the true one divided by the image own aspect. Undoing
     // that is what makes one number cover both causes: a square-canvas devicon
@@ -566,13 +574,23 @@ function sampleGlyph(img) {
       raster: S,
     })
     const lum = sum / n
-    return { ar, cap, ink: lum < INK_DARK_MAX ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid' }
-  } catch { return { ar: 1, cap: 1, ink: 'mid' } }
+    const corners = [0, S - 1, S * (S - 1), S * S - 1]
+    const opaqueCorners = corners.every(p => data[p * 4 + 3] === 255)
+    // A baked-in square's plate tone: the corners are plate, never artwork.
+    const plate = opaqueCorners
+      ? corners.reduce((t, p) => t + 0.2126 * toLin(data[p * 4]) + 0.7152 * toLin(data[p * 4 + 1]) + 0.0722 * toLin(data[p * 4 + 2]), 0) / 4
+      : null
+    return { ar, cap, ink: darkNeutral / n >= 0.25 ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid', opaqueCorners, plate }
+  } catch { return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false, plate: null } }
 }
 
 
 // Brand artwork keeps its colours in a transparent, fixed-size slot.
-const FLAG_PACKS = new Set(ICON_GROUPS.flags.packs)
+// Which halo (if any) keeps ink that matches the page ground readable: near-black
+// ink on the dark theme gets a light halo, near-white ink on the light theme a dark one.
+// A flag or emoji never gets one: its average tone says little about its edge, and its
+// outline is part of the artwork.
+const FLAG_PACKS = new Set([...ICON_GROUPS.flags.packs, 'twemoji'])
 const haloFor = (ink, theme, pack) => {
   if (FLAG_PACKS.has(pack)) return ''
   return ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : ''
@@ -719,6 +737,65 @@ function SavedPackGlyph({ icon }) {
   )
 }
 
+// A baked light plate stands out hard on the dark page. When the theme variant
+// comes back as one, the default variant is sometimes a darker plate, so it is
+// sampled once off-screen and used instead when it is clearly darker.
+const PLATE_LIGHT_MIN = 0.5
+const PLATE_DARKER_BY = 0.25
+function probeDefaultPlate(ref, themePlate, done) {
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    const next = sampleGlyph(img)
+    if (next.opaqueCorners && next.plate !== null && next.plate < themePlate - PLATE_DARKER_BY) done({ ...next, useDefault: true })
+  }
+  img.src = logodevUrl(ref, 64)
+}
+
+// Sample each logo variant once. Only baked-in opaque corners get rounded, with
+// a hairline on the plate's own edge (CSS) in place of the halo; transparent
+// marks stay unrounded and the halo follows the artwork's ink. A load the
+// browser refuses for CORS is shown plain: no sampling, so no halo or rounding.
+function LogoDevGlyph({ icon }) {
+  const { theme } = useTheme()
+  const key = `logodev:${icon.ref}:${theme}`
+  const [measured, setMeasured] = useState(null)
+  const [plainKey, setPlainKey] = useState(null)
+  const plain = plainKey === key
+  const shape = plain ? null : glyphCache.get(key) || (measured?.key === key ? measured.shape : null)
+  const halo = shape?.opaqueCorners ? '' : haloFor(shape?.ink, theme, 'logodev')
+  const onLoad = (e) => {
+    if (plain) return
+    if (!glyphCache.has(key)) {
+      const next = sampleGlyph(e.currentTarget)
+      glyphCache.set(key, next)
+      if (theme !== 'light' && next.opaqueCorners && next.plate > PLATE_LIGHT_MIN) {
+        probeDefaultPlate(icon.ref, next.plate, (darker) => {
+          glyphCache.set(key, darker)
+          setMeasured({ key, shape: darker })
+        })
+      }
+    }
+    setMeasured({ key, shape: glyphCache.get(key) })
+  }
+  return (
+    <span className={`ig-chip${halo ? ` ig-chip--${halo}` : ''}`}>
+      <img
+        key={plain ? `${key}:plain` : key}
+        {...(plain ? {} : { crossOrigin: 'anonymous' })}
+        src={logodevUrl(icon.ref, 64, shape?.useDefault ? undefined : theme)}
+        width="28"
+        height="28"
+        className={`ig-logo${shape?.opaqueCorners ? ' ig-logo--square' : ''}`}
+        loading="lazy"
+        alt={icon.name}
+        onLoad={onLoad}
+        onError={plain ? undefined : () => setPlainKey(key)}
+      />
+    </span>
+  )
+}
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
@@ -727,13 +804,7 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
     return <SavedPackGlyph icon={icon} />
   }
-  if (icon.logo) {
-    return (
-      <span className="ig-chip">
-        <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
-      </span>
-    )
-  }
+  if (icon.logo) return <LogoDevGlyph icon={icon} />
   if (icon.cdn) {
     if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} gone={gone} />
     // The batched body, composed into a data: URI. Empty until its tranche
@@ -3340,6 +3411,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   return (
     <div className="sec">
+      {/* Preview-only shape edges; these definitions never enter copied artwork. */}
+      <svg className="ig-edge-filters" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          {['light', 'dark'].map(tone => (
+            <filter key={tone} id={`ig-edge-${tone}`} x="-100%" y="-100%" width="300%" height="300%" colorInterpolationFilters="sRGB">
+              <feMorphology in="SourceAlpha" operator="dilate" radius="1" result="edge" />
+              <feFlood floodColor={tone === 'light' ? '#f4f4f5' : '#060607'} floodOpacity={tone === 'light' ? '.85' : '.75'} result="colour" />
+              <feComposite in="colour" in2="edge" operator="in" result="outline" />
+              <feMerge>
+                <feMergeNode in="outline" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          ))}
+        </defs>
+      </svg>
       {/* NO STANDALONE MASTHEAD. Both libraries used to carry one behind
           `{!embedded && ...}` — an eyebrow, an h1 and the subtitle — for a
           route that has not existed since the two were merged: the ONLY import
