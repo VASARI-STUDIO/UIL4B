@@ -133,6 +133,8 @@ export function cropRect(srcW, srcH, shapeId, anchor = 'centre') {
   const [a, b] = shape.ratio
   const w = floorEven(Math.min(srcW, (srcH * a) / b))
   const h = floorEven(Math.min(srcH, (srcW * b) / a))
+  // A sliver (a very thin source at a wide shape) leaves nothing ffmpeg can crop.
+  if (w < 2 || h < 2) return null
   if (w >= srcW - 1 && h >= srcH - 1) return null
   const place = (full, part) => (anchor === 'start' ? 0 : anchor === 'end' ? floorEven(full - part) : floorEven((full - part) / 2))
   return { w, h, x: place(srcW, w), y: place(srcH, h), axis: w < srcW - 1 ? 'x' : 'y' }

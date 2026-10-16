@@ -187,6 +187,12 @@ test('crop: each shape keeps an even, centred or anchored box, or nothing to cut
   assert.deepEqual(cropRect(500, 375, '1:1'), { w: 374, h: 374, x: 62, y: 0, axis: 'x' })
 })
 
+test('crop: a source too thin to cut a 2 px box from gives nothing to cut', () => {
+  assert.equal(cropRect(3, 1000, '16:9'), null)
+  assert.equal(cropRect(1000, 3, '9:16'), null)
+  assert.equal(cropRect(1, 1000, '1:1'), null)
+})
+
 test('turn and direction filters', () => {
   assert.deepEqual(turnFilters(90), ['transpose=1'])
   assert.deepEqual(turnFilters(270), ['transpose=2'])

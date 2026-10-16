@@ -725,7 +725,7 @@ function VideoSource({ srcUrl, videoRef, onLoadedMetadata, onError, facts, onRep
   return (
     <div className="fc-source">
       {editor ? (
-        <div className="fc-stage" style={size ? { '--src-w': size.w, '--src-h': size.h } : undefined}>
+        <div className="fc-vstage" style={size ? { '--src-w': size.w, '--src-h': size.h } : undefined}>
           {editor.isImage ? (
             <img
               src={srcUrl}
@@ -820,6 +820,7 @@ const FLIP_ID = { h: 'fc-vid-flip-h', v: 'fc-vid-flip-v' }
 const REVERSE_OFF_NOTE = 'Reverse keeps every frame in memory, so it’s off for a clip this long. Shorten the clip, lower the frame rate or make it narrower.'
 const REVERSE_UNKNOWN_NOTE = 'Reverse needs to know how long the clip is, and this file doesn’t say, so it’s off.'
 const NO_PREVIEW_NOTE = 'Can’t preview this file, so crop is unavailable. Convert still works.'
+const UNREADABLE_VIDEO_NOTE = 'This file could not be read as a video. Try saving it again as MP4 or WebM.'
 // A file the browser can’t play (an AVI, say) may never report its size. After
 // this long the panel stops saying "Reading the file…"; a late answer still wins.
 const READ_TIMEOUT_MS = 5000
@@ -1044,7 +1045,9 @@ function VideoConvert({ toast }) {
       setJob(null)
       toast(dir !== 'forward'
         ? 'Conversion failed. Reverse keeps every frame in memory; try a shorter clip or a narrower width.'
-        : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
+        : /encoder stopped with code/.test(err?.message || '')
+          ? UNREADABLE_VIDEO_NOTE
+          : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
   }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, turn, flipH, flipV, speed, dir, colours, dither, frames, sig, toast])
 
@@ -1212,10 +1215,11 @@ function VideoConvert({ toast }) {
             </div>
             <div className="fc-insp-sec">
               <Segmented id="fc-vid-turn" label="Turn" options={TURNS} value={turn} onChange={setTurn} disabled={working} />
-              <div className="fc-pair">
+              <div className="fc-flip-pair">
                 {flipBtn('h', flipH, setFlipH)}
                 {flipBtn('v', flipV, setFlipV)}
               </div>
+              {(turn !== 0 || flipH || flipV) && <p className="fc-note">Turn and flip show in the result, not the preview.</p>}
             </div>
             <div className="fc-insp-sec">
               <Segmented id="fc-vid-speed" label="Speed" options={speedOptions} value={speed} onChange={setSpeed} disabled={working} className="fc-seg--speed" />
