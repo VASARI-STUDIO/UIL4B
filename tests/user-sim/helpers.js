@@ -138,9 +138,10 @@ export function watch(page, persona) {
     // failure state. Chromium logs each refused response (75 of them: 25 packs
     // by 3 hosts), and none is a finding about the app. Same shape as the
     // motion persona above: keyed on the persona AND the host, so a refusal
-    // anywhere else still surfaces.
+    // anywhere else still surfaces. The refusal also takes the site's own copy
+    // of each pack list (a 404 on /iconify/collections/<pack>.json).
     const deliberateIconifyRefusal = persona === 'visitor whose icon catalogue is refused'
-      && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)/.test(url)
+      && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)|\/iconify\/collections\/[^/]+\.json/.test(url)
     if (deliberateIconifyRefusal) return
     if (isExpectedNoise(msg.text(), url)) return
     const source = url

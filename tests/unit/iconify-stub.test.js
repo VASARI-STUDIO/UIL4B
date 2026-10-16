@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { answerIconify, fixturePacks, ICONIFY_HOSTS } from '../user-sim/iconify-stub.js'
+import { answerIconify, answerSnapshot, fixturePacks, ICONIFY_HOSTS, SNAPSHOT_PATH_RE } from '../user-sim/iconify-stub.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -47,6 +47,21 @@ test('/collection answers per pack, and Lucide holds a full first page', () => {
   assert.ok(names.length >= 120, `lucide fixture has ${names.length} names; the default grid's first page needs 120 from one pack`)
   assert.ok(names.includes('zap'), '10-home hands lucide:zap to the editor; the fixture must hold it')
   assert.equal(answerIconify(`${HOST}/collection?prefix=no-such-pack`).status, 404)
+})
+
+test('the site\'s own pack list answers from the same fixture as /collection, and an unknown pack is a 404', () => {
+  for (const pack of fixturePacks()) {
+    const site = answerSnapshot(`/iconify/collections/${pack}.json`)
+    assert.equal(site.status, 200, `${pack}: the site's pack list has no fixture answer`)
+    assert.deepEqual(json(site), json(answerIconify(`${HOST}/collection?prefix=${pack}`)),
+      `${pack}: the site's list and the live /collection answer must be the same body, or the suite tests two different catalogues`)
+  }
+  assert.equal(answerSnapshot('/iconify/collections/no-such-pack.json').status, 404,
+    'a pack with no fixture must 404 on the site too, which is what sends the page on to Iconify')
+  assert.equal(answerSnapshot('/iconify/collections/lucide.json.map').status, 404)
+  assert.ok(SNAPSHOT_PATH_RE.test('/iconify/collections/lucide.json'))
+  assert.ok(!SNAPSHOT_PATH_RE.test('/lucide.json'), 'the batched glyph endpoint is not a pack list')
+  assert.ok(!SNAPSHOT_PATH_RE.test('/iconify/collections/a/b.json'))
 })
 
 test('/search filters the fixture index by query and by prefix(es), and a broad query mixes packs', () => {

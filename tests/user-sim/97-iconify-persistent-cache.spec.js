@@ -23,10 +23,19 @@
 //     on a non-zero count and the cool-down test on the first reload's ledger;
 //   - make cooling() return false: the "different query" step sends a request;
 //   - drop the clearIconifyCooldown() call from the Try again handler in
-//     IconLibrary.jsx: the fourth test never recovers (and so does 66's).
+//     IconLibrary.jsx: the third test never recovers (and so does 66's);
+//   - make getCollectionNames() in IconLibrary.jsx skip the site's pack lists
+//     and always ask Iconify: the first test and the Groups test fail on a
+//     non-zero /collection count.
+//
+// THE PACK LISTS ARE THE SITE'S OWN. A first visit reads each pack's list from
+// /iconify/collections/<pack>.json on this origin and sends Iconify no
+// /collection request. The tests that exercise the live /collection path (the
+// cool-down and Try again) take the site's lists away first with
+// withholdSnapshots, which is a pack with no usable snapshot.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, ready, signIn, watch } from './helpers.js'
-import { fixturePacks, iconifyRequests, isIconifyUrl, isLiveIconify, limitIconify } from './iconify-stub.js'
+import { fixturePacks, iconifyRequests, isIconifyUrl, isLiveIconify, limitIconify, withholdSnapshots } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 // helpers.js drops the console lines Chromium logs for deliberate 429s for this
@@ -99,7 +108,8 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
   // POSITIVE CONTROL: the first visit did go to the fixture. Without it, "the
   // reloads sent nothing" is true of a page that never asked.
   const first = mark(ctx)
-  expect(first.collection, 'load 1 fetched one /collection per pack').toBe(fixturePacks().length)
+  expect(iconifyRequests(ctx).snapshot, 'load 1 read one pack list per pack from the site').toBe(fixturePacks().length)
+  expect(first.collection, 'load 1 asked Iconify for a pack list the site already serves').toBe(0)
   expect(first.batch, 'load 1 fetched its glyph tranches').toBeGreaterThan(0)
   const afterFirst = urls.length
 
@@ -137,6 +147,10 @@ test('a 429 starts a cool-down: cached packs stay up, nothing is sent, and a tot
   watch(page, REFUSED)
   const notice = page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
   const select = page.locator('.lbry-select')
+
+  // The site's pack lists are taken away for the whole test, so the catalogue
+  // goes through iconifyFetch (its cache and its cool-down) and not around it.
+  await withholdSnapshots(page)
 
   // Warm the cache with a visit that includes a second pack.
   await go(page, '/create/icons')
@@ -208,7 +222,10 @@ test('after a total failure a reload stays quiet, and Try again clears the cool-
   const notice = page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
 
   // A first visit with nothing cached while the API refuses everything, the way
-  // the live API did (Retry-After 3555, not readable by the page).
+  // the live API did (Retry-After 3555, not readable by the page). The site's
+  // own pack lists are withheld, so every pack falls back to the live request
+  // that the 429 and its cool-down apply to.
+  await withholdSnapshots(page)
   const ledger = await limitIconify(page, { after: 0, retryAfter: 3555 })
   await go(page, '/create/icons')
   await expect(notice).toBeVisible({ timeout: 15000 })
@@ -224,12 +241,13 @@ test('after a total failure a reload stays quiet, and Try again clears the cool-
   // The API is healthy again, but the page does not know and is still cooling.
   // Try again is the visitor asking on purpose: it must clear the cool-down.
   await page.unrouteAll()
+  await withholdSnapshots(page)
   await notice.getByRole('button', { name: 'Try again' }).click()
   await expect(notice).toHaveCount(0, { timeout: 20000 })
   // Signed out: the status line reads "Showing 60 of 60 · 5 sets" (Pro adds "All packs").
   await expect(page.getByText(/Showing [\d,]+ of [\d,]+ · \d+ sets/)).toBeVisible({ timeout: 20000 })
   await expect(page.getByText(/Built-in icons/)).toHaveCount(0)
-  expect(iconifyRequests(ctx).collection, 'Try again fetched the catalogue').toBeGreaterThan(0)
+  expect(iconifyRequests(ctx).collection, 'Try again fetched the catalogue (the pack lists are withheld, so it is the live request)').toBeGreaterThan(0)
   await ctx.close()
 })
 
@@ -259,7 +277,8 @@ test('/create/icons-emoji and its Groups tab load from the cache on a reload', a
 
   await open()
   const first = mark(ctx)
-  expect(first.collection, 'load 1 fetched the catalogue for the Icons tab').toBeGreaterThan(0)
+  expect(iconifyRequests(ctx).snapshot, 'load 1 read the Icons tab pack lists from the site').toBeGreaterThan(0)
+  expect(first.collection, 'load 1 asked Iconify for a pack list the site already serves').toBe(0)
   expect(first.batch, 'load 1 fetched glyph tranches').toBeGreaterThan(0)
 
   for (const n of [2, 3]) {

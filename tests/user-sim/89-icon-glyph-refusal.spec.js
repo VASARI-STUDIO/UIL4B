@@ -20,7 +20,7 @@
 // per-spec route that drifted would refuse differently from the outage.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { isLiveIconify, refuseIconifyGlyphs } from './iconify-stub.js'
+import { iconifyRequests, isLiveIconify, refuseIconifyGlyphs } from './iconify-stub.js'
 
 const PERSONA = 'a designer looking for an icon on a shared office connection, where the icon API has rate-limited the whole building'
 
@@ -95,6 +95,11 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 
     await expect(page.getByText(/couldn.t reach the icon service/i)).toHaveCount(0)
     expect(batched.length, 'the catalogue grid is not requesting any glyphs').toBeGreaterThan(0)
+    // And the catalogue itself came from this site's pack lists: the page asked
+    // Iconify for glyphs only, never for a pack list.
+    const tally = iconifyRequests(page.context())
+    expect(tally.snapshot, 'the pack lists were not read from the site').toBeGreaterThan(0)
+    expect(tally.collection, 'a first visit asked Iconify for a pack list').toBe(0)
 
     const m = await page.evaluate(() => {
       const cells = [...document.querySelectorAll('.ig .ic img')]

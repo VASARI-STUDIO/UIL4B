@@ -97,6 +97,22 @@ export async function refuseIconify(page) {
 }
 
 /**
+ * Take the site's own pack lists away (a 404 for every /iconify/collections/<pack>.json)
+ * and leave Iconify itself answering from the fixture. This is a pack with no
+ * usable snapshot: the page must fall back to the live /collection request,
+ * which the stub then counts as `collection`. Call it before go(); a page route
+ * outranks the context route, and page.unrouteAll() puts the snapshots back.
+ *
+ * Stamped REFUSED_VALUE like the other refusals so the context audit reads it
+ * as deliberate. The 404s are same-origin, so they are not an Iconify escape.
+ */
+export async function withholdSnapshots(page) {
+  const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
+  await page.route((u) => SNAPSHOT_PATH_RE.test(u.pathname),
+    (route) => route.fulfill({ status: 404, contentType: 'text/plain', headers, body: 'Not found' }))
+}
+
+/**
  * Refuse ONLY the individual glyph .svg requests, and let the catalogue
  * (collections.json, collection/<pack>.json, search) answer normally from the
  * fixture.
