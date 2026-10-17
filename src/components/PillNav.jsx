@@ -6,7 +6,7 @@ import { localiseTools } from '../data/tools'
 import { searchHints } from '../data/toolIndex'
 // The Create pane is a miniature of the real style-guide export, read from the
 // same gallery palette and the same inkFor/grade the exporter uses.
-import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { LIBRARY_LEAD } from '../data/libraryTotals'
 import { inkFor, grade } from '../utils/styleGuideExport'
 import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -258,7 +258,7 @@ function initials(profile, user) {
 // exporter's own inkFor and grade, so it cannot show a grade the export would
 // not print.
 function ExportPreview() {
-  const palette = GALLERY_PALETTES[0]
+  const palette = LIBRARY_LEAD.palette
   return (
     <div className="pnav-prev" aria-hidden="true">
       <div className="pnav-prev-page">

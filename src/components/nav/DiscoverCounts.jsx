@@ -1,15 +1,15 @@
-import { GALLERY_PALETTES } from '../../data/paletteGallery'
-import { GALLERY_GRADIENTS } from '../../data/gradientGallery'
+import { LIBRARY_TOTALS, LIBRARY_LEAD } from '../../data/libraryTotals'
 import { PROMPT_COUNT } from '../../data/communityPromptsPreview'
 
 // Count the libraries whose totals are available in the local gallery data.
+// Palettes and gradients are counted from the generated totals
+// (src/data/libraryTotals.js), so no Pro row is needed in the bundle.
 const NEUTRAL = ['#15161B', '#33384A', '#5A6379', '#C9CDD6']
 
 export default function DiscoverCounts() {
-  const firstGradient = GALLERY_GRADIENTS[0]
   const cards = [
-    { count: GALLERY_PALETTES.length, label: 'Palettes, named and tagged', swatches: GALLERY_PALETTES[0].colors.slice(0, 4) },
-    { count: GALLERY_GRADIENTS.length, label: 'Gradients, copy as CSS', gradient: firstGradient },
+    { count: LIBRARY_TOTALS.curatedPalettes, label: 'Palettes, named and tagged', swatches: LIBRARY_LEAD.palette.colors.slice(0, 4) },
+    { count: LIBRARY_TOTALS.gradients, label: 'Gradients, copy as CSS', gradient: LIBRARY_LEAD.gradient },
     { count: PROMPT_COUNT, label: 'Prompts for UI and marketing', swatches: NEUTRAL },
   ]
   return (

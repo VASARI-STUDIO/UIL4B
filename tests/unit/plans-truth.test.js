@@ -198,7 +198,7 @@ test('the specific claim that shipped — "design JSON" — is gone from every p
 test('Pricing.jsx derives its figures instead of typing them', () => {
   // The page's own rule, enforced. Each of these must be IMPORTED, because each
   // one has a module that also drives the behaviour it describes.
-  for (const symbol of ['AI_LIMITS', 'FREE_SAVE_LIMITS', 'COLOUR_SYSTEMS', 'BRAND_PALETTES']) {
+  for (const symbol of ['AI_LIMITS', 'FREE_SAVE_LIMITS', 'COLOUR_SYSTEMS', 'LIBRARY_TOTALS']) {
     assert.match(PLANS, new RegExp(`import[^\\n]*\\b${symbol}\\b`),
       `Pricing.jsx no longer imports ${symbol} — a typed figure has replaced a derived one`)
   }
@@ -217,7 +217,7 @@ test('Pricing.jsx derives its figures instead of typing them', () => {
   // someone hard-codes "7 of 37" and the arrays change, the page lies silently.
   assert.ok(!/\b7 of 37\b/.test(code), 'Pricing.jsx hard-codes the brand palette split')
   assert.ok(!/\b2 of 8\b/.test(code), 'Pricing.jsx hard-codes the colour system split')
-  assert.match(code, /BRANDS_TOTAL|BRAND_PALETTES\.length/, 'the brand total is not derived')
+  assert.match(code, /BRANDS_TOTAL = LIBRARY_TOTALS\.brandPalettes/, 'the brand total is not derived from the generated totals')
   assert.match(code, /SYSTEMS_TOTAL|COLOUR_SYSTEMS\.length/, 'the colour system total is not derived')
 })
 

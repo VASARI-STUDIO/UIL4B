@@ -21,7 +21,7 @@
 // that had quietly stopped describing the view.
 import { test, expect } from './base.js'
 import { go, restingScrollY, watch, signIn } from './helpers.js'
-import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../../src/utils/paletteMood.js'
 import { splitLockedLibrary } from '../../src/utils/lockedPreview.js'
 
