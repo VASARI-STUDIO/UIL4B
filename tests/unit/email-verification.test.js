@@ -14,6 +14,7 @@ import path from 'node:path'
 import {
   needsEmailVerification, verifyLinkSettings, verifyBarVisible, verifyErrorText, sendVerificationLink,
   VERIFY_ERRORS, VERIFY_ERROR_FALLBACK, readVerifyDismissed, writeVerifyDismissed,
+  VERIFY_RESEND_COOLDOWN_S, verifyResendBlocked, verifyResendLabel, verifiedLandingMessage,
 } from '../../src/utils/emailVerification.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -131,9 +132,58 @@ test('the link brings the person back to Settings, which reads ?verified=1', () 
   assert.deepEqual(verifyLinkSettings('https://uil4b.com'), { url: 'https://uil4b.com/settings?verified=1' })
   const settings = stripComments(read('src/pages/Settings.jsx'))
   assert.match(settings, /get\('verified'\) !== '1'/)
-  // Signed out, the parameter proves nothing: Settings never says "verified" to it.
-  assert.doesNotMatch(settings, /Sign in to carry on/)
-  assert.match(settings, /if \(!user\) return/)
+  // Signed out, the parameter proves nothing: Settings says the link was opened
+  // and offers Sign in, and says "verified" only after the re-read says so.
+  assert.match(settings, /verifiedLandingMessage\(\{ signedIn: false \}\)/)
+  assert.match(settings, /requireLogin\(/)
+  assert.match(settings, /verifiedLandingMessage\(\{ signedIn: true, verified \}\)/)
+})
+
+test('the landing from the link says what is true for who is there', () => {
+  // Signed out (another browser or device): the link was opened, nothing is claimed.
+  const out = verifiedLandingMessage({ signedIn: false })
+  assert.equal(out.text, 'Your email link was opened. Sign in to finish.')
+  assert.equal(out.signIn, true)
+  assert.doesNotMatch(out.text, /verified/i)
+  // Signed in and the re-read shows verified.
+  assert.deepEqual(verifiedLandingMessage({ signedIn: true, verified: true }), { text: 'Email verified', kind: 'success', signIn: false })
+  // Signed in as an account the link did not verify: said plainly, no Sign in.
+  const other = verifiedLandingMessage({ signedIn: true, verified: false })
+  assert.match(other.text, /still isn't verified/)
+  assert.equal(other.signIn, false)
+  // Unknown is silent rather than a guess.
+  assert.equal(verifiedLandingMessage({ signedIn: true, verified: null }), null)
+})
+
+test('Resend waits out a cooldown after a send, and stays usable to focus', () => {
+  assert.equal(VERIFY_RESEND_COOLDOWN_S, 30)
+  assert.equal(verifyResendBlocked('idle', 0), false)
+  assert.equal(verifyResendBlocked('sending', 0), true)
+  assert.equal(verifyResendBlocked('sent', 12), true)
+  assert.equal(verifyResendBlocked('sent', 0), false)
+  assert.equal(verifyResendBlocked('failed', 0), false)
+  assert.equal(verifyResendLabel('idle', 0), 'Resend link')
+  assert.equal(verifyResendLabel('sending', 0), 'Sending…')
+  assert.equal(verifyResendLabel('sent', 30), 'Resend in 30s')
+  assert.equal(verifyResendLabel('sent', 1), 'Resend in 1s')
+  assert.equal(verifyResendLabel('sent', 0), 'Resend link')
+  const stack = stripComments(read('src/components/NoticeStack.jsx'))
+  // aria-disabled, never disabled: a disabled button that holds focus drops it to <body>.
+  assert.match(stack, /aria-disabled=\{blocked \|\| undefined\}/)
+  assert.doesNotMatch(stack, /[^-]disabled=\{/)
+  // Resend is not hidden by the sent state.
+  assert.doesNotMatch(stack, /state !== 'sent' &&/)
+})
+
+test('the notice strip sits right after the skip link, before the nav and the page', () => {
+  const app = stripComments(read('src/App.jsx'))
+  const skip = app.indexOf('className="skip-link"')
+  const strip = app.indexOf('<NoticeStack />')
+  const shell = app.indexOf('<AppInner />')
+  assert.ok(skip > 0 && strip > skip, 'the strip follows the skip link')
+  assert.ok(strip < shell, 'the strip precedes the app shell (nav and #main)')
+  assert.equal(app.split('<NoticeStack />').length - 1, 1, 'mounted once')
+  assert.doesNotMatch(app, /tabIndex=\{[1-9]/, 'no positive tabindex')
 })
 
 test('the bar and Settings share one set of refusal copy', () => {
@@ -178,13 +228,16 @@ test('the reminder bar is a third row in the strip and re-checks on focus', () =
   const stack = stripComments(read('src/components/NoticeStack.jsx'))
   assert.match(stack, /<VerifyNotice \/>/)
   assert.match(stack, /useVerificationRecheck\(/)
-  // The live region is the message text, never the wrapper holding the buttons,
-  // and a failed line is its own alert beside it.
-  assert.match(stack, /<p className="sync-notice-msg" role="status">/)
-  assert.match(stack, /<p className="sync-notice-msg" role="alert">/)
+  // Two live regions that stay mounted, the status text and a separate alert
+  // beside it; neither wraps the other, and neither wraps the buttons.
+  assert.match(stack, /<span role="status">/)
+  assert.match(stack, /<span role="alert">/)
+  assert.doesNotMatch(stack, /<p[^>]*role=/)
   assert.doesNotMatch(stack, /aria-live=/)
-  assert.doesNotMatch(stack, /verify-notice"\s+data-testid="verify-notice"\s+data-verify-state=\{[^}]*\}\s+role=/)
-  assert.match(stack, /dismissRef\.current\?\.focus\(\)/)
+  assert.doesNotMatch(stack, /data-verify-state=\{[^}]*\}\s+role=/)
+  // Focus is handed on when the bar or Resend leaves the page, in every state.
+  assert.match(stack, /useFocusFallback\(ref, \(\) => document\.getElementById\('main'\)\)/)
+  assert.match(stack, /useFocusFallback\(ref, \(\) => dismissRef\.current\)/)
   const hook = stripComments(read('src/hooks/useVerificationRecheck.js'))
   assert.match(hook, /addEventListener\('focus'/)
   assert.match(hook, /addEventListener\('visibilitychange'/)
@@ -195,7 +248,8 @@ test('onboarding says to check the inbox, or that the send failed', () => {
   const src = stripComments(read('src/pages/Onboarding.jsx'))
   assert.match(src, /Check your inbox: we sent a verification link to/)
   assert.match(src, /Your verification link didn't send\./)
-  assert.match(src, /onb-greeting onb-verify-line.*role="status"/)
+  // The status region is on the page before the line arrives, so it is announced.
+  assert.match(src, /<div role="status">\s*\{lineReady && verifyLine && <p className=\{`onb-greeting onb-verify-line/)
   // A failed send is read in the normal text colour, and a long address wraps.
   assert.match(src, /onb-verify-line--failed/)
   const css = read('src/styles/global.css')

@@ -5138,7 +5138,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    anywhere rather than pushing the button off the row. */
 .notice-stack>.verify-notice:not(:first-child){border-top:1px solid var(--bh)}
 .verify-notice{align-items:center}
-.verify-notice .sync-notice-msg{overflow-wrap:anywhere}
+.verify-notice .sync-notice-msg{overflow-wrap:anywhere;min-height:1.45em}
+/* Resend stays on the row and stays focusable while it sends and while it
+   cools down; aria-disabled marks it as not usable without taking it out of the
+   tab order. The countdown is in the label, so its digits keep a fixed width. */
+.verify-notice .btn{white-space:nowrap;font-variant-numeric:tabular-nums}
+.verify-notice .btn[aria-disabled="true"],.verify-notice .btn[aria-disabled="true"]:hover,.verify-notice .btn[aria-disabled="true"]:active{opacity:.55;cursor:not-allowed;background:var(--card);border-color:var(--border);color:var(--t0)}
 /* ON A PHONE THE ROW STAYS ON ONE LINE. The wrap above exists for a server
    sentence of unknown length; this row's copy is known, so the second sentence
    goes and the first takes the space beside the button instead of the full

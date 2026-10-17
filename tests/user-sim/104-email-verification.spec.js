@@ -11,8 +11,13 @@
 //     bar with Resend, which stays out of onboarding and Settings, clears itself
 //     when the account is verified, and is never shown to Google or verified
 //     accounts;
-//   · the link brings the person back to /settings?verified=1, which says so
-//     only to a signed-in account that the re-read shows verified.
+//   · Resend stays on the bar after a send, counts down a cooldown, and is
+//     offered again; focus never drops to the document in any state;
+//   · the bar is early in the tab order, straight after the skip link;
+//   · the link brings the person back to /settings?verified=1, which says
+//     "Email verified" only to a signed-in account that the re-read shows
+//     verified, tells a signed-out visit the link was opened and offers Sign in,
+//     and tells another unverified account that it still is not.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
@@ -95,27 +100,77 @@ test.describe('the "Verify your email" bar', () => {
     await expect(bar(page).getByRole('button', { name: 'Resend link' })).toBeVisible()
   })
 
-  test('Resend sends a link to its own address, then says so and drops the button', async ({ page }) => {
+  // The label counts down, so find the button by its first word.
+  const resendButton = (page) => bar(page).getByRole('button', { name: /^Resend/ })
+
+  test('Resend sends a link to its own address, says so, and stays: cooling down, then offered again', async ({ page }) => {
     watch(page, 'a person who lost the first email')
+    await page.clock.install()
     const account = await signIn(page, { plan: 'free', emailVerified: false })
     await go(page, '/projects')
-    await bar(page).getByRole('button', { name: 'Resend link' }).click()
+    await resendButton(page).click()
     await expect(bar(page)).toContainText(`Link sent to ${account.email}. Check your inbox and spam folder.`)
-    await expect(bar(page).getByRole('button', { name: 'Resend link' })).toHaveCount(0)
-    const mail = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)
-    expect(mail).toEqual([{ kind: 'verify-email', to: account.email }])
+    // Still there and still focusable, but not usable until the cooldown ends.
+    await expect(resendButton(page)).toHaveAttribute('aria-disabled', 'true')
+    await expect(resendButton(page)).toHaveText(/^Resend in \d+s$/)
+    // A press during the cooldown sends nothing. Playwright's click treats
+    // aria-disabled as not enabled, so press it the way a keyboard user would.
+    await resendButton(page).focus()
+    await page.keyboard.press('Enter')
+    expect(await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)).toEqual([{ kind: 'verify-email', to: account.email }])
+    await page.clock.fastForward('00:31')
+    await expect(resendButton(page)).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(resendButton(page)).toHaveText('Resend link')
+    await resendButton(page).click()
+    await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail.length)).toBe(2)
+    await expect(resendButton(page)).toHaveText(/^Resend in \d+s$/)
   })
 
-  test('a keyboard user who pressed Resend lands on Dismiss, not on the page', async ({ page }) => {
+  test('a keyboard user who pressed Resend stays on Resend through sent and the cooldown', async ({ page }) => {
     watch(page, 'a person who works the bar with the keyboard')
+    await page.clock.install()
     await signIn(page, { plan: 'free', emailVerified: false })
     await go(page, '/projects')
-    const resend = bar(page).getByRole('button', { name: 'Resend link' })
+    const resend = resendButton(page)
     await resend.focus()
     await expect(resend).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(bar(page)).toContainText('Link sent to')
-    await expect(resend).toHaveCount(0)
+    await expect(resend).toBeFocused()
+    await page.clock.fastForward('00:31')
+    await expect(resend).toHaveText('Resend link')
+    await expect(resend).toBeFocused()
+  })
+
+  test('a failed send leaves focus on Resend, ready to try again', async ({ page }) => {
+    watch(page, 'a person whose send was refused')
+    await signIn(page, { plan: 'free', emailVerified: false, authFail: { sendEmailVerification: 'auth/too-many-requests' } })
+    await go(page, '/projects')
+    const resend = resendButton(page)
+    await resend.focus()
+    await page.keyboard.press('Enter')
+    await expect(bar(page).getByRole('alert')).toContainText('Too many links sent')
+    await expect(resend).toBeFocused()
+    await expect(resend).not.toHaveAttribute('aria-disabled', 'true')
+  })
+
+  test('the bar is reached straight after the skip link, before the nav and the page', async ({ page }) => {
+    watch(page, 'a person who tabs from the top of the page')
+    await signIn(page, { plan: 'free', emailVerified: false })
+    await go(page, '/projects')
+    await expect(bar(page)).toBeVisible()
+    // In the document, the strip comes before the page's main content.
+    expect(await page.evaluate(() => {
+      const strip = document.querySelector('[data-testid="verify-notice"]')
+      const main = document.getElementById('main')
+      return !!(strip && main && (strip.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING))
+    })).toBe(true)
+    await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0) })
+    await page.keyboard.press('Tab')
+    await expect(page.locator('.skip-link')).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(resendButton(page)).toBeFocused()
+    await page.keyboard.press('Tab')
     await expect(bar(page).getByRole('button', { name: 'Dismiss verification reminder' })).toBeFocused()
   })
 
@@ -128,7 +183,13 @@ test.describe('the "Verify your email" bar', () => {
     await expect(bar(page).getByRole('status')).toContainText('Verify your email.')
     await bar(page).getByRole('button', { name: 'Resend link' }).click()
     await expect(bar(page).getByRole('alert')).toContainText('Too many links sent')
-    await expect(bar(page).getByRole('status')).toHaveCount(0)
+    // Both regions stay in the page and only their text changes: the status one
+    // goes quiet, and neither sits inside the other or around the buttons.
+    await expect(bar(page).getByRole('status')).toHaveText('')
+    expect(await bar(page).evaluate((el) => ({
+      nested: !!el.querySelector('[role="status"] [role="alert"], [role="alert"] [role="status"]'),
+      aroundButtons: !!el.querySelector('[role="status"] button, [role="alert"] button'),
+    }))).toEqual({ nested: false, aroundButtons: false })
   })
 
   // The hit area is an ::after pad on the button, which boundingBox() cannot see,
@@ -253,6 +314,23 @@ test.describe('the "Verify your email" bar', () => {
     await expect(bar(page)).toContainText('Email verified.')
     await expect(bar(page)).toHaveCount(0, { timeout: 8000 })
   })
+
+  test('focus on the bar when it takes itself away goes to the page, not the document', async ({ page }) => {
+    watch(page, 'a keyboard user on the bar when the address gets verified')
+    await signIn(page, { plan: 'free', emailVerified: false })
+    await go(page, '/projects')
+    const resend = resendButton(page)
+    await resend.focus()
+    await page.evaluate(() => { window.__UIL4B_TEST_AUTH__.account.emailVerified = true })
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect(bar(page)).toContainText('Email verified.')
+    // Resend goes with the unverified state; its focus moves to Dismiss.
+    await expect(resend).toHaveCount(0)
+    await expect(bar(page).getByRole('button', { name: 'Dismiss verification reminder' })).toBeFocused()
+    // And when the bar clears itself, the page takes it.
+    await expect(bar(page)).toHaveCount(0, { timeout: 8000 })
+    await expect(page.locator('#main')).toBeFocused()
+  })
 })
 
 test.describe('coming back from the link', () => {
@@ -285,24 +363,27 @@ test.describe('coming back from the link', () => {
     await expectNoToast(page)
   })
 
-  test('signed out, it claims nothing: the parameter is anyone\'s to type', async ({ page }) => {
-    watch(page, 'a person who opened the link in a browser they are not signed in on')
+  test('signed out, it says the link was opened and offers Sign in, and claims nothing', async ({ page }) => {
+    watch(page, 'a person who opened the link on a device they are not signed in on')
     await go(page, '/settings?verified=1')
     await expect(page).toHaveURL(/\/settings\/?$/)
-    await expectNoToast(page)
+    await expect(toast(page)).toContainText('Your email link was opened. Sign in to finish.')
+    await expect(toast(page)).not.toContainText('verified')
     await expect(page.getByText('Email verified')).toHaveCount(0)
+    // The action opens the sign-in dialog over the page.
+    await toast(page).getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
   })
 
-  test('an account the link did not verify gets no toast', async ({ page }) => {
+  test('an account the link did not verify is told so plainly', async ({ page }) => {
     watch(page, 'a person signed in as a different, still unverified account')
     await signIn(page, { plan: 'free', emailVerified: false })
     await go(page, '/settings?verified=1')
     await expect(page.locator('#set-account')).toBeVisible()
     await expect(page).toHaveURL(/\/settings\/?$/)
     await expect(page.locator('#set-account').getByText('Not verified')).toBeVisible()
-    // Zero is only evidence once the account has been re-read and the toast had
-    // its chance: wait for the re-read, then read the count without retrying.
-    await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_AUTH__.reloads)).toBeGreaterThan(0)
-    await expectNoToast(page)
+    await expect(toast(page)).toContainText("This account still isn't verified")
+    await expect(toast(page)).not.toContainText('Email verified')
+    await expect(toast(page).getByRole('button', { name: 'Sign in' })).toHaveCount(0)
   })
 })

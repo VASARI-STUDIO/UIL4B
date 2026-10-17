@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import useOnline from '../hooks/useOnline'
 import useVerificationRecheck from '../hooks/useVerificationRecheck'
-import { verifyBarVisible, verifyErrorText, readVerifyDismissed, writeVerifyDismissed } from '../utils/emailVerification'
+import {
+  verifyBarVisible, verifyErrorText, readVerifyDismissed, writeVerifyDismissed,
+  VERIFY_RESEND_COOLDOWN_S, verifyResendLabel, verifyResendBlocked,
+} from '../utils/emailVerification'
 import OfflineBanner from './OfflineBanner'
 import SyncNotice from './SyncNotice'
 
@@ -47,6 +50,50 @@ function Envelope() {
   )
 }
 
+function Check() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+// When a control that holds focus is about to leave the page, hand the focus on
+// instead of letting the browser drop it to <body>. The cleanup of a layout
+// effect runs while the node is still attached, which is the last moment
+// document.activeElement can be read. `getFallback` is read at that moment, so
+// it may return an element that only exists by then.
+function useFocusFallback(ref, getFallback) {
+  const fallback = useRef(getFallback)
+  useEffect(() => { fallback.current = getFallback })
+  useLayoutEffect(() => {
+    const node = ref.current
+    return () => {
+      if (!node || !node.contains(document.activeElement)) return
+      const next = fallback.current()
+      if (next && next.isConnected) next.focus()
+    }
+  }, [ref])
+}
+
+// The bar's root. Whatever takes the bar away (Dismiss, the verified hold
+// ending, going offline) leaves focus on the page rather than on <body>.
+function BarRoot({ children, ...props }) {
+  const ref = useRef(null)
+  useFocusFallback(ref, () => document.getElementById('main'))
+  return <div ref={ref} {...props}>{children}</div>
+}
+
+// Resend stays on the bar through every state but "verified", so a keyboard
+// user is never moved. When it does go (the address just verified), Dismiss
+// takes the focus. A sending or cooling-down button is aria-disabled rather
+// than disabled: a disabled control that holds focus drops it to <body>.
+function ResendButton({ dismissRef, ...props }) {
+  const ref = useRef(null)
+  useFocusFallback(ref, () => dismissRef.current)
+  return <button ref={ref} type="button" className="btn btn-s" {...props} />
+}
+
 // THE THIRD ROW: A PASSWORD ACCOUNT WHOSE ADDRESS IS STILL UNPROVED.
 //
 // Until now the only sign of it was a row in Settings, which someone who never
@@ -68,16 +115,23 @@ function VerifyNotice() {
 
   const [state, setState] = useState('idle') // idle | sending | sent | failed
   const [error, setError] = useState('')
+  // What the bar was saying when a send began, so "Sending…" (which lives on the
+  // button) does not make the sentence flip back to its first wording.
+  const [prior, setPrior] = useState('idle')
   const [dismissedUid, setDismissedUid] = useState(null)
   // The uid whose address was just verified here, so the bar can say so for a
   // moment instead of vanishing. Signing out also ends the debt, which is not
   // a verification, so it only counts while the same account is still in.
   const [verifiedUid, setVerifiedUid] = useState(null)
+  // After a send, Resend waits out a short cooldown (`until` is the clock time
+  // it ends, `left` the whole seconds to show) and then offers itself again.
+  const [until, setUntil] = useState(0)
+  const [left, setLeft] = useState(0)
   const [seen, setSeen] = useState({ uid, owed })
   if (seen.uid !== uid || seen.owed !== owed) {
     setSeen({ uid, owed })
     if (uid && seen.uid === uid && seen.owed && !owed) setVerifiedUid(uid)
-    if (seen.uid !== uid) { setState('idle'); setError('') }
+    if (seen.uid !== uid) { setState('idle'); setError(''); setUntil(0); setLeft(0) }
   }
 
   useEffect(() => {
@@ -86,16 +140,18 @@ function VerifyNotice() {
     return () => clearTimeout(timer)
   }, [verifiedUid])
 
-  // Resend unmounts once the link is sent. If it held focus, the Dismiss button
-  // next to it takes over, so a keyboard user is not dropped to the document.
-  const resendRef = useRef(null)
-  const dismissRef = useRef(null)
-  const resendHadFocus = useRef(false)
   useEffect(() => {
-    if (state !== 'sent' || !resendHadFocus.current) return
-    resendHadFocus.current = false
-    dismissRef.current?.focus()
-  }, [state])
+    if (!until) return undefined
+    const tick = () => {
+      const seconds = Math.ceil((until - Date.now()) / 1000)
+      setLeft(Math.max(0, seconds))
+      if (seconds <= 0) setUntil(0)
+    }
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [until])
+
+  const dismissRef = useRef(null)
 
   const confirmed = !!uid && verifiedUid === uid
   const shown = verifyBarVisible({ owed: owed || confirmed, pathname, online })
@@ -104,13 +160,17 @@ function VerifyNotice() {
   if (!shown || !email) return null
   if (!confirmed && (dismissedUid === uid || readVerifyDismissed(uid))) return null
 
+  const blocked = verifyResendBlocked(state, left)
+
   const resend = async () => {
-    // Read before the button disables itself, which can drop focus.
-    resendHadFocus.current = document.activeElement === resendRef.current
+    if (blocked) return
+    setPrior(state)
     setState('sending')
     try {
       await sendVerificationEmail()
       setState('sent')
+      setLeft(VERIFY_RESEND_COOLDOWN_S)
+      setUntil(Date.now() + VERIFY_RESEND_COOLDOWN_S * 1000)
     } catch (e) {
       setError(verifyErrorText(e))
       setState('failed')
@@ -124,35 +184,43 @@ function VerifyNotice() {
     document.getElementById('main')?.focus()
   }
 
-  let message
+  // Two live regions that stay in the page for the bar's whole life, one
+  // polite and one assertive, and only their text changes. A region that
+  // appears already holding its text is often not read, and one alert nested in
+  // a status region is read twice or not at all; two empty-until-needed
+  // siblings are each announced once. The buttons and the countdown sit
+  // outside both.
+  const view = state === 'sending' ? prior : state
+  let status = null
   if (confirmed) {
-    message = <p className="sync-notice-msg" role="status">Email verified.</p>
-  } else if (state === 'sent') {
-    message = <p className="sync-notice-msg" role="status">Link sent to {email}. Check your inbox and spam folder.</p>
-  } else if (state === 'failed') {
-    message = <p className="sync-notice-msg" role="alert">{error}</p>
-  } else {
-    message = (
-      <p className="sync-notice-msg" role="status">
+    status = 'Email verified.'
+  } else if (view === 'sent') {
+    status = `Link sent to ${email}. Check your inbox and spam folder.`
+  } else if (view !== 'failed') {
+    status = (
+      <>
         <strong>Verify your email.</strong>{' '}
         <span className="sync-notice-detail">Check {email} for the link, or send a new one.</span>
-      </p>
+      </>
     )
   }
 
   return (
-    <div
+    <BarRoot
       className="sync-notice sync-notice--info verify-notice"
       data-testid="verify-notice"
       data-verify-state={confirmed ? 'verified' : state}
     >
-      <span className="sync-notice-ico"><Envelope /></span>
-      {message}
+      <span className="sync-notice-ico">{confirmed ? <Check /> : <Envelope />}</span>
+      <p className="sync-notice-msg">
+        <span role="status">{status}</span>
+        <span role="alert">{!confirmed && state === 'failed' ? error : null}</span>
+      </p>
       <div className="sync-notice-actions">
-        {!confirmed && state !== 'sent' && (
-          <button type="button" className="btn btn-s" ref={resendRef} onClick={resend} disabled={state === 'sending'}>
-            {state === 'sending' ? 'Sending…' : 'Resend link'}
-          </button>
+        {!confirmed && (
+          <ResendButton dismissRef={dismissRef} aria-disabled={blocked || undefined} onClick={resend}>
+            {verifyResendLabel(state, left)}
+          </ResendButton>
         )}
         <button
           type="button"
@@ -166,7 +234,7 @@ function VerifyNotice() {
           </svg>
         </button>
       </div>
-    </div>
+    </BarRoot>
   )
 }
 

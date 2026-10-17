@@ -89,6 +89,17 @@ export default function Onboarding() {
     headingRef.current?.focus()
   }, [])
 
+  // The "check your inbox" line is announced by a status region that is already
+  // on the page when the text arrives: a region that mounts holding its text is
+  // usually not read, and the heading takes focus on mount, so a person on a
+  // screen reader would otherwise never hear it. The line follows one frame
+  // after the screen.
+  const [lineReady, setLineReady] = useState(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setLineReady(true))
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
   // Onboarding only makes sense for a signed-in user. While auth is still
   // resolving we show the flow shell; if definitively signed out, go to login.
   if (!loading && !user) return <Navigate to="/login" replace />
@@ -199,7 +210,9 @@ export default function Onboarding() {
             now" that does the identical thing is two names for one action. */}
         <div className="onb-step onb-firstwin-step" data-testid="onboarding-first-win">
           <div className="onb-greeting">You're in, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
-          {verifyLine && <p className={`onb-greeting onb-verify-line${signupVerification === 'failed' ? ' onb-verify-line--failed' : ''}`} role="status" data-testid="onboarding-verify-line">{verifyLine}</p>}
+          <div role="status">
+            {lineReady && verifyLine && <p className={`onb-greeting onb-verify-line${signupVerification === 'failed' ? ' onb-verify-line--failed' : ''}`} data-testid="onboarding-verify-line">{verifyLine}</p>}
+          </div>
           <h1 className="onb-q" ref={headingRef} tabIndex={-1}>What do you want to make first?</h1>
           <p className="onb-sub">
             Whichever you pick opens next. You can switch at any time — nothing here is locked in.

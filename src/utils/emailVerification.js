@@ -73,6 +73,38 @@ export function verifyBarVisible({ owed, pathname, online }) {
   return !VERIFY_BAR_HIDDEN_PATHS.includes(path)
 }
 
+// How long the bar's Resend button waits after a link has gone out before it
+// offers another. Long enough that a second press is not a reflex, short enough
+// that someone whose first email never came is not left without the button.
+export const VERIFY_RESEND_COOLDOWN_S = 30
+
+// Resend is not usable while a send is in flight or the cooldown has seconds
+// left. The button stays on the page and stays focusable either way.
+export function verifyResendBlocked(state, secondsLeft) {
+  return state === 'sending' || secondsLeft > 0
+}
+
+export function verifyResendLabel(state, secondsLeft) {
+  if (state === 'sending') return 'Sending…'
+  if (secondsLeft > 0) return `Resend in ${secondsLeft}s`
+  return 'Resend link'
+}
+
+/**
+ * What /settings?verified=1 says, given who is there. The parameter is anyone's
+ * to type and the link can be opened in a browser that is not signed in, so a
+ * signed-out landing says only that the link was opened, never that anything
+ * was verified.
+ *
+ * `verified` is the re-read of the signed-in account (null while unknown).
+ */
+export function verifiedLandingMessage({ signedIn, verified }) {
+  if (!signedIn) return { text: 'Your email link was opened. Sign in to finish.', kind: 'info', signIn: true }
+  if (verified === true) return { text: 'Email verified', kind: 'success', signIn: false }
+  if (verified === false) return { text: "This account still isn't verified. Send a new link from the Email row.", kind: 'info', signIn: false }
+  return null
+}
+
 const DISMISS_PREFIX = 'vs-verify-dismissed:'
 
 // Per visit, not per device: sessionStorage, so the bar comes back next time,

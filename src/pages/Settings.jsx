@@ -9,7 +9,8 @@ import { useProPrice, usePrices, refreshPrices } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { requestAccountReset } from '../utils/accountEvents'
-import { verifyErrorText } from '../utils/emailVerification'
+import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useVerificationRecheck from '../hooks/useVerificationRecheck'
 // Settings → Subscription says exactly what /plans says: the same lines, the
 // same cadences, the same per-month amounts and trial terms, from the one
@@ -769,11 +770,13 @@ export default function Settings({ toast }) {
   // /settings?verified=1 (see verifyLinkSettings), so the person lands where the
   // address is shown. The account is re-read rather than assumed: the flag is
   // only true here if the link really verified this account. Signed out (the
-  // link was opened in another browser) there is nothing to read and the
-  // parameter is anyone's to type, so nothing is claimed; a different,
-  // unverified account gets no toast either. Waits for auth to settle, then
-  // removes the parameter so a reload or a back-step does not repeat it.
+  // link was opened in another browser or on another device) there is nothing to
+  // read and the parameter is anyone's to type, so nothing is claimed: the
+  // toast says the link was opened and offers Sign in. A different, unverified
+  // account is told so plainly. Waits for auth to settle, then removes the
+  // parameter so a reload or a back-step does not repeat it.
   const navigate = useNavigate()
+  const { requireLogin } = useLoginPrompt()
   const verifiedReturn = useRef(false)
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -782,15 +785,33 @@ export default function Settings({ toast }) {
     params.delete('verified')
     const search = params.toString()
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true, state: location.state })
-    // Anyone can open this address, so a signed-out visit proves nothing: no
-    // claim of verification, just the parameter removed.
-    if (!user) return
+    const say = (landing) => {
+      if (!landing) return
+      const action = landing.signIn
+        ? {
+            label: 'Sign in',
+            onAction: () => {
+              requireLogin('finish verifying your email').then(() => {
+                // The toast that held the button is gone; keep focus on the page.
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                  if (!document.activeElement || document.activeElement === document.body) document.getElementById('main')?.focus()
+                }))
+              })
+            },
+          }
+        : null
+      toast?.(landing.text, landing.kind, action ? { action } : null)
+    }
+    if (!user) {
+      say(verifiedLandingMessage({ signedIn: false }))
+      return
+    }
     setActive('account')
     setPhoneView('section')
     refreshEmailVerified().then((verified) => {
-      if (verified) toast?.('Email verified')
+      say(verifiedLandingMessage({ signedIn: true, verified }))
     }).catch(() => {})
-  }, [location, authLoading, user, navigate, toast, refreshEmailVerified])
+  }, [location, authLoading, user, navigate, toast, refreshEmailVerified, requireLogin])
 
   // Recount whenever the Data panel is opened, and after a clear, so the figure
   // shown is the figure on disk.
