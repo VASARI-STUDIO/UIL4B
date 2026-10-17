@@ -326,6 +326,18 @@ function applyFieldOps(target, patch) {
  */
 export const denials = DECLARED?.deny || []
 
+/* A READ THAT ANSWERS LATE. `signIn(page, { slowReads: [{ path, ms }] })` holds
+ * every getDoc whose path contains `path` for `ms` before it resolves, which is
+ * what a slow Firestore round trip looks like from the app's side. Everything
+ * else about the answer is unchanged. Nothing is slowed unless a spec asks. */
+export function readDelayFor(path) {
+  let ms = 0
+  for (const entry of DECLARED?.slowReads || []) {
+    if (entry?.path && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
+  }
+  return ms
+}
+
 /* AN AUTH CALL THAT CAN BE TOLD TO REFUSE, for the same reason as `deny`.
  * `signIn(page, { authFail: { updateEmail: 'auth/operation-not-allowed' } })`
  * makes that one call reject with that Firebase code, so a spec can render what
