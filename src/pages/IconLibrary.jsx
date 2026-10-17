@@ -1,5 +1,5 @@
 import MenuSelect from '../components/tool/MenuSelect'
-import { useState, useCallback, useRef, useEffect, useMemo, memo, Fragment } from 'react'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, memo, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -1079,6 +1079,62 @@ const JOIN_OPTS = [
   { v: 'bevel', label: 'Bevel corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="bevel" /></svg> },
 ]
 
+// One "Similar in this pack" tile. It stays invisible (but in layout, so the
+// 44px row never shifts) until its glyph has loaded, then fades in: an empty
+// outlined tile is a loading square, and those are dropped. A glyph that
+// errors stays hidden. `visibility:hidden` also keeps a not-yet-shown tile out
+// of the tab order. A cached image can finish before React attaches onLoad, so
+// the ref callback checks it on attach. `onReadyChange` tells the section
+// whether any tile is showing, so it can hold back its heading and frame.
+function SimilarTile({ s, src, onPick, onReadyChange }) {
+  const [ready, setReady] = useState(false)
+  useEffect(() => { onReadyChange(s.id, ready) }, [s.id, ready, onReadyChange])
+  return (
+    <button
+      type="button"
+      className="icust-similar-btn"
+      data-ready={ready ? 'true' : undefined}
+      title={s.name}
+      aria-label={`Open ${s.name}`}
+      onClick={() => onPick?.(s)}
+    >
+      <img
+        ref={el => { if (el && el.complete && el.naturalWidth > 0) setReady(true) }}
+        src={src}
+        width="24"
+        height="24"
+        alt=""
+        onLoad={() => setReady(true)}
+        onError={() => setReady(false)}
+      />
+    </button>
+  )
+}
+
+// The "Similar in this pack" block. Its heading, rule and padding stay
+// collapsed (the tiles still mount so their glyphs load) until at least one
+// tile is showing, so a slow or fully failed pack never leaves a label over
+// an empty row. The images load eagerly: a lazy image inside a collapsed block
+// would never count as near the viewport. Keyed by the icon at the call site,
+// so each icon starts with nothing ready.
+function SimilarSection({ list, srcFor, onPick }) {
+  const [readyIds, setReadyIds] = useState({})
+  const onReadyChange = useCallback((id, ready) => {
+    setReadyIds(prev => (!!prev[id] === ready ? prev : { ...prev, [id]: ready }))
+  }, [])
+  const anyReady = list.some(s => readyIds[s.id])
+  return (
+    <div className="icust-similar" data-ready={anyReady ? 'true' : undefined}>
+      <div className="icust-similar-label">Similar in this pack</div>
+      <div className="icust-similar-row">
+        {list.map(s => (
+          <SimilarTile key={s.id} s={s} src={srcFor(s)} onPick={onPick} onReadyChange={onReadyChange} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
@@ -1272,7 +1328,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const baseSvgText = localBase || fetchedBase || cachedCdnBase
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
-  useEffect(() => {
+  // A layout effect, so the art lands in the same frame the waiting glyph leaves.
+  useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
     host.innerHTML = rendersInline && baseSvgText ? baseSvgText : ''
@@ -1284,7 +1341,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // SAME viewBox user units the exported file uses — so it goes through the
   // same px→units conversion the serializer runs. Preview and download read
   // one function; they cannot drift.
-  useEffect(() => {
+  //
+  // A layout effect declared after the injection above: React runs them in order
+  // before paint, so the art never shows a frame with a stale stroke.
+  useLayoutEffect(() => {
     const stage = stageRef.current
     if (!stage) return
     const strokeAttr = strokeAttrForPx({
@@ -1321,10 +1381,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const onKey = (e) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
-      const f = panelRef.current?.querySelectorAll(
+      // Only what can take focus right now: a hidden Similar tile (visibility
+      // hidden, or inside a collapsed block) is not a Tab stop.
+      const f = Array.from(panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      )
-      if (!f || f.length === 0) return
+      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+      if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
@@ -1414,6 +1476,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // own page ground. A coloured pack always uses it; a chosen mono colour keeps
   // the contrast ground.
   const onThemeGround = isColoredPack || !color
+  // Until the stage has its own art, show the glyph the grid drew for this icon
+  // (same data: URI, so nothing new is fetched) in the stage's box. It is only
+  // used on the theme ground, where the grid's tint matches. With no grid glyph
+  // (or a chosen colour) the slot stays the same size and paints nothing.
+  const waitSrc = activeIcon?.cdn && !activeIcon.custom && onThemeGround ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
+  const stageWait = waitSrc
+    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={size} height={size} alt="" aria-hidden="true" />
+    : <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1625,7 +1695,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && !loadErr && <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />}
+                  {!baseSvgText && !loadErr && stageWait}
                   {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               ) : (
@@ -1640,9 +1710,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       onLoad={brandKey ? onStageImgLoad : undefined}
                       style={imageError ? { visibility: 'hidden' } : undefined}
                     />
-                  ) : (
-                    <span className={imageError ? 'icust-stage-img' : 'icust-stage-img icust-stage-wait'} style={{ width: size, height: size }} aria-hidden="true" />
-                  )}
+                  ) : imageError ? (
+                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
+                  ) : stageWait}
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
@@ -1819,29 +1889,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             )}
 
             {similarList.length > 0 && (
-              <div className="icust-similar">
-                <div className="icust-similar-label">Similar in this pack</div>
-                <div className="icust-similar-row">
-                  {similarList.map(s => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className="icust-similar-btn"
-                      title={s.name}
-                      aria-label={`Open ${s.name}`}
-                      onClick={() => onPick?.(s)}
-                    >
-                      <img
-                        src={buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                        width="24"
-                        height="24"
-                        alt=""
-                        loading="lazy"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SimilarSection
+                key={currentId}
+                list={similarList}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                onPick={onPick}
+              />
             )}
           </>
         )}
@@ -1977,21 +2030,21 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
    these are the only human names the product has for them. `iconPackTiers.js`
    deliberately holds no labels — it is about entitlement, not vocabulary.
 
-   Order and labels are byte-for-byte what the hand-written menu rendered.
-   `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
+   Order and pack labels are what the hand-written menu rendered. The interface
+   packs are ONE group, "Interface", stroke packs first and the fill-only ones
+   after. Headings carry no style word ("line", "filled", "coloured"): the
+   Weight and Coloured chips own those words, and a heading repeating one beside
+   a pack that cannot do it (Material under "filled" with Fill struck through,
+   Simple Icons under "coloured") contradicts the chip. `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
    here as individual packs; they reach the grid through the Coloured chip, and
    that is unchanged. */
 const PACK_MENU = [
   {
-    label: 'Interface (outlined)',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor']],
+    label: 'Interface',
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
   },
   {
-    label: 'Interface (solid)',
-    packs: [['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
-  },
-  {
-    label: 'Brand logos (coloured)',
+    label: 'Brand logos',
     packs: [['logodev', 'Real brand logos (Logo.dev)'], ['simple-icons', 'Simple Icons'], ['logos', 'Logos (colour)'], ['devicon', 'Devicon'], ['skill-icons', 'Skill Icons']],
   },
   {
