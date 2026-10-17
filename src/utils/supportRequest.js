@@ -69,11 +69,16 @@ async function supportAttempt(body) {
   }
 }
 
-/** Retry transient failures once, keeping the exact message and request id. */
-export async function postSupportWithRetry(body, { retry = true } = {}) {
+/**
+ * Retry transient failures once, keeping the exact message and request id.
+ * `stale` (optional) says the sender's account has changed since the attempt
+ * began; a stale send makes no retry.
+ */
+export async function postSupportWithRetry(body, { retry = true, stale } = {}) {
   let result = await supportAttempt(body)
-  if (retry && !result.ok && (!result.status || result.status >= 500 || result.status === 408)) {
+  if (retry && !stale?.() && !result.ok && (!result.status || result.status >= 500 || result.status === 408)) {
     await new Promise(resolve => setTimeout(resolve, 1500))
+    if (stale?.()) return result
     result = await supportAttempt(body)
   }
   return result
@@ -125,23 +130,52 @@ export function supportError(status) {
 export function createSupportHolder() {
   let state = { status: 'idle', body: null, draft: null, result: null }
   const listeners = new Set()
-  const sending = { current: false }
+  // Replaced (not cleared) by invalidate(), so an attempt abandoned on an
+  // account change cannot clear the flag of the next account's send.
+  let sending = { current: false }
+  // Bumped on every account change; a send made under an older value is stale.
+  let epoch = 0
+  let lastRetry = null
   const publish = next => { state = next; listeners.forEach(listener => listener()) }
   const holder = {
     getSnapshot: () => state,
     subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
+    /**
+     * The account changed (sign-out, or a different account signing in): forget
+     * everything held, including a send still in flight. That send's outcome is
+     * dropped, it makes no retry, and a retry button already offered does nothing
+     * and is taken down.
+     */
+    invalidate() {
+      epoch += 1
+      sending = { current: false }
+      if (lastRetry && typeof window !== 'undefined' && typeof CustomEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('uil4b:toast-dismiss', { detail: { onAction: lastRetry } }))
+      }
+      lastRetry = null
+      publish({ status: 'idle', body: null, draft: null, result: null })
+    },
+    epoch: () => epoch,
     reset: () => { if (!sending.current) publish({ status: 'idle', body: null, draft: null, result: null }) },
     // A landed message is done with: drop it (and the address it carried).
     settle: () => { if (state.status === 'sent') holder.reset() },
     edit: () => { if (!sending.current) publish({ ...state, status: 'editing' }) },
     send(body, draft, { retry = true, visible, notify } = {}) {
-      const pending = startSupportSend(sending, body, { retry })
+      const mine = epoch
+      const stale = () => epoch !== mine
+      const pending = startSupportSend(sending, body, { retry, stale })
       if (!pending) return null
       publish({ status: 'sending', body, draft, result: null })
       return pending.then(result => {
+        if (stale()) return result
         publish({ ...state, status: result.ok ? 'sent' : 'failed', result })
         if (!result.ok && !visible?.()) {
-          notify?.(result.status, () => holder.send(body, draft, { retry: false, visible, notify }))
+          const retryAgain = () => {
+            if (stale()) return
+            holder.send(body, draft, { retry: false, visible, notify })
+          }
+          lastRetry = retryAgain
+          notify?.(result.status, retryAgain)
         }
         return result
       })
@@ -153,8 +187,12 @@ export function createSupportHolder() {
 export const modalFeedbackSend = createSupportHolder()
 export const pageFeedbackSend = createSupportHolder()
 
-/** On sign-out, drop what both holders keep (a sender's address rides in the held body). */
+/**
+ * On an account change (sign-out, or a different account signing in), drop what
+ * both holders keep: the pending send, its retry, the draft and the sender's
+ * address, which rides in the held body.
+ */
 export function forgetSupportSenders() {
-  modalFeedbackSend.reset()
-  pageFeedbackSend.reset()
+  modalFeedbackSend.invalidate()
+  pageFeedbackSend.invalidate()
 }

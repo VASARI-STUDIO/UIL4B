@@ -8,6 +8,7 @@ export function useToast({ listen = true } = {}) {
   const [action, setAction] = useState(null)
   const timer = useRef(null)
   const lastMs = useRef(0)
+  const actionRef = useRef(null)
 
   useEffect(() => {
     return () => clearTimeout(timer.current)
@@ -30,6 +31,7 @@ export function useToast({ listen = true } = {}) {
     setMessage(msg)
     setType(kind)
     setAction(act)
+    actionRef.current = act
     setVisible(true)
     clearTimeout(timer.current)
     const ms = toastDuration(msg, kind, { action: !!act })
@@ -53,6 +55,18 @@ export function useToast({ listen = true } = {}) {
     window.addEventListener('uil4b:toast', onToast)
     return () => window.removeEventListener('uil4b:toast', onToast)
   }, [toast, listen])
+
+  // A sender whose action no longer applies (a retry for an account that has
+  // signed out) takes its own toast down: `detail.onAction` names the action.
+  useEffect(() => {
+    if (!listen) return undefined
+    const onDismiss = (event) => {
+      const onAction = event.detail?.onAction
+      if (onAction && actionRef.current?.onAction === onAction) dismiss()
+    }
+    window.addEventListener('uil4b:toast-dismiss', onDismiss)
+    return () => window.removeEventListener('uil4b:toast-dismiss', onDismiss)
+  }, [dismiss, listen])
 
   const hold = useCallback(() => { clearTimeout(timer.current) }, [])
   const release = useCallback(() => {

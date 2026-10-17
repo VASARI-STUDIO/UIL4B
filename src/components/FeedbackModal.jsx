@@ -14,7 +14,7 @@ import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 import {
-  requestIdFor, recoverFeedbackDraft, guardSupportUnload, staleDelivery, forgetSupportSenders,
+  requestIdFor, recoverFeedbackDraft, guardSupportUnload, staleDelivery,
   modalFeedbackSend, SUPPORT_MESSAGE_MAX,
 } from '../utils/supportRequest'
 
@@ -135,12 +135,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     }
   }, [])
   useEffect(() => guardSupportUnload(sending || (open && !!error)), [sending, open, error])
-  // Signing out drops whatever a send still holds (it carries the address).
-  const signedInRef = useRef(!!user)
-  useEffect(() => {
-    if (signedInRef.current && !user) forgetSupportSenders()
-    signedInRef.current = !!user
-  }, [user])
+  // An account change drops whatever a send still holds: see App.jsx.
 
   useEffect(() => modalFeedbackSend.subscribe(() => {
     const current = modalFeedbackSend.getSnapshot()

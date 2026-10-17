@@ -77,6 +77,8 @@ export default function Feedback({ toast }) {
   const sendingRef = useRef(delivery.status === 'sending')
   const attemptRef = useRef(delivery.status === 'sent' ? null : delivery.draft?.attempt || null)
   const bodyRef = useRef(delivery.body)
+  // Moves when the account changes under a mounted page (see App.jsx).
+  const accountEpochRef = useRef(pageFeedbackSend.epoch())
   useEffect(() => {
     return () => { visibleRef.current = false }
   }, [])
@@ -87,6 +89,18 @@ export default function Feedback({ toast }) {
     bodyRef.current = current.body
     sendingRef.current = current.status === 'sending'
     attemptRef.current = current.status === 'sent' ? null : draft?.attempt || null
+    if (accountEpochRef.current !== pageFeedbackSend.epoch()) {
+      // A different account owns the page now: nothing typed or sent before carries over.
+      accountEpochRef.current = pageFeedbackSend.epoch()
+      setType('feature')
+      setSubject('')
+      setMessage('')
+      setContact('')
+      setSentTo('')
+      setError('')
+      setContactError('')
+      return
+    }
     if (draft && current.status !== 'sent') {
       setType(draft.type)
       setContact(draft.contact)

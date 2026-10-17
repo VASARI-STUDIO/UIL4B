@@ -2,10 +2,8 @@ import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import AppFooter from '../components/AppFooter'
-import Toast from '../components/Toast'
 import { findCreateGroup, resolveTool } from '../data/toolTree'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { useToast } from '../hooks/useToast'
 import { useClipboard } from '../hooks/useClipboard'
 import { ACTIVATION_EXPORTS } from '../config/activationExports'
 import { trackActivation, trackToolAction, trackToolOpen } from '../utils/analytics'
@@ -138,10 +136,10 @@ function SoonState({ title, isPro }) {
   )
 }
 
-export default function CreateTool() {
+// `toast` is the app's single toast host (App.jsx); a tool never mounts its own.
+export default function CreateTool({ toast }) {
   const location = useLocation()
   const { isPro } = useSubscription()
-  const { message, visible, type, action: toastAction, toast, dismiss: dismissToast, hold: holdToast, release: releaseToast } = useToast()
   // Live tools that copy values (ColorStudio) call onCopy(value) to WRITE the
   // clipboard + toast; the icon/emoji libraries write the clipboard themselves
   // and use onCopy purely as a notification (harmless idempotent re-write here).
@@ -239,7 +237,6 @@ export default function CreateTool() {
       </div>
 
       <AppFooter compact />
-      <Toast message={message} visible={visible} type={type} action={toastAction} onDismiss={toastAction ? dismissToast : undefined} onHold={holdToast} onRelease={releaseToast} />
     </>
   )
 }

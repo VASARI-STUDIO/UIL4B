@@ -8,6 +8,7 @@ import GoogleOneTap from './components/oneTapMount'
 import BillingBanner from './components/BillingBanner'
 import NoticeStack from './components/NoticeStack'
 import { useToast } from './hooks/useToast'
+import { forgetSupportSenders } from './utils/supportRequest'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { landOnHash } from './utils/hashLanding'
@@ -239,14 +240,23 @@ function LoginRoute() {
   )
 }
 
-function AppInner() {
+function AppInner({ toast }) {
   const { user: authUser, userProfile, profileLoaded, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   // Records what auth resolved to, so the NEXT cold load can pick the right
   // page before Firebase has finished loading. See utils/sessionHint.js.
   useSessionHint()
   useSmoothScroll()
-  const { message, visible, type, action: toastAction, toast, dismiss, hold: holdToast, release: releaseToast } = useToast()
+  // A message still sending, its retry, its draft and the sender's address belong
+  // to the account that wrote it: drop them when that account signs out or a
+  // different one signs in. A signed-out visitor signing in keeps their draft.
+  const sendersAccount = useRef(null)
+  useEffect(() => {
+    if (authLoading) return
+    const uid = authUser?.uid || null
+    if (sendersAccount.current && uid !== sendersAccount.current) forgetSupportSenders()
+    sendersAccount.current = uid
+  }, [authUser?.uid, authLoading])
   const copy = useClipboard(toast)
   const location = useLocation()
   const navigationType = useNavigationType()
@@ -515,7 +525,7 @@ function AppInner() {
               <AppFooter />
             </Suspense>
           )
-          : <CreateTool />}
+          : <CreateTool toast={toast} />}
         <GoogleOneTap />
       </>
     )
@@ -619,7 +629,6 @@ function AppInner() {
       </main>
 
       <AppFooter />
-      <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />
       <GoogleOneTap />
     </div>
   )
@@ -632,6 +641,10 @@ function AppInner() {
 // inside AuthProvider (main.jsx), which LoginPromptProvider depends on.
 export default function App() {
   const { pathname } = useLocation()
+  // The one toast host. It lives here, above every route's early return, so a
+  // toast raised on any route (including a failure that lands after the person
+  // has left the page that started it) is shown, and no route mounts its own.
+  const { message, visible, type, action: toastAction, toast, dismiss, hold: holdToast, release: releaseToast } = useToast()
   return (
     <LoginPromptProvider>
       <ProModalProvider>
@@ -644,8 +657,9 @@ export default function App() {
             a crash is a recovery screen rather than a blank page. The shell
             keeps its own boundary inside <main> so the nav survives there. */}
         <RouteErrorBoundary resetKey={pathname}>
-          <AppInner />
+          <AppInner toast={toast} />
         </RouteErrorBoundary>
+        <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />
         {/* Mounted out here rather than inside AppInner's shell: every Create
             tool takes the CHROMELESS_PATHS early return, and those are exactly
             the pages where a lapsed subscription is about to be felt. */}
