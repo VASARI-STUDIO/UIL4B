@@ -123,8 +123,8 @@ test.describe('every account surface starts at heading 1', () => {
     const h1 = page.locator('main h1')
     await expect(h1).toHaveCount(1)
     await expect(h1).toContainText('You’re on UIL4B Pro.')
-    // It is styled by the redesigned page's own `.checkout-page .co-title`
-    // (clamp(30px, 3.6vw, 44px), set when 08194522 replaced the card) and NOT
+    // It is styled by the page's own `.checkout-page .co-title`
+    // (clamp(30px, 3.6vw, 44px)) and NOT
     // by whatever an unscoped h1 rule would give a bare <h1> (the .sec-h
     // display size is 32-52px). The property being guarded is that the h2 -> h1
     // swap did not hand the heading a page-title size: at this 1440px viewport

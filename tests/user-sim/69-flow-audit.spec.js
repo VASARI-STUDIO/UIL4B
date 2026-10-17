@@ -44,8 +44,7 @@
 //   M6  Settings.jsx   disabled={busy||needsPassword} → disabled={busy}   flow 5 red
 //   M7  CheckoutReturn subscriptionActive !== true  → false               flow 2 red
 //   M8  CheckoutReturn to="/plans" Back to Plans    → to="/checkout"      flow 2 red
-//   (M7/M8 were taken on the pre-redesign card. Commit 08194522 moved the same
-//   lines into `.co-return`; the flow 2 tests below still guard them.)
+//   (M7/M8 apply to the `.co-return` page; the flow 2 tests below guard them.)
 //   M9  global.css     areas "head" "body" "rail"   → "head" "rail" "body" flow 2 red, all 6 phone cases
 //   M10 global.css     the ≤480 trim                → removed             flow 2 red, the 320×568 pair only
 //

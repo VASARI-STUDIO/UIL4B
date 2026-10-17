@@ -62,6 +62,10 @@ function ledgerRows() {
   ]
 }
 
+// How often, and how many times, a settling payment re-asks the server.
+const SETTLE_RETRY_MS = 4000
+const SETTLE_RETRIES = 15
+
 const formatDate = ms => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
 
 function Arrow() {
@@ -119,7 +123,7 @@ export default function CheckoutReturn() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { getCheckoutStatus, isPro, planKnown, subscription } = useSubscription()
+  const { getCheckoutStatus, subscription } = useSubscription()
 
   const sessionId = params.get('session_id')
   // Missing session id is an error state from the start — no effect needed.
@@ -137,45 +141,52 @@ export default function CheckoutReturn() {
     }
     if (!sessionId) return
     let cancelled = false
-    getCheckoutStatus(sessionId)
-      .then(data => {
-        if (cancelled) return
-        if (data.status === 'complete') {
-          if (data.mode === 'payment' && data.paymentStatus !== 'paid') {
+    let timer = null
+    const check = attempt => {
+      getCheckoutStatus(sessionId)
+        .then(data => {
+          if (cancelled) return
+          if (data.status === 'complete') {
+            if (data.mode === 'payment' && data.paymentStatus !== 'paid') {
+              setState('error')
+              return
+            }
+            setCheckoutMode(data.mode || 'subscription')
+            setBillingInterval(data.interval || null)
+            // Only the server's answer for this checkout's own kind counts: a
+            // one-off needs entitlementActive, a subscription needs
+            // subscriptionActive. When it can't confirm yet, the honest line is
+            // that the payment arrived and access is settling, and the page
+            // asks again until the server confirms.
+            const pending = data.mode === 'payment'
+              ? data.entitlementActive !== true
+              : data.subscriptionActive !== true
+            setActivationPending(pending)
+            setState('success')
+            if (pending && attempt < SETTLE_RETRIES) {
+              timer = setTimeout(() => check(attempt + 1), SETTLE_RETRY_MS)
+            }
+          } else if (data.status === 'open') {
+            // Payment not finished — send them back to retry.
+            navigate(`/checkout?plan=${data.interval || 'yearly'}`, { replace: true })
+          } else {
             setState('error')
-            return
           }
-          setCheckoutMode(data.mode || 'subscription')
-          setBillingInterval(data.interval || null)
-          // Both modes, not just the one-off. This page used to state flatly
-          // that "Your Pro subscription is active" for every completed
-          // subscription checkout — including one whose webhooks never landed
-          // and whose account was still on Free. /api/checkout-status now
-          // reconciles that case and reports the result; when it could not, the
-          // honest line is that the payment arrived and access is settling.
-          setActivationPending(data.mode === 'payment'
-            ? data.entitlementActive !== true
-            : data.subscriptionActive !== true)
-          setState('success')
-        } else if (data.status === 'open') {
-          // Payment not finished — send them back to retry.
-          navigate(`/checkout?plan=${data.interval || 'yearly'}`, { replace: true })
-        } else {
-          setState('error')
-        }
-      })
-      .catch(() => { if (!cancelled) setState('error') })
-    return () => { cancelled = true }
+        })
+        .catch(() => { if (!cancelled) setState('error') })
+    }
+    check(0)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [user, sessionId, getCheckoutStatus, navigate])
 
-  // The page already listens to the account live, so a settling payment turns
-  // into an active one the moment Pro lands, with no reload.
+  // A settling payment turns into an active one when a later checkout-status
+  // response confirms it. The live account is never enough on its own: it can
+  // hold Pro from another purchase or a stale snapshot.
   const oneOff = checkoutMode === 'payment'
-  const proLanded = isPro && planKnown
   let view
   if (state === 'loading') view = 'loading'
   else if (state === 'error') view = sessionId ? 'failed' : 'nosession'
-  else if (!activationPending || proLanded) {
+  else if (!activationPending) {
     view = !oneOff && subscription?.status === 'trialing' && Number.isFinite(subscription?.trialEndsAt) ? 'trial' : 'active'
   } else view = 'settling'
 
@@ -314,7 +325,7 @@ export default function CheckoutReturn() {
           )}
           {hasPlan && hasDate && (
             <div className="co-detail">
-              <dt>{view === 'trial' ? 'Free until' : 'Renews'}</dt>
+              <dt>{view === 'trial' ? 'Free until' : subscription?.cancelAtPeriodEnd ? 'Access until' : 'Renews'}</dt>
               <dd>{dateText}</dd>
             </div>
           )}
