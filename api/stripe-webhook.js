@@ -604,21 +604,68 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
   return 'flagged'
 }
 
+const TRANSIENT_STRIPE_ERRORS = new Set(['StripeConnectionError', 'StripeRateLimitError', 'StripeAPIError'])
+
+// A read that may succeed on a retry: Stripe's own transient error types, a 5xx,
+// or a failure with no status and no Stripe verdict at all (the network).
+function isTransientStripeError(err) {
+  if (TRANSIENT_STRIPE_ERRORS.has(err?.type)) return true
+  const status = err?.statusCode ?? err?.raw?.statusCode
+  if (Number.isFinite(status)) return status >= 500
+  return !err?.type && !err?.code
+}
+
+// The subscription an invoice belongs to: an id, or the id and status when it
+// was expanded. Basil moved it to parent.subscription_details (see
+// subscriptionForPaymentIntent); any other parent type has none.
+function invoiceSubscription(invoice) {
+  const parent = invoice?.parent
+  const ref = parent?.type === 'subscription_details' ? parent?.subscription_details?.subscription : undefined
+  if (!ref) return { id: null, status: null }
+  return typeof ref === 'string' ? { id: ref, status: null } : { id: ref.id || null, status: ref.status || null }
+}
+
+// Whether a failed invoice that is not paid or void is dead anyway: it belongs
+// to a cancelled subscription and the paid invoice to a different one.
+function failedInvoiceIsAbandoned(failed, paid) {
+  const failedSub = invoiceSubscription(failed)
+  const paidSub = invoiceSubscription(paid)
+  return Boolean(failedSub.id && paidSub.id && failedSub.id !== paidSub.id && failedSub.status === 'canceled')
+}
+
+const storedFailedInvoiceId = (sub) =>
+  (typeof sub?.failedInvoiceId === 'string' && sub.failedInvoiceId ? sub.failedInvoiceId : null)
+
+// The failure on record is still the one the decision was made about.
+const sameFailureOnRecord = (sub, basis) =>
+  sub?.paymentFailed === true
+  && storedFailedInvoiceId(sub) === basis.failedInvoiceId
+  && (sub.paymentFailedAt ?? null) === basis.paymentFailedAt
+
 /**
  * Clear the payment-failure flag when an invoice is paid, but only if that
  * payment settles the failure on record. invoice.paid can arrive late: a paid
  * event for an older invoice delivered after a newer invoice failed must not
- * wipe the newer failure, or the customer keeps Pro with no grace countdown.
+ * wipe the newer failure: the banner and the grace anchor are lost, and a
+ * past-due subscription with no paymentFailedAt gets no grace period, so the
+ * customer reads as Free with nothing on screen saying why.
  *
  * Returns 'no_account', 'nothing_to_clear', 'cleared' or 'kept_newer_failure'.
  *
  * · Paid invoice is the one that failed: clear.
- * · A different failed invoice is on record: ask Stripe about it and clear only
- *   if it is paid or void. If Stripe cannot be read this THROWS, so the delivery
- *   fails, the claim is released (processStripeEvent) and Stripe retries it;
- *   guessing either way risks a wrongly cleared or a wrongly kept failure.
+ * · A different failed invoice is on record: ask Stripe about it (one retrieve,
+ *   outside the write) and clear only if it is paid or void, or if it belongs to
+ *   a subscription that has since been cancelled while the paid invoice belongs
+ *   to another one (the customer resubscribed). A transient Stripe error THROWS,
+ *   so the delivery fails, the claim is released (processStripeEvent) and Stripe
+ *   retries it. A permanent one (an id Stripe will never find, a 4xx) keeps the
+ *   failure and returns, because retrying cannot change the answer.
  * · Legacy record (a failure stored before failedInvoiceId existed): clear unless
  *   the invoice was paid before the failure began. No paid_at: clear, as before.
+ *
+ * The decision is made on a read taken before the Stripe call, so the write
+ * re-reads the failure inside a transaction and only clears the one the decision
+ * was about. A failure flagged in the meantime stays.
  */
 export async function clearPaymentFailure(stripe, invoice, db = null) {
   const database = db || adminDb()
@@ -629,13 +676,22 @@ export async function clearPaymentFailure(stripe, invoice, db = null) {
   const existing = (await ref.get()).data()?.subscription
   if (existing?.paymentFailed !== true) return 'nothing_to_clear'
 
-  const failedInvoiceId = typeof existing.failedInvoiceId === 'string' && existing.failedInvoiceId
-    ? existing.failedInvoiceId
-    : null
+  const failedInvoiceId = storedFailedInvoiceId(existing)
+  const basis = { failedInvoiceId, paymentFailedAt: existing.paymentFailedAt ?? null }
 
   if (failedInvoiceId && failedInvoiceId !== invoice.id) {
-    const failed = await stripe.invoices.retrieve(failedInvoiceId)
-    if (failed?.status !== 'paid' && failed?.status !== 'void') {
+    let failed
+    try {
+      failed = await stripe.invoices.retrieve(failedInvoiceId, { expand: ['parent.subscription_details.subscription'] })
+    } catch (err) {
+      if (isTransientStripeError(err)) throw err
+      console.error('stripe-webhook: invoice.paid left the payment failure in place — the failed invoice cannot be read and retrying will not help', {
+        uid, paidInvoiceId: invoice.id, failedInvoiceId, error: err?.message, type: err?.type ?? null, code: err?.code ?? null,
+      })
+      return 'kept_newer_failure'
+    }
+    const settled = failed?.status === 'paid' || failed?.status === 'void'
+    if (!settled && !failedInvoiceIsAbandoned(failed, invoice)) {
       console.warn('stripe-webhook: invoice.paid left the payment failure in place — a different invoice is still unpaid', {
         uid, paidInvoiceId: invoice.id, failedInvoiceId, failedInvoiceStatus: failed?.status ?? null,
       })
@@ -651,7 +707,7 @@ export async function clearPaymentFailure(stripe, invoice, db = null) {
     }
   }
 
-  await ref.set({
+  const cleared = {
     // Clear the grace anchor and the retry link too, or a customer who
     // has paid keeps being shown a "fix your card" banner pointing at a
     // settled invoice.
@@ -659,8 +715,33 @@ export async function clearPaymentFailure(stripe, invoice, db = null) {
       paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null,
       updatedAt: Date.now(),
     },
-  }, { merge: true })
-  return 'cleared'
+  }
+  const keptNewer = (current) => {
+    console.warn('stripe-webhook: invoice.paid left the payment failure in place — a newer failure was recorded while it was being handled', {
+      uid, paidInvoiceId: invoice.id, decidedOn: basis.failedInvoiceId, nowOnRecord: storedFailedInvoiceId(current),
+    })
+    return 'kept_newer_failure'
+  }
+
+  // A failure may be flagged between the read above and this write (the Stripe
+  // lookup sits between them), so the write checks the record is still the
+  // failure the decision was about. Only a Firestore handle without
+  // runTransaction (an older test double) falls back to a plain re-read, which
+  // narrows the window but does not close it.
+  if (typeof database.runTransaction !== 'function') {
+    const current = (await ref.get()).data()?.subscription
+    if (current?.paymentFailed !== true) return 'nothing_to_clear'
+    if (!sameFailureOnRecord(current, basis)) return keptNewer(current)
+    await ref.set(cleared, { merge: true })
+    return 'cleared'
+  }
+  return database.runTransaction(async (tx) => {
+    const current = (await tx.get(ref)).data()?.subscription
+    if (current?.paymentFailed !== true) return 'nothing_to_clear'
+    if (!sameFailureOnRecord(current, basis)) return keptNewer(current)
+    tx.set(ref, cleared, { merge: true })
+    return 'cleared'
+  })
 }
 
 async function flagTrialEnding(subscription) {

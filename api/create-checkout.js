@@ -56,25 +56,30 @@ export async function checkoutRateLimit(db, { uid, ip, now = Date.now() }) {
 export const PRICE_CACHE_TTL_MS = 5 * 60 * 1000
 const priceCache = new Map()
 
-/** Forget the cached price for `interval` (or every interval), so the next checkout re-reads Stripe. */
-export function forgetCachedPrice(interval = null, cache = priceCache) {
-  if (interval == null) cache.clear()
-  else cache.delete(interval)
+/**
+ * Forget the cached price for `interval`, so the next checkout re-reads Stripe.
+ * Pass '*' to forget every interval. A missing or unknown interval does nothing,
+ * so a failed parse can never empty the whole cache by accident.
+ */
+export function forgetCachedPrice(interval, cache = priceCache) {
+  if (interval === '*') cache.clear()
+  else if (interval) cache.delete(interval)
 }
 
 /**
  * Whether a Stripe error from creating a session says the PRICE cannot be sold:
  * archived, on an inactive product, or gone. That is a price that was sellable
  * when it was cached and is not now, so the customer is told it is unavailable
- * instead of seeing a generic failure. Stripe reports it as an
- * invalid_request_error whose `param` points at the line item's price, or whose
- * message says the price or product is inactive. Any other error is not this.
+ * instead of seeing a generic failure. Two shapes count, both invalid_request_error:
+ * `resource_missing` on the line item's price, or a message saying the price or
+ * product is inactive or archived. A `param` that merely mentions "price" is not
+ * enough: it would also match an error about the customer's locked currency.
  */
 export function isUnsellablePriceError(err) {
   if (!err) return false
   const invalidRequest = err.type === 'StripeInvalidRequestError' || err.rawType === 'invalid_request_error'
   if (!invalidRequest) return false
-  if (typeof err.param === 'string' && /price/i.test(err.param)) return true
+  if (err.code === 'resource_missing' && typeof err.param === 'string' && /price/i.test(err.param)) return true
   const message = typeof err.message === 'string' ? err.message : ''
   return /\b(price|product)\b[^.]*\b(inactive|archived|not active|no longer active)\b/i.test(message)
     || /\b(inactive|archived)\b[^.]*\b(price|product)\b/i.test(message)
@@ -421,10 +426,13 @@ export default async function handler(req, res) {
       // The price was sellable when it was cached and Stripe now refuses it.
       // Drop it so the next request resolves a live price (or reports none).
       forgetCachedPrice(failedInterval)
-      console.error('create-checkout: Stripe refused the resolved price — dropped it from the cache', {
-        uid, interval: failedInterval, error: err?.message, param: err?.param ?? null,
+      return failRequest(res, {
+        status: 503,
+        scope: 'create-checkout price refused by Stripe',
+        message: priceUnavailableMessage(failedInterval),
+        err,
+        context: { uid, interval: failedInterval, param: err?.param ?? null },
       })
-      return res.status(503).json({ error: priceUnavailableMessage(failedInterval) })
     }
     return failRequest(res, {
       status: 500,
