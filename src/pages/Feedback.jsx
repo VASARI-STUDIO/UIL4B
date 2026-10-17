@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
@@ -18,9 +18,12 @@ import '../styles/pages/feedback.css'
 
 // Links from outside the app land here through /support (see legacyRoutes.js):
 // `?from=support` marks an arrival that wants help rather than to suggest
-// something, and `?reason=` says why. Any reason at all means the same, so a
-// link can name one without also naming `from`.
+// something, and `?reason=` or `?ref=` says why. Any reason or ref at all means
+// the same, so a link can name one without also naming `from`. A failed-payment
+// link may carry the marker in either parameter.
 const PAYMENT_FAILED = 'payment_failed'
+const PAYMENT_TITLE = 'Get help'
+const PAYMENT_CARD_LINK = 'Update your card'
 const PAYMENT_SUBTITLE = "Payment didn't go through? Tell us what happened and we'll sort it."
 const PAYMENT_PLACEHOLDER = 'What happened when you tried to pay?'
 const PAYMENT_SUBJECT = 'Payment failed'
@@ -35,8 +38,8 @@ const TYPES = [
 export default function Feedback({ toast }) {
   const { t } = useI18n()
   const [params] = useSearchParams()
-  const reason = params.get('reason') || ''
-  const paymentFailed = reason === PAYMENT_FAILED
+  const reason = params.get('reason') || params.get('ref') || ''
+  const paymentFailed = params.get('reason') === PAYMENT_FAILED || params.get('ref') === PAYMENT_FAILED
   const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
   const sentHeadingRef = useRef(null)
   const retryRef = useRef(null)
@@ -197,8 +200,15 @@ export default function Feedback({ toast }) {
   return (
     <div className="sec fb-page">
       <div className="sec-h">
-        <h1>{t('feedback.title')}</h1>
+        <h1>{paymentFailed ? PAYMENT_TITLE : t('feedback.title')}</h1>
         <p>{paymentFailed ? PAYMENT_SUBTITLE : t('feedback.subtitle')}</p>
+        {/* Billing lives in Settings, which needs an account, so only a
+            signed-in visitor is sent there. */}
+        {paymentFailed && accountEmail && (
+          <p style={{ marginTop: 12 }}>
+            <Link className="btn btn-s" to="/settings">{PAYMENT_CARD_LINK}</Link>
+          </p>
+        )}
       </div>
       <div className="card fb-card">
         {sendError ? (
