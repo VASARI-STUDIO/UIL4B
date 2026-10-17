@@ -384,12 +384,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail-item img,.ig-rail-item svg{width:24px;height:24px}
 .ig-rail-item svg{color:var(--t0);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 /* Waiting glyph slots keep their dimensions without painting a square. */
-@keyframes ig-skel-pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.icust-stage-wait{background:color-mix(in oklab,var(--t1) 6%,transparent);box-shadow:none;animation:ig-skel-pulse 1.4s ease-in-out infinite}
 .ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:none;box-shadow:none;animation:none}
-.icust-stage-wait{position:absolute;inset:0;margin:auto;border-radius:8px;flex-shrink:0}
-@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .icust-stage-wait{animation:none}}
-html[data-reduced-motion="true"] .icust-stage-wait{animation:none}
+/* The stage's waiting slot: the grid's own glyph at stage size when there is one,
+   otherwise an empty box of the same size. Centred like the final art. */
+.icust-stage-wait{position:absolute;inset:0;margin:auto;flex-shrink:0;background:none;box-shadow:none;animation:none}
 .ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
 /* Keep pending artwork hidden until it has decoded. */
 .ic img.ig-glyph-pending{border-radius:6px;filter:none}

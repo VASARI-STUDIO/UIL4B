@@ -1,5 +1,5 @@
 import MenuSelect from '../components/tool/MenuSelect'
-import { useState, useCallback, useRef, useEffect, useMemo, memo, Fragment } from 'react'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, memo, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -1272,7 +1272,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const baseSvgText = localBase || fetchedBase || cachedCdnBase
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
-  useEffect(() => {
+  // A layout effect, so the art lands in the same frame the waiting glyph leaves.
+  useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
     host.innerHTML = rendersInline && baseSvgText ? baseSvgText : ''
@@ -1414,6 +1415,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // own page ground. A coloured pack always uses it; a chosen mono colour keeps
   // the contrast ground.
   const onThemeGround = isColoredPack || !color
+  // Until the stage has its own art, show the glyph the grid drew for this icon
+  // (same data: URI, so nothing new is fetched) in the stage's box. It is only
+  // used on the theme ground, where the grid's tint matches. With no grid glyph
+  // (or a chosen colour) the slot stays the same size and paints nothing.
+  const waitSrc = activeIcon?.cdn && !activeIcon.custom && onThemeGround ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
+  const stageWait = waitSrc
+    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={size} height={size} alt="" aria-hidden="true" />
+    : <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1625,7 +1634,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && !loadErr && <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />}
+                  {!baseSvgText && !loadErr && stageWait}
                   {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               ) : (
@@ -1640,9 +1649,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       onLoad={brandKey ? onStageImgLoad : undefined}
                       style={imageError ? { visibility: 'hidden' } : undefined}
                     />
-                  ) : (
-                    <span className={imageError ? 'icust-stage-img' : 'icust-stage-img icust-stage-wait'} style={{ width: size, height: size }} aria-hidden="true" />
-                  )}
+                  ) : imageError ? (
+                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
+                  ) : stageWait}
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
@@ -1977,17 +1986,18 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
    these are the only human names the product has for them. `iconPackTiers.js`
    deliberately holds no labels — it is about entitlement, not vocabulary.
 
-   Order and labels are byte-for-byte what the hand-written menu rendered.
+   Order and pack labels are what the hand-written menu rendered; the first two
+   group headings now say line and filled, to match the style chips.
    `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
    here as individual packs; they reach the grid through the Coloured chip, and
    that is unchanged. */
 const PACK_MENU = [
   {
-    label: 'Interface (outlined)',
+    label: 'Interface (line)',
     packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor']],
   },
   {
-    label: 'Interface (solid)',
+    label: 'Interface (filled)',
     packs: [['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
   },
   {
