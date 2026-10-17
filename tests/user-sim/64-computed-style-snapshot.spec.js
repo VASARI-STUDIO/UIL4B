@@ -102,6 +102,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
 import { go } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 const BASELINE_FILE = path.join(process.cwd(), 'tests', 'user-sim', 'fixtures', 'computed-style-baseline.json')
 const UPDATING = process.env.UPDATE_STYLE_BASELINE === '1'
@@ -271,6 +272,20 @@ async function settledSnapshot(page, selectors) {
   return snap
 }
 
+/* /plans IS MEASURED WITH A LIVE PRICE, NOT WITH NO ANSWER AT ALL.
+ *
+ * The suite's preview has no serverless functions, so /api/get-prices never
+ * answers. /plans refuses to quote a price it was not given (it says
+ * "Unavailable" and offers "Retry live pricing" instead of a Pro checkout
+ * button), so with no answer the page paints the fail-closed state and the
+ * Pro button (`.pr-cta--pro`) is not there to measure. What a buyer is offered
+ * is the paid layout, so that is the one this snapshot guards: the route is
+ * answered with production's own shape, as the plans specs do. The fail-closed
+ * state itself is pinned by 114-pricing-fail-closed. */
+const STUBBED_PRICES = {
+  '/plans': { source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } },
+}
+
 async function openSettled(browser, route, width, selectors) {
   // A fresh context per width. Resizing an open page re-runs the media queries
   // but keeps whatever state the first width left behind, and this suite has
@@ -278,6 +293,11 @@ async function openSettled(browser, route, width, selectors) {
   const context = await browser.newContext({ viewport: { width, height: 900 } })
   try {
     const page = await context.newPage()
+    if (STUBBED_PRICES[route]) {
+      await page.route('**/api/get-prices', (r) => r.fulfill({
+        status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(STUBBED_PRICES[route])),
+      }))
+    }
     // `go()` rather than page.goto: it carries the readiness wait that tells a
     // rendered route apart from the lazy-chunk fallback, which measures as a
     // full page (421 characters of chrome) and would be snapshotted as one.

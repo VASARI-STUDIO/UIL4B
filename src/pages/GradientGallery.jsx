@@ -9,7 +9,11 @@ import LibraryEmpty from '../components/library/LibraryEmpty'
 import LibraryGrid from '../components/library/LibraryGrid'
 import { LockedPaletteCard, LockedTeaseCta } from '../components/library/LockedTease'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
-import { GALLERY_GRADIENTS, GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
+import ProLibraryStatus from '../components/library/ProLibraryStatus'
+import { useProLibrary } from '../hooks/useProLibrary'
+import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
+import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
+import { LIBRARY_RULES } from '../utils/libraryRules'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 import { mergeSubmissions } from '../utils/communityQueue'
 import { listMySubmissions } from '../utils/communityQueueApi'
@@ -64,10 +68,17 @@ export default function GradientGallery({ toast }) {
   const { user } = useAuth()
   const { isPro } = useSubscription()
   const { requireLogin } = useLoginPrompt()
+  // A Pro account's full library comes from the server (src/utils/proLibrary.js);
+  // the bundle holds the free rows and name-only stubs. Until it arrives a Pro
+  // viewer sees the free rows and a status line, never the upsell.
+  const pro = useProLibrary('gradients')
+  const ready = pro.status === 'ready'
+  const proPending = pro.active && !ready
+  const rows = pro.items ?? LIBRARY_GRADIENT_ROWS
   // Anonymous → free account → Pro, exactly as on the Palette Library. Both
   // inputs must be an exact `true` to climb a rung: an entitlement or an auth
   // state still resolving shows the tier below, never the one above.
-  const tier = galleryTier({ isPro, signedIn: user != null })
+  const tier = galleryTier({ isPro: ready, signedIn: user != null })
   const [rawQuery, setRawQuery] = useState('')
   const [tag, setTag] = useState('all')
   // An ARRAY, because the type tray is multi-select (founder request,
@@ -117,7 +128,7 @@ export default function GradientGallery({ toast }) {
   //
   // Every gradient is eligible (`isOpen` is unconditional): unlike the palette
   // and prompt libraries this collection has no per-row paid flag, so the tier
-  // CAP is the whole gate here. It still runs over GALLERY_GRADIENTS in its own
+  // CAP is the whole gate here. It still runs over the rows in their own
   // order, before the filters and the search see anything, which is what stops
   // it being the positional gate utils/lockedPreview.js was written after.
   //
@@ -126,17 +137,17 @@ export default function GradientGallery({ toast }) {
   // full collection would let a signed-out visitor confirm a withheld
   // gradient's colours by typing them, and read its name back from the result.
   const { open: browsable, locked: lockedPreviews, remaining: lockedCount, eligible } = useMemo(() => (
-    splitLockedLibrary(GALLERY_GRADIENTS, {
-      unlocked: isPro === true,
-      isOpen: () => true,
-      // A gradient's NAME is the tease and its stops are the product — the same
-      // split as a brand palette, and the opposite of a community prompt, whose
-      // title IS the thing being sold. `slots` is the stop count: how many
-      // values the row holds, never the values.
-      preview: (g) => ({ id: g.id, label: g.name, slots: g.stops.length }),
+    // A gradient's NAME is the tease and its stops are the product — the same
+    // split as a brand palette, and the opposite of a community prompt, whose
+    // title IS the thing being sold. `slots` is the stop count: how many values
+    // the row holds, never the values (src/utils/libraryRules.js).
+    splitLockedLibrary(rows, {
+      unlocked: ready,
+      isOpen: LIBRARY_RULES.gradients.isOpen,
+      preview: LIBRARY_RULES.gradients.preview,
       limit: galleryLimit(tier),
     })
-  ), [isPro, tier])
+  ), [rows, ready, tier])
 
   const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
 
@@ -162,13 +173,13 @@ export default function GradientGallery({ toast }) {
   // Pro's — they come with a free account. See the longer note in
   // PaletteGallery.jsx.
   const anonymous = tier === 'anonymous'
-  const teaseVisible = lockedCount > 0 && !query && tag === 'all' && types.includes('all')
+  const teaseVisible = !proPending && lockedCount > 0 && !query && tag === 'all' && types.includes('all')
   const lockedBlock = teaseVisible ? (
     anonymous ? (
       <div className="lockt-cta">
         <div className="lockt-cta-copy">
           <p className="lockt-cta-head">{`Another ${accountAdds} ${accountAdds === 1 ? 'gradient' : 'gradients'} with a free account`}</p>
-          <p className="lockt-cta-body">{`A free account opens ${browsable.length + accountAdds} of the ${GALLERY_GRADIENTS.length} gradients. Pro opens all ${GALLERY_GRADIENTS.length}.`}</p>
+          <p className="lockt-cta-body">{`A free account opens ${browsable.length + accountAdds} of the ${rows.length} gradients. Pro opens all ${rows.length}.`}</p>
         </div>
         <button
           type="button"
@@ -192,7 +203,7 @@ export default function GradientGallery({ toast }) {
         <LockedTeaseCta
           gate="gradient-library-tier-lock"
           heading={`Another ${lockedCount} ${lockedCount === 1 ? 'gradient' : 'gradients'} with Pro`}
-          body={`Free covers ${browsable.length} of the ${GALLERY_GRADIENTS.length}. Pro opens the remaining ${lockedCount}, each one editable in the Gradient Generator.`}
+          body={`Free covers ${browsable.length} of the ${rows.length}. Pro opens the remaining ${lockedCount}, each one editable in the Gradient Generator.`}
           action="See what Pro includes"
         />
       </>
@@ -348,6 +359,7 @@ export default function GradientGallery({ toast }) {
           order Savee's paywall uses and the one the Palette and Prompt libraries
           already run: what you have, then a glimpse of more, then how to get it. */}
       {lockedBlock}
+      {proPending && <ProLibraryStatus library={pro} noun="gradient library" />}
 
       {/* The closing line, last child of the page. Same reasoning as the Palette
           Library: the Gradient Generator is where a gradient gets made and where
@@ -366,10 +378,10 @@ export default function GradientGallery({ toast }) {
           action="Create and submit your own"
           to="/create/gradient"
         />
-      ) : !teaseVisible && lockedCount > 0 ? (
+      ) : !teaseVisible && !proPending && lockedCount > 0 ? (
         <GalleryCloseCta
           className="grg-cta"
-          detail={`Free covers ${browsable.length} of the ${GALLERY_GRADIENTS.length}. Pro opens all of them.`}
+          detail={`Free covers ${browsable.length} of the ${rows.length}. Pro opens all of them.`}
           action="See what Pro includes"
           to="/plans"
         />

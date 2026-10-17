@@ -87,9 +87,17 @@ async function catchDownload(page) {
   return page.evaluate(() => window.__v3dFile)
 }
 
+// How long the FIRST model (or first engine-dependent verdict) of a fresh
+// context may take: the three.js engine fetched, parsed and run. The download
+// dominates it, and on a loaded CI runner it has run past 20 s while the same
+// test passed in 25-31 s on another attempt. 35 s keeps a real hang failing at
+// this line, by name, inside FILE_TEST_BUDGET_MS even after go() has spent its
+// own 20 s backstop on a cold start (20 + 35 < 60).
+const OPEN_BOX_MS = 35_000
+
 async function openBox(page) {
   await input(page).setInputFiles(boxStl())
-  await expect(fact(page, 'triangles'), 'the box never finished loading').toHaveText('12', { timeout: 20000 })
+  await expect(fact(page, 'triangles'), 'the box never finished loading').toHaveText('12', { timeout: OPEN_BOX_MS })
 }
 
 // ONE HONEST BUDGET FOR THE WHOLE FILE, not a fix per test as each one trips.
@@ -103,7 +111,7 @@ async function openBox(page) {
 // says.
 //
 // So each test gets twice the slowest single-model test measured on CI.
-// Every wait inside keeps its own backstop (go() 20 s, openBox 20 s, the
+// Every wait inside keeps its own backstop (go() 20 s, openBox 35 s, the
 // result and error waits their own), so a real hang still fails there, by
 // name, well inside this.
 const SLOWEST_MODEL_TEST_ON_CI_MS = 30_000
@@ -246,7 +254,7 @@ test.describe('3D Model Converter', () => {
     await go(page, ROUTE)
     // 2 wide, 1 deep and 3 tall in the STL's own Z-up numbers.
     await input(page).setInputFiles(boxStl([2, 1, 3]))
-    await expect(fact(page, 'triangles')).toHaveText('12', { timeout: 20000 })
+    await expect(fact(page, 'triangles')).toHaveText('12', { timeout: OPEN_BOX_MS })
     const zUp = page.getByRole('button', { name: 'Z up' })
     const yUp = page.getByRole('button', { name: 'Y up' })
     await expect(zUp, 'an STL did not open as Z up').toHaveAttribute('aria-pressed', 'true')
@@ -350,7 +358,7 @@ test.describe('3D Model Converter', () => {
     await page.route((u) => u.href.startsWith('https://cdn.jsdelivr.net/npm/occt-import-js'), (route) => route.abort('internetdisconnected'))
     await go(page, ROUTE)
     await input(page).setInputFiles({ name: 'bracket.step', mimeType: 'model/step', buffer: Buffer.from('ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n') })
-    await expect(page.getByTestId('v3d-error')).toContainText('CAD engine could not be fetched', { timeout: 20000 })
+    await expect(page.getByTestId('v3d-error')).toContainText('CAD engine could not be fetched', { timeout: OPEN_BOX_MS })
     await openBox(page)
   })
 
@@ -371,7 +379,7 @@ test.describe('3D Model Converter', () => {
     })
     await go(page, ROUTE)
     await input(page).setInputFiles({ name: 'bracket.step', mimeType: 'model/step', buffer: Buffer.from('ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n') })
-    await expect(page.getByTestId('v3d-error')).toContainText('did not match its pinned fingerprint', { timeout: 20000 })
+    await expect(page.getByTestId('v3d-error')).toContainText('did not match its pinned fingerprint', { timeout: OPEN_BOX_MS })
     // POSITIVE CONTROL: both altered files were fetched, so the refusal was
     // the check at work and not a request that never happened.
     expect(served.sort()).toEqual(['occt-import-js.js', 'occt-import-js.wasm'])
@@ -386,7 +394,7 @@ test.describe('3D Model Converter', () => {
     // draws a model, then walks seven widths — twice, measured at up to 28.4 s
     // on a CI runner. Derived from the arrays that drive the loops, so a width or a
     // theme added raises the budget in the same edit; every wait inside keeps
-    // its own backstop (go() 20 s, openBox 20 s), so a real hang still fails
+    // its own backstop (go() 20 s, openBox 35 s), so a real hang still fails
     // there, by name.
     const THEMES = ['light', 'dark']
     const WIDTHS = [320, 390, 768, 1024, 1280, 1440, 1920]

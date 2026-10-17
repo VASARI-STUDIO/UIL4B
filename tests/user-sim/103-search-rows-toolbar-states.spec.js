@@ -233,11 +233,21 @@ async function fromPaletteViaMore(page) {
   const sheet = page.getByRole('dialog', { name: 'More' })
   await expect(sheet).toBeVisible()
   const fromPalette = sheet.getByRole('button', { name: /^From palette/ })
-  // The sheet slides up; wait until its row has come to rest on screen.
+  // The sheet slides up; wait until its row has come to rest on screen. On
+  // screen is not at rest: the row's bottom edge passes 844 while it is still
+  // about 80px below its resting place, which is a whole row, so a press
+  // aimed at it lands on the row beneath once the slide finishes. The click
+  // is forced (the row is aria-disabled, which a normal click refuses), and a
+  // forced click does not wait for the target to stop. So wait for every
+  // animation that ends to have ended.
   await expect.poll(async () => {
     const b = await fromPalette.boundingBox()
     return b ? Math.round(b.y + b.height) : 99999
   }).toBeLessThanOrEqual(844)
+  await expect.poll(
+    () => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running' && a.effect.getComputedTiming().iterations !== Infinity).length),
+    { message: 'the More sheet is still sliding up' },
+  ).toBe(0)
   await fromPalette.click({ force: true })
   await expect(sheet).toBeHidden()
   return page.locator('.grd .grd-note--palette')

@@ -1,5 +1,5 @@
 import MenuSelect from '../components/tool/MenuSelect'
-import { useState, useCallback, useRef, useEffect, useMemo, memo, Fragment } from 'react'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, memo, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -123,10 +123,10 @@ const CUSTOM_KEY = 'vs-custom-icons'
 const LOGODEV_TOKEN = import.meta.env.VITE_LOGODEV_KEY || 'pk_L_3nxFHHQrOLmFuS16PsFQ'
 // Build a logo image URL. `ref` is a domain (stripe.com) or a plain brand name;
 // names are resolved through the /name/ path. Retina PNG so it stays crisp.
-const logodevUrl = (ref, size = 128) => {
+const logodevUrl = (ref, size = 128, theme) => {
   const clean = String(ref || '').trim()
   const path = clean.includes('.') ? encodeURIComponent(clean) : `name/${encodeURIComponent(clean)}`
-  return `https://img.logo.dev/${path}?token=${LOGODEV_TOKEN}&size=${size}&format=png&retina=true`
+  return `https://img.logo.dev/${path}?token=${LOGODEV_TOKEN}&size=${size}&format=png&retina=true${theme ? `&theme=${theme === 'light' ? 'light' : 'dark'}` : ''}`
 }
 // Curated popular brands for the browse grid — domains give the most reliable
 // match. Grouped loosely (tech · dev · social · finance · commerce · media).
@@ -478,13 +478,8 @@ function glyphDataUri(pack, name) {
 }
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
-// Colored/brand artwork keeps its own colours, so the grid can't tint it for
-// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
-// on a chip using the Stage's light gradient by default; if the artwork itself
-// is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
-// flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
-// so scrolling or reopening never re-samples.
-const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wide-slot cap, ink tone)
+// Remember artwork measurements so scrolling or reopening never re-samples.
+const glyphCache = new Map() // 'pack:name' or 'logodev:ref:theme' → artwork measurements
 
 // A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
 //
@@ -510,13 +505,14 @@ const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wi
 // Colored/brand artwork keeps its own colours and sits straight on the page
 // ground: the chip around it is a transparent slot, not a box. Artwork whose ink
 // is near-black (or near-white in the light theme) would vanish on that ground,
-// so the sampled ink tone also picks a faint halo (`ig-chip--halo-*`) that never
+// so the sampled ink tone also picks a one-pixel edge (`ig-chip--halo-*`) that never
 // touches the artwork's colours. The measurement is remembered per icon, so
 // scrolling or reopening never re-samples.
 
 // The aspect ratio of the box the glyph's opaque pixels occupy, plus the tone of
-// that ink (average relative luminance: near-black -> 'dark', near-white ->
-// 'light', anything else 'mid'). Any failure
+// that ink (substantial dark neutral ink -> 'dark', near-white average ->
+// 'light', anything else 'mid'), and the plate tone when four opaque corners say the
+// art is a baked-in square (else null). Any failure
 // (CORS taint, decode error) falls back to a square mid-tone ink box - which is exactly
 // the treatment every icon had before this measurement existed, so a sampling
 // failure degrades to the old behaviour rather than to a broken one.
@@ -524,7 +520,13 @@ const glyphCache = new Map() // 'pack:name' → { ar, cap, ink } (ink aspect, wi
 // S is 64 rather than 24 because a 10:1 lockup occupies two rows of a 24px
 // raster: enough to see, not enough to measure. At 64 it is a six-row band and
 // the ratio is stable.
-const INK_DARK_MAX = 0.05 // linear luminance: GitHub / Vercel / Apple black sit well under this
+// Linear luminance below which a chosen icon colour counts as near-black (a saved
+// icon's colour; sampleGlyph reads pixels and uses INK_DARK_NEUTRAL_MAX instead).
+const INK_DARK_MAX = 0.05
+// Per-pixel ceiling for the dark-neutral share in sampleGlyph. Dark greys through
+// #5a5a5a (linear 0.10) sit under it; a mid-grey such as #666 (0.13) already has
+// enough contrast on a dark page and gets no edge.
+const INK_DARK_NEUTRAL_MAX = 0.11
 const INK_LIGHT_MIN = 0.82
 function sampleGlyph(img) {
   try {
@@ -538,10 +540,16 @@ function sampleGlyph(img) {
     const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
     let sum = 0
     let n = 0
+    let darkNeutral = 0
     let x0 = S, y0 = S, x1 = -1, y1 = -1
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 64) continue
-      sum += 0.2126 * toLin(data[i]) + 0.7152 * toLin(data[i + 1]) + 0.0722 * toLin(data[i + 2])
+      const [r, g, b] = [data[i], data[i + 1], data[i + 2]]
+      const lum = 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b)
+      sum += lum
+      // Dark lettering can dominate a lockup whose coloured mark lifts its
+      // average luminance. Ignore saturated ink and tiny dark details.
+      if (lum < INK_DARK_NEUTRAL_MAX && Math.max(r, g, b) - Math.min(r, g, b) <= 48) darkNeutral++
       n++
       const p = i / 4
       const px = p % S
@@ -551,7 +559,7 @@ function sampleGlyph(img) {
       if (py < y0) y0 = py
       if (py > y1) y1 = py
     }
-    if (n === 0) return { ar: 1, cap: 1, ink: 'mid' }
+    if (n === 0) return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false, plate: null }
     // The raster is SQUARE and drawImage stretched the art to fill it, so the
     // measured ink box is the true one divided by the image own aspect. Undoing
     // that is what makes one number cover both causes: a square-canvas devicon
@@ -566,13 +574,23 @@ function sampleGlyph(img) {
       raster: S,
     })
     const lum = sum / n
-    return { ar, cap, ink: lum < INK_DARK_MAX ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid' }
-  } catch { return { ar: 1, cap: 1, ink: 'mid' } }
+    const corners = [0, S - 1, S * (S - 1), S * S - 1]
+    const opaqueCorners = corners.every(p => data[p * 4 + 3] === 255)
+    // A baked-in square's plate tone: the corners are plate, never artwork.
+    const plate = opaqueCorners
+      ? corners.reduce((t, p) => t + 0.2126 * toLin(data[p * 4]) + 0.7152 * toLin(data[p * 4 + 1]) + 0.0722 * toLin(data[p * 4 + 2]), 0) / 4
+      : null
+    return { ar, cap, ink: darkNeutral / n >= 0.25 ? 'dark' : lum > INK_LIGHT_MIN ? 'light' : 'mid', opaqueCorners, plate }
+  } catch { return { ar: 1, cap: 1, ink: 'mid', opaqueCorners: false, plate: null } }
 }
 
 
 // Brand artwork keeps its colours in a transparent, fixed-size slot.
-const FLAG_PACKS = new Set(ICON_GROUPS.flags.packs)
+// Which halo (if any) keeps ink that matches the page ground readable: near-black
+// ink on the dark theme gets a light halo, near-white ink on the light theme a dark one.
+// A flag or emoji never gets one: its average tone says little about its edge, and its
+// outline is part of the artwork.
+const FLAG_PACKS = new Set([...ICON_GROUPS.flags.packs, 'twemoji'])
 const haloFor = (ink, theme, pack) => {
   if (FLAG_PACKS.has(pack)) return ''
   return ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : ''
@@ -719,6 +737,65 @@ function SavedPackGlyph({ icon }) {
   )
 }
 
+// A baked light plate stands out hard on the dark page. When the theme variant
+// comes back as one, the default variant is sometimes a darker plate, so it is
+// sampled once off-screen and used instead when it is clearly darker.
+const PLATE_LIGHT_MIN = 0.5
+const PLATE_DARKER_BY = 0.25
+function probeDefaultPlate(ref, themePlate, done) {
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    const next = sampleGlyph(img)
+    if (next.opaqueCorners && next.plate !== null && next.plate < themePlate - PLATE_DARKER_BY) done({ ...next, useDefault: true })
+  }
+  img.src = logodevUrl(ref, 64)
+}
+
+// Sample each logo variant once. Only baked-in opaque corners get rounded, with
+// a hairline on the plate's own edge (CSS) in place of the halo; transparent
+// marks stay unrounded and the halo follows the artwork's ink. A load the
+// browser refuses for CORS is shown plain: no sampling, so no halo or rounding.
+function LogoDevGlyph({ icon }) {
+  const { theme } = useTheme()
+  const key = `logodev:${icon.ref}:${theme}`
+  const [measured, setMeasured] = useState(null)
+  const [plainKey, setPlainKey] = useState(null)
+  const plain = plainKey === key
+  const shape = plain ? null : glyphCache.get(key) || (measured?.key === key ? measured.shape : null)
+  const halo = shape?.opaqueCorners ? '' : haloFor(shape?.ink, theme, 'logodev')
+  const onLoad = (e) => {
+    if (plain) return
+    if (!glyphCache.has(key)) {
+      const next = sampleGlyph(e.currentTarget)
+      glyphCache.set(key, next)
+      if (theme !== 'light' && next.opaqueCorners && next.plate > PLATE_LIGHT_MIN) {
+        probeDefaultPlate(icon.ref, next.plate, (darker) => {
+          glyphCache.set(key, darker)
+          setMeasured({ key, shape: darker })
+        })
+      }
+    }
+    setMeasured({ key, shape: glyphCache.get(key) })
+  }
+  return (
+    <span className={`ig-chip${halo ? ` ig-chip--${halo}` : ''}`}>
+      <img
+        key={plain ? `${key}:plain` : key}
+        {...(plain ? {} : { crossOrigin: 'anonymous' })}
+        src={logodevUrl(icon.ref, 64, shape?.useDefault ? undefined : theme)}
+        width="28"
+        height="28"
+        className={`ig-logo${shape?.opaqueCorners ? ' ig-logo--square' : ''}`}
+        loading="lazy"
+        alt={icon.name}
+        onLoad={onLoad}
+        onError={plain ? undefined : () => setPlainKey(key)}
+      />
+    </span>
+  )
+}
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
@@ -727,13 +804,7 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
     return <SavedPackGlyph icon={icon} />
   }
-  if (icon.logo) {
-    return (
-      <span className="ig-chip">
-        <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
-      </span>
-    )
-  }
+  if (icon.logo) return <LogoDevGlyph icon={icon} />
   if (icon.cdn) {
     if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={src} gone={gone} />
     // The batched body, composed into a data: URI. Empty until its tranche
@@ -1008,6 +1079,62 @@ const JOIN_OPTS = [
   { v: 'bevel', label: 'Bevel corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="bevel" /></svg> },
 ]
 
+// One "Similar in this pack" tile. It stays invisible (but in layout, so the
+// 44px row never shifts) until its glyph has loaded, then fades in: an empty
+// outlined tile is a loading square, and those are dropped. A glyph that
+// errors stays hidden. `visibility:hidden` also keeps a not-yet-shown tile out
+// of the tab order. A cached image can finish before React attaches onLoad, so
+// the ref callback checks it on attach. `onReadyChange` tells the section
+// whether any tile is showing, so it can hold back its heading and frame.
+function SimilarTile({ s, src, onPick, onReadyChange }) {
+  const [ready, setReady] = useState(false)
+  useEffect(() => { onReadyChange(s.id, ready) }, [s.id, ready, onReadyChange])
+  return (
+    <button
+      type="button"
+      className="icust-similar-btn"
+      data-ready={ready ? 'true' : undefined}
+      title={s.name}
+      aria-label={`Open ${s.name}`}
+      onClick={() => onPick?.(s)}
+    >
+      <img
+        ref={el => { if (el && el.complete && el.naturalWidth > 0) setReady(true) }}
+        src={src}
+        width="24"
+        height="24"
+        alt=""
+        onLoad={() => setReady(true)}
+        onError={() => setReady(false)}
+      />
+    </button>
+  )
+}
+
+// The "Similar in this pack" block. Its heading, rule and padding stay
+// collapsed (the tiles still mount so their glyphs load) until at least one
+// tile is showing, so a slow or fully failed pack never leaves a label over
+// an empty row. The images load eagerly: a lazy image inside a collapsed block
+// would never count as near the viewport. Keyed by the icon at the call site,
+// so each icon starts with nothing ready.
+function SimilarSection({ list, srcFor, onPick }) {
+  const [readyIds, setReadyIds] = useState({})
+  const onReadyChange = useCallback((id, ready) => {
+    setReadyIds(prev => (!!prev[id] === ready ? prev : { ...prev, [id]: ready }))
+  }, [])
+  const anyReady = list.some(s => readyIds[s.id])
+  return (
+    <div className="icust-similar" data-ready={anyReady ? 'true' : undefined}>
+      <div className="icust-similar-label">Similar in this pack</div>
+      <div className="icust-similar-row">
+        {list.map(s => (
+          <SimilarTile key={s.id} s={s} src={srcFor(s)} onPick={onPick} onReadyChange={onReadyChange} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
@@ -1201,7 +1328,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const baseSvgText = localBase || fetchedBase || cachedCdnBase
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
-  useEffect(() => {
+  // A layout effect, so the art lands in the same frame the waiting glyph leaves.
+  useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
     host.innerHTML = rendersInline && baseSvgText ? baseSvgText : ''
@@ -1213,7 +1341,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // SAME viewBox user units the exported file uses — so it goes through the
   // same px→units conversion the serializer runs. Preview and download read
   // one function; they cannot drift.
-  useEffect(() => {
+  //
+  // A layout effect declared after the injection above: React runs them in order
+  // before paint, so the art never shows a frame with a stale stroke.
+  useLayoutEffect(() => {
     const stage = stageRef.current
     if (!stage) return
     const strokeAttr = strokeAttrForPx({
@@ -1250,10 +1381,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const onKey = (e) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
-      const f = panelRef.current?.querySelectorAll(
+      // Only what can take focus right now: a hidden Similar tile (visibility
+      // hidden, or inside a collapsed block) is not a Tab stop.
+      const f = Array.from(panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      )
-      if (!f || f.length === 0) return
+      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+      if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
@@ -1343,6 +1476,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // own page ground. A coloured pack always uses it; a chosen mono colour keeps
   // the contrast ground.
   const onThemeGround = isColoredPack || !color
+  // Until the stage has its own art, show the glyph the grid drew for this icon
+  // (same data: URI, so nothing new is fetched) in the stage's box. It is only
+  // used on the theme ground, where the grid's tint matches. With no grid glyph
+  // (or a chosen colour) the slot stays the same size and paints nothing.
+  const waitSrc = activeIcon?.cdn && !activeIcon.custom && onThemeGround ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
+  const stageWait = waitSrc
+    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={size} height={size} alt="" aria-hidden="true" />
+    : <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1554,7 +1695,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && !loadErr && <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />}
+                  {!baseSvgText && !loadErr && stageWait}
                   {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               ) : (
@@ -1569,9 +1710,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       onLoad={brandKey ? onStageImgLoad : undefined}
                       style={imageError ? { visibility: 'hidden' } : undefined}
                     />
-                  ) : (
-                    <span className={imageError ? 'icust-stage-img' : 'icust-stage-img icust-stage-wait'} style={{ width: size, height: size }} aria-hidden="true" />
-                  )}
+                  ) : imageError ? (
+                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
+                  ) : stageWait}
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
@@ -1748,29 +1889,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             )}
 
             {similarList.length > 0 && (
-              <div className="icust-similar">
-                <div className="icust-similar-label">Similar in this pack</div>
-                <div className="icust-similar-row">
-                  {similarList.map(s => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className="icust-similar-btn"
-                      title={s.name}
-                      aria-label={`Open ${s.name}`}
-                      onClick={() => onPick?.(s)}
-                    >
-                      <img
-                        src={buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                        width="24"
-                        height="24"
-                        alt=""
-                        loading="lazy"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SimilarSection
+                key={currentId}
+                list={similarList}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                onPick={onPick}
+              />
             )}
           </>
         )}
@@ -1906,21 +2030,21 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
    these are the only human names the product has for them. `iconPackTiers.js`
    deliberately holds no labels — it is about entitlement, not vocabulary.
 
-   Order and labels are byte-for-byte what the hand-written menu rendered.
-   `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
+   Order and pack labels are what the hand-written menu rendered. The interface
+   packs are ONE group, "Interface", stroke packs first and the fill-only ones
+   after. Headings carry no style word ("line", "filled", "coloured"): the
+   Weight and Coloured chips own those words, and a heading repeating one beside
+   a pack that cannot do it (Material under "filled" with Fill struck through,
+   Simple Icons under "coloured") contradicts the chip. `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
    here as individual packs; they reach the grid through the Coloured chip, and
    that is unchanged. */
 const PACK_MENU = [
   {
-    label: 'Interface (outlined)',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor']],
+    label: 'Interface',
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
   },
   {
-    label: 'Interface (solid)',
-    packs: [['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
-  },
-  {
-    label: 'Brand logos (coloured)',
+    label: 'Brand logos',
     packs: [['logodev', 'Real brand logos (Logo.dev)'], ['simple-icons', 'Simple Icons'], ['logos', 'Logos (colour)'], ['devicon', 'Devicon'], ['skill-icons', 'Skill Icons']],
   },
   {
@@ -3340,6 +3464,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   return (
     <div className="sec">
+      {/* Preview-only shape edges; these definitions never enter copied artwork. */}
+      <svg className="ig-edge-filters" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          {['light', 'dark'].map(tone => (
+            <filter key={tone} id={`ig-edge-${tone}`} x="-100%" y="-100%" width="300%" height="300%" colorInterpolationFilters="sRGB">
+              <feMorphology in="SourceAlpha" operator="dilate" radius="1" result="edge" />
+              <feFlood floodColor={tone === 'light' ? '#f4f4f5' : '#060607'} floodOpacity={tone === 'light' ? '.85' : '.75'} result="colour" />
+              <feComposite in="colour" in2="edge" operator="in" result="outline" />
+              <feMerge>
+                <feMergeNode in="outline" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          ))}
+        </defs>
+      </svg>
       {/* NO STANDALONE MASTHEAD. Both libraries used to carry one behind
           `{!embedded && ...}` — an eyebrow, an h1 and the subtitle — for a
           route that has not existed since the two were merged: the ONLY import

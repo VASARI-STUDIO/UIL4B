@@ -13,9 +13,8 @@ import {
   resolvePlanLadder,
   savingsVsMonthly,
 } from '../../config/planLadder.js'
-import { GALLERY_GRADIENTS } from '../../data/gradientGallery.js'
 import { ICON_PACK_TIERS } from '../../data/iconPackTiers.js'
-import { LIBRARY_PALETTES } from '../../data/paletteLibrary.js'
+import { LIBRARY_TOTALS } from '../../data/libraryTotals.js'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // EVERY NUMBER AND EVERY CAPABILITY CLAIM THE SPECTRUM PAGE MAKES, DERIVED.
@@ -120,8 +119,8 @@ export const route = toolRoute
 /* ── What is in the library, counted ──────────────────────────────────────── */
 
 export const LIBRARY_COUNTS = {
-  palettes: LIBRARY_PALETTES.length,
-  gradients: GALLERY_GRADIENTS.length,
+  palettes: LIBRARY_TOTALS.palettes,
+  gradients: LIBRARY_TOTALS.gradients,
 }
 
 /* ── Plans ────────────────────────────────────────────────────────────────────
@@ -272,10 +271,10 @@ export const ASSURANCES = [
 export const PROOF_STATS = [
   // live, non-beta tools in toolTree.js — the same count the bench states
   { value: TOOL_COUNT, label: 'tools, each free to open without an account' },
-  // LIBRARY_PALETTES, which /discover/palettes renders
-  { value: LIBRARY_PALETTES.length, label: 'palettes in the Discover library' },
-  // GALLERY_GRADIENTS, which /discover/gradients renders
-  { value: GALLERY_GRADIENTS.length, label: 'gradients in the Discover library' },
+  // the true size of the library /discover/palettes renders
+  { value: LIBRARY_TOTALS.palettes, label: 'palettes in the Discover library' },
+  // the true size of the library /discover/gradients renders
+  { value: LIBRARY_TOTALS.gradients, label: 'gradients in the Discover library' },
   // one row per pack in iconPackTiers.js, the Icon Library's own table
   { value: Object.keys(ICON_PACK_TIERS).length, label: 'icon sets to search in the Icon Library' },
 ]
