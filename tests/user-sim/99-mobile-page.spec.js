@@ -274,6 +274,10 @@ test.describe('the phone row', () => {
 test.describe('reduced motion', () => {
   test('nothing moves: no word entrance, no menu stagger, no exit wait', async ({ browser }) => {
     const { ctx, page } = await ctxAt(browser, 1440, { reducedMotion: 'reduce' })
+    // The exit wait is measured on the page clock, not on how fast a runner
+    // happens to be: a wall-clock window short enough to tell 0 from 260 ms
+    // also fails a slow machine that has done nothing wrong.
+    await page.clock.install()
     await go(page, '/mobile')
     // Mutation: drop prefersReducedMotion() from heroLit → .is-in lands.
     await expect(page.locator('.spm-hero')).not.toHaveClass(/is-in/)
@@ -282,8 +286,12 @@ test.describe('reduced motion', () => {
     const running = await page.evaluate(() => (document.getAnimations?.() || [])
       .filter((a) => a.playState === 'running' && a.effect?.target?.closest?.('.spnav-menu')).length)
     expect(running, 'the menu still animates under reduced motion').toBe(0)
+    // Stop the clock, then let 100 ms pass by hand: shorter than the 260 ms the
+    // menu waits to leave with motion on, so only "no wait" can be gone by now.
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500)
     await page.keyboard.press('Escape')
-    await expect(page.locator('.spnav-menu')).toHaveCount(0, { timeout: 150 })
+    await page.clock.runFor(100)
+    await expect(page.locator('.spnav-menu')).toHaveCount(0)
     await ctx.close()
   })
 })

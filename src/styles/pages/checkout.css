@@ -7,8 +7,9 @@
  * Every selector is scoped under `.checkout-page`, the root both pages
  * render, because Vite orders chunk CSS by the dependency graph: tool-shell.css
  * and global.css restate `.checkout-return*` and `.card` at equal specificity.
- * Nothing on these pages moves except the confirmation spinner, a loading
- * state, which global.css's reduced-motion clamp already freezes.
+ * Nothing on /checkout moves. On /checkout/return the confirmation spinner (a
+ * loading state, frozen by global.css's reduced-motion clamp) and the ledger's
+ * one reveal move; see the return-page block below.
  *
  * ── The shape ────────────────────────────────────────────────────────────────
  * The summary beside the form is the pattern every subscription checkout in
@@ -158,14 +159,76 @@
 .checkout-page .checkout-success-icon svg,
 .checkout-page .checkout-error-icon svg { width: 28px; height: 28px; }
 .checkout-page .checkout-spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--co-hair-2); border-top-color: var(--accent-mid); animation: checkout-spin .8s linear infinite; }
-/* A reference a customer may be asked for: mono, selectable in one gesture,
-   and allowed to wrap because a Stripe session id has no spaces. */
-/* One surface: the reference is a row set off by hairlines, not
-   a filled box inside the card. */
-.checkout-page .checkout-return-ref { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; width: 100%; max-width: 100%; margin-top: 10px; padding: 12px 0; border: 0; border-top: 1px solid var(--co-hair); border-bottom: 1px solid var(--co-hair); border-radius: 0; background: none; }
-.checkout-page .checkout-return-ref-label { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
-.checkout-page .checkout-return-ref-code { font-family: var(--mono); font-size: 12px; line-height: 1.45; color: var(--t0); word-break: break-all; user-select: all; }
 .checkout-page .checkout-return-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }
+
+/* ── The return page after a payment (CheckoutReturn.jsx) ─────────────────────
+   One centred column on the page ground, no card: the card was a small box in
+   a big void. Containment is kept only where it means something, the ledger's
+   hairline rows and the details list's hairline. Top-anchored, not vertically
+   centred, so changing state never moves the headline: the glyph slot is a
+   fixed 28px in every state. The ledger steps each Free value to its Pro value
+   as a link into the tool where it applies; the Pro value is the page's
+   largest coloured element. */
+.checkout-page .co-return { display: flex; flex-direction: column; width: min(100%, 600px); margin-inline: auto; padding: clamp(24px, 8vh, 88px) 0 0; }
+
+.checkout-page .co-head { display: flex; flex-direction: column; align-items: flex-start; animation: co-fade 150ms var(--ease-out) both; }
+.checkout-page .co-glyph { display: flex; align-items: center; justify-content: flex-start; width: 28px; height: 28px; margin-bottom: 16px; }
+.checkout-page .co-tick { color: var(--ok-strong); }
+.checkout-page .co-alert { color: var(--err-strong); }
+.checkout-page .co-spin { width: 20px; height: 20px; border-width: 2px; }
+.checkout-page .co-title { margin: 0; padding: 0; font-family: var(--display); font-size: clamp(30px, 3.6vw, 44px); font-weight: 600; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; color: var(--t0); }
+.checkout-page .co-title:focus, .checkout-page .co-title:focus-visible { outline: none; }
+.checkout-page .co-sub { display: flex; align-items: flex-start; gap: 8px; max-width: 52ch; margin: 12px 0 0; font-size: 15px; line-height: 1.6; text-wrap: pretty; color: var(--t1); }
+.checkout-page .co-spin-inline { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 4px; }
+
+/* The ledger */
+.checkout-page .co-ledger { margin: 32px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--co-hair); }
+.checkout-page .co-ledger li { border-bottom: 1px solid var(--co-hair); }
+.checkout-page .co-ledger-h { margin: 32px 0 0; font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--t2); }
+.checkout-page .co-ledger-h + .co-ledger { margin-top: 8px; }
+.checkout-page .co-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; column-gap: 16px; align-items: center; min-height: 64px; padding: 14px 0; color: inherit; text-decoration: none; }
+.checkout-page .co-row:hover { text-decoration: none; }
+.checkout-page a.co-row { transition: background-color var(--dur-1) ease, color var(--dur-1) ease; }
+.checkout-page a.co-row:focus-visible { outline-offset: -2px; }
+.checkout-page .co-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.checkout-page .co-row-label { font-size: 15px; font-weight: 560; line-height: 1.4; color: var(--t0); }
+.checkout-page .co-row-note { font-size: 13px; line-height: 1.5; text-wrap: pretty; color: var(--t1); }
+.checkout-page .co-change { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.checkout-page .co-from { font-size: 14px; color: var(--t2); }
+.checkout-page .co-arrow { align-self: center; flex: 0 0 auto; color: var(--t2); }
+.checkout-page .co-to { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; color: var(--accent-text); }
+.checkout-page .co-unit { font-size: 13px; color: var(--t1); }
+.checkout-page .co-row-end { display: flex; align-items: center; justify-content: flex-end; }
+.checkout-page .co-chev { color: var(--t2); transition: color var(--dur-1) ease; }
+@media (hover: hover) {
+  .checkout-page a.co-row:hover { background: var(--co-wash); }
+  .checkout-page a.co-row:hover .co-chev { color: var(--t0); }
+}
+
+/* Actions, then the details */
+.checkout-page .co-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.checkout-page .co-actions:empty { display: none; }
+.checkout-page .co-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 16px 0 0; font-size: 13.5px; line-height: 1.5; }
+.checkout-page .co-links a { display: inline-flex; align-items: center; min-height: 32px; color: var(--accent-text); }
+.checkout-page .co-details { margin: 32px 0 0; padding: 12px 0 0; border-top: 1px solid var(--co-hair); }
+.checkout-page .co-detail { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 16px; align-items: center; min-height: 36px; font-size: 13px; line-height: 1.5; }
+.checkout-page .co-detail dt { color: var(--t2); }
+.checkout-page .co-detail dd { margin: 0; min-width: 0; color: var(--t1); }
+.checkout-page .co-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.checkout-page .co-ref { display: flex; align-items: center; gap: 12px; }
+.checkout-page .co-ref-code { font-family: var(--mono); font-size: 12.5px; color: var(--t1); }
+
+/* Motion: one staged reveal of the ledger (300ms, rows 100ms apart, rising
+   12px), and a 150ms crossfade as the state changes. The rise runs only when
+   the app has resolved motion on (html[data-reduced-motion="false"] already
+   folds in the OS setting); otherwise rows just fade, with no movement. */
+@keyframes co-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes co-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.checkout-page .co-ledger.is-live li { animation: co-fade 150ms var(--ease-out) both; }
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li { animation: co-rise 300ms var(--ease-out) both; }
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(2) { animation-delay: 100ms; }
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(3) { animation-delay: 200ms; }
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(4) { animation-delay: 300ms; }
 
 .checkout-page :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
@@ -186,6 +249,21 @@
   .checkout-page .checkout-signin--inline { display: flex; align-items: stretch; gap: 6px; margin-top: 18px; padding: 18px 0 0; border-top: 1px solid var(--co-hair); text-align: left; }
   .checkout-page .checkout-signin--inline .checkout-signin-btn { min-height: 44px; }
   .checkout-page .checkout-signin--inline + .checkout-features { margin-top: 18px; }
+}
+@media (max-width: 520px) {
+  .checkout-page .co-return { padding: 8px 8px 0; }
+  .checkout-page .co-actions { flex-direction: column; }
+  .checkout-page .co-actions .btn, .checkout-page .co-actions .btn-accent { width: 100%; min-height: 48px; justify-content: center; }
+  .checkout-page .co-detail { grid-template-columns: 96px minmax(0, 1fr); }
+  /* Exports only: the wide change drops under its note instead of starving it. */
+  .checkout-page .co-row--stack { grid-template-columns: minmax(0, 1fr) 16px; row-gap: 6px; }
+  .checkout-page .co-row--stack .co-change { grid-column: 1; grid-row: 2; justify-self: start; }
+  .checkout-page .co-row--stack .co-row-end { grid-column: 2; grid-row: 1 / span 2; }
+  .checkout-page .co-note-more { display: none; }
+}
+@media (pointer: coarse) {
+  .checkout-page .co-ref .btn-s { min-height: 44px; }
+  .checkout-page .co-links a { min-height: 44px; }
 }
 @media (max-width: 420px) {
   .checkout-page .card { padding: 18px; }
