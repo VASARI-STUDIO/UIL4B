@@ -1285,7 +1285,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // SAME viewBox user units the exported file uses — so it goes through the
   // same px→units conversion the serializer runs. Preview and download read
   // one function; they cannot drift.
-  useEffect(() => {
+  //
+  // A layout effect declared after the injection above: React runs them in order
+  // before paint, so the art never shows a frame with a stale stroke.
+  useLayoutEffect(() => {
     const stage = stageRef.current
     if (!stage) return
     const strokeAttr = strokeAttrForPx({
@@ -1987,7 +1990,7 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
    deliberately holds no labels — it is about entitlement, not vocabulary.
 
    Order and pack labels are what the hand-written menu rendered; the first two
-   group headings now say line and filled, to match the style chips.
+   group headings now say line and filled, avoiding the old outlined/solid wording.
    `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
    here as individual packs; they reach the grid through the Coloured chip, and
    that is unchanged. */

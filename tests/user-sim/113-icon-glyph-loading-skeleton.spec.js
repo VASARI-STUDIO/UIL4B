@@ -4,7 +4,6 @@ import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, answerIconify, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer opening the icon library on a slow connection'
-const MAX_SKELETON_ALPHA = 0.2
 
 async function choosePack(page, pack) {
   const filters = page.getByRole('button', { name: /^Filters\b/ })
