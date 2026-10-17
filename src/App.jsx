@@ -25,7 +25,7 @@ import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
 import { chromelessRoutes } from './data/toolTree'
-import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
+import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
@@ -108,6 +108,14 @@ const SurfaceIndex = lazy(() => import('./pages/SurfaceIndex'))
 // return and the app-wide feedback mount at the bottom of the file cannot drift
 // apart when a tool is added. tests/unit/feedback-reach.test.js fails if they do.
 const CHROMELESS_PATHS = new Set(chromelessRoutes())
+
+// The client-side answer for a retired path: the same <Navigate>, with the
+// visitor's own query string carried to the destination (see
+// mergeRedirectQuery), as the edge redirect does.
+function LegacyRedirect({ to }) {
+  const location = useLocation()
+  return <Navigate to={mergeRedirectQuery(to, location.search)} replace />
+}
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -534,7 +542,7 @@ function AppInner() {
                   suite can observe, and it is what catches an in-app <Link> that
                   still names a retired path. */}
               {CLIENT_REDIRECT_ROUTES.map(([from, to]) => (
-                <Route key={from} path={from} element={<Navigate to={to} replace />} />
+                <Route key={from} path={from} element={<LegacyRedirect to={to} />} />
               ))}
 
               {/* Curated gradient gallery — copy CSS or hand a gradient to the

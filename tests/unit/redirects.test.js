@@ -41,8 +41,9 @@ const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const vercel = () => JSON.parse(read('vercel.json'))
 const built = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'))
 
-// Fragment-stripped destination — `/learn/help#about` routes to the page `/learn/help`.
-const destPath = (d) => d.split('#')[0]
+// Fragment- and query-stripped destination — `/learn/help#about` routes to the
+// page `/learn/help`, and `/feedback?from=support` to `/feedback`.
+const destPath = (d) => d.split('#')[0].split('?')[0]
 
 // The Create routes as they stood the day before the migration. Frozen on
 // purpose: this is history, not configuration, and the whole point of the test
@@ -163,8 +164,8 @@ test('the edge and the client answer the same question the same way', () => {
   const app = read('src/App.jsx')
   assert.match(app, /CLIENT_REDIRECT_ROUTES\.map\(/,
     'App.jsx no longer renders the client-side redirect fallback')
-  assert.match(app, /<Route[^>]*path=\{from\}[^>]*element=\{<Navigate to=\{to\}/,
-    'the mapped redirect routes no longer render a <Navigate>')
+  assert.match(app, /<Route[^>]*path=\{from\}[^>]*element=\{<(?:Navigate|LegacyRedirect) to=\{to\}/,
+    'the mapped redirect routes no longer render a <Navigate> (via LegacyRedirect)')
   for (const early of EARLY_RETURN_REDIRECTS) {
     assert.ok(app.includes(`'${early}'`),
       `${early} is listed as an early-return redirect but App.jsx does not mention it`)

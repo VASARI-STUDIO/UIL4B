@@ -137,8 +137,10 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/help', '/learn/help'],
   // Not a retired page: /support never existed. It is a support link set outside
   // the repo (failed-payment emails), so it needs to land on the contact page.
-  // Vercel keeps the query string on a redirect, so a ?-tagged link survives.
-  ['/support', '/feedback'],
+  // `from=support` tells the form the visitor came for help; any query on the
+  // incoming link (reason, ref) is merged in, at the edge and by
+  // `mergeRedirectQuery` in the client router.
+  ['/support', '/feedback?from=support'],
   ['/resources', '/discover'],
   ['/discover/resources', '/discover'],
   ['/prompts', '/discover/prompts'],
@@ -220,3 +222,23 @@ export const EARLY_RETURN_REDIRECTS = Object.freeze(['/welcome', '/color/ui'])
 export const CLIENT_REDIRECT_ROUTES = Object.freeze(
   LEGACY_REDIRECTS.filter(([from]) => !EARLY_RETURN_REDIRECTS.includes(from)),
 )
+
+/**
+ * The client router's version of what the edge does for a redirect with a
+ * query: the destination's own parameters plus whatever the visitor arrived
+ * with. A parameter the destination names keeps the destination's value; a
+ * `#fragment` on the destination is kept.
+ */
+export function mergeRedirectQuery(destination, incomingSearch = '') {
+  const hashAt = destination.indexOf('#')
+  const hash = hashAt === -1 ? '' : destination.slice(hashAt)
+  const noHash = hashAt === -1 ? destination : destination.slice(0, hashAt)
+  const queryAt = noHash.indexOf('?')
+  const pathname = queryAt === -1 ? noHash : noHash.slice(0, queryAt)
+  const merged = new URLSearchParams(queryAt === -1 ? '' : noHash.slice(queryAt + 1))
+  for (const [key, value] of new URLSearchParams(incomingSearch)) {
+    if (!merged.has(key)) merged.append(key, value)
+  }
+  const query = merged.toString()
+  return `${pathname}${query ? `?${query}` : ''}${hash}`
+}
