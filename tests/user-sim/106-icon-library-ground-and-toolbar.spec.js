@@ -6,7 +6,8 @@
 //    Coloured icons (flags, brand and colour packs) always sit on that same page
 //    ground, and the grid draws them with no white box behind: the chip around
 //    a coloured glyph is a transparent slot in both themes. Ink that matches the
-//    page ground (near-black on dark, near-white on light) gets a hairline halo.
+//    page ground (near-black on dark, near-white on light) gets a hairline halo;
+//    a baked-in square logo plate gets a 1px outline on its own edge instead.
 // 2. The toolbar above the grid stays on one row at every width, each control
 //    is whole (a visible control is never narrower than its glyph and padding
 //    say), and on a coarse pointer every control is at least 44px both ways.
@@ -117,6 +118,131 @@ const chipPaint = (page) => page.evaluate((sel) => [...document.querySelectorAll
 }), LOADED_CHIP)
 
 test.describe('coloured icons sit on the page, not in a white box', () => {
+  for (const scheme of ['light', 'dark']) {
+    test(`Logo.dev keeps a transparent slot and unclipped raster corners, ${scheme}`, async ({ browser }) => {
+      const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
+      const page = await ctx.newPage()
+      watch(page, `someone browsing real brand logos in ${scheme} mode`)
+      await signIn(page, { plan: 'pro' })
+      await page.route('https://img.logo.dev/**', route => route.fulfill({
+        contentType: 'image/svg+xml',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="#0078d4" d="M4 4h20v20H4z"/></svg>',
+      }))
+      await go(page, '/create/icons')
+      await choosePack(page, 'logodev')
+      const logo = page.locator('.ig .ic img.ig-logo').first()
+      await expect(logo).toBeVisible({ timeout: 20000 })
+      await expect.poll(() => logo.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+      await expect(logo.locator('..')).not.toHaveClass(/ig-chip--tile/)
+      await expect(logo).toHaveAttribute('crossorigin', 'anonymous')
+      expect(new URL(await logo.getAttribute('src')).searchParams.get('theme')).toBe(scheme)
+      await expect(logo).not.toHaveClass(/ig-logo--square/)
+      const paint = await logo.evaluate(img => {
+        const slot = getComputedStyle(img.parentElement)
+        const art = getComputedStyle(img)
+        return { bg: slot.backgroundColor, image: slot.backgroundImage, shadow: slot.boxShadow, radius: art.borderRadius, filter: art.filter }
+      })
+      expect(paint).toEqual({ bg: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none', radius: '0px', filter: 'none' })
+      await ctx.close()
+    })
+  }
+
+  for (const { scheme, square, fill, halo } of [
+    { scheme: 'dark', square: false, fill: '#080808', halo: 'light' },
+    { scheme: 'light', square: false, fill: '#ffffff', halo: 'dark' },
+    { scheme: 'dark', square: true, fill: '#080808', halo: null },
+    { scheme: 'light', square: true, fill: '#ffffff', halo: null },
+  ]) {
+    test(`Logo.dev samples ${square ? 'opaque squares' : 'transparent marks'} on ${scheme} ground`, async ({ browser }) => {
+      const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
+      try {
+        const page = await ctx.newPage()
+        await signIn(page, { plan: 'pro' })
+        await page.route('https://img.logo.dev/**', route => route.fulfill({
+          contentType: 'image/svg+xml',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="${fill}" d="${square ? 'M0 0h28v28H0z' : 'M4 4h20v20H4z'}"/></svg>`,
+        }))
+        await go(page, '/create/icons')
+        await choosePack(page, 'logodev')
+        const chip = page.locator('.ig .ic .ig-chip:has(img.ig-logo)').first()
+        const logo = chip.locator('img')
+        if (square) await expect(logo).toHaveClass(/ig-logo--square/)
+        else await expect(chip).toHaveClass(new RegExp(`ig-chip--halo-${halo}`))
+        await expect(chip).not.toHaveClass(/ig-chip--tile/)
+        await expect(logo).toHaveCSS('border-radius', square ? '6px' : '0px')
+        if (square) {
+          // A baked plate gets one even hairline on its own edge, not the preview ring.
+          await expect(chip).not.toHaveClass(/halo/)
+          await expect(logo).toHaveCSS('filter', 'none')
+          await expect(logo).toHaveCSS('outline-style', 'solid')
+          await expect(logo).toHaveCSS('outline-width', '1px')
+          await expect(logo).toHaveCSS('outline-offset', '-1px')
+          await expect(logo).toHaveCSS('outline-color', scheme === 'dark' ? /oklch\(1 0 0 \/ 0\.1\)|rgba\(255, 255, 255, 0\.1\)/ : /oklch\(0 0 0 \/ 0\.1\)|rgba\(0, 0, 0, 0\.1\)/)
+        } else {
+          await expect(logo).toHaveCSS('filter', new RegExp(`#ig-edge-${halo}`))
+          await expect(logo).toHaveCSS('outline-style', 'none')
+        }
+        await expect(chip).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+        await expect(chip).toHaveCSS('background-image', 'none')
+        await expect(chip).toHaveCSS('box-shadow', 'none')
+        await expect(chip).toHaveCSS('filter', 'none')
+        expect(new URL(await logo.getAttribute('src')).searchParams.get('theme')).toBe(scheme)
+      } finally { await ctx.close() }
+    })
+  }
+
+  // Dark theme: a theme variant that is a light plate falls back to the default
+  // variant when that one is a darker plate. Transparent marks keep following the theme.
+  test('Logo.dev swaps a light dark-theme plate for a darker default plate', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+    try {
+      const page = await ctx.newPage()
+      await signIn(page, { plan: 'pro' })
+      await page.route('https://img.logo.dev/**', route => {
+        const themed = new URL(route.request().url()).searchParams.has('theme')
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="${themed ? '#ffffff' : '#080808'}" d="M0 0h28v28H0z"/></svg>`,
+        })
+      })
+      await go(page, '/create/icons')
+      await choosePack(page, 'logodev')
+      const logo = page.locator('.ig .ic .ig-chip img.ig-logo').first()
+      await expect(logo).toHaveClass(/ig-logo--square/)
+      await expect.poll(async () => new URL(await logo.getAttribute('src')).searchParams.has('theme'), 'still showing the light plate').toBe(false)
+    } finally { await ctx.close() }
+  })
+
+  // A response the browser refuses for CORS must still show the art, plain.
+  // A fulfilled response is never CORS-checked in Chromium, so the first load of
+  // each URL (the crossorigin one) is aborted and the plain retry is fulfilled.
+  test('Logo.dev art still shows when the response is not CORS-readable', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1440, height: 900 } })
+    try {
+      const page = await ctx.newPage()
+      await signIn(page, { plan: 'pro' })
+      const seen = new Set()
+      await page.route('https://img.logo.dev/**', route => {
+        const url = route.request().url()
+        if (!seen.has(url)) { seen.add(url); return route.abort('failed') }
+        return route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><path fill="#0078d4" d="M0 0h28v28H0z"/></svg>',
+        })
+      })
+      await go(page, '/create/icons')
+      await choosePack(page, 'logodev')
+      const logo = page.locator('.ig .ic img.ig-logo').first()
+      await expect(logo).not.toHaveAttribute('crossorigin', /.*/)
+      await expect.poll(() => logo.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+      await expect(logo).not.toHaveClass(/ig-logo--square/)
+      await expect(logo).toHaveCSS('filter', 'none')
+    } finally { await ctx.close() }
+  })
+
   for (const [scheme, width] of [['light', 1440], ['dark', 1440], ['light', 390], ['dark', 390]]) {
     test(`flag grid chip is transparent and the stage is the page ground, ${scheme} ${width}`, async ({ browser }) => {
       const { ctx, page } = await openFlagGrid(browser, scheme, width)
@@ -157,6 +283,7 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     const root = out.match(/<svg[^>]*>/)?.[0] || ''
     expect(root, 'no svg root in the copied markup').not.toBe('')
     expect(out, 'a background rect was added').not.toMatch(/<rect[^>]*(width|height)="100%"/)
+    expect(out, 'preview edge definitions or references leaked into the export').not.toMatch(/ig-edge-/)
     expect(root, 'a colour was forced onto the root').not.toMatch(/\s(color|fill)=/)
     await ctx.close()
   })
@@ -266,6 +393,9 @@ const INK = {
   'github-icon': '<path fill="#181717" d="M3 3h18v18H3z"/>',
   'vercel-icon': '<path fill="#000" d="M12 3l10 18H2z"/>',
   apple: '<path fill="#fff" d="M3 3h18v18H3z"/>',
+  // Colour raises the average; neutral lettering still needs an edge.
+  svelte: '<path fill="#ff3e00" d="M1 3h7v18H1z"/><path fill="#353535" d="M10 6h13v12H10z"/>',
+  firebase: '<path fill="#ffca28" d="M1 3h7v18H1z"/><path fill="#5a5a5a" d="M10 6h13v12H10z"/>',
 }
 const FLAG_INK = {
   jp: '<path fill="#fefefe" d="M3 3h18v18H3z"/>',
@@ -314,11 +444,22 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       const c = document.querySelector('.ig .ic[aria-label="Customise github-icon"] .ig-chip')
       return { filter: getComputedStyle(c.querySelector('img')).filter, bg: getComputedStyle(c).backgroundImage }
     })
-    expect(m.filter, 'the near-black mark has no halo').toContain('drop-shadow')
+    expect(m.filter, 'the near-black mark has no shape edge').toContain('#ig-edge-light')
     expect(m.bg, 'the halo mark got a box').toBe('none')
     // The customiser stage carries the same halo for the same mark.
     await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
     await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--halo-light/, { timeout: 20000 })
+    await ctx.close()
+  })
+
+  test('dark lettering in mixed-colour wordmarks gets an edge in grid and stage', async ({ browser }) => {
+    const { ctx, page } = await openLogos(browser, 'dark')
+    for (const name of ['svelte', 'firebase']) {
+      await expect(chipOf(page, name)).toHaveClass(/ig-chip--halo-light/)
+    }
+    await expect(chipOf(page, 'gitlab'), 'saturated-only artwork gained an edge').not.toHaveClass(/halo/)
+    await page.locator('.ig .ic[aria-label="Customise firebase"]').click()
+    await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--halo-light/)
     await ctx.close()
   })
 

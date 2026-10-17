@@ -451,10 +451,11 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    rather than a blank square. */
 .ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:none;box-shadow:none}
 /* Ink that matches the page ground (near-black on dark, near-white on light) would
-   vanish with no box behind it. A hairline halo outlines the shape; the artwork's
-   own colours are untouched. */
-.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(255,255,255,.6))}
-.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
+   vanish with no box behind it. Dilate alpha by one CSS pixel, without blur,
+   then paint the original artwork over the edge. This stays crisp at 1x. */
+.ig-edge-filters{position:absolute;width:0;height:0;pointer-events:none}
+.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-light)}
+.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-dark)}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
 .ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
 /* Copy, save and download wait for the icon's markup. */
@@ -512,7 +513,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    element that is 104px tall in a 36px slot shows its empty top margin instead
    of the lockup. Measured as blank tiles on eleven devicon -wordmark entries
    before this line existed. */
-.ig-chip--wide img{position:absolute;left:50%;top:50%;width:min(100%,calc(36px * var(--ig-wide-cap,1)));height:auto;max-height:none;transform:translate(-50%,-50%)}
+.ig-chip--wide img{position:absolute;left:50%;top:50%;width:min(calc(100% - 2px),calc(36px * var(--ig-wide-cap,1)));height:auto;max-height:none;transform:translate(-50%,-50%)}
 .ig-chip img.ig-logo{width:28px;height:28px}
 .ig-attrib{padding:6px 0 20px;text-align:center;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
 .ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
@@ -1131,7 +1132,10 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .ig .ic-name{min-height:25px}
 .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:calc(113px + var(--fs-micro))}
 @media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:104px}}
-.lib-surface .ic:hover{background:var(--hvr);border-color:transparent}
+/* Hover only where a pointer can hover, so a tap does not leave the cell tinted;
+   touch gets the same tint for the length of the press. */
+@media (hover:hover){.lib-surface .ic:hover{background:var(--hvr);border-color:transparent}}
+.lib-surface .ic:active{background:var(--hvr);border-color:transparent}
 .lib-surface .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
 .lib-surface .ic:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .lib-surface .ic>span:not(.ic-pack){font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}

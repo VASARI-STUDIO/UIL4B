@@ -634,7 +634,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    below ~336px `calc(100%/3)` still takes over and holds three columns. */
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(112px,calc(100%/3)),1fr));gap:4px}
 .ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
-.ic:hover{background:var(--bg-2);border-color:var(--border)}
+@media (hover:hover){.ic:hover{background:var(--bg-2);border-color:var(--border)}}
 .ic:active{transform:scale(.95)}
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
@@ -1760,35 +1760,50 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .bkit-card-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:700}
 .bkit-card-steps li.is-current .bkit-card-num{background:var(--accent-fill);color:var(--accent-fg)}
 .bkit-card-go{width:100%;justify-content:center}
-.bkit-step{display:flex;align-items:center;gap:8px;min-width:0;height:100%;padding:6px 9px;border-radius:var(--radius-s);border:1px solid transparent;color:var(--t2);text-decoration:none;transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
-.bkit-step:hover{background:var(--hvr);color:var(--t0)}
-.bkit-step.is-current{border-color:var(--border);background:var(--bg-2);color:var(--t0)}
+.bkit-step{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;height:44px;padding:2px 0;border:0;border-radius:var(--btn-radius);color:var(--t2);text-align:center;text-decoration:none;transition:background-color 150ms ease,color 150ms ease}
+/* A built step reads one step brighter than one not reached yet. */
+.bkit-step.is-done{color:var(--t1)}
+.bkit-step.is-current{color:var(--t0)}
+@media(hover:hover){
+  .bkit-step:hover{background:var(--hvr);color:var(--t0)}
+}
+.bkit-step:focus-visible{outline:2px solid var(--bkit-focus,var(--accent));outline-offset:-2px}
 .bkit-step-mark{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:10.5px;font-weight:700}
 .bkit-step.is-current .bkit-step-mark{background:var(--accent-fill);color:var(--accent-fg)}
 /* Done beats current: a step you have built keeps its tick while you stand on
    it, because the tick is a statement about the SYSTEM, not about the cursor. */
 .bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-text)}
 .bkit-rail-next{flex-shrink:0}
-/* From 1024px the steps are links in a flush bar, not pills. The mark answers
-   one question (built or not: a tick on an accent wash, or an outlined
-   numeral), and the label plus a 2px accent line on the bar's top edge answer
-   the other (where you are). The line sits 10px above the link: the bar's 9px
-   padding plus its 1px top rule, so it covers the rule exactly. The --bkit-*
+/* A tap pad: the chip draws pill-shaped, and a pill is not hit-tested in its
+   corners, so the pad is a plain box at least 44px tall, over the whole chip. It
+   stays inside the 4px gap between chips and rows. */
+.bkit-step::after{content:"";position:absolute;inset:-4px 0}
+/* Where you are: a 2px accent line, under the step on a phone and on the bar's
+   top edge from 768px. */
+.bkit-step.is-current::before{content:"";position:absolute;inset-inline:12px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--accent-fill)}
+/* From 768px the steps are links in a flush bar, not stacked cells. The mark
+   answers one question (built or not: a tick on an accent wash, or an
+   outlined numeral), and the label plus the 2px accent line on the bar's top
+   edge answer the other (where you are). The line sits 9px above the link on
+   the tablet bar (8px padding plus its 1px top rule) and 10px above it from
+   1024px (9px padding), so it covers the rule exactly. The --bkit-*
    aliases are declared on .bkit-rail in tool-shell.css. */
-@media(min-width:1024px){
-  .bkit-step{position:relative;display:inline-flex;height:36px;padding:0 10px;border:0;border-radius:var(--btn-radius);color:var(--bkit-dim);transition:background-color 150ms ease,color 150ms ease}
+@media(min-width:768px){
+  .bkit-step{flex-direction:row;justify-content:flex-start;gap:8px;padding:0 10px;text-align:start;color:var(--bkit-dim)}
+  .bkit-step.is-done{color:var(--t1)}
   .bkit-step.is-current{background:transparent;color:var(--t0)}
-  .bkit-step.is-current::before{content:"";position:absolute;inset-inline:10px;top:-10px;height:2px;border-radius:0 0 2px 2px;background:var(--accent-fill)}
+  .bkit-step.is-current::before{inset-inline:10px;bottom:auto;top:-9px;border-radius:0 0 2px 2px}
   .bkit-step-mark{box-sizing:border-box;background:transparent;border:1.5px solid var(--bkit-mark-line);color:var(--t2);font-family:var(--font);font-size:.75rem;font-weight:560;line-height:1;font-variant-numeric:tabular-nums}
   .bkit-step.is-current .bkit-step-mark{background:transparent;color:var(--t2)}
   .bkit-step.is-done .bkit-step-mark{background:var(--accent-bg);border-color:transparent;color:var(--accent-text)}
   .bkit-step-mark svg{stroke-width:2.5}
-  .bkit-step:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
+  .bkit-step:focus-visible{outline-offset:2px}
 }
-@media(min-width:1024px) and (hover:hover) and (pointer:fine){
-  .bkit-step.is-current:hover{background:var(--hvr)}
+@media(min-width:1024px){
+  .bkit-step{height:36px}
+  .bkit-step.is-current::before{top:-10px}
 }
-@media(min-width:1024px) and (forced-colors:active){
+@media(forced-colors:active){
   .bkit-step.is-current::before{background:Highlight}
   .bkit-step-mark{border-color:CanvasText}
 }
@@ -3178,9 +3193,12 @@ html.lenis{scroll-behavior:auto!important}
    properties. It is reachable by anyone who has copied an icon — the rail is
    the "recently used" strip — so it is converted rather than only recorded. */
 .ig-rail-track{display:flex;gap:8px;padding-bottom:4px}
-/* Logo.dev brand marks are raster and already coloured — size a touch larger
-   than glyph icons, keep their own colours (no invert), and round the corners. */
-.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
+/* Transparent marks keep their edges; baked-in square plates get app-icon corners
+   and one even hairline on the plate's own edge (an outline paints over the image
+   and follows the radius, so no side can come out heavier than another). */
+.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:0}
+.ic img.ig-logo--square{border-radius:6px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px}
+[data-theme="dark"] .ic img.ig-logo--square{outline-color:oklch(1 0 0 / .1)}
 /* THE PACK LABEL IS NOW RENDERED ONLY WHEN THE RESULT SET IS MIXED, and the
    decision moved into IconLibrary.jsx because it depends on the results, not
    on the width. Read the note there for the Mobbin evidence.
@@ -4848,6 +4866,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .lockt-cta-head{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--t0)}
 .lockt-cta-body{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .lockt-cta-btn{white-space:nowrap;flex:0 0 auto}
+/* A Pro viewer's library is on its way (or failed): the same footprint as the
+   upsell it replaces, with the accent fill taken out so it reads as a status. */
+.lockt-cta.lockt-status{background:none;border-color:var(--border)}
+.lockt-status .lockt-cta-btn{width:auto}
 @media(max-width:640px){
   .lockt-cta{gap:12px;padding:16px}
   .lockt-cta-btn{width:100%}

@@ -26,8 +26,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { splitLockedLibrary, LOCKED_TEASE } from '../../src/utils/lockedPreview.js'
-import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { FREE_PROMPT_LIMIT } from '../../src/data/promptCategories.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
@@ -152,7 +152,16 @@ test('every gated surface splits BEFORE it renders, not on the control', () => {
     assert.ok(split > -1, `${file} must route its library through splitLockedLibrary`)
     // The gate is satisfied by an exact identity check, not by a truthy test —
     // `!isPro` would open for any truthy non-boolean the context ever returns.
-    assert.ok(/unlocked:\s*isPro === true/.test(src), `${file} must gate on an exact isPro === true`)
+    // The page now opens the library only once the server's full set has arrived,
+    // so every `unlocked:` is a literal false or a name bound to an exact
+    // `status === 'ready'` comparison (never a truthy subscription flag).
+    const gates = [...src.matchAll(/unlocked:\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1])
+    assert.ok(gates.length > 0, `${file} must pass an unlocked: gate to splitLockedLibrary`)
+    for (const name of gates) {
+      if (name === 'false') continue
+      assert.ok(new RegExp(`const ${name} = [\\w.]+\\.status === 'ready'`).test(src),
+        `${file} must gate on an exact status === 'ready', but unlocked: ${name} is not bound to one`)
+    }
   }
 })
 
@@ -337,8 +346,10 @@ test('the prompt library gates on identity and never on a position', () => {
   assert.ok(!/idx\s*>=/.test(src), 'the grid still compares a render index against the tier size')
   assert.ok(!src.includes('FREE_PROMPT_LIMIT'),
     'the page still imports the free-tier COUNT — the gate must read the per-row flag instead')
-  assert.ok(/isOpen:\s*\(p\)\s*=>\s*p\.free === true/.test(src),
-    'the gate must be an exact per-prompt identity check')
+  assert.ok(/isOpen:\s*LIBRARY_RULES\.prompts\.isOpen/.test(src),
+    'the page must gate on the shared prompt rule')
+  assert.ok(/prompts:[\s\S]*?isOpen:\s*\(prompt\)\s*=>\s*prompt\.free === true/.test(stripComments(read('src/utils/libraryRules.js'))),
+    'the shared prompt rule must be an exact per-prompt identity check')
   // Search and grid must both read the split output. Filtering the full list
   // is the leak: the predicate reads p.text, so it answers "does a Pro prompt
   // contain this phrase" for anyone who types one.

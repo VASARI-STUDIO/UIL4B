@@ -6,7 +6,7 @@
 // ────────────────────────────────────────────────────────────────────────
 // The founder asked for “suggested icons, palettes or gradients”. The homepage
 // already solved the hard half of that in `homepage-community-points-outward`:
-// gradients come out of GALLERY_GRADIENTS, palettes out of LIBRARY_PALETTES, and
+// gradients come out of LIBRARY_GRADIENT_ROWS, palettes out of LIBRARY_PALETTE_ROWS, and
 // the link is built by gradientToolUrl() / paletteBuilderUrl() — the SAME
 // hand-offs the Discover galleries use, so the tool opens with the values loaded
 // and there is no second encoding of a tool URL anywhere in the codebase.
@@ -32,9 +32,11 @@
 // here, the honest way is a small pre-picked local set with its own provenance,
 // which is a separate piece of work.
 
-import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from './gradientGallery.js'
-import { LIBRARY_PALETTES } from './paletteLibrary.js'
+import { gradientCss, gradientToolUrl } from './gradientGallery.js'
+import { LIBRARY_GRADIENT_ROWS } from './gradientLibrary.js'
+import { LIBRARY_PALETTE_ROWS } from './paletteLibrary.js'
 import { paletteBuilderUrl } from './paletteGallery.js'
+import { isStub } from '../utils/libraryRules.js'
 import { pickForDay, paletteBands } from '../utils/userHome.js'
 import { dayNumber } from './dailyTips.js'
 
@@ -47,11 +49,18 @@ import { dayNumber } from './dailyTips.js'
  * “suggested for you” row can do. The Palette Library is where locked brands are
  * legitimately teased, with the lock visible before the click.
  */
-export const SUGGESTABLE_PALETTES = LIBRARY_PALETTES.filter((p) => !p.pro)
+export const SUGGESTABLE_PALETTES = LIBRARY_PALETTE_ROWS.filter((p) => !p.pro && !isStub(p))
 
-/** Real catalogue sizes, counted off the arrays — never typed. */
+/**
+ * The gradients this surface may suggest: the rows the browser holds in full.
+ * The rest of the set reaches a Pro account from the server, and a suggestion
+ * has to open the Generator with its values already in.
+ */
+export const SUGGESTABLE_GRADIENTS = LIBRARY_GRADIENT_ROWS.filter((g) => !isStub(g))
+
+/** Sizes of the two pools, counted off the arrays — never typed. */
 export const STARTER_TOTALS = Object.freeze({
-  gradients: GALLERY_GRADIENTS.length,
+  gradients: SUGGESTABLE_GRADIENTS.length,
   palettes: SUGGESTABLE_PALETTES.length,
 })
 
@@ -98,7 +107,7 @@ function paletteCard(p) {
  */
 export function startersForDay(date) {
   const day = dayNumber(date)
-  const gradients = pickForDay(GALLERY_GRADIENTS, day, 2).map(gradientCard)
+  const gradients = pickForDay(SUGGESTABLE_GRADIENTS, day, 2).map(gradientCard)
   const palettes = pickForDay(SUGGESTABLE_PALETTES, day, 2, 11).map(paletteCard)
   const out = []
   for (let i = 0; i < 2; i += 1) {

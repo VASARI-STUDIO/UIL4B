@@ -7,8 +7,9 @@ import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
 import LearnGuideIndex from '../components/LearnGuideIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
-import { LIBRARY_PALETTES } from '../data/paletteLibrary'
-import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
+import { LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
+import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
+import { gradientCss } from '../data/gradientGallery'
 // The count and three titles only — NOT the prompt data. This page is one of
 // the five App.jsx loads eagerly, so importing COMMUNITY_PROMPTS here put all
 // 27.7 KB of it in the main entry chunk, on every route, to render one card.
@@ -48,22 +49,13 @@ import '../styles/pages/surface.css'
 // this is presentation. The array in toolTree.js stays exactly as it is, which
 // also keeps this clear of [handkept-tool-lists-remaining].
 const PREVIEWS = {
-  // COUNTED OFF THE LIBRARY, NOT OFF THE CURATED SET. This read
-  // GALLERY_PALETTES.length and said "64 palettes", while /discover/palettes —
-  // the page this very card links to — announces "71 palettes" to a signed-out
-  // visitor and holds 101. GALLERY_PALETTES is only the curated half;
-  // LIBRARY_PALETTES is that set plus the 37 brand systems, and it is what
-  // PaletteGallery renders and what that page's own Pro modal counts against.
-  // The card was under-counting the library by 37 while its description sold
-  // the brand systems as the reason to open it.
-  //
-  // The swatch preview is drawn from the SAME array as the count, so the card
-  // cannot show one library and count another — which is the failure the
-  // comment at the top of this block already claimed was impossible.
+  // The swatch preview is drawn from the first rows of the library, which every
+  // visitor may open in full. The count on the card is the library's true size
+  // (src/data/libraryTotals.js), curated palettes and brand systems together.
   'palette-library': () => ({
     node: (
       <div className="scp-stack">
-        {LIBRARY_PALETTES.slice(0, 3).map((p) => (
+        {LIBRARY_PALETTE_ROWS.slice(0, 3).map((p) => (
           <div className="scp-row" key={p.id}>
             {p.colors.map((c, i) => <span className="scp-chip" key={i} style={{ background: c }} />)}
           </div>
@@ -74,7 +66,7 @@ const PREVIEWS = {
   'gradient-gallery': () => ({
     node: (
       <div className="scp-tiles">
-        {GALLERY_GRADIENTS.slice(0, 3).map((g) => (
+        {LIBRARY_GRADIENT_ROWS.slice(0, 3).map((g) => (
           <span className="scp-tile" key={g.id} style={{ backgroundImage: gradientCss(g.type, g.angle, g.stops) }} />
         ))}
       </div>

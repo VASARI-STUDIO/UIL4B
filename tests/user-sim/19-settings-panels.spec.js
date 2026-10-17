@@ -8,6 +8,7 @@
 // panel is a blank page, and a blank page is indistinguishable from a crash.
 import { test, expect } from './base.js'
 import { go, restingScrollY, signIn, watch } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 test.describe('settings panels', () => {
   test('opens on a real panel, never blank', async ({ page }) => {
@@ -89,11 +90,11 @@ test.describe('settings panels', () => {
     }
   })
 
-  // THE SERVICE ANSWERS, BUT NOT FOR THIS CURRENCY. `serviceAvailable` is true
-  // and the amount is still null (usePrices only formats a number), and the
-  // yearly line printed "AUD · null/mo" under "Unavailable". The monthly one
-  // claimed "billed monthly" for a price it could not show.
-  test('signed in, a live price list without this currency never prints "null"', async ({ page }) => {
+  // THE SERVICE ANSWERS, BUT WITH NO LIVE PRICE FOR THIS CURRENCY ON ANY
+  // CADENCE. That is the outage, not one missing cadence: the amount slot says
+  // "Unavailable", the sentence is the outage one, Retry is offered, and the
+  // line never prints "null".
+  test('signed in, a price list with no live cadence says pricing is unreachable and offers Retry', async ({ page }) => {
     watch(page, 'a free account whose currency the price service does not list')
     await page.route('**/api/get-prices*', (r) => r.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({ monthly: {}, quarterly: {}, yearly: {} }),
@@ -109,8 +110,33 @@ test.describe('settings panels', () => {
       // POSITIVE CONTROL: this is the no-amount state, not a loaded price.
       await expect(pro.locator('.sub-tier-amount'), `${billing}: a price was found after all`).toHaveText('Unavailable')
       await expect(pro.locator('.sub-tier-sub'), `${billing}: the price line prints "null"`).not.toContainText('null')
-      await expect(pro.locator('.sub-tier-sub'), `${billing}: the missing price is not said`).toContainText('price for this billing period')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Live pricing is unreachable')
+      await expect(pro.getByRole('button', { name: 'Retry live pricing' }), `${billing}: no Retry`).toBeVisible()
     }
+  })
+
+  // A LIVE MONTHLY PRICE BUT NONE FOR YEARLY. Only the yearly line is
+  // unavailable: it says so for the currency, offers no Retry (the service is
+  // not down) and never prints "null"; monthly still prices.
+  test('signed in, a cadence without a live price says so while the other still prices', async ({ page }) => {
+    watch(page, 'a free account whose yearly price is not live')
+    await page.route('**/api/get-prices*', (r) => r.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability({ monthly: { usd: 7 }, quarterly: {}, yearly: {} })),
+    }))
+    await page.addInitScript(() => { try { localStorage.setItem('vs-settings-section', 'support') } catch { /* private mode */ } })
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+
+    const pro = page.locator('.sub-tier-pro')
+    await expect(pro).toBeVisible()
+    await page.getByRole('tab', { name: /Monthly/ }).click()
+    await expect(pro.locator('.sub-tier-amount'), 'monthly has a live price').toContainText('7')
+    await page.getByRole('tab', { name: /Yearly/ }).click()
+    await expect(pro.locator('.sub-tier-amount'), 'yearly was priced after all').toHaveText('Unavailable')
+    await expect(pro.locator('.sub-tier-sub')).not.toContainText('null')
+    await expect(pro.locator('.sub-tier-sub')).toContainText('price for this billing period')
+    await expect(pro.locator('.sub-tier-sub')).not.toContainText('unreachable')
+    await expect(pro.getByRole('button', { name: 'Retry live pricing' })).toHaveCount(0)
   })
 })
 
