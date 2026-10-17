@@ -98,10 +98,14 @@ test('the page asks the snapshot before Iconify, and still falls back to Iconify
   const src = strip(fs.readFileSync(path.join(ROOT, 'src/pages/IconLibrary.jsx'), 'utf8'))
   // The page's pack-list loader is built by createCollectionLoader; the part
   // that decides where a list comes from is its fetchEntry.
-  const body = src.match(/const getCollectionNames = createCollectionLoader\(\{[\s\S]*?\n\}\)/)?.[0]
-  assert.ok(body, 'getCollectionNames (createCollectionLoader) is gone from IconLibrary.jsx')
+  // Found by what it passes to createCollectionLoader, not by the name of the
+  // constant it is assigned to, so a rename cannot make this vacuous or red.
+  const loaders = [...src.matchAll(/createCollectionLoader\(\{[\s\S]*?\n\}\)/g)].map((m) => m[0])
+  assert.equal(loaders.length, 1, `IconLibrary.jsx should build exactly one pack-list loader; found ${loaders.length}`)
+  const body = loaders[0]
+  assert.match(body, /fetchEntry:/, 'the loader needs a fetchEntry: that is where a list comes from')
   const snap = body.indexOf('fetchCollectionSnapshot(pack)')
   const live = body.indexOf('fetchWithFallback(`/collection?prefix=')
-  assert.ok(snap >= 0, 'getCollectionNames no longer reads the snapshot')
+  assert.ok(snap >= 0, 'the pack-list loader no longer reads the snapshot')
   assert.ok(live > snap, 'the live /collection request must come after the snapshot, as the fallback')
 })

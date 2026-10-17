@@ -319,13 +319,30 @@ export function answerIconify(urlString) {
 }
 
 /**
+ * The folder the build copies the site's own pack lists from. The fixture holds
+ * a pack list for more packs than the site commits (fluent-emoji has none), and
+ * the real site answers those with a 404 so the page goes on to the live
+ * /collection request. Reading the folder, not the fixture, keeps the stub from
+ * answering a list the product never serves, which would hide that live request
+ * from every count.
+ */
+export const SNAPSHOT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', 'iconify', 'collections')
+
+/** The packs the site serves a list for, sorted. */
+export function snapshotPacks() {
+  return fs.readdirSync(SNAPSHOT_DIR).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort()
+}
+
+/**
  * The answer for one same-origin pack list, as { status, contentType, body }:
- * the pack's fixture file, or a 404 for a pack the fixture does not hold, which
- * is what sends the page on to the Iconify host (where the miss is recorded).
+ * the pack's fixture body when the site commits a snapshot file for it, or a
+ * 404 for any other pack, which is what sends the page on to the Iconify host
+ * (where the live request is counted).
  */
 export function answerSnapshot(pathname) {
   const pack = pathname.match(SNAPSHOT_PATH_RE)?.[1]
-  const body = pack && loadFixture().collection.get(decodeURIComponent(pack))
+  const name = pack && decodeURIComponent(pack)
+  const body = name && snapshotPacks().includes(name) && loadFixture().collection.get(name)
   return body
     ? { status: 200, contentType: 'application/json', body }
     : { status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'not found' }) }

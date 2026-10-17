@@ -109,7 +109,11 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
   // reloads sent nothing" is true of a page that never asked.
   const first = mark(ctx)
   expect(iconifyRequests(ctx).snapshot, 'load 1 read one pack list per pack from the site').toBe(fixturePacks().length)
-  expect(first.collection, 'load 1 asked Iconify for a pack list the site already serves').toBe(0)
+  // Pro browses fluent-emoji, the one pack the repo commits no list for, so it
+  // is the one live /collection request of a cold visit. Exactly one: more is a
+  // list the site serves being asked of Iconify; none means the stub answers a
+  // list the product does not serve (iconify-stub.test.js pins that).
+  expect(first.collection, 'load 1 asked Iconify for a list the site serves, or skipped the one it must ask').toBe(1)
   expect(first.batch, 'load 1 fetched its glyph tranches').toBeGreaterThan(0)
   const afterFirst = urls.length
 

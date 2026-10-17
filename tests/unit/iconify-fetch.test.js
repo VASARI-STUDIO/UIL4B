@@ -11,8 +11,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  BASE_COOLDOWN, MAX_COOLDOWN, NET_COOLDOWN, NET_FAIL_WINDOW, STRIKE_MEMORY, TTL_DEFAULT, TTL_SEARCH,
-  createIconifyFetch, fitsUrl, parseRetryAfter, ttlFor,
+  BASE_COOLDOWN, HELD_HEADER, MAX_COOLDOWN, NET_COOLDOWN, NET_FAIL_WINDOW, STRIKE_MEMORY, TTL_DEFAULT, TTL_SEARCH,
+  createIconifyFetch, fitsUrl, parseRetryAfter, scopeFor, ttlFor,
 } from '../../src/utils/iconifyFetch.js'
 // Loaded here, by its real specifier, so a missing ".js" in its own import of
 // iconifyFetch fails this whole file under Node ESM, not just the groups tests.
@@ -448,6 +448,160 @@ test('a back-off count from long ago, or one the visitor cleared, starts again a
   cleared.api.clearCooldown()
   await cleared.api.get(COLLECTION)
   assert.equal(cleared.api.cooldownUntil() - cleared.clock.t, BASE_COOLDOWN, 'Try again starts the ladder over')
+})
+
+// ── the cool-down is kept per kind of request ────────────────────────────────
+const GLYPH = `${HOST}/lucide.json?icons=a,b,c`
+const GLYPH_2 = `${HOST}/tabler.json?icons=a,b,c`
+const ICON_SVG = `${HOST}/lucide/home.svg?width=24`
+const COOLDOWN_STORE = 'uil4b-iconify-cooldown'
+const IS_LIST = /\/collection\?/
+const IS_GLYPH = /\.json\?icons=/
+/** Refuse (429) one kind of request, answer every other kind. */
+const refuseOnly = (re, retryAfter = 600) => (url) => (re.test(url) ? limited(retryAfter) : ok())
+
+test('scopeFor sorts a URL into pack list, search, icon file or glyph file', () => {
+  assert.equal(scopeFor(COLLECTION), 'collection')
+  assert.equal(scopeFor(SEARCH), 'search')
+  assert.equal(scopeFor(ICON_SVG), 'svg')
+  assert.equal(scopeFor(GLYPH), 'glyph')
+  assert.equal(scopeFor(`${HOST}/collections`), 'glyph', 'anything else is treated as a glyph file')
+  assert.equal(scopeFor('not a url'), 'glyph', 'an odd URL does not throw')
+})
+
+test('a refused pack list does not hold glyph files, icon files or searches', async () => {
+  const { api, net } = rig({ answer: refuseOnly(IS_LIST) })
+  assert.equal((await api.get(COLLECTION)).status, 429)
+  assert.equal(net.calls.length, 1)
+  assert.equal((await api.get(OTHER)).status, 429, 'positive control: the pack lists are held')
+  assert.equal(net.calls.length, 1)
+
+  for (const url of [GLYPH, ICON_SVG, SEARCH]) {
+    const r = await api.get(url)
+    assert.equal(r.status, 200, `${url} should still be sent`)
+    assert.equal(r.headers.get(HELD_HEADER), null)
+  }
+  assert.equal(net.calls.length, 4, 'one pack list, then the three other kinds')
+})
+
+test('a refused glyph file holds glyph files only, and the pack lists still go out', async () => {
+  const { api, net, clock } = rig({ answer: refuseOnly(IS_GLYPH, 900) })
+  assert.equal((await api.get(GLYPH)).status, 429)
+  assert.equal(api.cooldownUntil(GLYPH_2), clock.t + 900_000, 'another pack\'s glyph file is held for the same time')
+  assert.equal(api.cooldownUntil(COLLECTION), 0)
+  assert.equal(api.cooldownUntil(SEARCH), 0)
+  assert.equal((await api.get(COLLECTION)).status, 200)
+  assert.equal(net.calls.length, 2)
+})
+
+test('a request held by a cool-down says so; a refusal Iconify sent does not', async () => {
+  const { api } = rig({ answer: () => limited(600) })
+  const real = await api.get(COLLECTION)
+  assert.equal(real.status, 429)
+  assert.equal(real.headers.get(HELD_HEADER), null, 'this one was sent and refused by Iconify')
+  const held = await api.get(OTHER)
+  assert.equal(held.status, 429)
+  assert.equal(held.headers.get(HELD_HEADER), '1', 'this one never left the page')
+})
+
+test('cooldownUntil(url) reports that kind; with no url it reports the latest of any', async () => {
+  const { api, clock } = rig({ answer: refuseOnly(IS_LIST, 600) })
+  await api.get(COLLECTION)
+  assert.equal(api.cooldownUntil(COLLECTION), clock.t + 600_000)
+  assert.equal(api.cooldownUntil(OTHER), clock.t + 600_000, 'any pack list')
+  assert.equal(api.cooldownUntil(GLYPH), 0)
+  assert.equal(api.cooldownUntil(SEARCH), 0)
+  assert.equal(api.cooldownUntil(), clock.t + 600_000)
+
+  const both = rig({ answer: (url) => (IS_LIST.test(url) ? limited(600) : IS_GLYPH.test(url) ? limited(1800) : ok()) })
+  await both.api.get(COLLECTION)
+  await both.api.get(GLYPH)
+  assert.equal(both.api.cooldownUntil(COLLECTION), both.clock.t + 600_000)
+  assert.equal(both.api.cooldownUntil(GLYPH), both.clock.t + 1_800_000)
+  assert.equal(both.api.cooldownUntil(), both.clock.t + 1_800_000, 'no url: the longest')
+})
+
+test('each kind climbs its own back-off ladder', async () => {
+  const { api, clock } = rig({ answer: (url) => (IS_LIST.test(url) || IS_GLYPH.test(url) ? limited(null) : ok()) })
+  await api.get(COLLECTION)
+  clock.t += BASE_COOLDOWN
+  await api.get(OTHER)
+  assert.equal(api.cooldownUntil(COLLECTION) - clock.t, BASE_COOLDOWN * 2, 'positive control: pack lists climbed to the second rung')
+  await api.get(GLYPH)
+  assert.equal(api.cooldownUntil(GLYPH) - clock.t, BASE_COOLDOWN, 'the first glyph refusal starts at the base, not at the pack lists\' rung')
+})
+
+test('a glyph success does not reset the pack lists\' back-off count', async () => {
+  const { api, clock } = rig({ answer: (url) => (IS_GLYPH.test(url) ? ok() : limited(null)) })
+  await api.get(COLLECTION)
+  clock.t += BASE_COOLDOWN
+  await api.get(OTHER)
+  assert.equal(api.cooldownUntil(COLLECTION) - clock.t, BASE_COOLDOWN * 2, 'positive control: second rung')
+  clock.t += BASE_COOLDOWN * 2
+  await api.get(GLYPH)
+  await api.get(COLLECTION)
+  assert.equal(api.cooldownUntil(COLLECTION) - clock.t, BASE_COOLDOWN * 4, 'still climbing: the third rung is 4x the base')
+})
+
+test('the cool-down is saved per kind in storage', async () => {
+  const { api, storage, clock } = rig({ answer: refuseOnly(IS_LIST, 600) })
+  await api.get(COLLECTION)
+  const saved = JSON.parse(storage.map.get(COOLDOWN_STORE))
+  assert.deepEqual(Object.keys(saved), ['scopes'])
+  assert.deepEqual(saved.scopes, { collection: { until: clock.t + 600_000, strikes: 1 } })
+})
+
+test('after a reload the pack lists are still held but glyph files are sent', async () => {
+  const { make, net } = rig({ answer: refuseOnly(IS_LIST, 600) })
+  await make().get(COLLECTION)
+  const afterReload = make()
+  const held = await afterReload.get(OTHER)
+  assert.equal(held.headers.get(HELD_HEADER), '1')
+  assert.equal(net.calls.length, 1, 'the reloaded page sent no pack list')
+  assert.equal((await afterReload.get(GLYPH)).status, 200)
+  assert.equal(net.calls.length, 2, 'but its glyph file went out')
+})
+
+test('a cool-down saved in the old single-value shape holds nothing', async () => {
+  const { make, net, storage, clock } = rig()
+  storage.setItem(COOLDOWN_STORE, JSON.stringify({ until: clock.t + 600_000, strikes: 2 }))
+  const api = make()
+  assert.equal(api.cooldownUntil(), 0)
+  assert.equal((await api.get(COLLECTION)).status, 200)
+  assert.equal(net.calls.length, 1)
+})
+
+test('a cool-down saved by another tab is picked up for that kind only', async () => {
+  const { make, net, storage, clock } = rig()
+  const api = make()
+  storage.setItem(COOLDOWN_STORE, JSON.stringify({ scopes: { glyph: { until: clock.t + 600_000, strikes: 1 } } }))
+  assert.equal(api.cooldownUntil(GLYPH), clock.t + 600_000)
+  assert.equal((await api.get(GLYPH)).headers.get(HELD_HEADER), '1')
+  assert.equal(net.calls.length, 0)
+  assert.equal((await api.get(COLLECTION)).status, 200)
+})
+
+test('Try again clears every kind\'s cool-down and the saved copy', async () => {
+  const { api, storage } = rig({ answer: (url) => (IS_LIST.test(url) || IS_GLYPH.test(url) ? limited(600) : ok()) })
+  await api.get(COLLECTION)
+  await api.get(GLYPH)
+  assert.ok(api.cooldownUntil(COLLECTION) > 0 && api.cooldownUntil(GLYPH) > 0, 'positive control: both are held')
+  api.clearCooldown()
+  assert.equal(api.cooldownUntil(COLLECTION), 0)
+  assert.equal(api.cooldownUntil(GLYPH), 0)
+  assert.equal(api.cooldownUntil(), 0)
+  assert.equal(storage.map.has(COOLDOWN_STORE), false)
+})
+
+test('the short pause after rejected fetches holds every kind, and says it was held', async () => {
+  const { api, net } = rig({ answer: boom })
+  for (const p of ['a', 'b', 'c']) await assert.rejects(api.get(collectionOf(p)), TypeError)
+  for (const url of [GLYPH, ICON_SVG, SEARCH]) {
+    const r = await api.get(url)
+    assert.equal(r.status, 429, url)
+    assert.equal(r.headers.get(HELD_HEADER), '1', url)
+  }
+  assert.equal(net.calls.length, 3)
 })
 
 // ── glyph tranches: one icon, one URL ────────────────────────────────────────

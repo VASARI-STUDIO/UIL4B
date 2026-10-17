@@ -130,7 +130,10 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   // browses (the positive control: the page did ask for its lists), and not one
   // /collection request to Iconify, which is what rate-limits a first visit.
   expect(tally.snapshot, 'one same-origin pack list per pack the page browses on first paint').toBe(packs.length)
-  expect(tally.collection, 'a first visit asked Iconify for a pack list the site already serves').toBe(0)
+  // Pro browses fluent-emoji, the one pack with no committed list, so a cold
+  // Pro visit makes exactly one live /collection request (see iconify-stub.js
+  // answerSnapshot): more is a list the site serves being asked of Iconify.
+  expect(tally.collection, 'a cold Pro visit asks Iconify only for the pack the site has no list for').toBe(1)
   expect(tally.missing, 'every request had an answer in the fixture').toEqual([])
   expect(tally.escaped, 'no response came from a real Iconify host').toEqual([])
   // THE GRID'S GLYPHS, WHICH ARE NO LONGER ONE REQUEST EACH. This read
@@ -212,7 +215,8 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   // Try again's own round, one list per pack, read from the site and not
   // re-asked of Iconify.
   expect(iconifyRequests(ctx).snapshot, 'Try again read the pack lists again').toBe(fixturePacks().length)
-  expect(iconifyRequests(ctx).collection, 'Try again went to Iconify for lists the site serves').toBe(0)
+  // Exactly one: fluent-emoji, the Pro pack with no list on the site.
+  expect(iconifyRequests(ctx).collection, 'Try again asked Iconify for lists the site serves').toBe(1)
   await ctx.close()
 })
 
