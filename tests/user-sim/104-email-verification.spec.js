@@ -234,7 +234,8 @@ test.describe('the "Verify your email" bar', () => {
     await go(page, '/projects')
     await bar(page).getByRole('button', { name: 'Resend link' }).click()
     await expect(bar(page)).toContainText(`Link sent to ${account.email}.`)
-    await expect(bar(page).getByRole('alert')).toHaveCount(0)
+    // The alert region stays mounted so a later failure is announced; a fall-back that worked leaves it empty.
+    await expect(bar(page).getByRole('alert')).toBeEmpty()
     const sends = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.verifySends)
     expect(sends).toEqual([{ withReturn: true, refused: true }, { withReturn: false, refused: false }])
   })
