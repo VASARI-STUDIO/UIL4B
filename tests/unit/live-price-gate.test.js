@@ -104,12 +104,20 @@ test('/plans takes its amounts and button state from resolveOffers', () => {
   assert.doesNotMatch(page, /prices\?\.\[[^\]]+\]\?\.\[currency\]/, '/plans reads a raw price again')
   assert.match(page, /const hasAmount = !!offer\.amountLabel/)
   assert.match(page, /const priceServiceDown = price\.loaded && !hasAmount/)
-  // The unavailable button comes before the Link that starts a trial.
-  const disabled = page.indexOf('} else if (priceServiceDown) {')
-  const trial = page.indexOf('to={proTo}', disabled)
-  assert.ok(disabled > 0, 'an unavailable cadence no longer gets the unavailable button')
-  assert.ok(trial > disabled, 'the trial button is reachable without a live amount')
-  assert.match(page.slice(disabled, trial), /aria-disabled="true"/)
+  // Both unavailable branches (switch to the live cadence, retry the prices)
+  // come before the Link that starts a trial, and neither of them is a Link.
+  const switchTo = page.indexOf('} else if (priceServiceDown && otherOffer) {')
+  const retry = page.indexOf('} else if (priceServiceDown) {')
+  const trial = page.indexOf('to={proTo}', retry)
+  assert.ok(switchTo > 0, 'one unpriced cadence no longer gets the switch-cadence button')
+  assert.ok(retry > switchTo, 'nothing priced no longer gets the retry button')
+  assert.ok(trial > retry, 'the trial button is reachable without a live amount')
+  const buyable = page.indexOf('} else {', retry)
+  assert.ok(buyable > retry && buyable < trial, 'the buy branch no longer follows the unavailable branches')
+  const unavailable = page.slice(switchTo, buyable)
+  assert.doesNotMatch(unavailable, /<Link/, 'an unavailable state offers a link to checkout')
+  assert.match(page.slice(switchTo, retry), /chooseBilling\(otherOffer\.id\)/, 'the switch button no longer switches cadence')
+  assert.match(page.slice(retry, buyable), /refreshPrices\(\)/, 'the retry button no longer asks for prices again')
 })
 
 test('Quarterly stays off sale', () => {
