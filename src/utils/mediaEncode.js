@@ -144,7 +144,7 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
  */
 export function videoToAnimationArgs({ format, input, fps, width, plays = 0, quality = 'medium', start = 0, length = 0 }) {
   const fmt = findFormat(format)
-  const w = Math.max(16, Math.min(2000, Math.round(Number(width) || 480)))
+  const w = Math.max(16, Math.min(MAX_ANIMATION_SIDE, Math.round(Number(width) || 480)))
   const args = []
   if (start > 0) args.push('-ss', String(start))
   args.push('-i', input)
