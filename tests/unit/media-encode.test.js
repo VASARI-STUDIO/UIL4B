@@ -95,16 +95,41 @@ test('video → animation keeps the GIF it always made, and trims when asked', (
   // Height is -2 now (even, which MP4 needs); nothing else moved.
   const gif = videoToAnimationArgs({ format: 'gif', input: 'input.mp4', fps: 10, width: 480 })
   assert.deepEqual(gif, ['-i', 'input.mp4', '-vf',
-    'fps=10,scale=480:-2:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse=dither=bayer:bayer_scale=2',
+    'fps=10,scale=trunc(min(480\\,iw*1920/ih)/2)*2:-2:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse=dither=bayer:bayer_scale=2',
     '-loop', '0', 'output.gif'])
 
   const trimmed = videoToAnimationArgs({ format: 'mp4', input: 'in.mov', fps: 30, width: 720, start: 1.5, length: 3 })
   assert.deepEqual(trimmed.slice(0, 6), ['-ss', '1.5', '-i', 'in.mov', '-t', '3'])
-  assert.equal(after(trimmed, '-vf'), 'fps=30,scale=720:-2:flags=lanczos')
+  assert.equal(after(trimmed, '-vf'), 'fps=30,scale=trunc(min(720\\,iw*1920/ih)/2)*2:-2:flags=lanczos')
   assert.ok(trimmed.includes('-an'), 'the video outputs are silent, and say so in the UI')
 
   const clamped = videoToAnimationArgs({ format: 'webp', input: 'a', fps: 999, width: 99999 })
-  assert.equal(after(clamped, '-vf'), `fps=${FPS_MAX},scale=1920:-2:flags=lanczos`)
+  assert.equal(after(clamped, '-vf'), `fps=${FPS_MAX},scale=trunc(min(${MAX_ANIMATION_SIDE}\\,iw*1920/ih)/2)*2:-2:flags=lanczos`)
+})
+
+test('video → animation: both sides stay within the cap for any source, portrait included', () => {
+  // Evaluate the generated scale filter the way ffmpeg does, for a source size.
+  const run = (iw, ih, width) => {
+    const vf = after(videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width }), '-vf')
+    assert.ok(vf.includes('\\,'), `the comma inside min() must be escaped: ${vf}`)
+    const m = /scale=trunc\(min\((\d+)\\,iw\*(\d+)\/ih\)\/2\)\*2:-2:/.exec(vf)
+    assert.ok(m, `unexpected scale filter: ${vf}`)
+    const w = Math.trunc(Math.min(Number(m[1]), (iw * Number(m[2])) / ih) / 2) * 2
+    const h = Math.round((w * ih) / iw / 2) * 2
+    return { w, h }
+  }
+  for (const [iw, ih] of [[1080, 1920], [1920, 1080], [720, 2560], [4000, 3000]]) {
+    for (const width of [1920, 480, 481]) {
+      const { w, h } = run(iw, ih, width)
+      const label = `${iw}x${ih} @ ${width} -> ${w}x${h}`
+      assert.ok(w <= MAX_ANIMATION_SIDE && h <= MAX_ANIMATION_SIDE, `over the cap: ${label}`)
+      assert.equal(w % 2, 0, `odd width: ${label}`)
+      assert.equal(h % 2, 0, `odd height: ${label}`)
+      assert.ok(Math.abs(w / h - iw / ih) * h <= 2, `aspect drifted: ${label}`)
+    }
+  }
+  // The case that froze the tab: a 1080x1920 clip at width 1920 used to be ~1920x3414.
+  assert.deepEqual(run(1080, 1920, 1920), { w: 1080, h: 1920 })
 })
 
 test('video encode width is capped at 1920 on every format, matching the other converter tabs', () => {
@@ -114,15 +139,15 @@ test('video encode width is capped at 1920 on every format, matching the other c
   for (const width of [1921, 2000, 5000, 99999]) {
     for (const f of ANIMATION_FORMATS) {
       const args = videoToAnimationArgs({ format: f.id, input: 'in.mp4', fps: 10, width })
-      assert.match(after(args, '-vf'), /scale=1920:-2:flags=lanczos/, `${f.id} width ${width}`)
+      assert.match(after(args, '-vf'), /scale=trunc\(min\(1920\\,iw\*1920\/ih\)\/2\)\*2:-2:flags=lanczos/, `${f.id} width ${width}`)
       assert.ok(!args.join(' ').includes('scale=2000'), `${f.id} width ${width} let 2000 through`)
     }
   }
   // At and under the cap the width passes through untouched.
   const at = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1920 })
-  assert.match(after(at, '-vf'), /scale=1920:-2:/)
+  assert.match(after(at, '-vf'), /scale=trunc\(min\(1920\\,iw\*1920\/ih\)\/2\)\*2:-2:/)
   const under = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1900 })
-  assert.match(after(under, '-vf'), /scale=1900:-2:/)
+  assert.match(after(under, '-vf'), /scale=trunc\(min\(1900\\,iw\*1920\/ih\)\/2\)\*2:-2:/)
 })
 
 test('fps is clamped to what GIF can actually store', () => {
