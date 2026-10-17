@@ -257,7 +257,7 @@ export function subscriptionStatusGrantsAccess(sub) {
 export function subscriptionDocFields(sub, now = Date.now()) {
   const healthy = subscriptionStatusGrantsAccess(sub)
   const recovery = healthy
-    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null }
+    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null }
     : {}
   return {
     id: sub?.id,

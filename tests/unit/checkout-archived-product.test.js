@@ -100,9 +100,9 @@ function setup(t, { prices = {}, lookup = {}, createSession = async () => ({ cli
 
   // A test sets the price env vars it needs before calling setup; the cache and
   // the vars are cleared again afterwards.
-  forgetCachedPrice()
+  forgetCachedPrice('*')
   t.after(() => {
-    forgetCachedPrice()
+    forgetCachedPrice('*')
     for (const key of Object.values(PRICE_ENV_KEYS)) delete process.env[key]
   })
   return { calls, db }
@@ -257,6 +257,7 @@ test('a cached price Stripe now refuses answers 503, not 500, and is re-checked 
   assert.equal(calls.sessions.length, 2, 'the session create was attempted and rejected')
   assert.equal(refused.statusCode, 503)
   assert.equal(refused.body.error, 'The monthly price is temporarily unavailable. No payment session was created.')
+  assert.match(refused.body.correlationId, /^[0-9a-z]+$/, 'the 503 carries the reference id the server log is filed under')
 
   // 3. The cache entry was dropped, so the next request asks Stripe again, finds
   //    the product archived, and never reaches the session create.
@@ -267,7 +268,7 @@ test('a cached price Stripe now refuses answers 503, not 500, and is re-checked 
   assert.equal(next.statusCode, 503)
 })
 
-test('a refused price is not retried without the currency', async (t) => {
+test('a refused price is still retried once without the currency, and the retry\'s error decides', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
   const { calls } = setup(t, {
     prices: { price_env: price('price_env') },
@@ -276,8 +277,28 @@ test('a refused price is not retried without the currency', async (t) => {
   const res = await startCheckout('monthly', { currency: 'eur' })
 
   assert.equal(res.statusCode, 503)
-  assert.equal(calls.sessions.length, 1, 'repeating a refused price without the currency only repeats the refusal')
+  assert.equal(calls.sessions.length, 2, 'the currency-less retry always happens when a currency was sent')
   assert.equal(calls.sessions[0].currency, 'eur')
+  assert.equal(calls.sessions[1].currency, undefined)
+})
+
+test('a currency the customer is locked out of is not mistaken for an unsellable price', async (t) => {
+  process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
+  const { calls } = setup(t, {
+    prices: { price_env: price('price_env') },
+    createSession: async (params) => {
+      if (params.currency) {
+        throw Stripe.errors.StripeError.generate({
+          type: 'invalid_request_error', param: 'currency', message: 'You cannot combine currencies on a single customer.',
+        })
+      }
+      return { client_secret: 'cs_secret_1' }
+    },
+  })
+  const res = await startCheckout('monthly', { currency: 'eur' })
+
+  assert.equal(res.statusCode, 200)
+  assert.equal(calls.sessions.length, 2)
 })
 
 test('a failure that is not about the price stays a 500 and keeps the cached price', async (t) => {
@@ -304,7 +325,9 @@ test('a failure that is not about the price stays a 500 and keeps the cached pri
 
 test('only an invalid-request error about a price or product counts as an unsellable price', () => {
   const invalid = (extra) => Stripe.errors.StripeError.generate({ type: 'invalid_request_error', message: 'x', ...extra })
-  assert.equal(isUnsellablePriceError(invalid({ param: 'line_items[0][price]' })), true)
+  assert.equal(isUnsellablePriceError(invalid({ param: 'line_items[0][price]', code: 'resource_missing' })), true)
+  assert.equal(isUnsellablePriceError(invalid({ param: 'line_items[0][price]' })), false, 'a param that mentions price is not enough on its own')
+  assert.equal(isUnsellablePriceError(invalid({ param: 'currency', code: 'resource_missing' })), false)
   assert.equal(isUnsellablePriceError(invalid({ message: 'The product is archived.' })), true)
   assert.equal(isUnsellablePriceError(invalid({ message: 'This price is no longer active.' })), true)
   assert.equal(isUnsellablePriceError(invalid({ param: 'customer', message: 'No such customer' })), false)
