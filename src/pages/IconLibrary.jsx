@@ -1084,9 +1084,11 @@ const JOIN_OPTS = [
 // outlined tile is a loading square, and those are dropped. A glyph that
 // errors stays hidden. `visibility:hidden` also keeps a not-yet-shown tile out
 // of the tab order. A cached image can finish before React attaches onLoad, so
-// the ref callback checks it on attach.
-function SimilarTile({ s, src, onPick }) {
+// the ref callback checks it on attach. `onReadyChange` tells the section
+// whether any tile is showing, so it can hold back its heading and frame.
+function SimilarTile({ s, src, onPick, onReadyChange }) {
   const [ready, setReady] = useState(false)
+  useEffect(() => { onReadyChange(s.id, ready) }, [s.id, ready, onReadyChange])
   return (
     <button
       type="button"
@@ -1102,11 +1104,34 @@ function SimilarTile({ s, src, onPick }) {
         width="24"
         height="24"
         alt=""
-        loading="lazy"
         onLoad={() => setReady(true)}
         onError={() => setReady(false)}
       />
     </button>
+  )
+}
+
+// The "Similar in this pack" block. Its heading, rule and padding stay
+// collapsed (the tiles still mount so their glyphs load) until at least one
+// tile is showing, so a slow or fully failed pack never leaves a label over
+// an empty row. The images load eagerly: a lazy image inside a collapsed block
+// would never count as near the viewport. Keyed by the icon at the call site,
+// so each icon starts with nothing ready.
+function SimilarSection({ list, srcFor, onPick }) {
+  const [readyIds, setReadyIds] = useState({})
+  const onReadyChange = useCallback((id, ready) => {
+    setReadyIds(prev => (!!prev[id] === ready ? prev : { ...prev, [id]: ready }))
+  }, [])
+  const anyReady = list.some(s => readyIds[s.id])
+  return (
+    <div className="icust-similar" data-ready={anyReady ? 'true' : undefined}>
+      <div className="icust-similar-label">Similar in this pack</div>
+      <div className="icust-similar-row">
+        {list.map(s => (
+          <SimilarTile key={s.id} s={s} src={srcFor(s)} onPick={onPick} onReadyChange={onReadyChange} />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -1356,10 +1381,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const onKey = (e) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
-      const f = panelRef.current?.querySelectorAll(
+      // Only what can take focus right now: a hidden Similar tile (visibility
+      // hidden, or inside a collapsed block) is not a Tab stop.
+      const f = Array.from(panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      )
-      if (!f || f.length === 0) return
+      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+      if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
@@ -1862,19 +1889,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             )}
 
             {similarList.length > 0 && (
-              <div className="icust-similar">
-                <div className="icust-similar-label">Similar in this pack</div>
-                <div className="icust-similar-row">
-                  {similarList.map(s => (
-                    <SimilarTile
-                      key={s.id}
-                      s={s}
-                      src={buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                      onPick={onPick}
-                    />
-                  ))}
-                </div>
-              </div>
+              <SimilarSection
+                key={currentId}
+                list={similarList}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                onPick={onPick}
+              />
             )}
           </>
         )}

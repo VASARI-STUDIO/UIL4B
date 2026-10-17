@@ -365,6 +365,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 /* Similar icons — same-pack siblings, a foot-of-popup retention nudge */
 .icust-similar{padding:16px 24px 24px;border-top:1px solid var(--border)}
+/* Until a tile has loaded (the section's data-ready) the block takes no space:
+   no heading, rule or padding over an empty row. The tiles stay mounted inside
+   so their glyphs still load. */
+.icust-similar:not([data-ready]){height:0;padding:0;border-top-width:0;overflow:hidden}
 .icust-similar-label{margin-bottom:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .icust-similar-row{display:flex;flex-wrap:wrap;gap:8px}
 .icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
