@@ -902,6 +902,7 @@
   .fc { --fc-bar-h: 63px; }
   .fc .fc-tab,
   .fc .fc-btn,
+  .fc .fc-btn--quiet,
   .fc .fc-field,
   .fc .fc-bg-pick { min-height: 44px; }
   .fc .fc-field { height: 44px; }
