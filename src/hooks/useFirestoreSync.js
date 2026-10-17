@@ -173,6 +173,7 @@ export function useFirestoreSync(uid) {
       // The prompt library and its saved ids merge separately; once the data
       // document has been applied, add any copy a saved id is missing.
       repairAfterSettle(remote, ls, {
+        uid,
         isCurrent: () => !cancelled && uidRef.current === uid,
         announce: announceApplied,
       })

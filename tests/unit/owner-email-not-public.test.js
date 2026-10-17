@@ -136,17 +136,24 @@ const addressPattern = () => new RegExp(ADDRESS_SOURCE, 'g')
 // Nothing here can receive mail, which is the entire point of using them.
 const UNROUTABLE = /(?:^|\.)(?:example\.(?:com|net|org)|example|invalid|test|localhost)$/i
 
-// EXACT addresses, not a uil4b.com wildcard. These two are role addresses
-// published on purpose in the Terms and Privacy pages; `someone@uil4b.com` would
-// still fail.
-const PUBLISHED_ON_PURPOSE = new Set([
-  'legal@uil4b.com',
-  'privacy@uil4b.com',
+// EXACT addresses, not a uil4b.com wildcard. These three are the role aliases
+// that exist (hello@, help@, support@), so any of them MAY appear.
+// `someone@uil4b.com` would still fail.
+const ALLOWED = new Set([
+  'hello@uil4b.com',
+  'help@uil4b.com',
+  'support@uil4b.com',
+])
+
+// The subset that MUST appear: Terms and Privacy publish support@ only. This
+// is the presence check, so a scan that stopped reading those chunks goes red.
+const MUST_SHIP = new Set([
+  'support@uil4b.com',
 ])
 
 function allowed(address) {
   const lower = address.toLowerCase()
-  if (PUBLISHED_ON_PURPOSE.has(lower)) return true
+  if (ALLOWED.has(lower)) return true
   return UNROUTABLE.test(lower.slice(lower.lastIndexOf('@') + 1))
 }
 
@@ -503,8 +510,8 @@ test('no personal or third-party email address ships in dist/', { skip }, () => 
     'an email address that is neither a published role address nor an RFC 2606 placeholder is being served to '
     + 'every visitor of this site:\n  ' + offenders.join('\n  '))
 
-  // The allowlisted ones ARE there, so the filter above ran over real hits.
-  for (const expected of PUBLISHED_ON_PURPOSE) {
+  // The required ones ARE there, so the filter above ran over real hits.
+  for (const expected of MUST_SHIP) {
     assert.ok(addresses.has(expected),
       `${expected} is no longer in the build — the scan is not reading the Terms and Privacy chunks`)
   }

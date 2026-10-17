@@ -5,8 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE AMOUNTS BELOW ARE DISPLAY FALLBACKS. THEY ARE NOT WHAT STRIPE CHARGES.
 //
-//     `approvedTotal` below is the approved ladder: $7 monthly · $18
-//     quarterly · $48 yearly.
+//     `approvedTotal` below is the approved ladder: $7 monthly · $48 yearly.
 //
 // api/_lib/pricing.js holds the same USD fallbacks; tests/unit/price-ladder.test.js fails if they differ.
 //
@@ -22,7 +21,7 @@
 //          do not charge. `approvedTotal` is only the pre-settle fallback.
 //       2. A tier with no `checkoutPlan` is NOT rendered by the upgrade modal.
 //          src/pages/Checkout.jsx only accepts the plans in its own table
-//          (monthly, quarterly, yearly); offering anything else would dead-end
+//          (monthly, yearly); offering anything else would dead-end
 //          on "Invalid checkout selection".
 //       3. The "from $X/month" headline is COMPUTED from whatever is actually
 //          renderable, never typed. If the ladder changes, the headline follows.
@@ -40,9 +39,8 @@ import { PRICE_SYMBOLS } from '../utils/currency.js'
 // server is the same lie with an extra step, which is why
 // tests/unit/trial-cadence.test.js compares the two tables.
 //
-// THE TRIAL IS EARNED BY THE CADENCE. Monthly bills today
-// and says so; quarterly and yearly each get seven days. Yearly granted 7
-// before this change and grants 7 after it, so no promise already made moved.
+// THE TRIAL IS EARNED BY THE CADENCE. Monthly bills today and says so;
+// yearly gets seven days.
 export const PLAN_LADDER = Object.freeze([
   Object.freeze({
     id: 'monthly',
@@ -53,25 +51,6 @@ export const PLAN_LADDER = Object.freeze([
     checkoutPlan: 'monthly',
     approvedTotal: 7,
     trialDays: 0,
-  }),
-  Object.freeze({
-    id: 'quarterly',
-    label: 'Quarterly',
-    cadence: 'billed every 3 months',
-    months: 3,
-    liveKey: 'quarterly',
-    // Quarterly is buyable. It relies on BILLING_INTERVALS, PRICE_ENV_KEYS,
-    // the Checkout.jsx case, useProPrice.quarterlyTotal, the trial, and
-    // `interval_count` in setup-stripe. The Stripe price has the lookup key
-    // `uil4b_pro_quarterly` and recurs { interval: 'month', interval_count: 3 },
-    // so it bills once a quarter. /api/get-prices resolves it the same way
-    // create-checkout does. Pro is granted by subscription status, not price id
-    // (api/_lib/plans.js planForSubscription), so a quarterly subscriber gets
-    // Pro exactly as a monthly or yearly one does.
-    // tests/unit/price-ladder.test.js keeps the preconditions pinned.
-    checkoutPlan: 'quarterly',
-    approvedTotal: 18,
-    trialDays: 7,
   }),
   Object.freeze({
     id: 'yearly',
@@ -94,9 +73,13 @@ export const APPROVED_CURRENCY = 'usd'
 // always renders two decimals, which is right on an invoice and wrong on a
 // 44px headline number — "$4.00/month" makes the eye check the cents. Whole
 // amounts lose the cents here; anything with real cents keeps them.
-export function formatMoney(amount, currency = APPROVED_CURRENCY) {
+//
+// A bare "$" reads as the page's own dollar. When the amount is USD but the page
+// is in another currency, pass `qualify` and it prints "US$", the way the other
+// dollar currencies already carry their prefix.
+export function formatMoney(amount, currency = APPROVED_CURRENCY, { qualify = false } = {}) {
   if (typeof amount !== 'number' || !Number.isFinite(amount)) return null
-  const symbol = PRICE_SYMBOLS[currency] || `${currency.toUpperCase()} `
+  const symbol = qualify && currency === 'usd' ? 'US$' : (PRICE_SYMBOLS[currency] || `${currency.toUpperCase()} `)
   const isWhole = Math.abs(amount - Math.round(amount)) < 0.005
   return `${symbol}${isWhole ? Math.round(amount) : amount.toFixed(2)}`
 }
@@ -109,6 +92,30 @@ function perMonthOf(total, months) {
   return Math.round((total / months) * 100) / 100
 }
 
+/**
+ * The amount Stripe will actually charge for `liveKey` in `currency`, or
+ * undefined when the price service has no live price for that pair.
+ *
+ * /api/get-prices fills EVERY cadence and currency, from DEFAULT_PRICES when
+ * Stripe has nothing, and says so beside the numbers: `source[cadence]` is
+ * 'live' or 'fallback', and `currencyAvailability[cadence][currency]` is true
+ * only when the live Stripe price carries that currency. A fallback amount is
+ * a display default, not a price, so it is never returned here: showing it
+ * buys a trial button that ends in a 503 at checkout.
+ *
+ * It fails closed: a payload that does not say the pair is live (no
+ * `currencyAvailability`, or false for it) has no live price. The route always
+ * sends both fields.
+ */
+export function livePriceOf(prices, liveKey, currency) {
+  const amount = prices?.[liveKey]?.[currency]
+  if (typeof amount !== 'number' || !Number.isFinite(amount)) return undefined
+  const source = prices?.source?.[liveKey]
+  if (source !== undefined && source !== 'live') return undefined
+  if (prices?.currencyAvailability?.[liveKey]?.[currency] !== true) return undefined
+  return amount
+}
+
 // Resolve the ladder against whatever the live price service returned.
 //
 // `prices` is the raw payload from usePrices() — { monthly: { usd: 4.99 }, … } —
@@ -117,8 +124,8 @@ function perMonthOf(total, months) {
 // and callers should hold a skeleton rather than flash the fallback.
 export function resolvePlanLadder({ prices, currency = APPROVED_CURRENCY } = {}) {
   return PLAN_LADDER.map((plan) => {
-    const live = prices?.[plan.liveKey]?.[currency]
-    const isLive = typeof live === 'number' && Number.isFinite(live)
+    const live = livePriceOf(prices, plan.liveKey, currency)
+    const isLive = typeof live === 'number'
     const total = isLive ? live : plan.approvedTotal
     const planCurrency = isLive ? currency : APPROVED_CURRENCY
     const perMonth = perMonthOf(total, plan.months)
@@ -143,11 +150,22 @@ export function purchasablePlans(resolved) {
   return resolved.filter((p) => p.purchasable)
 }
 
+// Only the tiers whose amount is the live price Stripe will charge.
+export function livePlans(resolved) {
+  return purchasablePlans(resolved).filter((p) => p.isLive)
+}
+
 // The honest headline: the cheapest per-month figure among the tiers we will
 // actually sell. Never typed into copy.
+//
+// Rates are compared in one currency only. When any tier is live, only live
+// tiers compete (a US$ fallback never undercuts an A$ price Stripe charges);
+// with none live, as on the static pages, the approved ladder competes as it is.
 export function cheapestPerMonth(resolved) {
-  const candidates = purchasablePlans(resolved).filter((p) => typeof p.perMonth === 'number')
-  if (!candidates.length) return null
+  const priced = purchasablePlans(resolved).filter((p) => typeof p.perMonth === 'number')
+  const pool = priced.some((p) => p.isLive) ? priced.filter((p) => p.isLive) : priced
+  if (!pool.length) return null
+  const candidates = pool.filter((p) => p.currency === pool[0].currency)
   return candidates.reduce((low, p) => (p.perMonth < low.perMonth ? p : low), candidates[0])
 }
 
@@ -156,6 +174,9 @@ export function cheapestPerMonth(resolved) {
 export function savingsVsMonthly(plan, resolved) {
   const monthly = resolved.find((p) => p.id === 'monthly')
   if (!monthly?.perMonth || !plan?.perMonth || plan.id === 'monthly') return 0
+  // Two rates in two currencies (a live A$ yearly beside the US$ monthly
+  // fallback) are not comparable, so there is no saving to state.
+  if (monthly.currency !== plan.currency) return 0
   const pct = Math.round((1 - plan.perMonth / monthly.perMonth) * 100)
   return pct >= 5 ? pct : 0
 }

@@ -5,7 +5,7 @@ import { go, watch } from './helpers.js'
 import { readSeed, setSeed, openPaletteTools } from './palette-helpers.js'
 import { appendCommunitySubmission, readCommunitySubmissions } from '../../src/utils/communitySubmissions.js'
 import { buildCommunityPromptRecord, resolvePromptProfileLink } from '../../src/utils/promptSubmission.js'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { getOwnerHandle } from '../../src/utils/constants.js'
 
 /* The site-owner address, read from the environment.

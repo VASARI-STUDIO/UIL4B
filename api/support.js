@@ -2,6 +2,7 @@ import { adminDb } from './_lib/firebase-admin.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
 import { mailFrom, REPLY_TO } from './_lib/mail.js'
+import { waitUntil } from '@vercel/functions'
 
 // THE BOOTSTRAP IS SHARED, NOT COPIED. This file used to carry its own
 // initializeApp(): a bare JSON.parse of FIREBASE_SERVICE_ACCOUNT_KEY inside a
@@ -114,15 +115,16 @@ function isAlreadyExists(err) {
   return err?.code === 6 || err?.code === 'already-exists' || /ALREADY_EXISTS/.test(String(err?.message || ''))
 }
 
-// Bounds each outbound call so one slow service cannot hold the response.
+// Bounds each outbound call so one slow service cannot hold the invocation open.
 const OUTBOUND_TIMEOUT_MS = 5000
 
 export default function handler(req, res) {
   return handleSupport(req, res)
 }
 
-// The handler body, with the database lookup injectable for tests.
-export async function handleSupport(req, res, { getDb = adminDb } = {}) {
+// The handler body, with the database lookup and the after-response scheduler
+// injectable for tests.
+export async function handleSupport(req, res, { getDb = adminDb, defer = waitUntil } = {}) {
   // `Access-Control-Allow-Origin: *` invited every page on the internet to POST
   // here from a visitor's browser. The allowlist is the same one the Stripe
   // flows use. Note what this does and does not buy: CORS is a browser
@@ -169,10 +171,9 @@ export async function handleSupport(req, res, { getDb = adminDb } = {}) {
   const { entry } = validated
   const requestId = parseRequestId(req.body?.requestId)
 
-  // Whether the message actually landed anywhere. A failed Firestore write used
-  // to be logged and then answered with `{ ok: true }` — the user was told their
-  // bug report had been received when it had been dropped. The response at the
-  // end is now conditional on this.
+  // Whether the record landed in the database. It decides how the response is
+  // sent below: a stored message is confirmed straight away, while an unstored
+  // one is only confirmed if the email reaches someone.
   let stored = false
   try {
     if (requestId) await db.collection('feedback').doc(requestId).create(entry)
@@ -188,8 +189,8 @@ export async function handleSupport(req, res, { getDb = adminDb } = {}) {
   }
 
   // The two notifications are independent of each other, so they run together
-  // and each is bounded: the response waits for the slower of the two, not
-  // their sum, and never for longer than OUTBOUND_TIMEOUT_MS.
+  // and each is bounded by OUTBOUND_TIMEOUT_MS. Neither one rejects: each
+  // catches and logs its own failure.
 
   // Append to a Google Sheet via an Apps Script web app (optional).
   // Optional legacy mirror: set the server-only GOOGLE_SHEETS_WEBHOOK_URL and
@@ -259,12 +260,21 @@ export async function handleSupport(req, res, { getDb = adminDb } = {}) {
     }
   })() : null
 
-  const [, emailed] = await Promise.all([mirrored, mailed])
+  const notifications = Promise.all([mirrored, mailed])
 
-  // Every downstream is optional except the record itself, so "delivered" means
-  // at least one of them took it. Nothing else in this handler is allowed to
-  // turn a dropped message into a green tick.
-  if (!stored && !emailed) {
+  // A stored message is already safe, and the notifications are best-effort
+  // extras, so the reply does not wait for them: they finish after the response
+  // is sent, kept alive by the platform's after-response hook.
+  if (stored) {
+    defer(notifications)
+    return res.status(200).json({ ok: true })
+  }
+
+  // Not stored: the email is the only copy, so wait for it. Every downstream is
+  // optional except the record itself, so "delivered" means at least one of
+  // them took it. A dropped message is never answered with a green tick.
+  const [, emailed] = await notifications
+  if (!emailed) {
     return res.status(502).json({ error: 'We could not record that message. Please try again shortly.' })
   }
   return res.status(200).json({ ok: true })

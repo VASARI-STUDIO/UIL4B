@@ -63,8 +63,8 @@ import {
 //     signed with a name and a role, no CTA furniture inside it.
 //     That drove the SHAPE of the panel: heading, prose, signature.
 //   • Framer's "This feature is in beta" — states the state plainly and offers
-//     exactly ONE way to respond ("Open Discord →") rather than a row of
-//     choices. That drove the single action at the foot of this panel.
+//     a direct way to respond ("Open Discord →"). That drove the feedback
+//     action at the foot of this panel.
 export default function FounderNote() {
   const [open, setOpen] = useState(false)
   const titleId = useId()
@@ -175,7 +175,7 @@ export default function FounderNote() {
                 {FOUNDER_SIGNATURE.name}
                 <span className="fnote-sign-place">{FOUNDER_SIGNATURE.place}</span>
               </p>
-              {/* ONE action, and it is the feedback channel this app already has.
+              {/* The feedback action uses the channel this app already has.
                   /feedback is the same destination the footer's own "Send
                   feedback" link points at and the same form the floating feedback
                   button opens, so a note that asks for feedback and a footer that
@@ -189,9 +189,15 @@ export default function FounderNote() {
                   them. Nothing here sends mail: transactional email is blocked on
                   a key that does not exist yet, and this deliberately does not
                   wait on it. */}
-              <Link className="btn btn-accent fnote-action" to="/feedback" onClick={close}>
-                Send feedback
-              </Link>
+              <div className="fnote-actions">
+                <Link className="btn btn-accent fnote-action" to="/feedback" onClick={close}>
+                  Send feedback
+                </Link>
+                {/* The support action points to Plans, where a subscription supports the product. */}
+                <Link className="btn fnote-action" to="/plans" onClick={close}>
+                  Support this project
+                </Link>
+              </div>
             </div>
           </div>
         </div>,

@@ -5,8 +5,8 @@
 // to one page cannot silently drift the other.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { LIBRARY_PALETTES, BRAND_LIBRARY_PALETTES, CURATED_LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
-import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
+import { LIBRARY_PALETTES, BRAND_LIBRARY_PALETTES, CURATED_LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 
 // A withheld palette is not rendered at all — not blurred, not greyed, absent —
 // because its colours never reach the page (src/utils/lockedPreview.js).
