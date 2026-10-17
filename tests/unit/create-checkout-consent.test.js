@@ -5,7 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { read, stripComments, assertStripperWorks } from './helpers/source-text.js'
-import { createSession, isTermsUrlError, sessionCurrency, CONSENT_DROPPED_TAG } from '../../api/create-checkout.js'
+import { createSession, createSessionInCurrency, isTermsUrlError, sessionCurrency, CONSENT_DROPPED_TAG } from '../../api/create-checkout.js'
 
 const TERMS_ERROR = 'Consent to the terms of service cannot be collected until a terms of service URL is saved on the account.'
 
@@ -133,4 +133,46 @@ test('isTermsUrlError also matches other plausible spellings of the same refusal
     assert.equal(isTermsUrlError(stripeError(message)), true, message)
   }
   assert.equal(isTermsUrlError(stripeError('Invalid consent_collection[terms_of_service]: must be one of required')), false)
+})
+
+// The route opens the session through createSessionInCurrency, so the consent
+// retry has to hold up inside the currency-locked path, not only on its own.
+const withConsent = () => ({ mode: 'subscription', consent_collection: { terms_of_service: 'required' } })
+const currencyError = () => stripeError('The price does not support the currency aud.', { param: 'currency' })
+
+test('in the currency-locked session, a Terms-URL refusal retries once without consent and keeps the currency', async (t) => {
+  const logged = t.mock.method(console, 'error', () => {})
+  const stripe = fakeStripe([stripeError(TERMS_ERROR), { id: 'cs_3' }])
+  const input = withConsent()
+  const result = await createSessionInCurrency(stripe, input, 'aud')
+  assert.equal(result.refusal, undefined)
+  assert.equal(result.session.id, 'cs_3')
+  assert.equal(stripe.calls.length, 2)
+  assert.deepEqual(stripe.calls[0].consent_collection, { terms_of_service: 'required' })
+  assert.equal('consent_collection' in stripe.calls[1], false, 'the retry must drop consent collection')
+  assert.equal(stripe.calls[0].currency, 'aud')
+  assert.equal(stripe.calls[1].currency, 'aud', 'the retry must not lose the currency the buyer was shown')
+  assert.equal(sessionCurrency(result.session, { ...input, currency: 'aud' }), 'aud')
+  assert.deepEqual(logged.mock.calls.map((c) => c.arguments), [[CONSENT_DROPPED_TAG]], 'one console.error, with the fixed tag')
+})
+
+test('in the currency-locked session, a currency refusal is a 409 and consent is not retried', async (t) => {
+  const logged = t.mock.method(console, 'error', () => {})
+  const stripe = fakeStripe([currencyError(), { id: 'never' }])
+  const result = await createSessionInCurrency(stripe, withConsent(), 'aud')
+  assert.equal(result.session, undefined)
+  assert.equal(result.refusal.status, 409)
+  assert.match(result.refusal.error, /AUD/)
+  assert.equal(stripe.calls.length, 1, 'a currency refusal must not trigger any retry')
+  assert.equal(logged.mock.calls.some((c) => c.arguments[0] === CONSENT_DROPPED_TAG), false, 'consent was never dropped')
+})
+
+test('a currency refusal on the consent retry is still a 409, never a session in another currency', async (t) => {
+  quiet(t)
+  const stripe = fakeStripe([stripeError(TERMS_ERROR), currencyError(), { id: 'never' }])
+  const result = await createSessionInCurrency(stripe, withConsent(), 'aud')
+  assert.equal(result.session, undefined)
+  assert.equal(result.refusal.status, 409)
+  assert.equal(stripe.calls.length, 2, 'only the one consent retry')
+  assert.equal(stripe.calls[1].currency, 'aud')
 })
