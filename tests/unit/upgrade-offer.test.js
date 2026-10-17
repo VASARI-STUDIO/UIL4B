@@ -67,7 +67,7 @@ test('every cadence on the fallback table: no amount and no billed line', () => 
 })
 
 test('a payload without currencyAvailability fails closed: no amount', () => {
-  const { currencyAvailability, ...bare } = LIVE
+  const { currencyAvailability: _currencyAvailability, ...bare } = LIVE
   const offer = upgradeOffer({ prices: bare, currency: 'aud', loaded: true })
   assert.equal(offer.label, 'See Pro')
   assert.equal(offer.billed, '')
