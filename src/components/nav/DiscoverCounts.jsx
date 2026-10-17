@@ -1,28 +1,16 @@
-import { GALLERY_PALETTES } from '../../data/paletteGallery'
-import { GALLERY_GRADIENTS } from '../../data/gradientGallery'
+import { LIBRARY_TOTALS, LIBRARY_LEAD } from '../../data/libraryTotals'
 import { PROMPT_COUNT } from '../../data/communityPromptsPreview'
-import { DISCOVER_RESOURCES } from '../../data/discoverResources'
 
-// THE DISCOVER PANE'S 2×2 — `UIL4B App.dc.html` lines 176-190 and 2066-2071.
-//
-// The design's component, true numbers. Palettes and gradients are counted
-// here from the galleries the pages render. The font and icon totals are
-// fetched at runtime from Google Fonts and Iconify and exist nowhere in this
-// codebase to count, so those two cards are the other two libraries that CAN
-// be counted: the prompt library and the curated resources.
-//
-// Lazy: the resources list is 20 KB of copy that no other always-loaded module
-// needs, and the pane only exists once the Discover menu is open.
+// Count the libraries whose totals are available in the local gallery data.
+// Palettes and gradients are counted from the generated totals
+// (src/data/libraryTotals.js), so no Pro row is needed in the bundle.
 const NEUTRAL = ['#15161B', '#33384A', '#5A6379', '#C9CDD6']
-const NEUTRAL_DEEP = ['#0E0F13', '#232838', '#4B5468', '#C9CDD6']
 
 export default function DiscoverCounts() {
-  const firstGradient = GALLERY_GRADIENTS[0]
   const cards = [
-    { count: GALLERY_PALETTES.length, label: 'Palettes, named and tagged', swatches: GALLERY_PALETTES[0].colors.slice(0, 4) },
-    { count: GALLERY_GRADIENTS.length, label: 'Gradients, copy as CSS', gradient: firstGradient },
+    { count: LIBRARY_TOTALS.curatedPalettes, label: 'Palettes, named and tagged', swatches: LIBRARY_LEAD.palette.colors.slice(0, 4) },
+    { count: LIBRARY_TOTALS.gradients, label: 'Gradients, copy as CSS', gradient: LIBRARY_LEAD.gradient },
     { count: PROMPT_COUNT, label: 'Prompts for UI and marketing', swatches: NEUTRAL },
-    { count: DISCOVER_RESOURCES.length, label: 'Curated resources', swatches: NEUTRAL_DEEP },
   ]
   return (
     <div className="pnav-dcounts">

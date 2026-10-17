@@ -83,7 +83,6 @@ const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 // Moved from Create to Discover: it is a browse-and-take surface, not a tool
 // you operate, so it belongs beside the palette and gradient libraries.
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
-const CuratedResources = lazy(() => import('./pages/CuratedResources'))
 // One Learn article, rendered inside the PillNav app-shell. /learn itself is
 // chromeless (SurfaceIndex mounts its own nav); its articles are not, the same
 // way /discover is chromeless and /discover/palettes is not.
@@ -549,11 +548,6 @@ function AppInner() {
                   no visible error, on the page whose whole product is the text
                   you came to copy. Same helper /seo is given below. */}
               <Route path="/discover/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
-              {/* Curated Resources — the hand-picked external set in
-                  src/data/discoverResources.js. The nav has advertised this as
-                  “Soon” since Slice 2 while the data sat unrendered; this is the
-                  route that makes the menu entry true. */}
-              <Route path="/discover/resources" element={<CuratedResources />} />
 
               {/* Learn articles. An unknown slug renders NotFound from inside
                   LearnArticle rather than matching here, so /learn/nonsense is a

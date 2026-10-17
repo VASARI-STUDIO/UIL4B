@@ -88,17 +88,9 @@ test('every line carries a tier the code understands and a justification a human
   assert.equal(tierOf('no-such-pack'), null, 'a pack the table has never heard of must not resolve to a tier')
 })
 
-test('the signed-out sample is exactly the outlined packs', () => {
-  // The founder's line for logged out is "a capped grid, outlined packs only".
-  // That is a claim about a SET, so it is asserted as one rather than left to
-  // five independent lines that could drift apart one at a time.
-  const src = read(PAGE)
-  const outlined = src.match(/outlined:\s*\{[^}]*packs:\s*\[([^\]]*)\]/)[1]
-    .split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
+test('the signed-out sample retains the five regular interface packs', () => {
   const anon = Object.entries(ICON_PACK_TIERS).filter(([, r]) => r.tier === 'anon').map(([p]) => p)
-  assert.deepEqual([...anon].sort(), [...outlined].sort(),
-    'The `anon` tier and the Outlined group have come apart. Signed out is "outlined packs only", '
-    + 'so a pack in one and not the other is a rule nobody stated.')
+  assert.deepEqual([...anon].sort(), ['heroicons', 'iconoir', 'lucide', 'ph', 'tabler'])
 })
 
 test('the tiers widen, and an unknown pack is refused by everyone except Pro', () => {

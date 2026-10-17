@@ -366,10 +366,6 @@ const DISCOVER_SPEC = [
   // already written for the live page and is untouched.
   { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: false },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
-  // Live as of this change. The curated resources in discoverResources.js
-  // have existed since Slice 2; only the page was missing, so this entry
-  // pointed at /discover and said “Soon” while the content sat unrendered.
-  { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover/resources', soon: false },
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
 
@@ -580,7 +576,7 @@ function groupsToMenu(groups, spec) {
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
   { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library'] },
   { label: 'Community', ids: ['inspiration', 'community-prompts'] },
-  { label: 'Your library', ids: ['curated', 'collections'] },
+  { label: 'Your library', ids: ['collections'] },
 ])
 
 // Which NavIcon glyph a Learn article row shows. Presentation, so it lives here
@@ -640,7 +636,6 @@ function liveDiscoverGroups() {
 function discoverPromoTitle() {
   const names = liveDiscoverGroups()
     .map((group) => group.label.replace(/ (?:Library|Gallery|Resources)$/, ''))
-    .filter((label) => label !== 'Curated')
     .map((label) => (label.endsWith('s') ? label.toLowerCase() : label.toLowerCase() + 's'))
   if (!names.length) return 'Discover'
   const last = names[names.length - 1]

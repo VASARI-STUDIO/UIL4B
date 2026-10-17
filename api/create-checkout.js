@@ -78,9 +78,60 @@ export async function resolvePrice(stripe, interval, { env = process.env, cache 
 export function intervalRefusal(rawInterval) {
   if (parseBillingInterval(rawInterval)) return null
   if (rawInterval === 'lifetime') {
-    return { status: 400, error: 'Pro is sold as a monthly, quarterly or yearly subscription. There is no one-off purchase. No payment session was created.' }
+    return { status: 400, error: 'Pro is sold as a monthly or yearly subscription. There is no one-off purchase. No payment session was created.' }
   }
   return { status: 400, error: `interval must be one of: ${BILLING_INTERVALS.join(', ')}` }
+}
+
+/**
+ * The 400 answer for a currency the request names but this route does not
+ * sell, or null when it is fine (or absent). An unrecognised currency used to
+ * be dropped without a word, which opened the session in whatever currency
+ * Stripe defaulted to, not the one the buyer saw.
+ */
+export function currencyRefusal(rawCurrency) {
+  if (rawCurrency === undefined || rawCurrency === null) return null
+  if (typeof rawCurrency === 'string' && CURRENCY_CODES.includes(rawCurrency.toLowerCase())) return null
+  return { status: 400, error: `currency must be one of: ${CURRENCY_CODES.join(', ')}. No payment session was created.` }
+}
+
+// Stripe refuses a currency it cannot honour on this session: the price has no
+// option for it, or the customer is locked to another currency by an earlier
+// subscription. Both name the currency.
+// Stripe's own `param` decides when it names one; the message is read only when
+// it does not, so an error about another field never counts as a currency one.
+function isCurrencyError(err) {
+  if (typeof err?.param === 'string' && err.param) return err.param === 'currency'
+  return /currenc/i.test(String(err?.message || ''))
+}
+
+/**
+ * Opens the checkout session in the currency the buyer was shown. If Stripe
+ * cannot honour that currency the answer is a refusal, never a retry without
+ * it: a session with no currency opens in the price's base currency or the
+ * customer's locked one, and the buyer would be charged an amount they were
+ * not shown. Any other Stripe error is thrown for the caller's generic answer.
+ *
+ * Returns `{ session }` or `{ refusal: { status, error } }`.
+ */
+export async function createSessionInCurrency(stripe, sessionParams, wantCurrency) {
+  const params = wantCurrency ? { ...sessionParams, currency: wantCurrency } : sessionParams
+  try {
+    return { session: await stripe.checkout.sessions.create(params) }
+  } catch (err) {
+    if (wantCurrency && isCurrencyError(err)) {
+      console.error('create-checkout: Stripe cannot open the session in the requested currency — refusing rather than switching currency', {
+        currency: wantCurrency, error: err?.message, type: err?.type, param: err?.param,
+      })
+      return {
+        refusal: {
+          status: 409,
+          error: `Checkout can't be opened in ${wantCurrency.toUpperCase()} for this account right now. No payment session was created and nothing was charged.`,
+        },
+      }
+    }
+    throw err
+  }
 }
 
 export default async function handler(req, res) {
@@ -104,6 +155,8 @@ export default async function handler(req, res) {
   // or Stripe call to refuse.
   const refusal = intervalRefusal(req.body?.interval)
   if (refusal) return res.status(refusal.status).json({ error: refusal.error })
+  const badCurrency = currencyRefusal(req.body?.currency)
+  if (badCurrency) return res.status(badCurrency.status).json({ error: badCurrency.error })
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -174,9 +227,7 @@ export default async function handler(req, res) {
     // whose only symptom is a card statement, so both now read the same table
     // and tests/unit/trial-cadence.test.js fails if they drift.
     //
-    // Founder, 2026-09-15: monthly bills today, quarterly and yearly each get
-    // seven days. Yearly is unchanged by this commit — it granted 7 before and
-    // grants 7 now — so no existing promise moved.
+    // The rule: monthly bills today; yearly gets a seven-day trial.
     const subscriptionData = { metadata: { firebaseUid: uid } }
     const trialDays = trialDaysFor(interval)
     if (trialDays > 0) {
@@ -202,21 +253,12 @@ export default async function handler(req, res) {
       subscription_data: subscriptionData,
     }
     // Present the customer's local currency (the price carries currency_options
-    // for each supported currency). Falls back gracefully if a returning
-    // customer already has a locked currency from a prior subscription.
-    if (wantCurrency) sessionParams.currency = wantCurrency
-
-    let session
-    try {
-      session = await stripe.checkout.sessions.create(sessionParams)
-    } catch (e) {
-      if (wantCurrency) {
-        delete sessionParams.currency
-        session = await stripe.checkout.sessions.create(sessionParams)
-      } else {
-        throw e
-      }
-    }
+    // for each supported currency). If Stripe cannot honour it — a returning
+    // customer locked to another currency by a prior subscription, say — the
+    // answer is a refusal the page shows, never a session in a different
+    // currency (see createSessionInCurrency).
+    const { session, refusal: currencyRefused } = await createSessionInCurrency(stripe, sessionParams, wantCurrency)
+    if (currencyRefused) return res.status(currencyRefused.status).json({ error: currencyRefused.error })
 
     return res.status(200).json({
       clientSecret: session.client_secret,

@@ -4,7 +4,7 @@
 // frame while the dialog around it holds still.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS } from '../../src/data/promptPreviewAssets.js'
 
 async function openLibrary(browser, { width = 1440, height = 900, reducedMotion = 'no-preference' } = {}) {

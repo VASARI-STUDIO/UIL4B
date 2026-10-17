@@ -231,14 +231,13 @@ test('no file under /api holds an email address any more', () => {
   // tests/unit/owner-email-not-public.test.js already sets, because a PERSONAL
   // mailbox on the site's own domain is exactly as harvestable as one on
   // gmail.com. These are role addresses that have to be reachable to do their
-  // job: admin@uil4b.com is the Reply-To on every outbound support mail
+  // job: support@uil4b.com is the Reply-To on every outbound support mail
   // (api/_lib/mail.js explains why it is that one), and onboarding@resend.dev
   // is Resend's own sandbox sender.
   const PUBLISHED = new Set([
-    'admin@uil4b.com',
+    'hello@uil4b.com',
+    'help@uil4b.com',
     'support@uil4b.com',
-    'legal@uil4b.com',
-    'privacy@uil4b.com',
     'onboarding@resend.dev',
   ])
 

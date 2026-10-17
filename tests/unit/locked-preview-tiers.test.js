@@ -35,10 +35,10 @@ import {
   galleryTier,
   GALLERY_TIER_LIMITS,
 } from '../../src/utils/lockedPreview.js'
-import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
-import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
-import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
@@ -322,13 +322,14 @@ test('the three libraries add up at every rung', () => {
 test('every gated gallery derives its rung and passes that rung as the cap', () => {
   for (const [name, file] of Object.entries(PAGES)) {
     const src = stripComments(read(file))
-    assert.ok(/galleryTier\(\{\s*isPro,\s*signedIn:/.test(src),
-      `${name} must derive its rung from galleryTier(isPro, signedIn)`)
+    assert.ok(/galleryTier\(\{\s*isPro:\s*ready,\s*signedIn:/.test(src),
+      `${name} must derive its rung from galleryTier(isPro: ready, signedIn)`)
     assert.ok(/limit:\s*galleryLimit\(tier\)/.test(src),
       `${name} must hand the rung's cap to splitLockedLibrary`)
     // The cap alone is not the gate. `unlocked` stays an exact identity check,
     // so Pro is answered before any counting happens.
-    assert.ok(/unlocked:\s*isPro === true/.test(src), `${name} must still gate on an exact isPro === true`)
+    assert.ok(/const ready = pro\.status === 'ready'/.test(src), `${name} must derive ready from an exact status === 'ready'`)
+    assert.ok(/unlocked:\s*ready\b/.test(src), `${name} must still gate on the server's full set having arrived`)
   }
 })
 
@@ -340,7 +341,9 @@ test('the prompt gate is handed the library, not the view of it the reader built
   // prompts fall open. The splitter must see COMMUNITY_PROMPTS, and the sort
   // must run on what it returned.
   const src = stripComments(read(PAGES.prompts))
-  assert.ok(/splitLockedLibrary\(COMMUNITY_PROMPTS,/.test(src),
+  assert.ok(/const communityRows = pro\.items \?\? COMMUNITY_PROMPT_ROWS/.test(src),
+    'the canonical rows must be the server list or the bundle whole list, in order')
+  assert.ok(/splitLockedLibrary\(communityRows,/.test(src),
     'the splitter must be given the canonical prompt library')
   assert.ok(!/splitLockedLibrary\(sorted/.test(src),
     'the splitter is being given a sorted view — the Sort control can move the gate')

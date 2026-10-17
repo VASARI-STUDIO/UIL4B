@@ -13,7 +13,7 @@ import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { createTools } from '../../src/data/toolTree.js'
-import { GALLERY_PALETTES } from '../../src/data/paletteGallery.js'
+import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
 
 const SESSION_HINT = 'vs-session'
 const FIXTURE = '/tests/user-sim/fixtures/user-home.html'

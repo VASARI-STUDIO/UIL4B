@@ -103,9 +103,7 @@ test.describe('the secondary landings stay compressed', () => {
   test('every hero count is read off the data rather than typed into the copy', async ({ page }) => {
     watch(page, 'visitor checking whether the numbers are true')
 
-    // /discover said "Four curated libraries are ready now" for months after it
-    // stopped being four — the Prompt Library shipped, then /discover/resources
-    // did, and the sentence could not know. It counts now.
+    // The hero and cards share the registry's live and upcoming counts.
     await go(page, '/discover')
     const live = DISCOVER_GROUPS.filter((g) => !g.soon).length
     const soon = DISCOVER_GROUPS.length - live

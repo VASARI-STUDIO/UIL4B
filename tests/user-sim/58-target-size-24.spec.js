@@ -65,7 +65,7 @@ function measureTargets(min) {
   //
   // Measured on the same run, this narrows the exemption and nothing else: the
   // 16 genuinely inline waivers all survive - `.app-footer-attrib` on every
-  // surface, and the prose links on /privacy (privacy@uil4b.com, oaic.gov.au,
+  // surface, and the prose links on /privacy (support@uil4b.com, oaic.gov.au,
   // "Settings -> Your data") - while all 23 block-level ones are now reported.
   const inlineInSentence = (el) => {
     if (el.tagName !== 'A') return false

@@ -65,7 +65,7 @@ const SECTIONS = [
   { id: 'terms-s5', title: 'terms.s5Title', intro: 'terms.s5Intro', items: 'terms.s5Items' },
   { id: 'terms-s6', title: 'terms.s6Title', text: 'terms.s6Text' },
   { id: 'terms-s7', title: 'terms.s7Title', text: 'terms.s7Text' },
-  { id: 'terms-s8', title: 'terms.s8Title', text: 'terms.s8Text', contact: 'legal@uil4b.com' },
+  { id: 'terms-s8', title: 'terms.s8Title', text: 'terms.s8Text', contact: 'support@uil4b.com' },
 ]
 
 export default function Terms() {
