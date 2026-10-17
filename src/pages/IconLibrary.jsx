@@ -1079,6 +1079,37 @@ const JOIN_OPTS = [
   { v: 'bevel', label: 'Bevel corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="bevel" /></svg> },
 ]
 
+// One "Similar in this pack" tile. It stays invisible (but in layout, so the
+// 44px row never shifts) until its glyph has loaded, then fades in: an empty
+// outlined tile is a loading square, and those are dropped. A glyph that
+// errors stays hidden. `visibility:hidden` also keeps a not-yet-shown tile out
+// of the tab order. A cached image can finish before React attaches onLoad, so
+// the ref callback checks it on attach.
+function SimilarTile({ s, src, onPick }) {
+  const [ready, setReady] = useState(false)
+  return (
+    <button
+      type="button"
+      className="icust-similar-btn"
+      data-ready={ready ? 'true' : undefined}
+      title={s.name}
+      aria-label={`Open ${s.name}`}
+      onClick={() => onPick?.(s)}
+    >
+      <img
+        ref={el => { if (el && el.complete && el.naturalWidth > 0) setReady(true) }}
+        src={src}
+        width="24"
+        height="24"
+        alt=""
+        loading="lazy"
+        onLoad={() => setReady(true)}
+        onError={() => setReady(false)}
+      />
+    </button>
+  )
+}
+
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
@@ -1835,22 +1866,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 <div className="icust-similar-label">Similar in this pack</div>
                 <div className="icust-similar-row">
                   {similarList.map(s => (
-                    <button
+                    <SimilarTile
                       key={s.id}
-                      type="button"
-                      className="icust-similar-btn"
-                      title={s.name}
-                      aria-label={`Open ${s.name}`}
-                      onClick={() => onPick?.(s)}
-                    >
-                      <img
-                        src={buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                        width="24"
-                        height="24"
-                        alt=""
-                        loading="lazy"
-                      />
-                    </button>
+                      s={s}
+                      src={buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                      onPick={onPick}
+                    />
                   ))}
                 </div>
               </div>
@@ -1989,22 +2010,21 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
    these are the only human names the product has for them. `iconPackTiers.js`
    deliberately holds no labels — it is about entitlement, not vocabulary.
 
-   Order and pack labels are what the hand-written menu rendered; the first two
-   group headings now say line and filled, avoiding the old outlined/solid wording.
-   `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
+   Order and pack labels are what the hand-written menu rendered. The interface
+   packs are ONE group, "Interface", stroke packs first and the fill-only ones
+   after. Headings carry no style word ("line", "filled", "coloured"): the
+   Weight and Coloured chips own those words, and a heading repeating one beside
+   a pack that cannot do it (Material under "filled" with Fill struck through,
+   Simple Icons under "coloured") contradicts the chip. `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
    here as individual packs; they reach the grid through the Coloured chip, and
    that is unchanged. */
 const PACK_MENU = [
   {
-    label: 'Interface (line)',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor']],
+    label: 'Interface',
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
   },
   {
-    label: 'Interface (filled)',
-    packs: [['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
-  },
-  {
-    label: 'Brand logos (coloured)',
+    label: 'Brand logos',
     packs: [['logodev', 'Real brand logos (Logo.dev)'], ['simple-icons', 'Simple Icons'], ['logos', 'Logos (colour)'], ['devicon', 'Devicon'], ['skill-icons', 'Skill Icons']],
   },
   {
