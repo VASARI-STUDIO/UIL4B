@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
+import { useNavigate, useSearchParams, NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -9,6 +9,7 @@ import { getStripe, hasStripeKey } from '../utils/stripeClient'
 import { refreshPrices, usePrices, useProPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
+import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -38,6 +39,7 @@ const PLANS = {
     name: 'UIL4B Pro',
     cadence: 'Monthly',
     per: 'per month',
+    months: 1,
     trial: trialLine('monthly'),
   },
   yearly: {
@@ -45,6 +47,7 @@ const PLANS = {
     name: 'UIL4B Pro',
     cadence: 'Yearly',
     per: 'per year',
+    months: 12,
     trial: trialLine('yearly'),
   },
 }
@@ -173,6 +176,10 @@ export default function Checkout() {
   const [formReady, setFormReady] = useState(false)
   // Payment submitted or complete: the period choice is locked.
   const [paying, setPaying] = useState(false)
+  // The currency each period's payment session was actually created in, as the
+  // server reported it, keyed by period so a late answer for a period the buyer
+  // has left cannot colour the one on screen.
+  const [sessionCurrencies, setSessionCurrencies] = useState({})
   const startedSent = useRef(false)
 
   // The billing-period choices are the ladder's buyable cadences that this
@@ -197,6 +204,19 @@ export default function Checkout() {
     }, { replace: true })
   }
   const amount = planKey === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly
+  const ladderEntry = PLAN_LADDER.find((entry) => entry.id === planKey)
+  // The amount is quoted only when the price service confirmed it live AND the
+  // payment session was created in the currency that amount is shown in. A
+  // returning customer with a locked currency gets a session in that currency
+  // whatever the page asked for, so the server reports the currency it used
+  // and a mismatch (or no report yet) drops the figure. Without one the terms
+  // say how the plan renews and leave the figure to Stripe's own form.
+  const amountLive = !!amount && proPrice.source[planKey] === 'live'
+  const renewal = renewalDisclosure({
+    trialDays: ladderEntry?.trialDays || 0,
+    amount: quotableAmount({ amount, live: amountLive, displayCurrency: proPrice.currency, sessionCurrency: sessionCurrencies[planKey] }),
+    months: plan?.months,
+  })
   // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and until
   // 2026-09-11 it rendered it as a lie. `useProPrice` returns `loaded: true`
   // the moment the fetch SETTLES — including when it settled by failing — and
@@ -226,7 +246,7 @@ export default function Checkout() {
       ? `No ${proPrice.currencyLabel} price for this billing period right now`
     : planKey === 'yearly'
       ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · Save ${proPrice.savingsPct}%` : ''}`
-      : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
+      : `${proPrice.currencyLabel} · billed monthly · cancel any time`
 
   useEffect(() => {
     if (sessionPlan === planKey) return undefined
@@ -244,7 +264,9 @@ export default function Checkout() {
       startedSent.current = true
       sendEvent(EVENTS.checkoutStarted, { plan: sessionInterval })
     }
-    return createCheckoutSession(sessionInterval)
+    return createCheckoutSession(sessionInterval, (session) => {
+      setSessionCurrencies((prev) => ({ ...prev, [sessionInterval]: session?.currency || null }))
+    })
   }, [createCheckoutSession, sessionInterval])
 
   // The payment panel is waiting on the auth answer, so ask for it now rather
@@ -410,15 +432,28 @@ export default function Checkout() {
             </div>
           ) : (
             <>
-              {/* From the moment a form is destroyed until the next one
-                  mounts. Kept in the tree and emptied, so each new load is
-                  announced. */}
-              <p className="checkout-loading" role="status">{formReady ? '' : 'Loading payment form…'}</p>
+              {/* How the plan renews and what subscribing agrees to, directly
+                  above the payment form in every layout. The block stays
+                  mounted while the period changes, so its polite live region
+                  announces the new wording. */}
+              <div className="checkout-disclosure">
+                <p className="checkout-renewal" aria-live="polite" aria-atomic="true">{renewal}</p>
+                <p className="checkout-terms">
+                  By subscribing you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+                </p>
+              </div>
               {/* A new period destroys the form at once; the next is created
                   once the choice has rested, with a new session request. */}
               {sessionPlan === planKey && (
                 <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={setError} onPaying={setPaying} />
               )}
+              {/* From the moment a form is destroyed until the next one
+                  mounts. Kept in the tree and emptied, so each new load is
+                  announced. It follows the embed's mount point (empty until
+                  the form mounts), so it fills the form's own place under the
+                  disclosure and nothing above it moves when the form is
+                  ready. */}
+              <p className="checkout-loading" role="status">{formReady ? '' : 'Loading payment form…'}</p>
             </>
           )}
         </div>

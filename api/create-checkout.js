@@ -83,6 +83,58 @@ export function intervalRefusal(rawInterval) {
   return { status: 400, error: `interval must be one of: ${BILLING_INTERVALS.join(', ')}` }
 }
 
+/**
+ * Whether Stripe refused a session because the account has no Terms of Service
+ * URL set (Dashboard > Settings > Public details), which consent collection needs.
+ * Stripe's wording is not a stable contract, so spaces, hyphens and the
+ * `terms_of_service` parameter spelling all count. Only a Stripe invalid-request
+ * error (HTTP 400) qualifies, so a network, auth or server failure whose text
+ * happens to mention the Terms is never retried.
+ */
+export function isTermsUrlError(err) {
+  if (!err) return false
+  if (err.type !== 'StripeInvalidRequestError' && err.statusCode !== 400) return false
+  const message = String(err.message || '')
+  const termsMention = /terms[\s_-]*of[\s_-]*service/i.test(message) || /consent_collection/i.test(String(err.param || ''))
+  return termsMention && /url/i.test(message)
+}
+
+// Logged when the Terms-URL fallback below drops consent collection.
+export const CONSENT_DROPPED_TAG = '[checkout] consent_collection dropped: terms URL not set'
+
+/**
+ * Create the Checkout Session. If Stripe rejects it only because the account has
+ * no Terms of Service URL yet, retry once without consent collection so checkout
+ * keeps working; any other error is thrown unchanged.
+ */
+export async function createSession(stripe, params) {
+  try {
+    return await stripe.checkout.sessions.create(params)
+  } catch (err) {
+    if (!params.consent_collection || !isTermsUrlError(err)) throw err
+    // An error, not a warning: sessions created on this path carry no recorded
+    // Terms agreement, so it has to stand out in the logs. The tag is fixed text
+    // only, with no error message, key or uid.
+    console.error(CONSENT_DROPPED_TAG)
+    const { consent_collection: _omitted, ...withoutConsent } = params
+    return stripe.checkout.sessions.create(withoutConsent)
+  }
+}
+
+/**
+ * The currency (lowercase ISO) a session was actually created in, or null when
+ * that is not known. The session's own currency wins; failing that, the
+ * currency we asked for counts only while it is still in the final params (the
+ * retry above deletes it when a returning customer's locked currency refused
+ * it), so the answer never names a currency Stripe did not use.
+ */
+export function sessionCurrency(session, params) {
+  const reported = typeof session?.currency === 'string' ? session.currency.trim().toLowerCase() : ''
+  if (reported) return reported
+  const asked = typeof params?.currency === 'string' ? params.currency.trim().toLowerCase() : ''
+  return asked || null
+}
+
 export default async function handler(req, res) {
   // An allowlisted origin is reflected, anything else gets no CORS header at
   // all — the same allowlist and the same shape as api/support.js, which
@@ -198,6 +250,8 @@ export default async function handler(req, res) {
         billingInterval: interval,
       },
       subscription_data: subscriptionData,
+      // Stripe shows the Terms checkbox and records the agreement on the session.
+      consent_collection: { terms_of_service: 'required' },
     }
     // Present the customer's local currency (the price carries currency_options
     // for each supported currency). Falls back gracefully if a returning
@@ -206,11 +260,11 @@ export default async function handler(req, res) {
 
     let session
     try {
-      session = await stripe.checkout.sessions.create(sessionParams)
+      session = await createSession(stripe, sessionParams)
     } catch (e) {
       if (wantCurrency) {
         delete sessionParams.currency
-        session = await stripe.checkout.sessions.create(sessionParams)
+        session = await createSession(stripe, sessionParams)
       } else {
         throw e
       }
@@ -218,6 +272,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       clientSecret: session.client_secret,
+      currency: sessionCurrency(session, sessionParams),
       interval,
       mode: sessionParams.mode,
     })
