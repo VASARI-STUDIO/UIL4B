@@ -280,7 +280,21 @@ test.describe('the icon grid for a name the service does not have', () => {
 test.describe('the customiser while its artwork is loading', () => {
   test.skip(isLiveIconify(), 'this spec controls when the artwork arrives')
 
-  test('a cold preview pulses until the held artwork arrives', async ({ page }) => {
+  // What the waiting slot may paint: nothing of its own. No fill, no shadow, no
+  // outline, no animation, whatever the motion setting.
+  const measureWait = (el) => el.evaluate((node) => {
+    const css = getComputedStyle(node)
+    const r = node.getBoundingClientRect()
+    const stage = node.parentElement.getBoundingClientRect()
+    return { background: css.backgroundColor, backgroundImage: css.backgroundImage, shadow: css.boxShadow,
+      animation: css.animationName, width: r.width, height: r.height,
+      dx: r.x + r.width / 2 - stage.x - stage.width / 2,
+      dy: r.y + r.height / 2 - stage.y - stage.height / 2 }
+  })
+  // Only the artwork the customiser finally shows, never the waiting slot.
+  const FINAL_ART = 'img.icust-stage-img:not(.icust-stage-wait)'
+
+  test('a cold coloured preview paints no square while the held artwork loads', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
@@ -301,36 +315,93 @@ test.describe('the customiser while its artwork is loading', () => {
       const placeholder = stage.locator('.icust-stage-wait')
       await expect(placeholder).toBeVisible()
       await expect.poll(() => requests).toBeGreaterThan(0)
-      await expect(placeholder).toHaveClass(/icust-stage-wait/)
-      await expect(placeholder).toHaveCSS('animation-name', 'ig-skel-pulse')
-      const paint = await placeholder.evaluate(el => {
-        const css = getComputedStyle(el)
-        const r = el.getBoundingClientRect()
-        const stage = el.parentElement.getBoundingClientRect()
-        return { background: css.backgroundColor, width: r.width, height: r.height,
-          dx: r.x + r.width / 2 - stage.x - stage.width / 2,
-          dy: r.y + r.height / 2 - stage.y - stage.height / 2 }
-      })
-      expect(alphaOf(paint.background)).toBeGreaterThan(0)
-      expect(alphaOf(paint.background)).toBeLessThan(MAX_SKELETON_ALPHA)
+      // No grid glyph has arrived for this icon, so the slot is an empty box.
+      await expect(stage.locator(FINAL_ART)).toHaveCount(0)
+      for (const motion of ['no-preference', 'reduce']) {
+        await page.emulateMedia({ reducedMotion: motion })
+        const paint = await measureWait(placeholder)
+        expect(alphaOf(paint.background), `${motion}: the waiting slot paints a fill`).toBe(0)
+        expect(paint.backgroundImage, `${motion}: the waiting slot paints an image`).toBe('none')
+        expect(paint.shadow, `${motion}: the waiting slot paints a shadow`).toBe('none')
+        expect(paint.animation, `${motion}: the waiting slot animates`).toBe('none')
+        expect(paint.width).toBeCloseTo(48, 1)
+        expect(paint.height).toBeCloseTo(48, 1)
+        expect(Math.abs(paint.dx)).toBeLessThan(1)
+        expect(Math.abs(paint.dy)).toBeLessThan(1)
+      }
+      const status = stage.getByRole('status')
+      await expect(status).toHaveText('Loading…')
+      // The loading string is clipped for sighted readers but remains announced.
+      await expect(status.getByText('Loading…', { exact: true })).toHaveClass('sr-only')
+      await expect(status.locator('.sr-only')).toHaveCSS('clip', 'rect(0px, 0px, 0px, 0px)')
+      release()
+      await expect(stage.locator(FINAL_ART)).toBeVisible()
+      await expect.poll(() => stage.locator(FINAL_ART).evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+      await expect(placeholder).toHaveCount(0)
+      await expect(status).toHaveCount(0)
+    } finally { release() }
+  })
+
+  test('a cold preview shows the glyph the grid drew, unpainted, until the held artwork arrives', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible()
+    let releaseBatch, releaseArt
+    const heldBatch = new Promise(resolve => { releaseBatch = resolve })
+    const heldArt = new Promise(resolve => { releaseArt = resolve })
+    let artRequests = 0
+    // Hold the grid's glyph batch and the stage's own fetch, so the customiser opens
+    // on a cell that has no glyph yet; then let only the batch through.
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname)
+      && /^\/tabler\.json$/.test(u.pathname) && u.search.includes('icons='), async route => {
+      await heldBatch
+      await route.fallback()
+    })
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/tabler\/[^/]+\.svg$/.test(u.pathname), async route => {
+      artRequests += 1
+      await heldArt
+      await route.fallback()
+    })
+    try {
+      await choosePack(page, 'tabler')
+      await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible()
+      await page.locator('.ig .ic').first().click()
+      const stage = page.locator('.icust-stage')
+      const placeholder = stage.locator('.icust-stage-wait')
+      await expect.poll(() => artRequests).toBeGreaterThan(0)
+
+      // Nothing to show yet: an empty, unpainted 48px box, as for any cold stage.
+      await expect(placeholder).toHaveCount(1)
+      await expect(placeholder).not.toHaveAttribute('src', /./)
+      expect((await measureWait(placeholder)).width).toBeCloseTo(48, 1)
+
+      // The grid's glyph lands first. The slot becomes that glyph, still unpainted.
+      releaseBatch()
+      const glyph = stage.locator('img.icust-stage-wait')
+      await expect(glyph).toHaveCount(1)
+      await expect(glyph).toHaveAttribute('src', /^data:image\/svg\+xml/)
+      await expect(glyph).toHaveAttribute('alt', '')
+      await expect(glyph).toHaveAttribute('aria-hidden', 'true')
+      await expect(stage.locator(FINAL_ART)).toHaveCount(0)
+      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(0)
+      const paint = await measureWait(glyph)
+      expect(alphaOf(paint.background)).toBe(0)
+      expect(paint.shadow).toBe('none')
+      expect(paint.animation).toBe('none')
       expect(paint.width).toBeCloseTo(48, 1)
       expect(paint.height).toBeCloseTo(48, 1)
       expect(Math.abs(paint.dx)).toBeLessThan(1)
       expect(Math.abs(paint.dy)).toBeLessThan(1)
-      await expect(placeholder).toHaveCSS('border-radius', '8px')
-      const status = stage.getByRole('status')
-      await expect(status).toHaveText('Loading\u2026')
-      // The loading string is clipped for sighted readers but remains announced.
-      await expect(status.getByText('Loading\u2026', { exact: true })).toHaveClass('sr-only')
-      await expect(status.locator('.sr-only')).toHaveCSS('clip', 'rect(0px, 0px, 0px, 0px)')
-      await page.emulateMedia({ reducedMotion: 'reduce' })
-      await expect(placeholder).toHaveCSS('animation-name', 'none')
-      release()
-      await expect(stage.locator('img.icust-stage-img')).toBeVisible()
-      await expect.poll(() => stage.locator('img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
+      await expect(stage.getByRole('status')).toHaveText('Loading…')
+
+      // The art arrives: the glyph and the message leave together, the art stays.
+      releaseArt()
+      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(1)
       await expect(placeholder).toHaveCount(0)
-      await expect(status).toHaveCount(0)
-    } finally { release() }
+      await expect(stage.getByRole('status')).toHaveCount(0)
+      await expect(stage.locator('img')).toHaveCount(0)
+    } finally { releaseBatch(); releaseArt() }
   })
 
   test('cached markup opens without a loading frame', async ({ page }) => {
@@ -345,7 +416,7 @@ test.describe('the customiser while its artwork is loading', () => {
         const stage = document.querySelector('.icust-stage')
         if (stage) window.__stagePaints.push({
           waiting: !!stage.querySelector('.icust-stage-wait, [role="status"]'),
-          image: !!stage.querySelector('img[src^="data:"]'),
+          image: !!stage.querySelector('img[src^="data:"]:not(.icust-stage-wait)'),
         })
       }).observe(document.body, { childList: true, subtree: true })
     })
