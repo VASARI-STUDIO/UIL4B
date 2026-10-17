@@ -212,7 +212,14 @@ function createFakeAuth(d) {
   auth.signInNow = () => {
     auth.currentUser = buildUser(d)
     auth.notify()
+    return auth.currentUser
   }
+  // True while a `lateSignIn` session has not yet signed in. The login form's
+  // password sign-in completes it (firebase-auth.js), so a spec can finish a
+  // sign-in the way a person does, through the popup, and the popup's own
+  // success path runs (signInNow() alone changes the account but never closes
+  // the popup or settles the promise that requireLogin() handed back).
+  auth.awaitingLateSignIn = () => !!d.lateSignIn && !auth.currentUser
   // What the auth server holds, as distinct from the signed-in User object,
   // and the links it would have emailed. See firebase-auth.js.
   auth.account = { emailVerified: d.emailVerified !== false }

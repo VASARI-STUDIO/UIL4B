@@ -83,6 +83,9 @@ const refuse = (what) => Promise.reject(authError(
 
 export function signInWithEmailAndPassword(auth, email, password) {
   if (!isFakeAuth(auth)) return realSignInWithEmailAndPassword(auth, email, password)
+  // A session declared with lateSignIn is waiting to be signed in; the form
+  // completes it. Any other session has nothing to check a password against.
+  if (auth.awaitingLateSignIn?.()) return Promise.resolve({ user: auth.signInNow() })
   return refuse('Signing in with a password')
 }
 

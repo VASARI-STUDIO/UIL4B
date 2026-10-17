@@ -515,6 +515,14 @@ test.describe('coming back from the link', () => {
     await expect(toast(page).getByRole('button', { name: 'Sign in' })).toHaveCount(0)
   })
 
+  // The person signs in through the popup's own form, so the promise the Sign in
+  // action is waiting on settles the way it does in life.
+  async function signInThroughPopup(page) {
+    await page.locator('#ui-login-email').fill('someone@uil4b.test')
+    await page.locator('#ui-login-password').fill('a-long-password')
+    await page.locator('form.auth-form button[type="submit"]').click()
+  }
+
   // "Sign in to finish" has to finish: the sign-in lands on the Account section,
   // the account is read again, and the answer is said.
   for (const width of [390, 1280]) {
@@ -525,7 +533,7 @@ test.describe('coming back from the link', () => {
       await go(page, '/settings?verified=1')
       await toast(page).getByRole('button', { name: 'Sign in' }).click()
       await expect(page.locator('#ui-login-title')).toBeVisible()
-      await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+      await signInThroughPopup(page)
       await expect(page.locator('#set-account')).toBeVisible()
       await expect(toast(page)).toContainText('Email verified')
     })
@@ -537,7 +545,7 @@ test.describe('coming back from the link', () => {
     await go(page, '/settings?verified=1')
     await toast(page).getByRole('button', { name: 'Sign in' }).click()
     await expect(page.locator('#ui-login-title')).toBeVisible()
-    await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+    await signInThroughPopup(page)
     await expect(page.locator('#set-account')).toBeVisible()
     await expect(toast(page)).toContainText("This account still isn't verified")
     await expect(toast(page)).not.toContainText('Email verified')
