@@ -172,7 +172,7 @@ export function createSupportHolder() {
         if (!result.ok && !visible?.()) {
           const retryAgain = () => {
             if (stale()) return
-            holder.send(body, draft, { retry: false, visible, notify })
+            return holder.send(body, draft, { retry: false, visible, notify })
           }
           lastRetry = retryAgain
           notify?.(result.status, retryAgain)
