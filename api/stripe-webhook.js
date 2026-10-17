@@ -555,6 +555,26 @@ async function invoiceNowPaid(stripe, invoice) {
   }
 }
 
+// Whether the failure on record belongs to a different invoice that Stripe now
+// reports as paid or void. That failure is over, so a new failing invoice is a
+// new failure and gets its own grace window rather than inheriting the old
+// start time. A record without an invoice id, the same invoice failing again,
+// or an invoice that cannot be read all count as "not settled": the original
+// start time is kept, which is the safe side for the customer's grace window.
+async function oldFailureSettled(stripe, existing, invoice, uid) {
+  const oldId = typeof existing?.failedInvoiceId === 'string' ? existing.failedInvoiceId : null
+  if (!stripe || !oldId || oldId === invoice?.id) return false
+  try {
+    const old = await stripe.invoices.retrieve(oldId)
+    return old?.status === 'paid' || old?.status === 'void'
+  } catch (err) {
+    console.error('stripe-webhook: could not read the earlier failed invoice — keeping its failure start time', {
+      uid, invoiceId: oldId, error: err?.message,
+    })
+    return false
+  }
+}
+
 /**
  * Flag a failed invoice payment on the customer's account, unless the invoice
  * has been paid since. Returns 'no_account', 'already_paid' or 'flagged'.
@@ -575,11 +595,14 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
   // (api/_lib/plans.js), so it has to be stamped ONCE — on the transition into
   // failure — and then survive every retry. Stripe fires invoice.payment_failed
   // again on each Smart Retry; re-stamping here would push the window forward
-  // each time, which is the same as having no window at all.
+  // each time, which is the same as having no window at all. The exception is a
+  // failure whose invoice has since been paid or voided (oldFailureSettled): the
+  // next failing invoice is a new failure and starts a fresh window.
   let failedAt = Date.now()
   try {
     const existing = (await ref.get()).data()?.subscription
-    if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)) {
+    if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)
+      && !(await oldFailureSettled(stripe, existing, invoice, uid))) {
       failedAt = existing.paymentFailedAt
     }
   } catch (err) {
@@ -604,14 +627,20 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
   return 'flagged'
 }
 
-const TRANSIENT_STRIPE_ERRORS = new Set(['StripeConnectionError', 'StripeRateLimitError', 'StripeAPIError'])
+const RETRYABLE_STRIPE_ERRORS = new Set([
+  'StripeConnectionError', 'StripeRateLimitError', 'StripeAPIError',
+  // A rejected or restricted key is an operator fault that gets fixed; the
+  // redelivery after the fix is what clears the failure.
+  'StripeAuthenticationError', 'StripePermissionError',
+])
 
-// A read that may succeed on a retry: Stripe's own transient error types, a 5xx,
-// or a failure with no status and no Stripe verdict at all (the network).
-function isTransientStripeError(err) {
-  if (TRANSIENT_STRIPE_ERRORS.has(err?.type)) return true
+// A read that may succeed on a retry: Stripe's own transient error types, a
+// rejected or restricted key (401, 403), a 5xx, or a failure with no status and
+// no Stripe verdict at all (the network).
+function isRetryableStripeError(err) {
+  if (RETRYABLE_STRIPE_ERRORS.has(err?.type)) return true
   const status = err?.statusCode ?? err?.raw?.statusCode
-  if (Number.isFinite(status)) return status >= 500
+  if (Number.isFinite(status)) return status >= 500 || status === 401 || status === 403
   return !err?.type && !err?.code
 }
 
@@ -656,9 +685,10 @@ const sameFailureOnRecord = (sub, basis) =>
  * · A different failed invoice is on record: ask Stripe about it (one retrieve,
  *   outside the write) and clear only if it is paid or void, or if it belongs to
  *   a subscription that has since been cancelled while the paid invoice belongs
- *   to another one (the customer resubscribed). A transient Stripe error THROWS,
- *   so the delivery fails, the claim is released (processStripeEvent) and Stripe
- *   retries it. A permanent one (an id Stripe will never find, a 4xx) keeps the
+ *   to another one (the customer resubscribed). A retryable Stripe error (a
+ *   transient one, or a 401/403 from a rejected or restricted key) THROWS, so the
+ *   delivery fails, the claim is released (processStripeEvent) and Stripe retries
+ *   it. A permanent one (an id Stripe will never find, any other 4xx) keeps the
  *   failure and returns, because retrying cannot change the answer.
  * · Legacy record (a failure stored before failedInvoiceId existed): clear unless
  *   the invoice was paid before the failure began. No paid_at: clear, as before.
@@ -684,7 +714,7 @@ export async function clearPaymentFailure(stripe, invoice, db = null) {
     try {
       failed = await stripe.invoices.retrieve(failedInvoiceId, { expand: ['parent.subscription_details.subscription'] })
     } catch (err) {
-      if (isTransientStripeError(err)) throw err
+      if (isRetryableStripeError(err)) throw err
       console.error('stripe-webhook: invoice.paid left the payment failure in place — the failed invoice cannot be read and retrying will not help', {
         uid, paidInvoiceId: invoice.id, failedInvoiceId, error: err?.message, type: err?.type ?? null, code: err?.code ?? null,
       })

@@ -247,6 +247,61 @@ test('flagging a failed invoice records which invoice failed', async (t) => {
   assert.equal(sub.hostedInvoiceUrl, 'https://pay.example/in_old')
 })
 
+test('a failure whose invoice was since paid or voided starts a fresh grace window for the next failing invoice', async (t) => {
+  quiet(t)
+  const LATER = FAILED_AT + 30 * 86_400_000
+  t.mock.method(Date, 'now', () => LATER)
+  for (const status of ['paid', 'void']) {
+    const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old', hostedInvoiceUrl: 'https://pay.example/in_old' }))
+    const stripe = fakeStripe({ invoices: {
+      in_old: { id: 'in_old', status },
+      in_new: { id: 'in_new', status: 'open' },
+    } })
+
+    assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged', status)
+    const sub = stored(db)
+    assert.equal(sub.paymentFailedAt, LATER, `${status}: the new failure gets its own grace clock`)
+    assert.equal(sub.failedInvoiceId, 'in_new', status)
+    assert.equal(sub.hostedInvoiceUrl, 'https://pay.example/in_new', status)
+    assert.deepEqual(stripe.calls.sort(), ['in_new', 'in_old'], `${status}: both invoices were read`)
+  }
+})
+
+test('the same invoice failing again keeps its grace clock without asking about an older one', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(failingAccount())
+  const stripe = openInvoices('in_new')
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT)
+  assert.deepEqual(stripe.calls, ['in_new'], 'only the re-read of the failing invoice itself')
+})
+
+test('when the earlier failed invoice cannot be read the original grace clock is kept', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old' }))
+  // in_new reads fine (open); in_old is unknown to the double, so its read throws.
+  const stripe = openInvoices('in_new')
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  const sub = stored(db)
+  assert.equal(sub.paymentFailedAt, FAILED_AT, 'unreadable: stay on the safe side and do not move the clock')
+  assert.equal(sub.failedInvoiceId, 'in_new')
+})
+
+test('a legacy record with no stored invoice id keeps its grace clock', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(legacyAccount())
+  const stripe = openInvoices('in_new')
+
+  await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db)
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT)
+  assert.deepEqual(stripe.calls, ['in_new'])
+})
+
 test('a retried failure keeps the first paymentFailedAt but follows the newest failing invoice', async (t) => {
   quiet(t)
   const clock = t.mock.method(Date, 'now', () => FAILED_AT)
@@ -381,7 +436,15 @@ const stripeError = (props) => Object.assign(new Error(`stripe said ${props.type
 const PERMANENT_ERRORS = {
   'no such invoice (404 resource_missing)': { type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 },
   'bad request (400)': { type: 'StripeInvalidRequestError', code: 'parameter_invalid_empty', statusCode: 400 },
-  'key may not read invoices (403)': { type: 'StripePermissionError', statusCode: 403 },
+}
+
+// A rejected or restricted key is fixed by an operator, and only a redelivery
+// can clear the failure afterwards, so these are retried like the transient ones.
+const KEY_ERRORS = {
+  'key rejected (401 authentication error)': { type: 'StripeAuthenticationError', statusCode: 401 },
+  'key may not read invoices (403 permission error)': { type: 'StripePermissionError', statusCode: 403 },
+  'a bare 401 with no error type': { statusCode: 401 },
+  'a bare 403 with no error type': { statusCode: 403 },
 }
 
 const TRANSIENT_ERRORS = {
@@ -414,9 +477,9 @@ test('a permanent read error completes the event instead of leaving it processin
   assert.equal(stripe.calls.length, 1, 'no point asking again')
 })
 
-test('a transient read error throws out of clearPaymentFailure and writes nothing', async (t) => {
+test('a transient or key read error throws out of clearPaymentFailure and writes nothing', async (t) => {
   quiet(t)
-  for (const [name, props] of Object.entries(TRANSIENT_ERRORS)) {
+  for (const [name, props] of Object.entries({ ...TRANSIENT_ERRORS, ...KEY_ERRORS })) {
     const db = memoryDb(failingAccount())
     const error = stripeError(props)
     await assert.rejects(clearPaymentFailure(fakeStripe({ error }), paidInvoice('in_old'), db), (thrown) => thrown === error, name)
@@ -424,9 +487,9 @@ test('a transient read error throws out of clearPaymentFailure and writes nothin
   }
 })
 
-test('after a transient read error the claim is released, so a redelivery runs and clears the failure', async (t) => {
+test('after a transient or key read error the claim is released, so a redelivery runs and clears the failure', async (t) => {
   quiet(t)
-  for (const [name, props] of Object.entries(TRANSIENT_ERRORS)) {
+  for (const [name, props] of Object.entries({ ...TRANSIENT_ERRORS, ...KEY_ERRORS })) {
     const db = memoryDb(failingAccount())
     const event = paidEvent(paidInvoice('in_old'))
 
