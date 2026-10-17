@@ -365,11 +365,28 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 /* Similar icons — same-pack siblings, a foot-of-popup retention nudge */
 .icust-similar{padding:16px 24px 24px;border-top:1px solid var(--border)}
+/* Until a tile has loaded (the section's data-ready) the block takes no space:
+   no heading, rule or padding over an empty row. The tiles stay mounted inside
+   so their glyphs still load. */
+.icust-similar:not([data-ready]){height:0;padding:0;border-top-width:0;overflow:hidden}
 .icust-similar-label{margin-bottom:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .icust-similar-row{display:flex;flex-wrap:wrap;gap:8px}
 .icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
 .icust-similar-btn:hover{border-color:var(--bh);background:var(--hvr);transform:translateY(-1px)}
 .icust-similar-btn img{display:block;width:24px;height:24px}
+/* A tile is invisible, with no border or ground, until its glyph has loaded
+   (SimilarTile sets data-ready); a glyph that errors never gets there. It keeps
+   its 44px box so the row never shifts, and visibility:hidden keeps an unshown
+   tile out of the tab order. Opacity fades in; visibility flips at the start of
+   the transition, so the fade is seen. */
+.icust-similar-btn:not([data-ready]){visibility:hidden;opacity:0}
+.icust-similar-btn[data-ready]{visibility:visible;opacity:1;transition:opacity var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+html[data-reduced-motion="true"] .icust-similar-btn[data-ready]{transition:none}
+html[data-reduced-motion="true"] .icust-similar-btn:hover{transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .icust-similar-btn[data-ready]{transition:none}
+  html:not([data-reduced-motion="false"]) .icust-similar-btn:hover{transform:none}
+}
 
 /* Recents rail */
 .ig-rail{margin:8px 0 28px}
@@ -384,12 +401,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail-item img,.ig-rail-item svg{width:24px;height:24px}
 .ig-rail-item svg{color:var(--t0);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 /* Waiting glyph slots keep their dimensions without painting a square. */
-@keyframes ig-skel-pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.icust-stage-wait{background:color-mix(in oklab,var(--t1) 6%,transparent);box-shadow:none;animation:ig-skel-pulse 1.4s ease-in-out infinite}
 .ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:none;box-shadow:none;animation:none}
-.icust-stage-wait{position:absolute;inset:0;margin:auto;border-radius:8px;flex-shrink:0}
-@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .icust-stage-wait{animation:none}}
-html[data-reduced-motion="true"] .icust-stage-wait{animation:none}
+/* The stage's waiting slot: the grid's own glyph at stage size when there is one,
+   otherwise an empty box of the same size. Centred like the final art. */
+.icust-stage-wait{position:absolute;inset:0;margin:auto;flex-shrink:0;background:none;box-shadow:none;animation:none}
 .ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
 /* Keep pending artwork hidden until it has decoded. */
 .ic img.ig-glyph-pending{border-radius:6px;filter:none}

@@ -239,6 +239,7 @@ export default function TintTool({ onCopy, toast }) {
                 return (
                   <div key={s.id} className={on ? 'tt-src is-on' : 'tt-src'}>
                     <ColorPickerPop
+                      portal
                       value={s.hex}
                       onChange={(hex) => setSourceHex(s.id, hex.toUpperCase())}
                       ariaLabel={`Pick base colour ${i + 1}`}

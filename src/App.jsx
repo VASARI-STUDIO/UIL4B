@@ -652,6 +652,13 @@ export default function App() {
             user's first Tab bypasses the repeated PillNav and jumps to #main
             (WCAG 2.4.1). Each layout tags its content-start with id="main". */}
         <a href="#main" className="skip-link">Skip to content</a>
+        {/* The notice strip comes second in the document, straight after the
+            skip link, so Tab reaches a condition notice (offline, sync stopped,
+            verify your email) before the nav and the page rather than after
+            the footer. It is position:fixed under the nav, so where it sits in
+            the markup changes the tab order and nothing on screen. The long
+            note on why it is mounted out here, and not in the shell, is below. */}
+        <NoticeStack />
         {/* Every route, including the ones that return before the app shell
             (the Create tools, `/`, /home, /onboarding, /discover, /learn), so
             a crash is a recovery screen rather than a blank page. The shell
@@ -681,7 +688,6 @@ export default function App() {
             Both now render as rows inside <NoticeStack>, which reserves the
             height they occupy instead of floating them over the toolbar of
             whatever tool is open — founder decision, 2026-09-14. */}
-        <NoticeStack />
         {/* And the feedback entry points, for the same reason a fourth time —
             except that this one is about the RIGHT-CLICK menu rather than a
             banner. Mounted inside AppInner's shell it was absent from every

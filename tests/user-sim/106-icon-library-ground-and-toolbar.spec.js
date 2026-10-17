@@ -68,7 +68,7 @@ test.describe('the customizer preview ground', () => {
 // A coloured-pack glyph sits in a transparent slot, and the customizer shows it
 // on the page ground. Circle Flags is a paid pack, so the viewer is Pro; the
 // fixture serves its names, and the slot is drawn whether or not the artwork has
-// arrived. While it is pending the slot is a faint tint (spec 113 owns that), so
+// arrived. While it is pending the slot paints nothing (spec 113 owns that), so
 // the paint checks below look at slots whose glyph has loaded: that is the
 // resting state a reader sees.
 
@@ -761,13 +761,25 @@ for (const fail of [false, true]) {
       await page.locator('.ig .ic').first().click()
       const stage = page.locator('.icust-stage')
       await expect(stage.getByRole('status')).toHaveText('Loading\u2026')
-      await expect(stage.locator('.icust-stage-wait')).toBeVisible()
+      // The waiting slot holds the stage's 48px box but paints no square of its own.
+      const wait = stage.locator('.icust-stage-wait')
+      await expect(wait).toHaveCount(1)
+      const waitPaint = await wait.evaluate(e => {
+        const s = getComputedStyle(e)
+        const r = e.getBoundingClientRect()
+        return { bg: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow, animation: s.animationName, width: r.width, height: r.height }
+      })
+      expect({ ...waitPaint, width: 0, height: 0 }).toEqual({ bg: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none', animation: 'none', width: 0, height: 0 })
+      expect(waitPaint.width).toBeCloseTo(48, 1)
+      expect(waitPaint.height).toBeCloseTo(48, 1)
       await expect(stage.getByRole('status').locator('.sr-only')).toHaveCSS('clip', 'rect(0px, 0px, 0px, 0px)')
       const reserved = await stage.boundingBox()
       release()
       if (fail) await expect(stage.getByRole('status')).toHaveText('Couldn\u2019t load this icon.')
       else {
-        await expect(stage.locator('img')).toBeVisible()
+        // The final art only: the waiting slot may itself be an <img> until then.
+        await expect(stage.locator('img.icust-stage-img:not(.icust-stage-wait)')).toBeVisible()
+        await expect(stage.locator('.icust-stage-wait')).toHaveCount(0)
         await expect(stage.getByRole('status')).toHaveCount(0)
       }
       expect(Math.abs((await stage.boundingBox()).height - reserved.height)).toBeLessThan(0.5)
@@ -799,4 +811,28 @@ test('a saved duotone icon reopens with the Default colour button', async ({ pag
   await saved.click()
   const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
   await expect(colour.getByRole('button', { name: 'Default', exact: true })).toBeVisible()
+})
+
+test('the pack menu has one Interface group and borrows no style word from the Weight and Coloured chips', async ({ page }) => {
+  await signIn(page, { plan: 'pro' })
+  await go(page, '/create/icons')
+  await expect(page.locator('.ig .ic').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Icon pack' }).click()
+  const list = page.locator('.menu-select-list[role="listbox"]')
+  await expect(list).toBeVisible()
+  const headings = list.locator('.pop-head')
+  // PRESENCE first, so an empty menu cannot pass the absences below.
+  await expect(headings.filter({ hasText: /^Interface$/ })).toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Brand logos$/ })).toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Interface/ }), 'the Interface group is not split in two').toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Brand logos/ })).toHaveCount(1)
+  for (const word of [/line/i, /filled?/i, /solid/i, /outlined/i, /colou?red/i]) {
+    await expect(headings.filter({ hasText: word }), `a group heading says ${word}`).toHaveCount(0)
+  }
+  // Stroke and fill-only packs now sit together under the one heading.
+  const interfaceGroup = list.getByRole('group', { name: 'Interface', exact: true })
+  for (const pack of ['Lucide', 'Material Design', 'BoxIcons']) {
+    await expect(interfaceGroup.getByRole('option', { name: pack }), `${pack} is under Interface`).toHaveCount(1)
+  }
+  await expect(list.getByRole('group', { name: 'Brand logos', exact: true }).getByRole('option', { name: 'Simple Icons' })).toHaveCount(1)
 })
