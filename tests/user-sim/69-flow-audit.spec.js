@@ -399,6 +399,9 @@ test.describe('flow 2 — the checkout return page', () => {
       await expect(ledger).toContainText('AI generations')
       await expect(ledger).toContainText(String(AI_LIMITS.pro.daily))
       await expect(ledger).toContainText(String(COLOUR_SYSTEMS.length))
+      // The Exports row is short (the extra export names follow it); the details label reads "Plan" once Pro is active.
+      await expect(ledger).toContainText('No “Made with UIL4B” line. Use Export in the top bar.')
+      await expect(view.locator('.co-details dt', { hasText: /^Plan$/ })).toHaveCount(1)
       await expect(ledger.getByRole('link', { name: /Alt Text/ })).toHaveAttribute('href', '/create/alt-text')
       // The details list names the account and the plan. The payment
       // reference is quiet: the last 8 characters, never the whole session id.
@@ -426,6 +429,9 @@ test.describe('flow 2 — the checkout return page', () => {
     // Settling shows what is arriving as plain rows, not links, and offers a re-check.
     await expect(view.locator('.co-ledger a')).toHaveCount(0)
     await expect(view.getByRole('button', { name: 'Check again' })).toBeVisible()
+    // Until Pro attaches the details label says what was paid for, not the plan the account is on.
+    await expect(view.locator('.co-details dt', { hasText: /^Paid for$/ })).toHaveCount(1)
+    await expect(view.locator('.co-details dt', { hasText: /^Plan$/ })).toHaveCount(0)
     await context.close()
   })
 
