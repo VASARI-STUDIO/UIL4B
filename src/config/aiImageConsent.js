@@ -12,3 +12,11 @@
 // checks it names Google Gemini and the use, not the exact words.
 export const AI_IMAGE_CONSENT =
   'Images you upload here are sent to Google Gemini to generate the text, and Google may use them to improve its products.'
+
+// Shown instead of the dropzone to visitors in the UK, Switzerland or the
+// European Economic Area, where Google's terms don't allow the free tier to
+// serve them (api/_lib/geoBlock.js).
+export const AI_REGION_TITLE = 'Not available in your region'
+export const AI_REGION_ALT_BODY = "The alt text generator runs on Google Gemini, and Google's terms don't let us offer it in the UK, Switzerland or the European Economic Area. The guide below still applies if you write alt text by hand."
+export const AI_REGION_PANEL = 'Every other UIL4B tool works as normal where you are.'
+export const AI_REGION_SCAN_NOTE = "Photo scanning runs on Google Gemini, and Google's terms don't let us offer it in the UK, Switzerland or the European Economic Area. You can still build and enhance prompts below."

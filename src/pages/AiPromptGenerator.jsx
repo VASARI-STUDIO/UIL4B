@@ -4,7 +4,9 @@ import { AI_LIMITS } from '../config/plans'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
-import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
+import { AI_IMAGE_CONSENT, AI_REGION_SCAN_NOTE } from '../config/aiImageConsent'
+import useAiRegion from '../hooks/useAiRegion'
+import { isRegionRefusal } from '../utils/aiRegion'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
 import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
@@ -45,6 +47,11 @@ export default function AiPromptGenerator({ toast }) {
   // nothing ever consumed — so the meter reflects the account, not this
   // browser, and the monthly ceiling is visible before it bites.
   const quota = useAiQuota(TOOL_ID)
+  // In the UK, Switzerland and the EEA the photo scan is off (Google's Gemini
+  // terms); the text prompt tools keep working.
+  const region = useAiRegion()
+  // Stable across renders, unlike the `region` object, so callbacks can depend on it.
+  const { markBlocked } = region
 
   // JSON builder state
   const [subject, setSubject] = useState('')
@@ -90,6 +97,7 @@ export default function AiPromptGenerator({ toast }) {
         body: JSON.stringify({ task: 'scan-photo', image: base64, mimeType: refImage.type }),
       })
       const data = await r.json().catch(() => ({}))
+      if (isRegionRefusal(r.status, data)) markBlocked()
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       const rules = data.rules || []
       setScannedRules(rules)
@@ -100,7 +108,7 @@ export default function AiPromptGenerator({ toast }) {
     } finally {
       setScanning(false)
     }
-  }, [refImage, toast])
+  }, [refImage, toast, markBlocked])
 
   const applyScannedRules = useCallback(() => {
     const allRuleIds = RULE_CATEGORIES.flatMap(c => c.rules.map(r => r.id))
@@ -171,6 +179,7 @@ export default function AiPromptGenerator({ toast }) {
       const data = await r.json().catch(() => ({}))
       // Authoritative counts ride on every response, 429s included.
       quota.absorb(data)
+      if (isRegionRefusal(r.status, data)) region.markBlocked()
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       recordUsage(TOOL_ID)
 
@@ -248,6 +257,10 @@ export default function AiPromptGenerator({ toast }) {
                       SCAN_SYSTEM_PROMPT). Said before upload, visibly.
                       This page has no route today; the notice is here so it
                       is true the day it gets one. */}
+                  {region.blocked ? (
+                  <p className="aipg-region-note" role="status" data-testid="ai-region-blocked" style={{ margin: '4px 0 0', fontSize: 12, lineHeight: 1.5, color: 'var(--t2)' }}>{AI_REGION_SCAN_NOTE}</p>
+                  ) : (
+                  <>
                   <p className="ai-image-consent" style={{ margin: '4px 0 8px', fontSize: 12, lineHeight: 1.5, color: 'var(--t2)' }}>{AI_IMAGE_CONSENT}</p>
                   {!refPreview ? (
                     <div
@@ -294,6 +307,8 @@ export default function AiPromptGenerator({ toast }) {
                         ))}
                       </div>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
 

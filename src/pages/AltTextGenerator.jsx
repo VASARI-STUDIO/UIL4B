@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
 } from '../components/tool/ToolLayout'
@@ -10,7 +11,11 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
-import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
+import {
+  AI_IMAGE_CONSENT, AI_REGION_TITLE, AI_REGION_ALT_BODY, AI_REGION_PANEL,
+} from '../config/aiImageConsent'
+import useAiRegion, { regionBlockedNow } from '../hooks/useAiRegion'
+import { isRegionRefusal } from '../utils/aiRegion'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { toCsv } from '../utils/csv'
 // The `alt-text` page stylesheet. Imported here rather than from global.css so
@@ -138,6 +143,21 @@ export default function AltTextGenerator({ toast }) {
   // consumed, so the meter reflects the account rather than this browser — and
   // so the MONTHLY ceiling is visible before it is hit.
   const quota = useAiQuota(ALT_TEXT_TOOL_ID)
+  // Visitors in the UK, Switzerland and the EEA can't use this tool (Google's
+  // Gemini terms); the server says so and the page swaps the dropzone for why.
+  const region = useAiRegion()
+  const regionBlocked = region.blocked
+  // Set when a Generate request is refused. The button the visitor pressed goes
+  // away with the block, so focus moves to the card heading; a block found on
+  // first load leaves focus alone.
+  const regionHeadingRef = useRef(null)
+  const focusRegionRef = useRef(false)
+  useEffect(() => {
+    if (regionBlocked && focusRegionRef.current) {
+      focusRegionRef.current = false
+      regionHeadingRef.current?.focus()
+    }
+  }, [regionBlocked])
   // The tool opens signed out. An account is asked for only when a generation
   // is requested, because that is the step that sends the image to /api/ai and
   // spends an allowance the server meters per account.
@@ -226,6 +246,14 @@ export default function AltTextGenerator({ toast }) {
         body: JSON.stringify({ task: 'alt-text', image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined, tone }),
       })
       const data = await r.json().catch(() => ({}))
+      // The server refuses this region before it takes anything from the
+      // allowance, so there is nothing to record or retry.
+      if (isRegionRefusal(r.status, data)) {
+        focusRegionRef.current = true
+        region.markBlocked()
+        setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: data.error || AI_REGION_TITLE } : p))
+        return false
+      }
       // A failed reply that still used the allowance says so, and is counted
       // here the same as a success so the local tracker agrees with the server.
       if (!r.ok && data.quotaSpent === true) recordUsage(ALT_TEXT_TOOL_ID)
@@ -265,6 +293,8 @@ export default function AltTextGenerator({ toast }) {
     let done = 0
     for (let i = 0; i < targets.length; i++) {
       if (await generateForItem(targets[i])) done++
+      // A region refusal is final for every remaining card, so stop here.
+      if (regionBlockedNow()) break
       if (i < targets.length - 1) await delay(4500)
     }
     setBusy(false)
@@ -325,8 +355,9 @@ export default function AltTextGenerator({ toast }) {
 
   // The toolbar's actions, in row order. Each id carries what it acts on, so a
   // change in the queue re-measures the row.
+  // Empty when the region gate applies: there is nothing to add, generate or copy.
   const tbItems = []
-  if (items.length > 0) {
+  if (!regionBlocked && items.length > 0) {
     tbItems.push({
       id: `count-${items.length}-${doneCount}`,
       menu: false,
@@ -337,7 +368,7 @@ export default function AltTextGenerator({ toast }) {
       ),
     })
   }
-  tbItems.push({
+  if (!regionBlocked) tbItems.push({
     id: 'add',
     priority: 2,
     render: () => (
@@ -347,7 +378,7 @@ export default function AltTextGenerator({ toast }) {
     ),
     menu: { label: 'Add images', icon: 'upload-simple', onSelect: () => fileInputRef.current?.click(), disabled: busy },
   })
-  if (doneCount > 0) {
+  if (!regionBlocked && doneCount > 0) {
     tbItems.push({
       id: 'copy-all',
       align: 'end',
@@ -362,7 +393,7 @@ export default function AltTextGenerator({ toast }) {
       menu: { label: 'Download CSV', onSelect: downloadCSV, disabled: busy },
     })
   }
-  if (items.length > 0) {
+  if (!regionBlocked && items.length > 0) {
     tbItems.push({
       id: 'clear',
       align: doneCount > 0 ? undefined : 'end',
@@ -378,7 +409,7 @@ export default function AltTextGenerator({ toast }) {
       title="Alt Text Generator"
       titleId="alt-title"
       items={tbItems}
-      primary={(
+      primary={regionBlocked ? null : (
         <ToolButton variant="accent" icon="magic-wand" onClick={generateAll} disabled={busy || readyCount === 0}>
           {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
         </ToolButton>
@@ -388,7 +419,23 @@ export default function AltTextGenerator({ toast }) {
         <ToolMain className="alt-main">
           {/* Above the dropzone, not beside the button: the allowance is something
               to know BEFORE uploading forty images, not after the eighth refusal. */}
-          <QuotaMeter quota={quota} className="quota--tool" />
+          {!regionBlocked && <QuotaMeter quota={quota} className="quota--tool" />}
+          {regionBlocked ? (
+            <section className="alt-region" role="status" aria-labelledby="alt-region-title" data-testid="ai-region-blocked">
+              <span className="alt-region-ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M3 12h18" />
+                  <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" />
+                </svg>
+              </span>
+              <h2 className="alt-region-title" id="alt-region-title" ref={regionHeadingRef} tabIndex={-1}>{AI_REGION_TITLE}</h2>
+              <p className="alt-region-body">{AI_REGION_ALT_BODY}</p>
+              <p className="alt-region-note">{AI_REGION_PANEL}</p>
+              <Link to="/create" className="alt-btn alt-region-link">Browse other tools</Link>
+            </section>
+          ) : (
+          <>
           {/* The line saying where an uploaded image goes sits here, between the
               allowance and the dropzone, and describes the dropzone. */}
           <p id="alt-ai-consent" className="ai-image-consent">{AI_IMAGE_CONSENT}</p>
@@ -421,8 +468,10 @@ export default function AltTextGenerator({ toast }) {
             <div className="alt-dropzone-title">Drop images here or click to upload</div>
             <div className="alt-dropzone-sub">JPG · PNG · WebP · HEIC · multiple files supported</div>
           </div>
+          </>
+          )}
 
-          {items.length === 0 && (
+          {(regionBlocked || items.length === 0) && (
             <section className="alt-examples" aria-labelledby="alt-examples-title">
               <h2 className="tl-sec-label" id="alt-examples-title">What good alt text looks like</h2>
               <div className="alt-examples-grid">
@@ -440,7 +489,7 @@ export default function AltTextGenerator({ toast }) {
               <ul className="alt-tips">
                 <li>Keep it under ~125 characters — screen readers cut off long descriptions.</li>
                 <li>Don&rsquo;t start with “image of” or “picture of” — that&rsquo;s already announced.</li>
-                <li>Add <strong>page context</strong> for sharper results (e.g. the article topic).</li>
+                {!regionBlocked && <li>Add <strong>page context</strong> for sharper results (e.g. the article topic).</li>}
                 <li>For purely decorative images, leave alt text empty (<code>alt=&quot;&quot;</code>).</li>
                 {/* The honest version, stated where a user forms their mental model
                     of what this tool is for. A stuffing tool would promise the
@@ -450,7 +499,7 @@ export default function AltTextGenerator({ toast }) {
             </section>
           )}
 
-          <div className="alt-grid">
+          {!regionBlocked && <div className="alt-grid">
             {items.map(it => (
               <div key={it.id} className={`alt-card alt-card-${it.status}`}>
                 <div className="alt-card-preview">
@@ -505,9 +554,12 @@ export default function AltTextGenerator({ toast }) {
                 </div>
               </div>
             ))}
-          </div>
+          </div>}
         </ToolMain>
 
+        {/* No panel while blocked: it would hold no settings. The reassurance
+            line lives inside the region card instead. */}
+        {!regionBlocked && (
         <ToolPanel label="Alt text settings" className="alt-panel">
           <ToolSection label="Page context" className="alt-context">
             <label className="sr-only" htmlFor="alt-context-input">Page context (optional)</label>
@@ -560,6 +612,7 @@ export default function AltTextGenerator({ toast }) {
             </p>
           </ToolSection>
         </ToolPanel>
+        )}
       </ToolGrid>
     </ToolLayout>
   )

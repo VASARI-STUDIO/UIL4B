@@ -12,6 +12,12 @@ import {
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from './_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
 import {
+  geminiRegionBlocked,
+  REGION_BLOCKED_STATUS,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_ERROR,
+} from './_lib/geoBlock.js'
+import {
   BRAND_STARTER_TOOL_ID,
   MAX_PROMPT_CHARS,
   MIN_PROMPT_CHARS,
@@ -37,6 +43,7 @@ import {
 //   task 'scan-photo'      → toolId 'scan-photo'      (Gemini vision, photo-rule JSON)
 //   task 'generate-prompt' → toolId 'prompts-ai'      (OpenRouter → Gemini fallback)
 //   task 'brand-starter'   → toolId 'brand-starter'   (OpenRouter → Gemini fallback)
+// Vision tasks refuse EEA, UK and CH visitors with 451; text tasks skip the Gemini fallback there.
 //
 // 'brand-starter' is a MODE here rather than a route of its own for the reason
 // this file exists: /api holds twelve handlers and Vercel allows twelve on this
@@ -815,7 +822,8 @@ async function runBrandStarter(req, res, { plan, bucket, used }) {
     }
   }
 
-  if (!text && GEMINI_KEY) {
+  // No Gemini fallback for visitors in a blocked region (Google's terms).
+  if (!text && GEMINI_KEY && !geminiRegionBlocked(req.headers)) {
     try {
       text = await callGemini(userMessage, opts)
       servedBy = 'gemini'
@@ -914,7 +922,8 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     }
   }
 
-  if (!prompt && GEMINI_KEY) {
+  // No Gemini fallback for visitors in a blocked region (Google's terms).
+  if (!prompt && GEMINI_KEY && !geminiRegionBlocked(req.headers)) {
     try {
       prompt = await callGemini(userMessage)
       provider = 'gemini'
@@ -962,6 +971,7 @@ const TASKS = {
     limitError: 'Daily limit reached',
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
+    geminiOnly: true,
     run: runAltText,
     cutoffRefundCap: ALT_TEXT_CUTOFF_REFUND_CAP,
   },
@@ -970,6 +980,7 @@ const TASKS = {
     limitError: 'Daily scan limit reached',
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
+    geminiOnly: true,
     run: runScanPhoto,
   },
   'generate-prompt': {
@@ -1165,11 +1176,21 @@ async function serveBacklog(req, res) {
   }
 }
 
+// Per-visitor answer, so it must never be cached or shared between visitors.
+function serveRegion(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store')
+  return res.status(200).json({ blocked: geminiRegionBlocked(req.headers) })
+}
+
 export default async function handler(req, res) {
   // ── The founder's Pipeline board ──────────────────────────────────────────
   // GET /api/ai?backlog=1. Ahead of the diagnostic because it is a different
   // question with the same gate; see serveBacklog above for why it lives here.
   if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
+
+  // GET /api/ai?region=1: does the Gemini region gate apply to this visitor? The
+  // tool pages ask so they can show the explanation instead of an upload box.
+  if (req.method === 'GET' && 'region' in (req.query || {})) return serveRegion(req, res)
 
   // ── The Pro libraries ─────────────────────────────────────────────────────
   // GET /api/ai?library=palettes|gradients|prompts. Token + planForUser, like
@@ -1275,6 +1296,15 @@ export default async function handler(req, res) {
   const task = TASKS[req.body?.task]
   if (!task) {
     return res.status(400).json({ error: `Unknown task — expected one of: ${Object.keys(TASKS).join(', ')}` })
+  }
+
+  // Region gate. After auth on purpose (an anonymous caller still gets 401 and
+  // learns nothing), before the quota reservation and any provider fetch, so a
+  // refused request costs nothing. Gemini-only tasks refuse outright; a task
+  // with an OpenRouter key skips the Gemini fallback instead (see the run fns).
+  if (geminiRegionBlocked(req.headers) && (task.geminiOnly || !OPENROUTER_KEY)) {
+    res.setHeader('Cache-Control', 'no-store')
+    return res.status(REGION_BLOCKED_STATUS).json({ error: REGION_BLOCKED_ERROR, code: REGION_BLOCKED_CODE, quotaSpent: false })
   }
 
   // …and only now, to a caller Firebase has vouched for, does the server say
