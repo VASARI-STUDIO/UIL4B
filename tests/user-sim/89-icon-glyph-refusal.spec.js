@@ -130,6 +130,13 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 // answering from the fixture (route.fallback hands the request to the context
 // route), and a refused answer is stamped REFUSED_VALUE so the audit counts it
 // as deliberate.
+//
+// THE VICTIM'S BATCH ANSWERS 503, NOT 429. A 429 starts the shared Iconify
+// back-off (src/utils/iconifyFetch.js): by design nothing more goes to Iconify
+// until it ends, so a 429 cannot show the page asking the failed pack again.
+// A 503 is a pack that failed on its own, which is the case the page's own
+// bounded retry exists for. The back-off after a 429 is pinned in
+// 97-iconify-persistent-cache.spec.js and tests/unit/iconify-fetch.test.js.
 const BATCH = (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/[^/]+\.json$/.test(u.pathname) && u.search.includes('icons=')
 
 const failFirstPack = async (page, failures) => {
@@ -141,7 +148,7 @@ const failFirstPack = async (page, failures) => {
     seen.requests += 1
     if (seen.requests > failures) return route.fallback()
     return route.fulfill({
-      status: 429, contentType: 'text/plain', body: 'Too Many Requests',
+      status: 503, contentType: 'text/plain', body: 'Service Unavailable',
       headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE },
     })
   })

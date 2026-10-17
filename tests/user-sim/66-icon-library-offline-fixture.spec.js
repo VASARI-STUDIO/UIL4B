@@ -692,7 +692,12 @@ test('reloading retains all five packs without new collection requests', async (
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   try {
     const page = await ctx.newPage()
-    watch(page, 'visitor reloading cached icon collections')
+    // These three tests are about the live /collection path (its stored answers
+    // and its back-off), which a page that can read the site's own pack lists
+    // never takes. Withholding the lists puts the page on that path; the 404s
+    // are deliberate, so the persona is the one whose refusals are not reported.
+    watch(page, REFUSED)
+    await withholdSnapshots(page)
     await go(page, '/create/icons')
     await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
     await expect(page.locator('.ig .ic img').first()).toBeVisible()
@@ -725,6 +730,7 @@ test('an expired collection keeps its pack available when collection requests fa
       localStorage.setItem('uil4b:iconify:collection:lucide', JSON.stringify({ v: 1, at, data: { names, title, credit: null } }))
     }, { names, title: collection.title, at })
     let requests = 0
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests++
       return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
@@ -750,6 +756,7 @@ test('Try again sends at most one collection request per pack on each click', as
     watch(page, 'visitor whose icon catalogue is refused')
     const requests = []
     let refusing = true
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests.push(new URL(route.request().url()).searchParams.get('prefix'))
       if (!refusing) return route.fallback()
