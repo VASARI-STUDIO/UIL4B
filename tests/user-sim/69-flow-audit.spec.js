@@ -383,8 +383,7 @@ test.describe('flow 2 — the checkout return page', () => {
       await stub(page, { status: 'complete', mode: 'subscription', interval: 'monthly', subscriptionActive: true, customerEmail: 'pro.user@uil4b.test' })
       await go(page, '/checkout/return?session_id=cs_test_flow_audit')
 
-      // Redesigned from a card to a centred column (`.co-return`). The old
-      // `.checkout-return-card` and its "Confirmation reference" are gone.
+      // The return page is a centred column (`.co-return`).
       const view = page.locator('.co-return')
       await expect(view.getByRole('heading', { level: 1 })).toContainText(/on UIL4B Pro/i)
       // No "a confirmation has been sent to …": whether Stripe emails a
