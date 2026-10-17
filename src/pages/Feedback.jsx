@@ -205,8 +205,10 @@ export default function Feedback({ toast }) {
         {/* Billing lives in Settings, which needs an account, so only a
             signed-in visitor is sent there. */}
         {paymentFailed && accountEmail && (
-          <p style={{ marginTop: 12 }}>
-            <Link className="btn btn-s" to="/settings">{PAYMENT_CARD_LINK}</Link>
+          <p className="fb-fix">
+            {/* The Subscription section holds billing; without the state
+                Settings opens on whichever section was used last. */}
+            <Link className="btn btn-s" to="/settings" state={{ section: 'support' }}>{PAYMENT_CARD_LINK}</Link>
           </p>
         )}
       </div>

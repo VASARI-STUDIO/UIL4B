@@ -84,7 +84,8 @@ test.describe('the feedback form for a failed payment', () => {
     await expect(alert).toHaveCount(0)
     await page.getByRole('button', { name: 'Submit' }).click()
     await expect(page.locator('.fb-done')).toContainText('A reply can reach you at shopper@example.com')
-    expect(posts).toHaveLength(1)
+    // The send runs in the background, after the confirmation is up.
+    await expect.poll(() => posts.length).toBe(1)
     const sent = JSON.parse(posts[0])
     expect(sent).toMatchObject({
       type: 'help',
@@ -117,6 +118,10 @@ test.describe('the feedback form for a failed payment', () => {
 
     await page.getByRole('link', { name: 'Update your card' }).click()
     await expect(page).toHaveURL(/\/settings(\?|#|$)/)
+    // It opens on the Subscription section (id `support`), not the last one used.
+    await expect(page.locator('#settab-support')).toHaveClass(/(^| )active( |$)/)
+    await expect(page.locator('#settab-support')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('#set-support')).toBeVisible()
   })
 })
 
