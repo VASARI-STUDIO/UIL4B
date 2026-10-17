@@ -694,7 +694,7 @@ export default function Settings({ toast }) {
   const billingTabs = useRef([])
   const proPrice = useProPrice()
   const { prices } = usePrices()
-  const { offers } = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
+  const { offers, priceServiceDown } = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
   const offer = offers.find((o) => o.id === billing) || offers[0]
   const onBillingKey = (event, index) => {
     const moves = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: offers.length - 1 }
@@ -1131,11 +1131,11 @@ export default function Settings({ toast }) {
                       </div>
                       <div className="sub-tier-sub">
                         {!proPrice.loaded ? 'Checking live price…'
-                          : !proPrice.serviceAvailable ? 'Live pricing is unreachable · no price can be shown right now'
+                          : priceServiceDown ? 'Live pricing is unreachable · no price can be shown right now'
                             : !offer?.amountLabel ? `No ${proPrice.currencyLabel} price for this billing period right now`
                               : offer.billedNote}
                       </div>
-                      {proPrice.loaded && !proPrice.serviceAvailable && (
+                      {priceServiceDown && (
                         <button type="button" className="btn btn-s sub-price-retry" onClick={() => refreshPrices()}>Retry live pricing</button>
                       )}
                     </div>

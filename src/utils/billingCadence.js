@@ -18,7 +18,11 @@ export function everyWords(interval, intervalCount = 1) {
   return `every ${COUNT_WORDS[count] || count} ${unit}s`
 }
 
-/** How often each buyable cadence bills: { monthly, quarterly, yearly }. */
+/**
+ * How often each ladder cadence bills, keyed by ladder id. Which of them are on
+ * sale is BILLING_OPTIONS' call (config/planFacts.js), not this table's: a
+ * cadence can bill here (an existing subscription) without being sold.
+ */
 export const BILLED_EVERY = Object.freeze({
   monthly: everyWords('month', 1),
   quarterly: everyWords('month', 3),
