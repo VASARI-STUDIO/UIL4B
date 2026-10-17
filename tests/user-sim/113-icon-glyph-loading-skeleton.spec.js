@@ -218,11 +218,17 @@ async function answerWithMissing(page, pack, pick) {
     await held
     const answer = answerIconify(route.request().url())
     const data = JSON.parse(answer.body)
-    const drop = state.name ? null : pick(Object.keys(data.icons))
+    // The service lacks this name for good, so EVERY answer that carries it leaves
+    // it out. The page may ask for the same name in more than one batch (the grid
+    // it opened on, then the chosen pack's first page); dropping it from only the
+    // first answer let a later batch put it back.
+    const drop = state.name ?? pick(Object.keys(data.icons))
     if (drop) {
       state.name = drop
-      delete data.icons[drop]
-      data.not_found = [drop]
+      if (drop in data.icons) {
+        delete data.icons[drop]
+        data.not_found = [drop]
+      }
     }
     await route.fulfill({
       status: 200,
