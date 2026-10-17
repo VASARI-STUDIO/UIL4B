@@ -403,6 +403,89 @@ test.describe('the customiser while its artwork is loading', () => {
     } finally { releaseBatch(); releaseArt() }
   })
 
+  test('a Phosphor icon whose art arrives after the modal opens never shows the art with a stroke other than its settled one', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible()
+    let releaseArt, releaseBatch
+    const heldArt = new Promise(resolve => { releaseArt = resolve })
+    const heldBatch = new Promise(resolve => { releaseBatch = resolve })
+    let artRequests = 0
+    // The grid's glyph batch is held too, so the cell has no markup to hand the
+    // stage and the art can only arrive after the modal is open.
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname)
+      && /^\/ph\.json$/.test(u.pathname) && u.search.includes('icons='), async route => {
+      await heldBatch
+      await route.fallback()
+    })
+    // A 256-unit viewBox, as Phosphor draws. Until the art is here the stage has no
+    // viewBox to read, so its first stroke value is the 24-unit one; the settled
+    // value for this art is a different number. A frame holding both is the fault.
+    const ART = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" '
+      + 'stroke="currentColor"><circle cx="128" cy="128" r="96"/></svg>'
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/ph\/[^/]+\.svg$/.test(u.pathname), async route => {
+      artRequests += 1
+      await heldArt
+      await route.fulfill({
+        status: 200, contentType: 'image/svg+xml; charset=utf-8',
+        headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }, body: ART,
+      })
+    })
+    try {
+      await choosePack(page, 'ph')
+      await page.locator('.ig .ic').first().click()
+      const stage = page.locator('.icust-stage')
+      await expect.poll(() => artRequests).toBeGreaterThan(0)
+      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(0)
+
+      // Sample the stage's stroke variable on every frame, and again the instant
+      // art lands in the host (before any later task could set it right).
+      await page.evaluate(() => {
+        const stageEl = document.querySelector('.icust-stage')
+        const hostEl = stageEl.querySelector('.icust-stage-host')
+        const read = () => ({
+          art: !!hostEl.querySelector('svg'),
+          stroke: stageEl.style.getPropertyValue('--ig-stroke'),
+        })
+        window.__strokeFrames = []
+        window.__strokeAtInjection = []
+        const tick = () => { window.__strokeFrames.push(read()); requestAnimationFrame(tick) }
+        requestAnimationFrame(tick)
+        new MutationObserver(() => {
+          const now = read()
+          if (now.art) window.__strokeAtInjection.push(now)
+        }).observe(hostEl, { childList: true })
+      })
+      // Let a few art-less frames go by so the cold value is on record.
+      await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))
+
+      releaseArt()
+      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(1)
+      // Settle, then take a few more frames so a late correction would show too.
+      await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))))
+      const { frames, injected, settled } = await page.evaluate(() => ({
+        frames: window.__strokeFrames,
+        injected: window.__strokeAtInjection,
+        settled: document.querySelector('.icust-stage').style.getPropertyValue('--ig-stroke'),
+      }))
+
+      const cold = frames.filter(f => !f.art).map(f => f.stroke)
+      const withArt = frames.filter(f => f.art)
+      expect(cold.length, 'frames recorded before the art arrived').toBeGreaterThan(0)
+      expect(withArt.length, 'frames recorded with the art on screen').toBeGreaterThan(0)
+      // Hand-checked: 4px default at 48px over a 256 box is 4 / (48/256) = 21.33 units,
+      // against 2 units for a 24 box. If these matched, the test could not tell.
+      expect(Number(settled)).toBeCloseTo(21.33, 1)
+      expect(cold, 'the cold stage used the 24-unit stroke').toContain('2')
+      expect(injected.length, 'the host was filled once the art landed').toBeGreaterThan(0)
+      expect(injected.map(f => f.stroke), 'stroke at the moment the art entered the host')
+        .toEqual(injected.map(() => settled))
+      expect(withArt.map(f => f.stroke), 'stroke on every frame that held the art')
+        .toEqual(withArt.map(() => settled))
+    } finally { releaseBatch(); releaseArt() }
+  })
+
   test('cached markup opens without a loading frame', async ({ page }) => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
