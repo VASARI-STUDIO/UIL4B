@@ -42,10 +42,9 @@ export function refreshPrices() {
 export function usePrices() {
   const [, force] = useState(0)
   useEffect(() => {
-    if (priceCache) return undefined
     const rerender = () => force((value) => value + 1)
     subscribers.add(rerender)
-    fetchPricesOnce()
+    if (!priceCache) fetchPricesOnce()
     return () => { subscribers.delete(rerender) }
   }, [])
   return { prices: priceCache, settled: priceSettled }

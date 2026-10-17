@@ -69,6 +69,7 @@ const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'
 const HERO_SUB = `Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(SYSTEMS_TOTAL)} colour systems, and gives you unlimited projects and exports without the UIL4B mark.`
 
 const CANCEL_LINE = 'Cancel Pro any time. Keep every export you made.'
+const FREE_LINE = 'Everything on Free keeps working.'
 const OFFER_BY_ID = Object.fromEntries(BILLING_OPTIONS.map((o) => [o.id, o]))
 
 // Where the docked plan bar takes over from the sticky top bar: below this the
@@ -193,6 +194,8 @@ export default function Pricing() {
   const ctaRef = useRef(null)
   const endRef = useRef(null)
   const rampRef = useRef(null)
+  // Set when a recovery action replaces the Pro button, so focus follows the swap.
+  const keepCtaFocus = useRef(false)
 
   // The live prices. useProPrice() knows whether the price service answered;
   // usePrices() is the same cache read raw, which resolveOffers needs.
@@ -268,6 +271,21 @@ export default function Pricing() {
     }
   }, [barEnabled, ledger])
 
+  // The recovery actions replace the Pro button with another element (the buy
+  // link, or the loading link), which drops focus to the page. Put it back on
+  // the new Pro button, and stop once the prices have settled. If focus has
+  // gone somewhere else on purpose, leave it there.
+  useEffect(() => {
+    if (!keepCtaFocus.current) return
+    const active = document.activeElement
+    if (active && active !== document.body && active !== ctaRef.current) {
+      keepCtaFocus.current = false
+      return
+    }
+    ctaRef.current?.focus({ preventScroll: true })
+    if (price.loaded) keepCtaFocus.current = false
+  }, [price.loaded, priceServiceDown, offer.id])
+
   // A repeat of the Pro button, so it is hidden from assistive tech and keyboard
   // users; they reach the real one.
   const bar = (
@@ -291,12 +309,32 @@ export default function Pricing() {
         View account details
       </Link>
     )
+  } else if (priceServiceDown && otherOffer) {
+    // This cadence has no price in the visitor's currency, so retrying would
+    // fail again; the useful action is the cadence that can be bought.
+    proCta = (
+      <button
+        type="button"
+        ref={ctaRef}
+        className="pr-cta pr-cta--pro"
+        aria-describedby="pricing-noprice"
+        onClick={() => { keepCtaFocus.current = true; chooseBilling(otherOffer.id) }}
+      >
+        {`Switch to ${otherOffer.label}`}
+      </button>
+    )
   } else if (priceServiceDown) {
     // No amount means no offer. Asking for a card without being able to name
     // the amount is the one thing a pricing page must never do.
     proCta = (
-      <button type="button" className="pr-cta pr-cta--pro" aria-disabled="true" aria-describedby="pricing-noprice">
-        Pricing unavailable right now
+      <button
+        type="button"
+        ref={ctaRef}
+        className="pr-cta pr-cta--free"
+        aria-describedby="pricing-noprice"
+        onClick={() => { keepCtaFocus.current = true; refreshPrices() }}
+      >
+        Retry live pricing
       </button>
     )
   } else {
@@ -336,35 +374,32 @@ export default function Pricing() {
   const sizedMonthly = sized.find((o) => o.id === 'monthly')
   const bestLive = !!offers.find((o) => o.id === DEFAULT_BILLING)?.amountLabel
   const monthlyForNote = price.loaded ? offers.find((o) => o.id === 'monthly') : sizedMonthly
+  // The unavailable state is two short lines, each one line wide at 320px, so it
+  // is never the tallest state in the slot and never sizes it. One cadence
+  // unpriced: say so and name the one that can be bought. Nothing priced: say the
+  // prices did not load.
+  const unavailableLines = otherOffer
+    ? [
+      `No ${price.currencyLabel} price for ${offer.label} right now.`,
+      `${otherOffer.label} can be bought in ${price.currencyLabel}.`,
+    ]
+    : ['Live prices didn’t load,', 'so no checkout will start.']
   const noteStates = [
     ...sized.map((o) => ({
       id: o.id,
       lines: [billedLine(o, monthlyForNote), CANCEL_LINE].filter(Boolean),
       under: underLine(o, sizedBest, bestLive),
     })),
+    { id: 'unavailable', lines: unavailableLines, under: FREE_LINE },
     { id: 'loading', lines: ['Checking the live price…'], under: '' },
   ]
   const activeNote = !price.loaded ? 'loading' : priceServiceDown ? 'unavailable' : offer.id
-  const noPriceNote = otherOffer
-    ? `There is no ${price.currencyLabel} price for ${offer.label} right now, so no checkout will be started. ${otherOffer.label} is available, and everything on Free keeps working.`
-    : `We can’t reach Stripe to confirm the ${price.currencyLabel} price, so no checkout will be started. Everything on Free keeps working.`
-  // The unavailable note and its Retry are one more state of the note slot, so
-  // the Pro button stays put when a cadence lands unavailable. Hidden, it sizes
-  // the slot; shown, it is the only one that is. Only the shown one carries the
-  // id the disabled button points at, and the hidden Retry is out of the tab order.
-  const unavailableState = (
-    <div key="unavailable" className={priceServiceDown ? undefined : 'is-ghost'} aria-hidden={priceServiceDown ? undefined : 'true'}>
-      <p className={`pr-note${priceServiceDown ? '' : ' is-ghost'}`} id={priceServiceDown ? 'pricing-noprice' : undefined}>{noPriceNote}</p>
-      <button type="button" className="pr-retry" tabIndex={priceServiceDown ? undefined : -1} onClick={() => refreshPrices()}>
-        Retry live pricing
-      </button>
-    </div>
-  )
 
   // The offer-first layout's two lines above the Pro button, sized the same way:
   // every state shares one cell, so nothing moves when the switch is used.
   const cardStates = [
     ...sized.map((o) => ({ id: o.id, ...cardLines(o) })),
+    { id: 'unavailable', billed: unavailableLines[0], trial: unavailableLines[1] },
     { id: 'loading', billed: 'Checking the live price…', trial: '' },
   ]
 
@@ -482,29 +517,27 @@ export default function Pricing() {
                             <p
                               key={state.id}
                               className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
+                              id={state.id === 'unavailable' && state.id === activeNote ? 'pricing-noprice' : undefined}
                               aria-hidden={state.id === activeNote ? undefined : 'true'}
                             >
                               {state.lines.map((line) => <span key={line}>{line}</span>)}
                             </p>
                           ))}
-                          {unavailableState}
                         </div>
                       </div>
                     </div>
                     {proCta}
-                    {!priceServiceDown && (
-                      <div className="pr-stack pr-stack--under">
-                        {noteStates.map((state) => (
-                          <span
-                            key={state.id}
-                            className={`pr-under${state.id === activeNote ? '' : ' is-ghost'}`}
-                            aria-hidden={state.id === activeNote ? undefined : 'true'}
-                          >
-                            {state.under}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="pr-stack pr-stack--under">
+                      {noteStates.map((state) => (
+                        <span
+                          key={state.id}
+                          className={`pr-under${state.id === activeNote ? '' : ' is-ghost'}`}
+                          aria-hidden={state.id === activeNote ? undefined : 'true'}
+                        >
+                          {state.under}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -601,18 +634,18 @@ export default function Pricing() {
                           <p
                             key={state.id}
                             className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
+                            id={state.id === 'unavailable' && state.id === activeNote ? 'pricing-noprice' : undefined}
                             aria-hidden={state.id === activeNote ? undefined : 'true'}
                           >
                             <span>{state.billed}</span>
                             {state.trial && <span>{state.trial}</span>}
                           </p>
                         ))}
-                        {unavailableState}
                       </div>
                     </div>
                   </div>
                   {proCta}
-                  {!priceServiceDown && !isPro && <span className="pr-under">{CANCEL_LINE}</span>}
+                  {!isPro && <span className="pr-under">{priceServiceDown ? FREE_LINE : CANCEL_LINE}</span>}
                 </div>
 
                 <div className="pr-pro-adds">

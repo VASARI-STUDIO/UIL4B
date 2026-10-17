@@ -638,9 +638,8 @@ test.describe('when the price service cannot answer', () => {
     await expect(pro(page).locator('.pr-amt')).toHaveClass(/is-word/)
     await expect(pro(page).locator('.pr-per'), 'a cadence is printed beside no price').toHaveCount(0)
     await expect(pro(page).getByRole('link', { name: /Upgrade to Pro|free trial/ }), 'a checkout is offered with no price').toHaveCount(0)
-    const off = pro(page).getByRole('button', { name: 'Pricing unavailable right now' })
-    await expect(off).toHaveAttribute('aria-disabled', 'true')
-    await expect(pro(page).locator('#pricing-noprice')).toContainText('no checkout will be started')
+    await expect(pro(page).getByRole('button', { name: 'Pricing unavailable right now' })).toHaveCount(0)
+    await expect(pro(page).locator('#pricing-noprice')).toContainText('so no checkout will start')
     await expect(page.locator('.pr-billing-save'), 'a saving is claimed with no prices to compute it').toHaveCount(0)
     await expect(page.locator('.pr-bar'), 'the docked bar offers a checkout with no price').not.toHaveClass(/is-on/)
 
@@ -660,10 +659,11 @@ test.describe('when the price service cannot answer', () => {
 
     await expect(pro(page).locator('.pr-amt')).toHaveText('Unavailable')
     const unavailable = pro(page).locator('#pricing-noprice')
-    await expect(unavailable).toContainText('Yearly')
-    await expect(unavailable).toContainText('no checkout will be started')
-    await expect(unavailable, 'the price service answered, so it is not an outage').not.toContainText(/reach Stripe/)
-    await expect(pro(page).getByRole('button', { name: 'Pricing unavailable right now' })).toHaveAttribute('aria-disabled', 'true')
+    await expect(unavailable).toContainText('No USD price for Yearly')
+    await expect(unavailable).toContainText('Monthly can be bought in USD')
+    await expect(unavailable, 'the price service answered, so it is not an outage').not.toContainText(/didn.t load/)
+    await expect(pro(page).getByRole('button', { name: 'Retry live pricing' }), 'Retry cannot fix a missing price').toHaveCount(0)
+    await expect(pro(page).getByRole('button', { name: 'Switch to Monthly' })).toBeVisible()
 
     await choose(page, 'Monthly')
     await expect(pro(page).locator('.pr-amt')).toHaveText(money(LIVE.monthly.usd))

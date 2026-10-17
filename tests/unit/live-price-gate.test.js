@@ -324,12 +324,13 @@ test('Stripe\'s `param` decides whether a failure is about the currency; the mes
   assert.equal(result.refusal.status, 409, 'with no param the message still identifies a currency failure')
 })
 
-test('/plans keeps the unavailable note and its Retry inside the note slot, so the Pro button does not move', () => {
+test('/plans shows the unavailable state as one more note state, with the recovery action in the Pro button slot', () => {
   const page = stripComments(read('src/pages/Pricing.jsx'))
-  assert.doesNotMatch(page, /<p className="pr-note" id="pricing-noprice">/, 'the unavailable note is outside the slot again')
-  assert.equal(page.split('{unavailableState}').length - 1, 2, 'both layouts put the unavailable state in their note stack')
+  assert.doesNotMatch(page, /unavailableState/, 'a reserved unavailable block is back in the note stack')
+  assert.match(page, /\{ id: 'unavailable', lines: unavailableLines/, 'the ledger has no unavailable note state')
+  assert.match(page, /\{ id: 'unavailable', billed: unavailableLines\[0\]/, 'the offer layout has no unavailable note state')
   assert.match(page, /const activeNote = !price\.loaded \? 'loading' : priceServiceDown \? 'unavailable' : offer\.id/)
-  assert.match(page, /id=\{priceServiceDown \? 'pricing-noprice' : undefined\}/, 'the hidden copy would duplicate the id')
+  assert.equal(page.split("id={state.id === 'unavailable' && state.id === activeNote ? 'pricing-noprice' : undefined}").length - 1, 2, 'only the shown copy may carry the id')
 })
 
 test('/checkout announces a refusal and brings it into view', () => {
