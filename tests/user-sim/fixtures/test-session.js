@@ -213,6 +213,17 @@ function createFakeAuth(d) {
     auth.currentUser = buildUser(d)
     auth.notify()
   }
+  // The same account signing out, or a different one signing in, under a page
+  // that stays mounted (`over` replaces uid, email or name). Exposed so a spec
+  // can change the account without a reload.
+  auth.signOutNow = () => {
+    auth.currentUser = null
+    auth.notify()
+  }
+  auth.switchTo = (over = {}) => {
+    auth.currentUser = buildUser({ ...d, ...over })
+    auth.notify()
+  }
   // What the auth server holds, as distinct from the signed-in User object,
   // and the links it would have emailed. See firebase-auth.js.
   auth.account = { emailVerified: d.emailVerified !== false }
@@ -372,5 +383,5 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, signInNow: fakeAuth.signInNow } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }

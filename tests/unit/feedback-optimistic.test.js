@@ -228,3 +228,109 @@ test('signing out clears a landed message and its address from both holders', as
   assert.equal(pageFeedbackSend.getSnapshot().body, null)
   assert.equal(modalFeedbackSend.getSnapshot().status, 'idle')
 })
+
+// A fetch that answers only when told, so a test can change account while a send is in flight.
+function heldNetwork(t, status) {
+  const calls = []
+  const gates = []
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push(JSON.parse(options.body))
+    await new Promise(resolve => gates.push(resolve))
+    return { ok: false, status }
+  })
+  const realTimer = globalThis.setTimeout
+  t.mock.method(globalThis, 'setTimeout', (fn, ms) => realTimer(fn, ms === 1500 ? 0 : ms))
+  return { calls, release: (count = gates.length) => gates.splice(0, count).forEach(resolve => resolve()) }
+}
+
+test('a retry offered before sign-out sends nothing after it', async t => {
+  const calls = network(t, [{ ok: false, status: 400 }])
+  const holder = createSupportHolder()
+  const { body } = makeDraft()
+  let offered = null
+  await holder.send(body.current, {}, { visible: () => false, notify: (status, retry) => { offered = retry } })
+  assert.equal(calls.length, 1)
+  assert.equal(typeof offered, 'function', 'the failure offered a retry')
+  holder.invalidate()
+  offered()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(calls.length, 1, 'the stale retry made no request')
+  assert.deepEqual(holder.getSnapshot(), { status: 'idle', body: null, draft: null, result: null })
+})
+
+test('forgetSupportSenders makes both holders drop an offered retry', async t => {
+  const calls = network(t, [{ ok: false, status: 400 }, { ok: false, status: 400 }])
+  const offered = {}
+  for (const [name, holder] of [['modal', modalFeedbackSend], ['page', pageFeedbackSend]]) {
+    await holder.send(makeDraft().body.current, {}, { visible: () => false, notify: (status, retry) => { offered[name] = retry } })
+  }
+  assert.equal(calls.length, 2)
+  forgetSupportSenders()
+  offered.modal()
+  offered.page()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(calls.length, 2, 'neither stale retry made a request')
+})
+
+test('a send in flight at sign-out gets no automatic retry and is not reported', async t => {
+  const net = heldNetwork(t, 503)
+  const holder = createSupportHolder()
+  const { body } = makeDraft()
+  let notified = false
+  const pending = holder.send(body.current, {}, { visible: () => false, notify: () => { notified = true } })
+  assert.equal(net.calls.length, 1)
+  holder.invalidate()
+  net.release()
+  await pending
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(net.calls.length, 1, 'a 503 would have been retried had the account not changed')
+  assert.equal(notified, false, 'the old account is not told its message failed')
+  assert.equal(holder.getSnapshot().status, 'idle', 'its outcome does not reach the next account')
+})
+
+test('control: without a sign-out the same 503 is retried once', async t => {
+  const net = heldNetwork(t, 503)
+  const holder = createSupportHolder()
+  const { body } = makeDraft()
+  const pending = holder.send(body.current, {}, { visible: () => false })
+  net.release()
+  while (net.calls.length < 2) await new Promise(resolve => setTimeout(resolve, 1))
+  net.release()
+  await pending
+  assert.equal(net.calls.length, 2)
+})
+
+test('an abandoned send does not block, or get cleared by, the send of the next account', async t => {
+  const net = heldNetwork(t, 200)
+  const holder = createSupportHolder()
+  const oldBody = makeDraft().body.current
+  const newBody = makeDraft().body.current
+  const abandoned = holder.send(oldBody, {}, { retry: false })
+  holder.invalidate()
+  const next = holder.send(newBody, {}, { retry: false })
+  assert.notEqual(next, null, 'the new account can send at once')
+  net.release(1)
+  await abandoned
+  assert.equal(holder.send(makeDraft().body.current, {}), null, 'the old send finishing leaves the new send marked as in flight')
+  net.release(1)
+  await next
+})
+
+test('invalidate takes down a toast whose action is the offered retry, and only that one', async t => {
+  network(t, [{ ok: false, status: 400 }])
+  const seen = []
+  const realWindow = globalThis.window
+  const target = new EventTarget()
+  globalThis.window = target
+  t.after(() => { if (realWindow === undefined) delete globalThis.window; else globalThis.window = realWindow })
+  target.addEventListener('uil4b:toast-dismiss', event => seen.push(event.detail.onAction))
+  const holder = createSupportHolder()
+  holder.invalidate()
+  assert.equal(seen.length, 0, 'nothing on offer, nothing to take down')
+  let offered = null
+  await holder.send(makeDraft().body.current, {}, { visible: () => false, notify: (status, retry) => { offered = retry } })
+  holder.invalidate()
+  assert.deepEqual(seen, [offered])
+  holder.invalidate()
+  assert.equal(seen.length, 1, 'a retry is taken down once')
+})
