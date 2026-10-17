@@ -152,12 +152,18 @@ test.describe('a settling payment keeps asking, then stops', () => {
     await expect(heading(page)).toHaveText('Payment received.')
     await expect.poll(status.requests).toBe(1)
 
-    // Just short of the wait, nothing more is asked.
-    await page.clock.fastForward(RETRY_MS - 100)
+    // The clock runs on its own after install(), so on a loaded runner real
+    // time eats into any short margin. Stop it, then move it only by hand. The
+    // pause jumps 500 ms, so the next ask is now at most 3.5 s away.
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500)
+
+    // Well short of the wait, nothing more is asked.
+    await page.clock.fastForward(2500)
     await drain(page)
     expect(status.requests(), 'asked again before the wait was over').toBe(1)
 
-    await page.clock.fastForward(100)
+    // Past the 4 s mark in all, it has asked.
+    await page.clock.fastForward(1500)
     await expect.poll(status.requests).toBe(2)
     await expect(heading(page)).toHaveText('Payment received.')
 
