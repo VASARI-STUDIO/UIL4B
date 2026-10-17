@@ -30,6 +30,9 @@ import {
   clampFps, findFormat, formatBytes, formatTime, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
+import {
+  avifEncodeKnown, blobMatches, canEncodeAvif, usableFormat, withAvifIf,
+} from '../utils/avifSupport'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -58,12 +61,28 @@ const OUTPUT_FORMATS = [
 ]
 
 // Formats supported by the canvas frame encoder (Video → Frames). AVIF is
-// excluded here because canvas.toBlob('image/avif') support is too inconsistent
-// to offer for batch frame extraction; ICO only makes sense for still images.
+// excluded here on purpose, whatever the browser can do, to keep batch frame
+// extraction on the formats every browser encodes; ICO only makes sense for
+// still images. The still-image picker offers AVIF only where it is confirmed
+// (see utils/avifSupport.js).
 const FRAME_FORMATS = OUTPUT_FORMATS.filter(f => f.id !== 'image/avif' && !f.ico)
 
 const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/bmp,image/avif,image/x-icon,image/vnd.microsoft.icon,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.avif,.ico'
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
+
+// Whether this browser can encode AVIF: null until the one-off probe answers,
+// then true/false. A returning visit reads the remembered answer on first
+// render, so the picker never changes shape after the first visit.
+function useAvifEncode() {
+  const [ok, setOk] = useState(avifEncodeKnown)
+  useEffect(() => {
+    if (ok !== null) return undefined
+    let live = true
+    canEncodeAvif().then(v => { if (live) setOk(v) })
+    return () => { live = false }
+  }, [ok])
+  return ok
+}
 
 const LARGE_FILE_BYTES = 50 * 1024 * 1024 // 50 MB warning threshold
 const MAX_FRAMES = 500 // frames per Extract run: a long clip at a high FPS can't freeze the tab
@@ -281,7 +300,13 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // then belongs to the visitor — nothing here keeps re-asserting it.
   const seeded = initialDraft ? draftToConverterSettings(initialDraft) : null
   const [items, setItems] = useState([]) // { id, name, srcUrl, file, out:{blob,url,bytes,w,h} }
-  const [format, setFormat] = useState(() => seeded?.format ?? 'image/webp')
+  // AVIF is offered only where the browser really encodes it. A handed-over
+  // AVIF draft is held as asked and resolved below: it applies once the check
+  // says yes, and quietly becomes WebP if it says no.
+  const avifOk = useAvifEncode()
+  const [chosenFormat, setFormat] = useState(() => seeded?.format ?? 'image/webp')
+  const format = usableFormat(chosenFormat, avifOk, 'image/webp')
+  const outputFormats = withAvifIf(OUTPUT_FORMATS, avifOk)
   const [quality, setQuality] = useState(() => seeded?.quality ?? QUALITY_DEFAULT)
   const [maxDim, setMaxDim] = useState(() => seeded?.maxDim ?? 0) // 0 = keep original size
   const [renderScale, setRenderScale] = useState(1) // @1x / @2x export
@@ -414,16 +439,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     if (format === 'image/jpeg') { ctx.fillStyle = jpegBg; ctx.fillRect(0, 0, w, h) }
     ctx.drawImage(img, 0, 0, w, h)
     const q = format === 'image/png' ? undefined : quality / 100
-    // canvas.toBlob yields null when the browser can't encode the requested
-    // format (notably AVIF in some browsers) — and a callback that never fires
-    // would wedge the whole batch in its busy state. Guard both so each item
-    // records a clear error and the batch keeps going.
+    // canvas.toBlob yields null — or quietly a PNG — when the browser can't
+    // encode the requested format (notably AVIF in some browsers), and a
+    // callback that never fires would wedge the whole batch in its busy state.
+    // Guard all three so each item records a clear error and the batch keeps
+    // going, and nothing is saved under a name that isn't its real format.
     const label = OUTPUT_FORMATS.find(f => f.id === format)?.label || format
     const blob = await new Promise((resolve, reject) => {
       const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
       canvas.toBlob(b => {
         clearTimeout(to)
-        if (b) resolve(b)
+        if (blobMatches(b, format)) resolve(b)
         else reject(new Error(`${label} export not supported by this browser`))
       }, format, q)
     })
@@ -471,14 +497,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // What a homepage output draft actually became here. Stated explicitly rather
   // than applied silently — including the part this converter cannot honour, so
   // "Lossless" is never implied where only a quality setting exists.
-  const draftFormat = initialDraft && DRAFT_FORMATS.find(f => f.id === initialDraft.format)
-  const draftNotice = initialDraft && {
+  // An AVIF draft is described only once the browser has said whether it can
+  // deliver it, so the note never claims AVIF and then changes its mind.
+  const draftWaitsOnAvif = initialDraft?.format === 'image/avif' && avifOk === null
+  const draftFormat = initialDraft && DRAFT_FORMATS.find(f => f.id === usableFormat(initialDraft.format, avifOk, 'image/webp'))
+  const draftNotice = initialDraft && !draftWaitsOnAvif && {
     applied: [
       draftFormat?.label || initialDraft.format,
       DRAFT_RESOLUTIONS.find(r => r.id === initialDraft.resolution)?.detail || 'source size',
       draftFormat?.lossless ? 'lossless' : `quality ${seeded.quality}%`,
     ].join(' · '),
-    limit: describeCompressionLimit(initialDraft.format, initialDraft.compression),
+    limit: describeCompressionLimit(draftFormat?.id ?? initialDraft.format, initialDraft.compression),
   }
 
   const downloadOne = useCallback((item) => {
@@ -604,7 +633,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
               <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
-                {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                {outputFormats.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </MenuSelect>
               {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
               {format === 'image/jpeg' && (
@@ -1201,9 +1230,10 @@ function VideoFrames({ toast }) {
           const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
           // toBlob can't be interrupted; drop its result if the run ended meanwhile.
           if (signal.aborted) break
-          // null blob => this browser can't encode the chosen format. Bail out of
-          // the batch with a clear error rather than silently producing 0 frames.
-          if (!blob) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
+          // null blob, or one of another type (a PNG under a .webp name) => this
+          // browser can't encode the chosen format. Bail out of the batch with a
+          // clear error rather than silently producing 0 frames or wrong files.
+          if (!blobMatches(blob, fmt.id)) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
           out.push({
             blob, url: URL.createObjectURL(blob),
             name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
