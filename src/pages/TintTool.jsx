@@ -14,7 +14,9 @@ import '../styles/pages/tint.css'
 // App.dc.html, `isTint`, D:793-869, view model D:1432-1444 and D:1936-1975).
 // A sticky tool toolbar with accent "Copy variables"; the scale
 // as full-height step columns over a LIGHTNESS PER STEP chart; and one side
-// card of HUE AND CHROMA, STEPS / CURVE pills and CONTRAST NOTES.
+// card of HUE AND CHROMA and STEPS / CURVE pills. CONTRAST NOTES are a
+// grid card under the chart (a list in the side card made the page taller than a
+// laptop screen); below 901px everything stacks and they follow the controls.
 //
 // THE GENERATOR IS THE DESIGN'S: an OKLCH lightness curve from 0.97 down, one
 // hue, and a chroma that peaks mid-scale (D:1436-1442), with 9 / 11 / 13 steps
@@ -330,8 +332,10 @@ export default function TintTool({ onCopy, toast }) {
               onChange={setCurve}
             />
           </ToolSection>
-
-          <ToolSection label="Contrast notes" className="tt-notes">
+        </ToolPanel>
+        <div className="tt-notes" role="group" aria-labelledby="tt-notes-label">
+          <span className="tl-sec-label" id="tt-notes-label">Contrast notes</span>
+          <div className="tt-notes-list">
             {scale.steps.map((t) => {
               const aa = contrastRatio(t.hex, INK_DARK) >= 4.5 ? 'AA on dark' : contrastRatio(t.hex, INK_LIGHT) >= 4.5 ? 'AA on light' : 'Low'
               return (
@@ -343,8 +347,8 @@ export default function TintTool({ onCopy, toast }) {
                 </button>
               )
             })}
-          </ToolSection>
-        </ToolPanel>
+          </div>
+        </div>
       </ToolGrid>
     </ToolLayout>
   )
