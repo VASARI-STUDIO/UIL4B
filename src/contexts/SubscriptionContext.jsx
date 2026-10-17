@@ -166,7 +166,9 @@ export function SubscriptionProvider({ children }) {
 
   // Creates an embedded Checkout session and returns its client_secret, used by
   // the /checkout page to mount Stripe's <EmbeddedCheckout />.
-  const createCheckoutSession = useCallback(async (interval = 'monthly') => {
+  // `onSession`, when given, receives the server's answer (the currency the
+  // session was created in) next to the client secret this returns.
+  const createCheckoutSession = useCallback(async (interval = 'monthly', onSession) => {
     if (!BILLING_INTERVALS.has(interval)) throw new Error('Invalid billing interval')
     const token = await (await loadAuthSdk()).auth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
@@ -177,6 +179,7 @@ export function SubscriptionProvider({ children }) {
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw billingError(data, res.status, 'Checkout failed')
+    if (typeof onSession === 'function') onSession(data)
     return data.clientSecret
   }, [])
 
