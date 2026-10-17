@@ -1,7 +1,6 @@
 // EXTRACT FRAMES: CANCEL, THE 500-FRAME CAP, AND STOPPING WHEN YOU LEAVE.
 //
-// Commit 36e7a90e gave /create/file-converter > "Extract frames" three things
-// that nothing guarded:
+// /create/file-converter > "Extract frames" has three things that need guarding:
 //
 //   1. A Cancel button beside the progress bar. It keeps the frames already
 //      made, says so in a toast ("Extraction cancelled — kept N frames", or
@@ -24,8 +23,8 @@
 // The seek count is the oracle for "the run really stopped": a loop that
 // kept going after Cancel or after leaving would keep counting.
 //
-// MUTATIONS (each makes a test below go red; run on 17 Oct 2026):
-//   - FileConverter.jsx: delete `useEffect(() => () => { abortRef.current?.abort('leave') }, [])`
+// MUTATIONS (each makes a test below go red):
+//   - FileConverter.jsx: delete `useEffect(() => disposeRun, [disposeRun])`
 //     -> "switching mode mid-run" goes red (a toast fires after the tab is
 //     gone and seeks keep counting).
 //   - cancelExtract(): delete `abortRef.current.abort('cancel')`
@@ -33,7 +32,7 @@
 //   - extract(): change `Math.min(MAX_FRAMES, wanted)` to `wanted`
 //     -> the cap test goes red (600 frames made, not 500).
 //   - abandoned(): change `disposedRef.current.has(ac)` back to
-//     `signal.aborted && signal.reason !== 'cancel'` (commit 36e7a90e)
+//     `signal.aborted && signal.reason !== 'cancel'`
 //     -> "Cancel, then switching mode" goes red (a toast fires after the tab is gone).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
