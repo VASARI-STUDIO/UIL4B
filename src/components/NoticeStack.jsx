@@ -215,7 +215,7 @@ function VerifyNotice() {
     status = (
       <>
         <strong>Verify your email.</strong>{' '}
-        <span className="sync-notice-detail">Check <span className="verify-addr">{email}</span> for the link, or send a new one.</span>
+        <span className="sync-notice-detail">Check <span className="verify-addr verify-addr--idle" title={email}>{email}</span> for the link, or send a new one.</span>
       </>
     )
   }

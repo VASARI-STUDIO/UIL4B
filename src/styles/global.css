@@ -5149,6 +5149,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .verify-notice{align-items:center;min-height:62px}
 .verify-notice .sync-notice-msg{overflow-wrap:anywhere;min-height:1.45em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .verify-notice .verify-addr{display:inline-block;max-width:28ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+/* The idle line carries more words round the address, so it takes a shorter cap to stay inside the two-line clamp (full address in the title). */
+.verify-notice .verify-addr--idle{max-width:18ch}
 /* The failed state wears the error tile rather than the envelope. */
 .verify-notice[data-verify-state="failed"] .sync-notice-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
 /* Resend stays on the row and stays focusable while it sends and while it
