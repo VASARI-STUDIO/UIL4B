@@ -193,6 +193,12 @@ test('every client-side retired path lands on its destination and keeps the visi
   }
 })
 
+test('mergeRedirectQuery keeps every repeated incoming value and lets the destination\'s own keys win', () => {
+  const landed = new URL(mergeRedirectQuery('/feedback?from=support', '?ref=invoice&ref=retry&from=other'), 'https://example.test')
+  assert.deepEqual(landed.searchParams.getAll('ref'), ['invoice', 'retry'])
+  assert.deepEqual(landed.searchParams.getAll('from'), ['support'])
+})
+
 /* ── The Create migration specifically ────────────────────────────────────── */
 
 test('every pre-migration Create URL has exactly one 301 to a /create/ route', () => {

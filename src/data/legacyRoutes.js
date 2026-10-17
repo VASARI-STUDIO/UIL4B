@@ -236,8 +236,11 @@ export function mergeRedirectQuery(destination, incomingSearch = '') {
   const queryAt = noHash.indexOf('?')
   const pathname = queryAt === -1 ? noHash : noHash.slice(0, queryAt)
   const merged = new URLSearchParams(queryAt === -1 ? '' : noHash.slice(queryAt + 1))
+  // Snapshot the destination's own keys first: checking the growing result
+  // would drop every repeat of an incoming key (?ref=a&ref=b keeping only a).
+  const ownKeys = new Set(merged.keys())
   for (const [key, value] of new URLSearchParams(incomingSearch)) {
-    if (!merged.has(key)) merged.append(key, value)
+    if (!ownKeys.has(key)) merged.append(key, value)
   }
   const query = merged.toString()
   return `${pathname}${query ? `?${query}` : ''}${hash}`
