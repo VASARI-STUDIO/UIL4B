@@ -96,8 +96,10 @@ test('a pack list with only categories is usable', () => {
 
 test('the page asks the snapshot before Iconify, and still falls back to Iconify', () => {
   const src = strip(fs.readFileSync(path.join(ROOT, 'src/pages/IconLibrary.jsx'), 'utf8'))
-  const body = src.match(/async function getCollectionNames\(pack\) \{[\s\S]*?\n\}/)?.[0]
-  assert.ok(body, 'getCollectionNames is gone from IconLibrary.jsx')
+  // The page's pack-list loader is built by createCollectionLoader; the part
+  // that decides where a list comes from is its fetchEntry.
+  const body = src.match(/const getCollectionNames = createCollectionLoader\(\{[\s\S]*?\n\}\)/)?.[0]
+  assert.ok(body, 'getCollectionNames (createCollectionLoader) is gone from IconLibrary.jsx')
   const snap = body.indexOf('fetchCollectionSnapshot(pack)')
   const live = body.indexOf('fetchWithFallback(`/collection?prefix=')
   assert.ok(snap >= 0, 'getCollectionNames no longer reads the snapshot')
