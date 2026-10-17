@@ -83,6 +83,9 @@ const refuse = (what) => Promise.reject(authError(
 
 export function signInWithEmailAndPassword(auth, email, password) {
   if (!isFakeAuth(auth)) return realSignInWithEmailAndPassword(auth, email, password)
+  // A session declared with lateSignIn is waiting to be signed in; the form
+  // completes it. Any other session has nothing to check a password against.
+  if (auth.awaitingLateSignIn?.()) return Promise.resolve({ user: auth.signInNow() })
   return refuse('Signing in with a password')
 }
 
@@ -138,8 +141,17 @@ export function updateEmail(user, newEmail) {
  * flag; only `reload()` brings it onto the user, as the real SDK does. */
 export function sendEmailVerification(user, settings) {
   if (!isFakeUser(user)) return realSendEmailVerification(user, settings)
+  // `sendEmailVerificationWithReturn` refuses only a send that carries a return
+  // address, as Firebase does for a domain it has not authorised; the plain
+  // send that follows is let through.
+  const refusedReturn = settings ? authFailFor('sendEmailVerificationWithReturn') : null
+  if (refusedReturn) {
+    fakeAuth.verifySends.push({ withReturn: true, refused: true })
+    return Promise.reject(refusedReturn)
+  }
   const refused = authFailFor('sendEmailVerification')
   if (refused) return Promise.reject(refused)
+  fakeAuth.verifySends.push({ withReturn: !!settings, refused: false })
   fakeAuth.mail.push({ kind: 'verify-email', to: user.email })
   return Promise.resolve()
 }
@@ -156,6 +168,7 @@ export function verifyBeforeUpdateEmail(user, newEmail, settings) {
 export function reload(user) {
   if (!isFakeUser(user)) return realReload(user)
   user.emailVerified = fakeAuth.account.emailVerified === true
+  fakeAuth.reloads += 1
   return Promise.resolve()
 }
 
