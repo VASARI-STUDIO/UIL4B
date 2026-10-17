@@ -47,7 +47,6 @@
 /* Subscription — billing toggle */
 .sub-signin-note{font-size:13px;color:var(--t2);margin-bottom:14px}
 .sub-signin-note a{color:var(--accent-mid);font-weight:600}
-.sub-tier-flag{position:absolute;top:-10px;right:20px;padding:4px 10px;border-radius:999px;background:var(--accent-fill);color:var(--accent-ink);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
 
 
 /* Language picker (flags) */

@@ -1057,7 +1057,7 @@ export default function Settings({ toast }) {
                       onKeyDown={(event) => onBillingKey(event, i)}
                     >
                       <span className="sub-tab-label">{o.label}</span>
-                      {o.savingLabel && <span className="sub-save">{o.savingLabel}</span>}
+                      {o.saving > 0 && <span className="sub-save"> · Save {o.saving}%</span>}
                     </button>
                   ))}
                 </div>
@@ -1076,7 +1076,6 @@ export default function Settings({ toast }) {
                   </div>
 
                   <div className="sub-tier sub-tier-pro">
-                    <span className="sub-tier-flag">{offer?.savingLabel ? offer.savingLabel.toUpperCase() : 'RECOMMENDED'}</span>
                     <div className="sub-tier-head">
                       <div className="sub-tier-name">Pro</div>
                       <div className="sub-tier-price">

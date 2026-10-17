@@ -325,26 +325,20 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     }
 
     // THE TRIAL IS ON EVERY CADENCE THAT CARRIES ONE — counted off the ladder,
-    // not assumed to be one.
-    //
-    // This asserted toHaveCount(1) and passed for the wrong reason: the ladder
-    // lists monthly, quarterly, yearly, and PLAN_LADDER.find(trialDays > 0)
-    // returns QUARTERLY, whose 7 days happen to equal yearly's. Only yearly
-    // rendered, because quarterly has no checkoutPlan yet — so a test about
-    // "the tier that carries the trial" was reading quarterly's number off
-    // yearly's chip. The day the founder adds the Stripe price and quarterly
-    // becomes purchasable, the count becomes 2 and this goes red for a change
-    // that is entirely correct.
+    // not assumed to be one. It is stated in the row's terms line, after the
+    // total, so it is read off the same line as the money.
     const trialPlans = ladder.filter((pl) => pl.purchasable && pl.trialDays > 0)
-    await expect(modal.locator('.ui-pro-plan-trial')).toHaveCount(trialPlans.length)
+    expect(trialPlans.length, 'the ladder has no cadence with a trial — this check would pass vacuously').toBeGreaterThan(0)
+    await expect(modal.locator('.ui-pro-plan-total', { hasText: 'free trial' }), 'one row names a trial per cadence that carries one')
+      .toHaveCount(trialPlans.length)
     for (const plan of trialPlans) {
       const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-trial')).toContainText(`${plan.trialDays}-day free trial`)
+      await expect(row.locator('.ui-pro-plan-total')).toContainText(`${plan.totalLabel} ${plan.cadence} · ${plan.trialDays}-day free trial`)
     }
     // ...and a cadence that bills today says nothing about a trial.
     for (const plan of ladder.filter((pl) => pl.purchasable && !pl.trialDays)) {
       const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-trial')).toHaveCount(0)
+      await expect(row.locator('.ui-pro-plan-total')).not.toContainText('free trial')
     }
 
     // The steps say the day money moves, with the real total, for whichever

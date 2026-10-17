@@ -492,6 +492,11 @@ html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{animatio
 :where(input[type="number"])::-webkit-inner-spin-button,:where(input[type="number"])::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 :where(input[type="number"]){-moz-appearance:textfield}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+/* A text field that is keyboard- or pointer-focused already wears the offset
+   outline from the global :focus-visible rule (or the tool-layout one). The
+   border change and halo above would be a second ring around the same box, so
+   these fields give them up and keep the outline as their one indicator. */
+:is(.fb-input,.fb-textarea,.auth-field input,.cpk-hex):focus-visible{border-color:var(--border);box-shadow:none}
 :where(input[type="color"]){width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
 :where(input[type="color"]):hover{border-color:var(--bh)}
 /* Strip the native swatch chrome so the colour well reads as one clean, rounded
@@ -629,7 +634,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    below ~336px `calc(100%/3)` still takes over and holds three columns. */
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(112px,calc(100%/3)),1fr));gap:4px}
 .ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
-.ic:hover{background:var(--bg-2);border-color:var(--border)}
+@media (hover:hover){.ic:hover{background:var(--bg-2);border-color:var(--border)}}
 .ic:active{transform:scale(.95)}
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
@@ -1614,6 +1619,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .fnote-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 22px 20px;border-top:1px solid var(--border);flex-shrink:0}
 .fnote-sign{display:flex;flex-direction:column;gap:2px;margin:0;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
 .fnote-sign-place{font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.fnote-actions{display:flex;flex-wrap:wrap;gap:8px;max-width:100%}
 .fnote-action{flex-shrink:0}
 /* Phone: the same bottom-sheet form .fb-modal takes, at the same breakpoint. A
    centred card on a 390px screen puts the close button in the middle of the
@@ -1622,7 +1628,8 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
   .fnote-overlay{padding:0;align-items:flex-end}
   .fnote{max-width:100%;max-height:92dvh;border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:none}
   .fnote-foot{gap:12px}
-  .fnote-action{width:100%;justify-content:center}
+  .fnote-actions{width:100%}
+  .fnote-action{flex:1 1 0;min-width:max-content;min-height:44px;padding-inline:8px;white-space:nowrap;justify-content:center;text-align:center}
 }
 /* REDUCED MOTION, both directions of the contract.
    The global clamp at the top of this file forces durations and delays to near
@@ -1751,15 +1758,53 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .bkit-card-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:700}
 .bkit-card-steps li.is-current .bkit-card-num{background:var(--accent-fill);color:var(--accent-fg)}
 .bkit-card-go{width:100%;justify-content:center}
-.bkit-step{display:flex;align-items:center;gap:8px;min-width:0;height:100%;padding:6px 9px;border-radius:var(--radius-s);border:1px solid transparent;color:var(--t2);text-decoration:none;transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
-.bkit-step:hover{background:var(--hvr);color:var(--t0)}
-.bkit-step.is-current{border-color:var(--border);background:var(--bg-2);color:var(--t0)}
+.bkit-step{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;height:44px;padding:2px 0;border:0;border-radius:var(--btn-radius);color:var(--t2);text-align:center;text-decoration:none;transition:background-color 150ms ease,color 150ms ease}
+/* A built step reads one step brighter than one not reached yet. */
+.bkit-step.is-done{color:var(--t1)}
+.bkit-step.is-current{color:var(--t0)}
+@media(hover:hover){
+  .bkit-step:hover{background:var(--hvr);color:var(--t0)}
+}
+.bkit-step:focus-visible{outline:2px solid var(--bkit-focus,var(--accent));outline-offset:-2px}
 .bkit-step-mark{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:10.5px;font-weight:700}
 .bkit-step.is-current .bkit-step-mark{background:var(--accent-fill);color:var(--accent-fg)}
 /* Done beats current: a step you have built keeps its tick while you stand on
    it, because the tick is a statement about the SYSTEM, not about the cursor. */
 .bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-text)}
 .bkit-rail-next{flex-shrink:0}
+/* A tap pad: the chip draws pill-shaped, and a pill is not hit-tested in its
+   corners, so the pad is a plain box at least 44px tall, over the whole chip. It
+   stays inside the 4px gap between chips and rows. */
+.bkit-step::after{content:"";position:absolute;inset:-4px 0}
+/* Where you are: a 2px accent line, under the step on a phone and on the bar's
+   top edge from 768px. */
+.bkit-step.is-current::before{content:"";position:absolute;inset-inline:12px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--accent-fill)}
+/* From 768px the steps are links in a flush bar, not stacked cells. The mark
+   answers one question (built or not: a tick on an accent wash, or an
+   outlined numeral), and the label plus the 2px accent line on the bar's top
+   edge answer the other (where you are). The line sits 9px above the link on
+   the tablet bar (8px padding plus its 1px top rule) and 10px above it from
+   1024px (9px padding), so it covers the rule exactly. The --bkit-*
+   aliases are declared on .bkit-rail in tool-shell.css. */
+@media(min-width:768px){
+  .bkit-step{flex-direction:row;justify-content:flex-start;gap:8px;padding:0 10px;text-align:start;color:var(--bkit-dim)}
+  .bkit-step.is-done{color:var(--t1)}
+  .bkit-step.is-current{background:transparent;color:var(--t0)}
+  .bkit-step.is-current::before{inset-inline:10px;bottom:auto;top:-9px;border-radius:0 0 2px 2px}
+  .bkit-step-mark{box-sizing:border-box;background:transparent;border:1.5px solid var(--bkit-mark-line);color:var(--t2);font-family:var(--font);font-size:.75rem;font-weight:560;line-height:1;font-variant-numeric:tabular-nums}
+  .bkit-step.is-current .bkit-step-mark{background:transparent;color:var(--t2)}
+  .bkit-step.is-done .bkit-step-mark{background:var(--accent-bg);border-color:transparent;color:var(--accent-text)}
+  .bkit-step-mark svg{stroke-width:2.5}
+  .bkit-step:focus-visible{outline-offset:2px}
+}
+@media(min-width:1024px){
+  .bkit-step{height:36px}
+  .bkit-step.is-current::before{top:-10px}
+}
+@media(forced-colors:active){
+  .bkit-step.is-current::before{background:Highlight}
+  .bkit-step-mark{border-color:CanvasText}
+}
 
 
 /* ci-fade — retained: the Slice-1 colour-info popup CSS (.ci-*) was removed in
@@ -2666,8 +2711,9 @@ html.lenis{scroll-behavior:auto!important}
 
 /* ══ THE APP HEADER — `UIL4B App.dc.html` lines 100-124 ══════════════════════
    Built to the file. One 64px row,
-   in the file's order: wordmark · search · theme · the three menus, then at the
-   far end the right cluster. Every wash and hairline is an alpha of the ink,
+   in the file's order: wordmark · search · the three menus, then at the
+   far end the right cluster, which ends with the theme switch directly left of
+   the account control. Every wash and hairline is an alpha of the ink,
    as in the file (--ink-rgb / --page-rgb, declared with the accent family).
 
    IT NEVER WRAPS. The file's row wraps below ~950px;
@@ -2705,7 +2751,8 @@ html.lenis{scroll-behavior:auto!important}
 @keyframes pnav-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
 .pnav-search-kbd{flex:0 0 auto;padding:3px 7px;border-radius:var(--radius-xs);border:1px solid rgba(var(--ink-rgb),.06);background:rgba(var(--ink-rgb),.07);color:rgba(var(--ink-rgb),var(--ink-faint));font-family:var(--mono);font-size:10px;font-weight:400;line-height:1.2}
 
-/* The theme cycle (App line 108): 36px, 12px radius, ink .06, no border. */
+/* The theme cycle (App line 108): 36px, 12px radius, ink .06, no border. It
+   sits in the right cluster, directly left of the account control. */
 .pnav .pnav-theme{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:0;border-radius:var(--btn-radius);background:rgba(var(--ink-rgb),.06);color:rgb(var(--ink-rgb));cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
 @media(hover:hover){.pnav .pnav-theme:hover{background:rgba(var(--ink-rgb),.12)}}
 
@@ -2899,6 +2946,7 @@ html.lenis{scroll-behavior:auto!important}
 /* Discover: the file's 2×2 of counts, without the four boxes — each count is
    a hairline, a swatch strip, the number and its label. */
 .pnav-dcounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px}
+.pnav-dcount:last-child:nth-child(odd){grid-column:1/-1}
 .pnav-dcounts--wait{min-height:170px}
 .pnav-dcount{display:grid;align-content:start;gap:7px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
 .pnav-dcount-strip{display:flex;height:22px;border-radius:var(--radius-xs);overflow:hidden}
@@ -3110,7 +3158,6 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}
 .cpk-dropper:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
-.cpk-hex:focus{outline:none;border-color:var(--accent)}
 /* The notation select. Sized to its widest option (HEX/RGB/HSL are all three
    characters) so switching never reflows the row under the pointer. */
 .cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
@@ -3149,9 +3196,12 @@ html.lenis{scroll-behavior:auto!important}
    properties. It is reachable by anyone who has copied an icon — the rail is
    the "recently used" strip — so it is converted rather than only recorded. */
 .ig-rail-track{display:flex;gap:8px;padding-bottom:4px}
-/* Logo.dev brand marks are raster and already coloured — size a touch larger
-   than glyph icons, keep their own colours (no invert), and round the corners. */
-.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
+/* Transparent marks keep their edges; baked-in square plates get app-icon corners
+   and one even hairline on the plate's own edge (an outline paints over the image
+   and follows the radius, so no side can come out heavier than another). */
+.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:0}
+.ic img.ig-logo--square{border-radius:6px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px}
+[data-theme="dark"] .ic img.ig-logo--square{outline-color:oklch(1 0 0 / .1)}
 /* THE PACK LABEL IS NOW RENDERED ONLY WHEN THE RESULT SET IS MIXED, and the
    decision moved into IconLibrary.jsx because it depends on the results, not
    on the width. Read the note there for the Mobbin evidence.
@@ -4444,12 +4494,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--t1)}
 .ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-fill);color:var(--accent-ink)}
 
-/* The ladder. Two tiles at rest, stacking into Glide-style rows on a phone. */
-/* STACKED ROWS. As a 2-up grid at minmax(180px,1fr) this held exactly two
-   cadences in a ~400px column; quarterly makes three and the third wrapped
-   onto its own line, half-width, under two full ones. A column of rows takes a
-   fourth without a layout decision, and gives the trial somewhere to sit that
-   is not a footnote. */
+/* Monthly and Yearly are stacked plan rows, with space for trial details. */
 .ui-pro-plans{display:flex;flex-direction:column;gap:8px;margin:20px 0 0;padding:0;border:none;min-width:0}
 .ui-pro-plans-skel{height:186px;border-radius:var(--radius-l)}
 .ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
@@ -4466,7 +4511,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-text)}
 /* The one --hi element on this surface, and the only place it appears in the
    whole modal - the marker-pen budget is one per viewport. */
-.ui-pro-plan-save{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:var(--radius-pill);background:var(--hi);color:var(--hi-fg)}
+.ui-pro-plan-save{font-size:13px;font-weight:500;color:var(--accent-mid);white-space:pre}
 .ui-pro-plan-rate{display:flex;align-items:baseline;gap:3px;margin-left:auto;flex:none}
 .ui-pro-plan-amount{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.035em;color:var(--t0)}
 .ui-pro-plan-per{font-size:13px;font-weight:600;color:var(--t2)}
@@ -4477,7 +4522,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    outlined "Save N%" pill sits beside it and the trial must win that pairing:
    a discount is a reason to prefer a cadence, a free trial is a reason to
    start at all. */
-.ui-pro-plan-trial{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);white-space:nowrap}
 
 .ui-pro-plans-err{margin:20px 0 0;padding:14px;border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius-l);background:color-mix(in srgb,var(--err) 8%,transparent)}
 .ui-pro-plans-err p{margin:0 0 10px;font-size:13px;color:var(--t1)}
@@ -4825,6 +4869,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .lockt-cta-head{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--t0)}
 .lockt-cta-body{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .lockt-cta-btn{white-space:nowrap;flex:0 0 auto}
+/* A Pro viewer's library is on its way (or failed): the same footprint as the
+   upsell it replaces, with the accent fill taken out so it reads as a status. */
+.lockt-cta.lockt-status{background:none;border-color:var(--border)}
+.lockt-status .lockt-cta-btn{width:auto}
 @media(max-width:640px){
   .lockt-cta{gap:12px;padding:16px}
   .lockt-cta-btn{width:100%}

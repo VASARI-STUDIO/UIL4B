@@ -88,9 +88,8 @@ export const LOCKED_TEASE = 3
 // something on its own, so the ladder is anonymous → free account → Pro.
 //
 // It applies to the three galleries that hand over a COPYABLE PAYLOAD (palettes,
-// gradients, prompts). Curated Resources and the Font Gallery are outside it:
-// they publish external links and Google Fonts, so there is nothing of ours to
-// meter. The Icon Library has its own rule (pack-level, see the brief).
+// gradients, prompts). The Font Gallery publishes Google Fonts and has no
+// copyable payload to meter. The Icon Library uses pack-level access rules.
 //
 // WHY A COUNT AND A FLAG, RATHER THAN ONE OR THE OTHER. The flag (`pro` on a
 // palette, `free` on a prompt) says WHICH rows may ever be free; the count says

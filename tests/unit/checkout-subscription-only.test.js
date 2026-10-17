@@ -41,10 +41,11 @@ test('a lifetime checkout is refused with a 400 and a clear message', async () =
 
 test('the refusal is specific to intervals that cannot be bought', () => {
   assert.equal(intervalRefusal('monthly'), null)
-  assert.equal(intervalRefusal('quarterly'), null)
   assert.equal(intervalRefusal('yearly'), null)
+  assert.ok(intervalRefusal('quarterly'), 'quarterly is no longer sold, so a request for it is refused')
+  assert.match(intervalRefusal('quarterly').error, /interval must be one of: monthly, yearly/)
   assert.match(intervalRefusal('lifetime').error, /no one-off purchase/i)
-  assert.match(intervalRefusal('weekly').error, /interval must be one of: monthly, quarterly, yearly/)
+  assert.match(intervalRefusal('weekly').error, /interval must be one of: monthly, yearly/)
   assert.equal(parseBillingInterval('lifetime'), null)
 })
 
@@ -69,7 +70,7 @@ test('a one-off price is not sellable for any interval', () => {
 })
 
 test('no pricing table carries a lifetime entry', () => {
-  assert.deepEqual([...BILLING_INTERVALS], ['monthly', 'quarterly', 'yearly'])
+  assert.deepEqual([...BILLING_INTERVALS], ['monthly', 'yearly'])
   for (const [name, table] of Object.entries({ DEFAULT_PRICES, LOOKUP_KEYS, PRICE_ENV_KEYS, TRIAL_DAYS })) {
     assert.equal(Object.hasOwn(table, 'lifetime'), false, `${name} still has a lifetime entry`)
   }

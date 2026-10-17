@@ -87,7 +87,7 @@ export const perMonth = (total, months) => Math.round((total / months) * 100) / 
 /**
  * Every buyable cadence resolved against the live prices, carrying exactly
  * what /plans prints for it: the per-month amount, the saving against monthly
- * ("17% off", nothing under 5%), the trial, and the billed line.
+ * ("Save 17%", nothing under 5%), the trial, and the billed line.
  *
  * `prices` is usePrices().prices; `loaded` is useProPrice().loaded. No price →
  * `amountLabel: null` and `priceServiceDown: true`: an offer is never shown
@@ -120,7 +120,7 @@ export function resolveOffers({ prices, currency = 'usd', loaded = true } = {}) 
       amountLabel: has ? formatMoney(perMonth(total, o.months), currency) : null,
       totalLabel: has ? formatMoney(total, currency) : null,
       saving,
-      savingLabel: saving > 0 ? `${saving}% off` : '',
+      savingLabel: saving > 0 ? `Save ${saving}%` : '',
       billedNote,
     }
   })

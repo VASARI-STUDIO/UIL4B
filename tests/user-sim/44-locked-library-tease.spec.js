@@ -33,8 +33,8 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
-import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
-import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const ROUTE = '/discover/palettes'
@@ -118,6 +118,7 @@ test.describe('a locked library row hands nothing over — signed out', () => {
     // line is the honesty check: a page showing three may not claim 101.
     await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_TIER_LIMITS.anonymous} palettes`)
+    await expect(page.locator('.dgh-hero')).not.toContainText('101')
   })
 
   test('no withheld palette colour appears in the text, the markup or the paint', async ({ page }) => {

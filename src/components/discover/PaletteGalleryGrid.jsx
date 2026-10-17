@@ -2,13 +2,13 @@ import { useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LibraryCard from '../library/LibraryCard'
 import LibraryGrid from '../library/LibraryGrid'
-import { GALLERY_PALETTES, paletteBuilderUrl } from '../../data/paletteGallery'
+import { paletteBuilderUrl } from '../../data/paletteGallery'
 import { setGradientDraft, resetGradientDraft } from '../../utils/colorHandoff'
 import { useProject } from '../../contexts/ProjectContext'
 
 // Colorhunt-style palette gallery — shared by the Discover palettes view and
-// the Palette Builder's colour-gallery popup. Everything is local + static
-// (src/data/paletteGallery.js): stripes are plain CSS backgrounds, likes live
+// the Palette Builder's colour-gallery popup. The rows come from the page that
+// renders it: stripes are plain CSS backgrounds, likes live
 // in localStorage, and "use" either navigates to the Palette Builder with a
 // ?c= hand-off or (when `onPick` is provided, e.g. inside the builder popup)
 // applies the colours directly via the callback.
@@ -115,7 +115,7 @@ function CheckGlyph() {
 // metaOf and hexChips are the Palette Library card foot as the app file draws
 // it ("Warm, 5 colours" beside the name, the hexes as mono chips under it).
 // Opt-in, so the Palette Builder gallery popup keeps its compact card.
-export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = GALLERY_PALETTES, labelledBy, metaOf, hexChips = false }) {
+export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = [], labelledBy, metaOf, hexChips = false }) {
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
   const { setPalette, canSaveProjects } = useProject()
