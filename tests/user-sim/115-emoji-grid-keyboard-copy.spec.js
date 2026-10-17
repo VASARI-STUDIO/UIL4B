@@ -49,10 +49,23 @@ test.describe('emoji grid copy', () => {
     await page.evaluate(() => window.scrollBy(0, 6000))
     // The first cell of the old window is unmounted; wait for the new window.
     await expect.poll(async () => glyphOf(page.locator(CELL).first())).not.toBe(before)
-    const cell = page.locator(CELL).filter({ has: page.locator('.emoji-char') }).nth(3)
-    await cell.scrollIntoViewIfNeeded()
-    const glyph = await glyphOf(cell)
+    // Pin ONE node that is fully on screen. A positional locator (.nth) is
+    // resolved again at every step, and the window keeps moving under it while
+    // the scroll settles and the click scrolls, so the glyph read and the cell
+    // clicked could be two different cells. A node on screen needs no scroll to
+    // be clicked, so the window stays put; if it were unmounted anyway, the
+    // handle would fail loudly rather than point at a neighbour.
+    const handle = await page.evaluateHandle((sel) => {
+      const fits = (el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight }
+      return [...document.querySelectorAll(sel)].filter(fits)[3]
+    }, CELL)
+    const cell = handle.asElement()
+    expect(cell, 'no emoji cell fully on screen after the scroll').not.toBeNull()
+    const glyph = await cell.evaluate((el) => el.querySelector('.emoji-char').textContent)
+    expect(glyph, 'the pinned cell is not one that was mounted before the scroll').not.toBe(before)
     await cell.click()
-    expect(await clipboard(page)).toBe(glyph)
+    // The copy is written asynchronously; read it back once the cell reports it.
+    await expect.poll(() => cell.evaluate((el) => el.classList.contains('copied'))).toBe(true)
+    await expect.poll(() => clipboard(page)).toBe(glyph)
   })
 })
