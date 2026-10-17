@@ -384,3 +384,102 @@ for (const modal of [true, false]) {
     })
   })
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Links from outside the app (/support, a failed payment) arrive at /feedback
+// with `?from=support` or `?reason=`. They choose the form's starting point;
+// a draft kept from a failed send, and the address a payment problem needs,
+// take precedence over that.
+test.describe('feedback page opened from a link', () => {
+  const form = page => page.locator('.fb-page')
+  const emailError = page => form(page).locator('#fb-email-error')
+  const sent = page => form(page).getByRole('heading', { name: 'Sent', exact: true })
+  const message = 'My card was declined twice on the Pro checkout.'
+
+  async function standIn(page, reply = () => ({ status: 200 })) {
+    const posted = []
+    const gates = []
+    await page.route('**/api/support', async route => {
+      posted.push(JSON.parse(route.request().postData() || '{}'))
+      const verdict = reply(posted.length)
+      if (verdict.hold) await new Promise(resolve => gates.push(resolve))
+      await route.fulfill({ status: verdict.status ?? 200, contentType: 'application/json', body: '{}' })
+    })
+    return { posted, release: () => gates.splice(0).forEach(resolve => resolve()) }
+  }
+
+  test('?from=support and any ?reason= preselect Help; no link defaults to a feature request', async ({ page }) => {
+    const checked = () => form(page).locator('[role="radio"][aria-checked="true"]')
+    await go(page, '/feedback?from=support')
+    await expect(checked()).toHaveText('Help Request')
+    await go(page, '/feedback?reason=anything_at_all')
+    await expect(checked()).toHaveText('Help Request')
+    await go(page, '/feedback')
+    await expect(checked()).not.toHaveText('Help Request')
+  })
+
+  test('reason=payment_failed fills the subject and makes the email required', async ({ page }) => {
+    await go(page, '/feedback?reason=payment_failed')
+    await expect(form(page).locator('#fb-subject')).toHaveValue('Payment failed')
+    await expect(form(page).locator('#fb-email')).toHaveAttribute('aria-required', 'true')
+    await expect(form(page).getByText('Required — we need your email to reply.')).toBeVisible()
+  })
+
+  test('signed out with a blank email: the required-email error shows, no Sent, no request', async ({ page }) => {
+    watch(page, 'a visitor whose payment failed')
+    const server = await standIn(page)
+    await go(page, '/feedback?reason=payment_failed')
+    await form(page).locator('#fb-message').fill(message)
+    await form(page).locator('button[type="submit"]').click()
+    await expect(emailError(page)).toHaveText('Add your email so we can reply about your payment.')
+    await expect(emailError(page)).toHaveAttribute('role', 'alert')
+    await expect(form(page).locator('#fb-email')).toBeFocused()
+    await expect(sent(page)).toHaveCount(0)
+    // Give a wrongly-sent request every chance to arrive before counting none.
+    await page.waitForTimeout(500)
+    expect(server.posted).toHaveLength(0)
+  })
+
+  test('signed out with a valid email: Sent shows at once and exactly one request goes up', async ({ page }) => {
+    watch(page, 'a visitor whose payment failed')
+    const server = await standIn(page, () => ({ hold: true }))
+    await go(page, '/feedback?reason=payment_failed')
+    await form(page).locator('#fb-email').fill('pat@example.com')
+    await form(page).locator('#fb-message').fill(message)
+    await form(page).locator('button[type="submit"]').click()
+    await expect(sent(page)).toBeVisible()
+    await expect.poll(() => server.posted.length).toBe(1)
+    expect(server.posted[0]).toMatchObject({
+      type: 'help',
+      subject: 'Payment failed',
+      message,
+      email: 'pat@example.com',
+    })
+    server.release()
+    await expect(form(page).getByRole('button', { name: 'Submit another' })).toBeEnabled()
+    expect(server.posted).toHaveLength(1)
+  })
+
+  test('a draft kept from a failed send is restored, and wins over the link defaults', async ({ page }) => {
+    watch(page, 'a visitor retrying after a failed send')
+    const server = await standIn(page, () => ({ status: 502 }))
+    await go(page, '/feedback')
+    await form(page).getByRole('radio', { name: 'Bug Report' }).click()
+    await form(page).locator('#fb-subject').fill('Export is broken')
+    await form(page).locator('#fb-email').fill('pat@example.com')
+    await form(page).locator('#fb-message').fill(message)
+    await form(page).locator('button[type="submit"]').click()
+    await expect(form(page).locator('.fb-error')).toHaveAttribute('role', 'alert')
+    // Leave, then come back through a link that would otherwise preselect Help
+    // with the subject "Payment failed".
+    await page.locator('a[href="/projects"]').first().click()
+    await expect(form(page)).toHaveCount(0)
+    await page.evaluate(() => { history.pushState({}, '', '/feedback?reason=payment_failed'); dispatchEvent(new PopStateEvent('popstate')) })
+    await expect(form(page).getByLabel('Your message')).toHaveValue(message)
+    await form(page).getByRole('button', { name: 'Edit message' }).click()
+    await expect(form(page).locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug Report')
+    await expect(form(page).locator('#fb-subject')).toHaveValue('Export is broken')
+    await expect(form(page).locator('#fb-email')).toHaveValue('pat@example.com')
+    await expect(form(page).locator('#fb-message')).toHaveValue(message)
+  })
+})
