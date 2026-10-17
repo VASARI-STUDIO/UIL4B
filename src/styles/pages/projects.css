@@ -250,6 +250,9 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-disc-card { display: block; min-width: 0; border: 1px solid var(--ws-hair); border-radius: 18px; background: var(--card); overflow: hidden; text-align: left; text-decoration: none; color: inherit; transition: background .18s ease, border-color .18s ease; }
 .uh .uh-disc-strip { display: flex; height: 74px; }
 .uh .uh-disc-strip > span { flex: 1; }
+/* A palette the account has not opened: neutral steps stand in for its colours. */
+.uh .uh-disc-strip--locked > span { background: var(--ws-hair); }
+.uh .uh-disc-strip--locked > span:nth-child(even) { background: var(--ws-faint); opacity: .35; }
 .uh .uh-disc-body { display: block; padding: 11px 13px 13px; }
 .uh .uh-disc-name { display: block; font-size: 13.5px; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uh .uh-disc-meta { display: block; margin-top: 5px; font-size: 11.5px; color: var(--ws-faint); }

@@ -14,6 +14,9 @@ import {
   subscriptionRevocationStamp,
   subscriptionStatusGrantsAccess,
   writeSubscriptionDoc,
+  chargeHasWithdrawalRefund,
+  finishWithdrawalRefund,
+  withdrawalMarkerFor,
   writeSubscriptionForEvent,
 } from './_lib/billing.js'
 
@@ -33,6 +36,35 @@ async function upsertSubscription(stripe, subscription, eventCreated) {
     return writeSubscription(userUid, subscription, null, stripe, eventCreated)
   }
   return writeSubscription(uid, subscription, null, stripe, eventCreated)
+}
+
+// A refund is the 14-day withdrawal's (api/create-portal.js) when the refund itself
+// says so: it carries the withdrawal reason and this subscription's id. Reading it
+// off the refund, not off a marker on the user document, is what keeps a late
+// event for an earlier withdrawal exempt after a later one has rewritten the marker.
+// A full refund made by hand carries neither, so it still revokes.
+const isWithdrawalRefundOf = (stripe, charge, sub) => chargeHasWithdrawalRefund(stripe, charge?.id, sub?.id)
+
+// A withdrawal whose request died after the cancel but before the refund finished
+// is finished here when Stripe reports the subscription deleted, from the amounts
+// stored before anything was cancelled. The same idempotent path as the customer's
+// own retry, so it can never refund twice. Throws on failure so Stripe redelivers.
+export async function finishStrandedWithdrawal(stripe, sub, db = null, now = Date.now()) {
+  const database = db || adminDb()
+  const uid = sub?.metadata?.firebaseUid || await uidForCustomer(sub?.customer, database)
+  if (!uid) return 'no_account'
+  const stored = (await database.collection('users').doc(uid).get()).data()?.subscription
+  const marker = withdrawalMarkerFor(stored, sub?.id)
+  if (marker?.state !== 'pending') return 'nothing_to_finish'
+  try {
+    await finishWithdrawalRefund({ stripe, db: database, uid, subscriptionId: sub.id, marker, now })
+  } catch (err) {
+    console.error('stripe-webhook: a cancelled subscription was NOT refunded — its withdrawal refund could not be finished', {
+      uid, subscriptionId: sub.id, error: err?.message,
+    })
+    throw err
+  }
+  return 'finished'
 }
 
 // The subscription document's SHAPE lives in _lib/billing.js, not here, for two
@@ -79,6 +111,12 @@ export async function writeSubscription(uid, sub, db = null, stripe = null, even
       // which is worse than the gap this closes — but never silently.
       console.error('stripe-webhook: could not read the charge behind a subscription — written WITHOUT a revocation check', {
         uid, subscriptionId: sub?.id, reason: health.reason, error: health.error || null,
+      })
+    } else if (health.dirty && health.reason === 'full_refund' && await isWithdrawalRefundOf(stripe, health.charge, sub)) {
+      // A late delivery of the subscription's pre-cancel state, arriving after the
+      // withdrawal refunded its charge. That refund is not a reason to revoke.
+      console.warn('stripe-webhook: latest charge refunded by a 14-day withdrawal — no revocation stamped', {
+        uid, subscriptionId: sub?.id, stripeStatus: sub?.status,
       })
     } else if (health.dirty) {
       console.warn('stripe-webhook: subscription written with access REVOKED — its latest charge has gone back', {
@@ -379,6 +417,20 @@ async function revokeSubscriptionAccess(stripe, { paymentIntentId, customerId = 
     return false
   }
 
+  // The 14-day withdrawal (api/create-portal.js) refunds the whole charge, so
+  // this is the normal path for it, not an edge case. The action has already
+  // cancelled the subscription, and a sticky `accessRevoked` would keep the
+  // customer on Free through a later, legitimate resubscription. Only a refund
+  // that carries the withdrawal's stamp for THIS subscription is exempt; any
+  // other full refund, and every dispute, still stamps.
+  if (reason === 'full_refund' && chargeId
+    && await isWithdrawalRefundOf(stripe, { id: chargeId }, sub)) {
+    console.warn('stripe-webhook: full refund of a withdrawn subscription — already cancelled, no revocation stamped', {
+      uid, paymentIntentId, subscriptionId: sub.id,
+    })
+    return false
+  }
+
   const db = adminDb()
   const ref = db.collection('users').doc(uid)
   await db.runTransaction(async (tx) => {
@@ -665,9 +717,13 @@ export async function processStripeEvent(event, { db, stripe, dispatch = dispatc
 async function dispatchStripeEvent(stripe, event) {
   switch (event.type) {
     case 'customer.subscription.created':
-    case 'customer.subscription.updated':
+    case 'customer.subscription.updated': {
+      await upsertSubscription(stripe, event.data.object, event.created)
+      break
+    }
     case 'customer.subscription.deleted': {
       await upsertSubscription(stripe, event.data.object, event.created)
+      await finishStrandedWithdrawal(stripe, event.data.object)
       break
     }
     case 'checkout.session.completed': {

@@ -53,6 +53,7 @@
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
@@ -307,7 +308,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account reading the Pro offer')
     const prices = { monthly: { usd: 7 }, yearly: { usd: 48 } }
-    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prices) }))
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(prices)) }))
     await signIn(page, { plan: 'free' })
     await go(page, '/create/palette')
     const modal = await raiseWall(page)
@@ -325,26 +326,20 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     }
 
     // THE TRIAL IS ON EVERY CADENCE THAT CARRIES ONE — counted off the ladder,
-    // not assumed to be one.
-    //
-    // This asserted toHaveCount(1) and passed for the wrong reason: the ladder
-    // lists monthly, quarterly, yearly, and PLAN_LADDER.find(trialDays > 0)
-    // returns QUARTERLY, whose 7 days happen to equal yearly's. Only yearly
-    // rendered, because quarterly has no checkoutPlan yet — so a test about
-    // "the tier that carries the trial" was reading quarterly's number off
-    // yearly's chip. The day the founder adds the Stripe price and quarterly
-    // becomes purchasable, the count becomes 2 and this goes red for a change
-    // that is entirely correct.
+    // not assumed to be one. It is stated in the row's terms line, after the
+    // total, so it is read off the same line as the money.
     const trialPlans = ladder.filter((pl) => pl.purchasable && pl.trialDays > 0)
-    await expect(modal.locator('.ui-pro-plan-trial')).toHaveCount(trialPlans.length)
+    expect(trialPlans.length, 'the ladder has no cadence with a trial — this check would pass vacuously').toBeGreaterThan(0)
+    await expect(modal.locator('.ui-pro-plan-total', { hasText: 'free trial' }), 'one row names a trial per cadence that carries one')
+      .toHaveCount(trialPlans.length)
     for (const plan of trialPlans) {
       const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-trial')).toContainText(`${plan.trialDays}-day free trial`)
+      await expect(row.locator('.ui-pro-plan-total')).toContainText(`${plan.totalLabel} ${plan.cadence} · ${plan.trialDays}-day free trial`)
     }
     // ...and a cadence that bills today says nothing about a trial.
     for (const plan of ladder.filter((pl) => pl.purchasable && !pl.trialDays)) {
       const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-trial')).toHaveCount(0)
+      await expect(row.locator('.ui-pro-plan-total')).not.toContainText('free trial')
     }
 
     // The steps say the day money moves, with the real total, for whichever

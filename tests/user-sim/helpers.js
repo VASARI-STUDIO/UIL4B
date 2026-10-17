@@ -44,6 +44,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 // `adminEmails()` is still the one parser, so the trimming and lower-casing
 // rules cannot diverge between the fixture and the server.
 import { adminEmails } from '../../api/_lib/adminEmails.js'
+import { serveLibrary } from '../../api/_lib/library/serve.js'
 import { resolveReportDir } from './report-dir.js'
 
 // A RESERVED TEST DOMAIN, never the founder's real address. The whole point
@@ -369,6 +370,33 @@ export async function signIn(page, opts = {}) {
       ...docs,
     },
   }
+
+  /* THE PRO LIBRARIES ARE ANSWERED BY THE REAL ENDPOINT CODE.
+   *
+   * A Pro account's Palette, Gradient and Prompt libraries come from
+   * GET /api/ai?library=<kind>, which `vite preview` does not serve. Rather than
+   * hand back a canned list, the route runs api/_lib/library/serve.js itself with
+   * the session's own user document standing in for Firestore, so a Pro session
+   * gets the full library, a Free one gets the endpoint's 403, and the plan is
+   * decided by the same planForUser the deployed function uses. */
+  await page.route(/\/api\/ai\?library=/, async (route) => {
+    const url = new URL(route.request().url())
+    const reply = { status: 200, headers: {}, body: null }
+    const res = {
+      setHeader: (name, value) => { reply.headers[name] = value },
+      status: (code) => { reply.status = code; return res },
+      json: (body) => { reply.body = body; return res },
+    }
+    await serveLibrary(
+      { headers: route.request().headers(), query: { library: url.searchParams.get('library') } },
+      res,
+      {
+        verifyIdToken: async () => ({ uid: session.uid, email: session.email, email_verified: session.emailVerified }),
+        readUser: async () => session.docs[`users/${session.uid}`],
+      },
+    )
+    await route.fulfill({ status: reply.status, headers: reply.headers, contentType: 'application/json', body: JSON.stringify(reply.body) })
+  })
 
   /* THE DECLARATION IS RE-READ ON EVERY LOAD; THE STORAGE IS SEEDED ONCE.
    *

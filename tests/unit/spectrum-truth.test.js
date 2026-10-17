@@ -36,8 +36,8 @@ import { EXPORT_FORMATS, unbuiltFormats } from '../../src/config/exportFormats.j
 import { createTools } from '../../src/data/toolTree.js'
 import { HERO_HEADLINE } from '../../src/data/positioning.js'
 import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
-import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
-import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { ICON_PACK_TIERS } from '../../src/data/iconPackTiers.js'
 import { ICON_GROUP_SHELF } from '../../src/components/spectrum/iconGroupShelf.js'
 import { listIconGroups } from '../../src/data/iconGroups.js'
@@ -227,7 +227,7 @@ test('not one of the prototype\'s proof numbers survives, and the band\'s figure
       `the proof figure "${s.label}" makes a claim about other people, which nothing measures`)
   }
   // MUTATION GUARD: the module interpolates rather than types the figures.
-  assert.ok(FACTS.includes('LIBRARY_PALETTES.length') && FACTS.includes('Object.keys(ICON_PACK_TIERS).length'),
+  assert.ok(FACTS.includes('LIBRARY_TOTALS.palettes') && FACTS.includes('LIBRARY_TOTALS.gradients') && FACTS.includes('Object.keys(ICON_PACK_TIERS).length'),
     'spectrumFacts.js no longer counts its proof figures; something typed them')
   assert.ok(stripComments(read('src/components/spectrum/SpectrumProof.jsx')).includes('PROOF_STATS.map'),
     'SpectrumProof.jsx no longer renders PROOF_STATS')

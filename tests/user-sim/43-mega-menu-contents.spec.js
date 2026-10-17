@@ -31,9 +31,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
 import { watch, go } from './helpers.js'
-import { GALLERY_PALETTES } from '../../src/data/paletteGallery.js'
+import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
 import { inkFor, grade } from '../../src/utils/styleGuideExport.js'
-import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 import { readingMinutes } from '../../src/data/learnIndex.js'
@@ -186,16 +186,14 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   })
 
 
-  // The Discover pane is the App file's 2×2 of
-  // counts (lines 176-190), not the three gradient tiles. The design file typed "71"
-  // and "100"; these are counted from the galleries the pages render.
+  // Discover counts come from the local gallery data rendered by its libraries.
   test('the Discover pane counts its libraries from the data the galleries render', async ({ page }) => {
     watch(page, 'a designer scanning for something worth a tab')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Discover')
 
     const counts = page.locator('#pnav-mega .pnav-dcount-n')
-    await expect(counts).toHaveCount(4)
+    await expect(counts).toHaveCount(3)
     const values = (await counts.allTextContents()).map((t) => t.trim())
     expect(values.slice(0, 2)).toEqual([String(GALLERY_PALETTES.length), String(GALLERY_GRADIENTS.length)])
     // The gradient strip is a real gallery gradient, not a decorative ramp.

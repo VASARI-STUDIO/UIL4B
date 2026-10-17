@@ -222,18 +222,17 @@
 /* The cadence row never wraps: three equal cells on a phone,
    each saving under its label rather than beside it. */
 .stg .sub-plans { overflow: hidden; }
-.stg .sub-billing-toggle { display: flex; flex-wrap: nowrap; gap: 2px; width: max-content; max-width: calc(100% - 40px); margin: 20px 20px 0; padding: 3px; border: 1px solid var(--stg-hair); border-radius: var(--radius); background: var(--stg-wash); }
-.stg .sub-billing-toggle button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 16px; border-radius: var(--radius-s); font-weight: 500; color: var(--t1); white-space: nowrap; }
-.stg .sub-billing-toggle .sub-save { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .04em; }
+.stg .sub-billing-toggle { display: flex; flex-wrap: nowrap; gap: 2px; width: max-content; max-width: calc(100% - 40px); margin: 20px 20px 0; padding: 4px; border: 1px solid var(--stg-hair); border-radius: var(--radius-pill); background: var(--stg-wash); }
+.stg .sub-billing-toggle button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 500; color: var(--t1); white-space: nowrap; }
+.stg .sub-billing-toggle .sub-save { padding: 0; background: none; font-family: inherit; font-size: inherit; font-weight: inherit; letter-spacing: 0; color: var(--accent-mid); white-space: pre; }
 /* Selected is the ink ground, the way Spectrum draws every segmented control,
    so "selected" is one idea across the product and the accent stays on the
    action that spends money. */
 .stg .sub-billing-toggle button.active { background: var(--t0); color: var(--bg-0); box-shadow: none; }
-.stg .sub-billing-toggle .sub-save { color: inherit; }
+.stg .sub-billing-toggle button.active .sub-save { color: inherit; }
 .stg .sub-tiers { gap: 0; margin-top: 4px; }
 .stg .sub-tier { gap: 14px; padding: 22px 20px; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .stg .sub-tier-pro { border-left: 1px solid var(--stg-hair); box-shadow: none; }
-.stg .sub-tier-flag { position: absolute; top: 20px; right: 20px; padding: 0; border-radius: 0; background: none; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--accent-mid); }
 .stg .sub-tier-name { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--t1); }
 .stg .sub-tier-amount { font-family: var(--display); font-size: 34px; font-weight: 600; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
 .stg .sub-tier-per { color: var(--t1); }
@@ -316,7 +315,7 @@
   .stg .settings-profile-info { flex: 1 1 calc(100% - 72px); }
   .stg .lang-grid { grid-template-columns: 1fr; }
   .stg .sub-billing-toggle { width: auto; max-width: none; margin: 16px 16px 0; }
-  .stg .sub-billing-toggle button { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 1px; min-height: 44px; padding: 4px 6px; }
+  .stg .sub-billing-toggle button { flex: 1 1 0; min-width: 0; justify-content: center; gap: 0; min-height: 44px; padding: 0 var(--s-3); }
   .stg .sub-tiers { grid-template-columns: minmax(0, 1fr); }
   .stg .sub-tier { padding: 20px 16px; }
   .stg .sub-tier-pro { border-left: 0; border-top: 1px solid var(--stg-hair); }
