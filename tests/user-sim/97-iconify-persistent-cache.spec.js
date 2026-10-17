@@ -78,6 +78,27 @@ async function reload(page, route) {
   await ready(page, route)
 }
 
+/**
+ * Choose a pack without the pointer ever leaving the toolbar. The menu option
+ * sits over the grid, so a real click on it leaves the pointer there; when the
+ * menu closes a glyph cell is under the stationary pointer, the browser fires a
+ * synthetic mouseenter on it, and the page's hover warm-up (IconLibrary.jsx,
+ * warmSoon) asks for that one icon's /<pack>/<name>.svg 150 ms later. That file
+ * is a different kind of request with its own cool-down, so a search being
+ * refused does not hold it. It is the customizer's head start, not part of a
+ * pack switch, and whether it fires depends on which cell the pointer lands on
+ * when the layout settles, so it failed one CI run in 2128. Dispatching the
+ * option's click keeps the pointer on the select, which is not over any cell,
+ * and the count below then depends only on what a pack switch asks for.
+ */
+async function pickPack(page, select, pack) {
+  await select.click()
+  const option = page.locator(`.menu-select-list[role="listbox"] [role="option"][data-value="${pack}"]`)
+  await option.waitFor({ state: 'visible' })
+  await option.dispatchEvent('click')
+  await expect(page.locator('.menu-select-list[role="listbox"]')).toHaveCount(0)
+}
+
 /** Pack switches that revisit packs: the second time round must be free. */
 const SWITCHES = ['tabler', 'mdi', 'lucide', 'tabler', 'all']
 async function switchPacks(page) {
@@ -160,7 +181,7 @@ test('a 429 starts a cool-down: cached packs stay up, nothing is sent, and a tot
   await go(page, '/create/icons')
   await paint(page)
   for (const pack of ['tabler', 'lucide', 'all']) {
-    await chooseMenuOption(page, select, pack)
+    await pickPack(page, select, pack)
     await page.waitForTimeout(1000)
   }
   await paint(page)
@@ -190,24 +211,24 @@ test('a 429 starts a cool-down: cached packs stay up, nothing is sent, and a tot
   await paint(page)
   await settle(page)
   await expect(notice).toHaveCount(0)
-  expect(ledger.urls.length, 'the reload sent a request during the cool-down').toBe(sent)
+  expect(ledger.urls.length, `the reload sent a request during the cool-down: ${ledger.urls.slice(sent).join(' ')}`).toBe(sent)
 
   // 4. A query that is not cached cannot be answered, and does not leave the
   //    building: the page says so instead of retrying into the limit.
   await page.locator('.lbry-search input').first().fill('home')
   await expect(notice).toBeVisible({ timeout: 15000 })
-  expect(ledger.urls.length, 'a new search was sent during the cool-down').toBe(sent)
+  expect(ledger.urls.length, `a new search was sent during the cool-down: ${ledger.urls.slice(sent).join(' ')}`).toBe(sent)
 
   // 5. Clearing the search and moving between cached packs is free and clean.
   await page.locator('.lbry-search input').first().fill('')
   await expect(notice).toHaveCount(0, { timeout: 15000 })
   for (const pack of ['tabler', 'lucide', 'all']) {
-    await chooseMenuOption(page, select, pack)
+    await pickPack(page, select, pack)
     await page.waitForTimeout(1000)
     await expect(notice, `switching to cached ${pack} raised the banner`).toHaveCount(0)
     await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 15000 }).toBeGreaterThan(0)
   }
-  expect(ledger.urls.length, 'a cached pack switch was sent during the cool-down').toBe(sent)
+  expect(ledger.urls.length, `a cached pack switch was sent during the cool-down: ${ledger.urls.slice(sent).join(' ')}`).toBe(sent)
 
   // Try again is NOT exercised here on purpose. After a failed SEARCH the page
   // sets cdnOk=false, and doSearch then answers from the built-in set without
