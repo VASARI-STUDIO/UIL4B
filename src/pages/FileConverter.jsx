@@ -26,7 +26,7 @@ import {
   outputDimensions,
 } from '../utils/imageResize'
 import {
-  ANIMATION_FORMATS, FPS_MAX, FPS_MIN, PLAY_OPTIONS, QUALITY_LEVELS,
+  ANIMATION_FORMATS, FPS_MAX, FPS_MIN, MAX_ANIMATION_SIDE, PLAY_OPTIONS, QUALITY_LEVELS,
   clampFps, findFormat, formatBytes, formatTime, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
@@ -943,8 +943,8 @@ function VideoConvert({ toast }) {
                 </div>
                 <div>
                   <label className="fc-eyebrow" htmlFor="fc-vid-width">Width (px)</label>
-                  <input id="fc-vid-width" className="fc-field fc-field--num" type="number" min="16" max="2000" value={width} disabled={working}
-                    onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} />
+                  <input id="fc-vid-width" className="fc-field fc-field--num" type="number" min="16" max={MAX_ANIMATION_SIDE} value={width} disabled={working}
+                    onChange={e => setWidth(Math.max(16, Math.min(MAX_ANIMATION_SIDE, +e.target.value || 480)))} />
                 </div>
               </div>
               <p className="fc-note">Height follows the video&apos;s shape</p>

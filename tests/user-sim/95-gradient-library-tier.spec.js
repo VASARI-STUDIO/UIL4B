@@ -26,7 +26,7 @@
 // nothing, which is exactly how this file would start lying.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const ROUTE = '/discover/gradients'

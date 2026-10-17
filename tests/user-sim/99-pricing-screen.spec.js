@@ -23,6 +23,7 @@
 // pricing page that cannot name a price must not start a checkout.
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 // Production's /api/get-prices answer, trimmed to the currency under test.
 const LIVE = {
@@ -41,7 +42,7 @@ test.use({ locale: 'en-US' })
 
 async function stubPrices(page, body = LIVE, status = 200) {
   await page.route('**/api/get-prices', (route) => route.fulfill({
-    status, contentType: 'application/json', body: JSON.stringify(body),
+    status, contentType: 'application/json', body: JSON.stringify(status === 200 ? withAvailability(body) : body),
   }))
 }
 
@@ -548,7 +549,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
 test.describe('when one cadence has no price in the page currency', () => {
   test.use({ locale: 'en-AU' })
 
-  test('the USD amount named in the Yearly note is labelled US$, never a bare $ or A$', async ({ page }) => {
+  test('the Yearly note names no monthly price when Monthly has none in AUD, and never a USD one', async ({ page }) => {
     watch(page, 'an Australian visitor when Monthly has no AUD price')
     await stubPrices(page, {
       source: { monthly: 'live', yearly: 'live' },
@@ -559,8 +560,55 @@ test.describe('when one cadence has no price in the page currency', () => {
     await expectRendered(page)
 
     await expect(pro(page).locator('.pr-amt')).toHaveText('A$6.25')
-    await expect(note(page)).toContainText('A$75 billed once a year, or US$7 billed monthly.')
-    await expect(note(page), 'the USD amount is not shown as an AUD one').not.toContainText(/A\$7(?!\d)/)
+    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page), 'a USD monthly price was set beside an AUD yearly one').not.toContainText(/billed monthly|US\$|A\$7(?!\d)/)
+    await expect(page.locator('.pr-billing-save'), 'a saving was stated across two currencies').toHaveCount(0)
+  })
+
+  test('the Yearly note names a monthly price that is live in AUD', async ({ page }) => {
+    watch(page, 'an Australian visitor when both cadences have an AUD price')
+    await stubPrices(page, {
+      source: { monthly: 'live', yearly: 'live' },
+      monthly: { usd: 7, aud: 11 },
+      yearly: { usd: 48, aud: 75 },
+    })
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(note(page)).toContainText('A$75 billed once a year, or A$11 billed monthly.')
+  })
+
+  test('a live price with no option for AUD is not offered in AUD, whatever number the table carries', async ({ page }) => {
+    watch(page, 'an Australian visitor when the live Monthly price has no AUD option')
+    await stubPrices(page, {
+      source: { monthly: 'live', yearly: 'live' },
+      currencyAvailability: { monthly: { usd: true, aud: false }, yearly: { usd: true, aud: true } },
+      monthly: { usd: 7, aud: 11 },
+      yearly: { usd: 48, aud: 75 },
+    })
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page), 'an AUD figure with no live AUD price behind it was named').not.toContainText(/billed monthly|A\$11/)
+    await go(page, '/plans?billing=monthly')
+    await expectRendered(page)
+    await expect(pro(page).locator('.pr-amt')).toHaveText('Unavailable')
+    await expect(pro(page).getByRole('link', { name: /Upgrade to Pro|free trial/ })).toHaveCount(0)
+  })
+
+  test('the Yearly note does not name a monthly price the service serves from its fallback table', async ({ page }) => {
+    watch(page, 'an Australian visitor when Monthly is only a fallback default')
+    await stubPrices(page, {
+      source: { monthly: 'fallback', yearly: 'live' },
+      monthly: { usd: 7, aud: 11 },
+      yearly: { usd: 48, aud: 75 },
+    })
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page), 'a fallback default was named as a price').not.toContainText(/billed monthly|A\$11/)
   })
 
   test('with Yearly unbuyable in AUD, the Monthly page has no "Yearly works out at" line', async ({ page }) => {
@@ -590,9 +638,8 @@ test.describe('when the price service cannot answer', () => {
     await expect(pro(page).locator('.pr-amt')).toHaveClass(/is-word/)
     await expect(pro(page).locator('.pr-per'), 'a cadence is printed beside no price').toHaveCount(0)
     await expect(pro(page).getByRole('link', { name: /Upgrade to Pro|free trial/ }), 'a checkout is offered with no price').toHaveCount(0)
-    const off = pro(page).getByRole('button', { name: 'Pricing unavailable right now' })
-    await expect(off).toHaveAttribute('aria-disabled', 'true')
-    await expect(pro(page).locator('#pricing-noprice')).toContainText('no checkout will be started')
+    await expect(pro(page).getByRole('button', { name: 'Pricing unavailable right now' })).toHaveCount(0)
+    await expect(pro(page).locator('#pricing-noprice')).toContainText('so no checkout will start')
     await expect(page.locator('.pr-billing-save'), 'a saving is claimed with no prices to compute it').toHaveCount(0)
     await expect(page.locator('.pr-bar'), 'the docked bar offers a checkout with no price').not.toHaveClass(/is-on/)
 
@@ -612,10 +659,11 @@ test.describe('when the price service cannot answer', () => {
 
     await expect(pro(page).locator('.pr-amt')).toHaveText('Unavailable')
     const unavailable = pro(page).locator('#pricing-noprice')
-    await expect(unavailable).toContainText('Yearly')
-    await expect(unavailable).toContainText('no checkout will be started')
-    await expect(unavailable, 'the price service answered, so it is not an outage').not.toContainText(/reach Stripe/)
-    await expect(pro(page).getByRole('button', { name: 'Pricing unavailable right now' })).toHaveAttribute('aria-disabled', 'true')
+    await expect(unavailable).toContainText('No USD price for Yearly')
+    await expect(unavailable).toContainText('Monthly can be bought in USD')
+    await expect(unavailable, 'the price service answered, so it is not an outage').not.toContainText(/didn.t load/)
+    await expect(pro(page).getByRole('button', { name: 'Retry live pricing' }), 'Retry cannot fix a missing price').toHaveCount(0)
+    await expect(pro(page).getByRole('button', { name: 'Switch to Monthly' })).toBeVisible()
 
     await choose(page, 'Monthly')
     await expect(pro(page).locator('.pr-amt')).toHaveText(money(LIVE.monthly.usd))

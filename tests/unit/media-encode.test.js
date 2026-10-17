@@ -104,7 +104,25 @@ test('video → animation keeps the GIF it always made, and trims when asked', (
   assert.ok(trimmed.includes('-an'), 'the video outputs are silent, and say so in the UI')
 
   const clamped = videoToAnimationArgs({ format: 'webp', input: 'a', fps: 999, width: 99999 })
-  assert.equal(after(clamped, '-vf'), `fps=${FPS_MAX},scale=2000:-2:flags=lanczos`)
+  assert.equal(after(clamped, '-vf'), `fps=${FPS_MAX},scale=1920:-2:flags=lanczos`)
+})
+
+test('video encode width is capped at 1920 on every format, matching the other converter tabs', () => {
+  // Hand-checked literals, not MAX_ANIMATION_SIDE: the cap itself is what is
+  // being pinned. 2000 was the old ceiling and must no longer pass through.
+  assert.equal(MAX_ANIMATION_SIDE, 1920)
+  for (const width of [1921, 2000, 5000, 99999]) {
+    for (const f of ANIMATION_FORMATS) {
+      const args = videoToAnimationArgs({ format: f.id, input: 'in.mp4', fps: 10, width })
+      assert.match(after(args, '-vf'), /scale=1920:-2:flags=lanczos/, `${f.id} width ${width}`)
+      assert.ok(!args.join(' ').includes('scale=2000'), `${f.id} width ${width} let 2000 through`)
+    }
+  }
+  // At and under the cap the width passes through untouched.
+  const at = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1920 })
+  assert.match(after(at, '-vf'), /scale=1920:-2:/)
+  const under = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1900 })
+  assert.match(after(under, '-vf'), /scale=1900:-2:/)
 })
 
 test('fps is clamped to what GIF can actually store', () => {
