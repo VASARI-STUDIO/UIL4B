@@ -8,7 +8,8 @@ import { readSessionHint } from '../utils/sessionHint'
 import { buildCSSVars } from '../utils/exportBuilder'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
-import { UPGRADE, UPGRADE_LINE, byRecent, projectSlots4, projectStatus } from '../components/userhome/workspace'
+import { UPGRADE_LINE, byRecent, projectSlots4, projectStatus, upgradeOffer } from '../components/userhome/workspace'
+import { usePrices, useProPrice } from '../hooks/usePrices'
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
@@ -60,6 +61,10 @@ function ProjectDetail({ id, toast }) {
     loadProject, overwriteProject, renameProject, duplicateProject, archiveProject, deleteProject,
   } = useProject()
   const copy = useClipboard()
+  // The upgrade link's price: the live one in the visitor's currency, none if not live.
+  const proPrice = useProPrice()
+  const { prices } = usePrices()
+  const upgrade = upgradeOffer({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
 
   const [hintedSession] = useState(readSessionHint)
   const resolving = authLoading && hintedSession
@@ -345,7 +350,7 @@ function ProjectDetail({ id, toast }) {
           {!isPro && !planLoading && (
             <div className="pjd-upgrade">
               <span className="pjd-upgrade-line">{UPGRADE_LINE}</span>
-              <Link to="/plans" className="pjd-upgrade-link">{UPGRADE.label}</Link>
+              <Link to="/plans" className="pjd-upgrade-link">{upgrade.label}</Link>
             </div>
           )}
         </div>

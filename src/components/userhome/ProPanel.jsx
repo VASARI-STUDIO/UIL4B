@@ -1,17 +1,22 @@
 import { Link } from 'react-router-dom'
 import Glyph from './Glyph'
-import { PRO_PERKS, UPGRADE, UPGRADE_LINE } from './workspace'
+import { usePrices, useProPrice } from '../../hooks/usePrices'
+import { PRO_PERKS, UPGRADE_LINE, upgradeOffer } from './workspace'
 
 // The Pro panel at the foot of the workspace (UIL4B App.dc.html, `projects`
 // screen). Hidden for a Pro account by the page — there is nothing to sell it.
 //
 // FACTS CHANGED, LAYOUT NOT: the layout is the design's, the facts are the
-// product's. The price is derived (workspace.js UPGRADE), "cancel any time"
+// product's. The price is live, in the visitor's own currency (workspace.js
+// upgradeOffer; no amount until one is live), "cancel any time"
 // is gone (there is no cancel flow), the version-history claims are
 // gone (there is no version history), and "Curves and OKLCH controls" is the
 // HCT editor and the per-colour contrast chip, which are what the Palette
 // Builder actually gates. The pill goes to /plans, never to checkout.
 export default function ProPanel() {
+  const { currency, loaded } = useProPrice()
+  const { prices } = usePrices()
+  const upgrade = upgradeOffer({ prices, currency, loaded })
   return (
     <section className="uh-pro" aria-labelledby="uh-pro-h">
       <div className="uh-pro-copy">
@@ -20,10 +25,10 @@ export default function ProPanel() {
         <p className="uh-pro-line">{UPGRADE_LINE}</p>
         <div className="uh-pro-cta-row">
           <Link to="/plans" className="uh-pro-cta">
-            <span>{UPGRADE.label}</span>
+            <span>{upgrade.label}</span>
             <span className="uh-pro-cta-ico" aria-hidden="true"><Glyph name="arrow-up-right" size={13} /></span>
           </Link>
-          {UPGRADE.billed && <span className="uh-pro-billed">{UPGRADE.billed}</span>}
+          {upgrade.billed && <span className="uh-pro-billed">{upgrade.billed}</span>}
         </div>
       </div>
       <ul className="uh-pro-perks">
