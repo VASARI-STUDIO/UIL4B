@@ -14,10 +14,15 @@
 //   · Resend stays on the bar after a send, counts down a cooldown, and is
 //     offered again; focus never drops to the document in any state;
 //   · the bar is early in the tab order, straight after the skip link;
+//   · the bar keeps one height in every state (54px at 520px and below, 62px
+//     above), with the longest address and every refusal, and its Resend and
+//     Dismiss reach 44px on a touch screen without growing it;
+//   · a keyboard landing on <main> (after Dismiss) draws no page-sized frame;
 //   · the link brings the person back to /settings?verified=1, which says
 //     "Email verified" only to a signed-in account that the re-read shows
 //     verified, tells a signed-out visit the link was opened and offers Sign in,
-//     and tells another unverified account that it still is not.
+//     and tells another unverified account that it still is not, including
+//     after the sign-in the signed-out toast offers.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
@@ -334,6 +339,128 @@ test.describe('the "Verify your email" bar', () => {
   })
 })
 
+// A bar that persists keeps one height: 54px at 520px and below, 62px above,
+// in every state it can be in, whatever the address or the refusal says. A
+// message that would need a third line is clipped to two rather than growing
+// the bar, so the check is that nothing is cut off either.
+const LONG_ADDRESS = `${'a'.repeat(51)}@uil4b.test` // 62 characters
+const HEIGHT_AT = [[390, 54], [768, 62], [1440, 62]]
+
+async function expectBarHeight(page, want, what) {
+  const m = await bar(page).evaluate((el) => {
+    const msg = el.querySelector('.sync-notice-msg')
+    return { height: el.getBoundingClientRect().height, clipped: msg.scrollHeight > msg.clientHeight + 1 }
+  })
+  expect(Math.abs(m.height - want), `${what}: the bar is ${m.height}px, not ${want}px`).toBeLessThanOrEqual(1)
+  expect(m.clipped, `${what}: the message is cut off`).toBe(false)
+}
+
+// What a thumb lands on just outside the visible Dismiss button.
+async function dismissReach(page) {
+  const dismiss = bar(page).getByRole('button', { name: 'Dismiss verification reminder' })
+  const box = await dismiss.boundingBox()
+  return dismiss.evaluate((el, b) => {
+    const hit = (x, y) => document.elementFromPoint(x, y) === el
+    const midX = b.x + b.width / 2
+    const midY = b.y + b.height / 2
+    return {
+      above: hit(midX, b.y - 8), below: hit(midX, b.y + b.height + 8),
+      right: hit(b.x + b.width + 12, midY), left: hit(b.x - 4, midY),
+    }
+  }, box)
+}
+
+test.describe('the "Verify your email" bar keeps one height', () => {
+  for (const [width, want] of HEIGHT_AT) {
+    test(`at ${width}px it is ${want}px idle, sent and verified, with a 62-character address`, async ({ page }) => {
+      watch(page, 'a person watching the page under a bar that must not move')
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page, { plan: 'free', emailVerified: false, email: LONG_ADDRESS })
+      await go(page, '/projects')
+      await expect(bar(page)).toBeVisible()
+      await expectBarHeight(page, want, 'idle')
+      await bar(page).getByRole('button', { name: 'Resend link' }).click()
+      await expect(bar(page)).toContainText('Link sent')
+      await expectBarHeight(page, want, 'sent, cooling down')
+      await expect(bar(page).getByRole('button', { name: /^Resend/ })).toHaveText(/^Resend in \d+s$/)
+      await page.evaluate(() => { window.__UIL4B_TEST_AUTH__.account.emailVerified = true })
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+      await expect(bar(page)).toContainText('Email verified.')
+      await expectBarHeight(page, want, 'verified')
+    })
+
+    for (const code of ['auth/too-many-requests', 'auth/network-request-failed', 'auth/internal-error']) {
+      test(`at ${width}px a refusal (${code}) leaves it ${want}px, with a 62-character address`, async ({ page }) => {
+        watch(page, 'a person whose send was refused')
+        await page.setViewportSize({ width, height: 900 })
+        await signIn(page, { plan: 'free', emailVerified: false, email: LONG_ADDRESS, authFail: { sendEmailVerification: code } })
+        await go(page, '/projects')
+        await bar(page).getByRole('button', { name: 'Resend link' }).click()
+        await expect(bar(page).getByRole('alert')).not.toBeEmpty()
+        await expectBarHeight(page, want, `failed (${code})`)
+      })
+    }
+  }
+
+  test('on a phone the sent line leaves the address out; wider, it keeps it', async ({ page }) => {
+    watch(page, 'a person reading the sent line on two screens')
+    const account = await signIn(page, { plan: 'free', emailVerified: false })
+    await page.setViewportSize({ width: 390, height: 800 })
+    await go(page, '/projects')
+    await bar(page).getByRole('button', { name: 'Resend link' }).click()
+    await expect(bar(page)).toContainText('Link sent')
+    await expect(bar(page).getByRole('status')).toHaveText('Link sent. Check your inbox and spam folder.', { useInnerText: true })
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await expect(bar(page).getByRole('status')).toHaveText(`Link sent to ${account.email}. Check your inbox and spam folder.`, { useInnerText: true })
+  })
+})
+
+// A tablet is a touch screen above 520px: Resend and Dismiss reach 44px there
+// too, through an ::after pad, and the bar stays 62px.
+test.describe('the "Verify your email" bar on a touch tablet', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 768, height: 1024 } })
+
+  test('Resend and Dismiss reach 44px without growing the bar or meeting each other', async ({ page }) => {
+    watch(page, 'a person tapping the bar on a tablet')
+    await signIn(page, { plan: 'free', emailVerified: false })
+    await go(page, '/projects')
+    await expect(bar(page)).toBeVisible()
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+    await expectBarHeight(page, 62, 'idle on a tablet')
+    const resend = bar(page).getByRole('button', { name: 'Resend link' })
+    const rBox = await resend.boundingBox()
+    const reach = await resend.evaluate((el, b) => {
+      const hit = (x, y) => document.elementFromPoint(x, y) === el
+      const midX = b.x + b.width / 2
+      return { above: hit(midX, b.y - 6), below: hit(midX, b.y + b.height + 6) }
+    }, rBox)
+    expect(reach).toEqual({ above: true, below: true })
+    expect(await dismissReach(page)).toEqual({ above: true, below: true, right: true, left: true })
+    // Dismiss's pad does not reach into Resend.
+    const dBox = await bar(page).getByRole('button', { name: 'Dismiss verification reminder' }).boundingBox()
+    expect(dBox.x).toBeGreaterThanOrEqual(rBox.x + rBox.width)
+  })
+})
+
+test.describe('a keyboard landing on the page', () => {
+  for (const width of [390, 1440]) {
+    test(`at ${width}px, Dismiss by keyboard hands focus to <main> with no page-sized frame`, async ({ page }) => {
+      watch(page, 'a keyboard user who dismissed the bar')
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page, { plan: 'free', emailVerified: false })
+      await go(page, '/projects')
+      await bar(page).getByRole('button', { name: 'Dismiss verification reminder' }).focus()
+      await page.keyboard.press('Enter')
+      await expect(bar(page)).toHaveCount(0)
+      const landed = await page.evaluate(() => {
+        const main = document.getElementById('main')
+        return { onMain: document.activeElement === main, outline: getComputedStyle(main).outlineStyle }
+      })
+      expect(landed).toEqual({ onMain: true, outline: 'none' })
+    })
+  }
+})
+
 test.describe('coming back from the link', () => {
   const toast = (page) => page.locator('.toast.show')
   // "No toast" must be read once, now. `toHaveCount(0)` retries until the count
@@ -386,5 +513,33 @@ test.describe('coming back from the link', () => {
     await expect(toast(page)).toContainText("This account still isn't verified")
     await expect(toast(page)).not.toContainText('Email verified')
     await expect(toast(page).getByRole('button', { name: 'Sign in' })).toHaveCount(0)
+  })
+
+  // "Sign in to finish" has to finish: the sign-in lands on the Account section,
+  // the account is read again, and the answer is said.
+  for (const width of [390, 1280]) {
+    test(`at ${width}px, signing in from the signed-out toast says "Email verified"`, async ({ page }) => {
+      watch(page, 'a person who opened the link on another device, then signed in here')
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page, { plan: 'free', emailVerified: true, lateSignIn: true })
+      await go(page, '/settings?verified=1')
+      await toast(page).getByRole('button', { name: 'Sign in' }).click()
+      await expect(page.locator('#ui-login-title')).toBeVisible()
+      await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+      await expect(page.locator('#set-account')).toBeVisible()
+      await expect(toast(page)).toContainText('Email verified')
+    })
+  }
+
+  test('signing in from the signed-out toast as an unverified account says it still is not', async ({ page }) => {
+    watch(page, 'a person who signed in as an account the link did not verify')
+    await signIn(page, { plan: 'free', emailVerified: false, lateSignIn: true })
+    await go(page, '/settings?verified=1')
+    await toast(page).getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+    await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+    await expect(page.locator('#set-account')).toBeVisible()
+    await expect(toast(page)).toContainText("This account still isn't verified")
+    await expect(toast(page)).not.toContainText('Email verified')
   })
 })

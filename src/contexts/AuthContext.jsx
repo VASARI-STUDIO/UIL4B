@@ -475,12 +475,14 @@ export function AuthProvider({ children }) {
   }, [firebaseUser])
 
   // The link is opened in another tab or on another device, so the flag here
-  // only changes when the account is re-read. Returns the fresh value.
+  // only changes when the account is re-read. Returns the fresh value, or null
+  // when the account changed mid-read.
   const refreshEmailVerified = useCallback(async () => {
     if (!firebaseUser) return false
     const A = await loadAuthSdk()
     await A.reload(firebaseUser)
-    if (firebaseUser !== A.auth.currentUser) return false
+    // The account changed while this was reading: nothing to report.
+    if (firebaseUser !== A.auth.currentUser) return null
     const verified = firebaseUser.emailVerified === true
     setEmailVerified(verified)
     // Roles are read from the ID token, which carries its own copy of the

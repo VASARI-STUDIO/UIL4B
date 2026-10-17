@@ -50,12 +50,13 @@ export async function sendVerificationLink(A, user, origin) {
 }
 
 // Firebase's refusals, in words. The reminder bar and Settings send the same
-// link, so they share this copy.
+// link, so they share this copy. Each fits two lines beside the bar's button on
+// a phone, where the bar keeps one height.
 export const VERIFY_ERRORS = {
-  'auth/too-many-requests': 'Too many links sent. Wait a few minutes and try again.',
-  'auth/network-request-failed': 'You appear to be offline. Try again when you are connected.',
+  'auth/too-many-requests': 'Too many links sent. Wait a few minutes.',
+  'auth/network-request-failed': "You're offline. Try again once you're back online.",
 }
-export const VERIFY_ERROR_FALLBACK = 'The verification link could not be sent. Please try again.'
+export const VERIFY_ERROR_FALLBACK = "The link didn't send. Try again."
 
 export function verifyErrorText(error) {
   return VERIFY_ERRORS[error?.code] || VERIFY_ERROR_FALLBACK

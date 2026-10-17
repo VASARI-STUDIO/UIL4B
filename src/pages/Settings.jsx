@@ -791,7 +791,14 @@ export default function Settings({ toast }) {
         ? {
             label: 'Sign in',
             onAction: () => {
-              requireLogin('finish verifying your email').then(() => {
+              requireLogin('finish verifying your email').then((signedIn) => {
+                // Signed in: land on the account and re-read it (the effect
+                // below), so "Sign in to finish" ends with an answer.
+                if (signedIn) {
+                  setActive('account')
+                  setPhoneView('section')
+                  setFinishAfterSignIn(true)
+                }
                 // The toast that held the button is gone; keep focus on the page.
                 requestAnimationFrame(() => requestAnimationFrame(() => {
                   if (!document.activeElement || document.activeElement === document.body) document.getElementById('main')?.focus()
@@ -812,6 +819,20 @@ export default function Settings({ toast }) {
       say(verifiedLandingMessage({ signedIn: true, verified }))
     }).catch(() => {})
   }, [location, authLoading, user, navigate, toast, refreshEmailVerified, requireLogin])
+
+  // After signing in from the signed-out landing: the account is read again and
+  // the answer is said, the same words the signed-in landing uses. It waits for
+  // the account to be in (refreshEmailVerified belongs to the signed-in user),
+  // and a null answer (the account changed mid-read) stays silent.
+  const [finishAfterSignIn, setFinishAfterSignIn] = useState(false)
+  useEffect(() => {
+    if (!finishAfterSignIn || !user) return
+    setFinishAfterSignIn(false)
+    refreshEmailVerified().then((verified) => {
+      const landing = verifiedLandingMessage({ signedIn: true, verified })
+      if (landing) toast?.(landing.text, landing.kind, null)
+    }).catch(() => {})
+  }, [finishAfterSignIn, user, toast, refreshEmailVerified])
 
   // Recount whenever the Data panel is opened, and after a clear, so the figure
   // shown is the figure on disk.

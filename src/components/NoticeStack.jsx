@@ -50,6 +50,15 @@ function Envelope() {
   )
 }
 
+function Alert() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v5M12 16.5v.01" />
+    </svg>
+  )
+}
+
 function Check() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -195,12 +204,18 @@ function VerifyNotice() {
   if (confirmed) {
     status = 'Email verified.'
   } else if (view === 'sent') {
-    status = `Link sent to ${email}. Check your inbox and spam folder.`
+    // On a phone the address goes (the idle line drops its detail the same way),
+    // so the sentence stays two lines beside Resend and the bar keeps its height.
+    status = (
+      <>
+        Link sent<span className="verify-to"> to <span className="verify-addr">{email}</span></span>. Check your inbox and spam folder.
+      </>
+    )
   } else if (view !== 'failed') {
     status = (
       <>
         <strong>Verify your email.</strong>{' '}
-        <span className="sync-notice-detail">Check {email} for the link, or send a new one.</span>
+        <span className="sync-notice-detail">Check <span className="verify-addr">{email}</span> for the link, or send a new one.</span>
       </>
     )
   }
@@ -211,7 +226,7 @@ function VerifyNotice() {
       data-testid="verify-notice"
       data-verify-state={confirmed ? 'verified' : state}
     >
-      <span className="sync-notice-ico">{confirmed ? <Check /> : <Envelope />}</span>
+      <span className="sync-notice-ico">{confirmed ? <Check /> : state === 'failed' ? <Alert /> : <Envelope />}</span>
       <p className="sync-notice-msg">
         <span role="status">{status}</span>
         <span role="alert">{!confirmed && state === 'failed' ? error : null}</span>

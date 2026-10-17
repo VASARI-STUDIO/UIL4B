@@ -194,6 +194,61 @@ test('the bar and Settings share one set of refusal copy', () => {
   assert.doesNotMatch(stripComments(read('src/components/NoticeStack.jsx')), /VERIFY_ERRORS\s*=/)
 })
 
+test('the refusal copy is short enough for two lines beside Resend on a phone', () => {
+  // The bar keeps one height, so every string it can show fits the ~28-character
+  // column in two lines (56 characters at most, with room for a word break).
+  for (const text of [...Object.values(VERIFY_ERRORS), VERIFY_ERROR_FALLBACK]) {
+    assert.ok(text.length <= 52, `${text} is ${text.length} characters`)
+  }
+  assert.equal(VERIFY_ERROR_FALLBACK, "The link didn't send. Try again.")
+})
+
+test('the bar keeps one height in every state, and the phone sentence drops the address', () => {
+  const css = stripComments(read('src/styles/global.css'))
+  const stack = stripComments(read('src/components/NoticeStack.jsx'))
+  // 62px above 520px, 54px at 520px and below, whatever the bar says.
+  assert.match(css, /\.verify-notice\{align-items:center;min-height:62px\}/)
+  const phone = css.match(/@media \(max-width:520px\)\{\s*\.verify-notice\{[^}]*\}[\s\S]*?\n\}/)
+  assert.ok(phone, 'the phone block for the verify bar exists')
+  assert.match(phone[0], /\.verify-notice\{[^}]*min-height:54px/)
+  assert.match(phone[0], /\.verify-to\{display:none\}|\.verify-to[^{]*\{display:none\}/)
+  // Backstop: two lines, and an address is ellipsised, never allowed to grow the bar.
+  assert.match(css, /\.verify-notice \.sync-notice-msg\{[^}]*-webkit-line-clamp:2/)
+  assert.match(css, /\.verify-notice \.verify-addr\{[^}]*text-overflow:ellipsis/)
+  // The sent sentence keeps the address in the text, in a span a phone can hide.
+  assert.match(stack, /Link sent<span className="verify-to"> to <span className="verify-addr">\{email\}<\/span><\/span>\. Check your inbox and spam folder\./)
+  // The failed state wears the error tile and glyph.
+  assert.match(css, /\.verify-notice\[data-verify-state="failed"\] \.sync-notice-ico\{[^}]*var\(--err\)/)
+  assert.match(stack, /state === 'failed' \? <Alert \/>/)
+})
+
+test('Resend and Dismiss have 44px targets on a phone and on any touch screen, without growing the bar', () => {
+  const css = stripComments(read('src/styles/global.css'))
+  const block = css.match(/@media \(max-width:520px\),\(pointer:coarse\)\{[\s\S]*?\n\}/)
+  assert.ok(block, 'a block for narrow widths and touch screens exists')
+  assert.match(block[0], /\.verify-notice \.btn-s::after\{[^}]*inset:-8px 0/)
+  assert.match(block[0], /\.verify-notice \.sync-notice-dismiss::after\{[^}]*inset:-10px -14px -10px -6px/)
+  assert.doesNotMatch(block[0], /min-height|padding/)
+})
+
+test('a keyboard landing on <main> draws no page-sized frame', () => {
+  const css = stripComments(read('src/styles/global.css'))
+  assert.match(css, /main\[tabindex="-1"\]:focus-visible\{outline:none\}/)
+  assert.match(stripComments(read('src/App.jsx')), /<main[^>]*id="main"[^>]*tabIndex=\{-1\}/)
+})
+
+test('signing in from the signed-out landing re-reads the account and says the answer', () => {
+  const settings = stripComments(read('src/pages/Settings.jsx'))
+  assert.match(settings, /requireLogin\('finish verifying your email'\)\.then\(\(signedIn\) =>/)
+  assert.match(settings, /if \(signedIn\) \{\s*setActive\('account'\)\s*setPhoneView\('section'\)\s*setFinishAfterSignIn\(true\)/)
+  // The re-read runs once the account is in (the callback belongs to the signed-in user).
+  assert.match(settings, /if \(!finishAfterSignIn \|\| !user\) return\s*setFinishAfterSignIn\(false\)\s*refreshEmailVerified\(\)\.then/)
+  // An account that changed mid-read answers null, which says nothing.
+  const refresh = callbackBody(stripComments(read('src/contexts/AuthContext.jsx')), 'refreshEmailVerified')
+  assert.match(refresh, /firebaseUser !== A\.auth\.currentUser\) return null/)
+  assert.equal(verifiedLandingMessage({ signedIn: true, verified: null }), null)
+})
+
 test('the bar is for an owing account, online, away from onboarding and settings', () => {
   const on = { owed: true, online: true }
   assert.equal(verifyBarVisible({ ...on, pathname: '/projects' }), true)
