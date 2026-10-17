@@ -462,7 +462,7 @@ test.describe('feedback page opened from a link', () => {
 
   test('a draft kept from a failed send is restored, and wins over the link defaults', async ({ page }) => {
     watch(page, 'a visitor retrying after a failed send')
-    const server = await standIn(page, () => ({ status: 502 }))
+    await standIn(page, () => ({ status: 502 }))
     await go(page, '/feedback')
     await form(page).getByRole('radio', { name: 'Bug Report' }).click()
     await form(page).locator('#fb-subject').fill('Export is broken')
