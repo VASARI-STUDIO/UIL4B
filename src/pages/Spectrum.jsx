@@ -13,8 +13,10 @@ import SpectrumProof from '../components/spectrum/SpectrumProof'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { useSpectrumReveal } from '../components/spectrum/useSpectrumReveal'
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../components/spectrum/spectrumHero'
-import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
-import { CURATED_LIBRARY_PALETTES } from '../data/paletteLibrary'
+import { gradientCss } from '../data/gradientGallery'
+import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
+import { LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
+import { isStub } from '../utils/libraryRules'
 import { LIBRARY_COUNTS, TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 import { ICON_GROUP_SHELF } from '../components/spectrum/iconGroupShelf'
 import { ICON_GROUPS_ROUTE, listIconGroups } from '../data/iconGroups'
@@ -63,7 +65,8 @@ const DISCOVER_TABS = [
     label: 'Palettes',
     count: `${LIBRARY_COUNTS.palettes} PALETTES`,
     to: '/discover/palettes',
-    items: CURATED_LIBRARY_PALETTES.slice(0, 5).map((p) => ({
+    // The first rows are the ones every visitor may open in full.
+    items: LIBRARY_PALETTE_ROWS.filter((p) => p.kind === 'curated' && !isStub(p)).slice(0, 5).map((p) => ({
       id: p.id,
       name: p.name,
       swatches: p.colors,
@@ -76,7 +79,7 @@ const DISCOVER_TABS = [
     count: `${LIBRARY_COUNTS.gradients} GRADIENTS`,
     to: '/discover/gradients',
     // The design's meta style ("Linear, 135 deg"), read off each row.
-    items: GALLERY_GRADIENTS.slice(0, 5).map((g) => ({
+    items: LIBRARY_GRADIENT_ROWS.filter((g) => !isStub(g)).slice(0, 5).map((g) => ({
       id: g.id,
       name: g.name,
       art: gradientCss(g.type, g.angle, g.stops),

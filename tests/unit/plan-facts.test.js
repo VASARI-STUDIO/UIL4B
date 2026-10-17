@@ -69,7 +69,10 @@ test('the cadences are exactly the buyable rungs of the ladder, yearly first cho
 })
 
 test('prices, savings, trials and the billed line come out as /plans prints them', () => {
-  const prices = { monthly: { usd: 7 }, yearly: { usd: 48 } }
+  const prices = {
+    monthly: { usd: 7 }, yearly: { usd: 48 },
+    currencyAvailability: { monthly: { usd: true }, yearly: { usd: true } },
+  }
   const { offers, priceServiceDown } = resolveOffers({ prices, currency: 'usd', loaded: true })
   assert.equal(priceServiceDown, false)
   const by = Object.fromEntries(offers.map((o) => [o.id, o]))

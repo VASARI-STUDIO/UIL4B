@@ -132,6 +132,24 @@ test('video → animation: both sides stay within the cap for any source, portra
   assert.deepEqual(run(1080, 1920, 1920), { w: 1080, h: 1920 })
 })
 
+test('video encode width is capped at 1920 on every format, matching the other converter tabs', () => {
+  // Hand-checked literals, not MAX_ANIMATION_SIDE: the cap itself is what is
+  // being pinned. 2000 was the old ceiling and must no longer pass through.
+  assert.equal(MAX_ANIMATION_SIDE, 1920)
+  for (const width of [1921, 2000, 5000, 99999]) {
+    for (const f of ANIMATION_FORMATS) {
+      const args = videoToAnimationArgs({ format: f.id, input: 'in.mp4', fps: 10, width })
+      assert.match(after(args, '-vf'), /scale=trunc\(min\(1920\\,iw\*1920\/ih\)\/2\)\*2:-2:flags=lanczos/, `${f.id} width ${width}`)
+      assert.ok(!args.join(' ').includes('scale=2000'), `${f.id} width ${width} let 2000 through`)
+    }
+  }
+  // At and under the cap the width passes through untouched.
+  const at = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1920 })
+  assert.match(after(at, '-vf'), /scale=trunc\(min\(1920\\,iw\*1920\/ih\)\/2\)\*2:-2:/)
+  const under = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1900 })
+  assert.match(after(under, '-vf'), /scale=trunc\(min\(1900\\,iw\*1920\/ih\)\/2\)\*2:-2:/)
+})
+
 test('fps is clamped to what GIF can actually store', () => {
   assert.equal(clampFps(0), 1)
   assert.equal(clampFps(-4), 1)

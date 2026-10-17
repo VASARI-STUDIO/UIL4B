@@ -25,6 +25,7 @@
 // fails the build for any spec that reaches past it.
 import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import {
   EXPORT_FORMATS,
   freeFormats,
@@ -33,7 +34,7 @@ import {
 } from '../../src/config/exportFormats.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
-import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
 
 // /plans is the plan ledger (src/pages/Pricing.jsx): one table whose columns are
@@ -59,7 +60,7 @@ const cellText = (cell) => cell.evaluate((td) => {
 const stubPrices = (page) => page.route('**/api/get-prices', (route) => route.fulfill({
   status: 200,
   contentType: 'application/json',
-  body: JSON.stringify({ source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } }),
+  body: JSON.stringify(withAvailability({ source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } })),
 }))
 const ledgerRow = (page, label) =>
   page.locator('.pr-row', { has: page.locator('th', { hasText: new RegExp(`^${label}$`) }) })

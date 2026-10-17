@@ -2,10 +2,10 @@ import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import LibraryCard from '../library/LibraryCard'
 import LibraryGrid from '../library/LibraryGrid'
-import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from '../../data/gradientGallery'
+import { gradientCss, gradientToolUrl } from '../../data/gradientGallery'
 
-// The browse grid on /discover/gradients. Everything is local + static
-// (src/data/gradientGallery.js): swatches are plain CSS backgrounds, likes live
+// The browse grid on /discover/gradients. The rows come from the page that
+// renders it: swatches are plain CSS backgrounds, likes live
 // in localStorage, "CSS" copies the production background rule and "Open" hands
 // the gradient to the Gradient Generator via the ?gs= URL scheme.
 //
@@ -30,7 +30,7 @@ function HeartGlyph({ filled }) {
   )
 }
 
-export default function GradientGalleryGrid({ toast, gradients = GALLERY_GRADIENTS }) {
+export default function GradientGalleryGrid({ toast, gradients = [] }) {
   const [likes, setLikes] = useState(loadLikes)
 
   const toggleLike = useCallback((id) => {

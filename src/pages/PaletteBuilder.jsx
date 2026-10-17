@@ -19,7 +19,11 @@ import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/palet
 import { colorName, randomPaletteName } from '../utils/paletteNames'
 import { roleLabel } from '../utils/paletteRoles'
 import { barRef, colRef } from '../utils/paletteBoard'
-import { BRAND_PALETTES } from '../data/brandPalettes'
+import { BRAND_ROWS, LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
+import { LIBRARY_TOTALS } from '../data/libraryTotals'
+import { LIBRARY_RULES } from '../utils/libraryRules'
+import { useProLibrary } from '../hooks/useProLibrary'
+import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 // The eighteen preview scenes and the components that paint them. Lifted out of
 // this file on 2026-09-11 — 280 lines of pure, prop-only rendering that nothing
@@ -28,7 +32,7 @@ import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import PreviewScene from '../components/palette/PalettePreview'
 import { PREVIEW_SCENES } from '../data/palettePreviewScenes'
 import { LockedPaletteRow, LockedTeaseCta } from '../components/library/LockedTease'
-import { splitLockedLibrary } from '../utils/lockedPreview'
+import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
@@ -677,18 +681,47 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const { registerExport, clearExport } = useExport()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
+  // The gallery popup's two library tabs. The bundle holds the free brands and
+  // the free curated palettes in full and a name-only stub for every Pro brand;
+  // a Pro account's full set comes from the server (src/utils/proLibrary.js),
+  // fetched when the popup opens and not before. The palettes library carries
+  // the brands too (kind 'brand', id `brand-*`, with the colour system), so one
+  // fetch feeds both tabs.
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  const proLib = useProLibrary('palettes', { enabled: galleryOpen })
+  const proReady = proLib.status === 'ready'
+  const proPending = proLib.active && !proReady
+  const brandRows = useMemo(() => (proReady
+    ? proLib.items
+      .filter((row) => row.kind === 'brand')
+      .map((row) => ({ id: row.id.replace(/^brand-/, ''), name: row.name, free: row.pro !== true, system: row.system, colors: row.colors }))
+    : BRAND_ROWS
+  ), [proReady, proLib.items])
   // The brands panel, split before it is rendered rather than styled after it.
-  // A locked brand's colours are not in `openBrands`, so they never reach
-  // barRef and never enter the DOM — see utils/lockedPreview.js. Fails closed
-  // while the entitlement is still resolving, because `unlocked` is only ever
-  // satisfied by an exact `true`.
+  // A locked brand is a stub with no colours, so it never reaches barRef and
+  // never enters the DOM — see utils/lockedPreview.js. `unlocked` is only
+  // satisfied once the server's full set has arrived, so it fails closed while
+  // the entitlement or the fetch is still resolving.
   const { open: openBrands, locked: lockedBrands, remaining: lockedBrandCount } = useMemo(() => (
-    splitLockedLibrary(BRAND_PALETTES, {
-      unlocked: isPro === true,
-      isOpen: (brand) => brand.free === true,
-      preview: (brand) => ({ id: brand.id, label: brand.name, slots: brand.colors.length }),
+    splitLockedLibrary(brandRows, {
+      unlocked: proReady,
+      isOpen: LIBRARY_RULES.brands.isOpen,
+      preview: LIBRARY_RULES.brands.preview,
     })
-  ), [isPro])
+  ), [brandRows, proReady])
+  // The Community tab: the curated palettes. Free accounts get the free set
+  // (the same ten the Palette Library opens) and a line saying there is more.
+  const communityRows = useMemo(() => (proReady
+    ? proLib.items.filter((row) => row.kind === 'curated')
+    : splitLockedLibrary(LIBRARY_PALETTE_ROWS, {
+      unlocked: false,
+      isOpen: LIBRARY_RULES.palettes.isOpen,
+      preview: LIBRARY_RULES.palettes.preview,
+      limit: GALLERY_TIER_LIMITS.free,
+      tease: 0,
+    }).open.filter((row) => row.kind === 'curated')
+  ), [proReady, proLib.items])
+  const communityLocked = Math.max(0, LIBRARY_TOTALS.curatedPalettes - communityRows.length)
   const { requireLogin } = useLoginPrompt()
   // Producing a FILE needs a free account; copying never does.
   const requireExportAccount = useExportGate()
@@ -944,7 +977,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // this button back.
   // Combined community-gallery popup (Discover hand-in): one large popup with
   // Community / Variations / Brands tabs, applying a pick straight onto the board.
-  const [galleryOpen, setGalleryOpen] = useState(false)
   const [galleryTab, setGalleryTab] = useState('community') // community | variations | brands
   // Which community palette is currently "imported" (ticked). Clicking that same
   // card again reverts to the pre-import system; any edit clears the tick because
@@ -2703,10 +2735,19 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               <div className="plb-galpopup-body">
                 <PaletteGalleryGrid
                   toast={toast}
+                  palettes={communityRows}
                   selectedId={importedGalleryId}
                   onPick={(cols, name, id) => importGalleryPalette(cols, name, id)}
                   onCompare={(cols, name) => comparePalette(name, cols)}
                 />
+                {proPending ? <ProLibraryStatus library={proLib} noun="palette library" /> : communityLocked > 0 && (
+                  <LockedTeaseCta
+                    gate="palette-builder-community-lock"
+                    heading={`Another ${communityLocked} ${communityLocked === 1 ? 'palette' : 'palettes'} with Pro`}
+                    body={`Free covers ${communityRows.length} of the ${LIBRARY_TOTALS.curatedPalettes} curated palettes.`}
+                    action="See what Pro includes"
+                  />
+                )}
                 <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
               </div>
             )}
@@ -2760,8 +2801,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     </button>
                   </div>
                 ))}
-                {lockedBrands.map(p => <LockedPaletteRow key={p.id} preview={p} />)}
-                {lockedBrandCount > 0 && (
+                {proPending && <ProLibraryStatus library={proLib} noun="brand library" />}
+                {!proPending && lockedBrands.map(p => <LockedPaletteRow key={p.id} preview={p} />)}
+                {!proPending && lockedBrandCount > 0 && (
                   <LockedTeaseCta
                     gate="palette-builder-brand-lock"
                     heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
@@ -2770,7 +2812,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     modal={{
                       eyebrow: 'Pro colour tools',
                       title: 'Load any brand system',
-                      subtitle: `Free covers ${BRAND_PALETTES.length - lockedBrandCount} starter brands. Pro opens the remaining ${lockedBrandCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
+                      subtitle: `Free covers ${brandRows.length - lockedBrandCount} starter brands. Pro opens the remaining ${lockedBrandCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
                     }}
                   />
                 )}

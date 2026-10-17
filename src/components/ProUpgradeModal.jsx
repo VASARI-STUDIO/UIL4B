@@ -6,7 +6,7 @@ import { detectCurrency } from '../utils/currency'
 import { PRO_POINTS } from '../config/planFacts'
 import {
   resolvePlanLadder,
-  purchasablePlans,
+  livePlans,
   cheapestPerMonth,
   savingsVsMonthly,
 } from '../config/planLadder'
@@ -128,8 +128,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     () => resolvePlanLadder({ prices, currency }),
     [prices, currency],
   )
-  const plans = useMemo(() => purchasablePlans(ladder), [ladder])
-  const headline = useMemo(() => cheapestPerMonth(ladder), [ladder])
+  // Only rows Stripe has a live price for, in the currency shown. A cadence
+  // served from the fallback table is not listed: it would quote the approved
+  // USD amount beside the live rows, and start a trial that ends at a refusal.
+  const plans = useMemo(() => livePlans(ladder), [ladder])
+  const headline = useMemo(() => cheapestPerMonth(plans), [plans])
 
   // Default to the cheapest per-month plan, which is also the one carrying the
   // trial. Selecting it for the user is a convenience, not a trap: every other
@@ -137,7 +140,9 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
   const [choiceId, setChoiceId] = useState(() => headline?.id || 'yearly')
   const choice = plans.find((p) => p.id === choiceId) || plans[0] || null
 
-  const priceUnavailable = settled && !prices
+  // No live row at all: the service is unreachable, or it answered with
+  // fallback defaults only. Either way there is no offer to make.
+  const priceUnavailable = settled && plans.length === 0
   const hasTrial = !!choice?.trialDays
 
   // Every Pro/upgrade CTA goes to /plans — never to a login popup, never
@@ -220,7 +225,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
               <legend className="sr-only">Choose a billing period</legend>
               {!settled && <span className="sk ui-pro-plans-skel" aria-hidden="true" />}
               {settled && plans.map((plan) => {
-                const save = savingsVsMonthly(plan, ladder)
+                const save = savingsVsMonthly(plan, plans)
                 return (
                   <label
                     key={plan.id}
