@@ -162,9 +162,9 @@
 .checkout-page .co-tick { color: var(--ok-strong); }
 .checkout-page .co-alert { color: var(--err-strong); }
 .checkout-page .co-spin { width: 20px; height: 20px; border-width: 2px; }
-.checkout-page .co-title { margin: 0; padding: 0; font-family: var(--display); font-size: clamp(30px, 3.6vw, 44px); font-weight: 600; letter-spacing: -.035em; line-height: 1.05; color: var(--t0); }
+.checkout-page .co-title { margin: 0; padding: 0; font-family: var(--display); font-size: clamp(30px, 3.6vw, 44px); font-weight: 600; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; color: var(--t0); }
 .checkout-page .co-title:focus, .checkout-page .co-title:focus-visible { outline: none; }
-.checkout-page .co-sub { display: flex; align-items: flex-start; gap: 8px; max-width: 52ch; margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: var(--t1); }
+.checkout-page .co-sub { display: flex; align-items: flex-start; gap: 8px; max-width: 52ch; margin: 12px 0 0; font-size: 15px; line-height: 1.6; text-wrap: pretty; color: var(--t1); }
 .checkout-page .co-spin-inline { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 4px; }
 
 /* The ledger */
@@ -178,7 +178,7 @@
 .checkout-page a.co-row:focus-visible { outline-offset: -2px; }
 .checkout-page .co-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .checkout-page .co-row-label { font-size: 15px; font-weight: 560; line-height: 1.4; color: var(--t0); }
-.checkout-page .co-row-note { font-size: 13px; line-height: 1.5; color: var(--t1); }
+.checkout-page .co-row-note { font-size: 13px; line-height: 1.5; text-wrap: pretty; color: var(--t1); }
 .checkout-page .co-change { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .checkout-page .co-from { font-size: 14px; color: var(--t2); }
 .checkout-page .co-arrow { align-self: center; flex: 0 0 auto; color: var(--t2); }
@@ -205,17 +205,16 @@
 .checkout-page .co-ref-code { font-family: var(--mono); font-size: 12.5px; color: var(--t1); }
 
 /* Motion: one staged reveal of the ledger (300ms, rows 100ms apart, rising
-   12px), and a 150ms crossfade as the state changes. Reduced motion keeps the
-   fade and drops the movement and the stagger. */
+   12px), and a 150ms crossfade as the state changes. The rise runs only when
+   the app has resolved motion on (html[data-reduced-motion="false"] already
+   folds in the OS setting); otherwise rows just fade, with no movement. */
 @keyframes co-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes co-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .checkout-page .co-ledger.is-live li { animation: co-fade 150ms var(--ease-out) both; }
-@media (prefers-reduced-motion: no-preference) {
-  html:not([data-reduced-motion="true"]) .checkout-page .co-ledger.is-live li { animation: co-rise 300ms var(--ease-out) both; }
-  html:not([data-reduced-motion="true"]) .checkout-page .co-ledger.is-live li:nth-child(2) { animation-delay: 100ms; }
-  html:not([data-reduced-motion="true"]) .checkout-page .co-ledger.is-live li:nth-child(3) { animation-delay: 200ms; }
-  html:not([data-reduced-motion="true"]) .checkout-page .co-ledger.is-live li:nth-child(4) { animation-delay: 300ms; }
-}
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li { animation: co-rise 300ms var(--ease-out) both; }
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(2) { animation-delay: 100ms; }
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(3) { animation-delay: 200ms; }
+html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(4) { animation-delay: 300ms; }
 
 .checkout-page :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
@@ -235,6 +234,11 @@
   .checkout-page .co-actions { flex-direction: column; }
   .checkout-page .co-actions .btn, .checkout-page .co-actions .btn-accent { width: 100%; min-height: 48px; justify-content: center; }
   .checkout-page .co-detail { grid-template-columns: 96px minmax(0, 1fr); }
+  /* Exports only: the wide change drops under its note instead of starving it. */
+  .checkout-page .co-row--stack { grid-template-columns: minmax(0, 1fr) 16px; row-gap: 6px; }
+  .checkout-page .co-row--stack .co-change { grid-column: 1; grid-row: 2; justify-self: start; }
+  .checkout-page .co-row--stack .co-row-end { grid-column: 2; grid-row: 1 / span 2; }
+  .checkout-page .co-note-more { display: none; }
 }
 @media (pointer: coarse) {
   .checkout-page .co-ref .btn-s { min-height: 44px; }

@@ -55,7 +55,9 @@ function ledgerRows() {
       label: 'Exports',
       from: 'Marked',
       to: 'Unmarked',
-      note: `No “Made with UIL4B” line, plus the ${PRO_EXPORT_NAMES}. Use Export in the top bar.`,
+      note: 'No “Made with UIL4B” line. Use Export in the top bar.',
+      more: ` Also the ${PRO_EXPORT_NAMES}.`,
+      stack: true,
     },
   ]
 }
@@ -82,7 +84,7 @@ function Ledger({ linked }) {
           <>
             <span className="co-row-text">
               <span className="co-row-label">{row.label}</span>
-              <span className="co-row-note">{row.note}</span>
+              <span className="co-row-note">{row.note}{row.more && <span className="co-note-more">{row.more}</span>}</span>
             </span>
             <span className="co-change">
               <span className="co-from">{row.from}</span>
@@ -98,13 +100,13 @@ function Ledger({ linked }) {
             {linked && row.href ? (
               <Link
                 to={row.href}
-                className="co-row"
+                className={`co-row${row.stack ? ' co-row--stack' : ''}`}
                 aria-label={`${row.label}: ${row.to}${row.unit ? ` ${row.unit}` : ''}, up from ${row.from}. Open ${row.where}.`}
               >
                 {body}
               </Link>
             ) : (
-              <div className="co-row">{body}</div>
+              <div className={`co-row${row.stack ? ' co-row--stack' : ''}`}>{body}</div>
             )}
           </li>
         )
@@ -306,7 +308,7 @@ export default function CheckoutReturn() {
           )}
           {hasPlan && (
             <div className="co-detail">
-              <dt>Plan</dt>
+              <dt>{view === 'settling' ? 'Paid for' : 'Plan'}</dt>
               <dd>{oneOff ? 'Pro, one-off purchase' : `Pro${BILLED_EVERY[billingInterval] ? `, billed ${BILLED_EVERY[billingInterval]}` : ''}`}</dd>
             </div>
           )}
