@@ -68,7 +68,7 @@ test('the Terms-URL error retries once without consent collection and logs an er
 test('sessionCurrency reports the currency the session was created in, never an unused one', () => {
   assert.equal(sessionCurrency({ currency: 'USD' }, { currency: 'aud' }), 'usd', 'the session\'s own currency wins')
   assert.equal(sessionCurrency({}, { currency: 'aud' }), 'aud', 'the requested currency, while it was kept')
-  assert.equal(sessionCurrency({}, {}), null, 'currency dropped on the locked-currency retry and not reported: unknown')
+  assert.equal(sessionCurrency({}, {}), null, 'no currency asked for and none reported: unknown')
   assert.equal(sessionCurrency(null, undefined), null)
 })
 

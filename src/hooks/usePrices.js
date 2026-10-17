@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { detectCurrency, formatCurrency } from '../utils/currency'
+import { livePriceOf } from '../config/planLadder'
 
 export const formatPrice = formatCurrency
 
@@ -41,10 +42,9 @@ export function refreshPrices() {
 export function usePrices() {
   const [, force] = useState(0)
   useEffect(() => {
-    if (priceCache) return undefined
     const rerender = () => force((value) => value + 1)
     subscribers.add(rerender)
-    fetchPricesOnce()
+    if (!priceCache) fetchPricesOnce()
     return () => { subscribers.delete(rerender) }
   }, [])
   return { prices: priceCache, settled: priceSettled }
@@ -54,8 +54,9 @@ export function useProPrice(requestedCurrency) {
   const currency = requestedCurrency || detectCurrency()
   const { prices, settled } = usePrices()
   return useMemo(() => {
-    const monthlyAmount = prices?.monthly?.[currency]
-    const yearlyAmount = prices?.yearly?.[currency]
+    // Live amounts only: a fallback default is not a price (see livePriceOf).
+    const monthlyAmount = livePriceOf(prices, 'monthly', currency)
+    const yearlyAmount = livePriceOf(prices, 'yearly', currency)
     const hasRecurring = typeof monthlyAmount === 'number' && typeof yearlyAmount === 'number'
     const savingsPct = hasRecurring
       ? Math.max(0, Math.round((1 - yearlyAmount / (monthlyAmount * 12)) * 100))

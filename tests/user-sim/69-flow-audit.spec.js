@@ -53,6 +53,7 @@
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
@@ -307,7 +308,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account reading the Pro offer')
     const prices = { monthly: { usd: 7 }, yearly: { usd: 48 } }
-    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prices) }))
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(prices)) }))
     await signIn(page, { plan: 'free' })
     await go(page, '/create/palette')
     const modal = await raiseWall(page)
