@@ -9,7 +9,7 @@ import { refreshPrices, usePrices, useProPrice } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { APPROVED_CURRENCY, formatMoney } from '../config/planLadder'
 import { COLOUR_SYSTEMS } from '../config/colourSystems'
-import { BRAND_PALETTES } from '../data/brandPalettes'
+import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { freeFormats, proOnlyFormats } from '../config/exportFormats'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // The offers, cadences and billed lines live in one module that every surface
@@ -44,7 +44,7 @@ import '../styles/pages/pricing.css'
 // cannot drift from the product without a test going red.
 //   AI_LIMITS / FREE_SAVE_LIMITS → src/config/plans.js (api/_lib/plans.js mirror)
 //   COLOUR_SYSTEMS               → what the palette engine gates on
-//   BRAND_PALETTES               → what PaletteBuilder gates on (`b.free`)
+//   LIBRARY_TOTALS               → the generated library sizes (src/data/libraryTotals.js)
 //   export formats               → src/config/exportFormats.js, which renders the buttons
 //   offers, trials, savings      → src/config/planFacts.js over the one ladder
 //   prices                       → /api/get-prices via usePrices(); nothing typed
@@ -53,8 +53,8 @@ import '../styles/pages/pricing.css'
 const AI = AI_LIMITS
 const SYSTEMS_TOTAL = COLOUR_SYSTEMS.length
 const SYSTEMS_FREE = COLOUR_SYSTEMS.filter((s) => s.free)
-const BRANDS_TOTAL = BRAND_PALETTES.length
-const BRANDS_FREE = BRAND_PALETTES.filter((b) => b.free === true).length
+const BRANDS_TOTAL = LIBRARY_TOTALS.brandPalettes
+const BRANDS_FREE = LIBRARY_TOTALS.freeBrandPalettes
 
 const FREE_EXPORTS = freeFormats()
 const PRO_EXPORTS = proOnlyFormats()

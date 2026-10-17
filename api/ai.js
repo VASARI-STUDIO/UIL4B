@@ -666,7 +666,7 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
     // someone tries to email a customer.
     sender: sendingDomainConfigured()
       ? `${mailFrom()} — a verified uil4b.com sender`
-      : `${mailFrom()} — SANDBOX. Resend will only deliver this to the account owner. Set MAIL_FROM to "UIL4B <admin@uil4b.com>" in Vercel once uil4b.com is verified (OWNER-ACTIONS §4.10). Replies already reach ${REPLY_TO}.`,
+      : `${mailFrom()} — SANDBOX. Resend will only deliver this to the account owner. Set MAIL_FROM to "UIL4B <support@uil4b.com>" in Vercel once uil4b.com is verified. Replies already reach ${REPLY_TO}.`,
     alerting: alerting
       ? 'on — the first OpenRouter failure of each day is emailed to SUPPORT_NOTIFY_EMAIL'
       : 'OFF — set RESEND_API_KEY and SUPPORT_NOTIFY_EMAIL in Vercel to be emailed the first time OpenRouter fails on any day. Until then this panel is the only place a failover surfaces.',
@@ -1170,6 +1170,18 @@ export default async function handler(req, res) {
   // GET /api/ai?backlog=1. Ahead of the diagnostic because it is a different
   // question with the same gate; see serveBacklog above for why it lives here.
   if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
+
+  // ── The Pro libraries ─────────────────────────────────────────────────────
+  // GET /api/ai?library=palettes|gradients|prompts. Token + planForUser, like
+  // the tasks below; see api/_lib/library/serve.js. Imported on demand so the
+  // library data does not ride in this function's cold start.
+  if (req.method === 'GET' && 'library' in (req.query || {})) {
+    const { serveLibrary } = await import('./_lib/library/serve.js')
+    return serveLibrary(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
 
   // ── Config health check ───────────────────────────────────────────────────
   // GET /api/ai?diag=1 reports whether the AI keys and the Firebase credential
