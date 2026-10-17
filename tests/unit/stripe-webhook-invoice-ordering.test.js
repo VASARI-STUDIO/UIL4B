@@ -11,7 +11,7 @@
 // out by hand, not derived from the code under test.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { STRIPE_EVENTS_COLLECTION } from '../../api/_lib/billing.js'
+import { STRIPE_EVENTS_COLLECTION, subscriptionDocFields } from '../../api/_lib/billing.js'
 import { clearPaymentFailure, flagPaymentFailed, processStripeEvent } from '../../api/stripe-webhook.js'
 import { memoryDb } from './helpers/memory-firestore.js'
 
@@ -39,13 +39,18 @@ const failingAccount = (subscription = {}) => ({
 })
 
 // A Stripe double that only knows how to read an invoice by id.
-function fakeStripe({ invoices = {}, error = null } = {}) {
+// `during` runs inside the lookup, which is where a real delivery can race.
+function fakeStripe({ invoices = {}, error = null, during = null } = {}) {
   const calls = []
+  const options = []
   return {
     calls,
+    options,
     invoices: {
-      async retrieve(id) {
+      async retrieve(id, opts) {
         calls.push(id)
+        options.push(opts)
+        if (during) await during(id)
         if (error) throw error
         if (!invoices[id]) throw new Error(`No such invoice: ${id}`)
         return invoices[id]
@@ -293,4 +298,235 @@ test('failure on the old invoice, failure on the new one, then a late paid for t
   await processStripeEvent(paidEvent(paidInvoice('in_new', FAILED_AT + 20 * SECOND), 'evt_new'), { db, stripe })
   assert.equal(stored(db).paymentFailed, false, 'paying the newer invoice does clear it')
   assert.equal(stored(db).failedInvoiceId, null)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A failure flagged while the decision is being made
+// ─────────────────────────────────────────────────────────────────────────────
+// The decision to clear is taken from a read before the Stripe lookup. These
+// write to the account from inside the lookup, the way a second delivery would.
+const writeSubscription = (db, subscription) =>
+  db.collection('users').doc('uid_1').set({ subscription }, { merge: true })
+
+const NEWER_FAILURE = {
+  paymentFailed: true,
+  paymentFailedAt: FAILED_AT + 5 * SECOND,
+  hostedInvoiceUrl: 'https://pay.example/in_newest',
+  failedInvoiceId: 'in_newest',
+}
+
+test('a newer failure flagged during the Stripe lookup survives a clear that was decided before it', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  // Stripe says the recorded failure (in_new) was paid, so on the first read the answer is "clear".
+  const stripe = fakeStripe({
+    invoices: { in_new: { id: 'in_new', status: 'paid' } },
+    during: () => writeSubscription(db, NEWER_FAILURE),
+  })
+
+  assert.equal(await clearPaymentFailure(stripe, paidInvoice('in_old'), db), 'kept_newer_failure')
+  const sub = stored(db)
+  assert.equal(sub.paymentFailed, true)
+  assert.equal(sub.failedInvoiceId, 'in_newest')
+  assert.equal(sub.paymentFailedAt, FAILED_AT + 5 * SECOND)
+  assert.equal(sub.hostedInvoiceUrl, 'https://pay.example/in_newest')
+})
+
+test('the same invoice failing again during the lookup (a new failure time) is also kept', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const stripe = fakeStripe({
+    invoices: { in_new: { id: 'in_new', status: 'paid' } },
+    during: () => writeSubscription(db, { paymentFailedAt: FAILED_AT + 9 * SECOND }),
+  })
+
+  assert.equal(await clearPaymentFailure(stripe, paidInvoice('in_old'), db), 'kept_newer_failure')
+  assert.equal(stored(db).paymentFailed, true)
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT + 9 * SECOND)
+})
+
+test('a failure cleared by someone else during the lookup is not rewritten', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const stripe = fakeStripe({
+    invoices: { in_new: { id: 'in_new', status: 'paid' } },
+    during: () => writeSubscription(db, { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null, updatedAt: 111 }),
+  })
+
+  assert.equal(await clearPaymentFailure(stripe, paidInvoice('in_old'), db), 'nothing_to_clear')
+  assert.equal(stored(db).updatedAt, 111, 'the write was skipped, so the other writer\'s record is untouched')
+})
+
+test('through the event path, a failure flagged mid-lookup survives and the event is still marked done', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const stripe = fakeStripe({
+    invoices: { in_new: { id: 'in_new', status: 'void' } },
+    during: () => writeSubscription(db, NEWER_FAILURE),
+  })
+
+  const outcome = await processStripeEvent(paidEvent(paidInvoice('in_old', FAILED_AT + SECOND)), { db, stripe })
+
+  assert.equal(outcome, 'processed')
+  assert.equal(stored(db).paymentFailed, true)
+  assert.equal(stored(db).failedInvoiceId, 'in_newest')
+  assert.equal(db.doc(`${STRIPE_EVENTS_COLLECTION}/evt_paid`).status, 'done')
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Which Stripe read errors are worth retrying
+// ─────────────────────────────────────────────────────────────────────────────
+const stripeError = (props) => Object.assign(new Error(`stripe said ${props.type || props.statusCode || 'nothing'}`), props)
+
+const PERMANENT_ERRORS = {
+  'no such invoice (404 resource_missing)': { type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 },
+  'bad request (400)': { type: 'StripeInvalidRequestError', code: 'parameter_invalid_empty', statusCode: 400 },
+  'key may not read invoices (403)': { type: 'StripePermissionError', statusCode: 403 },
+}
+
+const TRANSIENT_ERRORS = {
+  'connection error': { type: 'StripeConnectionError' },
+  'rate limit': { type: 'StripeRateLimitError', statusCode: 429 },
+  'api error': { type: 'StripeAPIError', statusCode: 500 },
+  'a 503 from a gateway': { statusCode: 503 },
+  'a 503 carried on raw': { raw: { statusCode: 503 } },
+  'a bare network failure with no Stripe verdict': {},
+}
+
+test('a permanent read error keeps the failure and returns, without throwing', async (t) => {
+  quiet(t)
+  for (const [name, props] of Object.entries(PERMANENT_ERRORS)) {
+    const db = memoryDb(failingAccount())
+    const stripe = fakeStripe({ error: stripeError(props) })
+    assert.equal(await clearPaymentFailure(stripe, paidInvoice('in_old'), db), 'kept_newer_failure', name)
+    failureStillOnRecord(db)
+  }
+})
+
+test('a permanent read error completes the event instead of leaving it processing', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const stripe = fakeStripe({ error: stripeError(PERMANENT_ERRORS['no such invoice (404 resource_missing)']) })
+
+  assert.equal(await processStripeEvent(paidEvent(paidInvoice('in_old')), { db, stripe }), 'processed')
+  assert.equal(db.doc(`${STRIPE_EVENTS_COLLECTION}/evt_paid`).status, 'done')
+  failureStillOnRecord(db)
+  assert.equal(stripe.calls.length, 1, 'no point asking again')
+})
+
+test('a transient read error throws out of clearPaymentFailure and writes nothing', async (t) => {
+  quiet(t)
+  for (const [name, props] of Object.entries(TRANSIENT_ERRORS)) {
+    const db = memoryDb(failingAccount())
+    const error = stripeError(props)
+    await assert.rejects(clearPaymentFailure(fakeStripe({ error }), paidInvoice('in_old'), db), (thrown) => thrown === error, name)
+    failureStillOnRecord(db)
+  }
+})
+
+test('after a transient read error the claim is released, so a redelivery runs and clears the failure', async (t) => {
+  quiet(t)
+  for (const [name, props] of Object.entries(TRANSIENT_ERRORS)) {
+    const db = memoryDb(failingAccount())
+    const event = paidEvent(paidInvoice('in_old'))
+
+    await assert.rejects(processStripeEvent(event, { db, stripe: fakeStripe({ error: stripeError(props) }) }), name)
+    assert.equal(db.doc(`${STRIPE_EVENTS_COLLECTION}/evt_paid`), undefined, `${name}: the claim is released`)
+
+    const retry = fakeStripe({ invoices: { in_new: { id: 'in_new', status: 'paid' } } })
+    assert.equal(await processStripeEvent(event, { db, stripe: retry }), 'processed', name)
+    assert.equal(retry.calls.length, 1, `${name}: the redelivery really ran the handler`)
+    assert.equal(stored(db).paymentFailed, false, name)
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The customer resubscribed: the failed invoice belongs to a cancelled subscription
+// ─────────────────────────────────────────────────────────────────────────────
+const onSubscription = (subscription) => ({
+  parent: { type: 'subscription_details', subscription_details: { subscription } },
+})
+const failedOn = (subscription, status = 'open') => ({ id: 'in_new', status, ...onSubscription(subscription) })
+const paidOn = (subscription) => ({ ...paidInvoice('in_paid', FAILED_AT + 60 * SECOND), ...onSubscription(subscription) })
+
+const EXPAND = { expand: ['parent.subscription_details.subscription'] }
+
+test('an open failed invoice on a cancelled subscription is cleared when the paid invoice is on a different one', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const stripe = fakeStripe({ invoices: { in_new: failedOn({ id: 'sub_old', status: 'canceled' }) } })
+
+  assert.equal(await clearPaymentFailure(stripe, paidOn('sub_new'), db), 'cleared')
+  const sub = stored(db)
+  assert.equal(sub.paymentFailed, false)
+  assert.equal(sub.failedInvoiceId, null)
+  assert.equal(sub.paymentFailedAt, null)
+  assert.equal(sub.hostedInvoiceUrl, null)
+  assert.deepEqual(stripe.options, [EXPAND], 'the failed invoice is read with its subscription expanded')
+})
+
+test('the same resubscribe case clears through the event path, and the paid invoice may carry an expanded subscription', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const stripe = fakeStripe({ invoices: { in_new: failedOn({ id: 'sub_old', status: 'canceled' }) } })
+
+  assert.equal(await processStripeEvent(paidEvent(paidOn({ id: 'sub_new', status: 'active' })), { db, stripe }), 'processed')
+  assert.equal(stored(db).paymentFailed, false)
+})
+
+test('an open failed invoice stays when its subscription is cancelled but the paid invoice is on the same one', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const stripe = fakeStripe({ invoices: { in_new: failedOn({ id: 'sub_old', status: 'canceled' }) } })
+
+  assert.equal(await clearPaymentFailure(stripe, paidOn('sub_old'), db), 'kept_newer_failure')
+  failureStillOnRecord(db)
+})
+
+test('an open failed invoice stays when its subscription is still live', async (t) => {
+  quiet(t)
+  for (const status of ['active', 'past_due', 'unpaid', 'incomplete', 'trialing']) {
+    const db = memoryDb(failingAccount())
+    const stripe = fakeStripe({ invoices: { in_new: failedOn({ id: 'sub_old', status }) } })
+    assert.equal(await clearPaymentFailure(stripe, paidOn('sub_new'), db), 'kept_newer_failure', `subscription ${status}`)
+    failureStillOnRecord(db)
+  }
+})
+
+test('without a readable subscription on both invoices the failure stays', async (t) => {
+  quiet(t)
+  const cases = {
+    'failed invoice has the subscription as a bare id': [failedOn('sub_old'), paidOn('sub_new')],
+    'failed invoice has no parent': [{ id: 'in_new', status: 'open' }, paidOn('sub_new')],
+    'failed invoice parent is another type': [{ id: 'in_new', status: 'open', parent: { type: 'quote_details' } }, paidOn('sub_new')],
+    'paid invoice has no parent': [failedOn({ id: 'sub_old', status: 'canceled' }), paidInvoice('in_paid', FAILED_AT + SECOND)],
+  }
+  for (const [name, [failed, paid]] of Object.entries(cases)) {
+    const db = memoryDb(failingAccount())
+    const stripe = fakeStripe({ invoices: { in_new: failed } })
+    assert.equal(await clearPaymentFailure(stripe, paid, db), 'kept_newer_failure', name)
+    failureStillOnRecord(db)
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A healthy subscription document drops the failed-invoice link too
+// ─────────────────────────────────────────────────────────────────────────────
+test('a healthy subscription document nulls all four failure fields', () => {
+  for (const status of ['active', 'trialing']) {
+    const doc = subscriptionDocFields({ id: 'sub_1', status }, 1_800_000_000_000)
+    assert.equal(doc.paymentFailed, false, status)
+    assert.equal(doc.paymentFailedAt, null, status)
+    assert.equal(doc.hostedInvoiceUrl, null, status)
+    assert.equal(doc.failedInvoiceId, null, status)
+  }
+})
+
+test('an unhealthy subscription document leaves the failure fields alone', () => {
+  for (const status of ['past_due', 'unpaid', 'canceled', 'incomplete']) {
+    const doc = subscriptionDocFields({ id: 'sub_1', status }, 1_800_000_000_000)
+    for (const field of ['paymentFailed', 'paymentFailedAt', 'hostedInvoiceUrl', 'failedInvoiceId']) {
+      assert.equal(field in doc, false, `${status} must not write ${field}`)
+    }
+  }
 })
