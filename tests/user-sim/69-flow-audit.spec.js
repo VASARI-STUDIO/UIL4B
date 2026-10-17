@@ -44,6 +44,8 @@
 //   M6  Settings.jsx   disabled={busy||needsPassword} → disabled={busy}   flow 5 red
 //   M7  CheckoutReturn subscriptionActive !== true  → false               flow 2 red
 //   M8  CheckoutReturn to="/plans" Back to Plans    → to="/checkout"      flow 2 red
+//   (M7/M8 were taken on the pre-redesign card. Commit 08194522 moved the same
+//   lines into `.co-return`; the flow 2 tests below still guard them.)
 //   M9  global.css     areas "head" "body" "rail"   → "head" "rail" "body" flow 2 red, all 6 phone cases
 //   M10 global.css     the ≤480 trim                → removed             flow 2 red, the 320×568 pair only
 //
@@ -55,7 +57,9 @@ import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
-import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
+import { FREE_SAVE_LIMITS, AI_LIMITS } from '../../src/config/plans.js'
+import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
+import { BILLED_EVERY } from '../../src/config/planFacts.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
@@ -373,23 +377,37 @@ test.describe('flow 2 — the checkout return page', () => {
   const stub = (page, body) => page.route('**/api/checkout-status*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }))
 
   for (const size of WIDTHS) {
-    test(`${size[0]}px: an active subscription is confirmed, with the next step and the reference`, async ({ browser }) => {
+    test(`${size[0]}px: an active subscription is confirmed, with the ledger, the next step and a short reference`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a new subscriber back from Stripe (${size[0]}px)`)
       await signIn(page, { plan: 'pro' })
-      await stub(page, { status: 'complete', mode: 'subscription', subscriptionActive: true, customerEmail: 'pro.user@uil4b.test' })
+      await stub(page, { status: 'complete', mode: 'subscription', interval: 'monthly', subscriptionActive: true, customerEmail: 'pro.user@uil4b.test' })
       await go(page, '/checkout/return?session_id=cs_test_flow_audit')
 
-      const card = page.locator('.checkout-return-card')
-      await expect(card.getByRole('heading')).toContainText(/on UIL4B Pro/i)
+      // Redesigned from a card to a centred column (`.co-return`). The old
+      // `.checkout-return-card` and its "Confirmation reference" are gone.
+      const view = page.locator('.co-return')
+      await expect(view.getByRole('heading', { level: 1 })).toContainText(/on UIL4B Pro/i)
       // No "a confirmation has been sent to …": whether Stripe emails a
       // receipt is a dashboard setting nobody here can see, so the page no
-      // longer claims one was sent (or names the address it went to).
-      await expect(card).not.toContainText(/confirmation has been sent/i)
-      await expect(card).not.toContainText('pro.user@uil4b.test')
-      await expect(card).toContainText('cs_test_flow_audit')
-      await expect(card.getByRole('link', { name: 'Start building' })).toHaveAttribute('href', '/projects')
-      await expect(card.getByRole('link', { name: 'Manage subscription' })).toHaveAttribute('href', '/settings')
+      // longer claims one was sent.
+      await expect(view).not.toContainText(/confirmation has been sent/i)
+      // What changed is a ledger of Free -> Pro rows; the figures come from
+      // the plan config and each linked row is a real route.
+      const ledger = view.locator('.co-ledger')
+      await expect(ledger.locator('li')).toHaveCount(4)
+      await expect(ledger).toContainText('AI generations')
+      await expect(ledger).toContainText(String(AI_LIMITS.pro.daily))
+      await expect(ledger).toContainText(String(COLOUR_SYSTEMS.length))
+      await expect(ledger.getByRole('link', { name: /Alt Text/ })).toHaveAttribute('href', '/create/alt-text')
+      // The details list names the account and the plan. The payment
+      // reference is quiet: the last 8 characters, never the whole session id.
+      await expect(view.locator('.co-details')).toContainText('pro.user@uil4b.test')
+      await expect(view.locator('.co-details')).toContainText(`Pro, billed ${BILLED_EVERY.monthly}`)
+      await expect(view.locator('.co-ref-code')).toHaveText('…ow_audit')
+      await expect(view, 'the full Stripe session id must not be printed on the page').not.toContainText('cs_test_flow_audit')
+      await expect(view.getByRole('link', { name: 'Start building' })).toHaveAttribute('href', '/projects')
+      await expect(view.getByRole('link', { name: 'Manage subscription' })).toHaveAttribute('href', '/settings')
       await context.close()
     })
   }
@@ -401,10 +419,13 @@ test.describe('flow 2 — the checkout return page', () => {
     await stub(page, { status: 'complete', mode: 'subscription', subscriptionActive: false, customerEmail: 'free.user@uil4b.test' })
     await go(page, '/checkout/return?session_id=cs_test_pending')
 
-    const card = page.locator('.checkout-return-card')
-    await expect(card.getByRole('heading')).toContainText('Payment received')
-    await expect(card).toContainText(/still being attached/i)
-    await expect(card, 'must not claim an active subscription it cannot see').not.toContainText(/subscription is active/i)
+    const view = page.locator('.co-return')
+    await expect(view.getByRole('heading', { level: 1 })).toHaveText('Payment received.')
+    await expect(view).toContainText(/still being attached/i)
+    await expect(view, 'must not claim an active subscription it cannot see').not.toContainText(/subscription is active|on UIL4B Pro/i)
+    // Settling shows what is arriving as plain rows, not links, and offers a re-check.
+    await expect(view.locator('.co-ledger a')).toHaveCount(0)
+    await expect(view.getByRole('button', { name: 'Check again' })).toBeVisible()
     await context.close()
   })
 
@@ -413,8 +434,8 @@ test.describe('flow 2 — the checkout return page', () => {
     watch(page, 'someone who landed on /checkout/return by hand')
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout/return')
-    const card = page.locator('.checkout-return-card')
-    await expect(card.getByRole('heading')).toContainText(/couldn.t confirm/i)
+    const card = page.locator('.co-return')
+    await expect(card.getByRole('heading', { level: 1 })).toContainText(/no payment attached/i)
     await expect(card.locator('.checkout-spinner')).toHaveCount(0)
     // The way forward goes where a plan is chosen. It used to be "Try again"
     // → /checkout, and /checkout without ?plan says "Invalid checkout
@@ -423,6 +444,24 @@ test.describe('flow 2 — the checkout return page', () => {
     await expect(card.getByRole('link', { name: 'Back to Plans' })).toHaveAttribute('href', '/plans')
     await expect(card.getByRole('link', { name: 'Try again' })).toHaveCount(0)
     await expect(card.getByRole('link', { name: 'Back to settings' })).toHaveAttribute('href', '/settings')
+    await context.close()
+  })
+
+  test('a session the server cannot confirm offers a re-check and support, and keeps the full id off the page', async ({ browser }) => {
+    const { context, page } = await open(browser, WIDTHS[0])
+    watch(page, 'someone whose payment could not be confirmed')
+    await signIn(page, { plan: 'free' })
+    await page.route('**/api/checkout-status*', (r) => r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"boom"}' }))
+    await go(page, '/checkout/return?session_id=cs_test_unconfirmed')
+    const view = page.locator('.co-return')
+    await expect(view.getByRole('heading', { level: 1 })).toContainText(/couldn.t confirm/i)
+    await expect(view.getByRole('button', { name: 'Check again' })).toBeVisible()
+    await expect(view.getByRole('link', { name: 'Back to Plans' })).toHaveAttribute('href', '/plans')
+    // The support link carries the full reference so support can find the
+    // payment; the page itself only prints the tail.
+    await expect(view.getByRole('link', { name: 'Email support' })).toHaveAttribute('href', /^mailto:support@uil4b\.com\?.*cs_test_unconfirmed/)
+    await expect(view.locator('.co-ref-code')).toHaveText('…onfirmed')
+    await expect(view).not.toContainText('cs_test_unconfirmed')
     await context.close()
   })
 })

@@ -86,7 +86,7 @@ test.describe('checkout states a price it cannot confirm', () => {
 
 test.describe('every account surface starts at heading 1', () => {
   const SURFACES = [
-    ['/checkout/return', {}, 'We couldn’t confirm your checkout'],
+    ['/checkout/return', {}, 'This link has no payment attached.'],
     ['/checkout', {}, 'Invalid checkout selection'],
   ]
   for (const [url, opts, heading] of SURFACES) {
@@ -122,16 +122,17 @@ test.describe('every account surface starts at heading 1', () => {
     await go(page, '/checkout/return?session_id=cs_test_paid')
     const h1 = page.locator('main h1')
     await expect(h1).toHaveCount(1)
-    await expect(h1).toContainText('You’re on UIL4B Pro')
-    // It is styled as the confirmation panel's heading — `.checkout-page
-    // .checkout-return-card h1`, the Spectrum pass's clamp(24px,3vw,30px) —
-    // and NOT by whatever an unscoped h1 rule would give a bare <h1> (the
-    // .sec-h display size is 32-52px). This pinned '22px' until the Spectrum
-    // pass restyled the panel on purpose; the property it was guarding is that
-    // the h2 -> h1 swap did not hand the heading a page-title size.
+    await expect(h1).toContainText('You’re on UIL4B Pro.')
+    // It is styled by the redesigned page's own `.checkout-page .co-title`
+    // (clamp(30px, 3.6vw, 44px), set when 08194522 replaced the card) and NOT
+    // by whatever an unscoped h1 rule would give a bare <h1> (the .sec-h
+    // display size is 32-52px). The property being guarded is that the h2 -> h1
+    // swap did not hand the heading a page-title size: at this 1440px viewport
+    // .co-title resolves to its 44px ceiling, which .sec-h's 52px would exceed.
+    await expect(h1).toHaveClass(/co-title/)
     const px = parseFloat(await h1.evaluate((el) => getComputedStyle(el).fontSize))
-    expect(px, 'the confirmation heading is not set at a page-title size').toBeGreaterThanOrEqual(24)
-    expect(px, 'the confirmation heading is not set at a page-title size').toBeLessThanOrEqual(30)
+    expect(px, 'the confirmation heading is not set at a page-title size').toBeGreaterThanOrEqual(30)
+    expect(px, 'the confirmation heading is not set at a page-title size').toBeLessThanOrEqual(44)
   })
 
   test('a payment whose entitlement has not landed says so, from an h1', async ({ page }) => {
@@ -146,10 +147,10 @@ test.describe('every account surface starts at heading 1', () => {
       }),
     }))
     await go(page, '/checkout/return?session_id=cs_test_pending')
-    await expect(page.locator('main h1')).toHaveText('Payment received')
+    await expect(page.locator('main h1')).toHaveText('Payment received.')
     // The honesty half, which is the reason this state exists at all.
-    await expect(page.locator('.checkout-return-card p').first())
-      .toContainText('Pro access is still being attached to this account')
+    await expect(page.locator('.co-return .co-sub'))
+      .toContainText('Pro is still being attached to')
   })
 })
 
