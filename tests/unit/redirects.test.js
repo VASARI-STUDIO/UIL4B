@@ -30,6 +30,7 @@ import {
   CREATE_ROUTE_MIGRATION,
   CLIENT_REDIRECT_ROUTES,
   EARLY_RETURN_REDIRECTS,
+  mergeRedirectQuery,
 } from '../../src/data/legacyRoutes.js'
 import { CREATE_GROUPS, createRoutes, resolveTool } from '../../src/data/toolTree.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
@@ -169,6 +170,26 @@ test('the edge and the client answer the same question the same way', () => {
   for (const early of EARLY_RETURN_REDIRECTS) {
     assert.ok(app.includes(`'${early}'`),
       `${early} is listed as an early-return redirect but App.jsx does not mention it`)
+  }
+})
+
+test('every client-side retired path lands on its destination and keeps the visitor\'s query', () => {
+  // The client router redirects through mergeRedirectQuery. Walked over the whole
+  // table rather than over /support alone, so a retired path that quietly drops
+  // utm_* tags or a #fragment on the way through is named here.
+  const incoming = '?utm_source=email&ref=abc'
+  for (const [from, to] of CLIENT_REDIRECT_ROUTES) {
+    const landed = mergeRedirectQuery(to, incoming)
+    const url = new URL(landed, 'https://example.test')
+    assert.equal(url.pathname, destPath(to), `${from} no longer lands on ${destPath(to)} (got ${landed})`)
+    assert.equal(url.hash, to.includes('#') ? `#${to.split('#')[1]}` : '', `${from} lost or invented a fragment`)
+    assert.equal(url.searchParams.get('utm_source'), 'email', `${from} dropped the visitor's utm_source`)
+    assert.equal(url.searchParams.get('ref'), 'abc', `${from} dropped the visitor's ref`)
+    // The destination's own parameters survive beside the visitor's.
+    const own = new URLSearchParams(to.split('#')[0].split('?')[1] || '')
+    for (const [key, value] of own) assert.equal(url.searchParams.get(key), value, `${from} lost its own ${key}`)
+    // With nothing incoming the destination comes back exactly as listed.
+    assert.equal(mergeRedirectQuery(to, ''), to)
   }
 })
 
