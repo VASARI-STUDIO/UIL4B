@@ -510,6 +510,103 @@ test.describe('the customiser while its artwork is loading', () => {
   })
 })
 
+test.describe('the customiser\'s "Similar in this pack" row while its images are loading', () => {
+  test.skip(isLiveIconify(), 'this spec controls when the Similar images arrive')
+
+  // The tiles are <img>-backed buttons. Hold only those image requests: the stage
+  // fetches its own art with fetch(), and the grid takes glyphs from the batch.
+  const SIMILAR_IMAGE = (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/lucide\/arrow-[^/]+\.svg$/.test(u.pathname)
+  const tileState = (tile) => tile.evaluate((el) => {
+    const css = getComputedStyle(el)
+    const r = el.getBoundingClientRect()
+    return { visibility: css.visibility, opacity: css.opacity, height: r.height, width: r.width, ready: el.dataset.ready }
+  })
+
+  test('a tile is invisible, unfocusable and still 44px until its image loads, and a failed one stays hidden', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+
+    let release
+    const held = new Promise((resolve) => { release = resolve })
+    const held_ = { requested: new Set(), failName: null }
+    await page.route(SIMILAR_IMAGE, async (route) => {
+      if (route.request().resourceType() !== 'image') return route.fallback()
+      const name = new URL(route.request().url()).pathname.split('/').pop().replace(/\.svg$/, '')
+      held_.requested.add(name)
+      await held
+      if (name !== held_.failName) return route.fallback()
+      // A body that is not an image: the <img> errors, and nothing is logged.
+      return route.fulfill({
+        status: 200, contentType: 'image/svg+xml; charset=utf-8',
+        headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }, body: 'this is not an image',
+      })
+    })
+    try {
+      await choosePack(page, 'lucide')
+      await page.locator('.ig .ic[aria-label="Customise arrow-right"]').click()
+      const row = page.locator('.icust-similar-row')
+      const tiles = row.locator('.icust-similar-btn')
+      await expect(tiles).toHaveCount(6)
+      // Lazy images only start once the row is near the viewport.
+      await row.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+      await expect.poll(() => held_.requested.size, { timeout: 20_000 }).toBe(6)
+
+      // POSITIVE CONTROL for "held": every tile has asked for its image and none has it.
+      const names = await tiles.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label').replace(/^Open /, '')))
+      expect([...held_.requested].sort(), 'each tile requested its own image').toEqual([...names].sort())
+      held_.failName = names[names.length - 1]
+
+      for (let i = 0; i < 6; i += 1) {
+        const tile = tiles.nth(i)
+        await expect(tile, `tile ${names[i]} is visible before its image loads`).toBeHidden()
+        const s = await tileState(tile)
+        expect(s.visibility).toBe('hidden')
+        expect(s.opacity).toBe('0')
+        expect(s.ready, 'data-ready is set before the image loaded').toBeUndefined()
+        expect(s.height, 'a waiting tile keeps its 44px box').toBe(44)
+        expect(s.width).toBe(44)
+      }
+      const rowBox = await row.evaluate((el) => el.getBoundingClientRect().height)
+      expect(rowBox, 'the row stays one 44px line while every tile waits').toBe(44)
+
+      // Tab from the control before the row must not land on a waiting tile.
+      await page.locator('.icust-reset').focus()
+      for (let i = 0; i < 4; i += 1) {
+        await page.keyboard.press('Tab')
+        const onTile = await page.evaluate(() => document.activeElement?.classList.contains('icust-similar-btn'))
+        expect(onTile, `Tab ${i + 1} landed on a Similar tile that is not shown`).toBe(false)
+      }
+
+      release()
+
+      // The five that load fade in, are focusable, and the row did not move.
+      for (let i = 0; i < 5; i += 1) {
+        const tile = tiles.nth(i)
+        await expect(tile, `tile ${names[i]} shows once its image has loaded`).toBeVisible({ timeout: 20_000 })
+        await expect(tile).toHaveCSS('opacity', '1')
+        await expect(tile).toHaveAttribute('data-ready', 'true')
+        expect((await tileState(tile)).height).toBe(44)
+      }
+      await expect(row.locator('.icust-similar-btn:visible'), 'exactly the five that loaded are shown').toHaveCount(5)
+      expect(await row.evaluate((el) => el.getBoundingClientRect().height)).toBe(44)
+
+      // The one whose image failed never appears, and keeps its place.
+      const failed = tiles.nth(5)
+      await expect.poll(() => failed.evaluate((el) => el.querySelector('img').complete), { timeout: 20_000 }).toBe(true)
+      expect(await failed.evaluate((el) => el.querySelector('img').naturalWidth), 'the failed image has no pixels').toBe(0)
+      await expect(failed).toBeHidden()
+      await expect(failed).not.toHaveAttribute('data-ready', /.*/)
+      expect((await tileState(failed)).height).toBe(44)
+
+      // Positive control for the Tab check: a shown tile IS reachable from the same spot.
+      await page.locator('.icust-reset').focus()
+      await page.keyboard.press('Tab')
+      await expect(page.getByRole('button', { name: `Open ${names[0]}`, exact: true })).toBeFocused()
+    } finally { release() }
+  })
+})
+
 test('slow catalogues keep the skeleton and loading message until icons arrive', async ({ page }) => {
   test.skip(isLiveIconify(), 'this test controls catalogue arrival times')
   await page.addInitScript(() => {

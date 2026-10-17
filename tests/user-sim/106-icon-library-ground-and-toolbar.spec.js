@@ -813,7 +813,7 @@ test('a saved duotone icon reopens with the Default colour button', async ({ pag
   await expect(colour.getByRole('button', { name: 'Default', exact: true })).toBeVisible()
 })
 
-test('the pack menu names its first two groups line and filled, never solid', async ({ page }) => {
+test('the pack menu has one Interface group and borrows no style word from the Weight and Coloured chips', async ({ page }) => {
   await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await expect(page.locator('.ig .ic').first()).toBeVisible()
@@ -821,9 +821,18 @@ test('the pack menu names its first two groups line and filled, never solid', as
   const list = page.locator('.menu-select-list[role="listbox"]')
   await expect(list).toBeVisible()
   const headings = list.locator('.pop-head')
-  await expect(headings.filter({ hasText: /^Interface \(line\)/ })).toHaveCount(1)
-  await expect(headings.filter({ hasText: /^Interface \(filled\)/ })).toHaveCount(1)
-  await expect(headings.filter({ hasText: /solid/i }), 'a group heading still says solid').toHaveCount(0)
-  await expect(headings.filter({ hasText: /outlined/i }), 'a group heading still says outlined').toHaveCount(0)
-  await expect(list.getByRole('group', { name: /^Interface \(filled\)/ }).getByRole('option', { name: 'Material Design' })).toHaveCount(1)
+  // PRESENCE first, so an empty menu cannot pass the absences below.
+  await expect(headings.filter({ hasText: /^Interface$/ })).toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Brand logos$/ })).toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Interface/ }), 'the Interface group is not split in two').toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Brand logos/ })).toHaveCount(1)
+  for (const word of [/line/i, /filled?/i, /solid/i, /outlined/i, /colou?red/i]) {
+    await expect(headings.filter({ hasText: word }), `a group heading says ${word}`).toHaveCount(0)
+  }
+  // Stroke and fill-only packs now sit together under the one heading.
+  const interfaceGroup = list.getByRole('group', { name: 'Interface', exact: true })
+  for (const pack of ['Lucide', 'Material Design', 'BoxIcons']) {
+    await expect(interfaceGroup.getByRole('option', { name: pack }), `${pack} is under Interface`).toHaveCount(1)
+  }
+  await expect(list.getByRole('group', { name: 'Brand logos', exact: true }).getByRole('option', { name: 'Simple Icons' })).toHaveCount(1)
 })
