@@ -214,6 +214,17 @@ function createFakeAuth(d) {
     auth.notify()
     return auth.currentUser
   }
+  // The same account signing out, or a different one signing in, under a page
+  // that stays mounted (`over` replaces uid, email or name). Exposed so a spec
+  // can change the account without a reload.
+  auth.signOutNow = () => {
+    auth.currentUser = null
+    auth.notify()
+  }
+  auth.switchTo = (over = {}) => {
+    auth.currentUser = buildUser({ ...d, ...over })
+    auth.notify()
+  }
   // True while a `lateSignIn` session has not yet signed in. The login form's
   // password sign-in completes it (firebase-auth.js), so a spec can finish a
   // sign-in the way a person does, through the popup, and the popup's own
@@ -395,5 +406,5 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }

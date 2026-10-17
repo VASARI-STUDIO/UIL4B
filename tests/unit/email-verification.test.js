@@ -179,7 +179,7 @@ test('the notice strip sits right after the skip link, before the nav and the pa
   const app = stripComments(read('src/App.jsx'))
   const skip = app.indexOf('className="skip-link"')
   const strip = app.indexOf('<NoticeStack />')
-  const shell = app.indexOf('<AppInner />')
+  const shell = app.indexOf('<AppInner ')
   assert.ok(skip > 0 && strip > skip, 'the strip follows the skip link')
   assert.ok(strip < shell, 'the strip precedes the app shell (nav and #main)')
   assert.equal(app.split('<NoticeStack />').length - 1, 1, 'mounted once')
