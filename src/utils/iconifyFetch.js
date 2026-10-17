@@ -11,11 +11,16 @@
 //      entry (24 h for the catalogue, tranches and SVGs; 1 h for /search) is
 //      answered with no network at all, and survives a reload.
 //   2. Concurrent identical requests share one round trip.
-//   3. A shared cool-down. A 429 records "no Iconify requests until T" in
-//      memory and localStorage, so a reload honours it. Until T nothing is sent;
-//      a cached entry is served even if it has expired. Only a request with
-//      nothing cached gets the 429 back, so a total failure stays visible to
-//      the page's own refused state.
+//   3. A shared cool-down, kept per kind of request (pack lists, glyph files,
+//      icon files, search). A 429 records "no requests of that kind until T" in
+//      memory and localStorage, so a reload honours it. Until T nothing of that
+//      kind is sent; a cached entry is served even if it has expired. Only a
+//      request with nothing cached gets the 429 back, so a total failure stays
+//      visible to the page's own refused state. A refused pack list therefore
+//      does not stop the glyphs of a pack whose list is already cached or
+//      served from the site: the glyph request is tried, and starts its own
+//      cool-down only if Iconify refuses it too. A refusal made locally (nothing
+//      sent) carries HELD_HEADER, so a caller can tell "wait" from "refused".
 //   4. At most MAX_PARALLEL requests in flight, so the first 429 of a cold
 //      25-pack load stops the rest instead of arriving after they have left.
 //
@@ -46,6 +51,9 @@ export const ICONIFY_HOST = 'https://api.iconify.design'
 const CACHE_NAME = 'uil4b-iconify-v1'
 const STAMP_HEADER = 'x-uil4b-stored-at'
 const COOLDOWN_KEY = 'uil4b-iconify-cooldown'
+// Set on the 429 that is answered locally because a cool-down is running and the
+// request was never sent. A real refusal from Iconify does not carry it.
+export const HELD_HEADER = 'x-uil4b-held'
 
 const HOUR = 60 * 60 * 1000
 export const TTL_DEFAULT = 24 * HOUR
@@ -89,6 +97,20 @@ export function ttlFor(url) {
   try { return new URL(url).pathname === '/search' ? TTL_SEARCH : TTL_DEFAULT } catch { return TTL_DEFAULT }
 }
 
+/**
+ * Which cool-down a URL belongs to: the pack list, a search, an icon file, or
+ * (everything else) a glyph file. A refusal of one kind does not hold the others.
+ */
+export function scopeFor(url) {
+  try {
+    const path = new URL(url).pathname
+    if (path === '/collection') return 'collection'
+    if (path === '/search') return 'search'
+    if (path.endsWith('.svg')) return 'svg'
+  } catch { /* an odd URL is treated as a glyph file */ }
+  return 'glyph'
+}
+
 /** A Retry-After header (delta-seconds or HTTP date) as milliseconds, or null. */
 export function parseRetryAfter(value, nowMs = Date.now()) {
   if (value == null || value === '') return null
@@ -121,9 +143,10 @@ export function createIconifyFetch(opts = {}) {
     try { globalThis.addEventListener?.('online', cb) } catch { /* no event target */ }
   })
 
-  let until = 0
+  // scope → { until, strikes }: one back-off ladder per kind of request.
+  const rungs = new Map()
+  const rung = (scope) => rungs.get(scope) || { until: 0, strikes: 0 }
   let netUntil = 0
-  let strikes = 0
   let netFails = []
   const inflight = new Map()
   const waiting = []
@@ -139,9 +162,11 @@ export function createIconifyFetch(opts = {}) {
       const raw = getStorage()?.getItem(COOLDOWN_KEY)
       if (!raw) return
       const saved = JSON.parse(raw)
-      if (Number.isFinite(saved?.until) && saved.until > until) {
-        until = saved.until
-        strikes = Number(saved.strikes) || strikes
+      for (const [scope, s] of Object.entries(saved?.scopes || {})) {
+        const mine = rung(scope)
+        if (Number.isFinite(s?.until) && s.until > mine.until) {
+          rungs.set(scope, { until: s.until, strikes: Number(s.strikes) || mine.strikes })
+        }
       }
     } catch { /* unreadable storage: the in-memory value stands */ }
   }
@@ -149,32 +174,49 @@ export function createIconifyFetch(opts = {}) {
     try {
       const store = getStorage()
       if (!store) return
-      if (until || strikes) store.setItem(COOLDOWN_KEY, JSON.stringify({ until, strikes }))
+      const scopes = {}
+      for (const [scope, s] of rungs) if (s.until || s.strikes) scopes[scope] = s
+      if (Object.keys(scopes).length) store.setItem(COOLDOWN_KEY, JSON.stringify({ scopes }))
       else store.removeItem(COOLDOWN_KEY)
     } catch { /* quota or private mode */ }
   }
   // A cool-down that ended long ago is history: forget it (and its count) so a
   // refusal weeks later starts at BASE_COOLDOWN, not at a stale doubling.
   function forgetOldCooldown() {
-    if ((until || strikes) && now() > until + STRIKE_MEMORY) { until = 0; strikes = 0; saveCooldown() }
+    let changed = false
+    for (const [scope, s] of rungs) {
+      if ((s.until || s.strikes) && now() > s.until + STRIKE_MEMORY) { rungs.delete(scope); changed = true }
+    }
+    if (changed) saveCooldown()
   }
-  const cooling = () => { syncCooldown(); forgetOldCooldown(); return now() < Math.max(until, netUntil) }
+  // The latest end among the cool-downs that apply: just `scope`'s, or every
+  // kind's when no scope is given. The short pause after rejected fetches
+  // (netUntil) applies to all of them.
+  const endsAt = (scope) => {
+    let end = netUntil
+    if (scope) return Math.max(end, rung(scope).until)
+    for (const s of rungs.values()) end = Math.max(end, s.until)
+    return end
+  }
+  const cooling = (scope) => { syncCooldown(); forgetOldCooldown(); return now() < endsAt(scope) }
 
-  function noteRateLimited(retryAfter) {
+  function noteRateLimited(scope, retryAfter) {
     syncCooldown()
     forgetOldCooldown()
     const asked = parseRetryAfter(retryAfter, now())
+    const cur = rung(scope)
     // Refusals from one burst arrive together: only the first starts a new
     // round of back-off, or six stragglers would double the wait six times.
-    if (now() >= until) strikes = Math.min(strikes + 1, 8)
+    const strikes = now() >= cur.until ? Math.min(cur.strikes + 1, 8) : cur.strikes
     const wait = asked != null && asked > 0 ? asked : BASE_COOLDOWN * 2 ** (strikes - 1)
-    until = Math.max(until, now() + Math.min(wait, MAX_COOLDOWN))
+    rungs.set(scope, { until: Math.max(cur.until, now() + Math.min(wait, MAX_COOLDOWN)), strikes })
     saveCooldown()
   }
   // A success once the cool-down has run out is the all-clear. One that lands
   // while it is still running is a straggler from before the refusal.
-  function noteOk() {
-    if (strikes && now() >= until) { strikes = 0; until = 0; saveCooldown() }
+  function noteOk(scope) {
+    const cur = rung(scope)
+    if (cur.strikes && now() >= cur.until) { rungs.delete(scope); saveCooldown() }
   }
   // A refusal the browser would not let us read arrives as a rejected fetch.
   // One or two are just a bad connection; a quick run of them, with nothing
@@ -268,11 +310,13 @@ export function createIconifyFetch(opts = {}) {
   async function load(url, { timeout, ttl, persist }) {
     const entry = persist ? await readEntry(url) : null
     if (entry && now() - entry.storedAt < ttl) return entry
+    const scope = scopeFor(url)
 
     return schedule(async () => {
       // Checked here, not before queuing: a request that waited for a slot
-      // while an earlier one was refused must not leave.
-      if (cooling()) return entry || refused()
+      // while an earlier one was refused must not leave. Only this kind of
+      // request waits; the others are tried.
+      if (cooling(scope)) return entry || refused()
       let res
       let body
       try {
@@ -284,7 +328,7 @@ export function createIconifyFetch(opts = {}) {
         noteNetworkFailure(err)
         throw err
       }
-      if (res.status === 429) noteRateLimited(res.headers?.get?.('retry-after'))
+      if (res.status === 429) noteRateLimited(scope, res.headers?.get?.('retry-after'))
       if (!res.ok) {
         // Rate-limited or unwell: an old answer beats none. A 404 is an answer.
         if (entry && (res.status === 429 || res.status >= 500)) return entry
@@ -298,7 +342,7 @@ export function createIconifyFetch(opts = {}) {
         // not an all-clear, not kept. An older good answer beats it.
         return entry || fresh
       }
-      noteOk()
+      noteOk(scope)
       if (persist) await writeEntry(url, fresh)
       return fresh
     })
@@ -306,7 +350,10 @@ export function createIconifyFetch(opts = {}) {
 
   const toResponse = (r) => new Response(r.body === '' ? null : r.body, {
     status: r.status,
-    headers: r.type ? { 'content-type': r.type } : {},
+    headers: {
+      ...(r.type ? { 'content-type': r.type } : {}),
+      ...(r.synthetic ? { [HELD_HEADER]: '1' } : {}),
+    },
   })
 
   /**
@@ -328,12 +375,18 @@ export function createIconifyFetch(opts = {}) {
 
   return {
     get,
-    /** Epoch ms the cool-down ends, or 0 when not cooling. */
-    cooldownUntil: () => (cooling() ? Math.max(until, netUntil) : 0),
-    /** The visitor pressed "Try again": forget the cool-down and ask once more. */
-    clearCooldown: () => { until = 0; strikes = 0; netUntil = 0; netFails = []; saveCooldown() },
+    /**
+     * Epoch ms the cool-down ends, or 0 when not cooling. With a URL: the one
+     * that holds that kind of request. Without: the latest of any kind.
+     */
+    cooldownUntil: (url) => {
+      const scope = url ? scopeFor(url) : undefined
+      return cooling(scope) ? endsAt(scope) : 0
+    },
+    /** The visitor pressed "Try again": forget every cool-down and ask once more. */
+    clearCooldown: () => { rungs.clear(); netUntil = 0; netFails = []; saveCooldown() },
     /** Test hook: drop in-memory state (not Cache Storage). */
-    reset: () => { until = 0; strikes = 0; netUntil = 0; netFails = []; inflight.clear(); waiting.length = 0; active = 0; cachePromise = null; swept = false },
+    reset: () => { rungs.clear(); netUntil = 0; netFails = []; inflight.clear(); waiting.length = 0; active = 0; cachePromise = null; swept = false },
   }
 }
 

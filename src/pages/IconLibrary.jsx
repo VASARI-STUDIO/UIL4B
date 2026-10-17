@@ -34,7 +34,7 @@ import {
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
 import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
-import { iconifyFetch, clearIconifyCooldown } from '../utils/iconifyFetch'
+import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, HELD_HEADER } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 // The stylesheet families this surface needs, split out of the one
@@ -401,7 +401,9 @@ const GLYPH_RETRY_AFTER = new Map() // pack → earliest time it may be asked ag
  * Fetch one pack's worth of glyph bodies in a single request and fill the
  * caches. Resolves true when the request was answered, false when the service
  * refused it — the caller turns a false into the page's existing refused state
- * rather than into 120 silently broken images.
+ * rather than into 120 silently broken images. When a back-off was running and
+ * nothing was sent, resolves `{ heldUntil }` instead: the name was not tried, so
+ * it is not a failure and must not use up a retry.
  */
 async function loadGlyphBatch(pack, names) {
   if (!names.length) return true
@@ -409,6 +411,7 @@ async function loadGlyphBatch(pack, names) {
   let data
   try {
     const r = await iconifyFetch(url, { timeout: 8000 })
+    if (r.headers.get(HELD_HEADER)) return { heldUntil: iconifyCooldownUntil(url) }
     // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
     // as a broken image nobody can see.
     if (!r.ok) return false
@@ -3102,9 +3105,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // `setGlyphTick` was skipped by a guard that thought the page had gone.
   const mountedRef = useRef(true)
   const retryTimerRef = useRef(0)
+  // The wake-up for batches held back by a running back-off; separate from the
+  // failed-batch timer so neither pushes the other later.
+  const heldTimerRef = useRef(0)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current) }
+    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current); clearTimeout(heldTimerRef.current) }
   }, [])
   // `icons` and `visible`, NOT `shown`. `shown` is a fresh array on every render,
   // so depending on it re-runs this body for every unrelated state change in the
@@ -3184,12 +3190,26 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // A RETRY run that fails is a partial failure too, however many jobs it
         // held: one flag pack timing out twice must not swap the whole grid for
         // the built-in set, so only a first-time total refusal raises the notice.
-        const allRefused = results.length > 0 && results.every(ok => ok === false)
+        // A batch held back by a running back-off (`{ heldUntil }`) was never
+        // sent, so it counts as refused for the notice but not as a failed try.
+        const isHeld = (ok) => ok !== null && typeof ok === 'object'
+        const allRefused = results.length > 0 && results.every(ok => ok === false || isHeld(ok))
         const isRetryRun = jobs.every(j => j.names.some(n => GLYPH_FAILS.has(svgKey(j.pack, n))))
         const refusing = allRefused && !isRetryRun
-        if (results.some(ok => ok === false) && !refusing) {
+        if (results.some(ok => ok === false || isHeld(ok)) && !refusing) {
           let retry = false
+          let heldFor = 0
           jobs.forEach((job, i) => {
+            if (isHeld(results[i])) {
+              // Ask again when the back-off ends, with no failure recorded:
+              // GLYPH_FAILS only counts requests Iconify actually answered badly.
+              const asked = askedFor(job.pack)
+              for (const n of job.names) asked.delete(n)
+              const end = results[i].heldUntil || Date.now() + GLYPH_RETRY_MS
+              GLYPH_RETRY_AFTER.set(job.pack, end)
+              heldFor = Math.max(heldFor, end - Date.now())
+              return
+            }
             if (results[i] !== false) return
             const asked = askedFor(job.pack)
             for (const n of job.names) {
@@ -3205,6 +3225,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           if (retry) {
             clearTimeout(retryTimerRef.current)
             retryTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
+          }
+          if (heldFor > 0) {
+            clearTimeout(heldTimerRef.current)
+            heldTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, heldFor + 50)
           }
         }
         if (refusing) {
