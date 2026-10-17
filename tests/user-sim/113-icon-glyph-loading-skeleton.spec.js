@@ -1,7 +1,14 @@
 // Hold glyph batches to verify the transparent waiting state before artwork arrives.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, answerIconify, isLiveIconify } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, SNAPSHOT_PATH_RE, answerIconify, isLiveIconify } from './iconify-stub.js'
+
+// A pack list reaches the page from this site first (/iconify/collections/<pack>.json)
+// and from Iconify's /collection only when the site has none, so holding "the
+// catalogue" means holding both.
+const isCatalogueRequest = (u) =>
+  (ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection') || SNAPSHOT_PATH_RE.test(u.pathname)
+const catalogueFor = (u) => u.searchParams.get('prefix') ?? decodeURIComponent(u.pathname.match(SNAPSHOT_PATH_RE)?.[1] ?? '')
 
 const PERSONA = 'a designer opening the icon library on a slow connection'
 
@@ -620,7 +627,7 @@ test('slow catalogues keep the skeleton and loading message until icons arrive',
   let release
   const held = new Promise(resolve => { release = resolve })
   let arrivals = 0
-  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection', async route => {
+  await page.route(isCatalogueRequest, async route => {
     await held
     await new Promise(resolve => setTimeout(resolve, 4000))
     arrivals += 1
@@ -651,9 +658,9 @@ test('staggered catalogues keep the signed-out first page intact at 768', async 
   const held = new Promise(resolve => { release = resolve })
   const packs = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
   const arrivals = []
-  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection', async route => {
+  await page.route(isCatalogueRequest, async route => {
     await held
-    const pack = new URL(route.request().url()).searchParams.get('prefix')
+    const pack = catalogueFor(new URL(route.request().url()))
     const index = packs.indexOf(pack)
     expect(index, 'only signed-out packs are requested').toBeGreaterThanOrEqual(0)
     await new Promise(resolve => setTimeout(resolve, 150 + index * 200))
@@ -713,7 +720,7 @@ for (const scheme of ['light', 'dark']) {
           }
           let release
           const held = new Promise(resolve => { release = resolve })
-          await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection',
+          await page.route(isCatalogueRequest,
             async route => { await held; await route.fallback() })
           try {
             await go(page, '/create/icons')
