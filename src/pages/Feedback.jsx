@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
@@ -14,6 +15,16 @@ import '../styles/deferred/tool-shell.css'
 import '../styles/pages/feedback.css'
 
 // Delivery acknowledges submission immediately and preserves failed drafts for retry.
+
+// Links from outside the app land here through /support (see legacyRoutes.js):
+// `?from=support` marks an arrival that wants help rather than to suggest
+// something, and `?reason=` says why. Any reason at all means the same, so a
+// link can name one without also naming `from`.
+const PAYMENT_FAILED = 'payment_failed'
+const PAYMENT_SUBTITLE = "Payment didn't go through? Tell us what happened and we'll sort it."
+const PAYMENT_PLACEHOLDER = 'What happened when you tried to pay?'
+const PAYMENT_SUBJECT = 'Payment failed'
+
 const TYPES = [
   { id: 'feature', labelKey: 'feedback.featureRequest' },
   { id: 'bug', labelKey: 'feedback.bugReport' },
@@ -23,6 +34,9 @@ const TYPES = [
 
 export default function Feedback({ toast }) {
   const { t } = useI18n()
+  const [params] = useSearchParams()
+  const reason = params.get('reason') || ''
+  const paymentFailed = reason === PAYMENT_FAILED
   const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
   const sentHeadingRef = useRef(null)
   const retryRef = useRef(null)
@@ -34,10 +48,16 @@ export default function Feedback({ toast }) {
     pageFeedbackSend.settle()
     return () => { pageFeedbackSend.settle() }
   }, [])
-  const [type, setType] = useState(() => delivery.status === 'sent' ? 'feature' : delivery.draft?.type ?? 'feature')
-  const [message, setMessage] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.message ?? '')
-  const [subject, setSubject] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.subject ?? '')
-  const [contact, setContact] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.contact ?? '')
+  // A draft kept from a failed send comes back as it was; otherwise the form
+  // starts from the link: read once, for the first render, since the form is the
+  // user's after that.
+  const restored = delivery.status === 'sent' ? null : delivery.draft
+  const [type, setType] = useState(
+    () => restored?.type ?? (params.get('from') === 'support' || reason ? 'help' : 'feature'),
+  )
+  const [message, setMessage] = useState(() => restored?.message ?? '')
+  const [subject, setSubject] = useState(() => restored?.subject ?? (paymentFailed ? PAYMENT_SUBJECT : ''))
+  const [contact, setContact] = useState(() => restored?.contact ?? '')
   const [contactError, setContactError] = useState('')
   const submitted = delivery.status === 'sending' || delivery.status === 'sent'
   // The address carried by the submitted message.
@@ -135,7 +155,16 @@ export default function Feedback({ toast }) {
     // would be reported as one. Same shape, same cap — see utils/contactEmail.js
     // and the unit test that holds the two together.
     if (!accountEmail && !isContactEmail(contact)) {
-      setContactError('That email address does not look right. Correct it, or clear the field to send without one.')
+      setContactError(paymentFailed
+        ? 'That email address does not look right. Correct it so we can reply.'
+        : 'That email address does not look right. Correct it, or clear the field to send without one.')
+      contactRef.current?.focus()
+      return
+    }
+    // A payment problem can only be sorted out with an answer, so here the
+    // address is not optional for someone who is not signed in.
+    if (paymentFailed && !accountEmail && !contact.trim()) {
+      setContactError('Add your email so we can reply about your payment.')
       contactRef.current?.focus()
       return
     }
@@ -169,7 +198,7 @@ export default function Feedback({ toast }) {
     <div className="sec fb-page">
       <div className="sec-h">
         <h1>{t('feedback.title')}</h1>
-        <p>{t('feedback.subtitle')}</p>
+        <p>{paymentFailed ? PAYMENT_SUBTITLE : t('feedback.subtitle')}</p>
       </div>
       <div className="card fb-card">
         {sendError ? (
@@ -266,15 +295,21 @@ export default function Feedback({ toast }) {
                   className="fb-input"
                   value={contact}
                   onChange={e => { setContact(e.target.value); if (contactError) setContactError('') }}
-                  placeholder="you@example.com (optional)"
+                  placeholder={paymentFailed ? 'you@example.com' : 'you@example.com (optional)'}
                   autoComplete="email"
                   maxLength={CONTACT_EMAIL_MAX}
+                  required={paymentFailed}
+                  aria-required={paymentFailed}
                   aria-invalid={!!contactError}
                   aria-describedby={contactError ? 'fb-email-error' : 'fb-email-hint'}
                 />
                 {contactError
                   ? <p className="fb-error" id="fb-email-error" role="alert">{contactError}</p>
-                  : <p className="fb-hint" id="fb-email-hint">Optional — but without it there is no way to reply to you.</p>}
+                  : <p className="fb-hint" id="fb-email-hint">
+                      {paymentFailed
+                        ? 'Required — we need your email to reply.'
+                        : 'Optional — but without it there is no way to reply to you.'}
+                    </p>}
               </div>
             )}
 
@@ -286,7 +321,7 @@ export default function Feedback({ toast }) {
                 className="fb-textarea"
                 value={message}
                 onChange={e => { setMessage(e.target.value); if (error) setError('') }}
-                placeholder={t('feedback.messagePlaceholder')}
+                placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t('feedback.messagePlaceholder')}
                 maxLength={SUPPORT_MESSAGE_MAX}
                 aria-invalid={!!error}
                 aria-describedby={error ? 'fb-error' : undefined}
