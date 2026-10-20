@@ -87,11 +87,14 @@
 
 import { partsPresent } from './userHome.js'
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
+import { activeColour, deriveTints, hasTints, tintsStale } from './projectTints.js'
 
 /** Live under localStorage, not sessionStorage — see the resumability note. */
 export const GUIDE_KEY = 'vs-uikit-guide'
 /** Whether the orientation card has been shown once already. */
 export const GUIDE_SEEN_KEY = 'vs-uikit-guide-seen'
+/** Fired on window when a fresh start turns the flow on. See startGuide. */
+export const GUIDE_START_EVENT = 'vs-uikit-guide-start'
 
 /**
  * The ordered steps, and the four the Create mega-menu card already promises:
@@ -329,7 +332,14 @@ export const isGuideActive = (storage) => readFlag(storage).active
  * a resume, so a running flow keeps the steps already moved past.
  */
 export function startGuide(storage) {
-  if (!readFlag(storage).active) writeFlag([], storage)
+  if (readFlag(storage).active) return
+  writeFlag([], storage)
+  // A tool already on screen read the flag when it mounted, and a start from the
+  // page the flow begins on navigates to the path it is already at, which
+  // mounts nothing. The event is how that mounted guide hears the flag change.
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new Event(GUIDE_START_EVENT))
+  }
 }
 /** Leave it. The card stays "seen" so re-entering does not re-teach. */
 export const endGuide = (storage) => drop(GUIDE_KEY, storage)
@@ -350,6 +360,35 @@ export function acceptStep(id, storage) {
 export function clearAcceptedSteps(storage) {
   if (readFlag(storage).active) writeFlag([], storage)
 }
+/**
+ * What the project saved from this walkthrough must carry beyond the working
+ * design, so the project page reads the same parts the rail showed.
+ *
+ *  - `chosen`: the parts whose step was moved past with Next. A part kept on its
+ *    defaults is a choice, but its values match the defaults, so only a marker
+ *    can say so (see partsPresent in utils/userHome.js).
+ *  - `tints`: the project's fourth part is not a walkthrough step, it is made
+ *    from the colour. Once the colours are settled the ramp is derived with the
+ *    Colour Studio's own generator, unless the project already has one made from
+ *    its active colour (a ramp recorded as made from another colour is replaced;
+ *    one with no record is kept, its colour being unknown). Not
+ *    derived for a design with no palette work in it, so a half-built project
+ *    still reads as incomplete and keeps "Fill the gaps".
+ */
+export function savePatch(design, accepted = acceptedSteps()) {
+  const moved = new Set(Array.isArray(accepted) ? accepted : [])
+  const chosen = {}
+  for (const step of BRAND_KIT_STEPS) if (step.part && moved.has(step.id)) chosen[step.part] = true
+  const patch = {}
+  if (Object.keys(chosen).length) patch.chosen = chosen
+  const paletteSet = !!partsPresent({ ...withDefaults(design), chosen }).palette
+  if (paletteSet && (!hasTints(design) || tintsStale(design?.tints, activeColour(design)))) {
+    const tints = deriveTints(design)
+    if (tints) patch.tints = tints
+  }
+  return patch
+}
+
 /** Has the orientation card already been offered once? */
 export const introSeen = (storage) => read(GUIDE_SEEN_KEY, storage) === '1'
 /** Record that it has. Called when it is DISMISSED, never while rendering. */

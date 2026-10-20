@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useClipboard } from '../hooks/useClipboard'
 import { buildCSSVars } from '../utils/exportBuilder'
+import { tintsCurrent } from '../utils/projectTints'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
 import { UPGRADE_LINE, byRecent, projectSlots4, projectStatus, upgradeOffer } from '../components/userhome/workspace'
@@ -113,7 +114,12 @@ function ProjectDetail({ id, toast }) {
 
   const status = projectStatus(project)
   const { digest } = status
-  const slots = projectSlots4(project)
+  // A tint ramp recorded as made from the project's active colour says so; one
+  // from elsewhere (or with no record) keeps the plain step count.
+  const madeFromColours = tintsCurrent(project.design)
+  const slots = projectSlots4(project).map((s) => (
+    s.id === 'tints' && s.done && madeFromColours ? { ...s, detail: `${s.detail}, made from your colours` } : s
+  ))
   const complete = digest.done === digest.total
   const open = digest.total - digest.done
   const others = projects.filter((p) => p.id !== id).sort(byRecent)

@@ -205,6 +205,8 @@
    that stays fully usable behind it. */
 .bkit-card{position:sticky;bottom:96px;z-index:61;margin:0 auto;width:min(440px,calc(100% - 32px));background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:22px 24px;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .bkit-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.bkit-card[data-overlay-hidden]{animation:none;transition:opacity 120ms ease-out,visibility 0s;opacity:1}
+.bkit-card[data-overlay-hidden="true"]{opacity:0;visibility:hidden;pointer-events:none;transition:opacity 120ms ease-out,visibility 0s 120ms}
 .bkit-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
 .bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
 .bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--btn-radius);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard)}
@@ -397,9 +399,9 @@ html[data-reduced-motion="true"] :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close):active{transform:none}
 }
-html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:none}
+html[data-reduced-motion="true"] .bkit-card{animation:none;transform:none;transition:none}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .bkit-card{animation:none;opacity:1;transform:none}
+  html:not([data-reduced-motion="false"]) .bkit-card{animation:none;transform:none;transition:none}
 }
 /* SnapSlider — shared range control: snap points, double-click reset, and a
    click-to-edit value readout for custom values beyond the track range. */
