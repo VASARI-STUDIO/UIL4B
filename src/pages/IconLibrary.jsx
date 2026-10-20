@@ -2896,11 +2896,17 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Which weights the current scope can honour, and why not when it cannot.
   // "All packs" can show a weight when any pack the viewer may browse draws
-  // it; a single pack only when that pack does.
+  // it; a pack or group only when a pack within that scope does.
   const weightState = (w) => {
+    const collection = ICON_GROUPS[group]
+    const scope = collection
+      ? collection.packs.filter((p) => allowedPacks.includes(p) && (!pack || p === pack))
+      : pack && pack !== 'custom' ? [pack] : allowedPacks
+    if (collection && !scope.some((p) => Object.values(WEIGHT_RULES).some((rules) => p in rules))) {
+      return { ok: false, why: `${collection.label} come in one style` }
+    }
     if (w === 'regular') return { ok: true }
     const drawn = weightPacks(w)
-    const scope = pack && pack !== 'custom' ? [pack] : allowedPacks
     const ok = scope.some((p) => drawn.includes(p))
     const who = drawn.map((p) => WEIGHT_PACK_NAMES[p]).join(', ')
     return { ok, why: ok ? (pack ? '' : `Drawn by ${who}`) : `${ICON_WEIGHTS.find((x) => x.id === w).label} is drawn by ${who} only` }

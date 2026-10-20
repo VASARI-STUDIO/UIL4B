@@ -9,7 +9,7 @@
 // Served from the Iconify fixture (tests/user-sim/fixtures/iconify), whose
 // Phosphor collection carries a handful of each weight.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 
 // A REAL cell, not the loading skeleton: while the catalogue is in flight the
 // grid draws `.ic.ig-skel` placeholders that are visible but carry no
@@ -21,6 +21,46 @@ const cellNames = (page) => page.evaluate((sel) =>
   [...document.querySelectorAll(sel)].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')), REAL_CELL)
 
 test.describe('the icon weight segment', () => {
+  for (const width of [1440, 390]) {
+    test(`Flags keeps its group and grid when a disabled weight is clicked at ${width}px`, async ({ page }) => {
+      watch(page, 'someone browsing Flags and reaching for Bold')
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page, { plan: 'pro' })
+      await go(page, '/create/icons')
+      await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
+
+      const filters = page.getByRole('button', { name: /^Filters\b/ })
+      const sheet = page.getByRole('dialog', { name: 'Filters' })
+      const inPanel = await filters.isVisible()
+      if (inPanel) await filters.click()
+      const flags = page.getByRole('button', { name: 'Flags', exact: true })
+      if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
+      await flags.click()
+      if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+      else if (inPanel) await filters.click()
+
+      await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
+      const seg = width === 390
+        ? page.locator('.lbry-toolbar-quick .ig-weight')
+        : page.getByRole('group', { name: 'Icon weight' })
+      await expect(seg).toBeVisible()
+      for (const label of ['Regular', 'Bold', 'Fill', 'Duo']) {
+        const chip = seg.getByRole('button', { name: new RegExp(`^${label}`) })
+        await expect(chip).toHaveAttribute('aria-disabled', 'true')
+        await expect(chip).toHaveAccessibleName(new RegExp(`${label}.*Flags come in one style`))
+        await expect(chip).toHaveAttribute('title', 'Flags come in one style')
+      }
+      const before = await cellNames(page)
+      expect(before.length).toBeGreaterThan(0)
+      await seg.getByRole('button', { name: /^Bold/ }).click({ force: true })
+      expect(await cellNames(page)).toEqual(before)
+
+      if (inPanel) await filters.click()
+      if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
+      await expect(flags).toHaveAttribute('aria-pressed', 'true')
+    })
+  }
+
   test('Bold, Fill and Duo each show only the glyphs a pack drew at that weight', async ({ page }) => {
     watch(page, 'someone switching the icon library to Bold')
     await page.setViewportSize({ width: 1440, height: 900 })
