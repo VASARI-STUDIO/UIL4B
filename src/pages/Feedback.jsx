@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
-import { requestIdFor, postSupport } from '../utils/supportRequest'
+import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend, SUPPORT_MESSAGE_MAX } from '../utils/supportRequest'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -13,62 +14,19 @@ import '../styles/deferred/tool-shell.css'
 // by its scoping, not its position.
 import '../styles/pages/feedback.css'
 
-// The feedback form. Four surfaces across the app point here as THE way to
-// report a problem — including, now, the 404 page — so this is the last place
-// that should quietly fail or be hard to use.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT WAS WRONG (2026-08-11 site audit, P2 — see CHANGELOG.md)
-// ─────────────────────────────────────────────────────────────────────────────
-// Measured on the rendered page: ZERO <label> elements. The three `.seg-label`
-// divs look like labels and are not — so neither the subject nor the message
-// had an accessible name, and a screen-reader user met two unnamed fields with
-// only a placeholder, which is not a name and disappears the moment you type.
-//
-// The four type buttons carried no role, no aria-pressed and no aria-checked.
-// Which one was selected was conveyed by a CSS class and nothing else, so it
-// was invisible to assistive tech and to anyone who cannot distinguish the
-// active style (WCAG 1.4.1).
-//
-// An empty submit produced a toast — transient, unattached to the field, gone
-// before a slow reader reaches it — with no aria-invalid, no inline message and
-// no focus move.
-//
-// The audit also reported the submit itself failing. That was an artefact of
-// testing against `vite preview`, which does not run the Vercel functions, so
-// /api/support was a 404 there. The server path validates correctly; the client
-// already refuses to claim success on a failed request, which is the important
-// half and is kept.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT WAS WRONG (2026-09-11 quality pass, purpose & content scored 6)
-// ─────────────────────────────────────────────────────────────────────────────
-// A SIGNED-OUT SUBMISSION COULD NOT BE ANSWERED, AND NOTHING ON THE PAGE SAID
-// SO. The payload was built from `user?.email`, the form had no contact field,
-// and the confirmation read "Your submission has been received and will be
-// reviewed." Rendered signed out and captured off the real request, the body
-// was:
-//
-//   {"type":"feature","subject":"[feature] Submission","message":"…",
-//    "email":"","source":"feedback-form"}
-//
-// Nothing in those five fields identifies the sender. So a person who picked
-// the form's own "Help Request" type — a category that only makes sense if an
-// answer can come back — wrote a question into a channel that had no return
-// path, and was thanked as though a conversation had started.
-//
-// THE API ALREADY TOOK THE FIELD. `api/support.js` has validated `email`,
-// capped it at 254 and rendered it as the notification's `From:` line since it
-// was written; only the form never offered anywhere to type one. Nothing about
-// the request contract changes here — the same five fields go up (plus the
-// `requestId` every request carries, see utils/supportRequest.js), and one of
-// them can now be non-empty when the sender is signed out.
-//
-// Both branches are now stated rather than implied: the field says what a blank
-// costs BEFORE you submit, and the confirmation says which of the two happened
-// AFTER. A signed-in submitter gets "Sending as <email>", which is the sentence
-// FeedbackModal.jsx already shows in the same situation — one vocabulary for
-// one fact, rather than a second way of saying it.
+// Delivery acknowledges submission immediately and preserves failed drafts for retry.
+
+// Links from outside the app land here through /support (see legacyRoutes.js):
+// `?from=support` marks an arrival that wants help rather than to suggest
+// something, and `?reason=` or `?ref=` says why. Any reason or ref at all means
+// the same, so a link can name one without also naming `from`. A failed-payment
+// link may carry the marker in either parameter.
+const PAYMENT_FAILED = 'payment_failed'
+const PAYMENT_TITLE = 'Get help'
+const PAYMENT_CARD_LINK = 'Update your card'
+const PAYMENT_SUBTITLE = "Payment didn't go through? Tell us what happened and we'll sort it."
+const PAYMENT_PLACEHOLDER = 'What happened when you tried to pay?'
+const PAYMENT_SUBJECT = 'Payment failed'
 
 const TYPES = [
   { id: 'feature', labelKey: 'feedback.featureRequest' },
@@ -78,27 +36,89 @@ const TYPES = [
 ]
 
 export default function Feedback({ toast }) {
-  const [type, setType] = useState('feature')
-  const [message, setMessage] = useState('')
-  const [subject, setSubject] = useState('')
-  const [contact, setContact] = useState('')
+  const { t } = useI18n()
+  const [params] = useSearchParams()
+  const reason = params.get('reason') || params.get('ref') || ''
+  const paymentFailed = params.get('reason') === PAYMENT_FAILED || params.get('ref') === PAYMENT_FAILED
+  const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
+  const sentHeadingRef = useRef(null)
+  const retryRef = useRef(null)
+  const visibleRef = useRef(false)
+  // A landed message is not kept for the next visit: drop it on arriving (it may
+  // have landed while the page was away) and on leaving.
+  useLayoutEffect(() => {
+    visibleRef.current = true
+    pageFeedbackSend.settle()
+    return () => { pageFeedbackSend.settle() }
+  }, [])
+  // A draft kept from a failed send comes back as it was; otherwise the form
+  // starts from the link: read once, for the first render, since the form is the
+  // user's after that.
+  const restored = delivery.status === 'sent' ? null : delivery.draft
+  const [type, setType] = useState(
+    () => restored?.type ?? (params.get('from') === 'support' || reason ? 'help' : 'feature'),
+  )
+  const [message, setMessage] = useState(() => restored?.message ?? '')
+  const [subject, setSubject] = useState(() => restored?.subject ?? (paymentFailed ? PAYMENT_SUBJECT : ''))
+  const [contact, setContact] = useState(() => restored?.contact ?? '')
   const [contactError, setContactError] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-  // The address the LAST successful submission actually carried, so the
-  // confirmation reports what was sent rather than what is currently typed in a
-  // field that has since been cleared.
-  const [sentTo, setSentTo] = useState('')
-  const [busy, setBusy] = useState(false)
+  const submitted = delivery.status === 'sending' || delivery.status === 'sent'
+  // The address carried by the submitted message.
+  const [sentTo, setSentTo] = useState(() => delivery.body?.email || '')
+  const busy = delivery.status === 'sending'
   const [error, setError] = useState('')
+  const sendError = delivery.status === 'failed' ? t(delivery.result.status === 429 ? 'feedback.rateLimit' : 'feedback.submitError') : ''
   const messageRef = useRef(null)
   const contactRef = useRef(null)
   const typeRefs = useRef({})
   // Send bookkeeping, in refs so a second submit in the same task sees it:
   //   sendingRef  an attempt is in flight
   //   attemptRef  the request id in use and the exact content it was made for
-  const sendingRef = useRef(false)
-  const attemptRef = useRef(null)
-  const { t } = useI18n()
+  const sendingRef = useRef(delivery.status === 'sending')
+  const attemptRef = useRef(delivery.status === 'sent' ? null : delivery.draft?.attempt || null)
+  const bodyRef = useRef(delivery.body)
+  // Moves when the account changes under a mounted page (see App.jsx).
+  const accountEpochRef = useRef(pageFeedbackSend.epoch())
+  useEffect(() => {
+    return () => { visibleRef.current = false }
+  }, [])
+  useEffect(() => guardSupportUnload(busy || !!sendError), [busy, sendError])
+  useEffect(() => pageFeedbackSend.subscribe(() => {
+    const current = pageFeedbackSend.getSnapshot()
+    const draft = current.draft
+    bodyRef.current = current.body
+    sendingRef.current = current.status === 'sending'
+    attemptRef.current = current.status === 'sent' ? null : draft?.attempt || null
+    if (accountEpochRef.current !== pageFeedbackSend.epoch()) {
+      // A different account owns the page now: nothing typed or sent before carries over.
+      accountEpochRef.current = pageFeedbackSend.epoch()
+      setType('feature')
+      setSubject('')
+      setMessage('')
+      setContact('')
+      setSentTo('')
+      setError('')
+      setContactError('')
+      return
+    }
+    if (draft && current.status !== 'sent') {
+      setType(draft.type)
+      setContact(draft.contact)
+      setSubject(draft.subject)
+      setMessage(draft.message)
+    } else if (current.status === 'sent') {
+      setSubject('')
+      setMessage('')
+      setContact('')
+    }
+    if (current.body) setSentTo(current.body.email)
+  }), [])
+  useEffect(() => {
+    if (!visibleRef.current) return
+    if (delivery.status === 'failed') retryRef.current?.focus()
+    else if (delivery.status === 'sending' || delivery.status === 'sent') sentHeadingRef.current?.focus()
+  }, [delivery.status])
+
   const { user } = useAuth()
 
   // Signed in, the account's address goes up and always has. Signed out, the
@@ -121,7 +141,19 @@ export default function Feedback({ toast }) {
     typeRefs.current[id]?.focus()
   }
 
-  const submit = async (e) => {
+  const send = (body, retry = true) => {
+    const draft = { type, subject, message, contact, attempt: attemptRef.current }
+    return pageFeedbackSend.send(body, draft, {
+      retry,
+      visible: () => visibleRef.current,
+      notify: (status, onAction) => toast(
+        t(status === 429 ? 'feedback.rateLimit' : 'feedback.submitError'), 'error',
+        { action: { label: t('feedback.tryAgain'), onAction } },
+      ),
+    })
+  }
+
+  const submit = (e) => {
     e.preventDefault()
     // A ref, not `busy`: two submit events in the same task both see the state
     // from before the first one re-rendered.
@@ -140,15 +172,22 @@ export default function Feedback({ toast }) {
     // would be reported as one. Same shape, same cap — see utils/contactEmail.js
     // and the unit test that holds the two together.
     if (!accountEmail && !isContactEmail(contact)) {
-      setContactError('That email address does not look right. Correct it, or clear the field to send without one.')
+      setContactError(paymentFailed
+        ? 'That email address does not look right. Correct it so we can reply.'
+        : 'That email address does not look right. Correct it, or clear the field to send without one.')
+      contactRef.current?.focus()
+      return
+    }
+    // A payment problem can only be sorted out with an answer, so here the
+    // address is not optional for someone who is not signed in.
+    if (paymentFailed && !accountEmail && !contact.trim()) {
+      setContactError('Add your email so we can reply about your payment.')
       contactRef.current?.focus()
       return
     }
 
-    sendingRef.current = true
     setError('')
     setContactError('')
-    setBusy(true)
 
     const email = accountEmail || contact.trim()
     const payload = {
@@ -168,57 +207,61 @@ export default function Feedback({ toast }) {
     // the same message updates this record rather than adding another.
     saveFeedback({ ...payload, id: requestId })
 
-    const ok = await postSupport({ ...payload, requestId })
-
-    sendingRef.current = false
-    setBusy(false)
-
-    // Never show success if the request didn't land — a silently-lost support
-    // request is the worst failure mode for a feedback channel.
-    if (!ok) {
-      const msg = t('feedback.submitError') || 'Something went wrong sending that. Please check your connection and try again.'
-      setError(msg)
-      toast(msg)
-      return
-    }
-
-    attemptRef.current = null
-    toast(t('feedback.thankYou'))
-    setMessage('')
-    setSubject('')
-    setSentTo(email)
-    setSubmitted(true)
+    bodyRef.current = { ...payload, requestId }
+    void send(bodyRef.current)
   }
 
   return (
     <div className="sec fb-page">
       <div className="sec-h">
-        <h1>{t('feedback.title')}</h1>
-        <p>{t('feedback.subtitle')}</p>
+        <h1>{paymentFailed ? PAYMENT_TITLE : t('feedback.title')}</h1>
+        <p>{paymentFailed ? PAYMENT_SUBTITLE : t('feedback.subtitle')}</p>
+        {/* Billing lives in Settings, which needs an account, so only a
+            signed-in visitor is sent there. */}
+        {paymentFailed && accountEmail && (
+          <p className="fb-fix">
+            {/* The Subscription section holds billing; without the state
+                Settings opens on whichever section was used last. */}
+            <Link className="btn btn-s" to="/settings" state={{ section: 'support' }}>{PAYMENT_CARD_LINK}</Link>
+          </p>
+        )}
       </div>
       <div className="card fb-card">
-        {submitted ? (
+        {sendError ? (
+          <div className="fb-done">
+            <p className="fb-error" role="alert" style={{ marginBottom: 'var(--s-3)' }}>{sendError}</p>
+            <textarea className="fb-textarea" aria-label={t('feedback.yourMessage')} value={message} readOnly />
+            <div className="fb-success-actions fb-again">
+              <button type="button" className="btn btn-accent" ref={retryRef} onClick={() => { void send(bodyRef.current, false) }}>{t('feedback.tryAgain')}</button>
+              <button type="button" className="btn" onClick={() => {
+                recoverFeedbackDraft(bodyRef, attemptRef)
+                pageFeedbackSend.edit()
+                requestAnimationFrame(() => messageRef.current?.focus())
+              }}>{t('feedback.editMessage')}</button>
+            </div>
+          </div>
+        ) : submitted ? (
           <div className="fb-done" role="status">
             <div className="fb-done-mark" aria-hidden="true">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 className="fb-done-title">{t('feedback.thankYou')}</h2>
-            <p className="fb-done-sub">Your submission has been received and will be reviewed.</p>
+            <h2 className="fb-done-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h2>
+            <p className="fb-done-sub">{busy ? t('feedback.sendingMessage') : t('feedback.sentMessage')}</p>
             {/* Which of the two things just happened. Neither line promises a
                 reply — whether one is written is a person's decision, not the
                 code's — they state whether one is POSSIBLE, which is a fact
                 about the five fields that were sent. */}
             <p className="fb-done-reply">
               {sentTo
-                ? <>A reply can reach you at <strong>{sentTo}</strong>.</>
-                : 'No email address went with it, so this one is one-way.'}
+                ? t('feedback.replyAddress', { email: sentTo })
+                : t('feedback.noReplyAddress')}
             </p>
-            {/* Was on a 4s timer that swapped the form back underneath you.
-                Leaving it up until dismissed means the confirmation is still
-                there when you look back at the screen. */}
-            <button className="btn btn-s fb-again" onClick={() => setSubmitted(false)}>Submit another</button>
+            <button className="btn btn-s fb-again" disabled={busy} onClick={() => {
+              pageFeedbackSend.reset()
+              requestAnimationFrame(() => messageRef.current?.focus())
+            }}>{t('feedback.submitAnother')}</button>
           </div>
         ) : (
           <form onSubmit={submit} className="fb-form" noValidate>
@@ -278,15 +321,21 @@ export default function Feedback({ toast }) {
                   className="fb-input"
                   value={contact}
                   onChange={e => { setContact(e.target.value); if (contactError) setContactError('') }}
-                  placeholder="you@example.com (optional)"
+                  placeholder={paymentFailed ? 'you@example.com' : 'you@example.com (optional)'}
                   autoComplete="email"
                   maxLength={CONTACT_EMAIL_MAX}
+                  required={paymentFailed}
+                  aria-required={paymentFailed}
                   aria-invalid={!!contactError}
                   aria-describedby={contactError ? 'fb-email-error' : 'fb-email-hint'}
                 />
                 {contactError
                   ? <p className="fb-error" id="fb-email-error" role="alert">{contactError}</p>
-                  : <p className="fb-hint" id="fb-email-hint">Optional — but without it there is no way to reply to you.</p>}
+                  : <p className="fb-hint" id="fb-email-hint">
+                      {paymentFailed
+                        ? 'Required — we need your email to reply.'
+                        : 'Optional — but without it there is no way to reply to you.'}
+                    </p>}
               </div>
             )}
 
@@ -298,7 +347,8 @@ export default function Feedback({ toast }) {
                 className="fb-textarea"
                 value={message}
                 onChange={e => { setMessage(e.target.value); if (error) setError('') }}
-                placeholder={t('feedback.messagePlaceholder')}
+                placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t('feedback.messagePlaceholder')}
+                maxLength={SUPPORT_MESSAGE_MAX}
                 aria-invalid={!!error}
                 aria-describedby={error ? 'fb-error' : undefined}
               />

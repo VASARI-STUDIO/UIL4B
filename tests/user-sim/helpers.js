@@ -296,6 +296,9 @@ function seedProject(i, design) {
  *              user see when sync fails" was unreachable from a browser test —
  *              and that is the whole of `project-sync-single-document`.
  *              Nothing is denied unless a spec asks, so no existing test moves.
+ *   slowReads  [{ path, ms }] — every getDoc whose path contains `path` answers
+ *              `ms` late, with the real data. For "what does the app decide
+ *              before the account has answered".
  *   projectTombstones  deletes this account already made, keyed by project id
  *              -> ISO timestamp, seeded into the same localStorage key
  *              ProjectContext writes them to.
@@ -317,6 +320,7 @@ export async function signIn(page, opts = {}) {
     docs = {},
     claims = {},
     deny = [],
+    slowReads = [],
     authFail = null,
     projectTombstones = null,
     displayName,
@@ -352,6 +356,7 @@ export async function signIn(page, opts = {}) {
     lateSignIn,
     claims,
     deny,
+    slowReads,
     authFail,
     docs: {
       [`users/${uid}`]: {

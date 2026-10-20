@@ -66,6 +66,11 @@ const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,im
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
 
 const LARGE_FILE_BYTES = 50 * 1024 * 1024 // 50 MB warning threshold
+const MAX_FRAMES = 500 // frames per Extract run: a long clip at a high FPS can't freeze the tab
+// How many frames a run over [from, to) makes at `fps` (before the cap): one per
+// 1/fps step from `from`, so a 10.5 s clip at 1 fps is 11. The run, its toast and
+// the estimate line all read this one number.
+const frameCountFor = (from, to, fps) => Math.max(1, Math.ceil((to - from) * Math.max(0.1, Math.min(30, fps)) - 1e-9))
 
 const QUALITY_SNAPS = [25, 50, 75, 90]
 const QUALITY_DEFAULT = 90
@@ -1000,6 +1005,37 @@ function VideoConvert({ toast }) {
 }
 
 // ── Mode 4: Video → Frames (HTML5 video + canvas seek) ───────────────────────
+
+// Waits for a media event, but lets the run's AbortSignal cut the wait short so
+// a pending seek or load can't keep a cancelled or unmounted run alive.
+// `attach(ok, fail)` wires the event handlers; the timeout is optional.
+function waitFor(signal, attach, timeoutMs = 0, timeoutMessage = 'Timed out') {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return }
+    let timer = 0
+    const settle = { onAbort: null }
+    const finish = (fn, value) => {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', settle.onAbort)
+      fn(value)
+    }
+    settle.onAbort = () => finish(reject, new DOMException('Aborted', 'AbortError'))
+    signal.addEventListener('abort', settle.onAbort, { once: true })
+    if (timeoutMs) timer = setTimeout(() => finish(reject, new Error(timeoutMessage)), timeoutMs)
+    attach(() => finish(resolve), err => finish(reject, err))
+  })
+}
+
+// Stops the decoder and drops the file reference so the element can be collected.
+function releaseVideo(video) {
+  video.onloadeddata = null
+  video.onseeked = null
+  video.onerror = null
+  video.pause()
+  video.removeAttribute('src')
+  video.load()
+}
+
 function VideoFrames({ toast }) {
   const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
@@ -1036,6 +1072,36 @@ function VideoFrames({ toast }) {
     u.frames.forEach(f => URL.revokeObjectURL(f.url))
   }, [])
 
+  // One abort mechanism for the running extraction: the AbortController of the
+  // current run, or null when idle. The reason says why it was aborted:
+  // 'cancel' (button) or 'disposed' (unmount / another video picked; see disposedRef).
+  const abortRef = useRef(null)
+  // Runs whose page or file is gone. An AbortController keeps only its FIRST
+  // abort reason, so Cancel followed by leaving would read as a plain cancel;
+  // this records leave/newfile on its own and abandoned() reads it, not the reason.
+  const disposedRef = useRef(new WeakSet())
+  const disposeRun = useCallback(() => {
+    if (!abortRef.current) return false
+    disposedRef.current.add(abortRef.current)
+    abortRef.current.abort('disposed')
+    return true
+  }, [])
+  const refocusExtract = useRef(false)
+  const extractBtnRef = useRef(null)
+  useEffect(() => disposeRun, [disposeRun])
+  // The Cancel button unmounts when the run ends, so hand focus back to Extract.
+  useEffect(() => {
+    if (extracting || !refocusExtract.current) return
+    refocusExtract.current = false
+    extractBtnRef.current?.focus()
+  }, [extracting])
+
+  const cancelExtract = () => {
+    if (!abortRef.current) return
+    refocusExtract.current = true
+    abortRef.current.abort('cancel')
+  }
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
@@ -1044,6 +1110,11 @@ function VideoFrames({ toast }) {
       return
     }
     if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow', 'info')
+    // A run in flight belongs to the old file: stop it before its source URL goes.
+    if (disposeRun()) {
+      abortRef.current = null
+      setExtracting(false)
+    }
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     frames.forEach(fr => URL.revokeObjectURL(fr.url))
     setFile(f)
@@ -1053,7 +1124,7 @@ function VideoFrames({ toast }) {
     setProgress(0)
     setRangeStart(0)
     setRangeEnd(null)
-  }, [srcUrl, frames, toast])
+  }, [srcUrl, frames, toast, disposeRun])
 
   const onLoadedMeta = useCallback(() => {
     const v = videoRef.current
@@ -1061,7 +1132,12 @@ function VideoFrames({ toast }) {
   }, [])
 
   const extract = useCallback(async () => {
-    if (!srcUrl || !meta || extracting) return
+    // abortRef is the real "already running" guard: `extracting` is stale for a
+    // second click in the same tick.
+    if (!srcUrl || !meta || extracting || abortRef.current) return
+    const ac = new AbortController()
+    const { signal } = ac
+    abortRef.current = ac
     setExtracting(true)
     setProgress(0)
     // A second extraction replaces the first: revoke its thumbnails' blob: URLs
@@ -1069,78 +1145,97 @@ function VideoFrames({ toast }) {
     setFrames(prev => { prev.forEach(fr => URL.revokeObjectURL(fr.url)); return [] })
 
     const video = document.createElement('video')
-    video.muted = true
-    video.preload = 'auto'
-    video.src = srcUrl
-    try {
-      await new Promise((resolve, reject) => {
-        video.onloadeddata = resolve
-        video.onerror = () => reject(new Error('Could not load video'))
-      })
-    } catch (err) {
-      toast(err.message, 'error')
-      setExtracting(false)
-      return
-    }
-
-    const outW = Math.max(1, Math.round(meta.width * scale))
-    const outH = Math.max(1, Math.round(meta.height * scale))
-    const canvas = document.createElement('canvas')
-    canvas.width = outW
-    canvas.height = outH
-    const ctx = canvas.getContext('2d')
-
-    const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
-    const q = fmt.lossy ? quality / 100 : undefined
-
-    const step = 1 / Math.max(0.1, Math.min(30, fps))
-    const from = Math.max(0, Math.min(rangeStart || 0, meta.duration))
-    const to = rangeEnd == null ? meta.duration : Math.max(from, Math.min(rangeEnd, meta.duration))
-    const total = Math.max(1, Math.floor((to - from) / step))
     const out = []
-    let t = from, idx = 0
-    let unsupported = false
-    let stopped = null
-
+    // Leaving the page or swapping the file means nobody can see this run any
+    // more: no state, no toast, and the frames it made have no owner to revoke them.
+    const abandoned = () => disposedRef.current.has(ac)
+    const abandon = () => out.forEach(fr => URL.revokeObjectURL(fr.url))
     try {
-      while (t < to && idx < total + 1) {
-        video.currentTime = t
-        await new Promise((resolve, reject) => {
-          const to = setTimeout(() => reject(new Error('Seek timed out')), 8000)
-          video.onseeked = () => { clearTimeout(to); resolve() }
+      video.muted = true
+      video.preload = 'auto'
+      video.src = srcUrl
+      try {
+        await waitFor(signal, (ok, fail) => {
+          video.onloadeddata = ok
+          video.onerror = () => fail(new Error('Could not load video'))
         })
-        // JPEG has no alpha — fill white so transparent areas don't go black.
-        if (fmt.id === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, outW, outH) }
-        else ctx.clearRect(0, 0, outW, outH)
-        ctx.drawImage(video, 0, 0, outW, outH)
-        const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
-        // null blob => this browser can't encode the chosen format. Bail out of
-        // the batch with a clear error rather than silently producing 0 frames.
-        if (!blob) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
-        out.push({
-          blob, url: URL.createObjectURL(blob),
-          name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
-          time: t, size: blob.size,
-        })
-        idx++
-        t += step
-        setProgress(Math.round((idx / total) * 100))
+      } catch (err) {
+        if (abandoned()) return
+        if (signal.aborted) {
+          setExtracting(false)
+          toast('Extraction cancelled', 'info')
+          return
+        }
+        toast(err.message, 'error')
+        setExtracting(false)
+        return
       }
-    } catch (err) {
-      stopped = err.message
-    }
 
-    revealNext.current = out.length > 0
-    setFrames(out)
-    setExtracting(false)
-    setProgress(100)
-    // ONE toast, chosen after the loop. The catch used to toast "Extracted N
-    // frames (stopped: …)" and then this line toasted "Extracted N frames" in
-    // the same tick — the second replaced the first before it painted, so a
-    // run that stopped early reported itself as a clean success.
-    if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
-    else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
-    else toast(`Extracted ${out.length} frames`)
+      const outW = Math.max(1, Math.round(meta.width * scale))
+      const outH = Math.max(1, Math.round(meta.height * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d')
+
+      const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
+      const q = fmt.lossy ? quality / 100 : undefined
+
+      const step = 1 / Math.max(0.1, Math.min(30, fps))
+      const from = Math.max(0, Math.min(rangeStart || 0, meta.duration))
+      const to = rangeEnd == null ? meta.duration : Math.max(from, Math.min(rangeEnd, meta.duration))
+      const wanted = frameCountFor(from, to, fps) // the same count the estimate line shows
+      const cap = Math.min(MAX_FRAMES, wanted)
+      let t = from, idx = 0
+      let unsupported = false
+      let stopped = null
+
+      try {
+        while (t < to && idx < cap && !signal.aborted) {
+          const at = t
+          await waitFor(signal, ok => { video.onseeked = ok; video.currentTime = at }, 8000, 'Seek timed out')
+          // JPEG has no alpha — fill white so transparent areas don't go black.
+          if (fmt.id === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, outW, outH) }
+          else ctx.clearRect(0, 0, outW, outH)
+          ctx.drawImage(video, 0, 0, outW, outH)
+          const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
+          // toBlob can't be interrupted; drop its result if the run ended meanwhile.
+          if (signal.aborted) break
+          // null blob => this browser can't encode the chosen format. Bail out of
+          // the batch with a clear error rather than silently producing 0 frames.
+          if (!blob) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
+          out.push({
+            blob, url: URL.createObjectURL(blob),
+            name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
+            time: t, size: blob.size,
+          })
+          idx++
+          t += step
+          setProgress(Math.round((idx / cap) * 100))
+        }
+      } catch (err) {
+        stopped = err.message
+      }
+
+      if (abandoned()) { abandon(); return }
+
+      revealNext.current = out.length > 0
+      setFrames(out)
+      setExtracting(false)
+      setProgress(100)
+      // ONE toast, chosen after the loop. The catch used to toast "Extracted N
+      // frames (stopped: …)" and then this line toasted "Extracted N frames" in
+      // the same tick — the second replaced the first before it painted, so a
+      // run that stopped early reported itself as a clean success.
+      if (signal.aborted) toast(out.length ? `Extraction cancelled — kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
+      else if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
+      else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
+      else if (wanted > MAX_FRAMES && idx >= MAX_FRAMES) toast(`Extracted ${out.length} frames, the most one run makes`, 'info')
+      else toast(`Extracted ${out.length} frames`)
+    } finally {
+      releaseVideo(video)
+      if (abortRef.current === ac) abortRef.current = null
+    }
   }, [srcUrl, meta, fps, scale, format, quality, rangeStart, rangeEnd, extracting, toast])
 
   const downloadAll = useCallback(async () => {
@@ -1161,7 +1256,7 @@ function VideoFrames({ toast }) {
 
   const estFrom = meta ? Math.max(0, Math.min(rangeStart || 0, meta.duration)) : 0
   const estTo = meta ? (rangeEnd == null ? meta.duration : Math.max(estFrom, Math.min(rangeEnd, meta.duration))) : 0
-  const est = meta ? Math.max(1, Math.floor((estTo - estFrom) * Math.max(0.1, Math.min(30, fps)))) : 0
+  const est = meta ? frameCountFor(estFrom, estTo, fps) : 0
   const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
 
   return (
@@ -1181,7 +1276,7 @@ function VideoFrames({ toast }) {
                 ['Size', formatBytes(file?.size)],
                 ['Duration', formatTime(meta.duration)],
                 ['Resolution', `${meta.width}×${meta.height}px`],
-                ['Est. frames', est.toLocaleString()],
+                ['Est. frames', est > MAX_FRAMES ? `${MAX_FRAMES} of ~${est.toLocaleString()}` : est.toLocaleString()],
               ] : [['File', file?.name], ['Size', formatBytes(file?.size)]]}
             />
           </div>
@@ -1237,15 +1332,23 @@ function VideoFrames({ toast }) {
                 <p className="fc-note">
                   {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} · ~{est.toLocaleString()} frames
                 </p>
+                {est > MAX_FRAMES && (
+                  <p className="fc-note fc-note--warn">
+                    Stops at {MAX_FRAMES} frames, at {formatTime(estFrom + MAX_FRAMES / fps)}. Lower the FPS or shorten the range to get the rest.
+                  </p>
+                )}
               </div>
             </aside>
             <div className="fc-actionbar fc-actions">
-              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
+              <button type="button" ref={extractBtnRef} className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
                 {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
               </button>
               {extracting && (
-                <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                  <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                <div className="fc-job">
+                  <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                    <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                  </div>
+                  <button type="button" className="fc-btn fc-btn--quiet" onClick={cancelExtract}>Cancel</button>
                 </div>
               )}
             </div>

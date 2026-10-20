@@ -138,9 +138,13 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
 
 /**
  * The whole argument list for a video clip. `start` and `length` are seconds;
- * a length of 0 means "to the end". Width is clamped, and the height is left
- * to ffmpeg as `-2`: the aspect ratio held and the result rounded to an even
- * number, which H.264 in yuv420p requires and every other format tolerates.
+ * a length of 0 means "to the end". Both sides are capped at MAX_ANIMATION_SIDE
+ * without knowing the source: the width is the smaller of the request and
+ * `iw*MAX/ih` (so a portrait clip's height cannot pass the cap), floored to even,
+ * and the height is left to ffmpeg as `-2`: the aspect ratio held and the result
+ * rounded to an even number, which H.264 in yuv420p requires and every other
+ * format tolerates. The comma inside min() is escaped because the filters are
+ * joined with ','.
  */
 export function videoToAnimationArgs({ format, input, fps, width, plays = 0, quality = 'medium', start = 0, length = 0 }) {
   const fmt = findFormat(format)
@@ -149,7 +153,7 @@ export function videoToAnimationArgs({ format, input, fps, width, plays = 0, qua
   if (start > 0) args.push('-ss', String(start))
   args.push('-i', input)
   if (length > 0) args.push('-t', String(length))
-  const filters = [`fps=${clampFps(fps)}`, `scale=${w}:-2:flags=lanczos`]
+  const filters = [`fps=${clampFps(fps)}`, `scale=trunc(min(${w}\\,iw*${MAX_ANIMATION_SIDE}/ih)/2)*2:-2:flags=lanczos`]
   return [...args, ...encoderArgs(fmt, { quality, plays, filters })]
 }
 

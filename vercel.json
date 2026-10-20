@@ -245,7 +245,7 @@
     },
     {
       "source": "/support",
-      "destination": "/feedback",
+      "destination": "/feedback?from=support",
       "permanent": true
     },
     {

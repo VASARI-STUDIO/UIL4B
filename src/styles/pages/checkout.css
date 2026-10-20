@@ -71,6 +71,20 @@
    before paying (nothing charged today). --ok-strong on the 12% --ok wash. */
 .checkout-page .checkout-trial { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 12px; border-radius: var(--radius); background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok-strong); font-size: 12.5px; font-weight: 560; line-height: 1.4; }
 .checkout-page .checkout-trial svg { flex: 0 0 auto; }
+/* Renewal terms and consent, in the form panel directly above the payment
+   form. The renewal sentence is primary ink: it is what the buyer is agreeing
+   to pay. It reserves two lines, and three where the longest wording (the
+   yearly trial sentence) wraps to three: in one column, and in the narrow band
+   just above it where the two columns first leave the panel little width. So
+   a period change that swaps its wording does not move the payment form. The
+   Terms line stays secondary. */
+.checkout-page .checkout-disclosure { margin: 0 0 16px; }
+.checkout-page .checkout-renewal { min-height: 3em; margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: var(--t0); }
+.checkout-page .checkout-terms { margin: 6px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
+.checkout-page .checkout-terms a { padding-block: 4px; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+@media (hover: hover) {
+  .checkout-page .checkout-terms a:hover { color: var(--t0); }
+}
 .checkout-page .checkout-features { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--co-hair); list-style: none; }
 .checkout-page .checkout-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
 .checkout-page .checkout-check { flex-shrink: 0; margin-top: 3px; color: var(--accent-mid); }
@@ -155,10 +169,17 @@
 
 .checkout-page :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
+/* Two columns, panel at its narrowest: the yearly trial sentence needs three
+   lines until about 790px. The band runs to 860px for room (a longer amount
+   adds characters); wider, two lines hold. */
+@media (min-width: 761px) and (max-width: 860px) {
+  .checkout-page .checkout-renewal { min-height: 4.5em; }
+}
 @media (max-width: 760px) {
   .checkout-page .checkout-grid { grid-template-columns: minmax(0, 1fr); }
   .checkout-page .checkout-summary { position: static; }
   .checkout-page .checkout-back { min-height: 44px; }
+  .checkout-page .checkout-renewal { min-height: 4.5em; }
   /* Signed out, the sign-in moves up into the summary card, above the
      features list, and the panel that held it goes. */
   .checkout-page .checkout-form.is-signed-out { display: none; }

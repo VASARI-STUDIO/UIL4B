@@ -1744,7 +1744,9 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-success-icon{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:color-mix(in srgb,var(--ok) 12%,transparent);margin-bottom:16px}
 .fb-success-title{font-size:18px;font-weight:700;color:var(--t0);margin-bottom:8px}
 .fb-success-text{font-size:13px;color:var(--t1);line-height:1.7;margin-bottom:20px;max-width:320px}
-.fb-success-actions{display:flex;gap:8px}
+.fb-success-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px}
+.fb-success-actions.fb-again{margin-top:16px}
+.fb-textarea[readonly]{resize:none}
 @media(max-width:480px){
   .fb-overlay{padding:0;align-items:flex-end}
   .fb-modal{max-width:100%;max-height:92dvh;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-bottom:none}
@@ -1826,12 +1828,21 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 .onb-greeting{font-size:14px;color:var(--t2);margin-bottom:6px}
 .onb-greeting em{font-style:normal;color:var(--t0);font-weight:600}
+/* The verification line carries an address with no break points, so it wraps
+   anywhere; a failed send is the one thing here that has to be read, so it
+   takes the normal text colour rather than the muted greeting one. */
+.onb-verify-line{overflow-wrap:anywhere}
+.onb-verify-line--failed{color:var(--t0)}
 .onb-q{font-family:var(--display);font-size:clamp(22px,3vw,28px);font-weight:500;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px;color:var(--t0)}
 .onb-sub{font-size:13px;color:var(--t2);margin-bottom:20px}
 /* The question is a focus TARGET, not a control: Onboarding focuses it on each
    step so the new question is announced. Same rule as .ui-modal[tabindex="-1"]
    further down; the options below keep their rings. */
 .onb-q[tabindex="-1"]:focus-visible{outline:none}
+/* <main> takes focus from script (Dismiss, the skip link) so focus stays on the
+   page; it is a landing point, not a control, and a ring round the whole page is
+   noise. The first real control inside keeps its ring. */
+main[tabindex="-1"]:focus-visible{outline:none}
 
 .onb-options{display:flex;flex-direction:column;gap:8px}
 .onb-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--dur-2) var(--ease-out);text-align:left}
@@ -3110,6 +3121,11 @@ html.lenis{scroll-behavior:auto!important}
    each popover; padding is overridden because the instrument bleeds through it. */
 .cpk-pop{display:flex;flex-direction:column;gap:var(--s-2);width:244px}
 .pop.cpk-pop{padding:var(--s-3)}
+.pop.cpk-pop[data-pop-fixed="true"]{position:fixed;inset:auto;left:var(--select-left,8px);top:var(--select-top,0px);z-index:var(--cpk-layer,130)}
+/* Opened upward: pin the BOTTOM edge to the line above the trigger, so a panel
+   that grows after it opens (the Recent row) grows up, never over its trigger.
+   `translate` is its own property, so the entry animation's transform is kept. */
+.pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"]{top:var(--select-anchor-top,0px);translate:0 -100%}
 /* Which colour is being edited, in the shared .pop-head voice. */
 .cpk-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);padding:0}
 .cpk-head-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -5126,4 +5142,46 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .sync-notice{flex-wrap:wrap;row-gap:8px}
   .sync-notice-msg{flex:1 1 calc(100% - 37px)}
   .sync-notice-actions{margin-left:auto}
+}
+/* THE VERIFY-YOUR-EMAIL ROW reuses the sync notice and changes only what an
+   address needs. It sits third in the strip, so a hairline separates it from a
+   row above. The address can be long and has no break points: it wraps
+   anywhere rather than pushing the button off the row. */
+.notice-stack>.verify-notice:not(:first-child){border-top:1px solid var(--bh)}
+/* ONE HEIGHT IN EVERY STATE. The bar keeps the same height whatever it says
+   (idle, sending, sent, failed, verified) at a given width: 62px above 520px
+   (12 + two 13px lines or the 38px button + 12) and 54px at 520px and below
+   (8 + 38 + 8). The message is held to two lines as a backstop, and an address
+   is shortened with an ellipsis rather than allowed to push the bar taller. */
+.verify-notice{align-items:center;min-height:62px}
+.verify-notice .sync-notice-msg{overflow-wrap:anywhere;min-height:1.45em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.verify-notice .verify-addr{display:inline-block;max-width:28ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+/* The idle line carries more words round the address, so it takes a shorter cap to stay inside the two-line clamp (full address in the title). */
+.verify-notice .verify-addr--idle{max-width:18ch}
+/* The failed state wears the error tile rather than the envelope. */
+.verify-notice[data-verify-state="failed"] .sync-notice-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
+/* Resend stays on the row and stays focusable while it sends and while it
+   cools down; aria-disabled marks it as not usable without taking it out of the
+   tab order. The countdown is in the label, so its digits keep a fixed width. */
+.verify-notice .btn{white-space:nowrap;font-variant-numeric:tabular-nums}
+.verify-notice .btn[aria-disabled="true"],.verify-notice .btn[aria-disabled="true"]:hover,.verify-notice .btn[aria-disabled="true"]:active{opacity:.55;cursor:not-allowed;background:var(--card);border-color:var(--border);color:var(--t0)}
+/* ON A PHONE THE ROW STAYS ON ONE LINE. The wrap above exists for a server
+   sentence of unknown length; this row's copy is known, so the second sentence
+   goes and the first takes the space beside the button instead of the full
+   row above it. */
+@media (max-width:520px){
+  .verify-notice{flex-wrap:nowrap;min-height:54px;padding-block:8px}
+  .verify-notice .sync-notice-detail,.verify-notice .verify-to{display:none}
+  .verify-notice .sync-notice-msg{flex:1 1 auto}
+  .verify-notice .sync-notice-actions{margin-left:0;gap:12px}
+}
+/* The 24px Dismiss and the short Resend get 44px targets without growing the
+   bar: each pad hangs out of its button through a pseudo-element. Dismiss's
+   reaches into the row padding on the right and the gap beside Resend on the
+   left; Resend's is vertical only, so the two zones never overlap. On a phone
+   by width, and on any touch screen above that (a tablet). */
+@media (max-width:520px),(pointer:coarse){
+  .verify-notice .btn-s,.verify-notice .sync-notice-dismiss{position:relative}
+  .verify-notice .btn-s::after{content:"";position:absolute;inset:-8px 0}
+  .verify-notice .sync-notice-dismiss::after{content:"";position:absolute;inset:-10px -14px -10px -6px}
 }

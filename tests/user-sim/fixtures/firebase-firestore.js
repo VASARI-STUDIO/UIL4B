@@ -54,7 +54,7 @@ import {
   increment as realIncrement,
   deleteField as realDeleteField,
 } from 'firebase/firestore'
-import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor } from './test-session.js'
+import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor, readDelayFor } from './test-session.js'
 
 export * from 'firebase/firestore'
 
@@ -124,6 +124,11 @@ export function getDoc(reference) {
   if (!isFakeRef(reference)) return realGetDoc(reference)
   const denied = deniedFor(reference.path, 'get')
   if (denied) return Promise.reject(denied)
+  const wait = readDelayFor(reference.path)
+  if (wait > 0) {
+    // The answer is read when it is delivered, not when it was asked for.
+    return new Promise((resolve) => setTimeout(() => resolve(snapshot(reference.store, reference.path)), wait))
+  }
   return Promise.resolve(snapshot(reference.store, reference.path))
 }
 

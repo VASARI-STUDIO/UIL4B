@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { processAvatarImage } from '../utils/imageProcessing'
 import { useAppearance } from '../contexts/AppearanceContext'
@@ -9,6 +9,9 @@ import { useProPrice, usePrices, refreshPrices } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { requestAccountReset } from '../utils/accountEvents'
+import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import useVerificationRecheck from '../hooks/useVerificationRecheck'
 // Settings → Subscription says exactly what /plans says: the same lines, the
 // same cadences, the same per-month amounts and trial terms, from the one
 // module /plans reads. See src/config/planFacts.js for why.
@@ -376,11 +379,6 @@ function emailErrorText(e) {
   return EMAIL_ERRORS[e?.code] || 'Your email could not be changed. Nothing was changed. Please try again.'
 }
 
-const VERIFY_ERRORS = {
-  'auth/too-many-requests': 'Too many links sent. Wait a few minutes and try again.',
-  'auth/network-request-failed': 'You appear to be offline. Try again when you are connected.',
-}
-
 // Shown only while the account's address is unproved. The link is opened in
 // the inbox, usually in another tab, so returning to this one re-reads the
 // account and the note clears without a reload.
@@ -388,18 +386,7 @@ function EmailVerificationNote({ address, onSend, onRefresh }) {
   const [state, setState] = useState('idle')
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    const check = () => {
-      if (document.visibilityState === 'visible') onRefresh().catch(() => {})
-    }
-    check()
-    window.addEventListener('focus', check)
-    document.addEventListener('visibilitychange', check)
-    return () => {
-      window.removeEventListener('focus', check)
-      document.removeEventListener('visibilitychange', check)
-    }
-  }, [onRefresh])
+  useVerificationRecheck(onRefresh)
 
   const send = async () => {
     setState('sending')
@@ -407,7 +394,7 @@ function EmailVerificationNote({ address, onSend, onRefresh }) {
       await onSend()
       setState('sent')
     } catch (e) {
-      setError(VERIFY_ERRORS[e?.code] || 'The verification link could not be sent. Please try again.')
+      setError(verifyErrorText(e))
       setState('failed')
     }
   }
@@ -674,7 +661,7 @@ function rememberSection(id) {
 }
 
 export default function Settings({ toast }) {
-  const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified } = useAuth()
+  const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
@@ -778,6 +765,74 @@ export default function Settings({ toast }) {
     const section = location.state?.section
     if (section) { setActive(section); setPhoneView('section') }
   }, [location.state])
+
+  // Back from the verification link. Both link sends point it at
+  // /settings?verified=1 (see verifyLinkSettings), so the person lands where the
+  // address is shown. The account is re-read rather than assumed: the flag is
+  // only true here if the link really verified this account. Signed out (the
+  // link was opened in another browser or on another device) there is nothing to
+  // read and the parameter is anyone's to type, so nothing is claimed: the
+  // toast says the link was opened and offers Sign in. A different, unverified
+  // account is told so plainly. Waits for auth to settle, then removes the
+  // parameter so a reload or a back-step does not repeat it.
+  const navigate = useNavigate()
+  const { requireLogin } = useLoginPrompt()
+  const verifiedReturn = useRef(false)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('verified') !== '1' || authLoading || verifiedReturn.current) return
+    verifiedReturn.current = true
+    params.delete('verified')
+    const search = params.toString()
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true, state: location.state })
+    const say = (landing) => {
+      if (!landing) return
+      const action = landing.signIn
+        ? {
+            label: 'Sign in',
+            onAction: () => {
+              requireLogin('finish verifying your email').then((signedIn) => {
+                // Signed in: land on the account and re-read it (the effect
+                // below), so "Sign in to finish" ends with an answer.
+                if (signedIn) {
+                  setActive('account')
+                  setPhoneView('section')
+                  setFinishAfterSignIn(true)
+                }
+                // The toast that held the button is gone; keep focus on the page.
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                  if (!document.activeElement || document.activeElement === document.body) document.getElementById('main')?.focus()
+                }))
+              })
+            },
+          }
+        : null
+      toast?.(landing.text, landing.kind, action ? { action } : null)
+    }
+    if (!user) {
+      say(verifiedLandingMessage({ signedIn: false }))
+      return
+    }
+    setActive('account')
+    setPhoneView('section')
+    refreshEmailVerified().then((verified) => {
+      say(verifiedLandingMessage({ signedIn: true, verified }))
+    }).catch(() => {})
+  }, [location, authLoading, user, navigate, toast, refreshEmailVerified, requireLogin])
+
+  // After signing in from the signed-out landing: the account is read again and
+  // the answer is said, the same words the signed-in landing uses. It waits for
+  // the account to be in (refreshEmailVerified belongs to the signed-in user),
+  // and a null answer (the account changed mid-read) stays silent.
+  const [finishAfterSignIn, setFinishAfterSignIn] = useState(false)
+  useEffect(() => {
+    if (!finishAfterSignIn || !user) return
+    setFinishAfterSignIn(false)
+    refreshEmailVerified().then((verified) => {
+      const landing = verifiedLandingMessage({ signedIn: true, verified })
+      if (landing) toast?.(landing.text, landing.kind, null)
+    }).catch(() => {})
+  }, [finishAfterSignIn, user, toast, refreshEmailVerified])
 
   // Recount whenever the Data panel is opened, and after a clear, so the figure
   // shown is the figure on disk.

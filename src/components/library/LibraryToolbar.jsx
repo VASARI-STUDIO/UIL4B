@@ -1,4 +1,4 @@
-import { Children, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Children, memo, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import LibrarySearch from './LibrarySearch'
 import { ToolbarModeContext } from './toolbarMode'
@@ -71,7 +71,7 @@ function FiltersGlyph() {
   )
 }
 
-export default function LibraryToolbar({
+function LibraryToolbar({
   search,
   count,
   action,
@@ -231,6 +231,11 @@ export default function LibraryToolbar({
     </div>
   )
 }
+
+// Memoised so a page that renders for its own reasons (a scroll window, a copy
+// flash) does not re-run the toolbar's measuring; a page that passes stable
+// props gets the skip, one that does not renders exactly as before.
+export default memo(LibraryToolbar)
 
 // The one control the groups collapse into, and the panel it opens.
 function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action }) {
