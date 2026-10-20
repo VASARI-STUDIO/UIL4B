@@ -204,6 +204,50 @@ test.describe('the UI kit export', () => {
     })
   }
 
+  for (const theme of ['light', 'dark']) {
+    for (const size of [...SIZES, { width: 768, height: 900 }]) {
+      test(`downloaded notice stays in view at ${size.width} in ${theme}`, async ({ page }) => {
+        watch(page, `a free account reading the download confirmation at ${size.width}px in ${theme}`)
+        await page.setViewportSize(size)
+        await page.emulateMedia({ colorScheme: theme })
+        await page.addInitScript((value) => localStorage.setItem('vs-t', value), theme)
+        await fontFixtures(page, { licence: false })
+        await signIn(page, { plan: 'free' })
+        await go(page, BOARD)
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+        const panel = await openPanel(page)
+        await panel.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)))
+        const before = await panel.evaluate((el) => ({
+          scrollTop: el.scrollTop,
+          buttons: el.querySelector('.exp-foot').getBoundingClientRect().toJSON(),
+        }))
+        const cta = panel.getByRole('button', { name: 'Export UI kit', exact: true })
+        await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
+        const notice = panel.getByRole('status')
+        await expect(notice).toContainText('Your UI kit downloaded.')
+        await expect(panel.getByRole('button', { name: 'Close', exact: true })).toBeVisible()
+        // Read geometry without scrolling the notice into view. DOM visibility
+        // alone also passes when the status is clipped below the format list.
+        await expect.poll(async () => notice.evaluate((el) => {
+          const panel = el.closest('.exp-panel')
+          const p = panel.getBoundingClientRect()
+          const r = el.getBoundingClientRect()
+          const buttons = panel.querySelector('.exp-foot').getBoundingClientRect()
+          return r.top >= Math.max(p.top + panel.clientTop, 0)
+            && r.bottom <= Math.min(p.top + panel.clientTop + panel.clientHeight, buttons.top, window.innerHeight)
+            && r.left >= Math.max(p.left + panel.clientLeft, 0)
+            && r.right <= Math.min(p.left + panel.clientLeft + panel.clientWidth, window.innerWidth)
+        }), 'the whole notice is inside the visible panel and above its buttons').toBe(true)
+        const after = await panel.evaluate((el) => ({
+          scrollTop: el.scrollTop,
+          buttons: el.querySelector('.exp-foot').getBoundingClientRect().toJSON(),
+        }))
+        expect(after.scrollTop, 'reading the notice needs no panel scroll').toBe(before.scrollTop)
+        expect(after.buttons, 'the actions keep their position and size').toEqual(before.buttons)
+      })
+    }
+  }
+
   test('free: no identity fields, and a finished export with a notice offers Close', async ({ page }) => {
     watch(page, 'a free account exporting the kit')
     await fontFixtures(page, { licence: false })

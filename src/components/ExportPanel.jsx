@@ -397,27 +397,29 @@ export default function ExportPanel({ onClose }) {
         {activeFormat?.logo && <BrandLogoField />}
 
         {error && <p className="exp-error" role="alert">{error}</p>}
-        {notice && <p className="exp-notice" role="status">{notice}</p>}
 
-        <div className="exp-foot">
-          <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
-            {done ? 'Close' : 'Cancel'}
-          </button>
-          {activeFormat?.live ? (
-            <button type="button" className="btn btn-accent exp-act" onClick={runExport} disabled={busy}>
-              {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
+        <div className="exp-footer">
+          {notice && <p className="exp-notice" role="status">{notice}</p>}
+          <div className="exp-foot">
+            <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
+              {done ? 'Close' : 'Cancel'}
             </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-accent exp-act"
-              disabled
-              aria-disabled="true"
-              title="This format is coming soon"
-            >
-              Export &mdash; Soon
-            </button>
-          )}
+            {activeFormat?.live ? (
+              <button type="button" className="btn btn-accent exp-act" onClick={runExport} disabled={busy}>
+                {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-accent exp-act"
+                disabled
+                aria-disabled="true"
+                title="This format is coming soon"
+              >
+                Export &mdash; Soon
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -93,9 +93,8 @@
 @media (pointer:coarse){.exp-field input{min-height:44px}.exp-field input,.exp-field textarea{font-size:16px}}
 .exp-identity + .exp-logo{border-top:0;padding-top:12px}
 .exp-formats > .exp-logo + .exp-fmt{border-top:1px solid var(--border)}
-/* The action stays in reach while the format list scrolls: on a phone the
-   list is taller than the sheet, and the button was below the fold. */
-.exp-foot{position:sticky;bottom:0;z-index:1}
+/* Keep the download status and actions in view while the format list scrolls. */
+.exp-footer{position:sticky;bottom:0;z-index:1;flex-shrink:0;background:var(--bg-1)}
 @media (pointer:coarse){.exp-close{width:44px;height:44px}}
 /* Buttons are pills; the icon-only close is a circle. */
 .exp-foot .exp-act{border-radius:var(--radius-pill)}
