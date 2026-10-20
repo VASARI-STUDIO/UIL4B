@@ -13,6 +13,8 @@ import { useExport } from '../contexts/ExportContext'
 // its user (Escape closes and hands focus back, a press outside closes, opening
 // moves focus in, tabbing past either end closes). The Add-to-Project panel
 // below held none of it.
+import { reconcileStudioPalette, sameColours, studioRoleCount, resolveStudioRoles } from '../utils/studioPalette'
+import { tintsNeedWrite } from '../utils/projectTints'
 import usePopover from '../hooks/usePopover'
 import useExportGate from '../hooks/useExportGate'
 // The free-tier cap's refusal, rendered where it was thrown. Shared with the
@@ -128,8 +130,12 @@ export default function ColorStudio({ onCopy, toast }) {
   // `mode` now (so the value round-trips through ProjectContext) but don't expose a
   // setter until that toggle exists. Add `setMode` back when the toggle lands.
   const [mode] = useState(() => design?.palette?.mode || 'auto')
-  const [globalAdjust] = useState(() => design?.palette?.globalAdjust || { h: 0, s: 0, b: 0, temp: 0 })
-  const [extraColors, setExtraColors] = useState(() => design?.palette?.extraColors || [])
+  // The saved colour list wins over base + harmony (see utils/studioPalette.js):
+  // opening this page on a saved project must read the palette it has, not
+  // rebuild a smaller one from its base and write that back.
+  const [reconciled] = useState(() => reconcileStudioPalette(design?.palette))
+  const [globalAdjust] = useState(() => reconciled?.globalAdjust || design?.palette?.globalAdjust || { h: 0, s: 0, b: 0, temp: 0 })
+  const [extraColors, setExtraColors] = useState(() => reconciled?.extraColors || design?.palette?.extraColors || [])
   // Reconcile the incoming palette against this studio's base+harmony model.
   // The Palette Builder (and project loads / brand + variation picks) persist the
   // full, authoritative palette in `colors`, but describe the five roles ONLY
@@ -141,6 +147,7 @@ export default function ColorStudio({ onCopy, toast }) {
   // lens is baked into `colors` (the studio's own base+harmony+adjust round-trip
   // is already faithful, and pinning the adjusted colours would double-apply it).
   const [overrides, setOverrides] = useState(() => {
+    if (reconciled) return reconciled.overrides
     const p = design?.palette || {}
     const stored = p.overrides || {}
     const full = Array.isArray(p.colors) ? p.colors : null
@@ -186,7 +193,13 @@ export default function ColorStudio({ onCopy, toast }) {
   // change (menus, toasts). generateHarmony is pure for a given (base, harmony).
   const colors = useMemo(() => generateHarmony(baseColor, harmony), [baseColor, harmony])
   // Per-index manual overrides applied on top of the harmony-generated colours.
-  const resolvedColors = useMemo(() => colors.map((c, i) => overrides[i] || c), [colors, overrides])
+  // A saved palette sets the slot count (Auto makes one colour, other harmonies
+  // make a fixed set), so the generator never pads or trims what was saved.
+  const roleCount = studioRoleCount(colors, reconciled)
+  const resolvedColors = useMemo(
+    () => resolveStudioRoles(colors, overrides, roleCount),
+    [colors, overrides, roleCount],
+  )
   // baseColors = the RAW palette (generator + overrides + extras). All write-back
   // handlers (drag/edit/remove/randomise) operate on THIS — the global adjust is a
   // non-destructive lens layered on top for display/export only.
@@ -226,7 +239,14 @@ export default function ColorStudio({ onCopy, toast }) {
   const PRO_MAX = 8
 
   // Sync palette state to ProjectContext (full design persistence)
+  // The first run is skipped when it would only restate the project's own
+  // colours: nothing changed, and a write would drop the Palette Builder's
+  // un-lensed `baseColors` for no gain.
+  const palWroteRef = useRef(false)
   useEffect(() => {
+    const first = !palWroteRef.current
+    palWroteRef.current = true
+    if (first && sameColours(design?.palette?.colors, allColors)) return
     setPalette({ base: baseColor, harmony, mode, globalAdjust, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors, locked: [...locked] })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseColor, harmony, mode, JSON.stringify(globalAdjust), extraColors, JSON.stringify(overrides), activeColorIdx, allColors.join(',')])
@@ -276,7 +296,7 @@ export default function ColorStudio({ onCopy, toast }) {
     if (!locked.has(0)) setBaseColor(fresh[0])
     setOverrides(prev => {
       const next = { ...prev }
-      for (let i = 1; i < colors.length; i++) {
+      for (let i = 1; i < roleCount; i++) {
         if (locked.has(i)) next[i] = baseColors[i]       // keep the locked colour
         else next[i] = fresh[i] || hslToHex(Math.floor(Math.random() * 360), 60, 55)
       }
@@ -287,7 +307,7 @@ export default function ColorStudio({ onCopy, toast }) {
       if (locked.has(globalIdx)) return c
       return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
     }))
-  }, [locked, colors, baseColors, toast])
+  }, [locked, colors, baseColors, roleCount, toast])
 
   // Deal a fresh Auto tonal palette once on mount (CS#3.8) — only if the user
   // hasn't carried in a saved/customised palette.
@@ -312,8 +332,16 @@ export default function ColorStudio({ onCopy, toast }) {
   }, [activeColor, lumBias, satDecay, oled])
 
   // Sync tints to ProjectContext
+  // An existing ramp (the Tint tool's, or an earlier visit's) is not replaced just
+  // by opening this page while it is still made from the active colour; it is
+  // written when the ramp is empty, was made from another colour, or its inputs
+  // move. `from` records the colour the ramp was made from.
+  const tintWroteRef = useRef(false)
   useEffect(() => {
-    setTints({ lumBias, satDecay, oled, scale: tintScale })
+    const first = !tintWroteRef.current
+    tintWroteRef.current = true
+    if (first && !tintsNeedWrite(design?.tints, activeColor)) return
+    setTints({ lumBias, satDecay, oled, scale: tintScale, from: activeColor })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lumBias, satDecay, oled, tintScale.join(',')])
 

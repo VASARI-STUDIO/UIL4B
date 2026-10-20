@@ -3,11 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import { useExport } from '../contexts/ExportContext'
 import { getRecentIcons } from '../utils/recentIcons'
 import { IDENTITY_NAME_MAX } from '../utils/kitIdentity'
 import SaveRefusal from './SaveRefusal'
+import { hasOpenOverlays, suspendGuideForOverlays } from '../utils/openOverlays'
 import {
   BRAND_KIT_STEPS,
+  GUIDE_START_EVENT,
   NEW_PROJECT_STATE,
   acceptStep,
   acceptedSteps,
@@ -18,6 +21,7 @@ import {
   isGuideActive,
   markIntroSeen,
   nextStep,
+  savePatch,
 } from '../utils/brandKitGuide'
 
 // The Brand kit walkthrough, rendered by each of the four tools it walks.
@@ -91,6 +95,7 @@ export default function UIKitGuide({ step }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { design, updateDesign, saveProject, canSaveProjects } = useProject()
+  const { exportActions } = useExport() || {}
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
   // A new blank project opens the card again, seen before or not.
@@ -111,6 +116,21 @@ export default function UIKitGuide({ step }) {
     () => firstStep && isGuideActive() && (newProject || !introSeen()),
   )
   const [showName, setShowName] = useState(false)
+  // A fresh start pressed on the page the flow begins on: the path it navigates
+  // to is the one already on screen, so nothing remounts and the flag read
+  // above is stale. startGuide announces the start; the first step's copy of
+  // this guide takes it up as an arrival. Any other step's copy is about to be
+  // navigated away from, so it ignores it.
+  useEffect(() => {
+    if (!firstStep) return undefined
+    const onStart = () => {
+      setActive(true)
+      setAccepted(newProject ? [] : acceptedSteps())
+      setShowIntro(newProject || !introSeen())
+    }
+    window.addEventListener(GUIDE_START_EVENT, onStart)
+    return () => window.removeEventListener(GUIDE_START_EVENT, onStart)
+  }, [firstStep, newProject])
   const cardRef = useRef(null)
   const introTriggerRef = useRef(null)
   const nameTriggerRef = useRef(null)
@@ -136,7 +156,7 @@ export default function UIKitGuide({ step }) {
   useEffect(() => {
     if (!showIntro) return undefined
     openedByRef.current = document.activeElement
-    cardRef.current?.focus()
+    if (!hasOpenOverlays(document.body)) cardRef.current?.focus()
     // Copied into the effect's own scope rather than read off the ref inside the
     // cleanup: by the time cleanup runs the ref may point at a different node,
     // and this is the fallback that has to still BE the trigger.
@@ -191,13 +211,18 @@ export default function UIKitGuide({ step }) {
   // tool it opens the closing step instead of leaving.
   const goNext = useCallback(() => {
     setAccepted(acceptStep(step))
+    // The palette board shows an untouched random draw without saving it (it is
+    // not work until someone chooses it). Pressing Next on Colours is that
+    // choice, so the board the person is looking at is what the project keeps.
+    const live = exportActions?.path === '/create/palette' ? exportActions.design?.palette : null
+    if (step === 'color' && Array.isArray(live?.colors) && live.colors.length > 1) updateDesign({ palette: live })
     if (next) {
       navigate(next.path)
       return
     }
     setShowIntro(false)
     setShowName((v) => !v)
-  }, [navigate, next, step])
+  }, [exportActions, navigate, next, step, updateDesign])
 
   // ── The closing step: one name for the project and the kit ──────────────
   const [draft, setDraft] = useState(() => (typeof design?.identity?.name === 'string' ? design.identity.name : ''))
@@ -213,7 +238,8 @@ export default function UIKitGuide({ step }) {
 
   const save = useCallback((name) => {
     try {
-      const id = saveProject(name, { identityName: name })
+      // `patch`: the parts moved past with Next, and the tints made from the colours.
+      const id = saveProject(name, { identityName: name, patch: savePatch(design) })
       endGuide()
       setActive(false)
       navigate(`/projects/${id}`)
@@ -222,7 +248,7 @@ export default function UIKitGuide({ step }) {
       setRefusal(err?.message || 'That project could not be saved.')
       setBusy(false)
     }
-  }, [navigate, saveProject, setBusy])
+  }, [design, navigate, saveProject, setBusy])
 
   const submitName = useCallback(async (e) => {
     e.preventDefault()
@@ -270,7 +296,7 @@ export default function UIKitGuide({ step }) {
     if (!showName) return undefined
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
     const first = coarse ? nameTitleRef.current : nameInputRef.current
-    first?.focus()
+    if (!hasOpenOverlays(document.body)) first?.focus()
     const trigger = nameTriggerRef.current
     return () => { if (trigger && trigger.isConnected) trigger.focus() }
   }, [showName])
@@ -412,6 +438,13 @@ export default function UIKitGuide({ step }) {
     else if (c.left < s.left) strip.scrollLeft -= s.left - c.left
   }, [active, step])
 
+  // Keep the cards mounted so opening a tool menu cannot consume the intro or
+  // discard a name draft. Observe portals too, including the phone sheets.
+  useLayoutEffect(() => {
+    if (!active || (!showIntro && !showName)) return undefined
+    return suspendGuideForOverlays(document, [cardRef.current, nameCardRef.current].filter(Boolean))
+  }, [active, showIntro, showName])
+
   if (!active || !current) return null
 
   return (
@@ -511,7 +544,7 @@ export default function UIKitGuide({ step }) {
             ) : (
               <p className="bkit-name-note" id={`${nameCardId}-note`}>
                 {canSaveProjects
-                  ? 'Saved to your projects with the colours, fonts and type scale you chose.'
+                  ? 'Saved to your projects with the colours, fonts and type scale you chose, and tints made from your colours.'
                   : 'Saving needs a free account. What you built stays here while you sign in.'}
               </p>
             )}
