@@ -73,6 +73,28 @@ test('cells above the focused one are still windowed', () => {
   assert.doesNotMatch(src, /upTo = Math\.min\(upTo, focused/)
 })
 
+test('pack labels stay stable across pages of the full result', () => {
+  const labels = src.slice(src.indexOf('const packOf ='), src.indexOf('const warmSoon ='))
+  const grid = block('const mainShowPack =', 'const firstPageSize =').replace(/const firstPageSize =$/, '')
+  const render = new Function('icons', 'visibleRecents', 'useMemo', 'renderCell', `
+    ${labels}
+    ${grid}
+    return { page: list => renderGrid(list), recents: () => renderGrid(visibleRecents, recentsShowPack) }
+  `)
+  const firstPack = Array.from({ length: 180 }, (_, i) => ({ pack: 'circle-flags', name: String(i) }))
+  const icons = [...firstPack, { pack: 'flag', name: 'ad' }]
+  let computations = 0
+  const memo = fn => { computations++; return fn() }
+  const cells = render(icons, firstPack.slice(0, 2), memo, (icon, idx, showPack) => showPack)
+  assert.ok(cells.page(icons.slice(0, 120)).every(Boolean))
+  assert.ok(cells.page(icons).every(Boolean))
+  assert.ok(cells.recents().every(showPack => !showPack))
+  assert.equal(computations, 2, 'scrolling does not recompute the main or recent pack set')
+  const single = render(firstPack, [], memo, (icon, idx, showPack) => showPack)
+  assert.ok(single.page(firstPack.slice(0, 120)).every(showPack => !showPack))
+  assert.match(src, /useMemo\(\(\) => gridShowsPack\(icons\), \[icons\]\)/)
+})
+
 test('the initial skeleton fits the signed-out cap and the signed-in first page', () => {
   // Run the sizing expressions with catalogue-sized packs, without mounting React.
   const labels = src.slice(src.indexOf('const packOf ='), src.indexOf('const warmSoon ='))
