@@ -211,9 +211,17 @@ export function ProjectProvider({ children }) {
     const base = opts.blank ? DEFAULT_DESIGN : design
     // `identityName` names the kit in the saved copy as well, for callers that
     // set the working design's identity in the same event.
-    const snapshot = typeof opts.identityName === 'string'
+    const named = typeof opts.identityName === 'string'
       ? { ...base, identity: { ...(base.identity || {}), name: opts.identityName } }
       : base
+    // `patch` is for a caller that has just changed the working design in the
+    // same event (the state above is still the render before it): applied one
+    // level deep, the way updateDesign applies it.
+    const snapshot = { ...named }
+    for (const [key, value] of Object.entries(opts.patch || {})) {
+      const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v)
+      snapshot[key] = isObj(value) && isObj(named[key]) ? { ...named[key], ...value } : value
+    }
     const project = {
       id,
       name: name.trim() || `Project ${new Date().toLocaleDateString()}`,

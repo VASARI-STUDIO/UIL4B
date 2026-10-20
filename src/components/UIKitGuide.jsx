@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import { useExport } from '../contexts/ExportContext'
 import { getRecentIcons } from '../utils/recentIcons'
 import { IDENTITY_NAME_MAX } from '../utils/kitIdentity'
 import SaveRefusal from './SaveRefusal'
@@ -20,6 +21,7 @@ import {
   isGuideActive,
   markIntroSeen,
   nextStep,
+  savePatch,
 } from '../utils/brandKitGuide'
 
 // The Brand kit walkthrough, rendered by each of the four tools it walks.
@@ -93,6 +95,7 @@ export default function UIKitGuide({ step }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { design, updateDesign, saveProject, canSaveProjects } = useProject()
+  const { exportActions } = useExport() || {}
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
   // A new blank project opens the card again, seen before or not.
@@ -208,13 +211,18 @@ export default function UIKitGuide({ step }) {
   // tool it opens the closing step instead of leaving.
   const goNext = useCallback(() => {
     setAccepted(acceptStep(step))
+    // The palette board shows an untouched random draw without saving it (it is
+    // not work until someone chooses it). Pressing Next on Colours is that
+    // choice, so the board the person is looking at is what the project keeps.
+    const live = exportActions?.path === '/create/palette' ? exportActions.design?.palette : null
+    if (step === 'color' && Array.isArray(live?.colors) && live.colors.length > 1) updateDesign({ palette: live })
     if (next) {
       navigate(next.path)
       return
     }
     setShowIntro(false)
     setShowName((v) => !v)
-  }, [navigate, next, step])
+  }, [exportActions, navigate, next, step, updateDesign])
 
   // ── The closing step: one name for the project and the kit ──────────────
   const [draft, setDraft] = useState(() => (typeof design?.identity?.name === 'string' ? design.identity.name : ''))
@@ -230,7 +238,8 @@ export default function UIKitGuide({ step }) {
 
   const save = useCallback((name) => {
     try {
-      const id = saveProject(name, { identityName: name })
+      // `patch`: the parts moved past with Next, and the tints made from the colours.
+      const id = saveProject(name, { identityName: name, patch: savePatch(design) })
       endGuide()
       setActive(false)
       navigate(`/projects/${id}`)
@@ -239,7 +248,7 @@ export default function UIKitGuide({ step }) {
       setRefusal(err?.message || 'That project could not be saved.')
       setBusy(false)
     }
-  }, [navigate, saveProject, setBusy])
+  }, [design, navigate, saveProject, setBusy])
 
   const submitName = useCallback(async (e) => {
     e.preventDefault()
