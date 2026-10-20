@@ -209,10 +209,19 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
 const batchOf = (pack) => (u) => ICONIFY_HOSTS.includes(u.hostname)
   && u.pathname === `/${pack}.json` && u.search.includes('icons=')
 
+// The page asks for the pack's first page only after the batch for the grid it
+// opened on has landed, so the first answer is not the last. Wait until no slot is
+// still waiting and every request has been answered: only then has a later batch
+// that carried the missing name (and would put it back) been drawn.
+async function settleAnswers(page, missing, waitingSlot) {
+  await expect(page.locator(waitingSlot), 'slots are still waiting after the batches returned').toHaveCount(0, { timeout: 20_000 })
+  await expect.poll(() => missing.answered, { timeout: 20_000 }).toBe(missing.requests)
+}
+
 async function answerWithMissing(page, pack, pick) {
   let release
   const held = new Promise((resolve) => { release = resolve })
-  const state = { name: null, requests: 0, release }
+  const state = { name: null, requests: 0, answered: 0, release }
   await page.route(batchOf(pack), async (route) => {
     state.requests += 1
     await held
@@ -236,6 +245,7 @@ async function answerWithMissing(page, pack, pick) {
       headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
       body: JSON.stringify(data),
     })
+    state.answered += 1
   })
   return state
 }
@@ -260,6 +270,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect(slot).toHaveClass(/ig-chip--wait/, { timeout: 20_000 })
     await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
     missing.release()
+    await settleAnswers(page, missing, '.ig .ig-chip--wait')
 
     // Its neighbours drew their artwork; the missing name did not, and does not wait.
     await expect(page.locator('.ig .ic[aria-label="Customise github-icon"] .ig-chip img')).toBeVisible({ timeout: 20_000 })
@@ -279,6 +290,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible({ timeout: 20_000 })
     await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
     missing.release()
+    await settleAnswers(page, missing, '.ig .ic .ig-glyph-wait')
 
     await expect(page.locator('.ig .ic img').nth(8)).toBeVisible({ timeout: 20_000 })
     expect(missing.name, 'the answer listed nothing as not found').toBeTruthy()
