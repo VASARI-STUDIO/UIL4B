@@ -8,7 +8,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { contrastRatio, textColorForBg } from '../utils/colors'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
-import { tintsFor, tintsNeedWrite } from '../utils/projectTints'
+import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -94,8 +94,7 @@ export default function TintTool({ onCopy, toast }) {
   // active colour; the blue below is only the example a blank project opens on.
   const [projectHex] = useState(() => {
     if (!partsPresent(design).palette) return null
-    const cols = Array.isArray(design?.palette?.colors) ? design.palette.colors : []
-    return normaliseHex(cols[design?.palette?.activeIdx || 0] || cols[0])
+    return normaliseHex(activeColour(design))
   })
   const [sources, setSources] = useState(() => (carried ? carried.colors.map(mkSource) : [mkSource(projectHex || '#2563EB')]))
   const [selectedId, setSelectedId] = useState(() => sources[0].id)

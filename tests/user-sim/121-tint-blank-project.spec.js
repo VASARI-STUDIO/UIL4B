@@ -57,4 +57,18 @@ test.describe('Tint tool and the project tints part', () => {
     // The tool writes only tints: the palette is exactly what was seeded.
     expect(kept.palette).toEqual({ base: PALETTE[0], harmony: 'auto', colors: PALETTE, activeIdx: 1 })
   })
+
+  test('the active colour counts only the colours that are real hexes', async ({ page }) => {
+    watch(page, 'designer whose palette holds a stray entry')
+    const colors = ['not-a-colour', PALETTE[0], PALETTE[1]]
+    await page.addInitScript((c) => {
+      try {
+        localStorage.setItem('vs-current-design', JSON.stringify({ palette: { base: c[1], harmony: 'auto', colors: c, activeIdx: 1 } }))
+      } catch { /* private mode */ }
+    }, colors)
+    await go(page, '/create/tint')
+    await expect(page.locator('.tt-cell')).toHaveCount(11)
+    // Index 1 of the real colours is the second hex, not the second entry.
+    await expect.poll(async () => (await working(page))?.tints?.from?.toUpperCase()).toBe(PALETTE[1])
+  })
 })
