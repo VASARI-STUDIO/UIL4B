@@ -208,8 +208,6 @@ export default function FileConverter({ toast }) {
       title="File Converter"
       titleId="fc-title"
       items={[
-        // A status tag, not an action: it leaves the row rather than the menu.
-        { id: 'alpha', menu: false, render: () => <span className="fc-alpha">Alpha</span> },
         // 3D files are converted by their own tool; this action links to it.
         {
           id: '3d',
