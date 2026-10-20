@@ -8,7 +8,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { contrastRatio, textColorForBg } from '../utils/colors'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
-import { tintsFor, tintsStale } from '../utils/projectTints'
+import { tintsFor, tintsNeedWrite } from '../utils/projectTints'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -149,8 +149,7 @@ export default function TintTool({ onCopy, toast }) {
     const first = keptFirstRef.current
     keptFirstRef.current = false
     if (!ownColoursRef.current) return undefined
-    const empty = !(design?.tints?.scale?.length > 0)
-    if (first && !((empty || tintsStale(design?.tints, projectHex)) && projectHex && !carried)) return undefined
+    if (first && !(projectHex && !carried && tintsNeedWrite(design?.tints, projectHex))) return undefined
     const from = selected?.hex
     const t = setTimeout(() => setTints({ scale: keptRamp, from }), first ? 0 : 200)
     return () => clearTimeout(t)

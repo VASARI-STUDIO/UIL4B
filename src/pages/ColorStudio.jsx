@@ -14,7 +14,7 @@ import { useExport } from '../contexts/ExportContext'
 // moves focus in, tabbing past either end closes). The Add-to-Project panel
 // below held none of it.
 import { reconcileStudioPalette, sameColours, studioRoleCount, resolveStudioRoles } from '../utils/studioPalette'
-import { tintsStale } from '../utils/projectTints'
+import { tintsNeedWrite } from '../utils/projectTints'
 import usePopover from '../hooks/usePopover'
 import useExportGate from '../hooks/useExportGate'
 // The free-tier cap's refusal, rendered where it was thrown. Shared with the
@@ -340,7 +340,7 @@ export default function ColorStudio({ onCopy, toast }) {
   useEffect(() => {
     const first = !tintWroteRef.current
     tintWroteRef.current = true
-    if (first && (design?.tints?.scale?.length || 0) > 0 && !tintsStale(design?.tints, activeColor)) return
+    if (first && !tintsNeedWrite(design?.tints, activeColor)) return
     setTints({ lumBias, satDecay, oled, scale: tintScale, from: activeColor })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lumBias, satDecay, oled, tintScale.join(',')])

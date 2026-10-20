@@ -69,6 +69,13 @@ export function tintsStale(tints, hex) {
   return !sameHex(tints.from, hex)
 }
 
+/**
+ * Should opening a page write a ramp for `hex`? Only when the project has none,
+ * or its ramp was made from another colour; a current ramp, and a legacy one
+ * with no record of its colour, are left as they are.
+ */
+export const tintsNeedWrite = (tints, hex) => !(Array.isArray(tints?.scale) && tints.scale.length > 0) || tintsStale(tints, hex)
+
 /** Is the ramp recorded as made from the project's active colour? */
 export function tintsCurrent(design) {
   const hex = activeColour(design)

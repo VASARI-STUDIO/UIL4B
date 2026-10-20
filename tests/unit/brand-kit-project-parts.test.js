@@ -2,18 +2,19 @@
 // are all filled, with the palette the walkthrough showed. These pin the pieces
 // that used to drop that on the way: parts moved past with Next, the tints part
 // nothing wrote, and the Colour Studio rebuilding a five-colour Auto palette as
-// one colour.
+// one colour. The page-level behaviour (what the Tint tool and the Colour Studio
+// write when they open) is walked in tests/user-sim/121-tint-blank-project.spec.js
+// and 121-studio-keeps-project.spec.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 
 import { BRAND_KIT_STEPS, savePatch } from '../../src/utils/brandKitGuide.js'
 import { projectDigest, partsPresent } from '../../src/utils/userHome.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-import { deriveTints, tintsStale, tintsCurrent } from '../../src/utils/projectTints.js'
+import { activeColour, deriveTints, tintsCurrent, tintsFor, tintsNeedWrite, tintsStale } from '../../src/utils/projectTints.js'
 import { reconcileStudioPalette, sameColours, studioBaseColours } from '../../src/utils/studioPalette.js'
 import { projectSnapshot } from '../../src/utils/designPatch.js'
-import { generateHarmony, applyAdjust } from '../../src/utils/colors.js'
+import { generateHarmony, generateTintScale, applyAdjust } from '../../src/utils/colors.js'
 
 const FIVE = ['#1D3557', '#E63946', '#F1FAEE', '#A8DADC', '#457B9D']
 const ALL = BRAND_KIT_STEPS.map((s) => s.id)
@@ -158,23 +159,42 @@ test('a palette with one colour has nothing to preserve beyond its base', () => 
   assert.equal(reconcileStudioPalette({ base: '#0051FF', harmony: 'auto', colors: ['#0051FF'] }), null)
 })
 
-// ── Sources: who writes what ───────────────────────────────────────────────
-const read = (p) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8')
-
-test('the Tint tool writes the project tints and never the palette', () => {
-  const src = read('src/pages/TintTool.jsx')
-  assert.match(src, /setTints\(\{ scale: keptRamp, from \}\)/)
-  assert.doesNotMatch(src, /setPalette|palette:\s*\{/)
+// ── Who writes what: the rules the Tint tool and the Colour Studio share ──
+test('opening a page writes a ramp only when there is none or it was made from another colour', () => {
+  const ramp = ['#111111', '#222222']
+  assert.equal(tintsNeedWrite({ scale: [] }, FIVE[0]), true, 'no ramp yet')
+  assert.equal(tintsNeedWrite(undefined, FIVE[0]), true, 'no tints block at all')
+  assert.equal(tintsNeedWrite({ scale: ramp, from: FIVE[0] }, FIVE[0]), false, 'a current ramp is left alone')
+  assert.equal(tintsNeedWrite({ scale: ramp, from: FIVE[0].toLowerCase() }, FIVE[0]), false, 'case does not make it stale')
+  assert.equal(tintsNeedWrite({ scale: ramp, from: '#FF0000' }, FIVE[0]), true, 'made from another colour')
+  assert.equal(tintsNeedWrite({ scale: ramp }, FIVE[0]), false, 'a ramp with no record is left alone')
 })
 
-test('the Colour Studio skips a first palette write that only restates the project', () => {
-  const src = read('src/pages/ColorStudio.jsx')
-  assert.match(src, /first && sameColours\(design\?\.palette\?\.colors, allColors\)/)
+test('the Tint tool, the Colour Studio and a finished project keep the same ramp for the same colour', () => {
+  const settings = { lumBias: 82, satDecay: 12, oled: true }
+  // The Colour Studio's own call, as it makes it (ColorStudio.jsx, tintScale).
+  const studio = generateTintScale({
+    hex: FIVE[1], anchor: 5, hueShift: 0,
+    satMin: -settings.satDecay, satMax: settings.satDecay / 2,
+    lMin: settings.oled ? 3 : 5, lMax: settings.lumBias, mode: 'perceived',
+  })
+  assert.deepEqual(tintsFor(FIVE[1], settings).scale, studio)
+  const design = withPalette(FIVE)
+  design.palette.activeIdx = 1
+  assert.deepEqual(deriveTints(design).scale, studio)
+  assert.equal(tintsFor(FIVE[1], settings).from, FIVE[1])
 })
 
-test('the pages and the context call the shared functions these tests exercise', () => {
-  assert.match(read('src/pages/ColorStudio.jsx'), /studioRoleCount\(colors, reconciled\)/)
-  assert.match(read('src/pages/ColorStudio.jsx'), /tintsStale\(design\?\.tints, activeColor\)/)
-  assert.match(read('src/pages/TintTool.jsx'), /tintsStale\(design\?\.tints, projectHex\)/)
-  assert.match(read('src/contexts/ProjectContext.jsx'), /projectSnapshot\(base, opts\)/)
+test('the project tint settings shape the kept ramp, and missing ones fall back to the defaults', () => {
+  const moved = tintsFor(FIVE[1], { lumBias: 60, satDecay: 4, oled: false })
+  assert.notDeepEqual(moved.scale, tintsFor(FIVE[1], undefined).scale)
+  assert.deepEqual(tintsFor(FIVE[1], {}).scale, tintsFor(FIVE[1], DEFAULT_DESIGN.tints).scale)
+  assert.equal(moved.scale.length, 11)
+})
+
+test('the active colour skips entries that are not hex colours', () => {
+  const palette = { colors: ['nope', FIVE[0], FIVE[1]], activeIdx: 1 }
+  assert.equal(activeColour({ palette }), FIVE[1], 'index counts the colours that are real')
+  assert.equal(activeColour({ palette: { colors: [], base: FIVE[2] } }), FIVE[2])
+  assert.equal(activeColour({ palette: { colors: [], base: 'x' } }), null)
 })

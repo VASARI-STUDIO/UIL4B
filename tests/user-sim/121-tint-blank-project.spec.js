@@ -8,6 +8,7 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
+import { tintsFor } from '../../src/utils/projectTints.js'
 
 const working = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('vs-current-design') || 'null'))
 const PALETTE = ['#1D3557', '#E63946', '#F1FAEE', '#A8DADC', '#457B9D']
@@ -51,6 +52,9 @@ test.describe('Tint tool and the project tints part', () => {
     const kept = await working(page)
     expect(kept.tints.scale.every((h) => /^#[0-9a-f]{6}$/i.test(h))).toBe(true)
     expect(kept.tints.from.toUpperCase()).toBe(PALETTE[1])
-    expect(kept.palette.colors).toEqual(PALETTE)
+    // The project's own ramp (the Colour Studio's), not the page's display curve.
+    expect(kept.tints.scale).toEqual(tintsFor(PALETTE[1], DEFAULT_DESIGN.tints).scale)
+    // The tool writes only tints: the palette is exactly what was seeded.
+    expect(kept.palette).toEqual({ base: PALETTE[0], harmony: 'auto', colors: PALETTE, activeIdx: 1 })
   })
 })
