@@ -129,15 +129,21 @@ export default function TintTool({ onCopy, toast }) {
   // gets one as soon as this opens, and so does one recorded as made from
   // another colour than the project's own; otherwise it is written when the
   // person changes something. `from` is the colour the ramp was made from.
+  // A project with no colours of its own writes nothing at all: the blue it
+  // opens on is an example, and a ramp kept from it would mark Tints done for a
+  // project that has not chosen a colour yet.
   const keptRamp = useMemo(() => {
     const sc = scales[selIndex] || scales[0]
     return buildRamp(sc.hue, sc.chroma, 11, curve).map((t) => t.hex)
   }, [scales, selIndex, curve])
   const keptKey = keptRamp.join(',')
   const keptFirstRef = useRef(true)
+  const ownColoursRef = useRef(false)
+  ownColoursRef.current = partsPresent(design).palette
   useEffect(() => {
     const first = keptFirstRef.current
     keptFirstRef.current = false
+    if (!ownColoursRef.current) return undefined
     const empty = !(design?.tints?.scale?.length > 0)
     if (first && !((empty || tintsStale(design?.tints, projectHex)) && projectHex && !carried)) return undefined
     const from = selected?.hex
