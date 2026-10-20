@@ -84,7 +84,7 @@ test.describe('the homepage below the hero', () => {
 
     const text = (await page.locator('main').first().evaluate((el) => el.textContent || ''))
       .replace(/\s+/g, ' ')
-    expect(text).toContain(`${AI_LIMITS.pro.daily} AI generations a day`)
+    expect(text).toContain(`${AI_LIMITS.pro.daily} a day, ${AI_LIMITS.pro.monthly} a month`)
     expect(text).toContain(`${AI_LIMITS.pro.monthly} a month`)
 
     const lower = text.toLowerCase()
@@ -162,7 +162,7 @@ test.describe('the Plans page reassurance lines', () => {
     await go(page, '/plans')
     await expectRendered(page, '/plans')
 
-    const note = page.locator('.pr-plan--free .pr-plan-note')
+    const note = page.locator('.pr-head--free .pr-note')
     await expect(note).toHaveText('Free because the tools cost us nothing to run.')
     const text = (await page.locator('.pricing main').innerText()).toLowerCase()
     for (const phrase of ['no trial clock', 'no card', 'ready today', 'upgrade when your workflow']) {
@@ -246,27 +246,6 @@ test.describe('the 404', () => {
     const text = (await page.locator('.nf-grid').textContent()).toLowerCase()
     expect(text).not.toContain('palette generator')
     expect(text).not.toContain('community palettes')
-  })
-})
-
-test.describe('the gallery mastheads', () => {
-  // THE PALETTE AND GRADIENT LIBRARY MASTHEAD SENTENCES WERE DELETED AND PUT
-  // BACK, in the same audit. "…with a point of view … make it yours." is one
-  // sentence with the nouns swapped, and it is on the founder's list to
-  // rewrite — but three standing contracts pin the masthead as title +
-  // description (15-discover-library-parity, 34-palette-library-sections),
-  // and without the sentence the 390px masthead is 183px of dead space, the
-  // exact defect 40-gallery-hero was written for. A hole is worse than a
-  // templated line, so the line stays until he writes its replacement. The
-  // audit's only gallery-chrome change is the one below.
-
-  test('the Curated Resources grid heading has no "not scraped" label above it', async ({ page }) => {
-    watch(page, PERSONA)
-    await go(page, '/discover/resources')
-    await expectRendered(page, '/discover/resources')
-    const heading = page.locator('#cur-bands-heading')
-    await expect(heading).toHaveCount(1)
-    await expect(heading.locator('xpath=..').locator('span')).toHaveCount(0)
   })
 })
 

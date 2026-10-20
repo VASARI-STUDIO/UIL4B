@@ -21,7 +21,7 @@
 // that the eager page stays light.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_COUNT, PROMPT_PREVIEW_TITLES } from '../../src/data/communityPromptsPreview.js'
 
 test('the count on the /discover card is the real number of prompts', () => {

@@ -79,6 +79,7 @@
 }
 .iel-page .icust-seg button.active{background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}
 .iel-page .icust-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.iel-page .icust-seg-static{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0;background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}
 /* "Fixed" stroke is a toggle, so its on-state is the same wash — not an
    accent fill with accent text, which claimed it was the next action. */
 .iel-page .icust-abs{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
@@ -143,6 +144,16 @@
 .iel-page .emoji-tone-btn.open{border-color:var(--bh);background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
 .iel-page .emoji-tone-pop{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-m)}
 .iel-page .emoji-skin-btn.active{border-color:var(--accent-border);background:var(--accent-wash);box-shadow:0 0 0 1px var(--accent)}
+/* A cell paints its glyph from a bitmap EmojiGrid drew once, because painting
+   the colour emoji text again on every commit and every scroll tile is what
+   made this page slow. The real character stays in the cell (the label, the
+   title and the copy all read it) and is hidden only while the bitmap shows.
+   On hover the cell scales up, and the live text redraws crisply at that size
+   where the bitmap would be stretched, so the hovered cell goes back to text. */
+.iel-page .emoji-bitmap{display:block;flex:none;width:36px;background-repeat:no-repeat;pointer-events:none}
+.iel-page .emoji-cell.has-bitmap .emoji-char{display:none}
+.iel-page .emoji-cell.has-bitmap:hover .emoji-char{display:block}
+.iel-page .emoji-cell.has-bitmap:hover .emoji-bitmap{display:none}
 /* The count stays a filled chip — 71-media-tools-breakpoints measures it as
    ink on its OWN ground — but as a 6px rectangle, not a pill. */
 .iel-page .emoji-section-count{border-radius:var(--radius-xs)}
@@ -227,3 +238,5 @@
   .iel-page.lib-surface .lib-switch-btn>svg,
   .iel-page.lib-surface .lib-switch-btn>.lib-switch-emoji{display:none}
 }
+
+.iel-page .icust-original{white-space:nowrap}

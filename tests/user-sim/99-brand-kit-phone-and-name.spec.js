@@ -1,6 +1,6 @@
 // The brand kit walkthrough on a phone, and its closing step.
 //
-//   · On a phone the rail and the docked card sit above the fixed tab bar, so a
+//   · On a phone the rail takes the bottom edge (the tab bar is hidden) and the card docks above it, so a
 //     tap on any of their controls lands on that control, across at least 44px.
 //   · On a touch screen the name card does not raise the keyboard by itself,
 //     and once the field is focused Save stays above the keyboard.
@@ -103,19 +103,21 @@ async function railControlsAllLand(page) {
   await expectHitArea(r.locator('.bkit-rail-next'), 'Next')
   await expectHitArea(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
   await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
-  // The rail clears the tab bar outright, and its action row has not wrapped.
+  // The walkthrough hides the tab bar and the rail takes the bottom edge; its
+  // action row has not wrapped.
   const geo = await page.evaluate(() => {
     const railBox = document.querySelector('.bkit-rail').getBoundingClientRect()
-    const bar = document.querySelector('.pnav-tabs')?.getBoundingClientRect()
+    const bar = document.querySelector('.pnav-tabs')
     const tops = [...document.querySelectorAll('.bkit-rail-actions > *')].map((n) => n.getBoundingClientRect())
     return {
       railBottom: railBox.bottom,
-      barTop: bar ? bar.top : null,
+      viewportBottom: window.innerHeight,
+      barDisplay: bar ? getComputedStyle(bar).display : 'none',
       spread: Math.max(...tops.map((b) => b.top + b.height / 2)) - Math.min(...tops.map((b) => b.top + b.height / 2)),
     }
   })
-  expect(geo.barTop, 'the phone tab bar is not on screen').not.toBeNull()
-  expect(geo.railBottom, 'the rail runs under the tab bar').toBeLessThanOrEqual(geo.barTop)
+  expect(geo.barDisplay, 'the phone tab bar is still showing').toBe('none')
+  expect(Math.abs(geo.railBottom - geo.viewportBottom), 'the rail is not on the bottom edge').toBeLessThan(1)
   expect(geo.spread, 'the rail actions wrapped onto two lines').toBeLessThan(4)
 }
 
@@ -163,7 +165,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
       await railControlsAllLand(page)
 
       // The closing card docks above the rail at its tallest, on this step.
-      await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
+      await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
       await expect(nameCard(page)).toBeVisible()
       await expectCardClearsRail(page, nameCard(page), 'the name card overlaps the rail')
       await expectTapsLand(nameCard(page).getByRole('button', { name: 'Close' }), 'name card Close')
@@ -174,28 +176,47 @@ test.describe('Brand kit walkthrough on a phone', () => {
       await expectHitArea(nameCard(page).getByRole('button', { name: 'Save project' }), 'Save project')
       await railControlsAllLand(page)
 
-      // At the end of the page the rail rises off the tab bar; the card follows it.
+      // At the end of the page the card still sits clear of the rail.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
       await expectCardClearsRail(page, nameCard(page), 'at the end of the page the name card overlaps the rail')
     })
   }
 
+  // From 1024px the bar is flush to the viewport foot (bottom 0, no 20px gap)
+  // and the card hangs 63px above it (55px bar + 12px, less 4px). On Colours
+  // the bar rides on the Adjust-all row, so both offsets rise by its height.
+  const desktopOffsets = (page) => page.evaluate(() => ({
+    rail: getComputedStyle(document.querySelector('.bkit-rail')).bottom,
+    card: getComputedStyle(document.querySelector('.bkit-card')).bottom,
+    help: getComputedStyle(document.querySelector('.bkit-rail-help-text')).position,
+  }))
+
   test('1440px: the rail and card keep their desktop offsets', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page, { seen: true })
+    await go(page, '/create/font-pair')
+    await rail(page).getByRole('button', { name: /What.s this\?/ }).click()
+    await expect(introCard(page)).toBeVisible()
+    await expect.poll(() => desktopOffsets(page)).toEqual({ rail: '0px', card: '63px', help: 'static' })
+
+    // Each close button animates only what its own states change: the card's
+    // close its hover colours; the bar's also the 97% press scale (transform).
+    const transitions = await page.evaluate(() => ['.bkit-card-close', '.bkit-rail-close']
+      .map((sel) => getComputedStyle(document.querySelector(sel)).transitionProperty))
+    expect(transitions).toEqual(['border-color, color, background-color', 'background-color, border-color, color, transform'])
+  })
+
+  test('1440px: on Colours the rail and card sit on top of the Adjust-all row', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await seed(page, { seen: false })
     await go(page, '/create/palette')
     await expect(introCard(page)).toBeVisible()
-    const offsets = await page.evaluate(() => ({
-      rail: getComputedStyle(document.querySelector('.bkit-rail')).bottom,
-      card: getComputedStyle(document.querySelector('.bkit-card')).bottom,
-      help: getComputedStyle(document.querySelector('.bkit-rail-help-text')).position,
-    }))
-    expect(offsets).toEqual({ rail: '20px', card: '96px', help: 'static' })
-
-    // The two close buttons animate only the properties their hover changes.
-    const transitions = await page.evaluate(() => ['.bkit-card-close', '.bkit-rail-close']
-      .map((sel) => getComputedStyle(document.querySelector(sel)).transitionProperty))
-    expect(transitions).toEqual(['border-color, color, background-color', 'border-color, color, background-color'])
+    const toolbarH = await page.locator('.plb-adjust').evaluate((el) => el.getBoundingClientRect().height)
+    expect(toolbarH, 'the Adjust-all row has no height').toBeGreaterThan(0)
+    await expect.poll(async () => {
+      const o = await desktopOffsets(page)
+      return { rail: Math.round(parseFloat(o.rail) - toolbarH), card: Math.round(parseFloat(o.card) - toolbarH), help: o.help }
+    }).toEqual({ rail: 0, card: 63, help: 'static' })
   })
 
   test('390px: the help trigger is a visible, named icon button and Escape returns focus to it', async ({ page }) => {
@@ -228,6 +249,25 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await page.keyboard.press('Escape')
     await expect(introCard(page)).toBeHidden()
     await expect(help).toBeFocused()
+  })
+
+  test('390px: the X closes the rail in place and the tab bar is there', async ({ page }) => {
+    watch(page, 'designer leaving the walkthrough on a phone')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await seed(page)
+    await go(page, '/create/palette')
+    await expect(rail(page)).toBeVisible()
+    await expect(page.locator('.pnav-tabs'), 'the tab bar is hidden while the walkthrough is on').toBeHidden()
+
+    const before = page.url()
+    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).click()
+
+    await expect(rail(page)).toBeHidden()
+    expect(page.url()).toBe(before)
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expect(page.locator('.pnav-tabs')).toBeVisible()
+    // Focus lands on the page's main landmark, not <body>.
+    await expect(page.locator('#main')).toBeFocused()
   })
 
   test('390px: the current step is the chip in view', async ({ page }) => {
@@ -308,7 +348,7 @@ test.describe('Brand kit walkthrough: naming the kit on a touch screen', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height })
       await seed(page, { colours: true })
       await go(page, '/create/icons')
-      await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
+      await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
       const card = nameCard(page)
       await expect(card).toBeVisible()
 
@@ -337,23 +377,23 @@ test.describe('Brand kit walkthrough: ticks', () => {
     watch(page, 'designer happy with the defaults')
     await seed(page)
     await go(page, '/create/palette')
-    await expect(rail(page)).toContainText('0 of 4 built')
+    await expect(rail(page)).toContainText('0 of 4 parts')
 
     await rail(page).getByRole('button', { name: /^Next: Fonts/ }).click()
     await expect(page).toHaveURL(/\/create\/font-pair$/)
-    await expect(rail(page)).toContainText('1 of 4 built')
+    await expect(rail(page)).toContainText('1 of 4 parts')
     await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
 
     await rail(page).getByRole('button', { name: /^Next: Type scale/ }).click()
     await expect(page).toHaveURL(/\/create\/type-scale$/)
-    await expect(rail(page)).toContainText('2 of 4 built')
+    await expect(rail(page)).toContainText('2 of 4 parts')
 
     await rail(page).getByRole('button', { name: /^Next: Icons/ }).click()
     await expect(page).toHaveURL(/\/create\/icons$/)
-    await expect(rail(page)).toContainText('3 of 4 built')
+    await expect(rail(page)).toContainText('3 of 4 parts')
 
-    await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
-    await expect(rail(page)).toContainText('4 of 4 built')
+    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
+    await expect(rail(page)).toContainText('4 of 4 parts')
     await expect(nameCard(page)).toBeVisible()
   })
 })
@@ -369,7 +409,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     const leave = rail(page).getByRole('button', { name: 'Leave the walkthrough' })
     expect(await leave.getAttribute('title')).not.toMatch(/work is saved/i)
 
-    await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
+    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
     await expect(nameCard(page)).toBeVisible()
     const field = nameCard(page).getByRole('textbox', { name: 'Kit name' })
     await expect(field).toBeFocused()
@@ -403,7 +443,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await seed(page, { colours: true })
     await go(page, '/create/icons')
 
-    await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
+    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
     await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill('Fourth Kit')
     await nameCard(page).getByRole('button', { name: 'Save project' }).click()
 
@@ -432,7 +472,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
 
     // Every tool step ran without an account.
     await expect(page.locator('#ui-login-title')).toHaveCount(0)
-    await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
+    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
     await expect(nameCard(page)).toContainText('Saving needs a free account')
     await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill('Harbour Studio')
     await nameCard(page).getByRole('button', { name: 'Save project' }).click()
@@ -458,7 +498,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await signIn(page, { plan: 'free', projects: 0 })
     await go(page, '/create/icons')
     await expect(rail(page)).toBeVisible()
-    await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
+    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
     await expect(nameCard(page).getByRole('textbox', { name: 'Kit name' })).toHaveValue('Harbour Studio')
     await nameCard(page).getByRole('button', { name: 'Save project' }).click()
     await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
@@ -475,7 +515,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
   )
   const completeSignIn = (page) => page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
   async function nameAndAskToSave(page, name) {
-    await rail(page).getByRole('button', { name: /^Next: Name your kit/ }).click()
+    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
     await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill(name)
     await nameCard(page).getByRole('button', { name: 'Save project' }).click()
     await expect(page.locator('#ui-login-title')).toBeVisible()

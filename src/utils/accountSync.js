@@ -174,6 +174,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-state-shades': { scope: 'cache', why: 'Derived from the working design' },
   'vs-gf-catalog': { scope: 'cache', why: 'Google Fonts catalogue' },
   'vs-billing-dismissed': { scope: 'session', why: 'Billing notice dismissed for this tab session' },
+  'vs-verify-dismissed': { scope: 'session', why: 'Verify-your-email bar dismissed for this tab session (vs-verify-dismissed:<uid>)' },
   'vs-resume-after-onboarding': { scope: 'session', why: 'Where to go after onboarding, this tab only' },
   'vs-chunk-reload': { scope: 'session', why: 'Reload-loop guard after a deploy' },
   'vs-sync-meta': { scope: 'bookkeeping', why: 'Owner, per-key stamps and fingerprints for this module' },
@@ -563,8 +564,23 @@ export function clearMirrors(storage) {
 // ── After a sync has settled ────────────────────────────────────────────────
 
 // The community prompts are large, so they are fetched only when a repair
-// actually has something to look up.
-const loadCommunityPrompts = () => import('../data/communityPrompts.js').then((m) => m.COMMUNITY_PROMPTS)
+// actually has something to look up. The browser holds the text of the free
+// prompts only. A Pro account that has already fetched the whole library has
+// the rest in the session cache, read for that account's uid alone; a prompt
+// with no text is never copied.
+const loadCommunityPrompts = async (uid) => {
+  const [{ COMMUNITY_PROMPT_ROWS }, { isStub }, { cachedLibraryOfKind }] = await Promise.all([
+    import('../data/communityPrompts.js'),
+    import('./libraryRules.js'),
+    import('./proLibrary.js'),
+  ])
+  return (cachedLibraryOfKind('prompts', uid) || COMMUNITY_PROMPT_ROWS).filter((row) => !isStub(row))
+}
+
+// Calls `listener(kind, uid)` each time a Pro library is cached. A settle runs
+// before any page has fetched the Pro prompts, so a Pro prompt saved on another
+// device has no copy to repair from yet; the repair is run again from here.
+const onProLibraryReady = async (listener) => (await import('./proLibrary.js')).onLibraryReady(listener)
 
 /**
  * The prompt-library step that follows a settled sync. The library and the
@@ -575,18 +591,23 @@ const loadCommunityPrompts = () => import('../data/communityPrompts.js').then((m
  * change it makes is synced up like any other edit.
  *
  * @param storage      the cache
- * @param loadCatalog  resolves to the community prompts (overridable for tests)
+ * @param loadCatalog  resolves to the community prompts for `uid` (overridable for tests)
+ * @param uid          the account the cache belongs to; its fetched Pro prompts
+ *                     are used, nobody else's
  * @returns {Promise<number>} how many copies were added
  */
-export async function repairPromptLibraryAfterSync(storage, { loadCatalog = loadCommunityPrompts, now, isCurrent = () => true } = {}) {
+export async function repairPromptLibraryAfterSync(storage, { loadCatalog = loadCommunityPrompts, uid = null, now, isCurrent = () => true } = {}) {
   // Nothing to look up when every saved id is already matched by `sourceId`.
   if (!savedIdsWithoutCopy(getPrompts(storage), getSavedIds(storage)).length) return 0
-  const catalog = await loadCatalog()
+  const catalog = await loadCatalog(uid)
   // The catalog load is async: a sign-out or user switch during it must not
   // write into whatever cache is current by now.
   if (!isCurrent()) return 0
   return repairMissingCopies({ storage, catalog, now }).length
 }
+
+// Stops the repair waiting for Pro prompts (at most one, for the latest settle).
+let healOff = null
 
 /**
  * The hook point: what a settle does about the prompt library. Runs the repair
@@ -598,11 +619,36 @@ export async function repairPromptLibraryAfterSync(storage, { loadCatalog = load
  * @param remote   the documents just read, keyed by document id
  * @param storage  the cache
  * @param opts     `isCurrent` (false once the user signed out or changed),
- *                 `announce(keys)`, plus the repair's `loadCatalog` and `now`
+ *                 `announce(keys)`, `uid` (the account being settled),
+ *                 `onProLibrary(listener)` (overridable for tests), plus the
+ *                 repair's `loadCatalog` and `now`
+ *
+ * When a saved id is still without a copy afterwards (its prompt is a Pro one
+ * that has not been fetched), the repair runs once more as soon as the Pro
+ * prompts arrive for `uid`.
  */
-export function repairAfterSettle(remote, storage, { isCurrent = () => true, announce = () => {}, ...repairOpts } = {}) {
+export function repairAfterSettle(remote, storage, {
+  isCurrent = () => true, announce = () => {}, uid = null, onProLibrary = onProLibraryReady, ...repairOpts
+} = {}) {
   if (!remote || !Object.hasOwn(remote, 'data')) return null
-  return repairPromptLibraryAfterSync(storage, { ...repairOpts, isCurrent })
+  const run = () => repairPromptLibraryAfterSync(storage, { ...repairOpts, uid, isCurrent })
     .then((added) => { if (added && isCurrent()) announce(['vs-prompts']) })
+  return run()
+    .then(async () => {
+      // One waiting repair at most: a later settle replaces it.
+      if (healOff) { healOff(); healOff = null }
+      if (!uid || !isCurrent()) return
+      if (!savedIdsWithoutCopy(getPrompts(storage), getSavedIds(storage)).length) return
+      let off = null
+      let done = false
+      const stop = () => { done = true; if (off) off(); if (healOff === stop) healOff = null }
+      off = await onProLibrary((kind, readyUid) => {
+        if (done || kind !== 'prompts' || readyUid !== uid) return
+        stop()
+        run().catch(() => { /* the next settle tries again */ })
+      })
+      if (done) off()
+      else healOff = stop
+    })
     .catch(() => { /* the next settle tries again */ })
 }

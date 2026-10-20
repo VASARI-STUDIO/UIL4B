@@ -591,6 +591,418 @@ export function subscriptionRevocationStamp(sub, health, now = Date.now()) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 14-DAY WITHDRAWAL — cancel now, refund what was paid, exactly once
+// ─────────────────────────────────────────────────────────────────────────────
+// A buyer may withdraw from a new subscription within 14 days of the paid start.
+// The server action cancels the subscription at once and refunds the FULL amount
+// paid, less anything already refunded. A seller may keep a share only when the
+// buyer asked, at checkout, for the service to start straight away; checkout
+// records no such request, so there is no share to keep. Money moves, so:
+//
+//   · The eligibility rules and the amount are pure (withdrawalDecision,
+//     withdrawalRefundDue) and are tested without Stripe.
+//   · "Everything paid" means every succeeded charge behind this subscription's
+//     paid invoices, not just the latest: the portal can switch plans, and each
+//     switch can raise its own invoice. A payment still going through, a customer
+//     credit balance, or a payment history that cannot be read with confidence
+//     each REFUSE before anything is cancelled, instead of guessing.
+//   · The amounts are fixed ONCE, in a marker written before Stripe is touched. A
+//     retry reads the stored amounts back; it never works them out again.
+//   · The marker lives at `subscription.withdrawal`, inside a field
+//     firestore.rules locks against client writes. A top-level field would be
+//     client-writable, and a forged amount would be refunded.
+//   · The marker names its subscription, so it stops counting once the account
+//     holds a different one: a later subscription can withdraw again.
+//   · Each refund carries an idempotency key per subscription and charge, and
+//     before creating one the charge's own refunds are read: a refund this action
+//     already made is adopted, never repeated.
+//   · Every refund is stamped with `metadata.reason` and `metadata.subscriptionId`.
+//     That stamp, not the marker, is how the webhook knows a full refund is ours:
+//     the marker is one slot that a later withdrawal overwrites.
+export const WITHDRAWAL_WINDOW_MS = 14 * 86_400_000
+export const WITHDRAWAL_REASON = 'withdrawal_14_day'
+// A refund that failed or was cancelled at Stripe is replayed by the same key for
+// a day, so each failed attempt moves the key on and the next try is a fresh one.
+export const withdrawalIdempotencyKey = (subscriptionId, chargeId, failedAttempts = 0) =>
+  `uil4b:withdraw:${subscriptionId}:${chargeId}${failedAttempts > 0 ? `:retry${failedAttempts}` : ''}`
+
+const refundIsDead = (refund) => refund?.status === 'failed' || refund?.status === 'canceled'
+
+/** Whether a refund is one this withdrawal made for this subscription and still stands. Pure. */
+export function isWithdrawalRefund(refund, subscriptionId) {
+  return !!subscriptionId
+    && refund?.metadata?.reason === WITHDRAWAL_REASON
+    && refund.metadata.subscriptionId === subscriptionId
+    && !refundIsDead(refund)
+}
+
+/**
+ * Whether any refund on this charge is the withdrawal's refund for this
+ * subscription. The webhook asks this before it stamps a revocation for a full
+ * refund: only a refund carrying our stamp is exempt, so a hand-made full refund
+ * of a live subscription still revokes.
+ */
+export async function chargeHasWithdrawalRefund(stripe, chargeId, subscriptionId) {
+  if (!stripe?.refunds?.list || !chargeId || !subscriptionId) return false
+  const listed = await stripe.refunds.list({ charge: chargeId, limit: 100 })
+  return (listed?.data || []).some((r) => isWithdrawalRefund(r, subscriptionId))
+}
+
+/**
+ * When the customer started paying, in MILLISECONDS, or null if Stripe gave no
+ * start. A subscription with a trial is first charged when the trial ends, so the
+ * window runs from there; otherwise from the subscription's own start.
+ */
+export function withdrawalWindowStart(sub) {
+  const seconds = Number.isFinite(sub?.trial_end) && sub.trial_end > 0
+    ? sub.trial_end
+    : Number.isFinite(sub?.start_date) ? sub.start_date : sub?.created
+  return Number.isFinite(seconds) ? seconds * 1000 : null
+}
+
+/**
+ * What a withdrawal refunds: the whole charge less what has already gone back, in
+ * the charge's minor units, never negative. Pure. Null when the charge carries no
+ * usable amount (the caller must then refuse rather than guess).
+ */
+export function withdrawalRefundDue(charge) {
+  const paid = Number(charge?.amount_captured ?? charge?.amount)
+  const refunded = Number(charge?.amount_refunded) || 0
+  if (!Number.isFinite(paid) || paid < 0 || refunded < 0) return null
+  return Math.max(Math.floor(paid) - Math.floor(refunded), 0)
+}
+
+// Why a withdrawal that refunded nothing refunded nothing, in words the customer
+// can read. Keyed by the `noRefund` stored on the marker.
+const NO_REFUND_MESSAGES = Object.freeze({
+  trial: 'Your trial has been cancelled. Nothing had been charged, so there is nothing to refund.',
+  nothing_charged: 'Your subscription has been cancelled. No payment had been taken, so there is nothing to refund.',
+  already_refunded: 'Your subscription has been cancelled. Your payment had already been refunded in full.',
+  not_refundable: 'Your subscription has been cancelled. Your latest payment cannot be refunded here, so please contact support.',
+})
+
+/** The stored withdrawal marker for this subscription, or null. */
+export function withdrawalMarkerFor(storedSubscription, subscriptionId) {
+  const marker = storedSubscription?.withdrawal
+  return marker && subscriptionId && marker.subscriptionId === subscriptionId ? marker : null
+}
+
+const withdrawalRefusal = (status, code, message) => ({ ok: false, status, code, message })
+
+// Refused before anything is cancelled, so the customer can try again or be helped.
+const PAYMENT_PROCESSING = withdrawalRefusal(409, 'payment_processing', 'Your payment is still going through. Try again in a little while.')
+const NEEDS_SUPPORT = withdrawalRefusal(409, 'withdraw_needs_support', 'We cannot work out your refund automatically. Please contact support and we will sort it out.')
+
+/** What is shown for an account with nothing to withdraw from. */
+export function withdrawalNoSubscription(userData) {
+  if (userData?.lifetimeEntitlement?.active === true) {
+    return withdrawalRefusal(409, 'lifetime_not_withdrawable', 'A lifetime purchase is not a subscription, so it cannot be withdrawn here. Please contact support.')
+  }
+  return withdrawalRefusal(400, 'no_subscription', 'There is no subscription on this account to withdraw from.')
+}
+
+/**
+ * First look, from our own document alone: is there a subscription, and has this
+ * withdrawal already finished? A finished one is answered from the stored result
+ * without calling Stripe at all.
+ */
+export function withdrawalPrecheck(userData) {
+  const subscriptionId = userData?.subscription?.id
+  if (!subscriptionId) return withdrawalNoSubscription(userData)
+  const marker = withdrawalMarkerFor(userData.subscription, subscriptionId)
+  if (marker?.state === 'done') return { ok: true, action: 'done', subscriptionId, marker }
+  return { ok: true, action: 'proceed', subscriptionId, marker }
+}
+
+/**
+ * Second look, with the subscription as Stripe reports it. Pure. `action` is
+ * 'resume' (a marker exists: finish it, whatever the date now says, because the
+ * request that wrote it was in the window) or 'new'.
+ */
+export function withdrawalDecision({ sub, customerId, marker = null, now = Date.now() }) {
+  const subCustomer = typeof sub?.customer === 'string' ? sub.customer : sub?.customer?.id || null
+  if (!sub?.id || !customerId || subCustomer !== customerId) {
+    return withdrawalRefusal(403, 'subscription_mismatch', 'This subscription is not linked to your account. Please contact support.')
+  }
+  if (marker) return { ok: true, action: marker.state === 'done' ? 'done' : 'resume' }
+  if (FINAL_SUBSCRIPTION_STATUSES.includes(sub.status)) {
+    return withdrawalRefusal(409, 'already_canceled', 'This subscription has already ended.')
+  }
+  // A trial has had nothing charged, so ending it needs no window.
+  if (sub.status === 'trialing') return { ok: true, action: 'new' }
+  const startMs = withdrawalWindowStart(sub)
+  if (startMs === null || now - startMs > WITHDRAWAL_WINDOW_MS) {
+    return withdrawalRefusal(409, 'withdraw_window_closed', 'The 14-day withdrawal period for this subscription has ended.')
+  }
+  return { ok: true, action: 'new' }
+}
+
+/**
+ * Write the marker unless one for this subscription is already there, in one
+ * transaction. Returns the marker that is now stored, which on a repeat or a
+ * double-click is the FIRST one with its original amount.
+ */
+export function claimWithdrawal(db, uid, proposed) {
+  const ref = db.collection('users').doc(uid)
+  return db.runTransaction(async (tx) => {
+    const stored = (await tx.get(ref)).data()?.subscription || null
+    const existing = withdrawalMarkerFor(stored, proposed.subscriptionId)
+    if (existing) return existing
+    tx.set(ref, { subscription: { withdrawal: proposed } }, { merge: true })
+    return proposed
+  })
+}
+
+/** Mark the stored marker done. A marker for another subscription is left alone. */
+export function completeWithdrawal(db, uid, subscriptionId, fields) {
+  const ref = db.collection('users').doc(uid)
+  return db.runTransaction(async (tx) => {
+    const stored = (await tx.get(ref)).data()?.subscription || null
+    const existing = withdrawalMarkerFor(stored, subscriptionId)
+    if (!existing) return null
+    const marker = { ...existing, ...fields, state: 'done' }
+    tx.set(ref, { subscription: { withdrawal: marker } }, { merge: true })
+    return marker
+  })
+}
+
+function withdrawalResult(marker) {
+  const refunded = Number.isFinite(marker.refundedAmount) ? marker.refundedAmount : marker.amount
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      refunded,
+      currency: marker.currency || null,
+      subscriptionId: marker.subscriptionId,
+      // Cancelled but nothing paid back: say why, rather than leave a bare 0.
+      ...(refunded > 0 ? {} : { message: NO_REFUND_MESSAGES[marker.noRefund] || NO_REFUND_MESSAGES.already_refunded }),
+    },
+  }
+}
+
+const refusalResult = (r) => ({ status: r.status, body: { error: r.message, code: r.code } })
+
+function chargeCustomerId(charge) {
+  return typeof charge?.customer === 'string' ? charge.customer : charge?.customer?.id || null
+}
+
+const idOf = (ref) => (typeof ref === 'string' ? ref : ref?.id || null)
+
+async function chargeBehindIntent(stripe, intentRef) {
+  const intent = intentRef && typeof intentRef === 'object' && intentRef.latest_charge
+    ? intentRef
+    : await stripe.paymentIntents.retrieve(idOf(intentRef), { expand: ['latest_charge'] })
+  const latest = intent?.latest_charge
+  if (latest && typeof latest === 'object') return latest
+  return typeof latest === 'string' ? stripe.charges.retrieve(latest) : null
+}
+
+/**
+ * Everything this subscription has been paid, asked of Stripe invoice by invoice.
+ * Returns { charges } (every charge behind a paid invoice, deduplicated),
+ * { processing: true } when a payment is still going through, or
+ * { unsure: <why> } when the history cannot be read with confidence. The caller
+ * refuses on either of the last two before anything is cancelled.
+ *
+ * "Still going through" is a draft invoice (Stripe finalises it up to an hour
+ * after a trial ends), an open invoice nobody has tried to charge yet or whose
+ * payment is open, or a charge that is pending (a bank debit).
+ */
+export async function withdrawalPayments(stripe, sub) {
+  const listed = await stripe.invoices.list({ subscription: sub.id, limit: 100, expand: ['data.payments'] })
+  if (listed?.has_more) return { unsure: 'too_many_invoices' }
+  const invoices = [...(listed?.data || [])]
+  // The subscription's own latest invoice is always counted, listed or not.
+  const latestId = idOf(sub.latest_invoice)
+  if (latestId && !invoices.some((i) => i?.id === latestId)) {
+    invoices.push(await stripe.invoices.retrieve(latestId, { expand: ['payments'] }))
+  }
+
+  let processing = false
+  const charges = new Map()
+  for (const invoice of invoices) {
+    const payments = Array.isArray(invoice?.payments?.data) ? invoice.payments.data : null
+    if (invoice?.status === 'draft') { processing = true; continue }
+    if (invoice?.status === 'open') {
+      const attempted = Number(invoice.attempt_count) > 0
+      if (!attempted || (payments || []).some((p) => p?.status === 'open')) processing = true
+      continue
+    }
+    if (invoice?.status !== 'paid') continue // void or uncollectible: nothing was paid
+    if (!payments || invoice.payments.has_more) return { unsure: 'payments_unreadable' }
+    let found = 0
+    for (const p of payments) {
+      if (p?.status !== 'paid') continue
+      const ref = p.payment || {}
+      let charge = null
+      if (ref.payment_intent) charge = await chargeBehindIntent(stripe, ref.payment_intent)
+      else if (ref.charge) charge = typeof ref.charge === 'object' ? ref.charge : await stripe.charges.retrieve(ref.charge)
+      if (!charge?.id) return { unsure: 'charge_unreadable' }
+      charges.set(charge.id, charge)
+      found += 1
+    }
+    // Paid, with money taken, and no charge to show for it: paid some other way.
+    if (!found && Number(invoice.amount_paid) > 0) return { unsure: 'paid_without_a_charge' }
+  }
+  if ([...charges.values()].some((c) => c.status === 'pending')) processing = true
+  return processing ? { processing: true } : { charges: [...charges.values()] }
+}
+
+/**
+ * Make (or adopt) the refund for each charge on a withdrawal marker, then mark it
+ * done. Shared by the customer's request and by the webhook that finishes a
+ * request which died after the cancel. Safe to run again at any point: a refund
+ * already made is adopted, a refund can never exceed what its charge has left, and
+ * a refund that Stripe reports as failed is not counted as money paid back.
+ */
+export async function finishWithdrawalRefund({ stripe, db, uid, subscriptionId, marker, now = Date.now() }) {
+  const refundIds = []
+  let refundedAmount = 0
+  for (const entry of marker.charges || []) {
+    if (!(entry?.amount > 0)) continue
+    const charge = await stripe.charges.retrieve(entry.id)
+    const listed = await stripe.refunds.list({ charge: entry.id, limit: 100 })
+    const mine = (listed?.data || []).filter((r) => r?.metadata?.reason === WITHDRAWAL_REASON
+      && r.metadata.subscriptionId === subscriptionId)
+    const ours = mine.find((r) => !refundIsDead(r))
+    if (ours) {
+      refundIds.push(ours.id)
+      refundedAmount += ours.amount
+      continue
+    }
+    const left = (Number(charge.amount_captured ?? charge.amount) || 0) - (Number(charge.amount_refunded) || 0)
+    const amount = Math.min(entry.amount, left)
+    if (!(amount > 0)) continue
+    const refund = await stripe.refunds.create({
+      charge: entry.id,
+      amount,
+      reason: 'requested_by_customer',
+      metadata: { firebaseUid: uid, reason: WITHDRAWAL_REASON, subscriptionId },
+    }, { idempotencyKey: withdrawalIdempotencyKey(subscriptionId, entry.id, mine.length) })
+    // A refund object that came back failed is not money returned: leave the
+    // marker pending so the next attempt (a retry, or the webhook) makes another.
+    if (refundIsDead(refund)) {
+      throw new Error(`withdraw: the refund of charge ${entry.id} did not go through (${refund.status})`)
+    }
+    refundIds.push(refund.id)
+    refundedAmount += refund.amount
+  }
+  const done = await completeWithdrawal(db, uid, subscriptionId, {
+    refundId: refundIds[0] || null, refundIds, refundedAmount, completedAt: now,
+  })
+  return done || { ...marker, state: 'done', refundId: refundIds[0] || null, refundIds, refundedAmount }
+}
+
+/**
+ * The whole withdrawal. Returns { status, body } for the handler to send, and
+ * throws on anything unexpected (the handler turns that into failRequest). The
+ * caller has already proved the account owns `customerId`.
+ *
+ * Order, and why it is safe to run again after any step fails:
+ *   1. precheck      a finished withdrawal returns its stored result here
+ *   2. decision      refuses outside the window, with nothing paid out
+ *   3. payments      reads every paid invoice's charge; refuses (409) while a
+ *                    payment is going through, when the customer holds a credit
+ *                    balance, or when the history cannot be read with confidence
+ *   4. claim marker  fixes the amounts once, BEFORE Stripe is touched
+ *   5. cancel        tolerates "already canceled"
+ *   6. write doc     access drops now rather than when the webhook lands
+ *   7. refund        finishWithdrawalRefund: per charge, adopts an earlier
+ *                    refund of ours, else creates one under a per-subscription,
+ *                    per-charge idempotency key, capped by what the charge has
+ *                    left; then marks the marker done with what was refunded
+ */
+export async function performWithdrawal({ stripe, db, uid, userData, customerId, now = Date.now() }) {
+  const pre = withdrawalPrecheck(userData)
+  if (!pre.ok) return refusalResult(pre)
+  if (pre.action === 'done') return withdrawalResult(pre.marker)
+  const subscriptionId = pre.subscriptionId
+
+  let sub
+  try {
+    sub = await stripe.subscriptions.retrieve(subscriptionId)
+  } catch (err) {
+    if (err?.code === 'resource_missing') return refusalResult(withdrawalNoSubscription(null))
+    throw err
+  }
+  const decision = withdrawalDecision({ sub, customerId, marker: pre.marker, now })
+  if (!decision.ok) return refusalResult(decision)
+  if (decision.action === 'done') return withdrawalResult(pre.marker)
+
+  let marker = pre.marker
+  if (decision.action === 'new') {
+    // Everything that can refuse happens before the marker is written, so a
+    // refused request leaves no trace.
+    let paid = []
+    // A trial has nothing paid: cancel only.
+    if (sub.status !== 'trialing') {
+      // A credit balance (a downgrade can leave one) means some of what the
+      // customer paid was never charged to a card, so the charges alone are not
+      // the amount to give back. A person decides that.
+      const customer = await stripe.customers.retrieve(customerId)
+      if (customer?.deleted || !Number.isFinite(customer?.balance) || customer.balance !== 0) {
+        return refusalResult(NEEDS_SUPPORT)
+      }
+      const found = await withdrawalPayments(stripe, sub)
+      if (found.unsure) {
+        console.error('withdraw: the payment history could not be read with confidence — sent to support', {
+          uid, subscriptionId, reason: found.unsure,
+        })
+        return refusalResult(NEEDS_SUPPORT)
+      }
+      if (found.processing) return refusalResult(PAYMENT_PROCESSING)
+      paid = found.charges
+    }
+    if (paid.some((c) => { const owner = chargeCustomerId(c); return owner && owner !== customerId })) {
+      throw new Error('withdraw: a charge on this subscription does not belong to this customer')
+    }
+    // A charge that never succeeded took no money; a disputed one cannot be refunded.
+    const succeeded = paid.filter((c) => c.status === 'succeeded')
+    const refundable = succeeded.filter((c) => c.disputed !== true)
+    const due = refundable.map((c) => ({ id: c.id, currency: c.currency || null, amount: withdrawalRefundDue(c) }))
+    if (due.some((d) => d.amount === null)) {
+      throw new Error('withdraw: a charge carries no usable amount, so no refund can be worked out')
+    }
+    if (new Set(due.map((d) => d.currency)).size > 1) return refusalResult(NEEDS_SUPPORT)
+    const charges = due.filter((d) => d.amount > 0).map((d) => ({ id: d.id, amount: d.amount }))
+    const amount = charges.reduce((sum, c) => sum + c.amount, 0)
+    // Why nothing is refunded, when that is the outcome (see NO_REFUND_MESSAGES).
+    let noRefund = null
+    if (sub.status === 'trialing') noRefund = 'trial'
+    else if (!succeeded.length) noRefund = 'nothing_charged'
+    else if (!refundable.length) noRefund = 'not_refundable'
+    else if (amount === 0) noRefund = 'already_refunded'
+    marker = await claimWithdrawal(db, uid, {
+      subscriptionId,
+      amount,
+      currency: due[0]?.currency || null,
+      charges,
+      noRefund,
+      state: 'pending',
+      requestedAt: now,
+      refundId: null,
+    })
+    if (marker.state === 'done') return withdrawalResult(marker)
+  }
+
+  let canceled = sub
+  if (sub.status !== 'canceled') {
+    try {
+      canceled = await stripe.subscriptions.cancel(subscriptionId, { prorate: false, invoice_now: false })
+    } catch (err) {
+      const fresh = await stripe.subscriptions.retrieve(subscriptionId)
+      if (fresh?.status !== 'canceled') throw err
+      canceled = fresh
+    }
+  }
+  await writeSubscriptionDoc(db, uid, canceled, now)
+
+  const done = await finishWithdrawalRefund({ stripe, db, uid, subscriptionId, marker, now })
+  return withdrawalResult(done)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SUBSCRIPTION RECONCILE — the safety net the one-off path already had
 // ─────────────────────────────────────────────────────────────────────────────
 // api/checkout-status.js reconciles a paid ONE-OFF session inside a transaction

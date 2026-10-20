@@ -27,7 +27,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 
 const byId = id => BRAND_PALETTES.find(b => b.id === id)
 
@@ -161,7 +161,7 @@ const PEPSI_UNVERIFIED = ['#004B93', '#E32934', '#FFFFFF', '#0065C3', '#28458E']
 
 test('the pepsi row and the header\'s unverified claim move together', () => {
   const header = readFileSync(
-    new URL('../../src/data/brandPalettes.js', import.meta.url), 'utf8',
+    new URL('../../api/_lib/library/brandPalettes.js', import.meta.url), 'utf8',
   ).split('export const')[0]
 
   const claimsUnverified = /NOT VERIFIED: `pepsi`/.test(header)

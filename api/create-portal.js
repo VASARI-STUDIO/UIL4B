@@ -2,6 +2,7 @@ import { adminAuth, adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins, resolveOrigin } from './_lib/origins.js'
+import { performWithdrawal, withdrawalNoSubscription } from './_lib/billing.js'
 
 export default async function handler(req, res) {
   // An allowlisted origin is reflected, anything else gets no CORS header at
@@ -25,9 +26,17 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Missing auth token' })
   }
 
+  // A withdrawal moves money, so its token is also checked against revocation (a
+  // signed-out or password-changed session cannot refund). The portal path is
+  // unchanged.
+  const withdrawing = req.body?.action === 'withdraw'
+
   let uid
   try {
-    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
+    const token = authHeader.slice(7)
+    const decoded = withdrawing
+      ? await adminAuth().verifyIdToken(token, true)
+      : await adminAuth().verifyIdToken(token)
     uid = decoded.uid
   } catch {
     return res.status(401).json({ error: 'Invalid auth token' })
@@ -41,6 +50,10 @@ export default async function handler(req, res) {
     const customerId = userData?.stripeCustomerId || null
 
     if (!customerId) {
+      if (req.body?.action === 'withdraw') {
+        const none = withdrawalNoSubscription(userData)
+        return res.status(none.status).json({ error: none.message, code: none.code })
+      }
       return res.status(400).json({ error: 'No subscription found' })
     }
 
@@ -76,6 +89,26 @@ export default async function handler(req, res) {
         cause: customer?.deleted ? 'customer_deleted' : (customerUid ? 'uid_mismatch' : 'missing_metadata'),
       })
       return res.status(403).json({ error: 'This billing account is not linked to your login. Please contact support.' })
+    }
+
+    // 14-day withdrawal: cancel now and refund the full amount paid, once. The rules
+    // and the retry logic live in _lib/billing.js (performWithdrawal). Reached
+    // only after the ownership check above, and only when asked for by name, so
+    // the portal path below is untouched.
+    if (req.body?.action === 'withdraw') {
+      let outcome
+      try {
+        outcome = await performWithdrawal({ stripe, db: adminDb(), uid, userData, customerId })
+      } catch (err) {
+        return failRequest(res, {
+          status: 500,
+          scope: 'create-portal withdraw',
+          message: 'We could not complete your withdrawal. It is safe to try again, and you will not be refunded twice. If it keeps failing, contact support with the reference below.',
+          err,
+          context: { uid, subscriptionId: userData?.subscription?.id || null },
+        })
+      }
+      return res.status(outcome.status).json(outcome.body)
     }
 
     const origin = resolveOrigin(req)

@@ -30,6 +30,7 @@ import {
   CREATE_ROUTE_MIGRATION,
   CLIENT_REDIRECT_ROUTES,
   EARLY_RETURN_REDIRECTS,
+  mergeRedirectQuery,
 } from '../../src/data/legacyRoutes.js'
 import { CREATE_GROUPS, createRoutes, resolveTool } from '../../src/data/toolTree.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
@@ -41,8 +42,9 @@ const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const vercel = () => JSON.parse(read('vercel.json'))
 const built = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'))
 
-// Fragment-stripped destination — `/learn/help#about` routes to the page `/learn/help`.
-const destPath = (d) => d.split('#')[0]
+// Fragment- and query-stripped destination — `/learn/help#about` routes to the
+// page `/learn/help`, and `/feedback?from=support` to `/feedback`.
+const destPath = (d) => d.split('#')[0].split('?')[0]
 
 // The Create routes as they stood the day before the migration. Frozen on
 // purpose: this is history, not configuration, and the whole point of the test
@@ -91,14 +93,14 @@ test('every retired URL redirects exactly once', () => {
   assert.equal(sources.length, LEGACY_REDIRECTS.length)
 })
 
-test('every redirect is a 301, never a 302', () => {
-  // Vercel spells 301 as `permanent: true`. It is NOT the default: omit it, or
+test('every redirect is permanent', () => {
+  // Vercel spells 308 as `permanent: true`. It is NOT the default: omit it, or
   // set it false, and Vercel emits a 307/302, which tells Google the old URL is
   // still the canonical one and to keep it indexed — the exact opposite of what
   // a permanent rename needs, and a failure that looks identical in a browser.
   for (const r of vercel().redirects) {
     assert.equal(r.permanent, true,
-      `${r.source} is not permanent — it would ship as a 302 and Google would keep the old URL`)
+      `${r.source} is not permanent — it would keep the old URL indexed`)
   }
 })
 
@@ -163,12 +165,38 @@ test('the edge and the client answer the same question the same way', () => {
   const app = read('src/App.jsx')
   assert.match(app, /CLIENT_REDIRECT_ROUTES\.map\(/,
     'App.jsx no longer renders the client-side redirect fallback')
-  assert.match(app, /<Route[^>]*path=\{from\}[^>]*element=\{<Navigate to=\{to\}/,
-    'the mapped redirect routes no longer render a <Navigate>')
+  assert.match(app, /<Route[^>]*path=\{from\}[^>]*element=\{<(?:Navigate|LegacyRedirect) to=\{to\}/,
+    'the mapped redirect routes no longer render a <Navigate> (via LegacyRedirect)')
   for (const early of EARLY_RETURN_REDIRECTS) {
     assert.ok(app.includes(`'${early}'`),
       `${early} is listed as an early-return redirect but App.jsx does not mention it`)
   }
+})
+
+test('every client-side retired path lands on its destination and keeps the visitor\'s query', () => {
+  // The client router redirects through mergeRedirectQuery. Walked over the whole
+  // table rather than over /support alone, so a retired path that quietly drops
+  // utm_* tags or a #fragment on the way through is named here.
+  const incoming = '?utm_source=email&ref=abc'
+  for (const [from, to] of CLIENT_REDIRECT_ROUTES) {
+    const landed = mergeRedirectQuery(to, incoming)
+    const url = new URL(landed, 'https://example.test')
+    assert.equal(url.pathname, destPath(to), `${from} no longer lands on ${destPath(to)} (got ${landed})`)
+    assert.equal(url.hash, to.includes('#') ? `#${to.split('#')[1]}` : '', `${from} lost or invented a fragment`)
+    assert.equal(url.searchParams.get('utm_source'), 'email', `${from} dropped the visitor's utm_source`)
+    assert.equal(url.searchParams.get('ref'), 'abc', `${from} dropped the visitor's ref`)
+    // The destination's own parameters survive beside the visitor's.
+    const own = new URLSearchParams(to.split('#')[0].split('?')[1] || '')
+    for (const [key, value] of own) assert.equal(url.searchParams.get(key), value, `${from} lost its own ${key}`)
+    // With nothing incoming the destination comes back exactly as listed.
+    assert.equal(mergeRedirectQuery(to, ''), to)
+  }
+})
+
+test('mergeRedirectQuery keeps every repeated incoming value and lets the destination\'s own keys win', () => {
+  const landed = new URL(mergeRedirectQuery('/feedback?from=support', '?ref=invoice&ref=retry&from=other'), 'https://example.test')
+  assert.deepEqual(landed.searchParams.getAll('ref'), ['invoice', 'retry'])
+  assert.deepEqual(landed.searchParams.getAll('from'), ['support'])
 })
 
 /* ── The Create migration specifically ────────────────────────────────────── */

@@ -28,13 +28,16 @@ import {
 // is in src/utils/brandKitGuide.js, next to the step model itself. This file is
 // the surface. Two pieces:
 //
-//   1. THE RAIL. A sticky bar along the bottom of every step, showing all four
+//   1. THE RAIL. A bar docked to the bottom of every step, showing all four
 //      steps at once with a tick on the ones that are built AND THE ARTEFACT
 //      EACH ONE PRODUCED — the real swatches, the real family names, the real
 //      base and ratio. That is the difference between a guided flow and four
 //      bookmarks: standing on Icons you can see the palette you drew on
 //      Colours. Every value comes off the saved design, so the rail cannot show
-//      a system the tools did not build.
+//      a system the tools did not build. The rail is fixed to the foot of the
+//      viewport at every width (tool-shell.css), so it has the same width and
+//      position on all four tools; from 1024px the artefacts move into the
+//      orientation card's list.
 //
 //   2. THE ORIENTATION CARD. Docked above the rail, over a working tool.
 //
@@ -83,6 +86,8 @@ import {
 // shown, and the rail keeps a permanent “What’s this?” trigger so it is
 // reachable again afterwards. That last part is the lesson the founder-note
 // item recorded about one-time popups, and it is the cheap half to get right.
+let bkitOffTimer = 0
+
 export default function UIKitGuide({ step }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -163,14 +168,25 @@ export default function UIKitGuide({ step }) {
     markIntroSeen()
   }, [])
 
+  // The X ends the walkthrough in place: no navigation. Both cards are closed
+  // with it.
+  const leftInPlaceRef = useRef(false)
   const exit = useCallback(() => {
+    leftInPlaceRef.current = true
     endGuide()
     setActive(false)
-    // /projects, not /dashboard: /dashboard is a legacy redirect to it (see
-    // data/legacyRoutes.js), and /projects is the User Home that already renders
-    // this system's four-part progress — so "review" lands on the review.
-    navigate('/projects')
-  }, [navigate])
+    setShowIntro(false)
+    setShowName(false)
+  }, [])
+
+  // The X unmounts with the rail, so focus would fall to <body>. It goes to the
+  // page's own main landmark (App's skip-link target, tabIndex -1). An effect on
+  // `active`, so it runs after the card-close cleanups above, not before them.
+  useEffect(() => {
+    if (active || !leftInPlaceRef.current) return
+    leftInPlaceRef.current = false
+    document.getElementById('main')?.focus({ preventScroll: true })
+  }, [active])
 
   // Next counts the step as built, defaults and all, then moves on. On the last
   // tool it opens the closing step instead of leaving.
@@ -260,7 +276,7 @@ export default function UIKitGuide({ step }) {
     return () => { if (trigger && trigger.isConnected) trigger.focus() }
   }, [showName])
 
-  // On a phone a docked card is fixed 12px above the rail's top edge (see
+  // Below 1024px a docked card is fixed 12px above the rail's top edge (see
   // tool-shell.css). That edge moves with the rail's height, which changes with
   // the step, and with the scroll at the end of the page, so it is measured
   // while a card is open.
@@ -273,12 +289,50 @@ export default function UIKitGuide({ step }) {
   // screen is taken to mean the keyboard is up. The dock is recomputed on the
   // next frame rather than in the focus handler, so a tap that moves focus from
   // the field to Save still lands on Save.
+  //
+  // From 1024px a card is a popover over the docked bar, its trailing edge on
+  // the trailing edge of the button that opened it (What's this? or, on the
+  // last step, Name your kit). That edge is measured here too, and the first
+  // measure runs before paint so the card never appears in one place and then
+  // jumps to another.
   const railRef = useRef(null)
   const nameCardRef = useRef(null)
   const nameRowRef = useRef(null)
   const [dock, setDock] = useState(null)
+  const shown = active && !!current
+  // `bkit-on` is set before first paint and lasts while the walkthrough is
+  // showing. On a phone it hides the tab bar and zeroes --tabbar-h (so the page
+  // and scroll padding that read it collapse), and at every width it lifts
+  // toasts and the feedback button above the bar.
+  useLayoutEffect(() => {
+    if (!shown) return undefined
+    const root = document.documentElement
+    window.clearTimeout(bkitOffTimer)
+    root.classList.add('bkit-on')
+    const toolbar = step === 'color' ? railRef.current?.closest('.plb')?.querySelector('.plb-adjust') : null
+    const docked = window.matchMedia('(min-width:768px)')
+    const measure = () => {
+      if (toolbar && docked.matches) root.style.setProperty('--bkit-toolbar-h', `${toolbar.getBoundingClientRect().height}px`)
+      else root.style.removeProperty('--bkit-toolbar-h')
+    }
+    measure()
+    const observer = toolbar && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    observer?.observe(toolbar)
+    docked.addEventListener('change', measure)
+    return () => {
+      observer?.disconnect()
+      docked.removeEventListener('change', measure)
+      root.style.removeProperty('--bkit-toolbar-h')
+      // Each tool mounts its own copy, so moving between steps unmounts one and
+      // mounts the next with a gap between (a lazy route). While the flow is still
+      // on, the class is held through that gap so the tab bar does not flash back.
+      window.clearTimeout(bkitOffTimer)
+      if (isGuideActive()) bkitOffTimer = window.setTimeout(() => root.classList.remove('bkit-on'), 1500)
+      else root.classList.remove('bkit-on')
+    }
+  }, [shown, step])
   const cardOpen = showIntro || showName
-  useEffect(() => {
+  useLayoutEffect(() => {
     const rail = railRef.current
     if (!cardOpen || !rail) return undefined
     const vv = window.visualViewport
@@ -291,15 +345,23 @@ export default function UIKitGuide({ step }) {
       const focused = document.activeElement
       const inForm = !!focused && !!nameRowRef.current?.contains(focused)
       const lifted = inForm && (keyboard > 0 || (coarse && focused === nameInputRef.current))
+      const anchor = showName ? nameTriggerRef.current : introTriggerRef.current
+      const end = anchor ? Math.round(document.documentElement.clientWidth - anchor.getBoundingClientRect().right) : null
       const next = lifted
-        ? { bottom: keyboard + 12, room: Math.round(vv ? vv.height : window.innerHeight), top: Math.round(vv ? vv.offsetTop : 0) }
-        : { bottom: railLift + 12 }
-      setDock((prev) => (prev && prev.bottom === next.bottom && prev.room === next.room && prev.top === next.top ? prev : next))
+        ? { bottom: keyboard + 12, room: Math.round(vv ? vv.height : window.innerHeight), top: Math.round(vv ? vv.offsetTop : 0), end }
+        : { bottom: railLift + 12, end }
+      setDock((prev) => (prev && prev.bottom === next.bottom && prev.room === next.room && prev.top === next.top && prev.end === next.end ? prev : next))
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
-    schedule()
+    measure()
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
     observer?.observe(rail)
+    // The actions sit at the bar's trailing end, so a change in their width
+    // (a web font arriving) moves the button the card hangs from.
+    const actions = rail.querySelector('.bkit-rail-actions')
+    if (actions) observer?.observe(actions)
+    const toolbar = step === 'color' ? rail.closest('.plb')?.querySelector('.plb-adjust') : null
+    if (toolbar) observer?.observe(toolbar)
     window.addEventListener('scroll', schedule, { passive: true, capture: true })
     window.addEventListener('resize', schedule)
     document.addEventListener('focusin', schedule)
@@ -316,11 +378,12 @@ export default function UIKitGuide({ step }) {
       vv?.removeEventListener('resize', schedule)
       vv?.removeEventListener('scroll', schedule)
     }
-  }, [cardOpen, active, step])
+  }, [cardOpen, showName, active, step])
   const lifted = !!dock?.room
   const dockStyle = dock && (lifted || dock.bottom > 12)
     ? {
         '--bkit-dock-bottom': `${dock.bottom}px`,
+        ...(dock.end != null ? { '--bkit-dock-end': `${dock.end}px` } : null),
         ...(lifted ? { '--bkit-vv-h': `${dock.room}px`, '--bkit-vv-top': `${dock.top}px` } : null),
       }
     : undefined
@@ -336,20 +399,6 @@ export default function UIKitGuide({ step }) {
     if (r.bottom > c.bottom) card.scrollTop += r.bottom - c.bottom + 4
     else if (r.top < c.top) card.scrollTop -= c.top - r.top + 4
   }, [lifted, dock])
-
-  // While the card is lifted for typing, the phone tab bar steps aside. Where the
-  // keyboard shrinks the layout viewport the bar rides up on top of it, above the
-  // card, and on a short landscape screen it sits right over Save. Where the
-  // keyboard only shrinks the visual viewport the bar is under the keyboard
-  // already, so nothing visible changes.
-  // `dock` outlives the card, so the card has to be open too.
-  const typing = showName && lifted
-  useEffect(() => {
-    if (!typing) return undefined
-    const root = document.documentElement
-    root.classList.add('bkit-typing')
-    return () => root.classList.remove('bkit-typing')
-  }, [typing])
 
   // The current step's chip is scrolled into the strip, so on a narrow screen
   // the step the person is on is the one they can see. Only the strip scrolls.
@@ -407,7 +456,12 @@ export default function UIKitGuide({ step }) {
             {steps.map((s) => (
               <li key={s.id} className={s.id === step ? 'is-current' : ''}>
                 <span className="bkit-card-num" aria-hidden="true">{s.number}</span>
-                <span><strong>{s.label}</strong> — {s.blurb}</span>
+                <span>
+                  <strong>{s.label}</strong> — {s.blurb}
+                  {/* From 1024px the bar shows no artefacts; what each step
+                      produced is shown here instead. */}
+                  {s.done && <span className="bkit-card-artefact"><StepArtefact step={s} /></span>}
+                </span>
               </li>
             ))}
           </ol>
@@ -479,7 +533,7 @@ export default function UIKitGuide({ step }) {
           <span className="bkit-rail-eyebrow">Brand kit</span>
           {/* The count is the same reading the project card shows, so the two
               surfaces can never report different progress for one system. */}
-          <span className="bkit-rail-count">{done} of {total} built</span>
+          <span className="bkit-rail-count" aria-live="polite">{done} of {total} parts</span>
         </div>
 
         {/* Real links, not buttons: the rail is a map of the flow, so
@@ -502,9 +556,10 @@ export default function UIKitGuide({ step }) {
                   ) : s.number}
                 </span>
                 <span className="bkit-step-body">
-                  <span className="bkit-step-label">{s.label}</span>
+                  <span className="bkit-step-label" data-label={s.label}>{s.label}</span>
                   <StepArtefact step={s} />
                 </span>
+                <span className="sr-only">{s.done ? ', done' : ', not started'}</span>
               </Link>
             </li>
           ))}
@@ -540,7 +595,7 @@ export default function UIKitGuide({ step }) {
               aria-controls={showName ? nameCardId : undefined}
               ref={nameTriggerRef}
             >
-              Next: Name your kit
+              Name your kit
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
             </button>
           )}
@@ -549,6 +604,9 @@ export default function UIKitGuide({ step }) {
           </button>
         </div>
       </div>
+      {/* The bar is fixed to the foot of the viewport; this keeps its height in
+          the page so the end of the tool scrolls clear of it. */}
+      <div className="bkit-rail-space" aria-hidden="true" />
     </>
   )
 }

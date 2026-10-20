@@ -106,6 +106,11 @@ export function placePopover(trigger, panel) {
     panel.style.setProperty('--select-min-w', `${Math.min(anchor.width, vw - EDGE_PAD * 2)}px`)
     panel.style.setProperty('--select-left', `${left}px`)
     panel.style.setProperty('--select-top', `${side === 'top' ? Math.max(top, anchor.top - EDGE_PAD - Math.min(h, maxHeight)) : Math.max(top, anchor.bottom + EDGE_PAD)}px`)
+    // The line an upward panel's BOTTOM edge sits on. `--select-top` above is
+    // worked out from the height at open time, so a panel that grows afterwards
+    // (the colour picker gains a Recent row) would grow down over its own
+    // trigger. A panel that pins its bottom edge here grows upward instead.
+    panel.style.setProperty('--select-anchor-top', `${Math.max(top, anchor.top - EDGE_PAD)}px`)
     return
   }
 
@@ -192,7 +197,19 @@ function ownsItsOwnKeys(el) {
   return !['checkbox', 'radio', 'button', 'submit', 'reset', 'file'].includes(el.type)
 }
 
-export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true, arrowNav = false } = {}) {
+// The control Tab should reach from a popover that lives at the end of <body>
+// instead of beside its trigger: the first tabbable one after the trigger in
+// document order that is not inside the panel. Null when there is none.
+function focusableAfter(trigger, panel) {
+  if (!trigger) return null
+  const all = Array.from(document.querySelectorAll(FOCUSABLE))
+    .filter(el => el.getClientRects().length > 0 && !el.closest('[inert]'))
+  const at = all.indexOf(trigger)
+  if (at < 0) return null
+  return all.slice(at + 1).find(el => !panel.contains(el)) || null
+}
+
+export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true, arrowNav = false, portalled = false } = {}) {
   const triggerRef = useRef(null)
   const popRef = useRef(null)
   const closeRef = useRef(onClose)
@@ -305,7 +322,16 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       const leavingBack = e.shiftKey && (active === list[0] || active === panel)
       // Let the Tab through — the browser moves focus onward on its own. We just
       // close behind it, which is what "disclosure" means as opposed to "modal".
-      if (leavingForward || leavingBack) closeRef.current?.()
+      if (!leavingForward && !leavingBack) return
+      if (portalled) {
+        // A portalled panel is not next to its trigger in the document, so the
+        // browser's own next stop is the skip link (forward) or the page's last
+        // control (back). Send focus where an inline panel would have sent it.
+        e.preventDefault()
+        const target = leavingForward ? focusableAfter(triggerRef.current, panel) : null
+        ;(target || triggerRef.current)?.focus?.()
+      }
+      closeRef.current?.()
     }
 
     // Capture phase on pointerdown: an ancestor panel may stop propagation to
@@ -318,7 +344,7 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       document.removeEventListener('keydown', onKey, true)
       unmark()
     }
-  }, [open, initialFocus, autoFocus, arrowNav, closeToTrigger])
+  }, [open, initialFocus, autoFocus, arrowNav, portalled, closeToTrigger])
 
   return { triggerRef, popRef, closeToTrigger }
 }

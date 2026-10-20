@@ -67,7 +67,7 @@ function ArrowIcon() {
 }
 
 export default function Onboarding() {
-  const { user, userProfile, profileLoaded, updateProfile, loading } = useAuth()
+  const { user, userProfile, profileLoaded, updateProfile, loading, signupVerification, emailVerificationOwed } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const headingRef = useRef(null)
@@ -87,6 +87,17 @@ export default function Onboarding() {
   // tabIndex={-1} to be programmatically focusable without becoming a tab stop.
   useEffect(() => {
     headingRef.current?.focus()
+  }, [])
+
+  // The "check your inbox" line is announced by a status region that is already
+  // on the page when the text arrives: a region that mounts holding its text is
+  // usually not read, and the heading takes focus on mount, so a person on a
+  // screen reader would otherwise never hear it. The line follows one frame
+  // after the screen.
+  const [lineReady, setLineReady] = useState(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setLineReady(true))
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   // Onboarding only makes sense for a signed-in user. While auth is still
@@ -116,6 +127,13 @@ export default function Onboarding() {
   }
 
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
+  // Said only to the account that just signed up with a password and whose
+  // address is still unproved; 'pending' reads as sent, as the send is under way.
+  const verifyLine = emailVerificationOwed && user?.email && signupVerification
+    ? (signupVerification === 'failed'
+        ? "Your verification link didn't send. You can resend it from the bar at the top once you've picked."
+        : `Check your inbox: we sent a verification link to ${user.email}.`)
+    : null
 
   const markOnboardingComplete = (extra = null) => completeOnboarding(updateProfile, extra)
 
@@ -192,6 +210,9 @@ export default function Onboarding() {
             now" that does the identical thing is two names for one action. */}
         <div className="onb-step onb-firstwin-step" data-testid="onboarding-first-win">
           <div className="onb-greeting">You're in, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
+          <div role="status">
+            {lineReady && verifyLine && <p className={`onb-greeting onb-verify-line${signupVerification === 'failed' ? ' onb-verify-line--failed' : ''}`} data-testid="onboarding-verify-line">{verifyLine}</p>}
+          </div>
           <h1 className="onb-q" ref={headingRef} tabIndex={-1}>What do you want to make first?</h1>
           <p className="onb-sub">
             Whichever you pick opens next. You can switch at any time — nothing here is locked in.

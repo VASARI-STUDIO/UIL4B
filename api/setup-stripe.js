@@ -164,17 +164,12 @@ export default async function handler(req, res) {
         currency_options,
         nickname: `${PRODUCT_NAME} ${interval}`,
       }
-      // THE THREE-TIMES-OVERCHARGE. `recurring.interval` alone is only half of
-      // a quarterly price: Stripe reads { interval: 'month' } as billing every
-      // month, so a quarterly price created without `interval_count: 3` charges
-      // $18 a MONTH. INTERVAL_COUNTS has carried the right number since
-      // quarterly was first described in pricing.js and nothing read it, which
-      // is precisely how that ships unnoticed — the price object looks correct
-      // in the dashboard and the error appears on a customer's statement.
+      // `recurring.interval` alone does not say how often a price bills:
+      // Stripe reads { interval: 'month' } as every month, so the interval
+      // count must be sent with it.
       //
-      // Sent for every interval, not only quarterly. Monthly and yearly are
-      // both count 1, so this changes nothing for them and it means the next
-      // interval added cannot reintroduce the bug by forgetting a special case.
+      // Sent for every interval, so an interval with a count above 1 added to
+      // INTERVAL_COUNTS later is created correctly without a special case.
       // Every interval is recurring: no one-off price is created here.
       priceParams.recurring = {
         interval: INTERVAL_MAP[interval],

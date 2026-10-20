@@ -380,15 +380,24 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   // of six that a note can satisfy. RAISE IT the day a surface starts quoting
   // an amount literally again; do not let it fall below two without asking
   // whether anything is being compared at all.
+  //
+  // The floor is 1 because /plans renders its "$0" through
+  // formatMoney(0, currency), so Pricing.jsx quotes no amount by hand and the
+  // one literal left is Settings' "$0". A floor of 1 still fails if nothing is
+  // compared at all; the day Settings stops typing it too, this becomes a
+  // question about whether the scan has a job left.
   const checked = occurrences.filter((hit) => !excusedBy(hit))
-  assert.ok(checked.length >= 2,
+  assert.ok(checked.length >= 1,
     `only ${checked.length} price-shaped strings survived the allowlist to be checked `
     + 'against the ladder — the guard is close to guarding nothing')
 })
 
 test('the allowed set is derived from the ladder and is not empty', () => {
   const allowed = allowedLabels()
-  assert.ok(allowed.size >= 6,
+  // The ladder is Monthly and Yearly, so the allowed set is $0, $7, $48, $4 and
+  // $36: one amount per number a buyer can be quoted. The loop below still
+  // requires every tier to contribute.
+  assert.ok(allowed.size >= 5,
     `the ladder produced only ${allowed.size} allowed amounts (${[...allowed].join(', ')})`)
   for (const label of allowed) {
     assert.match(label, new RegExp(`^${PRICE.source}$`),

@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import usePopover from '../hooks/usePopover'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
+import EmojiGrid from '../components/library/EmojiGrid'
 import { EMOJI_DATA } from '../data/emojiData'
 import { normaliseQuery, searchEmoji } from '../data/emojiSearch'
 import { getLoadedEmojiIndex, loadEmojiIndex } from '../data/emojiIndexLoader'
@@ -41,15 +42,6 @@ function supportsSkinTone(emoji) {
   return MODIFIER_BASE.has(cps[0].codePointAt(0))
 }
 
-// Insert the tone right after the base code point, dropping an emoji-presentation
-// selector (U+FE0F) that must not sit between the base and its modifier.
-function toneOf(emoji, tone) {
-  if (!tone) return emoji
-  const cps = [...emoji]
-  const rest = cps.slice(1).filter((c, i) => !(i === 0 && c.codePointAt(0) === 0xFE0F))
-  return cps[0] + tone + rest.join('')
-}
-
 // EMOJI_DATA is fully static, so parse every group and flag each emoji's
 // skin-tone support exactly once at module load. Rendering is then a pure lookup
 // — no per-cell code-point spreading on every scroll, keystroke, or copy.
@@ -83,53 +75,16 @@ const CATEGORY_OPTIONS = [
 ]
 
 
-// ─── Virtualiser geometry ───
-// Emoji are native Unicode glyphs (font characters, not images), so "lazy
-// loading" here means only MOUNTING the cells near the viewport. Rows are laid
-// out mathematically (fixed square cells) and only the on-screen window ±
-// overscan is rendered; everything else is two spacer regions of pure height.
-const CELL_MIN = 42       // matches the old grid's minmax(42px, 1fr)
-// ON A COARSE POINTER THE FLOOR IS 44, the touch target the rest of the app
-// holds (tool-shell.css floors every library control at 44 under
-// `pointer:coarse`). The cells stretch to fill the row either way, so on a
-// fine pointer nothing moves; on a phone or tablet a row simply carries one
-// column fewer when 42 would have squeezed one more in. Measured before this:
-// 42x42 at 768 on a touch device, under the floor on every cell of the grid.
-const cellMin = () => (typeof window !== 'undefined' && window.matchMedia?.('(pointer:coarse)').matches ? 44 : CELL_MIN)
-const CELL_GAP = 4
-const HEAD_H = 42         // section header row (text + bottom breathing room)
-const SECTION_GAP = 24    // extra space above each section after the first
-const OVERSCAN_PX = 500   // render this much beyond the viewport each way
-
-// One memoised cell so a copy (which flips `copied` on the parent) re-renders
-// only the two affected cells, not the whole visible window. Props are compared
-// by value, so `shown` only changes when the skin tone actually changes.
-const EmojiCell = memo(function EmojiCell({ emoji, shown, isCopied, onCopy }) {
-  return (
-    <button
-      className={`emoji-cell${isCopied ? ' copied' : ''}`}
-      onClick={() => onCopy(emoji)}
-      title={`Copy ${shown}`}
-    >
-      <span className="emoji-char">{shown}</span>
-    </button>
-  )
-})
-
 export default function EmojiLibrary({ onCopy }) {
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState(null)
-  const [copied, setCopied] = useState(null)
   const [skinTone, setSkinTone] = useState('')
   const [toneOpen, setToneOpen] = useState(false)
-  const [gridW, setGridW] = useState(0)
-  const [range, setRange] = useState({ start: 0, end: 0 })
   // The search index is a separate chunk. Seeded from the loader's cache so a
   // second search in the same session is ready on the first render, with no
   // loading flash for an index that is already in memory.
   const [index, setIndex] = useState(getLoadedEmojiIndex)
   const [indexState, setIndexState] = useState(() => (getLoadedEmojiIndex() ? 'ready' : 'idle'))
-  const virtRef = useRef(null)
   // The skin-tone popover is a non-modal disclosure like every other popover
   // in the app, so it takes the shared contract (Escape, outside press,
   // focus in, tab out) — and, the reason it moved here: EDGE FLIPPING. Its
@@ -171,77 +126,6 @@ export default function EmojiLibrary({ onCopy }) {
     return { groups: items.length ? [{ cat: 'Results', items }] : [], count: items.length }
   }, [query, activeCat, index])
 
-  // Column count + square cell size from the measured container width — the
-  // same result the old CSS grid produced with repeat(auto-fill, minmax(42px,1fr)).
-  const { cols, cellW } = useMemo(() => {
-    const min = cellMin()
-    if (!gridW) return { cols: 0, cellW: min }
-    const c = Math.max(1, Math.floor((gridW + CELL_GAP) / (min + CELL_GAP)))
-    return { cols: c, cellW: (gridW - (c - 1) * CELL_GAP) / c }
-  }, [gridW])
-
-  // Full vertical layout: a flat list of rows (section headers + emoji rows),
-  // each with a precomputed top offset, plus the total scroll height.
-  const layout = useMemo(() => {
-    if (!cols) return { rows: [], height: 0 }
-    const rows = []
-    let y = 0
-    for (const g of results.groups) {
-      if (!g.items.length) continue
-      if (y > 0) y += SECTION_GAP
-      rows.push({ type: 'head', key: `h:${g.cat}`, cat: g.cat, count: g.items.length, top: y, h: HEAD_H })
-      y += HEAD_H
-      for (let i = 0; i < g.items.length; i += cols) {
-        rows.push({ type: 'cells', key: `${g.cat}:${i}`, items: g.items.slice(i, i + cols), top: y, h: cellW })
-        y += cellW + CELL_GAP
-      }
-      y -= CELL_GAP
-    }
-    return { rows, height: y }
-  }, [results, cols, cellW])
-
-  // Track the container width (also fires when the keep-alive tab un-hides).
-  useEffect(() => {
-    const el = virtRef.current
-    if (!el) return
-    const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentRect.width
-      setGridW(prev => (Math.abs(prev - w) > 0.5 ? w : prev))
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  // Window the rows against the page scroll position (rAF-throttled).
-  useEffect(() => {
-    const el = virtRef.current
-    if (!el || !layout.rows.length) return
-    let raf = 0
-    const update = () => {
-      raf = 0
-      const rect = el.getBoundingClientRect()
-      const minY = -rect.top - OVERSCAN_PX
-      const maxY = -rect.top + window.innerHeight + OVERSCAN_PX
-      const rows = layout.rows
-      let start = 0
-      while (start < rows.length && rows[start].top + rows[start].h < minY) start++
-      let end = start
-      while (end < rows.length && rows[end].top < maxY) end++
-      // Functional update keeps the identity stable when the window hasn't moved,
-      // so scroll ticks that land in the same row range never re-render.
-      setRange(cur => (cur.start === start && cur.end === end ? cur : { start, end }))
-    }
-    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
-    update()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
-    return () => {
-      if (raf) cancelAnimationFrame(raf)
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-    }
-  }, [layout])
-
   // Offline is recoverable without the user doing anything: when the network
   // returns, fetch the index they already asked for. The Try again button stays
   // for the failed-request case, which coming back online will not fix.
@@ -252,13 +136,102 @@ export default function EmojiLibrary({ onCopy }) {
     return () => window.removeEventListener('online', retry)
   }, [indexState, requestIndex])
 
-  const handleCopy = useCallback((emoji) => {
-    const text = supportsSkinTone(emoji) ? toneOf(emoji, skinTone) : emoji
-    navigator.clipboard.writeText(text)
-    onCopy(text)
-    setCopied(emoji)
-    setTimeout(() => setCopied(null), 1200)
-  }, [onCopy, skinTone])
+  // THE TOOLBAR'S PROPS ARE BUILT ONCE PER CHANGE, NOT ONCE PER RENDER. The
+  // toolbar measures its own row on every render, so an object or element
+  // rebuilt here would make it re-measure for nothing. Each piece below is
+  // memoised on the state it actually reads, and the toolbar is a memo
+  // component, so a render of this page that touches none of them leaves it
+  // alone.
+  const handleSearch = useCallback((next) => { setSearch(next); requestIndex() }, [requestIndex])
+  const searchProp = useMemo(() => ({
+    value: search,
+    onChange: handleSearch,
+    onFocus: requestIndex,
+    placeholder: 'Search emoji by name or keyword…',
+    label: 'Search emoji',
+  }), [search, handleSearch, requestIndex])
+
+  const toggleTone = useCallback(() => setToneOpen(o => !o), [])
+  const pickTone = useCallback((tone) => { setSkinTone(tone); setToneOpen(false) }, [])
+  const toneAction = useMemo(() => (
+    <>
+    {/* Skin tone lives in a compact popover instead of six inline buttons —
+        one control in the toolbar, the choices on demand. */}
+    <div className="emoji-tone-wrap">
+      <button
+        ref={toneTriggerRef}
+        type="button"
+        className={`emoji-tone-btn${toneOpen ? ' open' : ''}`}
+        onClick={toggleTone}
+        aria-haspopup="true"
+        aria-expanded={toneOpen}
+        title="Skin tone"
+        aria-label="Choose skin tone"
+      >
+        <span className="emoji-tone-current">{skinTone ? `👋${skinTone}` : '👋'}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {toneOpen && (
+        <div ref={tonePopRef} className="emoji-tone-pop" role="menu" aria-label="Skin tone" tabIndex={-1}>
+          {TONES.map((tone, i) => (
+            <button
+              key={i}
+              type="button"
+              role="menuitemradio"
+              aria-checked={skinTone === tone}
+              className={`emoji-skin-btn${skinTone === tone ? ' active' : ''}`}
+              onClick={() => pickTone(tone)}
+              title={i === 0 ? 'Default' : `Skin tone ${i}`}
+              aria-label={i === 0 ? 'Default skin tone' : `Skin tone ${i}`}
+            >
+              {i === 0 ? '👋' : `👋${tone}`}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+    </>
+  ), [toneOpen, skinTone, toneTriggerRef, tonePopRef, toggleTone, pickTone])
+
+  // A MENU, at every width — the same call the Palette Library's mood
+  // facet already makes, and for the same measured reason. Twelve
+  // categories, each carrying a glyph, a label and a count, is the
+  // largest tray in the app: its intrinsic width is 1478px, so the
+  // `overflows` path below 981px collapses it on every desktop already.
+  // But that path is switched off under 641px by design (#298), and
+  // THAT is where it was costing the most.
+  //
+  // MEASURED at 844px tall, light, before this prop: the tray alone was
+  // 290px in SEVEN rows at 320 and 249px in six rows at 390, taking the
+  // toolbar to 414px — 49% of a small phone's viewport — and pushing the
+  // first emoji cell to y=969 at 320 and y=912 at 390. ZERO emoji were
+  // on the first screen at 320, 360, 390 or 430. An emoji library that
+  // shows no emoji until you scroll past six rows of chips has stopped
+  // doing its job on the device most likely to want it.
+  //
+  // The precedent is exact: `alwaysCollapsed` exists because nine moods
+  // took the Palette Library's toolbar to 314px at 320 and 273px at 390,
+  // and the rule it settled was that a facet with nine or more values is
+  // a labelled control that opens a list rather than a row of chips that
+  // is a row of chips at some widths. Twelve is past that line.
+  //
+  // This also REMOVES a shape change rather than adding one: at 768 and
+  // above the group was already collapsed by the measured path, so the
+  // phone now matches every other width instead of disagreeing with it.
+  // The menu renders the SAME option buttons, so the glyph and the count
+  // on each category survive, and the trigger states the current choice
+  // ("Category · Smileys"), so nothing is hidden.
+  const handleCategory = useCallback((id) => setActiveCat(id === 'all' ? null : id), [])
+  const categoryFilter = useMemo(() => (
+    <LibraryFilterGroup
+      label="Filter by category"
+      triggerLabel="Category"
+      value={activeCat ?? 'all'}
+      onChange={handleCategory}
+      options={CATEGORY_OPTIONS}
+      alwaysCollapsed
+    />
+  ), [activeCat, handleCategory])
 
   return (
     <div className="sec">
@@ -294,89 +267,10 @@ export default function EmojiLibrary({ onCopy }) {
         className="emoji-toolbar"
         quick={0}
         activeFilters={activeCat ? 1 : 0}
-        search={{
-          value: search,
-          onChange: (next) => { setSearch(next); requestIndex() },
-          onFocus: requestIndex,
-          placeholder: 'Search emoji by name or keyword…',
-          label: 'Search emoji',
-        }}
-        action={(
-          <>
-          {/* Skin tone lives in a compact popover instead of six inline buttons —
-              one control in the toolbar, the choices on demand. */}
-          <div className="emoji-tone-wrap">
-            <button
-              ref={toneTriggerRef}
-              type="button"
-              className={`emoji-tone-btn${toneOpen ? ' open' : ''}`}
-              onClick={() => setToneOpen(o => !o)}
-              aria-haspopup="true"
-              aria-expanded={toneOpen}
-              title="Skin tone"
-              aria-label="Choose skin tone"
-            >
-              <span className="emoji-tone-current">{skinTone ? `👋${skinTone}` : '👋'}</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-            </button>
-            {toneOpen && (
-              <div ref={tonePopRef} className="emoji-tone-pop" role="menu" aria-label="Skin tone" tabIndex={-1}>
-                {TONES.map((tone, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={skinTone === tone}
-                    className={`emoji-skin-btn${skinTone === tone ? ' active' : ''}`}
-                    onClick={() => { setSkinTone(tone); setToneOpen(false) }}
-                    title={i === 0 ? 'Default' : `Skin tone ${i}`}
-                    aria-label={i === 0 ? 'Default skin tone' : `Skin tone ${i}`}
-                  >
-                    {i === 0 ? '👋' : `👋${tone}`}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          </>
-        )}
+        search={searchProp}
+        action={toneAction}
       >
-        {/* A MENU, at every width — the same call the Palette Library's mood
-            facet already makes, and for the same measured reason. Twelve
-            categories, each carrying a glyph, a label and a count, is the
-            largest tray in the app: its intrinsic width is 1478px, so the
-            `overflows` path below 981px collapses it on every desktop already.
-            But that path is switched off under 641px by design (#298), and
-            THAT is where it was costing the most.
-
-            MEASURED at 844px tall, light, before this prop: the tray alone was
-            290px in SEVEN rows at 320 and 249px in six rows at 390, taking the
-            toolbar to 414px — 49% of a small phone's viewport — and pushing the
-            first emoji cell to y=969 at 320 and y=912 at 390. ZERO emoji were
-            on the first screen at 320, 360, 390 or 430. An emoji library that
-            shows no emoji until you scroll past six rows of chips has stopped
-            doing its job on the device most likely to want it.
-
-            The precedent is exact: `alwaysCollapsed` exists because nine moods
-            took the Palette Library's toolbar to 314px at 320 and 273px at 390,
-            and the rule it settled was that a facet with nine or more values is
-            a labelled control that opens a list rather than a row of chips that
-            is a row of chips at some widths. Twelve is past that line.
-
-            This also REMOVES a shape change rather than adding one: at 768 and
-            above the group was already collapsed by the measured path, so the
-            phone now matches every other width instead of disagreeing with it.
-            The menu renders the SAME option buttons, so the glyph and the count
-            on each category survive, and the trigger states the current choice
-            ("Category · Smileys"), so nothing is hidden. */}
-        <LibraryFilterGroup
-          label="Filter by category"
-          triggerLabel="Category"
-          value={activeCat ?? 'all'}
-          onChange={(id) => setActiveCat(id === 'all' ? null : id)}
-          options={CATEGORY_OPTIONS}
-          alwaysCollapsed
-        />
+        {categoryFilter}
       </LibraryToolbar>
 
       {/* THE 1,655-CELL GRID WAS IN NO LANDMARK.
@@ -408,48 +302,14 @@ export default function EmojiLibrary({ onCopy }) {
           at, and this component has no heading of its own except the category
           bands inside the list. */}
       <section className="emoji-results" aria-labelledby="emoji-search-status">
-        {/* Windowed list: a relative container at full scroll height; only rows
-            inside the viewport (± overscan) are mounted, absolutely positioned. */}
-        <div
-          className="emoji-virt"
-          ref={virtRef}
-          style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
-        >
-          {/* THE CATEGORY HEADINGS ARE h2, AND THEY WERE h3.
-              They are the only section headings under this page's h1, so every
-              rendered cell of this surface stepped h1 to h3 with no h2 between
-              it — measured 2026-09-11 at 320/390/430/768/1024/1097/1120/1136/
-              1280/1440/1920 in both themes and with reduced motion on and off:
-              30 of 30 cells reported the jump. A screen reader's heading list is
-              the fastest way through a 1,655-cell grid of unlabelled buttons,
-              and a skipped level tells that reader a level exists which they
-              have somehow missed. WCAG 1.3.1.
-
-              Paint is unchanged: `.emoji-vhead h3` in global.css set the size,
-              weight and tracking explicitly and moves to h2 with the tag, and
-              the universal reset at the top of that file already zeroes the UA
-              margin either tag would otherwise carry. */}
-          {layout.rows.slice(range.start, range.end).map(row =>
-            row.type === 'head' ? (
-              <div key={row.key} className="emoji-vhead" style={{ top: row.top, height: row.h }}>
-                <h2>{row.cat}</h2>
-                <span className="emoji-section-count">{row.count}</span>
-              </div>
-            ) : (
-              <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
-                {row.items.map((item, i) => (
-                  <EmojiCell
-                    key={i}
-                    emoji={item.char}
-                    shown={item.tone && skinTone ? toneOf(item.char, skinTone) : item.char}
-                    isCopied={copied === item.char}
-                    onCopy={handleCopy}
-                  />
-                ))}
-              </div>
-            )
-          )}
-        </div>
+        {/* The windowed grid and its scroll state live in EmojiGrid, so a scroll
+            tick re-renders the grid alone and never this page or its toolbar. */}
+        <EmojiGrid
+          groups={results.groups}
+          catalogue={PARSED_EMOJI_DATA}
+          skinTone={skinTone}
+          onCopy={onCopy}
+        />
 
         {/* Always rendered so the input's aria-describedby always resolves, and
             so a screen reader hears the result count — which the grid, being a

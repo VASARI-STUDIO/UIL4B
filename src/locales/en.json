@@ -117,10 +117,6 @@
     "ai": {
       "label": "AI Tools",
       "description": "AI-powered generators for images, alt text, and more."
-    },
-    "resources": {
-      "label": "Resources",
-      "description": "Curated external tools, fonts, colours, and inspiration."
     }
   },
   "tools": {
@@ -147,10 +143,6 @@
     "docsDesign": {
       "label": "Design Principles",
       "description": "Visual hierarchy, balance, and design psychology."
-    },
-    "externalResources": {
-      "label": "External Resources",
-      "description": "Curated links to fonts, colours, AI tools, and inspiration."
     },
     "promptLibrary": {
       "label": "Prompt Library",
@@ -505,7 +497,17 @@
     "submitFeedback": "Submit Feedback",
     "enterFeedback": "Please enter your feedback",
     "thankYou": "Legend! Thanks for the feedback.",
-    "submitError": "Something went wrong sending that. Please check your connection and try again.",
+    "submitError": "Your message didn't send.",
+    "sent": "Sent",
+    "sendingMessage": "Thanks — sending your message now.",
+    "sentMessage": "Thanks, we've got it.",
+    "tryAgain": "Try again",
+    "editMessage": "Edit message",
+    "yourMessage": "Your message",
+    "rateLimit": "Too many messages just now. Try again in a minute.",
+    "submitAnother": "Submit another",
+    "replyAddress": "A reply can reach you at {email}.",
+    "noReplyAddress": "No email address went with it, so this one is one-way.",
     "sendViaEmail": "Send via Email",
     "openGitHubIssue": "Open GitHub Issue"
   },
