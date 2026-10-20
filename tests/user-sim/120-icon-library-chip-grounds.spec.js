@@ -3,10 +3,7 @@
 // 1. The Recent rail's icons sit straight on the page: the item keeps its
 //    hairline border and its hover ground, but at rest it has no fill of its own
 //    (a fill read as a white square behind the glyph in the light theme).
-// 2. A weight chip that is both pressed and aria-disabled (Regular, while a
-//    group drawn in one style such as Flags is selected) drops the raised
-//    "selected" pill: a struck-through label on a raised pill reads as chosen
-//    and unavailable at once.
+// 2. A group drawn in one style states that value without a raised weight pill.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -75,7 +72,7 @@ test.describe('the icon library draws no box where none is meant', () => {
 
   for (const theme of ['light', 'dark']) {
     for (const width of [1440, 390]) {
-      test(`Regular, pressed and disabled under Flags, shows no pill in ${theme} at ${width}px`, async ({ browser }) => {
+      test(`Flags shows its single style without a pill in ${theme} at ${width}px`, async ({ browser }) => {
         const { ctx, page } = await openIcons(browser, theme, width)
 
         const filters = page.getByRole('button', { name: /^Filters\b/ })
@@ -92,17 +89,16 @@ test.describe('the icon library draws no box where none is meant', () => {
         const seg = width === 390
           ? page.locator('.lbry-toolbar-quick .ig-weight')
           : page.getByRole('group', { name: 'Icon weight' })
-        const regular = seg.getByRole('button', { name: /^Regular/ })
-        // POSITIVE CONTROL: this is the pressed-and-disabled state, not some other chip.
-        await expect(regular).toHaveAttribute('aria-pressed', 'true')
-        await expect(regular).toHaveAttribute('aria-disabled', 'true')
-
-        const paint = await regular.evaluate((el) => {
+        await expect(seg.locator('.ig-weight-btn')).toHaveCount(0)
+        const status = seg.getByRole('status')
+        await expect(status).toHaveText('Flags come in one style')
+        await expect(status).toHaveCSS('text-decoration-line', 'none')
+        const paint = await status.evaluate((el) => {
           const css = getComputedStyle(el)
           return { background: css.backgroundColor, shadow: css.boxShadow }
         })
-        expect(alphaOf(paint.background), `the disabled chip paints ${paint.background}`).toBe(0)
-        expect(paint.shadow, 'the disabled chip keeps the pill shadow').toBe('none')
+        expect(alphaOf(paint.background), `the style text paints ${paint.background}`).toBe(0)
+        expect(paint.shadow, 'the style text keeps a pill shadow').toBe('none')
         await ctx.close()
       })
     }

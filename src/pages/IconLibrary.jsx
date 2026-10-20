@@ -2123,27 +2123,36 @@ function packsOnScreen(...lists) {
 // segment lifted onto the card ground, as drawn. A segment the current scope
 // cannot honour is `aria-disabled` rather than `disabled`, so a keyboard user
 // can still reach it and hear WHY (the reason is in its accessible name and
-// its tooltip) instead of meeting a gap in the tab order.
+// its tooltip) instead of meeting a gap in the tab order. When no weight can
+// act, the track states the single-style reason as text.
 function IconWeightSeg({ value, stateOf, onChange }) {
+  const states = ICON_WEIGHTS.map((w) => ({ ...w, ...stateOf(w.id) }))
+  const singleStyle = states.every((w) => !w.ok)
+  const reason = states[0].why
   return (
     <div className="ig-weight" role="group" aria-label="Icon weight">
-      {ICON_WEIGHTS.map((w) => {
-        const st = stateOf(w.id)
-        return (
-          <button
-            key={w.id}
-            type="button"
-            className="ig-weight-btn"
-            aria-pressed={value === w.id}
-            aria-disabled={!st.ok || undefined}
-            aria-label={st.ok ? w.label : `${w.label} — ${st.why}`}
-            title={st.why || undefined}
-            onClick={() => { if (st.ok) onChange(w.id) }}
-          >
-            {w.label}
-          </button>
-        )
-      })}
+      {singleStyle ? (
+        <>
+          {/* Noninteractive labels preserve the four-button track's intrinsic width. */}
+          <span className="ig-weight-measure" aria-hidden="true">
+            {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
+          </span>
+          <span className="ig-weight-status" role="status" title={reason}>{reason}</span>
+        </>
+      ) : states.map((w) => (
+        <button
+          key={w.id}
+          type="button"
+          className="ig-weight-btn"
+          aria-pressed={w.ok && value === w.id}
+          aria-disabled={!w.ok || undefined}
+          aria-label={w.ok ? w.label : `${w.label} — ${w.why}`}
+          title={w.why || undefined}
+          onClick={() => { if (w.ok) onChange(w.id) }}
+        >
+          {w.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -2930,8 +2939,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const q = query.trim()
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
-    // Collections browse their original artwork at Regular weight.
-    if (nextGroup) { weightRef.current = 'regular'; setWeight('regular') }
+    // Collections browse original artwork without replacing the stored weight.
     if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
     else if (pack) browsePack(pack, nextGroup)
     else if (nextGroup) browseGroup(nextGroup)
