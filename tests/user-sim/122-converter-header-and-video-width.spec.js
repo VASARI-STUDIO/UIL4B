@@ -20,8 +20,8 @@
 //     -> "no Alpha tag" goes red at 1440 (the tag is on screen).
 //   - FileConverter.jsx, VideoConvert: make `onWidthChange` call
 //     `setWidth(Math.max(16, Math.min(MAX_ANIMATION_SIDE, +e.target.value || 480)))`
-//     -> "clearing the field leaves it empty" and "typing into a cleared field"
-//     go red (the field snaps back to 480).
+//     -> "clearing the field leaves it empty, and typing into it keeps what is
+//     typed" (both widths) and the cap/floor test go red (the field snaps).
 //   - FileConverter.jsx, VideoConvert: drop the `onBlur` on the width input
 //     -> "a value under 16 floors to 16 on blur" goes red.
 import { test, expect } from './base.js'
@@ -44,8 +44,8 @@ test.describe('File converter: the header', () => {
       expect(alphaTags, 'an Alpha tag is on the converter').toEqual({ byClass: 0, byText: 0 })
 
       // The 3D Model Converter link is the header's one action; losing the tag must not take it.
-      const link = page.getByRole('link', { name: 'Open the 3D Model Converter' })
-      if (width >= 700) await expect(link).toBeVisible()
+      // It stays on the bar at 390 too (measured), so it is asserted at both widths.
+      await expect(page.getByRole('link', { name: 'Open the 3D Model Converter' }), 'the 3D Model Converter link is gone').toBeVisible()
     })
   }
 })
