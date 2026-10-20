@@ -8,7 +8,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { contrastRatio, textColorForBg } from '../utils/colors'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
-import { tintsStale } from '../utils/projectTints'
+import { tintsFor, tintsStale } from '../utils/projectTints'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -88,6 +88,7 @@ const HUE_TRACK = `linear-gradient(90deg,${[0, 60, 120, 180, 240, 300, 360].map(
 // not call the export hook (tests/unit/activation-exports.test.js).
 export default function TintTool({ onCopy, toast }) {
   const { design, setTints } = useProject()
+  const { lumBias, satDecay, oled } = design?.tints || {}
   const carried = readTintDraft()
   // With no hand-off, a project that already has colours is tinted from its own
   // active colour; the blue below is only the example a blank project opens on.
@@ -123,20 +124,24 @@ export default function TintTool({ onCopy, toast }) {
   const scale = scales[selIndex] || scales[0]
 
   // THE PROJECT'S TINTS PART. The ramp the project keeps is eleven stops (the
-  // shape every reader of design.tints.scale labels by index), made for the
-  // selected source on the current curve. Only `tints` is written: this tool
-  // reads the palette and never writes it. A project with colours and no ramp
-  // gets one as soon as this opens, and so does one recorded as made from
-  // another colour than the project's own; otherwise it is written when the
-  // person changes something. `from` is the colour the ramp was made from.
+  // shape every reader of design.tints.scale labels by index) of the selected
+  // source, made by the project's own generator (`tintsFor`, the one the Colour
+  // Studio uses) with the project's tint settings. The curves and step counts
+  // on this page shape what is drawn and copied; they are not what the project
+  // keeps, so the same colour is the same ramp wherever it was made. Only
+  // `tints` is written: this tool reads the palette and never writes it. A
+  // project with colours and no ramp gets one as soon as this opens, and so
+  // does one recorded as made from another colour than the project's own;
+  // otherwise it is written when the person changes the source colour. `from`
+  // is the colour the ramp was made from.
   // A project with no colours of its own writes nothing at all: the blue it
   // opens on is an example, and a ramp kept from it would mark Tints done for a
   // project that has not chosen a colour yet.
-  const keptRamp = useMemo(() => {
-    const sc = scales[selIndex] || scales[0]
-    return buildRamp(sc.hue, sc.chroma, 11, curve).map((t) => t.hex)
-  }, [scales, selIndex, curve])
-  const keptKey = keptRamp.join(',')
+  const keptRamp = useMemo(
+    () => tintsFor(selected.hex, { lumBias, satDecay, oled }).scale,
+    [selected.hex, lumBias, satDecay, oled],
+  )
+  const keptKey = `${selected.hex}|${keptRamp.join(',')}`
   const keptFirstRef = useRef(true)
   const ownColoursRef = useRef(false)
   ownColoursRef.current = partsPresent(design).palette

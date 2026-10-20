@@ -1,17 +1,16 @@
 // The tint ramp a project carries, and how it is derived from its colour.
 //
 // A project's "Tints" part is `design.tints.scale`: eleven hexes, 50 to 950, of
-// the project's active colour. The Colour Studio has always written it (from the
-// active palette colour and the project's three tint settings), but a project
-// can reach "finished" without that page ever opening, and the Tint tool did not
-// write it at all, so the part stayed empty however the system was built.
+// the project's active colour. `tintsFor` is the one derivation every writer
+// uses: the Colour Studio's generator (`generateTintScale`) with the project's
+// three tint settings, so the Colour Studio, the Tint tool and a project
+// finished without either open keep the same ramp for the same colour. The Tint
+// tool's on-screen curves are a separate, display-only scale and are never what
+// the project keeps.
 //
-// This is the one derivation both ends use: the same generator and the same
-// settings the Colour Studio uses, so a ramp made here and a ramp made there for
-// the same colour are the same ramp. `tints.from` records the colour a ramp was
-// made from, so a ramp left behind by a palette that has since changed can be told
-// from a current one. DOM-free and React-free so a unit test can
-// pin it.
+// `tints.from` records the colour a ramp was made from, so a ramp left behind
+// by a palette that has since changed can be told from a current one. DOM-free
+// and React-free so a unit test can pin it.
 
 import { generateTintScale } from './colors.js'
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
@@ -27,23 +26,30 @@ export function activeColour(design) {
 }
 
 /**
- * The tints block (settings and the eleven-stop ramp) for this design, or null
- * when it has no colour to make one from.
+ * The tints block (settings and the eleven-stop ramp) of `hex`, made with the
+ * project's three tint settings (`saved`, falling back to the defaults).
  */
-export function deriveTints(design) {
-  const hex = activeColour(design)
-  if (!hex) return null
-  const saved = design?.tints || {}
+export function tintsFor(hex, saved) {
+  const s = saved || {}
   const d = DEFAULT_DESIGN.tints
-  const lumBias = Number.isFinite(Number(saved.lumBias)) ? Number(saved.lumBias) : d.lumBias
-  const satDecay = Number.isFinite(Number(saved.satDecay)) ? Number(saved.satDecay) : d.satDecay
-  const oled = typeof saved.oled === 'boolean' ? saved.oled : d.oled
+  const lumBias = Number.isFinite(Number(s.lumBias)) ? Number(s.lumBias) : d.lumBias
+  const satDecay = Number.isFinite(Number(s.satDecay)) ? Number(s.satDecay) : d.satDecay
+  const oled = typeof s.oled === 'boolean' ? s.oled : d.oled
   const scale = generateTintScale({
     hex, anchor: 5, hueShift: 0,
     satMin: -satDecay, satMax: satDecay / 2,
     lMin: oled ? 3 : 5, lMax: lumBias, mode: 'perceived',
   })
   return { lumBias, satDecay, oled, scale, from: hex }
+}
+
+/**
+ * The tints block for this design's active colour, or null when it has no
+ * colour to make one from.
+ */
+export function deriveTints(design) {
+  const hex = activeColour(design)
+  return hex ? tintsFor(hex, design?.tints) : null
 }
 
 /** Does this design already carry a ramp? */
