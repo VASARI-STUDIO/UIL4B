@@ -113,9 +113,24 @@ export default function UIKitGuide({ step }) {
   // not be burned by anything a discarded render can reach — the same split
   // utils/handoffSlot.js draws between peek and consume, for the same reason.
   const [showIntro, setShowIntro] = useState(
-    () => firstStep && isGuideActive() && (newProject || !introSeen()),
+    () => isGuideActive() && (location.state?.openBrandKitCard || (firstStep && (newProject || !introSeen()))),
   )
   const [showName, setShowName] = useState(false)
+  // Each explicit start opens the card, including starts on the current page.
+  // Track the arrival so dismissing it stays effective until the next press.
+  const [cardArrival, setCardArrival] = useState(location.key)
+  if (cardArrival !== location.key) {
+    setCardArrival(location.key)
+    if (location.state?.openBrandKitCard) {
+      setShowName(false)
+      setShowIntro(true)
+    }
+  }
+  // Consume the request so reloading or revisiting this entry cannot reopen it.
+  useEffect(() => {
+    if (!location.state?.openBrandKitCard) return
+    navigate(location.pathname + location.search + location.hash, { replace: true, state: null })
+  }, [location, navigate])
   // A fresh start pressed on the page the flow begins on: the path it navigates
   // to is the one already on screen, so nothing remounts and the flag read
   // above is stale. startGuide announces the start; the first step's copy of
