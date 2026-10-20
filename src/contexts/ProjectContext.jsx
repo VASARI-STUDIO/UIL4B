@@ -140,6 +140,10 @@ export function ProjectProvider({ children }) {
   // What each per-project document on the account holds, as of the last pull
   // or push. See writeRemoteProjects(): it limits a push to what changed here.
   const storedRef = useRef(new Map())
+  // The account whose first pull has finished, whether it worked or not. A
+  // device with no local copy of an account's projects has an empty list until
+  // then, so "no such project" cannot be said before it (see projectsLoading).
+  const [pulledUid, setPulledUid] = useState(null)
 
   // Auto-persist current design
   useEffect(() => {
@@ -469,6 +473,7 @@ export function ProjectProvider({ children }) {
       reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), retry)
     } finally {
       if (!signal?.cancelled) {
+        setPulledUid(uid)
         // Release the suppression shortly after the merge settles so the next
         // genuine local edit can push — and then PUSH ONCE, unprompted.
         //
@@ -554,6 +559,9 @@ export function ProjectProvider({ children }) {
     design,
     projects,
     canSaveProjects: !!userKey,
+    // True from sign-in until the account's projects have been read once. The
+    // list above may be missing projects that exist on the account until then.
+    projectsLoading: !!uid && pulledUid !== uid,
     projectLimit,
     atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,
