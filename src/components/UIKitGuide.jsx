@@ -544,7 +544,7 @@ export default function UIKitGuide({ step }) {
             ) : (
               <p className="bkit-name-note" id={`${nameCardId}-note`}>
                 {canSaveProjects
-                  ? 'Saved to your projects with the colours, fonts and type scale you chose.'
+                  ? 'Saved to your projects with the colours, fonts and type scale you chose, and tints made from your colours.'
                   : 'Saving needs a free account. What you built stays here while you sign in.'}
               </p>
             )}

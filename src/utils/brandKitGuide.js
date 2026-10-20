@@ -87,7 +87,7 @@
 
 import { partsPresent } from './userHome.js'
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
-import { deriveTints, hasTints } from './projectTints.js'
+import { activeColour, deriveTints, hasTints, tintsStale } from './projectTints.js'
 
 /** Live under localStorage, not sessionStorage — see the resumability note. */
 export const GUIDE_KEY = 'vs-uikit-guide'
@@ -369,7 +369,9 @@ export function clearAcceptedSteps(storage) {
  *    can say so (see partsPresent in utils/userHome.js).
  *  - `tints`: the project's fourth part is not a walkthrough step, it is made
  *    from the colour. Once the colours are settled the ramp is derived with the
- *    Colour Studio's own generator, unless the project already has one. Not
+ *    Colour Studio's own generator, unless the project already has one made from
+ *    its active colour (a ramp recorded as made from another colour is replaced;
+ *    one with no record is kept, its colour being unknown). Not
  *    derived for a design with no palette work in it, so a half-built project
  *    still reads as incomplete and keeps "Fill the gaps".
  */
@@ -380,7 +382,7 @@ export function savePatch(design, accepted = acceptedSteps()) {
   const patch = {}
   if (Object.keys(chosen).length) patch.chosen = chosen
   const paletteSet = !!partsPresent({ ...withDefaults(design), chosen }).palette
-  if (paletteSet && !hasTints(design)) {
+  if (paletteSet && (!hasTints(design) || tintsStale(design?.tints, activeColour(design)))) {
     const tints = deriveTints(design)
     if (tints) patch.tints = tints
   }

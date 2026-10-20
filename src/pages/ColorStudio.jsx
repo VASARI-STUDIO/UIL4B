@@ -13,7 +13,8 @@ import { useExport } from '../contexts/ExportContext'
 // its user (Escape closes and hands focus back, a press outside closes, opening
 // moves focus in, tabbing past either end closes). The Add-to-Project panel
 // below held none of it.
-import { reconcileStudioPalette, sameColours } from '../utils/studioPalette'
+import { reconcileStudioPalette, sameColours, studioRoleCount, resolveStudioRoles } from '../utils/studioPalette'
+import { tintsStale } from '../utils/projectTints'
 import usePopover from '../hooks/usePopover'
 import useExportGate from '../hooks/useExportGate'
 // The free-tier cap's refusal, rendered where it was thrown. Shared with the
@@ -192,11 +193,11 @@ export default function ColorStudio({ onCopy, toast }) {
   // change (menus, toasts). generateHarmony is pure for a given (base, harmony).
   const colors = useMemo(() => generateHarmony(baseColor, harmony), [baseColor, harmony])
   // Per-index manual overrides applied on top of the harmony-generated colours.
-  // `roles` may be longer than the generator's set (Auto makes one colour), so the
-  // slots run to whichever is longer.
-  const roleCount = Math.max(colors.length, reconciled?.roles || 0)
+  // A saved palette sets the slot count (Auto makes one colour, other harmonies
+  // make a fixed set), so the generator never pads or trims what was saved.
+  const roleCount = studioRoleCount(colors, reconciled)
   const resolvedColors = useMemo(
-    () => Array.from({ length: roleCount }, (_, i) => overrides[i] || colors[i]).filter(Boolean),
+    () => resolveStudioRoles(colors, overrides, roleCount),
     [colors, overrides, roleCount],
   )
   // baseColors = the RAW palette (generator + overrides + extras). All write-back
@@ -332,13 +333,15 @@ export default function ColorStudio({ onCopy, toast }) {
 
   // Sync tints to ProjectContext
   // An existing ramp (the Tint tool's, or an earlier visit's) is not replaced just
-  // by opening this page; it is written when the ramp is empty or its inputs move.
+  // by opening this page while it is still made from the active colour; it is
+  // written when the ramp is empty, was made from another colour, or its inputs
+  // move. `from` records the colour the ramp was made from.
   const tintWroteRef = useRef(false)
   useEffect(() => {
     const first = !tintWroteRef.current
     tintWroteRef.current = true
-    if (first && (design?.tints?.scale?.length || 0) > 0) return
-    setTints({ lumBias, satDecay, oled, scale: tintScale })
+    if (first && (design?.tints?.scale?.length || 0) > 0 && !tintsStale(design?.tints, activeColor)) return
+    setTints({ lumBias, satDecay, oled, scale: tintScale, from: activeColor })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lumBias, satDecay, oled, tintScale.join(',')])
 

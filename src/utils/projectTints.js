@@ -8,7 +8,9 @@
 //
 // This is the one derivation both ends use: the same generator and the same
 // settings the Colour Studio uses, so a ramp made here and a ramp made there for
-// the same colour are the same ramp. DOM-free and React-free so a unit test can
+// the same colour are the same ramp. `tints.from` records the colour a ramp was
+// made from, so a ramp left behind by a palette that has since changed can be told
+// from a current one. DOM-free and React-free so a unit test can
 // pin it.
 
 import { generateTintScale } from './colors.js'
@@ -41,8 +43,29 @@ export function deriveTints(design) {
     satMin: -satDecay, satMax: satDecay / 2,
     lMin: oled ? 3 : 5, lMax: lumBias, mode: 'perceived',
   })
-  return { lumBias, satDecay, oled, scale }
+  return { lumBias, satDecay, oled, scale, from: hex }
 }
 
 /** Does this design already carry a ramp? */
 export const hasTints = (design) => Array.isArray(design?.tints?.scale) && design.tints.scale.length > 0
+
+const sameHex = (a, b) => String(a).toUpperCase() === String(b).toUpperCase()
+
+/**
+ * Was this ramp made from some other colour than `hex`? True only when the ramp
+ * records the colour it was made from (`from`) and that colour differs. A ramp
+ * with no record (made before `from` was kept) is not called stale: nothing says
+ * which colour it came from, so opening a page leaves it alone.
+ */
+export function tintsStale(tints, hex) {
+  if (!Array.isArray(tints?.scale) || tints.scale.length === 0) return false
+  if (typeof tints.from !== 'string' || !HEX_RE.test(tints.from) || !hex) return false
+  return !sameHex(tints.from, hex)
+}
+
+/** Is the ramp recorded as made from the project's active colour? */
+export function tintsCurrent(design) {
+  const hex = activeColour(design)
+  const from = design?.tints?.from
+  return hasTints(design) && !!hex && typeof from === 'string' && HEX_RE.test(from) && sameHex(from, hex)
+}

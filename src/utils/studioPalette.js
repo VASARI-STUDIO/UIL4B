@@ -41,3 +41,28 @@ export function sameColours(a, b) {
   const y = Array.isArray(b) ? b : []
   return x.length === y.length && x.every((c, i) => up(c) === up(y[i]))
 }
+
+/**
+ * How many role slots the studio shows. A saved palette decides it: the slots
+ * are exactly the saved colours that are not extras, so the generator never pads
+ * a palette out to its own set (a four-colour palette whose stored harmony makes
+ * five must stay four). With no saved palette the generator's set is the count.
+ */
+export const studioRoleCount = (generated, reconciled) =>
+  reconciled ? reconciled.roles : (Array.isArray(generated) ? generated.length : 0)
+
+/** The role colours: a pinned override where there is one, else the generator's. */
+export const resolveStudioRoles = (generated, overrides, roleCount) =>
+  Array.from({ length: roleCount }, (_, i) => (overrides || {})[i] || (generated || [])[i]).filter(Boolean)
+
+/**
+ * The studio's raw palette for a saved one: the role slots, then the extras.
+ * This is the list the studio shows (before the global lens) and writes back.
+ */
+export function studioBaseColours(palette, max = 10) {
+  const reconciled = reconcileStudioPalette(palette, max)
+  const generated = generateHarmony(palette?.base || '#2563EB', palette?.harmony || 'auto')
+  const overrides = reconciled ? reconciled.overrides : (palette?.overrides || {})
+  const extras = reconciled ? reconciled.extraColors : (palette?.extraColors || [])
+  return [...resolveStudioRoles(generated, overrides, studioRoleCount(generated, reconciled)), ...extras]
+}

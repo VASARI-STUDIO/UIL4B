@@ -8,6 +8,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { contrastRatio, textColorForBg } from '../utils/colors'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
+import { tintsStale } from '../utils/projectTints'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -125,8 +126,9 @@ export default function TintTool({ onCopy, toast }) {
   // shape every reader of design.tints.scale labels by index), made for the
   // selected source on the current curve. Only `tints` is written: this tool
   // reads the palette and never writes it. A project with colours and no ramp
-  // gets one as soon as this opens; otherwise it is written when the person
-  // changes something.
+  // gets one as soon as this opens, and so does one recorded as made from
+  // another colour than the project's own; otherwise it is written when the
+  // person changes something. `from` is the colour the ramp was made from.
   const keptRamp = useMemo(() => {
     const sc = scales[selIndex] || scales[0]
     return buildRamp(sc.hue, sc.chroma, 11, curve).map((t) => t.hex)
@@ -137,8 +139,9 @@ export default function TintTool({ onCopy, toast }) {
     const first = keptFirstRef.current
     keptFirstRef.current = false
     const empty = !(design?.tints?.scale?.length > 0)
-    if (first && !(empty && projectHex && !carried)) return undefined
-    const t = setTimeout(() => setTints({ scale: keptRamp }), first ? 0 : 200)
+    if (first && !((empty || tintsStale(design?.tints, projectHex)) && projectHex && !carried)) return undefined
+    const from = selected?.hex
+    const t = setTimeout(() => setTints({ scale: keptRamp, from }), first ? 0 : 200)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keptKey])

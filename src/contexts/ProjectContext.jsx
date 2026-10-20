@@ -13,6 +13,7 @@ import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
+import { projectSnapshot } from '../utils/designPatch'
 
 const ProjectContext = createContext()
 
@@ -209,19 +210,9 @@ export function ProjectProvider({ children }) {
     }
     const id = newId()
     const base = opts.blank ? DEFAULT_DESIGN : design
-    // `identityName` names the kit in the saved copy as well, for callers that
-    // set the working design's identity in the same event.
-    const named = typeof opts.identityName === 'string'
-      ? { ...base, identity: { ...(base.identity || {}), name: opts.identityName } }
-      : base
-    // `patch` is for a caller that has just changed the working design in the
-    // same event (the state above is still the render before it): applied one
-    // level deep, the way updateDesign applies it.
-    const snapshot = { ...named }
-    for (const [key, value] of Object.entries(opts.patch || {})) {
-      const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v)
-      snapshot[key] = isObj(value) && isObj(named[key]) ? { ...named[key], ...value } : value
-    }
+    // `identityName` and `patch` fold a caller's same-event changes into the
+    // saved copy (see utils/designPatch.js).
+    const snapshot = projectSnapshot(base, opts)
     const project = {
       id,
       name: name.trim() || `Project ${new Date().toLocaleDateString()}`,

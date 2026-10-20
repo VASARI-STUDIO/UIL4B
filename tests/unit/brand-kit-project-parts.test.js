@@ -10,23 +10,17 @@ import { readFileSync } from 'node:fs'
 import { BRAND_KIT_STEPS, savePatch } from '../../src/utils/brandKitGuide.js'
 import { projectDigest, partsPresent } from '../../src/utils/userHome.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-import { deriveTints } from '../../src/utils/projectTints.js'
-import { reconcileStudioPalette, sameColours } from '../../src/utils/studioPalette.js'
+import { deriveTints, tintsStale, tintsCurrent } from '../../src/utils/projectTints.js'
+import { reconcileStudioPalette, sameColours, studioBaseColours } from '../../src/utils/studioPalette.js'
+import { projectSnapshot } from '../../src/utils/designPatch.js'
 import { generateHarmony, applyAdjust } from '../../src/utils/colors.js'
 
 const FIVE = ['#1D3557', '#E63946', '#F1FAEE', '#A8DADC', '#457B9D']
 const ALL = BRAND_KIT_STEPS.map((s) => s.id)
 const clone = (o) => JSON.parse(JSON.stringify(o))
 
-/** What saveProject does with the walkthrough's patch (one level deep, like updateDesign). */
-function saved(design, accepted) {
-  const patch = savePatch(design, accepted)
-  const out = { ...design }
-  for (const [k, v] of Object.entries(patch)) {
-    out[k] = v && typeof v === 'object' && !Array.isArray(v) && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k]) ? { ...out[k], ...v } : v
-  }
-  return out
-}
+/** What saveProject keeps: the real snapshot builder, given the walkthrough's patch. */
+const saved = (design, accepted) => projectSnapshot(design, { patch: savePatch(design, accepted) })
 const withPalette = (colors) => ({ ...clone(DEFAULT_DESIGN), palette: { ...DEFAULT_DESIGN.palette, base: colors[0], harmony: 'auto', colors, extraColors: [] } })
 
 test('default steps, every Next pressed: the saved project has every part filled', () => {
@@ -61,10 +55,53 @@ test('no palette work, no derived tints: a blank design does not read as nearly 
   assert.equal(projectDigest({ design: saved(clone(DEFAULT_DESIGN), ['fonts', 'typescale']) }).done, 2)
 })
 
-test('an existing tint ramp is kept, not replaced by the derived one', () => {
+test('a tint ramp made from the active colour is kept, not replaced by the derived one', () => {
   const design = withPalette(FIVE)
-  design.tints.scale = ['#111111', '#222222']
+  design.tints = { ...design.tints, scale: ['#111111', '#222222'], from: FIVE[0] }
   assert.equal(savePatch(design, ALL).tints, undefined)
+  assert.deepEqual(saved(design, ALL).tints.scale, ['#111111', '#222222'])
+  assert.equal(tintsCurrent(design), true)
+})
+
+test('a tint ramp made from another colour is re-derived at save, keeping the tint settings', () => {
+  const design = withPalette(FIVE)
+  design.tints = { ...design.tints, lumBias: 70, satDecay: 9, scale: ['#111111', '#222222'], from: '#FF0000' }
+  assert.equal(tintsStale(design.tints, FIVE[0]), true)
+  const out = saved(design, ALL)
+  assert.equal(out.tints.scale.length, 11)
+  assert.equal(out.tints.from, FIVE[0])
+  assert.equal(out.tints.lumBias, 70, 'the saved settings survive the re-derive')
+  assert.equal(out.tints.satDecay, 9)
+  assert.equal(tintsCurrent({ palette: out.palette, tints: out.tints }), true)
+})
+
+test('the active colour, not the first, decides whether a ramp is current', () => {
+  const design = withPalette(FIVE)
+  design.palette.activeIdx = 2
+  design.tints = { ...design.tints, scale: ['#111111'], from: FIVE[0] }
+  assert.equal(savePatch(design, ALL).tints.from, FIVE[2])
+})
+
+test('a ramp with no record of its colour is left alone (legacy), and is not called current', () => {
+  const design = withPalette(FIVE)
+  design.tints = { ...design.tints, scale: ['#111111', '#222222'] }
+  assert.equal(tintsStale(design.tints, FIVE[0]), false)
+  assert.equal(savePatch(design, ALL).tints, undefined)
+  assert.equal(tintsCurrent(design), false)
+})
+
+test('from compares without regard to case, and derived tints record it', () => {
+  assert.equal(tintsStale({ scale: ['#111111'], from: FIVE[0].toLowerCase() }, FIVE[0]), false)
+  assert.equal(deriveTints(withPalette(FIVE)).from, FIVE[0])
+})
+
+test('the saved snapshot applies identityName and merges a patch one level deep', () => {
+  const base = { identity: { name: 'Old', tag: 'x' }, tints: { lumBias: 70, scale: [] } }
+  const out = projectSnapshot(base, { identityName: 'New', patch: { tints: { scale: ['#111111'] }, chosen: { fonts: true } } })
+  assert.deepEqual(out.identity, { name: 'New', tag: 'x' })
+  assert.deepEqual(out.tints, { lumBias: 70, scale: ['#111111'] })
+  assert.deepEqual(out.chosen, { fonts: true })
+  assert.equal(base.tints.scale.length, 0, 'the working design is not mutated')
 })
 
 test('chosen only counts when it is literally true', () => {
@@ -81,13 +118,8 @@ test('derived tints are the eleven-stop ramp of the active colour', () => {
 })
 
 // ── The Colour Studio must not rebuild a smaller palette ───────────────────
-/** The studio's own assembly: harmony slots, pinned overrides, extras, then the lens. */
-function studioColours(palette) {
-  const r = reconcileStudioPalette(palette)
-  const gen = generateHarmony(palette.base, palette.harmony)
-  const roles = Array.from({ length: Math.max(gen.length, r.roles) }, (_, i) => r.overrides[i] || gen[i]).filter(Boolean)
-  return applyAdjust([...roles, ...r.extraColors], r.globalAdjust)
-}
+/** The studio's own assembly (the function the page calls), then the lens it shows. */
+const studioColours = (palette) => applyAdjust(studioBaseColours(palette), reconcileStudioPalette(palette).globalAdjust)
 
 test('Auto harmony generates one colour, which is why the studio shrank palettes', () => {
   assert.equal(generateHarmony('#0051FF', 'auto').length, 1)
@@ -108,6 +140,20 @@ test('eight colours with three extras, and a palette with a lens, keep every col
   assert.equal(sameColours(studioColours(pl), shown), true)
 })
 
+test('a four-colour palette whose stored harmony makes five stays four', () => {
+  const four = FIVE.slice(0, 4)
+  assert.equal(generateHarmony(four[0], 'monochromatic').length > 4, true, 'the harmony alone would pad it')
+  const palette = { base: four[0], harmony: 'monochromatic', colors: four, extraColors: [] }
+  assert.deepEqual(studioBaseColours(palette), four)
+})
+
+test('stale extra colours do not pad a saved palette past its own colours', () => {
+  const four = FIVE.slice(0, 4)
+  const palette = { base: four[0], harmony: 'monochromatic', colors: four, extraColors: ['#222222', '#888888', '#DDDDDD', '#999999'] }
+  assert.equal(studioBaseColours(palette).length, 4)
+  assert.equal(sameColours(studioColours(palette), four), true)
+})
+
 test('a palette with one colour has nothing to preserve beyond its base', () => {
   assert.equal(reconcileStudioPalette({ base: '#0051FF', harmony: 'auto', colors: ['#0051FF'] }), null)
 })
@@ -124,4 +170,11 @@ test('the Tint tool writes the project tints and never the palette', () => {
 test('the Colour Studio skips a first palette write that only restates the project', () => {
   const src = read('src/pages/ColorStudio.jsx')
   assert.match(src, /first && sameColours\(design\?\.palette\?\.colors, allColors\)/)
+})
+
+test('the pages and the context call the shared functions these tests exercise', () => {
+  assert.match(read('src/pages/ColorStudio.jsx'), /studioRoleCount\(colors, reconciled\)/)
+  assert.match(read('src/pages/ColorStudio.jsx'), /tintsStale\(design\?\.tints, activeColor\)/)
+  assert.match(read('src/pages/TintTool.jsx'), /tintsStale\(design\?\.tints, projectHex\)/)
+  assert.match(read('src/contexts/ProjectContext.jsx'), /projectSnapshot\(base, opts\)/)
 })
