@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -362,10 +363,11 @@ function ProjectDetail({ id, toast }) {
         </div>
       </div>
 
-      {exporting && (
+      {exporting && createPortal(
         <Suspense fallback={null}>
           <ExportPanel onClose={() => setExporting(false)} />
-        </Suspense>
+        </Suspense>,
+        document.querySelector('.app-shell'),
       )}
     </div>
   )
