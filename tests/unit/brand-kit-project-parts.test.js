@@ -163,7 +163,7 @@ const read = (p) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8')
 
 test('the Tint tool writes the project tints and never the palette', () => {
   const src = read('src/pages/TintTool.jsx')
-  assert.match(src, /setTints\(\{ scale: keptRamp \}\)/)
+  assert.match(src, /setTints\(\{ scale: keptRamp, from \}\)/)
   assert.doesNotMatch(src, /setPalette|palette:\s*\{/)
 })
 
