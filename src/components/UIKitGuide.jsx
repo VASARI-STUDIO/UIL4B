@@ -9,6 +9,7 @@ import SaveRefusal from './SaveRefusal'
 import { hasOpenOverlays, suspendGuideForOverlays } from '../utils/openOverlays'
 import {
   BRAND_KIT_STEPS,
+  GUIDE_START_EVENT,
   NEW_PROJECT_STATE,
   acceptStep,
   acceptedSteps,
@@ -112,6 +113,21 @@ export default function UIKitGuide({ step }) {
     () => firstStep && isGuideActive() && (newProject || !introSeen()),
   )
   const [showName, setShowName] = useState(false)
+  // A fresh start pressed on the page the flow begins on: the path it navigates
+  // to is the one already on screen, so nothing remounts and the flag read
+  // above is stale. startGuide announces the start; the first step's copy of
+  // this guide takes it up as an arrival. Any other step's copy is about to be
+  // navigated away from, so it ignores it.
+  useEffect(() => {
+    if (!firstStep) return undefined
+    const onStart = () => {
+      setActive(true)
+      setAccepted(newProject ? [] : acceptedSteps())
+      setShowIntro(newProject || !introSeen())
+    }
+    window.addEventListener(GUIDE_START_EVENT, onStart)
+    return () => window.removeEventListener(GUIDE_START_EVENT, onStart)
+  }, [firstStep, newProject])
   const cardRef = useRef(null)
   const introTriggerRef = useRef(null)
   const nameTriggerRef = useRef(null)

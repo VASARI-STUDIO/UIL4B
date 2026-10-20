@@ -92,6 +92,8 @@ import { DEFAULT_DESIGN } from '../data/designDefaults.js'
 export const GUIDE_KEY = 'vs-uikit-guide'
 /** Whether the orientation card has been shown once already. */
 export const GUIDE_SEEN_KEY = 'vs-uikit-guide-seen'
+/** Fired on window when a fresh start turns the flow on. See startGuide. */
+export const GUIDE_START_EVENT = 'vs-uikit-guide-start'
 
 /**
  * The ordered steps, and the four the Create mega-menu card already promises:
@@ -329,7 +331,14 @@ export const isGuideActive = (storage) => readFlag(storage).active
  * a resume, so a running flow keeps the steps already moved past.
  */
 export function startGuide(storage) {
-  if (!readFlag(storage).active) writeFlag([], storage)
+  if (readFlag(storage).active) return
+  writeFlag([], storage)
+  // A tool already on screen read the flag when it mounted, and a start from the
+  // page the flow begins on navigates to the path it is already at, which
+  // mounts nothing. The event is how that mounted guide hears the flag change.
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new Event(GUIDE_START_EVENT))
+  }
 }
 /** Leave it. The card stays "seen" so re-entering does not re-teach. */
 export const endGuide = (storage) => drop(GUIDE_KEY, storage)
