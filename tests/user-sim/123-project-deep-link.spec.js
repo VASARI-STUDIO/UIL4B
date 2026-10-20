@@ -15,7 +15,7 @@
 // the loading check (or reading `projects` without `projectsLoading`) fails the
 // first two tests: the URL is /projects when the account answers.
 import { test, expect } from './base.js'
-import { goRaw, watch, signIn } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
 
 const UID = 'test-uid-free'
 const HOLD_MS = 2500
@@ -51,7 +51,7 @@ for (const width of [390, 1440]) {
     watch(page, 'a designer opening a shared project link on a new device')
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
     await freshDevice(page)
-    await goRaw(page, '/projects/p1')
+    await go(page, '/projects/p1')
 
     // The account has not answered: a loading state, and the link is still the link.
     await expect(page.locator('.uh-resolving')).toBeVisible()
@@ -68,7 +68,7 @@ for (const width of [390, 1440]) {
 test('an unknown project id still ends at the workspace once the account has answered', async ({ page }) => {
   watch(page, 'a designer following a link to a project that does not exist')
   await freshDevice(page)
-  await goRaw(page, '/projects/not-a-project')
+  await go(page, '/projects/not-a-project')
 
   // Not bounced while the account is still being read.
   await expect(page.locator('.uh-resolving')).toBeVisible()

@@ -13,7 +13,7 @@
 // Deleting the on-screen pass in src/hooks/useReveal.js (observing every node
 // again) fails the 1440x900 and 390x844 cases with a card in view at opacity 0.
 import { test, expect } from './base.js'
-import { goRaw, watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const SIZES = [
   { width: 1440, height: 900 },
@@ -37,7 +37,7 @@ for (const motion of ['no-preference', 'reduce']) {
       watch(page, 'a visitor opening Discover')
       await page.emulateMedia({ reducedMotion: motion })
       await page.setViewportSize({ width, height })
-      await goRaw(page, '/discover')
+      await go(page, '/discover')
       await expect(page.locator('.surface-card').first()).toBeAttached()
 
       // Without a scroll, a wheel or a touch.
