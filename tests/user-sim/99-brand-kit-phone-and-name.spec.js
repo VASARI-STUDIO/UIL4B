@@ -86,15 +86,25 @@ async function hitAreaMisses(locator) {
   })
 }
 
-// Soft, so one run names every control that is short of the target.
+// Soft, so one run names every control that is short of the target. Polled, like
+// expectTapsLand: a card that has just opened is still moving into place, and a
+// single sample of its edge can land mid-move. A control that stays short of the
+// target for the whole 5s still fails, with the misses from the last sample.
 async function expectHitArea(locator, what) {
-  expect.soft(await hitAreaMisses(locator), `${what}: a tap within 22px of its centre misses it`).toEqual([])
+  let misses = []
+  await expect.poll(async () => {
+    misses = await hitAreaMisses(locator)
+    return misses.length
+  }, { timeout: 5000 }).toBe(0).catch(() => {})
+  expect.soft(misses, `${what}: a tap within 22px of its centre misses it`).toEqual([])
 }
 
 async function railControlsAllLand(page) {
   const r = rail(page)
   const chips = r.locator('.bkit-step')
-  expect(await chips.count()).toBe(4)
+  // Waited for, not counted once: a navigation swaps the page, and the rail of
+  // the page being left is still in the DOM until the new page has rendered its own.
+  await expect(chips).toHaveCount(4)
   for (let i = 0; i < 4; i++) await expectTapsLand(chips.nth(i), `step chip ${i + 1}`)
   await expectTapsLand(r.locator('.bkit-rail-next'), 'Next')
   await expectTapsLand(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
@@ -161,6 +171,9 @@ test.describe('Brand kit walkthrough on a phone', () => {
       // The tallest step, and the one with the longest Next label.
       await rail(page).getByRole('link', { name: /Icons/ }).click()
       await expect(page).toHaveURL(/\/create\/icons$/)
+      // The URL changes before the page does, so the rail on screen at this
+      // point can still be the Colours page's. Wait for the Icons page's own.
+      await expect(rail(page).locator('.bkit-step[aria-current="step"]')).toContainText('Icons')
       await expect(rail(page)).toBeVisible()
       await railControlsAllLand(page)
 
