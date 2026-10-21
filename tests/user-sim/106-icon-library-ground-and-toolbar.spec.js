@@ -11,6 +11,7 @@
 // 2. The toolbar above the grid stays on one row at every width, each control
 //    is whole (a visible control is never narrower than its glyph and padding
 //    say), and on a coarse pointer every control is at least 44px both ways.
+import { readFileSync } from 'node:fs'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER } from './iconify-stub.js'
@@ -836,3 +837,68 @@ test('the pack menu has one Interface group and borrows no style word from the W
   }
   await expect(list.getByRole('group', { name: 'Brand logos', exact: true }).getByRole('option', { name: 'Simple Icons' })).toHaveCount(1)
 })
+
+
+for (const width of [1440, 390]) {
+  test(`Flags keeps packs contiguous and names sorted at ${width}px`, async ({ page }) => {
+    watch(page, `someone browsing the Flags group at ${width}px`)
+    await page.setViewportSize({ width, height: width === 1440 ? 500 : 900 })
+    const packs = ['circle-flags', 'flag', 'flagpack', 'cif']
+    const collections = new Map(packs.map(pack => [pack,
+      JSON.parse(readFileSync(new URL(`./fixtures/iconify/collection/${pack}.json`, import.meta.url), 'utf8')),
+    ]))
+    // Keep the first loaded page inside one pack so later packs cannot mask missing labels.
+    if (width === 1440) {
+      const circleFlags = collections.get('circle-flags')
+      circleFlags.uncategorized = Array.from({ length: 180 }, (_, i) => `flag-${String(i).padStart(3, '0')}`)
+      circleFlags.total = circleFlags.uncategorized.length
+      await page.route(url => ICONIFY_HOSTS.includes(url.hostname)
+        && url.pathname === '/collection' && url.searchParams.get('prefix') === 'circle-flags',
+      route => route.fulfill({
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*', [ICONIFY_STUB_HEADER]: '1' },
+        body: JSON.stringify(circleFlags),
+      }))
+    }
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    const filters = page.getByRole('button', { name: /^Filters\b/ })
+    const sheet = page.getByRole('dialog', { name: 'Filters' })
+    const inPanel = await filters.isVisible()
+    if (inPanel) await filters.click()
+    const flags = page.getByRole('button', { name: 'Flags', exact: true })
+    if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
+    await flags.click()
+    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    else if (inPanel) await filters.click()
+
+    const expected = packs.flatMap(pack => {
+      const data = collections.get(pack)
+      return data.uncategorized.slice().sort().map(name => ({ pack, name }))
+    })
+    const cells = page.locator('.ig .ic:not(.ig-skel)')
+    if (width === 1440) {
+      await expect(cells).toHaveCount(120)
+      const firstCell = cells.first()
+      await expect(firstCell.locator('.ic-pack')).toBeVisible()
+      await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('circle-flags'))
+      const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
+      // Focus retains the original cell while rows above the viewport are windowed.
+      await firstCell.focus()
+      await page.locator('.ig-sentinel').scrollIntoViewIfNeeded()
+      await expect(cells).toHaveCount(expected.length)
+      await cells.nth(180).scrollIntoViewIfNeeded()
+      await expect(cells.nth(180).locator('.ic-pack')).toBeVisible()
+      expect(await firstCell.evaluate(cell => cell.getBoundingClientRect().height)).toBe(firstHeight)
+      await page.evaluate(() => window.scrollTo(0, 0))
+    }
+    await expect(cells).toHaveCount(expected.length)
+    await expect(cells.locator('.ic-name')).toHaveText(expected.map(icon => icon.name))
+    await expect.poll(() => cells.locator('.ic-pack').allTextContents()).toEqual(expected.map(icon => icon.pack))
+    if (width === 1440) {
+      await choosePack(page, 'circle-flags')
+      await expect(cells).toHaveCount(120)
+      await expect(cells.locator('.ic-pack')).toHaveCount(0)
+    }
+  })
+}

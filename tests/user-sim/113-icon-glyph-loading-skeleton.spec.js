@@ -859,3 +859,50 @@ for (const scheme of ['light', 'dark']) {
     })
   }
 }
+
+// A search typed before the first catalogue lands is answered from the search
+// skeleton, which cannot know how many packs the answer will hold. The skeleton
+// reserves the pack label for any multi-pack scope; a narrow query whose hits
+// all sit in one pack loads a grid with no label, so the cells get shorter.
+for (const width of [390, 1440]) {
+  for (const { query, packs } of [{ query: 'arrow', packs: 'several packs' }, { query: 'chevron', packs: 'one pack' }]) {
+    test.describe(`search skeleton against ${packs} at ${width}`, () => {
+      test.skip(isLiveIconify(), 'this test holds the catalogue and search')
+      test(`signed in, "${query}" loads cells as tall as the skeleton's`, async ({ page }) => {
+        // Known gap: the skeleton reserves the pack label for a multi-pack scope but a
+        // one-pack answer draws none (about 8.5px at 390, 32px at 1440).
+        // Remove this line when the skeleton stops over-reserving.
+        test.fail(query === 'chevron', 'skeleton reserves a pack label a one-pack search result never shows')
+        await page.setViewportSize({ width, height: 900 })
+        await signIn(page, { plan: 'pro' })
+        let releaseSearch
+        const heldSearch = new Promise(resolve => { releaseSearch = resolve })
+        let releaseCatalogue
+        const heldCatalogue = new Promise(resolve => { releaseCatalogue = resolve })
+        await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection',
+          async route => { await heldCatalogue; await route.fallback() })
+        await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/search',
+          async route => { await heldSearch; await route.fallback() })
+        const cellHeight = () => page.locator('.ig').evaluate(grid => {
+          const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length
+          return grid.children[Math.min(columns, grid.children.length - 1)].getBoundingClientRect().height
+        })
+        try {
+          await go(page, '/create/icons')
+          await expect(page.locator('.ig-skel').first()).toBeVisible()
+          await page.getByLabel('Search icons').first().fill(query)
+          // The search fires after a 300 ms debounce; its request is the proof it has started.
+          await page.waitForRequest(r => new URL(r.url()).pathname === '/search')
+          await expect(page.locator('.ig-skel').first()).toBeVisible()
+          const skeletonHeight = await cellHeight()
+          releaseSearch()
+          await expect(page.locator('.ig-skel')).toHaveCount(0)
+          await expect(page.locator('.ig .ic img, .ig .ic svg').first()).toBeVisible()
+          const labelled = await page.locator('.ig .ic-pack').count()
+          expect(labelled > 0).toBe(query === 'arrow')
+          expect(Math.abs(await cellHeight() - skeletonHeight)).toBeLessThanOrEqual(2)
+        } finally { releaseSearch(); releaseCatalogue() }
+      })
+    })
+  }
+}

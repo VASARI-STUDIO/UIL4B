@@ -18,6 +18,7 @@ import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { createCollectionLoader } from '../utils/iconifyCollectionCache'
+import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
   STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
@@ -866,15 +867,6 @@ const WINDOW_OVERSCAN_PX = 800
 const GHOST_STEP = 24
 
 // ── Pure helpers (module scope — reused by the customizer + browse fns) ───────
-
-// Round-robin merge so the grid mixes packs (outlined+solid+coloured+…) instead
-// of dumping one pack fully before the next.
-function interleavePacks(lists) {
-  const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0)
-  const merged = []
-  for (let i = 0; i < maxLen; i++) for (const l of lists) if (i < l.length) merged.push(l[i])
-  return merged
-}
 
 // Pro-gated custom store. Callers MUST check isPro before invoking these for a
 // non-Pro user — the store is never touched for non-Pro (anti-tamper).
@@ -2647,7 +2639,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setLoading(true); setLoadError(false); glyphFails.current = 0
     Promise.all(packs.map(p =>
       getCollectionNames(p, { manualRetry })
-        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').slice(0, PER_PACK_CAP), pack: p, ok: true }))
+        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').sort().slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
@@ -2655,7 +2647,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!results.some(r => r.ok)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
         cdnOk.current = true
         const lists = results.map(r => r.names.map(n => ({ id: `${r.pack}:${n}`, pack: r.pack, name: n, cdn: true })))
-        const merged = capList(interleavePacks(lists))
+        // Share the anonymous allowance per pack; a final slice could hide later packs.
+        const groupCap = capped ? Math.floor(ANON_ICON_CAP / packs.length) : PER_PACK_CAP
+        const merged = concatenatePackLists(lists, groupCap)
         if (!merged.length) { renderLocal('', ''); return }
         setIcons(merged)
         setVisible(PAGE_SIZE)
@@ -2669,7 +2663,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capList, needFor, refuseScope, browseAll])
+  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -2750,10 +2744,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // the filter is applied to what ARRIVED rather than to what was asked
         // for. Same reasoning as the SANITISE_KEYS whitelist in lockedPreview.js:
         // the gate is the filter, the request is only a convenience.
-        const items = capList(d.icons
+        const matches = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
-          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current)))
+          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current))
+        const items = groupKey
+          ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
+          : capList(matches)
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
@@ -3427,8 +3424,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // filter in the toolbar above.
   // `ghosts` is the main grid's windowing state; cells before `ghosts.upTo`
   // render in their ghost form at their measured height.
-  const renderGrid = (list, ghosts = null) => {
-    const showPack = gridShowsPack(list)
+  // Use the full result so revealing another pack never changes cell heights.
+  const mainShowPack = useMemo(() => gridShowsPack(icons), [icons])
+  const recentsShowPack = useMemo(() => gridShowsPack(visibleRecents), [visibleRecents])
+  const renderGrid = (list, showPack = mainShowPack, ghosts = null) => {
     const ghostAt = (idx) => (ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0)
     return list.map((icon, idx) => renderCell(icon, idx, showPack, ghostAt(idx)))
   }
@@ -3439,7 +3438,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const skeletonIcons = Array.from({ length: firstPageSize }, (_, idx) => ({
     pack: pendingPacks[(source === 'group' || source === 'search' ? idx : Math.floor(idx / perPackCap)) % pendingPacks.length],
   }))
-  const skeletonShowPack = gridShowsPack(skeletonIcons)
+  // The loaded grid labels every cell once its result spans more than one pack,
+  // however the first page happens to split, so the skeleton reserves the label
+  // whenever the scope will load more than one pack.
+  const skeletonShowPack = pendingPacks.length > 1
 
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
@@ -3651,7 +3653,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 )}
               </div>
               {visibleRecents.length > 0 ? (
-                <div className="ig">{renderGrid(visibleRecents)}</div>
+                <div className="ig">{renderGrid(visibleRecents, recentsShowPack)}</div>
               ) : (
                 <div className="ig-custom-empty">Icons you copy show up here for quick reuse.</div>
               )}
@@ -3707,7 +3709,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                       </div>
                     </div>
                   ))
-                  : renderGrid(shown, windowed && win.list === icons ? win : null)}
+                  : renderGrid(shown, mainShowPack, windowed && win.list === icons ? win : null)}
               </div>
             )}
 
