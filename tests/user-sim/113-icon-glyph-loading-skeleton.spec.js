@@ -869,8 +869,8 @@ for (const width of [390, 1440]) {
     test.describe(`search skeleton against ${packs} at ${width}`, () => {
       test.skip(isLiveIconify(), 'this test holds the catalogue and search')
       test(`signed in, "${query}" loads cells as tall as the skeleton's`, async ({ page }) => {
-        // REGRESSION TO FIX (PR 579, measured 8.5px at 390 and 32px at 1440): the skeleton
-        // reserves the pack label for a multi-pack scope but a one-pack answer draws none.
+        // Known gap: the skeleton reserves the pack label for a multi-pack scope but a
+        // one-pack answer draws none (about 8.5px at 390, 32px at 1440).
         // Remove this line when the skeleton stops over-reserving.
         test.fail(query === 'chevron', 'skeleton reserves a pack label a one-pack search result never shows')
         await page.setViewportSize({ width, height: 900 })
