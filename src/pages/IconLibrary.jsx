@@ -3438,7 +3438,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const skeletonIcons = Array.from({ length: firstPageSize }, (_, idx) => ({
     pack: pendingPacks[(source === 'group' || source === 'search' ? idx : Math.floor(idx / perPackCap)) % pendingPacks.length],
   }))
-  const skeletonShowPack = gridShowsPack(skeletonIcons)
+  // The loaded grid labels every cell once its result spans more than one pack,
+  // however the first page happens to split, so the skeleton reserves the label
+  // whenever the scope will load more than one pack.
+  const skeletonShowPack = pendingPacks.length > 1
 
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
