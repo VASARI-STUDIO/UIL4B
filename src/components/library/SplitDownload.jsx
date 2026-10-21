@@ -32,6 +32,7 @@ export default function SplitDownload({ format, size, disabled = false, loading 
   const scrimRef = useRef(null)
   const rowRefs = useRef([])
   const openAtRef = useRef('checked')
+  const busyRef = useRef(false)
   const timers = useRef({ done: 0, fail: 0 })
   const [open, setOpen] = useState(false)
   // idle | building | done | failed
@@ -51,6 +52,9 @@ export default function SplitDownload({ format, size, disabled = false, loading 
   }, [])
 
   const run = useCallback(async (fmt) => {
+    // A second press while a file is being built does nothing.
+    if (busyRef.current) return
+    busyRef.current = true
     clearTimeout(timers.current.done)
     clearTimeout(timers.current.fail)
     setPhase('building')
@@ -60,6 +64,7 @@ export default function SplitDownload({ format, size, disabled = false, loading 
     let res
     try { res = await onDownload(fmt) } catch { res = { status: 'failed' } }
     clearTimeout(spinTimer)
+    busyRef.current = false
     setSpin(false)
     if (res?.status === 'done') {
       setPhase('done')
@@ -175,19 +180,23 @@ export default function SplitDownload({ format, size, disabled = false, loading 
         title={mainName}
         onClick={() => { if (!building) run(current) }}
       >
-        <span className="dl-ico" aria-hidden="true">
-          <FooterGlyph name="download" className="dl-i-dl" />
-          <FooterGlyph name="check" className="dl-i-check" />
-          <FooterGlyph name="circle-notch" className="dl-i-spin" />
+        {/* The face is the visible icon and label. The two hidden sizers hold the
+            widest face of each width tier, all in grid cell 1/1, so the button
+            never changes width on a format switch or a Size drag, and the face
+            sits at the centre of that reserved width. */}
+        <span className="dl-face">
+          <span className="dl-ico" aria-hidden="true">
+            <FooterGlyph name="download" className="dl-i-dl" />
+            <FooterGlyph name="check" className="dl-i-check" />
+            <FooterGlyph name="circle-notch" className="dl-i-spin" />
+          </span>
+          <span className="dl-label">
+            <span className="dl-show dl-w">{retry ? 'Retry' : current.label}</span>
+            <span className="dl-show dl-p">{retry ? 'Retry' : current.short}</span>
+          </span>
         </span>
-        <span className="dl-label">
-          {/* The longest label for each width tier holds the button's width, so a
-              format switch or a Size drag never moves its neighbours. */}
-          <span className="dl-sizer dl-w" aria-hidden="true">PNG 2048px</span>
-          <span className="dl-sizer dl-p" aria-hidden="true">PNG</span>
-          <span className="dl-show dl-w">{retry ? 'Retry' : current.label}</span>
-          <span className="dl-show dl-p">{retry ? 'Retry' : current.short}</span>
-        </span>
+        <span className="dl-sizer dl-w" aria-hidden="true"><span className="dl-ico" />PNG 2048px</span>
+        <span className="dl-sizer dl-p" aria-hidden="true"><span className="dl-ico" />PNG</span>
       </button>
       <button
         ref={triggerRef}

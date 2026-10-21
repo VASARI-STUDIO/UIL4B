@@ -1276,8 +1276,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 
    The footer is a size container (icon-emoji-library.css), so the labels pick
    their width tier from the footer's own width, not the viewport's. The
-   longest label of each tier sits in the label cell as a hidden sizer, which is
-   what stops the button changing width when the format or the Size changes. */
+   widest face of each tier (icon plus longest label) sits beside the visible
+   face as a hidden sizer, which is what stops the button changing width when the
+   format or the Size changes. */
 .icust-foot .dl-split{
   position:relative;display:inline-flex;align-items:stretch;flex:1 1 auto;min-width:max-content;
   min-height:40px;border-radius:var(--btn-radius);isolation:isolate;
@@ -1294,7 +1295,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
   cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard);
 }
-.icust-foot .dl-main{flex:1 1 auto;gap:6px;padding:0 12px 0 14px;border-radius:var(--btn-radius) 0 0 var(--btn-radius)}
+/* The main part is a one-cell grid: the visible face and the hidden sizer share
+   cell 1/1, so the part's width is the sizer's and the face sits in its centre. */
+.icust-foot .dl-main{display:grid;place-items:center;flex:1 1 auto;padding:0 12px;border-radius:var(--btn-radius) 0 0 var(--btn-radius);font-variant-numeric:tabular-nums}
 .icust-foot .dl-more{flex:0 0 36px;width:36px;padding:0;border-left:1px solid var(--bh);border-radius:0 var(--btn-radius) var(--btn-radius) 0}
 @media(hover:hover){
   .icust-foot .dl-split:hover::after{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 34%,transparent)}
@@ -1320,24 +1323,30 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .dl-split[data-spin="true"] .dl-i-spin{animation:dl-spin 800ms linear infinite}
 @keyframes dl-spin{to{transform:rotate(360deg)}}
 
-.dl-label{display:grid;white-space:nowrap;font-variant-numeric:tabular-nums}
-.dl-label>*{grid-area:1/1;text-align:left}
-.dl-label .dl-sizer{visibility:hidden}
-.dl-label .dl-p{display:none}
+.dl-main>.dl-face,.dl-main>.dl-sizer{grid-area:1/1;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.dl-main>.dl-sizer{visibility:hidden;pointer-events:none}
+.dl-main .dl-p{display:none}
 
 /* Width tiers, by the footer's own content width. Wide: full labels. Phone:
-   short labels. Narrow: the Save button is a glyph and Copy drops "SVG". */
+   short labels. Narrow: Copy drops "SVG" (under 300px), then the Save button is
+   a glyph (under 280px). */
 .icust-foot .icust-save-p,.icust-foot .icust-save-g{display:none}
 .icust-foot .icust-save-w{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 @container (max-width:439.98px){
-  .dl-label .dl-w{display:none}
-  .dl-label .dl-p{display:block}
+  .dl-main .dl-w{display:none}
+  .dl-main>.dl-sizer.dl-p{display:inline-flex}
+  .dl-main .dl-show.dl-p{display:block}
   .icust-foot .icust-save-w{display:none}
   .icust-foot .icust-save-p{display:inline}
 }
+/* Copy drops "SVG" under 300px of footer width (360 has 294, 320 has 254). Save
+   becomes a glyph only under 280px, so it keeps its word at 360 and goes
+   icon-only at 320. */
 @container (max-width:299.98px){
-  .icust-foot .dl-main{padding:0 10px 0 12px}
+  .icust-foot .dl-main{padding:0 10px}
   .icust-foot .icust-tier-w{display:none}
+}
+@container (max-width:279.98px){
   .icust-foot .icust-save-p{display:none}
   .icust-foot .icust-save-g{display:block}
   .iel-page .icust-foot .lib-btn.icust-save{flex:0 0 44px;width:44px;min-width:44px;padding:0}
