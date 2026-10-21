@@ -34,6 +34,9 @@ import {
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
 import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
+import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, HELD_HEADER } from '../utils/iconifyFetch'
+import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
+import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -277,7 +280,7 @@ function buildSvgUrl(host, pack, name, params = {}) {
 async function fetchWithFallback(path, timeout = 4000) {
   for (const host of API_HOSTS) {
     try {
-      const r = await fetch(`${host}${path}`, { signal: AbortSignal.timeout(timeout) })
+      const r = await iconifyFetch(`${host}${path}`, { timeout })
       if (r.ok) return r
     } catch { /* try next host */ }
   }
@@ -301,7 +304,7 @@ function fetchSvgText(pack, name, params = {}) {
     for (const host of API_HOSTS) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
-        const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
+        const r = await iconifyFetch(url, { timeout: 3000, persist: cacheable })
         if (r.ok) return await r.text()
       } catch { /* try next host */ }
     }
@@ -369,9 +372,10 @@ const GLYPH_BOX = new Map()
 // that re-renders the same cells never re-asks for them.
 const GLYPH_ASKED = new Map()
 
-// One request carries this many names. 60 measured at ~15KB; 100 keeps the URL
-// well inside every proxy's limit and still lands under 30KB for a stroke pack.
-const GLYPH_BATCH = 100
+// One request carries up to GLYPH_CHUNK names (src/utils/iconGroupGlyphs.js).
+// 60 measured at ~15KB; 100 keeps the URL well inside every proxy's limit and
+// still lands under 30KB for a stroke pack. Which names share a request is
+// fixed by position in the pack's listing, so a reload asks for the same URLs.
 
 const askedFor = (pack) => {
   let s = GLYPH_ASKED.get(pack)
@@ -397,14 +401,17 @@ const GLYPH_RETRY_AFTER = new Map() // pack → earliest time it may be asked ag
  * Fetch one pack's worth of glyph bodies in a single request and fill the
  * caches. Resolves true when the request was answered, false when the service
  * refused it — the caller turns a false into the page's existing refused state
- * rather than into 120 silently broken images.
+ * rather than into 120 silently broken images. When a back-off was running and
+ * nothing was sent, resolves `{ heldUntil }` instead: the name was not tried, so
+ * it is not a failure and must not use up a retry.
  */
 async function loadGlyphBatch(pack, names) {
   if (!names.length) return true
   const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
   let data
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    const r = await iconifyFetch(url, { timeout: 8000 })
+    if (r.headers.get(HELD_HEADER)) return { heldUntil: iconifyCooldownUntil(url) }
     // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
     // as a broken image nobody can see.
     if (!r.ok) return false
@@ -2000,11 +2007,18 @@ function collectionToNames(d) {
 const COLLECTION_CACHE = new Map()
 
 // info=1 includes registry attribution in the same catalogue request.
+// The answer comes from the same-origin snapshot first (public/iconify/collections/,
+// recorded by scripts/snapshot-icon-collections.mjs), so a first visit with an
+// empty cache asks Iconify for no pack lists. A pack with no snapshot falls
+// through to the live request, with iconifyFetch's cache and back-off.
 const getCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
   fetchEntry: async (pack) => {
-    const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
-    const d = await r.json()
+    let d = await fetchCollectionSnapshot(pack)
+    if (!d) {
+      const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
+      d = await r.json()
+    }
     return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
   },
 })
@@ -3097,9 +3111,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // `setGlyphTick` was skipped by a guard that thought the page had gone.
   const mountedRef = useRef(true)
   const retryTimerRef = useRef(0)
+  // The wake-up for batches held back by a running back-off; separate from the
+  // failed-batch timer so neither pushes the other later.
+  const heldTimerRef = useRef(0)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current) }
+    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current); clearTimeout(heldTimerRef.current) }
   }, [])
   // `icons` and `visible`, NOT `shown`. `shown` is a fresh array on every render,
   // so depending on it re-runs this body for every unrelated state change in the
@@ -3117,7 +3134,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     // wasted requests for names nobody was looking at any more. One frame's
     // worth of settling is under the network round trip that follows it.
     const t = setTimeout(() => {
-      const wanted = new Map()
+      // Each pack's full listing, in order: the tranches are cut from this, by
+      // position, so an icon always belongs to the same request (see
+      // glyphChunkPlan). Built from `icons`, which only ever holds packs the
+      // viewer may see; `canSee` below is still checked for every one.
+      const lists = new Map()
+      const listed = new Set()
+      for (const icon of icons) {
+        if (!icon.cdn || icon.custom || icon.logo) continue
+        if (!canSee(icon.pack)) continue
+        const key = svgKey(icon.pack, icon.name)
+        if (listed.has(key)) continue
+        listed.add(key)
+        if (!lists.has(icon.pack)) lists.set(icon.pack, [])
+        lists.get(icon.pack).push(icon.name)
+      }
+      const refs = []
       // The Recent rail is drawn from a separate list that is never part of
       // `icons`, so it has to be named here or its glyphs would wait forever.
       // One page AHEAD of what is drawn, so the markup for the next page is
@@ -3136,26 +3168,25 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // yesterday has simple-icons names in there today, and without this
         // line the rail would fetch them.
         if (!canSee(icon.pack)) continue
+        // Only a cell that still needs its markup sends a request. The request
+        // that covers it is the whole chunk, though, not just this cell.
         const key = svgKey(icon.pack, icon.name)
         if (GLYPH_BODY.has(key)) continue
         // A pack that just failed waits out its cool-down; a name that has
         // failed GLYPH_RETRY_MAX + 1 times is left alone for the session.
         if (Date.now() < (GLYPH_RETRY_AFTER.get(icon.pack) || 0)) continue
         if ((GLYPH_FAILS.get(key) || 0) > GLYPH_RETRY_MAX) continue
-        const asked = askedFor(icon.pack)
-        if (asked.has(icon.name)) continue
-        asked.add(icon.name)
-        if (!wanted.has(icon.pack)) wanted.set(icon.pack, [])
-        wanted.get(icon.pack).push(icon.name)
+        if (askedFor(icon.pack).has(icon.name)) continue
+        refs.push({ pack: icon.pack, name: icon.name })
       }
-      if (!wanted.size) return
-      const jobs = []
-      for (const [pack, names] of wanted) {
-        for (let i = 0; i < names.length; i += GLYPH_BATCH) {
-          const slice = names.slice(i, i + GLYPH_BATCH)
-          jobs.push({ pack, names: slice, done: loadGlyphBatch(pack, slice) })
-        }
+      const wanted = []
+      for (const chunk of glyphChunkPlan(lists, refs)) {
+        const asked = askedFor(chunk.pack)
+        chunk.names.forEach((n) => asked.add(n))
+        wanted.push(chunk)
       }
+      if (!wanted.length) return
+      const jobs = wanted.map((chunk) => ({ pack: chunk.pack, names: chunk.names, done: loadGlyphBatch(chunk.pack, chunk.names) }))
       Promise.all(jobs.map(j => j.done)).then((results) => {
         if (!mountedRef.current) return
         setGlyphTick(n => n + 1)
@@ -3165,12 +3196,26 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // A RETRY run that fails is a partial failure too, however many jobs it
         // held: one flag pack timing out twice must not swap the whole grid for
         // the built-in set, so only a first-time total refusal raises the notice.
-        const allRefused = results.length > 0 && results.every(ok => ok === false)
+        // A batch held back by a running back-off (`{ heldUntil }`) was never
+        // sent, so it counts as refused for the notice but not as a failed try.
+        const isHeld = (ok) => ok !== null && typeof ok === 'object'
+        const allRefused = results.length > 0 && results.every(ok => ok === false || isHeld(ok))
         const isRetryRun = jobs.every(j => j.names.some(n => GLYPH_FAILS.has(svgKey(j.pack, n))))
         const refusing = allRefused && !isRetryRun
-        if (results.some(ok => ok === false) && !refusing) {
+        if (results.some(ok => ok === false || isHeld(ok)) && !refusing) {
           let retry = false
+          let heldFor = 0
           jobs.forEach((job, i) => {
+            if (isHeld(results[i])) {
+              // Ask again when the back-off ends, with no failure recorded:
+              // GLYPH_FAILS only counts requests Iconify actually answered badly.
+              const asked = askedFor(job.pack)
+              for (const n of job.names) asked.delete(n)
+              const end = results[i].heldUntil || Date.now() + GLYPH_RETRY_MS
+              GLYPH_RETRY_AFTER.set(job.pack, end)
+              heldFor = Math.max(heldFor, end - Date.now())
+              return
+            }
             if (results[i] !== false) return
             const asked = askedFor(job.pack)
             for (const n of job.names) {
@@ -3187,11 +3232,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             clearTimeout(retryTimerRef.current)
             retryTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
           }
+          if (heldFor > 0) {
+            clearTimeout(heldTimerRef.current)
+            heldTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, heldFor + 50)
+          }
         }
         if (refusing) {
           // Names that were never answered must not stay marked as asked, or
           // the retry button would find nothing left to request.
-          for (const [pack, names] of wanted) {
+          for (const { pack, names } of wanted) {
             const asked = askedFor(pack)
             for (const n of names) asked.delete(n)
           }
@@ -3677,7 +3726,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // library connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
-                <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
               </div>
             )}
 

@@ -35,7 +35,10 @@
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { answerIconify, fixturePacks, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
+import {
+  answerIconify, fixturePacks, iconifyRequests, isLiveIconify, withholdSnapshots,
+  ICONIFY_STUB_HEADER, REFUSED_VALUE, SNAPSHOT_PATH_RE,
+} from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 
@@ -54,6 +57,10 @@ async function refuseIconify(page) {
     (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests' }))
   await page.route((u) => u.hostname === 'api.simplesvg.com' || u.hostname === 'api.unisvg.com',
     (route) => route.fulfill({ status: 403, contentType: 'text/plain', headers, body: 'Forbidden' }))
+  // The site's own copy of each pack list is part of the catalogue too. Left
+  // answering, the page would draw a healthy grid over a refused service.
+  await page.route((u) => SNAPSHOT_PATH_RE.test(u.pathname),
+    (route) => route.fulfill({ status: 404, contentType: 'text/plain', headers, body: 'Not found' }))
 }
 
 /** Relative luminance of a computed colour: `rgb(r, g, b)` or `color(srgb r g b)`. */
@@ -119,7 +126,14 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
 
   const tally = iconifyRequests(ctx)
   expect(tally, 'the stub is installed on this context').not.toBeNull()
-  expect(tally.collection, 'one /collection request per pack the page browses on first paint').toBe(packs.length)
+  // THE PACK LISTS COME FROM THIS SITE. One snapshot read per pack the page
+  // browses (the positive control: the page did ask for its lists), and not one
+  // /collection request to Iconify, which is what rate-limits a first visit.
+  expect(tally.snapshot, 'one same-origin pack list per pack the page browses on first paint').toBe(packs.length)
+  // Pro browses fluent-emoji, the one pack with no committed list, so a cold
+  // Pro visit makes exactly one live /collection request (see iconify-stub.js
+  // answerSnapshot): more is a list the site serves being asked of Iconify.
+  expect(tally.collection, 'a cold Pro visit asks Iconify only for the pack the site has no list for').toBe(1)
   expect(tally.missing, 'every request had an answer in the fixture').toEqual([])
   expect(tally.escaped, 'no response came from a real Iconify host').toEqual([])
   // THE GRID'S GLYPHS, WHICH ARE NO LONGER ONE REQUEST EACH. This read
@@ -196,7 +210,61 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   await expect(notice).toHaveCount(0, { timeout: 20000 })
   await expect(page.getByText(new RegExp(`All packs · [\\d,]+ icons · ${fixturePacks().length} sets`)))
     .toBeVisible({ timeout: 20000 })
-  expect(iconifyRequests(ctx).collection, 'Try again fetched the catalogue again').toBe(fixturePacks().length)
+  // The refusal took the site's pack lists as well, so the page's reads of them
+  // during the outage never reached the context's tally: what it counts now is
+  // Try again's own round, one list per pack, read from the site and not
+  // re-asked of Iconify.
+  expect(iconifyRequests(ctx).snapshot, 'Try again read the pack lists again').toBe(fixturePacks().length)
+  // Exactly one: fluent-emoji, the Pro pack with no list on the site.
+  expect(iconifyRequests(ctx).collection, 'Try again asked Iconify for lists the site serves').toBe(1)
+  await ctx.close()
+})
+
+// A COLD FIRST VISIT ASKS ICONIFY FOR NO PACK LIST AT ALL, SIGNED OUT TOO.
+// The Pro first test above covers the full twenty-five; this covers the
+// visitor most likely to arrive cold (a shared office address, no account),
+// where five packs render from the site's own lists.
+test('a cold signed-out first visit sends no /collection request to Iconify and every pack it browses renders', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, 'designer opening the icon library')
+  await go(page, '/create/icons')
+  await expect(page.getByText(/Showing [\d,]+ of [\d,]+ · \d+ sets/)).toBeVisible({ timeout: 20000 })
+  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+
+  const tally = iconifyRequests(ctx)
+  expect(tally.snapshot, 'POSITIVE CONTROL: the five packs this visitor browses were read from the site').toBe(OUTLINED.length)
+  expect(tally.collection, 'a signed-out first visit asked Iconify for a pack list').toBe(0)
+  expect(tally.missing).toEqual([])
+  expect(tally.escaped).toEqual([])
+  await expect(page.locator('.ig-notice'), 'nothing was refused, so no outage notice').toHaveCount(0)
+  await ctx.close()
+})
+
+// THE FALLBACK STILL WORKS. A pack with no usable snapshot (not committed yet,
+// or the file is not served) goes to the live /collection through the stub, and
+// the page ends up in the same place: every pack answered, no outage notice.
+test('with no pack lists on the site the page falls back to /collection, one per pack, and renders every pack', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  // The persona whose deliberate refusals the feedback loop does not report: the
+  // 404s on the withheld pack lists are on purpose.
+  watch(page, REFUSED)
+  await signIn(page, { plan: 'pro' })
+  await withholdSnapshots(page)
+  await go(page, '/create/icons')
+  await expect(page.getByText(new RegExp(`All packs · [\\d,]+ icons · ${fixturePacks().length} sets`)))
+    .toBeVisible({ timeout: 20000 })
+  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+
+  const tally = iconifyRequests(ctx)
+  // The withheld route sits above the context's, so the context's snapshot
+  // count stays 0 and the live count is the evidence the fallback ran.
+  expect(tally.snapshot, 'the withheld lists never reached the stub').toBe(0)
+  expect(tally.collection, 'one /collection fallback per pack').toBe(fixturePacks().length)
+  await expect(page.locator('.ig-notice'), 'a missing snapshot is not an outage').toHaveCount(0)
   await ctx.close()
 })
 
@@ -372,9 +440,14 @@ const NEEDS_PRO = ['simple-icons', 'logos', 'devicon', 'skill-icons', 'twemoji',
   'openmoji', 'fluent-emoji', 'circle-flags', 'flag', 'flagpack', 'cif', 'flat-color-icons',
   'vscode-icons', 'token-branded']
 
-/** The pack a request to api.iconify.design is about, or null for /search. */
+/** The pack a request to api.iconify.design (or the site's own copy of a pack list) is about, or null for /search. */
 function packInUrl(raw) {
   const url = new URL(raw)
+  // The pack list is read from this site now, so the gate is measured on that
+  // read as well as on the Iconify requests: a gated pack's list must not be
+  // fetched from anywhere.
+  const snapshot = url.pathname.match(SNAPSHOT_PATH_RE)
+  if (snapshot) return decodeURIComponent(snapshot[1])
   if (url.pathname === '/collection') return url.searchParams.get('prefix')
   const batch = url.pathname.match(/^\/([^/]+)\.json$/)
   if (batch) return batch[1]
@@ -382,11 +455,11 @@ function packInUrl(raw) {
   return svg ? svg[1] : null
 }
 
-/** Collect every Iconify and Logo.dev URL this page asks for. */
+/** Collect every Iconify and Logo.dev URL this page asks for, and every read of the site's own pack lists. */
 function iconifyUrlLog(page) {
   const urls = []
   page.on('request', (r) => {
-    if (/api\.iconify\.design|img\.logo\.dev/.test(r.url())) urls.push(r.url())
+    if (/api\.iconify\.design|img\.logo\.dev/.test(r.url()) || SNAPSHOT_PATH_RE.test(new URL(r.url()).pathname)) urls.push(r.url())
   })
   return urls
 }
@@ -623,7 +696,12 @@ test('reloading retains all five packs without new collection requests', async (
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   try {
     const page = await ctx.newPage()
-    watch(page, 'visitor reloading cached icon collections')
+    // These three tests are about the live /collection path (its stored answers
+    // and its back-off), which a page that can read the site's own pack lists
+    // never takes. Withholding the lists puts the page on that path; the 404s
+    // are deliberate, so the persona is the one whose refusals are not reported.
+    watch(page, REFUSED)
+    await withholdSnapshots(page)
     await go(page, '/create/icons')
     await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
     await expect(page.locator('.ig .ic img').first()).toBeVisible()
@@ -656,6 +734,7 @@ test('an expired collection keeps its pack available when collection requests fa
       localStorage.setItem('uil4b:iconify:collection:lucide', JSON.stringify({ v: 1, at, data: { names, title, credit: null } }))
     }, { names, title: collection.title, at })
     let requests = 0
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests++
       return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
@@ -681,6 +760,7 @@ test('Try again sends at most one collection request per pack on each click', as
     watch(page, 'visitor whose icon catalogue is refused')
     const requests = []
     let refusing = true
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests.push(new URL(route.request().url()).searchParams.get('prefix'))
       if (!refusing) return route.fallback()
