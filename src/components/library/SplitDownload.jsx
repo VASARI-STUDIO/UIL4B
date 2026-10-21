@@ -23,6 +23,11 @@ import FooterGlyph from './FooterGlyph'
 // overflow:hidden and the footer sits in a scroller, so an inline popover would
 // be clipped. Its semantics are a menu, not a listbox, because a row acts.
 
+// Every face the main part can show, per width tier. Each is a hidden sizer in
+// the same grid cell, so the button is as wide as the widest and never changes.
+const SIZER_WIDE = ['SVG', 'PNG 2048px', 'Retry']
+const SIZER_PHONE = ['SVG', 'PNG', 'Retry']
+
 export default function SplitDownload({ format, size, disabled = false, loading = false, onPick, onDownload }) {
   const uid = useId()
   const menuId = `dl-menu-${uid}`
@@ -180,8 +185,8 @@ export default function SplitDownload({ format, size, disabled = false, loading 
         title={mainName}
         onClick={() => { if (!building) run(current) }}
       >
-        {/* The face is the visible icon and label. The two hidden sizers hold the
-            widest face of each width tier, all in grid cell 1/1, so the button
+        {/* The face is the visible icon and label. The hidden sizers hold every
+            face of each width tier (formats and Retry), all in grid cell 1/1, so the button
             never changes width on a format switch or a Size drag, and the face
             sits at the centre of that reserved width. */}
         <span className="dl-face">
@@ -195,8 +200,8 @@ export default function SplitDownload({ format, size, disabled = false, loading 
             <span className="dl-show dl-p">{retry ? 'Retry' : current.short}</span>
           </span>
         </span>
-        <span className="dl-sizer dl-w" aria-hidden="true"><span className="dl-ico" />PNG 2048px</span>
-        <span className="dl-sizer dl-p" aria-hidden="true"><span className="dl-ico" />PNG</span>
+        {SIZER_WIDE.map(t => <span key={`w-${t}`} className="dl-sizer dl-w" aria-hidden="true"><span className="dl-ico" />{t}</span>)}
+        {SIZER_PHONE.map(t => <span key={`p-${t}`} className="dl-sizer dl-p" aria-hidden="true"><span className="dl-ico" />{t}</span>)}
       </button>
       <button
         ref={triggerRef}
