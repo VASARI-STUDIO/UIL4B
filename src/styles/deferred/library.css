@@ -1145,8 +1145,8 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   background:transparent;
 }
 .lib-surface .ig .ic-name{min-height:25px}
-.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:calc(113px + var(--fs-micro))}
-@media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:104px}}
+.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:calc(113px + var(--fs-micro))}
+@media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:104px}}
 /* Hover only where a pointer can hover, so a tap does not leave the cell tinted;
    touch gets the same tint for the length of the press. */
 @media (hover:hover){.lib-surface .ic:hover{background:var(--hvr);border-color:transparent}}
@@ -1159,7 +1159,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .lib-surface .ic{gap:6px;min-height:72px;padding:12px 4px;border-radius:var(--radius)}
   .lib-surface .ic>span:not(.ic-pack){-webkit-line-clamp:1;line-clamp:1}
   .lib-surface .ig .ic-name{min-height:12.5px}
-  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:80.5px}
+  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:80.5px}
 }
 
 
