@@ -18,6 +18,7 @@ import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { createCollectionLoader } from '../utils/iconifyCollectionCache'
+import { isMulticolourSvg, monochromeSvg } from '../utils/iconPaint'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
@@ -1238,7 +1239,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return counts
   }, [savePickerOpen])
 
-  const isColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
+  const inColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
   const isStroke = useMemo(() => {
     if (!activeIcon) return false
     if (activeIcon.custom) return !!activeIcon.isStroke
@@ -1317,7 +1318,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name)) || glyphSvgText(activeIcon.pack, activeIcon.name)
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
-  const baseSvgText = localBase || fetchedBase || cachedCdnBase
+  const rawBaseSvgText = localBase || fetchedBase || cachedCdnBase
+  const isColoredPack = inColoredPack && (!rawBaseSvgText || isMulticolourSvg(rawBaseSvgText))
+  const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
+    ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
+  [inColoredPack, isColoredPack, rawBaseSvgText])
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
   // A layout effect, so the art lands in the same frame the waiting glyph leaves.
