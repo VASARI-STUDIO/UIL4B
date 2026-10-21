@@ -943,10 +943,16 @@ for (const width of [1440, 390]) {
     await go(page, '/create/icons')
     const filters = page.getByRole('button', { name: /^Filters\b/ })
     const sheet = page.getByRole('dialog', { name: 'Filters' })
+    const flags = page.getByRole('button', { name: 'Flags', exact: true })
+    const groupMenu = page.getByRole('button', { name: /^Group\b/ })
+    // The toolbar mounts after the first paint and steps through its layout stages, so wait
+    // until it shows some way in to the groups before reading which one it chose. A bare
+    // isVisible() answers for the instant it is asked: on a slow runner that was before the
+    // toolbar existed, and the test then waited 30 s for a Group menu this layout never draws.
+    await expect(filters.or(groupMenu).or(flags).first()).toBeVisible()
     const inPanel = await filters.isVisible()
     if (inPanel) await filters.click()
-    const flags = page.getByRole('button', { name: 'Flags', exact: true })
-    if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
+    if (!await flags.isVisible()) await groupMenu.click()
     await flags.click()
     if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
     else if (inPanel) await filters.click()
