@@ -316,7 +316,7 @@ function AppHeader() {
   const launchBrandKit = () => {
     closeAll()
     startGuide()
-    navigate(brandKitEntry.path)
+    navigate(brandKitEntry.path, { state: brandKitEntry.resume ? null : { openBrandKitCard: true } })
   }
   const path = (location.pathname || '/').replace(/\/+$/, '') || '/'
   const isSalesPage = SALES_PATHS.has(path)
