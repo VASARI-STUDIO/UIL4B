@@ -1904,7 +1904,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 aria-busy={!baseSvgText && !loadErr}
                 aria-label={copied === 'svg' ? undefined : 'Copy SVG'}
               >
-                {copied === 'svg' ? 'Copied!' : <>Copy<span className="icust-tier-w"> SVG</span></>}
+                {copied === 'svg' ? 'Copied!' : <span>Copy<span className="icust-tier-w"> SVG</span></span>}
               </button>
 
               <SplitDownload
