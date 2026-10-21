@@ -27,7 +27,7 @@ import { isMulticolourSvg, monochromeSvg } from '../utils/iconPaint'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
-  STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
+  DEFAULT_ICON_SIZE, STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
   stickyStrokePx, strokeAttrForPx, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
@@ -208,6 +208,21 @@ function readStickyStroke() {
 function writeStickyStroke(v) {
   try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
 }
+
+// The customiser's opening values. One table feeds the first-open seeds, what
+// Reset restores, and the test for "does anything differ" (which shows Reset),
+// so they can never disagree. The stroke is in pixels (see iconStroke.js).
+const CUSTOMISER_DEFAULTS = Object.freeze({
+  size: DEFAULT_ICON_SIZE,
+  color: '',
+  stroke: STROKE_PX.default,
+  absStroke: false,
+  cap: 'round',
+  join: 'round',
+  rotate: 0,
+  flipH: false,
+  flipV: false,
+})
 
 // Each pack's Regular weight excludes its alternate glyph variants.
 const REGULAR_RULES = {
@@ -1167,8 +1182,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Seed controls from a re-opened custom's saved values, then from a validated
   // homepage draft (`draftSize` / `draftStroke` — bounded values, nothing else),
   // then from the defaults.
-  const [size, setSize] = useState(() => (icon?.custom && icon.size) || icon?.draftSize || 48)
-  const [color, setColor] = useState(() => (icon?.custom && icon.color) || '')
+  const [size, setSize] = useState(() => (icon?.custom && icon.size) || icon?.draftSize || CUSTOMISER_DEFAULTS.size)
+  const [color, setColor] = useState(() => (icon?.custom && icon.color) || CUSTOMISER_DEFAULTS.color)
   // A saved custom keeps its own stroke; anything else opens at the sticky width.
   // Both arrive in whatever unit their era used, so both go through the pixel
   // conversion: a pre-fix record stored viewBox units next to its own size, and
@@ -1180,11 +1195,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     ?? readStickyStroke()
   ))
   const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
-  const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || 'round')
-  const [join, setJoin] = useState(() => (icon?.custom && icon.join) || 'round')
-  const [rotate, setRotate] = useState(0)
-  const [flipH, setFlipH] = useState(false)
-  const [flipV, setFlipV] = useState(false)
+  const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || CUSTOMISER_DEFAULTS.cap)
+  const [join, setJoin] = useState(() => (icon?.custom && icon.join) || CUSTOMISER_DEFAULTS.join)
+  const [rotate, setRotate] = useState(CUSTOMISER_DEFAULTS.rotate)
+  const [flipH, setFlipH] = useState(CUSTOMISER_DEFAULTS.flipH)
+  const [flipV, setFlipV] = useState(CUSTOMISER_DEFAULTS.flipV)
   const [copied, setCopied] = useState('')
   // The file format the Download button hands over; it follows the account.
   const [dlFormat, setDlFormat] = useState(() => readDownloadFormat())
@@ -1621,23 +1636,27 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
   // Reset every control to its opening default (a fresh, un-edited icon).
   const handleReset = () => {
-    setSize(48)
-    setColor('')
-    setStroke(2)
-    writeStickyStroke(2)
-    setAbsStroke(false)
-    setCap('round')
-    setJoin('round')
-    setRotate(0)
-    setFlipH(false)
-    setFlipV(false)
+    const d = CUSTOMISER_DEFAULTS
+    setSize(d.size)
+    setColor(d.color)
+    setStroke(d.stroke)
+    writeStickyStroke(d.stroke)
+    setAbsStroke(d.absStroke)
+    setCap(d.cap)
+    setJoin(d.join)
+    setRotate(d.rotate)
+    setFlipH(d.flipH)
+    setFlipV(d.flipV)
     markDirty()
     // The button hides once nothing differs, so focus goes to the first control.
     document.getElementById('icust-size')?.focus()
   }
   // True while any control differs from what handleReset sets.
-  const edited = size !== 48 || !!color || stroke !== 2 || absStroke || cap !== 'round'
-    || join !== 'round' || rotate !== 0 || flipH || flipV
+  const edited = size !== CUSTOMISER_DEFAULTS.size || color !== CUSTOMISER_DEFAULTS.color
+    || stroke !== CUSTOMISER_DEFAULTS.stroke || absStroke !== CUSTOMISER_DEFAULTS.absStroke
+    || cap !== CUSTOMISER_DEFAULTS.cap || join !== CUSTOMISER_DEFAULTS.join
+    || rotate !== CUSTOMISER_DEFAULTS.rotate || flipH !== CUSTOMISER_DEFAULTS.flipH
+    || flipV !== CUSTOMISER_DEFAULTS.flipV
 
   const savedProjectName = useMemo(() => {
     if (!savedProjectId) return null
@@ -1769,7 +1788,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   min={12}
                   max={128}
                   value={size}
-                  defaultValue={48}
+                  defaultValue={CUSTOMISER_DEFAULTS.size}
                   snaps={[12, 16, 24, 32, 48, 64, 96, 128]}
                   unit="px"
                   inputMax={1024}
@@ -1810,7 +1829,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     max={STROKE_PX.max}
                     step={STROKE_PX.step}
                     value={stroke}
-                    defaultValue={STROKE_PX.default}
+                    defaultValue={CUSTOMISER_DEFAULTS.stroke}
                     snaps={STROKE_PX.snaps}
                     unit="px"
                     inputMin={STROKE_PX.inputMin}
