@@ -15,6 +15,15 @@ const cases = [
   ['multiline inline style paints', '<svg><path style="\nfill: #123456;\nstroke: #abcdef"/></svg>', true],
   ['ignored paints', '<svg fill="none" stroke="transparent"><path style="fill: inherit; stroke: currentColor"/></svg>', false],
   ['case and whitespace', '<svg fill=" RED "><path style="fill: red !important"/></svg>', false],
+  // Unpainted shapes render black, so they count as a second colour next to an explicit one.
+  ['explicit colour plus unpainted path', '<svg><path d="M0 0h8v8z"/><path fill="#d97757" d="M8 8h8v8z"/></svg>', true],
+  ['explicit colour plus unpainted shape in a group', '<svg><g><circle r="4"/></g><rect fill="#d97757"/></svg>', true],
+  ['explicit stroke plus unpainted path', '<svg><path stroke="#d97757"/><path d="M0 0h8v8z"/></svg>', true],
+  ['explicit black plus unpainted path', '<svg><path fill="#000"/><path d="M0 0h8v8z"/></svg>', false],
+  ['unpainted path inherits an ancestor fill', '<svg><g fill="#d97757"><path d="M0 0h8v8z"/></g><path fill="#d97757"/></svg>', false],
+  ['unpainted path under fill none', '<svg fill="none"><path d="M0 0h8v8z"/><path stroke="#d97757"/></svg>', false],
+  ['unpainted shape inside defs, clipPath or mask', '<svg><defs><clipPath id="a"><path d="M0 0h8v8z"/></clipPath></defs><mask id="m"><rect/></mask><path fill="#d97757"/></svg>', false],
+  ['unpainted non-shape elements', '<svg><g/><use href="#a"/><path fill="#d97757"/></svg>', false],
 ]
 
 for (const [name, svg, expected] of cases) {
