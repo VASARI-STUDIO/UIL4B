@@ -3455,6 +3455,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // however the first page happens to split, so the skeleton reserves the label
   // whenever the scope will load more than one pack.
   const skeletonShowPack = pendingPacks.length > 1
+  // Which pack a search returns is unknown while it loads, so the skeleton
+  // cannot tell a one-pack answer from a many-pack one. In a multi-pack scope
+  // the loaded grid keeps the labelled cell height either way (the same blank
+  // label row the narrow layouts already keep), so neither answer shifts.
+  const gridClass = skeletonShowPack ? 'ig ig--reserve-pack' : 'ig'
 
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
@@ -3711,7 +3716,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 that failed to fill — the "cell that failed to load" shape this
                 file has been fixed for twice. The wall is the whole answer. */}
             {!gated && (
-              <div className="ig" ref={gridRef}>
+              <div className={gridClass} ref={gridRef}>
                 {loading && icons.length === 0
                   ? skeletonIcons.map((icon, i) => (
                     <div key={`skel-${i}`} className="ic ig-skel" aria-hidden="true">
