@@ -1147,6 +1147,18 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .ig .ic-name{min-height:25px}
 .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:calc(113px + var(--fs-micro))}
 @media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:104px}}
+/* Glyphs and names start from the cell's top edge, so a cell reserved for a pack
+   line does not float its glyph below the same glyph in a cell without one.
+   In a cell with a pack line, a glyph chip (coloured art, logo or wordmark) is a
+   36px box that draws its 24px, 28px or wide artwork centred, so it takes 24px
+   of layout like the mono glyph beside it (it overflows 6px each side into the
+   cell padding): the glyph tops and the name tops then line up across a mixed
+   row. Its loading slot takes the same 24px. The loading labels sit where the
+   name will appear. */
+.lib-surface .ig .ic{justify-content:flex-start}
+.lib-surface .ig .ic:has(.ic-pack) .ig-chip,.lib-surface .ig.ig--reserve-pack .ic .ig-chip{margin-block:-6px}
+.lib-surface .ig .ig-skel:has(.ig-skel-pack) .ig-skel-slot,.lib-surface .ig.ig--reserve-pack .ig-skel .ig-skel-slot{height:24px}
+.lib-surface .ig .ig-skel-labels{justify-content:flex-start;padding-top:2px}
 /* Hover only where a pointer can hover, so a tap does not leave the cell tinted;
    touch gets the same tint for the length of the press. */
 @media (hover:hover){.lib-surface .ic:hover{background:var(--hvr);border-color:transparent}}
