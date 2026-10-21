@@ -902,3 +902,87 @@ for (const width of [390, 1440]) {
     })
   }
 }
+
+// A pack-labelled row can hold mono glyphs (24px) beside coloured chips (36px
+// boxes drawing 24px art). Every glyph top and every name top in the row must
+// agree, or the coloured cell reads as dropped below its neighbours.
+test.describe('a result row that mixes mono and coloured glyphs at 1440', () => {
+  test.skip(isLiveIconify(), 'the live API decides which packs answer; this spec reads the fixture')
+
+  test('glyph tops and name tops line up across the row', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic img').nth(3)).toBeVisible({ timeout: 20_000 })
+    await page.getByLabel('Search icons').first().fill('star')
+    await expect(page.locator('.ig .ic .ig-chip img').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ig .ig-skel, .ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0)
+    await expect.poll(() => page.locator('.ig .ic img').evaluateAll(
+      (imgs) => imgs.every((img) => img.complete && img.naturalWidth > 0 && getComputedStyle(img).opacity === '1'),
+    )).toBe(true)
+
+    const rows = await page.locator('.ig').evaluate((grid) => {
+      const byRow = new Map()
+      for (const cell of grid.querySelectorAll('.ic')) {
+        const top = Math.round(cell.getBoundingClientRect().top)
+        const img = cell.querySelector('img').getBoundingClientRect().top
+        const name = cell.querySelector('.ic-name').getBoundingClientRect().top
+        const list = byRow.get(top) || []
+        list.push({ coloured: !!cell.querySelector('.ig-chip'), packed: !!cell.querySelector('.ic-pack'), img, name })
+        byRow.set(top, list)
+      }
+      return [...byRow.values()]
+    })
+    const mixed = rows.filter((row) => row.some((c) => c.coloured) && row.some((c) => !c.coloured))
+    expect(mixed.length, 'the fixture search no longer produces a row of mono and coloured cells').toBeGreaterThan(0)
+    for (const row of mixed) {
+      expect(row.every((c) => c.packed), 'cells in a multi-pack result carry a pack line').toBe(true)
+      const spread = (key) => Math.max(...row.map((c) => c[key])) - Math.min(...row.map((c) => c[key]))
+      expect(spread('img'), 'glyph tops across the row').toBeLessThanOrEqual(1)
+      expect(spread('name'), 'name tops across the row').toBeLessThanOrEqual(1)
+    }
+  })
+})
+
+// While a signed-in search is held, the skeleton cycles its slots through every
+// pack, coloured ones included. Each slot must reserve the 24px the loaded glyph
+// takes and start at the same height in its cell, so nothing moves on arrival.
+test.describe('the search skeleton in a multi-pack scope at 1440', () => {
+  test.skip(isLiveIconify(), 'this test holds the search')
+
+  test('every slot is 24px and sits where the loaded glyph will', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await signIn(page, { plan: 'pro' })
+    let release
+    const held = new Promise((resolve) => { release = resolve })
+    // Hold the catalogue too, so the skeleton is what answers the typed search.
+    await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/search' || u.pathname === '/collection'),
+      async (route) => { await held; await route.fallback() })
+    try {
+      await go(page, '/create/icons')
+      await expect(page.locator('.ig-skel').first()).toBeVisible()
+      await page.getByLabel('Search icons').first().fill('star')
+      await page.waitForRequest((r) => new URL(r.url()).pathname === '/search')
+      await expect(page.locator('.ig.ig--reserve-pack .ig-skel').first()).toBeVisible()
+      // Offsets from each cell's own top: row position cannot hide a difference.
+      const offsets = (selector) => page.locator('.ig').evaluate((grid, sel) => [...grid.children].map((cell) => {
+        const box = cell.querySelector(sel).getBoundingClientRect()
+        return { top: box.top - cell.getBoundingClientRect().top, height: box.height }
+      }), selector)
+      const waiting = await offsets('.ig-skel-slot')
+      expect(waiting.length).toBeGreaterThan(13)
+      expect(await page.locator('.ig .ig-skel-slot:not(.ig-skel-slot--mono)').count(),
+        'positive control: some skeleton slots stand in for coloured packs').toBeGreaterThan(0)
+      for (const slot of waiting) expect(slot.height, 'a skeleton slot is not 24px tall').toBe(24)
+      expect(new Set(waiting.map((s) => Math.round(s.top))).size, 'skeleton slots start at different heights').toBe(1)
+
+      release()
+      await expect(page.locator('.ig-skel')).toHaveCount(0)
+      await expect(page.locator('.ig .ic .ig-chip img').first()).toBeVisible({ timeout: 20_000 })
+      const loaded = await offsets('img')
+      for (let i = 0; i < Math.min(waiting.length, loaded.length); i += 1) {
+        expect(Math.abs(loaded[i].top - waiting[i].top), `glyph ${i} moved when the results arrived`).toBeLessThanOrEqual(1)
+      }
+    } finally { release() }
+  })
+})
