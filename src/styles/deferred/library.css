@@ -359,7 +359,11 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Copy-only snippet: the text is not selectable, so the Copy button is the one
    way out — keeps the workflow inside UIL4B. */
 .icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
-.icust-reset{margin-left:0}
+/* Reset lives at the end of the tag row. Hidden, not removed, while nothing
+   differs from the defaults, so the row keeps its height. */
+.lib-surface .icust-meta .icust-reset{flex:none;margin-left:auto;min-height:32px;padding:0 12px}
+.lib-surface .icust-meta .icust-reset.is-hidden{visibility:hidden}
+@media(pointer:coarse){.lib-surface .icust-meta .icust-reset{min-height:44px}}
 .icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
 .icust-upgrade:hover{text-decoration:underline}
 
@@ -1262,6 +1266,106 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .lib-btn--primary:disabled:hover{background:var(--t0);border-color:var(--t0)}
 .lib-surface .lib-btn svg{flex-shrink:0}
 @media(pointer:coarse){.lib-surface .lib-btn{min-height:44px}}
+
+/* ── The customiser's split Download button ───────────────────────────────
+   One hairline pill drawn by the wrapper, two buttons inside it. The main part
+   names the format it will download; the arrow part opens the format menu. At
+   rest both are transparent like the other secondary buttons, so Copy SVG stays
+   the one filled button in the row. Each part has its own hover, press and
+   focus; the divider is the arrow part's left edge.
+
+   The footer is a size container (icon-emoji-library.css), so the labels pick
+   their width tier from the footer's own width, not the viewport's. The
+   longest label of each tier sits in the label cell as a hidden sizer, which is
+   what stops the button changing width when the format or the Size changes. */
+.icust-foot .dl-split{
+  position:relative;display:inline-flex;align-items:stretch;flex:1 1 auto;min-width:max-content;
+  min-height:40px;border:1px solid var(--bh);border-radius:var(--btn-radius);isolation:isolate;
+  transition:border-color var(--dur-1) var(--ease-standard);
+}
+.icust-foot .dl-main,.icust-foot .dl-more{
+  appearance:none;margin:0;border:0;background:transparent;color:var(--t0);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
+  cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard);
+}
+.icust-foot .dl-main{flex:1 1 auto;gap:6px;padding:0 12px 0 14px;border-radius:var(--btn-radius) 0 0 var(--btn-radius)}
+.icust-foot .dl-more{flex:0 0 36px;width:36px;padding:0;border-left:1px solid var(--bh);border-radius:0 var(--btn-radius) var(--btn-radius) 0}
+@media(hover:hover){
+  .icust-foot .dl-split:hover{border-color:color-mix(in srgb,var(--t0) 34%,transparent)}
+  .icust-foot .dl-main:hover:not(:disabled):not([aria-disabled="true"]),
+  .icust-foot .dl-more:hover:not(:disabled){background:var(--hvr)}
+}
+.icust-foot .dl-main:active:not(:disabled):not([aria-disabled="true"]),
+.icust-foot .dl-more:active:not(:disabled){background:color-mix(in srgb,var(--t0) 8%,transparent)}
+.icust-foot .dl-main:focus-visible,.icust-foot .dl-more:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.icust-foot .dl-more[aria-expanded="true"]{background:var(--hvr)}
+.icust-foot .dl-main:disabled,.icust-foot .dl-more:disabled{opacity:.5;cursor:not-allowed}
+.icust-foot .dl-main[aria-disabled="true"]{cursor:progress}
+.dl-caret{flex:none;transition:transform var(--dur-1) var(--ease-standard)}
+.dl-more[aria-expanded="true"] .dl-caret{transform:rotate(180deg)}
+
+/* The download glyph, the done check and the working spinner share one cell and
+   cross-fade (opacity only). */
+.dl-ico{display:grid;flex:none;width:16px;height:16px}
+.dl-ico>svg{grid-area:1/1;width:16px;height:16px;transition:opacity var(--dur-3) var(--ease-standard)}
+.dl-ico>.dl-i-check,.dl-ico>.dl-i-spin{opacity:0}
+.dl-split[data-phase="done"] .dl-i-dl,.dl-split[data-spin="true"] .dl-i-dl{opacity:0}
+.dl-split[data-phase="done"] .dl-i-check,.dl-split[data-spin="true"] .dl-i-spin{opacity:1}
+.dl-split[data-spin="true"] .dl-i-spin{animation:dl-spin 800ms linear infinite}
+@keyframes dl-spin{to{transform:rotate(360deg)}}
+
+.dl-label{display:grid;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dl-label>*{grid-area:1/1;text-align:left}
+.dl-label .dl-sizer{visibility:hidden}
+.dl-label .dl-p{display:none}
+
+/* Width tiers, by the footer's own content width. Wide: full labels. Phone:
+   short labels. Narrow: the Save button is a glyph and Copy drops "SVG". */
+.icust-foot .icust-save-p,.icust-foot .icust-save-g{display:none}
+.icust-foot .icust-save-w{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+@container (max-width:439.98px){
+  .dl-label .dl-w{display:none}
+  .dl-label .dl-p{display:block}
+  .icust-foot .icust-save-w{display:none}
+  .icust-foot .icust-save-p{display:inline}
+}
+@container (max-width:299.98px){
+  .icust-foot .dl-main{padding:0 10px 0 12px}
+  .icust-foot .icust-tier-w{display:none}
+  .icust-foot .icust-save-p{display:none}
+  .icust-foot .icust-save-g{display:block}
+  .iel-page .icust-foot .lib-btn.icust-save{flex:0 0 44px;width:44px;min-width:44px;padding:0}
+}
+.icust-foot .icust-save-g{width:16px;height:16px}
+
+/* The format menu. Portalled to <body>, so nothing here is scoped to the page.
+   Positioned by placePopover (top and side) and pinned to the split's right
+   edge by SplitDownload (--dl-right). Always a popover, never the phone sheet
+   that MenuSelect's list becomes: it holds four rows beside their trigger. */
+.pop.dl-menu[data-pop-fixed="true"]{
+  position:fixed;inset:auto;left:auto;right:var(--dl-right,8px);bottom:auto;top:var(--select-top,0px);
+  z-index:var(--select-layer,130);isolation:isolate;
+  min-width:max(200px,var(--dl-w,0px));width:max-content;max-width:calc(100vw - 16px);
+  max-height:var(--pop-max-h,100dvh);
+}
+.dl-scrim{position:fixed;inset:0;z-index:calc(var(--select-layer,130) - 1);background:transparent}
+.dl-item{min-height:36px;color:var(--t0);font-weight:500}
+.dl-item .dl-item-text{flex:1;min-width:0;white-space:nowrap}
+.dl-item .menu-select-mark{font-size:12px}
+.dl-item[aria-checked="true"] .menu-select-check{visibility:visible}
+.dl-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dl-item[aria-disabled="true"],.dl-item[aria-disabled="true"] .menu-select-mark{color:var(--t3)}
+.dl-item[aria-disabled="true"]{cursor:not-allowed}
+.dl-item[aria-disabled="true"]:hover{background:none}
+@media(pointer:coarse){
+  .dl-item{min-height:44px}
+  .icust-foot .dl-split{min-height:44px}
+  .icust-foot .dl-more{flex-basis:44px;width:44px}
+}
+@media(prefers-reduced-motion:reduce){
+  .dl-caret,.dl-ico>svg{transition:none}
+}
 
 /* The masthead's one action ("Submit prompt", "Open the Gradient Generator",
    "Suggest a resource"). The slab is a fixed dark surface in BOTH themes, so

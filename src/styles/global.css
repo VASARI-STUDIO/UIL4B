@@ -3082,7 +3082,12 @@ html.lenis{scroll-behavior:auto!important}
 .icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
 .icust-stage-host svg,.icust-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join)}
 .icust-stage.is-abs .icust-stage-host svg,.icust-stage.is-abs .icust-stage-host svg *{vector-effect:non-scaling-stroke}
-.icust-meta{display:flex;flex-wrap:wrap;gap:6px;padding:12px 24px 0}
+/* Tags on the left, Reset on the right: one row that never wraps. The name tag
+   gives way (ellipsis) before anything else does. */
+.icust-meta{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:12px 24px 0}
+.icust-tags{display:flex;gap:6px;min-width:0;flex:0 1 auto}
+.icust-tags .icust-tag{flex:none}
+.icust-tags .icust-tag--name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .icust-tag{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.03em;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px 9px}
 /* Controls */
 .icust-controls{display:flex;flex-direction:column;gap:14px;padding:18px 24px 4px}
@@ -3200,8 +3205,9 @@ html.lenis{scroll-behavior:auto!important}
 /* Locked panel is fully clickable — any click opens the Pro upgrade modal
    (no hover veil; less disruptive to the flow). */
 .icust-pro.is-locked{cursor:pointer}
-/* Footer + Pro save-lock — the four actions share the row width evenly and only
-   wrap to a second line when the footer is genuinely too narrow, so none clip. */
+/* Footer + Pro save-lock — the actions share the row width evenly. On the icon
+   page the footer holds one row at every width (see icon-emoji-library.css); the
+   wrap here is the fallback for anywhere else it is used. */
 .icust-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
 /* overflow / scrollbar / edge fade come from `.rail-overflow` (see the block by
    the global scrollbar rules). This was the eighth instance of the hidden-

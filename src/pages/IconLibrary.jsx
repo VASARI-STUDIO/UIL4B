@@ -15,6 +15,11 @@ import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import SnapSlider from '../components/SnapSlider'
+import SplitDownload from '../components/library/SplitDownload'
+import FooterGlyph from '../components/library/FooterGlyph'
+import {
+  downloadFileName, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
+} from '../utils/iconDownload'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { createCollectionLoader } from '../utils/iconifyCollectionCache'
@@ -1181,6 +1186,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [flipH, setFlipH] = useState(false)
   const [flipV, setFlipV] = useState(false)
   const [copied, setCopied] = useState('')
+  // The file format the Download button hands over; it follows the account.
+  const [dlFormat, setDlFormat] = useState(() => readDownloadFormat())
   const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
   // Save-to-project picker: saving is a two-step flow — choose a project, then
   // write — so the free per-PROJECT icon cap can be enforced at pick time.
@@ -1522,21 +1529,31 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
   // Copying the SVG stays free; taking the FILE needs a free account.
   // Founder decision 2026-09-15 — see src/hooks/useExportGate.js.
-  const handleDownload = async () => {
-    if (!serializedOutput) return
-    if (!(await requireExportAccount('download this icon'))) return
+  // Every format goes through the same gate. `format` is a described format from
+  // utils/iconDownload.js; the result tells the button what to show.
+  const handleDownload = async (format) => {
+    if (!serializedOutput) return { status: 'none' }
+    if (!(await requireExportAccount('download this icon'))) return { status: 'cancelled' }
+    const file = downloadFileName(activeIcon?.name, format)
     try {
-      const blob = new Blob([serializedOutput], { type: 'image/svg+xml' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${(activeIcon?.name || 'icon').replace(/[^\w.-]+/g, '-')}.svg`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch { /* ignore */ }
+      if (format.kind === 'svg') {
+        saveBlobAs(new Blob([serializedOutput], { type: 'image/svg+xml' }), file)
+      } else {
+        // The PNG is the preview drawn at `px`: a stroke width is in pixels of
+        // the size it was set at, so it scales with the export (a Fixed stroke
+        // included), and a plain icon takes the ink the stage shows because a
+        // PNG has no `currentColor` to inherit.
+        const grow = format.px / (size || 1)
+        const svg = serializeCustomizedSvg(baseSvgText, {
+          size: format.px, color: isColoredPack ? undefined : (color || themeInk),
+          stroke: stroke * grow, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+        })
+        saveBlobAs(await svgToPngBlob(svg), file)
+      }
+      return { status: 'done', file }
+    } catch { return { status: 'failed' } }
   }
+  const pickDownloadFormat = (id) => { setDlFormat(id); writeDownloadFormat(id) }
 
   // Saving is a two-step flow: pick a project, then write. Signed-out users are
   // gated to login first — projects are account-scoped, so the per-project save
@@ -1615,7 +1632,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     setFlipH(false)
     setFlipV(false)
     markDirty()
+    // The button hides once nothing differs, so focus goes to the first control.
+    document.getElementById('icust-size')?.focus()
   }
+  // True while any control differs from what handleReset sets.
+  const edited = size !== 48 || !!color || stroke !== 2 || absStroke || cap !== 'round'
+    || join !== 'round' || rotate !== 0 || flipH || flipV
 
   const savedProjectName = useMemo(() => {
     if (!savedProjectId) return null
@@ -1637,10 +1659,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     // savedState: re-check after each save so the note appears immediately.
   }, [activeIcon, projects, savedState]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The Save button's words for each width of the footer (the stylesheet shows
+  // one): the full label, a short one, and a glyph alone. The full label is
+  // always the accessible name.
   const saveLabel = savedState === 'saved'
-    ? (saveHover ? 'Save to another project' : (savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons'))
-    : savedState === 'error' ? 'Couldn’t save — retry'
-      : activeIcon?.custom ? 'Save as new' : 'Save to project'
+    ? (saveHover
+      ? { full: 'Save to another project', short: 'Save again', glyph: 'check' }
+      : { full: savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons', short: 'Saved', glyph: 'check' })
+    : savedState === 'error' ? { full: 'Couldn’t save. Retry', short: 'Retry', glyph: 'alert' }
+      : activeIcon?.custom ? { full: 'Save as new', short: 'Save new', glyph: 'folder-plus' }
+        : { full: 'Save to project', short: 'Save', glyph: 'folder-plus' }
+  // Hover re-arms a saved button only where there is a hover; a tap would latch it.
+  const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
 
@@ -1716,9 +1746,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             </div>
 
             <div className="icust-meta">
-              <span className="icust-tag">{activeIcon.custom ? 'Custom' : activeIcon.pasted ? 'Pasted' : (activeIcon.pack || 'embedded')}</span>
-              <span className="icust-tag">{activeIcon.name}</span>
-              {activeIcon.cdn && !activeIcon.custom && <span className="icust-tag">CDN</span>}
+              <div className="icust-tags">
+                <span className="icust-tag">{activeIcon.custom ? 'Custom' : activeIcon.pasted ? 'Pasted' : (activeIcon.pack || 'embedded')}</span>
+                <span className="icust-tag icust-tag--name" title={activeIcon.name}>{activeIcon.name}</span>
+                {activeIcon.cdn && !activeIcon.custom && <span className="icust-tag">CDN</span>}
+              </div>
+              {/* Reset changes the controls, so it sits with them. It shows only
+                  once something differs; hidden (not removed) so the row holds. */}
+              <button
+                type="button"
+                className={`lib-btn icust-reset${edited ? '' : ' is-hidden'}`}
+                onClick={handleReset}
+                aria-label="Reset to default"
+              >Reset</button>
             </div>
 
             <div className="icust-controls">
@@ -1856,27 +1896,43 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             </div>
 
             <div className="icust-foot">
-              <button type="button" className="lib-btn lib-btn--primary" onClick={handleCopySvg} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
-                {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
+              <button
+                type="button"
+                className="lib-btn lib-btn--primary icust-copy"
+                onClick={handleCopySvg}
+                disabled={!baseSvgText}
+                aria-busy={!baseSvgText && !loadErr}
+                aria-label={copied === 'svg' ? undefined : 'Copy SVG'}
+              >
+                {copied === 'svg' ? 'Copied!' : <>Copy<span className="icust-tier-w"> SVG</span></>}
               </button>
+
+              <SplitDownload
+                format={dlFormat}
+                size={size}
+                disabled={!baseSvgText}
+                loading={!baseSvgText && !loadErr}
+                onPick={pickDownloadFormat}
+                onDownload={handleDownload}
+              />
 
               <button
                 type="button"
-                className="lib-btn"
+                className="lib-btn icust-save"
                 onClick={handleSave}
                 disabled={!baseSvgText}
                 aria-busy={!baseSvgText && !loadErr}
-                onMouseEnter={() => setSaveHover(true)}
+                aria-label={saveLabel.full}
+                title={saveLabel.full}
+                onMouseEnter={() => { if (canHover()) setSaveHover(true) }}
                 onMouseLeave={() => setSaveHover(false)}
-                onFocus={() => setSaveHover(true)}
+                onFocus={() => { if (canHover()) setSaveHover(true) }}
                 onBlur={() => setSaveHover(false)}
               >
-                {saveLabel}
+                <span className="icust-save-w">{saveLabel.full}</span>
+                <span className="icust-save-p">{saveLabel.short}</span>
+                <FooterGlyph name={saveLabel.glyph} className="icust-save-g" />
               </button>
-
-              <button type="button" className="lib-btn" onClick={handleDownload} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>Download</button>
-
-              <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset to default</button>
             </div>
 
             {savedInProjects.length > 0 && (
