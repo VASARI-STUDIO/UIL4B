@@ -1280,8 +1280,13 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    what stops the button changing width when the format or the Size changes. */
 .icust-foot .dl-split{
   position:relative;display:inline-flex;align-items:stretch;flex:1 1 auto;min-width:max-content;
-  min-height:40px;border:1px solid var(--bh);border-radius:var(--btn-radius);isolation:isolate;
-  transition:border-color var(--dur-1) var(--ease-standard);
+  min-height:40px;border-radius:var(--btn-radius);isolation:isolate;
+}
+/* The outline is an inset ring on a pseudo-element, not a border: a border would
+   take 1px off each part's height, and on touch each part must be a full 44px. */
+.icust-foot .dl-split::after{
+  content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
+  box-shadow:inset 0 0 0 1px var(--bh);transition:box-shadow var(--dur-1) var(--ease-standard);
 }
 .icust-foot .dl-main,.icust-foot .dl-more{
   appearance:none;margin:0;border:0;background:transparent;color:var(--t0);
@@ -1292,7 +1297,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .icust-foot .dl-main{flex:1 1 auto;gap:6px;padding:0 12px 0 14px;border-radius:var(--btn-radius) 0 0 var(--btn-radius)}
 .icust-foot .dl-more{flex:0 0 36px;width:36px;padding:0;border-left:1px solid var(--bh);border-radius:0 var(--btn-radius) var(--btn-radius) 0}
 @media(hover:hover){
-  .icust-foot .dl-split:hover{border-color:color-mix(in srgb,var(--t0) 34%,transparent)}
+  .icust-foot .dl-split:hover::after{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 34%,transparent)}
   .icust-foot .dl-main:hover:not(:disabled):not([aria-disabled="true"]),
   .icust-foot .dl-more:hover:not(:disabled){background:var(--hvr)}
 }

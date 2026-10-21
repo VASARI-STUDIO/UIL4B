@@ -43,7 +43,7 @@ export default function SplitDownload({ format, size, disabled = false, loading 
   const current = effectiveFormat(format, size)
   const building = phase === 'building'
 
-  const { triggerRef, popRef } = usePopover(open, () => setOpen(false), { autoFocus: false })
+  const { triggerRef, popRef } = usePopover(open, () => setOpen(false), { autoFocus: false, portalled: true })
 
   useEffect(() => {
     const t = timers.current
