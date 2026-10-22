@@ -4,13 +4,13 @@
  * last does NOT make it last: Vite orders chunk CSS by the dependency graph, so
  * a shared deferred sheet can land after it (commit 8d30f37a measured exactly
  * that on /create/gradient). The root scope is what makes these rules win —
- * including over the old `.fc-tabs` / `.fc-alpha` / `.fc-drop` rules that still
+ * including over the old `.fc-tabs` / `.fc-drop` rules that still
  * sit in global.css, which this lane may not edit.
  *
  * ── THE TOOL PATTERN ─────────────────────────────────────────────────────────
  *
  * The root is also the ToolLayout root (`.tl.fc`): the sticky tool toolbar
- * carries the name, the Alpha tag and the way to the 3D Model Converter, so the page
+ * carries the name and the way to the 3D Model Converter, so the page
  * has no hero. The mode tabs sit under it as a row of pills. Each mode's
  * bench is the canvas column beside a side column that holds the settings
  * card and, under it, the run's action bar (Convert / Build / Extract). At
@@ -59,26 +59,6 @@
   --fc-bar-h: 55px;
   --fc-pad: clamp(12px, 2vw, 20px);
   min-width: 0;
-}
-
-/* The Alpha tag rides the toolbar row. */
-
-/* A status tag, not a badge: mono, hairline, neutral ink. It was a filled
-   `--accent-strong` chip, the loudest object in the header. */
-.fc .fc-alpha {
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 4px 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--t2);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
 }
 
 /* ── Modes ────────────────────────────────────────────────────────────────── */

@@ -23,6 +23,10 @@ const SEED_COLOURS = ['#1D3557', '#E63946', '#F1FAEE']
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
 const introCard = (page) => page.getByRole('dialog', { name: 'Four steps to a full system.' })
 const nameCard = (page) => page.getByRole('dialog', { name: 'Name your kit' })
+// From 1024px the closing step is a form inside the bar; below it, the docked card above.
+const inBar = (page) => page.viewportSize().width >= 1024
+const nameForm = (page) => (inBar(page) ? rail(page) : nameCard(page))
+const nameField = (page) => nameForm(page).getByRole('textbox', { name: inBar(page) ? 'Name your kit' : 'Kit name' })
 
 /** Prior state, written once per tab so the app's own writes are not undone on the next load. */
 async function seed(page, { guide = true, seen = true, colours = false } = {}) {
@@ -407,7 +411,7 @@ test.describe('Brand kit walkthrough: ticks', () => {
 
     await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
     await expect(rail(page)).toContainText('4 of 4 parts')
-    await expect(nameCard(page)).toBeVisible()
+    await expect(nameField(page)).toBeVisible()
   })
 })
 
@@ -423,16 +427,16 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     expect(await leave.getAttribute('title')).not.toMatch(/work is saved/i)
 
     await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await expect(nameCard(page)).toBeVisible()
-    const field = nameCard(page).getByRole('textbox', { name: 'Kit name' })
+    await expect(nameField(page)).toBeVisible()
+    const field = nameField(page)
     await expect(field).toBeFocused()
 
     // A blank name is refused in place.
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
-    await expect(nameCard(page).getByRole('alert')).toHaveText('Give your kit a name to save it.')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
+    await expect(nameForm(page).getByRole('alert')).toHaveText('Give your kit a name to save it.')
 
     await field.fill('Harbour Studio')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
     await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
     await expect(page.getByText('Harbour Studio').first()).toBeVisible()
 
@@ -457,8 +461,8 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await go(page, '/create/icons')
 
     await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill('Fourth Kit')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await nameField(page).fill('Fourth Kit')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
 
     const refusal = page.getByTestId('brand-kit-save-refusal')
     await expect(refusal).toBeVisible()
@@ -466,7 +470,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
     await expect(page).toHaveURL(/\/create\/icons$/)
     await expect(rail(page)).toBeVisible()
-    await expect(nameCard(page).getByRole('textbox', { name: 'Kit name' })).toHaveValue('Fourth Kit')
+    await expect(nameField(page)).toHaveValue('Fourth Kit')
 
     const stored = await page.evaluate(([dk, gk]) => ({
       count: Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat().length,
@@ -486,9 +490,9 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     // Every tool step ran without an account.
     await expect(page.locator('#ui-login-title')).toHaveCount(0)
     await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await expect(nameCard(page)).toContainText('Saving needs a free account')
-    await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill('Harbour Studio')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await expect(nameForm(page)).toContainText('Saving needs a free account')
+    await nameField(page).fill('Harbour Studio')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
 
     await expect(page.locator('#ui-login-title')).toBeVisible()
     // Saved work is a project; the kit is what gets exported.
@@ -512,8 +516,8 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await go(page, '/create/icons')
     await expect(rail(page)).toBeVisible()
     await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await expect(nameCard(page).getByRole('textbox', { name: 'Kit name' })).toHaveValue('Harbour Studio')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await expect(nameField(page)).toHaveValue('Harbour Studio')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
     await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
     const saved = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat())
     expect(saved).toHaveLength(1)
@@ -529,8 +533,8 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
   const completeSignIn = (page) => page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
   async function nameAndAskToSave(page, name) {
     await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill(name)
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await nameField(page).fill(name)
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
     await expect(page.locator('#ui-login-title')).toBeVisible()
   }
 
@@ -572,4 +576,71 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     expect(saved, 'three existing projects and the new one').toHaveLength(4)
     expect(saved.filter((p) => p.name === 'Fourth Kit')).toHaveLength(1)
   })
+
+  // From 1024px the form takes the place of the steps and the Next button, inside
+  // the bar: no card over the tool, nothing stacked, and no button still saying
+  // "Name your kit" while the form is open.
+  for (const width of [1440, 1024]) {
+    test(`${width}px: the name step is a form inside the bar, not a card over the tool`, async ({ page }) => {
+      watch(page, 'designer naming a kit on a desktop')
+      await page.setViewportSize({ width, height: 900 })
+      await seed(page, { colours: true })
+      await go(page, '/create/icons')
+      const r = rail(page)
+      const next = r.getByRole('button', { name: /^Name your kit/ })
+      await expect(r.locator('.bkit-steps')).toBeVisible()
+      await next.click()
+
+      // The bar is now the form, and focus is in its field.
+      const field = nameField(page)
+      await expect(field).toBeVisible()
+      await expect(field).toBeFocused()
+      await expect(r.locator('.bkit-steps')).toHaveCount(0)
+      await expect(r.getByRole('button', { name: /^Name your kit/ }), 'a button still says Name your kit').toHaveCount(0)
+      await expect(r.getByRole('button', { name: /^Next/ })).toHaveCount(0)
+      await expect(r.getByRole('button', { name: 'Save project' })).toBeVisible()
+      await expect(r.getByRole('button', { name: 'Back' })).toBeVisible()
+      await expect(r.getByRole('button', { name: /What.s this\?/ })).toBeVisible()
+      await expect(r.getByRole('button', { name: 'Leave the walkthrough' })).toBeVisible()
+      await expect(page.locator('.bkit-card--name'), 'the stacked card is back').toHaveCount(0)
+      await expect(page.getByRole('dialog'), 'a dialog is open over the tool').toHaveCount(0)
+
+      // One solid bar on the foot of the viewport, grown to hold the note, and the
+      // spacer that clears the end of the tool follows it.
+      await expect.poll(() => page.evaluate(() => {
+        const bar = document.querySelector('.bkit-rail')
+        const box = bar.getBoundingClientRect()
+        const form = bar.querySelector('.bkit-name-form').getBoundingClientRect()
+        const cs = getComputedStyle(bar)
+        return {
+          onBottom: Math.abs(box.bottom - window.innerHeight) < 1,
+          tall: box.height >= 80,
+          spacer: Math.abs(document.querySelector('.bkit-rail-space').getBoundingClientRect().height - box.height) < 1,
+          formInside: form.top >= box.top && form.bottom <= box.bottom && form.left >= box.left && form.right <= box.right,
+          noOverflow: bar.scrollWidth <= bar.clientWidth,
+          flat: cs.backdropFilter === 'none' && cs.boxShadow === 'none' && cs.borderRadius === '0px',
+        }
+      })).toEqual({ onBottom: true, tall: true, spacer: true, formInside: true, noOverflow: true, flat: true })
+
+      // Escape is Back, and focus goes back to the button that opened the form.
+      await page.keyboard.press('Escape')
+      await expect(r.locator('.bkit-steps')).toBeVisible()
+      await expect(next).toBeFocused()
+      await expect.poll(() => page.evaluate(() => document.querySelector('.bkit-rail').getBoundingClientRect().height)).toBeLessThan(60)
+
+      // So is the Back button.
+      await next.click()
+      await r.getByRole('button', { name: 'Back' }).click()
+      await expect(r.locator('.bkit-steps')).toBeVisible()
+      await expect(next).toBeFocused()
+
+      // A blank name is refused in the bar, under the field.
+      await next.click()
+      await r.getByRole('button', { name: 'Save project' }).click()
+      await expect(r.getByRole('alert')).toHaveText('Give your kit a name to save it.')
+      await expect(field).toHaveAttribute('aria-invalid', 'true')
+      // Focus goes back to the field so the person can type at once.
+      await expect(field).toBeFocused()
+    })
+  }
 })
