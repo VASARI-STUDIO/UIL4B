@@ -85,8 +85,10 @@ export default function ExportPanel({ onClose }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // A finished export that still has something to say (a font it could not
-  // embed). Announced politely, and never styled as an error.
-  const [notice, setNotice] = useState('')
+  // embed, a print window the browser blocked). { lead, detail }: the lead says
+  // what happened, the detail what follows from it. Announced politely, and
+  // never styled as an error.
+  const [notice, setNotice] = useState(null)
   // Which step a long export is on, for the button label: 'fonts' | 'building'.
   const [stage, setStage] = useState('')
   // An export finished and the panel stayed open to say something about it.
@@ -191,7 +193,7 @@ export default function ExportPanel({ onClose }) {
 
     setBusy(true)
     setError('')
-    setNotice('')
+    setNotice(null)
     setDone(false)
     // Which activation this export completed, and whether the panel may close.
     let activation = 'style-guide'
@@ -214,7 +216,10 @@ export default function ExportPanel({ onClose }) {
         if (missing.length) {
           // The kit WAS produced and says the same inside itself; the panel
           // stays open to carry the notice rather than closing over it.
-          setNotice(`Your UI kit downloaded. ${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`)
+          setNotice({
+            lead: 'Your UI kit downloaded.',
+            detail: `${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`,
+          })
           setBusy(false)
           setStage('')
           keepOpen = true
@@ -228,7 +233,7 @@ export default function ExportPanel({ onClose }) {
         if (!printBook(html, `${slug}-design-system-book.html`)) {
           // The book WAS produced, so this is a notice and not an error — the
           // panel stays open to carry it rather than closing over it.
-          setError('Your browser blocked the print window, so the book was downloaded instead. Open it and print to PDF.')
+          setNotice({ lead: 'The book downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           setBusy(false)
           keepOpen = true
         }
@@ -240,7 +245,8 @@ export default function ExportPanel({ onClose }) {
         const html = buildBrandGuidelines(design, { projectName })
         activation = 'brand-guidelines'
         if (!printBook(html, `${slug}-brand-guidelines.html`)) {
-          setError('Your browser blocked the print window, so the guidelines were downloaded instead. Open the file and print to PDF.')
+          // Also a produced file, so a notice and not an error.
+          setNotice({ lead: 'The guidelines downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           setBusy(false)
           keepOpen = true
         }
@@ -306,8 +312,11 @@ export default function ExportPanel({ onClose }) {
   const pickFormat = (id) => {
     if (id === format) return
     setFormat(id)
-    setNotice('')
+    setNotice(null)
     setError('')
+    // The secondary button reads Close only while a finished export's message is
+    // on screen; with the message gone there is something to cancel again.
+    setDone(false)
   }
   // Export disables while it builds, and a disabled button drops focus to the
   // page behind, so the next Tab would leave the dialog. Hold focus on the panel
@@ -463,7 +472,16 @@ export default function ExportPanel({ onClose }) {
             scroll position, instead of below the last format row. */}
         <div className="exp-dock">
           {error && <p className="exp-error" role="alert">{error}</p>}
-          {notice && <p className="exp-notice" role="status" aria-live="polite">{notice}</p>}
+          {/* The live region is mounted empty and stays mounted, so a screen
+              reader is already watching it when the text arrives. Empty, it
+              adds nothing to the dock. */}
+          <div className="exp-live" role="status" aria-live="polite">
+            {notice && (
+              <p className="exp-notice">
+                <span className="exp-notice-lead">{notice.lead}</span>{' '}{notice.detail}
+              </p>
+            )}
+          </div>
 
           <div className="exp-foot">
             <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
