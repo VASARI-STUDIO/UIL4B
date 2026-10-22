@@ -49,7 +49,7 @@
    nav search cluster. No real export yet: every format previews and the primary
    action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
 .exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84dvh,720px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84dvh,720px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
 .exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
 /* --accent-mid on the panel's --bg-1: 5.55:1 light, 8.48:1 dark. */
@@ -63,7 +63,7 @@
 .exp-fmt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
 .exp-fmt-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
 .exp-fmt-soon{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
-.exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg-0)}
+.exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg-0)}
 /* The footer's two actions: the app's rectangle at the 44px the old
    .ui-pill-md held, so the target does not shrink. */
 .exp-foot .exp-act{min-height:44px;padding:0 18px;justify-content:center}
@@ -93,8 +93,19 @@
 @media (pointer:coarse){.exp-field input{min-height:44px}.exp-field input,.exp-field textarea{font-size:16px}}
 .exp-identity + .exp-logo{border-top:0;padding-top:12px}
 .exp-formats > .exp-logo + .exp-fmt{border-top:1px solid var(--border)}
-/* Keep the download status and actions in view while the format list scrolls. */
-.exp-footer{position:sticky;bottom:0;z-index:1;flex-shrink:0;background:var(--bg-1)}
+/* The dock (the error, the notice, then the footer's actions) stays in reach
+   while the format list scrolls: on a phone the list is taller than the sheet,
+   and both the button and anything the export has to say were below the fold. */
+.exp-dock{position:sticky;bottom:0;z-index:1;background:var(--bg-0)}
+/* Scroll cue: while the list has more below the dock, its last visible row fades
+   into the panel ground. A mask on the content that is cut off, not decoration;
+   ExportPanel.jsx toggles .has-more from the panel's scroll position. */
+.exp-dock::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:44px;pointer-events:none;opacity:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bg-1) 0%,transparent),var(--bg-1));transition:opacity var(--dur-2) var(--ease-out)}
+.exp-panel.has-more .exp-dock::before{opacity:1}
+/* The Soon action is plainly off: a muted surface with a readable label, not the
+   primary fill dimmed (a dimmed blue still reads as live in the moment before
+   the fade settles). Scoped to this footer, so no other primary button moves. */
+.exp-foot .exp-act.btn-accent[aria-disabled="true"],.exp-foot .exp-act.btn-accent[aria-disabled="true"]:hover{opacity:1;background:var(--bg-3);border-color:var(--border);color:var(--t2);cursor:not-allowed}
 @media (pointer:coarse){.exp-close{width:44px;height:44px}}
 /* Buttons are pills; the icon-only close is a circle. */
 .exp-foot .exp-act{border-radius:var(--radius-pill)}
@@ -102,7 +113,7 @@
 @media(max-width:560px){
   /* One 16px gutter for every row of the dialog on a phone. */
   .exp-head{padding:20px 16px 12px}
-  .exp-foot{padding:12px 16px}
+  .exp-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
   .exp-notice{padding:14px 16px}
   .exp-identity{padding:16px 16px 6px}
   /* On a phone every description at once is a wall of text: the list reads as

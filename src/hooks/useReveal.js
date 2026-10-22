@@ -36,6 +36,20 @@ export function useReveal() {
       return
     }
 
+    // Whatever is already on screen shows now. The observer below trims the
+    // bottom of the viewport by 8% and wants 15% of the node inside what is
+    // left, so a node that straddles the fold on load (the last card of a short
+    // window, a tall card on a phone) never counts as intersecting and stayed
+    // blank until the visitor scrolled. The trim is for scrolling, where the
+    // node is about to arrive; it must not hide what is already here.
+    const fold = window.innerHeight
+    const below = nodes.filter((n) => {
+      const { top, bottom } = n.getBoundingClientRect()
+      if (top < fold && bottom > 0) { n.classList.add('is-in'); return false }
+      return true
+    })
+    if (below.length === 0) return
+
     const io = new IntersectionObserver(
       (entries, obs) => {
         for (const entry of entries) {
@@ -48,7 +62,7 @@ export function useReveal() {
       { threshold: 0.15, rootMargin: '0px 0px -8% 0px' },
     )
 
-    nodes.forEach((n) => io.observe(n))
+    below.forEach((n) => io.observe(n))
     return () => io.disconnect()
   }, [])
 }

@@ -1,10 +1,10 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useClipboard } from '../hooks/useClipboard'
-import { readSessionHint } from '../utils/sessionHint'
 import { buildCSSVars } from '../utils/exportBuilder'
 import { tintsCurrent } from '../utils/projectTints'
 import Glyph from '../components/userhome/Glyph'
@@ -46,6 +46,10 @@ const ExportPanel = lazy(() => import('../components/ExportPanel'))
 // duplicate, archive or restore, delete — sits behind the ⋯ beside Save, the
 // same menu (ProjectActions) the old list carried on every row.
 
+// The longest a project link waits for the account's projects before it gives up
+// and sends the visitor to the workspace.
+const LOOKUP_WAIT_MS = 10000
+
 // A different project is a different page: keyed on the id, so nothing — a
 // half-typed rename, an armed delete, "Saved" — carries from one to the next.
 export default function ProjectDetailRoute(props) {
@@ -58,7 +62,7 @@ function ProjectDetail({ id, toast }) {
   const { loading: authLoading } = useAuth()
   const { isPro, loading: planLoading } = useSubscription()
   const {
-    projects, canSaveProjects, projectLimit,
+    projects, canSaveProjects, projectsLoading, projectLimit,
     loadProject, overwriteProject, renameProject, duplicateProject, archiveProject, deleteProject,
   } = useProject()
   const copy = useClipboard()
@@ -66,9 +70,6 @@ function ProjectDetail({ id, toast }) {
   const proPrice = useProPrice()
   const { prices } = usePrices()
   const upgrade = upgradeOffer({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
-
-  const [hintedSession] = useState(readSessionHint)
-  const resolving = authLoading && hintedSession
 
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState('')
@@ -81,15 +82,28 @@ function ProjectDetail({ id, toast }) {
 
   const project = projects.find((p) => p.id === id)
 
+  // A project missing from the list is "not found" only once the list is known.
+  // On a fresh load the account has not answered yet (sign-in is still settling,
+  // or this device has not read the account's projects), so the list is
+  // unknown, not empty. Waiting is capped: a read that never lands ends in the
+  // redirect below rather than a loader that never leaves.
+  const unknown = !project && (authLoading || (canSaveProjects && projectsLoading))
+  const [gaveUp, setGaveUp] = useState(false)
+  useEffect(() => {
+    if (!unknown) return undefined
+    const timer = setTimeout(() => setGaveUp(true), LOOKUP_WAIT_MS)
+    return () => clearTimeout(timer)
+  }, [unknown])
+
   useEffect(() => () => clearTimeout(copyTimer.current), [])
 
-  if (resolving) {
+  if (unknown && !gaveUp) {
     return (
       <div className="uh pjd">
         <div className="uh-main">
           <div className="uh-resolving" role="status">
             <div className="fg-loader" />
-            <p>Opening your projects…</p>
+            <p>Opening your project…</p>
           </div>
         </div>
       </div>
@@ -362,10 +376,11 @@ function ProjectDetail({ id, toast }) {
         </div>
       </div>
 
-      {exporting && (
+      {exporting && createPortal(
         <Suspense fallback={null}>
           <ExportPanel onClose={() => setExporting(false)} />
-        </Suspense>
+        </Suspense>,
+        document.querySelector('.app-shell'),
       )}
     </div>
   )

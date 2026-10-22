@@ -11,6 +11,7 @@
 // 2. The toolbar above the grid stays on one row at every width, each control
 //    is whole (a visible control is never narrower than its glyph and padding
 //    say), and on a coarse pointer every control is at least 44px both ways.
+import { readFileSync } from 'node:fs'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER } from './iconify-stub.js'
@@ -401,22 +402,34 @@ const FLAG_INK = {
   jp: '<path fill="#fefefe" d="M3 3h18v18H3z"/>',
   de: '<path fill="#050505" d="M3 3h18v18H3z"/>',
 }
-const serveInk = (page) => page.route(/\/[^/]+\.json\?.*icons=/, (route) => {
-  const url = new URL(route.request().url())
-  const prefix = url.pathname.replace(/^\//, '').replace(/\.json$/, '')
-  const icons = {}
-  for (const n of (url.searchParams.get('icons') || '').split(',').filter(Boolean)) {
-    const body = (prefix === 'logos' && INK[n]) || (prefix === 'circle-flags' && FLAG_INK[n]) || coloured
-    icons[n] = { body }
-  }
-  return route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    // Stamped so the suite's Iconify audit counts this as the fixture, not a leak.
-    headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
-    body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {} }),
+const serveInk = async (page) => {
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/(logos|circle-flags)\/[^/]+\.svg$/.test(u.pathname), route => {
+    const [, prefix, filename] = new URL(route.request().url()).pathname.split('/')
+    const name = filename.replace(/\.svg$/, '')
+    const body = (prefix === 'logos' ? INK[name] : FLAG_INK[name]) || coloured
+    return route.fulfill({
+      contentType: 'image/svg+xml',
+      headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
+      body: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`,
+    })
   })
-})
+  await page.route(/\/[^/]+\.json\?.*icons=/, (route) => {
+    const url = new URL(route.request().url())
+    const prefix = url.pathname.replace(/^\//, '').replace(/\.json$/, '')
+    const icons = {}
+    for (const n of (url.searchParams.get('icons') || '').split(',').filter(Boolean)) {
+      const body = (prefix === 'logos' && INK[n]) || (prefix === 'circle-flags' && FLAG_INK[n]) || coloured
+      icons[n] = { body }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      // Stamped so the suite's Iconify audit counts this as the fixture, not a leak.
+      headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
+      body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {} }),
+    })
+  })
+}
 
 const openLogos = async (browser, scheme) => {
   const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
@@ -446,9 +459,10 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     })
     expect(m.filter, 'the near-black mark has no shape edge').toContain('#ig-edge-light')
     expect(m.bg, 'the halo mark got a box').toBe('none')
-    // The customiser stage carries the same halo for the same mark.
+    // A one-colour mark uses the theme ink once opened in the customizer.
     await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
-    await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--halo-light/, { timeout: 20000 })
+    await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
+    await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo-light/)
     await ctx.close()
   })
 
@@ -463,11 +477,7 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     await ctx.close()
   })
 
-  // MUTATION: let the customiser stage sample whatever it is showing (drop the
-  // `data:` check in `onStageImgLoad`) and this fails: while the markup is still
-  // on its way the stage shows the remote image, which cannot be read back, so a
-  // near-black mark is cached as mid-tone and never gets its halo.
-  test('a near-black logo opened before its markup arrives still gets the halo', async ({ browser }) => {
+  test('a one-colour logo opened before its markup arrives switches to plain ink', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
     const page = await ctx.newPage()
     watch(page, 'someone opening a logo before its markup has loaded')
@@ -488,7 +498,8 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       await expect.poll(() => stage.locator('.icust-stage-img').evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 20000 }).toBe(true)
       await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
       release()
-      await expect(stage, 'the near-black logo lost its halo').toHaveClass(/icust-stage--halo-light/, { timeout: 20000 })
+      await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
+      await expect(stage).not.toHaveClass(/icust-stage--halo-light/)
     } finally { release(); await ctx.close() }
   })
 
@@ -591,10 +602,13 @@ test.describe('saved icons', () => {
         await expect(flagChip, `${flagName} got a halo`).not.toHaveClass(/halo/)
       }
 
-      // The customiser stage carries the halo for the same saved logo.
+      // A saved one-colour logo opens in the customiser as plain ink: colour
+      // controls, no "Original colours" default, and no halo on the stage.
       const pick = scheme === 'dark' ? 'Custom (github 1)' : 'Custom (apple 1)'
       await page.locator('.ig .ic', { hasText: pick }).click()
-      await expect(page.locator('.icust-stage')).toHaveClass(scheme === 'dark' ? /icust-stage--halo-light/ : /icust-stage--halo-dark/, { timeout: 20000 })
+      await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible({ timeout: 20000 })
+      await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
+      await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo/)
       await page.keyboard.press('Escape')
       await choosePack(page, 'logodev')
       const logo = page.locator('.ig .ic .ig-chip').first()
@@ -673,6 +687,16 @@ test.describe('the icon toolbar', () => {
 })
 
 const adobeCatalogue = async (page) => {
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || u.pathname === '/logos/adobe.svg'), route => {
+    const url = new URL(route.request().url())
+    return route.fulfill({
+      contentType: url.pathname.endsWith('.svg') ? 'image/svg+xml' : 'application/json',
+      headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
+      body: url.pathname.endsWith('.svg')
+        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${coloured}</svg>`
+        : JSON.stringify({ prefix: 'logos', width: 24, height: 24, icons: { adobe: { body: coloured } } }),
+    })
+  })
   await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({
     contentType: 'application/json', headers: { [ICONIFY_STUB_HEADER]: '1' },
     body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: 1, uncategorized: ['adobe'] }),
@@ -697,6 +721,61 @@ const openAdobeGrid = async (page) => {
     await chooseMenuOption(page, pack, 'logos')
   }
   await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', 'Customise adobe')
+}
+
+for (const [name, body, multicolour] of [
+  ['github-icon', '<path fill="#161614" d="M3 3h18v18H3z"/>', false],
+  ['apple', '<path d="M3 3h18v18H3z"/>', false],
+  ['gitlab', coloured, true],
+]) {
+  test(`colour controls follow the artwork for logos:${name}`, async ({ page }) => {
+    await signIn(page, { plan: 'pro' })
+    await page.addInitScript(() => {
+      window.__copiedSvg = ''
+      navigator.clipboard.writeText = text => { window.__copiedSvg = text; return Promise.resolve() }
+    })
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || u.pathname.startsWith('/logos/')), route => {
+      const url = new URL(route.request().url())
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`
+      const icons = Object.fromEntries((url.searchParams.get('icons') || '').split(',').map(n => [n, { body }]))
+      return route.fulfill({
+        contentType: url.pathname.endsWith('.svg') ? 'image/svg+xml' : 'application/json',
+        headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
+        body: url.pathname.endsWith('.svg') ? svg : JSON.stringify({ prefix: 'logos', width: 24, height: 24, icons }),
+      })
+    })
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({
+      contentType: 'application/json', headers: { [ICONIFY_STUB_HEADER]: '1' },
+      body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: 1, uncategorized: [name] }),
+    }))
+    await go(page, '/create/icons')
+    await choosePack(page, 'logos')
+    await page.getByRole('button', { name: `Customise ${name}`, exact: true }).click()
+    await expect(page.locator('.icust-code-box')).toBeEnabled()
+    const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+    await expect(colour.getByText('Default', { exact: true })).toHaveCount(multicolour ? 1 : 0)
+    await expect(colour.getByText('Original colours', { exact: true })).toHaveCount(multicolour ? 1 : 0)
+    await expect(colour.getByRole('button', { name: 'Black', exact: true })).toHaveCount(multicolour ? 0 : 1)
+    await expect(colour.getByRole('button', { name: 'White', exact: true })).toHaveCount(multicolour ? 0 : 1)
+    await expect(colour.locator('.cpk-trigger')).toHaveCount(multicolour ? 0 : 1)
+    if (multicolour) return
+    await colour.getByRole('button', { name: 'Black', exact: true }).click()
+    await expect(page.locator('.icust-code-box')).toContainText('color="#000000"')
+    await expect.poll(async () => decodeURIComponent(await page.locator('.icust-stage-img').getAttribute('src'))).toContain('color="#000000"')
+    await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
+    const copied = await page.evaluate(() => window.__copiedSvg)
+    expect(copied).toContain('color="#000000"')
+    expect(copied).not.toContain('#161614')
+    const downloaded = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download', exact: true }).click()
+    const stream = await (await downloaded).createReadStream()
+    const chunks = []
+    for await (const chunk of stream) chunks.push(chunk)
+    const output = Buffer.concat(chunks).toString('utf8')
+    expect(output).toContain('color="#000000"')
+    expect(output).toContain('fill="#000000"')
+    expect(output).not.toContain('#161614')
+  })
 }
 
 for (const scheme of ['dark', 'light']) {
@@ -751,13 +830,14 @@ for (const fail of [false, true]) {
   test(`an uncached coloured preview shows a loading indicator${fail ? ' and an error' : ' until its image loads'}`, async ({ page }) => {
     let release
     const pending = new Promise(resolve => { release = resolve })
-    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || /\/logos\/.*\.svg$/.test(u.pathname)), async route => {
-      await pending
-      if (fail) await route.fulfill({ status: 404, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: 'refused' }, body: 'Missing' })
-      else await route.fallback()
-    })
     try {
       await openAdobeGrid(page)
+      // Registered after the catalogue fixture, so it sees the requests first (the last route added runs first).
+      await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || /\/logos\/.*\.svg$/.test(u.pathname)), async route => {
+        await pending
+        if (fail) await route.fulfill({ status: 404, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: 'refused' }, body: 'Missing' })
+        else await route.fallback()
+      })
       await page.locator('.ig .ic').first().click()
       const stage = page.locator('.icust-stage')
       await expect(stage.getByRole('status')).toHaveText('Loading\u2026')
@@ -836,3 +916,74 @@ test('the pack menu has one Interface group and borrows no style word from the W
   }
   await expect(list.getByRole('group', { name: 'Brand logos', exact: true }).getByRole('option', { name: 'Simple Icons' })).toHaveCount(1)
 })
+
+
+for (const width of [1440, 390]) {
+  test(`Flags keeps packs contiguous and names sorted at ${width}px`, async ({ page }) => {
+    watch(page, `someone browsing the Flags group at ${width}px`)
+    await page.setViewportSize({ width, height: width === 1440 ? 500 : 900 })
+    const packs = ['circle-flags', 'flag', 'flagpack', 'cif']
+    const collections = new Map(packs.map(pack => [pack,
+      JSON.parse(readFileSync(new URL(`./fixtures/iconify/collection/${pack}.json`, import.meta.url), 'utf8')),
+    ]))
+    // Keep the first loaded page inside one pack so later packs cannot mask missing labels.
+    if (width === 1440) {
+      const circleFlags = collections.get('circle-flags')
+      circleFlags.uncategorized = Array.from({ length: 180 }, (_, i) => `flag-${String(i).padStart(3, '0')}`)
+      circleFlags.total = circleFlags.uncategorized.length
+      await page.route(url => ICONIFY_HOSTS.includes(url.hostname)
+        && url.pathname === '/collection' && url.searchParams.get('prefix') === 'circle-flags',
+      route => route.fulfill({
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*', [ICONIFY_STUB_HEADER]: '1' },
+        body: JSON.stringify(circleFlags),
+      }))
+    }
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    const filters = page.getByRole('button', { name: /^Filters\b/ })
+    const sheet = page.getByRole('dialog', { name: 'Filters' })
+    const flags = page.getByRole('button', { name: 'Flags', exact: true })
+    const groupMenu = page.getByRole('button', { name: /^Group\b/ })
+    // The toolbar mounts after the first paint and steps through its layout stages, so wait
+    // until it shows some way in to the groups before reading which one it chose. A bare
+    // isVisible() answers for the instant it is asked: on a slow runner that was before the
+    // toolbar existed, and the test then waited 30 s for a Group menu this layout never draws.
+    await expect(filters.or(groupMenu).or(flags).first()).toBeVisible()
+    const inPanel = await filters.isVisible()
+    if (inPanel) await filters.click()
+    if (!await flags.isVisible()) await groupMenu.click()
+    await flags.click()
+    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    else if (inPanel) await filters.click()
+
+    const expected = packs.flatMap(pack => {
+      const data = collections.get(pack)
+      return data.uncategorized.slice().sort().map(name => ({ pack, name }))
+    })
+    const cells = page.locator('.ig .ic:not(.ig-skel)')
+    if (width === 1440) {
+      await expect(cells).toHaveCount(120)
+      const firstCell = cells.first()
+      await expect(firstCell.locator('.ic-pack')).toBeVisible()
+      await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('circle-flags'))
+      const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
+      // Focus retains the original cell while rows above the viewport are windowed.
+      await firstCell.focus()
+      await page.locator('.ig-sentinel').scrollIntoViewIfNeeded()
+      await expect(cells).toHaveCount(expected.length)
+      await cells.nth(180).scrollIntoViewIfNeeded()
+      await expect(cells.nth(180).locator('.ic-pack')).toBeVisible()
+      expect(await firstCell.evaluate(cell => cell.getBoundingClientRect().height)).toBe(firstHeight)
+      await page.evaluate(() => window.scrollTo(0, 0))
+    }
+    await expect(cells).toHaveCount(expected.length)
+    await expect(cells.locator('.ic-name')).toHaveText(expected.map(icon => icon.name))
+    await expect.poll(() => cells.locator('.ic-pack').allTextContents()).toEqual(expected.map(icon => icon.pack))
+    if (width === 1440) {
+      await choosePack(page, 'circle-flags')
+      await expect(cells).toHaveCount(120)
+      await expect(cells.locator('.ic-pack')).toHaveCount(0)
+    }
+  })
+}
