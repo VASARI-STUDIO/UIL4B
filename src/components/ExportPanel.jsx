@@ -299,6 +299,30 @@ export default function ExportPanel({ onClose }) {
     }
   }
   const panelRef = useRef(null)
+  const exportBtnRef = useRef(null)
+  // What a finished export said (the notice, the error line) belongs to the
+  // format that produced it, and the footer keeps it in view. Choosing another
+  // format starts clean, so "Your UI kit downloaded" never sits beside "Export CSS".
+  const pickFormat = (id) => {
+    if (id === format) return
+    setFormat(id)
+    setNotice('')
+    setError('')
+  }
+  // Export disables while it builds, and a disabled button drops focus to the
+  // page behind, so the next Tab would leave the dialog. Hold focus on the panel
+  // while it builds, then hand it back to the Export button once it is enabled.
+  const wasBusy = useRef(false)
+  useEffect(() => {
+    if (busy) {
+      wasBusy.current = true
+      panelRef.current?.focus()
+    } else if (wasBusy.current) {
+      wasBusy.current = false
+      const btn = exportBtnRef.current
+      if (btn && !btn.disabled) btn.focus()
+    }
+  }, [busy])
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
   // Lock body scroll while open; restore focus to the opener when we unmount.
@@ -408,7 +432,7 @@ export default function ExportPanel({ onClose }) {
                   role="radio"
                   aria-checked={active}
                   className={active ? 'exp-fmt is-active' : 'exp-fmt'}
-                  onClick={() => setFormat(f.id)}
+                  onClick={() => pickFormat(f.id)}
                 >
                   <span className="exp-fmt-check" aria-hidden="true" />
                   <span className="exp-fmt-text">
@@ -446,7 +470,7 @@ export default function ExportPanel({ onClose }) {
               {done ? 'Close' : 'Cancel'}
             </button>
             {activeFormat?.live ? (
-              <button type="button" className="btn btn-accent exp-act" onClick={runExport} disabled={busy}>
+              <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={runExport} disabled={busy}>
                 {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
               </button>
             ) : (
