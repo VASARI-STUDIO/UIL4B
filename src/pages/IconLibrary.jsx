@@ -849,7 +849,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n" className="ic-name">{icon.name}</span>
-      {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
+      {!ghost && pack && <span key="p" className="ic-pack">{icon.logo ? 'Logo.dev' : packLabel(pack)}</span>}
     </div>
   )
 })

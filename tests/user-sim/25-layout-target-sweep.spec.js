@@ -1381,6 +1381,8 @@ test('the icon grid labels the pack only when the results actually mix packs', a
       labels: visible.length,
       words: [...new Set(visible.map((n) => n.textContent.trim().toLowerCase()))],
       fontSize: visible[0] ? Math.round(parseFloat(getComputedStyle(visible[0]).fontSize)) : null,
+      textTransform: visible[0] ? getComputedStyle(visible[0]).textTransform : null,
+      tracking: visible[0] ? parseFloat(getComputedStyle(visible[0]).letterSpacing) || 0 : null,
     }
   })
 
@@ -1414,8 +1416,10 @@ test('the icon grid labels the pack only when the results actually mix packs', a
 
   const mixed = await read()
   expect(mixed.labels, 'every cell in a mixed set carries its pack').toBe(mixed.cells)
-  // 9px was below the smallest size in the type scale; --fs-micro is 11px.
-  expect(mixed.fontSize, 'the pack label must not sit under the type scale floor')
-    .toBeGreaterThanOrEqual(11)
+  // The label matches the icon name's 10px and must stay no louder than it.
+  expect(mixed.fontSize, 'the pack label must be the same size as the icon name')
+    .toBe(10)
+  expect(mixed.textTransform, 'quiet label: normal case').toBe('none')
+  expect(mixed.tracking, 'quiet label: no letter-spacing').toBe(0)
   await ctx.close()
 })
