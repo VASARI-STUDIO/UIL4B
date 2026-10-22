@@ -1382,6 +1382,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
       words: [...new Set(visible.map((n) => n.textContent.trim().toLowerCase()))],
       fontSize: visible[0] ? Math.round(parseFloat(getComputedStyle(visible[0]).fontSize)) : null,
       textTransform: visible[0] ? getComputedStyle(visible[0]).textTransform : null,
+      whiteSpace: visible[0] ? getComputedStyle(visible[0]).whiteSpace : null,
       tracking: visible[0] ? parseFloat(getComputedStyle(visible[0]).letterSpacing) || 0 : null,
     }
   })
@@ -1420,6 +1421,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   expect(mixed.fontSize, 'the pack label must be the same size as the icon name')
     .toBe(10)
   expect(mixed.textTransform, 'quiet label: normal case').toBe('none')
+  expect(mixed.whiteSpace, 'the pack label stays on one line').toBe('nowrap')
   expect(mixed.tracking, 'quiet label: no letter-spacing').toBe(0)
   await ctx.close()
 })

@@ -3241,7 +3241,7 @@ html.lenis{scroll-behavior:auto!important}
    real name ("Lucide", "Phosphor") in Geist at the name's own 10px, normal case, no
    tracking. The cell and skeleton heights are untouched: they are set by min-height
    from --fs-micro in library.css, not by this line. */
-.ic .ic-pack{font-family:var(--font);font-size:10px;letter-spacing:0;text-transform:none;color:var(--t3);line-height:1}
+.ic .ic-pack{font-family:var(--font);font-size:10px;line-height:var(--fs-micro);letter-spacing:0;text-transform:none;white-space:nowrap;max-width:calc(100% + 8px);color:var(--t3)}
 @media(max-width:980px){
   .ic .ic-pack{display:none}
 }
