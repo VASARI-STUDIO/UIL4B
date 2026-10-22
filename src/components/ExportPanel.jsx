@@ -85,8 +85,10 @@ export default function ExportPanel({ onClose }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // A finished export that still has something to say (a font it could not
-  // embed). Announced politely, and never styled as an error.
-  const [notice, setNotice] = useState('')
+  // embed, a print window the browser blocked). { lead, detail }: the lead says
+  // what happened, the detail what follows from it. Announced politely, and
+  // never styled as an error.
+  const [notice, setNotice] = useState(null)
   // Which step a long export is on, for the button label: 'fonts' | 'building'.
   const [stage, setStage] = useState('')
   // An export finished and the panel stayed open to say something about it.
@@ -123,6 +125,7 @@ export default function ExportPanel({ onClose }) {
     // Revoked on the next tick rather than immediately: revoking synchronously
     // races the download in Safari and produces an empty file.
     setTimeout(() => URL.revokeObjectURL(url), 1000)
+    return filename
   }
 
   // Open the book in its own window and raise the print dialog, so "Save as
@@ -190,11 +193,13 @@ export default function ExportPanel({ onClose }) {
 
     setBusy(true)
     setError('')
-    setNotice('')
+    setNotice(null)
     setDone(false)
     // Which activation this export completed, and whether the panel may close.
     let activation = 'style-guide'
     let keepOpen = false
+    // The file this export handed over, for the confirmation once the panel closes.
+    let savedFile = ''
     try {
       if (format === 'kit') {
         // The kit is built in the browser like everything else here, but it
@@ -207,11 +212,14 @@ export default function ExportPanel({ onClose }) {
           tier: isPro ? 'pro' : 'free',
           onStage: setStage,
         })
-        download(blob, filename)
+        savedFile = download(blob, filename)
         if (missing.length) {
           // The kit WAS produced and says the same inside itself; the panel
           // stays open to carry the notice rather than closing over it.
-          setNotice(`Your UI kit downloaded. ${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`)
+          setNotice({
+            lead: 'Your UI kit downloaded.',
+            detail: `${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`,
+          })
           setBusy(false)
           setStage('')
           keepOpen = true
@@ -225,7 +233,7 @@ export default function ExportPanel({ onClose }) {
         if (!printBook(html, `${slug}-design-system-book.html`)) {
           // The book WAS produced, so this is a notice and not an error — the
           // panel stays open to carry it rather than closing over it.
-          setError('Your browser blocked the print window, so the book was downloaded instead. Open it and print to PDF.')
+          setNotice({ lead: 'The book downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           setBusy(false)
           keepOpen = true
         }
@@ -237,7 +245,8 @@ export default function ExportPanel({ onClose }) {
         const html = buildBrandGuidelines(design, { projectName })
         activation = 'brand-guidelines'
         if (!printBook(html, `${slug}-brand-guidelines.html`)) {
-          setError('Your browser blocked the print window, so the guidelines were downloaded instead. Open the file and print to PDF.')
+          // Also a produced file, so a notice and not an error.
+          setNotice({ lead: 'The guidelines downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           setBusy(false)
           keepOpen = true
         }
@@ -251,7 +260,7 @@ export default function ExportPanel({ onClose }) {
         const body = css
           ? buildTokensCss(design, { projectName, watermark: !isPro })
           : buildTokensJson(design, { projectName, watermark: !isPro })
-        download(
+        savedFile = download(
           new Blob([body], { type: css ? 'text/css;charset=utf-8' : 'application/json;charset=utf-8' }),
           `${slug}.tokens.${css ? 'css' : 'json'}`,
         )
@@ -261,13 +270,13 @@ export default function ExportPanel({ onClose }) {
         // raster path costs nothing to anyone exporting HTML.
         const { renderStyleGuideImage } = await import('../utils/styleGuideRaster')
         const blob = await renderStyleGuideImage(design, { projectName, watermark: !isPro, format })
-        download(blob, `${slug}-style-guide.${format === 'jpeg' ? 'jpg' : 'png'}`)
+        savedFile = download(blob, `${slug}-style-guide.${format === 'jpeg' ? 'jpg' : 'png'}`)
       } else {
         const markdown = format === 'md'
         const body = markdown
           ? buildStyleGuideMarkdown(design, { projectName, watermark: !isPro })
           : buildStyleGuideHtml(design, { projectName, watermark: !isPro })
-        download(
+        savedFile = download(
           new Blob([body], { type: markdown ? 'text/markdown;charset=utf-8' : 'text/html;charset=utf-8' }),
           `${slug}-style-guide.${markdown ? 'md' : 'html'}`,
         )
@@ -278,8 +287,15 @@ export default function ExportPanel({ onClose }) {
       // whether the product was useful. The book reports under its own name so
       // the paid deliverable is not averaged into the free one.
       try { trackActivation(activation, 'export') } catch { /* never break an export */ }
-      if (!keepOpen) onClose()
-      else setDone(true)
+      if (!keepOpen) {
+        onClose()
+        // The panel closing says nothing about the file, so name it. Raised
+        // through the app's one toast host (useToast listens for this event).
+        // The print-window books hand over no file here, so they stay quiet.
+        if (savedFile) {
+          window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message: `Downloaded ${savedFile}`, type: 'success' } }))
+        }
+      } else setDone(true)
     } catch (err) {
       // The panel stays open on failure: closing it would leave the user with
       // no file and no explanation, which reads as the button doing nothing.
@@ -289,6 +305,33 @@ export default function ExportPanel({ onClose }) {
     }
   }
   const panelRef = useRef(null)
+  const exportBtnRef = useRef(null)
+  // What a finished export said (the notice, the error line) belongs to the
+  // format that produced it, and the footer keeps it in view. Choosing another
+  // format starts clean, so "Your UI kit downloaded" never sits beside "Export CSS".
+  const pickFormat = (id) => {
+    if (id === format) return
+    setFormat(id)
+    setNotice(null)
+    setError('')
+    // The secondary button reads Close only while a finished export's message is
+    // on screen; with the message gone there is something to cancel again.
+    setDone(false)
+  }
+  // Export disables while it builds, and a disabled button drops focus to the
+  // page behind, so the next Tab would leave the dialog. Hold focus on the panel
+  // while it builds, then hand it back to the Export button once it is enabled.
+  const wasBusy = useRef(false)
+  useEffect(() => {
+    if (busy) {
+      wasBusy.current = true
+      panelRef.current?.focus()
+    } else if (wasBusy.current) {
+      wasBusy.current = false
+      const btn = exportBtnRef.current
+      if (btn && !btn.disabled) btn.focus()
+    }
+  }, [busy])
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
   // Lock body scroll while open; restore focus to the opener when we unmount.
@@ -305,6 +348,34 @@ export default function ExportPanel({ onClose }) {
       if (opener && typeof opener.focus === 'function') opener.focus()
     }
   }, [])
+
+  // Whether the panel scrolls and has more below what is showing, for the fade
+  // above the dock. Re-measured on scroll and whenever a child changes size
+  // (a selected row opening its fields, a notice arriving, the window resizing).
+  const [moreBelow, setMoreBelow] = useState(false)
+  const measureRef = useRef(null)
+  useEffect(() => {
+    const el = panelRef.current
+    if (!el) return undefined
+    const measure = () => setMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
+    measureRef.current = measure
+    measure()
+    el.addEventListener('scroll', measure, { passive: true })
+    let ro = null
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(measure)
+      ro.observe(el)
+      Array.from(el.children).forEach((child) => ro.observe(child))
+    }
+    return () => {
+      el.removeEventListener('scroll', measure)
+      ro?.disconnect()
+      measureRef.current = null
+    }
+  }, [])
+  // A block added to the panel itself (the logo field) changes its scroll height
+  // without resizing any child that was already observed.
+  useEffect(() => { measureRef.current?.() }, [format, notice, error])
 
   // Move focus into the panel, trap Tab within it, and close on Escape.
   useEffect(() => {
@@ -333,7 +404,7 @@ export default function ExportPanel({ onClose }) {
   return (
     <div className="exp-overlay" onMouseDown={onClose}>
       <div
-        className="exp-panel"
+        className={moreBelow ? 'exp-panel has-more' : 'exp-panel'}
         role="dialog"
         aria-modal="true"
         aria-labelledby="exp-title"
@@ -370,7 +441,7 @@ export default function ExportPanel({ onClose }) {
                   role="radio"
                   aria-checked={active}
                   className={active ? 'exp-fmt is-active' : 'exp-fmt'}
-                  onClick={() => setFormat(f.id)}
+                  onClick={() => pickFormat(f.id)}
                 >
                   <span className="exp-fmt-check" aria-hidden="true" />
                   <span className="exp-fmt-text">
@@ -396,28 +467,42 @@ export default function ExportPanel({ onClose }) {
             is the same table that renders the rows. */}
         {activeFormat?.logo && <BrandLogoField />}
 
-        {error && <p className="exp-error" role="alert">{error}</p>}
-        {notice && <p className="exp-notice" role="status">{notice}</p>}
+        {/* The dock sticks to the bottom of the panel, so what an export has to
+            say sits right above its buttons and is in view whatever the list's
+            scroll position, instead of below the last format row. */}
+        <div className="exp-dock">
+          {error && <p className="exp-error" role="alert">{error}</p>}
+          {/* The live region is mounted empty and stays mounted, so a screen
+              reader is already watching it when the text arrives. Empty, it
+              adds nothing to the dock. */}
+          <div className="exp-live" role="status" aria-live="polite">
+            {notice && (
+              <p className="exp-notice">
+                <span className="exp-notice-lead">{notice.lead}</span>{' '}{notice.detail}
+              </p>
+            )}
+          </div>
 
-        <div className="exp-foot">
-          <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
-            {done ? 'Close' : 'Cancel'}
-          </button>
-          {activeFormat?.live ? (
-            <button type="button" className="btn btn-accent exp-act" onClick={runExport} disabled={busy}>
-              {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
+          <div className="exp-foot">
+            <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
+              {done ? 'Close' : 'Cancel'}
             </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-accent exp-act"
-              disabled
-              aria-disabled="true"
-              title="This format is coming soon"
-            >
-              Export &mdash; Soon
-            </button>
-          )}
+            {activeFormat?.live ? (
+              <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={runExport} disabled={busy}>
+                {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-accent exp-act"
+                disabled
+                aria-disabled="true"
+                title="This format is coming soon"
+              >
+                Export &mdash; Soon
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -113,9 +113,37 @@ export default function UIKitGuide({ step }) {
   // not be burned by anything a discarded render can reach — the same split
   // utils/handoffSlot.js draws between peek and consume, for the same reason.
   const [showIntro, setShowIntro] = useState(
-    () => firstStep && isGuideActive() && (newProject || !introSeen()),
+    () => isGuideActive() && (location.state?.openBrandKitCard || (firstStep && (newProject || !introSeen()))),
   )
   const [showName, setShowName] = useState(false)
+  // From 1024px the closing step is a form inside the bar. Below that it is the
+  // docked card, unchanged.
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(min-width:1024px)').matches)
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined
+    const query = window.matchMedia('(min-width:1024px)')
+    const sync = () => setWide(query.matches)
+    sync()
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
+  }, [])
+  const nameInBar = showName && wide
+  const nameCardOpen = showName && !wide
+  // Each explicit start opens the card, including starts on the current page.
+  // Track the arrival so dismissing it stays effective until the next press.
+  const [cardArrival, setCardArrival] = useState(location.key)
+  if (cardArrival !== location.key) {
+    setCardArrival(location.key)
+    if (location.state?.openBrandKitCard) {
+      setShowName(false)
+      setShowIntro(true)
+    }
+  }
+  // Consume the request so reloading or revisiting this entry cannot reopen it.
+  useEffect(() => {
+    if (!location.state?.openBrandKitCard) return
+    navigate(location.pathname + location.search + location.hash, { replace: true, state: null })
+  }, [location, navigate])
   // A fresh start pressed on the page the flow begins on: the path it navigates
   // to is the one already on screen, so nothing remounts and the flag read
   // above is stale. startGuide announces the start; the first step's copy of
@@ -250,12 +278,18 @@ export default function UIKitGuide({ step }) {
     }
   }, [design, navigate, saveProject, setBusy])
 
+  const nameInputRef = useRef(null)
+  const nameTitleRef = useRef(null)
   const submitName = useCallback(async (e) => {
     e.preventDefault()
     if (savingRef.current) return
     const name = draft.trim()
     if (!name) {
       setNameError('Give your kit a name to save it.')
+      // Back to the field so the person can type at once. On a touch screen it
+      // goes to the label instead, so an error does not raise the keyboard.
+      const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+      ;(coarse ? nameTitleRef.current : nameInputRef.current)?.focus()
       return
     }
     setNameError('')
@@ -288,10 +322,13 @@ export default function UIKitGuide({ step }) {
 
   // Same focus contract as the orientation card, and focus goes back to the
   // control that opened it on close. On a touch screen focus goes to the
-  // heading rather than the field: focusing the field would raise the
-  // on-screen keyboard before the person has read the card.
-  const nameInputRef = useRef(null)
-  const nameTitleRef = useRef(null)
+  // heading (in the bar, the label) rather than the field: focusing the field
+  // would raise the on-screen keyboard before the person has read it.
+  //
+  // In the bar the Next button is replaced by the form, so it is not mounted
+  // while the form is open and the cleanup below has nothing to return to.
+  // Back and Escape ask for the focus instead, and it lands once the button is
+  // back (the effect after this one).
   useEffect(() => {
     if (!showName) return undefined
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
@@ -299,6 +336,16 @@ export default function UIKitGuide({ step }) {
     if (!hasOpenOverlays(document.body)) first?.focus()
     const trigger = nameTriggerRef.current
     return () => { if (trigger && trigger.isConnected) trigger.focus() }
+  }, [showName, wide])
+  const refocusNextRef = useRef(false)
+  const closeNameForm = useCallback(() => {
+    refocusNextRef.current = true
+    setShowName(false)
+  }, [])
+  useEffect(() => {
+    if (showName || !refocusNextRef.current) return
+    refocusNextRef.current = false
+    nameTriggerRef.current?.focus()
   }, [showName])
 
   // Below 1024px a docked card is fixed 12px above the rail's top edge (see
@@ -356,7 +403,25 @@ export default function UIKitGuide({ step }) {
       else root.classList.remove('bkit-on')
     }
   }, [shown, step])
-  const cardOpen = showIntro || showName
+  // The name form in the bar is not a card: only the orientation card and the
+  // name card (below 1024px) are docked and measured.
+  const cardOpen = showIntro || nameCardOpen
+  // The bar grows to hold the note under the name form, so its height is read
+  // off the rail and published as --bkit-h for the spacer, the toasts and the
+  // scroll padding that follow it. Gone again as soon as the steps come back.
+  useLayoutEffect(() => {
+    const rail = railRef.current
+    if (!nameInBar || !rail || typeof ResizeObserver === 'undefined') return undefined
+    const root = document.documentElement
+    const sync = () => root.style.setProperty('--bkit-h', `${rail.getBoundingClientRect().height}px`)
+    sync()
+    const observer = new ResizeObserver(sync)
+    observer.observe(rail)
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--bkit-h')
+    }
+  }, [nameInBar])
   useLayoutEffect(() => {
     const rail = railRef.current
     if (!cardOpen || !rail) return undefined
@@ -370,7 +435,7 @@ export default function UIKitGuide({ step }) {
       const focused = document.activeElement
       const inForm = !!focused && !!nameRowRef.current?.contains(focused)
       const lifted = inForm && (keyboard > 0 || (coarse && focused === nameInputRef.current))
-      const anchor = showName ? nameTriggerRef.current : introTriggerRef.current
+      const anchor = nameCardOpen ? nameTriggerRef.current : introTriggerRef.current
       const end = anchor ? Math.round(document.documentElement.clientWidth - anchor.getBoundingClientRect().right) : null
       const next = lifted
         ? { bottom: keyboard + 12, room: Math.round(vv ? vv.height : window.innerHeight), top: Math.round(vv ? vv.offsetTop : 0), end }
@@ -403,7 +468,7 @@ export default function UIKitGuide({ step }) {
       vv?.removeEventListener('resize', schedule)
       vv?.removeEventListener('scroll', schedule)
     }
-  }, [cardOpen, showName, active, step])
+  }, [cardOpen, nameCardOpen, active, step])
   const lifted = !!dock?.room
   const dockStyle = dock && (lifted || dock.bottom > 12)
     ? {
@@ -441,11 +506,42 @@ export default function UIKitGuide({ step }) {
   // Keep the cards mounted so opening a tool menu cannot consume the intro or
   // discard a name draft. Observe portals too, including the phone sheets.
   useLayoutEffect(() => {
-    if (!active || (!showIntro && !showName)) return undefined
+    if (!active || (!showIntro && !nameCardOpen)) return undefined
     return suspendGuideForOverlays(document, [cardRef.current, nameCardRef.current].filter(Boolean))
-  }, [active, showIntro, showName])
+  }, [active, showIntro, nameCardOpen])
 
   if (!active || !current) return null
+
+  // The field and the note under it are the same in the card and in the bar.
+  const nameInput = (
+    <input
+      id={`${nameCardId}-name`}
+      ref={nameInputRef}
+      className="bkit-name-input"
+      type="text"
+      value={draft}
+      onChange={(e) => { setDraft(e.target.value); if (nameError) setNameError('') }}
+      maxLength={IDENTITY_NAME_MAX}
+      autoComplete="off"
+      spellCheck="false"
+      aria-invalid={nameError ? 'true' : undefined}
+      aria-describedby={nameError ? `${nameCardId}-err` : `${nameCardId}-note`}
+    />
+  )
+  const nameMessage = (
+    <>
+      {nameError ? (
+        <p className="bkit-name-error" id={`${nameCardId}-err`} role="alert">{nameError}</p>
+      ) : (
+        <p className="bkit-name-note" id={`${nameCardId}-note`}>
+          {canSaveProjects
+            ? 'Saves to your projects with your colours, fonts, type scale and tints.'
+            : 'Saving needs a free account. What you built stays here while you sign in.'}
+        </p>
+      )}
+      {refusal && <SaveRefusal message={refusal} testId="brand-kit-save-refusal" />}
+    </>
+  )
 
   return (
     <>
@@ -490,15 +586,24 @@ export default function UIKitGuide({ step }) {
               </li>
             ))}
           </ol>
+          {/* From 1024px the naming form is in the bar, which has no room for
+              this line; below 1024 the name card carries it itself. */}
+          {nameInBar && (
+            <p className="bkit-card-note">
+              The name goes on the project and on the kit you export. You can change it
+              later in Export.
+            </p>
+          )}
           <button type="button" className="btn btn-accent bkit-card-go" onClick={closeIntro}>
             Start with {current.label.toLowerCase()}
           </button>
         </div>
       )}
 
-      {showName && (
-        // The closing step, docked where the orientation card docks and
-        // non-modal for the same reason: the icon library stays usable behind it.
+      {nameCardOpen && (
+        // Below 1024px the closing step is a card, docked where the orientation
+        // card docks and non-modal for the same reason: the icon library stays
+        // usable behind it. From 1024px it is a form inside the bar (below).
         <div
           id={nameCardId}
           className={`bkit-card bkit-card--name${lifted ? ' is-lifted' : ''}`}
@@ -524,36 +629,15 @@ export default function UIKitGuide({ step }) {
           <form className="bkit-name-form" onSubmit={submitName} noValidate>
             <label className="bkit-name-label" htmlFor={`${nameCardId}-name`}>Kit name</label>
             <div className="bkit-name-row" ref={nameRowRef}>
-              <input
-                id={`${nameCardId}-name`}
-                ref={nameInputRef}
-                className="bkit-name-input"
-                type="text"
-                value={draft}
-                onChange={(e) => { setDraft(e.target.value); if (nameError) setNameError('') }}
-                maxLength={IDENTITY_NAME_MAX}
-                autoComplete="off"
-                spellCheck="false"
-                aria-invalid={nameError ? 'true' : undefined}
-                aria-describedby={nameError ? `${nameCardId}-err` : `${nameCardId}-note`}
-              />
+              {nameInput}
               <button type="submit" className="btn btn-accent bkit-name-save" disabled={saving}>Save project</button>
             </div>
-            {nameError ? (
-              <p className="bkit-name-error" id={`${nameCardId}-err`} role="alert">{nameError}</p>
-            ) : (
-              <p className="bkit-name-note" id={`${nameCardId}-note`}>
-                {canSaveProjects
-                  ? 'Saved to your projects with the colours, fonts and type scale you chose, and tints made from your colours.'
-                  : 'Saving needs a free account. What you built stays here while you sign in.'}
-              </p>
-            )}
-            {refusal && <SaveRefusal message={refusal} testId="brand-kit-save-refusal" />}
+            {nameMessage}
           </form>
         </div>
       )}
 
-      <div className="bkit-rail" ref={railRef} role="region" aria-label="Brand kit walkthrough">
+      <div className={`bkit-rail${nameInBar ? ' bkit-rail--name' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
         <div className="bkit-rail-head">
           <span className="bkit-rail-eyebrow">Brand kit</span>
           {/* The count is the same reading the project card shows, so the two
@@ -567,6 +651,23 @@ export default function UIKitGuide({ step }) {
             saved design both ends already read — so there is no draft that a
             modified click could strand in a tab that never navigates, and no
             slot needing navigatesThisTab() or a ttl. See utils/brandKitGuide.js. */}
+        {nameInBar ? (
+          // The closing step, in place of the steps and the Next button: one
+          // surface, nothing stacked on the bar. Escape is Back; the note, the
+          // error and the free-cap refusal sit on a second row under the field.
+          <form
+            className="bkit-name-form bkit-name-form--bar"
+            onSubmit={submitName}
+            noValidate
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeNameForm() } }}
+          >
+            <label className="bkit-name-label" htmlFor={`${nameCardId}-name`} ref={nameTitleRef} tabIndex={-1}>Name your kit</label>
+            {nameInput}
+            <button type="submit" className="btn btn-accent bkit-name-save" disabled={saving}>Save project</button>
+            <button type="button" className="bkit-name-back" onClick={closeNameForm}>Back</button>
+            <div className="bkit-name-msg">{nameMessage}</div>
+          </form>
+        ) : (
         <ol className="bkit-steps" ref={stepsRef}>
           {steps.map((s) => (
             <li key={s.id}>
@@ -589,6 +690,7 @@ export default function UIKitGuide({ step }) {
             </li>
           ))}
         </ol>
+        )}
 
         <div className="bkit-rail-actions">
           {/* Text on wide screens; on a phone the text is visually hidden and
@@ -596,7 +698,7 @@ export default function UIKitGuide({ step }) {
           <button
             type="button"
             className="bkit-rail-help"
-            onClick={() => { setShowName(false); setShowIntro((v) => !v) }}
+            onClick={() => { if (!nameInBar) setShowName(false); setShowIntro((v) => !v) }}
             aria-expanded={showIntro}
             aria-controls={showIntro ? cardId : undefined}
             ref={introTriggerRef}
@@ -611,13 +713,13 @@ export default function UIKitGuide({ step }) {
               Next: {next.label}
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
             </button>
-          ) : (
+          ) : !nameInBar && (
             <button
               type="button"
               className="btn btn-accent bkit-rail-next"
               onClick={goNext}
-              aria-expanded={showName}
-              aria-controls={showName ? nameCardId : undefined}
+              aria-expanded={nameCardOpen}
+              aria-controls={nameCardOpen ? nameCardId : undefined}
               ref={nameTriggerRef}
             >
               Name your kit

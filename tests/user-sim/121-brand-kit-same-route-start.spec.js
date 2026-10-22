@@ -47,8 +47,8 @@ test.describe('Brand kit: starting from the page it begins on', () => {
     await pressBrandKit(page)
 
     await expect(rail(page)).toBeVisible()
-    // Shown once, so a second start leaves the card closed.
-    await expect(card(page)).toHaveCount(0)
+    // An explicit start opens the card even after it has been dismissed.
+    await expect(card(page)).toBeVisible()
   })
 
   test('from another tool the button still lands on step one', async ({ page }) => {
