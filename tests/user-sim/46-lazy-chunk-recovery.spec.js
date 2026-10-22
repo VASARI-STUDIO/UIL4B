@@ -172,7 +172,9 @@ test.describe('a lazy page that fails to download', () => {
     await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
     expect(held.length, 'reloaded again inside the guard window: a reload loop').toBe(0)
     await expect.poll(() => seen.reports.length).toBe(1)
-    expect(seen.reports[0]).toMatch(/Chunk load failed on \/learn: Unable to preload CSS for \/assets\/SurfaceIndex-/)
+    // vite's preload helper names the stylesheet by path in some versions and by absolute URL in
+    // others; both mean the same thing, so accept either and still pin the file.
+    expect(seen.reports[0]).toMatch(/Chunk load failed on \/learn: Unable to preload CSS for (?:https?:\/\/[^/\s]+)?\/assets\/SurfaceIndex-/)
     expect(seen.posted).toEqual([])
   })
 
