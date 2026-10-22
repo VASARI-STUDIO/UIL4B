@@ -217,10 +217,16 @@ test.describe('the UI kit export', () => {
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
         const panel = await openPanel(page)
         await panel.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)))
-        const before = await panel.evaluate((el) => ({
-          scrollTop: el.scrollTop,
-          buttons: el.querySelector('.exp-foot').getBoundingClientRect().toJSON(),
-        }))
+        // The buttons themselves, not the footer box: with a notice showing the
+        // footer drops its hairline and tightens its padding, and the dock grows
+        // upward, so the box changes while the buttons stay put. Cancel becomes
+        // Close, which is a different width, so the left button is held to its
+        // row (top and height); the export button is held to its whole box.
+        const readActions = (el) => {
+          const [left, right] = [...el.querySelectorAll('.exp-foot .btn')].map((b) => b.getBoundingClientRect().toJSON())
+          return { scrollTop: el.scrollTop, buttons: { left: { top: left.top, bottom: left.bottom, height: left.height }, right } }
+        }
+        const before = await panel.evaluate(readActions)
         const cta = panel.getByRole('button', { name: 'Export UI kit', exact: true })
         await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
         const notice = panel.getByRole('status')
@@ -238,10 +244,7 @@ test.describe('the UI kit export', () => {
             && r.left >= Math.max(p.left + panel.clientLeft, 0)
             && r.right <= Math.min(p.left + panel.clientLeft + panel.clientWidth, window.innerWidth)
         }), 'the whole notice is inside the visible panel and above its buttons').toBe(true)
-        const after = await panel.evaluate((el) => ({
-          scrollTop: el.scrollTop,
-          buttons: el.querySelector('.exp-foot').getBoundingClientRect().toJSON(),
-        }))
+        const after = await panel.evaluate(readActions)
         expect(after.scrollTop, 'reading the notice needs no panel scroll').toBe(before.scrollTop)
         expect(after.buttons, 'the actions keep their position and size').toEqual(before.buttons)
       })
