@@ -1377,8 +1377,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .icust-foot .dl-split{min-height:44px}
   .icust-foot .dl-more{flex-basis:44px;width:44px}
 }
+html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 @media(prefers-reduced-motion:reduce){
-  .dl-caret,.dl-ico>svg{transition:none}
+  html:not([data-reduced-motion="false"]) :is(.dl-caret,.dl-ico>svg){transition:none}
 }
 
 /* The masthead's one action ("Submit prompt", "Open the Gradient Generator",
