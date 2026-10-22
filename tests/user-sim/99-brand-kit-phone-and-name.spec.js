@@ -639,6 +639,8 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
       await r.getByRole('button', { name: 'Save project' }).click()
       await expect(r.getByRole('alert')).toHaveText('Give your kit a name to save it.')
       await expect(field).toHaveAttribute('aria-invalid', 'true')
+      // Focus goes back to the field so the person can type at once.
+      await expect(field).toBeFocused()
     })
   }
 })

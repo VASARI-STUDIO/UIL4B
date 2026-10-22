@@ -213,6 +213,7 @@
 .bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 .bkit-card-title{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:8px}
 .bkit-card-body{font-size:13px;color:var(--t1);line-height:1.6;margin-bottom:16px}
+.bkit-card-note{margin:0 0 16px;font-size:13px;font-weight:400;line-height:1.6;color:var(--t2)}
 
 /* THE RAIL. A bar docked to the foot of the viewport on every step, built from
    the viewport and not from the host page's gutters, so it has one width and
@@ -293,6 +294,7 @@
 .bkit-name-input{flex:1;min-width:0;height:40px;padding:0 12px;font-family:var(--font);font-size:14px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);outline:none;transition:border-color var(--t),box-shadow var(--t)}
 .bkit-name-input:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 .bkit-name-input[aria-invalid="true"]{border-color:var(--err-strong)}
+.bkit-name-input[aria-invalid="true"]:focus-visible{border-color:var(--err-strong);box-shadow:0 0 0 3px color-mix(in srgb,var(--err-strong) 18%,transparent)}
 .bkit-name-save{flex-shrink:0;white-space:nowrap}
 .bkit-name-note{margin:0;font-size:12px;line-height:1.5;color:var(--t2)}
 .bkit-name-error{margin:0;font-size:12px;font-weight:500;line-height:1.5;color:var(--err-strong)}
@@ -382,7 +384,9 @@ html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,
      with a one-line note); UIKitGuide publishes it as --bkit-h. */
   .bkit-rail--name{height:auto;min-height:55px;align-items:flex-start}
   .bkit-rail--name .bkit-rail-head{align-items:center;height:36px}
-  .bkit-name-form--bar{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:auto minmax(200px,320px) auto auto;justify-content:start;align-items:center;column-gap:8px;row-gap:6px;animation:bkit-name-in 180ms var(--bkit-ease)}
+  .bkit-name-form--bar{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:auto minmax(200px,320px) auto auto 1fr;justify-content:start;align-items:center;column-gap:8px;row-gap:6px;animation:bkit-name-in 180ms var(--bkit-ease)}
+  .bkit-rail--name .bkit-rail-eyebrow{font-weight:400;color:var(--bkit-dim)}
+  .bkit-rail--name .bkit-name-form--bar{margin-inline-start:8px}
   .bkit-name-form--bar .bkit-name-label{font-size:.8125rem;font-weight:540;line-height:1.2;color:var(--t0);white-space:nowrap;margin-inline-end:4px}
   .bkit-name-form--bar .bkit-name-label:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
   .bkit-name-form--bar .bkit-name-input{height:36px;min-width:0}
@@ -418,9 +422,9 @@ html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,
 @media(forced-colors:active){
   .bkit-rail{border-top-color:CanvasText}
 }
-html[data-reduced-motion="true"] :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close):active{transform:none}
+html[data-reduced-motion="true"] :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close,.bkit-name-save,.bkit-name-back):active{transform:none}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close):active{transform:none}
+  html:not([data-reduced-motion="false"]) :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close,.bkit-name-save,.bkit-name-back):active{transform:none}
 }
 html[data-reduced-motion="true"] .bkit-card,html[data-reduced-motion="true"] .bkit-name-form--bar{animation:none;transform:none;transition:none}
 @media(prefers-reduced-motion:reduce){

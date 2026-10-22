@@ -278,12 +278,18 @@ export default function UIKitGuide({ step }) {
     }
   }, [design, navigate, saveProject, setBusy])
 
+  const nameInputRef = useRef(null)
+  const nameTitleRef = useRef(null)
   const submitName = useCallback(async (e) => {
     e.preventDefault()
     if (savingRef.current) return
     const name = draft.trim()
     if (!name) {
       setNameError('Give your kit a name to save it.')
+      // Back to the field so the person can type at once. On a touch screen it
+      // goes to the label instead, so an error does not raise the keyboard.
+      const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+      ;(coarse ? nameTitleRef.current : nameInputRef.current)?.focus()
       return
     }
     setNameError('')
@@ -323,8 +329,6 @@ export default function UIKitGuide({ step }) {
   // while the form is open and the cleanup below has nothing to return to.
   // Back and Escape ask for the focus instead, and it lands once the button is
   // back (the effect after this one).
-  const nameInputRef = useRef(null)
-  const nameTitleRef = useRef(null)
   useEffect(() => {
     if (!showName) return undefined
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
@@ -531,7 +535,7 @@ export default function UIKitGuide({ step }) {
       ) : (
         <p className="bkit-name-note" id={`${nameCardId}-note`}>
           {canSaveProjects
-            ? 'Saved to your projects with the colours, fonts and type scale you chose, and tints made from your colours.'
+            ? 'Saves to your projects with your colours, fonts, type scale and tints.'
             : 'Saving needs a free account. What you built stays here while you sign in.'}
         </p>
       )}
@@ -582,6 +586,14 @@ export default function UIKitGuide({ step }) {
               </li>
             ))}
           </ol>
+          {/* From 1024px the naming form is in the bar, which has no room for
+              this line; below 1024 the name card carries it itself. */}
+          {nameInBar && (
+            <p className="bkit-card-note">
+              The name goes on the project and on the kit you export. You can change it
+              later in Export.
+            </p>
+          )}
           <button type="button" className="btn btn-accent bkit-card-go" onClick={closeIntro}>
             Start with {current.label.toLowerCase()}
           </button>
