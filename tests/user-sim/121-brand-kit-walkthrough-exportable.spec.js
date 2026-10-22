@@ -10,7 +10,10 @@ import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const nameCard = (page) => page.getByRole('dialog', { name: 'Name your kit' })
+// From 1024px the closing step is a form inside the bar; below it, a docked card.
+const inBar = (page) => page.viewportSize().width >= 1024
+const nameForm = (page) => (inBar(page) ? rail(page) : page.getByRole('dialog', { name: 'Name your kit' }))
+const nameField = (page) => nameForm(page).getByRole('textbox', { name: inBar(page) ? 'Name your kit' : 'Kit name' })
 
 /** The hexes the palette board is showing, in board order. */
 const boardColours = (page) => page.locator('.plb-col').evaluateAll(
@@ -42,8 +45,8 @@ async function walk(page) {
     await expect(page).toHaveURL(url)
   }
   await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-  await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill('Walkthrough kit')
-  await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+  await nameField(page).fill('Walkthrough kit')
+  await nameForm(page).getByRole('button', { name: 'Save project' }).click()
   await expect(page).toHaveURL(/\/projects\/[^/]+$/)
   return board
 }
