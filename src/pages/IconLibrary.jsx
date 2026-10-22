@@ -851,7 +851,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n" className="ic-name">{icon.name}</span>
-      {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
+      {!ghost && pack && <span key="p" className="ic-pack">{icon.logo ? 'Logo.dev' : gridPackLabel(pack)}</span>}
     </div>
   )
 })
@@ -2054,6 +2054,8 @@ const PACK_MENU = [
   },
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
+const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons' }
+const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
 
 /* ── THE CREDIT UNDER THE GRID ───────────────────────────────────────────────
