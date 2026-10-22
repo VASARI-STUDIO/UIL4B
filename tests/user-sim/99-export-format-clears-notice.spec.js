@@ -39,10 +39,19 @@ test('choosing another format clears the finished-export notice', async ({ page 
   ])
   expect(download.suggestedFilename()).toBe('uil4b-ui-kit.html')
   await expect(panel.getByRole('status')).toContainText('Your UI kit downloaded.')
+  await expect(panel.locator('.exp-notice-lead')).toHaveText('Your UI kit downloaded.')
+  // With the message on screen the left button closes the panel.
+  await expect(panel.getByRole('button', { name: 'Close', exact: true })).toBeVisible()
 
   await panel.getByRole('radio', { name: /^CSS tokens/ }).click()
 
   await expect(panel.getByRole('radio', { name: /^CSS tokens/ })).toHaveAttribute('aria-checked', 'true')
   await expect(panel.getByRole('button', { name: 'Export CSS', exact: true })).toBeEnabled()
-  await expect(panel.getByRole('status'), 'the kit confirmation is gone once another format is chosen').toHaveCount(0)
+  // The status region is always mounted (a screen reader needs it present before
+  // the text arrives), so the check is on the words, not on the region.
+  await expect(panel.locator('.exp-notice'), 'the kit confirmation is gone once another format is chosen').toHaveCount(0)
+  await expect(panel.getByRole('status')).not.toContainText('Your UI kit downloaded.')
+  // With nothing finished on screen there is something to cancel again.
+  await expect(panel.getByRole('button', { name: 'Cancel', exact: true }), 'the left button goes back to Cancel after a format change').toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Close', exact: true })).toHaveCount(0)
 })
