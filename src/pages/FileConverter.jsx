@@ -1297,7 +1297,7 @@ function VideoConvert({ toast }) {
                   />
                 </div>
               </div>
-              <p className="fc-note">Height follows the crop and turn</p>
+              <p className="fc-note">Up to {MAX_ANIMATION_SIDE} px on the longer side. Height follows the crop and turn.</p>
               {isGif ? (
                 <>
                   <div className="fc-pair">
