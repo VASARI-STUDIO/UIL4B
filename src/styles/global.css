@@ -3189,7 +3189,9 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cpk-swatch.is-active{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
 .icust-abs{flex:0 0 auto;padding:6px 12px;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
-.icust-abs:hover{border-color:var(--bh);color:var(--t0)}
+@media(hover:hover){
+  .icust-abs:hover{border-color:var(--bh);color:var(--t0)}
+}
 .icust-abs.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text)}
 .icust-seg--icon svg{display:block;width:22px;height:22px;margin:0 auto;color:var(--t2)}
 .icust-seg--icon button:hover svg{color:var(--t0)}
