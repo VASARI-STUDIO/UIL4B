@@ -13,6 +13,7 @@ import assert from 'node:assert/strict'
 
 import {
   BRAND_KIT_STEPS,
+  GUIDE_START_EVENT,
   acceptStep,
   acceptedSteps,
   clearAcceptedSteps,
@@ -178,6 +179,31 @@ test('the flow flag survives a tab, because a brand system is not one sitting', 
   assert.equal(storage.getItem('vs-uikit-guide'), '1')
   endGuide(storage)
   assert.equal(isGuideActive(storage), false)
+})
+
+test('a fresh start announces itself, so a guide already on screen can take it up', () => {
+  // Pressing "Build a brand kit" on the page step one lives on navigates to the
+  // path it is already at, which mounts nothing. The mounted guide hears the
+  // flag change through this event, and only a start from off to on sends it.
+  const target = new EventTarget()
+  const had = Object.prototype.hasOwnProperty.call(globalThis, 'window')
+  const before = globalThis.window
+  globalThis.window = target
+  try {
+    let heard = 0
+    target.addEventListener(GUIDE_START_EVENT, () => { heard += 1 })
+    const storage = fakeStorage()
+    startGuide(storage)
+    assert.equal(heard, 1)
+    startGuide(storage) // a resume: the flow is already running
+    assert.equal(heard, 1)
+    endGuide(storage)
+    startGuide(storage)
+    assert.equal(heard, 2)
+  } finally {
+    if (had) globalThis.window = before
+    else delete globalThis.window
+  }
 })
 
 test('leaving the flow does NOT forget that the card was shown', () => {

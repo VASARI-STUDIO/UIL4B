@@ -354,7 +354,8 @@ test.describe('a person sees their own projects before anything else', () => {
 
     const controls = await axControls(page, page.context())
     const firstProject = controls.findIndex((c) => /^Seeded Project/.test(c.name))
-    const promo = controls.findIndex((c) => /^Upgrade for /.test(c.name))
+    // "See Pro" with no live price loaded (this run), "Upgrade for <price>" once one has.
+    const promo = controls.findIndex((c) => /^(Upgrade for |See Pro$)/.test(c.name))
     expect(firstProject, 'no project control in the tab order at all').toBeGreaterThanOrEqual(0)
     expect(promo, 'the Pro panel link is gone, so this test is measuring nothing').toBeGreaterThanOrEqual(0)
     expect(firstProject, `the upgrade link (${promo}) comes before the first project (${firstProject})`)

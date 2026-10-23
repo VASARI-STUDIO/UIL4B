@@ -135,6 +135,12 @@
 @media (max-width:380px){
   :where(.fg-page) .fg-compare-tray{flex-direction:column;align-items:stretch}
 }
+/* The phone tab bar is fixed along the bottom, so a tray that sticks to the
+   viewport edge sits under it. Stick above the bar instead (same offset the
+   feedback button and billing banner use). */
+@media (max-width:767px){
+  html.has-tabbar :where(.fg-page) .fg-compare-tray{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
+}
 @media (pointer:coarse){
   :where(.fg-page) .fg-card-compare{width:44px;height:44px;opacity:1}
 }

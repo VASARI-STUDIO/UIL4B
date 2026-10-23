@@ -28,11 +28,14 @@ import {
 import Segmented from '../components/converter/Segmented'
 import {
   ANIMATION_FORMATS, CROP_SHAPES, DIRECTIONS, DITHERS, FPS_MAX, FPS_MIN, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
-  MAX_VIDEO_WIDTH, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TURNS,
+  MAX_ANIMATION_SIDE, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TURNS,
   animatedImageSeconds, clampFps, commitNumber, cropRect, findFormat, formatBytes, formatTime, outputFrames, outputSize,
   reverseFits, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
+import {
+  avifEncodeKnown, blobMatches, canEncodeAvif, usableFormat, withAvifIf,
+} from '../utils/avifSupport'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -61,14 +64,35 @@ const OUTPUT_FORMATS = [
 ]
 
 // Formats supported by the canvas frame encoder (Video → Frames). AVIF is
-// excluded here because canvas.toBlob('image/avif') support is too inconsistent
-// to offer for batch frame extraction; ICO only makes sense for still images.
+// excluded here on purpose, whatever the browser can do, to keep batch frame
+// extraction on the formats every browser encodes; ICO only makes sense for
+// still images. The still-image picker offers AVIF only where it is confirmed
+// (see utils/avifSupport.js).
 const FRAME_FORMATS = OUTPUT_FORMATS.filter(f => f.id !== 'image/avif' && !f.ico)
 
 const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/bmp,image/avif,image/x-icon,image/vnd.microsoft.icon,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.avif,.ico'
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
 
+// Whether this browser can encode AVIF: null until the one-off probe answers,
+// then true/false. A returning visit reads the remembered answer on first
+// render, so the picker never changes shape after the first visit.
+function useAvifEncode() {
+  const [ok, setOk] = useState(avifEncodeKnown)
+  useEffect(() => {
+    if (ok !== null) return undefined
+    let live = true
+    canEncodeAvif().then(v => { if (live) setOk(v) })
+    return () => { live = false }
+  }, [ok])
+  return ok
+}
+
 const LARGE_FILE_BYTES = 50 * 1024 * 1024 // 50 MB warning threshold
+const MAX_FRAMES = 500 // frames per Extract run: a long clip at a high FPS can't freeze the tab
+// How many frames a run over [from, to) makes at `fps` (before the cap): one per
+// 1/fps step from `from`, so a 10.5 s clip at 1 fps is 11. The run, its toast and
+// the estimate line all read this one number.
+const frameCountFor = (from, to, fps) => Math.max(1, Math.ceil((to - from) * Math.max(0.1, Math.min(30, fps)) - 1e-9))
 
 const QUALITY_SNAPS = [25, 50, 75, 90]
 const QUALITY_DEFAULT = 90
@@ -206,8 +230,6 @@ export default function FileConverter({ toast }) {
       title="File Converter"
       titleId="fc-title"
       items={[
-        // A status tag, not an action: it leaves the row rather than the menu.
-        { id: 'alpha', menu: false, render: () => <span className="fc-alpha">Alpha</span> },
         // 3D files are converted by their own tool; this action links to it.
         {
           id: '3d',
@@ -281,7 +303,13 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // then belongs to the visitor — nothing here keeps re-asserting it.
   const seeded = initialDraft ? draftToConverterSettings(initialDraft) : null
   const [items, setItems] = useState([]) // { id, name, srcUrl, file, out:{blob,url,bytes,w,h} }
-  const [format, setFormat] = useState(() => seeded?.format ?? 'image/webp')
+  // AVIF is offered only where the browser really encodes it. A handed-over
+  // AVIF draft is held as asked and resolved below: it applies once the check
+  // says yes, and quietly becomes WebP if it says no.
+  const avifOk = useAvifEncode()
+  const [chosenFormat, setFormat] = useState(() => seeded?.format ?? 'image/webp')
+  const format = usableFormat(chosenFormat, avifOk, 'image/webp')
+  const outputFormats = withAvifIf(OUTPUT_FORMATS, avifOk)
   const [quality, setQuality] = useState(() => seeded?.quality ?? QUALITY_DEFAULT)
   const [maxDim, setMaxDim] = useState(() => seeded?.maxDim ?? 0) // 0 = keep original size
   const [renderScale, setRenderScale] = useState(1) // @1x / @2x export
@@ -414,16 +442,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     if (format === 'image/jpeg') { ctx.fillStyle = jpegBg; ctx.fillRect(0, 0, w, h) }
     ctx.drawImage(img, 0, 0, w, h)
     const q = format === 'image/png' ? undefined : quality / 100
-    // canvas.toBlob yields null when the browser can't encode the requested
-    // format (notably AVIF in some browsers) — and a callback that never fires
-    // would wedge the whole batch in its busy state. Guard both so each item
-    // records a clear error and the batch keeps going.
+    // canvas.toBlob yields null — or quietly a PNG — when the browser can't
+    // encode the requested format (notably AVIF in some browsers), and a
+    // callback that never fires would wedge the whole batch in its busy state.
+    // Guard all three so each item records a clear error and the batch keeps
+    // going, and nothing is saved under a name that isn't its real format.
     const label = OUTPUT_FORMATS.find(f => f.id === format)?.label || format
     const blob = await new Promise((resolve, reject) => {
       const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
       canvas.toBlob(b => {
         clearTimeout(to)
-        if (b) resolve(b)
+        if (blobMatches(b, format)) resolve(b)
         else reject(new Error(`${label} export not supported by this browser`))
       }, format, q)
     })
@@ -471,14 +500,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // What a homepage output draft actually became here. Stated explicitly rather
   // than applied silently — including the part this converter cannot honour, so
   // "Lossless" is never implied where only a quality setting exists.
-  const draftFormat = initialDraft && DRAFT_FORMATS.find(f => f.id === initialDraft.format)
-  const draftNotice = initialDraft && {
+  // An AVIF draft is described only once the browser has said whether it can
+  // deliver it, so the note never claims AVIF and then changes its mind.
+  const draftWaitsOnAvif = initialDraft?.format === 'image/avif' && avifOk === null
+  const draftFormat = initialDraft && DRAFT_FORMATS.find(f => f.id === usableFormat(initialDraft.format, avifOk, 'image/webp'))
+  const draftNotice = initialDraft && !draftWaitsOnAvif && {
     applied: [
       draftFormat?.label || initialDraft.format,
       DRAFT_RESOLUTIONS.find(r => r.id === initialDraft.resolution)?.detail || 'source size',
       draftFormat?.lossless ? 'lossless' : `quality ${seeded.quality}%`,
     ].join(' · '),
-    limit: describeCompressionLimit(initialDraft.format, initialDraft.compression),
+    limit: describeCompressionLimit(draftFormat?.id ?? initialDraft.format, initialDraft.compression),
   }
 
   const downloadOne = useCallback((item) => {
@@ -604,7 +636,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
               <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
-                {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                {outputFormats.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </MenuSelect>
               {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
               {format === 'image/jpeg' && (
@@ -1260,7 +1292,7 @@ function VideoConvert({ toast }) {
                   <DraftNumber
                     id="fc-vid-width" className="fc-field fc-field--num" disabled={working}
                     shown={width}
-                    onCommit={raw => setWidth(commitNumber(raw, { min: 16, max: MAX_VIDEO_WIDTH, fallback: width }))}
+                    onCommit={raw => setWidth(commitNumber(raw, { min: 16, max: MAX_ANIMATION_SIDE, fallback: width }))}
                   />
                 </div>
               </div>
@@ -1311,6 +1343,37 @@ function VideoConvert({ toast }) {
 }
 
 // ── Mode 4: Video → Frames (HTML5 video + canvas seek) ───────────────────────
+
+// Waits for a media event, but lets the run's AbortSignal cut the wait short so
+// a pending seek or load can't keep a cancelled or unmounted run alive.
+// `attach(ok, fail)` wires the event handlers; the timeout is optional.
+function waitFor(signal, attach, timeoutMs = 0, timeoutMessage = 'Timed out') {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return }
+    let timer = 0
+    const settle = { onAbort: null }
+    const finish = (fn, value) => {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', settle.onAbort)
+      fn(value)
+    }
+    settle.onAbort = () => finish(reject, new DOMException('Aborted', 'AbortError'))
+    signal.addEventListener('abort', settle.onAbort, { once: true })
+    if (timeoutMs) timer = setTimeout(() => finish(reject, new Error(timeoutMessage)), timeoutMs)
+    attach(() => finish(resolve), err => finish(reject, err))
+  })
+}
+
+// Stops the decoder and drops the file reference so the element can be collected.
+function releaseVideo(video) {
+  video.onloadeddata = null
+  video.onseeked = null
+  video.onerror = null
+  video.pause()
+  video.removeAttribute('src')
+  video.load()
+}
+
 function VideoFrames({ toast }) {
   const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
@@ -1347,6 +1410,36 @@ function VideoFrames({ toast }) {
     u.frames.forEach(f => URL.revokeObjectURL(f.url))
   }, [])
 
+  // One abort mechanism for the running extraction: the AbortController of the
+  // current run, or null when idle. The reason says why it was aborted:
+  // 'cancel' (button) or 'disposed' (unmount / another video picked; see disposedRef).
+  const abortRef = useRef(null)
+  // Runs whose page or file is gone. An AbortController keeps only its FIRST
+  // abort reason, so Cancel followed by leaving would read as a plain cancel;
+  // this records leave/newfile on its own and abandoned() reads it, not the reason.
+  const disposedRef = useRef(new WeakSet())
+  const disposeRun = useCallback(() => {
+    if (!abortRef.current) return false
+    disposedRef.current.add(abortRef.current)
+    abortRef.current.abort('disposed')
+    return true
+  }, [])
+  const refocusExtract = useRef(false)
+  const extractBtnRef = useRef(null)
+  useEffect(() => disposeRun, [disposeRun])
+  // The Cancel button unmounts when the run ends, so hand focus back to Extract.
+  useEffect(() => {
+    if (extracting || !refocusExtract.current) return
+    refocusExtract.current = false
+    extractBtnRef.current?.focus()
+  }, [extracting])
+
+  const cancelExtract = () => {
+    if (!abortRef.current) return
+    refocusExtract.current = true
+    abortRef.current.abort('cancel')
+  }
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
@@ -1355,6 +1448,11 @@ function VideoFrames({ toast }) {
       return
     }
     if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow', 'info')
+    // A run in flight belongs to the old file: stop it before its source URL goes.
+    if (disposeRun()) {
+      abortRef.current = null
+      setExtracting(false)
+    }
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     frames.forEach(fr => URL.revokeObjectURL(fr.url))
     setFile(f)
@@ -1364,7 +1462,7 @@ function VideoFrames({ toast }) {
     setProgress(0)
     setRangeStart(0)
     setRangeEnd(null)
-  }, [srcUrl, frames, toast])
+  }, [srcUrl, frames, toast, disposeRun])
 
   const onLoadedMeta = useCallback(() => {
     const v = videoRef.current
@@ -1372,7 +1470,12 @@ function VideoFrames({ toast }) {
   }, [])
 
   const extract = useCallback(async () => {
-    if (!srcUrl || !meta || extracting) return
+    // abortRef is the real "already running" guard: `extracting` is stale for a
+    // second click in the same tick.
+    if (!srcUrl || !meta || extracting || abortRef.current) return
+    const ac = new AbortController()
+    const { signal } = ac
+    abortRef.current = ac
     setExtracting(true)
     setProgress(0)
     // A second extraction replaces the first: revoke its thumbnails' blob: URLs
@@ -1380,78 +1483,98 @@ function VideoFrames({ toast }) {
     setFrames(prev => { prev.forEach(fr => URL.revokeObjectURL(fr.url)); return [] })
 
     const video = document.createElement('video')
-    video.muted = true
-    video.preload = 'auto'
-    video.src = srcUrl
-    try {
-      await new Promise((resolve, reject) => {
-        video.onloadeddata = resolve
-        video.onerror = () => reject(new Error('Could not load video'))
-      })
-    } catch (err) {
-      toast(err.message, 'error')
-      setExtracting(false)
-      return
-    }
-
-    const outW = Math.max(1, Math.round(meta.width * scale))
-    const outH = Math.max(1, Math.round(meta.height * scale))
-    const canvas = document.createElement('canvas')
-    canvas.width = outW
-    canvas.height = outH
-    const ctx = canvas.getContext('2d')
-
-    const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
-    const q = fmt.lossy ? quality / 100 : undefined
-
-    const step = 1 / Math.max(0.1, Math.min(30, fps))
-    const from = Math.max(0, Math.min(rangeStart || 0, meta.duration))
-    const to = rangeEnd == null ? meta.duration : Math.max(from, Math.min(rangeEnd, meta.duration))
-    const total = Math.max(1, Math.floor((to - from) / step))
     const out = []
-    let t = from, idx = 0
-    let unsupported = false
-    let stopped = null
-
+    // Leaving the page or swapping the file means nobody can see this run any
+    // more: no state, no toast, and the frames it made have no owner to revoke them.
+    const abandoned = () => disposedRef.current.has(ac)
+    const abandon = () => out.forEach(fr => URL.revokeObjectURL(fr.url))
     try {
-      while (t < to && idx < total + 1) {
-        video.currentTime = t
-        await new Promise((resolve, reject) => {
-          const to = setTimeout(() => reject(new Error('Seek timed out')), 8000)
-          video.onseeked = () => { clearTimeout(to); resolve() }
+      video.muted = true
+      video.preload = 'auto'
+      video.src = srcUrl
+      try {
+        await waitFor(signal, (ok, fail) => {
+          video.onloadeddata = ok
+          video.onerror = () => fail(new Error('Could not load video'))
         })
-        // JPEG has no alpha — fill white so transparent areas don't go black.
-        if (fmt.id === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, outW, outH) }
-        else ctx.clearRect(0, 0, outW, outH)
-        ctx.drawImage(video, 0, 0, outW, outH)
-        const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
-        // null blob => this browser can't encode the chosen format. Bail out of
-        // the batch with a clear error rather than silently producing 0 frames.
-        if (!blob) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
-        out.push({
-          blob, url: URL.createObjectURL(blob),
-          name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
-          time: t, size: blob.size,
-        })
-        idx++
-        t += step
-        setProgress(Math.round((idx / total) * 100))
+      } catch (err) {
+        if (abandoned()) return
+        if (signal.aborted) {
+          setExtracting(false)
+          toast('Extraction cancelled', 'info')
+          return
+        }
+        toast(err.message, 'error')
+        setExtracting(false)
+        return
       }
-    } catch (err) {
-      stopped = err.message
-    }
 
-    revealNext.current = out.length > 0
-    setFrames(out)
-    setExtracting(false)
-    setProgress(100)
-    // ONE toast, chosen after the loop. The catch used to toast "Extracted N
-    // frames (stopped: …)" and then this line toasted "Extracted N frames" in
-    // the same tick — the second replaced the first before it painted, so a
-    // run that stopped early reported itself as a clean success.
-    if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
-    else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
-    else toast(`Extracted ${out.length} frames`)
+      const outW = Math.max(1, Math.round(meta.width * scale))
+      const outH = Math.max(1, Math.round(meta.height * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d')
+
+      const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
+      const q = fmt.lossy ? quality / 100 : undefined
+
+      const step = 1 / Math.max(0.1, Math.min(30, fps))
+      const from = Math.max(0, Math.min(rangeStart || 0, meta.duration))
+      const to = rangeEnd == null ? meta.duration : Math.max(from, Math.min(rangeEnd, meta.duration))
+      const wanted = frameCountFor(from, to, fps) // the same count the estimate line shows
+      const cap = Math.min(MAX_FRAMES, wanted)
+      let t = from, idx = 0
+      let unsupported = false
+      let stopped = null
+
+      try {
+        while (t < to && idx < cap && !signal.aborted) {
+          const at = t
+          await waitFor(signal, ok => { video.onseeked = ok; video.currentTime = at }, 8000, 'Seek timed out')
+          // JPEG has no alpha — fill white so transparent areas don't go black.
+          if (fmt.id === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, outW, outH) }
+          else ctx.clearRect(0, 0, outW, outH)
+          ctx.drawImage(video, 0, 0, outW, outH)
+          const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
+          // toBlob can't be interrupted; drop its result if the run ended meanwhile.
+          if (signal.aborted) break
+          // null blob, or one of another type (a PNG under a .webp name) => this
+          // browser can't encode the chosen format. Bail out of the batch with a
+          // clear error rather than silently producing 0 frames or wrong files.
+          if (!blobMatches(blob, fmt.id)) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
+          out.push({
+            blob, url: URL.createObjectURL(blob),
+            name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
+            time: t, size: blob.size,
+          })
+          idx++
+          t += step
+          setProgress(Math.round((idx / cap) * 100))
+        }
+      } catch (err) {
+        stopped = err.message
+      }
+
+      if (abandoned()) { abandon(); return }
+
+      revealNext.current = out.length > 0
+      setFrames(out)
+      setExtracting(false)
+      setProgress(100)
+      // ONE toast, chosen after the loop. The catch used to toast "Extracted N
+      // frames (stopped: …)" and then this line toasted "Extracted N frames" in
+      // the same tick — the second replaced the first before it painted, so a
+      // run that stopped early reported itself as a clean success.
+      if (signal.aborted) toast(out.length ? `Extraction cancelled — kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
+      else if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
+      else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
+      else if (wanted > MAX_FRAMES && idx >= MAX_FRAMES) toast(`Extracted ${out.length} frames, the most one run makes`, 'info')
+      else toast(`Extracted ${out.length} frames`)
+    } finally {
+      releaseVideo(video)
+      if (abortRef.current === ac) abortRef.current = null
+    }
   }, [srcUrl, meta, fps, scale, format, quality, rangeStart, rangeEnd, extracting, toast])
 
   const downloadAll = useCallback(async () => {
@@ -1472,7 +1595,7 @@ function VideoFrames({ toast }) {
 
   const estFrom = meta ? Math.max(0, Math.min(rangeStart || 0, meta.duration)) : 0
   const estTo = meta ? (rangeEnd == null ? meta.duration : Math.max(estFrom, Math.min(rangeEnd, meta.duration))) : 0
-  const est = meta ? Math.max(1, Math.floor((estTo - estFrom) * Math.max(0.1, Math.min(30, fps)))) : 0
+  const est = meta ? frameCountFor(estFrom, estTo, fps) : 0
   const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
 
   return (
@@ -1492,7 +1615,7 @@ function VideoFrames({ toast }) {
                 ['Size', formatBytes(file?.size)],
                 ['Duration', formatTime(meta.duration)],
                 ['Resolution', `${meta.width}×${meta.height}px`],
-                ['Est. frames', est.toLocaleString()],
+                ['Est. frames', est > MAX_FRAMES ? `${MAX_FRAMES} of ~${est.toLocaleString()}` : est.toLocaleString()],
               ] : [['File', file?.name], ['Size', formatBytes(file?.size)]]}
             />
           </div>
@@ -1548,15 +1671,23 @@ function VideoFrames({ toast }) {
                 <p className="fc-note">
                   {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} · ~{est.toLocaleString()} frames
                 </p>
+                {est > MAX_FRAMES && (
+                  <p className="fc-note fc-note--warn">
+                    Stops at {MAX_FRAMES} frames, at {formatTime(estFrom + MAX_FRAMES / fps)}. Lower the FPS or shorten the range to get the rest.
+                  </p>
+                )}
               </div>
             </aside>
             <div className="fc-actionbar fc-actions">
-              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
+              <button type="button" ref={extractBtnRef} className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
                 {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
               </button>
               {extracting && (
-                <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                  <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                <div className="fc-job">
+                  <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                    <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                  </div>
+                  <button type="button" className="fc-btn fc-btn--quiet" onClick={cancelExtract}>Cancel</button>
                 </div>
               )}
             </div>

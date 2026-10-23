@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
@@ -7,6 +7,8 @@ import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch'
 import { useProject } from '../contexts/ProjectContext'
 import { contrastRatio, textColorForBg } from '../utils/colors'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
+import { partsPresent } from '../utils/userHome'
+import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -85,9 +87,16 @@ const HUE_TRACK = `linear-gradient(90deg,${[0, 60, 120, 180, 240, 300, 360].map(
 // onCopy only: Tint has no row in src/config/activationExports.js, so it must
 // not call the export hook (tests/unit/activation-exports.test.js).
 export default function TintTool({ onCopy, toast }) {
-  const { design } = useProject()
+  const { design, setTints } = useProject()
+  const { lumBias, satDecay, oled } = design?.tints || {}
   const carried = readTintDraft()
-  const [sources, setSources] = useState(() => (carried ? carried.colors.map(mkSource) : [mkSource('#2563EB')]))
+  // With no hand-off, a project that already has colours is tinted from its own
+  // active colour; the blue below is only the example a blank project opens on.
+  const [projectHex] = useState(() => {
+    if (!partsPresent(design).palette) return null
+    return normaliseHex(activeColour(design))
+  })
+  const [sources, setSources] = useState(() => (carried ? carried.colors.map(mkSource) : [mkSource(projectHex || '#2563EB')]))
   const [selectedId, setSelectedId] = useState(() => sources[0].id)
   const [steps, setSteps] = useState(11)
   const [curve, setCurve] = useState(0)
@@ -112,6 +121,39 @@ export default function TintTool({ onCopy, toast }) {
     return { id: s.id, hue: H, chroma: C, steps: buildRamp(H, C, steps, curve) }
   }), [sources, steps, curve])
   const scale = scales[selIndex] || scales[0]
+
+  // THE PROJECT'S TINTS PART. The ramp the project keeps is eleven stops (the
+  // shape every reader of design.tints.scale labels by index) of the selected
+  // source, made by the project's own generator (`tintsFor`, the one the Colour
+  // Studio uses) with the project's tint settings. The curves and step counts
+  // on this page shape what is drawn and copied; they are not what the project
+  // keeps, so the same colour is the same ramp wherever it was made. Only
+  // `tints` is written: this tool reads the palette and never writes it. A
+  // project with colours and no ramp gets one as soon as this opens, and so
+  // does one recorded as made from another colour than the project's own;
+  // otherwise it is written when the person changes the source colour. `from`
+  // is the colour the ramp was made from.
+  // A project with no colours of its own writes nothing at all: the blue it
+  // opens on is an example, and a ramp kept from it would mark Tints done for a
+  // project that has not chosen a colour yet.
+  const keptRamp = useMemo(
+    () => tintsFor(selected.hex, { lumBias, satDecay, oled }).scale,
+    [selected.hex, lumBias, satDecay, oled],
+  )
+  const keptKey = `${selected.hex}|${keptRamp.join(',')}`
+  const keptFirstRef = useRef(true)
+  const ownColoursRef = useRef(false)
+  ownColoursRef.current = partsPresent(design).palette
+  useEffect(() => {
+    const first = keptFirstRef.current
+    keptFirstRef.current = false
+    if (!ownColoursRef.current) return undefined
+    if (first && !(projectHex && !carried && tintsNeedWrite(design?.tints, projectHex))) return undefined
+    const from = selected?.hex
+    const t = setTimeout(() => setTints({ scale: keptRamp, from }), first ? 0 : 200)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keptKey])
 
   const varName = (ri, label) => (multi ? `--tint-${ri + 1}-${label}` : `--tint-${label}`)
   const cssFor = (ri) => `:root {\n${scales[ri].steps.map((t) => `  ${varName(ri, t.label)}: ${t.hex};`).join('\n')}\n}`
@@ -239,6 +281,7 @@ export default function TintTool({ onCopy, toast }) {
                 return (
                   <div key={s.id} className={on ? 'tt-src is-on' : 'tt-src'}>
                     <ColorPickerPop
+                      portal
                       value={s.hex}
                       onChange={(hex) => setSourceHex(s.id, hex.toUpperCase())}
                       ariaLabel={`Pick base colour ${i + 1}`}

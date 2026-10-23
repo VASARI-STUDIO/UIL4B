@@ -83,7 +83,20 @@
 /* "Fixed" stroke is a toggle, so its on-state is the same wash — not an
    accent fill with accent text, which claimed it was the next action. */
 .iel-page .icust-abs{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
-.iel-page .icust-abs.active{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--bh);color:var(--t0)}
+.iel-page .icust-abs.active{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--t0);color:var(--t0)}
+.iel-page .icust-abs:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){
+  .iel-page .icust-abs{position:relative}
+  .iel-page .icust-abs::after{content:"";position:absolute;inset:-7px 0}
+}
+.iel-page .icust-stroke{display:flex;flex-direction:column;gap:4px}
+/* Align with the slider: 56px label + 12px row gap. Reserve one caption line,
+   two on phones where the off caption wraps. */
+.iel-page .icust-stroke-note{margin:0;padding-left:68px;min-height:calc(1em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
+.iel-page .icust-stroke-note b{font-weight:560;color:var(--t0);font-variant-numeric:tabular-nums}
+@media(max-width:560px){
+  .iel-page .icust-stroke-note{padding-left:0;min-height:calc(2em * 1.4)}
+}
 .iel-page .icust-pro{border-radius:var(--radius);background:transparent}
 /* The Pro word on the line-style box. It rides the nav's `.pnav-pop-tag`
    class, which is a 999px accent pill painted in `--accent-strong`. Here it
@@ -144,6 +157,16 @@
 .iel-page .emoji-tone-btn.open{border-color:var(--bh);background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
 .iel-page .emoji-tone-pop{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-m)}
 .iel-page .emoji-skin-btn.active{border-color:var(--accent-border);background:var(--accent-wash);box-shadow:0 0 0 1px var(--accent)}
+/* A cell paints its glyph from a bitmap EmojiGrid drew once, because painting
+   the colour emoji text again on every commit and every scroll tile is what
+   made this page slow. The real character stays in the cell (the label, the
+   title and the copy all read it) and is hidden only while the bitmap shows.
+   On hover the cell scales up, and the live text redraws crisply at that size
+   where the bitmap would be stretched, so the hovered cell goes back to text. */
+.iel-page .emoji-bitmap{display:block;flex:none;width:36px;background-repeat:no-repeat;pointer-events:none}
+.iel-page .emoji-cell.has-bitmap .emoji-char{display:none}
+.iel-page .emoji-cell.has-bitmap:hover .emoji-char{display:block}
+.iel-page .emoji-cell.has-bitmap:hover .emoji-bitmap{display:none}
 /* The count stays a filled chip — 71-media-tools-breakpoints measures it as
    ink on its OWN ground — but as a 6px rectangle, not a pill. */
 .iel-page .emoji-section-count{border-radius:var(--radius-xs)}
@@ -157,10 +180,11 @@
    labels and never shrink below the label's width. On a wider screen the track
    sits in the toolbar row with the pack menu. */
 .iel-page .ig-weight{
-  display:flex;flex:0 0 auto;gap:2px;padding:3px;
+  position:relative;display:flex;flex:0 0 auto;gap:2px;padding:3px;
   border-radius:var(--radius-pill);background:color-mix(in srgb,var(--t0) 6%,transparent);
 }
-.iel-page .ig-weight-btn{
+.iel-page .ig-weight-btn,
+.iel-page .ig-weight-measure>span{
   flex:1 1 auto;min-width:0;min-height:36px;padding:0 14px;text-align:center;
   border:0;border-radius:var(--radius-pill);background:transparent;
   color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:560;white-space:nowrap;cursor:pointer;
@@ -168,9 +192,17 @@
 .iel-page .ig-weight-btn:hover{color:var(--t0)}
 .iel-page .ig-weight-btn[aria-pressed="true"]{background:var(--card);color:var(--t0);box-shadow:0 1px 2px rgba(10,10,18,.08)}
 [data-theme="dark"] .iel-page .ig-weight-btn[aria-pressed="true"]{background:var(--bg-3)}
-.iel-page .ig-weight-btn[aria-disabled="true"]{color:var(--t3);cursor:not-allowed;text-decoration:line-through;text-decoration-thickness:1px}
+.iel-page .ig-weight-btn[aria-disabled="true"]{color:var(--t3);cursor:not-allowed}
+.iel-page .ig-weight-measure{display:flex;gap:2px;visibility:hidden}
+.iel-page .ig-weight-status{
+  position:absolute;inset:3px;min-width:0;min-height:36px;align-content:center;text-align:center;
+  color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:560;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 .iel-page .ig-weight-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-@media(pointer:coarse){.iel-page .ig-weight-btn{min-height:44px}}
+@media(pointer:coarse){
+  .iel-page .ig-weight-btn,.iel-page .ig-weight-measure>span,.iel-page .ig-weight-status{min-height:44px}
+}
 .iel-page .lbry-toolbar-quick>.ig-weight{width:100%}
 .iel-page .lbry-panel-groups>.ig-weight{width:100%}
 .iel-page .lbry-toolbar-quick>.ig-weight .ig-weight-btn,

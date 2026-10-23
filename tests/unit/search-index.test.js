@@ -217,6 +217,33 @@ test('the six queries from the bug report reach the tool, not the sales page', (
   }
 })
 
+test('multi-word tool names find the tool, and it comes first', () => {
+  const routeOf = (id) => createTools().find((t) => t.id === id).route
+  const expected = [
+    ['tint generator', 'tint'],
+    ['export icons', 'icons'],
+    ['icons export', 'icons'],
+    ['gradient generator', 'gradient'],
+    ['image converter', 'file-converter'],
+    ['ratio aspect', 'ratio'],
+    ['  tint   generator ', 'tint'],
+    ['tints generator', 'tint'],
+    ['palette builder', 'palette'],
+    ['alt text generator', 'alt-text'],
+    ['font pair', 'font-pair'],
+    ['contrast checker', 'contrast'],
+    ['aspect ratio', 'ratio'],
+  ]
+  for (const [query, id] of expected) {
+    const first = firstHit(query)
+    assert.ok(first, `"${query}" returns nothing`)
+    assert.equal(first.path, routeOf(id), `"${query}" opens ${first.path}`)
+  }
+  assert.equal(ask('  tint   generator ').query, 'tint generator')
+  assert.ok(ask('generator').tools.length >= 3)
+  assert.equal(ask('tint zzzzqq').total, 0)
+})
+
 test('a label match outranks a description match', () => {
   // The mechanism behind the test above, pinned on its own so a regression
   // names the cause rather than a symptom. "tint" matched the Palette Builder
@@ -225,6 +252,8 @@ test('a label match outranks a description match', () => {
     < matchRank({ label: 'Palette', keywords: [], description: 'with tints and shades' }, 'tint'))
   assert.ok(matchRank({ label: 'Contrast Checker', keywords: [] }, 'contrast')
     < matchRank({ label: 'Palette', keywords: ['contrast ratio'] }, 'contrast'))
+  assert.ok(matchRank({ label: 'Tint', keywords: [], description: '' }, 'tint generator')
+    < matchRank({ label: 'Palette', keywords: ['generator'], description: 'with tints and shades' }, 'tint generator'))
 })
 
 // ── Destinations ────────────────────────────────────────────────────────────

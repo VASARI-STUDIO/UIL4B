@@ -114,7 +114,6 @@ export const DITHERS = [
 ]
 export const GIF_COLOURS_MIN = 2
 export const GIF_COLOURS_MAX = 256
-export const MAX_VIDEO_WIDTH = 2000
 // Reverse holds every decoded frame in memory. This budget is 300 frames at
 // 640 x 640. A judgement, not a measurement.
 export const REVERSE_MAX_PIXELS = 300 * 640 * 640
@@ -164,7 +163,8 @@ export function outputSize(srcW, srcH, { crop = null, turn = 0, width = 480 } = 
   let ih = crop ? crop.h : srcH
   if (!(iw > 0 && ih > 0)) return { w: 0, h: 0 }
   if (turn === 90 || turn === 270) [iw, ih] = [ih, iw]
-  const w = Math.max(16, Math.min(MAX_VIDEO_WIDTH, Math.round(Number(width) || 480)))
+  const asked = Math.max(16, Math.min(MAX_ANIMATION_SIDE, Math.round(Number(width) || 480)))
+  const w = floorEven(Math.min(asked, (iw * MAX_ANIMATION_SIDE) / ih))
   return { w, h: 2 * Math.round((w * ih) / (iw * 2)) }
 }
 
@@ -324,9 +324,14 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
 
 /**
  * The whole argument list for a video clip. `start` and `length` are seconds;
- * a length of 0 means "to the end". Width is clamped, and the height is left
- * to ffmpeg as `-2`: the aspect ratio held and the result rounded to an even
- * number, which H.264 in yuv420p requires and every other format tolerates.
+ * a length of 0 means "to the end". Both sides are capped at MAX_ANIMATION_SIDE
+ * without knowing the source: the width is the smaller of the request and
+ * `iw*MAX/ih` (so a portrait clip's height cannot pass the cap), floored to even,
+ * and the height is left to ffmpeg as `-2`: the aspect ratio held and the result
+ * rounded to an even number, which H.264 in yuv420p requires and every other
+ * format tolerates. The comma inside min() is escaped because the filters are
+ * joined with ','. iw and ih are the frame the scale filter receives, so the cap
+ * applies after the crop and the turn.
  *
  * Both trim flags sit BEFORE -i, so they limit how much of the source is read.
  * As an output option, -t would cap the length of what comes out, which is
@@ -345,7 +350,7 @@ export function videoToAnimationArgs({
   colours = GIF_COLOURS_MAX, dither = 'pattern',
 }) {
   const fmt = findFormat(format)
-  const w = Math.max(16, Math.min(MAX_VIDEO_WIDTH, Math.round(Number(width) || 480)))
+  const w = Math.max(16, Math.min(MAX_ANIMATION_SIDE, Math.round(Number(width) || 480)))
   const args = []
   if (start > 0) args.push('-ss', String(start))
   if (length > 0) args.push('-t', String(length))
@@ -357,7 +362,7 @@ export function videoToAnimationArgs({
   filters.push(...turnFilters(turn))
   if (flipH) filters.push('hflip')
   if (flipV) filters.push('vflip')
-  filters.push(`scale=${w}:-2:flags=lanczos`)
+  filters.push(`scale=trunc(min(${w}\\,iw*${MAX_ANIMATION_SIDE}/ih)/2)*2:-2:flags=lanczos`)
   const dir = directionFilter(direction)
   if (dir) filters.push(dir)
   return [...args, ...encoderArgs(fmt, { quality, plays, filters, gif: fmt.id === 'gif' ? { colours, dither } : null })]

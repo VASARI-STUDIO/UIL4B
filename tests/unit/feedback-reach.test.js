@@ -65,7 +65,7 @@ test('FeedbackButton is mounted OUTSIDE AppInner, so the menu survives the early
   // This is the assertion that actually guards the bug. AppInner returns early
   // for /home, /onboarding, / and every chromeless route; anything mounted
   // inside its shell is absent from all of them.
-  const inner = APP.indexOf('function AppInner()')
+  const inner = APP.indexOf('function AppInner(')
   const outer = APP.indexOf('export default function App()')
   assert.ok(inner !== -1 && outer !== -1 && inner < outer, 'App.jsx has the shape this test assumes')
 

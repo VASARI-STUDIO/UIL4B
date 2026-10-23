@@ -73,10 +73,32 @@ test('cells above the focused one are still windowed', () => {
   assert.doesNotMatch(src, /upTo = Math\.min\(upTo, focused/)
 })
 
+test('pack labels stay stable across pages of the full result', () => {
+  const labels = src.slice(src.indexOf('const packOf ='), src.indexOf('const warmSoon ='))
+  const grid = block('const mainShowPack =', 'const firstPageSize =').replace(/const firstPageSize =$/, '')
+  const render = new Function('icons', 'visibleRecents', 'useMemo', 'renderCell', `
+    ${labels}
+    ${grid}
+    return { page: list => renderGrid(list), recents: () => renderGrid(visibleRecents, recentsShowPack) }
+  `)
+  const firstPack = Array.from({ length: 180 }, (_, i) => ({ pack: 'circle-flags', name: String(i) }))
+  const icons = [...firstPack, { pack: 'flag', name: 'ad' }]
+  let computations = 0
+  const memo = fn => { computations++; return fn() }
+  const cells = render(icons, firstPack.slice(0, 2), memo, (icon, idx, showPack) => showPack)
+  assert.ok(cells.page(icons.slice(0, 120)).every(Boolean))
+  assert.ok(cells.page(icons).every(Boolean))
+  assert.ok(cells.recents().every(showPack => !showPack))
+  assert.equal(computations, 2, 'scrolling does not recompute the main or recent pack set')
+  const single = render(firstPack, [], memo, (icon, idx, showPack) => showPack)
+  assert.ok(single.page(firstPack.slice(0, 120)).every(showPack => !showPack))
+  assert.match(src, /useMemo\(\(\) => gridShowsPack\(icons\), \[icons\]\)/)
+})
+
 test('the initial skeleton fits the signed-out cap and the signed-in first page', () => {
   // Run the sizing expressions with catalogue-sized packs, without mounting React.
   const labels = src.slice(src.indexOf('const packOf ='), src.indexOf('const warmSoon ='))
-  const sizing = block('const firstPageSize =', 'const skeletonShowPack = gridShowsPack(skeletonIcons)')
+  const sizing = block('const firstPageSize =', 'const skeletonShowPack = pendingPacks.length > 1')
   const pageSize = Number(src.match(/const PAGE_SIZE = (\d+)/)[1])
   const capSource = readFileSync(new URL('../../src/data/iconPackTiers.js', import.meta.url), 'utf8')
   const cap = Number(capSource.match(/ANON_ICON_CAP = (\d+)/)[1])
@@ -88,7 +110,10 @@ test('the initial skeleton fits the signed-out cap and the signed-in first page'
   `)
   const packs = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
   assert.deepEqual(size(true, cap / packs.length, packs, pageSize, cap), { count: cap, showPack: true })
-  assert.deepEqual(size(false, 250, packs, pageSize, cap), { count: pageSize, showPack: false })
+  // The label is reserved whenever the scope loads more than one pack, however the first page splits.
+  assert.deepEqual(size(false, 250, packs, pageSize, cap), { count: pageSize, showPack: true })
+  // A scope that loads a single pack never carries the label.
+  assert.deepEqual(size(false, 250, ['lucide'], pageSize, cap), { count: pageSize, showPack: false })
 })
 
 test('the catalogue skeleton holds until a page fills, every pack settles, or a nonempty page times out', () => {

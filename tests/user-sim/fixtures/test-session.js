@@ -212,11 +212,33 @@ function createFakeAuth(d) {
   auth.signInNow = () => {
     auth.currentUser = buildUser(d)
     auth.notify()
+    return auth.currentUser
   }
+  // The same account signing out, or a different one signing in, under a page
+  // that stays mounted (`over` replaces uid, email or name). Exposed so a spec
+  // can change the account without a reload.
+  auth.signOutNow = () => {
+    auth.currentUser = null
+    auth.notify()
+  }
+  auth.switchTo = (over = {}) => {
+    auth.currentUser = buildUser({ ...d, ...over })
+    auth.notify()
+  }
+  // True while a `lateSignIn` session has not yet signed in. The login form's
+  // password sign-in completes it (firebase-auth.js), so a spec can finish a
+  // sign-in the way a person does, through the popup, and the popup's own
+  // success path runs (signInNow() alone changes the account but never closes
+  // the popup or settles the promise that requireLogin() handed back).
+  auth.awaitingLateSignIn = () => !!d.lateSignIn && !auth.currentUser
   // What the auth server holds, as distinct from the signed-in User object,
   // and the links it would have emailed. See firebase-auth.js.
   auth.account = { emailVerified: d.emailVerified !== false }
   auth.mail = []
+  auth.verifySends = []
+  // How many times the account was re-read. A spec that proves a toast did NOT
+  // appear waits on this first, so it cannot pass before the re-read has finished.
+  auth.reloads = 0
   return auth
 }
 
@@ -326,6 +348,18 @@ function applyFieldOps(target, patch) {
  */
 export const denials = DECLARED?.deny || []
 
+/* A READ THAT ANSWERS LATE. `signIn(page, { slowReads: [{ path, ms }] })` holds
+ * every getDoc whose path contains `path` for `ms` before it resolves, which is
+ * what a slow Firestore round trip looks like from the app's side. Everything
+ * else about the answer is unchanged. Nothing is slowed unless a spec asks. */
+export function readDelayFor(path) {
+  let ms = 0
+  for (const entry of DECLARED?.slowReads || []) {
+    if (entry?.path && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
+  }
+  return ms
+}
+
 /* AN AUTH CALL THAT CAN BE TOLD TO REFUSE, for the same reason as `deny`.
  * `signIn(page, { authFail: { updateEmail: 'auth/operation-not-allowed' } })`
  * makes that one call reject with that Firebase code, so a spec can render what
@@ -372,5 +406,5 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, signInNow: fakeAuth.signInNow } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }

@@ -13,6 +13,7 @@ import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
+import { projectSnapshot } from '../utils/designPatch'
 
 const ProjectContext = createContext()
 
@@ -140,6 +141,10 @@ export function ProjectProvider({ children }) {
   // What each per-project document on the account holds, as of the last pull
   // or push. See writeRemoteProjects(): it limits a push to what changed here.
   const storedRef = useRef(new Map())
+  // The account whose first pull has finished, whether it worked or not. A
+  // device with no local copy of an account's projects has an empty list until
+  // then, so "no such project" cannot be said before it (see projectsLoading).
+  const [pulledUid, setPulledUid] = useState(null)
 
   // Auto-persist current design
   useEffect(() => {
@@ -209,11 +214,9 @@ export function ProjectProvider({ children }) {
     }
     const id = newId()
     const base = opts.blank ? DEFAULT_DESIGN : design
-    // `identityName` names the kit in the saved copy as well, for callers that
-    // set the working design's identity in the same event.
-    const snapshot = typeof opts.identityName === 'string'
-      ? { ...base, identity: { ...(base.identity || {}), name: opts.identityName } }
-      : base
+    // `identityName` and `patch` fold a caller's same-event changes into the
+    // saved copy (see utils/designPatch.js).
+    const snapshot = projectSnapshot(base, opts)
     const project = {
       id,
       name: name.trim() || `Project ${new Date().toLocaleDateString()}`,
@@ -469,6 +472,7 @@ export function ProjectProvider({ children }) {
       reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), retry)
     } finally {
       if (!signal?.cancelled) {
+        setPulledUid(uid)
         // Release the suppression shortly after the merge settles so the next
         // genuine local edit can push — and then PUSH ONCE, unprompted.
         //
@@ -554,6 +558,9 @@ export function ProjectProvider({ children }) {
     design,
     projects,
     canSaveProjects: !!userKey,
+    // True from sign-in until the account's projects have been read once. The
+    // list above may be missing projects that exist on the account until then.
+    projectsLoading: !!uid && pulledUid !== uid,
     projectLimit,
     atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,

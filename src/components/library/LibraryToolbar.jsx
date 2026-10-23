@@ -1,4 +1,4 @@
-import { Children, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Children, memo, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import LibrarySearch from './LibrarySearch'
 import { ToolbarModeContext } from './toolbarMode'
@@ -71,7 +71,7 @@ function FiltersGlyph() {
   )
 }
 
-export default function LibraryToolbar({
+function LibraryToolbar({
   search,
   count,
   action,
@@ -232,13 +232,20 @@ export default function LibraryToolbar({
   )
 }
 
+// Memoised so a page that renders for its own reasons (a scroll window, a copy
+// flash) does not re-run the toolbar's measuring; a page that passes stable
+// props gets the skip, one that does not renders exactly as before.
+export default memo(LibraryToolbar)
+
 // The one control the groups collapse into, and the panel it opens.
 function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action }) {
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
+  const firstControl = ':is(button,a[href],input,select,textarea,[tabindex]):not([disabled]):not([aria-disabled="true"]):not([tabindex="-1"])'
   // Desktop: the app's non-modal disclosure (usePopover — dismissal, focus-in,
   // Escape back to the trigger, edge flipping). Phone: a modal bottom sheet
   // (useModalDialog — focus trap, Escape, scroll lock, focus returned).
-  const { triggerRef, popRef } = usePopover(open && !phone, close)
-  const sheetRef = useModalDialog(close, { enabled: open && phone })
+  const { triggerRef, popRef } = usePopover(open && !phone, close, { initialFocus: keyboardOpen ? firstControl : ':scope' })
+  const sheetRef = useModalDialog(close, { enabled: open && phone, initialFocus: keyboardOpen ? firstControl : null })
   const panelId = `lbry-panel-${useId().replace(/:/g, '')}`
 
   // The sheet is portalled so no ancestor's backdrop-filter or transform can
@@ -266,6 +273,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
         aria-controls={open ? panelId : undefined}
         data-active={activeFilters > 0}
         onClick={(event) => {
+          setKeyboardOpen(event.detail === 0)
           setHost(event.currentTarget.closest('[role="dialog"]') || document.body)
           setOpen((o) => !o)
         }}

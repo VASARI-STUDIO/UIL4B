@@ -365,11 +365,28 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 /* Similar icons — same-pack siblings, a foot-of-popup retention nudge */
 .icust-similar{padding:16px 24px 24px;border-top:1px solid var(--border)}
+/* Until a tile has loaded (the section's data-ready) the block takes no space:
+   no heading, rule or padding over an empty row. The tiles stay mounted inside
+   so their glyphs still load. */
+.icust-similar:not([data-ready]){height:0;padding:0;border-top-width:0;overflow:hidden}
 .icust-similar-label{margin-bottom:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .icust-similar-row{display:flex;flex-wrap:wrap;gap:8px}
 .icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
 .icust-similar-btn:hover{border-color:var(--bh);background:var(--hvr);transform:translateY(-1px)}
 .icust-similar-btn img{display:block;width:24px;height:24px}
+/* A tile is invisible, with no border or ground, until its glyph has loaded
+   (SimilarTile sets data-ready); a glyph that errors never gets there. It keeps
+   its 44px box so the row never shifts, and visibility:hidden keeps an unshown
+   tile out of the tab order. Opacity fades in; visibility flips at the start of
+   the transition, so the fade is seen. */
+.icust-similar-btn:not([data-ready]){visibility:hidden;opacity:0}
+.icust-similar-btn[data-ready]{visibility:visible;opacity:1;transition:opacity var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+html[data-reduced-motion="true"] .icust-similar-btn[data-ready]{transition:none}
+html[data-reduced-motion="true"] .icust-similar-btn:hover{transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .icust-similar-btn[data-ready]{transition:none}
+  html:not([data-reduced-motion="false"]) .icust-similar-btn:hover{transform:none}
+}
 
 /* Recents rail */
 .ig-rail{margin:8px 0 28px}
@@ -378,18 +395,16 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail-clear:hover{color:var(--accent-mid);border-color:var(--border);background:var(--bg-1)}
 .ig-rail-clear svg{width:11px;height:11px}
 /* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
-.ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-1) var(--ease-out)}
+.ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:transparent;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-1) var(--ease-out)}
 .ig-rail-item:hover{border-color:var(--bh);background:var(--bg-2)}
 .ig-rail-item:active{transform:scale(.94)}
 .ig-rail-item img,.ig-rail-item svg{width:24px;height:24px}
 .ig-rail-item svg{color:var(--t0);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 /* Waiting glyph slots keep their dimensions without painting a square. */
-@keyframes ig-skel-pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.icust-stage-wait{background:color-mix(in oklab,var(--t1) 6%,transparent);box-shadow:none;animation:ig-skel-pulse 1.4s ease-in-out infinite}
 .ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:none;box-shadow:none;animation:none}
-.icust-stage-wait{position:absolute;inset:0;margin:auto;border-radius:8px;flex-shrink:0}
-@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .icust-stage-wait{animation:none}}
-html[data-reduced-motion="true"] .icust-stage-wait{animation:none}
+/* The stage's waiting slot: the grid's own glyph at stage size when there is one,
+   otherwise an empty box of the same size. Centred like the final art. */
+.icust-stage-wait{position:absolute;inset:0;margin:auto;flex-shrink:0;background:none;box-shadow:none;animation:none}
 .ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
 /* Keep pending artwork hidden until it has decoded. */
 .ic img.ig-glyph-pending{border-radius:6px;filter:none}
@@ -1130,8 +1145,20 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   background:transparent;
 }
 .lib-surface .ig .ic-name{min-height:25px}
-.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:calc(113px + var(--fs-micro))}
-@media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:104px}}
+.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:calc(113px + var(--fs-micro))}
+@media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:104px}}
+/* Glyphs and names start from the cell's top edge, so a cell reserved for a pack
+   line does not float its glyph below the same glyph in a cell without one.
+   In a cell with a pack line, a glyph chip (coloured art, logo or wordmark) is a
+   36px box that draws its 24px, 28px or wide artwork centred, so it takes 24px
+   of layout like the mono glyph beside it (it overflows 6px each side into the
+   cell padding): the glyph tops and the name tops then line up across a mixed
+   row. Its loading slot takes the same 24px. The loading labels sit where the
+   name will appear. */
+.lib-surface .ig .ic{justify-content:flex-start}
+.lib-surface .ig .ic:has(.ic-pack) .ig-chip,.lib-surface .ig.ig--reserve-pack .ic .ig-chip{margin-block:-6px}
+.lib-surface .ig .ig-skel:has(.ig-skel-pack) .ig-skel-slot,.lib-surface .ig.ig--reserve-pack .ig-skel .ig-skel-slot{height:24px}
+.lib-surface .ig .ig-skel-labels{justify-content:flex-start;padding-top:2px}
 /* Hover only where a pointer can hover, so a tap does not leave the cell tinted;
    touch gets the same tint for the length of the press. */
 @media (hover:hover){.lib-surface .ic:hover{background:var(--hvr);border-color:transparent}}
@@ -1144,7 +1171,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .lib-surface .ic{gap:6px;min-height:72px;padding:12px 4px;border-radius:var(--radius)}
   .lib-surface .ic>span:not(.ic-pack){-webkit-line-clamp:1;line-clamp:1}
   .lib-surface .ig .ic-name{min-height:12.5px}
-  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack){min-height:80.5px}
+  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:80.5px}
 }
 
 

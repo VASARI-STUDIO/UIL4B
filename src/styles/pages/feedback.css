@@ -42,6 +42,9 @@
   text-wrap: pretty;
 }
 
+/* The card link under the heading, set apart from the subtitle. */
+.fb-page .sec-h .fb-fix { margin-top: 12px; }
+
 /* The panel. */
 .fb-page .fb-card {
   max-width: 600px;

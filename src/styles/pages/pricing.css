@@ -286,7 +286,6 @@
 .pricing .pr-cta:hover { text-decoration: none; }
 .pricing .pr-cta:active { transform: scale(.98); }
 .pricing .pr-cta:focus-visible,
-.pricing .pr-retry:focus-visible,
 .pricing .pr-bar-btn:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
 
 .pricing .pr-cta--pro { background: var(--accent); color: var(--accent-ink); }
@@ -297,25 +296,6 @@
 }
 .pricing .pr-cta--pro[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
 .pricing .pr-cta--pro[aria-disabled="true"]:active { transform: none; }
-
-.pricing .pr-retry {
-  min-height: 44px;
-  margin-top: var(--s-3);
-  padding: 0 var(--s-4);
-  border: 1px solid var(--sp-line-strong);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--sp-ink);
-  font-family: var(--font);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color var(--dur-1) ease, transform var(--dur-1) ease;
-}
-.pricing .pr-retry:active { transform: scale(.98); }
-@media (hover: hover) and (pointer: fine) {
-  .pricing .pr-retry:hover { border-color: var(--sp-ink); }
-}
 
 /* ── the plan bar ─────────────────────────────────────────────────────────── */
 
@@ -721,19 +701,15 @@
   :where(html:not([data-reduced-motion="false"])) .pricing .pr-swap,
   :where(html:not([data-reduced-motion="false"])) .pricing .pr-billing-text,
   :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta,
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-retry,
   :where(html:not([data-reduced-motion="false"])) .pricing .pr-bar,
   :where(html:not([data-reduced-motion="false"])) .pricing .pr-qa-mark::before,
   :where(html:not([data-reduced-motion="false"])) .pricing .pr-qa-mark::after { animation: none; transition: none; }
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta:active,
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-retry:active { transform: none; }
+  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta:active { transform: none; }
 }
 :where(html[data-reduced-motion="true"]) .pricing .pr-swap,
 :where(html[data-reduced-motion="true"]) .pricing .pr-billing-text,
 :where(html[data-reduced-motion="true"]) .pricing .pr-cta,
-:where(html[data-reduced-motion="true"]) .pricing .pr-retry,
 :where(html[data-reduced-motion="true"]) .pricing .pr-bar,
 :where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::before,
 :where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::after { animation: none; transition: none; }
-:where(html[data-reduced-motion="true"]) .pricing .pr-cta:active,
-:where(html[data-reduced-motion="true"]) .pricing .pr-retry:active { transform: none; }
+:where(html[data-reduced-motion="true"]) .pricing .pr-cta:active { transform: none; }

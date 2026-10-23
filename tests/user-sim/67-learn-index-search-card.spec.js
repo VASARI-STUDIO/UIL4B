@@ -144,7 +144,7 @@ test.describe('the Learn index', () => {
 
     const input = field(page)
     await expect(input).toBeVisible()
-    const status = page.locator('[role="status"]')
+    const status = page.locator('.lidx-status[role="status"]')
     await expect(status).toHaveAttribute('aria-live', 'polite')
     await expect(status).toHaveText('')
 
@@ -198,7 +198,7 @@ test.describe('the Learn index', () => {
     // Says what to do: a narrower term, or a topic — every topic by name.
     await expect(empty).toContainText(/try/i)
     for (const t of topicsWithGuides) await expect(empty).toContainText(t.toLowerCase())
-    await expect(page.locator('[role="status"]')).toHaveText('No guide mentions “qzxvw”.')
+    await expect(page.locator('.lidx-status[role="status"]')).toHaveText('No guide mentions “qzxvw”.')
 
     // Tab: field → clear control → the empty state's way out. Enter on it
     // restores the index and puts focus back in the field.
@@ -303,7 +303,7 @@ test.describe('the Learn index', () => {
 
     for (const q of [phrase, 'scale', 'qzxvw']) {
       await input.fill(q)
-      await expect(page.locator('[role="status"]')).not.toHaveText('')
+      await expect(page.locator('.lidx-status[role="status"]')).not.toHaveText('')
       const overflow = await page.evaluate(() => ({
         scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth,
       }))

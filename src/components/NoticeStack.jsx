@@ -1,4 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import useOnline from '../hooks/useOnline'
+import useVerificationRecheck from '../hooks/useVerificationRecheck'
+import {
+  verifyBarVisible, verifyErrorText, readVerifyDismissed, writeVerifyDismissed,
+  VERIFY_RESEND_COOLDOWN_S, verifyResendLabel, verifyResendBlocked,
+} from '../utils/emailVerification'
 import OfflineBanner from './OfflineBanner'
 import SyncNotice from './SyncNotice'
 
@@ -30,6 +38,221 @@ import SyncNotice from './SyncNotice'
 // The strip is display:none while empty (`.notice-stack:empty`), so with no
 // notice showing this writes 0px and every folded offset resolves to exactly
 // the value it had before this file existed.
+// How long "Email verified." stays up once the account comes back verified.
+const VERIFIED_HOLD_MS = 4000
+
+function Envelope() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  )
+}
+
+function Alert() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v5M12 16.5v.01" />
+    </svg>
+  )
+}
+
+function Check() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+// When a control that holds focus is about to leave the page, hand the focus on
+// instead of letting the browser drop it to <body>. The cleanup of a layout
+// effect runs while the node is still attached, which is the last moment
+// document.activeElement can be read. `getFallback` is read at that moment, so
+// it may return an element that only exists by then.
+function useFocusFallback(ref, getFallback) {
+  const fallback = useRef(getFallback)
+  useEffect(() => { fallback.current = getFallback })
+  useLayoutEffect(() => {
+    const node = ref.current
+    return () => {
+      if (!node || !node.contains(document.activeElement)) return
+      const next = fallback.current()
+      if (next && next.isConnected) next.focus()
+    }
+  }, [ref])
+}
+
+// The bar's root. Whatever takes the bar away (Dismiss, the verified hold
+// ending, going offline) leaves focus on the page rather than on <body>.
+function BarRoot({ children, ...props }) {
+  const ref = useRef(null)
+  useFocusFallback(ref, () => document.getElementById('main'))
+  return <div ref={ref} {...props}>{children}</div>
+}
+
+// Resend stays on the bar through every state but "verified", so a keyboard
+// user is never moved. When it does go (the address just verified), Dismiss
+// takes the focus. A sending or cooling-down button is aria-disabled rather
+// than disabled: a disabled control that holds focus drops it to <body>.
+function ResendButton({ dismissRef, ...props }) {
+  const ref = useRef(null)
+  useFocusFallback(ref, () => dismissRef.current)
+  return <button ref={ref} type="button" className="btn btn-s" {...props} />
+}
+
+// THE THIRD ROW: A PASSWORD ACCOUNT WHOSE ADDRESS IS STILL UNPROVED.
+//
+// Until now the only sign of it was a row in Settings, which someone who never
+// opens Settings never meets. A condition that stays true belongs in this strip
+// rather than in a toast, for the same reason as the sync notice; the strip
+// reserves its own height, so no toolbar is covered.
+//
+// Out of the way on /onboarding (which carries its own line) and /settings
+// (whose Email row offers the same link), and while offline, when a send could
+// not leave the device anyway: see verifyBarVisible. Dismissing lasts for the
+// visit, like the billing banner: it returns next time, because the address is
+// still unproved.
+function VerifyNotice() {
+  const { user, emailVerificationOwed: owed, sendVerificationEmail, refreshEmailVerified } = useAuth()
+  const { pathname } = useLocation()
+  const online = useOnline()
+  const uid = user?.uid
+  const email = user?.email
+
+  const [state, setState] = useState('idle') // idle | sending | sent | failed
+  const [error, setError] = useState('')
+  // What the bar was saying when a send began, so "Sending…" (which lives on the
+  // button) does not make the sentence flip back to its first wording.
+  const [prior, setPrior] = useState('idle')
+  const [dismissedUid, setDismissedUid] = useState(null)
+  // The uid whose address was just verified here, so the bar can say so for a
+  // moment instead of vanishing. Signing out also ends the debt, which is not
+  // a verification, so it only counts while the same account is still in.
+  const [verifiedUid, setVerifiedUid] = useState(null)
+  // After a send, Resend waits out a short cooldown (`until` is the clock time
+  // it ends, `left` the whole seconds to show) and then offers itself again.
+  const [until, setUntil] = useState(0)
+  const [left, setLeft] = useState(0)
+  const [seen, setSeen] = useState({ uid, owed })
+  if (seen.uid !== uid || seen.owed !== owed) {
+    setSeen({ uid, owed })
+    if (uid && seen.uid === uid && seen.owed && !owed) setVerifiedUid(uid)
+    if (seen.uid !== uid) { setState('idle'); setError(''); setUntil(0); setLeft(0) }
+  }
+
+  useEffect(() => {
+    if (!verifiedUid) return undefined
+    const timer = setTimeout(() => setVerifiedUid(null), VERIFIED_HOLD_MS)
+    return () => clearTimeout(timer)
+  }, [verifiedUid])
+
+  useEffect(() => {
+    if (!until) return undefined
+    const tick = () => {
+      const seconds = Math.ceil((until - Date.now()) / 1000)
+      setLeft(Math.max(0, seconds))
+      if (seconds <= 0) setUntil(0)
+    }
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [until])
+
+  const dismissRef = useRef(null)
+
+  const confirmed = !!uid && verifiedUid === uid
+  const shown = verifyBarVisible({ owed: owed || confirmed, pathname, online })
+  useVerificationRecheck(refreshEmailVerified, owed && shown)
+
+  if (!shown || !email) return null
+  if (!confirmed && (dismissedUid === uid || readVerifyDismissed(uid))) return null
+
+  const blocked = verifyResendBlocked(state, left)
+
+  const resend = async () => {
+    if (blocked) return
+    setPrior(state)
+    setState('sending')
+    try {
+      await sendVerificationEmail()
+      setState('sent')
+      setLeft(VERIFY_RESEND_COOLDOWN_S)
+      setUntil(Date.now() + VERIFY_RESEND_COOLDOWN_S * 1000)
+    } catch (e) {
+      setError(verifyErrorText(e))
+      setState('failed')
+    }
+  }
+
+  const dismiss = () => {
+    writeVerifyDismissed(uid)
+    setDismissedUid(uid)
+    // The bar held focus; hand it to the page rather than to the document.
+    document.getElementById('main')?.focus()
+  }
+
+  // Two live regions that stay in the page for the bar's whole life, one
+  // polite and one assertive, and only their text changes. A region that
+  // appears already holding its text is often not read, and one alert nested in
+  // a status region is read twice or not at all; two empty-until-needed
+  // siblings are each announced once. The buttons and the countdown sit
+  // outside both.
+  const view = state === 'sending' ? prior : state
+  let status = null
+  if (confirmed) {
+    status = 'Email verified.'
+  } else if (view === 'sent') {
+    // On a phone the address goes (the idle line drops its detail the same way),
+    // so the sentence stays two lines beside Resend and the bar keeps its height.
+    status = (
+      <>
+        Link sent<span className="verify-to"> to <span className="verify-addr">{email}</span></span>. Check your inbox and spam folder.
+      </>
+    )
+  } else if (view !== 'failed') {
+    status = (
+      <>
+        <strong>Verify your email.</strong>{' '}
+        <span className="sync-notice-detail">Check <span className="verify-addr verify-addr--idle" title={email}>{email}</span> for the link, or send a new one.</span>
+      </>
+    )
+  }
+
+  return (
+    <BarRoot
+      className="sync-notice sync-notice--info verify-notice"
+      data-testid="verify-notice"
+      data-verify-state={confirmed ? 'verified' : state}
+    >
+      <span className="sync-notice-ico">{confirmed ? <Check /> : state === 'failed' ? <Alert /> : <Envelope />}</span>
+      <p className="sync-notice-msg">
+        <span role="status">{status}</span>
+        <span role="alert">{!confirmed && state === 'failed' ? error : null}</span>
+      </p>
+      <div className="sync-notice-actions">
+        {!confirmed && (
+          <ResendButton dismissRef={dismissRef} aria-disabled={blocked || undefined} onClick={resend}>
+            {verifyResendLabel(state, left)}
+          </ResendButton>
+        )}
+        <button
+          type="button"
+          className="sync-notice-dismiss"
+          ref={dismissRef}
+          aria-label="Dismiss verification reminder"
+          onClick={dismiss}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </BarRoot>
+  )
+}
+
 export default function NoticeStack() {
   const ref = useRef(null)
 
@@ -65,6 +288,7 @@ export default function NoticeStack() {
     <div className="notice-stack" ref={ref}>
       <OfflineBanner />
       <SyncNotice />
+      <VerifyNotice />
     </div>
   )
 }

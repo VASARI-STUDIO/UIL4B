@@ -1,5 +1,5 @@
 import MenuSelect from '../components/tool/MenuSelect'
-import { useState, useCallback, useRef, useEffect, useMemo, memo, Fragment } from 'react'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, memo, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -18,10 +18,12 @@ import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { createCollectionLoader } from '../utils/iconifyCollectionCache'
+import { isMulticolourSvg, monochromeSvg } from '../utils/iconPaint'
+import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
   STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
-  stickyStrokePx, strokeAttrForPx, viewBoxOf,
+  stickyStrokePx, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 // WHO SEES WHICH PACK. One editable table, no pack name in this file's logic —
@@ -849,7 +851,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n" className="ic-name">{icon.name}</span>
-      {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
+      {!ghost && pack && <span key="p" className="ic-pack">{icon.logo ? 'Logo.dev' : gridPackLabel(pack)}</span>}
     </div>
   )
 })
@@ -866,15 +868,6 @@ const WINDOW_OVERSCAN_PX = 800
 const GHOST_STEP = 24
 
 // ── Pure helpers (module scope — reused by the customizer + browse fns) ───────
-
-// Round-robin merge so the grid mixes packs (outlined+solid+coloured+…) instead
-// of dumping one pack fully before the next.
-function interleavePacks(lists) {
-  const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0)
-  const merged = []
-  for (let i = 0; i < maxLen; i++) for (const l of lists) if (i < l.length) merged.push(l[i])
-  return merged
-}
 
 // Pro-gated custom store. Callers MUST check isPro before invoking these for a
 // non-Pro user — the store is never touched for non-Pro (anti-tamper).
@@ -1079,6 +1072,62 @@ const JOIN_OPTS = [
   { v: 'bevel', label: 'Bevel corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="bevel" /></svg> },
 ]
 
+// One "Similar in this pack" tile. It stays invisible (but in layout, so the
+// 44px row never shifts) until its glyph has loaded, then fades in: an empty
+// outlined tile is a loading square, and those are dropped. A glyph that
+// errors stays hidden. `visibility:hidden` also keeps a not-yet-shown tile out
+// of the tab order. A cached image can finish before React attaches onLoad, so
+// the ref callback checks it on attach. `onReadyChange` tells the section
+// whether any tile is showing, so it can hold back its heading and frame.
+function SimilarTile({ s, src, onPick, onReadyChange }) {
+  const [ready, setReady] = useState(false)
+  useEffect(() => { onReadyChange(s.id, ready) }, [s.id, ready, onReadyChange])
+  return (
+    <button
+      type="button"
+      className="icust-similar-btn"
+      data-ready={ready ? 'true' : undefined}
+      title={s.name}
+      aria-label={`Open ${s.name}`}
+      onClick={() => onPick?.(s)}
+    >
+      <img
+        ref={el => { if (el && el.complete && el.naturalWidth > 0) setReady(true) }}
+        src={src}
+        width="24"
+        height="24"
+        alt=""
+        onLoad={() => setReady(true)}
+        onError={() => setReady(false)}
+      />
+    </button>
+  )
+}
+
+// The "Similar in this pack" block. Its heading, rule and padding stay
+// collapsed (the tiles still mount so their glyphs load) until at least one
+// tile is showing, so a slow or fully failed pack never leaves a label over
+// an empty row. The images load eagerly: a lazy image inside a collapsed block
+// would never count as near the viewport. Keyed by the icon at the call site,
+// so each icon starts with nothing ready.
+function SimilarSection({ list, srcFor, onPick }) {
+  const [readyIds, setReadyIds] = useState({})
+  const onReadyChange = useCallback((id, ready) => {
+    setReadyIds(prev => (!!prev[id] === ready ? prev : { ...prev, [id]: ready }))
+  }, [])
+  const anyReady = list.some(s => readyIds[s.id])
+  return (
+    <div className="icust-similar" data-ready={anyReady ? 'true' : undefined}>
+      <div className="icust-similar-label">Similar in this pack</div>
+      <div className="icust-similar-row">
+        {list.map(s => (
+          <SimilarTile key={s.id} s={s} src={srcFor(s)} onPick={onPick} onReadyChange={onReadyChange} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
@@ -1190,7 +1239,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return counts
   }, [savePickerOpen])
 
-  const isColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
+  const inColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
   const isStroke = useMemo(() => {
     if (!activeIcon) return false
     if (activeIcon.custom) return !!activeIcon.isStroke
@@ -1269,10 +1318,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name)) || glyphSvgText(activeIcon.pack, activeIcon.name)
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
-  const baseSvgText = localBase || fetchedBase || cachedCdnBase
+  const rawBaseSvgText = localBase || fetchedBase || cachedCdnBase
+  const isColoredPack = inColoredPack && (!rawBaseSvgText || isMulticolourSvg(rawBaseSvgText))
+  const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
+    ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
+  [inColoredPack, isColoredPack, rawBaseSvgText])
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
-  useEffect(() => {
+  // A layout effect, so the art lands in the same frame the waiting glyph leaves.
+  useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
     host.innerHTML = rendersInline && baseSvgText ? baseSvgText : ''
@@ -1284,7 +1338,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // SAME viewBox user units the exported file uses — so it goes through the
   // same px→units conversion the serializer runs. Preview and download read
   // one function; they cannot drift.
-  useEffect(() => {
+  //
+  // A layout effect declared after the injection above: React runs them in order
+  // before paint, so the art never shows a frame with a stale stroke.
+  useLayoutEffect(() => {
     const stage = stageRef.current
     if (!stage) return
     const strokeAttr = strokeAttrForPx({
@@ -1321,10 +1378,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const onKey = (e) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
-      const f = panelRef.current?.querySelectorAll(
+      // Only what can take focus right now: a hidden Similar tile (visibility
+      // hidden, or inside a collapsed block) is not a Tab stop.
+      const f = Array.from(panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      )
-      if (!f || f.length === 0) return
+      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+      if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
@@ -1334,6 +1393,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const strokeCaption = strokeScaleCaption({ size, stroke, absolute: absStroke })
   const serializedOutput = useMemo(
     () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
     [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
@@ -1414,6 +1474,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // own page ground. A coloured pack always uses it; a chosen mono colour keeps
   // the contrast ground.
   const onThemeGround = isColoredPack || !color
+  // Until the stage has its own art, show the glyph the grid drew for this icon
+  // (same data: URI, so nothing new is fetched) in the stage's box. It is only
+  // used on the theme ground, where the grid's tint matches. With no grid glyph
+  // (or a chosen colour) the slot stays the same size and paints nothing.
+  const waitSrc = activeIcon?.cdn && !activeIcon.custom && onThemeGround ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
+  const stageWait = waitSrc
+    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={size} height={size} alt="" aria-hidden="true" />
+    : <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1625,7 +1693,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && !loadErr && <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />}
+                  {!baseSvgText && !loadErr && stageWait}
                   {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               ) : (
@@ -1640,9 +1708,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       onLoad={brandKey ? onStageImgLoad : undefined}
                       style={imageError ? { visibility: 'hidden' } : undefined}
                     />
-                  ) : (
-                    <span className={imageError ? 'icust-stage-img' : 'icust-stage-img icust-stage-wait'} style={{ width: size, height: size }} aria-hidden="true" />
-                  )}
+                  ) : imageError ? (
+                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
+                  ) : stageWait}
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
@@ -1693,38 +1761,42 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
 
               {isStroke && (
-                <div className="icust-row">
-                  <label htmlFor="icust-stroke">Stroke</label>
-                  {/* The `px` unit is half the fix: the slider now reports the
-                      width the exported file actually measures, at any size. */}
-                  <SnapSlider
-                    id="icust-stroke"
-                    min={STROKE_PX.min}
-                    max={STROKE_PX.max}
-                    step={STROKE_PX.step}
-                    value={stroke}
-                    defaultValue={STROKE_PX.default}
-                    snaps={STROKE_PX.snaps}
-                    unit="px"
-                    inputMin={STROKE_PX.inputMin}
-                    inputMax={STROKE_PX.inputMax}
-                    decimals={2}
-                    ariaLabel="Stroke width in pixels"
-                    onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
-                  />
-                  {/* Both modes now measure the same pixels AT THIS SIZE; they
-                      differ only once someone rescales the exported file. Off:
-                      the stroke scales with the artwork, the way an icon should.
-                      On (non-scaling-stroke): it holds this pixel width at every
-                      size it is ever drawn at. "Absolute" never said that. */}
-                  <button
-                    type="button"
-                    className={`icust-abs${absStroke ? ' active' : ''}`}
-                    aria-pressed={absStroke}
-                    aria-label={`Fixed stroke width — hold ${stroke}px even when the SVG is resized`}
-                    title={`Hold this stroke at ${stroke}px even if the SVG is resized later. Off: the stroke scales with the icon.`}
-                    onClick={() => { setAbsStroke(a => !a); markDirty() }}
-                  >Fixed</button>
+                <div className="icust-stroke">
+                  <div className="icust-row">
+                    <label htmlFor="icust-stroke">Stroke</label>
+                    {/* The `px` unit is half the fix: the slider now reports the
+                        width the exported file actually measures, at any size. */}
+                    <SnapSlider
+                      id="icust-stroke"
+                      min={STROKE_PX.min}
+                      max={STROKE_PX.max}
+                      step={STROKE_PX.step}
+                      value={stroke}
+                      defaultValue={STROKE_PX.default}
+                      snaps={STROKE_PX.snaps}
+                      unit="px"
+                      inputMin={STROKE_PX.inputMin}
+                      inputMax={STROKE_PX.inputMax}
+                      decimals={2}
+                      ariaLabel="Stroke width in pixels"
+                      onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
+                    />
+                    {/* Both modes now measure the same pixels AT THIS SIZE; they
+                        differ only once someone rescales the exported file. Off:
+                        the stroke scales with the artwork, the way an icon should.
+                        On (non-scaling-stroke): it holds this pixel width at every
+                        size it is ever drawn at. "Absolute" never said that. */}
+                    <button
+                      type="button"
+                      className={`icust-abs${absStroke ? ' active' : ''}`}
+                      aria-pressed={absStroke}
+                      aria-describedby="icust-stroke-note"
+                      onClick={() => { setAbsStroke(a => !a); markDirty() }}
+                    >Fixed</button>
+                  </div>
+                  <p id="icust-stroke-note" className="icust-stroke-note">
+                    {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
+                  </p>
                 </div>
               )}
 
@@ -1819,29 +1891,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             )}
 
             {similarList.length > 0 && (
-              <div className="icust-similar">
-                <div className="icust-similar-label">Similar in this pack</div>
-                <div className="icust-similar-row">
-                  {similarList.map(s => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className="icust-similar-btn"
-                      title={s.name}
-                      aria-label={`Open ${s.name}`}
-                      onClick={() => onPick?.(s)}
-                    >
-                      <img
-                        src={buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                        width="24"
-                        height="24"
-                        alt=""
-                        loading="lazy"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SimilarSection
+                key={currentId}
+                list={similarList}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                onPick={onPick}
+              />
             )}
           </>
         )}
@@ -1977,21 +2032,21 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
    these are the only human names the product has for them. `iconPackTiers.js`
    deliberately holds no labels — it is about entitlement, not vocabulary.
 
-   Order and labels are byte-for-byte what the hand-written menu rendered.
-   `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
+   Order and pack labels are what the hand-written menu rendered. The interface
+   packs are ONE group, "Interface", stroke packs first and the fill-only ones
+   after. Headings carry no style word ("line", "filled", "coloured"): the
+   Weight and Coloured chips own those words, and a heading repeating one beside
+   a pack that cannot do it (Material under "filled" with Fill struck through,
+   Simple Icons under "coloured") contradicts the chip. `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
    here as individual packs; they reach the grid through the Coloured chip, and
    that is unchanged. */
 const PACK_MENU = [
   {
-    label: 'Interface (outlined)',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor']],
+    label: 'Interface',
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
   },
   {
-    label: 'Interface (solid)',
-    packs: [['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
-  },
-  {
-    label: 'Brand logos (coloured)',
+    label: 'Brand logos',
     packs: [['logodev', 'Real brand logos (Logo.dev)'], ['simple-icons', 'Simple Icons'], ['logos', 'Logos (colour)'], ['devicon', 'Devicon'], ['skill-icons', 'Skill Icons']],
   },
   {
@@ -2004,6 +2059,8 @@ const PACK_MENU = [
   },
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
+const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons' }
+const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
 
 /* ── THE CREDIT UNDER THE GRID ───────────────────────────────────────────────
@@ -2070,27 +2127,36 @@ function packsOnScreen(...lists) {
 // segment lifted onto the card ground, as drawn. A segment the current scope
 // cannot honour is `aria-disabled` rather than `disabled`, so a keyboard user
 // can still reach it and hear WHY (the reason is in its accessible name and
-// its tooltip) instead of meeting a gap in the tab order.
+// its tooltip) instead of meeting a gap in the tab order. When no weight can
+// act, the track states the single-style reason as text.
 function IconWeightSeg({ value, stateOf, onChange }) {
+  const states = ICON_WEIGHTS.map((w) => ({ ...w, ...stateOf(w.id) }))
+  const singleStyle = states.every((w) => !w.ok)
+  const reason = states[0].why
   return (
     <div className="ig-weight" role="group" aria-label="Icon weight">
-      {ICON_WEIGHTS.map((w) => {
-        const st = stateOf(w.id)
-        return (
-          <button
-            key={w.id}
-            type="button"
-            className="ig-weight-btn"
-            aria-pressed={value === w.id}
-            aria-disabled={!st.ok || undefined}
-            aria-label={st.ok ? w.label : `${w.label} — ${st.why}`}
-            title={st.why || undefined}
-            onClick={() => { if (st.ok) onChange(w.id) }}
-          >
-            {w.label}
-          </button>
-        )
-      })}
+      {singleStyle ? (
+        <>
+          {/* Noninteractive labels preserve the four-button track's intrinsic width. */}
+          <span className="ig-weight-measure" aria-hidden="true">
+            {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
+          </span>
+          <span className="ig-weight-status" role="status" title={reason}>{reason}</span>
+        </>
+      ) : states.map((w) => (
+        <button
+          key={w.id}
+          type="button"
+          className="ig-weight-btn"
+          aria-pressed={w.ok && value === w.id}
+          aria-disabled={!w.ok || undefined}
+          aria-label={w.ok ? w.label : `${w.label} — ${w.why}`}
+          title={w.why || undefined}
+          onClick={() => { if (w.ok) onChange(w.id) }}
+        >
+          {w.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -2594,7 +2660,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setLoading(true); setLoadError(false); glyphFails.current = 0
     Promise.all(packs.map(p =>
       getCollectionNames(p, { manualRetry })
-        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').slice(0, PER_PACK_CAP), pack: p, ok: true }))
+        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').sort().slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
@@ -2602,7 +2668,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!results.some(r => r.ok)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
         cdnOk.current = true
         const lists = results.map(r => r.names.map(n => ({ id: `${r.pack}:${n}`, pack: r.pack, name: n, cdn: true })))
-        const merged = capList(interleavePacks(lists))
+        // Share the anonymous allowance per pack; a final slice could hide later packs.
+        const groupCap = capped ? Math.floor(ANON_ICON_CAP / packs.length) : PER_PACK_CAP
+        const merged = concatenatePackLists(lists, groupCap)
         if (!merged.length) { renderLocal('', ''); return }
         setIcons(merged)
         setVisible(PAGE_SIZE)
@@ -2616,7 +2684,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capList, needFor, refuseScope, browseAll])
+  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -2697,10 +2765,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // the filter is applied to what ARRIVED rather than to what was asked
         // for. Same reasoning as the SANITISE_KEYS whitelist in lockedPreview.js:
         // the gate is the filter, the request is only a convenience.
-        const items = capList(d.icons
+        const matches = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
-          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current)))
+          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current))
+        const items = groupKey
+          ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
+          : capList(matches)
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
@@ -2843,11 +2914,17 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Which weights the current scope can honour, and why not when it cannot.
   // "All packs" can show a weight when any pack the viewer may browse draws
-  // it; a single pack only when that pack does.
+  // it; a pack or group only when a pack within that scope does.
   const weightState = (w) => {
+    const collection = ICON_GROUPS[group]
+    const scope = collection
+      ? collection.packs.filter((p) => allowedPacks.includes(p) && (!pack || p === pack))
+      : pack && pack !== 'custom' ? [pack] : allowedPacks
+    if (collection && !scope.some((p) => Object.values(WEIGHT_RULES).some((rules) => p in rules))) {
+      return { ok: false, why: `${collection.label} come in one style` }
+    }
     if (w === 'regular') return { ok: true }
     const drawn = weightPacks(w)
-    const scope = pack && pack !== 'custom' ? [pack] : allowedPacks
     const ok = scope.some((p) => drawn.includes(p))
     const who = drawn.map((p) => WEIGHT_PACK_NAMES[p]).join(', ')
     return { ok, why: ok ? (pack ? '' : `Drawn by ${who}`) : `${ICON_WEIGHTS.find((x) => x.id === w).label} is drawn by ${who} only` }
@@ -2871,8 +2948,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const q = query.trim()
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
-    // Collections browse their original artwork at Regular weight.
-    if (nextGroup) { weightRef.current = 'regular'; setWeight('regular') }
+    // Collections browse original artwork without replacing the stored weight.
     if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
     else if (pack) browsePack(pack, nextGroup)
     else if (nextGroup) browseGroup(nextGroup)
@@ -3368,8 +3444,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // filter in the toolbar above.
   // `ghosts` is the main grid's windowing state; cells before `ghosts.upTo`
   // render in their ghost form at their measured height.
-  const renderGrid = (list, ghosts = null) => {
-    const showPack = gridShowsPack(list)
+  // Use the full result so revealing another pack never changes cell heights.
+  const mainShowPack = useMemo(() => gridShowsPack(icons), [icons])
+  const recentsShowPack = useMemo(() => gridShowsPack(visibleRecents), [visibleRecents])
+  const renderGrid = (list, showPack = mainShowPack, ghosts = null) => {
     const ghostAt = (idx) => (ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0)
     return list.map((icon, idx) => renderCell(icon, idx, showPack, ghostAt(idx)))
   }
@@ -3380,7 +3458,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const skeletonIcons = Array.from({ length: firstPageSize }, (_, idx) => ({
     pack: pendingPacks[(source === 'group' || source === 'search' ? idx : Math.floor(idx / perPackCap)) % pendingPacks.length],
   }))
-  const skeletonShowPack = gridShowsPack(skeletonIcons)
+  // The loaded grid labels every cell once its result spans more than one pack,
+  // however the first page happens to split, so the skeleton reserves the label
+  // whenever the scope will load more than one pack.
+  const skeletonShowPack = pendingPacks.length > 1
+  // Which pack a search returns is unknown while it loads, so the skeleton
+  // cannot tell a one-pack answer from a many-pack one. In a multi-pack scope
+  // the loaded grid keeps the labelled cell height either way (the same blank
+  // label row the narrow layouts already keep), so neither answer shifts.
+  const gridClass = skeletonShowPack ? 'ig ig--reserve-pack' : 'ig'
 
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
@@ -3592,7 +3678,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 )}
               </div>
               {visibleRecents.length > 0 ? (
-                <div className="ig">{renderGrid(visibleRecents)}</div>
+                <div className="ig">{renderGrid(visibleRecents, recentsShowPack)}</div>
               ) : (
                 <div className="ig-custom-empty">Icons you copy show up here for quick reuse.</div>
               )}
@@ -3637,7 +3723,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 that failed to fill — the "cell that failed to load" shape this
                 file has been fixed for twice. The wall is the whole answer. */}
             {!gated && (
-              <div className="ig" ref={gridRef}>
+              <div className={gridClass} ref={gridRef}>
                 {loading && icons.length === 0
                   ? skeletonIcons.map((icon, i) => (
                     <div key={`skel-${i}`} className="ic ig-skel" aria-hidden="true">
@@ -3648,7 +3734,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                       </div>
                     </div>
                   ))
-                  : renderGrid(shown, windowed && win.list === icons ? win : null)}
+                  : renderGrid(shown, mainShowPack, windowed && win.list === icons ? win : null)}
               </div>
             )}
 

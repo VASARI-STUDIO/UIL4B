@@ -1,14 +1,15 @@
 import { useCallback, useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
+import { useNavigate, useSearchParams, NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { openFirebaseGate } from '../utils/firebaseAccess'
-import { PRO_POINTS, BILLING_OPTIONS, resolveOffers } from '../config/planFacts'
+import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, resolveOffers } from '../config/planFacts'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
-import { refreshPrices, usePrices, useProPrice } from '../hooks/usePrices'
+import { refreshPrices, usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
+import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -38,6 +39,7 @@ const PLANS = {
     name: 'UIL4B Pro',
     cadence: 'Monthly',
     per: 'per month',
+    months: 1,
     trial: trialLine('monthly'),
   },
   yearly: {
@@ -45,6 +47,7 @@ const PLANS = {
     name: 'UIL4B Pro',
     cadence: 'Yearly',
     per: 'per year',
+    months: 12,
     trial: trialLine('yearly'),
   },
 }
@@ -173,12 +176,26 @@ export default function Checkout() {
   const [formReady, setFormReady] = useState(false)
   // Payment submitted or complete: the period choice is locked.
   const [paying, setPaying] = useState(false)
+  // The currency each period's payment session was actually created in, as the
+  // server reported it, keyed by period so a late answer for a period the buyer
+  // has left cannot colour the one on screen.
+  const [sessionCurrencies, setSessionCurrencies] = useState({})
   const startedSent = useRef(false)
+  const errorRef = useRef(null)
+
+  // A refusal arrives after the buyer has been looking at the form, and on a
+  // phone the panel can sit below the fold: bring it into view and focus it so
+  // it is not missed.
+  useEffect(() => {
+    if (!error || !errorRef.current) return
+    errorRef.current.focus({ preventScroll: true })
+    errorRef.current.scrollIntoView?.({ block: 'center' })
+  }, [error])
 
   // The billing-period choices are the ladder's buyable cadences that this
   // page has a case for, each with the saving /plans prints on its own tab.
-  const periodOptions = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
-    .offers.filter((o) => Object.hasOwn(PLANS, o.checkoutPlan))
+  const resolved = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
+  const periodOptions = resolved.offers.filter((o) => Object.hasOwn(PLANS, o.checkoutPlan))
   // /plans reads its cadence from `?billing=<ladder id>`, so going back keeps
   // the period chosen here.
   const chosenOption = periodOptions.find((o) => o.checkoutPlan === planKey)
@@ -196,7 +213,24 @@ export default function Checkout() {
       return nextParams
     }, { replace: true })
   }
-  const amount = planKey === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly
+  // THE AMOUNT AND THE NOTE COME OFF THE LADDER (`chosenOption`, from
+  // resolveOffers), whatever the cadence — there is no per-cadence branch to
+  // forget when a cadence is added. The amount is the total charged each
+  // period; the note names the per-month rate and how often it bills.
+  const amount = chosenOption?.available ? formatPrice(chosenOption.total, proPrice.currency) : null
+  const ladderEntry = PLAN_LADDER.find((entry) => entry.id === planKey)
+  // The amount is quoted only when the price service confirmed it live AND the
+  // payment session was created in the currency that amount is shown in. A
+  // returning customer with a locked currency gets a session in that currency
+  // whatever the page asked for, so the server reports the currency it used
+  // and a mismatch (or no report yet) drops the figure. Without one the terms
+  // say how the plan renews and leave the figure to Stripe's own form.
+  const amountLive = !!amount && proPrice.source[planKey] === 'live'
+  const renewal = renewalDisclosure({
+    trialDays: ladderEntry?.trialDays || 0,
+    amount: quotableAmount({ amount, live: amountLive, displayCurrency: proPrice.currency, sessionCurrency: sessionCurrencies[planKey] }),
+    months: plan?.months,
+  })
   // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and until
   // 2026-09-11 it rendered it as a lie. `useProPrice` returns `loaded: true`
   // the moment the fetch SETTLES — including when it settled by failing — and
@@ -206,27 +240,34 @@ export default function Checkout() {
   //                 amount was null, so React rendered NOTHING. Measured on the
   //                 built preview: `.checkout-plan-amount` textContent "" above
   //                 "per year". A blank where a price goes reads as free.
-  //   note          the yearly branch interpolated `proPrice.yearlyPerMonth`
+  //   note          the yearly branch interpolated the per-month figure
   //                 unconditionally, so the page printed the string
   //                 "USD · null/mo", in accent colour, on the screen where
   //                 money changes hands.
   //
-  // src/pages/Plans.jsx — the step immediately before this one — already
+  // src/pages/Pricing.jsx — the step immediately before this one — already
   // answers this exact outage, and these are ITS sentences, not new ones. Two
   // steps of one funnel must not describe one outage two ways.
-  const priceServiceDown = proPrice.loaded && !proPrice.serviceAvailable
-  const note = priceServiceDown
-    ? (amount
-      ? `Live pricing is unreachable · showing the canonical ${proPrice.currencyLabel} amount`
-      : 'Live pricing is unreachable · no price can be shown right now')
-    // THE SERVICE ANSWERED, BUT NOT FOR THIS CURRENCY. Without this branch the
-    // yearly line would print "GBP · null/mo". Settings' sentence for the same
-    // state.
-    : proPrice.loaded && !amount
-      ? `No ${proPrice.currencyLabel} price for this billing period right now`
-    : planKey === 'yearly'
-      ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · Save ${proPrice.savingsPct}%` : ''}`
-      : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
+  //
+  // "Down" is "no cadence has a live price in this currency", not "the request
+  // failed": a Stripe outage still answers 200, with every cadence a fallback.
+  const priceServiceDown = resolved.priceServiceDown
+  const note = !proPrice.loaded
+    // Not settled: no rate yet, because there is no offer to take it from.
+    ? 'Checking the live price…'
+    : priceServiceDown
+      ? 'Live pricing is unreachable · no price can be shown right now'
+      // THE SERVICE ANSWERED FOR OTHER CADENCES, BUT NOT WITH A LIVE PRICE FOR
+      // THIS ONE IN THIS CURRENCY (a fallback default is not one). Without this
+      // branch the line would print "GBP · null/mo". Settings' sentence for the
+      // same state.
+      : !amount
+        ? (chosenOption?.unavailableNote || `No ${proPrice.currencyLabel} price for this billing period right now`)
+        : chosenOption.months > 1
+          // A cadence longer than a month names its per-month rate, how often it
+          // bills, and its saving when it has one.
+          ? `${proPrice.currencyLabel} · ${formatPrice(chosenOption.total / chosenOption.months, proPrice.currency)}/mo · billed ${BILLED_EVERY[chosenOption.id]}${chosenOption.saving > 0 ? ` · Save ${chosenOption.saving}%` : ''}`
+          : `${proPrice.currencyLabel} · billed ${BILLED_EVERY[chosenOption.id] || 'monthly'} · cancel any time`
 
   useEffect(() => {
     if (sessionPlan === planKey) return undefined
@@ -244,7 +285,9 @@ export default function Checkout() {
       startedSent.current = true
       sendEvent(EVENTS.checkoutStarted, { plan: sessionInterval })
     }
-    return createCheckoutSession(sessionInterval)
+    return createCheckoutSession(sessionInterval, (session) => {
+      setSessionCurrencies((prev) => ({ ...prev, [sessionInterval]: session?.currency || null }))
+    })
   }, [createCheckoutSession, sessionInterval])
 
   // The payment panel is waiting on the auth answer, so ask for it now rather
@@ -308,7 +351,7 @@ export default function Checkout() {
         <aside className="checkout-summary">
           <div className="card checkout-summary-card">
             {/* Native radios, so arrow keys, Space and the screen reader's
-                "1 of 3" come from the platform. Each input is stretched
+                "1 of 2" come from the platform. Each input is stretched
                 invisibly over its label, which is the visible target. */}
             <div className={`checkout-period${paying ? ' is-locked' : ''}`} role="radiogroup" aria-labelledby="checkout-period-label" aria-describedby={paying ? 'checkout-period-locked' : undefined}>
               <span id="checkout-period-label" className="sr-only">Billing period</span>
@@ -344,8 +387,8 @@ export default function Checkout() {
                 <div className="checkout-plan-cadence">{plan.cadence} plan</div>
               </div>
               <div className="checkout-plan-price">
-                {/* `amount || 'Unavailable'` is Plans.jsx's line 306, for the
-                    reason given above: `loaded` means settled, not known. */}
+                {/* `amount || 'Unavailable'` is the same word /plans prints, for
+                    the reason given above: `loaded` means settled, not known. */}
                 <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{!proPrice.loaded ? '—' : amount || 'Unavailable'}</span>
                 <span className="checkout-plan-per">{plan.per}</span>
               </div>
@@ -355,7 +398,7 @@ export default function Checkout() {
 
             {/* usePrices caches the failure for the life of the module, so
                 without this the summary stays on "Unavailable" until a full
-                reload. Same control and same label as Plans.jsx. */}
+                reload. Same control and same label as /plans. */}
             {priceServiceDown && (
               <button type="button" className="btn btn-s checkout-price-retry" onClick={() => refreshPrices()}>
                 Retry live pricing
@@ -392,12 +435,20 @@ export default function Checkout() {
             <SignInToPay cadence={plan.cadence} onClick={signInToPay} />
           ) : !proPrice.loaded ? (
             <div className="checkout-error">Checking the live Stripe price…</div>
+          ) : !amount ? (
+            // No live price for this cadence in this currency: no payment form.
+            // The server would refuse it, or worse, charge something the
+            // summary does not show.
+            <div className="checkout-error">
+              <strong className="checkout-error-h">Checkout unavailable</strong>
+              <span className="checkout-error-p">{note}</span>
+            </div>
           ) : !hasStripeKey ? (
             <div className="checkout-error">
               Payments aren’t configured yet. Set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in your environment to enable checkout.
             </div>
           ) : error ? (
-            <div className="checkout-error">
+            <div className="checkout-error" role="alert" tabIndex={-1} ref={errorRef}>
               <strong className="checkout-error-h">Checkout unavailable</strong>
               <span className="checkout-error-p">{error}</span>
               {error.includes('Server configuration') && (
@@ -410,15 +461,28 @@ export default function Checkout() {
             </div>
           ) : (
             <>
-              {/* From the moment a form is destroyed until the next one
-                  mounts. Kept in the tree and emptied, so each new load is
-                  announced. */}
-              <p className="checkout-loading" role="status">{formReady ? '' : 'Loading payment form…'}</p>
+              {/* How the plan renews and what subscribing agrees to, directly
+                  above the payment form in every layout. The block stays
+                  mounted while the period changes, so its polite live region
+                  announces the new wording. */}
+              <div className="checkout-disclosure">
+                <p className="checkout-renewal" aria-live="polite" aria-atomic="true">{renewal}</p>
+                <p className="checkout-terms">
+                  By subscribing you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+                </p>
+              </div>
               {/* A new period destroys the form at once; the next is created
                   once the choice has rested, with a new session request. */}
               {sessionPlan === planKey && (
                 <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={setError} onPaying={setPaying} />
               )}
+              {/* From the moment a form is destroyed until the next one
+                  mounts. Kept in the tree and emptied, so each new load is
+                  announced. It follows the embed's mount point (empty until
+                  the form mounts), so it fills the form's own place under the
+                  disclosure and nothing above it moves when the form is
+                  ready. */}
+              <p className="checkout-loading" role="status">{formReady ? '' : 'Loading payment form…'}</p>
             </>
           )}
         </div>
