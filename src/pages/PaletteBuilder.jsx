@@ -2512,8 +2512,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     aria-expanded={actionsOpen}
                     // a tap on a control that is still faded out must not act
                     onPointerDown={(e) => { moreHiddenAtPressRef.current = e.pointerType !== 'mouse' && parseFloat(getComputedStyle(e.currentTarget).opacity) < 0.5 }}
+                    onPointerCancel={() => { moreHiddenAtPressRef.current = false }}
                     onClick={(e) => {
-                      if (moreHiddenAtPressRef.current) { moreHiddenAtPressRef.current = false; return }
+                      if (e.detail !== 0 && moreHiddenAtPressRef.current) { moreHiddenAtPressRef.current = false; return }
                       moreHiddenAtPressRef.current = false
                       const r = e.currentTarget.getBoundingClientRect()
                       ctxTriggerRef.current = e.currentTarget
