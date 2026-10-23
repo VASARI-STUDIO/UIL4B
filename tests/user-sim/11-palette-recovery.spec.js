@@ -1,6 +1,6 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { readSeed, seedChip, paletteToolbar, openPaletteTools } from './palette-helpers.js'
+import { readSeed, seedChip, paletteToolbar, openPaletteTools, clickPaletteAction } from './palette-helpers.js'
 import { hexToHct } from '../../src/utils/colors.js'
 
 /** The Palette Builder writes the board into the saved project on a ~200ms
@@ -236,31 +236,42 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('Space activates interactive Palette controls without invoking the global randomise shortcut', async ({ page }) => {
     watch(page, 'keyboard designer using controls, popovers and modals')
-    await go(page, '/create/palette')
-    await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
-    const before = await page.locator('.plb-col .plb-hex').allTextContents()
+    // Preview is a button on the toolbar row at 1440px and a row in the Extra
+    // tools overflow at 768px. Each is pressed with Space (in the overflow, the
+    // trigger too), and none may reach the page's randomise.
+    for (const { where, width } of [{ where: 'row', width: 1440 }, { where: 'overflow', width: 768 }]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/create/palette')
+      await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
+      const before = await page.locator('.plb-col .plb-hex').allTextContents()
+      await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
 
-    // Preview lives in the Extra tools overflow; both the trigger and the row are
-    // pressed with Space, and neither may reach the page's randomise.
-    const tools = paletteToolbar(page).getByRole('button', { name: 'Extra tools' })
-    await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
-    await tools.focus()
-    await page.keyboard.press('Space')
-    const row = page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview on a UI' })
-    await expect(row).toBeVisible()
-    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
-    await row.focus()
-    await page.keyboard.press('Space')
-    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
-    await page.getByRole('button', { name: 'Dark', exact: true }).focus()
-    await page.keyboard.press('Space')
-    await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    const close = page.getByRole('button', { name: 'Close preview' })
-    await close.focus()
-    await page.keyboard.press('Space')
-    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toHaveCount(0)
+      const onRow = paletteToolbar(page).getByRole('button', { name: 'Preview on a UI', exact: true })
+      let preview
+      if (where === 'row') {
+        preview = onRow
+        await expect(preview, `${width}px: Preview is a button on the row`).toBeVisible()
+      } else {
+        await expect(onRow, `${width}px: Preview has left the row`).toHaveCount(0)
+        await paletteToolbar(page).getByRole('button', { name: 'Extra tools' }).focus()
+        await page.keyboard.press('Space')
+        preview = page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview on a UI' })
+        await expect(preview).toBeVisible()
+      }
+      expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+      await preview.focus()
+      await page.keyboard.press('Space')
+      await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
+      await page.getByRole('button', { name: 'Dark', exact: true }).focus()
+      await page.keyboard.press('Space')
+      await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
+      const close = page.getByRole('button', { name: 'Close preview' })
+      await close.focus()
+      await page.keyboard.press('Space')
+      await expect(page.getByRole('dialog', { name: 'Palette preview' })).toHaveCount(0)
 
-    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+      expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+    }
   })
 
   test('swap direction, right-click insertion and preview gating are explicit', async ({ page }) => {
@@ -286,7 +297,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(insertMenu.getByRole('menuitem')).toHaveCount(4)
 
     await page.keyboard.press('Escape')
-    await (await openPaletteTools(page)).getByRole('button', { name: 'Preview on a UI' }).click()
+    await clickPaletteAction(page, 'Preview on a UI')
     await expect(page.locator('.plb-preview-item')).toHaveCount(6)
     await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
     await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(3)
