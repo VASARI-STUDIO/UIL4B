@@ -52,6 +52,9 @@ const KEEP = {
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'pl-modal-view', 'fdx-tab', 'pnav-tab'],
+  // the two halves of one split button: together they draw a single pill, so each keeps its
+  // outer corners round and squares the edge where they meet (.icust-foot .dl-main / .dl-more)
+  split: ['dl-main', 'dl-more'],
   // a switch track, drawn by its own geometry
   switch: ['toggle-switch', 'aipg-rule'],
   // previews of the user's own design system, drawn at the user's radius
