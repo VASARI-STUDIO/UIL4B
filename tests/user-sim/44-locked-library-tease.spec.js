@@ -24,8 +24,8 @@
 //
 // The founder's tiers — 3 signed out, 10 with a free account, everything with
 // Pro — mean the withheld set is no longer "the paid brands". It is now
-// "everything past this viewer's cap", which at the bottom rung is 98 of the
-// 101 palettes and at the free rung is 91. Every assertion below is therefore
+// "everything past this viewer's cap", which at the bottom rung is most of the
+// library and at the free rung is all but ten. Every assertion below is therefore
 // derived PER RUNG rather than from the brand flag, and the file covers two
 // rungs instead of one: signed out, where the next step is a free account, and
 // signed in free, where it is Pro. The Palette Builder's brands panel is
@@ -115,10 +115,12 @@ test.describe('a locked library row hands nothing over — signed out', () => {
 
   test('the signed-out rung shows three palettes and says so', async ({ page }) => {
     // The founder's number, on the page rather than in a unit test. The count
-    // line is the honesty check: a page showing three may not claim 101.
+    // line is the honesty check: a page showing three may not claim the size
+    // of the whole library, in the masthead or anywhere in it.
     await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_TIER_LIMITS.anonymous} palettes`)
-    await expect(page.locator('.dgh-hero')).not.toContainText('101')
+    await expect(page.locator('.dgh-hero')).not.toContainText(String(LIBRARY_PALETTES.length))
+    await expect(page.locator('.dgh-hero')).not.toContainText(/\d+\s+palettes/i)
   })
 
   test('no withheld palette colour appears in the text, the markup or the paint', async ({ page }) => {
@@ -196,6 +198,9 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
   test('the free rung shows ten palettes and says so', async ({ page }) => {
     await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.free)
     await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_TIER_LIMITS.free} palettes`)
+    // The masthead is held to the same honesty: ten shown, so no library total.
+    await expect(page.locator('.dgh-hero')).not.toContainText(String(LIBRARY_PALETTES.length))
+    await expect(page.locator('.dgh-hero')).not.toContainText(/\d+\s+palettes/i)
   })
 
   test('no withheld palette colour appears in the text, the markup or the paint', async ({ page }) => {
@@ -249,6 +254,19 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
     const heading = await page.locator('.lockt-cta-head').first().innerText()
     const numbersIn = (s) => (s.match(/\d+/g) || []).map(Number)
     expect(numbersIn(heading), 'the CTA must name how many rows are locked').toContain(FREE_REMAINING)
+  })
+})
+
+test.describe('the masthead count — signed in, Pro', () => {
+  test('the Pro rung names the full library size in the hero', async ({ page }) => {
+    watch(page, 'a Pro member browsing for a palette')
+    await signIn(page, { plan: 'pro' })
+    await go(page, ROUTE)
+    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    // Pro sees every palette, so the masthead may state the whole library.
+    await expect(page.locator('.dgh-hero')).toContainText(`${LIBRARY_PALETTES.length} palettes`)
+    // And nothing is locked for them: no placeholders, no wall.
+    await expect(page.locator('.lockt-card')).toHaveCount(0)
   })
 })
 
