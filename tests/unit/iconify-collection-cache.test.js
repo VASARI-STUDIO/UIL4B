@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  COLLECTION_TTL, COLLECTION_RETRY_DELAY, MANUAL_RETRY_FLOOR, createCollectionLoader,
+  COLLECTION_TTL, COLLECTION_RETRY_DELAY, createCollectionLoader,
   readCollectionCache, writeCollectionCache,
 } from '../../src/utils/iconifyCollectionCache.js'
 
@@ -138,42 +138,12 @@ test('after 60 seconds, a failed stale refresh is requested again', async () => 
 
 test('a manual retry requests a failed stale refresh at once and shares one request', async () => {
   let calls = 0
-  const { load, clock } = staleFailureLoader({ fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
+  const { load } = staleFailureLoader({ fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
   await load(PREFIX)
-  clock.now += MANUAL_RETRY_FLOOR
   const manual = load(PREFIX, { manualRetry: true })
   assert.equal(load(PREFIX, { manualRetry: true }), manual)
   assert.deepEqual(await manual, DATA)
   assert.equal(calls, 2)
-})
-
-test('manual retries closer than the floor to a failure do not request again, stale or not', async () => {
-  let calls = 0
-  const { load, clock } = staleFailureLoader({ fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
-  await load(PREFIX)
-  clock.now += 1000
-  assert.deepEqual(await load(PREFIX, { manualRetry: true }), DATA)
-  clock.now += 1000
-  assert.deepEqual(await load(PREFIX, { manualRetry: true }), DATA)
-  assert.equal(calls, 1)
-  clock.now = NOW + MANUAL_RETRY_FLOOR
-  assert.deepEqual(await load(PREFIX, { manualRetry: true }), DATA)
-  assert.equal(calls, 2)
-
-  const error = TypeError('Failed to fetch')
-  let bareCalls = 0
-  let at = NOW
-  const bare = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => at,
-    fetchEntry: async () => { bareCalls++; throw error } })
-  await assert.rejects(bare(PREFIX), error)
-  at += 1000
-  await assert.rejects(bare(PREFIX, { manualRetry: true }), error)
-  at += 1000
-  await assert.rejects(bare(PREFIX, { manualRetry: true }), error)
-  assert.equal(bareCalls, 1)
-  at = NOW + MANUAL_RETRY_FLOOR
-  await assert.rejects(bare(PREFIX, { manualRetry: true }), error)
-  assert.equal(bareCalls, 2)
 })
 
 test('a success after a failed stale refresh caches, persists and clears the failed state', async () => {
@@ -184,7 +154,6 @@ test('a success after a failed stale refresh caches, persists and clears the fai
   await load(PREFIX)
   assert.equal(load.failed(PREFIX), true)
   fails = false
-  clock.now += MANUAL_RETRY_FLOOR
   assert.deepEqual(await load(PREFIX, { manualRetry: true }), updated)
   assert.deepEqual(cache.get(PREFIX), updated)
   assert.equal(JSON.parse(store.getItem(KEY)).at, clock.now)
@@ -195,15 +164,13 @@ test('a failed first load with no stored data rejects, and a manual retry (chip 
   let calls = 0
   let fails = true
   const error = TypeError('Failed to fetch')
-  let at = NOW
-  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => at,
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
     fetchEntry: async () => { calls++; if (fails) throw error; return DATA } })
   await assert.rejects(load(PREFIX), error)
   assert.equal(load.failed(PREFIX), true)
   await assert.rejects(load(PREFIX), error)
   assert.equal(calls, 1)
   fails = false
-  at += MANUAL_RETRY_FLOOR
   assert.deepEqual(await load(PREFIX, { manualRetry: true }), DATA)
   assert.equal(calls, 2)
   assert.equal(load.failed(PREFIX), false)
