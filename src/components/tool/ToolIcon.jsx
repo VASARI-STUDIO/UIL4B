@@ -29,6 +29,7 @@ const GLYPHS = {
   x: (<><path d="M18.75 5.25 5.25 18.75" /><path d="M18.75 18.75 5.25 5.25" /></>),
   'x-circle': (<><circle cx="12" cy="12" r="9" /><path d="m15 9-6 6" /><path d="m15 15-6-6" /></>),
   'arrows-left-right': (<><path d="m16.5 13.5 3 3-3 3" /><path d="M4.5 16.5h15" /><path d="m7.5 10.5-3-3 3-3" /><path d="M19.5 7.5h-15" /></>),
+  eye: (<><path d="M2.25 12S5.6 5.25 12 5.25 21.75 12 21.75 12 18.4 18.75 12 18.75 2.25 12 2.25 12Z" /><circle cx="12" cy="12" r="3" /></>),
   swatches: (<><path d="M7.5 20.25a3 3 0 0 1-3-3V4.5a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v12.75a3 3 0 0 1-3 3Z" /><path d="M10.5 9.1 14.4 5.2a.75.75 0 0 1 1.06 0l3.18 3.18a.75.75 0 0 1 0 1.06L9.9 18.2" /><path d="M13.8 14.25h5.45a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75H7.5" /><circle cx="7.5" cy="17.25" r=".38" /></>),
   'upload-simple': (<><path d="M12 14.25V3.75" /><path d="M20.25 14.25v5.25a.75.75 0 0 1-.75.75h-15a.75.75 0 0 1-.75-.75v-5.25" /><path d="M8.25 7.5 12 3.75l3.75 3.75" /></>),
   'dots-three': (<><circle cx="5.25" cy="12" r="1.1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" /><circle cx="18.75" cy="12" r="1.1" fill="currentColor" stroke="none" /></>),
