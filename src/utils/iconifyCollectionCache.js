@@ -1,5 +1,7 @@
 export const COLLECTION_TTL = 7 * 24 * 60 * 60 * 1000
 export const COLLECTION_RETRY_DELAY = 60 * 1000
+// Even an explicit retry waits this long after a failure, so repeated clicks on a scope of many packs don't flood a service that is down.
+export const MANUAL_RETRY_FLOOR = 3000
 const storageKey = (prefix) => `uil4b:iconify:collection:${prefix}`
 const defaultStorage = () => globalThis.localStorage
 const CREDIT_FIELDS = ['name', 'author', 'url', 'spdx', 'licenceUrl']
@@ -52,7 +54,8 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
       return Promise.resolve(stored.data)
     }
     const failed = failures.get(prefix)
-    if (!manualRetry && failed && now() - failed.at < COLLECTION_RETRY_DELAY) {
+    const sinceFailure = failed ? now() - failed.at : Infinity
+    if (sinceFailure < MANUAL_RETRY_FLOOR || (!manualRetry && sinceFailure < COLLECTION_RETRY_DELAY)) {
       return stored ? Promise.resolve(stored.data) : Promise.reject(failed.error)
     }
     const request = Promise.resolve().then(() => fetchEntry(prefix))
