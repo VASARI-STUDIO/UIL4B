@@ -14,6 +14,8 @@ import {
   ANIMATION_FORMATS, PLAY_OPTIONS, FPS_MAX, MAX_ANIMATION_SIDE, clampFps, loopArgs,
   framesToAnimationArgs, videoToAnimationArgs, parseFrame, parseTime, moveItem,
   animationSize, fitContain, describeTiming, frameName, FRAME_PATTERN, findFormat,
+  cropRect, turnFilters, directionFilter, outputSize, outputFrames, reverseFits, commitNumber,
+  REVERSE_MAX_PIXELS, animatedImageSeconds,
 } from '../../src/utils/mediaEncode.js'
 
 const after = (args, flag) => args[args.indexOf(flag) + 1]
@@ -99,7 +101,9 @@ test('video → animation keeps the GIF it always made, and trims when asked', (
     '-loop', '0', 'output.gif'])
 
   const trimmed = videoToAnimationArgs({ format: 'mp4', input: 'in.mov', fps: 30, width: 720, start: 1.5, length: 3 })
-  assert.deepEqual(trimmed.slice(0, 6), ['-ss', '1.5', '-i', 'in.mov', '-t', '3'])
+  // Both trim flags are input options: -t after -i would cap the OUTPUT length,
+  // which cuts a slowed-down clip short.
+  assert.deepEqual(trimmed.slice(0, 6), ['-ss', '1.5', '-t', '3', '-i', 'in.mov'])
   assert.equal(after(trimmed, '-vf'), 'fps=30,scale=trunc(min(720\\,iw*1920/ih)/2)*2:-2:flags=lanczos')
   assert.ok(trimmed.includes('-an'), 'the video outputs are silent, and say so in the UI')
 
@@ -209,4 +213,140 @@ test('frame names match the pattern the encoder reads', () => {
   assert.equal(frameName(299), 'f0300.png')
   assert.equal(FRAME_PATTERN, 'f%04d.png')
   assert.equal(findFormat('nope').id, 'gif', 'an unknown id falls back rather than throwing')
+})
+
+// ── The video editor: crop, turn, speed, direction, GIF palette ──────────────
+test('crop: each shape keeps an even, centred or anchored box, or nothing to cut', () => {
+  assert.deepEqual(cropRect(1920, 1080, '1:1'), { w: 1080, h: 1080, x: 420, y: 0, axis: 'x' })
+  assert.deepEqual(cropRect(1920, 1080, '4:5'), { w: 864, h: 1080, x: 528, y: 0, axis: 'x' })
+  // 1080 x 9/16 = 607.5 floors to 606; (1920 - 606) / 2 = 657 floors to 656.
+  assert.deepEqual(cropRect(1920, 1080, '9:16'), { w: 606, h: 1080, x: 656, y: 0, axis: 'x' })
+  assert.equal(cropRect(1920, 1080, '16:9', 'start'), null)
+  assert.equal(cropRect(1920, 1080, '16:9', 'end'), null)
+  assert.equal(cropRect(1920, 1080, 'original'), null)
+  assert.equal(cropRect(0, 0, '1:1'), null)
+  assert.deepEqual(cropRect(1080, 1920, '1:1', 'start'), { w: 1080, h: 1080, x: 0, y: 0, axis: 'y' })
+  assert.deepEqual(cropRect(1080, 1920, '1:1', 'end'), { w: 1080, h: 1080, x: 0, y: 840, axis: 'y' })
+  assert.deepEqual(cropRect(500, 375, '1:1'), { w: 374, h: 374, x: 62, y: 0, axis: 'x' })
+})
+
+test('crop: a source too thin to cut a 2 px box from gives nothing to cut', () => {
+  assert.equal(cropRect(3, 1000, '16:9'), null)
+  assert.equal(cropRect(1000, 3, '9:16'), null)
+  assert.equal(cropRect(1, 1000, '1:1'), null)
+})
+
+test('turn and direction filters', () => {
+  assert.deepEqual(turnFilters(90), ['transpose=1'])
+  assert.deepEqual(turnFilters(270), ['transpose=2'])
+  assert.deepEqual(turnFilters(180), ['hflip', 'vflip'])
+  assert.deepEqual(turnFilters(0), [])
+  assert.equal(directionFilter('forward'), '')
+  assert.equal(directionFilter('reverse'), 'reverse')
+  assert.equal(directionFilter('boomerang'),
+    'split[fw][bw];[bw]reverse,trim=start_frame=1,setpts=PTS-STARTPTS[rv];[fw][rv]concat=n=2:v=1:a=0')
+})
+
+test('video → animation with every edit on, in the pinned filter order', () => {
+  const args = videoToAnimationArgs({
+    format: 'gif', input: 'input.mp4', fps: 12, width: 480, start: 2, length: 3,
+    speed: 2, crop: cropRect(1920, 1080, '1:1'), turn: 90, flipH: true,
+    direction: 'boomerang', colours: 64, dither: 'diffusion',
+  })
+  assert.deepEqual(args, ['-ss', '2', '-t', '3', '-i', 'input.mp4', '-vf',
+    'setpts=PTS/2,fps=12,crop=1080:1080:420:0,transpose=1,hflip,scale=trunc(min(480\\,iw*1920/ih)/2)*2:-2:flags=lanczos,split[fw][bw];[bw]reverse,trim=start_frame=1,setpts=PTS-STARTPTS[rv];[fw][rv]concat=n=2:v=1:a=0,split[s0][s1];[s0]palettegen=max_colors=64[p];[s1][p]paletteuse=dither=floyd_steinberg',
+    '-loop', '0', 'output.gif'])
+})
+
+test('reverse to MP4 puts speed first and reverse last', () => {
+  const args = videoToAnimationArgs({ format: 'mp4', input: 'a.mp4', fps: 30, width: 720, speed: 0.5, direction: 'reverse' })
+  assert.equal(after(args, '-vf'), 'setpts=PTS/0.5,fps=30,scale=trunc(min(720\\,iw*1920/ih)/2)*2:-2:flags=lanczos,reverse')
+})
+
+test('GIF Colours and Dither replace Quality for video; defaults match the Quality medium output', () => {
+  const gif = (o) => after(videoToAnimationArgs({ format: 'gif', input: 'i.mp4', fps: 10, width: 480, ...o }), '-vf')
+  assert.match(gif({ colours: 256 }), /\[s0\]palettegen\[p\]/)
+  assert.match(gif({ colours: 1 }), /palettegen=max_colors=2\[p\]/, 'clamped up to 2')
+  assert.match(gif({ colours: 999 }), /\[s0\]palettegen\[p\]/, 'clamped down to 256')
+  assert.match(gif({ dither: 'none' }), /paletteuse=dither=none$/)
+  assert.match(gif({ dither: 'pattern' }), /paletteuse=dither=bayer:bayer_scale=2$/)
+  assert.match(gif({ dither: 'nope' }), /paletteuse=dither=bayer:bayer_scale=2$/, 'unknown dither falls back to the default')
+  // Quality is ignored for a video GIF; it is still what the animation builder uses.
+  assert.match(gif({ quality: 'high' }), /paletteuse=dither=bayer:bayer_scale=2$/)
+})
+
+test('output size mirrors ffmpeg -2 rounding; frames count the boomerang once', () => {
+  assert.deepEqual(outputSize(1920, 1080, { crop: cropRect(1920, 1080, '1:1'), width: 480 }), { w: 480, h: 480 })
+  assert.deepEqual(outputSize(1920, 1080, { turn: 90, width: 480 }), { w: 480, h: 854 })
+  assert.deepEqual(outputSize(1920, 1080, { crop: cropRect(1920, 1080, '9:16'), width: 480 }), { w: 480, h: 856 })
+  assert.deepEqual(outputSize(0, 0, {}), { w: 0, h: 0 })
+  // The 1920 height cap is measured on the picture after crop and turn: a
+  // 1920x1080 clip turned 90 degrees is 1080x1920 and cannot be 1920 wide.
+  assert.deepEqual(outputSize(1080, 1920, { width: 1920 }), { w: 1080, h: 1920 })
+  assert.deepEqual(outputSize(1920, 1080, { turn: 90, width: 1920 }), { w: 1080, h: 1920 })
+  assert.deepEqual(outputSize(1920, 1080, { turn: 180, width: 1920 }), { w: 1920, h: 1080 })
+  assert.equal(outputFrames(3, 2, 12, 'boomerang'), 35)
+  assert.equal(outputFrames(3, 2, 12, 'forward'), 18)
+  assert.equal(outputFrames(0, 1, 10, 'forward'), 1)
+})
+
+test('reverse is allowed only while the frames fit in memory', () => {
+  assert.equal(reverseFits(30, 480, 270), true)
+  assert.equal(reverseFits(300, 1080, 608), false)
+  assert.equal(REVERSE_MAX_PIXELS, 300 * 640 * 640)
+})
+
+test('a number field that is cleared falls back, and never snaps to its floor', () => {
+  const colours = { min: 2, max: 256, fallback: 256 }
+  assert.equal(commitNumber('', colours), 256)
+  assert.equal(commitNumber('  ', colours), 256)
+  assert.equal(commitNumber('abc', colours), 256)
+  assert.equal(commitNumber('1', colours), 2)
+  assert.equal(commitNumber('300', colours), 256)
+  assert.equal(commitNumber('12.7', { min: 1, max: 50, fallback: 10 }), 13)
+  assert.equal(commitNumber('2.35', { min: 0, max: 10, fallback: 0, decimals: 1 }), 2.4)
+  assert.equal(commitNumber('0', { min: 16, max: 2000, fallback: 480 }), 16)
+})
+
+// ── Reading a GIF's or WebP's length from its own header ─────────────────────
+const ascii = (s) => [...s].map((c) => c.charCodeAt(0))
+const gifOf = (delaysCs) => new Uint8Array([
+  ...ascii('GIF89a'), 2, 0, 2, 0, 0, 0, 0,
+  ...delaysCs.flatMap((d) => [
+    0x21, 0xf9, 4, 0, d & 255, d >> 8, 0, 0, // graphic control: delay in hundredths of a second
+    0x2c, 0, 0, 0, 0, 2, 0, 2, 0, 0, // image descriptor, no local palette
+    2, 2, 0x44, 0x01, 0, // LZW size, one data block, terminator
+  ]),
+  0x3b,
+])
+const u32 = (n) => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255]
+const webpOf = (delaysMs) => {
+  const chunks = delaysMs.flatMap((d) => {
+    const body = [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, d & 255, (d >> 8) & 255, d >> 16, 0, ...ascii('VP8L'), ...u32(2), 0, 0]
+    return [...ascii('ANMF'), ...u32(body.length), ...body]
+  })
+  return new Uint8Array([...ascii('RIFF'), ...u32(4 + chunks.length), ...ascii('WEBP'), ...chunks])
+}
+
+test('animatedImageSeconds sums a GIF\'s frame delays', () => {
+  assert.equal(animatedImageSeconds(gifOf([10, 10, 30])), 0.5)
+  // A delay under 2 hundredths plays at 0.1 s, as browsers and ffmpeg do.
+  assert.equal(animatedImageSeconds(gifOf([0, 1, 20])), 0.4)
+})
+
+test('animatedImageSeconds sums an animated WebP\'s frame durations', () => {
+  assert.equal(animatedImageSeconds(webpOf([100, 100, 300])), 0.5)
+  assert.equal(animatedImageSeconds(webpOf([0, 100])), 0.11)
+})
+
+test('animatedImageSeconds says 0 (cannot tell) for anything else', () => {
+  assert.equal(animatedImageSeconds(gifOf([10])), 0) // one frame is not an animation
+  assert.equal(animatedImageSeconds(webpOf([100])), 0)
+  assert.equal(animatedImageSeconds(new Uint8Array(40)), 0) // not a GIF or WebP
+  assert.equal(animatedImageSeconds(new Uint8Array(0)), 0)
+  assert.equal(animatedImageSeconds(gifOf([10, 10]).slice(0, 30)), 0) // cut off inside the first frame
+})
+
+test('commitNumber reads a comma as a decimal point', () => {
+  assert.equal(commitNumber('1,5', { min: 0, max: 10, fallback: 0, decimals: 1 }), 1.5)
 })

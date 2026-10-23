@@ -245,6 +245,95 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Segmented choices (Video tab) ────────────────────────────────────────────
+   One tray per question; every option divides the row, so nothing wraps and
+   nothing scrolls sideways. The selected option is told apart by ground,
+   elevation and ink together, never colour alone. Options are 38px: one height
+   per tier, the same as .fc-field. */
+
+.fc .fc-seg-wrap { display: grid; gap: 8px; min-width: 0; }
+
+.fc .fc-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  max-width: 520px;
+  background: var(--inp);
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.fc .fc-seg-opt {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 4px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--t2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-s);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-1) ease-out, color var(--dur-1) ease-out;
+}
+
+.fc .fc-seg-opt[aria-checked="true"] {
+  color: var(--t0);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+}
+
+@media (hover: hover) {
+  .fc .fc-seg-opt:hover:not([aria-checked="true"]):not([aria-disabled="true"]) { color: var(--t0); background: var(--hvr); }
+}
+
+.fc .fc-seg-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.fc .fc-seg-opt[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+
+.fc .fc-seg--shape .fc-seg-opt { min-height: 52px; font-size: 11px; }
+
+.fc .fc-seg--speed .fc-seg-opt { font-variant-numeric: tabular-nums; }
+
+.fc .fc-seg-glyph { width: 16px; height: 16px; flex: none; }
+
+/* Chained with .fc-btn so it outranks the button's own weight and hover. */
+.fc .fc-btn.fc-toggle { font-weight: 500; }
+
+/* The same selected look as a segmented option: ground, hairline and ink. */
+.fc .fc-toggle[aria-pressed="true"],
+.fc .fc-toggle[aria-pressed="true"]:hover:not(:disabled) {
+  color: var(--t0);
+  background: var(--bg-1);
+  border-color: transparent;
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+}
+
+/* Flip horizontal and vertical stay side by side at every width. */
+.fc .fc-flip-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.fc .fc-flip-pair .fc-btn { min-width: 0; padding-inline: 8px; white-space: nowrap; }
+
+/* One line, so the action bar's height never changes with its text. */
+.fc .fc-consequence {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .fc .fc-range { display: flex; align-items: center; gap: 8px; }
 
 .fc .fc-range .fc-field { flex: 1 1 0; }
@@ -604,6 +693,38 @@
   border-radius: var(--radius-xl);
 }
 
+/* The editor's stage: a box with the media's own ratio, so the crop overlay's
+   percentages land on the picture and never on letterbox bars. Before the file
+   has said its size it is 16:9, and snaps once to the real ratio. */
+.fc .fc-vstage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(100%, calc(420px * var(--src-w, 16) / var(--src-h, 9)));
+  aspect-ratio: var(--src-w, 16) / var(--src-h, 9);
+  margin-inline: auto;
+  background: var(--bg-3);
+  border-radius: var(--radius-xl);
+}
+
+.fc .fc-vstage > video,
+.fc .fc-vstage > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* The kept part of the picture; the outside is dimmed by the shadow, which the
+   stage's overflow clips. Never animated: it follows the controls at once. */
+.fc .fc-crop-keep {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  outline: 1px solid var(--t0);
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--bg-0) 62%, transparent);
+}
+
 .fc .fc-source-card {
   display: flex;
   flex-wrap: wrap;
@@ -854,6 +975,8 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
   }
+  /* A focused field must not end up behind the pinned action bar. */
+  .fc .fc-inspector .fc-field { scroll-margin-bottom: 120px; }
   .fc .fc-actionbar {
     position: sticky;
     bottom: 0;
@@ -869,11 +992,21 @@
 
 @media (max-width: 640px) {
   .fc .fc-video { max-height: 260px; }
+  .fc .fc-vstage { width: min(100%, calc(260px * var(--src-w, 16) / var(--src-h, 9))); }
 }
 
 @media (max-width: 480px) {
   .fc .fc-grid { grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr)); }
   .fc .fc-pair { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* On a phone the fixed tab bar covers the bottom edge, so the pinned action bar
+   rests on top of it. The tab bar already pads for the home indicator. */
+@media (max-width: 767px) {
+  html.has-tabbar .fc .fc-actionbar {
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 10px;
+  }
 }
 
 /* Touch: every control this page draws reaches 44px under a coarse pointer
@@ -886,6 +1019,8 @@
   .fc .fc-field,
   .fc .fc-bg-pick { min-height: 44px; }
   .fc .fc-field { height: 44px; }
+  .fc .fc-seg-opt { min-height: 44px; }
+  .fc .fc-seg--shape .fc-seg-opt { min-height: 52px; }
   .fc .fc-remove { width: 44px; height: 44px; top: 12px; right: 12px; }
   .fc .fc-check { min-height: 44px; }
   .fc .fc-check input { width: 24px; height: 24px; }
