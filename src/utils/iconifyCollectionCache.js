@@ -31,7 +31,9 @@ export function writeCollectionCache(prefix, data, { storage = defaultStorage, n
 }
 
 // Concurrent callers share a request; only an explicit retry bypasses the failure cooldown.
-export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now }) {
+// `cooldownExempt(error)` marks failures that must not start the cooldown (a session
+// problem is fixed by the viewer, not by waiting).
+export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now, cooldownExempt = () => false }) {
   const pending = new Map()
   const failures = new Map()
   return function getCollectionNames(prefix, { manualRetry = false } = {}) {
@@ -54,7 +56,7 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
         return data
       })
       .catch(error => {
-        failures.set(prefix, { at: now(), error })
+        if (!cooldownExempt(error)) failures.set(prefix, { at: now(), error })
         if (!stored) throw error
         cache.set(prefix, stored.data)
         return stored.data
