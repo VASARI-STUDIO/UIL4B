@@ -42,6 +42,13 @@ test('nothing renders while auth or the first page is still loading', () => {
   }
 })
 
+test('a signed-in viewer sees no band until their plan is known', () => {
+  for (const tier of ['free', 'paid']) {
+    assert.equal(endBandKind({ ...settled, tier, planLoading: true }), null, `${tier} while the plan loads`)
+  }
+  assert.equal(endBandKind({ ...settled, tier: 'free', planLoading: false }), 'free', 'plan known: the free band returns')
+})
+
 test('a gated scope, My Icons and an empty search each own the screen, so there is no band', () => {
   for (const tier of ['anon', 'free']) {
     assert.equal(endBandKind({ ...settled, tier, gated: { need: 'free', label: 'Solar' } }), null, `${tier} gated`)

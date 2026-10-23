@@ -2330,7 +2330,7 @@ function IconEndTease({ cells, cols, cellH, chip, onAction }) {
 }
 
 export default function IconLibrary({ onCopy, onCatalogue }) {
-  const { isPro, plan } = useSubscription()
+  const { isPro, plan, planKnown } = useSubscription()
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   const navigate = useNavigate()
@@ -3365,7 +3365,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      band, and a gated scope never gets one (the wall is the whole answer). The
      rules live in endBandKind so they can be tested without rendering. */
   const endKind = endBandKind({
-    tier, authLoading, isMyIcons, gated, loading, resultCount: icons.length, hasMore,
+    tier, authLoading, planLoading: !planKnown, isMyIcons, gated, loading, resultCount: icons.length, hasMore,
   })
   const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the

@@ -525,6 +525,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   await chooseMenuOption(page, page.locator('.lbry-select'), 'custom')
   await page.waitForTimeout(1500)
   await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
+  await expect(page.locator('.ig-end'), 'My Icons carries no end band at any tier').toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Recently copied' })).toBeVisible()
 

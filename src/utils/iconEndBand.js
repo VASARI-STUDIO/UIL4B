@@ -14,6 +14,10 @@ import { canSeePack } from '../data/iconPackTiers.js'
  *   authLoading   whether an account exists is still unknown. Showing the
  *                 signed-out band to a signed-in viewer for a beat would say
  *                 something untrue.
+ *   planLoading   a signed-in viewer's plan is still on its way, so `free` is
+ *                 only the default held until it lands. A Pro viewer would see
+ *                 the upgrade band for a beat. A signed-out viewer's plan is
+ *                 never loading.
  *   loading       the skeleton grid owns the space.
  *   gated         a gated scope replaces the grid with its own wall.
  *   isMyIcons     that view has its own hint.
@@ -26,9 +30,9 @@ import { canSeePack } from '../data/iconPackTiers.js'
  * A Pro viewer gets nothing. `tier` is the output of viewerTier().
  */
 export function endBandKind({
-  tier, authLoading, isMyIcons, gated, loading, resultCount, hasMore,
+  tier, authLoading, planLoading, isMyIcons, gated, loading, resultCount, hasMore,
 } = {}) {
-  if (authLoading || isMyIcons || gated || loading || !(resultCount > 0)) return null
+  if (authLoading || planLoading || isMyIcons || gated || loading || !(resultCount > 0)) return null
   if (tier === 'anon') return 'anon'
   if (tier === 'free' && !hasMore) return 'free'
   return null
