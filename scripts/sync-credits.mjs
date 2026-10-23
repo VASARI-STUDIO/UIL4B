@@ -80,7 +80,7 @@ const OUT = path.join(root, 'src', 'data', 'creditsManifest.json')
  * So: the words come from the FILENAME, and each word's spelling comes from a
  * dictionary built out of every project name in the directory. GEIST + MONO →
  * "Geist" (from Geist's notice) + "Mono" (from JetBrains Mono's) → "Geist
- * Mono". Nothing is written down; add a seventh font and it spells itself.
+ * Mono". Nothing is written down; add another font and it spells itself.
  */
 /* A notice quotes its own URL verbatim in `copyright`; `source` is where the
  * "Project" link goes. Where the URL a notice carries no longer resolves, the
