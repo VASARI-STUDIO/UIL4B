@@ -6,7 +6,7 @@
 // A licence review on 2026-09-23 found the product using third-party icon sets,
 // typefaces and packages whose licences REQUIRE attribution, and attributing
 // almost none of them. Four icon sets are Creative Commons Attribution sets and
-// two of those are on the free tier; six typefaces ship under the SIL Open Font
+// two of those are on the free tier; the typefaces ship under the SIL Open Font
 // License, which asks that each font's copyright notice travel with the files
 // we serve; the Firebase SDK ships as `firebase` plus forty-odd `@firebase/*`
 // packages, all Apache-2.0, which asks the same of its notices. The app's only
@@ -70,7 +70,7 @@ const ASSET_CREDITS = [
     name: 'Iconify',
     author: 'Vjacheslav Trushkin and the Iconify contributors',
     url: 'https://iconify.design',
-    licenceUrl: 'https://github.com/iconifydesign/iconify/blob/main/license.txt',
+    licenceUrl: 'https://github.com/iconify/iconify/blob/main/license.txt',
     licenceName: 'MIT',
     used: 'The Icon Library reads every catalogue and every glyph through the public Iconify API. Iconify hosts and normalises the sets credited above; it does not own them.',
     checkedIn: 'src/pages/IconLibrary.jsx',
@@ -214,7 +214,7 @@ export default function Credits() {
         <div className="crd-sec-head">
           <h2 className="crd-h2" id="crd-type">Typefaces</h2>
           <p className="crd-sec-note">
-            All six are served from this origin under the{' '}
+            All {FONT_CREDITS.length} are served from this origin under the{' '}
             <Ext href="https://openfontlicense.org/">SIL Open Font License 1.1</Ext>,
             which asks that each font’s own notice travel with the files. These
             are those notices, read out of the licence files beside the fonts.
@@ -223,10 +223,10 @@ export default function Credits() {
         <ul className="crd-list crd-list--fonts">
           {FONT_CREDITS.map((font) => (
             <li className="crd-row crd-row--font" key={font.slug}>
-              {/* NO SPECIMEN. Three of these six families are served but not
+              {/* NO SPECIMEN. Some of these families are served but not
                   declared in global.css's @font-face block (they back the type
                   tools' previews), so setting each row in its own face would
-                  render three of them correctly and three of them in Geist —
+                  render some of them correctly and the rest in Geist —
                   a page about accuracy being inaccurate in its own typography. */}
               <span className="crd-row-name">{font.family}</span>
               <p className="crd-copy">{font.copyright}</p>
