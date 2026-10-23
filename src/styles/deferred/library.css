@@ -1168,10 +1168,11 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .ic>span:not(.ic-pack){font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
 @media(max-width:640px){
   .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
-  .lib-surface .ic{gap:6px;min-height:72px;padding:12px 4px;border-radius:var(--radius)}
-  .lib-surface .ic>span:not(.ic-pack){-webkit-line-clamp:1;line-clamp:1}
-  .lib-surface .ig .ic-name{min-height:12.5px}
-  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:80.5px}
+  .lib-surface .ic{gap:6px;padding:12px 4px;border-radius:var(--radius)}
+  .lib-surface .ig .ic-name{font-size:var(--fs-micro);line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:calc(var(--fs-micro) * 2.5);flex-shrink:0}
+  .lib-surface .ig .ig-skel-labels{height:calc(var(--fs-micro) * 2.5)}
+  /* Two name lines plus a 36px glyph, 6px gap, 24px padding and 2px border. */
+  .lib-surface .ig .ic,.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:calc(68px + var(--fs-micro) * 2.5)}
 }
 
 
