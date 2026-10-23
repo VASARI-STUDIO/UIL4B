@@ -60,6 +60,15 @@ export const STROKE_UNIT_PX = 'px'
  */
 export const DEFAULT_ICON_SIZE = 48
 
+/** Visible explanation of scaling the exported file, in the slider's pixels. */
+export function strokeScaleCaption({ size, stroke, absolute }) {
+  const fmtPx = (n) => String(Math.round(n * 100) / 100)
+  return {
+    prefix: `If the file is scaled to ${fmtPx(size * 2)}px, the stroke `,
+    effect: absolute ? `stays ${fmtPx(stroke)}px` : `grows to ${fmtPx(stroke * 2)}px`,
+  }
+}
+
 // Five decimals keeps an irrational conversion (a 20-unit viewBox at size 48
 // gives 0.83333) inside a thousandth of a pixel once the renderer scales it
 // back up, while leaving the common cases exact: 1, 0.75, 0.375.
