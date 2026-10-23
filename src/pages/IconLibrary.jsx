@@ -26,6 +26,12 @@ import {
   stickyStrokePx, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
+import {
+  endBandKind, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
+} from '../utils/iconEndBand'
+// The closing arrow shared with the homepage's closing band.
+import PhGlyph from '../components/spectrum/PhGlyph'
+import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 // WHO SEES WHICH PACK. One editable table, no pack name in this file's logic —
 // see src/data/iconPackTiers.js for the founder's rule and for how to move a
 // pack between tiers with a one-word edit.
@@ -2207,11 +2213,11 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
 
    References, and what each decided:
 
-   Discord Shop (mobbin.com/screens/97aac9b3-d4a7-474a-8724-032fe870507a) is the
-     capped grid exactly: three real rows, then one line and one button. Nothing
-     is blurred and nothing is faked — what you can see, you can use. That is
-     why the signed-out grid holds 60 REAL, fully working icons rather than 60
-     teasers, and why the wall sits after them rather than over them.
+   The capped grid is real rows first, then one line and one button. Every icon
+     inside the cap is real and fully working, so the signed-out grid holds 60
+     usable icons rather than 60 teasers, and the band sits after them rather
+     than over them. The only blur is on the extra rows IconEndBand draws past
+     the cap (see IconEndTease): those are decoration, not results.
 
    Jasper (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd) puts the
      plan word on the FILTER as well as on the card — its left-hand category
@@ -2226,11 +2232,10 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
      nothing on its own — the account dialog opens when the button is PRESSED,
      never on arrival or on scroll.
 
-   Descript (mobbin.com/screens/a20d8888-d4cb-47af-a0e1-9dde567f13e7) is the
-     other counter-example: a permanent "You're on a Free plan" strip across the
-     top of the app. There is no persistent banner here. A signed-in free
-     viewer sees markers on the controls and nothing else until they reach for
-     a locked set.
+   There is no persistent plan banner. A signed-in free viewer sees markers on
+     the controls, and the upgrade band only at the true end of their results
+     (a search, a pack or a group), never as a standing strip or during an
+     endless scroll. See endBandKind in utils/iconEndBand.js.
 
    NOT A FAILED LOAD, and not the refused state either. `.ig-notice` — "Couldn't
    reach the icon service" — is a plain row with a Try again button and means
@@ -2255,8 +2260,77 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
   )
 }
 
+/* ── THE END OF THE GRID ─────────────────────────────────────────────────────
+   The closing band at the bottom of the results: one display sentence, one dim
+   line, one filled pill and, where a second way on is true, a ghost pill. It is
+   one surface with no card. The text and both controls are always on screen;
+   nothing here depends on hover.
+
+   `kind` is 'anon' or 'free' (see endBandKind). `to` makes the primary control
+   a link to /plans; without it the primary control is a button that calls
+   `onAction`. `tease` is a slot above the copy: the signed-out band fills it
+   with IconEndTease, the free band leaves it empty. A blurred row for free
+   viewers would be passed here, as long as it holds no markup of a pack that
+   viewer may not load (see src/utils/lockedPreview.js). */
+function IconEndBand({ kind, heading, body, action, onAction, to, secondary, tease }) {
+  const arrow = (
+    <span className="ig-end-pill-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
+  )
+  return (
+    <section className="ig-end" data-gate={kind} data-end={kind} aria-labelledby="ig-end-h">
+      {tease}
+      <div className="ig-end-copy">
+        <h2 id="ig-end-h" className="ig-end-h">{heading}</h2>
+        <p className="ig-end-p" role={kind === 'anon' ? 'status' : undefined}>{body}</p>
+        <div className="ig-end-cta">
+          {to
+            ? <Link to={to} className="ig-end-pill" onClick={onAction}>{action}{arrow}</Link>
+            : <button type="button" className="ig-end-pill" onClick={onAction}>{action}{arrow}</button>}
+          {secondary && <Link to="/plans" className="ig-end-ghost">{secondary}</Link>}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* Two rows of blurred icons that continue the grid past the cap. They use a
+   grid of their own (the live grid's column count, passed in) rather than the
+   `.ig` class, so anything that looks up the results grid still finds exactly
+   one. The glyphs are
+   path strings already compiled into the bundle and belong to packs a signed-out
+   viewer may browse (see pickTeaseIcons), so this makes no request and holds
+   nothing gated. The cells carry no name, no pack and no title, are not
+   focusable, and are hidden from assistive tech: the band below says the same
+   thing in words. A click or tap anywhere on them runs `onAction`. The hover
+   chip is CSS-only and appears for a fine pointer; touch relies on the band. */
+function IconEndTease({ cells, cols, cellH, chip, onAction }) {
+  return (
+    <div className="ig-end-tease" aria-hidden="true" onClick={onAction}
+      style={{ '--ig-end-cols': cols, ...(cellH ? { '--ig-end-cell-h': `${cellH}px` } : null) }}>
+      {cells.map((cell, i) => {
+        const { row, edge } = teaseCellPlace(i, cols)
+        return (
+          <span key={cell.key} className="ig-end-cell" data-row={row} data-edge={edge || undefined}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              strokeLinecap="round" strokeLinejoin="round" focusable="false">
+              <path d={cell.d} />
+            </svg>
+            <span className="ig-end-chip">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                strokeLinecap="round" strokeLinejoin="round" focusable="false">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              {chip}
+            </span>
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function IconLibrary({ onCopy, onCatalogue }) {
-  const { isPro, plan } = useSubscription()
+  const { isPro, plan, planKnown } = useSubscription()
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   const navigate = useNavigate()
@@ -3281,17 +3355,18 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
 
-  /* ── THE THREE WALLS, AND WHICH ONE IS ON SCREEN ─────────────────────────
+  /* ── THE WALLS AND THE END BAND, AND WHICH ONE IS ON SCREEN ───────────────
      `gated` replaces the grid: the viewer asked for a set they may not have, so
      there is nothing to show and one thing to say.
-     `capWall` sits UNDER the grid: the viewer has everything they asked for,
-     there is simply less of it, and the sentence says why. Savee's placement
-     (cited in components/library/LockedTease.jsx) — what you have, then how to
-     get more — and Discord Shop's shape: real content, then one line, one
-     button.
-     A signed-in free viewer gets NEITHER until they reach for something. No
-     standing banner; see the Descript note on IconGateWall. */
-  const capWall = tier === 'anon' && !isMyIcons && !gated && !loading && icons.length > 0
+     `endKind` picks the band that sits UNDER the grid: the viewer has everything
+     they asked for, there is simply less of it, and the band says why. Signed
+     out, it is the cap explanation plus a way in. Signed in on the free plan,
+     it is an upgrade band shown only once the results have run out. Pro gets no
+     band, and a gated scope never gets one (the wall is the whole answer). The
+     rules live in endBandKind so they can be tested without rendering. */
+  const endKind = endBandKind({
+    tier, authLoading, planLoading: !planKnown, isMyIcons, gated, loading, resultCount: icons.length, hasMore,
+  })
   const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
@@ -3299,6 +3374,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     () => visiblePacks(ALL_PACKS, 'free').length - visiblePacks(ALL_PACKS, 'anon').length,
     [],
   )
+  // How many packs Pro adds over a free account, derived the same way.
+  const packsProAddsCount = useMemo(() => packsProAdds(ALL_PACKS), [])
   const openGate = useCallback((need) => {
     // The reason string follows the convention every gate in this app uses — a
     // short lowercase verb phrase naming the action, which LoginPopup renders
@@ -3335,6 +3412,46 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // whenever the list itself is replaced (a new pack, group or query), since
   // positions then mean different icons.
   const gridRef = useRef(null)
+
+  /* The blurred rows under the signed-out grid must line up with its columns, so
+     the column count is read from the live grid's resolved template and kept
+     current as the page resizes. The height of a real cell is read the same way
+     so the blurred rows sit on the grid's row pitch. Until they are read the
+     phone/desktop defaults are used; the band is below the fold at first paint,
+     so the correction is not seen. Only measured while the signed-out band is
+     showing. */
+  const [gridCols, setGridCols] = useState(null)
+  const [gridCellH, setGridCellH] = useState(null)
+  useEffect(() => {
+    if (endKind !== 'anon') return
+    const grid = gridRef.current
+    if (!grid) return
+    const read = () => {
+      const n = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length
+      if (n > 0) setGridCols(n)
+      const h = grid.querySelector('.ic')?.getBoundingClientRect().height
+      if (h > 0) setGridCellH(Math.round(h * 100) / 100)
+    }
+    read()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(read)
+    observer.observe(grid)
+    return () => observer.disconnect()
+  }, [endKind])
+  const teaseCols = gridCols
+    || teaseColsFallback(typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches)
+  // Built-in icons only, from packs this viewer may browse, and not repeating
+  // anything already on screen. No network involved.
+  const teaseCells = useMemo(() => {
+    if (endKind !== 'anon') return []
+    return pickTeaseIcons({
+      icons: window.icons || [],
+      shownNames: icons.slice(0, visible).map((i) => i.name),
+      count: teaseCellCount(teaseCols),
+      canSee,
+    })
+  }, [endKind, icons, visible, teaseCols, canSee])
+
   const [waitingStatus, setWaitingStatus] = useState(false)
   useEffect(() => {
     const grid = gridRef.current
@@ -3783,18 +3900,39 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               </p>
             )}
 
-            {/* THE SIGNED-OUT CAP, SAID OUT LOUD. The status line above counts
-                what is on screen; it cannot say that the number is a rule
-                rather than the size of the library, and a count with no
-                explanation is the thing that makes a cap feel punitive. This
-                sentence states the rule and the button is the way past it. */}
-            {capWall && (
-              <IconGateWall
+            {/* THE END BAND. The status line above counts what is on screen; it
+                cannot say that the number is a rule rather than the size of
+                the library, and a count with no explanation is the thing that
+                makes a cap feel punitive. Signed out, the band states the rule
+                and the Log in button is the way past it. Signed in on the free
+                plan, it names what Pro adds and links to the plans. */}
+            {endKind === 'anon' && (
+              <IconEndBand
                 kind="anon"
-                heading={ICON_GATE_COPY.anon.heading(packsBehindLogin)}
-                body={ICON_GATE_COPY.anon.body(ANON_ICON_CAP)}
-                action={ICON_GATE_COPY.anon.action}
+                heading={ICON_GATE_COPY.end.anon.heading}
+                body={ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, packsBehindLogin)}
+                action={ICON_GATE_COPY.end.anon.action}
                 onAction={() => openGate('free')}
+                secondary={ICON_GATE_COPY.end.anon.secondary}
+                tease={teaseCells.length > 0 && (
+                  <IconEndTease
+                    cells={teaseCells}
+                    cols={teaseCols}
+                    cellH={gridCellH}
+                    chip={ICON_GATE_COPY.end.anon.chip}
+                    onAction={() => openGate('free')}
+                  />
+                )}
+              />
+            )}
+            {endKind === 'free' && (
+              <IconEndBand
+                kind="free"
+                heading={ICON_GATE_COPY.end.free.heading}
+                body={ICON_GATE_COPY.end.free.body(packsProAddsCount, FREE_COPIES_PER_DAY)}
+                action={ICON_GATE_COPY.end.free.action}
+                to="/plans"
+                onAction={() => reportUpgradeGate('icon-library-end')}
               />
             )}
 

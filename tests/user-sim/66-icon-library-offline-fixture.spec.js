@@ -424,8 +424,8 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
 
   // The cap is SAID, not only done — a count with no explanation is what makes
   // a limit feel punitive rather than deliberate.
-  await expect(page.locator('.ig-gate')).toBeVisible()
-  await expect(page.locator('.ig-gate')).toContainText(String(cells))
+  await expect(page.locator('.ig-end[data-gate="anon"]')).toBeVisible()
+  await expect(page.locator('.ig-end[data-gate="anon"]')).toContainText(String(cells))
   // And it is not the outage state: nothing refused anything here.
   await expect(page.locator('.ig-notice')).toHaveCount(0)
   await ctx.close()
@@ -450,8 +450,10 @@ test('signed in free: the solid packs open, the brand, flag and emoji packs are 
     expect(fetched, `${pack} is Pro and must never appear in a URL for a free account`).not.toContain(pack)
   }
   // NO STANDING BANNER for a free account. The markers on the pack menu and the
-  // group tray are the whole of it until they reach for something.
+  // group tray are the whole of it until the results run out; browsing every
+  // pack never runs out, so neither the wall nor the end band is on screen.
   await expect(page.locator('.ig-gate')).toHaveCount(0)
+  await expect(page.locator('.ig-end')).toHaveCount(0)
   await ctx.close()
 })
 
@@ -523,6 +525,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   await chooseMenuOption(page, page.locator('.lbry-select'), 'custom')
   await page.waitForTimeout(1500)
   await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
+  await expect(page.locator('.ig-end'), 'My Icons carries no end band at any tier').toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Recently copied' })).toBeVisible()
 
