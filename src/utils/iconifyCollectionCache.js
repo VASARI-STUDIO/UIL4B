@@ -37,10 +37,13 @@ export function writeCollectionCache(prefix, data, { storage = defaultStorage, n
 }
 
 // Concurrent callers share a request; only an explicit retry bypasses the failure cooldown.
+// A failed refresh of stale stored data still resolves with that data, but it is never put in
+// the in-memory cache, so the cooldown and manual retries can request again. failed(prefix) tells
+// the UI that the last request for a prefix failed and nothing newer has loaded since.
 export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now }) {
   const pending = new Map()
   const failures = new Map()
-  return function getCollectionNames(prefix, { manualRetry = false } = {}) {
+  function getCollectionNames(prefix, { manualRetry = false } = {}) {
     if (cache.has(prefix)) return Promise.resolve(cache.get(prefix))
     if (pending.has(prefix)) return pending.get(prefix)
     const stored = readCollectionCache(prefix, { storage, now: now() })
@@ -50,7 +53,7 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
     }
     const failed = failures.get(prefix)
     if (!manualRetry && failed && now() - failed.at < COLLECTION_RETRY_DELAY) {
-      return Promise.reject(failed.error)
+      return stored ? Promise.resolve(stored.data) : Promise.reject(failed.error)
     }
     const request = Promise.resolve().then(() => fetchEntry(prefix))
       .then(data => {
@@ -62,11 +65,12 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
       .catch(error => {
         failures.set(prefix, { at: now(), error })
         if (!stored) throw error
-        cache.set(prefix, stored.data)
         return stored.data
       })
       .finally(() => pending.delete(prefix))
     pending.set(prefix, request)
     return request
   }
+  getCollectionNames.failed = (prefix) => failures.has(prefix) && !cache.has(prefix)
+  return getCollectionNames
 }

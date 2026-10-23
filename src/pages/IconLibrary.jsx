@@ -2691,6 +2691,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
+        // An old saved list is still shown when its refresh failed; the notice and Try again stay up.
+        if (getCollectionNames.failed(packFilter)) setLoadError(true)
         const names = capList(keepWeight(packFilter, raw, weightRef.current, groupKey))
         // A weight this pack does not draw is an empty answer, not a failure:
         // the built-in fallback would show Regular glyphs under a Bold label.
@@ -2981,9 +2983,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       setWeight('regular')
     }
     if (query.trim().length >= 2) doSearch(query, { pack: nextPack, group })
-    else if (nextPack) browsePack(nextPack, group)
-    else if (group) browseGroup(group)
-    else browseAll()
+    else if (nextPack) browsePack(nextPack, group, true)
+    else if (group) browseGroup(group, true)
+    else browseAll(true)
   }
 
   // Which weights the current scope can honour, and why not when it cannot.
@@ -3024,9 +3026,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setGroup(nextGroup)
     // Collections browse original artwork without replacing the stored weight.
     if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
-    else if (pack) browsePack(pack, nextGroup)
-    else if (nextGroup) browseGroup(nextGroup)
-    else browseAll()
+    else if (pack) browsePack(pack, nextGroup, true)
+    else if (nextGroup) browseGroup(nextGroup, true)
+    else browseAll(true)
   }
 
   const handleIconClick = (icon) => {
