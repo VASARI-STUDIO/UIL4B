@@ -236,19 +236,36 @@
 }
 .sp-ramp--hero .sp-ramp-bars { height: clamp(140px, 18vw, 232px); padding: 0 2px; }
 
+@property --sp-lift { syntax: '<number>'; inherits: false; initial-value: 1; }
 .sp-ramp-bar {
   flex: 1 1 0;
   min-width: 0;
   height: var(--sp-bar-h, 60%);
-  transform-origin: bottom;
-  background: hsl(calc(var(--sp-h, 8deg) + var(--sp-spin, 0deg)) var(--sp-s, 58%) var(--sp-l, 56%));
-  transition: transform .24s var(--sp-ease), filter .2s ease;
+  --sp-c: hsl(calc(var(--sp-h, 8deg) + var(--sp-spin, 0deg)) var(--sp-s, 58%) var(--sp-l, 56%));
+  background: var(--sp-c);
+  transition: height var(--dur-2) var(--sp-ease), filter var(--dur-2) var(--sp-ease);
 }
 /* The design lays the bars out in whole pixels (floor of the share, spread
    with space-between). SpectrumRamp writes that width once per resize. */
 .sp-ramp[style*="--sp-bar-w"] .sp-ramp-bar { flex: 0 0 auto; width: var(--sp-bar-w, auto); }
+/* A hovered bar grows by its HEIGHT and lifts by brightness(1.08), written as
+   the same per-channel multiply on its colour (--sp-lift), so it stays in
+   ordinary paint. A transform, a `filter` or an animated colour each give the
+   bar its own compositor layer or render surface while it runs, and that layer
+   snaps the bar's edges to the device-pixel grid differently from the paint
+   around it: the bar's edge and the gap beside it then jump a pixel mid-hover.
+   The strip has a fixed height and the bars sit on its floor (align-items:
+   flex-end), so a taller bar grows upward and moves nothing else. `filter`
+   stays as the fallback where relative colours are missing. */
 @media (hover: hover) and (pointer: fine) {
-  .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar:hover { transform: scale3d(1, 1.07, 1); filter: brightness(1.08); }
+  .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar:hover { height: calc(var(--sp-bar-h, 60%) * 1.07); filter: brightness(1.08); }
+  @supports (color: rgb(from red r g b)) {
+    .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar {
+      background: rgb(from var(--sp-c) calc(r * var(--sp-lift)) calc(g * var(--sp-lift)) calc(b * var(--sp-lift)));
+      transition: height var(--dur-2) var(--sp-ease), --sp-lift var(--dur-2) var(--sp-ease);
+    }
+    .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar:hover { --sp-lift: 1.08; filter: none; }
+  }
 }
 
 .sp-ramp-mirror {
@@ -1175,10 +1192,12 @@
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html[data-reduced-motion="true"]) .spectrum .sp-disc-cta::after { transition: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
 }
 
 /* ── FORCED COLOURS ──────────────────────────────────────────────────────────
