@@ -1168,11 +1168,19 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .ic>span:not(.ic-pack){font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
 @media(max-width:640px){
   .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
-  .lib-surface .ic{gap:6px;padding:12px 4px;border-radius:var(--radius)}
-  .lib-surface .ig .ic-name{font-size:var(--fs-micro);line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:calc(var(--fs-micro) * 2.5);flex-shrink:0}
-  .lib-surface .ig .ig-skel-labels{height:calc(var(--fs-micro) * 2.5)}
-  /* Two name lines plus a 36px glyph, 6px gap, 24px padding and 2px border. */
-  .lib-surface .ig .ic,.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:calc(68px + var(--fs-micro) * 2.5)}
+  .lib-surface .ic{gap:6px;padding:12px 2px;border-radius:var(--radius)}
+  /* Names stay at the design's 10px (line 1168) on up to two lines of 12.5px. */
+  .lib-surface .ig .ic-name{line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:25px;flex-shrink:0}
+  /* Every glyph takes 24px of layout: a 36px chip overflows 6px into the padding and the gap, as in a pack cell. */
+  .lib-surface .ig .ic .ig-chip{margin-block:-6px}
+  .lib-surface .ig .ig-skel .ig-skel-slot{height:24px}
+  .lib-surface .ig .ig-skel-labels{height:25px}
+  /* 1 border + 12 padding + 24 glyph + 6 gap + 25 name + 12 padding + 1 border. */
+  .lib-surface .ig .ic,.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:81px}
+}
+/* Below 360px a 4-up name box is 60px, too narrow for long names on two lines. */
+@media(max-width:359px){
+  .lib-surface .ig{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
 
