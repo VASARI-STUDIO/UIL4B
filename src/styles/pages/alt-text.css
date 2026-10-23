@@ -101,6 +101,49 @@
 
 .alt-page .alt-dropzone-sub { font-size: 12px; color: var(--t2); }
 
+/* ── Region card: a notice, where Gemini can't be used ─────────────────────── */
+/* Left-aligned, icon beside the text, so it reads as a notice above the guide
+   (which still applies) and not as an empty dropzone. The 2px inline margin
+   puts its edges level with the guide's (`.alt-examples` pads 2px). */
+
+.alt-page .alt-region {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 6px;
+  align-items: start;
+  margin-inline: 2px;
+  padding: 24px;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+}
+
+/* Its own tile, so a dropzone restyle can't change this card. */
+.alt-page .alt-region-ico {
+  grid-row: 1 / span 4;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--t1);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.alt-page .alt-region-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; color: var(--t0); }
+
+.alt-page .alt-region-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-xs); }
+
+.alt-page .alt-region-body { margin: 0; max-width: 72ch; font-size: 13px; line-height: 1.55; color: var(--t1); }
+
+.alt-page .alt-region-note { margin: 2px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+
+/* An anchor wearing the pill: no underline, hugs its text, sits under the note. */
+.alt-page .alt-region-link { justify-self: start; margin-top: 10px; text-decoration: none; }
+
 /* ── Side card: page context, length ──────────────────────────────────────── */
 
 .alt-page .alt-field {
@@ -267,6 +310,9 @@
 @media (max-width: 560px) {
   .alt-page .alt-examples-grid { grid-template-columns: 1fr; }
   .alt-page .alt-dropzone { padding: 22px 16px; }
+  .alt-page .alt-region { grid-template-columns: minmax(0, 1fr); padding: 20px 16px; row-gap: 8px; }
+  .alt-page .alt-region-ico { grid-row: auto; }
+  .alt-page .alt-region-link { min-height: 44px; }
 }
 
 @media (pointer: coarse) {
