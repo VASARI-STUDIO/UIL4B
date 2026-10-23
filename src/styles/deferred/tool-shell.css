@@ -330,7 +330,7 @@
   html.bkit-on.has-tabbar{scroll-padding-bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
 }
 html.bkit-on{scroll-padding-block-end:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
-html.bkit-on body .toast{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 12px)}
+html.bkit-on body .toast{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 12px + var(--toast-lift))}
 html.bkit-on body .global-feedback-btn{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 14px)}
 html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 20px)}
 @media(max-width:520px){
