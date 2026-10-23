@@ -6,6 +6,8 @@ import {
 import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch'
 import { useProject } from '../contexts/ProjectContext'
 import { contrastRatio, textColorForBg } from '../utils/colors'
+import { getLenis } from '../hooks/useSmoothScroll'
+import { refreshScrollLimit } from '../utils/hashLanding'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
 import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
@@ -111,6 +113,10 @@ export default function TintTool({ onCopy, toast }) {
     consumeTintDraft()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Lenis re-measures on a debounce, so a wheel in the first moments after the
+  // route mounts would stop at the previous page's limit.
+  useEffect(() => { refreshScrollLimit(getLenis) }, [])
 
   const selIndex = Math.max(0, sources.findIndex((s) => s.id === selectedId))
   const selected = sources[selIndex] || sources[0]

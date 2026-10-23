@@ -115,3 +115,23 @@ test('unavailable storage still leaves successful responses in memory', async ()
   await load(PREFIX)
   assert.equal(calls, 1)
 })
+
+test('credit links that are not https are dropped when read back from storage', () => {
+  const store = memoryStorage()
+  const credit = {
+    name: 'Lucide', author: 'Lucide Contributors', spdx: 'ISC',
+    url: 'javascript:alert(1)', licenceUrl: 'http://example.com/LICENSE',
+  }
+  store.setItem(KEY, JSON.stringify({ v: 1, at: NOW, data: { ...DATA, credit } }))
+  const { data } = readCollectionCache(PREFIX, { storage: () => store, now: NOW })
+  assert.equal('url' in data.credit, false)
+  assert.equal('licenceUrl' in data.credit, false)
+  assert.deepEqual(data.credit, { name: 'Lucide', author: 'Lucide Contributors', spdx: 'ISC' })
+})
+
+test('https credit links survive a round trip through storage', () => {
+  const store = memoryStorage()
+  const credit = { name: 'Lucide', url: 'https://lucide.dev', licenceUrl: 'https://example.com/LICENSE' }
+  writeCollectionCache(PREFIX, { ...DATA, credit }, { storage: () => store, now: NOW })
+  assert.deepEqual(readCollectionCache(PREFIX, { storage: () => store, now: NOW }).data.credit, credit)
+})
