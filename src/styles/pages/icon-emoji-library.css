@@ -83,7 +83,20 @@
 /* "Fixed" stroke is a toggle, so its on-state is the same wash — not an
    accent fill with accent text, which claimed it was the next action. */
 .iel-page .icust-abs{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
-.iel-page .icust-abs.active{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--bh);color:var(--t0)}
+.iel-page .icust-abs.active{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--t0);color:var(--t0)}
+.iel-page .icust-abs:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){
+  .iel-page .icust-abs{position:relative}
+  .iel-page .icust-abs::after{content:"";position:absolute;inset:-7px 0}
+}
+.iel-page .icust-stroke{display:flex;flex-direction:column;gap:4px}
+/* Align with the slider: 56px label + 12px row gap. Reserve one caption line,
+   two on phones where the off caption wraps. */
+.iel-page .icust-stroke-note{margin:0;padding-left:68px;min-height:calc(1em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
+.iel-page .icust-stroke-note b{font-weight:560;color:var(--t0);font-variant-numeric:tabular-nums}
+@media(max-width:560px){
+  .iel-page .icust-stroke-note{padding-left:0;min-height:calc(2em * 1.4)}
+}
 .iel-page .icust-pro{border-radius:var(--radius);background:transparent}
 /* The Pro word on the line-style box. It rides the nav's `.pnav-pop-tag`
    class, which is a 999px accent pill painted in `--accent-strong`. Here it

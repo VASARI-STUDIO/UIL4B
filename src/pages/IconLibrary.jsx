@@ -23,7 +23,7 @@ import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
   STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
-  stickyStrokePx, strokeAttrForPx, viewBoxOf,
+  stickyStrokePx, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 // WHO SEES WHICH PACK. One editable table, no pack name in this file's logic —
@@ -1393,6 +1393,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const strokeCaption = strokeScaleCaption({ size, stroke, absolute: absStroke })
   const serializedOutput = useMemo(
     () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
     [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
@@ -1760,38 +1761,42 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
 
               {isStroke && (
-                <div className="icust-row">
-                  <label htmlFor="icust-stroke">Stroke</label>
-                  {/* The `px` unit is half the fix: the slider now reports the
-                      width the exported file actually measures, at any size. */}
-                  <SnapSlider
-                    id="icust-stroke"
-                    min={STROKE_PX.min}
-                    max={STROKE_PX.max}
-                    step={STROKE_PX.step}
-                    value={stroke}
-                    defaultValue={STROKE_PX.default}
-                    snaps={STROKE_PX.snaps}
-                    unit="px"
-                    inputMin={STROKE_PX.inputMin}
-                    inputMax={STROKE_PX.inputMax}
-                    decimals={2}
-                    ariaLabel="Stroke width in pixels"
-                    onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
-                  />
-                  {/* Both modes now measure the same pixels AT THIS SIZE; they
-                      differ only once someone rescales the exported file. Off:
-                      the stroke scales with the artwork, the way an icon should.
-                      On (non-scaling-stroke): it holds this pixel width at every
-                      size it is ever drawn at. "Absolute" never said that. */}
-                  <button
-                    type="button"
-                    className={`icust-abs${absStroke ? ' active' : ''}`}
-                    aria-pressed={absStroke}
-                    aria-label={`Fixed stroke width — hold ${stroke}px even when the SVG is resized`}
-                    title={`Hold this stroke at ${stroke}px even if the SVG is resized later. Off: the stroke scales with the icon.`}
-                    onClick={() => { setAbsStroke(a => !a); markDirty() }}
-                  >Fixed</button>
+                <div className="icust-stroke">
+                  <div className="icust-row">
+                    <label htmlFor="icust-stroke">Stroke</label>
+                    {/* The `px` unit is half the fix: the slider now reports the
+                        width the exported file actually measures, at any size. */}
+                    <SnapSlider
+                      id="icust-stroke"
+                      min={STROKE_PX.min}
+                      max={STROKE_PX.max}
+                      step={STROKE_PX.step}
+                      value={stroke}
+                      defaultValue={STROKE_PX.default}
+                      snaps={STROKE_PX.snaps}
+                      unit="px"
+                      inputMin={STROKE_PX.inputMin}
+                      inputMax={STROKE_PX.inputMax}
+                      decimals={2}
+                      ariaLabel="Stroke width in pixels"
+                      onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
+                    />
+                    {/* Both modes now measure the same pixels AT THIS SIZE; they
+                        differ only once someone rescales the exported file. Off:
+                        the stroke scales with the artwork, the way an icon should.
+                        On (non-scaling-stroke): it holds this pixel width at every
+                        size it is ever drawn at. "Absolute" never said that. */}
+                    <button
+                      type="button"
+                      className={`icust-abs${absStroke ? ' active' : ''}`}
+                      aria-pressed={absStroke}
+                      aria-describedby="icust-stroke-note"
+                      onClick={() => { setAbsStroke(a => !a); markDirty() }}
+                    >Fixed</button>
+                  </div>
+                  <p id="icust-stroke-note" className="icust-stroke-note">
+                    {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
+                  </p>
                 </div>
               )}
 
