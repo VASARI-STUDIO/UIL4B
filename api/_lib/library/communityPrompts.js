@@ -38,9 +38,9 @@ Palette and type
 
 Sections
 1. A navy strip: "Burst pipe or no hot water? We answer the phone 24/7" and the number. Nav: a pipe-elbow mark, Prices, About, Service area, Contact, "Book online" and a copper call pill.
-2. Hero: area and licence line, "Plumbing, priced before we pick up a spanner.", a lede with one operational fact (average arrival 47 minutes last month), "Call" and "See every price", and three ticks (no call-out fee weekdays, fixed price before we start, 12-month guarantee).
+2. Hero: area and licence line, "Plumbing, priced before we pick up a spanner.", a lede on how the pricing works, "Call" and "See every price", and three ticks (no call-out fee weekdays, fixed price before we start, 12-month guarantee).
    Beside it, a card holding an SVG section through a two-storey house: rooms labelled in mono, bath, toilet, basin, kitchen bench, gas cooktop, a 250 L hot water system, water and gas meters, and the pipework drawn in its code colours with a legend. A leak drips inside the wall void. Six numbered hotspots (burst pipe, blocked drain, hot water, gas cooktop, hidden leak, bathroom renovation) are buttons with aria-pressed and arrow-key support. Choosing one updates the panel beside it (aria-live): category, name, "from" price, what we actually do, usual duration, the after-hours surcharge and "Book this job".
-3. Facts band: since 2009, jobs completed, licence number, public liability cover. Facts the business can state about itself, never a rating or a review count.
+3. Facts band: since 2009, licence number, public liability cover. Facts the business can state about itself, never a rating or a review count.
 4. Prices: a typographic rate card, not cards: number, service, one line of what happens, usual time, "from" price. Build it from the same data as the hotspots so the two can never disagree. A note on GST, after-hours and parts.
 5. About: the founder's story with dates, the team of six with roles, and a drawn service-area map (coastline, Lake Macquarie, suburbs, the depot, a dashed 40-minute ring) plus the suburbs as text.
 6. Contact: the number set large, hours as a list, and a form with visible labels (name, phone, email, suburb, what's happening), inline validation, and an inline confirmation saying it is a demonstration and nothing was sent.
@@ -59,7 +59,7 @@ Motion: on load the pipes draw in by stroke-dashoffset (waste, then cold, hot an
     text: `Build a one-page, scroll-driven site for Osteria Luna, a forty-seat Italian restaurant at 114 Gertrude Street, Fitzroy, Melbourne. Invent the rest and commit to it: a chef with a dated history, a co-owner who runs the floor, opening hours with Monday closed, and a spring menu of four dishes per course with prices in AUD. The idea: the site is one night at the restaurant, and the moon keeps time.
 
 Palette and type
-- Olive-black night #11140F (raised surfaces #161A13 and #1D2219), moonlight bone #E3E6DA for text (#B8BDAD secondary), and one accent, tomato #EE5033, for the button, the rail underline and focus rings. Hairlines are bone at 13% alpha.
+- Olive-black night #11140F (raised surfaces #161A13 and #1D2219), moonlight bone #E3E6DA for text (#B8BDAD secondary), and one accent, tomato #EE5033, for the button (with night-coloured text), the rail underline and focus rings. Hairlines are bone at 13% alpha.
 - Cormorant Garamond (light and italic) for display, Hanken Grotesk for body and UI. Set the name huge: "Osteria" at about 8vw and "Luna" in italic at about 19vw, line-height 0.8.
 
 Sections
@@ -87,7 +87,7 @@ Under prefers-reduced-motion nothing pins or travels sideways, the moon stays in
     title: 'Dark mode analytics dashboard',
     text: `Design a dark analytics dashboard for Keel, an analytics product, measuring one named business: Fernway Supply Co., an outdoor-gear Shopify store selling in Australia and New Zealand. Every label follows from that.
 
-Layout: a slim sidebar with drawn icons and real section names; a header with the store, the date range (18 Aug to 14 Sep 2026 against the previous 28 days) and a live marker; four KPI tabs (net revenue, orders, sessions, conversion rate) that switch the main chart; a live activity feed; a revenue-by-channel table; a checkout funnel.
+Layout: a slim sidebar with drawn icons and real section names; a header with the store, the date range (18 Aug to 14 Sep 2026 against the previous 28 days) and a sample-data marker; four KPI tabs (net revenue, orders, sessions, conversion rate) that switch the main chart; a live activity feed; a revenue-by-channel table; a checkout funnel.
 
 The data is the design:
 - Every KPI shows the previous period and a delta, and conversion moves the wrong way, in coral, with its cause annotated on the chart.
@@ -116,7 +116,7 @@ Palette and type
 - Familjen Grotesk (600, tracking about -0.058em at display sizes) for everything, JetBrains Mono for labels. Each artefact uses its own face, which is the point of a type designer's portfolio: Gloock, Bodoni Moda, Unbounded, Young Serif, Big Shoulders Display, Anton.
 
 Sections
-1. Hero: an availability pill ("Booking from November. Two identity slots left this year."), then the statement "I design brands / that people / remember." at about 10vw on three lines, the second indented, with a lime marker behind "remember.". As the hero scrolls away the three lines drift apart sideways at different rates. A hairline, a one-line description of who she works for, and "41 projects since 2014 / scroll for eight of them" in mono.
+1. Hero: an availability pill ("Booking from November."), then the statement "I design brands / that people / remember." at about 10vw on three lines, the second indented, with a lime marker behind "remember.". As the hero scrolls away the three lines drift apart sideways at different rates. A hairline, a one-line description of who she works for, and "41 projects since 2014 / scroll for eight of them" in mono.
 2. Selected work, a horizontal chapter on a black ground: pin it (position: sticky inside a section whose height equals the track's overflow width plus one viewport) and translate the track as the reader scrolls down. A counter ("03 / 08") and a lime progress bar track it; inside each frame the artwork drifts slightly against its card. The eight: Lume Oat Co. oat-drink carton (2026), Teatro da Encosta season poster (2026), Kiosk Quarterly magazine cover (2025), Norte Cycling Club logotype with a north arrow in the o (2025), Salt & Iron shortbread tin from above (2024), a Lisbon metro exit sign (2024), a Casa da Ribeira live fado LP sleeve with the record sliding out (2023), and a Casa Azulejo tile system (2022). Each caption: number, client, discipline and year.
 3. About: pinned beside an identity card (studio, independent since, before, languages, tools, projects a year). The bio is split into words that light from 16% to full opacity as the reader scrolls.
 4. Index: all eight as rows (number, client, what they do, discipline, year). A lime fill rises behind the row on hover or focus, and a small copy of the artefact follows the pointer.
@@ -146,13 +146,13 @@ Palette and type
 
 Sections
 1. Nav: a small barbell mark, "Dev Aranda / Strength · Brunswick East", The 12 weeks, Programmes, The coach, FAQ, and a red "Book a free consult" pill.
-2. Hero: "Stronger in twelve weeks. Here's the plan." with the second sentence in the dim chalk; a lede that says exactly what the consult involves (movement screen, a conversation, a first go on the bar, no sales pitch); two buttons; and a true capacity fact drawn as fourteen small bars, two of them empty: "12 of 14 client places taken".
+2. Hero: "Stronger in twelve weeks. Here's the plan." with the second sentence in the dim chalk; a lede that says exactly what the consult involves (movement screen, a conversation, a first go on the bar, no sales pitch); and two buttons.
    Beside it, the plan on a bar: an SVG barbell (shaft, sleeves, collars) whose plates are loaded per side from the standard set for the planned working weight, a huge number ("100 kg squat"), the week and phase, and a range slider for weeks 1 to 12 with aria-valuetext, a filled track and phase ticks underneath (Foundation, Build, Peak, Test). The example lifter tests at 70 kg; weeks 4 and 8 are deliberately lighter. A note says it is the plan for an example lifter, not a promise.
 3. What the twelve weeks look like: four phases with week ranges and what changes in each, then "What we measure" as a table (top sets, bar speed, sleep and soreness, optional bodyweight, optional waist) with how often and why.
 4. Programmes: three columns separated by hairlines, not cards: strength for fat loss ($95 a week), the full block ($135, "where I suggest most people start"), and sport ($165). Sessions per week, what is included, and a note that there is no joining fee or lock-in after the first block.
 5. The coach: a short manifesto line, years coaching, certifications by name with years, specialities, and a line in a red-ruled box about who he is not the right coach for.
 6. FAQ with native details and summary: all-in cost, coming back after years off, missed sessions, what is and is not guaranteed.
-7. Book: the true capacity fact and the next opening date, and a form with visible labels (name, mobile, email, preferred time as chips), inline validation, and an inline confirmation that says it is a demonstration and nothing was sent.
+7. Book: the next opening date, and a form with visible labels (name, mobile, email, preferred time as chips), inline validation, and an inline confirmation that says it is a demonstration and nothing was sent.
 
 Motion: on load the plan plays once, week 1 to 12 at about three weeks a second, plates sliding on and off the sleeves, and then the slider is the reader's; touching it stops the playback. Under prefers-reduced-motion it starts at week 12 with no sliding. No photographs, testimonials, before-and-after pictures, star ratings, countdown timers or invented client counts.`,
     tags: 'fitness, landing, trainer, conversion',
@@ -167,13 +167,13 @@ Motion: on load the plan plays once, week 1 to 12 at about three weeks a second,
     text: `Build the pricing page for Cronwright, which pages you when a scheduled job runs late, exits non-zero or stops checking in. The unit of pricing is the monitored job, never alerts or runs, and the page is built around it: the reader says how many jobs they run and the page shows what each plan would cost them.
 
 Palette and type
-- Warm off-white #F6F6F2, cards #FDFDFB, ink #111214 with #4D5058 secondary, hairlines at 12% ink. One signal green #12804A for "fits your jobs", the trial button and ticks, and an amber #C98A06 note for going over. No gradients.
+- Warm off-white #F6F6F2, cards #FDFDFB, ink #111214 with #4D5058 secondary, hairlines at 12% ink. One signal green #12804A for "fits your jobs", the trial button and ticks, and an amber #8A5A00 note for going over. No gradients.
 - Bricolage Grotesque 700 with tight tracking for headings and big numbers, Instrument Sans for the interface, JetBrains Mono for axis labels and small print.
 
 Page
 1. Nav with the product links (Pricing marked aria-current), Sign in, and "Start free".
 2. Heading "Pay for the jobs you watch. Nothing else." with the second sentence in grey, and one paragraph that names the unit.
-3. The calculator, one bordered panel in two halves. Left: "How many jobs do you run?", a huge live number, a logarithmic range slider from 1 to 5,000 (aria-valuetext), a 1 / 10 / 100 / 1,000 / 5,000 scale, three example chips (a side project 4, a product team 120, a data platform 3,500) that ease the slider there, and a live verdict ("Pro, $45 a month. 50 jobs included, then 70 more at $0.30 each."). Right: an SVG chart of monthly cost against jobs on a log axis: Free as a short green segment to five jobs, Pro as a solid line, Enterprise dashed, a dotted cursor and a dot on the cheapest plan, and a price tag beside it.
+3. The calculator, one bordered panel in two halves. Left: "How many jobs do you run?", a huge live number, a logarithmic range slider from 1 to 5,000 (aria-valuetext), a 1 / 10 / 100 / 1,000 / 5,000 scale, three example chips (a side project 4, a product team 120, a data platform 4,000) that ease the slider there, and a live verdict ("Pro, $45 a month. 50 jobs included, then 70 more at $0.30 each."). Right: an SVG chart of monthly cost against jobs on a log axis: Free as a short green segment to five jobs, Pro as a solid line, Enterprise dashed, a dotted cursor and a dot on the cheapest plan, and a price tag beside it.
 4. Plans with a monthly/yearly toggle (a sliding pill; yearly is "2 months free"). Free $0 for 5 jobs and 1 seat; Pro $24 a month ($20 billed yearly) with 50 jobs, then $0.30 per job, 10 seats; Enterprise from $900 a month with 2,500 jobs, then $0.18, unlimited seats, SSO and an uptime credit. Each lists five or six features, led by "Everything in <previous>, plus", with ticks and crosses that screen readers hear as included or not. Instead of a fixed "Most popular" badge, a "Fits your jobs" badge and a green wash move to whichever plan is cheapest for the number in the calculator. Toggling the period rolls the prices and rewrites each "billed as" line.
 5. An amber note: going over never stops monitoring; extra jobs are billed per day; emails at 80% and 100%; on Free a sixth job is created paused.
 6. "Compare every limit": a table with row headers for included jobs, the extra-job price, seats, shortest check interval, history, alert channels, SSO and audit log, and support. It scrolls sideways inside its own region on small screens.
@@ -266,10 +266,9 @@ Below
 - The knitter: "Knitted by Margaret Cammish, and four others in Filey", what the patterns mean, and her signature line.
 - Real tabs (arrow keys, Home and End, aria-selected, one panel at a time): Details; Size & fit with a measurement table per size and a fit note; Delivery & returns (made-to-order with initials is not returnable, but will be re-knitted once free); Care & repair (free darning for five years).
 - "Worn with it": a watch cap, sea-boot socks and a canvas smock, drawn, with colourway and price.
-- "Recently viewed": a scroll-snap rail of pattern swatches for other ganseys.
 
 No reviews, ratings, sale prices or urgency. Every control has a visible label, a hover state and a focus ring, and under prefers-reduced-motion the views switch instantly and the initials appear without knitting in.`,
-    tags: 'ecommerce, product, fashion, premium',
+    tags: 'ecommerce, product, fashion, knitwear',
     img: '',
     author: 'UIL4B Team',
     saves: 176,
@@ -281,7 +280,7 @@ No reviews, ratings, sale prices or urgency. Every control has a visible label, 
     text: `Design the four-screen first run of Swell, a surf forecast app for the east coast of Australia (buoy, wind and tide for 340 breaks between Noosa and Bermagui, read as one line), and present it as a case study: a clickable prototype first, then the whole flow, then the notes.
 
 Palette and type
-- Case-study canvas in sand #F3EDE2 with ink #0E2A30, #4B6166 secondary and 14% hairlines; a coral #E85D3F marker for the current step.
+- Case-study canvas in sand #F3EDE2 with ink #0E2A30, #4B6166 secondary and 14% hairlines; a coral #C8462B marker for the current step.
 - The app: deep sea #0E3A44 for the welcome screen and primary buttons, foam #E1F0EC for soft fills, off-white #FBF8F2 screens, coral for the "Worth it" tag. Sora throughout (700 with tight tracking for headlines), Geist Mono for labels.
 
 The prototype (first screen of the page)
