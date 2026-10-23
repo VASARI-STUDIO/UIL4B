@@ -30,8 +30,11 @@ import { WIDE_INK, inkShape } from '../utils/glyphShape'
 // see src/data/iconPackTiers.js for the founder's rule and for how to move a
 // pack between tiers with a one-word edit.
 import {
-  ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
+  ANIMATED_PACKS, ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, isAnimatedPack, tierOf, viewerTier, visiblePacks,
 } from '../data/iconPackTiers'
+// THE ANIMATED SETS NEVER TOUCH api.iconify.design FROM THE BROWSER. Their listing
+// and glyphs come only from this client, which calls the server's Pro check.
+import { ANIMATED_BATCH, animatedIcons } from '../utils/animatedIcons'
 // WHAT IS OWED TO THE PEOPLE WHO DREW THEM. Four of the sets below are Creative
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
@@ -70,6 +73,7 @@ const COLORED_PACKS = new Set([
   'logos', 'flat-color-icons', 'fxemoji', 'noto', 'noto-v1', 'twemoji', 'emojione',
   'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
   'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'token-branded',
+  'meteocons',
 ])
 // Theme-adaptive tint for the GRID/rail only (inverts monochrome art in dark mode).
 // The customizer Stage does NOT use this — it fixes contrast via a luminance swap.
@@ -264,6 +268,8 @@ const matchesWeight = (pack, name, weight) => (
 )
 
 function buildSvgUrl(host, pack, name, params = {}) {
+  // An animated set has no direct URL, ever: it loads through the server's Pro check.
+  if (isAnimatedPack(pack)) return ''
   let url = `${host}/${pack}/${name}.svg`
   const parts = []
   if (params.size) { parts.push(`width=${params.size}`, `height=${params.size}`) }
@@ -300,6 +306,13 @@ function fetchSvgText(pack, name, params = {}) {
   const key = svgKey(pack, name)
   if (cacheable && svgTextCache.has(key)) return svgTextCache.get(key)
   const p = (async () => {
+    // Animated sets: the server route, then the same standalone markup the grid builds.
+    if (isAnimatedPack(pack)) {
+      if (!(await loadGlyphBatch(pack, [name]))) throw new Error('Failed to fetch icon SVG')
+      const text = glyphSvgText(pack, name)
+      if (!text) throw new Error('Failed to fetch icon SVG')
+      return text
+    }
     for (const host of API_HOSTS) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
@@ -320,7 +333,7 @@ function fetchSvgText(pack, name, params = {}) {
 // Fire-and-forget warm-up on grid hover/focus, so by the time the click lands
 // the customizer's base markup is usually already resolved.
 const prefetchIconSvg = (icon) => {
-  if (icon?.cdn && !icon.custom && !icon.logo) fetchSvgText(icon.pack, icon.name).catch(() => {})
+  if (icon?.cdn && !icon.custom && !icon.logo && !isAnimatedPack(icon.pack)) fetchSvgText(icon.pack, icon.name).catch(() => {})
 }
 
 /* ── THE GRID ASKS FOR ONE FILE PER PACK, NOT ONE PER ICON ───────────────────
@@ -403,14 +416,19 @@ const GLYPH_RETRY_AFTER = new Map() // pack → earliest time it may be asked ag
  */
 async function loadGlyphBatch(pack, names) {
   if (!names.length) return true
-  const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
   let data
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
-    // as a broken image nobody can see.
-    if (!r.ok) return false
-    data = await r.json()
+    if (isAnimatedPack(pack)) {
+      // The server route checks the plan; a 401/403 throws and lands as "refused".
+      data = await animatedIcons.glyphs(pack, names)
+    } else {
+      const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+      // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
+      // as a broken image nobody can see.
+      if (!r.ok) return false
+      data = await r.json()
+    }
   } catch {
     return false
   }
@@ -1284,6 +1302,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [similar, setSimilar] = useState({ id: null, list: [] })
   useEffect(() => {
     if (!activeIcon?.cdn || activeIcon.custom || activeIcon.pasted) return
+    // The tiles are <img> URLs on the Iconify host, which an animated set never uses.
+    if (isAnimatedPack(activeIcon.pack)) return
     const { pack, name } = activeIcon
     if (!pack || !name) return
     const id = activeIcon.id || `${pack}:${name}`
@@ -1997,7 +2017,7 @@ function collectionToNames(d) {
 const COLLECTION_CACHE = new Map()
 
 // info=1 includes registry attribution in the same catalogue request.
-const getCollectionNames = createCollectionLoader({
+const getPublicCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
   fetchEntry: async (pack) => {
     const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
@@ -2005,6 +2025,34 @@ const getCollectionNames = createCollectionLoader({
     return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
   },
 })
+// The animated sets' listing comes from the server's Pro check, and is kept in
+// memory only: a Pro-only catalogue is never written to localStorage, where the
+// next account on this browser could read it.
+const getAnimatedCollectionNames = createCollectionLoader({
+  cache: COLLECTION_CACHE,
+  storage: () => null,
+  fetchEntry: async (pack) => {
+    const d = await animatedIcons.collection(pack)
+    return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
+  },
+})
+const getCollectionNames = (pack, options) => (
+  isAnimatedPack(pack) ? getAnimatedCollectionNames(pack, options) : getPublicCollectionNames(pack, options)
+)
+
+/** Forget everything fetched for the animated sets (the viewer is no longer Pro). */
+function purgeAnimatedCaches() {
+  for (const pack of ANIMATED_PACKS) {
+    COLLECTION_CACHE.delete(pack)
+    GLYPH_ASKED.delete(pack)
+    GLYPH_RETRY_AFTER.delete(pack)
+    const prefix = `${pack}:`
+    for (const store of [GLYPH_BODY, GLYPH_BOX, GLYPH_URI, GLYPH_FAILS, svgTextCache, svgTextReady]) {
+      for (const key of [...store.keys()]) if (key.startsWith(prefix)) store.delete(key)
+    }
+    for (const key of [...GLYPH_MISSING]) if (key.startsWith(prefix)) GLYPH_MISSING.delete(key)
+  }
+}
 
 /** The licence the registry answered for this pack, or null if it never has. */
 const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
@@ -2051,6 +2099,10 @@ const PACK_MENU = [
   {
     label: 'Flat & emoji',
     packs: [['flat-color-icons', 'Flat Color Icons'], ['twemoji', 'Twemoji'], ['noto', 'Noto Emoji'], ['fluent-emoji', 'Fluent Emoji'], ['openmoji', 'OpenMoji']],
+  },
+  {
+    label: 'Animated',
+    packs: [['line-md', 'Line MD (animated)'], ['svg-spinners', 'SVG Spinners (animated)'], ['meteocons', 'Meteocons (animated)']],
   },
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
@@ -2722,6 +2774,35 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       else browseAll()
       return
     }
+    // An animated set is searched in the names the server listed for it, never by
+    // asking the Iconify /search endpoint, which would put its prefix in a browser request.
+    if (isAnimatedPack(packFilter)) {
+      const rid = ++reqId.current
+      retryRef.current = () => doSearch(q, scope)
+      setSource('search')
+      setLoading(true); setLoadError(false); glyphFails.current = 0
+      const needle = q.toLowerCase()
+      getCollectionNames(packFilter)
+        .then(({ names, title }) => {
+          if (rid !== reqId.current) return
+          cdnOk.current = true
+          const items = capList(names
+            .filter(n => n.includes(needle) && matchesWeight(packFilter, n, weightRef.current))
+            .map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
+          if (!items.length) { renderLocal(q, packFilter); return }
+          setIcons(items)
+          setVisible(PAGE_SIZE)
+          setMode(`${items.length.toLocaleString()} matches · ${title}`)
+          setLoading(false)
+        })
+        .catch(() => {
+          if (rid !== reqId.current) return
+          cdnOk.current = false
+          setLoadError(true)
+          renderLocal(q, packFilter)
+        })
+      return
+    }
     if (cdnOk.current === false) {
       renderLocal(q, packFilter)
       return
@@ -2763,6 +2844,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         const matches = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
+          // An unscoped Pro search can name an animated set. Its glyphs only load
+          // through the server's Pro check, so a direct hit is left out of this list.
+          .filter(ic => !isAnimatedPack(ic.pack))
           .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current))
         const items = groupKey
           ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
@@ -2832,6 +2916,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   useEffect(() => {
     if (!didInit.current || lastTier.current === tier) return
     lastTier.current = tier
+    // Leaving Pro (sign-out, a lapsed plan) drops the animated sets' listing and glyphs.
+    if (tier !== 'paid') purgeAnimatedCaches()
     if (source === 'custom') browseCustom()
     else if (query.trim().length >= 2) doSearch(query, { pack, group })
     else if (pack) browsePack(pack, group)
@@ -3163,8 +3249,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       if (!wanted.size) return
       const jobs = []
       for (const [pack, names] of wanted) {
-        for (let i = 0; i < names.length; i += GLYPH_BATCH) {
-          const slice = names.slice(i, i + GLYPH_BATCH)
+        const batch = isAnimatedPack(pack) ? ANIMATED_BATCH : GLYPH_BATCH
+        for (let i = 0; i < names.length; i += batch) {
+          const slice = names.slice(i, i + batch)
           jobs.push({ pack, names: slice, done: loadGlyphBatch(pack, slice) })
         }
       }

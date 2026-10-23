@@ -30,23 +30,35 @@ export const LIBRARIES = Object.freeze({
 })
 
 /**
- * @param req   needs headers.authorization and query.library
+ * The Pro check, shared by every Pro-only GET this function hosts (the libraries
+ * here, the animated icons in ../icons/animated.js). It sends the refusal itself
+ * and resolves false, or resolves true for a verified Pro account and the caller
+ * sends its own 200. The private, no-store headers go on first, so neither a
+ * refusal nor a payload can ever be shared by a cache.
+ *
+ *   no/invalid token  401      signed in, not Pro  403      plan lookup failed  500
+ *
+ * @param req   needs headers.authorization
  * @param res   a Vercel/Express-style response
  * @param deps  { verifyIdToken(token, checkRevoked) -> decoded, readUser(uid) -> user doc data }
  */
-export async function serveLibrary(req, res, { verifyIdToken, readUser }) {
+export async function requireProUser(req, res, { verifyIdToken, readUser }) {
   res.setHeader('Cache-Control', 'private, no-store')
   res.setHeader('Vary', 'Authorization')
 
   const header = req.headers?.authorization
-  if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Authentication required' })
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Authentication required' })
+    return false
+  }
 
   let decoded
   try {
     // checkRevoked: a disabled or revoked account loses the library at once.
     decoded = await verifyIdToken(header.slice(7), true)
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired session' })
+    res.status(401).json({ error: 'Invalid or expired session' })
+    return false
   }
 
   let plan
@@ -59,9 +71,23 @@ export async function serveLibrary(req, res, { verifyIdToken, readUser }) {
       email: decoded.email_verified ? decoded.email : null,
     })
   } catch {
-    return res.status(500).json({ error: 'Could not check your plan' })
+    res.status(500).json({ error: 'Could not check your plan' })
+    return false
   }
-  if (plan.id !== 'pro') return res.status(403).json({ error: 'Pro plan required' })
+  if (plan.id !== 'pro') {
+    res.status(403).json({ error: 'Pro plan required' })
+    return false
+  }
+  return true
+}
+
+/**
+ * @param req   needs headers.authorization and query.library
+ * @param res   a Vercel/Express-style response
+ * @param deps  { verifyIdToken(token, checkRevoked) -> decoded, readUser(uid) -> user doc data }
+ */
+export async function serveLibrary(req, res, deps) {
+  if (!(await requireProUser(req, res, deps))) return
 
   const kind = req.query?.library
   if (!Object.hasOwn(LIBRARIES, kind)) {

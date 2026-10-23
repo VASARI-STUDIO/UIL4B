@@ -102,7 +102,28 @@ export const ICON_PACK_TIERS = {
   'fluent-emoji':     { tier: 'paid', why: 'No browser — Microsoft ship it as a GitHub repo. Named paid with the other emoji sets.' },
   noto:               { tier: 'paid', why: 'No icon browser — Google ship a font specimen and a GitHub repo. Named paid with the other emoji sets.' },
   openmoji:           { tier: 'paid', why: 'openmoji.org is the creator’s own free browser — named paid by the founder with the other emoji sets.' },
+
+  // ── paid · animated ──────────────────────────────────────────────────────
+  // Iconify's free animated sets (all MIT), Pro only. `animated: true` is the
+  // flag the rest of the app reads: these prefixes are NEVER requested from
+  // api.iconify.design by the browser. Their listing and glyphs come from
+  // GET /api/ai?animatedIcons=<prefix>, which checks the plan on the server
+  // (api/_lib/icons/animated.js keeps the matching allowlist, and
+  // tests/unit/animated-icons-endpoint.test.js pins the two together).
+  'line-md':          { tier: 'paid', animated: true, why: 'Material Line Icons — animated line icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  'svg-spinners':     { tier: 'paid', animated: true, why: 'SVG Spinners — animated loaders, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  meteocons:          { tier: 'paid', animated: true, why: 'Meteocons — animated weather icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
 }
+
+/** Is this one of the animated sets, which only ever load through the server's Pro check? */
+export function isAnimatedPack(prefix) {
+  return ICON_PACK_TIERS[prefix]?.animated === true
+}
+
+/** Every animated prefix in the table, in table order. */
+export const ANIMATED_PACKS = Object.freeze(
+  Object.keys(ICON_PACK_TIERS).filter((p) => ICON_PACK_TIERS[p].animated === true),
+)
 
 /* ── THE SIGNED-OUT CAP ─────────────────────────────────────────────────────
  *

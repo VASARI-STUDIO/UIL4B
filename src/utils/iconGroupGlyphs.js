@@ -9,6 +9,8 @@
 // Bodies are cached for the session at module scope, so reopening a group or
 // returning to the index costs nothing.
 
+import { isAnimatedPack } from '../data/iconPackTiers.js'
+
 const HOST = 'https://api.iconify.design'
 const BATCH = 100
 
@@ -43,6 +45,8 @@ function store(pack, names, data) {
 }
 
 async function requestBatch(pack, names, fetchImpl) {
+  // The animated sets load only through the server's Pro check, never from this host.
+  if (isAnimatedPack(pack)) return false
   const url = `${HOST}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
   try {
     const r = await fetchImpl(url, { signal: AbortSignal.timeout(8000) })
