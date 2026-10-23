@@ -265,7 +265,8 @@ export default function FileConverter({ toast }) {
           ))}
         </div>
         <p className="fc-about">
-          Convert images between PNG, JPEG, WebP, AVIF and favicon ICO, build
+          Convert images between PNG, JPEG, WebP and favicon ICO (and to AVIF
+          where your browser can make it), build
           animations from frames, edit videos and GIFs (crop, turn, speed,
           reverse) and save them as GIF, WebP, APNG, MP4 or WebM, or pull frames
           out of a video. It all runs in your browser and your files are never
