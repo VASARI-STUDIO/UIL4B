@@ -1444,14 +1444,17 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   display:grid;grid-template-columns:repeat(var(--ig-end-cols),minmax(0,1fr));gap:10px;
   margin-top:4px;
 }
-.ig-end-cell{position:relative;display:grid;place-items:center;min-height:92px;color:var(--t0)}
+.ig-end-cell{
+  position:relative;box-sizing:border-box;display:grid;place-items:start center;
+  min-height:var(--ig-end-cell-h,92px);padding-top:16px;color:var(--t0);
+}
 .ig-end-cell>svg{width:24px;height:24px;filter:blur(3px)}
 .ig-end-chip svg{flex:0 0 auto;width:12px;height:12px}
-.ig-end-cell[data-row="0"]>svg{opacity:.6}
-.ig-end-cell[data-row="1"]>svg{opacity:.32}
+.ig-end-cell[data-row="0"]>svg{opacity:.72}
+.ig-end-cell[data-row="1"]>svg{opacity:.42}
 @media(max-width:640px){
   .ig-end-tease{gap:2px}
-  .ig-end-cell{min-height:72px}
+  .ig-end-cell{min-height:var(--ig-end-cell-h,72px);padding-top:12px}
 }
 
 /* The chip. Absent on touch, where the band says the same thing in words. */
@@ -1459,7 +1462,7 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 @media (hover:hover) and (pointer:fine){
   .ig-end-cell{cursor:pointer}
   .ig-end-chip{
-    position:absolute;left:50%;top:50%;z-index:1;transform:translate(-50%,-50%);
+    position:absolute;left:50%;top:28px;z-index:1;transform:translate(-50%,-50%);
     display:inline-flex;align-items:center;gap:6px;
     padding:6px 10px;border-radius:var(--radius-pill);
     background:var(--t0);color:var(--bg-0);
@@ -1472,8 +1475,13 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   .ig-end-cell[data-edge="first"] .ig-end-chip{left:0;transform:translateY(-50%)}
   .ig-end-cell[data-edge="last"] .ig-end-chip{left:auto;right:0;transform:translateY(-50%)}
 }
+/* From 1200px the page gutter is wider than the chip's overhang, so the edge
+   chips can centre on their cell like the others. */
+@media (hover:hover) and (pointer:fine) and (min-width:1200px){
+  .ig-end-cell[data-edge] .ig-end-chip{left:50%;right:auto;transform:translate(-50%,-50%)}
+}
 
-.ig-end-copy{padding:40px 0 48px;text-align:center}
+.ig-end-copy{padding:56px 0 48px;text-align:center}
 .ig-end .ig-end-h{
   margin:0 auto;max-width:min(22ch,100%);
   font-family:var(--display);font-size:28px;font-weight:560;line-height:1.05;letter-spacing:-.035em;
@@ -1481,7 +1489,7 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 }
 .ig-end .ig-end-p{
   margin:12px auto 0;max-width:min(52ch,100%);
-  font-size:15px;line-height:1.6;color:var(--t1);text-wrap:pretty;
+  font-size:15px;line-height:1.6;color:var(--t1);text-wrap:balance;
 }
 .ig-end-cta{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px}
 
@@ -1524,11 +1532,11 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   .ig-end-cta{margin-top:28px}
 }
 @media(min-width:761px){
-  .ig-end-copy{padding:48px 0 56px}
+  .ig-end-copy{padding:64px 0 56px}
   .ig-end .ig-end-h{font-size:32px}
 }
 @media(min-width:1200px){
-  .ig-end-copy{padding:56px 0 64px}
+  .ig-end-copy{padding:72px 0 64px}
   .ig-end .ig-end-h{font-size:44px}
 }
 @media (forced-colors:active){

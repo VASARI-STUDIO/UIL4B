@@ -2303,9 +2303,10 @@ function IconEndBand({ kind, heading, body, action, onAction, to, secondary, tea
    focusable, and are hidden from assistive tech: the band below says the same
    thing in words. A click or tap anywhere on them runs `onAction`. The hover
    chip is CSS-only and appears for a fine pointer; touch relies on the band. */
-function IconEndTease({ cells, cols, chip, onAction }) {
+function IconEndTease({ cells, cols, cellH, chip, onAction }) {
   return (
-    <div className="ig-end-tease" aria-hidden="true" onClick={onAction} style={{ '--ig-end-cols': cols }}>
+    <div className="ig-end-tease" aria-hidden="true" onClick={onAction}
+      style={{ '--ig-end-cols': cols, ...(cellH ? { '--ig-end-cell-h': `${cellH}px` } : null) }}>
       {cells.map((cell, i) => {
         const { row, edge } = teaseCellPlace(i, cols)
         return (
@@ -3414,10 +3415,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   /* The blurred rows under the signed-out grid must line up with its columns, so
      the column count is read from the live grid's resolved template and kept
-     current as the page resizes. Until it is read the phone/desktop default is
-     used; the band is below the fold at first paint, so the correction is not
-     seen. Only measured while the signed-out band is showing. */
+     current as the page resizes. The height of a real cell is read the same way
+     so the blurred rows sit on the grid's row pitch. Until they are read the
+     phone/desktop defaults are used; the band is below the fold at first paint,
+     so the correction is not seen. Only measured while the signed-out band is
+     showing. */
   const [gridCols, setGridCols] = useState(null)
+  const [gridCellH, setGridCellH] = useState(null)
   useEffect(() => {
     if (endKind !== 'anon') return
     const grid = gridRef.current
@@ -3425,6 +3429,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const read = () => {
       const n = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length
       if (n > 0) setGridCols(n)
+      const h = grid.querySelector('.ic')?.getBoundingClientRect().height
+      if (h > 0) setGridCellH(Math.round(h * 100) / 100)
     }
     read()
     if (typeof ResizeObserver === 'undefined') return
@@ -3912,6 +3918,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                   <IconEndTease
                     cells={teaseCells}
                     cols={teaseCols}
+                    cellH={gridCellH}
                     chip={ICON_GATE_COPY.end.anon.chip}
                     onAction={() => openGate('free')}
                   />
