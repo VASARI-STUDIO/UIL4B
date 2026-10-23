@@ -62,7 +62,7 @@ test('the page never builds a direct Iconify request for an animated set', () =>
 
   // The batched glyph loader sends an animated prefix to the server client and only
   // builds the Iconify URL in the other branch.
-  const loader = PAGE.match(/async function loadGlyphBatch\([\s\S]*?\n\}/)[0]
+  const loader = PAGE.match(/async function loadGlyphBatchOutcome\([\s\S]*?\n\}/)[0]
   const animatedAt = loader.indexOf('animatedIcons.glyphs(')
   const directAt = loader.indexOf('API_HOSTS[0]')
   assert.ok(animatedAt > 0 && directAt > 0, 'both branches are present')
