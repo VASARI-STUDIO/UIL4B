@@ -919,6 +919,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const ctxMenuRef = useRef(null)
   const ctxTriggerRef = useRef(null)
+  const moreHiddenAtPressRef = useRef(false) // a non-mouse press landed while the More button was still faded out
   useLayoutEffect(() => {
     const el = ctxMenuRef.current
     if (!ctxMenu || !el) return
@@ -2523,7 +2524,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     aria-label={`More actions for ${role}`}
                     aria-haspopup="menu"
                     aria-expanded={actionsOpen}
+                    // a tap on a control that is still faded out must not act
+                    onPointerDown={(e) => { moreHiddenAtPressRef.current = e.pointerType !== 'mouse' && parseFloat(getComputedStyle(e.currentTarget).opacity) < 0.5 }}
+                    onPointerCancel={() => { moreHiddenAtPressRef.current = false }}
                     onClick={(e) => {
+                      if (e.detail !== 0 && moreHiddenAtPressRef.current) { moreHiddenAtPressRef.current = false; return }
+                      moreHiddenAtPressRef.current = false
                       const r = e.currentTarget.getBoundingClientRect()
                       ctxTriggerRef.current = e.currentTarget
                       setTintsIdx(null); setPickerIdx(null)
