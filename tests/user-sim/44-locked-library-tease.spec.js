@@ -32,7 +32,7 @@
 // unchanged and still gates on the flag alone, so its block is untouched.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { openPaletteTools } from './palette-helpers.js'
+import { clickPaletteAction } from './palette-helpers.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
@@ -259,7 +259,7 @@ test.describe('the same gate in the Palette Builder brands panel', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor looking for a brand palette')
     await go(page, '/create/palette')
-    await (await openPaletteTools(page)).getByRole('button', { name: 'Explore palettes' }).click()
+    await clickPaletteAction(page, 'Explore palettes')
     await page.locator('button[role="tab"]', { hasText: 'Brands' }).click()
     await expect(page.locator('.plb-galpopup-body .plb-varrow').first()).toBeVisible()
   })

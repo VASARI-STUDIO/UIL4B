@@ -2294,8 +2294,24 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
     },
+    {
+      id: 'explore', priority: 2,
+      render: () => (
+        <span className="plb-menuwrap">
+          <ToolButton icon="swatches" collapse onClick={() => (galleryOpen && galleryTab === 'community' ? closeAllMenus() : openGallery('community'))} aria-label="Explore palettes" title="Explore palettes" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'community'}>Explore</ToolButton>
+        </span>
+      ),
+      menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') },
+    },
     { id: 'system', priority: 0, align: 'end', render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
     { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
+    {
+      id: 'preview', priority: 2,
+      render: () => (
+        <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
+      ),
+      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) } },
+    },
     { id: 'div', priority: 0, divider: true },
     { id: 'undo', priority: 5, render: () => undoRedo, menu: () => <div className="plb-menu-tray">{undoRedo}</div> },
     {
@@ -2304,8 +2320,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       menu: { label: 'Randomise', icon: 'shuffle', hint: 'SPACE', onSelect: randomize },
     },
     // Overflow only — never on the row.
-    { id: 'explore', inline: false, menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') } },
-    { id: 'preview', inline: false, menu: { label: 'Preview on a UI', icon: 'image', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) } } },
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
     { id: 'history', inline: false, menu: { label: 'History', icon: 'arrow-counter-clockwise', onSelect: () => { closeAllMenus(); setHistOpen(true) } } },
     { id: 'reset', inline: false, menu: { label: 'Reset palette', icon: 'arrow-clockwise', onSelect: resetPalette } },

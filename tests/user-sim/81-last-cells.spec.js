@@ -39,7 +39,7 @@
 //                    untouched and stay founder-blocked; see the PR body.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { openPaletteTools } from './palette-helpers.js'
+import { clickPaletteAction } from './palette-helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -330,7 +330,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   test('all eighteen scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     await go(page, '/create/palette')
-    await (await openPaletteTools(page)).getByRole('button', { name: 'Preview on a UI' }).click()
+    await clickPaletteAction(page, 'Preview on a UI')
     await expect(page.locator('.plb-pv').first()).toBeVisible()
 
     const ROLES = ['--pv-bg', '--pv-surface', '--pv-primary', '--pv-onprimary', '--pv-accent',
