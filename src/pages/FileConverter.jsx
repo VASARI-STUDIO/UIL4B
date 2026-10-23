@@ -775,7 +775,19 @@ function VideoConvert({ toast }) {
   const [srcUrl, setSrcUrl] = useState(null)
   const [format, setFormat] = useState('gif')
   const [fps, setFps] = useState(10)
+  // The field holds what is typed ('' while it is being retyped); the floor
+  // applies on blur. settledWidth is what the encoder gets, so a half-typed or
+  // empty field (Convert pressed while it is focused) still converts at a valid
+  // width: under 16 floors to 16, empty falls back to the last real width.
   const [width, setWidth] = useState(480)
+  const [goodWidth, setGoodWidth] = useState(480) // last typed width that was 16 or more
+  const settledWidth = Number(width) > 0 ? Math.max(16, Number(width)) : goodWidth
+  const onWidthChange = (e) => {
+    if (e.target.value === '') { setWidth(''); return }
+    const v = Math.max(0, Math.min(MAX_ANIMATION_SIDE, Math.round(+e.target.value)))
+    setWidth(v)
+    if (v >= 16) setGoodWidth(v)
+  }
   const [quality, setQuality] = useState('medium')
   const [plays, setPlays] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -876,7 +888,7 @@ function VideoConvert({ toast }) {
       const bytes = await runJob(ffmpeg, {
         inputs: [{ name: inName, data: file }],
         args: videoToAnimationArgs({
-          format: target.id, input: inName, fps, width, plays, quality,
+          format: target.id, input: inName, fps, width: settledWidth, plays, quality,
           start, length: trimmed ? clipLen : 0,
         }),
         output: `output.${target.ext}`,
@@ -893,7 +905,7 @@ function VideoConvert({ toast }) {
       setJob(null)
       toast('Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, duration, trimStart, trimEnd, toast])
+  }, [file, working, fmt, settledWidth, fps, plays, quality, duration, trimStart, trimEnd, toast])
 
   const cancel = () => {
     runRef.current++
@@ -975,11 +987,12 @@ function VideoConvert({ toast }) {
                 </div>
                 <div>
                   <label className="fc-eyebrow" htmlFor="fc-vid-width">Width (px)</label>
-                  <input id="fc-vid-width" className="fc-field fc-field--num" type="number" min="16" max={MAX_ANIMATION_SIDE} value={width} disabled={working}
-                    onChange={e => setWidth(Math.max(16, Math.min(MAX_ANIMATION_SIDE, +e.target.value || 480)))} />
+                  <input id="fc-vid-width" className="fc-field fc-field--num" type="number" inputMode="numeric" min="16" max={MAX_ANIMATION_SIDE} value={width} disabled={working}
+                    onChange={onWidthChange}
+                    onBlur={() => { setWidth(settledWidth); setGoodWidth(settledWidth) }} />
                 </div>
               </div>
-              <p className="fc-note">Height follows the video&apos;s shape</p>
+              <p className="fc-note">Up to {MAX_ANIMATION_SIDE} px wide. Height follows the video&apos;s shape.</p>
             </div>
             <div className="fc-insp-sec">
               <div className="fc-pair">
