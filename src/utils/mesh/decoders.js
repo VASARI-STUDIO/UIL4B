@@ -15,7 +15,7 @@
 import { fetchVerified } from '../integrity.js'
 import { sharedDownload } from '../sharedDownload.js'
 
-export const THREE_VERSION = '0.186.0'
+export const THREE_VERSION = '0.186.1'
 const BASE = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/libs`
 
 export const DECODERS = Object.freeze({
