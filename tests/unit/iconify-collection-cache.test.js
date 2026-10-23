@@ -64,21 +64,116 @@ test('a new loader uses persisted data without fetching and populates memory', a
   assert.equal(calls, 1)
 })
 
-test('stale data is refreshed on success, or used without renewing its timestamp on failure', async () => {
-  for (const fails of [false, true]) {
-    const store = memoryStorage()
-    const oldAt = NOW - 2 * COLLECTION_TTL
-    writeCollectionCache(PREFIX, DATA, { storage: () => store, now: oldAt })
-    let calls = 0
-    const updated = { ...DATA, names: ['new-icon'] }
-    const load = createCollectionLoader({ cache: new Map(), storage: () => store, now: () => NOW,
-      fetchEntry: async () => { calls++; if (fails) throw TypeError('Failed to fetch'); return updated } })
-    assert.deepEqual(await load(PREFIX), fails ? DATA : updated)
-    assert.equal(calls, 1)
-    assert.equal(JSON.parse(store.getItem(KEY)).at, fails ? oldAt : NOW)
-    assert.deepEqual(await load(PREFIX), fails ? DATA : updated)
-    assert.equal(calls, 1)
-  }
+test('stale data is refreshed on success and persisted with a new timestamp', async () => {
+  const store = memoryStorage()
+  const cache = new Map()
+  writeCollectionCache(PREFIX, DATA, { storage: () => store, now: NOW - 2 * COLLECTION_TTL })
+  let calls = 0
+  const updated = { ...DATA, names: ['new-icon'] }
+  const load = createCollectionLoader({ cache, storage: () => store, now: () => NOW,
+    fetchEntry: async () => { calls++; return updated } })
+  assert.deepEqual(await load(PREFIX), updated)
+  assert.equal(JSON.parse(store.getItem(KEY)).at, NOW)
+  assert.deepEqual(cache.get(PREFIX), updated)
+  assert.deepEqual(await load(PREFIX), updated)
+  assert.equal(calls, 1)
+  assert.equal(load.failed(PREFIX), false)
+})
+
+// A failed refresh of a stale list: visitors keep their icons, but nothing is pinned in memory.
+function staleFailureLoader({ fetchEntry }) {
+  const store = memoryStorage()
+  const cache = new Map()
+  const oldAt = NOW - 2 * COLLECTION_TTL
+  writeCollectionCache(PREFIX, DATA, { storage: () => store, now: oldAt })
+  const clock = { now: NOW }
+  const load = createCollectionLoader({ cache, storage: () => store, now: () => clock.now, fetchEntry })
+  return { load, cache, store, clock, oldAt }
+}
+
+test('a failed refresh of stale data returns the stale list without pinning it or renewing its timestamp', async () => {
+  let calls = 0
+  const { load, cache, store, oldAt } = staleFailureLoader({
+    fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
+  assert.deepEqual(await load(PREFIX), DATA)
+  assert.equal(calls, 1)
+  assert.equal(cache.has(PREFIX), false)
+  assert.equal(JSON.parse(store.getItem(KEY)).at, oldAt)
+})
+
+test('the failed-with-stale state is visible to the UI through failed(prefix)', async () => {
+  const { load } = staleFailureLoader({ fetchEntry: async () => { throw TypeError('Failed to fetch') } })
+  assert.equal(load.failed(PREFIX), false)
+  await load(PREFIX)
+  assert.equal(load.failed(PREFIX), true)
+  assert.equal(load.failed('tabler'), false)
+})
+
+test('within 60 seconds of a failed stale refresh, automatic calls return the stale list without a request', async () => {
+  let calls = 0
+  const { load, clock } = staleFailureLoader({ fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
+  await load(PREFIX)
+  clock.now += COLLECTION_RETRY_DELAY - 1
+  assert.deepEqual(await load(PREFIX), DATA)
+  assert.equal(calls, 1)
+  assert.equal(load.failed(PREFIX), true)
+})
+
+test('after 60 seconds, a failed stale refresh is requested again', async () => {
+  let calls = 0
+  let fails = true
+  const updated = { ...DATA, names: ['new-icon'] }
+  const { load, cache, clock } = staleFailureLoader({
+    fetchEntry: async () => { calls++; if (fails) throw TypeError('Failed to fetch'); return updated } })
+  await load(PREFIX)
+  clock.now += COLLECTION_RETRY_DELAY
+  assert.deepEqual(await load(PREFIX), DATA)
+  assert.equal(calls, 2)
+  assert.equal(cache.has(PREFIX), false)
+  clock.now += COLLECTION_RETRY_DELAY
+  fails = false
+  assert.deepEqual(await load(PREFIX), updated)
+  assert.equal(calls, 3)
+})
+
+test('a manual retry requests a failed stale refresh at once and shares one request', async () => {
+  let calls = 0
+  const { load } = staleFailureLoader({ fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
+  await load(PREFIX)
+  const manual = load(PREFIX, { manualRetry: true })
+  assert.equal(load(PREFIX, { manualRetry: true }), manual)
+  assert.deepEqual(await manual, DATA)
+  assert.equal(calls, 2)
+})
+
+test('a success after a failed stale refresh caches, persists and clears the failed state', async () => {
+  let fails = true
+  const updated = { ...DATA, names: ['new-icon'] }
+  const { load, cache, store, clock } = staleFailureLoader({
+    fetchEntry: async () => { if (fails) throw TypeError('Failed to fetch'); return updated } })
+  await load(PREFIX)
+  assert.equal(load.failed(PREFIX), true)
+  fails = false
+  assert.deepEqual(await load(PREFIX, { manualRetry: true }), updated)
+  assert.deepEqual(cache.get(PREFIX), updated)
+  assert.equal(JSON.parse(store.getItem(KEY)).at, clock.now)
+  assert.equal(load.failed(PREFIX), false)
+})
+
+test('a failed first load with no stored data rejects, and a manual retry (chip click) within 60 seconds requests again', async () => {
+  let calls = 0
+  let fails = true
+  const error = TypeError('Failed to fetch')
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
+    fetchEntry: async () => { calls++; if (fails) throw error; return DATA } })
+  await assert.rejects(load(PREFIX), error)
+  assert.equal(load.failed(PREFIX), true)
+  await assert.rejects(load(PREFIX), error)
+  assert.equal(calls, 1)
+  fails = false
+  assert.deepEqual(await load(PREFIX, { manualRetry: true }), DATA)
+  assert.equal(calls, 2)
+  assert.equal(load.failed(PREFIX), false)
 })
 
 test('failures suppress automatic calls for 60 seconds, while a manual retry allows one shared request', async () => {
