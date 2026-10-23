@@ -3,13 +3,19 @@ export const COLLECTION_RETRY_DELAY = 60 * 1000
 const storageKey = (prefix) => `uil4b:iconify:collection:${prefix}`
 const defaultStorage = () => globalThis.localStorage
 const CREDIT_FIELDS = ['name', 'author', 'url', 'spdx', 'licenceUrl']
+const CREDIT_LINK_FIELDS = new Set(['url', 'licenceUrl'])
+const isHttpsUrl = (value) => /^https:\/\//.test(value)
 
 // Persist only the flattened catalogue and attribution fields used by the UI.
+// Stored values are untrusted on read: credit links must be https:// or they are dropped.
+// info=1 on the collection request returns the attribution in the same response, so it costs no extra request.
 function compactData(data) {
   if (!data || !Array.isArray(data.names) || !data.names.every(n => typeof n === 'string' && n)
     || typeof data.title !== 'string') return null
   const credit = data.credit && typeof data.credit === 'object'
-    ? Object.fromEntries(CREDIT_FIELDS.filter(k => typeof data.credit[k] === 'string').map(k => [k, data.credit[k]]))
+    ? Object.fromEntries(CREDIT_FIELDS
+      .filter(k => typeof data.credit[k] === 'string' && (!CREDIT_LINK_FIELDS.has(k) || isHttpsUrl(data.credit[k])))
+      .map(k => [k, data.credit[k]]))
     : null
   return { names: [...new Set(data.names)], title: data.title, credit }
 }
