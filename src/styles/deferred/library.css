@@ -1423,3 +1423,125 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   html:not([data-reduced-motion="false"]) .lib-surface.pgl-page .pgl-build-link:hover .pgl-build-icon{transform:none}
 }
 
+
+
+/* ── The end of the icon grid ────────────────────────────────────────────────
+   The closing band under the results: a display sentence, one dim line, one
+   ink pill with the arrow bubble and, signed out, a ghost pill. It mirrors the
+   homepage's closing band using the app's own tokens (ink is --t0, the page is
+   --bg-0, the dim line is --t1); the homepage's scoped tokens do not exist
+   here. No card, no box.
+
+   Signed out, two rows of blurred built-in icons continue the grid above it.
+   The rows are decoration: the band's words and buttons are always on screen,
+   and the "Log in to see more" chip is an echo for a fine pointer only.
+   Opacity steps fade the second row; there is no gradient mask. */
+.ig-end{margin-top:8px}
+
+.ig-end-tease{
+  --ig-end-cols:8;
+  position:relative;isolation:isolate;
+  display:grid;grid-template-columns:repeat(var(--ig-end-cols),minmax(0,1fr));gap:10px;
+  margin-top:4px;
+}
+.ig-end-cell{position:relative;display:grid;place-items:center;min-height:92px;color:var(--t0)}
+.ig-end-cell svg{width:24px;height:24px;filter:blur(5px)}
+.ig-end-cell[data-row="0"] svg{opacity:.5}
+.ig-end-cell[data-row="1"] svg{opacity:.28}
+@media(max-width:640px){
+  .ig-end-tease{gap:2px}
+  .ig-end-cell{min-height:72px}
+}
+
+/* The chip. Absent on touch, where the band says the same thing in words. */
+.ig-end-chip{display:none}
+@media (hover:hover) and (pointer:fine){
+  .ig-end-cell{cursor:pointer}
+  .ig-end-chip{
+    position:absolute;left:50%;top:50%;z-index:1;transform:translate(-50%,-50%);
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;border-radius:var(--radius-pill);
+    background:var(--t0);color:var(--bg-0);
+    font:500 12px/1 var(--font);white-space:nowrap;
+    opacity:0;pointer-events:none;
+    transition:opacity 150ms cubic-bezier(.23,1,.32,1);
+  }
+  .ig-end-cell:hover .ig-end-chip{opacity:1}
+  /* Edge columns keep the chip inside the grid. */
+  .ig-end-cell[data-edge="first"] .ig-end-chip{left:0;transform:translateY(-50%)}
+  .ig-end-cell[data-edge="last"] .ig-end-chip{left:auto;right:0;transform:translateY(-50%)}
+}
+
+.ig-end-copy{padding:40px 0 48px;text-align:center}
+.ig-end-h{
+  margin:0 auto;max-width:min(22ch,100%);
+  font-family:var(--display);font-size:28px;font-weight:560;line-height:1.05;letter-spacing:-.035em;
+  color:var(--t0);text-wrap:balance;
+}
+.ig-end-p{
+  margin:12px auto 0;max-width:min(52ch,100%);
+  font-size:15px;line-height:1.6;color:var(--t1);text-wrap:pretty;
+}
+.ig-end-cta{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px}
+
+.ig-end-pill,.ig-end-ghost{
+  box-sizing:border-box;display:inline-flex;align-items:center;min-height:48px;
+  border-radius:var(--radius-pill);
+  font-family:var(--font);font-size:15px;line-height:1.2;
+  white-space:nowrap;text-decoration:none;cursor:pointer;
+}
+.ig-end-pill{
+  gap:11px;padding:10px 10px 10px 22px;border:0;
+  background:var(--t0);color:var(--bg-0);font-weight:540;
+  transition:background-color var(--dur-1) ease,transform 140ms cubic-bezier(.23,1,.32,1);
+}
+.ig-end-pill-icon{
+  flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;
+  border-radius:var(--radius-pill);
+  background:color-mix(in srgb,currentColor 14%,transparent);
+  transition:transform var(--dur-1) cubic-bezier(.23,1,.32,1);
+}
+.ig-end-pill:active{transform:scale(.97)}
+.ig-end-ghost{
+  padding:13px 22px;border:1px solid var(--border);
+  background:transparent;color:var(--t0);font-weight:500;
+  transition:background-color var(--dur-1) ease,border-color var(--dur-1) ease;
+}
+@media (hover:hover) and (pointer:fine){
+  .ig-end-pill:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
+  .ig-end-pill:hover .ig-end-pill-icon{transform:rotate(45deg)}
+  .ig-end-ghost:hover{
+    background:color-mix(in srgb,var(--t0) 5%,transparent);
+    border-color:color-mix(in srgb,var(--t0) 24%,transparent);
+    color:var(--t0);text-decoration:none;
+  }
+}
+.ig-end-pill:focus-visible,.ig-end-ghost:focus-visible{outline:2px solid var(--link,var(--accent-text));outline-offset:3px}
+
+@media(min-width:641px){
+  .ig-end-p{font-size:16px}
+  .ig-end-cta{margin-top:28px}
+}
+@media(min-width:761px){
+  .ig-end-copy{padding:48px 0 56px}
+  .ig-end-h{font-size:32px}
+}
+@media(min-width:1200px){
+  .ig-end-copy{padding:56px 0 64px}
+  .ig-end-h{font-size:44px}
+}
+@media (forced-colors:active){
+  .ig-end-pill{border:1px solid ButtonText}
+}
+
+/* Reduced motion: the in-app choice wins in both directions, then the OS
+   setting. The chip appears and goes with no fade; the arrow does not rotate
+   and the press does not scale. */
+html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-pill-icon,.ig-end-ghost,.ig-end-chip){transition:none}
+html[data-reduced-motion="true"] .ig-end-pill:is(:hover,:active){transform:none}
+html[data-reduced-motion="true"] .ig-end-pill:hover .ig-end-pill-icon{transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-pill-icon,.ig-end-ghost,.ig-end-chip){transition:none}
+  html:not([data-reduced-motion="false"]) .ig-end-pill:is(:hover,:active){transform:none}
+  html:not([data-reduced-motion="false"]) .ig-end-pill:hover .ig-end-pill-icon{transform:none}
+}

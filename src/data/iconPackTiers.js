@@ -190,11 +190,25 @@ export function visiblePacks(packs, tier) {
  * is the nav trigger's own label; "See what Pro includes" is what the palette
  * and prompt libraries already say). */
 export const ICON_GATE_COPY = {
-  // Under the capped signed-out grid.
-  anon: {
-    heading: (n) => `Another ${n.toLocaleString()} icon ${n === 1 ? 'pack' : 'packs'} with a free account`,
-    body: (cap) => `Signed out, this grid shows the first ${cap} icons from the outlined packs.`,
-    action: 'Log in',
+  // The band at the end of the grid (IconEndBand). `anon` sits under the capped
+  // signed-out grid; `free` sits at the end of a signed-in free viewer's
+  // results. Counts are passed in, never typed.
+  end: {
+    anon: {
+      heading: 'Log in to keep browsing.',
+      // `cap` is ANON_ICON_CAP; `n` is how many solid packs an account adds.
+      body: (cap, n) => `Signed out, you see the first ${cap} icons. A free account lifts that cap and adds ${n.toLocaleString()} solid ${n === 1 ? 'pack' : 'packs'}.`,
+      action: 'Log in',
+      secondary: 'See the plans',
+      // The hover chip on a blurred icon.
+      chip: 'Log in to see more',
+    },
+    free: {
+      heading: 'Brand marks, flags and emoji are on Pro.',
+      // `p` is how many packs Pro adds; `d` is the free daily copy allowance.
+      body: (p, d) => `Pro adds ${p.toLocaleString()} more ${p === 1 ? 'pack' : 'packs'}, line caps and joins in the editor, and copying past ${d.toLocaleString()} icons a day.`,
+      action: 'See what Pro includes',
+    },
   },
   // When a signed-out visitor picks a pack or group that needs an account.
   // `label` is a pack name OR a group name, so the sentence has to read for
