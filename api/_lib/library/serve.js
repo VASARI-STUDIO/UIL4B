@@ -70,7 +70,8 @@ export async function requireProUser(req, res, { verifyIdToken, readUser }) {
       // Only a Firebase-verified email may claim an admin entitlement.
       email: decoded.email_verified ? decoded.email : null,
     })
-  } catch {
+  } catch (err) {
+    console.error('library: could not check the plan', { error: err?.message, code: err?.code })
     res.status(500).json({ error: 'Could not check your plan' })
     return false
   }
