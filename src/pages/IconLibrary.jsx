@@ -1815,7 +1815,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     >Fixed</button>
                   </div>
                   <p id="icust-stroke-note" className="icust-stroke-note">
-                    {strokeCaption.prefix}<b>{strokeCaption.effect}</b>.
+                    {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
                   </p>
                 </div>
               )}

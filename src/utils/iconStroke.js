@@ -64,8 +64,9 @@ export const DEFAULT_ICON_SIZE = 48
 export function strokeScaleCaption({ size, stroke, absolute }) {
   const fmtPx = (n) => String(Math.round(n * 100) / 100)
   return {
-    prefix: `If the file is scaled to ${fmtPx(size * 2)}px, the stroke `,
+    prefix: `Resized to ${fmtPx(size * 2)}px, the stroke `,
     effect: absolute ? `stays ${fmtPx(stroke)}px` : `grows to ${fmtPx(stroke * 2)}px`,
+    suffix: absolute ? '.' : `. Fixed keeps it at ${fmtPx(stroke)}px.`,
   }
 }
 
