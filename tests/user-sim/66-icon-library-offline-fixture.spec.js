@@ -268,12 +268,14 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
     // assertion below and naming the packs. Verified by mutation — the failure
     // was real, and told the reader nothing about what broke. A timeout here is
     // now a measurement, not a verdict.
+    // Skeleton cells are `.ic` too (`.ic.ig-skel`). A pack click now re-asks the service, so
+    // for a moment the grid is skeleton; only real icons count as cells, or the wait ends on it.
     await page.waitForFunction(
-      () => document.querySelectorAll('.ic').length > 0 || !!document.querySelector('.pl-empty'),
+      () => document.querySelectorAll('.ic:not(.ig-skel)').length > 0 || !!document.querySelector('.pl-empty'),
       null, { timeout: 1500 },
     ).catch(() => {})
     const seen = await page.evaluate(() => ({
-      cells: document.querySelectorAll('.ic').length,
+      cells: document.querySelectorAll('.ic:not(.ig-skel)').length,
       // `.ig-gate` counts as an answer too. It cannot appear in THIS test — the
       // session is Pro — but a tier regression that let a wall through here
       // would otherwise be reported as silence, which is the one thing this
