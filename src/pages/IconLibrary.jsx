@@ -2044,6 +2044,10 @@ const getAnimatedCollectionNames = createCollectionLoader({
 const getCollectionNames = (pack, options) => (
   isAnimatedPack(pack) ? getAnimatedCollectionNames(pack, options) : getPublicCollectionNames(pack, options)
 )
+// failed(pack) asks the loader that owns the pack whether its last request failed.
+getCollectionNames.failed = (pack) => (
+  isAnimatedPack(pack) ? getAnimatedCollectionNames : getPublicCollectionNames
+).failed(pack)
 
 /** Forget everything fetched for the animated sets (the viewer is no longer Pro). */
 const forgetAnimatedSets = () => purgeAnimatedCaches({
