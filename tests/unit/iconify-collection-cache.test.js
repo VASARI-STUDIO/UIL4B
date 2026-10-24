@@ -160,7 +160,7 @@ test('a success after a failed stale refresh caches, persists and clears the fai
   assert.equal(load.failed(PREFIX), false)
 })
 
-test('a failed first load with no stored data rejects, and a manual retry (chip click) within 60 seconds requests again', async () => {
+test('a failed first load with no stored data rejects, and Try again within 60 seconds requests again', async () => {
   let calls = 0
   let fails = true
   const error = TypeError('Failed to fetch')

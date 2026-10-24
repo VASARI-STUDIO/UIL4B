@@ -37,7 +37,7 @@ export function writeCollectionCache(prefix, data, { storage = defaultStorage, n
   } catch { /* Storage can be unavailable or full; memory still holds the catalogue. */ }
 }
 
-// Concurrent callers share a request; only an explicit retry bypasses the failure cooldown.
+// Concurrent callers share a request; an explicit retry bypasses the failure cooldown (a chip retry only after the floor below).
 // A chip-driven retry (chipRetry, with manualRetry) waits CHIP_RETRY_FLOOR after the last failure, so
 // clicking chips against a service that fails fast does not re-request every pack; Try again never waits.
 // A failed refresh of stale stored data still resolves with that data, but it is never put in
