@@ -196,7 +196,7 @@
 .iel-page .ig-weight-measure{display:flex;gap:2px;visibility:hidden}
 .iel-page .ig-weight--single{background:transparent}
 .iel-page .ig-weight-status{
-  position:absolute;inset:3px;min-width:0;min-height:36px;padding:0 14px;align-content:center;text-align:left;
+  position:absolute;inset:0;pointer-events:none;min-width:0;min-height:36px;padding:0 14px;align-content:center;text-align:left;
   color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:400;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }

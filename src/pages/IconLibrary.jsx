@@ -2181,14 +2181,14 @@ function IconWeightSeg({ value, stateOf, onChange }) {
   const reason = states[0].why
   return (
     <div className={singleStyle ? 'ig-weight ig-weight--single' : 'ig-weight'} role="group" aria-label="Icon weight">
+      {/* Always mounted, so a screen reader hears the reason when a group change
+          brings it in; empty and click-through while the buttons are showing. */}
+      <span className="ig-weight-status" role="status" title={singleStyle ? reason : undefined}>{singleStyle ? reason : ''}</span>
       {singleStyle ? (
-        <>
-          {/* Noninteractive labels preserve the four-button track's intrinsic width. */}
-          <span className="ig-weight-measure" aria-hidden="true">
-            {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
-          </span>
-          <span className="ig-weight-status" role="status" title={reason}>{reason}</span>
-        </>
+        // Noninteractive labels preserve the four-button track's intrinsic width.
+        <span className="ig-weight-measure" aria-hidden="true">
+          {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
+        </span>
       ) : states.map((w) => (
         <button
           key={w.id}
