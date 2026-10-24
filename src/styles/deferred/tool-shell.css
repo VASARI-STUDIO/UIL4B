@@ -380,7 +380,7 @@
   animation:bkit-panel-in 240ms var(--ease-entrance);
 }
 /* The panel takes focus when it opens so screen readers land in it; the ring stays on its controls, not on the panel itself. */
-.bkit-card:focus-visible{outline:none}
+.bkit-card.bkit-card[tabindex]:focus-visible{outline:none}
 /* Another overlay is open: the panel stays mounted and fades out. */
 .bkit-card[data-overlay-hidden]{animation:none;opacity:1;transition:opacity 150ms var(--ease-exit),transform 150ms var(--ease-exit),visibility 0s}
 .bkit-card[data-overlay-hidden="true"]{opacity:0;transform:translateY(-8px);visibility:hidden;pointer-events:none;transition:opacity 150ms var(--ease-exit),transform 150ms var(--ease-exit),visibility 0s 150ms}
