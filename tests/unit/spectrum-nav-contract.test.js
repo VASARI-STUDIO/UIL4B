@@ -178,7 +178,7 @@ test('the full-screen menu is the design\'s four items and its note — not a me
     'the fourth big item, "Open the toolkit ↗" in the accent, is gone')
   // What a dialog has to do, whatever is in it.
   for (const [what, re] of [
-    ['scroll lock', /document\.body\.style\.overflow = 'hidden'/],
+    ['scroll lock', /lockScroll\(\)/],
     ['a focus trap', /event\.key !== 'Tab'/],
     ['focus returned to the trigger on close', /burgerRef\.current\?\.focus\(\)/],
     ['the design\'s exit, held mounted', /menu !== 'closed' &&/],

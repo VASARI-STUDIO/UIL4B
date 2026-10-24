@@ -32,6 +32,8 @@ import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { lockScroll } from '../utils/scrollLock'
+import { markScrollContainers } from '../utils/scrollContainment.js'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
 // Discover pane's counts too — they render only inside the open Discover menu,
@@ -472,9 +474,10 @@ function AppHeader() {
   // The sheet locks the page's scroll and keeps Tab inside itself.
   useEffect(() => {
     if (!sheet) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlockScroll = lockScroll()
     const panel = sheetRef.current
+    // The page is locked and Lenis stopped; marking the panel's scroll boxes lets the wheel still scroll them.
+    const unmark = markScrollContainers(panel)
     const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
     focusable()[0]?.focus()
     const trap = (event) => {
@@ -494,7 +497,8 @@ function AppHeader() {
     panel?.addEventListener('keydown', trap)
     return () => {
       panel?.removeEventListener('keydown', trap)
-      document.body.style.overflow = prev
+      unlockScroll()
+      unmark()
     }
   }, [sheet])
 

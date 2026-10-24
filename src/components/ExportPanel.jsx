@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { trackActivation } from '../utils/analytics'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
-import { getLenis } from '../hooks/useSmoothScroll'
+import { lockScroll } from '../utils/scrollLock'
 import useExportDesign from '../hooks/useExportDesign'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import useExportGate from '../hooks/useExportGate'
@@ -334,17 +334,13 @@ export default function ExportPanel({ onClose }) {
   }, [busy])
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
-  // Lock body scroll while open; restore focus to the opener when we unmount.
-  // Also pause the app-wide Lenis so its rAF loop doesn't fight the locked body
-  // (a no-op when reduced motion is on and Lenis was never instantiated).
+  // Lock page scroll while open (this also pauses the app-wide Lenis); restore
+  // focus to the opener when we unmount.
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    getLenis()?.stop()
+    const unlockScroll = lockScroll()
     const opener = restoreRef.current
     return () => {
-      document.body.style.overflow = prev
-      getLenis()?.start()
+      unlockScroll()
       if (opener && typeof opener.focus === 'function') opener.focus()
     }
   }, [])

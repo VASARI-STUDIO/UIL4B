@@ -125,7 +125,7 @@ test.describe('the full-screen menu carries what the pill drops', () => {
     await expect(menu).toBeVisible()
     await expect(menu).toHaveAttribute('aria-modal', 'true')
     await expect(burger).toHaveAttribute('aria-expanded', 'true')
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow),
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow),
       'the page behind the menu is still scrolling').toBe('hidden')
     expect(await page.evaluate(() => document.querySelector('.spnav-menu').contains(document.activeElement)),
       'focus never moved into the menu').toBe(true)
@@ -134,9 +134,26 @@ test.describe('the full-screen menu carries what the pill drops', () => {
 
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow),
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow),
       'the scroll lock outlived the menu').not.toBe('hidden')
     await expect(burger, 'Escape closed the menu and dropped focus on the floor').toBeFocused()
+  })
+
+  // The menu holds the scroll lock, which stops Lenis. A section link inside it
+  // must still close the menu and land the page on that section.
+  test('a section link in the menu closes it and scrolls the page to the section', async ({ page }) => {
+    await salesPage(page)
+    await page.locator('.spnav-burger').click()
+    const menu = page.locator('.spnav-menu')
+    await expect(menu).toBeVisible()
+    const before = await page.evaluate(() => window.scrollY)
+    await menu.locator('a.spnav-mi[href$="#bench"]').click()
+    await expect(menu).toHaveCount(0)
+    await expect.poll(() => page.evaluate(() => {
+      const el = document.getElementById('bench')
+      return el ? Math.round(el.getBoundingClientRect().top) : null
+    }), { message: 'the page never scrolled to the section', timeout: 6000 }).toBeLessThan(200)
+    expect(await page.evaluate(() => window.scrollY), 'the page did not move').toBeGreaterThan(before)
   })
 
   test('Tab is trapped inside the menu', async ({ page }) => {
