@@ -1053,7 +1053,7 @@ export async function reconcileSubscriptionCheckout({ stripe, db, uid, session, 
     sub = await stripe.subscriptions.retrieve(decision.subscriptionId, { expand: SUBSCRIPTION_CHARGE_EXPAND })
   } catch (err) {
     // A paid subscription we could not confirm is a customer on Free with money
-    // gone — never silent. (The founder's standing rule on empty catches.)
+    // gone — never silent: an empty catch here would hide it.
     console.error('checkout-status: could not retrieve the subscription behind a paid checkout — the account may still be on Free', {
       uid, sessionId: session?.id, subscriptionId: decision.subscriptionId, error: err?.message, type: err?.type,
     })

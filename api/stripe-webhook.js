@@ -306,46 +306,28 @@ async function revokeByPaymentIntent(stripe, {
 // SUBSCRIPTION's own metadata, which checkout does stamp and which Stripe
 // carries for the life of the subscription; the customer lookup stays as a
 // fallback for subscriptions created before that was true.
-// BOTH HOPS THIS USED TO TAKE WERE DELETED FROM THE API, AND IT WENT INERT.
 //
-// Until 2026-09-15 this walked `intent.invoice` and then `invoice.subscription`.
-// Stripe's Basil release (2025-03-31) removed BOTH: "Removed the `invoice` field
-// from the PaymentIntent and Charge objects", and the Invoice lost its top-level
-// `subscription` in the same release. So `intent?.invoice` was undefined, the
-// `!invoiceId` guard returned null on every single call, and the whole
-// revocation path below it was unreachable — a chargeback or refund on a renewal
-// left Pro active while the money went back. Exactly the defect the paragraph
-// above describes as already fixed once.
+// THE PAYMENT-TO-SUBSCRIPTION HOP GOES THROUGH InvoicePayment. Stripe's Basil
+// API release (2025-03-31) removed `invoice` from the PaymentIntent and Charge
+// objects and the top-level `subscription` from the Invoice, so neither can be
+// walked. A lookup that tried would get `undefined`, return null on every call
+// and leave the revocation path below unreachable, without throwing or logging.
+// The SDK in node_modules pins its own ApiVersion and api/_lib/stripe.js passes
+// none, so the account's dashboard default does not change this.
 //
-// It was silent because it is INERT rather than wrong: nothing throws, nothing
-// logs, the catch is never reached, and the function returns the same `null` it
-// returns for a legitimate one-off payment. No test failed either —
-// tests/unit/billing.test.js covers the decision helpers downstream of this
-// lookup, not the lookup.
-//
-// CONFIRMED AGAINST THIS INSTALL, not just the changelog: node_modules/stripe is
-// 22.2.0 and pins `ApiVersion = '2026-05-27.dahlia'`, two release trains past
-// Basil, and api/_lib/stripe.js constructs `new Stripe(key)` with no apiVersion
-// — so the SDK's pinned version is what every request uses and the account's
-// dashboard default cannot rescue it.
-//
-// THE REPLACEMENT IS THE OBJECT BASIL ADDED FOR THIS. InvoicePayment is the
-// connection between a payment and an invoice, because an invoice may now be
-// paid by several payments. The filter shape is Stripe's own documented one,
+// InvoicePayment links a payment to an invoice, because an invoice may be paid
+// by several payments. The filter is Stripe's documented shape,
 // `payment[type]=payment_intent` plus `payment[payment_intent]=<id>`, and the
-// subscription moved to `parent.subscription_details.subscription` — guarded on
-// `parent.type`, since an invoice can have a different parent entirely.
+// subscription is read from `parent.subscription_details.subscription`, guarded
+// on `parent.type`, since an invoice can have a different parent entirely. The
+// list takes the PaymentIntent id directly, so no PaymentIntent retrieve is
+// needed.
 //
-// The PaymentIntent retrieve is gone with it: the list takes the id directly, so
-// this is two API calls where it used to be three.
-//
-// Everything the paragraph above says about the USER link still holds and is
-// untouched — the subscription's own metadata is still the reliable link, and
-// this function still returns the Subscription for the caller to read it from.
+// The user link is still the subscription's own metadata: this function returns
+// the Subscription for the caller to read it from.
 // Exported for tests/unit/chargeback-lookup.test.js, the same way
 // writeSubscription is. Vercel only ever reads the default export and `config`,
-// so a named export costs the handler nothing — and this function went dead for
-// months precisely because nothing could reach it to assert on.
+// so a named export costs the handler nothing and the lookup stays testable.
 export async function subscriptionForPaymentIntent(stripe, paymentIntentId) {
   if (!paymentIntentId) return null
   try {
@@ -388,21 +370,16 @@ export async function subscriptionForPaymentIntent(stripe, paymentIntentId) {
 //
 // Stripe's own subscription is deliberately NOT cancelled here. Cancelling is
 // an irreversible outward action on a live billing account taken off the back
-// of one webhook, so what happens to the subscription RECORD stays the founder's
-// call and the log line below is what tells them there is one to make.
+// of one webhook, so the subscription record is left for a person to act on,
+// and the log line below records that it was left alone.
 //
-// CORRECTION, 2026-09-16. This comment used to add "and Stripe already cancels
-// on a chargeback under its own rules". THAT IS FALSE, and it was load-bearing
-// — it is why nobody worried that a disputed subscription keeps running.
-// Stripe's own documentation (docs.stripe.com/billing/subscriptions/cancel,
-// "Configure automatic cancellation after a dispute") describes
-// cancel-on-dispute as a SETTING in the Billing dashboard, off unless the
-// account turns it on. Until the founder switches it on, a disputed
-// subscription keeps cycling:
-// it renews, it invoices, and it fires customer.subscription.updated at this
-// webhook every period. That is what turned a deleted user document into a
-// repeatable wash rather than a one-off — see writeSubscription above, which now
-// re-checks the charge instead of trusting the merge to carry the flag.
+// Stripe does not cancel a disputed subscription by default: cancel-on-dispute
+// is a Billing dashboard setting (docs.stripe.com/billing/subscriptions/cancel,
+// "Configure automatic cancellation after a dispute"). Without it, a disputed
+// subscription keeps renewing, invoicing and firing customer.subscription.updated
+// at this webhook every period. writeSubscription above therefore re-checks the
+// charge whenever a delivery would grant access, instead of trusting the merge
+// to carry the flag.
 //
 // Access stops either way, because the flag below is what plans.js reads.
 async function revokeSubscriptionAccess(stripe, { paymentIntentId, customerId = null, chargeId = null, disputeId = null, reason }) {
