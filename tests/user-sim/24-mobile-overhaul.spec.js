@@ -876,8 +876,11 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
 // at rest: painted, taking pointer events, and not covered by anything else.
 // The overflow control stays beside them.
 //
-// The last viewport is shorter than 760px. A mouse screen that short swaps the
-// stack for the overflow menu; a touch screen keeps it.
+// The 700px-tall viewport is shorter than 760px. A mouse screen that short swaps
+// the stack for the overflow menu; a touch screen keeps it. Under 600px tall
+// (a landscape phone, 768px or wider) every pointer drops the stack, which would
+// otherwise push the name, hex and ramp off screen, and the column keeps only
+// Lock and More actions.
 //
 // REAL DEVICE METRICS ARE THE WHOLE TEST. `hover:none` is what puts a device in
 // this branch of the stylesheet. A desktop Chromium narrowed to 834px reports
@@ -885,23 +888,26 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
 // for the wrong reason. The caps assertion is therefore not a formality: it
 // makes the rest mean what they say.
 const PINNED_BAND = [
-  [834, 1194],  // iPad portrait
-  [1180, 820],  // iPad Pro landscape
-  [1024, 768],  // the old 4:3 tablet, still above the 768px cutover
-  [1024, 700],  // a touch screen under 760px tall keeps the stack
+  // [width, height, whether the quick stack is expected]
+  [834, 1194, true],   // iPad portrait
+  [1180, 820, true],   // iPad Pro landscape
+  [1024, 768, true],   // the old 4:3 tablet, still above the 768px cutover
+  [1024, 700, true],   // a touch screen under 760px tall keeps the stack
+  [844, 390, false],   // a landscape phone drops the stack
 ]
 
+// [name, label, is a quick tool]
 const TABLET_TOOLS = [
-  ['Lock', /^(Lock|Unlock) /],
-  ['Edit in HCT', /^Edit .+ in HCT$/],
-  ['Swap', /^Choose a direction to swap /],
-  ['Remove', /^Remove /],
-  ['More actions', /^More actions for /],
+  ['Lock', /^(Lock|Unlock) /, false],
+  ['Edit in HCT', /^Edit .+ in HCT$/, true],
+  ['Swap', /^Choose a direction to swap /, true],
+  ['Remove', /^Remove /, true],
+  ['More actions', /^More actions for /, false],
 ]
 
 test('S11b · on a touch tablet the swatch quick tools are on show and pressable at rest', async ({ browser }) => {
   const damage = []
-  for (const [w, h] of PINNED_BAND) {
+  for (const [w, h, withStack] of PINNED_BAND) {
     const { ctx, page } = await openTouch(browser, w, h, '/create/palette', true, '.plb-col')
 
     const caps = await page.evaluate(() => ({
@@ -920,15 +926,16 @@ test('S11b · on a touch tablet the swatch quick tools are on show and pressable
       const cols = [...document.querySelectorAll('.plb-col')].filter(c => c.offsetParent !== null)
       return cols.map((col, i) => {
         const buttons = [...col.querySelectorAll('.plb-tool')]
-        const found = wanted.map(([name, source]) => {
+        const found = wanted.map(([name, source, quick]) => {
           const re = new RegExp(source)
           const tool = buttons.find(t => re.test(t.getAttribute('aria-label') || ''))
-          if (!tool) return { name, missing: true }
-          tool.scrollIntoView({ block: 'nearest' })
+          if (!tool) return { name, quick, missing: true }
+          if (tool.getBoundingClientRect().width > 0) tool.scrollIntoView({ block: 'nearest' })
           const b = tool.getBoundingClientRect()
           const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)
           return {
             name,
+            quick,
             missing: false,
             laidOut: b.width > 0 && b.height > 0,
             opacity: effOpacity(tool),
@@ -938,7 +945,7 @@ test('S11b · on a touch tablet the swatch quick tools are on show and pressable
         })
         return { i, found }
       })
-    }, TABLET_TOOLS.map(([name, re]) => [name, re.source]))
+    }, TABLET_TOOLS.map(([name, re, quick]) => [name, re.source, quick]))
     await ctx.close()
 
     // The sample cannot collapse to nothing: five columns, each with controls.
@@ -946,6 +953,10 @@ test('S11b · on a touch tablet the swatch quick tools are on show and pressable
 
     for (const c of r) {
       for (const t of c.found) {
+        if (t.quick && !withStack) {
+          if (!t.missing && t.laidOut) damage.push(`${w}x${h} col${c.i}: ${t.name} is laid out, but this screen is too short for the stack`)
+          continue
+        }
         if (t.missing) { damage.push(`${w}x${h} col${c.i}: no ${t.name} control`); continue }
         if (!t.laidOut) damage.push(`${w}x${h} col${c.i}: ${t.name} takes no space`)
         else if (t.opacity < 0.99) damage.push(`${w}x${h} col${c.i}: ${t.name} is not painted at rest (opacity ${t.opacity})`)
