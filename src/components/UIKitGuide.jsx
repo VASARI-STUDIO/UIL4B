@@ -168,9 +168,13 @@ export default function UIKitGuide({ step }) {
   // survives the close because the trigger is always mounted: the bar does not
   // unmount while the panel is up.
   const openedByRef = useRef(null)
+  // Set by "What's this?": closing the name panel on the way can move focus to
+  // the Name button first, so the help button names itself as the opener.
+  const introOpenerRef = useRef(null)
   useEffect(() => {
     if (!showIntro) return undefined
-    openedByRef.current = document.activeElement
+    openedByRef.current = introOpenerRef.current || document.activeElement
+    introOpenerRef.current = null
     if (!hasOpenOverlays(document.body)) cardRef.current?.focus()
     // Copied into the effect's own scope rather than read off the ref inside the
     // cleanup: by the time cleanup runs the ref may point at a different node,
@@ -492,6 +496,7 @@ export default function UIKitGuide({ step }) {
   const count = `${done} of ${total} parts`
   // "Start with" belongs to the first step. Reopened on a later one, the same
   // button leads back to where the person already is.
+  const stepNumber = ['one', 'two', 'three', 'four', 'five', 'six'][steps.indexOf(current)] || String(steps.indexOf(current) + 1)
   const goLabel = `${firstStep ? 'Start with' : 'Back to'} ${current.label.toLowerCase()}`
 
   return (
@@ -512,7 +517,7 @@ export default function UIKitGuide({ step }) {
           onEscape={closeIntro}
         >
           <p className="bkit-card-body">
-            You&rsquo;re on step one, and the tool is ready to use. Each step saves into
+            You&rsquo;re on step {stepNumber}, and the tool is ready to use. Each step saves into
             the same system as you work, so the last step knows what you chose in the
             first. You can leave and pick it up later.
           </p>
@@ -631,7 +636,7 @@ export default function UIKitGuide({ step }) {
           <button
             type="button"
             className="bkit-rail-help"
-            onClick={() => { setShowName(false); setShowIntro((v) => !v) }}
+            onClick={(e) => { introOpenerRef.current = e.currentTarget; setShowName(false); setShowIntro((v) => !v) }}
             aria-expanded={showIntro}
             aria-controls={showIntro ? cardId : undefined}
             ref={introTriggerRef}
