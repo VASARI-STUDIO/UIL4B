@@ -379,7 +379,8 @@
   font-family:var(--font);color:var(--t1);
   animation:bkit-panel-in 240ms var(--ease-entrance);
 }
-.bkit-card:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+/* The panel takes focus when it opens so screen readers land in it; the ring stays on its controls, not on the panel itself. */
+.bkit-card:focus-visible{outline:none}
 /* Another overlay is open: the panel stays mounted and fades out. */
 .bkit-card[data-overlay-hidden]{animation:none;opacity:1;transition:opacity 150ms var(--ease-exit),transform 150ms var(--ease-exit),visibility 0s}
 .bkit-card[data-overlay-hidden="true"]{opacity:0;transform:translateY(-8px);visibility:hidden;pointer-events:none;transition:opacity 150ms var(--ease-exit),transform 150ms var(--ease-exit),visibility 0s 150ms}
@@ -446,7 +447,6 @@
     border-bottom:1px solid var(--border);border-radius:var(--radius-2xl);
     animation-duration:180ms;
   }
-  .bkit-card:focus-visible{outline-offset:2px}
   .bkit-card.is-lifted{inset-inline:auto;right:var(--bkit-dock-end,var(--s-4));max-height:calc(var(--bkit-vvh,100dvh) - 12px - var(--chrome-h))}
   .bkit-card-grab{display:none}
   .bkit-card-title{font-size:15px}
