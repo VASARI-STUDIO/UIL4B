@@ -463,8 +463,8 @@
 @media(pointer:coarse){
   .bkit-name-input{font-size:16px}
 }
-/* From 1024px the bar's own lead carries the count. */
-@media(min-width:1024px){
+/* The bar shows its lead at 984px of its own width, which a 1056px window gives even with a classic scrollbar; from there the lead carries the count. */
+@media(min-width:1056px){
   .bkit-card-count{display:none}
 }
 
