@@ -22,10 +22,6 @@ import { INPUT_FORMATS, listForProse, outputLabels } from '../utils/meshFormats.
 // description names the best-known few and counts the rest.
 const NAMED_3D_INPUTS = ['step', 'iges', 'fbx', 'obj', 'stl'].map((id) => INPUT_FORMATS.find((f) => f.id === id).label)
 
-// Titles/descriptions for real destinations only. Legacy redirect-only paths
-// (/dashboard, /resources, /docs-*) are intentionally absent — they render a
-// <Navigate> and inherit their target's metadata, so an entry here would only
-// describe a page that no longer exists (AUDIT-B2).
 // A title without the site name, whichever end it sits at: tool pages lead with
 // the search phrase ("Type Scale Generator for CSS | UI L4B"), the rest with the
 // brand ("UI L4B | Learn").
@@ -34,6 +30,10 @@ export function pageName(title) {
   return title.replace(/^UI L4B \| /, '').replace(/ \| UI L4B$/, '').trim() || null
 }
 
+// Titles/descriptions for real destinations only. Legacy redirect-only paths
+// (/dashboard, /resources, /docs-*) are intentionally absent — they render a
+// <Navigate> and inherit their target's metadata, so an entry here would only
+// describe a page that no longer exists (AUDIT-B2).
 export const PAGE_TITLES = {
   '/': 'UI L4B | Design Toolkit',
   '/home': 'UI L4B | Design Toolkit',
