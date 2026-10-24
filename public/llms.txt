@@ -3,19 +3,19 @@
 > Build and export UI and brand design kits and content for website building. Every core tool is free forever, with 5 AI generations a day and 40 a month. Pro is from $4 USD a month and raises that to 30 a day and 300 a month, adds the advanced colour controls, and removes the export watermark. Free and Pro run the same AI model.
 
 ## Tools
-- [Palette Generator](https://uil4b.com/create/palette): Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps and accessibility checks.
-- [Semantic Colour Generator](https://uil4b.com/create/semantic-color): Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.
-- [Tint Scale Generator](https://uil4b.com/create/tint): Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.
-- [Gradient Generator](https://uil4b.com/create/gradient): Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.
-- [Colour Contrast Checker](https://uil4b.com/create/contrast): Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.
-- [Icon Library](https://uil4b.com/create/icons): Search icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.
-- [Emoji Library](https://uil4b.com/create/emoji): Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.
-- [Font Gallery](https://uil4b.com/create/font-gallery): Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.
-- [Font Pair](https://uil4b.com/create/font-pair): Free font pairing tool. Pick a heading face and see which body faces work under it, with the reasoning, previewed as a real page. Copy the import and CSS.
-- [Type Scale Generator](https://uil4b.com/create/type-scale): Free modular type scale generator. Set a base size and a ratio, preview the whole scale in a real layout, and copy CSS custom properties, Tailwind or SCSS.
+- [Color Palette Generator with Live UI Preview](https://uil4b.com/create/palette): Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps and accessibility checks.
+- [Semantic Color Generator for Design Tokens](https://uil4b.com/create/semantic-color): Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.
+- [Tint and Shade Generator for Color Scales](https://uil4b.com/create/tint): Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.
+- [CSS Gradient Generator](https://uil4b.com/create/gradient): Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.
+- [Color Contrast Checker for WCAG AA and AAA](https://uil4b.com/create/contrast): Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.
+- [SVG Icon Library: Recolor and Export Icons](https://uil4b.com/create/icons): Search icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.
+- [Emoji Library: Copy and Paste Emoji](https://uil4b.com/create/emoji): Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.
+- [Google Fonts Gallery for UI Design](https://uil4b.com/create/font-gallery): Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.
+- [Font Pairing Tool for Google Fonts](https://uil4b.com/create/font-pair): Free font pairing tool. Pick a heading face and see which body faces work under it, with the reasoning, previewed as a real page. Copy the import and CSS.
+- [Type Scale Generator for CSS](https://uil4b.com/create/type-scale): Free modular type scale generator. Set a base size and a ratio, preview the whole scale in a real layout, and copy CSS custom properties, Tailwind or SCSS.
 - [File Converter](https://uil4b.com/create/file-converter): Convert files between formats directly in your browser. Fast, private, client-side processing.
-- [Aspect & Resolution Calculator](https://uil4b.com/create/aspect-ratio): Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.
-- [3D Model Converter (beta)](https://uil4b.com/create/3d-converter): View STEP, IGES, FBX, OBJ, STL and 19 more 3D formats in your browser and convert them to GLB, OBJ, PLY, STL, 3MF, glTF, GLB (compressed) and USDZ.
+- [Aspect Ratio and Resolution Calculator](https://uil4b.com/create/aspect-ratio): Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.
+- [3D Model Converter for STEP, FBX, OBJ and STL (beta)](https://uil4b.com/create/3d-converter): View STEP, IGES, FBX, OBJ, STL and 19 more 3D formats in your browser and convert them to GLB, OBJ, PLY, STL, 3MF, glTF, GLB (compressed) and USDZ.
 - [Alt Text Generator](https://uil4b.com/create/alt-text): Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.
 - [SEO Specialist](https://uil4b.com/seo): Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.
 
@@ -33,10 +33,10 @@
 
 ## Browse
 - [Discover](https://uil4b.com/discover): The UI L4B palette, gradient, font, icon and prompt libraries, and community inspiration. Collections is marked Soon.
-- [Palette Library](https://uil4b.com/discover/palettes): Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.
-- [Gradient Library](https://uil4b.com/discover/gradients): Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.
+- [Color Palette Ideas for UI Design](https://uil4b.com/discover/palettes): Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.
+- [CSS Gradient Library and Ideas](https://uil4b.com/discover/gradients): Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.
 - [Community](https://uil4b.com/community): Join the UI L4B community. Share designs and discover inspiration.
-- [Prompt Library](https://uil4b.com/discover/prompts): A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.
+- [AI Website Design Prompts Library](https://uil4b.com/discover/prompts): A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.
 
 ## Plans
 - Free: 5 AI generations a day and 40 a month; UI kit export, and style guide export in HTML, Markdown, PNG, JPEG, CSS tokens and JSON tokens, with a "Made with UIL4B" footer line.
