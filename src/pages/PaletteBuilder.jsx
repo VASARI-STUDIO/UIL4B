@@ -1987,6 +1987,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
   }
 
+  // The Contrast Checker reads the project's palette. The board is written
+  // first so an edit still inside the 200ms save delay above goes with it.
+  const openInContrast = () => {
+    closeAllMenus()
+    setPalette({
+      ...persistedPalette(colors, adjust),
+      base: seed,
+      harmony,
+      extraColors: adjusted.slice(ROLES.length),
+      locked: [...locked],
+      activeIdx: 0,
+    })
+    setLiveMsg('Opening your palette in the Contrast Checker')
+    navigate('/create/contrast')
+  }
+
   const openInTint = (hex) => {
     if (!setTintDraft([hex])) { toast?.('That colour couldn’t be handed over — try another'); return }
     setTintsIdx(null)
@@ -2348,6 +2364,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     },
     // Overflow only — never on the row.
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
+    { id: 'contrast', inline: false, menu: { label: 'Check in Contrast Checker', icon: 'check-circle', onSelect: openInContrast } },
     { id: 'history', inline: false, menu: { label: 'History', icon: 'arrow-counter-clockwise', onSelect: () => { closeAllMenus(); setHistOpen(true) } } },
     { id: 'reset', inline: false, menu: { label: 'Reset palette', icon: 'arrow-clockwise', onSelect: resetPalette } },
   ]
