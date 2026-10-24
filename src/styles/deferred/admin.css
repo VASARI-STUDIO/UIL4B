@@ -1088,8 +1088,6 @@
 }
 
 .adm-top-list .adm-bar-label {
-  /* Wide rows give the name room; narrow ones wrap it under the 100px floor. */
-  width: clamp(100px, 28%, 220px);
   min-width: 0;
   overflow: visible;
   overflow-wrap: anywhere;
@@ -1097,8 +1095,12 @@
   white-space: normal;
 }
 
+/* Long stage names: the label takes 28% of the row (100px to 220px) and wraps. */
+.adm-top-list--wide .adm-bar-label {
+  width: clamp(100px, 28%, 220px);
+}
+
 .adm-top-list .adm-bar-value {
-  align-self: flex-start;
   min-width: max-content;
   white-space: nowrap;
 }

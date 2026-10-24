@@ -33,9 +33,8 @@ test('TopList labels wrap instead of truncating long stage names', () => {
   assert.equal(label['min-width'], '0')
 })
 
-test('TopList counts stay right-aligned on one line beside the first label line', () => {
+test('TopList counts stay right-aligned on one line', () => {
   const count = declarationsFor('.adm-bar-value', '.adm-top-list .adm-bar-value')
-  assert.equal(count['align-self'], 'flex-start')
   assert.equal(count['text-align'], 'right')
   assert.equal(count['white-space'], 'nowrap')
   assert.equal(count['flex-shrink'], '0')
@@ -45,5 +44,6 @@ test('TopList counts stay right-aligned on one line beside the first label line'
 test('TopList applies its wrapping styles to the shared list container', () => {
   const admin = stripJs(fs.readFileSync('src/pages/Admin.jsx', 'utf8'))
   const topList = admin.slice(admin.indexOf('function TopList('), admin.indexOf('function ToolUsageCard('))
-  assert.match(topList, /className="adm-bar adm-top-list"/)
+  assert.match(topList, /adm-bar adm-top-list/)
+  assert.match(admin, /<TopList title="Funnel"[^>]*\swide\s/)
 })
