@@ -275,9 +275,9 @@
 .bkit-rail-close{border-radius:50%}
 .bkit-rail .bkit-rail-help{border-radius:var(--btn-radius);border-color:var(--bkit-line);background:transparent;color:var(--t0)}
 /* A pad wider than the drawn control keeps the target at 44px on a touch screen. */
-.bkit-rail-help::after,.bkit-rail-close::after{content:"";position:absolute;top:50%;left:50%;width:max(100%,40px);height:max(100%,40px);transform:translate(-50%,-50%)}
+.bkit-rail-help::after,.bkit-rail-close::after,.bkit-card-close::after{content:"";position:absolute;top:50%;left:50%;width:max(100%,40px);height:max(100%,40px);transform:translate(-50%,-50%)}
 @media(pointer:coarse){
-  .bkit-rail-help::after,.bkit-rail-close::after{width:max(100%,44px);height:max(100%,44px)}
+  .bkit-rail-help::after,.bkit-rail-close::after,.bkit-card-close::after{width:max(100%,44px);height:max(100%,44px)}
 }
 .bkit-rail-close svg{width:16px;height:16px}
 .bkit-rail-help-icon{display:block;flex:0 0 auto;width:18px;height:18px}
@@ -392,7 +392,7 @@
 .bkit-card-headtext{min-width:0}
 .bkit-card-title{margin:0;font-size:17px;font-weight:600;line-height:1.25;letter-spacing:normal;color:var(--t0)}
 .bkit-card-count{margin:2px 0 0;font-size:var(--fs-caption);font-weight:400;line-height:1.4;color:var(--t2);font-variant-numeric:tabular-nums}
-.bkit-card-close{position:relative;flex:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;height:44px;margin:-6px -6px 0 0;padding:0;border:1px solid transparent;border-radius:var(--btn-radius);background:transparent;color:var(--t1);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease)}
+.bkit-card-close{position:relative;flex:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;height:44px;margin:-6px -6px 0 0;padding:0;border:1px solid transparent;border-radius:var(--btn-radius);background:transparent;color:var(--t1);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease,cubic-bezier(.23,1,.32,1))}
 .bkit-card-close:active{transform:scale(.97)}
 .bkit-card-close:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 @media(hover:hover){
