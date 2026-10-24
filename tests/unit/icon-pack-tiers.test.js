@@ -201,29 +201,39 @@ test('a gated scope never becomes the refused-service state, and never the empty
     'the "couldn\'t reach the icon service" notice must be suppressed for a gated scope — nothing was asked for, so nothing refused it')
   assert.match(page, /const searchEmpty = [^\n]*!gated/,
     '"No icons to show" must be suppressed for a gated scope — it blames the catalogue for a decision the product made')
-  assert.match(page, /const capWall = [^\n]*!gated/,
-    'the signed-out cap wall and a gated scope are different answers and must not stack')
+  assert.match(page, /const endKind = endBandKind\(\{[^}]*\bgated\b/,
+    'the end band and a gated scope are different answers and must not stack: the page has to hand `gated` to endBandKind')
 })
 
 test('the gate copy is complete, count-driven, and reuses the app\'s own action labels', () => {
-  for (const key of ['anon', 'lockedFree', 'lockedPro']) {
-    const c = ICON_GATE_COPY[key]
+  for (const key of ['end.anon', 'end.free', 'lockedFree', 'lockedPro']) {
+    const c = key.split('.').reduce((o, k) => o?.[k], ICON_GATE_COPY)
     assert.ok(c, `ICON_GATE_COPY.${key} is missing — a wall would render undefined`)
     assert.ok(c.action && c.action.trim(), `ICON_GATE_COPY.${key}.action is empty — the wall would have an unlabelled button`)
   }
   // "Log in" is the nav trigger's own word and "See what Pro includes" is what
   // the Palette and Prompt libraries already say. Neither is coined here.
-  assert.equal(ICON_GATE_COPY.anon.action, 'Log in')
+  assert.equal(ICON_GATE_COPY.end.anon.action, 'Log in')
+  assert.equal(ICON_GATE_COPY.end.free.action, 'See what Pro includes')
   assert.equal(ICON_GATE_COPY.lockedFree.action, 'Log in')
   assert.equal(ICON_GATE_COPY.lockedPro.action, 'See what Pro includes')
 
   // NO HARD-CODED NUMBER. Every count in a wall comes from the live table, so
   // moving a pack changes the sentence. A typed number would be a claim that
   // stops being true the first time the table is edited.
-  assert.match(ICON_GATE_COPY.anon.heading(5), /\b5\b/, 'the heading must render the count it is handed')
-  assert.match(ICON_GATE_COPY.anon.heading(1), /\bpack\b/, 'one pack is singular')
-  assert.match(ICON_GATE_COPY.anon.heading(2), /\bpacks\b/, 'two packs are plural')
-  assert.match(ICON_GATE_COPY.anon.body(ANON_ICON_CAP), new RegExp(`\\b${ANON_ICON_CAP}\\b`))
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 5), /\b5\b/, 'the body must render the pack count it is handed')
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 1), /\bpack\b/, 'one pack is singular')
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 2), /\bpacks\b/, 'two packs are plural')
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 5), new RegExp(`\\b${ANON_ICON_CAP}\\b`))
+  assert.match(ICON_GATE_COPY.end.free.body(16, 10), /\b16\b[^.]*\b10\b/, 'the free body must render both counts it is handed')
+  assert.doesNotMatch(ICON_GATE_COPY.end.anon.heading + ICON_GATE_COPY.end.free.heading, /\d/,
+    'a fixed heading must not quote a count it cannot keep true')
+  for (const text of [
+    ICON_GATE_COPY.end.anon.heading, ICON_GATE_COPY.end.anon.body(60, 5), ICON_GATE_COPY.end.anon.chip,
+    ICON_GATE_COPY.end.free.heading, ICON_GATE_COPY.end.free.body(16, 10),
+  ]) {
+    assert.doesNotMatch(text, /—/, 'no em dash in the end band copy')
+  }
   assert.doesNotMatch(ICON_GATE_COPY.lockedPro.body, /\d/, 'a fixed sentence must not quote a count it cannot keep true')
   assert.doesNotMatch(ICON_GATE_COPY.lockedFree.body, /\d/)
 

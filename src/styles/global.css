@@ -760,8 +760,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .auth-links button:hover{color:var(--accent-text);text-decoration:underline}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
+.toast{position:fixed;bottom:calc(24px + var(--toast-lift));right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
+/* The Feedback button (.global-feedback-btn) floats in the same bottom-right
+   corner and is hidden only on a coarse pointer, so everywhere else the toast
+   stack rides above it: 44px clears the 36px desktop button, 52px clears the
+   compact icon-only form used on narrow or short viewports. */
+:root{--toast-lift:0px}
+@media not all and (pointer:coarse){:root{--toast-lift:44px}}
+@media (pointer:fine) and (max-width:640px),(pointer:fine) and (max-height:500px){:root{--toast-lift:52px}}
 .toast-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .toast-ico svg{width:15px;height:15px}
 .toast-msg{font-size:13px;font-weight:500;line-height:1.35;color:var(--t0);letter-spacing:-.005em}
@@ -773,6 +780,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    opts back in. Negative margins keep the box the same height it was. */
 .toast-x{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;margin:-4px -6px -4px 0;border:none;border-radius:var(--btn-radius);background:none;color:var(--t2);cursor:pointer;pointer-events:auto;transition:background var(--t),color var(--t)}
 .toast-x svg{width:14px;height:14px}
+/* A 44px tap area on touch without a bigger visible button: the
+   pseudo-element is the hit target, the 28px box stays what is drawn. */
+@media(pointer:coarse){.toast-x{position:relative}.toast-x::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}}
 .toast-x:hover{background:var(--bg-2);color:var(--t0)}
 .toast:not(.show) .toast-x{pointer-events:none}
 /* One action on a toast (Undo): an outline pill, opted back into pointer
@@ -1001,10 +1011,10 @@ img,svg,video{max-width:100%;height:auto}
 @media(max-width:640px){
 
   /* Toast */
-  .toast{left:12px;right:12px;bottom:12px;max-width:none}}
+  .toast{left:12px;right:12px;bottom:calc(12px + var(--toast-lift));max-width:none}}
 /* The phone tab bar is fixed over the foot of the screen; a toast sits above it. */
 @media(max-width:767px){
-  html.has-tabbar .toast{bottom:calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom))}
+  html.has-tabbar .toast{bottom:calc(var(--tabbar-h) + 12px + var(--toast-lift) + env(safe-area-inset-bottom))}
 }
 
 

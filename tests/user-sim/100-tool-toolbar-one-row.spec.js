@@ -37,12 +37,15 @@ const TOOLS = [
     actions: [
       { row: 'Pull colours from an image', menu: 'From image' },
       { row: 'Suggest a palette', menu: 'Suggest' },
+      // Priority 2 buttons (icon-only below 768px): on the row where there is room, else in Extra tools.
+      'Explore palettes',
+      'Preview on a UI',
       'Undo',
       'Redo',
       'Randomise',
     ],
     selects: ['Colour system', 'Colour vision check'],
-    menuOnly: ['Explore palettes', 'Preview on a UI', 'Open in Gradient', 'History', 'Reset palette'],
+    menuOnly: ['Open in Gradient', 'History', 'Reset palette'],
   },
   { route: '/create/gradient', actions: ['Random', 'From palette', 'Reset', 'Submit for review'], primary: /^Copy /, title: 'Gradient' },
   { route: '/create/contrast', actions: [], primary: /^Swap/, title: 'Contrast Checker' },

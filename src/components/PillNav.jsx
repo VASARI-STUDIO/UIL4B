@@ -34,8 +34,8 @@ import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
-// Discover pane's counts too — the resources list behind one of them is 20 KB
-// no other always-loaded module needs.
+// Discover pane's counts too — they render only inside the open Discover menu,
+// and the prompt count comes from a data module nothing else here imports.
 const CommandPalette = lazy(() => import('./CommandPalette'))
 const ExportPanel = lazy(() => import('./ExportPanel'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
