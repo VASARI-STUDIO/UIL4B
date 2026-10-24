@@ -51,9 +51,15 @@ test.describe('the icon weight segment', () => {
       await flags.click()
       await expect(seg.locator('.ig-weight-btn')).toHaveCount(0)
       const status = seg.getByRole('status')
-      await expect(status).toHaveText('Flags come in one style')
-      await expect(status).toHaveAttribute('title', 'Flags come in one style')
+      await expect(status).toHaveText('These icons come in one style')
+      await expect(status).toHaveAttribute('title', 'These icons come in one style')
       expect((await seg.boundingBox()).width).toBeCloseTo(trackWidth, 0)
+      // Plain text, not a control: no pill ground behind it, normal weight, and
+      // it starts where the first segment's label starts.
+      await expect(seg).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await expect(status).toHaveCSS('font-weight', '400')
+      await expect(status).toHaveCSS('text-align', 'left')
+      await expect(status).not.toHaveAttribute('tabindex', /.*/)
       await hideFilters()
       await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
 
