@@ -1300,8 +1300,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setToolsIdx(null) }
     const onDown = (e) => {
       // The image dialog is a modal of its own (it closes on its scrim), so a
-      // drag inside it is not an outside press.
-      if (!e.target.closest('.plb-menuwrap, .plb-modal')) closeAllMenus()
+      // drag inside it is not an outside press. Nor is a press in the sign-in
+      // dialog a gallery like opened: the gallery stays put behind it.
+      if (!e.target.closest('.plb-menuwrap, .plb-modal, [aria-labelledby="ui-login-title"]')) closeAllMenus()
       if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) closePops()
     }
     const onEsc = (e) => {
