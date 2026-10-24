@@ -358,6 +358,9 @@
   .plb .plb-copycss:hover { background: color-mix(in srgb, var(--t0) 9%, transparent); }
 }
 
+/* Undo and redo: two of the toolbar's round icon buttons, held close together. */
+.plb .plb-history { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+
 /* ── Floating panels: Suggest / Explore, History, Save current ──────────── */
 .plb .plb-float {
   position: fixed;
