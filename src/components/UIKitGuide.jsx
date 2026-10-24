@@ -630,7 +630,7 @@ export default function UIKitGuide({ step }) {
               icon shows, so the control and its name both stay. */}
           <button
             type="button"
-            className="bkit-rail-help ui-pill-out"
+            className="bkit-rail-help"
             onClick={() => { setShowName(false); setShowIntro((v) => !v) }}
             aria-expanded={showIntro}
             aria-controls={showIntro ? cardId : undefined}
