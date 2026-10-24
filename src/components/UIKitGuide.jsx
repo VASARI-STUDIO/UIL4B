@@ -26,70 +26,69 @@ import {
 
 // The Brand kit walkthrough, rendered by each of the four tools it walks.
 //
-// The reading behind it — what was broken, where the state lives, why progress
-// is derived rather than counted, and which Mobbin screen drove which decision —
-// is in src/utils/brandKitGuide.js, next to the step model itself. This file is
-// the surface. Two pieces:
+// The reading behind it (what was broken, where the state lives, why progress
+// is derived rather than counted) is in src/utils/brandKitGuide.js, next to the
+// step model itself. This file is the surface. Two pieces:
 //
-//   1. THE RAIL. A bar docked to the bottom of every step, showing all four
-//      steps at once with a tick on the ones that are built AND THE ARTEFACT
-//      EACH ONE PRODUCED — the real swatches, the real family names, the real
-//      base and ratio. That is the difference between a guided flow and four
-//      bookmarks: standing on Icons you can see the palette you drew on
-//      Colours. Every value comes off the saved design, so the rail cannot show
-//      a system the tools did not build. The rail is fixed to the foot of the
-//      viewport at every width (tool-shell.css), so it has the same width and
-//      position on all four tools; from 1024px the artefacts move into the
-//      orientation card's list.
+//   1. THE BAR. A flat strip docked to the bottom of every step, showing all
+//      four steps at once with a tick on the ones that are built AND THE
+//      ARTEFACT EACH ONE PRODUCED: the real swatches, the real family names, the
+//      real base and ratio. That is the difference between a guided flow and
+//      four bookmarks: standing on Icons you can see the palette you drew on
+//      Colours. Every value comes off the saved design, so the bar cannot show a
+//      system the tools did not build. The bar is fixed to the foot of the
+//      viewport at every width (tool-shell.css), so it has the same height, width
+//      and position on all four tools and on every step.
 //
-//   2. THE ORIENTATION CARD. Docked above the rail, over a working tool.
+//   2. THE PANEL. One surface that holds both the orientation copy and the
+//      closing step where the project is named: a bottom sheet joined to the bar
+//      on a phone, a popover hung from the button that opened it from 768px.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THE CARD IS NOT A MODAL, AND WHY THAT IS A DELIBERATE DEVIATION
+// WHY THE PANEL IS NOT A MODAL
 // ─────────────────────────────────────────────────────────────────────────────
-// The backlog item asks for the founder-note pattern — “focus-trapped, Escape
-// closes, focus returns, AND IT MUST NOT BLOCK THE STEP BEHIND IT”. The last
-// clause contradicts the first: a focus trap IS blocking. It is the mechanism
-// by which a modal makes the rest of the page unreachable, and `aria-modal`
-// declares exactly that to assistive technology.
+// A focus trap IS blocking: it is the mechanism by which a modal makes the rest
+// of the page unreachable, and `aria-modal` declares exactly that to assistive
+// technology. The walkthrough must not block the step behind it, so the panel:
 //
-// So the non-blocking half wins, because it is the half the founder asked for
-// twice (“go straight into step 1”, then a popup over it). This card therefore:
-//
-//   • does NOT declare aria-modal and does NOT trap focus — Tab walks out of it
-//     into the palette board behind, which is the point;
+//   • does NOT declare aria-modal and does NOT trap focus; Tab walks out of it
+//     into the tool behind, which is the point;
 //   • does NOT lock scroll and paints NO scrim, so the tool stays fully usable
 //     and fully visible while it is up;
 //   • DOES take focus when it opens, DOES close on Escape, and DOES return
 //     focus to whatever opened it.
 //
-// That is the correct contract for a NON-modal dialog, and it is honest: the old
-// version declared the aria-modal attribute over a scrim while trapping
-// nothing, which tests/unit/modal-contract.test.js was written to catch.
-// Declaring it here and not trapping would fail that guard; trapping would
-// block the step. Not declaring it is the only answer that is both.
+// That is the correct contract for a NON-modal dialog. Declaring the modal
+// attribute without trapping would fail tests/unit/modal-contract.test.js, and
+// trapping would block the step. (That guard scans RAW source for the attribute,
+// so this note names it in words rather than spelling out the declaration.)
 //
-// (That guard scans RAW source for the attribute, so this note names it in
-// words rather than spelling out the declaration -- prose that reads like code
-// is precisely what it exists to flag.)
-//
-// Escape is bound to the CARD, not the window, and that follows from the same
-// decision: while the card is open the tool behind is live, and PaletteBuilder
-// binds its own Escape to close colour popovers. A window-level handler here
-// would eat that. Escape closes the card whenever focus is inside it, which it
-// is the moment it opens.
+// Escape is bound to the PANEL, not the window: while the panel is open the tool
+// behind is live, and PaletteBuilder binds its own Escape to close colour
+// popovers. A window-level handler here would eat that. Escape closes the panel
+// whenever focus is inside it, which it is the moment it opens.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // IT OPENS ONCE, THEN ONLY ON REQUEST
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder asked for the popup to be PROVIDED on arrival — “go straight into
-// step 1 then provide a popup with a quick set of information” — so unlike the
-// founder note it does open itself, once, on the first step of a fresh flow.
-// After that it is opt-in furniture: `GUIDE_SEEN_KEY` records that it has been
-// shown, and the rail keeps a permanent “What’s this?” trigger so it is
-// reachable again afterwards. That last part is the lesson the founder-note
-// item recorded about one-time popups, and it is the cheap half to get right.
+// The orientation panel opens itself once, on the first step of a fresh flow.
+// After that it is opt-in: `GUIDE_SEEN_KEY` records that it has been shown, and
+// the bar keeps a permanent "What's this?" trigger so it is reachable again.
 let bkitOffTimer = 0
+
+const CLOSE_ICON = (size, stroke) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
+
+const ARROW_ICON = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+)
+
+const TICK_ICON = (
+  <svg className="bkit-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+)
 
 export default function UIKitGuide({ step }) {
   const navigate = useNavigate()
@@ -98,7 +97,7 @@ export default function UIKitGuide({ step }) {
   const { exportActions } = useExport() || {}
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
-  // A new blank project opens the card again, seen before or not.
+  // A new blank project opens the panel again, seen before or not.
   const newProject = location.state?.newProject === NEW_PROJECT_STATE.newProject
   const firstStep = step === BRAND_KIT_STEPS[0].id
   const [active, setActive] = useState(() => isGuideActive())
@@ -110,26 +109,15 @@ export default function UIKitGuide({ step }) {
   // READ in the initialiser, WRITTEN on dismiss. React may render a component,
   // throw the result away and render it again (concurrent rendering, Suspense
   // retries, StrictMode's development double-invoke), so the "seen" flag must
-  // not be burned by anything a discarded render can reach — the same split
+  // not be burned by anything a discarded render can reach: the same split
   // utils/handoffSlot.js draws between peek and consume, for the same reason.
   const [showIntro, setShowIntro] = useState(
     () => isGuideActive() && (location.state?.openBrandKitCard || (firstStep && (newProject || !introSeen()))),
   )
   const [showName, setShowName] = useState(false)
-  // From 1024px the closing step is a form inside the bar. Below that it is the
-  // docked card, unchanged.
-  const [wide, setWide] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(min-width:1024px)').matches)
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return undefined
-    const query = window.matchMedia('(min-width:1024px)')
-    const sync = () => setWide(query.matches)
-    sync()
-    query.addEventListener('change', sync)
-    return () => query.removeEventListener('change', sync)
-  }, [])
-  const nameInBar = showName && wide
-  const nameCardOpen = showName && !wide
-  // Each explicit start opens the card, including starts on the current page.
+  // Only one panel exists at a time: the orientation copy, or the naming step.
+  const panelOpen = showIntro || showName
+  // Each explicit start opens the panel, including starts on the current page.
   // Track the arrival so dismissing it stays effective until the next press.
   const [cardArrival, setCardArrival] = useState(location.key)
   if (cardArrival !== location.key) {
@@ -176,14 +164,17 @@ export default function UIKitGuide({ step }) {
   const current = steps.find((s) => s.id === step) || null
   const next = nextStep(step)
 
-  // Focus the card when it opens; hand focus back when it closes. `openedBy`
-  // survives the close because the trigger is always mounted — the rail does not
-  // unmount while the card is up, which is the same reason FounderNote keeps its
-  // footer button mounted.
+  // Focus the panel when it opens; hand focus back when it closes. `openedBy`
+  // survives the close because the trigger is always mounted: the bar does not
+  // unmount while the panel is up.
   const openedByRef = useRef(null)
+  // Set by "What's this?": closing the name panel on the way can move focus to
+  // the Name button first, so the help button names itself as the opener.
+  const introOpenerRef = useRef(null)
   useEffect(() => {
     if (!showIntro) return undefined
-    openedByRef.current = document.activeElement
+    openedByRef.current = introOpenerRef.current || document.activeElement
+    introOpenerRef.current = null
     if (!hasOpenOverlays(document.body)) cardRef.current?.focus()
     // Copied into the effect's own scope rather than read off the ref inside the
     // cleanup: by the time cleanup runs the ref may point at a different node,
@@ -191,19 +182,18 @@ export default function UIKitGuide({ step }) {
     const trigger = introTriggerRef.current
     return () => {
       const back = openedByRef.current
-      // Three ways `back` is not somewhere to return to, and the rendered spec
-      // found the third:
+      // Three ways `back` is not somewhere to return to:
       //   · nothing had focus;
-      //   · the opener was DETACHED — very often true, because the control that
+      //   · the opener was DETACHED, very often true, because the control that
       //     started the flow is a mega-menu button that unmounts on the route
       //     change. .focus() on a detached node is a silent no-op;
       //   · the opener was <body>, which is what `activeElement` reports when
-      //     nothing is focused — and body IS connected, so an isConnected check
-      //     alone waves it through and "restores" focus to nowhere. That is the
-      //     normal case here, because this card opens ITSELF on arrival rather
-      //     than being opened by a press.
-      // The rail's own trigger is the answer in all three: it is always mounted
-      // while the card is up, and it is what re-opens the card.
+      //     nothing is focused. body IS connected, so an isConnected check alone
+      //     waves it through and "restores" focus to nowhere. That is the normal
+      //     case here, because the panel opens ITSELF on arrival rather than
+      //     being opened by a press.
+      // The bar's own trigger is the answer in all three: it is always mounted
+      // while the panel is up, and it is what re-opens the panel.
       const usable = back && back !== document.body && back.isConnected
       const target = usable ? back : trigger
       if (target && target.isConnected) target.focus()
@@ -215,8 +205,7 @@ export default function UIKitGuide({ step }) {
     markIntroSeen()
   }, [])
 
-  // The X ends the walkthrough in place: no navigation. Both cards are closed
-  // with it.
+  // The X ends the walkthrough in place: no navigation. The panel closes with it.
   const leftInPlaceRef = useRef(false)
   const exit = useCallback(() => {
     leftInPlaceRef.current = true
@@ -226,9 +215,9 @@ export default function UIKitGuide({ step }) {
     setShowName(false)
   }, [])
 
-  // The X unmounts with the rail, so focus would fall to <body>. It goes to the
+  // The X unmounts with the bar, so focus would fall to <body>. It goes to the
   // page's own main landmark (App's skip-link target, tabIndex -1). An effect on
-  // `active`, so it runs after the card-close cleanups above, not before them.
+  // `active`, so it runs after the panel-close cleanups above, not before them.
   useEffect(() => {
     if (active || !leftInPlaceRef.current) return
     leftInPlaceRef.current = false
@@ -256,6 +245,9 @@ export default function UIKitGuide({ step }) {
   const [draft, setDraft] = useState(() => (typeof design?.identity?.name === 'string' ? design.identity.name : ''))
   const [nameError, setNameError] = useState('')
   const [refusal, setRefusal] = useState('')
+  // Signing in needs a connection. Offline, the name is kept and Save stays
+  // pressable, so it can be tried again once the connection is back.
+  const [offline, setOffline] = useState(false)
   // Save is disabled from the press until the save lands, is refused, or the
   // sign-in it asked for is dismissed. The ref blocks a second press that
   // arrives before the disabled state renders.
@@ -285,19 +277,24 @@ export default function UIKitGuide({ step }) {
     if (savingRef.current) return
     const name = draft.trim()
     if (!name) {
-      setNameError('Give your kit a name to save it.')
+      setNameError('Give your project a name to save it.')
       // Back to the field so the person can type at once. On a touch screen it
-      // goes to the label instead, so an error does not raise the keyboard.
+      // goes to the title instead, so an error does not raise the keyboard.
       const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
       ;(coarse ? nameTitleRef.current : nameInputRef.current)?.focus()
       return
     }
     setNameError('')
     setRefusal('')
-    setBusy(true)
     // Written to the working design first, so the name rides through a sign-in
-    // with everything else that was built.
+    // (or an offline stretch) with everything else that was built.
     updateDesign({ identity: { name } })
+    if (!canSaveProjects && typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setOffline(true)
+      return
+    }
+    setOffline(false)
+    setBusy(true)
     if (canSaveProjects) {
       save(name)
       return
@@ -320,15 +317,10 @@ export default function UIKitGuide({ step }) {
     save(name)
   }, [canSaveProjects, planKnown, save])
 
-  // Same focus contract as the orientation card, and focus goes back to the
-  // control that opened it on close. On a touch screen focus goes to the
-  // heading (in the bar, the label) rather than the field: focusing the field
-  // would raise the on-screen keyboard before the person has read it.
-  //
-  // In the bar the Next button is replaced by the form, so it is not mounted
-  // while the form is open and the cleanup below has nothing to return to.
-  // Back and Escape ask for the focus instead, and it lands once the button is
-  // back (the effect after this one).
+  // Same focus contract as the orientation panel, and focus goes back to the
+  // control that opened it on close. On a touch screen focus goes to the title
+  // rather than the field: focusing the field would raise the on-screen keyboard
+  // before the person has read it.
   useEffect(() => {
     if (!showName) return undefined
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
@@ -336,39 +328,24 @@ export default function UIKitGuide({ step }) {
     if (!hasOpenOverlays(document.body)) first?.focus()
     const trigger = nameTriggerRef.current
     return () => { if (trigger && trigger.isConnected) trigger.focus() }
-  }, [showName, wide])
-  const refocusNextRef = useRef(false)
-  const closeNameForm = useCallback(() => {
-    refocusNextRef.current = true
-    setShowName(false)
-  }, [])
-  useEffect(() => {
-    if (showName || !refocusNextRef.current) return
-    refocusNextRef.current = false
-    nameTriggerRef.current?.focus()
   }, [showName])
 
-  // Below 1024px a docked card is fixed 12px above the rail's top edge (see
-  // tool-shell.css). That edge moves with the rail's height, which changes with
-  // the step, and with the scroll at the end of the page, so it is measured
-  // while a card is open.
+  // Where the panel sits is mostly CSS: a sheet on the bar's top edge on a phone,
+  // a popover just above it from 768px. Two things are measured while it is open:
   //
-  // While the name form has focus and an on-screen keyboard is up, the card
-  // docks 12px above the keyboard instead. The keyboard shrinks the visual
-  // viewport, not the layout viewport a fixed card is placed in, so its height
-  // is read off window.visualViewport. Where the keyboard shrinks the layout
-  // viewport instead, nothing shows up there, so a focused field on a touch
-  // screen is taken to mean the keyboard is up. The dock is recomputed on the
-  // next frame rather than in the focus handler, so a tap that moves focus from
-  // the field to Save still lands on Save.
-  //
-  // From 1024px a card is a popover over the docked bar, its trailing edge on
-  // the trailing edge of the button that opened it (What's this? or, on the
-  // last step, Name your kit). That edge is measured here too, and the first
-  // measure runs before paint so the card never appears in one place and then
-  // jumps to another.
+  //   · the trailing edge of the button that opened it, which the popover hangs
+  //     from (the "What's this?" button, or on the last step the "Name your
+  //     project" button). The first measure runs before paint so the popover
+  //     never appears in one place and then jumps to another.
+  //   · the visible area, because an on-screen keyboard shrinks the visual
+  //     viewport and not the layout viewport a fixed panel is placed in. While
+  //     the name field has focus and a keyboard is up, the panel docks 12px above
+  //     the keyboard and the bar steps out of the way. Where the keyboard
+  //     shrinks the layout viewport instead, nothing shows up there, so a focused
+  //     field on a touch screen is taken to mean the keyboard is up. The dock is
+  //     recomputed on the next frame rather than in the focus handler, so a tap
+  //     that moves focus from the field to Save still lands on Save.
   const railRef = useRef(null)
-  const nameCardRef = useRef(null)
   const nameRowRef = useRef(null)
   const [dock, setDock] = useState(null)
   const shown = active && !!current
@@ -381,10 +358,13 @@ export default function UIKitGuide({ step }) {
     const root = document.documentElement
     window.clearTimeout(bkitOffTimer)
     root.classList.add('bkit-on')
+    // A tool's own bottom toolbar keeps the screen's bottom edge and the bar sits
+    // directly on it. Only a toolbar that is pinned to the viewport counts: one
+    // that scrolls with the page has nothing to stack on.
     const toolbar = step === 'color' ? railRef.current?.closest('.plb')?.querySelector('.plb-adjust') : null
     const docked = window.matchMedia('(min-width:768px)')
     const measure = () => {
-      if (toolbar && docked.matches) root.style.setProperty('--bkit-toolbar-h', `${toolbar.getBoundingClientRect().height}px`)
+      if (toolbar && getComputedStyle(toolbar).position === 'fixed') root.style.setProperty('--bkit-toolbar-h', `${toolbar.getBoundingClientRect().height}px`)
       else root.style.removeProperty('--bkit-toolbar-h')
     }
     measure()
@@ -403,55 +383,37 @@ export default function UIKitGuide({ step }) {
       else root.classList.remove('bkit-on')
     }
   }, [shown, step])
-  // The name form in the bar is not a card: only the orientation card and the
-  // name card (below 1024px) are docked and measured.
-  const cardOpen = showIntro || nameCardOpen
-  // The bar grows to hold the note under the name form, so its height is read
-  // off the rail and published as --bkit-h for the spacer, the toasts and the
-  // scroll padding that follow it. Gone again as soon as the steps come back.
   useLayoutEffect(() => {
     const rail = railRef.current
-    if (!nameInBar || !rail || typeof ResizeObserver === 'undefined') return undefined
-    const root = document.documentElement
-    const sync = () => root.style.setProperty('--bkit-h', `${rail.getBoundingClientRect().height}px`)
-    sync()
-    const observer = new ResizeObserver(sync)
-    observer.observe(rail)
-    return () => {
-      observer.disconnect()
-      root.style.removeProperty('--bkit-h')
-    }
-  }, [nameInBar])
-  useLayoutEffect(() => {
-    const rail = railRef.current
-    if (!cardOpen || !rail) return undefined
+    if (!panelOpen || !rail) return undefined
     const vv = window.visualViewport
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
     let frame = 0
     const measure = () => {
       frame = 0
-      const railLift = Math.round(window.innerHeight - rail.getBoundingClientRect().top)
       const keyboard = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0
       const focused = document.activeElement
       const inForm = !!focused && !!nameRowRef.current?.contains(focused)
       const lifted = inForm && (keyboard > 0 || (coarse && focused === nameInputRef.current))
-      const anchor = nameCardOpen ? nameTriggerRef.current : introTriggerRef.current
+      const anchor = showName ? nameTriggerRef.current : introTriggerRef.current
       const end = anchor ? Math.round(document.documentElement.clientWidth - anchor.getBoundingClientRect().right) : null
-      const next = lifted
-        ? { bottom: keyboard + 12, room: Math.round(vv ? vv.height : window.innerHeight), top: Math.round(vv ? vv.offsetTop : 0), end }
-        : { bottom: railLift + 12, end }
-      setDock((prev) => (prev && prev.bottom === next.bottom && prev.room === next.room && prev.top === next.top && prev.end === next.end ? prev : next))
+      const next = {
+        vvh: Math.round(vv ? vv.height : window.innerHeight),
+        top: Math.round(vv ? vv.offsetTop : 0),
+        bottom: keyboard + 12,
+        lifted,
+        end,
+      }
+      setDock((prev) => (prev && prev.vvh === next.vvh && prev.top === next.top && prev.bottom === next.bottom && prev.lifted === next.lifted && prev.end === next.end ? prev : next))
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
     measure()
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
     observer?.observe(rail)
     // The actions sit at the bar's trailing end, so a change in their width
-    // (a web font arriving) moves the button the card hangs from.
+    // (a web font arriving) moves the button the popover hangs from.
     const actions = rail.querySelector('.bkit-rail-actions')
     if (actions) observer?.observe(actions)
-    const toolbar = step === 'color' ? rail.closest('.plb')?.querySelector('.plb-adjust') : null
-    if (toolbar) observer?.observe(toolbar)
     window.addEventListener('scroll', schedule, { passive: true, capture: true })
     window.addEventListener('resize', schedule)
     document.addEventListener('focusin', schedule)
@@ -468,29 +430,29 @@ export default function UIKitGuide({ step }) {
       vv?.removeEventListener('resize', schedule)
       vv?.removeEventListener('scroll', schedule)
     }
-  }, [cardOpen, nameCardOpen, active, step])
-  const lifted = !!dock?.room
-  const dockStyle = dock && (lifted || dock.bottom > 12)
+  }, [panelOpen, showName, active, step])
+  const lifted = panelOpen && !!dock?.lifted
+  const dockStyle = dock
     ? {
-        '--bkit-dock-bottom': `${dock.bottom}px`,
+        '--bkit-vvh': `${dock.vvh}px`,
         ...(dock.end != null ? { '--bkit-dock-end': `${dock.end}px` } : null),
-        ...(lifted ? { '--bkit-vv-h': `${dock.room}px`, '--bkit-vv-top': `${dock.top}px` } : null),
+        ...(lifted ? { '--bkit-dock-bottom': `${dock.bottom}px`, '--bkit-vv-top': `${dock.top}px` } : null),
       }
     : undefined
 
-  // A lifted card can be shorter than its content; keep the field and Save in
+  // A lifted panel can be shorter than its content; keep the field and Save in
   // view inside it.
   useEffect(() => {
-    const card = nameCardRef.current
+    const card = cardRef.current
     const row = nameRowRef.current
-    if (!lifted || !card || !row) return
+    if (!lifted || !showName || !card || !row) return
     const c = card.getBoundingClientRect()
     const r = row.getBoundingClientRect()
     if (r.bottom > c.bottom) card.scrollTop += r.bottom - c.bottom + 4
     else if (r.top < c.top) card.scrollTop -= c.top - r.top + 4
-  }, [lifted, dock])
+  }, [lifted, showName, dock])
 
-  // The current step's chip is scrolled into the strip, so on a narrow screen
+  // The current step's link is scrolled into the strip, so on a narrow screen
   // the step the person is on is the one they can see. Only the strip scrolls.
   const stepsRef = useRef(null)
   useEffect(() => {
@@ -503,35 +465,23 @@ export default function UIKitGuide({ step }) {
     else if (c.left < s.left) strip.scrollLeft -= s.left - c.left
   }, [active, step])
 
-  // Keep the cards mounted so opening a tool menu cannot consume the intro or
+  // Keep the panel mounted so opening a tool menu cannot consume the intro or
   // discard a name draft. Observe portals too, including the phone sheets.
   useLayoutEffect(() => {
-    if (!active || (!showIntro && !nameCardOpen)) return undefined
-    return suspendGuideForOverlays(document, [cardRef.current, nameCardRef.current].filter(Boolean))
-  }, [active, showIntro, nameCardOpen])
+    if (!active || !panelOpen) return undefined
+    return suspendGuideForOverlays(document, [cardRef.current].filter(Boolean))
+  }, [active, panelOpen, showName])
 
   if (!active || !current) return null
 
-  // The field and the note under it are the same in the card and in the bar.
-  const nameInput = (
-    <input
-      id={`${nameCardId}-name`}
-      ref={nameInputRef}
-      className="bkit-name-input"
-      type="text"
-      value={draft}
-      onChange={(e) => { setDraft(e.target.value); if (nameError) setNameError('') }}
-      maxLength={IDENTITY_NAME_MAX}
-      autoComplete="off"
-      spellCheck="false"
-      aria-invalid={nameError ? 'true' : undefined}
-      aria-describedby={nameError ? `${nameCardId}-err` : `${nameCardId}-note`}
-    />
-  )
   const nameMessage = (
     <>
       {nameError ? (
         <p className="bkit-name-error" id={`${nameCardId}-err`} role="alert">{nameError}</p>
+      ) : offline ? (
+        <p className="bkit-name-note" id={`${nameCardId}-note`} role="status">
+          You&rsquo;re offline. Your work stays here. Save once you&rsquo;re back online.
+        </p>
       ) : (
         <p className="bkit-name-note" id={`${nameCardId}-note`}>
           {canSaveProjects
@@ -543,131 +493,116 @@ export default function UIKitGuide({ step }) {
     </>
   )
 
+  const count = `${done} of ${total} parts`
+  // "Start with" belongs to the first step. Reopened on a later one, the same
+  // button leads back to where the person already is.
+  const stepNumber = ['one', 'two', 'three', 'four', 'five', 'six'][steps.indexOf(current)] || String(steps.indexOf(current) + 1)
+  const goLabel = `${firstStep ? 'Start with' : 'Back to'} ${current.label.toLowerCase()}`
+
   return (
     <>
       {showIntro && (
-        // No overlay element at all. The previous version wrapped this in a
-        // fixed, blurred, full-viewport scrim; the card is docked directly now,
-        // so there is nothing between the visitor and the tool.
-        <div
+        // No overlay element at all: the panel is docked directly, so there is
+        // nothing between the visitor and the tool.
+        <BkitPanel
+          key="intro"
           id={cardId}
-          className="bkit-card"
+          panelRef={cardRef}
           style={dockStyle}
-          role="dialog"
-          aria-labelledby={titleId}
+          titleId={titleId}
+          title="Four steps to a full system."
+          count={count}
           tabIndex={-1}
-          ref={cardRef}
-          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeIntro() } }}
+          onClose={closeIntro}
+          onEscape={closeIntro}
         >
-          <div className="bkit-card-head">
-            <span className="bkit-card-eyebrow">Brand kit</span>
-            <button type="button" className="bkit-card-close" onClick={closeIntro} aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-          <h2 id={titleId} className="bkit-card-title">Four steps to a full system.</h2>
           <p className="bkit-card-body">
-            You are on step one and the tool below is live — nothing is waiting on this
-            panel. Each step saves into the same system as you work, so the last step
-            knows what you chose in the first, and you can leave and pick it up later.
+            You&rsquo;re on step {stepNumber}, and the tool is ready to use. Each step saves into
+            the same system as you work, so the last step knows what you chose in the
+            first. You can leave and pick it up later.
           </p>
           <ol className="bkit-card-steps">
             {steps.map((s) => (
-              <li key={s.id} className={s.id === step ? 'is-current' : ''}>
-                <span className="bkit-card-num" aria-hidden="true">{s.number}</span>
-                <span>
-                  <strong>{s.label}</strong> — {s.blurb}
-                  {/* From 1024px the bar shows no artefacts; what each step
-                      produced is shown here instead. */}
+              <li key={s.id} className={`${s.id === step ? 'is-current' : ''}${s.done ? ' is-done' : ''}`}>
+                <span className="bkit-card-num" aria-hidden="true">
+                  <span className="bkit-step-num">{s.number}</span>
+                  {TICK_ICON}
+                </span>
+                <span className="bkit-card-text">
+                  <strong>{s.label}</strong>
+                  <span className="bkit-card-blurb">{s.blurb}</span>
                   {s.done && <span className="bkit-card-artefact"><StepArtefact step={s} /></span>}
                 </span>
               </li>
             ))}
           </ol>
-          {/* From 1024px the naming form is in the bar, which has no room for
-              this line; below 1024 the name card carries it itself. */}
-          {nameInBar && (
-            <p className="bkit-card-note">
-              The name goes on the project and on the kit you export. You can change it
-              later in Export.
-            </p>
-          )}
           <button type="button" className="btn btn-accent bkit-card-go" onClick={closeIntro}>
-            Start with {current.label.toLowerCase()}
+            {goLabel}
           </button>
-        </div>
+        </BkitPanel>
       )}
 
-      {nameCardOpen && (
-        // Below 1024px the closing step is a card, docked where the orientation
-        // card docks and non-modal for the same reason: the icon library stays
-        // usable behind it. From 1024px it is a form inside the bar (below).
-        <div
+      {showName && (
+        // The closing step shares the panel: the icon library stays usable
+        // behind it, and the same Escape, focus and overlay rules apply.
+        <BkitPanel
+          key="name"
           id={nameCardId}
-          className={`bkit-card bkit-card--name${lifted ? ' is-lifted' : ''}`}
+          panelRef={cardRef}
           style={dockStyle}
-          ref={nameCardRef}
-          role="dialog"
-          aria-labelledby={`${nameCardId}-title`}
-          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setShowName(false) } }}
+          titleId={`${nameCardId}-title`}
+          titleRef={nameTitleRef}
+          title="Name your project"
+          count={count}
+          lifted={lifted}
+          modifier="bkit-card--name"
+          onClose={() => setShowName(false)}
+          onEscape={() => setShowName(false)}
         >
-          <div className="bkit-card-head">
-            <span className="bkit-card-eyebrow">Brand kit · Last step</span>
-            <button type="button" className="bkit-card-close" onClick={() => setShowName(false)} aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-          <h2 id={`${nameCardId}-title`} className="bkit-card-title" tabIndex={-1} ref={nameTitleRef}>Name your kit</h2>
           <p className="bkit-card-body">
             The name goes on the project and on the kit you export. You can change it
             later in Export.
           </p>
-          <form className="bkit-name-form" onSubmit={submitName} noValidate>
-            <label className="bkit-name-label" htmlFor={`${nameCardId}-name`}>Kit name</label>
+          <form className="bkit-name-form" onSubmit={submitName} noValidate aria-busy={saving ? 'true' : undefined}>
+            <label className="bkit-name-label" htmlFor={`${nameCardId}-name`}>Project name</label>
             <div className="bkit-name-row" ref={nameRowRef}>
-              {nameInput}
-              <button type="submit" className="btn btn-accent bkit-name-save" disabled={saving}>Save project</button>
+              <input
+                id={`${nameCardId}-name`}
+                ref={nameInputRef}
+                className="bkit-name-input"
+                type="text"
+                inputMode="text"
+                autoCapitalize="words"
+                enterKeyHint="done"
+                value={draft}
+                onChange={(e) => { setDraft(e.target.value); if (nameError) setNameError(''); if (offline) setOffline(false) }}
+                maxLength={IDENTITY_NAME_MAX}
+                autoComplete="off"
+                spellCheck="false"
+                aria-invalid={nameError ? 'true' : undefined}
+                aria-describedby={nameError ? `${nameCardId}-err` : `${nameCardId}-note`}
+              />
+              <button type="submit" className="btn btn-accent bkit-name-save" disabled={saving}>{saving ? 'Saving…' : 'Save project'}</button>
             </div>
-            {nameMessage}
+            <div className="bkit-name-msg">{nameMessage}</div>
           </form>
-        </div>
+        </BkitPanel>
       )}
 
-      <div className={`bkit-rail${nameInBar ? ' bkit-rail--name' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
+      <div className={`bkit-rail${lifted ? ' bkit-rail--kbd' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
         <div className="bkit-rail-head">
           <span className="bkit-rail-eyebrow">Brand kit</span>
           {/* The count is the same reading the project card shows, so the two
               surfaces can never report different progress for one system. */}
-          <span className="bkit-rail-count" aria-live="polite">{done} of {total} parts</span>
+          <span className="bkit-rail-count" aria-live="polite">{count}</span>
         </div>
 
-        {/* Real links, not buttons: the rail is a map of the flow, so
+        {/* Real links, not buttons: the bar is a map of the flow, so
             middle-click and open-in-new-tab should work on it. Nothing is
-            STAGED by these clicks — the state that carries between steps is the
-            saved design both ends already read — so there is no draft that a
-            modified click could strand in a tab that never navigates, and no
-            slot needing navigatesThisTab() or a ttl. See utils/brandKitGuide.js. */}
-        {nameInBar ? (
-          // The closing step, in place of the steps and the Next button: one
-          // surface, nothing stacked on the bar. Escape is Back; the note, the
-          // error and the free-cap refusal sit on a second row under the field.
-          <form
-            className="bkit-name-form bkit-name-form--bar"
-            onSubmit={submitName}
-            noValidate
-            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeNameForm() } }}
-          >
-            <label className="bkit-name-label" htmlFor={`${nameCardId}-name`} ref={nameTitleRef} tabIndex={-1}>Name your kit</label>
-            {nameInput}
-            <button type="submit" className="btn btn-accent bkit-name-save" disabled={saving}>Save project</button>
-            <button type="button" className="bkit-name-back" onClick={closeNameForm}>Back</button>
-            <div className="bkit-name-msg">{nameMessage}</div>
-          </form>
-        ) : (
+            STAGED by these clicks (the state that carries between steps is the
+            saved design both ends already read), so there is no draft that a
+            modified click could strand in a tab that never navigates. See
+            utils/brandKitGuide.js. */}
         <ol className="bkit-steps" ref={stepsRef}>
           {steps.map((s) => (
             <li key={s.id}>
@@ -677,58 +612,60 @@ export default function UIKitGuide({ step }) {
                 aria-current={s.id === step ? 'step' : undefined}
               >
                 <span className="bkit-step-mark" aria-hidden="true">
-                  {s.done ? (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  ) : s.number}
+                  <span className="bkit-step-num">{s.number}</span>
+                  {TICK_ICON}
                 </span>
                 <span className="bkit-step-body">
                   <span className="bkit-step-label" data-label={s.label}>{s.label}</span>
-                  <StepArtefact step={s} />
+                  <StepArtefact step={s} decorative />
                 </span>
                 <span className="sr-only">{s.done ? ', done' : ', not started'}</span>
               </Link>
             </li>
           ))}
         </ol>
-        )}
 
+        {/* Close first, so the walkthrough's exit sits away from its primary
+            action; Next is last, at the trailing end. */}
         <div className="bkit-rail-actions">
-          {/* Text on wide screens; on a phone the text is visually hidden and
-              the icon shows, so the control and its name both stay. */}
+          <button type="button" className="bkit-rail-close" onClick={exit} aria-label="Leave the walkthrough" title="Leave the walkthrough. It is not saved as a project until you name it.">
+            {CLOSE_ICON(14, 2.4)}
+          </button>
+          {/* Text from 1080px; below that the text is visually hidden and the
+              icon shows, so the control and its name both stay. */}
           <button
             type="button"
             className="bkit-rail-help"
-            onClick={() => { if (!nameInBar) setShowName(false); setShowIntro((v) => !v) }}
+            onClick={(e) => { introOpenerRef.current = e.currentTarget; setShowName(false); setShowIntro((v) => !v) }}
             aria-expanded={showIntro}
             aria-controls={showIntro ? cardId : undefined}
             ref={introTriggerRef}
           >
-            <svg className="bkit-rail-help-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg className="bkit-rail-help-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="9.5" /><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8" /><line x1="12" y1="17.2" x2="12" y2="17.3" />
             </svg>
             <span className="bkit-rail-help-text">What&rsquo;s this?</span>
           </button>
+          {/* One filled button per view: while the panel is open its own button
+              takes the fill and this one draws as an outline. */}
           {next ? (
-            <button type="button" className="btn btn-accent bkit-rail-next" onClick={goNext}>
-              Next: {next.label}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+            <button type="button" className={`btn bkit-rail-next${panelOpen ? ' is-outline' : ' btn-accent'}`} onClick={goNext}>
+              <span className="bkit-rail-next-text">Next: {next.label}</span>
+              {ARROW_ICON}
             </button>
-          ) : !nameInBar && (
+          ) : (
             <button
               type="button"
-              className="btn btn-accent bkit-rail-next"
+              className={`btn bkit-rail-next${panelOpen ? ' is-outline' : ' btn-accent'}`}
               onClick={goNext}
-              aria-expanded={nameCardOpen}
-              aria-controls={nameCardOpen ? nameCardId : undefined}
+              aria-expanded={showName}
+              aria-controls={showName ? nameCardId : undefined}
               ref={nameTriggerRef}
             >
-              Name your kit
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              <span className="bkit-rail-next-text">Name your project</span>
+              {ARROW_ICON}
             </button>
           )}
-          <button type="button" className="bkit-rail-close" onClick={exit} aria-label="Leave the walkthrough" title="Leave the walkthrough. It is not saved as a project until you name it.">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
         </div>
       </div>
       {/* The bar is fixed to the foot of the viewport; this keeps its height in
@@ -739,15 +676,53 @@ export default function UIKitGuide({ step }) {
 }
 
 /**
- * What this step produced, under its label.
+ * The one floating surface of the walkthrough: a title row, a close control and
+ * whatever the caller puts under it. Escape is handled here, bound to the panel.
+ * The `bkit-card` class is also what utils/openOverlays.js excludes from the
+ * "another overlay is open" check, so the panel never counts as an obstruction
+ * to itself.
+ */
+function BkitPanel({ id, panelRef, style, titleId, titleRef, title, count, tabIndex, lifted, modifier, onClose, onEscape, children }) {
+  return (
+    <div
+      id={id}
+      className={`bkit-card${modifier ? ` ${modifier}` : ''}${lifted ? ' is-lifted' : ''}`}
+      style={style}
+      role="dialog"
+      aria-labelledby={titleId}
+      tabIndex={tabIndex}
+      ref={panelRef}
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onEscape() } }}
+    >
+      <span className="bkit-card-grab" aria-hidden="true" />
+      <div className="bkit-card-head">
+        <div className="bkit-card-headtext">
+          <h2 id={titleId} className="bkit-card-title" tabIndex={titleRef ? -1 : undefined} ref={titleRef}>{title}</h2>
+          {/* Below 1024px the bar's own count is not drawn, so it is shown here. */}
+          <p className="bkit-card-count">{count}</p>
+        </div>
+        <button type="button" className="bkit-card-close" onClick={onClose} aria-label="Close">
+          {CLOSE_ICON(16, 2)}
+        </button>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * What this step produced, beside its label.
  *
  * Swatches for colour because a list of six hex codes at this size is a wall and
  * the colours themselves are the artefact; text for the other two because a
  * family name and a ratio ARE readable at this size. Nothing at all for a step
- * with no work in it — "Not set" on three of four chips is noise, and the number
+ * with no work in it: "Not set" on three of four steps is noise, and the number
  * instead of a tick already says it.
+ *
+ * On the bar (`decorative`) it is hidden from assistive technology, because the
+ * panel's list carries the readable version.
  */
-function StepArtefact({ step }) {
+function StepArtefact({ step, decorative = false }) {
   if (!step.done) return null
   if (step.id === 'color') {
     const colors = step.artefact.colors || []
@@ -762,5 +737,5 @@ function StepArtefact({ step }) {
   }
   const text = step.artefact.text
   if (!text) return null
-  return <span className="bkit-step-value">{text}</span>
+  return <span className="bkit-step-value" aria-hidden={decorative ? 'true' : undefined}>{text}</span>
 }
