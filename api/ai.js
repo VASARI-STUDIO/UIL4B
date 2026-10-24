@@ -1183,6 +1183,17 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── The animated icon sets (Pro) ──────────────────────────────────────────
+  // GET /api/ai?animatedIcons=<prefix>[&icons=a,b,c]. Same token + planForUser
+  // gate as the libraries; see api/_lib/icons/animated.js.
+  if (req.method === 'GET' && 'animatedIcons' in (req.query || {})) {
+    const { serveAnimatedIcons } = await import('./_lib/icons/animated.js')
+    return serveAnimatedIcons(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
   // ── Config health check ───────────────────────────────────────────────────
   // GET /api/ai?diag=1 reports whether the AI keys and the Firebase credential
   // are present and valid — presence and length only, never a value.

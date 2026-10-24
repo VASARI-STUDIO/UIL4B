@@ -43,7 +43,9 @@ export function writeCollectionCache(prefix, data, { storage = defaultStorage, n
 // A failed refresh of stale stored data still resolves with that data, but it is never put in
 // the in-memory cache, so the cooldown and manual retries can request again. failed(prefix) tells
 // the UI that the last request for a prefix failed and nothing newer has loaded since.
-export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now }) {
+// `cooldownExempt(error)` marks failures that must not start the cooldown (a session
+// problem is fixed by the viewer, not by waiting).
+export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now, cooldownExempt = () => false }) {
   const pending = new Map()
   const failures = new Map()
   function getCollectionNames(prefix, { manualRetry = false, chipRetry = false } = {}) {
@@ -67,7 +69,7 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
         return data
       })
       .catch(error => {
-        failures.set(prefix, { at: now(), error })
+        if (!cooldownExempt(error)) failures.set(prefix, { at: now(), error })
         if (!stored) throw error
         return stored.data
       })

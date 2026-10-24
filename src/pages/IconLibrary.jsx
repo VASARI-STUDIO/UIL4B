@@ -36,8 +36,14 @@ import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 // see src/data/iconPackTiers.js for the founder's rule and for how to move a
 // pack between tiers with a one-word edit.
 import {
-  ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
+  ANIMATED_PACKS, ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, isAnimatedPack, tierOf, viewerTier, visiblePacks,
 } from '../data/iconPackTiers'
+// THE ANIMATED SETS NEVER TOUCH api.iconify.design FROM THE BROWSER. Their listing
+// and glyphs come only from this client, which calls the server's Pro check.
+import { ANIMATED_BATCH, animatedIcons, classifyAnimatedFailure, isAnimatedName, isPackScopedFailure } from '../utils/animatedIcons'
+import {
+  applyGlyphData, glyphKey, purgeAnimatedCaches, setAnimatedTier, staleAnimatedAnswer, animatedTierIsPaid,
+} from '../utils/animatedIconCache'
 // WHAT IS OWED TO THE PEOPLE WHO DREW THEM. Four of the sets below are Creative
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
@@ -76,6 +82,7 @@ const COLORED_PACKS = new Set([
   'logos', 'flat-color-icons', 'fxemoji', 'noto', 'noto-v1', 'twemoji', 'emojione',
   'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
   'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'token-branded',
+  'meteocons',
 ])
 // Theme-adaptive tint for the GRID/rail only (inverts monochrome art in dark mode).
 // The customizer Stage does NOT use this — it fixes contrast via a luminance swap.
@@ -270,6 +277,8 @@ const matchesWeight = (pack, name, weight) => (
 )
 
 function buildSvgUrl(host, pack, name, params = {}) {
+  // An animated set has no direct URL, ever: it loads through the server's Pro check.
+  if (isAnimatedPack(pack)) return ''
   let url = `${host}/${pack}/${name}.svg`
   const parts = []
   if (params.size) { parts.push(`width=${params.size}`, `height=${params.size}`) }
@@ -299,13 +308,20 @@ async function fetchWithFallback(path, timeout = 4000) {
 // customizer can seed its stage on first paint with no "Loading…" flash.
 const svgTextCache = new Map()
 const svgTextReady = new Map()
-const svgKey = (pack, name) => `${pack}:${name}`
+const svgKey = glyphKey
 
 function fetchSvgText(pack, name, params = {}) {
   const cacheable = !params || Object.keys(params).length === 0
   const key = svgKey(pack, name)
   if (cacheable && svgTextCache.has(key)) return svgTextCache.get(key)
   const p = (async () => {
+    // Animated sets: the server route, then the same standalone markup the grid builds.
+    if (isAnimatedPack(pack)) {
+      if (!(await loadGlyphBatch(pack, [name]))) throw new Error('Failed to fetch icon SVG')
+      const text = glyphSvgText(pack, name)
+      if (!text) throw new Error('Failed to fetch icon SVG')
+      return text
+    }
     for (const host of API_HOSTS) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
@@ -326,7 +342,7 @@ function fetchSvgText(pack, name, params = {}) {
 // Fire-and-forget warm-up on grid hover/focus, so by the time the click lands
 // the customizer's base markup is usually already resolved.
 const prefetchIconSvg = (icon) => {
-  if (icon?.cdn && !icon.custom && !icon.logo) fetchSvgText(icon.pack, icon.name).catch(() => {})
+  if (icon?.cdn && !icon.custom && !icon.logo && !isAnimatedPack(icon.pack)) fetchSvgText(icon.pack, icon.name).catch(() => {})
 }
 
 /* ── THE GRID ASKS FOR ONE FILE PER PACK, NOT ONE PER ICON ───────────────────
@@ -401,53 +417,40 @@ const GLYPH_RETRY_MS = 3000
 const GLYPH_FAILS = new Map() // 'pack:name' → failed attempts so far
 const GLYPH_RETRY_AFTER = new Map() // pack → earliest time it may be asked again
 
+// The glyph stores the animated-icon cache module writes into and purges.
+const GLYPH_STORES = { body: GLYPH_BODY, box: GLYPH_BOX, missing: GLYPH_MISSING }
+
 /**
  * Fetch one pack's worth of glyph bodies in a single request and fill the
- * caches. Resolves true when the request was answered, false when the service
- * refused it — the caller turns a false into the page's existing refused state
- * rather than into 120 silently broken images.
+ * caches. Resolves { ok: true } when the request was answered, and
+ * { ok: false, kind } when it was not — the caller turns a failure into the
+ * page's existing refused state rather than into 120 silently broken images.
+ * `kind` says why (see classifyAnimatedFailure): only an animated set can fail
+ * for a reason other than 'transient'.
  */
-async function loadGlyphBatch(pack, names) {
-  if (!names.length) return true
-  const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
+async function loadGlyphBatchOutcome(pack, names) {
+  if (!names.length) return { ok: true }
   let data
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
-    // as a broken image nobody can see.
-    if (!r.ok) return false
-    data = await r.json()
-  } catch {
-    return false
-  }
-  const defW = data.width || 24
-  const defH = data.height || 24
-  const bodyOf = (n) => {
-    // A requested name can be an alias; the parent carries the markup. Iconify
-    // allows an alias chain, so walk it with a hop cap rather than trusting it
-    // to be one deep. An alias such as `lucide:home` (of `house`) would
-    // otherwise be recorded as missing.
-    let cur = n
-    for (let hop = 0; hop < 8; hop++) {
-      if (data.icons && data.icons[cur]) return { icon: data.icons[cur], key: cur }
-      const alias = data.aliases && data.aliases[cur]
-      if (!alias || !alias.parent) return null
-      cur = alias.parent
+    if (isAnimatedPack(pack)) {
+      // The server route checks the plan; a 401/403 throws and is classified below.
+      data = await animatedIcons.glyphs(pack, names)
+    } else {
+      const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+      // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
+      // as a broken image nobody can see.
+      if (!r.ok) return { ok: false, kind: 'transient' }
+      data = await r.json()
     }
-    return null
+  } catch (err) {
+    return { ok: false, kind: isAnimatedPack(pack) ? classifyAnimatedFailure(err) : 'transient' }
   }
-  for (const n of names) {
-    const found = bodyOf(n)
-    const key = svgKey(pack, n)
-    if (!found || typeof found.icon.body !== 'string') { GLYPH_MISSING.add(key); continue }
-    GLYPH_MISSING.delete(key)
-    GLYPH_BODY.set(key, found.icon.body)
-    const w = found.icon.width || defW
-    const h = found.icon.height || defH
-    if (w !== 24 || h !== 24) GLYPH_BOX.set(key, { w, h })
-  }
-  return true
+  // An animated answer that lands after the viewer left Pro is dropped, not stored.
+  if (!applyGlyphData(pack, names, data, GLYPH_STORES)) return { ok: false, kind: classifyAnimatedFailure(staleAnimatedAnswer()) }
+  return { ok: true }
 }
+const loadGlyphBatch = async (pack, names) => (await loadGlyphBatchOutcome(pack, names)).ok
 
 /**
  * The <img> src for a batched glyph, or '' when its body has not arrived. The
@@ -1290,6 +1293,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [similar, setSimilar] = useState({ id: null, list: [] })
   useEffect(() => {
     if (!activeIcon?.cdn || activeIcon.custom || activeIcon.pasted) return
+    // The tiles are <img> URLs on the Iconify host, which an animated set never uses.
+    if (isAnimatedPack(activeIcon.pack)) return
     const { pack, name } = activeIcon
     if (!pack || !name) return
     const id = activeIcon.id || `${pack}:${name}`
@@ -2012,13 +2017,42 @@ const COLLECTION_CACHE = new Map()
 const retryOptions = (retry) => ({ manualRetry: !!retry, chipRetry: retry === 'chip' })
 
 // info=1 includes registry attribution in the same catalogue request.
-const getCollectionNames = createCollectionLoader({
+const getPublicCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
   fetchEntry: async (pack) => {
     const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
     const d = await r.json()
     return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
   },
+})
+// The animated sets' listing comes from the server's Pro check, and is kept in
+// memory only: a Pro-only catalogue is never written to localStorage, where the
+// next account on this browser could read it.
+const getAnimatedCollectionNames = createCollectionLoader({
+  cache: COLLECTION_CACHE,
+  storage: () => null,
+  // A session or plan problem is the viewer's to fix, and an answer dropped as
+  // stale is not a failure of the service: neither starts the retry cooldown.
+  cooldownExempt: (error) => isPackScopedFailure(classifyAnimatedFailure(error)),
+  fetchEntry: async (pack) => {
+    const d = await animatedIcons.collection(pack)
+    // An answer that lands after the viewer left Pro is dropped, not cached.
+    if (!animatedTierIsPaid()) throw staleAnimatedAnswer()
+    return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
+  },
+})
+const getCollectionNames = (pack, options) => (
+  isAnimatedPack(pack) ? getAnimatedCollectionNames(pack, options) : getPublicCollectionNames(pack, options)
+)
+// failed(pack) asks the loader that owns the pack whether its last request failed.
+getCollectionNames.failed = (pack) => (
+  isAnimatedPack(pack) ? getAnimatedCollectionNames : getPublicCollectionNames
+).failed(pack)
+
+/** Forget everything fetched for the animated sets (the viewer is no longer Pro). */
+const forgetAnimatedSets = () => purgeAnimatedCaches({
+  byPack: [COLLECTION_CACHE, GLYPH_ASKED, GLYPH_RETRY_AFTER],
+  keyed: [GLYPH_BODY, GLYPH_BOX, GLYPH_URI, GLYPH_FAILS, GLYPH_MISSING, svgTextCache, svgTextReady, glyphCache],
 })
 
 /** The licence the registry answered for this pack, or null if it never has. */
@@ -2066,6 +2100,10 @@ const PACK_MENU = [
   {
     label: 'Flat & emoji',
     packs: [['flat-color-icons', 'Flat Color Icons'], ['twemoji', 'Twemoji'], ['noto', 'Noto Emoji'], ['fluent-emoji', 'Fluent Emoji'], ['openmoji', 'OpenMoji']],
+  },
+  {
+    label: 'Animated',
+    packs: [['line-md', 'Line MD (animated)'], ['svg-spinners', 'SVG Spinners (animated)'], ['meteocons', 'Meteocons (animated)']],
   },
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
@@ -2398,6 +2436,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const [mode, setMode] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  /* Why an animated set cannot be shown, when the reason is the viewer's session
+     or plan rather than the icon service: 'auth' (sign in again) or 'forbidden'
+     (the plan does not include the set). Scoped to the animated pack on screen:
+     it never touches `loadError` or `cdnOk`, so the other packs and the next
+     search carry on as normal. Cleared wherever a new listing starts. */
+  const [animatedNotice, setAnimatedNotice] = useState(null)
   const [activeCat] = useState('all')
   const [pack, setPack] = useState('')
   // The weight is read through a ref by the browse functions, so choosing one
@@ -2530,7 +2574,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
-    setLoadError(false)
+    setLoadError(false); setAnimatedNotice(null)
     setVisible(PAGE_SIZE); setMode('')
     // ALLOWED, NOT ALL. This is the line that decides how many third-party
     // requests a visit costs: a signed-out visit asks five hosts for a
@@ -2628,7 +2672,23 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     retryRef.current = null
     setGated({ label, need })
     setIcons([]); setVisible(PAGE_SIZE); setMode('')
-    setLoading(false); setLoadError(false)
+    setLoading(false); setLoadError(false); setAnimatedNotice(null)
+  }, [])
+
+  /* A FAILED ANIMATED LISTING, WHEN THE CAUSE IS THE SESSION OR THE PLAN. The
+     grid stays empty and the notice says which, without touching `loadError`
+     or `cdnOk`: the icon service is fine, and the next search in any other pack
+     must still go to it. Returns false for any other cause so the caller can
+     show its usual unreachable state. A stale answer (the viewer left Pro while
+     it was in flight) is dropped without a notice; the tier change is already
+     re-running the browse. */
+  const failAnimatedScope = useCallback((error) => {
+    const kind = classifyAnimatedFailure(error)
+    if (!isPackScopedFailure(kind)) return false
+    setIcons([]); setVisible(PAGE_SIZE); setMode('')
+    setLoading(false)
+    if (kind !== 'stale') setAnimatedNotice(kind)
+    return true
   }, [])
 
   // The narrowest tier that would open at least one of these packs. A group
@@ -2644,7 +2704,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
-    setLoadError(false)
+    setLoadError(false); setAnimatedNotice(null)
     setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
     setVisible(PAGE_SIZE)
     setMode(`Brand logos · ${LOGODEV_BRANDS.length} popular brands`)
@@ -2657,7 +2717,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const searchLogos = useCallback((q) => {
     reqId.current++
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
-    setLoadError(false)
+    setLoadError(false); setAnimatedNotice(null)
     const term = (q || '').trim()
     if (term.length < 2) { browseLogos(); return }
     const lower = term.toLowerCase()
@@ -2690,7 +2750,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (packFilter === 'logodev') { browseLogos(); return }
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter, groupKey, true)
-    setLoading(true); setLoadError(false); glyphFails.current = 0
+    setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
     getCollectionNames(packFilter, retryOptions(manualRetry))
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
@@ -2711,13 +2771,16 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${names.length.toLocaleString()} icons`)
         setLoading(false)
       })
-      .catch(() => {
+      .catch((error) => {
         if (rid !== reqId.current) return
-        cdnOk.current = false
+        if (isAnimatedPack(packFilter) && failAnimatedScope(error)) return
+        // An animated set failing for any other reason is still a failure of
+        // this scope alone: it must not switch the other packs to the fallback.
+        if (!isAnimatedPack(packFilter)) cdnOk.current = false
         setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope])
+  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope, failAnimatedScope])
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
@@ -2737,7 +2800,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => browseGroup(groupKey, true)
     setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
-    setLoading(true); setLoadError(false); glyphFails.current = 0
+    setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
     Promise.all(packs.map(p =>
       getCollectionNames(p, retryOptions(manualRetry))
         .then(({ names }) => ({ names: keepWeight(p, names, 'regular').sort().slice(0, PER_PACK_CAP), pack: p, ok: true }))
@@ -2778,7 +2841,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack(''); setGated(null)
-    setQuery(''); setLoadError(false)
+    setQuery(''); setLoadError(false); setAnimatedNotice(null)
     const list = readCustomIcons()
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
@@ -2807,6 +2870,38 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       else browseAll()
       return
     }
+    // An animated set is searched in the names the server listed for it, never by
+    // asking the Iconify /search endpoint, which would put its prefix in a browser request.
+    if (isAnimatedPack(packFilter)) {
+      const rid = ++reqId.current
+      retryRef.current = () => doSearch(q, scope)
+      setSource('search')
+      setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
+      // The names are hyphenated, so "arrow up" has to match arrow-up.
+      const needle = q.toLowerCase().replace(/\s+/g, '-')
+      getCollectionNames(packFilter)
+        .then(({ names, title }) => {
+          if (rid !== reqId.current) return
+          cdnOk.current = true
+          const items = capList(names
+            .filter(n => n.includes(needle) && matchesWeight(packFilter, n, weightRef.current))
+            .map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
+          if (!items.length) { renderLocal(q, packFilter); return }
+          setIcons(items)
+          setVisible(PAGE_SIZE)
+          setMode(`${items.length.toLocaleString()} matches · ${title}`)
+          setLoading(false)
+        })
+        .catch((error) => {
+          if (rid !== reqId.current) return
+          if (failAnimatedScope(error)) return
+          // Not the session or plan: the same unreachable state as before, but an
+          // animated set failing must not switch every other pack to the fallback.
+          setLoadError(true)
+          renderLocal(q, packFilter)
+        })
+      return
+    }
     if (cdnOk.current === false) {
       renderLocal(q, packFilter)
       return
@@ -2814,7 +2909,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => doSearch(q, scope)
     setSource('search')
-    setLoading(true); setLoadError(false); glyphFails.current = 0
+    setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
     // the collection of results; chip alone fans out to the
     // whole collection's packs.
@@ -2848,6 +2943,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         const matches = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
+          // An unscoped Pro search can name an animated set. Its glyphs only load
+          // through the server's Pro check, so a direct hit is left out of this list.
+          .filter(ic => !isAnimatedPack(ic.pack))
           .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current))
         const items = groupKey
           ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
@@ -2866,7 +2964,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal(q, packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, tier, allowedPacks, seesEverything])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks, seesEverything])
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
@@ -2880,6 +2978,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // never disagree again. Reported through a callback rather than lifted,
   // because the fetch lifecycle (reqId, cdnOk, the retry ref) lives here.
   useEffect(() => { onCatalogue?.(loadError ? 'fallback' : 'live') }, [loadError, onCatalogue])
+
+  // The animated-icon cache drops any answer that lands while the viewer is not
+  // on Pro, so it has to hear the tier before the browse effects below ask for
+  // anything. Effects run in the order written: this one stays above them.
+  useEffect(() => { setAnimatedTier(tier) }, [tier])
 
   // Initial load: every pack this viewer may browse, so the grid shows the
   // breadth they actually have on first paint.
@@ -2917,6 +3020,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   useEffect(() => {
     if (!didInit.current || lastTier.current === tier) return
     lastTier.current = tier
+    // Leaving Pro (sign-out, a lapsed plan) drops the animated sets' listing and glyphs.
+    if (tier !== 'paid') forgetAnimatedSets()
     if (source === 'custom') browseCustom()
     else if (query.trim().length >= 2) doSearch(query, { pack, group })
     else if (pack) browsePack(pack, group)
@@ -3234,6 +3339,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // line the rail would fetch them.
         if (!canSee(icon.pack)) continue
         const key = svgKey(icon.pack, icon.name)
+        // A name the server would refuse is never sent: one such name fails its whole batch.
+        if (isAnimatedPack(icon.pack) && !isAnimatedName(icon.name)) { GLYPH_MISSING.add(key); continue }
         if (GLYPH_BODY.has(key)) continue
         // A pack that just failed waits out its cool-down; a name that has
         // failed GLYPH_RETRY_MAX + 1 times is left alone for the session.
@@ -3248,9 +3355,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       if (!wanted.size) return
       const jobs = []
       for (const [pack, names] of wanted) {
-        for (let i = 0; i < names.length; i += GLYPH_BATCH) {
-          const slice = names.slice(i, i + GLYPH_BATCH)
-          jobs.push({ pack, names: slice, done: loadGlyphBatch(pack, slice) })
+        const batch = isAnimatedPack(pack) ? ANIMATED_BATCH : GLYPH_BATCH
+        for (let i = 0; i < names.length; i += batch) {
+          const slice = names.slice(i, i + batch)
+          jobs.push({ pack, names: slice, done: loadGlyphBatchOutcome(pack, slice) })
         }
       }
       Promise.all(jobs.map(j => j.done)).then((results) => {
@@ -3262,13 +3370,25 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // A RETRY run that fails is a partial failure too, however many jobs it
         // held: one flag pack timing out twice must not swap the whole grid for
         // the built-in set, so only a first-time total refusal raises the notice.
-        const allRefused = results.length > 0 && results.every(ok => ok === false)
+        const allRefused = results.length > 0 && results.every(r => !r.ok)
         const isRetryRun = jobs.every(j => j.names.some(n => GLYPH_FAILS.has(svgKey(j.pack, n))))
-        const refusing = allRefused && !isRetryRun
-        if (results.some(ok => ok === false) && !refusing) {
+        // An animated set failing says nothing about the icon service the other
+        // packs use, so a refusal made up only of animated batches never counts
+        // as the service refusing (and never sets cdnOk).
+        const animatedOnly = jobs.every(j => isAnimatedPack(j.pack))
+        const refusing = allRefused && !isRetryRun && !animatedOnly
+        // A failure that belongs to the viewer's session or plan is neither a
+        // retry candidate (waiting will not fix it) nor an outage.
+        const scoped = (i) => !results[i].ok && isPackScopedFailure(results[i].kind)
+        // Names that were never answered must not stay marked as asked, or a
+        // later pass (the retry button, a scroll) would find nothing to request.
+        const forgetAsked = (job) => { const asked = askedFor(job.pack); for (const n of job.names) asked.delete(n) }
+        const animatedOutage = animatedOnly && allRefused && !isRetryRun && results.every(r => r.kind === 'transient')
+        if (results.some(r => !r.ok) && !refusing && !animatedOutage) {
           let retry = false
           jobs.forEach((job, i) => {
-            if (results[i] !== false) return
+            if (results[i].ok) return
+            if (scoped(i)) { forgetAsked(job); return }
             const asked = askedFor(job.pack)
             for (const n of job.names) {
               asked.delete(n)
@@ -3284,10 +3404,16 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             clearTimeout(retryTimerRef.current)
             retryTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
           }
+          // 'forbidden' wins over 'auth': it is the one a retry cannot fix.
+          const kinds = results.filter((r, i) => scoped(i) && r.kind !== 'stale').map(r => r.kind)
+          if (kinds.length) setAnimatedNotice(kinds.includes('forbidden') ? 'forbidden' : 'auth')
+        }
+        if (animatedOutage) {
+          jobs.forEach(forgetAsked)
+          setLoadError(true)
+          renderLocal('', jobs[0].pack)
         }
         if (refusing) {
-          // Names that were never answered must not stay marked as asked, or
-          // the retry button would find nothing left to request.
           for (const [pack, names] of wanted) {
             const asked = askedFor(pack)
             for (const n of names) asked.delete(n)
@@ -3358,7 +3484,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // entitled to; printing it over a gate would be the page blaming the
   // catalogue for a decision the product made. A gated scope has its own panel,
   // which says what it is and how to open it.
-  const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0
+  const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0 && !animatedNotice
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
 
   /* ── THE WALLS AND THE END BAND, AND WHICH ONE IS ON SCREEN ───────────────
@@ -3828,6 +3954,21 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
                 <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
+              </div>
+            )}
+
+            {/* AN ANIMATED SET THE SESSION OR PLAN CANNOT OPEN. Its own notice, apart
+                from the one above: the icon service is fine, so nothing here
+                claims otherwise, shows the built-in set, or affects other packs.
+                Only while that pack is the one on screen. */}
+            {animatedNotice && isAnimatedPack(pack) && !gated && (
+              <div className="ig-notice" role="status">
+                <span>{animatedNotice === 'forbidden'
+                  ? 'Animated icons need an active Pro plan.'
+                  : 'Sign in again to load animated icons.'}</span>
+                {animatedNotice === 'forbidden'
+                  ? <button type="button" className="lib-btn ig-notice-btn" onClick={() => openGate('paid')}>{ICON_GATE_COPY.lockedPro.action}</button>
+                  : <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>}
               </div>
             )}
 
