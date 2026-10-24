@@ -125,7 +125,7 @@ test.describe('the full-screen menu carries what the pill drops', () => {
     await expect(menu).toBeVisible()
     await expect(menu).toHaveAttribute('aria-modal', 'true')
     await expect(burger).toHaveAttribute('aria-expanded', 'true')
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow),
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow),
       'the page behind the menu is still scrolling').toBe('hidden')
     expect(await page.evaluate(() => document.querySelector('.spnav-menu').contains(document.activeElement)),
       'focus never moved into the menu').toBe(true)
@@ -134,7 +134,7 @@ test.describe('the full-screen menu carries what the pill drops', () => {
 
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow),
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow),
       'the scroll lock outlived the menu').not.toBe('hidden')
     await expect(burger, 'Escape closed the menu and dropped focus on the floor').toBeFocused()
   })

@@ -61,6 +61,7 @@ import { stripJs } from '../helpers/strip-comments.js'
 
 const SRC = path.join(process.cwd(), 'src')
 const HOOK_PATH = 'src/hooks/useModalDialog.js'
+const LOCK_PATH = 'src/utils/scrollLock.js'
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -245,6 +246,7 @@ function makeDom() {
 // The repository's answer is the vm harness in
 // reduced-motion-resolution.test.js, and this uses the same one.
 const hookSource = fs.readFileSync(path.join(process.cwd(), HOOK_PATH), 'utf8')
+const lockSource = fs.readFileSync(path.join(process.cwd(), LOCK_PATH), 'utf8')
 
 const loadHook = (dom) => {
   let out = hookSource
@@ -258,11 +260,20 @@ const loadHook = (dom) => {
   }
 
   rewrite(/import \{ useEffect, useRef \} from 'react'/, '', 'the react import')
-  rewrite(/import \{ getLenis \} from '\.\/useSmoothScroll\.js'/, '', 'the useSmoothScroll import')
+  rewrite(/import \{ lockScroll \} from '\.\.\/utils\/scrollLock\.js'/, '', 'the scrollLock import')
   rewrite(/import \{ markScrollContainers \} from '\.\.\/utils\/scrollContainment\.js'/, '',
     'the scrollContainment import')
   rewrite(/^export default function useModalDialog/m, 'function useModalDialog',
     'the hook export')
+
+  // The shared lock the hook calls is run from its real source too, with only
+  // its Lenis import stubbed, so the hook and the lock are tested together.
+  assert.match(lockSource, /import \{ getLenis \} from '\.\.\/hooks\/useSmoothScroll\.js'/,
+    `${LOCK_PATH} no longer imports getLenis the way this harness stubs it`)
+  assert.match(lockSource, /^export function lockScroll/m, `${LOCK_PATH} no longer exports lockScroll`)
+  out = lockSource
+    .replace(/import \{ getLenis \} from '\.\.\/hooks\/useSmoothScroll\.js'/, '')
+    .replace(/^export function lockScroll/m, 'function lockScroll') + '\n' + out
 
   assert.ok(!/^\s*import\s/m.test(out),
     `${HOOK_PATH} has gained a static import this harness does not stub:\n  `

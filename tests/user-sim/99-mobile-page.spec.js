@@ -109,7 +109,7 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     await menu.locator('.spnav-mi', { hasText: 'On mobile' }).click()
     await expect(page).toHaveURL(/\/mobile$/)
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow), 'the menu\'s scroll lock outlived it').not.toBe('hidden')
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'the menu\'s scroll lock outlived it').not.toBe('hidden')
     await ctx.close()
   })
 

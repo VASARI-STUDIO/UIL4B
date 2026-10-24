@@ -11,6 +11,7 @@ import '../styles/pages/spectrum-chrome.css'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { lockScroll } from '../utils/scrollLock'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
@@ -228,8 +229,7 @@ export default function SpectrumNav() {
   // the page scrolling behind it and lets Tab walk out the back is not a dialog.
   useEffect(() => {
     if (!open) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlockScroll = lockScroll()
     const panel = sheetRef.current
     const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
       .filter((el) => el.getClientRects().length > 0)
@@ -251,7 +251,7 @@ export default function SpectrumNav() {
     panel?.addEventListener('keydown', trap)
     return () => {
       panel?.removeEventListener('keydown', trap)
-      document.body.style.overflow = prev
+      unlockScroll()
     }
   }, [open])
 

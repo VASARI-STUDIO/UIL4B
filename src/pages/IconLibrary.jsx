@@ -7,7 +7,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useProject } from '../contexts/ProjectContext'
 import { useProModal, reportUpgradeGate } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { getLenis } from '../hooks/useSmoothScroll'
+import { lockScroll } from '../utils/scrollLock'
 import useExportGate from '../hooks/useExportGate'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
@@ -1370,15 +1370,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
   }, [size, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText])
 
-  // Lock body scroll + restore focus to the opener on unmount (mirror ExportPanel).
+  // Lock page scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    getLenis()?.stop()
+    const unlockScroll = lockScroll()
     const opener = restoreRef.current
     return () => {
-      document.body.style.overflow = prev
-      getLenis()?.start()
+      unlockScroll()
       if (opener && typeof opener.focus === 'function') opener.focus()
     }
   }, [])
