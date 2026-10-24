@@ -220,10 +220,15 @@ export default function SpectrumNav() {
     setOpen(false)
     const el = document.getElementById(href.slice(1))
     if (!el) return
-    const lenis = getLenis()
-    // Lenis reads the target's scroll-margin-top itself.
-    if (lenis) lenis.scrollTo(el)
-    else el.scrollIntoView({ block: 'start' })
+    // The open menu holds the page's scroll lock, which keeps Lenis stopped, and
+    // a stopped Lenis ignores scrollTo. The lock is released when the close
+    // commits, so the scroll waits one frame.
+    requestAnimationFrame(() => {
+      const lenis = getLenis()
+      // Lenis reads the target's scroll-margin-top itself.
+      if (lenis) lenis.scrollTo(el)
+      else el.scrollIntoView({ block: 'start' })
+    })
   }, [setOpen])
 
   // Scroll lock + focus move-in + focus trap: a full-screen layer that leaves
