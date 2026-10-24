@@ -17,7 +17,7 @@
 // Tap is stubbed on the browser fixture.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { openPaletteTools } from './palette-helpers.js'
+import { openPaletteTools, clickPaletteAction } from './palette-helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -435,7 +435,7 @@ test('/create/palette · “Use →” on a community card in the Explore popup 
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a designer borrowing a community palette')
   await go(page, '/create/palette')
-  await (await openPaletteTools(page)).getByRole('button', { name: 'Explore palettes' }).click()
+  await clickPaletteAction(page, 'Explore palettes')
   const use = page.locator('.plb-galpopup-body .pgal-use')
   await expect(use.first()).toBeVisible()
   await settled(page, '.plb-galpopup')

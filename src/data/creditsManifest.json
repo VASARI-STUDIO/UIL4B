@@ -61,7 +61,7 @@
       "slug": "manrope",
       "family": "Manrope",
       "copyright": "Copyright 2018 The Manrope Project Authors (https://github.com/sharanda/manrope)",
-      "source": "https://github.com/sharanda/manrope",
+      "source": "https://github.com/googlefonts/manrope",
       "licenceFile": "/fonts/MANROPE-OFL.txt"
     },
     {
@@ -110,6 +110,10 @@
     {
       "name": "@vercel/analytics",
       "licence": "MIT"
+    },
+    {
+      "name": "@vercel/functions",
+      "licence": "Apache-2.0"
     },
     {
       "name": "firebase",

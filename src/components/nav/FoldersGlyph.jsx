@@ -1,5 +1,5 @@
-// The folders glyph: Projects, wherever it is drawn (the phone tab bar, the
-// account popover and the menu sheet), so one icon always means the workspace.
+// The folders glyph: the Dashboard, wherever it is drawn (the phone tab bar and
+// the header button), so one icon always means the dashboard.
 export default function FoldersGlyph({ size = 21 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

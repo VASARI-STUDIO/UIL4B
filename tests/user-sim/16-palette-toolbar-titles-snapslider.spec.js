@@ -4,7 +4,7 @@
 // shipped once because nothing measured the RENDERED result. These tests
 // measure the rendered result.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
 
 /* ── 1 · DELETED: 'Palette Builder · toolbar labels expand the button' ────────
@@ -54,9 +54,8 @@ import { openPaletteTools } from './palette-helpers.js'
  * palettes to the builder — Spectrum's Discover cards and
  * `PaletteGalleryGrid` both open it through `paletteBuilderUrl()`, a URL rather
  * than a staged slot, which is immune to (b) by construction because a new tab
- * carries the URL with it. That path is asserted by
- * tests/unit/discover-handoff.test.js, and rendered on this very page by the
- * colour-titles test below, which loads its fixed board through `?c=`.
+ * carries the URL with it. The colour-titles test below renders that path,
+ * loading its fixed board through `?c=`.
  *
  * The SLOT's own contract — versioned, bounded, consumed exactly once, TTL —
  * is still proved in full by tests/unit/board-handoff.test.js and
@@ -90,9 +89,10 @@ test.describe('Palette Builder · colour titles', () => {
     expect(before.names.every((n) => n.trim().length > 0)).toBe(true)
 
     // Monochromatic is a FREE system, so this runs signed-out without a modal.
-    const system = page.getByRole('combobox', { name: 'Colour system' })
-    await system.selectOption('monochromatic')
-    await expect(system).toHaveValue('monochromatic')
+    const system = page.getByRole('button', { name: 'Colour system' })
+    await chooseMenuOption(page, system, 'monochromatic')
+    await expect(system).toHaveAttribute('value', 'monochromatic')
+    await expect(system).toHaveAccessibleName(/Colour system: Monochromatic/)
     await expect.poll(async () => (await hexes.allInnerTexts()).join()).not.toBe(before.hexes.join())
 
     // Read both in ONE evaluation, so a title can never be compared against a

@@ -13,9 +13,8 @@ import {
   resolvePlanLadder,
   savingsVsMonthly,
 } from '../../config/planLadder.js'
-import { GALLERY_GRADIENTS } from '../../data/gradientGallery.js'
 import { ICON_PACK_TIERS } from '../../data/iconPackTiers.js'
-import { LIBRARY_PALETTES } from '../../data/paletteLibrary.js'
+import { LIBRARY_TOTALS } from '../../data/libraryTotals.js'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // EVERY NUMBER AND EVERY CAPABILITY CLAIM THE SPECTRUM PAGE MAKES, DERIVED.
@@ -43,9 +42,9 @@ import { LIBRARY_PALETTES } from '../../data/paletteLibrary.js'
 //   "$4 / month", "was $4"                $7 monthly · $48 yearly, i.e. $4 a
 //                                         month on the yearly cadence.
 //                                         planLadder.js#approvedTotal
-//   Quarterly at $3.60 a month            Quarterly has `checkoutPlan: null` —
-//                                         buying it dead-ends on "Invalid
-//                                         selection". It is not offered here.
+//   Offered billing cadences             Monthly and Yearly, derived from
+//                                         planLadder.js. Quarterly is absent
+//                                         from the offered ladder.
 //   "Cancel Pro any time" · "Cancel? From  The Stripe Customer Portal has no
 //   the dashboard, in two clicks"          cancellation flow enabled
 //                                         ([stripe-retention-config]); /plans
@@ -120,8 +119,8 @@ export const route = toolRoute
 /* ── What is in the library, counted ──────────────────────────────────────── */
 
 export const LIBRARY_COUNTS = {
-  palettes: LIBRARY_PALETTES.length,
-  gradients: GALLERY_GRADIENTS.length,
+  palettes: LIBRARY_TOTALS.palettes,
+  gradients: LIBRARY_TOTALS.gradients,
 }
 
 /* ── Plans ────────────────────────────────────────────────────────────────────
@@ -134,9 +133,8 @@ export const LIBRARY_COUNTS = {
  * fetch for a panel five screens down. This page is the front door.
  */
 const RESOLVED = resolvePlanLadder()
-/** Only the cadences something can accept the click for. Quarterly is absent by
- *  construction — it has no `checkoutPlan` — rather than by being deleted from a
- *  second list somebody has to remember to keep in step. */
+/** Monthly and Yearly are the offered cadences. The purchasable filter keeps
+ *  this list limited to plans with a checkout destination. */
 export const LADDER = purchasablePlans(RESOLVED)
 /** The honest headline figure: the cheapest per-month price among the tiers we
  *  will actually sell. planLadder.js: "Never typed into copy." */
@@ -273,10 +271,10 @@ export const ASSURANCES = [
 export const PROOF_STATS = [
   // live, non-beta tools in toolTree.js — the same count the bench states
   { value: TOOL_COUNT, label: 'tools, each free to open without an account' },
-  // LIBRARY_PALETTES, which /discover/palettes renders
-  { value: LIBRARY_PALETTES.length, label: 'palettes in the Discover library' },
-  // GALLERY_GRADIENTS, which /discover/gradients renders
-  { value: GALLERY_GRADIENTS.length, label: 'gradients in the Discover library' },
+  // the true size of the library /discover/palettes renders
+  { value: LIBRARY_TOTALS.palettes, label: 'palettes in the Discover library' },
+  // the true size of the library /discover/gradients renders
+  { value: LIBRARY_TOTALS.gradients, label: 'gradients in the Discover library' },
   // one row per pack in iconPackTiers.js, the Icon Library's own table
   { value: Object.keys(ICON_PACK_TIERS).length, label: 'icon sets to search in the Icon Library' },
 ]

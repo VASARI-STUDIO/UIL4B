@@ -492,6 +492,11 @@ html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{animatio
 :where(input[type="number"])::-webkit-inner-spin-button,:where(input[type="number"])::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 :where(input[type="number"]){-moz-appearance:textfield}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+/* A text field that is keyboard- or pointer-focused already wears the offset
+   outline from the global :focus-visible rule (or the tool-layout one). The
+   border change and halo above would be a second ring around the same box, so
+   these fields give them up and keep the outline as their one indicator. */
+:is(.fb-input,.fb-textarea,.auth-field input,.cpk-hex):focus-visible{border-color:var(--border);box-shadow:none}
 :where(input[type="color"]){width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
 :where(input[type="color"]):hover{border-color:var(--bh)}
 /* Strip the native swatch chrome so the colour well reads as one clean, rounded
@@ -629,7 +634,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    below ~336px `calc(100%/3)` still takes over and holds three columns. */
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(112px,calc(100%/3)),1fr));gap:4px}
 .ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
-.ic:hover{background:var(--bg-2);border-color:var(--border)}
+@media (hover:hover){.ic:hover{background:var(--bg-2);border-color:var(--border)}}
 .ic:active{transform:scale(.95)}
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
@@ -650,7 +655,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    lean on search and the glyph itself. UIL4B keeps the name because the name is
    the thing you copy, but that is the reason it has to be legible rather than
    decorative. */
-.ic span{max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;font-size:11px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.25}
+/* The label rule below must not reach the glyph chip (`.ig-chip`, a flex slot
+   that centres its image): `:where()` keeps the specificity at 0,1,1. */
+.ic span:not(:where(.ig-chip)){max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;font-size:11px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.25}
 
 /* ─── Image Converter ─── */
 .pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
@@ -753,8 +760,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .auth-links button:hover{color:var(--accent-text);text-decoration:underline}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
+.toast{position:fixed;bottom:calc(24px + var(--toast-lift));right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
+/* The Feedback button (.global-feedback-btn) floats in the same bottom-right
+   corner and is hidden only on a coarse pointer, so everywhere else the toast
+   stack rides above it: 44px clears the 36px desktop button, 52px clears the
+   compact icon-only form used on narrow or short viewports. */
+:root{--toast-lift:0px}
+@media not all and (pointer:coarse){:root{--toast-lift:44px}}
+@media (pointer:fine) and (max-width:640px),(pointer:fine) and (max-height:500px){:root{--toast-lift:52px}}
 .toast-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .toast-ico svg{width:15px;height:15px}
 .toast-msg{font-size:13px;font-weight:500;line-height:1.35;color:var(--t0);letter-spacing:-.005em}
@@ -766,6 +780,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    opts back in. Negative margins keep the box the same height it was. */
 .toast-x{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;margin:-4px -6px -4px 0;border:none;border-radius:var(--btn-radius);background:none;color:var(--t2);cursor:pointer;pointer-events:auto;transition:background var(--t),color var(--t)}
 .toast-x svg{width:14px;height:14px}
+/* A 44px tap area on touch without a bigger visible button: the
+   pseudo-element is the hit target, the 28px box stays what is drawn. */
+@media(pointer:coarse){.toast-x{position:relative}.toast-x::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}}
 .toast-x:hover{background:var(--bg-2);color:var(--t0)}
 .toast:not(.show) .toast-x{pointer-events:none}
 /* One action on a toast (Undo): an outline pill, opted back into pointer
@@ -994,7 +1011,11 @@ img,svg,video{max-width:100%;height:auto}
 @media(max-width:640px){
 
   /* Toast */
-  .toast{left:12px;right:12px;bottom:12px;max-width:none}}
+  .toast{left:12px;right:12px;bottom:calc(12px + var(--toast-lift));max-width:none}}
+/* The phone tab bar is fixed over the foot of the screen; a toast sits above it. */
+@media(max-width:767px){
+  html.has-tabbar .toast{bottom:calc(var(--tabbar-h) + 12px + var(--toast-lift) + env(safe-area-inset-bottom))}
+}
 
 
 /* Small phone (≤480px) */
@@ -1610,6 +1631,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .fnote-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 22px 20px;border-top:1px solid var(--border);flex-shrink:0}
 .fnote-sign{display:flex;flex-direction:column;gap:2px;margin:0;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
 .fnote-sign-place{font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.fnote-actions{display:flex;flex-wrap:wrap;gap:8px;max-width:100%}
 .fnote-action{flex-shrink:0}
 /* Phone: the same bottom-sheet form .fb-modal takes, at the same breakpoint. A
    centred card on a 390px screen puts the close button in the middle of the
@@ -1618,7 +1640,8 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
   .fnote-overlay{padding:0;align-items:flex-end}
   .fnote{max-width:100%;max-height:92dvh;border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:none}
   .fnote-foot{gap:12px}
-  .fnote-action{width:100%;justify-content:center}
+  .fnote-actions{width:100%}
+  .fnote-action{flex:1 1 0;min-width:max-content;min-height:44px;padding-inline:8px;white-space:nowrap;justify-content:center;text-align:center}
 }
 /* REDUCED MOTION, both directions of the contract.
    The global clamp at the top of this file forces durations and delays to near
@@ -1733,7 +1756,9 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-success-icon{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:color-mix(in srgb,var(--ok) 12%,transparent);margin-bottom:16px}
 .fb-success-title{font-size:18px;font-weight:700;color:var(--t0);margin-bottom:8px}
 .fb-success-text{font-size:13px;color:var(--t1);line-height:1.7;margin-bottom:20px;max-width:320px}
-.fb-success-actions{display:flex;gap:8px}
+.fb-success-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px}
+.fb-success-actions.fb-again{margin-top:16px}
+.fb-textarea[readonly]{resize:none}
 @media(max-width:480px){
   .fb-overlay{padding:0;align-items:flex-end}
   .fb-modal{max-width:100%;max-height:92dvh;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-bottom:none}
@@ -1747,15 +1772,53 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .bkit-card-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:700}
 .bkit-card-steps li.is-current .bkit-card-num{background:var(--accent-fill);color:var(--accent-fg)}
 .bkit-card-go{width:100%;justify-content:center}
-.bkit-step{display:flex;align-items:center;gap:8px;min-width:0;height:100%;padding:6px 9px;border-radius:var(--radius-s);border:1px solid transparent;color:var(--t2);text-decoration:none;transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
-.bkit-step:hover{background:var(--hvr);color:var(--t0)}
-.bkit-step.is-current{border-color:var(--border);background:var(--bg-2);color:var(--t0)}
+.bkit-step{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;height:44px;padding:2px 0;border:0;border-radius:var(--btn-radius);color:var(--t2);text-align:center;text-decoration:none;transition:background-color 150ms ease,color 150ms ease}
+/* A built step reads one step brighter than one not reached yet. */
+.bkit-step.is-done{color:var(--t1)}
+.bkit-step.is-current{color:var(--t0)}
+@media(hover:hover){
+  .bkit-step:hover{background:var(--hvr);color:var(--t0)}
+}
+.bkit-step:focus-visible{outline:2px solid var(--bkit-focus,var(--accent));outline-offset:-2px}
 .bkit-step-mark{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:10.5px;font-weight:700}
 .bkit-step.is-current .bkit-step-mark{background:var(--accent-fill);color:var(--accent-fg)}
 /* Done beats current: a step you have built keeps its tick while you stand on
    it, because the tick is a statement about the SYSTEM, not about the cursor. */
 .bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-text)}
 .bkit-rail-next{flex-shrink:0}
+/* A tap pad: the chip draws pill-shaped, and a pill is not hit-tested in its
+   corners, so the pad is a plain box at least 44px tall, over the whole chip. It
+   stays inside the 4px gap between chips and rows. */
+.bkit-step::after{content:"";position:absolute;inset:-4px 0}
+/* Where you are: a 2px accent line, under the step on a phone and on the bar's
+   top edge from 768px. */
+.bkit-step.is-current::before{content:"";position:absolute;inset-inline:12px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--accent-fill)}
+/* From 768px the steps are links in a flush bar, not stacked cells. The mark
+   answers one question (built or not: a tick on an accent wash, or an
+   outlined numeral), and the label plus the 2px accent line on the bar's top
+   edge answer the other (where you are). The line sits 9px above the link on
+   the tablet bar (8px padding plus its 1px top rule) and 10px above it from
+   1024px (9px padding), so it covers the rule exactly. The --bkit-*
+   aliases are declared on .bkit-rail in tool-shell.css. */
+@media(min-width:768px){
+  .bkit-step{flex-direction:row;justify-content:flex-start;gap:8px;padding:0 10px;text-align:start;color:var(--bkit-dim)}
+  .bkit-step.is-done{color:var(--t1)}
+  .bkit-step.is-current{background:transparent;color:var(--t0)}
+  .bkit-step.is-current::before{inset-inline:10px;bottom:auto;top:-9px;border-radius:0 0 2px 2px}
+  .bkit-step-mark{box-sizing:border-box;background:transparent;border:1.5px solid var(--bkit-mark-line);color:var(--t2);font-family:var(--font);font-size:.75rem;font-weight:560;line-height:1;font-variant-numeric:tabular-nums}
+  .bkit-step.is-current .bkit-step-mark{background:transparent;color:var(--t2)}
+  .bkit-step.is-done .bkit-step-mark{background:var(--accent-bg);border-color:transparent;color:var(--accent-text)}
+  .bkit-step-mark svg{stroke-width:2.5}
+  .bkit-step:focus-visible{outline-offset:2px}
+}
+@media(min-width:1024px){
+  .bkit-step{height:36px}
+  .bkit-step.is-current::before{top:-10px}
+}
+@media(forced-colors:active){
+  .bkit-step.is-current::before{background:Highlight}
+  .bkit-step-mark{border-color:CanvasText}
+}
 
 
 /* ci-fade — retained: the Slice-1 colour-info popup CSS (.ci-*) was removed in
@@ -1777,12 +1840,21 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 .onb-greeting{font-size:14px;color:var(--t2);margin-bottom:6px}
 .onb-greeting em{font-style:normal;color:var(--t0);font-weight:600}
+/* The verification line carries an address with no break points, so it wraps
+   anywhere; a failed send is the one thing here that has to be read, so it
+   takes the normal text colour rather than the muted greeting one. */
+.onb-verify-line{overflow-wrap:anywhere}
+.onb-verify-line--failed{color:var(--t0)}
 .onb-q{font-family:var(--display);font-size:clamp(22px,3vw,28px);font-weight:500;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px;color:var(--t0)}
 .onb-sub{font-size:13px;color:var(--t2);margin-bottom:20px}
 /* The question is a focus TARGET, not a control: Onboarding focuses it on each
    step so the new question is announced. Same rule as .ui-modal[tabindex="-1"]
    further down; the options below keep their rings. */
 .onb-q[tabindex="-1"]:focus-visible{outline:none}
+/* <main> takes focus from script (Dismiss, the skip link) so focus stays on the
+   page; it is a landing point, not a control, and a ring round the whole page is
+   noise. The first real control inside keeps its ring. */
+main[tabindex="-1"]:focus-visible{outline:none}
 
 .onb-options{display:flex;flex-direction:column;gap:8px}
 .onb-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--dur-2) var(--ease-out);text-align:left}
@@ -2657,14 +2729,14 @@ html.lenis{scroll-behavior:auto!important}
 
 /* ══ THE APP HEADER — `UIL4B App.dc.html` lines 100-124 ══════════════════════
    Built to the file. One 64px row,
-   in the file's order: wordmark · search · theme · the three menus, then at the
-   far end the right cluster. Every wash and hairline is an alpha of the ink,
+   in the file's order: wordmark · search · the three menus, then at the
+   far end the right cluster, which ends with the theme switch directly left of
+   the account control. Every wash and hairline is an alpha of the ink,
    as in the file (--ink-rgb / --page-rgb, declared with the accent family).
 
    IT NEVER WRAPS. The file's row wraps below ~950px;
    ours folds instead: under 1100px the search field becomes its own icon, and
-   under 900px Export, Palette library and Back to the site move into the
-   account popover, whose matching rows (.pnav-pop-item--fold) show only then.
+   under 900px Export and Dashboard keep their place but lose their labels.
    Below 768px it is the phone header, further down.
 
    The row is 64px because the file's is: 11px + the 41px search field + 11px
@@ -2697,7 +2769,8 @@ html.lenis{scroll-behavior:auto!important}
 @keyframes pnav-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
 .pnav-search-kbd{flex:0 0 auto;padding:3px 7px;border-radius:var(--radius-xs);border:1px solid rgba(var(--ink-rgb),.06);background:rgba(var(--ink-rgb),.07);color:rgba(var(--ink-rgb),var(--ink-faint));font-family:var(--mono);font-size:10px;font-weight:400;line-height:1.2}
 
-/* The theme cycle (App line 108): 36px, 12px radius, ink .06, no border. */
+/* The theme cycle (App line 108): 36px, 12px radius, ink .06, no border. It
+   sits in the right cluster, directly left of the account control. */
 .pnav .pnav-theme{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:0;border-radius:var(--btn-radius);background:rgba(var(--ink-rgb),.06);color:rgb(var(--ink-rgb));cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
 @media(hover:hover){.pnav .pnav-theme:hover{background:rgba(var(--ink-rgb),.12)}}
 
@@ -2715,6 +2788,36 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-iconbtn{display:grid;place-items:center;flex:0 0 auto;width:38px;height:38px;padding:0;border:0;border-radius:var(--btn-radius);background:rgba(var(--ink-rgb),.045);color:rgba(var(--ink-rgb),.82);cursor:pointer;text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 @media(hover:hover){.pnav-iconbtn:hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}}
 .pnav-iconbtn[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08);color:rgb(var(--ink-rgb))}
+/* Export and Dashboard: labelled quiet pills on the icon buttons' material (ink
+   .045 under ink .82, ink .07 on hover). 9px of padding round 14px type at 1.2
+   gives the same 34.8px box as Upgrade. */
+.pnav-act-wrap{position:relative;display:inline-flex;flex:0 0 auto}
+.pnav-act{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:9px 14px 9px 12px;border:0;border-radius:var(--radius-pill);background:rgba(var(--ink-rgb),.045);color:rgba(var(--ink-rgb),.82);font-family:var(--font);font-size:14px;font-weight:400;line-height:1.2;white-space:nowrap;cursor:pointer;text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-act svg{flex:0 0 auto}
+@media(hover:hover){.pnav-act:not([aria-disabled="true"]):hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}}
+.pnav-act[aria-expanded="true"],.pnav-act[aria-current="page"]{background:rgba(var(--ink-rgb),.08);color:rgb(var(--ink-rgb))}
+.pnav-act[aria-current="page"]{font-weight:560}
+.pnav-act[aria-disabled="true"]{background:rgba(var(--ink-rgb),.03);color:rgba(var(--ink-rgb),.5);cursor:default}
+/* The current page's heavier label would widen the button; an invisible copy
+   at that weight reserves the room so nothing shifts between pages. */
+.pnav-act--dash .pnav-act-label{display:inline-grid}
+.pnav-act--dash .pnav-act-label::after{content:attr(data-text);height:0;overflow:hidden;visibility:hidden;font-weight:560}
+/* The hint for a disabled Export. Hidden by visibility, not removed, so the
+   button's aria-describedby always has something to read. */
+.pnav-tip{position:absolute;top:50%;right:calc(100% + 8px);left:auto;transform:translateY(-50%);z-index:130;padding:6px 10px;border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-s);background:var(--card);box-shadow:0 12px 30px -16px rgba(var(--shade-rgb),var(--shade-a));color:rgb(var(--ink-rgb));font-size:12px;font-weight:400;line-height:1.3;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-1)}
+.pnav-tip.is-open{opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
+/* Carries the pointer across the gap between the button and the hint. */
+.pnav-tip::before{content:"";position:absolute;top:0;bottom:0;left:100%;width:8px}
+.pnav-tip--below{top:calc(100% + 8px);right:auto;left:50%;transform:translateX(-50%)}
+.pnav-tip--below::before{top:-8px;bottom:auto;left:0;right:0;width:auto;height:8px}
+@media(max-width:899px){
+  .pnav-tip{top:calc(100% + 8px);right:auto;left:50%;transform:translateX(-50%)}
+  .pnav-tip::before{top:-8px;bottom:auto;left:0;right:0;width:auto;height:8px}
+}
+:where(html[data-reduced-motion="true"]) .pnav-tip{transition:none !important}
+@media(prefers-reduced-motion:reduce){
+  :where(html:not([data-reduced-motion="false"])) .pnav-tip{transition:none !important}
+}
 /* Signed out there is no avatar; "Log in" sits where the file has none, so it
    is as quiet as a menu trigger. */
 .pnav-login{padding:9px 10px;border:0;border-radius:var(--btn-radius);background:transparent;color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:14px;font-weight:400;line-height:1.2;white-space:nowrap;cursor:pointer}
@@ -2734,19 +2837,22 @@ html.lenis{scroll-behavior:auto!important}
 @media(hover:hover){.pnav-more:hover{background:rgba(var(--ink-rgb),.07)}}
 .pnav-more[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08)}
 .pnav-mobile{display:none}
-.pnav-trigger:focus-visible,.pnav-search-field:focus-visible,.pnav-theme:focus-visible,.pnav-iconbtn:focus-visible,.pnav-login:focus-visible,.pnav-upgrade:focus-visible,.pnav-avatar-btn:focus-visible,.pnav-more:focus-visible,.pnav-mobile:focus-visible,.pnav-logo:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.pnav-trigger:focus-visible,.pnav-search-field:focus-visible,.pnav-theme:focus-visible,.pnav-iconbtn:focus-visible,.pnav-act:focus-visible,.pnav-login:focus-visible,.pnav-upgrade:focus-visible,.pnav-avatar-btn:focus-visible,.pnav-more:focus-visible,.pnav-mobile:focus-visible,.pnav-logo:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 
 /* Folding, so the row never wraps. Measured in the report. */
-.pnav-pop .pnav-pop-item--fold{display:none}
 @media(max-width:1099px){
   .pnav-search{flex:0 0 auto;max-width:none}
   .pnav-search-field{width:41px;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
 }
+/* Labelled Export and Dashboard take the last of the room signed out, so the
+   groups sit closer together until the row has space again. */
+@media(min-width:900px) and (max-width:979px){
+  .pnav-inner{gap:10px}
+}
 @media(max-width:899px){
-  .pnav-fold{display:none}
-  .pnav-pop .pnav-pop-item--fold{display:flex}
-  .pnav-pop .pnav-pop-sep.pnav-pop-item--fold{display:block}
+  .pnav-act{justify-content:center;gap:0;width:38px;height:38px;padding:0}
+  .pnav-act-label{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 }
 
 /* ── The account popover: kept, on the file's materials ─────────────────── */
@@ -2858,6 +2964,7 @@ html.lenis{scroll-behavior:auto!important}
 /* Discover: the file's 2×2 of counts, without the four boxes — each count is
    a hairline, a swatch strip, the number and its label. */
 .pnav-dcounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px}
+.pnav-dcount:last-child:nth-child(odd){grid-column:1/-1}
 .pnav-dcounts--wait{min-height:170px}
 .pnav-dcount{display:grid;align-content:start;gap:7px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
 .pnav-dcount-strip{display:flex;height:22px;border-radius:var(--radius-xs);overflow:hidden}
@@ -2895,11 +3002,13 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-inner{gap:10px;padding:0 16px}
   .pnav-logo{margin-right:auto}
   .pnav-word{font-size:21px;font-weight:560;letter-spacing:-.01em}
-  .pnav .pnav-theme,.pnav-items,.pnav-fold,.pnav-login,.pnav-inner .pnav-upgrade,.pnav-more-wrap{display:none}
+  .pnav .pnav-theme,.pnav-items,.pnav-act--dash,.pnav-login,.pnav-inner .pnav-upgrade,.pnav-more-wrap,.pnav-tip{display:none}
   .pnav-actions{margin-left:0;gap:10px}
   .pnav-search{flex:0 0 auto;max-width:none}
   .pnav-search-field{width:36px;height:36px;padding:0;justify-content:center;border-radius:var(--radius-pill);border-color:rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
   .pnav-search-ph,.pnav-search-kbd{display:none}
+  .pnav-act.pnav-export{width:36px;height:36px;border:1px solid rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
+  .pnav-act.pnav-export[aria-disabled="true"]{color:rgba(var(--ink-rgb),.5)}
   .pnav-avatar-btn,.pnav-avatar{width:36px;height:36px}
   .pnav-avatar{font-size:12px}
   .pnav-mobile{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:1px solid rgba(var(--ink-rgb),.14);border-radius:var(--radius-pill);background:transparent;color:rgb(var(--ink-rgb));cursor:pointer}
@@ -2908,8 +3017,11 @@ html.lenis{scroll-behavior:auto!important}
 }
 /* A7: every header control is at least 44px to a finger, whatever it draws. */
 @media(pointer:coarse){
-  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-mobile,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
-  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-mobile::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-act,.pnav-mobile,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
+  /* Hit areas extend beyond the compact circles without changing row layout. */
+  .pnav-search-field,.pnav-export,.pnav-avatar-btn,.pnav-mobile,.pnav-logo{overflow:visible}
+  .pnav-search-field::after,.pnav-export::after,.pnav-avatar-btn::after,.pnav-mobile::after,.pnav-logo::after{pointer-events:auto}
+  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-act::after,.pnav-mobile::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pnav-tool,.pnav-pop-item{min-height:44px}
 }
 
@@ -3021,6 +3133,11 @@ html.lenis{scroll-behavior:auto!important}
    each popover; padding is overridden because the instrument bleeds through it. */
 .cpk-pop{display:flex;flex-direction:column;gap:var(--s-2);width:244px}
 .pop.cpk-pop{padding:var(--s-3)}
+.pop.cpk-pop[data-pop-fixed="true"]{position:fixed;inset:auto;left:var(--select-left,8px);top:var(--select-top,0px);z-index:var(--cpk-layer,130)}
+/* Opened upward: pin the BOTTOM edge to the line above the trigger, so a panel
+   that grows after it opens (the Recent row) grows up, never over its trigger.
+   `translate` is its own property, so the entry animation's transform is kept. */
+.pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"]{top:var(--select-anchor-top,0px);translate:0 -100%}
 /* Which colour is being edited, in the shared .pop-head voice. */
 .cpk-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);padding:0}
 .cpk-head-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3064,7 +3181,6 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}
 .cpk-dropper:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
-.cpk-hex:focus{outline:none;border-color:var(--accent)}
 /* The notation select. Sized to its widest option (HEX/RGB/HSL are all three
    characters) so switching never reflows the row under the pointer. */
 .cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
@@ -3083,7 +3199,9 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cpk-swatch.is-active{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
 .icust-abs{flex:0 0 auto;padding:6px 12px;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
-.icust-abs:hover{border-color:var(--bh);color:var(--t0)}
+@media(hover:hover){
+  .icust-abs:hover{border-color:var(--bh);color:var(--t0)}
+}
 .icust-abs.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text)}
 .icust-seg--icon svg{display:block;width:22px;height:22px;margin:0 auto;color:var(--t2)}
 .icust-seg--icon button:hover svg{color:var(--t0)}
@@ -3103,9 +3221,12 @@ html.lenis{scroll-behavior:auto!important}
    properties. It is reachable by anyone who has copied an icon — the rail is
    the "recently used" strip — so it is converted rather than only recorded. */
 .ig-rail-track{display:flex;gap:8px;padding-bottom:4px}
-/* Logo.dev brand marks are raster and already coloured — size a touch larger
-   than glyph icons, keep their own colours (no invert), and round the corners. */
-.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
+/* Transparent marks keep their edges; baked-in square plates get app-icon corners
+   and one even hairline on the plate's own edge (an outline paints over the image
+   and follows the radius, so no side can come out heavier than another). */
+.ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:0}
+.ic img.ig-logo--square{border-radius:6px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px}
+[data-theme="dark"] .ic img.ig-logo--square{outline-color:oklch(1 0 0 / .1)}
 /* THE PACK LABEL IS NOW RENDERED ONLY WHEN THE RESULT SET IS MIXED, and the
    decision moved into IconLibrary.jsx because it depends on the results, not
    on the width. Read the note there for the Mobbin evidence.
@@ -3128,8 +3249,13 @@ html.lenis{scroll-behavior:auto!important}
    4.55:1 in light and 5.77:1 in dark against the icon grid's own #EFEEE9 /
    #101012 ground, so it clears AA and stays. (The 3.70:1 figure recorded
    against --t3 elsewhere in this file is on --bg-3, a darker ground than
-   this one.) */
-.ic .ic-pack{font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;color:var(--t3);line-height:1}
+   this one.)
+   THEN IT GOES QUIETER: at 1024px and up an 11px uppercase tracked label out-shouted
+   the 10px icon name, so a mixed row read "LUCIDE LUCIDE LUCIDE". It is now the set's
+   real name ("Lucide", "Phosphor") in Geist at the name's own 10px, normal case, no
+   tracking. The cell and skeleton heights are untouched: they are set by min-height
+   from --fs-micro in library.css, not by this line. */
+.ic .ic-pack{font-family:var(--font);font-size:10px;line-height:var(--fs-micro);letter-spacing:0;text-transform:none;white-space:nowrap;max-width:calc(100% + 8px);color:var(--t3)}
 @media(max-width:980px){
   .ic .ic-pack{display:none}
 }
@@ -4302,6 +4428,37 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;background:none;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 
+/* Shared select triggers retain the field classes supplied by each surface. */
+:where(.menu-select-trigger){display:inline-flex;align-items:center;gap:var(--s-2);min-width:0;max-width:100%;padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:13px;text-align:left;cursor:pointer}
+.menu-select-trigger:disabled{opacity:.55;cursor:not-allowed}
+.menu-select-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.menu-select-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-select-caret{flex:none;margin-left:auto}
+.menu-select-trigger.fb-select,.ui-field .menu-select-trigger{width:100%}
+.pop.menu-select-list{position:fixed;inset:auto;left:var(--select-left,8px);top:var(--select-top,0px);bottom:auto;z-index:var(--select-layer,130);min-width:min(max(180px,var(--select-min-w,0px)),calc(100vw - 16px));width:max-content;max-width:calc(100vw - 16px);max-height:min(var(--pop-max-h,100dvh),var(--select-scroll-max-h,100dvh));isolation:isolate;scrollbar-width:thin;scrollbar-color:var(--t3) transparent}
+.pop.menu-select-list[data-pop-side="top"],.pop.menu-select-list[data-pop-align]{left:var(--select-left,8px);right:auto;top:var(--select-top,0px);bottom:auto}
+.menu-select-option.is-active{background:var(--hvr);color:var(--t0)}
+.pop.menu-select-list:focus-visible{outline:none}
+.menu-select-list:focus-visible .menu-select-option.is-active{outline:2px solid var(--link);outline-offset:-2px}
+.menu-select-scrim{display:block;position:fixed;inset:0;z-index:calc(var(--select-layer,130) - 1);background:transparent;animation:none}
+.menu-select-list .pop-head{display:flex;justify-content:space-between;gap:var(--s-2)}
+.menu-select-option[aria-selected="true"]{color:var(--accent-text)}
+.menu-select-option[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
+.menu-select-mark{flex:none;color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:none}
+.menu-select-check{flex:none;visibility:hidden}
+.menu-select-option[aria-selected="true"] .menu-select-check{visibility:visible}
+@media(pointer:coarse){.menu-select-option{min-height:44px}}
+@media(max-width:960px){
+  .menu-select-option{min-height:44px}
+}
+@media(max-width:767px){
+  .menu-select-scrim{background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+  .pop.menu-select-list,.pop.menu-select-list[data-pop-side="top"],.pop.menu-select-list[data-pop-align]{left:0;right:0;top:auto;bottom:0;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px,calc(100dvh - var(--chrome-h) - var(--tabbar-h) - 16px),var(--select-scroll-max-h,100dvh));padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:var(--shadow-cmd);animation:menu-select-sheet-in var(--dur-2) var(--ease-entrance)}
+  .menu-select-list::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:var(--radius-pill);background:var(--border)}
+  html.has-tabbar .pop.menu-select-list{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
+}
+@keyframes menu-select-sheet-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
 /* ─── The app-wide right-click menu (FeedbackContextMenu) ────────────────────
    The anchor is a zero-height, MENU-WIDE box whose left edge sits on the
    pointer. That width is not decorative: usePopover's placePopover end-aligns
@@ -4367,12 +4524,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--t1)}
 .ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-fill);color:var(--accent-ink)}
 
-/* The ladder. Two tiles at rest, stacking into Glide-style rows on a phone. */
-/* STACKED ROWS. As a 2-up grid at minmax(180px,1fr) this held exactly two
-   cadences in a ~400px column; quarterly makes three and the third wrapped
-   onto its own line, half-width, under two full ones. A column of rows takes a
-   fourth without a layout decision, and gives the trial somewhere to sit that
-   is not a footnote. */
+/* Monthly and Yearly are stacked plan rows, with space for trial details. */
 .ui-pro-plans{display:flex;flex-direction:column;gap:8px;margin:20px 0 0;padding:0;border:none;min-width:0}
 .ui-pro-plans-skel{height:186px;border-radius:var(--radius-l)}
 .ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
@@ -4389,7 +4541,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-text)}
 /* The one --hi element on this surface, and the only place it appears in the
    whole modal - the marker-pen budget is one per viewport. */
-.ui-pro-plan-save{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:var(--radius-pill);background:var(--hi);color:var(--hi-fg)}
+.ui-pro-plan-save{font-size:13px;font-weight:500;color:var(--accent-mid);white-space:pre}
 .ui-pro-plan-rate{display:flex;align-items:baseline;gap:3px;margin-left:auto;flex:none}
 .ui-pro-plan-amount{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.035em;color:var(--t0)}
 .ui-pro-plan-per{font-size:13px;font-weight:600;color:var(--t2)}
@@ -4400,7 +4552,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    outlined "Save N%" pill sits beside it and the trial must win that pairing:
    a discount is a reason to prefer a cadence, a free trial is a reason to
    start at all. */
-.ui-pro-plan-trial{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);white-space:nowrap}
 
 .ui-pro-plans-err{margin:20px 0 0;padding:14px;border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius-l);background:color-mix(in srgb,var(--err) 8%,transparent)}
 .ui-pro-plans-err p{margin:0 0 10px;font-size:13px;color:var(--t1)}
@@ -4748,6 +4899,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .lockt-cta-head{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--t0)}
 .lockt-cta-body{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .lockt-cta-btn{white-space:nowrap;flex:0 0 auto}
+/* A Pro viewer's library is on its way (or failed): the same footprint as the
+   upsell it replaces, with the accent fill taken out so it reads as a status. */
+.lockt-cta.lockt-status{background:none;border-color:var(--border)}
+.lockt-status .lockt-cta-btn{width:auto}
 @media(max-width:640px){
   .lockt-cta{gap:12px;padding:16px}
   .lockt-cta-btn{width:100%}
@@ -5006,4 +5161,46 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .sync-notice{flex-wrap:wrap;row-gap:8px}
   .sync-notice-msg{flex:1 1 calc(100% - 37px)}
   .sync-notice-actions{margin-left:auto}
+}
+/* THE VERIFY-YOUR-EMAIL ROW reuses the sync notice and changes only what an
+   address needs. It sits third in the strip, so a hairline separates it from a
+   row above. The address can be long and has no break points: it wraps
+   anywhere rather than pushing the button off the row. */
+.notice-stack>.verify-notice:not(:first-child){border-top:1px solid var(--bh)}
+/* ONE HEIGHT IN EVERY STATE. The bar keeps the same height whatever it says
+   (idle, sending, sent, failed, verified) at a given width: 62px above 520px
+   (12 + two 13px lines or the 38px button + 12) and 54px at 520px and below
+   (8 + 38 + 8). The message is held to two lines as a backstop, and an address
+   is shortened with an ellipsis rather than allowed to push the bar taller. */
+.verify-notice{align-items:center;min-height:62px}
+.verify-notice .sync-notice-msg{overflow-wrap:anywhere;min-height:1.45em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.verify-notice .verify-addr{display:inline-block;max-width:28ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+/* The idle line carries more words round the address, so it takes a shorter cap to stay inside the two-line clamp (full address in the title). */
+.verify-notice .verify-addr--idle{max-width:18ch}
+/* The failed state wears the error tile rather than the envelope. */
+.verify-notice[data-verify-state="failed"] .sync-notice-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
+/* Resend stays on the row and stays focusable while it sends and while it
+   cools down; aria-disabled marks it as not usable without taking it out of the
+   tab order. The countdown is in the label, so its digits keep a fixed width. */
+.verify-notice .btn{white-space:nowrap;font-variant-numeric:tabular-nums}
+.verify-notice .btn[aria-disabled="true"],.verify-notice .btn[aria-disabled="true"]:hover,.verify-notice .btn[aria-disabled="true"]:active{opacity:.55;cursor:not-allowed;background:var(--card);border-color:var(--border);color:var(--t0)}
+/* ON A PHONE THE ROW STAYS ON ONE LINE. The wrap above exists for a server
+   sentence of unknown length; this row's copy is known, so the second sentence
+   goes and the first takes the space beside the button instead of the full
+   row above it. */
+@media (max-width:520px){
+  .verify-notice{flex-wrap:nowrap;min-height:54px;padding-block:8px}
+  .verify-notice .sync-notice-detail,.verify-notice .verify-to{display:none}
+  .verify-notice .sync-notice-msg{flex:1 1 auto}
+  .verify-notice .sync-notice-actions{margin-left:0;gap:12px}
+}
+/* The 24px Dismiss and the short Resend get 44px targets without growing the
+   bar: each pad hangs out of its button through a pseudo-element. Dismiss's
+   reaches into the row padding on the right and the gap beside Resend on the
+   left; Resend's is vertical only, so the two zones never overlap. On a phone
+   by width, and on any touch screen above that (a tablet). */
+@media (max-width:520px),(pointer:coarse){
+  .verify-notice .btn-s,.verify-notice .sync-notice-dismiss{position:relative}
+  .verify-notice .btn-s::after{content:"";position:absolute;inset:-8px 0}
+  .verify-notice .sync-notice-dismiss::after{content:"";position:absolute;inset:-10px -14px -10px -6px}
 }

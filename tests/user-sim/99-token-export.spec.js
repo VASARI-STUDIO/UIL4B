@@ -88,6 +88,9 @@ test.describe('token export, signed out', () => {
   for (const [name, label] of [['CSS tokens', 'CSS'], ['JSON tokens', 'JSON']]) {
     test(`${name}: the same create-account gate as the style guide, and no file`, async ({ page }) => {
       watch(page, 'someone trying the tools before signing up for anything')
+      // Export is dimmed until there is a design to export, so make one first, as a
+      // visitor does: open a shared palette, then go to the tool.
+      await boardWithPalette(page)
       await go(page, '/create/tint')
       await page.evaluate(() => {
         window.__dl = 0

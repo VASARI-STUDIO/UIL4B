@@ -2,8 +2,8 @@
 // Card left-rail, category pill, browse tile, and filter-chip dot all read from
 // here so the colour/icon system stays consistent. Accents are muted/desaturated
 // (NOT neon); per-surface tints are derived at render time with color-mix() in
-// global.css from `--dsc-c` (set via [data-cat]). Glyphs are inline SVG paths
-// ported from the old ExternalResources page so we ship one icon source.
+// global.css from `--dsc-c` (set via [data-cat]). Glyphs use shared inline SVG
+// paths so every surface renders the same category icon.
 //
 // `key` doubles as the resource `category` value AND the [data-cat] attribute.
 
@@ -93,8 +93,6 @@ export const DISCOVER_CATEGORIES = [
     ]),
   },
   {
-    // NOTE: `community` is a distinct browse surface, NOT a DISCOVER_RESOURCES
-    // category value — the external grid short-circuits on it (see Discover.jsx).
     key: 'community',
     label: 'Community',
     color: 'var(--accent)',

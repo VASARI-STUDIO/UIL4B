@@ -8,6 +8,7 @@ import GoogleOneTap from './components/oneTapMount'
 import BillingBanner from './components/BillingBanner'
 import NoticeStack from './components/NoticeStack'
 import { useToast } from './hooks/useToast'
+import { forgetSupportSenders } from './utils/supportRequest'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { landOnHash } from './utils/hashLanding'
@@ -25,7 +26,7 @@ import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
 import { chromelessRoutes } from './data/toolTree'
-import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
+import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
@@ -83,7 +84,6 @@ const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 // Moved from Create to Discover: it is a browse-and-take surface, not a tool
 // you operate, so it belongs beside the palette and gradient libraries.
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
-const CuratedResources = lazy(() => import('./pages/CuratedResources'))
 // One Learn article, rendered inside the PillNav app-shell. /learn itself is
 // chromeless (SurfaceIndex mounts its own nav); its articles are not, the same
 // way /discover is chromeless and /discover/palettes is not.
@@ -109,6 +109,14 @@ const SurfaceIndex = lazy(() => import('./pages/SurfaceIndex'))
 // return and the app-wide feedback mount at the bottom of the file cannot drift
 // apart when a tool is added. tests/unit/feedback-reach.test.js fails if they do.
 const CHROMELESS_PATHS = new Set(chromelessRoutes())
+
+// The client-side answer for a retired path: the same <Navigate>, with the
+// visitor's own query string carried to the destination (see
+// mergeRedirectQuery), as the edge redirect does.
+function LegacyRedirect({ to }) {
+  const location = useLocation()
+  return <Navigate to={mergeRedirectQuery(to, location.search)} replace />
+}
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -232,14 +240,23 @@ function LoginRoute() {
   )
 }
 
-function AppInner() {
+function AppInner({ toast }) {
   const { user: authUser, userProfile, profileLoaded, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   // Records what auth resolved to, so the NEXT cold load can pick the right
   // page before Firebase has finished loading. See utils/sessionHint.js.
   useSessionHint()
   useSmoothScroll()
-  const { message, visible, type, action: toastAction, toast, dismiss, hold: holdToast, release: releaseToast } = useToast()
+  // A message still sending, its retry, its draft and the sender's address belong
+  // to the account that wrote it: drop them when that account signs out or a
+  // different one signs in. A signed-out visitor signing in keeps their draft.
+  const sendersAccount = useRef(null)
+  useEffect(() => {
+    if (authLoading) return
+    const uid = authUser?.uid || null
+    if (sendersAccount.current && uid !== sendersAccount.current) forgetSupportSenders()
+    sendersAccount.current = uid
+  }, [authUser?.uid, authLoading])
   const copy = useClipboard(toast)
   const location = useLocation()
   const navigationType = useNavigationType()
@@ -508,7 +525,7 @@ function AppInner() {
               <AppFooter />
             </Suspense>
           )
-          : <CreateTool />}
+          : <CreateTool toast={toast} />}
         <GoogleOneTap />
       </>
     )
@@ -535,7 +552,7 @@ function AppInner() {
                   suite can observe, and it is what catches an in-app <Link> that
                   still names a retired path. */}
               {CLIENT_REDIRECT_ROUTES.map(([from, to]) => (
-                <Route key={from} path={from} element={<Navigate to={to} replace />} />
+                <Route key={from} path={from} element={<LegacyRedirect to={to} />} />
               ))}
 
               {/* Curated gradient gallery — copy CSS or hand a gradient to the
@@ -549,11 +566,6 @@ function AppInner() {
                   no visible error, on the page whose whole product is the text
                   you came to copy. Same helper /seo is given below. */}
               <Route path="/discover/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
-              {/* Curated Resources — the hand-picked external set in
-                  src/data/discoverResources.js. The nav has advertised this as
-                  “Soon” since Slice 2 while the data sat unrendered; this is the
-                  route that makes the menu entry true. */}
-              <Route path="/discover/resources" element={<CuratedResources />} />
 
               {/* Learn articles. An unknown slug renders NotFound from inside
                   LearnArticle rather than matching here, so /learn/nonsense is a
@@ -617,7 +629,6 @@ function AppInner() {
       </main>
 
       <AppFooter />
-      <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />
       <GoogleOneTap />
     </div>
   )
@@ -630,6 +641,10 @@ function AppInner() {
 // inside AuthProvider (main.jsx), which LoginPromptProvider depends on.
 export default function App() {
   const { pathname } = useLocation()
+  // The one toast host. It lives here, above every route's early return, so a
+  // toast raised on any route (including a failure that lands after the person
+  // has left the page that started it) is shown, and no route mounts its own.
+  const { message, visible, type, action: toastAction, toast, dismiss, hold: holdToast, release: releaseToast } = useToast()
   return (
     <LoginPromptProvider>
       <ProModalProvider>
@@ -637,13 +652,21 @@ export default function App() {
             user's first Tab bypasses the repeated PillNav and jumps to #main
             (WCAG 2.4.1). Each layout tags its content-start with id="main". */}
         <a href="#main" className="skip-link">Skip to content</a>
+        {/* The notice strip comes second in the document, straight after the
+            skip link, so Tab reaches a condition notice (offline, sync stopped,
+            verify your email) before the nav and the page rather than after
+            the footer. It is position:fixed under the nav, so where it sits in
+            the markup changes the tab order and nothing on screen. The long
+            note on why it is mounted out here, and not in the shell, is below. */}
+        <NoticeStack />
         {/* Every route, including the ones that return before the app shell
             (the Create tools, `/`, /home, /onboarding, /discover, /learn), so
             a crash is a recovery screen rather than a blank page. The shell
             keeps its own boundary inside <main> so the nav survives there. */}
         <RouteErrorBoundary resetKey={pathname}>
-          <AppInner />
+          <AppInner toast={toast} />
         </RouteErrorBoundary>
+        <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />
         {/* Mounted out here rather than inside AppInner's shell: every Create
             tool takes the CHROMELESS_PATHS early return, and those are exactly
             the pages where a lapsed subscription is about to be felt. */}
@@ -665,7 +688,6 @@ export default function App() {
             Both now render as rows inside <NoticeStack>, which reserves the
             height they occupy instead of floating them over the toolbar of
             whatever tool is open — founder decision, 2026-09-14. */}
-        <NoticeStack />
         {/* And the feedback entry points, for the same reason a fourth time —
             except that this one is about the RIGHT-CLICK menu rather than a
             banner. Mounted inside AppInner's shell it was absent from every

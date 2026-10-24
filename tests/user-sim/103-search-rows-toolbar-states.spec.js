@@ -2,7 +2,7 @@
 // WHEN THEY CANNOT ACT.
 //
 //   1. Search rows land on the page their label names (the Learn guides and the
-//      curated resources), and a row with no page behind it is not offered —
+//      brand guides), and a row with no page behind it is not offered —
 //      including in the list shown before anything is typed.
 //   2. The Palette toolbar stays on one line across screen widths.
 //   3. Gradient "From palette" with fewer than two palette colours says so on
@@ -39,25 +39,53 @@ const rowByLabel = (dialog, label) => dialog.locator('.cp-item').filter({
 test.describe('header search · rows land on real pages', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'someone using the header search') })
 
-  test('the empty-query list offers no category that is not a page', async ({ page }) => {
+  // Today no category is a page you can be sent to (every Create group home
+  // bounces to its first tool and /docs lands on the Learn hub), so the list
+  // offers no category row at all. The expected count is a fixed 0, not read
+  // from the data, so a category that gains a page has to be added here on
+  // purpose. A category row is the one with the "Category" pill.
+  const categoryRows = (dialog) => dialog.locator('.cp-item').filter({
+    has: dialog.page().locator('.cp-item-cat', { hasText: /^Category$/ }),
+  })
+
+  test('the empty-query list offers no category row, because no category is a page', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/palette')
     const dialog = await openSearch(page)
     const labels = await dialog.locator('.cp-item-label').allTextContents()
-    // POSITIVE CONTROL: the list is really there, categories included.
+    // POSITIVE CONTROL: the list is really there, with real tool rows.
     expect(labels.length, 'the empty-query list rendered').toBeGreaterThan(10)
-    expect(labels, 'a real category is still offered').toContain('Resources')
+    expect(labels, 'a real tool is still offered').toContain('Palette')
+    await expect(categoryRows(dialog), 'a category row is offered although no category is a page').toHaveCount(0)
+    await expect(dialog.locator('.cp-section-label', { hasText: /^Categories$/ }), 'an empty Categories section is rendered').toHaveCount(0)
     expect(labels, 'UI Builder has no page and must not be offered').not.toContain('UI Builder')
     expect(labels, 'Documentation only reaches a hub and must not be offered').not.toContain('Documentation')
     await expect(dialog.getByRole('option', { name: /^UI Builder/ })).toHaveCount(0)
+  })
+
+  test('typing a page-less or retired category name offers no category row and no Resources row', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/palette')
+    const dialog = await openSearch(page)
+    const input = dialog.locator('.cp-input')
+    // POSITIVE CONTROL: a typed query that should match does show a tool row.
+    await input.fill('palette')
+    await expect(rowByLabel(dialog, 'Palette').first()).toBeVisible()
+    for (const query of ['typography', 'imagery', 'icons', 'alt text', 'documentation', 'ui builder', 'resources']) {
+      await input.fill(query)
+      await expect(input).toHaveValue(query)
+      await expect(categoryRows(dialog), `"${query}" offered a category row`).toHaveCount(0)
+      await expect(
+        dialog.locator('.cp-item-label').filter({ hasText: /^(External )?Resources$/ }),
+        `"${query}" offered a Resources row, and that page is gone`,
+      ).toHaveCount(0)
+    }
   })
 
   const ROWS = [
     { label: 'Design Principles', path: '/learn/principles' },
     { label: 'UI Design Themes', path: '/learn/theme-systems' },
     { label: 'Brand Colour Guide', path: '/learn/brand-colour' },
-    { label: 'External Resources', path: '/discover/resources' },
-    { label: 'Resources', path: '/discover/resources' },
   ]
   for (const { label, path } of ROWS) {
     test(`"${label}" opens ${path}`, async ({ page }) => {
@@ -103,60 +131,44 @@ test.describe('header search · rows land on real pages', () => {
   })
 })
 
-// ── Your workspace: header icon, account popover, phone sheet ───────────────
+// ── Dashboard: header button, phone tab ─────────────────────────────────────
 
-test.describe('header · Your workspace is one target and one label', () => {
-  test.beforeEach(async ({ page }) => { watch(page, 'someone pressing the header workspace icon') })
+test.describe('header · Dashboard is one target and one label', () => {
+  test.beforeEach(async ({ page }) => { watch(page, 'someone pressing the header Dashboard button') })
 
-  test('at 1440 the visible header icon lands on /projects', async ({ page }) => {
+  test('at 1440 the labelled header button lands on /projects', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/discover/palettes')
     expect(new URL(page.url()).pathname, 'the test starts away from /projects').toBe('/discover/palettes')
-    const icon = page.locator('.pnav-actions').getByRole('link', { name: 'Your workspace' })
-    // POSITIVE CONTROL: the icon is the visible bookmark in the header row.
-    await expect(icon).toBeVisible()
-    await expect(icon.locator('svg')).toHaveCount(1)
-    await expect(icon).toHaveAttribute('title', 'Your workspace')
-    await icon.click()
-    await expect.poll(() => new URL(page.url()).pathname, 'the bookmark icon landed somewhere else').toBe('/projects')
+    const button = page.locator('.pnav-actions').getByRole('link', { name: 'Dashboard' })
+    await expect(button).toBeVisible()
+    await expect(button.locator('.pnav-act-label')).toBeVisible()
+    await button.click()
+    await expect.poll(() => new URL(page.url()).pathname, 'the Dashboard button landed somewhere else').toBe('/projects')
   })
 
-  test('at 800 the folded row in the account popover is Your workspace and lands on /projects', async ({ page }) => {
+  test('at 800 the Dashboard button stays in the header as an icon, with no popover duplicate', async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 900 })
     await go(page, '/discover/palettes')
-    // Folded: the header's own icon is gone, so the popover is the only way.
-    await expect(page.locator('.pnav-actions').getByRole('link', { name: 'Your workspace' })).toBeHidden()
+    const button = page.locator('.pnav-actions').getByRole('link', { name: 'Dashboard' })
+    await expect(button).toBeVisible()
+    await expect(button).toHaveAttribute('title', 'Dashboard')
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
-    const pop = page.locator('#pnav-account-pop')
-    await expect(pop).toBeVisible()
-    const row = pop.getByRole('link', { name: 'Your workspace' })
-    // POSITIVE CONTROL: the sibling folded rows are there beside it.
-    await expect(pop.getByRole('link', { name: 'Back to the site' })).toBeVisible()
-    await expect(row).toBeVisible()
-    await expect(row).toHaveAttribute('href', '/projects')
-    await expect(pop.getByText('Palette library'), 'the old label is still offered').toHaveCount(0)
-    await row.click()
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/projects')
+    await expect(page.locator('#pnav-account-pop').getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
   })
 
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
-    test('the menu sheet row is Your workspace, lands on /projects and wears the Projects tab glyph', async ({ page }) => {
+    test('the Dashboard tab lands on /projects and the sheet has no Dashboard, Export or Back to the site row', async ({ page }) => {
       await go(page, '/discover/palettes')
-      const glyph = (locator) => locator.locator('svg').first().innerHTML()
-      const tab = await glyph(page.locator('.pnav-tab', { hasText: 'Projects' }))
-      // POSITIVE CONTROL: the tab really drew a glyph.
-      expect(tab).toContain('<path')
+      await expect(page.locator('.pnav-tab', { hasText: 'Dashboard' })).toHaveAttribute('href', '/projects')
       await page.getByRole('button', { name: 'Open menu' }).click()
       const sheet = page.locator('.pnav-sheet')
       await expect(sheet).toBeVisible()
-      const row = sheet.getByRole('link', { name: 'Your workspace' })
-      await expect(row).toHaveAttribute('href', '/projects')
-      await expect(sheet.getByText('Palette library'), 'the old label is still offered').toHaveCount(0)
-      expect(await glyph(row), 'one place, two icons').toBe(tab)
-      await row.click()
-      await expect.poll(() => new URL(page.url()).pathname).toBe('/projects')
+      await expect(sheet.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+      await expect(sheet.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
+      await expect(sheet.getByText('Back to the site')).toHaveCount(0)
     })
   })
 })
@@ -221,11 +233,21 @@ async function fromPaletteViaMore(page) {
   const sheet = page.getByRole('dialog', { name: 'More' })
   await expect(sheet).toBeVisible()
   const fromPalette = sheet.getByRole('button', { name: /^From palette/ })
-  // The sheet slides up; wait until its row has come to rest on screen.
+  // The sheet slides up; wait until its row has come to rest on screen. On
+  // screen is not at rest: the row's bottom edge passes 844 while it is still
+  // about 80px below its resting place, which is a whole row, so a press
+  // aimed at it lands on the row beneath once the slide finishes. The click
+  // is forced (the row is aria-disabled, which a normal click refuses), and a
+  // forced click does not wait for the target to stop. So wait for every
+  // animation that ends to have ended.
   await expect.poll(async () => {
     const b = await fromPalette.boundingBox()
     return b ? Math.round(b.y + b.height) : 99999
   }).toBeLessThanOrEqual(844)
+  await expect.poll(
+    () => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running' && a.effect.getComputedTiming().iterations !== Infinity).length),
+    { message: 'the More sheet is still sliding up' },
+  ).toBe(0)
   await fromPalette.click({ force: true })
   await expect(sheet).toBeHidden()
   return page.locator('.grd .grd-note--palette')

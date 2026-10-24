@@ -1,14 +1,16 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useClipboard } from '../hooks/useClipboard'
-import { readSessionHint } from '../utils/sessionHint'
 import { buildCSSVars } from '../utils/exportBuilder'
+import { tintsCurrent } from '../utils/projectTints'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
-import { UPGRADE, UPGRADE_LINE, byRecent, projectSlots4, projectStatus } from '../components/userhome/workspace'
+import { UPGRADE_LINE, byRecent, projectSlots4, projectStatus, upgradeOffer } from '../components/userhome/workspace'
+import { usePrices, useProPrice } from '../hooks/usePrices'
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
@@ -44,6 +46,10 @@ const ExportPanel = lazy(() => import('../components/ExportPanel'))
 // duplicate, archive or restore, delete — sits behind the ⋯ beside Save, the
 // same menu (ProjectActions) the old list carried on every row.
 
+// The longest a project link waits for the account's projects before it gives up
+// and sends the visitor to the workspace.
+const LOOKUP_WAIT_MS = 10000
+
 // A different project is a different page: keyed on the id, so nothing — a
 // half-typed rename, an armed delete, "Saved" — carries from one to the next.
 export default function ProjectDetailRoute(props) {
@@ -56,13 +62,14 @@ function ProjectDetail({ id, toast }) {
   const { loading: authLoading } = useAuth()
   const { isPro, loading: planLoading } = useSubscription()
   const {
-    projects, canSaveProjects, projectLimit,
+    projects, canSaveProjects, projectsLoading, projectLimit,
     loadProject, overwriteProject, renameProject, duplicateProject, archiveProject, deleteProject,
   } = useProject()
   const copy = useClipboard()
-
-  const [hintedSession] = useState(readSessionHint)
-  const resolving = authLoading && hintedSession
+  // The upgrade link's price: the live one in the visitor's currency, none if not live.
+  const proPrice = useProPrice()
+  const { prices } = usePrices()
+  const upgrade = upgradeOffer({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
 
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState('')
@@ -75,15 +82,28 @@ function ProjectDetail({ id, toast }) {
 
   const project = projects.find((p) => p.id === id)
 
+  // A project missing from the list is "not found" only once the list is known.
+  // On a fresh load the account has not answered yet (sign-in is still settling,
+  // or this device has not read the account's projects), so the list is
+  // unknown, not empty. Waiting is capped: a read that never lands ends in the
+  // redirect below rather than a loader that never leaves.
+  const unknown = !project && (authLoading || (canSaveProjects && projectsLoading))
+  const [gaveUp, setGaveUp] = useState(false)
+  useEffect(() => {
+    if (!unknown) return undefined
+    const timer = setTimeout(() => setGaveUp(true), LOOKUP_WAIT_MS)
+    return () => clearTimeout(timer)
+  }, [unknown])
+
   useEffect(() => () => clearTimeout(copyTimer.current), [])
 
-  if (resolving) {
+  if (unknown && !gaveUp) {
     return (
       <div className="uh pjd">
         <div className="uh-main">
           <div className="uh-resolving" role="status">
             <div className="fg-loader" />
-            <p>Opening your projects…</p>
+            <p>Opening your project…</p>
           </div>
         </div>
       </div>
@@ -95,7 +115,12 @@ function ProjectDetail({ id, toast }) {
 
   const status = projectStatus(project)
   const { digest } = status
-  const slots = projectSlots4(project)
+  // A tint ramp recorded as made from the project's active colour says so; one
+  // from elsewhere (or with no record) keeps the plain step count.
+  const madeFromColours = tintsCurrent(project.design)
+  const slots = projectSlots4(project).map((s) => (
+    s.id === 'tints' && s.done && madeFromColours ? { ...s, detail: `${s.detail}, made from your colours` } : s
+  ))
   const complete = digest.done === digest.total
   const open = digest.total - digest.done
   const others = projects.filter((p) => p.id !== id).sort(byRecent)
@@ -345,16 +370,17 @@ function ProjectDetail({ id, toast }) {
           {!isPro && !planLoading && (
             <div className="pjd-upgrade">
               <span className="pjd-upgrade-line">{UPGRADE_LINE}</span>
-              <Link to="/plans" className="pjd-upgrade-link">{UPGRADE.label}</Link>
+              <Link to="/plans" className="pjd-upgrade-link">{upgrade.label}</Link>
             </div>
           )}
         </div>
       </div>
 
-      {exporting && (
+      {exporting && createPortal(
         <Suspense fallback={null}>
           <ExportPanel onClose={() => setExporting(false)} />
-        </Suspense>
+        </Suspense>,
+        document.querySelector('.app-shell'),
       )}
     </div>
   )

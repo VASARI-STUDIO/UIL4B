@@ -1,3 +1,4 @@
+import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import JSZip from 'jszip'
@@ -24,11 +25,17 @@ import {
   exceedsCanvasLimit,
   outputDimensions,
 } from '../utils/imageResize'
+import Segmented from '../components/converter/Segmented'
 import {
-  ANIMATION_FORMATS, FPS_MAX, FPS_MIN, PLAY_OPTIONS, QUALITY_LEVELS,
-  clampFps, findFormat, formatBytes, formatTime, videoToAnimationArgs,
+  ANIMATION_FORMATS, CROP_SHAPES, DIRECTIONS, DITHERS, FPS_MAX, FPS_MIN, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
+  MAX_ANIMATION_SIDE, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TURNS,
+  animatedImageSeconds, clampFps, commitNumber, cropRect, findFormat, formatBytes, formatTime, outputFrames, outputSize,
+  reverseFits, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
+import {
+  avifEncodeKnown, blobMatches, canEncodeAvif, usableFormat, withAvifIf,
+} from '../utils/avifSupport'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -57,14 +64,35 @@ const OUTPUT_FORMATS = [
 ]
 
 // Formats supported by the canvas frame encoder (Video → Frames). AVIF is
-// excluded here because canvas.toBlob('image/avif') support is too inconsistent
-// to offer for batch frame extraction; ICO only makes sense for still images.
+// excluded here on purpose, whatever the browser can do, to keep batch frame
+// extraction on the formats every browser encodes; ICO only makes sense for
+// still images. The still-image picker offers AVIF only where it is confirmed
+// (see utils/avifSupport.js).
 const FRAME_FORMATS = OUTPUT_FORMATS.filter(f => f.id !== 'image/avif' && !f.ico)
 
 const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/bmp,image/avif,image/x-icon,image/vnd.microsoft.icon,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.avif,.ico'
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
 
+// Whether this browser can encode AVIF: null until the one-off probe answers,
+// then true/false. A returning visit reads the remembered answer on first
+// render, so the picker never changes shape after the first visit.
+function useAvifEncode() {
+  const [ok, setOk] = useState(avifEncodeKnown)
+  useEffect(() => {
+    if (ok !== null) return undefined
+    let live = true
+    canEncodeAvif().then(v => { if (live) setOk(v) })
+    return () => { live = false }
+  }, [ok])
+  return ok
+}
+
 const LARGE_FILE_BYTES = 50 * 1024 * 1024 // 50 MB warning threshold
+const MAX_FRAMES = 500 // frames per Extract run: a long clip at a high FPS can't freeze the tab
+// How many frames a run over [from, to) makes at `fps` (before the cap): one per
+// 1/fps step from `from`, so a 10.5 s clip at 1 fps is 11. The run, its toast and
+// the estimate line all read this one number.
+const frameCountFor = (from, to, fps) => Math.max(1, Math.ceil((to - from) * Math.max(0.1, Math.min(30, fps)) - 1e-9))
 
 const QUALITY_SNAPS = [25, 50, 75, 90]
 const QUALITY_DEFAULT = 90
@@ -202,8 +230,6 @@ export default function FileConverter({ toast }) {
       title="File Converter"
       titleId="fc-title"
       items={[
-        // A status tag, not an action: it leaves the row rather than the menu.
-        { id: 'alpha', menu: false, render: () => <span className="fc-alpha">Alpha</span> },
         // 3D files are converted by their own tool; this action links to it.
         {
           id: '3d',
@@ -239,11 +265,14 @@ export default function FileConverter({ toast }) {
           ))}
         </div>
         <p className="fc-about">
-          Convert images between PNG, JPEG, WebP, AVIF and favicon ICO, turn short
-          videos into GIFs, or extract video frames — all in your browser; your
-          files are never uploaded. Image conversion is fully offline. The video
-          tools download a converter engine — about 9 MB — from a public code
-          CDN the first time you use one, then keep it cached.
+          Convert images between PNG, JPEG, WebP and favicon ICO (and to AVIF
+          where your browser can make it), build
+          animations from frames, edit videos and GIFs (crop, turn, speed,
+          reverse) and save them as GIF, WebP, APNG, MP4 or WebM, or pull frames
+          out of a video. It all runs in your browser and your files are never
+          uploaded. Image conversion works offline. The video tools download a
+          converter engine, about 9 MB, from a public code CDN the first time
+          you use one, then keep it cached.
         </p>
       </div>
 
@@ -275,7 +304,13 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // then belongs to the visitor — nothing here keeps re-asserting it.
   const seeded = initialDraft ? draftToConverterSettings(initialDraft) : null
   const [items, setItems] = useState([]) // { id, name, srcUrl, file, out:{blob,url,bytes,w,h} }
-  const [format, setFormat] = useState(() => seeded?.format ?? 'image/webp')
+  // AVIF is offered only where the browser really encodes it. A handed-over
+  // AVIF draft is held as asked and resolved below: it applies once the check
+  // says yes, and quietly becomes WebP if it says no.
+  const avifOk = useAvifEncode()
+  const [chosenFormat, setFormat] = useState(() => seeded?.format ?? 'image/webp')
+  const format = usableFormat(chosenFormat, avifOk, 'image/webp')
+  const outputFormats = withAvifIf(OUTPUT_FORMATS, avifOk)
   const [quality, setQuality] = useState(() => seeded?.quality ?? QUALITY_DEFAULT)
   const [maxDim, setMaxDim] = useState(() => seeded?.maxDim ?? 0) // 0 = keep original size
   const [renderScale, setRenderScale] = useState(1) // @1x / @2x export
@@ -408,16 +443,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     if (format === 'image/jpeg') { ctx.fillStyle = jpegBg; ctx.fillRect(0, 0, w, h) }
     ctx.drawImage(img, 0, 0, w, h)
     const q = format === 'image/png' ? undefined : quality / 100
-    // canvas.toBlob yields null when the browser can't encode the requested
-    // format (notably AVIF in some browsers) — and a callback that never fires
-    // would wedge the whole batch in its busy state. Guard both so each item
-    // records a clear error and the batch keeps going.
+    // canvas.toBlob yields null — or quietly a PNG — when the browser can't
+    // encode the requested format (notably AVIF in some browsers), and a
+    // callback that never fires would wedge the whole batch in its busy state.
+    // Guard all three so each item records a clear error and the batch keeps
+    // going, and nothing is saved under a name that isn't its real format.
     const label = OUTPUT_FORMATS.find(f => f.id === format)?.label || format
     const blob = await new Promise((resolve, reject) => {
       const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
       canvas.toBlob(b => {
         clearTimeout(to)
-        if (b) resolve(b)
+        if (blobMatches(b, format)) resolve(b)
         else reject(new Error(`${label} export not supported by this browser`))
       }, format, q)
     })
@@ -465,14 +501,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // What a homepage output draft actually became here. Stated explicitly rather
   // than applied silently — including the part this converter cannot honour, so
   // "Lossless" is never implied where only a quality setting exists.
-  const draftFormat = initialDraft && DRAFT_FORMATS.find(f => f.id === initialDraft.format)
-  const draftNotice = initialDraft && {
+  // An AVIF draft is described only once the browser has said whether it can
+  // deliver it, so the note never claims AVIF and then changes its mind.
+  const draftWaitsOnAvif = initialDraft?.format === 'image/avif' && avifOk === null
+  const draftFormat = initialDraft && DRAFT_FORMATS.find(f => f.id === usableFormat(initialDraft.format, avifOk, 'image/webp'))
+  const draftNotice = initialDraft && !draftWaitsOnAvif && {
     applied: [
       draftFormat?.label || initialDraft.format,
       DRAFT_RESOLUTIONS.find(r => r.id === initialDraft.resolution)?.detail || 'source size',
       draftFormat?.lossless ? 'lossless' : `quality ${seeded.quality}%`,
     ].join(' · '),
-    limit: describeCompressionLimit(initialDraft.format, initialDraft.compression),
+    limit: describeCompressionLimit(draftFormat?.id ?? initialDraft.format, initialDraft.compression),
   }
 
   const downloadOne = useCallback((item) => {
@@ -597,9 +636,9 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
           <aside className="fc-inspector" aria-label="Output settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
-              <select id="fc-img-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={busy}>
-                {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
+              <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
+                {outputFormats.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </MenuSelect>
               {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
               {format === 'image/jpeg' && (
                 <div className="fc-row">
@@ -635,15 +674,15 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 <div className="fc-pair">
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
-                    <select id="fc-img-size" className="fc-field" value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} aria-label="Output size limit">
+                    <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy} aria-label="Output size limit">
                       {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
+                    </MenuSelect>
                   </div>
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-scale">Export scale</label>
-                    <select id="fc-img-scale" className="fc-field" value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} aria-label="Export render scale">
+                    <MenuSelect label="Export render scale" id="fc-img-scale" className="fc-field" value={renderScale} onChange={nextValue => setRenderScale(+nextValue)} disabled={busy} aria-label="Export render scale">
                       {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
+                    </MenuSelect>
                   </div>
                 </div>
 
@@ -707,11 +746,45 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   )
 }
 
-/** A video's source panel: the player, then the facts about the file. */
-function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, busy }) {
+/**
+ * A video's source panel: the player, then the facts about the file. With
+ * `editor` (the Video tab) the media sits in a stage that has the media's own
+ * ratio, so the crop overlay's percentages land on the picture and not on
+ * letterbox bars. Without it (Extract frames) it is the plain player.
+ */
+function VideoSource({ srcUrl, videoRef, onLoadedMetadata, onError, facts, onReplace, busy, editor }) {
+  const size = editor?.size
+  const crop = editor?.crop
   return (
     <div className="fc-source">
-      <video ref={videoRef} src={srcUrl} controls muted className="fc-video" aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} />
+      {editor ? (
+        <div className="fc-vstage" style={size ? { '--src-w': size.w, '--src-h': size.h } : undefined}>
+          {editor.isImage ? (
+            <img
+              src={srcUrl}
+              alt="Animation preview"
+              onLoad={e => editor.onImageLoad(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)}
+              onError={onError}
+            />
+          ) : (
+            <video ref={videoRef} src={srcUrl} controls muted playsInline aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} onError={onError} />
+          )}
+          {crop && size && (
+            <div
+              className="fc-crop-keep"
+              aria-hidden="true"
+              style={{
+                left: `${(crop.x / size.w) * 100}%`,
+                top: `${(crop.y / size.h) * 100}%`,
+                width: `${(crop.w / size.w) * 100}%`,
+                height: `${(crop.h / size.h) * 100}%`,
+              }}
+            />
+          )}
+        </div>
+      ) : (
+        <video ref={videoRef} src={srcUrl} controls muted className="fc-video" aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} />
+      )}
       <div className="fc-source-card">
         <dl className="fc-facts">
           {facts.map(([k, v]) => (
@@ -728,18 +801,84 @@ function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, bus
   )
 }
 
+/**
+ * A number field that lets the visitor clear it and retype. The draft lives
+ * here while the field is being edited; blur or Enter hands it to `onCommit`
+ * (which decides what an empty or out-of-range draft means), and Escape drops
+ * the draft and shows the last committed value again.
+ */
+function DraftNumber({ shown, onCommit, inputMode = 'numeric', ...rest }) {
+  const [draft, setDraft] = useState(null)
+  const done = () => {
+    if (draft === null) return
+    const raw = draft
+    setDraft(null)
+    onCommit(raw)
+  }
+  return (
+    <input
+      {...rest}
+      type="text"
+      inputMode={inputMode}
+      autoComplete="off"
+      value={draft ?? String(shown)}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={done}
+      onKeyDown={e => {
+        if (e.key === 'Enter') { e.preventDefault(); done() }
+        else if (e.key === 'Escape') setDraft(null)
+      }}
+    />
+  )
+}
+
+/** One shape's glyph: a 16 x 16 outline in the shape's own proportions. */
+function ShapeGlyph({ w, h, dashed }) {
+  return (
+    <svg className="fc-seg-glyph" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <rect
+        x={(16 - w) / 2} y={(16 - h) / 2} width={w} height={h} rx="2"
+        fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray={dashed ? '2 2' : undefined}
+      />
+    </svg>
+  )
+}
+
+const SHAPE_GLYPH_SIZE = { '1:1': [12, 12], '4:5': [11, 14], '16:9': [16, 9], '9:16': [9, 16] }
+const ANCHOR_LABELS = {
+  x: [{ id: 'start', label: 'Left' }, { id: 'centre', label: 'Centre' }, { id: 'end', label: 'Right' }],
+  y: [{ id: 'start', label: 'Top' }, { id: 'centre', label: 'Centre' }, { id: 'end', label: 'Bottom' }],
+}
+const FLIP_ID = { h: 'fc-vid-flip-h', v: 'fc-vid-flip-v' }
+const REVERSE_OFF_NOTE = 'Reverse keeps every frame in memory, so it’s off for a clip this long. Shorten the clip, lower the frame rate or make it narrower.'
+const REVERSE_UNKNOWN_NOTE = 'Reverse needs to know how long the clip is, and this file doesn’t say, so it’s off.'
+const NO_PREVIEW_NOTE = 'Can’t preview this file, so crop is unavailable. Convert still works.'
+const UNREADABLE_VIDEO_NOTE = 'This file could not be read as a video. Try saving it again as MP4 or WebM.'
+// A file the browser can’t play (an AVI, say) may never report its size. After
+// this long the panel stops saying "Reading the file…"; a late answer still wins.
+const READ_TIMEOUT_MS = 5000
+
 // ── Mode 3: Video → an animated file ─────────────────────────────────────────
 // This was "Video → GIF". The engine it already loaded writes four more
 // formats for the cost of a different argument list (utils/mediaEncode.js), so
 // the same panel now offers GIF, animated WebP, APNG, MP4 and WebM. GIF stays
-// the default and its command is unchanged apart from an even height, which
+// the default and its command is unchanged for the default settings, which
 // tests/unit/media-encode.test.js pins. Sound is dropped in every format:
 // these are loops for a page, and saying so is better than a silent track
 // that sometimes survives.
+//
+// It is also a small editor: crop to a shape, turn and flip, change speed, play
+// forward, backward or as a boomerang, and (for GIF) choose colours and
+// dither. Every one of those is an argument in mediaEncode.js, not a
+// separate pass, so the clip is encoded once.
 function VideoConvert({ toast }) {
   const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
+  const [isImage, setIsImage] = useState(false) // a GIF or animated WebP, shown as an <img>
+  const [srcSize, setSrcSize] = useState(null) // { w, h } once the file has said
+  const [srcFailed, setSrcFailed] = useState(false) // the browser errored, or said nothing for READ_TIMEOUT_MS
+  const [imageLen, setImageLen] = useState(null) // seconds read from a GIF/WebP's own header; null = still reading, 0 = can't tell
   const [format, setFormat] = useState('gif')
   const [fps, setFps] = useState(10)
   const [width, setWidth] = useState(480)
@@ -748,9 +887,19 @@ function VideoConvert({ toast }) {
   const [duration, setDuration] = useState(0)
   const [trimStart, setTrimStart] = useState(0)
   const [trimEnd, setTrimEnd] = useState(null) // null = to the end
+  const [shape, setShape] = useState('original')
+  const [anchor, setAnchor] = useState('centre')
+  const [turn, setTurn] = useState(0)
+  const [flipH, setFlipH] = useState(false)
+  const [flipV, setFlipV] = useState(false)
+  const [speed, setSpeed] = useState(1)
+  const [direction, setDirection] = useState('forward')
+  const [colours, setColours] = useState(GIF_COLOURS_MAX)
+  const [dither, setDither] = useState('pattern')
   const [job, setJob] = useState(null)
   const [engineFailed, setEngineFailed] = useState(false)
-  const [result, setResult] = useState(null) // { url, blob, bytes, format }
+  const [result, setResult] = useState(null) // { url, blob, bytes, format, sig }
+  const videoRef = useRef(null)
   // One token per run. Cancel (and unmount) bumps it, and so does every new run,
   // so a run can only ever act while it is the latest one. A shared boolean,
   // which the next run reset to false, let a cancelled run wake up and encode.
@@ -778,9 +927,38 @@ function VideoConvert({ toast }) {
     if (u.job) { runRef.current++; resetFfmpeg() }
   }, [])
 
+  // The preview plays at the chosen speed. A media element goes back to its
+  // default rate whenever it loads a source, so both rates are set together
+  // here and again when its metadata arrives.
+  const applyRate = useCallback(() => {
+    const v = videoRef.current
+    if (v) { v.defaultPlaybackRate = speed; v.playbackRate = speed }
+  }, [speed])
+  useEffect(() => { applyRate() }, [applyRate, srcUrl])
+
+  // A file the browser can't play never fires loadedmetadata, and some browsers
+  // fire no error either, so a timer ends the wait.
+  useEffect(() => {
+    if (!srcUrl || srcSize) return undefined
+    const t = setTimeout(() => setSrcFailed(true), READ_TIMEOUT_MS)
+    return () => clearTimeout(t)
+  }, [srcUrl, srcSize])
+
+  // An <img> hides its length, so a GIF or animated WebP is read for it (header
+  // bytes only). Reverse needs the length to stay inside the memory budget.
+  useEffect(() => {
+    if (!file || !isImage) return undefined
+    let live = true
+    ;(file.size > PROBE_MAX_BYTES ? Promise.resolve(0) : file.arrayBuffer().then(animatedImageSeconds))
+      .catch(() => 0)
+      .then(s => { if (live) setImageLen(s) })
+    return () => { live = false }
+  }, [file, isImage])
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
+    const animImage = /^image\/(gif|webp)$/.test(f.type) || /\.(gif|webp)$/i.test(f.name)
     const okType = f.type.startsWith('video/') || /\.(mp4|webm|mov|avi|gif|webp)$/i.test(f.name)
     if (!okType) { toast('Please choose a video, animated GIF or animated WebP', 'error'); return }
     if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — conversion may be slow or run out of memory', 'info')
@@ -788,15 +966,56 @@ function VideoConvert({ toast }) {
     if (result?.url) URL.revokeObjectURL(result.url)
     setFile(f)
     setSrcUrl(URL.createObjectURL(f))
+    setIsImage(animImage)
+    setSrcSize(null)
+    setSrcFailed(false)
+    setImageLen(null)
     setResult(null)
     setDuration(0)
     setTrimStart(0)
     setTrimEnd(null)
+    setShape('original')
+    setAnchor('centre')
   }, [srcUrl, result, toast])
+
+  // ── What the settings come to ──────────────────────────────────────────────
+  const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
+  const end = trimEnd == null ? duration : Math.min(trimEnd, duration || trimEnd)
+  const clipLen = duration && end > start ? end - start : 0
+  const trimmed = clipLen > 0 && (start > 0 || end < duration)
+  const trimInvalid = duration > 0 && end <= start
+
+  const crop = srcSize ? cropRect(srcSize.w, srcSize.h, shape, anchor) : null
+  const outSize = srcSize ? outputSize(srcSize.w, srcSize.h, { crop, turn, width }) : null
+  const unreadable = srcFailed && !srcSize
+  // The length Reverse is measured against: the clip for a video, the header's
+  // sum of frame delays for a GIF or WebP. 0 means it is not known.
+  const secs = clipLen > 0 ? clipLen : isImage ? imageLen || 0 : 0
+  const forwardFrames = secs > 0 ? outputFrames(secs, speed, fps, 'forward') : 0
+  // Reverse is on only when the clip is measured and fits. An unknown length is
+  // treated as over budget (a long GIF would run the tab out of memory), and
+  // while the file is still being read it stays off without a note.
+  const lengthPending = !unreadable && (!srcSize || (isImage && imageLen === null))
+  const reverseWhy = trimInvalid ? null
+    : lengthPending ? 'pending'
+      : secs <= 0 || !outSize ? 'unknown'
+        : reverseFits(forwardFrames, outSize.w, outSize.h) ? null : 'long'
+  const reverseOk = reverseWhy === null
+  const dir = reverseOk ? direction : 'forward'
+  // A direction that no longer fits falls back to Forward (adjusted during
+  // render, the supported way to derive state from a change in other state).
+  if (!reverseOk && direction !== 'forward') setDirection('forward')
+  const frames = secs > 0 ? outputFrames(secs, speed, fps, dir) : 0
+  const outSeconds = frames / clampFps(fps)
+  const isGif = fmt.id === 'gif'
+
+  // Everything a result depends on. A result made from a different signature is
+  // labelled out of date rather than presented as the current one.
+  const sig = JSON.stringify([format, fps, width, isGif ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir, isGif ? colours : 0, isGif ? dither : 0])
 
   const convert = useCallback(async () => {
     if (!file || working) return
-    if (duration > 0 && (trimEnd == null ? duration : trimEnd) <= trimStart) {
+    if (trimInvalid) {
       toast('Trim end must be after trim start', 'error')
       return
     }
@@ -832,35 +1051,38 @@ function VideoConvert({ toast }) {
     }
     if (stale()) return
 
-    // Optional trim: -ss before -i seeks fast; -t caps the clip length.
-    const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
-    const end = trimEnd == null ? duration : Math.min(trimEnd, duration || trimEnd)
-    const clipLen = duration && end > start ? end - start : 0
-    const trimmed = clipLen > 0 && (start > 0 || end < duration)
+    // ffmpeg's time= counts OUTPUT time, so after a speed change the bar's
+    // total is the length of what comes out, not of what goes in.
+    const total = frames / clampFps(fps)
     const inName = 'input' + (file.name.match(/\.[^.]+$/)?.[0] || '.mp4')
-    setJob({ stage: 'encode', done: 0, total: clipLen, unit: 'time' })
+    setJob({ stage: 'encode', done: 0, total, unit: 'time' })
     try {
       const bytes = await runJob(ffmpeg, {
         inputs: [{ name: inName, data: file }],
         args: videoToAnimationArgs({
           format: target.id, input: inName, fps, width, plays, quality,
           start, length: trimmed ? clipLen : 0,
+          crop, turn, flipH, flipV, speed, direction: dir, colours, dither,
         }),
         output: `output.${target.ext}`,
-        onTime: (t) => { if (!stale()) setJob({ stage: 'encode', done: t, total: clipLen, unit: 'time' }) },
+        onTime: (t) => { if (!stale()) setJob({ stage: 'encode', done: t, total, unit: 'time' }) },
       })
       if (stale()) return
       const blob = new Blob([bytes], { type: target.mime })
       revealNext.current = true
-      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id })
+      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig })
       setJob(null)
       toast(`${target.label} ready`)
     } catch (err) {
       if (stale()) return
       setJob(null)
-      toast('Conversion failed: ' + (err?.message || 'unknown error'), 'error')
+      toast(dir !== 'forward'
+        ? 'Conversion failed. Reverse keeps every frame in memory; try a shorter clip or a narrower width.'
+        : /encoder stopped with code/.test(err?.message || '')
+          ? UNREADABLE_VIDEO_NOTE
+          : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, duration, trimStart, trimEnd, toast])
+  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, turn, flipH, flipV, speed, dir, colours, dither, frames, sig, toast])
 
   const cancel = () => {
     runRef.current++
@@ -880,26 +1102,71 @@ function VideoConvert({ toast }) {
   const resultFmt = result ? findFormat(result.format) : null
   const base = (file?.name || 'video').replace(/\.[^.]+$/, '')
 
+  // ── The controls' options ──────────────────────────────────────────────────
+  const srcRatio = srcSize ? srcSize.w / srcSize.h : 1
+  const shapeOptions = CROP_SHAPES.map(s => {
+    let glyph
+    if (s.id === 'original') {
+      glyph = srcRatio >= 1 ? <ShapeGlyph w={16} h={16 / srcRatio} dashed /> : <ShapeGlyph w={16 * srcRatio} h={16} dashed />
+    } else {
+      const [gw, gh] = SHAPE_GLYPH_SIZE[s.id]
+      glyph = <ShapeGlyph w={gw} h={gh} />
+    }
+    return { id: s.id, label: s.label, glyph }
+  })
+  const anchorOptions = ANCHOR_LABELS[crop?.axis || 'x']
+  const speedOptions = SPEEDS.map(s => ({ id: s.id, label: s.label, name: s.name }))
+  const flipBtn = (axis, on, set) => (
+    <button
+      type="button"
+      id={FLIP_ID[axis]}
+      className="fc-btn fc-toggle"
+      aria-pressed={on}
+      disabled={working}
+      onClick={() => set(!on)}
+    >
+      {axis === 'h' ? 'Flip horizontal' : 'Flip vertical'}
+    </button>
+  )
+
+  const consequence = !srcSize
+    ? (unreadable ? NO_PREVIEW_NOTE : 'Reading the file…')
+    :`${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
+
   return (
     <>
       {!srcUrl ? (
         <DropZone
           accept={ACCEPT_VIDEO}
           onFiles={onFiles}
-          hint="Drop a video or animation here or click to browse"
-          sub="MP4, WebM, MOV, AVI, animated GIF / WebP — out as GIF, WebP, APNG, MP4 or WebM"
+          hint="Drop a video or GIF to edit and convert"
+          sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4 or WebM."
         />
       ) : (
         <div className="fc-bench">
           <div className="fc-bench-main">
             <VideoSource
               srcUrl={srcUrl}
+              videoRef={videoRef}
               // A recorded WebM often reports Infinity until it is played
               // through; treat that as unknown rather than as a length.
-              onLoadedMetadata={e => setDuration(Number.isFinite(e.target.duration) ? e.target.duration : 0)}
+              onError={() => setSrcFailed(true)}
+              onLoadedMetadata={e => {
+                const v = e.target
+                setDuration(Number.isFinite(v.duration) ? v.duration : 0)
+                if (v.videoWidth > 0 && v.videoHeight > 0) setSrcSize({ w: v.videoWidth, h: v.videoHeight })
+                applyRate()
+              }}
+              editor={{
+                isImage,
+                size: srcSize,
+                crop,
+                onImageLoad: (w, h) => { if (w > 0 && h > 0) setSrcSize({ w, h }) },
+              }}
               facts={[
                 ['File', file?.name],
                 ['Size', formatBytes(file?.size)],
+                ...(isImage && srcSize ? [['Dimensions', `${srcSize.w} × ${srcSize.h}`]] : []),
                 ...(duration > 0 ? [['Duration', formatTime(duration)]] : []),
               ]}
               onReplace={clearFile}
@@ -917,6 +1184,9 @@ function VideoConvert({ toast }) {
                   {resultFmt.label} · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
                   {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
                 </p>
+                {result.sig !== sig && (
+                  <p className="fc-note fc-note--warn">Settings changed since this was made. Convert again to update it.</p>
+                )}
                 <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.blob, `${base}.${resultFmt.ext}`, `download the ${resultFmt.label}`)}>
                   Download {resultFmt.label}
                 </button>
@@ -928,65 +1198,140 @@ function VideoConvert({ toast }) {
           <aside className="fc-inspector" aria-label="Conversion settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-vid-format">Output format</label>
-              <select id="fc-vid-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={working}>
+              <MenuSelect label="Output format" id="fc-vid-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={working}>
                 {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
+              </MenuSelect>
               <p className="fc-note">Sound is removed</p>
-            </div>
-            <div className="fc-insp-sec">
-              <div className="fc-pair">
-                <div>
-                  <label className="fc-eyebrow" htmlFor="fc-vid-fps">Frame rate (fps)</label>
-                  <input id="fc-vid-fps" className="fc-field fc-field--num" type="number" min={FPS_MIN} max={FPS_MAX} value={fps} disabled={working}
-                    onChange={e => setFps(clampFps(+e.target.value || 10))} />
-                </div>
-                <div>
-                  <label className="fc-eyebrow" htmlFor="fc-vid-width">Width (px)</label>
-                  <input id="fc-vid-width" className="fc-field fc-field--num" type="number" min="16" max="2000" value={width} disabled={working}
-                    onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} />
-                </div>
-              </div>
-              <p className="fc-note">Height follows the video&apos;s shape</p>
-            </div>
-            <div className="fc-insp-sec">
-              <div className="fc-pair">
-                <div>
-                  <label className="fc-eyebrow" htmlFor="fc-vid-quality">Quality</label>
-                  <select id="fc-vid-quality" className="fc-field" value={quality} onChange={e => setQuality(e.target.value)} disabled={working || fmt.id === 'apng'}>
-                    {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="fc-eyebrow" htmlFor="fc-vid-loop">Loop</label>
-                  <select id="fc-vid-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={e => setPlays(+e.target.value)} disabled={working || !fmt.loops}>
-                    {PLAY_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
-              {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
             </div>
             {duration > 0 && (
               <div className="fc-insp-sec">
                 <span className="fc-eyebrow">Trim (seconds)</span>
                 <div className="fc-range">
-                  <input className="fc-field fc-field--num" type="number" min="0" max={duration} step="0.1" value={trimStart} disabled={working}
-                    onChange={e => setTrimStart(Math.max(0, Math.min(duration, +e.target.value || 0)))}
-                    aria-label="Trim start (seconds)" />
+                  <DraftNumber
+                    className="fc-field fc-field--num" inputMode="decimal" disabled={working}
+                    aria-label="Trim start (seconds)"
+                    shown={trimStart}
+                    onCommit={raw => setTrimStart(commitNumber(raw, { min: 0, max: duration, fallback: trimStart, decimals: 1 }))}
+                  />
                   <span className="fc-range-arrow" aria-hidden="true">→</span>
-                  <input className="fc-field fc-field--num" type="number" min="0" max={duration} step="0.1"
-                    value={trimEnd == null ? +duration.toFixed(1) : trimEnd} disabled={working}
-                    onChange={e => setTrimEnd(Math.max(0, Math.min(duration, +e.target.value || 0)))}
-                    aria-label="Trim end (seconds)" />
+                  <DraftNumber
+                    className="fc-field fc-field--num" inputMode="decimal" disabled={working}
+                    aria-label="Trim end (seconds)"
+                    shown={trimEnd == null ? +duration.toFixed(1) : trimEnd}
+                    onCommit={raw => setTrimEnd(String(raw).trim() === '' ? null : commitNumber(raw, { min: 0, max: duration, fallback: null, decimals: 1 }))}
+                  />
                 </div>
-                <p className="fc-note">
-                  clip: {formatTime(Math.max(0, (trimEnd == null ? duration : trimEnd) - trimStart))} of {formatTime(duration)}
-                </p>
+                {trimInvalid ? (
+                  <p className="fc-note fc-note--warn">The end is before the start. Change one of them.</p>
+                ) : (
+                  <p className="fc-note">
+                    clip: {formatTime(Math.max(0, end - start))} of {formatTime(duration)}
+                  </p>
+                )}
               </div>
             )}
+            <div className="fc-insp-sec">
+              <Segmented
+                id="fc-vid-shape" label="Shape" options={shapeOptions} value={shape} onChange={setShape}
+                disabled={working || !srcSize} className="fc-seg--shape"
+              />
+              {!srcSize && <p className="fc-note">{unreadable ? NO_PREVIEW_NOTE : 'Reading the file…'}</p>}
+              {shape !== 'original' && (
+                <>
+                  <Segmented
+                    id="fc-vid-anchor" label="Position" options={anchorOptions} value={anchor} onChange={setAnchor}
+                    disabled={working || !crop}
+                  />
+                  {!crop && <p className="fc-note">Nothing to cut at this shape</p>}
+                </>
+              )}
+            </div>
+            <div className="fc-insp-sec">
+              <Segmented id="fc-vid-turn" label="Turn" options={TURNS} value={turn} onChange={setTurn} disabled={working} />
+              <div className="fc-flip-pair">
+                {flipBtn('h', flipH, setFlipH)}
+                {flipBtn('v', flipV, setFlipV)}
+              </div>
+              {(turn !== 0 || flipH || flipV) && <p className="fc-note">Turn and flip show in the result, not the preview.</p>}
+            </div>
+            <div className="fc-insp-sec">
+              <Segmented id="fc-vid-speed" label="Speed" options={speedOptions} value={speed} onChange={setSpeed} disabled={working} className="fc-seg--speed" />
+              <p className="fc-note">{isImage ? 'Speed shows in the result.' : 'The preview plays at this speed.'}</p>
+              <Segmented
+                id="fc-vid-direction" label="Direction" options={DIRECTIONS} value={dir} onChange={setDirection} disabled={working}
+                isOptionDisabled={o => o.id !== 'forward' && !reverseOk}
+              />
+              {reverseWhy === 'long' ? (
+                <p className="fc-note">{REVERSE_OFF_NOTE}</p>
+              ) : reverseWhy === 'unknown' ? (
+                <p className="fc-note">{REVERSE_UNKNOWN_NOTE}</p>
+              ) : dir !== 'forward' ? (
+                <p className="fc-note">Shows in the result, not the preview.</p>
+              ) : null}
+              <div className="fc-pair">
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-fps">Frame rate (fps)</label>
+                  <DraftNumber
+                    id="fc-vid-fps" className="fc-field fc-field--num" disabled={working}
+                    shown={fps}
+                    onCommit={raw => setFps(commitNumber(raw, { min: FPS_MIN, max: FPS_MAX, fallback: fps }))}
+                  />
+                </div>
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-loop">Loop</label>
+                  <MenuSelect label="Loop" id="fc-vid-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={nextValue => setPlays(+nextValue)} disabled={working || !fmt.loops}>
+                    {PLAY_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </MenuSelect>
+                </div>
+              </div>
+              {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
+            </div>
+            <div className="fc-insp-sec">
+              <div className="fc-pair">
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-width">Width (px)</label>
+                  <DraftNumber
+                    id="fc-vid-width" className="fc-field fc-field--num" disabled={working}
+                    shown={width}
+                    onCommit={raw => setWidth(commitNumber(raw, { min: 16, max: MAX_ANIMATION_SIDE, fallback: width }))}
+                  />
+                </div>
+              </div>
+              <p className="fc-note">Up to {MAX_ANIMATION_SIDE} px on the longer side. Height follows the crop and turn.</p>
+              {isGif ? (
+                <>
+                  <div className="fc-pair">
+                    <div>
+                      <label className="fc-eyebrow" htmlFor="fc-vid-colours">Colours</label>
+                      <DraftNumber
+                        id="fc-vid-colours" className="fc-field fc-field--num" disabled={working}
+                        shown={colours}
+                        onCommit={raw => setColours(commitNumber(raw, { min: GIF_COLOURS_MIN, max: GIF_COLOURS_MAX, fallback: colours }))}
+                      />
+                    </div>
+                  </div>
+                  <p className="fc-note">Up to 256. Fewer colours make a smaller file.</p>
+                  <Segmented id="fc-vid-dither" label="Dither" options={DITHERS} value={dither} onChange={setDither} disabled={working} />
+                  <p className="fc-note">Pattern is Bayer, Diffusion is Floyd-Steinberg.</p>
+                </>
+              ) : (
+                <>
+                  <div className="fc-pair">
+                    <div>
+                      <label className="fc-eyebrow" htmlFor="fc-vid-quality">Quality</label>
+                      <MenuSelect label="Quality" id="fc-vid-quality" className="fc-field" value={quality} onChange={nextValue => setQuality(nextValue)} disabled={working || fmt.id === 'apng'}>
+                        {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
+                      </MenuSelect>
+                    </div>
+                  </div>
+                  {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
+                </>
+              )}
+            </div>
           </aside>
           <div className="fc-actionbar fc-actions">
-            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working}>
+            <p className="fc-note fc-consequence" aria-live="polite">{consequence}</p>
+            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid}>
               {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : `Convert to ${fmt.label}`}
             </button>
             <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />
@@ -999,6 +1344,37 @@ function VideoConvert({ toast }) {
 }
 
 // ── Mode 4: Video → Frames (HTML5 video + canvas seek) ───────────────────────
+
+// Waits for a media event, but lets the run's AbortSignal cut the wait short so
+// a pending seek or load can't keep a cancelled or unmounted run alive.
+// `attach(ok, fail)` wires the event handlers; the timeout is optional.
+function waitFor(signal, attach, timeoutMs = 0, timeoutMessage = 'Timed out') {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return }
+    let timer = 0
+    const settle = { onAbort: null }
+    const finish = (fn, value) => {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', settle.onAbort)
+      fn(value)
+    }
+    settle.onAbort = () => finish(reject, new DOMException('Aborted', 'AbortError'))
+    signal.addEventListener('abort', settle.onAbort, { once: true })
+    if (timeoutMs) timer = setTimeout(() => finish(reject, new Error(timeoutMessage)), timeoutMs)
+    attach(() => finish(resolve), err => finish(reject, err))
+  })
+}
+
+// Stops the decoder and drops the file reference so the element can be collected.
+function releaseVideo(video) {
+  video.onloadeddata = null
+  video.onseeked = null
+  video.onerror = null
+  video.pause()
+  video.removeAttribute('src')
+  video.load()
+}
+
 function VideoFrames({ toast }) {
   const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
@@ -1035,6 +1411,36 @@ function VideoFrames({ toast }) {
     u.frames.forEach(f => URL.revokeObjectURL(f.url))
   }, [])
 
+  // One abort mechanism for the running extraction: the AbortController of the
+  // current run, or null when idle. The reason says why it was aborted:
+  // 'cancel' (button) or 'disposed' (unmount / another video picked; see disposedRef).
+  const abortRef = useRef(null)
+  // Runs whose page or file is gone. An AbortController keeps only its FIRST
+  // abort reason, so Cancel followed by leaving would read as a plain cancel;
+  // this records leave/newfile on its own and abandoned() reads it, not the reason.
+  const disposedRef = useRef(new WeakSet())
+  const disposeRun = useCallback(() => {
+    if (!abortRef.current) return false
+    disposedRef.current.add(abortRef.current)
+    abortRef.current.abort('disposed')
+    return true
+  }, [])
+  const refocusExtract = useRef(false)
+  const extractBtnRef = useRef(null)
+  useEffect(() => disposeRun, [disposeRun])
+  // The Cancel button unmounts when the run ends, so hand focus back to Extract.
+  useEffect(() => {
+    if (extracting || !refocusExtract.current) return
+    refocusExtract.current = false
+    extractBtnRef.current?.focus()
+  }, [extracting])
+
+  const cancelExtract = () => {
+    if (!abortRef.current) return
+    refocusExtract.current = true
+    abortRef.current.abort('cancel')
+  }
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
@@ -1043,6 +1449,11 @@ function VideoFrames({ toast }) {
       return
     }
     if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow', 'info')
+    // A run in flight belongs to the old file: stop it before its source URL goes.
+    if (disposeRun()) {
+      abortRef.current = null
+      setExtracting(false)
+    }
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     frames.forEach(fr => URL.revokeObjectURL(fr.url))
     setFile(f)
@@ -1052,7 +1463,7 @@ function VideoFrames({ toast }) {
     setProgress(0)
     setRangeStart(0)
     setRangeEnd(null)
-  }, [srcUrl, frames, toast])
+  }, [srcUrl, frames, toast, disposeRun])
 
   const onLoadedMeta = useCallback(() => {
     const v = videoRef.current
@@ -1060,7 +1471,12 @@ function VideoFrames({ toast }) {
   }, [])
 
   const extract = useCallback(async () => {
-    if (!srcUrl || !meta || extracting) return
+    // abortRef is the real "already running" guard: `extracting` is stale for a
+    // second click in the same tick.
+    if (!srcUrl || !meta || extracting || abortRef.current) return
+    const ac = new AbortController()
+    const { signal } = ac
+    abortRef.current = ac
     setExtracting(true)
     setProgress(0)
     // A second extraction replaces the first: revoke its thumbnails' blob: URLs
@@ -1068,78 +1484,98 @@ function VideoFrames({ toast }) {
     setFrames(prev => { prev.forEach(fr => URL.revokeObjectURL(fr.url)); return [] })
 
     const video = document.createElement('video')
-    video.muted = true
-    video.preload = 'auto'
-    video.src = srcUrl
-    try {
-      await new Promise((resolve, reject) => {
-        video.onloadeddata = resolve
-        video.onerror = () => reject(new Error('Could not load video'))
-      })
-    } catch (err) {
-      toast(err.message, 'error')
-      setExtracting(false)
-      return
-    }
-
-    const outW = Math.max(1, Math.round(meta.width * scale))
-    const outH = Math.max(1, Math.round(meta.height * scale))
-    const canvas = document.createElement('canvas')
-    canvas.width = outW
-    canvas.height = outH
-    const ctx = canvas.getContext('2d')
-
-    const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
-    const q = fmt.lossy ? quality / 100 : undefined
-
-    const step = 1 / Math.max(0.1, Math.min(30, fps))
-    const from = Math.max(0, Math.min(rangeStart || 0, meta.duration))
-    const to = rangeEnd == null ? meta.duration : Math.max(from, Math.min(rangeEnd, meta.duration))
-    const total = Math.max(1, Math.floor((to - from) / step))
     const out = []
-    let t = from, idx = 0
-    let unsupported = false
-    let stopped = null
-
+    // Leaving the page or swapping the file means nobody can see this run any
+    // more: no state, no toast, and the frames it made have no owner to revoke them.
+    const abandoned = () => disposedRef.current.has(ac)
+    const abandon = () => out.forEach(fr => URL.revokeObjectURL(fr.url))
     try {
-      while (t < to && idx < total + 1) {
-        video.currentTime = t
-        await new Promise((resolve, reject) => {
-          const to = setTimeout(() => reject(new Error('Seek timed out')), 8000)
-          video.onseeked = () => { clearTimeout(to); resolve() }
+      video.muted = true
+      video.preload = 'auto'
+      video.src = srcUrl
+      try {
+        await waitFor(signal, (ok, fail) => {
+          video.onloadeddata = ok
+          video.onerror = () => fail(new Error('Could not load video'))
         })
-        // JPEG has no alpha — fill white so transparent areas don't go black.
-        if (fmt.id === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, outW, outH) }
-        else ctx.clearRect(0, 0, outW, outH)
-        ctx.drawImage(video, 0, 0, outW, outH)
-        const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
-        // null blob => this browser can't encode the chosen format. Bail out of
-        // the batch with a clear error rather than silently producing 0 frames.
-        if (!blob) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
-        out.push({
-          blob, url: URL.createObjectURL(blob),
-          name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
-          time: t, size: blob.size,
-        })
-        idx++
-        t += step
-        setProgress(Math.round((idx / total) * 100))
+      } catch (err) {
+        if (abandoned()) return
+        if (signal.aborted) {
+          setExtracting(false)
+          toast('Extraction cancelled', 'info')
+          return
+        }
+        toast(err.message, 'error')
+        setExtracting(false)
+        return
       }
-    } catch (err) {
-      stopped = err.message
-    }
 
-    revealNext.current = out.length > 0
-    setFrames(out)
-    setExtracting(false)
-    setProgress(100)
-    // ONE toast, chosen after the loop. The catch used to toast "Extracted N
-    // frames (stopped: …)" and then this line toasted "Extracted N frames" in
-    // the same tick — the second replaced the first before it painted, so a
-    // run that stopped early reported itself as a clean success.
-    if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
-    else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
-    else toast(`Extracted ${out.length} frames`)
+      const outW = Math.max(1, Math.round(meta.width * scale))
+      const outH = Math.max(1, Math.round(meta.height * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d')
+
+      const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
+      const q = fmt.lossy ? quality / 100 : undefined
+
+      const step = 1 / Math.max(0.1, Math.min(30, fps))
+      const from = Math.max(0, Math.min(rangeStart || 0, meta.duration))
+      const to = rangeEnd == null ? meta.duration : Math.max(from, Math.min(rangeEnd, meta.duration))
+      const wanted = frameCountFor(from, to, fps) // the same count the estimate line shows
+      const cap = Math.min(MAX_FRAMES, wanted)
+      let t = from, idx = 0
+      let unsupported = false
+      let stopped = null
+
+      try {
+        while (t < to && idx < cap && !signal.aborted) {
+          const at = t
+          await waitFor(signal, ok => { video.onseeked = ok; video.currentTime = at }, 8000, 'Seek timed out')
+          // JPEG has no alpha — fill white so transparent areas don't go black.
+          if (fmt.id === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, outW, outH) }
+          else ctx.clearRect(0, 0, outW, outH)
+          ctx.drawImage(video, 0, 0, outW, outH)
+          const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
+          // toBlob can't be interrupted; drop its result if the run ended meanwhile.
+          if (signal.aborted) break
+          // null blob, or one of another type (a PNG under a .webp name) => this
+          // browser can't encode the chosen format. Bail out of the batch with a
+          // clear error rather than silently producing 0 frames or wrong files.
+          if (!blobMatches(blob, fmt.id)) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
+          out.push({
+            blob, url: URL.createObjectURL(blob),
+            name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
+            time: t, size: blob.size,
+          })
+          idx++
+          t += step
+          setProgress(Math.round((idx / cap) * 100))
+        }
+      } catch (err) {
+        stopped = err.message
+      }
+
+      if (abandoned()) { abandon(); return }
+
+      revealNext.current = out.length > 0
+      setFrames(out)
+      setExtracting(false)
+      setProgress(100)
+      // ONE toast, chosen after the loop. The catch used to toast "Extracted N
+      // frames (stopped: …)" and then this line toasted "Extracted N frames" in
+      // the same tick — the second replaced the first before it painted, so a
+      // run that stopped early reported itself as a clean success.
+      if (signal.aborted) toast(out.length ? `Extraction cancelled — kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
+      else if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
+      else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
+      else if (wanted > MAX_FRAMES && idx >= MAX_FRAMES) toast(`Extracted ${out.length} frames, the most one run makes`, 'info')
+      else toast(`Extracted ${out.length} frames`)
+    } finally {
+      releaseVideo(video)
+      if (abortRef.current === ac) abortRef.current = null
+    }
   }, [srcUrl, meta, fps, scale, format, quality, rangeStart, rangeEnd, extracting, toast])
 
   const downloadAll = useCallback(async () => {
@@ -1160,7 +1596,7 @@ function VideoFrames({ toast }) {
 
   const estFrom = meta ? Math.max(0, Math.min(rangeStart || 0, meta.duration)) : 0
   const estTo = meta ? (rangeEnd == null ? meta.duration : Math.max(estFrom, Math.min(rangeEnd, meta.duration))) : 0
-  const est = meta ? Math.max(1, Math.floor((estTo - estFrom) * Math.max(0.1, Math.min(30, fps)))) : 0
+  const est = meta ? frameCountFor(estFrom, estTo, fps) : 0
   const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
 
   return (
@@ -1180,7 +1616,7 @@ function VideoFrames({ toast }) {
                 ['Size', formatBytes(file?.size)],
                 ['Duration', formatTime(meta.duration)],
                 ['Resolution', `${meta.width}×${meta.height}px`],
-                ['Est. frames', est.toLocaleString()],
+                ['Est. frames', est > MAX_FRAMES ? `${MAX_FRAMES} of ~${est.toLocaleString()}` : est.toLocaleString()],
               ] : [['File', file?.name], ['Size', formatBytes(file?.size)]]}
             />
           </div>
@@ -1197,20 +1633,20 @@ function VideoFrames({ toast }) {
                   </div>
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-fr-scale">Scale</label>
-                    <select id="fc-fr-scale" className="fc-field" value={scale} onChange={e => setScale(+e.target.value)} disabled={extracting}>
+                    <MenuSelect label="Scale" id="fc-fr-scale" className="fc-field" value={scale} onChange={nextValue => setScale(+nextValue)} disabled={extracting}>
                       <option value={1}>100% (Original)</option>
                       <option value={0.75}>75%</option>
                       <option value={0.5}>50%</option>
                       <option value={0.25}>25%</option>
-                    </select>
+                    </MenuSelect>
                   </div>
                 </div>
               </div>
               <div className="fc-insp-sec">
                 <label className="fc-eyebrow" htmlFor="fc-fr-format">Output format</label>
-                <select id="fc-fr-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={extracting}>
+                <MenuSelect label="Output format" id="fc-fr-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={extracting}>
                   {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
+                </MenuSelect>
                 <span className="fc-eyebrow fc-eyebrow--sub">Quality</span>
                 <SnapSlider
                   min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
@@ -1236,15 +1672,23 @@ function VideoFrames({ toast }) {
                 <p className="fc-note">
                   {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} · ~{est.toLocaleString()} frames
                 </p>
+                {est > MAX_FRAMES && (
+                  <p className="fc-note fc-note--warn">
+                    Stops at {MAX_FRAMES} frames, at {formatTime(estFrom + MAX_FRAMES / fps)}. Lower the FPS or shorten the range to get the rest.
+                  </p>
+                )}
               </div>
             </aside>
             <div className="fc-actionbar fc-actions">
-              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
+              <button type="button" ref={extractBtnRef} className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
                 {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
               </button>
               {extracting && (
-                <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                  <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                <div className="fc-job">
+                  <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                    <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                  </div>
+                  <button type="button" className="fc-btn fc-btn--quiet" onClick={cancelExtract}>Cancel</button>
                 </div>
               )}
             </div>

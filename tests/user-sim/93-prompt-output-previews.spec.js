@@ -15,7 +15,7 @@
 // what matters is what the browser was handed.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS } from '../../src/data/promptPreviewAssets.js'
 
 const withPreview = COMMUNITY_PROMPTS.filter((p) => PROMPT_PREVIEW_IDS.includes(p.id))
@@ -40,6 +40,13 @@ test.describe('the prompt library shows its outputs', () => {
 
     // Every poster must actually load. A broken <img> here is a grey box where
     // the product's shop window should be, and it would not fail any other test.
+    // Wait for each one to settle first: a card that starts playing mounts its
+    // animated poster (a few hundred KB), and one still downloading is not broken.
+    await page.waitForFunction(
+      () => [...document.querySelectorAll('[data-preview-kind="output"] img')].every((img) => img.complete),
+      null,
+      { timeout: 15_000 },
+    ).catch(() => {})
     const broken = await page.evaluate(() => {
       const out = []
       for (const img of document.querySelectorAll('[data-preview-kind="output"] img')) {

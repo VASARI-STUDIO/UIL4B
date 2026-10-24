@@ -12,9 +12,8 @@ import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { cheapestPerMonth, resolvePlanLadder } from '../../src/config/planLadder.js'
 import { createTools } from '../../src/data/toolTree.js'
-import { GALLERY_PALETTES } from '../../src/data/paletteGallery.js'
+import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
 
 const SESSION_HINT = 'vs-session'
 const FIXTURE = '/tests/user-sim/fixtures/user-home.html'
@@ -82,9 +81,9 @@ test.describe('the front door', () => {
 
     await go(page, '/')
     await expect(page).toHaveURL(/\/projects$/)
-    // The wordmark goes to the workspace now (the App file's goProjects); the
-    // way back to the sales page is the header's Back to the site button.
-    await page.getByRole('link', { name: 'Back to the site' }).first().click()
+    // The wordmark goes to the dashboard from app pages and, on the dashboard,
+    // to the sales page.
+    await page.getByRole('link', { name: 'UIL4B, go to the home page' }).first().click()
     await expect(page, 'the Home control must land on the sales page and stay there').toHaveURL(/\/home$/)
     await expect(page.locator('.spectrum')).toBeVisible()
   })
@@ -268,7 +267,7 @@ test.describe('the plan strip reads the real plan', () => {
     await expect(page.locator('.uh-pro'), 'nothing to sell a Pro account').toHaveCount(0)
   })
 
-  test('the Pro panel’s control: a free account is shown it, priced from the plan ladder, with no false perk', async ({ page }) => {
+  test('the Pro panel’s control: a free account is shown it, priced only if a live price exists, with no false perk', async ({ page }) => {
     watch(page, 'a free account reading the Pro panel')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/projects')
@@ -276,8 +275,11 @@ test.describe('the plan strip reads the real plan', () => {
 
     const pro = page.locator('.uh-pro')
     await expect(pro).toBeVisible()
-    const cheapest = cheapestPerMonth(resolvePlanLadder())
-    const cta = pro.getByRole('link', { name: `Upgrade for ${cheapest.perMonthLabel}/mo` })
+    // The price is the live one in the visitor's currency, so this run (no
+    // price service) shows no amount; it must never show the USD fallback.
+    // Exactly "See Pro": a looser pattern (Upgrade for \S+/mo) would also pass the
+    // bare "$4" of the USD fallback, which is the fault this guards.
+    const cta = pro.getByRole('link', { name: 'See Pro', exact: true })
     await expect(cta, 'every upgrade CTA goes to /plans').toHaveAttribute('href', '/plans')
     const text = await pro.innerText()
     expect(text, 'there is no version history').not.toMatch(/version history/i)

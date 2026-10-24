@@ -15,17 +15,9 @@ import { billingAlert, isWithinPastDueGrace } from '../utils/billingState'
 const SubscriptionContext = createContext()
 
 // The intervals the CLIENT will start a checkout for. It has to match
-// api/_lib/pricing.js#BILLING_INTERVALS, and on 2026-09-15 it did not:
-// quarterly was switched on server-side, given a Checkout.jsx case, a price
-// lookup, a trial and a quarterlyTotal — and this Set was missed. The result
-// would have been the worst shape available: /checkout?plan=quarterly renders
-// completely, with the name, the cadence, the price and the 7-day trial line,
-// and then throws "Invalid billing interval" on the button instead of the
-// clean 503 create-checkout was written to give. Not reachable in production
-// yet only because planLadder.js still holds checkoutPlan: null.
-//
-// Guarded by tests/unit/trial-cadence.test.js, which now compares the two.
-const BILLING_INTERVALS = new Set(['monthly', 'quarterly', 'yearly'])
+// api/_lib/pricing.js#BILLING_INTERVALS and the plan ladder's checkout plans;
+// tests/unit/billing-intervals-drift.test.js compares all three.
+const BILLING_INTERVALS = new Set(['monthly', 'yearly'])
 
 // The billing APIs return a generic message plus a correlation id (the real
 // Stripe/Firebase error stays in the server log). Show the id so a user can
@@ -174,7 +166,9 @@ export function SubscriptionProvider({ children }) {
 
   // Creates an embedded Checkout session and returns its client_secret, used by
   // the /checkout page to mount Stripe's <EmbeddedCheckout />.
-  const createCheckoutSession = useCallback(async (interval = 'monthly') => {
+  // `onSession`, when given, receives the server's answer (the currency the
+  // session was created in) next to the client secret this returns.
+  const createCheckoutSession = useCallback(async (interval = 'monthly', onSession) => {
     if (!BILLING_INTERVALS.has(interval)) throw new Error('Invalid billing interval')
     const token = await (await loadAuthSdk()).auth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
@@ -185,6 +179,7 @@ export function SubscriptionProvider({ children }) {
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw billingError(data, res.status, 'Checkout failed')
+    if (typeof onSession === 'function') onSession(data)
     return data.clientSecret
   }, [])
 

@@ -52,12 +52,16 @@
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
+// Export is dimmed until there is a design to export, so these load a palette the way a
+// shared link does (?c=) rather than the untouched starting board.
+const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 
 const CAP = FREE_SAVE_LIMITS.projects
 const WIDTHS = [[390, 844], [1280, 800]]
@@ -225,11 +229,9 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
   async function raiseWall(page) {
     // The colour system is a select on the toolbar, or in its Extra tools overflow
     // when the row has no room; a Pro system raises the wall.
-    const system = page.getByRole('combobox', { name: 'Colour system' }).first()
+    const system = page.getByRole('button', { name: 'Colour system' }).first()
     if (!(await system.isVisible())) await page.getByRole('button', { name: /^Extra tools/ }).click()
-    // A person changing a select has it focused; selectOption alone does not.
-    await system.focus()
-    await system.selectOption({ label: 'Analogous (Pro)' })
+    await chooseMenuOption(page, system, { label: 'Analogous, Pro' })
     const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
     await expect(modal).toBeVisible()
     return modal
@@ -275,9 +277,9 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await signIn(page, { plan: 'free' })
       await go(page, '/create/palette')
       // On a phone the System select is in the palette's Extra tools sheet; its
-      // paid options read "(Pro)" and choosing one raises the wall.
+      // Paid options carry a Pro mark and choosing one raises the wall.
       const tools = await openPaletteTools(page)
-      await tools.getByRole('combobox', { name: 'Colour system' }).selectOption('analogous')
+      await chooseMenuOption(page, tools.getByRole('button', { name: 'Colour system' }), 'analogous')
       await expect(tools).toHaveCount(0)
       const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
       await expect(modal).toBeVisible()
@@ -306,7 +308,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account reading the Pro offer')
     const prices = { monthly: { usd: 7 }, yearly: { usd: 48 } }
-    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prices) }))
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(prices)) }))
     await signIn(page, { plan: 'free' })
     await go(page, '/create/palette')
     const modal = await raiseWall(page)
@@ -324,26 +326,20 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     }
 
     // THE TRIAL IS ON EVERY CADENCE THAT CARRIES ONE — counted off the ladder,
-    // not assumed to be one.
-    //
-    // This asserted toHaveCount(1) and passed for the wrong reason: the ladder
-    // lists monthly, quarterly, yearly, and PLAN_LADDER.find(trialDays > 0)
-    // returns QUARTERLY, whose 7 days happen to equal yearly's. Only yearly
-    // rendered, because quarterly has no checkoutPlan yet — so a test about
-    // "the tier that carries the trial" was reading quarterly's number off
-    // yearly's chip. The day the founder adds the Stripe price and quarterly
-    // becomes purchasable, the count becomes 2 and this goes red for a change
-    // that is entirely correct.
+    // not assumed to be one. It is stated in the row's terms line, after the
+    // total, so it is read off the same line as the money.
     const trialPlans = ladder.filter((pl) => pl.purchasable && pl.trialDays > 0)
-    await expect(modal.locator('.ui-pro-plan-trial')).toHaveCount(trialPlans.length)
+    expect(trialPlans.length, 'the ladder has no cadence with a trial — this check would pass vacuously').toBeGreaterThan(0)
+    await expect(modal.locator('.ui-pro-plan-total', { hasText: 'free trial' }), 'one row names a trial per cadence that carries one')
+      .toHaveCount(trialPlans.length)
     for (const plan of trialPlans) {
       const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-trial')).toContainText(`${plan.trialDays}-day free trial`)
+      await expect(row.locator('.ui-pro-plan-total')).toContainText(`${plan.totalLabel} ${plan.cadence} · ${plan.trialDays}-day free trial`)
     }
     // ...and a cadence that bills today says nothing about a trial.
     for (const plan of ladder.filter((pl) => pl.purchasable && !pl.trialDays)) {
       const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-trial')).toHaveCount(0)
+      await expect(row.locator('.ui-pro-plan-total')).not.toContainText('free trial')
     }
 
     // The steps say the day money moves, with the real total, for whichever
@@ -507,7 +503,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account exporting every format it is entitled to')
     await signIn(page, { plan: 'free', projects: 1 })
-    await go(page, '/create/palette')
+    await go(page, WORKED_BOARD)
     expect(FREE_LIVE.map((f) => f.id).sort()).toEqual(Object.keys(FILE).sort())
 
     for (const fmt of FREE_LIVE) {
@@ -537,7 +533,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account trying the brand guidelines')
     await signIn(page, { plan: 'free' })
-    await go(page, '/create/palette')
+    await go(page, WORKED_BOARD)
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await page.getByRole('radio', { name: /Brand guidelines/i }).click()
     await expect(page.locator('.exp-foot button').last()).toHaveText('Unlock with Pro')

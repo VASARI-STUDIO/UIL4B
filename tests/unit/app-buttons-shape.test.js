@@ -49,13 +49,17 @@ const KEEP = {
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'icust-code-box'],
   // fields drawn as inputs or selects
-  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim'],
+  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'pl-modal-view', 'fdx-tab', 'pnav-tab'],
   // a switch track, drawn by its own geometry
   switch: ['toggle-switch', 'aipg-rule'],
   // previews of the user's own design system, drawn at the user's radius
   preview: ['uis-demo-button', 'uis-scene-tab'],
+  // a state modifier the sweep reads off the phone tab bar's buttons; it is not a button, and the
+  // walkthrough bar's current-step indicator (.bkit-step.is-current::before) is a bar on a pseudo-element.
+  // A rule that also names a real button class is still checked through that class.
+  state: ['is-current'],
 }
 const KEEP_SET = new Set(Object.values(KEEP).flat())
 // Menu rows that reuse the filter-chip class inside a filter menu.
@@ -109,7 +113,7 @@ test('the readers find what they are about (positive control)', () => {
   assert.ok(blocksFor('.ui-pill').length >= 1, '.ui-pill not found')
   const classes = buttonClasses()
   assert.ok(classes.size > 150, `only ${classes.size} button classes read from the JSX`)
-  for (const c of ['btn', 'tl-btn', 'uh-new', 'pnav-iconbtn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
+  for (const c of ['btn', 'tl-btn', 'uh-new', 'pnav-act', 'pnav-export', 'pnav-avatar-btn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
 })
 
 test('the button token is the pill, and the base families read it', () => {

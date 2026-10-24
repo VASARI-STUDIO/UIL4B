@@ -10,7 +10,7 @@
 // bundled-fallback notice, the retry and the "everything still works" promise
 // are the states most likely to rot, and they are the ones under test.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, watch } from './helpers.js'
 
 async function installFontEvidenceMock(page, { fontApi, mode }) {
   await page.addInitScript(({ exposeFontApi, initialMode }) => {
@@ -66,7 +66,7 @@ test.describe('Type Scale Generator', () => {
     // on the bar would pass with any ratio selected. That is the assertion this
     // replaces and it is why it is not replaced in kind.
     await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('16px')
-    await expect(page.getByLabel('Scale ratio')).toHaveValue('1.25')
+    await expect(page.getByLabel('Scale ratio')).toHaveAttribute('value', '1.25')
     await expect(page.locator('.tsc-scale-range')).toHaveText('10px – 61px')
 
     // The ratio genuinely drives the maths: a bigger ratio must move the top step.
@@ -74,18 +74,18 @@ test.describe('Type Scale Generator', () => {
     // nearest-0.5px rounding.
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
     await expect(largest).toContainText('61px')
-    await page.getByLabel('Scale ratio').selectOption('1.5')
+    await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
     await expect(largest).toContainText('182.5px')
-    await page.getByLabel('Scale ratio').selectOption('1.25')
+    await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.25')
     await expect(largest).toContainText('61px')
 
     // Rounding is an explicit decision, not a hidden .toFixed(). It is one of
     // the four controls that moved behind the "Fine tuning" disclosure, so
     // reaching it is now a step the test has to take, exactly as a user does.
     await page.getByRole('button', { name: 'Fine tuning' }).click()
-    await page.getByLabel('Rounding').selectOption('whole')
+    await chooseMenuOption(page, page.getByLabel('Rounding'), 'whole')
     await expect(largest).toContainText('61px')
-    await page.getByLabel('Rounding').selectOption('none')
+    await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
     await expect(largest).toContainText('61.04px')
 
     // The audience control is now the switch that sits above the panel it
@@ -172,7 +172,7 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'designer stress-testing an extreme modular scale')
     await go(page, '/create/type-scale')
 
-    await page.getByLabel('Scale ratio').selectOption('custom')
+    await chooseMenuOption(page, page.getByLabel('Scale ratio'), 'custom')
     await page.locator('#tsc-custom + .snapv-value').click()
     await page.getByRole('spinbutton', { name: /Custom scale ratio/ }).fill('3')
     await page.getByRole('spinbutton', { name: /Custom scale ratio/ }).press('Enter')
@@ -1045,7 +1045,7 @@ test.describe('typography tools under a failing font catalogue', () => {
     await expect(page.locator('.typ-notice')).toContainText('offline')
 
     // The scale is pure maths — it must keep responding with the network gone.
-    await page.getByLabel('Scale ratio').selectOption('1.5')
+    await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
     await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('182.5px')
 
     await context.setOffline(false)

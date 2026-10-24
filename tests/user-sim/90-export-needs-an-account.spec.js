@@ -110,12 +110,19 @@ test.describe('a file needs a free account', () => {
   // route, and nothing was covering them.
   test('the nav export panel asks before it builds a file', async ({ page }) => {
     watch(page, PERSONA)
+    // Export is dimmed until there is a design to export (it says "Nothing to
+    // export yet"), so make one first, as a visitor does: open a shared palette,
+    // wait for it to be kept, then go to the tool.
+    await go(page, '/create/palette?c=1F4B8E,2E7BB8,3FA9A0')
+    await expect.poll(() => page.evaluate(() => {
+      try { return JSON.parse(localStorage.getItem('vs-current-design') || '{}').palette?.colors?.[0] || '' } catch { return '' }
+    }), { message: 'the ?c= palette never reached the working design' }).toBe('#1F4B8E')
     await go(page, '/create/tint')
     await watchDownloads(page)
 
-    // `.pnav-export` rather than a name, because the desktop opener is an ICON
-    // button carrying only aria-label="Export" — and the route matters too:
-    // PillNav hides it on SALES_PATHS, so this has to run on a tool route.
+    // `.pnav-export` rather than a name, because the same word is also the panel's
+    // own action — and the route matters too: PillNav hides the opener on
+    // SALES_PATHS, so this has to run on a tool route.
     const openExport = page.locator('.pnav-export').first()
     // POSITIVE CONTROL: without the opener this test never reaches the panel.
     await expect(openExport, 'the nav offers no Export control on a tool route')

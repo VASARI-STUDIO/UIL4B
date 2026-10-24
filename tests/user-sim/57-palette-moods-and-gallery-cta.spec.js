@@ -21,7 +21,7 @@
 // that had quietly stopped describing the view.
 import { test, expect } from './base.js'
 import { go, restingScrollY, watch, signIn } from './helpers.js'
-import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../../src/utils/paletteMood.js'
 import { splitLockedLibrary } from '../../src/utils/lockedPreview.js'
 
@@ -229,7 +229,6 @@ const GALLERIES = [
   { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
   { route: '/discover/gradients', card: '.grg-card', action: 'Create and submit your own', href: '/create/gradient' },
   { route: '/discover/prompts', card: '.pl-card', action: 'Create and submit your own', href: null },
-  { route: '/discover/resources', card: '.cur-row, .cur-lead', action: 'Suggest a resource', href: '/feedback' },
   { route: '/community', card: '.ch-card', action: 'Create and submit your own', href: null },
 ]
 

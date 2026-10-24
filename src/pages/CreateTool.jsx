@@ -1,14 +1,12 @@
-import { Suspense, useCallback } from 'react'
+import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import AppFooter from '../components/AppFooter'
-import Toast from '../components/Toast'
 import { findCreateGroup, resolveTool } from '../data/toolTree'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { useToast } from '../hooks/useToast'
 import { useClipboard } from '../hooks/useClipboard'
 import { ACTIVATION_EXPORTS } from '../config/activationExports'
-import { trackActivation } from '../utils/analytics'
+import { trackActivation, trackToolAction, trackToolOpen } from '../utils/analytics'
 import { EVENTS, sendOnce } from '../utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a tool file that failed to
 // download waits for the recovery reload instead of crashing the route.
@@ -138,10 +136,10 @@ function SoonState({ title, isPro }) {
   )
 }
 
-export default function CreateTool() {
+// `toast` is the app's single toast host (App.jsx); a tool never mounts its own.
+export default function CreateTool({ toast }) {
   const location = useLocation()
   const { isPro } = useSubscription()
-  const { message, visible, type, toast } = useToast()
   // Live tools that copy values (ColorStudio) call onCopy(value) to WRITE the
   // clipboard + toast; the icon/emoji libraries write the clipboard themselves
   // and use onCopy purely as a notification (harmless idempotent re-write here).
@@ -171,12 +169,30 @@ export default function CreateTool() {
   // not (utils/productEvents.js). A pointer or key press inside the tool's own
   // <main>, not merely arriving on the page: arriving is traffic.
   const toolSlug = normPath(location.pathname).split('/').pop()
+  // The slug whose use has already been counted in this open. Moving to another
+  // tool (or back to this one from another) starts a new open.
+  const usedSlug = useRef(null)
   const markToolUsed = useCallback(() => {
     sendOnce(EVENTS.firstToolUsed, { tool: toolSlug })
+    if (usedSlug.current === toolSlug) return
+    usedSlug.current = toolSlug
+    try { trackToolAction(toolSlug) } catch { /* never break a tool */ }
   }, [toolSlug])
 
   const group = findCreateGroup(location.pathname)
   const { name, isHome, tool } = resolveTool(location.pathname)
+
+  // A tool's `views` (toolTree.js) mount the tool's own component.
+  const LiveTool = !group || group.soon ? null : (LIVE_TOOLS[normPath(location.pathname)] || (tool && LIVE_TOOLS[normPath(tool.route)]) || null)
+
+  // One count per open of a live tool. Keyed on the slug, so a re-render never
+  // counts again and a move to another tool does.
+  const opened = !!LiveTool
+  useEffect(() => {
+    usedSlug.current = null
+    if (!opened) return
+    try { trackToolOpen(toolSlug) } catch { /* never break a tool */ }
+  }, [opened, toolSlug])
 
   // Impossible in practice — the router only mounts this on resolved Create
   // routes — but keeps the component honest if it's ever reused off-tree.
@@ -196,9 +212,6 @@ export default function CreateTool() {
   if (isHome && !group.soon && !homeIsLive && firstTool && normPath(firstTool.route) !== normPath(group.home)) {
     return <Navigate to={firstTool.route} replace />
   }
-
-  // A tool's `views` (toolTree.js) mount the tool's own component.
-  const LiveTool = group.soon ? null : (LIVE_TOOLS[normPath(location.pathname)] || (tool && LIVE_TOOLS[normPath(tool.route)]) || null)
 
   return (
     <>
@@ -224,7 +237,6 @@ export default function CreateTool() {
       </div>
 
       <AppFooter compact />
-      <Toast message={message} visible={visible} type={type} />
     </>
   )
 }

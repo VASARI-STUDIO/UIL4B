@@ -34,8 +34,8 @@
 //     fails on the label count;
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
-import { fixturePacks, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { answerIconify, fixturePacks, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 
@@ -244,8 +244,10 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
   // the built-in set rather than a grid still loading.
   await expect(page.getByText(/Showing \d+ of \d+ · Built-in icons/)).toBeVisible({ timeout: 15000 })
 
-  const select = page.locator('select').first()
-  const packs = await select.locator('option').evaluateAll((os) => os.map((o) => o.value))
+  const select = page.getByRole('button', { name: 'Icon pack' })
+  await select.click()
+  const packs = await page.getByRole('listbox').getByRole('option').evaluateAll(rows => rows.map(row => row.dataset.value))
+  await page.keyboard.press('Escape')
   const selectable = packs.filter((p) => p && p !== 'custom' && p !== 'logodev' && p !== 'all')
 
   // POSITIVE CONTROL. Everything below is per-pack, so an empty or broken pack
@@ -256,7 +258,7 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
   const silent = []
   let emptied = 0
   for (const pack of selectable) {
-    await select.selectOption(pack)
+    await chooseMenuOption(page, select, pack)
     // The browse is debounced and then swaps the grid, so wait for it to settle
     // into EITHER cells or an empty state — but do not assert on that wait.
     //
@@ -266,12 +268,14 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
     // assertion below and naming the packs. Verified by mutation — the failure
     // was real, and told the reader nothing about what broke. A timeout here is
     // now a measurement, not a verdict.
+    // Skeleton cells are `.ic` too (`.ic.ig-skel`). A pack click now re-asks the service, so
+    // for a moment the grid is skeleton; only real icons count as cells, or the wait ends on it.
     await page.waitForFunction(
-      () => document.querySelectorAll('.ic').length > 0 || !!document.querySelector('.pl-empty'),
+      () => document.querySelectorAll('.ic:not(.ig-skel)').length > 0 || !!document.querySelector('.pl-empty'),
       null, { timeout: 1500 },
     ).catch(() => {})
     const seen = await page.evaluate(() => ({
-      cells: document.querySelectorAll('.ic').length,
+      cells: document.querySelectorAll('.ic:not(.ig-skel)').length,
       // `.ig-gate` counts as an answer too. It cannot appear in THIS test — the
       // session is Pro — but a tier regression that let a wall through here
       // would otherwise be reported as silence, which is the one thing this
@@ -422,8 +426,8 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
 
   // The cap is SAID, not only done — a count with no explanation is what makes
   // a limit feel punitive rather than deliberate.
-  await expect(page.locator('.ig-gate')).toBeVisible()
-  await expect(page.locator('.ig-gate')).toContainText(String(cells))
+  await expect(page.locator('.ig-end[data-gate="anon"]')).toBeVisible()
+  await expect(page.locator('.ig-end[data-gate="anon"]')).toContainText(String(cells))
   // And it is not the outage state: nothing refused anything here.
   await expect(page.locator('.ig-notice')).toHaveCount(0)
   await ctx.close()
@@ -448,8 +452,10 @@ test('signed in free: the solid packs open, the brand, flag and emoji packs are 
     expect(fetched, `${pack} is Pro and must never appear in a URL for a free account`).not.toContain(pack)
   }
   // NO STANDING BANNER for a free account. The markers on the pack menu and the
-  // group tray are the whole of it until they reach for something.
+  // group tray are the whole of it until the results run out; browsing every
+  // pack never runs out, so neither the wall nor the end band is on screen.
   await expect(page.locator('.ig-gate')).toHaveCount(0)
+  await expect(page.locator('.ig-end')).toHaveCount(0)
   await ctx.close()
 })
 
@@ -465,7 +471,7 @@ test('choosing a Pro pack costs nothing, and says so in its own words', async ({
 
   // Counted from the moment of the click, so the default browse is not in the way.
   const after = iconifyUrlLog(page)
-  await page.locator('.lbry-select').selectOption('simple-icons')
+  await chooseMenuOption(page, page.locator('.lbry-select'), 'simple-icons')
   await page.waitForTimeout(2500)
 
   expect(after, `picking a Pro pack made ${after.length} request(s): ${after.slice(0, 3).join(' ')}`).toEqual([])
@@ -518,9 +524,10 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
     'only the recent the visitor may still have is drawn').toBe(1)
 
   // The visitor's own icons, at the narrowest tier there is.
-  await page.locator('.lbry-select').selectOption('custom')
+  await chooseMenuOption(page, page.locator('.lbry-select'), 'custom')
   await page.waitForTimeout(1500)
   await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
+  await expect(page.locator('.ig-end'), 'My Icons carries no end band at any tier').toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Recently copied' })).toBeVisible()
 
@@ -530,7 +537,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   // one left open.
   const logos = []
   page.on('request', (r) => { if (r.url().includes('img.logo.dev')) logos.push(r.url()) })
-  await page.locator('.lbry-select').selectOption('logodev')
+  await chooseMenuOption(page, page.locator('.lbry-select'), 'logodev')
   await page.waitForTimeout(2500)
   expect(logos, 'a gated Logo.dev must not resolve a single brand image').toEqual([])
   await expect(page.locator('.ig-gate')).toBeVisible()
@@ -591,16 +598,19 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
 
   const locked = (r) => r.chips.filter((c) => c.badge)
   // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
-  expect(anon.chips.length, 'the group tray rendered').toBe(7)
+  expect(anon.chips.length, 'the group tray rendered').toBe(5)
   expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
   for (const c of anon.chips) {
     expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
       .toBe(/ · (Pro|Log in)$/.test(c.name))
   }
-  for (const open of ['My Icons', 'Outlined']) {
+  for (const open of ['My Icons']) {
     expect(anon.chips.find((c) => c.name.startsWith(open)).badge, `${open} is open signed out`).toBe(false)
   }
-  expect(locked(free).length, 'an account opens groups, so it sees fewer locks').toBeLessThan(locked(anon).length)
+  expect(locked(anon).map((c) => c.name), 'signed out, every group but My Icons is locked and asks for Pro').toEqual(
+    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro', 'Emoji · Pro'],
+  )
+  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same four stay locked').toEqual(locked(anon).map((c) => c.name))
   expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
   expect(locked(pro), 'Pro sees no locks at all').toEqual([])
   // The width half only means something for the TRAY: it is what the toolbar's
@@ -609,4 +619,92 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
   if (anon.form === 'tray') {
     expect(Math.abs(anon.width - pro.width), `the tray is ${anon.width}px signed out and ${pro.width}px for Pro`).toBeLessThanOrEqual(1)
   }
+})
+
+const refusedNotice = page => page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
+
+test('reloading retains all five packs without new collection requests', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  try {
+    const page = await ctx.newPage()
+    watch(page, 'visitor reloading cached icon collections')
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    const firstCount = iconifyRequests(ctx).collection
+    expect(firstCount).toBeGreaterThan(0)
+    expect(firstCount).toBe(5)
+    const packs = await page.locator('.ic .ic-pack').allTextContents()
+    expect(new Set(packs).size).toBe(5)
+
+    await page.reload()
+    await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    expect(await page.locator('.ic .ic-pack').allTextContents()).toEqual(packs)
+    expect(iconifyRequests(ctx).collection - firstCount).toBe(0)
+    await expect(refusedNotice(page)).toHaveCount(0)
+    expect(iconifyRequests(ctx).escaped).toEqual([])
+  } finally { await ctx.close() }
+})
+
+test('an expired collection keeps its pack available when collection requests fail', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  try {
+    const page = await ctx.newPage()
+    watch(page, 'visitor whose icon catalogue is refused')
+    const collection = JSON.parse(answerIconify('https://api.iconify.design/collection?prefix=lucide&info=1').body)
+    const names = [...new Set([...(collection.uncategorized || []), ...Object.values(collection.categories || {}).flat()])]
+    const at = Date.now() - 8 * 24 * 60 * 60 * 1000
+    await page.addInitScript(({ names, title, at }) => {
+      localStorage.setItem('uil4b:iconify:collection:lucide', JSON.stringify({ v: 1, at, data: { names, title, credit: null } }))
+    }, { names, title: collection.title, at })
+    let requests = 0
+    await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
+      requests++
+      return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
+    })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig-status').filter({ hasText: /1 sets$/ })).toBeVisible()
+    await expect.poll(() => requests).toBe(5)
+    const shown = await page.locator('.ig .ic > span').allTextContents()
+    expect(shown.length).toBeGreaterThan(0)
+    expect(shown.every(name => names.includes(name))).toBe(true)
+    await expect(refusedNotice(page)).toHaveCount(0)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('uil4b:iconify:collection:lucide')).at)).toBe(at)
+    expect(iconifyRequests(ctx).escaped).toEqual([])
+  } finally { await ctx.close() }
+})
+
+test('Try again sends at most one collection request per pack on each click', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  try {
+    const page = await ctx.newPage()
+    watch(page, 'visitor whose icon catalogue is refused')
+    const requests = []
+    let refusing = true
+    await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
+      requests.push(new URL(route.request().url()).searchParams.get('prefix'))
+      if (!refusing) return route.fallback()
+      return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
+    })
+    await go(page, '/create/icons')
+    const notice = refusedNotice(page)
+    await expect(notice).toBeVisible({ timeout: 20000 })
+    expect(requests).toHaveLength(5)
+    await notice.getByRole('button', { name: 'Try again' }).click()
+    await expect.poll(() => requests.length).toBe(10)
+    await expect(notice).toBeVisible()
+    expect(new Set(requests.slice(5)).size).toBe(5)
+    refusing = false
+    await notice.getByRole('button', { name: 'Try again' }).click()
+    await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
+    expect(requests).toHaveLength(15)
+    expect(new Set(requests.slice(10)).size).toBe(5)
+    await expect(notice).toHaveCount(0)
+    expect(iconifyRequests(ctx).escaped).toEqual([])
+  } finally { await ctx.close() }
 })

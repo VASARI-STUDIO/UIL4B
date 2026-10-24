@@ -52,7 +52,6 @@
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
-  DISCOVER_GROUPS,
   LEARN_GROUPS,
   createTools,
 } from './toolTree.js'
@@ -92,7 +91,6 @@ function treeRoute(rows, id) {
 const ROUTE_PRINCIPLES = treeRoute(LEARN_GROUPS, 'principles')
 const ROUTE_THEMES = treeRoute(LEARN_GROUPS, 'themes')
 const ROUTE_BRAND_COLOUR = treeRoute(LEARN_GROUPS, 'brand')
-const ROUTE_RESOURCES = treeRoute(DISCOVER_GROUPS, 'curated')
 
 // ── Categories ──────────────────────────────────────────────────────────────
 //
@@ -173,14 +171,6 @@ const CATEGORY_DEFS = [
     label: 'Documentation',
     description: 'Design principles and marketing references.',
   },
-  {
-    id: 'resources',
-    path: ROUTE_RESOURCES,
-    labelKey: 'categories.resources.label',
-    descKey: 'categories.resources.description',
-    label: 'Resources',
-    description: 'Curated external tools, fonts, colours, and inspiration.',
-  },
 ]
 
 /** Categories with their route and destination status derived, not declared. */
@@ -231,7 +221,7 @@ export const CREATE_TOOL_SEARCH = {
   },
   icons: {
     description: 'Search icons from the open-source packs, then copy SVG or JSX.',
-    keywords: ['icon', 'icons', 'icon library', 'svg', 'jsx', 'symbol', 'glyph', 'iconify', 'pictogram'],
+    keywords: ['icon', 'icons', 'icon library', 'svg', 'jsx', 'symbol', 'glyph', 'iconify', 'pictogram', 'export', 'download'],
   },
   emoji: {
     description: 'Browse and copy every emoji, organised by category.',
@@ -309,9 +299,8 @@ const CREATE_TOOL_ENTRIES = createTools().map((tool) => {
 // ── Surfaces outside the Create tree ────────────────────────────────────────
 //
 // toolTree.js does not own the Create-tree identity of these, so they are
-// declared. Where toolTree.js does list the page (the Learn guides and the
-// curated resources), the route is READ from it with treeRoute() rather than
-// typed again, so a row can never sit on a retired path or on a hub when the
+// declared. Where toolTree.js lists a Learn guide, its route is read with
+// treeRoute() rather than typed again, so a row can never sit on a retired path or on a hub when the
 // page it names exists. Every path still goes through liveDestination().
 //
 // A row is only listed when a page stands behind it. Learn topics that are
@@ -327,7 +316,6 @@ const STATIC_TOOL_DEFS = [
   { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
   { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
   { id: 'seo', label: 'SEO Specialist', path: '/seo', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Live SERP + social preview, scored checklist, copy-ready meta tags, and a JSON-LD structured-data generator.', keywords: ['seo', 'meta', 'serp', 'title', 'description', 'snippet', 'preview', 'open graph', 'social', 'score', 'inspector', 'specialist', 'schema', 'json-ld', 'structured data'] },
-  { id: 'resources', label: 'External Resources', path: ROUTE_RESOURCES, category: 'resources', description: 'Curated links to fonts, colours, AI tools, and inspiration.', keywords: ['resources', 'links', 'external', 'google fonts', 'tailwind', 'framer', 'awwwards'] },
 ]
 
 const STATIC_TOOL_ENTRIES = STATIC_TOOL_DEFS.map((tool) => ({
@@ -355,7 +343,6 @@ export const TOOL_I18N_MAP = {
   'alt-text': 'tools.altText',
   prompts: 'tools.promptLibrary',
   'docs-design': 'tools.docsDesign',
-  resources: 'tools.externalResources',
 }
 
 export function localiseWith(list, t, map) {
@@ -438,11 +425,41 @@ export function groupBySubcategory(tools) {
 // "search" starts offering tools the product does not have, or hiding ones it
 // does. Callers pass an already-localised index so the predicate never has to
 // know about i18n.
+const GENERIC_QUERY_WORDS = new Set([
+  'generator', 'builder', 'maker', 'tool', 'tools', 'finder', 'creator',
+  'free', 'online', 'the', 'a', 'an', 'for', 'to', 'and', 'of',
+])
+
+function singularToken(word) {
+  return word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
+    ? word.slice(0, -1) : word
+}
+
+function searchTokens(text) {
+  return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(singularToken)
+}
+
+function tokenMatchRank(item, q) {
+  const words = q.trim().toLowerCase().split(/\s+/)
+  if (words.length < 2) return 5
+  const significant = words.filter(word => !GENERIC_QUERY_WORDS.has(word))
+  const terms = (significant.length ? significant : words).map(singularToken)
+  const allMatch = (tokens) => terms.every(word => tokens.some(token => (
+    word.length <= 2 ? token === word : token.startsWith(word)
+  )))
+  const labelTokens = searchTokens(item.label)
+  if (allMatch(labelTokens)) return 1
+  const keywordTokens = [...labelTokens, ...searchTokens((item.keywords || []).join(' '))]
+  if (allMatch(keywordTokens)) return 3
+  if (allMatch([...keywordTokens, ...searchTokens(item.description || '')])) return 4
+  return 5
+}
+
 export function matchesQuery(item, q) {
   if (item.label.toLowerCase().includes(q)) return true
   if (item.description && item.description.toLowerCase().includes(q)) return true
   if (item.keywords && item.keywords.some(k => k.includes(q))) return true
-  return false
+  return tokenMatchRank(item, q) < 5
 }
 
 // ── How well a row matches ──────────────────────────────────────────────────
@@ -461,7 +478,7 @@ export function matchRank(item, q) {
   if (keywords.some(k => k === q)) return 2
   if (keywords.some(k => k.includes(q))) return 3
   if (item.description && item.description.toLowerCase().includes(q)) return 4
-  return 5
+  return tokenMatchRank(item, q)
 }
 
 // Stable within a rank: the index tie-break is explicit rather than relying on
@@ -484,7 +501,7 @@ export function offerableCategories(categories) {
 }
 
 export function queryCommandIndex(query, { tools = [], categories = [], actions = [] }) {
-  const q = query.trim().toLowerCase()
+  const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
   if (!q) return { query: '', tools: [], categories: [], actions: [], total: 0 }
   const hitTools = rankedMatches(tools, q)
   // A category row is only offered when it is somewhere you can be SENT. The

@@ -4,7 +4,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
-import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
+import { COMMUNITY_PROMPT_ROWS } from '../data/communityPrompts'
+import { LIBRARY_RULES, isStub } from '../utils/libraryRules'
+import { useProLibrary } from '../hooks/useProLibrary'
+import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { TAG_CATEGORIES } from '../data/promptCategories'
 import { getPrompts, setPromptsStore, getSavedIds, removeStoredPrompt, readPromptLibrary, parseTags, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
 import { onAccountApplied } from '../utils/accountEvents'
@@ -55,6 +58,16 @@ export default function PromptLibrary({ onCopy, toast }) {
   // Stable primitive so the gate effect doesn't re-run on every AuthContext render.
   const uid = user?.uid || null
   const { isPro } = useSubscription()
+  // A Pro account's full community set comes from the server
+  // (src/utils/proLibrary.js); the bundle holds the free prompts and tag-only
+  // stubs. Until it arrives a Pro viewer sees the free prompts and a status
+  // line, never the upsell.
+  const pro = useProLibrary('prompts')
+  const ready = pro.status === 'ready'
+  const proPending = pro.active && !ready
+  const communityRows = pro.items ?? COMMUNITY_PROMPT_ROWS
+  // Whole prompts only: a stub has no title or text to match a saved copy on.
+  const communityCatalog = useMemo(() => communityRows.filter((p) => !isStub(p)), [communityRows])
   const [prompts, setPrompts] = useState(getPrompts)
   const [submitOpen, setSubmitOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -131,12 +144,12 @@ export default function PromptLibrary({ onCopy, toast }) {
     // Deleting the copy a community Save made also clears that Save (found by
     // `sourceId`, or by title and text for an older copy), so the community
     // card does not read "Saved" and the repair does not add the copy back.
-    const result = removeStoredPrompt(id, { catalog: COMMUNITY_PROMPTS })
+    const result = removeStoredPrompt(id, { catalog: communityCatalog })
     setPrompts(result.prompts)
     setSavedIds(result.savedIds)
     setModalPrompt(null)
     toast(t('promptLibrary.promptDeleted'))
-  }, [toast, t])
+  }, [toast, t, communityCatalog])
 
   const copyPrompt = useCallback((e, txt) => {
     e.stopPropagation()
@@ -225,7 +238,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   // not change identity on every AuthContext render, and an exact null check
   // rather than a truthy one: while auth is resolving there is no account, so
   // the page shows the rung BELOW and climbs when the answer arrives.
-  const tier = galleryTier({ isPro, signedIn: uid !== null })
+  const tier = galleryTier({ isPro: ready, signedIn: uid !== null })
 
   // The gate, applied BEFORE search and sort can reach the data.
   //
@@ -241,7 +254,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   // search predicate, which reads `p.text` and would otherwise answer "does a
   // locked prompt contain this phrase" for anyone who asked.
   //
-  // `unlocked` is `isPro === true` and nothing looser: a subscription still
+  // `unlocked` is the server's full set having arrived and nothing looser: a subscription still
   // resolving is not a subscription. See utils/lockedPreview for why a preview
   // can never carry the payload.
   //
@@ -255,14 +268,14 @@ export default function PromptLibrary({ onCopy, toast }) {
   // hand the cap a different first three, and a visitor could collect six
   // prompts out of a three-prompt allowance by toggling one control.
   //
-  // So COMMUNITY_PROMPTS goes in, in the order the data file declares, and the
+  // So the rows go in, in the order the data declares, and the
   // OPEN set is sorted afterwards. Which prompts are free is now a property of
   // the library; the order they are shown in is the reader's choice, and the
   // two can no longer reach each other.
   const { open: openCommunity, locked: lockedPrompts, remaining: lockedCount, eligible } = useMemo(() => (
-    splitLockedLibrary(COMMUNITY_PROMPTS, {
-      unlocked: isPro === true,
-      isOpen: (p) => p.free === true,
+    splitLockedLibrary(communityRows, {
+      unlocked: ready,
+      isOpen: LIBRARY_RULES.prompts.isOpen,
       // No label. A brand palette's name is the tease and its hexes are the
       // product; a prompt is the opposite — the TITLE is the idea being sold,
       // so it stays behind the gate with the text. Tags are already the
@@ -272,13 +285,13 @@ export default function PromptLibrary({ onCopy, toast }) {
       // swatch count, a real fact about the row; a prompt has no count worth
       // publishing, and deriving one from the text length would leak the size
       // of what is being withheld. Three lines is the card's shape, not data.
-      preview: (p) => ({ id: p.id, tags: parseTags(p.tags).slice(0, 2), slots: 3 }),
+      preview: LIBRARY_RULES.prompts.preview,
       // The rung's cap, over the canonical list above. A prompt that fails the
       // `free` flag is still locked at every rung below Pro, so the cap narrows
       // the free tier and can never widen it.
       limit: galleryLimit(tier),
     })
-  ), [isPro, tier])
+  ), [communityRows, ready, tier])
 
   // Display order, chosen by the reader, applied to what the gate already
   // opened. Nothing here can move a prompt across the gate.
@@ -298,7 +311,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   // Only while browsing the whole community library, and only when something
   // is actually locked. `lockedCount` is 0 for a Pro viewer, so the block
   // disappears for them without a second condition.
-  const lockedBlockVisible = isCommunity && lockedCount > 0 && !q.trim() && !activeCategory
+  const lockedBlockVisible = isCommunity && !proPending && lockedCount > 0 && !q.trim() && !activeCategory
 
   const filtered = sourceList.filter(p => {
     if (activeCategory) {
@@ -456,12 +469,7 @@ export default function PromptLibrary({ onCopy, toast }) {
         </div>
       ) : (
         isCommunity ? (
-          /* The shared Library empty state, as used by the Palette, Gradient,
-             Font and Curated Resources galleries. This page was the last one
-             still rendering its own: a <p> with no control and no role, so the
-             grid emptying was announced to nobody and the only way back was to
-             work out by hand which of the search, sort and category controls
-             was still set. Both halves are LibraryEmpty's stated job. */
+          /* LibraryEmpty announces empty results and lets visitors clear filters. */
           <LibraryEmpty
             className="pl-empty"
             title="No prompts match your search"
@@ -502,7 +510,7 @@ export default function PromptLibrary({ onCopy, toast }) {
           <div className="lockt-cta">
             <div className="lockt-cta-copy">
               <p className="lockt-cta-head">{`Another ${accountAdds} community ${accountAdds === 1 ? 'prompt' : 'prompts'} with a free account`}</p>
-              <p className="lockt-cta-body">{`A free account opens ${browsableCommunity.length + accountAdds} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens all ${COMMUNITY_PROMPTS.length}.`}</p>
+              <p className="lockt-cta-body">{`A free account opens ${browsableCommunity.length + accountAdds} of the ${communityRows.length} community prompts. Pro opens all ${communityRows.length}.`}</p>
             </div>
             <button
               type="button"
@@ -536,6 +544,8 @@ export default function PromptLibrary({ onCopy, toast }) {
         )
       )}
 
+      {isCommunity && proPending && <ProLibraryStatus library={pro} noun="community prompt library" />}
+
       {/* The closing line, below the last card and below the Pro tease. The
           prompt submission entry is ON this page rather than behind a route, so
           the CTA calls it directly — which means a signed-out visitor meets
@@ -553,10 +563,10 @@ export default function PromptLibrary({ onCopy, toast }) {
           onAction={openSubmitFromClose}
           busy={authLoading}
         />
-      ) : !lockedBlockVisible && lockedCount > 0 ? (
+      ) : !lockedBlockVisible && !proPending && lockedCount > 0 ? (
         <GalleryCloseCta
           className="pl-cta"
-          detail={`Free covers ${openCommunity.length} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens all of them.`}
+          detail={`Free covers ${openCommunity.length} of the ${communityRows.length} community prompts. Pro opens all of them.`}
           action="See what Pro includes"
           to="/plans"
         />

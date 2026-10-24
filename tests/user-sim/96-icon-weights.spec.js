@@ -9,17 +9,85 @@
 // Served from the Iconify fixture (tests/user-sim/fixtures/iconify), whose
 // Phosphor collection carries a handful of each weight.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 
-const cellNames = (page) => page.evaluate(() =>
-  [...document.querySelectorAll('.ig .ic')].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')))
+// A REAL cell, not the loading skeleton: while the catalogue is in flight the
+// grid draws `.ic.ig-skel` placeholders that are visible but carry no
+// aria-label and no glyph, so waiting for "the first .ic" returns on them and
+// the names read next are nothing to do with a weight.
+const REAL_CELL = '.ig .ic:not(.ig-skel)'
+
+const cellNames = (page) => page.evaluate((sel) =>
+  [...document.querySelectorAll(sel)].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')), REAL_CELL)
 
 test.describe('the icon weight segment', () => {
+  for (const width of [390, 768, 1440]) {
+    test(`Flags shows its single style as text and restores the stored weight at ${width}px`, async ({ page }) => {
+      watch(page, 'someone browsing Flags then returning to their chosen weight')
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page, { plan: 'pro' })
+      await go(page, '/create/icons')
+      await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
+
+      const filters = page.getByRole('button', { name: /^Filters\b/ })
+      const sheet = page.getByRole('dialog', { name: 'Filters' })
+      const inPanel = await filters.isVisible()
+      const showFilters = async () => {
+        if (inPanel && await filters.getAttribute('aria-expanded') !== 'true') await filters.click()
+      }
+      const hideFilters = async () => {
+        if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+        else if (inPanel && await filters.getAttribute('aria-expanded') === 'true') await filters.click()
+      }
+      if (width !== 390) await showFilters()
+      const seg = page.locator('.ig-weight')
+      await seg.getByRole('button', { name: /^Bold/ }).click()
+      await expect(seg.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
+      const trackWidth = (await seg.boundingBox()).width
+
+      await showFilters()
+      const flags = page.getByRole('button', { name: 'Flags', exact: true })
+      if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
+      await flags.click()
+      await expect(seg.locator('.ig-weight-btn')).toHaveCount(0)
+      const status = seg.getByRole('status')
+      await expect(status).toHaveText('Flags come in one style')
+      await expect(status).toHaveAttribute('title', 'Flags come in one style')
+      expect((await seg.boundingBox()).width).toBeCloseTo(trackWidth, 0)
+      await hideFilters()
+      await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
+
+      if (inPanel) {
+        await showFilters()
+        const panel = page.locator(width === 390 ? '.lbry-sheet' : '.lbry-filterpop-panel')
+        await expect(panel).toBeFocused()
+        await expect(page.locator('.ig-weight-btn:focus')).toHaveCount(0)
+        await expect(panel).toHaveCSS('outline-style', 'none')
+        await expect(status).toBeVisible()
+        await hideFilters()
+        await filters.focus()
+        await filters.press('Enter')
+        const firstControl = panel.locator('button:not([disabled]):not([aria-disabled="true"])').first()
+        await expect(firstControl).toBeFocused()
+      }
+
+      if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
+      await expect(flags).toHaveAttribute('aria-pressed', 'true')
+      await flags.click()
+      await expect(seg.locator('.ig-weight-btn')).toHaveCount(4)
+      await expect(seg.getByRole('status')).toHaveCount(0)
+      await expect(seg.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
+      await hideFilters()
+      await expect.poll(async () => (await cellNames(page)).length, { timeout: 15000 }).toBeGreaterThan(0)
+      await expect.poll(async () => (await cellNames(page)).filter((n) => !/-bold$/.test(n)), { timeout: 15000 }).toEqual([])
+    })
+  }
+
   test('Bold, Fill and Duo each show only the glyphs a pack drew at that weight', async ({ page }) => {
     watch(page, 'someone switching the icon library to Bold')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
     const seg = page.getByRole('group', { name: 'Icon weight' })
     await expect(seg.getByRole('button', { name: 'Regular', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
@@ -41,11 +109,13 @@ test.describe('the icon weight segment', () => {
     watch(page, 'someone browsing Lucide and reaching for Bold')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-    await page.locator('select[aria-label="Icon pack"]').selectOption('lucide')
+    await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
     const seg = page.getByRole('group', { name: 'Icon weight' })
     const bold = seg.getByRole('button', { name: /^Bold/ })
     await expect(bold).toHaveAttribute('aria-disabled', 'true')
+    await expect(bold).toHaveAttribute('aria-pressed', 'false')
+    await expect(bold).toHaveCSS('text-decoration-line', 'none')
     // The reason is in the name, not only in a tooltip a keyboard never sees.
     await expect(bold).toHaveAccessibleName(/drawn by Phosphor only/)
     const before = await cellNames(page)
@@ -63,10 +133,10 @@ test.describe('the icon weight segment', () => {
     const box = await seg.boundingBox()
     expect(box.y + box.height, 'the weight segment is below the fold').toBeLessThan(844)
     // Four columns, and the first icons on the first screen.
-    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
     const cols = await page.evaluate(() => getComputedStyle(document.querySelector('.ig')).gridTemplateColumns.split(' ').length)
     expect(cols).toBe(4)
-    const firstTop = await page.locator('.ig .ic').first().evaluate((e) => e.getBoundingClientRect().top)
+    const firstTop = await page.locator(REAL_CELL).first().evaluate((e) => e.getBoundingClientRect().top)
     expect(firstTop, 'the first icon sits below the fold on a phone').toBeLessThan(844)
   })
 
@@ -76,7 +146,7 @@ test.describe('the icon weight segment', () => {
     watch(page, 'someone customising an icon on a phone')
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/icons')
-    await page.locator('.ig .ic').first().click({ timeout: 20000 })
+    await page.locator(REAL_CELL).first().click({ timeout: 20000 })
     const copy = page.locator('.icust-panel').getByRole('button', { name: /^Copy SVG$/ })
     await expect(copy).toBeVisible()
     const hit = await copy.evaluate((el) => {

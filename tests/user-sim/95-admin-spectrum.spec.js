@@ -34,6 +34,7 @@
 // once, which is also what makes the chip assertions worth making.
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { test, expect } from './base.js'
 import { go, watch, signIn, REPORT_DIR } from './helpers.js'
 
@@ -76,39 +77,25 @@ const FEEDBACK = (() => {
 
 /* ── THE SERVER AGGREGATE, SEEDED AS DOCUMENTS ─────────────────────────────
  *
- * Overview's four headline figures and its four ranked lists all come from
+ * Overview's four headline figures and its lists all come from
  * getAggregateAnalytics(), which reads the `analytics-daily` collection. With
  * nothing there the tab renders its "No aggregate data yet" branch — a correct
  * state, and the WRONG one to photograph or to measure type against, because
  * none of the figures exist in it.
  *
- * #484's rule is preserved exactly: these are SERVER documents, the same ones
- * every signed-in session writes, not this browser's localStorage. Seeding the
- * server side is the only way to see the populated tab, and it is what the
- * founder's own dashboard reads. */
-const AGGREGATE_DOCS = (() => {
-  const out = {}
-  for (let i = 0; i < 6; i++) {
-    const day = `2026-09-${String(18 - i).padStart(2, '0')}`
-    out[`analytics-daily/${day}`] = {
-      day,
-      views: 420 - i * 37,
-      'icon-copies': 96 - i * 8,
-      view__root: 140 - i * 9,
-      view__create_palette: 96 - i * 7,
-      view__discover_gradients: 61 - i * 4,
-      view__plans: 38 - i * 3,
-      tool__palette: 74 - i * 6,
-      tool__contrast: 52 - i * 4,
-      tool__gradient: 33 - i * 2,
-      icon__arrow_right: 41 - i * 3,
-      icon__check: 29 - i * 2,
-      ipack__lucide: 58 - i * 5,
-      ipack__phosphor: 24 - i * 2,
-    }
-  }
-  return out
-})()
+ * These are SERVER documents, the same ones every signed-in session writes, not
+ * this browser's localStorage. They are produced by running the real trackers
+ * (tests/helpers/aggregate-fixture.js, in a child process so its module hooks
+ * stay out of the test runner), so the field names are the ones the product
+ * writes and cannot drift from what the reader expects. EXPECTED comes from the
+ * fixture's plan, not from the documents. */
+const FIXTURE = JSON.parse(execFileSync(
+  process.execPath,
+  [path.join(import.meta.dirname, '..', 'helpers', 'aggregate-fixture.js')],
+  { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 },
+))
+const AGGREGATE_DOCS = FIXTURE.docs
+const EXPECTED = FIXTURE.expected
 
 /** Two prompts so the Prompts tab renders cards rather than its empty state. */
 const PROMPT_DOCS = {
@@ -462,6 +449,43 @@ test.describe('the surface still does everything it did', () => {
     await expect(chip('Gus Gone')).toHaveText('Cancelled')
     await expect(chip('Freya Free')).toHaveText('Free')
     expect(await familyOf(page, '.adm-plan')).toContain('geist mono')
+  })
+})
+
+test.describe('the Overview shows what the writers recorded', () => {
+  // The fixture is built by the real trackers, so these figures only appear if
+  // the field names the writers produce are the ones the reader understands.
+  const stat = (page, label) => page.locator(`.adm-stat:has(.adm-stat-label:text-is("${label}")) .adm-stat-value`)
+  const card = (page, title) => page.locator('.adm-card').filter({ has: page.locator(`.adm-card-title:text-is("${title}")`) })
+
+  test('headline figures, per-tool Opened and Used, and the Funnel list', async ({ page }) => {
+    // MUTATION: make the writers collapse `__` (run bumpAggregate's field
+    // through sanitizeKey) — every list is empty and this goes red.
+    await openDashboard(page)
+    await expect(stat(page, 'Total Page Views')).toHaveText(String(EXPECTED.totalViews))
+    await expect(stat(page, 'Distinct Pages')).toHaveText('4')
+
+    const usedTotal = Object.values(EXPECTED.used).reduce((a, b) => a + b, 0) + EXPECTED.fontCopies
+    await expect(stat(page, 'Tool Actions')).toHaveText(String(usedTotal))
+
+    // Opened and Used are two separate numbers on every tool row.
+    const tools = page.locator('[data-testid="adm-tool-usage"]')
+    for (const id of Object.keys(EXPECTED.opens)) {
+      const row = tools.locator(`[data-tool="${id}"]`)
+      await expect(row.locator('[data-col="opened"]'), `${id} opened`).toContainText(String(EXPECTED.opens[id]))
+      await expect(row.locator('[data-col="used"]'), `${id} used`).toContainText(String(EXPECTED.used[id] || 0))
+    }
+
+    // Funnel counters are their own list, not rows in the tools list.
+    await expect(tools.locator('[data-tool^="gate"], [data-tool^="activation"], [data-tool^="ttv"], [data-tool^="firstwin"]')).toHaveCount(0)
+    const funnel = card(page, 'Funnel')
+    await expect(funnel).toContainText('Met an upgrade gate')
+    await expect(funnel.locator('.adm-bar-row:has-text("Met an upgrade gate") .adm-bar-value')).toHaveText(String(EXPECTED.gates))
+    await expect(funnel.locator('.adm-bar-row:has-text("Saved or exported a result") .adm-bar-value')).toHaveText(String(EXPECTED.activations))
+
+    // The icon lists the writers feed are populated as well.
+    await expect(card(page, 'Top Icons').locator('.adm-bar-row')).not.toHaveCount(0)
+    await expect(card(page, 'Top Icon Packs').locator('.adm-bar-row')).not.toHaveCount(0)
   })
 })
 

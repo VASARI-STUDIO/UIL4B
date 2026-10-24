@@ -19,8 +19,7 @@
 .typ-notice>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 /* Font picker — a specimen you can see, not a name you have to recall.
    The trigger shows the CURRENT family rendered in itself and opens the browse
-   dialog. It replaced a native <select>, which renders every option in the UI
-   font and so could never show a single one of the faces on offer. */
+   dialog, where each family is previewed in its own face. */
 .typ-picker{display:flex;flex-direction:column;margin-bottom:14px}
 /* Specimen on its own row, above the name — NOT beside it. Side by side, a
    104px face box clipped "Handgloves" mid-word, which reads as a broken

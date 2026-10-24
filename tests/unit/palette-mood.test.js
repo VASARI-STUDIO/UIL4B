@@ -37,7 +37,7 @@ import {
   HUE_TERMS,
 } from '../../src/utils/paletteMood.js'
 import { paletteHaystack } from '../../src/utils/paletteSearch.js'
-import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { splitLockedLibrary } from '../../src/utils/lockedPreview.js'
 
 // The library, classified once, exactly the way the page classifies it.

@@ -129,12 +129,14 @@
 
 .seo-page .seo-field input,
 .seo-page .seo-field textarea,
-.seo-page .seo-field select { width: 100%; border-radius: var(--radius-s); }
+.seo-page .seo-field .menu-select-trigger { width: 100%; border-radius: var(--radius-s); }
 
 .seo-page .seo-field input,
-.seo-page .seo-field select { min-height: 40px; }
+.seo-page .seo-field .menu-select-trigger { min-height: 40px; }
 
 .seo-page .seo-field textarea { line-height: 1.5; resize: vertical; }
+
+.seo-page .seo-field :is(input, textarea):focus-visible { border-color: var(--border); box-shadow: none; }
 
 .seo-page .seo-meter { display: block; height: 4px; overflow: hidden; background: var(--bg-3); border-radius: var(--radius-pill); }
 
@@ -363,6 +365,6 @@
   .seo-page .seo-btn,
   .seo-page .seo-seg button,
   .seo-page .seo-field input,
-  .seo-page .seo-field select { min-height: 44px; }
+  .seo-page .seo-field .menu-select-trigger { min-height: 44px; }
   .seo-page .seo-faq-del { min-width: 44px; min-height: 44px; }
 }

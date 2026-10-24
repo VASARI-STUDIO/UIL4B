@@ -18,7 +18,7 @@
 import { AI_LIMITS, FREE_SAVE_LIMITS } from './plans.js'
 import { COLOUR_SYSTEMS } from './colourSystems.js'
 import { freeFormats, proOnlyFormats, styleGuideFormats } from './exportFormats.js'
-import { PLAN_LADDER, formatMoney } from './planLadder.js'
+import { PLAN_LADDER, formatMoney, livePriceOf } from './planLadder.js'
 import { createTools } from '../data/toolTree.js'
 import { BILLED_EVERY } from '../utils/billingCadence.js'
 
@@ -87,14 +87,20 @@ export const perMonth = (total, months) => Math.round((total / months) * 100) / 
 /**
  * Every buyable cadence resolved against the live prices, carrying exactly
  * what /plans prints for it: the per-month amount, the saving against monthly
- * ("17% off", nothing under 5%), the trial, and the billed line.
+ * ("Save 17%", nothing under 5%), the trial, and the billed line.
  *
  * `prices` is usePrices().prices; `loaded` is useProPrice().loaded. No price →
  * `amountLabel: null` and `priceServiceDown: true`: an offer is never shown
  * without its amount.
+ *
+ * Only a price Stripe reports live, in this currency, counts (livePriceOf). A
+ * cadence the service answers for with a fallback default has `available:
+ * false`, no amount and an `unavailableNote`: it is never offered for
+ * checkout. `priceServiceDown` is true only when NO cadence has a price. The
+ * saving exists only when the monthly price is live in the same currency.
  */
 export function resolveOffers({ prices, currency = 'usd', loaded = true } = {}) {
-  const totalOf = (o) => (loaded ? prices?.[o.liveKey]?.[currency] : undefined)
+  const totalOf = (o) => (loaded ? livePriceOf(prices, o.liveKey, currency) : undefined)
   const monthly = BILLING_OPTIONS.find((o) => o.id === 'monthly')
   const monthlyTotal = monthly ? totalOf(monthly) : undefined
   const hasMonthly = typeof monthlyTotal === 'number'
@@ -116,11 +122,13 @@ export function resolveOffers({ prices, currency = 'usd', loaded = true } = {}) 
       months: o.months,
       checkoutPlan: o.checkoutPlan,
       trialDays: o.trialDays || 0,
+      available: has,
       total: has ? total : null,
       amountLabel: has ? formatMoney(perMonth(total, o.months), currency) : null,
       totalLabel: has ? formatMoney(total, currency) : null,
       saving,
-      savingLabel: saving > 0 ? `${saving}% off` : '',
+      savingLabel: saving > 0 ? `Save ${saving}%` : '',
+      unavailableNote: loaded && !has ? `No ${currency.toUpperCase()} price for this billing period right now` : null,
       billedNote,
     }
   })

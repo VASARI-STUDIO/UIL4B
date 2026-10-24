@@ -24,7 +24,7 @@ const WIDTHS = [320, 360, 390, 480, 640, 768, 900, 1024, 1280, 1440, 1920]
 
 // Each tool: its route, and the names of every toolbar action it must offer.
 // An action is its name, or { row, menu } when the row's button and the
-// overflow's row are named differently. `selects` are comboboxes that move
+// overflow's row are named differently. `selects` are listbox triggers that move
 // the same way, and `sliders` likewise; `links` are actions drawn as a link on the row (a button once
 // they are in the overflow); `menuOnly` actions live in the overflow at every
 // width; and `overflow` is what the tool calls its overflow (default "More").
@@ -37,12 +37,15 @@ const TOOLS = [
     actions: [
       { row: 'Pull colours from an image', menu: 'From image' },
       { row: 'Suggest a palette', menu: 'Suggest' },
+      // Priority 2 buttons (icon-only below 768px): on the row where there is room, else in Extra tools.
+      'Explore palettes',
+      'Preview on a UI',
       'Undo',
       'Redo',
       'Randomise',
     ],
     selects: ['Colour system', 'Colour vision check'],
-    menuOnly: ['Explore palettes', 'Preview on a UI', 'Open in Gradient', 'History', 'Reset palette'],
+    menuOnly: ['Open in Gradient', 'History', 'Reset palette'],
   },
   { route: '/create/gradient', actions: ['Random', 'From palette', 'Reset', 'Submit for review'], primary: /^Copy /, title: 'Gradient' },
   { route: '/create/contrast', actions: [], primary: /^Swap/, title: 'Contrast Checker' },
@@ -147,7 +150,7 @@ for (const tool of TOOLS) {
         }
         const missingSelects = []
         for (const name of tool.selects || []) {
-          const shown = await bar.getByRole('combobox', { name }).first().isVisible().catch(() => false)
+          const shown = await bar.getByRole('button', { name }).first().isVisible().catch(() => false)
           if (!shown) missingSelects.push(name)
         }
         const missingSliders = []
@@ -171,7 +174,7 @@ for (const tool of TOOLS) {
             await expect(panel.getByRole('button', { name: startsWith(name) }).first(), `${width}px: "${name}" is not in the overflow`).toBeVisible()
           }
           for (const name of missingSelects) {
-            await expect(panel.getByRole('combobox', { name }), `${width}px: the "${name}" select is not in the overflow`).toBeVisible()
+            await expect(panel.getByRole('button', { name }), `${width}px: the "${name}" select is not in the overflow`).toBeVisible()
           }
           for (const name of missingSliders) {
             await expect(panel.getByRole('slider', { name }), `${width}px: the "${name}" slider is not in the overflow`).toBeVisible()

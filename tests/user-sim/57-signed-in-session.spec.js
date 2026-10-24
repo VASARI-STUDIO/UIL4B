@@ -42,6 +42,9 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn, firebaseRequests } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
+// Export is dimmed until there is a design to export, so these load a palette the way a
+// shared link does (?c=) rather than the untouched starting board.
+const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 
 const CAP = FREE_SAVE_LIMITS.projects
 
@@ -179,7 +182,7 @@ test.describe('the export gate, driven', () => {
     const page = await context.newPage()
     watch(page, 'a free account trying to export the design system book')
     await signIn(page, { plan: 'free' })
-    await go(page, '/create/palette')
+    await go(page, WORKED_BOARD)
     await openExportPanel(page)
 
     await expect(
@@ -207,7 +210,7 @@ test.describe('the export gate, driven', () => {
     const page = await context.newPage()
     watch(page, 'a Pro subscriber exporting the design system book')
     await signIn(page, { plan: 'pro' })
-    await go(page, '/create/palette')
+    await go(page, WORKED_BOARD)
     await openExportPanel(page)
 
     await expect(page.locator('.exp-fmt-pro'), 'Pro sees no Pro badges').toHaveCount(0)
