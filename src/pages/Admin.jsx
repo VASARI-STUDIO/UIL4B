@@ -207,7 +207,7 @@ function TopList({ title, rows, unit, empty }) {
       </div>
       <div className="adm-card-body">
         {rows.length > 0 ? (
-          <div className="adm-bar">
+          <div className="adm-bar adm-top-list">
             {rows.slice(0, 8).map(([label, count]) => (
               <div key={label} className="adm-bar-row">
                 <span className="adm-bar-label">{label}</span>
