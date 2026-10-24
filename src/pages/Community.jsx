@@ -403,14 +403,16 @@ export default function Community({ toast }) {
     [serverIcons, iconLocal],
   )
 
-  const toggleSave = useCallback((id) => {
+  // Saves belong to an account: signed out, a press asks to sign in first.
+  const toggleSave = useCallback(async (id) => {
+    if (!await requireLogin('save designs', { free: true, signup: true })) return
     setSaves(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
-  }, [])
+  }, [requireLogin])
 
   // A saved item gets +1 on its displayed count so the ranking reacts to the
   // user's own save — exactly the "ranking by saves" behaviour, illustratively.

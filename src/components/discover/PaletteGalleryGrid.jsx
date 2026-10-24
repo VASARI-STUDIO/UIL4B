@@ -5,6 +5,7 @@ import LibraryGrid from '../library/LibraryGrid'
 import { paletteBuilderUrl } from '../../data/paletteGallery'
 import { setGradientDraft, resetGradientDraft } from '../../utils/colorHandoff'
 import { useProject } from '../../contexts/ProjectContext'
+import { useLoginPrompt } from '../../contexts/LoginPromptContext'
 
 // Colorhunt-style palette gallery — shared by the Discover palettes view and
 // the Palette Builder's colour-gallery popup. The rows come from the page that
@@ -119,8 +120,12 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
   const { setPalette, canSaveProjects } = useProject()
+  const { requireLogin } = useLoginPrompt()
 
-  const toggleLike = useCallback((id) => {
+  // Likes belong to an account: signed out, a press asks to sign in first and
+  // the like lands once it succeeds.
+  const toggleLike = useCallback(async (id) => {
+    if (!await requireLogin('like palettes', { free: true, signup: true })) return
     setLikes(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -128,7 +133,7 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
       try { localStorage.setItem(LIKES_KEY, JSON.stringify([...next])) } catch { /* quota / disabled */ }
       return next
     })
-  }, [])
+  }, [requireLogin])
 
   const copyHex = useCallback((hex) => {
     navigator.clipboard.writeText(hex).then(() => {

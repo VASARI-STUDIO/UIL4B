@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import LibraryCard from '../library/LibraryCard'
 import LibraryGrid from '../library/LibraryGrid'
 import { gradientCss, gradientToolUrl } from '../../data/gradientGallery'
+import { useLoginPrompt } from '../../contexts/LoginPromptContext'
 
 // The browse grid on /discover/gradients. The rows come from the page that
 // renders it: swatches are plain CSS backgrounds, likes live
@@ -32,8 +33,12 @@ function HeartGlyph({ filled }) {
 
 export default function GradientGalleryGrid({ toast, gradients = [] }) {
   const [likes, setLikes] = useState(loadLikes)
+  const { requireLogin } = useLoginPrompt()
 
-  const toggleLike = useCallback((id) => {
+  // Likes belong to an account: signed out, a press asks to sign in first and
+  // the like lands once it succeeds.
+  const toggleLike = useCallback(async (id) => {
+    if (!await requireLogin('like gradients', { free: true, signup: true })) return
     setLikes(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -41,7 +46,7 @@ export default function GradientGalleryGrid({ toast, gradients = [] }) {
       try { localStorage.setItem(LIKES_KEY, JSON.stringify([...next])) } catch { /* quota / disabled */ }
       return next
     })
-  }, [])
+  }, [requireLogin])
 
   const copyCss = useCallback((g) => {
     const css = `background: ${gradientCss(g.type, g.angle, g.stops)};`

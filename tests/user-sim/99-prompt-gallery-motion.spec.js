@@ -3,15 +3,17 @@
 // toggles, and a "See it running" view whose demo scrolls inside its own
 // frame while the dialog around it holds still.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS } from '../../src/data/promptPreviewAssets.js'
 
-async function openLibrary(browser, { width = 1440, height = 900, reducedMotion = 'no-preference' } = {}) {
+async function openLibrary(browser, { width = 1440, height = 900, reducedMotion = 'no-preference', member = false } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion })
   await context.addInitScript(() => { try { localStorage.setItem('vs-prompt-tab', 'community') } catch { /* no storage */ } })
   const page = await context.newPage()
   watch(page, 'a visitor browsing community prompts')
+  // Saving belongs to an account; signed out, Save opens the sign-in prompt.
+  if (member) await signIn(page)
   await go(page, '/discover/prompts')
   await expect(page.locator('.pl-card').first()).toBeVisible()
   return { context, page }
@@ -90,7 +92,7 @@ test.describe('the community prompt gallery', () => {
   })
 
   test('Save toggles: pressed state, unsave with Undo, the same in the modal', async ({ browser }) => {
-    const { context, page } = await openLibrary(browser)
+    const { context, page } = await openLibrary(browser, { member: true })
     const id = await firstCardId(page)
     const save = page.locator('.pl-card-save').first()
     const myCount = page.locator('.pl-tab', { hasText: 'My Prompts' }).locator('.pl-tab-count')
