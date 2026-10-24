@@ -49,9 +49,7 @@ test('a revocation beats the seven-day past-due grace', () => {
 })
 
 test('planForUser honours it too, and admins are still exempt', () => {
-  // The admin allowlist is the ADMIN_EMAILS environment variable now — it used
-  // to be the founder's personal address written into api/_lib/plans.js, and
-  // into this test. Set here rather than assumed, so the exemption is measured
+  // The admin allowlist is the ADMIN_EMAILS environment variable. Set here rather than assumed, so the exemption is measured
   // against a configured administrator instead of against whatever the machine
   // running the suite happens to have in its environment.
   const before = process.env.ADMIN_EMAILS
