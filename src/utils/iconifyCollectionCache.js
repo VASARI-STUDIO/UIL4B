@@ -1,5 +1,6 @@
 export const COLLECTION_TTL = 7 * 24 * 60 * 60 * 1000
 export const COLLECTION_RETRY_DELAY = 60 * 1000
+export const CHIP_RETRY_FLOOR = 3 * 1000
 const storageKey = (prefix) => `uil4b:iconify:collection:${prefix}`
 const defaultStorage = () => globalThis.localStorage
 const CREDIT_FIELDS = ['name', 'author', 'url', 'spdx', 'licenceUrl']
@@ -36,14 +37,16 @@ export function writeCollectionCache(prefix, data, { storage = defaultStorage, n
   } catch { /* Storage can be unavailable or full; memory still holds the catalogue. */ }
 }
 
-// Concurrent callers share a request; only an explicit retry bypasses the failure cooldown.
+// Concurrent callers share a request; an explicit retry bypasses the failure cooldown (a chip retry only after the floor below).
+// A chip-driven retry (chipRetry, with manualRetry) waits CHIP_RETRY_FLOOR after the last failure, so
+// clicking chips against a service that fails fast does not re-request every pack; Try again never waits.
 // A failed refresh of stale stored data still resolves with that data, but it is never put in
 // the in-memory cache, so the cooldown and manual retries can request again. failed(prefix) tells
 // the UI that the last request for a prefix failed and nothing newer has loaded since.
 export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now }) {
   const pending = new Map()
   const failures = new Map()
-  function getCollectionNames(prefix, { manualRetry = false } = {}) {
+  function getCollectionNames(prefix, { manualRetry = false, chipRetry = false } = {}) {
     if (cache.has(prefix)) return Promise.resolve(cache.get(prefix))
     if (pending.has(prefix)) return pending.get(prefix)
     const stored = readCollectionCache(prefix, { storage, now: now() })
@@ -52,7 +55,8 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
       return Promise.resolve(stored.data)
     }
     const failed = failures.get(prefix)
-    if (!manualRetry && failed && now() - failed.at < COLLECTION_RETRY_DELAY) {
+    const bypass = manualRetry && !(chipRetry && failed && now() - failed.at < CHIP_RETRY_FLOOR)
+    if (!bypass && failed && now() - failed.at < COLLECTION_RETRY_DELAY) {
       return stored ? Promise.resolve(stored.data) : Promise.reject(failed.error)
     }
     const request = Promise.resolve().then(() => fetchEntry(prefix))

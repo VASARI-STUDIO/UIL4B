@@ -2007,6 +2007,10 @@ function collectionToNames(d) {
 // Each caller applies its own style filter to the unfiltered names.
 const COLLECTION_CACHE = new Map()
 
+// Browse functions take false (plain), true (Try again) or 'chip' (a pack or group chip click).
+// Only 'chip' carries the retry floor; Try again requests at once.
+const retryOptions = (retry) => ({ manualRetry: !!retry, chipRetry: retry === 'chip' })
+
 // info=1 includes registry attribution in the same catalogue request.
 const getCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
@@ -2567,7 +2571,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     }
     setFirstPageTimeout(() => () => reveal(true))
     allowedPacks.forEach((p, idx) => {
-      getCollectionNames(p, { manualRetry })
+      getCollectionNames(p, retryOptions(manualRetry))
         .then(({ names: raw }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
@@ -2687,7 +2691,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter, groupKey, true)
     setLoading(true); setLoadError(false); glyphFails.current = 0
-    getCollectionNames(packFilter, { manualRetry })
+    getCollectionNames(packFilter, retryOptions(manualRetry))
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
@@ -2735,7 +2739,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
     setLoading(true); setLoadError(false); glyphFails.current = 0
     Promise.all(packs.map(p =>
-      getCollectionNames(p, { manualRetry })
+      getCollectionNames(p, retryOptions(manualRetry))
         .then(({ names }) => ({ names: keepWeight(p, names, 'regular').sort().slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
@@ -2983,9 +2987,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       setWeight('regular')
     }
     if (query.trim().length >= 2) doSearch(query, { pack: nextPack, group })
-    else if (nextPack) browsePack(nextPack, group, true)
-    else if (group) browseGroup(group, true)
-    else browseAll(true)
+    else if (nextPack) browsePack(nextPack, group, 'chip')
+    else if (group) browseGroup(group, 'chip')
+    else browseAll('chip')
   }
 
   // Which weights the current scope can honour, and why not when it cannot.
@@ -3026,9 +3030,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setGroup(nextGroup)
     // Collections browse original artwork without replacing the stored weight.
     if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
-    else if (pack) browsePack(pack, nextGroup, true)
-    else if (nextGroup) browseGroup(nextGroup, true)
-    else browseAll(true)
+    else if (pack) browsePack(pack, nextGroup, 'chip')
+    else if (nextGroup) browseGroup(nextGroup, 'chip')
+    else browseAll('chip')
   }
 
   const handleIconClick = (icon) => {

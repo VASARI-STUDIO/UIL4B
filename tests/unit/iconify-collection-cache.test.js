@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  COLLECTION_TTL, COLLECTION_RETRY_DELAY, createCollectionLoader,
+  COLLECTION_TTL, COLLECTION_RETRY_DELAY, CHIP_RETRY_FLOOR, createCollectionLoader,
   readCollectionCache, writeCollectionCache,
 } from '../../src/utils/iconifyCollectionCache.js'
 
@@ -160,7 +160,7 @@ test('a success after a failed stale refresh caches, persists and clears the fai
   assert.equal(load.failed(PREFIX), false)
 })
 
-test('a failed first load with no stored data rejects, and a manual retry (chip click) within 60 seconds requests again', async () => {
+test('a failed first load with no stored data rejects, and Try again within 60 seconds requests again', async () => {
   let calls = 0
   let fails = true
   const error = TypeError('Failed to fetch')
@@ -174,6 +174,72 @@ test('a failed first load with no stored data rejects, and a manual retry (chip 
   assert.deepEqual(await load(PREFIX, { manualRetry: true }), DATA)
   assert.equal(calls, 2)
   assert.equal(load.failed(PREFIX), false)
+})
+
+const CHIP = { manualRetry: true, chipRetry: true }
+
+test('two chip retries 1 second apart after a failure make one request and return the stale list', async () => {
+  let calls = 0
+  const { load, clock } = staleFailureLoader({ fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
+  await load(PREFIX)
+  clock.now += 1000
+  assert.deepEqual(await load(PREFIX, CHIP), DATA)
+  clock.now += 1000
+  assert.deepEqual(await load(PREFIX, CHIP), DATA)
+  assert.equal(calls, 1)
+  assert.equal(load.failed(PREFIX), true)
+})
+
+test('two chip retries 1 second apart after a failure with nothing stored make one request and reject', async () => {
+  let calls = 0
+  const error = TypeError('Failed to fetch')
+  const clock = { now: NOW }
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => clock.now,
+    fetchEntry: async () => { calls++; throw error } })
+  await assert.rejects(load(PREFIX), error)
+  clock.now += 1000
+  await assert.rejects(load(PREFIX, CHIP), error)
+  clock.now += 1000
+  await assert.rejects(load(PREFIX, CHIP), error)
+  assert.equal(calls, 1)
+})
+
+test('a chip retry after the 3 second floor requests at once, and the floor restarts from that failure', async () => {
+  let calls = 0
+  let fails = true
+  const { load, clock } = staleFailureLoader({ fetchEntry: async () => { calls++; if (fails) throw TypeError('Failed to fetch'); return DATA } })
+  await load(PREFIX)
+  clock.now += CHIP_RETRY_FLOOR
+  await load(PREFIX, CHIP)
+  assert.equal(calls, 2)
+  clock.now += CHIP_RETRY_FLOOR - 1
+  await load(PREFIX, CHIP)
+  assert.equal(calls, 2)
+  fails = false
+  clock.now += 1
+  await load(PREFIX, CHIP)
+  assert.equal(calls, 3)
+  assert.equal(load.failed(PREFIX), false)
+})
+
+test('a chip retry with no earlier failure requests at once', async () => {
+  let calls = 0
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
+    fetchEntry: async () => { calls++; return DATA } })
+  assert.deepEqual(await load(PREFIX, CHIP), DATA)
+  assert.equal(calls, 1)
+})
+
+test('Try again (manualRetry without the chip option) requests at once even within the chip floor', async () => {
+  let calls = 0
+  const { load, clock } = staleFailureLoader({ fetchEntry: async () => { calls++; throw TypeError('Failed to fetch') } })
+  await load(PREFIX)
+  clock.now += 100
+  await load(PREFIX, { manualRetry: true })
+  assert.equal(calls, 2)
+  clock.now += 100
+  await load(PREFIX, { manualRetry: true })
+  assert.equal(calls, 3)
 })
 
 test('failures suppress automatic calls for 60 seconds, while a manual retry allows one shared request', async () => {
