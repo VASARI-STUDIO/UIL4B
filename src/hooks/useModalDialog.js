@@ -87,7 +87,15 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // gesture reaches the browser and the dialog scrolls natively. Without it a
     // stopped Lenis would freeze the dialog's body along with the page — the bug
     // wearing its opposite coat.
-    document.body.style.overflow = 'hidden'
+    //
+    // The lock goes on <html>, not <body>. The root sets overflow-x: clip, so a
+    // body overflow no longer passes up to the viewport: body turns into its own
+    // scroll box, and a sticky footer half revealed at the foot of the page
+    // drops to where it would sit unstuck. On <html> the lock reaches the
+    // viewport, and the gutter stays reserved so the page does not shift.
+    const root = document.documentElement
+    root.style.overflow = 'hidden'
+    root.style.scrollbarGutter = 'stable'
     getLenis()?.stop()
     const unmark = markScrollContainers(node)
 
@@ -115,7 +123,8 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     document.addEventListener('keydown', onKey, true)
     return () => {
       document.removeEventListener('keydown', onKey, true)
-      document.body.style.overflow = ''
+      root.style.overflow = ''
+      root.style.scrollbarGutter = ''
       getLenis()?.start()
       unmark()
       // THE RESTORE WAITS ONE FRAME. It used to run right here, synchronously,

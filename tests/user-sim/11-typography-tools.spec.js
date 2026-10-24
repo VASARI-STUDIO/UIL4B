@@ -693,7 +693,7 @@ test.describe('Font Gallery', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(card).toBeFocused()
     // Background scroll must be handed back, or the page is left unusable.
-    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('')
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow + document.body.style.overflow)).toBe('')
   })
 
   test('rows reserve their metrics so the list never reflows as faces load', async ({ page }) => {
@@ -1276,7 +1276,7 @@ test.describe('the font picker is browsable', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(trigger).toBeFocused()
     // Background scroll must be handed back, or the page is left unusable.
-    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('')
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow + document.body.style.overflow)).toBe('')
   })
 
   test('the trigger shows the current family in that family', async ({ page }) => {

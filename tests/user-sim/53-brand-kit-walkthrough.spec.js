@@ -222,7 +222,7 @@ test.describe('Brand kit walkthrough', () => {
     // version blocked the step: position:fixed inset:0 with a backdrop blur.
     const blocked = await page.evaluate(() => ({
       overlay: !!document.querySelector('.uikit-intro-overlay'),
-      bodyLocked: getComputedStyle(document.body).overflow === 'hidden',
+      bodyLocked: getComputedStyle(document.documentElement).overflow === 'hidden' || getComputedStyle(document.body).overflow === 'hidden',
     }))
     expect(blocked.overlay).toBe(false)
     expect(blocked.bodyLocked).toBe(false)
