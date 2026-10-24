@@ -79,7 +79,7 @@
 // result requires a rating, so without one it renders nothing. Same trade as
 // above, same answer.
 import { CREATE_GROUPS } from '../src/data/toolTree.js'
-import { PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { PAGE_TITLES, pageName } from '../src/data/routeMetaMap.js'
 import { CREATE_HOMES_THAT_RENDER } from './route-matrix.mjs'
 import { SITE_ORIGIN } from '../src/utils/routeMeta.js'
 
@@ -91,15 +91,12 @@ const norm = (p) => {
 /**
  * The human name for a route, from the title the page already uses.
  *
- * PAGE_TITLES entries read "UI L4B | Palette Generator"; a breadcrumb crumb
+ * PAGE_TITLES entries carry the site name at one end; a breadcrumb crumb
  * reading the site name on every level is noise. Derived rather than a second
  * table of names, so a retitled page renames its own crumb.
  */
 export function crumbName(route) {
-  const title = PAGE_TITLES[norm(route)]
-  if (!title) return null
-  const cut = title.indexOf('|')
-  return (cut === -1 ? title : title.slice(cut + 1)).trim() || null
+  return pageName(PAGE_TITLES[norm(route)])
 }
 
 /**

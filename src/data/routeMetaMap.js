@@ -22,6 +22,14 @@ import { INPUT_FORMATS, listForProse, outputLabels } from '../utils/meshFormats.
 // description names the best-known few and counts the rest.
 const NAMED_3D_INPUTS = ['step', 'iges', 'fbx', 'obj', 'stl'].map((id) => INPUT_FORMATS.find((f) => f.id === id).label)
 
+// A title without the site name, whichever end it sits at: tool pages lead with
+// the search phrase ("Type Scale Generator for CSS | UI L4B"), the rest with the
+// brand ("UI L4B | Learn").
+export function pageName(title) {
+  if (!title) return null
+  return title.replace(/^UI L4B \| /, '').replace(/ \| UI L4B$/, '').trim() || null
+}
+
 // Titles/descriptions for real destinations only. Legacy redirect-only paths
 // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
 // <Navigate> and inherit their target's metadata, so an entry here would only
@@ -29,32 +37,32 @@ const NAMED_3D_INPUTS = ['step', 'iges', 'fbx', 'obj', 'stl'].map((id) => INPUT_
 export const PAGE_TITLES = {
   '/': 'UI L4B | Design Toolkit',
   '/home': 'UI L4B | Design Toolkit',
-  '/create/color': 'UI L4B | Colour System Generator',
-  '/create/palette': 'UI L4B | Palette Generator',
-  '/create/semantic-color': 'UI L4B | Semantic Colour Generator',
-  '/create/tint': 'UI L4B | Tint Scale Generator',
-  '/create/gradient': 'UI L4B | Gradient Generator',
-  '/create/contrast': 'UI L4B | Colour Contrast Checker',
-  '/create/typography': 'UI L4B | Typography',
-  '/create/type-scale': 'UI L4B | Type Scale Generator',
-  '/create/font-pair': 'UI L4B | Font Pair',
-  '/create/font-gallery': 'UI L4B | Font Gallery',
-  '/create/icons': 'UI L4B | Icon Library',
-  '/create/icons/groups': 'UI L4B | Icon Groups',
+  '/create/color': 'Color System Generator for UI Design | UI L4B',
+  '/create/palette': 'Color Palette Generator with Live UI Preview | UI L4B',
+  '/create/semantic-color': 'Semantic Color Generator for Design Tokens | UI L4B',
+  '/create/tint': 'Tint and Shade Generator for Color Scales | UI L4B',
+  '/create/gradient': 'CSS Gradient Generator | UI L4B',
+  '/create/contrast': 'Color Contrast Checker for WCAG AA and AAA | UI L4B',
+  '/create/typography': 'Typography Tools for UI Design | UI L4B',
+  '/create/type-scale': 'Type Scale Generator for CSS | UI L4B',
+  '/create/font-pair': 'Font Pairing Tool for Google Fonts | UI L4B',
+  '/create/font-gallery': 'Google Fonts Gallery for UI Design | UI L4B',
+  '/create/icons': 'SVG Icon Library: Recolor and Export Icons | UI L4B',
+  '/create/icons/groups': 'Matching SVG Icon Sets for UI Design | UI L4B',
   '/create/imagery': 'UI L4B | Imagery',
-  '/create/icons-emoji': 'UI L4B | Icons & Emoji',
+  '/create/icons-emoji': 'SVG Icons and Emoji Library | UI L4B',
   '/discover': 'UI L4B | Discover',
-  '/discover/gradients': 'UI L4B | Gradient Library',
-  '/discover/palettes': 'UI L4B | Palette Library',
+  '/discover/gradients': 'CSS Gradient Library and Ideas | UI L4B',
+  '/discover/palettes': 'Color Palette Ideas for UI Design | UI L4B',
   '/learn': 'UI L4B | Learn',
   '/create/alt-text': 'UI L4B | Alt Text Generator',
   '/create/ai-prompt': 'UI L4B | AI Image Prompt Generator',
   '/create/ai-tools': 'UI L4B | AI Tools',
-  '/create/landing-prompts': 'UI L4B | AI Landing Page Prompts',
-  '/discover/prompts': 'UI L4B | Prompt Library',
-  '/create/emoji': 'UI L4B | Emoji Library',
-  '/create/aspect-ratio': 'UI L4B | Aspect & Resolution Calculator',
-  '/create/box-shadow': 'UI L4B | Box Shadow',
+  '/create/landing-prompts': 'AI Landing Page Prompts | UI L4B',
+  '/discover/prompts': 'AI Website Design Prompts Library | UI L4B',
+  '/create/emoji': 'Emoji Library: Copy and Paste Emoji | UI L4B',
+  '/create/aspect-ratio': 'Aspect Ratio and Resolution Calculator | UI L4B',
+  '/create/box-shadow': 'CSS Box Shadow Generator | UI L4B',
   '/create/components': 'UI L4B | UI Component Builder',
   '/create/component-designer': 'UI L4B | Component Designer',
   '/projects': 'UI L4B | Projects',
@@ -76,7 +84,7 @@ export const PAGE_TITLES = {
   '/admin': 'UI L4B | Admin',
   '/create/auto-builder': 'UI L4B | Brand Starter',
   '/create/file-converter': 'UI L4B | File Converter',
-  '/create/3d-converter': 'UI L4B | 3D Model Converter',
+  '/create/3d-converter': '3D Model Converter for STEP, FBX, OBJ and STL | UI L4B',
   ...LEARN_PAGE_TITLES,
 }
 // THE "CSS EXPORTS" CLAUSE WAS FALSE AND IS DELETED, not reworded.

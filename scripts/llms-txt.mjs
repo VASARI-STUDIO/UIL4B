@@ -50,7 +50,7 @@ import { freeFormats, proOnlyFormats, unbuiltFormats } from '../src/config/expor
 import { cheapestPerMonth, formatMoney, resolvePlanLadder } from '../src/config/planLadder.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../src/data/toolTree.js'
 import { LEARN_ARTICLES } from '../src/data/learnIndex.js'
-import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { PAGE_DESCRIPTIONS, PAGE_TITLES, pageName } from '../src/data/routeMetaMap.js'
 import { TOOL_ENTRIES } from '../src/data/toolIndex.js'
 import { canonicalUrl } from '../src/utils/routeMeta.js'
 import { CURRENCY_CODE, pricingSentence } from './site-pricing.mjs'
@@ -58,14 +58,13 @@ import { prerenderRoutes } from './route-matrix.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// "UI L4B | Palette Generator" → "Palette Generator". The title table is the
+// The title without the site name (pageName). The title table is the
 // one place every public route already has a human name; the tool tree's
 // labels are nav-length ("Palette", "Tint") and read as fragments in a list.
-const TITLE_PREFIX = /^UI L4B \| /
 const nameOf = (route) => {
   const title = PAGE_TITLES[route]
   if (!title) throw new Error(`llms-txt: ${route} has no title in routeMetaMap.js`)
-  return title.replace(TITLE_PREFIX, '')
+  return pageName(title)
 }
 const descriptionOf = (route) => {
   const desc = PAGE_DESCRIPTIONS[route]
