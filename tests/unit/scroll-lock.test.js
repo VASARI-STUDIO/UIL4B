@@ -34,7 +34,8 @@ function load({ lenis = true } = {}) {
     getLenis: () => (lenis ? stub : null),
   }, { filename: LOCK_PATH })
 
-  return { lockScroll, root, body, stub }
+  // `root` is the <html> style object the lock writes to.
+  return { lockScroll, root: root.style, body, stub }
 }
 
 test('the first lock sets the root overflow and the last unlock clears it', () => {
@@ -50,10 +51,9 @@ test('the first lock sets the root overflow and the last unlock clears it', () =
 test('scrollbar-gutter is never touched', () => {
   const { lockScroll, root } = load()
   const unlock = lockScroll()
-  assert.equal(root.style?.scrollbarGutter ?? root.scrollbarGutter, undefined)
-  assert.equal(root.style.scrollbarGutter, '', 'reserving the gutter grew the page at phone widths')
+  assert.equal(root.scrollbarGutter, '', 'reserving the gutter grew the page at phone widths')
   unlock()
-  assert.equal(root.style.scrollbarGutter, '')
+  assert.equal(root.scrollbarGutter, '')
 })
 
 test('nested locks hold until the last one is released, in any order', () => {

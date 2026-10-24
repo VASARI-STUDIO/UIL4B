@@ -12,6 +12,7 @@ import '../styles/pages/spectrum-chrome.css'
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { lockScroll } from '../utils/scrollLock'
+import { markScrollContainers } from '../utils/scrollContainment.js'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
@@ -231,6 +232,8 @@ export default function SpectrumNav() {
     if (!open) return undefined
     const unlockScroll = lockScroll()
     const panel = sheetRef.current
+    // The page is locked and Lenis stopped; marking the panel's scroll boxes lets the wheel still scroll them.
+    const unmark = markScrollContainers(panel)
     const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
       .filter((el) => el.getClientRects().length > 0)
     focusable()[0]?.focus()
@@ -252,6 +255,7 @@ export default function SpectrumNav() {
     return () => {
       panel?.removeEventListener('keydown', trap)
       unlockScroll()
+      unmark()
     }
   }, [open])
 
