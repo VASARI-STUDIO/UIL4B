@@ -1169,7 +1169,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 @media(max-width:640px){
   .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
   .lib-surface .ic{gap:6px;padding:12px 2px;border-radius:var(--radius)}
-  /* Names stay at the design's 10px (line 1168) on up to two lines of 12.5px. */
+  /* Names stay at the base 10px on up to two lines of 12.5px. */
   .lib-surface .ig .ic-name{line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:25px;flex-shrink:0}
   /* Every glyph takes 24px of layout: a 36px chip overflows 6px into the padding and the gap, as in a pack cell. */
   .lib-surface .ig .ic .ig-chip{margin-block:-6px}
