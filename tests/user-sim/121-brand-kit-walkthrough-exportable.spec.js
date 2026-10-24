@@ -10,10 +10,9 @@ import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-// From 1024px the closing step is a form inside the bar; below it, a docked card.
-const inBar = (page) => page.viewportSize().width >= 1024
-const nameForm = (page) => (inBar(page) ? rail(page) : page.getByRole('dialog', { name: 'Name your kit' }))
-const nameField = (page) => nameForm(page).getByRole('textbox', { name: inBar(page) ? 'Name your kit' : 'Kit name' })
+// The closing step is one panel at every width: a sheet on a phone, a popover above the bar from 768px.
+const nameForm = (page) => page.getByRole('dialog', { name: 'Name your project' })
+const nameField = (page) => nameForm(page).getByRole('textbox', { name: 'Project name' })
 
 /** The hexes the palette board is showing, in board order. */
 const boardColours = (page) => page.locator('.plb-col').evaluateAll(
@@ -44,7 +43,7 @@ async function walk(page) {
     await rail(page).getByRole('button', { name: button }).click()
     await expect(page).toHaveURL(url)
   }
-  await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
+  await rail(page).getByRole('button', { name: /^Name your project/ }).click()
   await nameField(page).fill('Walkthrough kit')
   await nameForm(page).getByRole('button', { name: 'Save project' }).click()
   await expect(page).toHaveURL(/\/projects\/[^/]+$/)
