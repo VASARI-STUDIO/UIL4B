@@ -92,10 +92,9 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // body overflow no longer passes up to the viewport: body turns into its own
     // scroll box, and a sticky footer half revealed at the foot of the page
     // drops to where it would sit unstuck. On <html> the lock reaches the
-    // viewport, and the gutter stays reserved so the page does not shift.
+    // viewport, as the stopped-Lenis rule on the root already does.
     const root = document.documentElement
     root.style.overflow = 'hidden'
-    root.style.scrollbarGutter = 'stable'
     getLenis()?.stop()
     const unmark = markScrollContainers(node)
 
@@ -124,7 +123,6 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     return () => {
       document.removeEventListener('keydown', onKey, true)
       root.style.overflow = ''
-      root.style.scrollbarGutter = ''
       getLenis()?.start()
       unmark()
       // THE RESTORE WAITS ONE FRAME. It used to run right here, synchronously,

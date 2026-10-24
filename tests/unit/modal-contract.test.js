@@ -398,7 +398,6 @@ test('the background scroll is locked on open and released on close', () => {
   const s = scene()
   const root = s.dom.document.documentElement.style
   assert.equal(root.overflow, 'hidden', 'the root scroll lock was not applied')
-  assert.equal(root.scrollbarGutter, 'stable', 'the scrollbar gutter was not reserved, so the page would shift')
   assert.equal(s.dom.document.body.style.overflow, '',
     'the lock went on <body>: with overflow-x: clip on the root that makes body its own scroll box and a sticky footer drops')
   assert.equal(s.dom.lenis.stopped, 1, 'Lenis was not stopped — the page behind can still scroll')
@@ -406,7 +405,6 @@ test('the background scroll is locked on open and released on close', () => {
 
   s.close()
   assert.equal(root.overflow, '', 'the root scroll lock was not released')
-  assert.equal(root.scrollbarGutter, '', 'the scrollbar gutter was not released')
   assert.equal(s.dom.document.body.style.overflow, '', 'closing left a body overflow behind')
   assert.equal(s.dom.lenis.started, 1, 'Lenis was never restarted — the page is frozen for good')
   assert.equal(s.dom.unmarked, 1, 'the scroll-container marks were not cleaned up')
@@ -573,8 +571,6 @@ test('enabled:false does nothing at all, so a closed dialog cannot lock the page
   const s = scene({ enabled: false })
   assert.equal(s.dom.document.documentElement.style.overflow, '',
     'a disabled dialog locked the background scroll')
-  assert.equal(s.dom.document.documentElement.style.scrollbarGutter, '',
-    'a disabled dialog reserved a scrollbar gutter')
   assert.equal(s.dom.document.body.style.overflow, '',
     'a disabled dialog locked the body')
   assert.equal(s.dom.listeners.length, 0, 'a disabled dialog installed a key handler')
