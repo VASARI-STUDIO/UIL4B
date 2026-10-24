@@ -2,20 +2,19 @@
 //
 // From 768px up they sit in ONE ordered column with the lock and the actions
 // button: Lock, Edit in HCT, Swap, Remove, "...". Each is also an item in the
-// "Colour actions" menu. They are revealed three ways, and each way has its own
-// test because each is its own piece of CSS or code:
+// "Colour actions" menu. On a mouse screen they are revealed two ways, and each
+// way has its own test because each is its own piece of CSS or code:
 //
 //   1. a pointer hovering the swatch,
 //   2. keyboard focus VISIBLY inside the swatch (`:has(:focus-visible)`; the
 //      tools stay rendered and focusable at rest from 768px up, so focus is
 //      what shows them — never `visibility:hidden` or `display:none`). A mouse
 //      press leaves focus on a button but is not focus-visible, so it does not
-//      latch the stack open,
-//   3. a tap on the bare swatch where there is no hover (`(hover: none)`), from
-//      768px up.
-// Columns under 80px wide (a 10-colour board at 768) hide the stack, and the
-// Colour actions menu still holds every action. Phones (767 and under) show
-// only Lock and More actions.
+//      latch the stack open.
+// A device with no hover (`(hover: none)`) has nothing to reveal them with, so
+// from 768px up they are on show at rest and pressable. Columns under 80px wide
+// (a 10-colour board at 768) hide the stack, and the Colour actions menu still
+// holds every action. Phones (767 and under) show only Lock and More actions.
 //
 // The second half of the file ("the ordered column") pins the behaviour of the
 // ordered column itself: Tab order, no focus latch, focus after a keyboard
@@ -237,20 +236,26 @@ test.describe('the per-swatch quick tools', () => {
     await ctx.close()
   })
 
-  // On phones Tab reaches More actions and its menu; wider touch devices
-  // keep Edit, Swap and Remove in the swatch's tab order, between the lock and
-  // More actions.
+  // On phones Tab reaches More actions and its menu, and no quick tool is drawn.
+  // On a wider touch device Edit, Swap and Remove are on show at rest, take the
+  // pointer, and sit in the swatch's tab order between the lock and More actions.
   for (const width of [390, 820]) {
     test(`Tab reaches the colour actions at ${width}px on a touch device`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width, { touch: true })
       const col = page.locator('.plb-col').nth(2)
 
-      // POSITIVE CONTROLS: no hover on this device, the tools exist, and none
-      // is painted before focus arrives.
+      // POSITIVE CONTROLS: no hover on this device, and the tools exist.
       expect(await page.evaluate(() => matchMedia('(hover: hover)').matches)).toBe(false)
       const rest = await quickState(col)
       expect(rest.every(Boolean), 'all three quick tools exist').toBe(true)
-      expect(rest.some(painted), 'nothing painted before focus arrives').toBe(false)
+      if (width < 768) {
+        expect(rest.some(painted), 'a phone draws no quick tool').toBe(false)
+      } else {
+        await expect.poll(async () => (await quickState(col)).every(painted), { message: 'a touch tablet shows every quick tool at rest' }).toBe(true)
+        const hits = await hitsOf(col)
+        expect(hits, 'three tools measured').toHaveLength(3)
+        expect(hits.filter((h) => !h.hitTool).map((h) => h.label), 'every quick tool takes the pointer at rest').toEqual([])
+      }
 
       await col.getByRole('button', { name: /^(Lock|Unlock) / }).focus()
       if (width < 768) {
