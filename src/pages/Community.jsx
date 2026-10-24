@@ -403,11 +403,13 @@ export default function Community({ toast }) {
     [serverIcons, iconLocal],
   )
 
-  // Saves belong to an account: signed out, a press asks to sign in first.
+  // Saves belong to an account: signed out, a press asks to sign in first. The
+  // stored set is read again after the wait, because signing in may have
+  // merged the account's saves into it.
   const toggleSave = useCallback(async (id) => {
     if (!await requireLogin('save designs', { free: true, signup: true })) return
-    setSaves(prev => {
-      const next = new Set(prev)
+    setSaves(() => {
+      const next = loadSaves()
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next

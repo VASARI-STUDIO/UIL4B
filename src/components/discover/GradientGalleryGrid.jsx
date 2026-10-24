@@ -36,16 +36,16 @@ export default function GradientGalleryGrid({ toast, gradients = [] }) {
   const { requireLogin } = useLoginPrompt()
 
   // Likes belong to an account: signed out, a press asks to sign in first and
-  // the like lands once it succeeds.
+  // the like lands once it succeeds. The stored set is read again after the
+  // wait, because signing in may have merged the account's likes into it, and
+  // written before the state, because a popup grid can close during sign-in.
   const toggleLike = useCallback(async (id) => {
     if (!await requireLogin('like gradients', { free: true, signup: true })) return
-    setLikes(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      try { localStorage.setItem(LIKES_KEY, JSON.stringify([...next])) } catch { /* quota / disabled */ }
-      return next
-    })
+    const next = loadLikes()
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    try { localStorage.setItem(LIKES_KEY, JSON.stringify([...next])) } catch { /* quota / disabled */ }
+    setLikes(next)
   }, [requireLogin])
 
   const copyCss = useCallback((g) => {

@@ -42,4 +42,18 @@ test.describe('signed-out likes and saves ask to sign in', () => {
       await expect(loginDialog(page)).toHaveCount(0)
     })
   }
+
+  test('Palette Builder gallery: a press inside the sign-in dialog keeps the gallery open', async ({ page }) => {
+    watch(page, 'a visitor liking a palette from the builder gallery')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/palette')
+    await page.getByRole('button', { name: 'Explore palettes' }).click()
+    const gallery = page.getByRole('dialog', { name: 'Colour gallery' })
+    await expect(gallery).toBeVisible()
+    await gallery.locator('.pgal-like').first().click()
+    const login = loginDialog(page)
+    await expect(login).toBeVisible()
+    await login.locator('#ui-login-title').click()
+    await expect(gallery, 'the gallery closed under the sign-in dialog').toBeVisible()
+  })
 })
