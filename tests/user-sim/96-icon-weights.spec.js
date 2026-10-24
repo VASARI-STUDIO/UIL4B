@@ -44,6 +44,9 @@ test.describe('the icon weight segment', () => {
       await seg.getByRole('button', { name: /^Bold/ }).click()
       await expect(seg.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
       const trackWidth = (await seg.boundingBox()).width
+      // The reason's live region is already in place, empty, so it is announced
+      // when a group change fills it.
+      await expect(seg.getByRole('status')).toHaveText('')
 
       await showFilters()
       const flags = page.getByRole('button', { name: 'Flags', exact: true })
@@ -51,9 +54,15 @@ test.describe('the icon weight segment', () => {
       await flags.click()
       await expect(seg.locator('.ig-weight-btn')).toHaveCount(0)
       const status = seg.getByRole('status')
-      await expect(status).toHaveText('Flags come in one style')
-      await expect(status).toHaveAttribute('title', 'Flags come in one style')
+      await expect(status).toHaveText('These icons come in one style')
+      await expect(status).toHaveAttribute('title', 'These icons come in one style')
       expect((await seg.boundingBox()).width).toBeCloseTo(trackWidth, 0)
+      // Plain text, not a control: no pill ground behind it, normal weight, and
+      // it starts where the first segment's label starts.
+      await expect(seg).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await expect(status).toHaveCSS('font-weight', '400')
+      await expect(status).toHaveCSS('text-align', 'left')
+      await expect(status).not.toHaveAttribute('tabindex', /.*/)
       await hideFilters()
       await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
 
@@ -75,7 +84,7 @@ test.describe('the icon weight segment', () => {
       await expect(flags).toHaveAttribute('aria-pressed', 'true')
       await flags.click()
       await expect(seg.locator('.ig-weight-btn')).toHaveCount(4)
-      await expect(seg.getByRole('status')).toHaveCount(0)
+      await expect(seg.getByRole('status')).toHaveText('')
       await expect(seg.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
       await hideFilters()
       await expect.poll(async () => (await cellNames(page)).length, { timeout: 15000 }).toBeGreaterThan(0)

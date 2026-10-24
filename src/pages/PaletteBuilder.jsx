@@ -4,7 +4,7 @@ import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolTray, ToolIcon,
+  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
 import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
@@ -979,6 +979,31 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Combined community-gallery popup (Discover hand-in): one large popup with
   // Community / Variations / Brands tabs, applying a pick straight onto the board.
   const [galleryTab, setGalleryTab] = useState('community') // community | variations | brands
+  // The toolbar button that opened the gallery, or null when it was opened from
+  // the Extra tools menu, which has no button on screen to sit under.
+  const [galleryAnchor, setGalleryAnchor] = useState(null)
+  const galleryRef = useRef(null)
+  // Above phone width the gallery opens under the button that opened it, kept
+  // 16px inside the viewport; without one on screen it keeps its docked place.
+  useLayoutEffect(() => {
+    const wrap = galleryRef.current
+    if (!galleryOpen || !wrap) return undefined
+    const place = () => {
+      const btn = galleryAnchor?.isConnected && galleryAnchor.getClientRects().length ? galleryAnchor : null
+      if (!btn || window.innerWidth <= 640) {
+        wrap.style.top = ''; wrap.style.left = ''; wrap.style.right = ''
+        return
+      }
+      const r = btn.getBoundingClientRect()
+      const max = window.innerWidth - wrap.offsetWidth - 16
+      wrap.style.top = `${Math.round(r.bottom + 8)}px`
+      wrap.style.right = 'auto'
+      wrap.style.left = `${Math.round(Math.max(16, Math.min(r.left, max)))}px`
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [galleryOpen, galleryAnchor])
   // Which community palette is currently "imported" (ticked). Clicking that same
   // card again reverts to the pre-import system; any edit clears the tick because
   // the palette is now an edited derivative, not the untouched import.
@@ -2220,7 +2245,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     }))
 
-  const openGallery = (tab) => { closeAllMenus(); setGalleryTab(tab); setGalleryOpen(true) }
+  const openGallery = (tab, anchor = null) => { closeAllMenus(); setGalleryTab(tab); setGalleryAnchor(anchor); setGalleryOpen(true) }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
   const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, mark: h.free || isPro ? '' : 'Pro' }))
@@ -2264,10 +2289,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     </span>
   )
   const undoRedo = (
-    <ToolTray label="History">
+    <span className="plb-history" role="group" aria-label="History">
       <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
       <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />
-    </ToolTray>
+    </span>
   )
 
   // Secondary actions move into Extra tools when the toolbar runs out of room.
@@ -2291,7 +2316,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       id: 'suggest', priority: 1,
       render: () => (
         <span className="plb-menuwrap">
-          <ToolButton icon="magic-wand" collapse onClick={() => (galleryOpen && galleryTab === 'variations' ? closeAllMenus() : openGallery('variations'))} aria-label="Suggest a palette" title="Suggest a palette" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'variations'}>Suggest</ToolButton>
+          <ToolButton icon="magic-wand" collapse onClick={(e) => (galleryOpen && galleryTab === 'variations' ? closeAllMenus() : openGallery('variations', e.currentTarget))} aria-label="Suggest a palette" title="Suggest a palette" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'variations'}>Suggest</ToolButton>
         </span>
       ),
       menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
@@ -2300,7 +2325,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       id: 'explore', priority: 2,
       render: () => (
         <span className="plb-menuwrap">
-          <ToolButton icon="swatches" collapse onClick={() => (galleryOpen && galleryTab === 'community' ? closeAllMenus() : openGallery('community'))} aria-label="Explore palettes" title="Explore palettes" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'community'}>Explore</ToolButton>
+          <ToolButton icon="swatches" collapse onClick={(e) => (galleryOpen && galleryTab === 'community' ? closeAllMenus() : openGallery('community', e.currentTarget))} aria-label="Explore palettes" title="Explore palettes" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'community'}>Explore</ToolButton>
         </span>
       ),
       menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') },
@@ -2735,12 +2760,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       )}
 
       {/* ── The floating panels: Suggest / Explore, History, Save or share ──
-          Fixed under the toolbar (a bottom sheet on a phone) rather than
-          anchored to a button, because on a phone the button that opened one
-          may be in the Extra tools sheet. `.plb-menuwrap` keeps the page's one
-          dismiss layer from closing a panel on a press inside it. */}
+          Fixed under the toolbar (a bottom sheet on a phone). The gallery is
+          moved under the button that opened it when there is one on screen;
+          opened from the Extra tools sheet it stays docked. `.plb-menuwrap`
+          keeps the page's one dismiss layer from closing a panel on a press
+          inside it. */}
       {galleryOpen && (
-        <div className="plb-menuwrap plb-float">
+        <div className="plb-menuwrap plb-float" ref={galleryRef}>
           <div className="plb-menu plb-galpopup" role="dialog" aria-label="Colour gallery" data-lenis-prevent>
             <div className="plb-galpopup-head">
               <div className="plb-menu-title">{galleryTab === 'community' ? 'Community gallery' : galleryTab === 'variations' ? 'Suggestions' : 'Brand systems'}</div>

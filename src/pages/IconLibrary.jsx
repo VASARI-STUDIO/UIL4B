@@ -2173,21 +2173,22 @@ function packsOnScreen(...lists) {
 // cannot honour is `aria-disabled` rather than `disabled`, so a keyboard user
 // can still reach it and hear WHY (the reason is in its accessible name and
 // its tooltip) instead of meeting a gap in the tab order. When no weight can
-// act, the track states the single-style reason as text.
+// act, the track drops its ground and states the single-style reason as plain
+// text in the first segment's place, so it does not read as a control.
 function IconWeightSeg({ value, stateOf, onChange }) {
   const states = ICON_WEIGHTS.map((w) => ({ ...w, ...stateOf(w.id) }))
   const singleStyle = states.every((w) => !w.ok)
   const reason = states[0].why
   return (
-    <div className="ig-weight" role="group" aria-label="Icon weight">
+    <div className={singleStyle ? 'ig-weight ig-weight--single' : 'ig-weight'} role="group" aria-label="Icon weight">
+      {/* Always mounted, so a screen reader hears the reason when a group change
+          brings it in; empty and click-through while the buttons are showing. */}
+      <span className="ig-weight-status" role="status" title={singleStyle ? reason : undefined}>{singleStyle ? reason : ''}</span>
       {singleStyle ? (
-        <>
-          {/* Noninteractive labels preserve the four-button track's intrinsic width. */}
-          <span className="ig-weight-measure" aria-hidden="true">
-            {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
-          </span>
-          <span className="ig-weight-status" role="status" title={reason}>{reason}</span>
-        </>
+        // Noninteractive labels preserve the four-button track's intrinsic width.
+        <span className="ig-weight-measure" aria-hidden="true">
+          {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
+        </span>
       ) : states.map((w) => (
         <button
           key={w.id}
@@ -3103,7 +3104,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       ? collection.packs.filter((p) => allowedPacks.includes(p) && (!pack || p === pack))
       : pack && pack !== 'custom' ? [pack] : allowedPacks
     if (collection && !scope.some((p) => Object.values(WEIGHT_RULES).some((rules) => p in rules))) {
-      return { ok: false, why: `${collection.label} come in one style` }
+      return { ok: false, why: 'These icons come in one style' }
     }
     if (w === 'regular') return { ok: true }
     const drawn = weightPacks(w)
