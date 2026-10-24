@@ -388,21 +388,16 @@ export async function subscriptionForPaymentIntent(stripe, paymentIntentId) {
 //
 // Stripe's own subscription is deliberately NOT cancelled here. Cancelling is
 // an irreversible outward action on a live billing account taken off the back
-// of one webhook, so what happens to the subscription RECORD stays the founder's
-// call and the log line below is what tells them there is one to make.
+// of one webhook, so what happens to the subscription record is decided by a
+// person, and the log line below says there is one to decide.
 //
-// CORRECTION, 2026-09-16. This comment used to add "and Stripe already cancels
-// on a chargeback under its own rules". THAT IS FALSE, and it was load-bearing
-// — it is why nobody worried that a disputed subscription keeps running.
-// Stripe's own documentation (docs.stripe.com/billing/subscriptions/cancel,
-// "Configure automatic cancellation after a dispute") describes
-// cancel-on-dispute as a SETTING in the Billing dashboard, off unless the
-// account turns it on. Until the founder switches it on, a disputed
-// subscription keeps cycling:
-// it renews, it invoices, and it fires customer.subscription.updated at this
-// webhook every period. That is what turned a deleted user document into a
-// repeatable wash rather than a one-off — see writeSubscription above, which now
-// re-checks the charge instead of trusting the merge to carry the flag.
+// Stripe does not cancel a disputed subscription by default: cancel-on-dispute
+// is a Billing dashboard setting (docs.stripe.com/billing/subscriptions/cancel,
+// "Configure automatic cancellation after a dispute"). Without it, a disputed
+// subscription keeps renewing, invoicing and firing customer.subscription.updated
+// at this webhook every period. writeSubscription above therefore re-checks the
+// charge whenever a delivery would grant access, instead of trusting the merge
+// to carry the flag.
 //
 // Access stops either way, because the flag below is what plans.js reads.
 async function revokeSubscriptionAccess(stripe, { paymentIntentId, customerId = null, chargeId = null, disputeId = null, reason }) {
