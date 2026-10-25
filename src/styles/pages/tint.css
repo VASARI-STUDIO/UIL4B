@@ -98,7 +98,8 @@
 }
 .tt .tt-dot { width: 10px; height: 10px; border-radius: 999px; border: 1.5px solid currentColor; }
 .tt .tt-src-pick[aria-checked="true"] .tt-dot { background: var(--tl-ink); border-color: var(--tl-ink); }
-.tt .tt-add { width: 100%; font-size: 13px; }
+.tt .tt-add, .tt .tt-import { width: 100%; font-size: 13px; }
+.tt .tt-import { margin-top: 8px; }
 @media (hover: hover) and (pointer: fine) {
   .tt .tt-iconbtn:hover { background: var(--tl-wash-2); color: var(--tl-ink); }
 }
