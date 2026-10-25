@@ -195,7 +195,7 @@ test('/help and the llms.txt generator derive their line from the module', () =>
 
 test('/plans does not type a positioning line as a literal', () => {
   const src = read('src/pages/Pricing.jsx')
-  assert.ok(src.includes('less than 1 coffee'),
+  assert.ok(src.includes('less than 1 cup of coffee'),
     'Pricing.jsx no longer carries the design’s pricing h1 — this check is reading the wrong file')
   for (const [id, text] of Object.entries(PINNED)) {
     assert.ok(!src.includes(text),

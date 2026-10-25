@@ -61,7 +61,21 @@ const PRO_EXPORTS = proOnlyFormats()
 
 // The page headline, on both billing states. One constant, so Monthly and
 // Yearly cannot end up with different wording.
-const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'
+const HEADLINE_LEAD = 'Improve your design systems for less than 1 cup of coffee'
+const HEADLINE_TAIL = ' per month.'
+
+// A takeaway cup, drawn inline: the icon set has no coffee glyph.
+function TakeawayCup() {
+  return (
+    <svg className="pr-h1-cup" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" focusable="false"
+      fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 6h14" />
+      <path d="M6.5 3.5h11L19 6" />
+      <path d="M5 6l1.6 14.5h10.8L19 6" />
+      <path d="M5.8 11h12.4" />
+    </svg>
+  )
+}
 
 // The ceilings side by side. "Six times" would be true of the daily limit and
 // false of the monthly one (300 against 40), so the sub-line quotes both ends
@@ -456,7 +470,7 @@ export default function Pricing() {
 
       <main id="main" tabIndex={-1}>
         <section id="pricing" className="pr-hero pr-shell" aria-labelledby="pricing-h1">
-          <h1 className="pr-h1" id="pricing-h1">{HEADLINE}</h1>
+          <h1 className="pr-h1" id="pricing-h1">{HEADLINE_LEAD}{' '}<TakeawayCup />{HEADLINE_TAIL}</h1>
           <p className="pr-sub">{HERO_SUB}</p>
         </section>
 
