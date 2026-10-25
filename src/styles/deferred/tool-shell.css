@@ -1083,7 +1083,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    stretched the indicator down every line of a wrapped tray and left it sitting
    under options that are not selected. Height and Y come from the active
    button's own box, so the padding is measured rather than hard-coded. */
-.lbry-filter-ind{position:absolute;top:0;left:0;width:var(--lbry-ind-w,0px);height:var(--lbry-ind-h,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-xs);transform:translate(var(--lbry-ind-x,0px),var(--lbry-ind-y,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),height var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
+.lbry-filter-ind{position:absolute;top:0;left:0;width:var(--lbry-ind-w,0px);height:var(--lbry-ind-h,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius-pill);box-shadow:var(--shadow-xs);transform:translate(var(--lbry-ind-x,0px),var(--lbry-ind-y,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),height var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
 .lbry-filter-hint{align-self:center;padding:0 10px 0 4px;color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
 @media(max-width:900px){.lbry-filter-hint{display:none}}
 /* And on ANY touch device, whatever its width. The 900px rule was standing in
@@ -1101,7 +1101,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    is made in markup rather than here — a tray and a menu are different
    controls, not one control with two looks.
 
-   The trigger is 46px to match `.lbry-search`'s min-height, so the collapsed
+   The trigger takes `.lbry-search`'s --search-h, so the collapsed
    row reads as one bar of controls rather than a search field with smaller
    things floating beside it. It clears the WCAG 2.5.8 44px floor on its own,
    which the 38px tray option only does inside the `pointer:coarse` block. */

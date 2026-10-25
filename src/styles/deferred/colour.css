@@ -602,7 +602,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-pvg-swatches{position:relative;z-index:1;display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--pv-border)}
 .plb-pvg-sw{flex:1;background:var(--plb-rc)}
 /* Preview-context tabs in the modal head (UI / Brand / Graphic Design) */
-.plb-modal-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-modal-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .plb-modal-tab{padding:5px 12px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:var(--btn-radius);cursor:pointer;transition:all var(--t);white-space:nowrap}
 .plb-modal-tab:hover{color:var(--t0)}
 .plb-modal-tab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}

@@ -259,7 +259,7 @@
   grid-auto-columns: minmax(0, 1fr);
   max-width: 520px;
   background: var(--inp);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-pill);
   box-shadow: inset 0 0 0 1px var(--border);
 }
 
@@ -279,7 +279,7 @@
   color: var(--t2);
   background: transparent;
   border: 0;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-pill);
   white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--dur-1) ease-out, color var(--dur-1) ease-out;
