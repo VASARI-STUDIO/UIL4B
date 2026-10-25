@@ -61,8 +61,8 @@ const PRO_EXPORTS = proOnlyFormats()
 
 // The page headline, on both billing states. One constant, so Monthly and
 // Yearly cannot end up with different wording.
-const HEADLINE_LEAD = 'Improve your design systems for less than 1 cup of coffee'
-const HEADLINE_TAIL = ' per month.'
+const HEADLINE_LEAD = 'Improve your design systems for less than 1 cup of'
+const HEADLINE_TAIL = 'per month.'
 
 // A takeaway cup, drawn inline: the icon set has no coffee glyph.
 function TakeawayCup() {
@@ -470,7 +470,7 @@ export default function Pricing() {
 
       <main id="main" tabIndex={-1}>
         <section id="pricing" className="pr-hero pr-shell" aria-labelledby="pricing-h1">
-          <h1 className="pr-h1" id="pricing-h1">{HEADLINE_LEAD}{' '}<TakeawayCup />{HEADLINE_TAIL}</h1>
+          <h1 className="pr-h1" id="pricing-h1">{HEADLINE_LEAD}{' '}<span className="pr-h1-nowrap">coffee{' '}<TakeawayCup /></span>{' '}{HEADLINE_TAIL}</h1>
           <p className="pr-sub">{HERO_SUB}</p>
         </section>
 

@@ -258,7 +258,7 @@ test.describe('/plans says what it claims', () => {
     await expectRendered(page)
 
     await expect(page.getByRole('heading', { level: 1 }))
-      .toHaveText(/^Improve your design systems for less than 1 cup of coffee\s*per month\.$/)
+      .toHaveText(/^Improve your design systems for less than 1 cup of coffee\s+per month\.$/)
 
     await expect(page.locator('.pr-hero .pr-sub')).toHaveText(
       `Pro lifts AI from ${AI_LIMITS.free.daily} to ${AI_LIMITS.pro.daily} generations a day, `

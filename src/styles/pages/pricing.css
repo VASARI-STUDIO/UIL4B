@@ -41,7 +41,8 @@
 
 .pricing .pr-hero { padding-top: calc(var(--chrome-h) + var(--s-8)); }
 
-.pricing .pr-h1-cup { display: inline-block; vertical-align: -0.12em; margin-right: 0.08em; color: var(--accent); }
+.pricing .pr-h1-cup { display: inline-block; vertical-align: -0.12em; color: var(--accent); }
+.pricing .pr-h1-nowrap { white-space: nowrap; }
 .pricing .pr-h1 {
   margin: 0;
   max-width: 28ch;
