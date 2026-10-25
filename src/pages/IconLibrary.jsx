@@ -371,9 +371,8 @@ const prefetchIconSvg = (icon) => {
    body is `dangerouslySetInnerHTML`. The only use in src is PhIcon, which
    injects the app's own bundled path data; third-party markup fetched at
    runtime is the worst possible thing to inject the same way. (The customiser
-   stage is separate: it parses one sanitised SVG into the DOM to edit it.)
-   Composing the
-   body into a `data:image/svg+xml` URI keeps the exact same <img> element, the
+   stage is separate: it parses one SVG, sanitised on fetch or paste, into the
+   DOM to edit it.) Composing the body into a `data:image/svg+xml` URI keeps the exact same <img> element, the
    same `ig-inv` tint, the same `loading="lazy"`, and the same canvas sampling in
    BrandGlyph (a data: URI does not taint a canvas, so that path stops needing
    CORS at all) — while SVG inside an <img> is a non-scripting context by spec,
