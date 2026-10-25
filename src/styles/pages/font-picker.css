@@ -169,17 +169,18 @@
   padding: 10px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-pill);
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+@media (max-width: 640px) { .fbd-overlay .lbry-toolbar { border-radius: 26px; } }
 
 .fbd-overlay .lbry-search {
   min-height: 44px;
   padding: 0 13px;
   border-color: transparent;
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--t0) 4.5%, transparent);
 }
 

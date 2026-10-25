@@ -140,7 +140,7 @@
    Search and the topic jump-links on the left, at the page's edge — not a
    centred 560px island under a centred headline. */
 .srf .lidx-tools { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 24px; max-width: none; margin: 0 0 4px; }
-.srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; min-height: 44px; border-radius: var(--radius); border-color: var(--srf-hair-2); background: var(--card); box-shadow: none; }
+.srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; min-height: 44px; border-radius: var(--radius-pill); border-color: var(--srf-hair-2); background: var(--card); box-shadow: none; }
 .srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
 .srf .lidx-topics { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 18px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
 .srf .lidx-topics a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--t1); text-decoration: none; border-bottom: 1px solid transparent; }

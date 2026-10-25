@@ -310,7 +310,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-stage--light{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .icust-stage-img{display:block;max-width:100%;height:auto}
 /* A selected state with nothing to switch to: reads like .icust-seg button.active. */
-.icust-seg-static{flex:1;padding:6px 8px;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-align:center;color:var(--t0);background:var(--bg-0);box-shadow:var(--shadow-xs);cursor:default}
+.icust-seg-static{flex:1;padding:6px 8px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-align:center;color:var(--t0);background:var(--bg-0);box-shadow:var(--shadow-xs);cursor:default}
 .icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:rgba(244,244,245,.55)}
 .icust-stage--light .icust-stage-msg{color:rgba(10,10,11,.5)}
 .icust-note{flex:1;font-size:var(--fs-caption);color:var(--t2);font-style:italic}
@@ -884,7 +884,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 }
 .lib-surface .lbry-search{
   min-height:44px;padding:0 13px;
-  border-radius:var(--radius);
+  border-radius:var(--radius-pill);
   background:color-mix(in srgb,var(--t0) 4.5%,transparent);
 }
 .lib-surface .lbry-search input{font-size:15px}

@@ -942,7 +942,7 @@
 }
 
 .adm-search {
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   background: var(--bg-2);
   border: 1px solid var(--border);
 }

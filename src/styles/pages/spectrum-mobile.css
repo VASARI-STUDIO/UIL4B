@@ -326,7 +326,7 @@
 
 /* ── screen 2: Icon Library (1459-1485) ──────────────────────────────────── */
 .spm .spm-ic-search {
-  flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px;
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px;
   background: var(--spm-a05); border: 1px solid var(--spm-a09);
 }
 .spm .spm-ic-query { flex: 1; min-width: 0; font-size: 12.5px; color: var(--sp-dim); }

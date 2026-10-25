@@ -72,9 +72,9 @@
 /* The segmented controls: the design's selected segment is a 9% ink wash, not
    a lifted white chip — which in dark was `--bg-0` on `--bg-2`, the page
    colour showing through a hole. One recipe, both themes. */
-.iel-page .icust-seg{border-radius:var(--radius-s);background:color-mix(in srgb,var(--t0) 4%,transparent)}
+.iel-page .icust-seg{border-radius:var(--radius-pill);background:color-mix(in srgb,var(--t0) 4%,transparent)}
 .iel-page .icust-seg button{
-  border-radius:var(--radius-xs);
+  border-radius:var(--radius-pill);
   font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0;
 }
 .iel-page .icust-seg button.active{background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}

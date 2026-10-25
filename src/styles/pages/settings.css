@@ -190,7 +190,7 @@
 .stg .toggle-row:last-child { border-bottom: none; }
 .stg .toggle-row-label { font-size: 14px; font-weight: 500; color: var(--t0); }
 .stg .toggle-row-meta { font-size: 12.5px; color: var(--t1); }
-.stg .toggle-row .theme-seg { border-radius: var(--radius); background: var(--stg-wash-2); }
+.stg .toggle-row .theme-seg { border-radius: var(--radius-pill); background: var(--stg-wash-2); }
 .stg .toggle-row .theme-seg-btn { border-radius: var(--btn-radius); }
 .stg .toggle-row .theme-seg-btn[aria-pressed="true"] { background: var(--card); box-shadow: 0 0 0 1px var(--stg-hair-2); }
 /* --accent-mid, not --brand: the switch's "on" track is a 3:1 graphic and
