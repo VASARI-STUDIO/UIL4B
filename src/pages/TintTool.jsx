@@ -235,13 +235,7 @@ export default function TintTool({ onCopy, toast }) {
       className="tt"
       title="Tint"
       titleId="tt-title"
-      items={[
-        {
-          id: 'import', priority: 1,
-          render: () => <ToolButton icon="swatches" onClick={importPalette} title="Replace the sources with your palette's colours">Import from palette</ToolButton>,
-          menu: { label: 'Import from palette', icon: 'swatches', onSelect: importPalette },
-        },
-      ]}
+      items={[]}
       primary={(
         <ToolButton variant="accent" icon="copy" iconSize={14} onClick={copyAll}>
           {copiedAll ? 'Copied' : 'Copy variables'}
@@ -335,6 +329,8 @@ export default function TintTool({ onCopy, toast }) {
             {sources.length < MAX_SOURCES && (
               <ToolButton variant="dashed" icon="plus" iconSize={13} className="tt-add" onClick={addSource}>Add a colour</ToolButton>
             )}
+            {/* Importing replaces the sources, so it sits with them. */}
+            <ToolButton icon="swatches" iconSize={13} className="tt-import" onClick={importPalette} title="Replace the sources with your palette's colours">Import from palette</ToolButton>
           </ToolSection>
 
           <ToolSection label="Hue and chroma" className="tt-hc">
