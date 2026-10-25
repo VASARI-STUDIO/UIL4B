@@ -26,13 +26,12 @@ export const BASE_CURRENCY = 'usd'
 //
 //     What a customer is actually billed comes from the live Stripe price
 //     resolved via PRICE_ENV_KEYS / LOOKUP_KEYS below. Those prices are created
-//     and edited in the Stripe dashboard by the founder and do not exist in
+//     and edited in the Stripe dashboard and do not exist in
 //     this repository. Editing this table changes the number a visitor is
 //     SHOWN when /api/get-prices cannot answer. It changes no charge.
 //
-//     Keeping the charge and the display in step is the founder's, tracked in
-//     docs/OWNER-ACTIONS.md, which is local-only since 2026-09-16 and is not in
-//     this repository; .gitignore records the decision.
+//     Keeping the charge and the display in step is a manual job done in the
+//     Stripe dashboard, outside this repository.
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // USD is $7 monthly · $48 yearly. src/config/planLadder.js carries the same
