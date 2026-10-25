@@ -46,6 +46,10 @@ async function openWithRecent(page) {
   await hex.fill('#22c55e')
   await hex.press('Enter')
   await expect(picker.locator('.cpk-recents')).toBeVisible()
+  // getBoundingClientRect includes transforms, so a measurement taken while the
+  // entry animation runs (the sheet's 24px slide, the panel's scale-in) reads
+  // a few px off the settled layout. Wait for the animations, not for time.
+  await picker.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))))
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
   return picker
 }
