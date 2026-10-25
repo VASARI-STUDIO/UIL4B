@@ -757,7 +757,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    wraps", below), so both tabs of /create/icons share one toolbar height
    (25-layout-target-sweep: 68px vs 213px). */
 .lib-surface .lbry-toolbar-filters{gap:10px}
-.lib-surface .lbry-filters{gap:6px;padding:0;background:none;border-radius:0}
+.lib-surface .lbry-filters{gap:6px;padding:0;background:none;border:0;border-radius:0}
 .lib-surface .lbry-filters .lbry-filter{
   min-height:40px;padding:9px 15px;
   border:1px solid var(--bh);border-radius:var(--radius-pill);
@@ -882,11 +882,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   box-shadow:var(--shadow-s);
   -webkit-backdrop-filter:none;backdrop-filter:none;
 }
-.lib-surface .lbry-search{
-  min-height:44px;padding:0 13px;
-  border-radius:var(--radius-pill);
-  background:color-mix(in srgb,var(--t0) 4.5%,transparent);
-}
+/* Height, fill, hairline and shape come from the base .lbry-search (--search-h,
+   --inp, --border, the pill); this surface only sets the inset. */
+.lib-surface .lbry-search{padding:0 13px}
 .lib-surface .lbry-search input{font-size:15px}
 /* The Icon Library's pack menu trigger shares the filter row with the chips, so
    it takes their height and their hairline. NOT their 999px radius: this one
@@ -1291,7 +1289,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    library control is floored at in tool-shell.css. */
 @media(pointer:coarse){
   .lib-surface .btn{min-height:44px}
-  .lib-surface .lbry-search input{min-height:44px}
+  .lib-surface .lbry-search input{min-height:var(--search-h)}
 }
 
 
@@ -1358,10 +1356,10 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   border:1px solid color-mix(in srgb,var(--t0) 8%,transparent);box-shadow:none;
 }
 @media(max-width:640px){.lib-surface .lbry-toolbar:is(.pgl-toolbar,.grg-toolbar){border-radius:26px}}
-/* The search pill (line 228): the card ground, 999px, 11px/18px. */
+/* The search pill (line 228): 18px inset. Its ground and hairline are the shared
+   search tokens, so it matches every other search bar. */
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-search{
-  min-height:44px;padding:0 18px;border-radius:var(--radius-pill);
-  background:var(--card);border:1px solid color-mix(in srgb,var(--t0) 10%,transparent);
+  padding:0 18px;
 }
 /* The rule above is (0,3,0) and comes after the generic focus ring near the top
    of this file, so it covered that ring's accent border and left only the wash.
@@ -1372,7 +1370,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    segment a 9% ink wash in full ink — not the solid ink chip the icon filters
    use, which is a different control in the file. */
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters{
-  gap:2px;padding:3px;border-radius:var(--radius-pill);
+  gap:2px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-pill);
   background:color-mix(in srgb,var(--t0) 5%,transparent);
 }
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter{

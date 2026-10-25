@@ -942,8 +942,11 @@
 }
 
 .adm-search {
+  box-sizing: border-box;
+  height: var(--search-h);
+  padding-inline: 16px;
   border-radius: var(--radius-pill);
-  background: var(--bg-2);
+  background: var(--inp);
   border: 1px solid var(--border);
 }
 

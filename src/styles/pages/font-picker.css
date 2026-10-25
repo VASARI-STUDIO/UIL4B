@@ -177,11 +177,7 @@
 @media (max-width: 640px) { .fbd-overlay .lbry-toolbar { border-radius: 26px; } }
 
 .fbd-overlay .lbry-search {
-  min-height: 44px;
   padding: 0 13px;
-  border-color: transparent;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
 }
 
 .fbd-overlay .lbry-search:focus-within {

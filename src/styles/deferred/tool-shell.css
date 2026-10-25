@@ -1101,7 +1101,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    is made in markup rather than here — a tray and a menu are different
    controls, not one control with two looks.
 
-   The trigger is 46px to match `.lbry-search`'s min-height, so the collapsed
+   The trigger takes `.lbry-search`'s --search-h, so the collapsed
    row reads as one bar of controls rather than a search field with smaller
    things floating beside it. It clears the WCAG 2.5.8 44px floor on its own,
    which the 38px tray option only does inside the `pointer:coarse` block. */
