@@ -553,17 +553,11 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
    390. WCAG 2.5.8 (AA) asks 24x24. A 14px band is also simply hard to hit
    with a thumb on a phone, which is where a colour tool gets used one-handed.
 
-   MOBBIN, five captures, all iOS colour/adjustment sliders:
-     Freeform   https://mobbin.com/screens/17ea4802-3f5f-4425-a740-813e13d3b7da
-     Craft      https://mobbin.com/screens/8bfac362-d556-49de-befa-74221fb49fe7
-     Apple Notes https://mobbin.com/screens/63d95cf0-0452-451f-aa1c-0a5c2654c4c4
-     VSCO       https://mobbin.com/screens/9b5f4b29-caa9-4443-a8dd-2900a717dd19
-     Edits      https://mobbin.com/screens/da55d8ca-8fbf-4f46-914c-d40e7e45a52d
-   Freeform, Craft and Apple Notes all paint a THICK gradient track — visibly
-   in the mid-20s of px — with the thumb inset in it. VSCO and Edits keep a
-   thin track and put the size in a large overhanging thumb. Both shapes give
-   the finger 24px+; none of the five hands the user a 14px band. The thick
-   track is the one taken here because the track IS the gradient preview on
+   iOS colour and adjustment sliders commonly paint a THICK gradient track —
+   in the mid-20s of px — with the thumb inset in it, or keep a thin track and
+   put the size in a large overhanging thumb. Both shapes give the finger 24px+;
+   neither hands the user a 14px band. The thick track is the one taken here
+   because the track IS the gradient preview on
    this control, so height buys legibility as well as reach.
 
    The thumb keeps its two opposed rings and its `--snapv-handle` core — that
@@ -1032,8 +1026,8 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 .dgh-aside{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px;min-width:0;align-self:end}
 
 /* ── GalleryCloseCta ─ the last block on a gallery page ─────────────────────
-   Founder request (2026-09-07): a closing "can't find what you're looking for"
-   on every gallery.
+   A closing "can't find what you're looking for" block at the end of every
+   gallery.
 
    NO CARD, NO PANEL, NO TINT. Nothing here paints a background, and that is the
    design rather than an omission: the page above it is a hundred cards, and one
@@ -1044,13 +1038,13 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 
    The generous bottom padding is load-bearing, not taste. `.global-feedback-btn`
    is fixed at the bottom-right corner (20px/20px, 14px/14px on a phone), and
-   #413 found a FAB sitting on top of a footer control on a page with no scroll
-   room. A centred pill clears it on width alone at most sizes, but not at 320,
+   it can sit on top of a footer control on a page with no scroll room. A
+   centred pill clears it on width alone at most sizes, but not at 320,
    so the block keeps a floor of clear space under the action. */
 .gcta{display:flex;flex-direction:column;align-items:center;gap:12px;margin:clamp(52px,7vw,88px) 0 0;padding:clamp(36px,5vw,56px) 20px clamp(56px,7vw,72px);border-top:1px solid var(--border);text-align:center}
 .gcta-action{margin-top:6px}
 @media(max-width:720px){
-  /* NO min-height (founder decision, 2026-09-13). The floor here was 280px and
+  /* NO min-height. The floor here was 280px and
      the base rule's was 300px; both are gone, and the masthead is now exactly
      its content plus its padding at every width. See the long note above
      .dgh-hero in global.css for the measurements that retired them - the short
@@ -1094,7 +1088,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 @media(max-width:900px){.lbry-filter-hint{display:none}}
 /* And on ANY touch device, whatever its width. The 900px rule was standing in
    for "no modifier key", and an iPad in landscape is 1024px wide: MEASURED
-   2026-09-16 on the live /discover/gradients at 1024 with touch, the Type tray
+   on the live /discover/gradients at 1024 with touch, the Type tray
    printed "Shift-click to combine types" beside chips no finger can
    shift-click. The trigger and the pressed chips still report a
    multi-selection; only the instruction for a gesture that is not offered
@@ -1124,7 +1118,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 /* IN DARK, --card AND --bg-2 ARE THE SAME HEX (#111215), so every "raised
    surface on the tray" fill above paints nothing there: the tray's sliding
    indicator is --card on a --bg-2 tray, and the menu's active and hover rows
-   are --bg-2 on a --card menu. Measured 2026-09-08 on /discover/palettes with
+   are --bg-2 on a --card menu. Measured on /discover/palettes with
    Brand and Warm selected — indicator rgb(25,26,29) on rgb(25,26,29), active
    option rgb(25,26,29) on rgb(25,26,29) — leaving text colour (242 vs 159) as
    the only sign of which option is on, and hover with no feedback at all.
@@ -1249,9 +1243,9 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
        filter group onto a line of its own. Measured at 834px: a 774px search
        field, above a filter tray with a third of the row empty beside it.
      · `.lbry-toolbar-action{margin-left:auto}` then strands the action on a
-       ragged last row, hard right, alone. That is the same shape #298 recorded
-       as a deliberate cost on `.pl-toolbar` ("Submit prompt lands on a third
-       row of its own") — reproduced here on five more surfaces by one shared
+       ragged last row, hard right, alone. That is the same shape `.pl-toolbar`
+       accepts as a deliberate cost (the Submit prompt action lands on a third
+       row of its own), reproduced here on five more surfaces by one shared
        rule, which is the argument for fixing it in the shared component.
 
    The cap is 360px because that is `.pl-search-wrap`'s existing desktop
@@ -1263,31 +1257,31 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
    The auto margin is DROPPED rather than kept, so an action that still wraps
    sits flush under the filters and reads as the next control in the row rather
    than an orphan pinned to the far edge. Nothing is reordered: `order` and
-   grid areas both move the box without moving the tab stop, and #298 already
-   rejected that trade on this exact layout on WCAG 2.4.3 grounds. Search →
+   grid areas both move the box without moving the tab stop, and that trade
+   is rejected on this layout on WCAG 2.4.3 grounds. Search →
    filters → action is the DOM order, the visual order and the focus order, at
    every width. */
 /* PATTERN B, FOURTH INSTANCE - and the band bound above was the bug.
 
-   #318 wrote the two rules below for 641-980 because that was the range with no
-   layout of its own. The reasoning it gave - "`.lbry-search{flex:1 1 240px}` has
-   no ceiling, so with nothing to compete with on a short row it takes the WHOLE
-   row and pushes every filter group onto a line of its own", and "`margin-left:
-   auto` then strands the action on a ragged last row, hard right, alone" - is
+   The two rules below were written for 641-980 because that was the range with
+   no layout of its own. Their reasoning - `.lbry-search{flex:1 1 240px}` has no
+   ceiling, so with nothing to compete with on a short row it takes the WHOLE
+   row and pushes every filter group onto a line of its own, and `margin-left:
+   auto` then strands the action on a ragged last row, hard right, alone - is
    not a fact about 641-980. It is a fact about a row whose filter tray cannot
    share it. Above 980 the tray usually can, so the fault stayed hidden on five
    of the six surfaces and shipped on the sixth.
 
-   Founder, 2026-09-04: "the header design changes height switching from the
-   emoji to icon library. the bar is broken visually on a standard desktop."
+   The toolbar changed height when switching from the emoji to the icon library,
+   which broke the bar on a standard desktop.
 
    MEASURED at 1440x900 before this change:
 
      /create/icons   toolbar  68px   tray wants  493px   one line
      /create/emoji   toolbar 213px   tray wants 1478px   THREE lines
 
-   145px of jump on a tab switch, and on the emoji side exactly the shape #318
-   named: a 1321px search field alone on line one, the tray wrapped to two chip
+   145px of jump on a tab switch, and on the emoji side exactly the shape described
+   above: a 1321px search field alone on line one, the tray wrapped to two chip
    rows on line two, and a 70px skin-tone control orphaned hard right on line
    three. The emoji tray needs 1478px because it carries twelve categories with
    a glyph, a label and a count each; no desktop under about 2050px can give it
@@ -1305,7 +1299,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
    person does not spend the afternoon on it. Three explicit tracks
    (`minmax(0,360px) minmax(0,1fr) auto`) do make the row deterministic, but a
    fixed first track cannot give width back the way `flex:1 1 240px` does, and
-   flex was quietly relying on that: measured on this branch, the Prompt Library
+   flex was quietly relying on that. Measured: the Prompt Library
    at 1024px went 68px -> 124px and the Icon Library at 834px went 68px -> 120px,
    because the search field held 360px that the filter row needed. Flex shares
    the row correctly already. What it could not do was stop a 1478px tray from
@@ -1313,7 +1307,8 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 @media(min-width:641px){
   .lbry-search{max-width:360px}
 }
-/* The auto margin is dropped only in the band #318 wrote it for. Above 980 the
+/* The auto margin is dropped only in the 641-980 band, where the tray cannot
+   share the row. Above 980 the
    action no longer lands on a ragged last row — the tray collapses before the
    row runs out — so there is nothing to rescue it from, and pinning it to the
    far edge is the resting look those five surfaces already had. */
