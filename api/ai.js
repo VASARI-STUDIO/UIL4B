@@ -87,7 +87,7 @@ function todayStr() {
 // which is absent from firestore.rules and therefore default-denied to every
 // client — only the Admin SDK (which bypasses rules) touches it. Reusing the
 // collection is what keeps the monthly ceiling free of a rules change, and
-// rules changes are founder-gated and separately published.
+// rules changes are published separately.
 function monthStr() {
   const d = new Date()
   return `m${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -111,7 +111,7 @@ function monthStr() {
 //      audiences want the SAME sentence rather than asking for a compromise.
 // Cost: the examples are text-only, so this adds input tokens and no extra
 // request. Free Gemini tiers meter requests per minute/day, not tokens, so it
-// stays inside the founder's free-tier-only constraint.
+// stays inside the free-tier-only constraint.
 const ALT_BASE_PROMPT = `# Role
 
 You are an accessibility specialist writing the alt text for one image on a website.
@@ -479,11 +479,11 @@ async function callGemini(userMessage, opts = {}) {
 // find out, within a day, that every generation is coming from the fallback?
 // These counters are the durable half of making that a yes.
 //
-// WHERE IT LIVES, and why that needed nothing from the founder: `provider-health`
+// WHERE IT LIVES, and why that needs no rules change: `provider-health`
 // appears NOWHERE in firestore.rules, which default-denies, so it is unreachable
 // from every client and only the Admin SDK (which bypasses rules) can touch it.
 // That is the same property `daily-usage` already relies on, and it is what
-// keeps this clear of a rules change — rules changes are founder-gated and
+// keeps this clear of a rules change — rules changes are
 // published separately.
 const PROVIDER_HEALTH = 'provider-health'
 const HEALTH_WINDOW_DAYS = 7
@@ -605,8 +605,8 @@ async function alertFirstFailoverOfDay(db, date, summary) {
  * Summarise the last HEALTH_WINDOW_DAYS for the admin diagnostic.
  *
  * A verdict, not a pile of numbers. `openrouterKey: "set (73 chars)"` is what a
- * revoked key looks like too — that is precisely why the old owner action could
- * never be completed. This reports what the key DID.
+ * revoked key looks like too — that is why a key's presence is not a health
+ * check. This reports what the key DID.
  */
 // Exported and pure. This is the sentence an operator actually reads, so it is
 // the part most worth pinning: `days` is `[{ date, data }]`, newest first.
@@ -638,8 +638,8 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
   const attempts = totals.openrouterOk + totals.openrouterFail
   let status, summary
   if (attempts === 0) {
-    // NOT 'ok'. Silence is not health — reading no traffic as a pass is how the
-    // previous owner action recorded a check that never ran.
+    // NOT 'ok'. Silence is not health — reading no traffic as a pass would
+    // record a check that never ran.
     status = 'no-data'
     summary = `No prompt generations in the last ${window} days, so nothing has exercised the OpenRouter path. This is not a pass — generate one prompt and look again.`
   } else if (totals.openrouterFail === 0) {
@@ -660,7 +660,7 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
     totals,
     byDay,
     lastFailover,
-    // Reported so the founder can see from Admin whether outbound mail is still
+    // Reported so an admin can see from Admin whether outbound mail is still
     // going out as the Resend sandbox, without opening a dashboard. A mailbox is
     // not a verified sending domain, and the difference is invisible until
     // someone tries to email a customer.
@@ -726,7 +726,7 @@ export function buildPromptUserMessage({ description, style, platform } = {}) {
 // and the whole provider-health apparatus below exists because the first one
 // did. Same race, same counters, same once-a-day operator email.
 //
-// COST CONTROLS, all four of them, because this spends the founder's money:
+// COST CONTROLS, all four of them, because this spends real money:
 //   1. the brief is capped at MAX_PROMPT_CHARS on the way in;
 //   2. maxTokens is 900 — enough for eight swatches and two font names, and not
 //      enough to be talked into an essay;
@@ -1004,102 +1004,61 @@ function timingSafeEqual(a, b) {
   return nodeTimingSafeEqual(av, bv)
 }
 
-// ── The founder's internal boards, served rather than shipped ───────────────
+// ── The internal boards, served rather than shipped ────────────────────────
 //
-// TWO data modules describe the PROJECT rather than the product, and both used
-// to ship to the browser. This one endpoint returns both, because they are one
-// question ("what is the state of this project") behind one gate, and because
-// two requests would be two things to keep in step.
+// TWO data modules describe the PROJECT rather than the product. This one
+// endpoint returns both, because they are one question ("what is the state of
+// this project") behind one gate, and because two requests would be two things
+// to keep in step.
 //
-//   src/data/pipeline.js    the engineering backlog — 185 rows whose `note`
-//                           fields are long, candid and written for us.
-//   src/data/moduleBoard.js the module status board — 20 entries carrying
-//                           `summary`, `recentChanges`, `nextSteps`, `health`
-//                           and dated owner actions per module.
+//   src/data/pipeline.js    the engineering backlog — long, candid `note`
+//                           fields written for the team.
+//   src/data/moduleBoard.js the module status board — per module, a `summary`,
+//                           `recentChanges`, `nextSteps`, `health` and dated
+//                           owner actions.
 //
-// THE FIRST ONE reached the Admin dashboard by `import('../data/pipeline')`,
-// which made it a CLIENT MODULE — so rolldown emitted it as
-// dist/assets/pipeline-*.js and Vercel served it as a public static asset.
-// MEASURED against a real `npm run build`, anonymous, no login:
-//
-//   GET /admin                    200   the HTML names the entry chunk
-//   GET /assets/index-*.js        200   names Admin-rjGyizH8.js
-//   GET /assets/Admin-*.js        200   names pipeline-DUbq1XL3.js
-//   GET /assets/pipeline-*.js     200   824,007 bytes, 319,711 gzip, no auth
-//
-// That file contained the literal string `allow create: if true` — the feedback
-// rule that #472 has since closed in firestore.rules (docs/OWNER-ACTIONS.md,
-// the founder's own worklist, followed the boards out of the repository on
-// 2026-09-16 for the same reason one level up: this paragraph is the argument
-// for why a worklist must not ship to a client or sit in a public tree — see
-// .gitignore) — 23 mentions of firestore.rules,
-// 3 permission-denied diagnostics and
-// 246 mentions of the founder. #420 moved it behind a dynamic import, which
-// fixed WHEN it was fetched and did nothing at all about WHO could fetch it.
-//
-// THE SECOND ONE was a plain STATIC import in Admin.jsx, so its 20,332 bytes
-// were inlined straight into the Admin chunk and fetched by anyone who loaded
-// /admin. Measured on the same build, in dist/assets/Admin-*.js verbatim:
-//
-//   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after
-//   the published Firestore rules", "Do not assume the admin custom claim
-//   exists; resolve any permission-denied result explicitly", ...]
-//
-// Instructions addressed to the owner, plus per-module health and what is known
-// to be unfinished. Much smaller, so the weight argument barely applies — the
-// trust argument applies in full, and it is the same class of disclosure.
-//
-// So both boards now arrive from here, behind the same verified-admin check
-// /api/ai?diag=1 already uses, and neither module enters the client graph.
+// WHY THEY ARE SERVED, NOT BUNDLED: a module imported by client code is built
+// into dist/assets/ and served as a public static asset, readable by anyone
+// without logging in. These boards hold instructions addressed to the owner,
+// per-module health and what is known to be unfinished, so they must not enter
+// the client graph at all. Both arrive from here, behind the same
+// verified-admin check /api/ai?diag=1 uses.
 // tests/unit/admin-chunk-carries-no-backlog.test.js DERIVES the internal boards
 // from src/data/ by shape and fails the build if a row of any of them is back
-// in the output — so a third one is covered the day it is written.
+// in the output — so a new board is covered the day it is written.
 //
 // ── WHY THIS ROUTE AND NOT A NEW ONE ───────────────────────────────────────
 // api/ holds exactly twelve deployed functions and Vercel allows twelve on this
 // plan; three unit tests fail the build on a thirteenth. api/verify-admin.js is
-// the established place to fold an admin-only payload (`includeUsers` says so
-// in its own comment) — but docs/reference/human-validation-zones.md gates that
-// file to the founder, so a change there could not ship today and the board
-// would have to stay broken until somebody typed a patch in. THIS route is not
-// gated, already imports requireAdmin from _lib/admin.js, and already answers
-// an admin-only GET. Folding in here costs nothing against the budget and ships
-// now, which is the difference between a hole closed and a hole documented.
+// the usual place to fold an admin-only payload (`includeUsers` says so in its
+// own comment), but that file is a protected one that changes only through a
+// separate review. THIS route is not protected, already imports requireAdmin
+// from _lib/admin.js, and already answers an admin-only GET. Folding in here
+// costs nothing against the budget.
 //
 // ── WHY import() AND NOT A GENERATED JSON ──────────────────────────────────
-// The same reason the client's comment gave before it: a generator can go
-// stale. An agent who edits pipeline.js and forgets to re-run it would leave
-// the founder's board showing yesterday's backlog with every check green.
-// import() of a literal path cannot go stale. It is INSIDE this branch rather
-// than at module scope so the hot POST path never parses a quarter of a
-// megabyte of prose on a cold start — and, since 2026-09-16, so that a
-// deployment WITHOUT the modules still serves every other route on this
-// function instead of failing to load at all.
+// A generator can go stale. If pipeline.js were edited without re-running it,
+// the board would show an old backlog with every check green. import() of a
+// literal path cannot go stale. It is INSIDE this branch rather than at module
+// scope so the hot POST path never parses a large block of prose on a cold
+// start, and so a deployment WITHOUT the modules still serves every other
+// route on this function instead of failing to load at all.
 //
-// ── SINCE 2026-09-16 THE MODULES ARE NOT IN THE DEPLOYMENT AT ALL ──────────
+// ── THE MODULES ARE NOT IN THE DEPLOYMENT ──────────────────────────────────
 //
-// The repository went PUBLIC to use free GitHub Actions minutes, which made
-// this backlog world-readable. The founder chose to keep the repository public
-// and take the notes out of it instead: src/data/pipeline.js and
-// src/data/moduleBoard.js are gitignored, byte-identical on his machine and in
-// no clone. .gitignore carries the decision, its date and its cost.
-//
-// vercel.json's `functions["api/ai.js"].includeFiles` named both files as
-// belt-and-braces behind @vercel/nft's trace of the literal imports below. It
-// named two paths that no longer exist in a checkout, so it went with them, and
-// the `functions` block was empty afterwards and went too.
+// src/data/pipeline.js and src/data/moduleBoard.js are gitignored: they exist
+// on the maintainer's machine and in no clone of this public repository.
 //
 // SO IN PRODUCTION BOTH IMPORTS BELOW THROW, AND THAT IS THE EXPECTED STATE
 // RATHER THAN A FAULT. It is caught by specifier and said out loud. WHAT IT
 // MUST NEVER DO IS ANSWER 200 WITH EMPTY ARRAYS: an empty board is
 // indistinguishable from "there is no work left", and a surface that cannot
-// tell those two apart is the exact class of lie the comments above argue
-// against. A REAL failure — a syntax error in the module, a dependency of it
-// missing — is still a 500, because it is still a fault; the two are told apart
-// by the error's own `code` and the specifier it names, not by the wording of
-// its message.
+// tell those two apart is a lie. A REAL failure — a syntax error in the
+// module, a dependency of it missing — is still a 500, because it is still a
+// fault; the two are told apart by the error's own `code` and the specifier it
+// names, not by the wording of its message.
 //
-// pipeline.js DOES NOT MOVE. Every agent's composition scripts and several
+// pipeline.js DOES NOT MOVE. Composition scripts and several
 // tests/unit/*.test.js files import it by that exact path, and they still run
 // in full wherever it is present.
 
@@ -1108,7 +1067,7 @@ function timingSafeEqual(a, b) {
 // could not be found, which is the unambiguous half; the message is read as a
 // fallback for a runtime that sets no `url`, and only the quoted specifier out
 // of it, because matching the whole message would also match a missing
-// DEPENDENCY of a board and report a real defect as a founder decision.
+// DEPENDENCY of a board and report a real defect as a missing board.
 const BOARD_MODULE = /[/\\]src[/\\]data[/\\](?:pipeline|moduleBoard)\.js$/
 function isBoardModuleMissing(err) {
   if (err?.code !== 'ERR_MODULE_NOT_FOUND') return false
@@ -1166,7 +1125,7 @@ async function serveBacklog(req, res) {
 }
 
 export default async function handler(req, res) {
-  // ── The founder's Pipeline board ──────────────────────────────────────────
+  // ── The Pipeline board ────────────────────────────────────────────────────
   // GET /api/ai?backlog=1. Ahead of the diagnostic because it is a different
   // question with the same gate; see serveBacklog above for why it lives here.
   if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
@@ -1307,8 +1266,8 @@ export default async function handler(req, res) {
   // every other AI task already uses. Both live in `daily-usage`, which is
   // absent from firestore.rules and therefore default-denied to every client —
   // only the Admin SDK, which bypasses rules, can read or write it. That is
-  // what keeps this clear of a rules change, and rules changes are founder-
-  // gated and published separately.
+  // what keeps this clear of a rules change, and rules changes are
+  // published separately.
   //
   // The response carries the count back so the UI can show what is left
   // without ever reading the collection itself.
