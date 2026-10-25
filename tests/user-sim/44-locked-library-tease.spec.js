@@ -22,7 +22,7 @@
 // meaningless, and that is exactly how this suite would start lying.
 // ── WHAT CHANGED WHEN THE GATE GREW A THIRD RUNG ───────────────
 //
-// The founder's tiers — 3 signed out, 10 with a free account, everything with
+// The tiers — 3 signed out, 10 with a free account, everything with
 // Pro — mean the withheld set is no longer "the paid brands". It is now
 // "everything past this viewer's cap", which at the bottom rung is most of the
 // library and at the free rung is all but ten. Every assertion below is therefore
@@ -114,7 +114,7 @@ test.describe('a locked library row hands nothing over — signed out', () => {
   })
 
   test('the signed-out rung shows three palettes and says so', async ({ page }) => {
-    // The founder's number, on the page rather than in a unit test. The count
+    // The signed-out cap, checked on the page rather than in a unit test. The count
     // line is the honesty check: a page showing three may not claim the size
     // of the whole library, in the masthead or anywhere in it.
     await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
@@ -315,7 +315,7 @@ test.describe('the same gate in the Palette Builder brands panel', () => {
 })
 
 test.describe('the locked rows in the dark theme', () => {
-  // #343 made the dark theme reachable, so both themes are real surfaces now.
+  // The dark theme is reachable, so both themes are real surfaces.
   // colorScheme on the context, not setAttribute — setting the attribute by
   // hand does not re-render React and the assertion would pass against a light
   // page wearing a dark attribute.
