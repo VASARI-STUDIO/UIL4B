@@ -49,9 +49,7 @@ test('a revocation beats the seven-day past-due grace', () => {
 })
 
 test('planForUser honours it too, and admins are still exempt', () => {
-  // The admin allowlist is the ADMIN_EMAILS environment variable now — it used
-  // to be the founder's personal address written into api/_lib/plans.js, and
-  // into this test. Set here rather than assumed, so the exemption is measured
+  // The admin allowlist is the ADMIN_EMAILS environment variable. Set here rather than assumed, so the exemption is measured
   // against a configured administrator instead of against whatever the machine
   // running the suite happens to have in its environment.
   const before = process.env.ADMIN_EMAILS
@@ -143,19 +141,16 @@ test('the client mirror checks the same flag, before the same grace window', () 
   assert.ok(flagAt < graceAt, 'the client checks the past-due grace before the revocation, so a revoked account keeps Pro for seven more days')
 })
 
-test('the webhook does not cancel the Stripe subscription behind the founder', () => {
+test('the webhook does not cancel the Stripe subscription itself', () => {
   // Deliberate: cancelling is an irreversible outward action on a live billing
-  // account, taken off the back of one webhook. If this ever becomes wanted it
-  // is a founder decision, not a drive-by.
+  // account, taken off the back of one webhook. If that is ever wanted it needs
+  // its own change and review, not a side effect of this handler.
   //
-  // CORRECTION, 2026-09-16: this comment used to add "and Stripe already cancels
-  // on a chargeback under its own rules". It does not. Cancel-on-dispute is a
-  // Billing dashboard SETTING, off unless the account turns it on
-  // (docs.stripe.com/billing/subscriptions/cancel). A disputed subscription
-  // therefore keeps cycling and keeps firing customer.subscription.updated —
-  // which is what made the deleted-user-document wash repeatable rather than a
-  // one-off. Access still stops here, because accessRevoked is what plans.js
-  // reads; the subscription record simply outlives it.
+  // Stripe does not cancel a disputed subscription by default: cancel-on-dispute
+  // is a Billing dashboard setting (docs.stripe.com/billing/subscriptions/cancel).
+  // A disputed subscription therefore keeps renewing and firing
+  // customer.subscription.updated. Access still stops here, because
+  // accessRevoked is what plans.js reads; the subscription record outlives it.
   const hook = fs.readFileSync(path.join(process.cwd(), 'api/stripe-webhook.js'), 'utf8')
     .replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   assert.doesNotMatch(hook, /subscriptions\.(cancel|del)\(/, 'the webhook now cancels subscriptions in Stripe')
