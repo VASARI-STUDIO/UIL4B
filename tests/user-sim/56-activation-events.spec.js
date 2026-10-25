@@ -180,9 +180,10 @@ test.describe('activation fires from the export, not from its neighbours', () =>
     await go(page, '/create/tint')
     await ready(page, '/create/tint')
 
-    const copy = page.getByRole('button', { name: 'Copy variables' }).first()
+    const copy = page.getByRole('menuitem', { name: 'Copy CSS' })
     // POSITIVE CONTROL: this page really does copy — otherwise "no activation"
     // would be true of a page with no working controls at all.
+    await page.locator('.tl-export-btn').click()
     await expect(copy, 'the tint tool has a copy control').toBeVisible()
     await copy.click()
     await clipboard(page).toMatch(/#[0-9a-f]{6}/i)
