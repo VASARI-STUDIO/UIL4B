@@ -154,7 +154,7 @@ test('no saving unless the monthly price is live in the same currency', () => {
 test('the Yearly note names no monthly price at all', () => {
   const page = stripComments(read('src/pages/Pricing.jsx'))
   assert.doesNotMatch(page, /monthlyForNote|sizedMonthly/, 'the note reads a monthly price again')
-  assert.match(page, /billedLine\(o\)/, 'the note is no longer built from the offer alone')
+  assert.match(page, /billedLine\(o\)/, 'the Yearly note no longer calls billedLine(o), so it is not built from the offer alone')
 })
 
 test('the upgrade modal states no saving across two currencies', () => {

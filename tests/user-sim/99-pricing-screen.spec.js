@@ -46,6 +46,53 @@ async function stubPrices(page, body = LIVE, status = 200) {
   }))
 }
 
+// The checkout's payment form is Stripe's embed. A build with a publishable key
+// uses window.Stripe when one exists, so this stand-in is what it finds, and
+// /api/create-checkout is answered here: nothing reaches Stripe. The mounted
+// node carries the session it was made from, one per cadence.
+async function answerSessions(page) {
+  const intervals = []
+  await page.route('**/api/create-checkout', async (route) => {
+    const { interval } = JSON.parse(route.request().postData() || '{}')
+    intervals.push(interval)
+    await route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ clientSecret: `cs_test_stub_${interval}` }),
+    })
+  })
+  return intervals
+}
+
+async function stubStripe(page) {
+  await page.addInitScript(() => {
+    const unused = () => { throw new Error('not part of this stand-in') }
+    window.Stripe = () => ({
+      elements: unused,
+      createToken: unused,
+      createPaymentMethod: unused,
+      confirmCardPayment: unused,
+      createEmbeddedCheckoutPage: async (options) => {
+        const secret = await options.fetchClientSecret()
+        let node = null
+        return {
+          mount(el) { node = el; el.setAttribute('data-stub-session', secret); el.textContent = 'Stripe Checkout' },
+          unmount() { node?.removeAttribute('data-stub-session'); if (node) node.textContent = '' },
+          destroy() { this.unmount() },
+        }
+      },
+    })
+  })
+}
+
+// Logs in through the popup the checkout's prompt opens. `lateSignIn` starts
+// the page signed out and lets this form complete the sign-in in place.
+async function logInThroughPrompt(page) {
+  await page.locator('.checkout-form').getByRole('button', { name: 'Log in to continue' }).click()
+  await expect(page.locator('#ui-login-title')).toBeVisible()
+  await page.locator('#ui-login-email').fill('someone@uil4b.test')
+  await page.locator('#ui-login-password').fill('a-long-password')
+  await page.locator('form.auth-form button[type="submit"]').click()
+}
+
 const switchGroup = (page) => page.getByRole('radiogroup', { name: 'Billing' })
 const option = (page, name) => switchGroup(page).getByRole('radio', { name: new RegExp(`^${name}`) })
 // The radios are visually hidden; the label is what a pointer hits.
@@ -73,9 +120,11 @@ test.describe('the billing switch', () => {
 
     await expect(pro(page).locator('.pr-amt')).toHaveText(money(LIVE.yearly.usd / 12))
     await expect(pro(page).locator('.pr-per')).toHaveText('/ month')
-    // Both real prices are written out; no strike-through, no badge.
+    // The real yearly price is written out; no strike-through, no badge.
     await expect(note(page)).toContainText(money(LIVE.yearly.usd))
-    await expect(note(page)).toContainText(money(LIVE.monthly.usd))
+    // The Yearly terms name only their own price (live-price-gate.test.js pins the
+    // source of that); the monthly figure belongs to the other tab.
+    await expect(note(page)).not.toContainText(money(LIVE.monthly.usd))
     await expect(under(page)).toHaveText(`Free for 7 days, then ${money(LIVE.yearly.usd)} a year.`)
     await expect(page.locator('.pr-plan-was, .pr-plan-badge, s, del')).toHaveCount(0)
   })
@@ -472,12 +521,8 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await expectRendered(page)
 
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=yearly')
-    await expect(page.locator('.pr-close .pr-cta--pro')).toHaveAttribute('href', '/checkout?plan=yearly')
-    await expect(page.locator('.pr-bar-btn')).toHaveAttribute('href', '/checkout?plan=yearly')
     await choose(page, 'Monthly')
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=monthly')
-    await expect(page.locator('.pr-close .pr-cta--pro')).toHaveAttribute('href', '/checkout?plan=monthly')
-    await expect(page.locator('.pr-bar-btn')).toHaveAttribute('href', '/checkout?plan=monthly')
 
     // Not the bare sign-in box: the visitor lands on the plan, its price and its trial.
     await choose(page, 'Yearly')
@@ -486,8 +531,79 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await expect(page.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
     await expect(page.locator('.checkout-plan-amount')).not.toHaveText('—')
     await expect(page.locator('.checkout-trial')).toContainText('7-day free trial')
-    await expect(page.getByText('Log in or create an account to pay').first()).toBeVisible()
+    // The panel's prompt: the summary's own copy of it is hidden in two columns.
+    await expect(page.locator('.checkout-form').getByText('Log in or create an account to pay')).toBeVisible()
   })
+
+  // The closing band and the docked bar only exist in the narrow layout (the
+  // 1440px ledger has neither), so their links are read at a phone width.
+  test('signed out, the closing Choose Pro and the docked bar button also carry the chosen cadence', async ({ page }) => {
+    watch(page, 'a visitor at the end of the page before they have an account')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await stubPrices(page)
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    await expect(page.locator('.pr-close .pr-cta--pro')).toHaveAttribute('href', '/checkout?plan=yearly')
+    await expect(page.locator('.pr-bar-btn')).toHaveAttribute('href', '/checkout?plan=yearly')
+    await choose(page, 'Monthly')
+    await expect(page.locator('.pr-close .pr-cta--pro')).toHaveAttribute('href', '/checkout?plan=monthly')
+    await expect(page.locator('.pr-bar-btn')).toHaveAttribute('href', '/checkout?plan=monthly')
+  })
+
+  // The continuation of the test above: the visitor clicks the prompt, logs in
+  // through the popup, and the page must still be the checkout for the cadence
+  // they chose, now with the payment form mounting for it.
+  for (const cadence of ['yearly', 'monthly']) {
+    const word = cadence === 'yearly' ? 'Yearly' : 'Monthly'
+    test(`signed out, logging in at checkout keeps the ${cadence} plan and mounts the ${cadence} payment form`, async ({ page }) => {
+      watch(page, 'a visitor who chose a cadence, then logged in to pay')
+      const sessions = await answerSessions(page)
+      await stubStripe(page)
+      await stubPrices(page)
+      await signIn(page, { plan: 'free', lateSignIn: true })
+      await go(page, '/plans')
+      await expectRendered(page)
+      await choose(page, word)
+      await proCta(page).click()
+      await expect(page).toHaveURL(new RegExp(`/checkout\\?plan=${cadence}$`))
+      await expect(page.locator('.checkout-form').getByText('Log in or create an account to pay')).toBeVisible()
+      expect(sessions, 'a payment session was asked for before anyone had logged in').toEqual([])
+
+      await logInThroughPrompt(page)
+      // The hand-off a brand-new account depends on: sign-up routes through
+      // onboarding, which returns to whatever this holds (69-flow-audit covers
+      // the return itself). The fixture cannot mint a new account, so the
+      // stash is what can be read here.
+      expect(
+        await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')),
+        'the checkout with its cadence was not remembered for a new sign-up',
+      ).toBe(`/checkout?plan=${cadence}`)
+
+      // Still this checkout, for this cadence: the popup closed over the page and
+      // did not send the visitor anywhere.
+      await expect(page.locator('#ui-login-title')).toHaveCount(0)
+      await expect(page.getByText('Log in or create an account to pay')).toHaveCount(0)
+      await expect(page).toHaveURL(new RegExp(`/checkout\\?plan=${cadence}$`))
+      await expect(page.locator('.checkout-plan-cadence')).toHaveText(`${word} plan`)
+      await expect(page.locator('.checkout-period-opt.is-on .checkout-period-label')).toHaveText(word)
+
+      // The payment form is built for that cadence, and only that one. A build
+      // without a Stripe publishable key stops at "Payments aren't configured"
+      // (105-checkout-change-plan skips there); everything above still ran, and
+      // the run says so rather than passing silently.
+      const mounted = page.locator('.checkout-form [data-stub-session]')
+      const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
+      await expect(mounted.or(notConfigured)).toBeVisible()
+      if (await notConfigured.isVisible()) {
+        test.info().annotations.push({ type: 'payment form not asserted', description: 'this build carries no Stripe publishable key' })
+        expect(sessions, 'a session was asked for in a build with no payment form').toEqual([])
+        return
+      }
+      await expect(mounted).toHaveAttribute('data-stub-session', `cs_test_stub_${cadence}`)
+      expect(sessions, 'the session was not for the cadence the visitor chose').toEqual([cadence])
+    })
+  }
 
   test('a Pro account is sent to its account, not to a second checkout', async ({ page }) => {
     watch(page, 'a Pro subscriber reading the plans')
