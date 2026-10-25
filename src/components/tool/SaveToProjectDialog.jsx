@@ -31,7 +31,7 @@ export default function SaveToProjectDialog({ title = 'Save to a project', summa
   const submit = (e) => {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) { setError('Give the project a name.'); return }
+    if (!trimmed) { setError('Give the project a name.'); inputRef.current?.focus(); return }
     try {
       onSave(trimmed)
     } catch (err) {
