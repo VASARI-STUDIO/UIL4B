@@ -3188,7 +3188,7 @@ html.lenis{scroll-behavior:auto!important}
      it only needs the picker's own layer number, one under the panel. */
   .menu-select-scrim.cpk-scrim{z-index:calc(var(--cpk-layer,130) - 1)}
   /* The sheet's way out, in the header beside the colour chip. */
-  .cpk-close{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 var(--s-3);border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;letter-spacing:0;text-transform:none;cursor:pointer}
+  .cpk-close{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 var(--s-3);border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;letter-spacing:0;text-transform:none;cursor:pointer}
   .cpk-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .cpk-close:active{background:var(--hvr)}
 }
