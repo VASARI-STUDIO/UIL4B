@@ -111,7 +111,9 @@ test.describe('Tint · Export menu', () => {
     const [file] = await downloads(page)
     expect(file.name).toMatch(/^tint-[0-9a-f]{6}\.css$/)
     expect(file.type).toContain('text/css')
-    expect(file.text.trim()).toBe(copied)
+    // The OS clipboard may hand text back with CRLF line ends, so compare on LF.
+    const lf = (s) => s.replace(/\r\n/g, '\n').trim()
+    expect(lf(file.text)).toBe(lf(copied))
     expect(await loginOpen(page)).toBe(false)
   })
 
