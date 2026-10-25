@@ -1,22 +1,21 @@
-// The 2026-09-09 anti-slop audit of the marketing and wayfinding surfaces,
+// The anti-slop audit of the marketing and wayfinding surfaces,
 // as rendered assertions — one per fix, each of which was seen to FAIL with
-// the fix reverted before it was trusted (the mutation tally is in the PR).
+// the fix reverted before it was trusted.
 //
 // ── What "the bar" is, in one paragraph ─────────────────────────────────────
 //
-// .claude/skills/uil4b-brand-design/references/anti-slop-quality-bar.md, read
-// against the founder's own verdicts: taglines and payment-reassurance lines
-// are "a huge AI Slop feature", "Not a screenshot. The actual
-// tools, running here." is defensive negation he threw out, "Everything below
-// is the real tool. Use it." is "MEGA AI generated", "Systems worth stealing."
-// is "bad copy", and the three-up figure strip and the taxonomy eyebrow above
-// an h1 were both marked "AI" on the gallery mastheads. Every check below
+// The site's brand rules: taglines and payment-reassurance lines
+// count as AI slop, "Not a screenshot. The actual
+// tools, running here." is defensive negation, "Everything below
+// is the real tool. Use it." is machine-sounding filler, "Systems worth stealing."
+// is bad copy, and the three-up figure strip and the taxonomy eyebrow above
+// an h1 are both AI tells on the gallery mastheads. Every check below
 // names which of those a surface was failing.
 //
 // ── Copy rule the fixes obey, and the tests therefore assume ────────────────
 //
-// An agent may DELETE slop and may REPLACE a sentence only with one the
-// founder wrote, read from src/data/positioning.js by id. So where a heading
+// An agent may DELETE slop and may REPLACE a sentence only with one already
+// in src/data/positioning.js, read from it by id. So where a heading
 // changed, the test computes the expected text from that module rather than
 // pinning a string — the same shape 54-plans-truth and 57-help-and-principles
 // use — and where a figure appears it is read from the config that enforces
@@ -24,7 +23,7 @@
 //
 // ── Every absence is paired with a presence ─────────────────────────────────
 //
-// `toHaveCount(0)` is free on a blank page (#394). Each test clears
+// `toHaveCount(0)` is free on a blank page. Each test clears
 // expectRendered() first and then asserts something the surface must still
 // show, so "delete the section" cannot be the way any of these goes green.
 // The retired PHRASES are swept by 62-retired-taglines.spec.js across every
@@ -42,7 +41,7 @@ import { sectionEyebrow } from '../../scripts/og-cards.mjs'
 const PERSONA = 'a designer who has seen a hundred AI-generated SaaS pages'
 
 test.describe('the homepage below the hero', () => {
-  /* FOUR TESTS REMOVED HERE, 2026-09-22 — the sections they guarded are gone.
+  /* FOUR TESTS REMOVED HERE — the sections they guarded are gone.
    *
    * They asserted the OLD homepage below its hero: the tools-section lede and
    * its Soon-badged grid, the six-card tool grid, the export section read by
@@ -54,7 +53,7 @@ test.describe('the homepage below the hero', () => {
    * does not badge a figure strip, and does not claim an unbuilt tool — did
    * not go with them:
    *   · the price panel below still checks every figure against the config
-   *     that enforces it, and still bans the four sentences he removed;
+   *     that enforces it, and still bans the four removed sentences;
    *   · 04-premium-home sums the bench rail against the lede's "thirteen"
    *     and asserts the figure strip stays absent;
    *   · Spectrum omits unbuilt tools rather than badging them, so there is no
@@ -106,8 +105,7 @@ test.describe('the homepage below the hero', () => {
 test.describe('the Discover landing', () => {
   test('is headed by its own name, with no eyebrow and no lede', async ({ page }) => {
     // Was: a "Discover" eyebrow over "Find systems worth stealing." — a line
-    // the founder had already thrown out on the homepage ('"Systems worth
-    // stealing." is bad copy', 56-homepage-headline-copy) with "Find" in
+    // already removed from the homepage (56-homepage-headline-copy) with "Find" in
     // front of it — over an agent lede built on the "earn a tab" idiom.
     watch(page, PERSONA)
     await go(page, '/discover')
@@ -134,9 +132,9 @@ test.describe('the Discover landing', () => {
 
 test.describe('the Help centre', () => {
   test('opens on the founder’s sentence and nothing after it', async ({ page }) => {
-    // Was: the founder line followed by "No account, no setup, no blank
+    // Was: the positioning line followed by "No account, no setup, no blank
     // canvas. Sign in later if you want the same work on another device." —
-    // a three-part reassurance in the class he retired, and a sentence the
+    // a three-part reassurance in a class of line since retired, and a sentence the
     // "Do I need an account?" answer below already carries.
     watch(page, PERSONA)
     await go(page, '/learn/help')
@@ -181,11 +179,11 @@ test.describe('the Plans page reassurance lines', () => {
  * has one contentinfo landmark rather than two — and that footer is a different
  * object with different rules: no wordmark block, and it DOES carry one
  * sentence ("Save time, and save your mind."), which SpectrumFooter.jsx argues
- * is a handoff above a button rather than the tagline-under-a-wordmark the
- * founder retired. Asserting the AppFooter rules there would fail a page that
+ * is a handoff above a button rather than the tagline-under-a-wordmark pattern
+ * that was retired. Asserting the AppFooter rules there would fail a page that
  * is behaving as designed.
  *
- * What still holds on every route, '/' included, is the founder attribution —
+ * What still holds on every route, '/' included, is the attribution line —
  * and 07-public-shell-library-palette asserts it across both footers. The
  * Spectrum footer's link parity with AppFooter is pinned by
  * tests/unit/spectrum-footer-parity.test.js. */
@@ -196,8 +194,7 @@ test.describe('the footer', () => {
     test(`${route} carries the wordmark and no tagline`, async ({ page }) => {
       // Was: "The operating workspace for building, validating and exporting
       // interface foundations." under the wordmark on every page — a tagline,
-      // the founder's word for the line he retired as "a huge AI Slop
-      // feature", and a value claim typed outside positioning.js.
+      // the kind of line since retired as AI slop, and a value claim typed outside positioning.js.
       watch(page, PERSONA)
       await go(page, route)
       await expectRendered(page, route)

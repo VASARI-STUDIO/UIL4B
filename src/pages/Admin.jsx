@@ -172,7 +172,7 @@ function DonutChart({ segments, size = 120 }) {
         <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--t0)" fontFamily="var(--mono)" fontSize="19" fontWeight="600">{total}</text>
         {/* The word stays exactly as it was. Uppercasing it would have been a
             styling decision that edits a string, and strings on this page are
-            the founder's. Mono and tracking carry the treatment instead. */}
+            left as written. Mono and tracking carry the treatment instead. */}
         <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--t3)" fontFamily="var(--mono)" fontSize="8.5" letterSpacing=".1em">total</text>
       </svg>
       <div className="adm-donut-legend">
@@ -288,7 +288,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
       {expanded && (
         <div className="adm-submission-body">
           <div className="adm-submission-msg">{item.message}</div>
-          {/* The reporter's address is founder-only (utils/moderation.js,
+          {/* The reporter's address is limited to the founder role (utils/moderation.js,
               canSeeReporterEmail). It arrives through /api/support from a
               PUBLIC form with no session, so it is personal data handed to the
               site owner and not verified to belong to the sender. A moderator
@@ -864,9 +864,9 @@ function countryFromLocation(location) {
 const flagEmoji = (iso2) => iso2.replace(/./g, ch => String.fromCodePoint(0x1F1A5 + ch.charCodeAt(0)))
 const countryName = (iso2) => { try { return regionNames?.of(iso2) || iso2 } catch { return iso2 } }
 
-// The founder's own row. He is a founder by verified email against a
-// server-side allowlist, which outranks any claim, so offering to "make" him a
-// moderator would be offering him less than he has.
+// The row of an admin with the founder role. Such an account is a founder by
+// verified email against a server-side allowlist, which outranks any claim, so
+// offering to "make" it a moderator would be offering it less than it has.
 const isFounderRow = (u) => isAdminEmail(u?.email)
 
 function EyeIcon({ off }) {
@@ -882,7 +882,7 @@ function EyeIcon({ off }) {
 }
 
 // Email hidden behind an eye toggle — first few characters visible, the rest
-// blurred, so the founder can screen-share the dashboard without leaking PII.
+// blurred, so an admin can screen-share the dashboard without leaking PII.
 function MaskedEmail({ email, revealed, onToggle }) {
   if (!email) return <span style={{ color: 'var(--t3)' }}>—</span>
   const cut = Math.min(3, email.indexOf('@') > 0 ? email.indexOf('@') : 3)
@@ -919,8 +919,8 @@ const ACCESS_RANK = { founder: 0, moderator: 1, user: 2, unknown: 3 }
  * for them before they moved into the detail panel.
  *
  * ── WHY THIS IS A FILTER AND NOT THREE COLUMNS ─────────────────────────────
- * The signup questionnaire was cut to a single question (#436 took out the
- * role and attribution questions as answers nobody read). So an account made
+ * The signup questionnaire asks a single question (role and attribution
+ * questions were answers nobody read). So an account made
  * since then has ONE answer and an older one has three, and three fixed
  * columns printed a field of em-dashes across the newest half of the table.
  *
@@ -954,7 +954,7 @@ const USER_SORTS = {
 }
 
 // The four states the tiles above the table filter to. Each one is a QUESTION
-// the founder actually asks of this list, and each is a real subset of it —
+// an admin actually asks of this list, and each is a real subset of it —
 // Mobbin: HubSpot's Users & Teams puts its counts in tiles above the table and
 // makes each one a way into the rows it counted, rather than a figure to read
 // and then go filtering for by hand
@@ -1000,7 +1000,7 @@ function UsersPanel({ localUsers, toast, role }) {
   // The moderator roster, as a Set of uids. null = NOT READ YET, and it renders
   // as "checking" rather than as "nobody holds the role" — the same distinction
   // the feedback panel was fixed for, in the one place where getting it wrong
-  // would have the founder appointing somebody who is already appointed.
+  // would have an admin appointing somebody who is already appointed.
   const [roster, setRoster] = useState(null)
   const [rosterError, setRosterError] = useState('')
   // ── Whether the deployed route can grant the role at all ──────────────────
@@ -1008,15 +1008,17 @@ function UsersPanel({ localUsers, toast, role }) {
   // · false = it is not.
   //
   // THREE STATES, NOT TWO, AND THIS IS THE WHOLE POINT. api/verify-admin.js is
-  // founder-gated: it ships only once `npm run apply:gated` has been run and
-  // the site redeployed. The UNPATCHED route does not reject `moderatorAction`
-  // — it has never heard of it — so it falls through to its ordinary 200 and a
-  // button wired to `res.ok` would report a grant that never happened, on the
-  // one screen in this product where a false success is a security statement.
+  // gated: the roster half ships only once `npm run apply:gated` has been run
+  // and the site redeployed. A route without it does not reject
+  // `moderatorAction` — it has never heard of it — so it falls through to its
+  // ordinary 200 and a button wired to `res.ok` would report a grant that never
+  // happened, on the one screen in this product where a false success is a
+  // security statement. Until the probe sees the roster half, the grant and
+  // revoke buttons stay hidden.
   //
-  // So the probe is a POSITIVE signal rather than the absence of an error: the
-  // patched route returns `role` as a string on every one of its exits and the
-  // unpatched one returns it on none of them.
+  // So the probe is a POSITIVE signal rather than the absence of an error: a
+  // route that handles the action returns `role` as a string on every one of
+  // its exits and one that does not returns it on none of them.
   const [roleEnabled, setRoleEnabled] = useState(null)
   const [busyUid, setBusyUid] = useState(null)
   // { uid, grant } — the decision waiting on the confirmation step. ONE piece
@@ -1066,7 +1068,7 @@ function UsersPanel({ localUsers, toast, role }) {
   // ── The roster ────────────────────────────────────────────────────────────
   // Read separately from the user list because the route answers one question
   // per call: `moderatorAction` returns early, before `includeUsers` is read.
-  // Founder-only, so a moderator who somehow reached this tab does not even
+  // Restricted to the founder role, so a moderator who somehow reached this tab does not even
   // request the list of who else holds the role.
   const loadRoster = useCallback(async () => {
     if (!canAssignModerators(role)) return
@@ -1080,7 +1082,7 @@ function UsersPanel({ localUsers, toast, role }) {
         body: JSON.stringify({ moderatorAction: 'list' }),
       })
       const data = await res.json().catch(() => ({}))
-      // The probe. An unpatched route answers this call with its ordinary
+      // The probe. A route without the roster half answers this call with its ordinary
       // handshake — 200, no `role`, no roster array — which is not an error and
       // must not be reported as one.
       if (res.ok && typeof data.role !== 'string') {
@@ -1242,7 +1244,7 @@ function UsersPanel({ localUsers, toast, role }) {
   )
 
   // User · Plan · Joined · Last seen · Location · Details, plus Access when the
-  // founder is the one reading. Counted once so the empty row cannot go out of
+  // reader has the founder role. Counted once so the empty row cannot go out of
   // step with the header again.
   const COLUMNS = founderView ? 7 : 6
 
@@ -1434,7 +1436,7 @@ function UsersPanel({ localUsers, toast, role }) {
                                 <div className="adm-detail-cols">
                                   <section className="adm-detail-sec">
                                     <h4>Account</h4>
-                                    {/* The two handles the founder needs to act on
+                                    {/* The two handles an admin needs to act on
                                         this person anywhere else — Firebase console,
                                         Stripe, a support reply. Neither was reachable
                                         from this page before; the uid was not rendered
@@ -2034,8 +2036,8 @@ export default function Admin({ toast }) {
           The tablist was already correct — roving tabindex, arrow keys,
           aria-selected, a real focus ring — but there was no tabpanel and no
           aria-controls anywhere on the route. A screen reader was told "tab,
-          selected" and then offered nothing to move into. Found by the
-          2026-09-18 independent review, measured: [role=tabpanel] count 0,
+          selected" and then offered nothing to move into. Measured
+          before the fix: [role=tabpanel] count 0,
           every aria-controls null.
 
           Settings.jsx renders all six of ITS panels and hides the inactive

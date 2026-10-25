@@ -1,12 +1,11 @@
 // "Start for Free" must open the SIGN-UP form.
 //
-// FOUNDER-BATCH-5 REGRESSION GUARD. Every control promising a new free account
+// REGRESSION GUARD. Every control promising a new free account
 // — the hero, the header pill, the overflow menu, the bottom-of-page block and
 // the Plans Free tier — opened a "Welcome Back" / "Sign In" form, with the
 // actual signup demoted to a small text link underneath. Four of the highest
 // traffic paths into the product told a first-time visitor they already had an
-// account. The usability sweep called it the single highest-impact fix on the
-// site (2026-08-11 site audit, P1).
+// account, which is the costliest kind of wrong turn on the site.
 //
 // The popup is one component either way; only which form it OPENS on changed.
 // So these tests assert the opening state, and that "Log in" — which shares the
@@ -17,7 +16,7 @@ import { go, watch } from './helpers.js'
 const PERSONA = 'a first-time visitor clicking the primary call to action'
 
 /** The popup's own heading tells you which form you are looking at. */
-// BY ID, NOT BY TAG. This read `.ui-login h2` and broke on 2026-09-15 when the
+// BY ID, NOT BY TAG. This read `.ui-login h2` and broke when the
 // dialog began titling itself for its context: on the /login ROUTE it is an h1,
 // because LoginRoute renders null and the dialog is the whole document, and
 // everywhere else it stays an h2 over a page that has its own h1. Three of the
@@ -50,9 +49,9 @@ test.describe('signup intent', () => {
     // asserts the accessible name of THAT element rather than searching the page
     // for one containing "Name".
     //
-    // It used to be `page.getByLabel('Name')`, and that broke on 2026-09-14 for
+    // It used to be `page.getByLabel('Name')`, and that broke for
     // a reason worth keeping: getByLabel does a SUBSTRING match, and the
-    // founder's new positioning line — "No more trying to remember the names of
+    // positioning line — "No more trying to remember the names of
     // the 1 tool websites." — labels the closing `.system-cta` region on this
     // very page. So the locator matched the region AND the input, and Playwright
     // refused it in strict mode. The page was correct; the locator was never

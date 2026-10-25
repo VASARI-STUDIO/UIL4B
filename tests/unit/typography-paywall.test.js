@@ -1,9 +1,9 @@
 // What Pro means for the typography tools, pinned.
 //
-// Founder decision, 2026-09-05, settling [typography-paywall-model]: browsing
+// The model, [typography-paywall-model]: browsing
 // is free, saving is Pro. Anyone may browse fonts, pair them and build a scale
-// without an account; what costs money is KEEPING a type system. He chose that
-// option because it matches how the colour tools already work, which makes
+// without an account; what costs money is KEEPING a type system. This option
+// was chosen because it matches how the colour tools already work, which makes
 // consistency with them the requirement rather than a nice-to-have.
 //
 // So this file guards BOTH halves, and the free half is the one more likely to
@@ -75,8 +75,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { projectSnapshot } from '../../src/utils/designPatch.js'
 import { stripCss } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
-// asserts on were split out of global.css into src/styles/deferred/*.css on
-// 2026-09-13; a test that keeps reading one file after a lift like that does
+// asserts on were split out of global.css into src/styles/deferred/*.css; a test that keeps reading one file after a lift like that does
 // not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
 import { ALL_CSS } from './appStylesheets.js'
 
@@ -240,7 +239,7 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
 
 test('1 · no typography tool gates its own catalogue, controls or previews', () => {
   // The entitlement checks live in ONE component. A tool that grows its own
-  // isPro branch has started a second scheme, which is the thing the founder's
+  // isPro branch has started a second scheme, which is the thing the
   // "it matches the colour tools" reasoning rules out.
   for (const [name, src] of TOOLS) {
     const code = stripComments(src)
@@ -284,7 +283,7 @@ test('3 · every export and copy action stays ungated', () => {
   }
   // And the promise it has to keep.
   //
-  // ── CHANGED 2026-09-05, and the reason matters more than the strings ───────
+  // ── CHANGED, and the reason matters more than the strings ───────
   //
   // These two assertions used to pin the words "…, gradients and exports" and
   // "…, type scales and exports". Both sentences were removed from /plans in
@@ -493,7 +492,7 @@ test('9 · saving needs an account, not a subscription', () => {
   // visitor who clicks Save must meet a login prompt, never a paywall.
   const code = stripComments(SAVE)
   // The options are matched as a SET rather than as one exact literal. This
-  // read `{ free: true }` character for character and went red on 2026-09-18
+  // read `{ free: true }` character for character and went red
   // for a change that strengthened the very thing it was protecting: adding
   // `signup: true`, so a visitor with no account meets the create-account form
   // instead of "Log in to continue" at the moment they first try to keep their
