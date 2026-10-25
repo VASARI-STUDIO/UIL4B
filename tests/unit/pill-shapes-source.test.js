@@ -71,7 +71,7 @@ const endsWithTarget = (sel, target) => {
 //   - height / min-height: var(--search-h); the collapsed header search is a 36px
 //     icon button, so .pnav-search-field may also say 36px
 //   - border: 1px solid var(--border); border-color: var(--border)
-//   - background: var(--inp)
+//   - background: var(--inp), or var(--bg-3) in a dark-only rule
 // Not in the family, so not listed: .hcmd-bar (the 60px hero command bar).
 const SEARCH_BARS = ['.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search']
 const declared = (body, prop) => {
@@ -103,7 +103,9 @@ for (const target of SEARCH_BARS) {
       const color = declared(r.body, 'border-color')
       if (color !== null && color !== 'var(--border)') bad.push(`${r.file}: border-color:${color}`)
       const ground = declared(r.body, 'background')
-      if (ground !== null && ground !== 'var(--inp)') bad.push(`${r.file}: background:${ground}`)
+      // Dark --inp equals the toolbar card, so a dark-only rule may step up to --bg-3.
+      const darkStep = ground === 'var(--bg-3)' && r.selectors.every((sel) => sel.startsWith('[data-theme="dark"]'))
+      if (ground !== null && ground !== 'var(--inp)' && !darkStep) bad.push(`${r.file}: background:${ground}`)
     }
     assert.deepEqual(bad, [], `${target} must use --search-h, 1px solid var(--border) and var(--inp)`)
   })
