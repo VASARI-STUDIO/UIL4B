@@ -1,13 +1,13 @@
-// /create/tint — the Export menu replaces the old "Copy variables" button.
+// /create/tint — the "Copy or save" menu replaces the old "Copy variables" button.
 //
 // One accent pill in the toolbar opens Copy CSS, Save to project and Download.
 // Copy is free for anybody; saving and taking a file away ask for an account
 // (the same gates the other tools use), so a signed-out press opens the
 // sign-in dialog rather than doing nothing.
 //
-// Seam: the Export button (`.tl-export-btn`) and the rows it opens. The page
-// also carries the app header's own "Export" button, so the toolbar one is
-// always found by its class, never by its name alone.
+// Seam: the Copy or save button (`.tl-export-btn`) and the rows it opens. The page
+// also carries the app header's own "Export" button (the whole design system), so
+// the toolbar one is named differently and is still found by its class.
 //
 // MUTATIONS (each should turn a case red):
 //   * drop `onSelect` from the Download row -> "Download hands over a .css file"
@@ -22,9 +22,9 @@ const row = (page, name) => page.getByRole('menuitem', { name, exact: true })
 const loginOpen = (page) => page.evaluate(() => !!document.querySelector('#ui-login-title'))
 
 async function openMenu(page) {
-  await expect(trigger(page), 'the Export button is not in the toolbar').toBeVisible({ timeout: 15000 })
+  await expect(trigger(page), 'the Copy or save button is not in the toolbar').toBeVisible({ timeout: 15000 })
   await trigger(page).click()
-  await expect(page.getByRole('menu', { name: 'Export' })).toBeVisible()
+  await expect(page.getByRole('menu', { name: 'Copy or save' })).toBeVisible()
 }
 
 // Record every blob handed to a download anchor: its file name and its text.
@@ -50,13 +50,33 @@ async function watchDownloads(page) {
 }
 const downloads = (page) => page.evaluate(() => window.__dl)
 
-test.describe('Tint · Export menu', () => {
-  test('the old Copy variables button is gone and Export lists three rows', async ({ page }) => {
+test.describe('Tint · Copy or save menu', () => {
+  test('the old Copy variables button is gone and Copy or save lists three rows', async ({ page }) => {
     watch(page, 'designer looking for the CSS')
     await go(page, '/create/tint')
     await expect(page.getByRole('button', { name: 'Copy variables' })).toHaveCount(0)
     await openMenu(page)
-    await expect(page.getByRole('menuitem')).toHaveText(['Copy CSS', 'Save to project', 'Download'])
+    await expect(page.getByRole('menuitem')).toHaveText(['Copy CSS', 'Save to projectFree account', 'DownloadFree account'])
+  })
+
+  test('the button is not called Export (the header owns that word) and signed out the account rows carry a hint', async ({ page }) => {
+    watch(page, 'designer looking for the CSS')
+    await go(page, '/create/tint')
+    await expect(trigger(page)).toBeVisible({ timeout: 15000 })
+    await expect(trigger(page), 'the toolbar button clashes with the header Export button').toHaveAccessibleName('Copy or save')
+    await openMenu(page)
+    await expect(row(page, 'Copy CSS').locator('.tl-menu-row-hint'), 'copying is free, no hint').toHaveCount(0)
+    for (const name of ['Save to project', 'Download']) {
+      await expect(row(page, name).locator('.tl-menu-row-hint'), `${name} should say it needs an account`).toHaveText('Free account')
+    }
+  })
+
+  test('signed in, the account rows carry no hint', async ({ page }) => {
+    watch(page, 'designer with an account')
+    await signIn(page, {})
+    await go(page, '/create/tint')
+    await openMenu(page)
+    await expect(page.locator('.tl-menu-row-hint')).toHaveCount(0)
   })
 
   test('Copy CSS puts the tint variables on the clipboard without asking for an account', async ({ page }) => {
@@ -128,24 +148,67 @@ test.describe('Tint · Export menu', () => {
     await expect(dialog).toBeVisible()
     const name = dialog.getByRole('textbox', { name: 'Project name' })
     await expect(name, 'the name starts filled in').toHaveValue(/^Tint #[0-9A-F]{6}$/)
+    await expect(name).toBeFocused()
+    expect(await name.evaluate((el) => el.selectionStart === 0 && el.selectionEnd === el.value.length), 'the suggested name is selected').toBe(true)
+    await expect(dialog.getByText(/^The project keeps the 11-step ramp of #[0-9A-F]{6}\.$/)).toBeVisible()
     await name.fill('Brand tints')
     await dialog.getByRole('button', { name: 'Save', exact: true }).click()
 
-    await expect(page.getByText('Brand tints saved', { exact: false }).first()).toBeVisible()
+    await expect(page.getByText('Saved to Brand tints. Tints included.', { exact: true }).first()).toBeVisible()
     await expect(dialog).toHaveCount(0)
-    const kept = await page.evaluate(() => {
+    const kept = await keptScale(page, 'Brand tints')
+    expect(kept, 'the saved project carries the eleven-step ramp').toHaveLength(11)
+  })
+
+  test('signed in, Save to project keeps the ramp that is on screen: a 9-step setting saves 9 stops', async ({ page }) => {
+    watch(page, 'designer with an account')
+    await signIn(page, {})
+    await go(page, '/create/tint')
+    await page.getByRole('button', { name: '9 steps' }).click()
+    await expect(page.locator('.tt-cell')).toHaveCount(9)
+    const onScreen = await page.locator('.tt-cell').evaluateAll((cells) => cells.map((c) => c.style.getPropertyValue('--tt-c').trim().toLowerCase()))
+
+    await openMenu(page)
+    await row(page, 'Save to project').click()
+    const dialog = page.getByRole('dialog', { name: 'Save tints to a project' })
+    await expect(dialog.getByText(/^The project keeps the 9-step ramp of #[0-9A-F]{6}\.$/)).toBeVisible()
+    await dialog.getByRole('textbox', { name: 'Project name' }).fill('Nine stops')
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(dialog).toHaveCount(0)
+    expect(await keptScale(page, 'Nine stops'), 'the saved ramp ignored the 9-step setting').toHaveLength(9)
+    expect((await keptScale(page, 'Nine stops')).map((h) => h.toLowerCase()), 'the saved ramp is not the one drawn').toEqual(onScreen)
+  })
+
+  test('an empty project name is refused with an error the field points to', async ({ page }) => {
+    watch(page, 'designer with an account')
+    await signIn(page, {})
+    await go(page, '/create/tint')
+    await openMenu(page)
+    await row(page, 'Save to project').click()
+    const dialog = page.getByRole('dialog', { name: 'Save tints to a project' })
+    const name = dialog.getByRole('textbox', { name: 'Project name' })
+    await name.fill('')
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+    const err = dialog.getByRole('alert')
+    await expect(err).toHaveText('Give the project a name.')
+    const errId = await err.getAttribute('id')
+    await expect(name).toHaveAttribute('aria-describedby', errId)
+  })
+
+  // The saved project's tint ramp (the hexes), or [] when it is not found.
+  async function keptScale(page, projectName) {
+    return page.evaluate((wanted) => {
       for (let i = 0; i < localStorage.length; i += 1) {
         const raw = localStorage.getItem(localStorage.key(i)) || ''
-        if (!raw.includes('Brand tints')) continue
+        if (!raw.includes(wanted)) continue
         try {
-          const found = Object.values(JSON.parse(raw)).flat().find((p) => p?.name === 'Brand tints')
-          if (found) return found.design?.tints?.scale?.length ?? 0
+          const found = Object.values(JSON.parse(raw)).flat().find((p) => p?.name === wanted)
+          if (found) return found.design?.tints?.scale ?? []
         } catch { /* not a projects store */ }
       }
-      return -1
-    })
-    expect(kept, 'the saved project carries the eleven-step ramp').toBe(11)
-  })
+      return []
+    }, projectName)
+  }
 
   test('keyboard: Enter, ArrowDown and ArrowUp open it, arrows move, Escape closes and refocuses the button', async ({ page }) => {
     watch(page, 'keyboard user')
@@ -191,7 +254,7 @@ test.describe('Tint · Export menu', () => {
       expect(box.height, `${name} is under 44px`).toBeGreaterThanOrEqual(44)
     }
     const trig = await trigger(page).boundingBox()
-    expect(trig.height, 'the Export button is shorter than the toolbar floor (44 on a coarse pointer, 36 otherwise)').toBeGreaterThanOrEqual(36)
+    expect(trig.height, 'the Copy or save button is shorter than the toolbar floor (44 on a coarse pointer, 36 otherwise)').toBeGreaterThanOrEqual(36)
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false)
 
     await row(page, 'Copy CSS').click()

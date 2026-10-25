@@ -20,7 +20,7 @@ import '../styles/pages/tint.css'
 
 // Tint — /create/tint, rebuilt to the design (UIL4B
 // App.dc.html, `isTint`, D:793-869, view model D:1432-1444 and D:1936-1975).
-// A sticky tool toolbar with the accent Export menu; the scale
+// A sticky tool toolbar with the accent "Copy or save" menu; the scale
 // as full-height step columns over a LIGHTNESS PER STEP chart; and one side
 // card of HUE AND CHROMA and STEPS / CURVE pills. CONTRAST NOTES are a
 // grid card under the chart (a list in the side card made the page taller than a
@@ -34,7 +34,7 @@ import '../styles/pages/tint.css'
 // The drawn card is ONE scale; ours can hold several. So the card gains a
 // SOURCES section above the drawn one: each source is a row (swatch picker, hex, select,
 // copy, remove — the same row shape as the gradient's STOPS), the selected
-// source drives the columns, the chart, the sliders and the notes, and the Export
+// source drives the columns, the chart, the sliders and the notes, and the "Copy or save"
 // menu (Copy CSS, Save to project, Download) takes every scale (`--tint-<step>` for one,
 // `--tint-<n>-<step>` for several — the previous build's names). The Hue and Chroma sliders edit
 // the SELECTED source's own hue and chroma, so a hex typed or picked there and
@@ -139,9 +139,9 @@ export default function TintTool({ onCopy, toast }) {
   // THE PROJECT'S TINTS PART. The ramp the project keeps is eleven stops (the
   // shape every reader of design.tints.scale labels by index) of the selected
   // source, made by the project's own generator (`tintsFor`, the one the Colour
-  // Studio uses) with the project's tint settings. The curves and step counts
-  // on this page shape what is drawn and copied; they are not what the project
-  // keeps, so the same colour is the same ramp wherever it was made. Only
+  // Studio uses) with the project's tint settings. That is the WORKING design's
+  // ramp, written as the source colour changes. "Save to project" is different:
+  // it keeps the ramp on screen (steps and curve included, see saveTints). Only
   // `tints` is written: this tool reads the palette and never writes it. A
   // project with colours and no ramp gets one as soon as this opens, and so
   // does one recorded as made from another colour than the project's own;
@@ -226,7 +226,7 @@ export default function TintTool({ onCopy, toast }) {
     setTimeout(() => setCopiedHex((h) => (h === hex ? '' : h)), 1000)
   }
 
-  // The Export menu. Copying is free; keeping the tints in a project and taking
+  // The Copy or save menu. Copying is free; keeping the tints in a project and taking
   // a file away both need an account, asked for through the shared gates.
   const copyCss = () => { onCopy?.(allCss) }
   const downloadCss = () => {
@@ -240,17 +240,22 @@ export default function TintTool({ onCopy, toast }) {
     }
     setSaveOpen(true)
   }
-  // The selected source's ramp is folded into the saved copy, so the project
-  // keeps what is on screen even if the working design was never given one.
+  // The selected source's ramp AS DRAWN (its steps, curve, hue and chroma) is
+  // folded into the saved copy, so the project keeps exactly what is on screen
+  // and copied. `tintsFor` supplies only the three tint settings (with their
+  // defaults) and `from`; its own eleven-stop scale is replaced.
   const saveTints = (name) => {
-    saveProject(name, { patch: { tints: tintsFor(selected.hex, { lumBias, satDecay, oled }) } })
+    const tints = { ...tintsFor(selected.hex, { lumBias, satDecay, oled }), scale: scale.steps.map((t) => t.hex) }
+    saveProject(name, { patch: { tints } })
     setSaveOpen(false)
-    toast?.(`${name} saved — tints included`)
+    toast?.(`Saved to ${name}. Tints included.`)
   }
+  // Signed out, the two rows that need an account say so before they are pressed.
+  const accountHint = canSaveProjects ? undefined : 'Free account'
   const exportItems = [
     { id: 'copy-css', label: 'Copy CSS', icon: 'copy', onSelect: copyCss },
-    { id: 'save', label: 'Save to project', icon: 'bookmark-simple', onSelect: startSave },
-    { id: 'download', label: 'Download', icon: 'download-simple', onSelect: downloadCss },
+    { id: 'save', label: 'Save to project', icon: 'bookmark-simple', hint: accountHint, onSelect: startSave },
+    { id: 'download', label: 'Download', icon: 'download-simple', hint: accountHint, onSelect: downloadCss },
   ]
 
   const hueDeg = Math.round(scale.hue)
@@ -268,7 +273,7 @@ export default function TintTool({ onCopy, toast }) {
       {saveOpen && (
         <SaveToProjectDialog
           title="Save tints to a project"
-          summary={`The project keeps the 11-step ramp of ${selected.hex}.`}
+          summary={`The project keeps the ${steps}-step ramp of ${selected.hex}${multi ? ` (scale ${selIndex + 1} of ${sources.length})` : ''}.`}
           defaultName={`Tint ${selected.hex}`}
           onSave={saveTints}
           onClose={() => setSaveOpen(false)}

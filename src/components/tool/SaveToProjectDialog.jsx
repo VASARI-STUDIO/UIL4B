@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import useModalDialog from '../../hooks/useModalDialog'
 import SaveRefusal from '../SaveRefusal'
 
@@ -20,7 +20,13 @@ export default function SaveToProjectDialog({ title = 'Save to a project', summa
   const [error, setError] = useState('')
   const [refusal, setRefusal] = useState('')
   const titleId = useId()
+  const errId = useId()
+  const inputRef = useRef(null)
   const dialogRef = useModalDialog(onClose, { initialFocus: '.tl-save-input' })
+
+  // Focus lands on the name field (useModalDialog); select the suggested name so
+  // typing replaces it.
+  useEffect(() => { inputRef.current?.select() }, [])
 
   const submit = (e) => {
     e.preventDefault()
@@ -49,15 +55,17 @@ export default function SaveToProjectDialog({ title = 'Save to a project', summa
             <input
               type="text"
               className="tl-save-input"
+              ref={inputRef}
               value={name}
               onChange={(e) => { setName(e.target.value); setError(''); setRefusal('') }}
               maxLength={60}
               autoComplete="off"
               aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errId : undefined}
             />
           </label>
           {refusal && <SaveRefusal message={refusal} testId="project-save-refusal" />}
-          {error && <p className="tl-save-err" role="alert">{error}</p>}
+          {error && <p id={errId} className="tl-save-err" role="alert">{error}</p>}
           <div className="tl-save-actions">
             <button type="button" className="btn" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-accent">Save</button>

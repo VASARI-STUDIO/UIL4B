@@ -4,14 +4,20 @@ import usePopover, { popoverArrowTarget } from '../../hooks/usePopover'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import ToolIcon from './ToolIcon'
 
-// The tool toolbar's Export menu: one accent pill that opens a short list of
-// ways to take the work away (copy it, keep it in a project, download it).
+// The tool toolbar's "Copy or save" menu: one accent pill that opens a short
+// list of ways to take the work away (copy it, keep it in a project, download
+// it). It is not called Export because the app header's own Export button
+// already means "the whole design system"; this one takes only this tool's output.
 //
 //   items   [{ id, label, icon, hint, disabled, onSelect }] in menu order.
 //           Choosing a row closes the menu, returns focus to the button, then
 //           calls onSelect. Anything that needs an account asks for it inside
 //           onSelect (useExportGate / requireLogin), so a row is never inert.
+//           `hint` is the small mono text at the row's end ("Free account").
+//           A disabled row stays focusable (aria-disabled) so a keyboard or
+//           screen reader user still finds it; choosing it does nothing.
 //   label   the button's text and the menu's accessible name.
+//   icon    the button's leading icon; a trailing caret is always drawn.
 //
 // Placement, dismissal and focus return are usePopover's. From 768px the list
 // is a popover under the button; below it the same rows sit in the toolbar
@@ -22,9 +28,9 @@ import ToolIcon from './ToolIcon'
 // last, the arrows wrap, Home and End jump, Escape closes and refocuses the
 // button, and Tab closes it and moves on.
 const PHONE = '(max-width: 767px)'
-const ROWS = '[role="menuitem"]:not([disabled])'
+const ROWS = '[role="menuitem"]'
 
-export default function ExportMenu({ items, label = 'Export', icon = 'upload-simple' }) {
+export default function ExportMenu({ items, label = 'Copy or save', icon = 'copy' }) {
   const [open, setOpen] = useState(false)
   const phone = useMediaQuery(PHONE)
   const menuId = useId().replace(/:/g, '')
@@ -71,6 +77,7 @@ export default function ExportMenu({ items, label = 'Export', icon = 'upload-sim
   }
 
   const choose = (item) => {
+    if (item.disabled) return
     closeToTrigger()
     item.onSelect?.()
   }
@@ -85,7 +92,7 @@ export default function ExportMenu({ items, label = 'Export', icon = 'upload-sim
           tabIndex={-1}
           className="tl-menu-row"
           data-export-item={item.id}
-          disabled={item.disabled}
+          aria-disabled={item.disabled ? true : undefined}
           onClick={() => choose(item)}
         >
           {item.icon && <ToolIcon name={item.icon} size={16} />}
