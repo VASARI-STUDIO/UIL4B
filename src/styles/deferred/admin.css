@@ -1087,6 +1087,24 @@
   font-size: 11px;
 }
 
+.adm-top-list .adm-bar-label {
+  min-width: 0;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* Long stage names: the label takes 28% of the row (100px to 220px) and wraps. */
+.adm-top-list--wide .adm-bar-label {
+  width: clamp(100px, 28%, 220px);
+}
+
+.adm-top-list .adm-bar-value {
+  min-width: max-content;
+  white-space: nowrap;
+}
+
 /* ── THE ICON TILE ─────────────────────────────────────────────────────────
  * Every glyph in the app design sits on a rounded SQUARE washed with the
  * accent — `width:28..36px;border-radius:9..11px;background:{{ accentWash }};

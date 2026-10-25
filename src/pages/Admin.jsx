@@ -197,7 +197,7 @@ function DonutChart({ segments, size = 120 }) {
  * localStorage — with nothing on either card to tell them apart. One component
  * that is only ever handed aggregate rows cannot develop that difference again.
  */
-function TopList({ title, rows, unit, empty }) {
+function TopList({ title, rows, unit, empty, wide = false }) {
   const max = Math.max(1, ...rows.map(r => r[1]))
   return (
     <div className="adm-card">
@@ -207,7 +207,7 @@ function TopList({ title, rows, unit, empty }) {
       </div>
       <div className="adm-card-body">
         {rows.length > 0 ? (
-          <div className="adm-bar">
+          <div className={`adm-bar adm-top-list${wide ? ' adm-top-list--wide' : ''}`}>
             {rows.slice(0, 8).map(([label, count]) => (
               <div key={label} className="adm-bar-row">
                 <span className="adm-bar-label">{label}</span>
@@ -2174,7 +2174,7 @@ export default function Admin({ toast }) {
                   {/* The funnel counters share the daily document with the tool
                       counters but are not tool usage, so they get their own list. */}
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <TopList title="Funnel" unit="stages" empty="No funnel events yet" rows={aggregate.funnel} />
+                    <TopList title="Funnel" unit="stages" empty="No funnel events yet" rows={aggregate.funnel} wide />
                   </div>
                 </div>
               </>
