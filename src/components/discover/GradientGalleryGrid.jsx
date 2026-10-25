@@ -13,7 +13,7 @@ import { useLoginPrompt } from '../../contexts/LoginPromptContext'
 // Card anatomy comes from the shared Library language (components/library), so
 // this grid and the Palette Library's now agree on where a badge, a like button
 // and a card's actions live. `.grg-` classes remain for the deltas that are
-// genuinely specific to a gradient — chiefly the 3:4 swatch, which is a
+// genuinely specific to a gradient — chiefly the 4:5 swatch, which is a
 // gradient's most useful shape and a palette's least.
 
 const LIKES_KEY = 'vs-gradient-likes'
@@ -58,7 +58,7 @@ export default function GradientGalleryGrid({ toast, gradients = [] }) {
   }, [toast])
 
   return (
-    <LibraryGrid className="grg-grid" min={280}>
+    <LibraryGrid className="grg-grid grg-grid--swatch" min={224}>
       {gradients.map(g => (
         <LibraryCard
           key={g.id}
