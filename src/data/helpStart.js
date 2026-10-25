@@ -126,6 +126,10 @@ export const HELP_ANSWERS = Object.freeze([
   }),
   Object.freeze({
     id: 'soon',
+    // Admin-only: HelpCentre skips it for everyone else, because unfinished
+    // pages are hidden from them and this answer would promise a list they
+    // cannot see.
+    adminOnly: true,
     q: 'What is not built yet?',
     a: `${SOON_TOOLS.length} tools carry a Soon badge and do not open. The site map marks every one of them, so nothing is advertised that you cannot use.`,
     to: '/sitemap',
