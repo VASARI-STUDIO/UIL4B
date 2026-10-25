@@ -793,9 +793,9 @@ export function isSoonPath(pathname) {
 export function soonRedirect(pathname) {
   if (!isSoonPath(pathname)) return null
   const { group } = resolveTool(pathname)
-  if (group.soon) return '/create'
+  if (group.soon) return '/create/palette'
   const live = group.tools.find((t) => isListedTool(t) && !t.soon)
-  return live ? live.route : '/create'
+  return live ? live.route : '/create/palette'
 }
 
 // Human label for a route, for document.title. Null when unknown.

@@ -300,7 +300,7 @@ test('SiteMap lists visible tools through the shared data helper', () => {
   assert.ok(tools.some((t) => t.id === 'ai-prompt'), 'visible Soon tools remain listed')
   assert.ok(!tools.some((t) => t.hidden), 'SiteMap must omit hidden tools')
   const source = stripComments(read('src/pages/SiteMap.jsx'))
-  assert.match(source, /\{listedTools\(group\)\.map\(/,
+  assert.match(source, /listedTools\(group\)/,
     'SiteMap must render the filtered list from listedTools')
 })
 

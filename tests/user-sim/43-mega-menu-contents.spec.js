@@ -251,7 +251,8 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
       const cs = getComputedStyle(el)
       return { color: cs.color, size: cs.fontSize, transform: cs.textTransform, rule: getComputedStyle(el, '::before').content }
     }))
-    expect(labels.length).toBeGreaterThanOrEqual(6)
+    // Signed out, so a group made only of soon tools is not drawn.
+    expect(labels.length).toBeGreaterThanOrEqual(5)
     expect(new Set(labels.map((l) => l.color)).size).toBe(1)
     for (const l of labels) {
       expect(l.size).toBe('9.5px')
