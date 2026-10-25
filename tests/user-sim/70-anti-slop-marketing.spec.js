@@ -23,7 +23,7 @@
 //
 // ── Every absence is paired with a presence ─────────────────────────────────
 //
-// `toHaveCount(0)` is free on a blank page (#394). Each test clears
+// `toHaveCount(0)` is free on a blank page. Each test clears
 // expectRendered() first and then asserts something the surface must still
 // show, so "delete the section" cannot be the way any of these goes green.
 // The retired PHRASES are swept by 62-retired-taglines.spec.js across every
@@ -53,7 +53,7 @@ test.describe('the homepage below the hero', () => {
    * does not badge a figure strip, and does not claim an unbuilt tool — did
    * not go with them:
    *   · the price panel below still checks every figure against the config
-   *     that enforces it, and still bans the four sentences he removed;
+   *     that enforces it, and still bans the four removed sentences;
    *   · 04-premium-home sums the bench rail against the lede's "thirteen"
    *     and asserts the figure strip stays absent;
    *   · Spectrum omits unbuilt tools rather than badging them, so there is no

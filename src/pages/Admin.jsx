@@ -919,8 +919,8 @@ const ACCESS_RANK = { founder: 0, moderator: 1, user: 2, unknown: 3 }
  * for them before they moved into the detail panel.
  *
  * ── WHY THIS IS A FILTER AND NOT THREE COLUMNS ─────────────────────────────
- * The signup questionnaire was cut to a single question (#436 took out the
- * role and attribution questions as answers nobody read). So an account made
+ * The signup questionnaire asks a single question (role and attribution
+ * questions were answers nobody read). So an account made
  * since then has ONE answer and an older one has three, and three fixed
  * columns printed a field of em-dashes across the newest half of the table.
  *
@@ -1013,8 +1013,8 @@ function UsersPanel({ localUsers, toast, role }) {
   // `moderatorAction` — it has never heard of it — so it falls through to its
   // ordinary 200 and a button wired to `res.ok` would report a grant that never
   // happened, on the one screen in this product where a false success is a
-  // security statement. Until the probe sees the roster half, the controls stay
-  // hidden.
+  // security statement. Until the probe sees the roster half, the grant and
+  // revoke buttons stay hidden.
   //
   // So the probe is a POSITIVE signal rather than the absence of an error: a
   // route that handles the action returns `role` as a string on every one of

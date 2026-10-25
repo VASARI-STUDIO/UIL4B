@@ -30,8 +30,8 @@ export const BASE_CURRENCY = 'usd'
 //     this repository. Editing this table changes the number a visitor is
 //     SHOWN when /api/get-prices cannot answer. It changes no charge.
 //
-//     Keeping the charge and the display in step is a manual job done in the
-//     Stripe dashboard, outside this repository.
+//     Keeping them in step is manual: change the Stripe price (dashboard or
+//     the admin Stripe panel) and this table in the same release.
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // USD is $7 monthly · $48 yearly. src/config/planLadder.js carries the same

@@ -96,18 +96,10 @@ const SCANNED = /\.(?:jsx?|css|json)$/
 // excludes the same two files for the same reason, in its words: "a route is
 // not reachable because we wrote about it."
 //
-// MEASURED, and this is why it matters rather than being tidy.
-// Across src/, 28 price-shaped strings; 7 of them were in ONE pipeline.js row
-// ($48, $48.00, $4.00 — a note about a yearly total), and all 7 survived the
-// allowlist and were counted as CHECKED. The "checked >= 6" floor at the foot
-// of this file — the assertion whose whole job is to prove the guard still has
-// teeth — was therefore being held up by a backlog note. The two prices this
-// guard actually compares against the ladder on a rendered surface are in
-// Plans.jsx and Settings.jsx, and there are two of them.
-//
-// That came to light because the boards left the repository (.gitignore
-// carries it), so CI runs without them and the
-// floor failed. The floor was wrong before they left, and is honest now.
+// It matters for more than tidiness: a price in a board note would count as
+// CHECKED and prop up the "checked >=" floor at the foot of this file, whose job
+// is to prove the guard still has teeth. Only a few literal amounts remain on
+// rendered surfaces; the floor's own comment names them.
 const NOT_A_SURFACE = new Set([
   path.join(SRC, 'data', 'pipeline.js'),
   path.join(SRC, 'data', 'moduleBoard.js'),
@@ -365,20 +357,6 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   // than waved through by the allowlist. If this drops, either the app stopped
   // quoting prices in code or NOT_A_PLAN_PRICE has grown wide enough to swallow
   // the thing it was meant to leave exposed.
-  //
-  // 6 → 2, AND THIS IS THE FLOOR BEING CORRECTED RATHER THAN
-  // LOWERED. All 7 board hits were CHECKED — they are real ladder amounts
-  // quoted inside one backlog note — so "six prices are still being compared"
-  // was, for as long as it has existed, five prose mentions and one or two
-  // surfaces. What the guard compares today is Plans.jsx and Settings.jsx: two
-  // literal amounts, because every other surface now renders the ladder through
-  // its own arithmetic instead of typing the number, which is the outcome this
-  // whole file was arguing for.
-  //
-  // So two is the truth, and a floor that says two is worth more than a floor
-  // of six that a note can satisfy. RAISE IT the day a surface starts quoting
-  // an amount literally again; do not let it fall below two without asking
-  // whether anything is being compared at all.
   //
   // The floor is 1 because /plans renders its "$0" through
   // formatMoney(0, currency), so Pricing.jsx quotes no amount by hand and the
