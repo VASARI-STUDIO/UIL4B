@@ -58,7 +58,7 @@ export default function GradientGalleryGrid({ toast, gradients = [] }) {
   }, [toast])
 
   return (
-    <LibraryGrid className="grg-grid grg-grid--swatch" min={256}>
+    <LibraryGrid className="grg-grid grg-grid--swatch" min={224}>
       {gradients.map(g => (
         <LibraryCard
           key={g.id}
