@@ -71,7 +71,7 @@
    `.rail-content` is rendered only by CreateTool.jsx and the sole consumer of
    `.pl-toolbar` is PromptLibrary, which is not inside it. A correct rule
    scoped to a selector that never matches is the shape this defect had. */
-/* RETIRED (#323). `.pl-toolbar` and `.pl-search-*` were the last one-off
+/* RETIRED. `.pl-toolbar` and `.pl-search-*` were the last one-off
    browse toolbar in the app — the Prompt Library was the only consumer, and
    it is now on the shared `LibraryToolbar` / `.lbry-toolbar` like every
    other browse surface. The sticky-offset reasoning above is preserved
@@ -589,7 +589,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .lbry-select:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 @media(max-width:640px){.lbry-select{max-width:100%;width:100%}}
 
-/* `.pl-sort` is retired with `.pl-toolbar` (#323): the Prompt Library's sort is
+/* `.pl-sort` is retired with `.pl-toolbar`: the Prompt Library's sort is
    a LibraryFilterGroup now, so it reflows with every other filter tray instead
    of needing its own 320px rescue. `.pl-chips` stays — five other surfaces
    (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
