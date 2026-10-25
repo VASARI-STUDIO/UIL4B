@@ -30,7 +30,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
-import { watch, go } from './helpers.js'
+import { watch, go, signIn } from './helpers.js'
 import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
 import { inkFor, grade } from '../../src/utils/styleGuideExport.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
@@ -378,6 +378,8 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('the Soon badge adds no focus stop', async ({ page }) => {
     watch(page, 'a keyboard user tabbing past what is not built yet')
+    // Unfinished rows are an admin-only sight (128-soon-pages-hidden.spec.js).
+    await signIn(page, { admin: true })
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
@@ -514,7 +516,8 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   // description lines said nothing their label had not already said.
 
   test('a Soon row never describes what it will do once it exists', async ({ page }) => {
-    watch(page, 'a visitor deciding what is worth clicking')
+    watch(page, 'an admin checking what the unbuilt rows say')
+    await signIn(page, { admin: true })
     await go(page, MENU_ROUTE)
 
     for (const name of TRIGGERS) {
@@ -532,7 +535,8 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   })
 
   test('Learn separates the guides that exist from the topics that do not', async ({ page }) => {
-    watch(page, 'a visitor checking whether the guides exist yet')
+    watch(page, 'an admin checking whether the guides exist yet')
+    await signIn(page, { admin: true })
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Learn')
 

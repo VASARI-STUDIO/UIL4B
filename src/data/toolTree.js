@@ -778,6 +778,26 @@ export function resolveTool(pathname) {
   return { group, tool, name, isHome }
 }
 
+// Whether a Create pathname renders the "still in the workshop" state. A tool
+// inside a Soon group is Soon whatever its own flag says. Non-Create paths are
+// never Soon (Discover and Learn rows that are Soon have no page of their own).
+export function isSoonPath(pathname) {
+  const { group, tool } = resolveTool(pathname)
+  return !!group && !!(group.soon || tool?.soon)
+}
+
+// Where a visitor who may not see a Soon page is sent instead, or null when the
+// path is not Soon. A Soon tool inside a live section goes to that section's
+// first live tool (the section landing is only a redirect to it); a Soon section
+// has no live page of its own, so it goes to the Create index.
+export function soonRedirect(pathname) {
+  if (!isSoonPath(pathname)) return null
+  const { group } = resolveTool(pathname)
+  if (group.soon) return '/create'
+  const live = group.tools.find((t) => isListedTool(t) && !t.soon)
+  return live ? live.route : '/create'
+}
+
 // Human label for a route, for document.title. Null when unknown.
 export function routeLabel(pathname) {
   const path = normalise(pathname)

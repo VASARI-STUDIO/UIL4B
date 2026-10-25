@@ -2,7 +2,8 @@ import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import AppFooter from '../components/AppFooter'
-import { findCreateGroup, resolveTool } from '../data/toolTree'
+import { findCreateGroup, resolveTool, soonRedirect } from '../data/toolTree'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useClipboard } from '../hooks/useClipboard'
 import { ACTIVATION_EXPORTS } from '../config/activationExports'
@@ -182,6 +183,12 @@ export default function CreateTool({ toast }) {
   const group = findCreateGroup(location.pathname)
   const { name, isHome, tool } = resolveTool(location.pathname)
 
+  // Unfinished pages are for admins only. Everyone else is sent to the nearest
+  // live page; the redirect waits for auth to answer so an admin opening one of
+  // these URLs cold is not bounced on the way in.
+  const { isAdmin, loading: authLoading } = useIsAdmin()
+  const soonTarget = isAdmin ? null : soonRedirect(location.pathname)
+
   // A tool's `views` (toolTree.js) mount the tool's own component.
   const LiveTool = !group || group.soon ? null : (LIVE_TOOLS[normPath(location.pathname)] || (tool && LIVE_TOOLS[normPath(tool.route)]) || null)
 
@@ -197,6 +204,11 @@ export default function CreateTool({ toast }) {
   // Impossible in practice — the router only mounts this on resolved Create
   // routes — but keeps the component honest if it's ever reused off-tree.
   if (!group) return <Navigate to="/home" replace />
+
+  if (soonTarget) {
+    if (authLoading) return <div className="page-loading"><div className="fg-loader" /></div>
+    return <Navigate to={soonTarget} replace />
+  }
 
   // A live group's category home has no screen of its own — send it to the first
   // real tool (e.g. /create/icons-emoji → /create/icons) so visitors never land on an empty home.
