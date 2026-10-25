@@ -947,12 +947,12 @@ test('N1 · no font family name is truncated down to the 320px floor', async ({ 
 // this one — and the per-card counts below are asserted so a selector rename
 // turns the test red instead of leaving it vacuous.
 
-/* 1024 AND 1280 ARE IN THE LIST BECAUSE A LIST ENDING AT 1180 MISSES A LIVE DEFECT.
+/* 1024 AND 1280 ARE IN THE LIST BECAUSE A LIST ENDING AT 1180 CAN MISS A DEFECT.
  *
  * The rule here is that no gradient name or meta line is truncated at
- * ANY width. At a 16px card name, 13 of 100 names are cut at 1280 and one at
- * 1024; a list that stopped at 1180 would stay green while the rule was
- * broken on the commonest desktop size there is.
+ * ANY width. With the name as a single-line 16px label, 13 of 100 names were
+ * cut at 1280 and one at 1024; a list that stopped at 1180 would have stayed
+ * green while the rule was broken on the commonest desktop size there is.
  *
  * The narrow widths below are where a card is tightest, which is the intuition
  * that built this list. It is the wrong intuition: the name's room is decided by
