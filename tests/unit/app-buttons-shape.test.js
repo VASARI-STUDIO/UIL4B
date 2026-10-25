@@ -3,8 +3,9 @@
 // One token carries the shape: --btn-radius, set to --radius-pill in :root.
 // The .btn and .ui-pill families and the tool layout's buttons read it, and so
 // does every page rule that shapes a button. A 999px radius on a square box is
-// a circle, so icon-only buttons need nothing extra. Inputs, selects, search
-// fields, cards, panels and menus keep their own radii.
+// a circle, so icon-only buttons need nothing extra. Inputs, selects, cards,
+// panels and menus keep their own radii; search bars and pill toolbars are
+// pills too, pinned by pill-shapes-source.test.js.
 //
 // The sweep below reads every class the JSX puts on a <button> (or on an
 // element with role="button", or a link whose class names a btn / cta / pill),

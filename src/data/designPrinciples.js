@@ -69,8 +69,8 @@ export const DESIGN_PRINCIPLES = Object.freeze([
   }),
   Object.freeze({
     id: 'unbuilt',
-    rule: 'Unbuilt is a state the interface shows.',
-    body: 'The navigation, the site map and this page all read the same registry, so a tool cannot be advertised on one screen and missing on another. What is not ready says Soon and does not open.',
+    rule: 'Only what is built is listed.',
+    body: 'The navigation, the site map and this page all read the same registry, so a tool cannot be advertised on one screen and missing on another. What is not ready stays out of the menus until it ships.',
     to: '/sitemap',
     linkLabel: 'See every page',
   }),

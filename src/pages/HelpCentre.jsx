@@ -75,6 +75,7 @@
 // rather than at the top of a page that no longer has that tab.
 import { Link } from 'react-router-dom'
 import { useReveal } from '../hooks/useReveal'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import { SystemRunStrip } from '../components/SystemProofs'
 import { HELP_ANSWERS, HELP_STARTS, LIVE_TOOLS, SOON_TOOLS, STARTS_WITH_CONTENT } from '../data/helpStart'
 // The opening line is the founder's, read by id from the one module every
@@ -99,6 +100,9 @@ import '../styles/pages/help.css'
 
 export default function HelpCentre() {
   useReveal()
+  // Unfinished tools are hidden from everyone but admins, so the page's
+  // "still being built" figure and its answer about them are admin-only too.
+  const { isAdmin } = useIsAdmin()
 
   return (
     <div className="sec cpg hlp">
@@ -131,7 +135,8 @@ export default function HelpCentre() {
         {/* Counted, not typed. The sentence this replaced named a tool that had
             been retired and one that had become a mode inside another. */}
         <p className="hlp-hint">
-          {LIVE_TOOLS.length} tools open now &middot; {SOON_TOOLS.length} still being built
+          {LIVE_TOOLS.length} tools open now
+          {isAdmin && <> &middot; {SOON_TOOLS.length} still being built</>}
         </p>
       </header>
 
@@ -177,7 +182,7 @@ export default function HelpCentre() {
           <h2 className="hlp-h2" id="hlp-faq-h">Answers.</h2>
         </div>
         <dl className="hlp-answers" data-reveal>
-          {HELP_ANSWERS.map((item) => (
+          {HELP_ANSWERS.map((item) => (item.adminOnly && !isAdmin ? null : (
             <div className="hlp-answer" key={item.id}>
               <dt className="hlp-answer-q">{item.q}</dt>
               <dd className="hlp-answer-a">
@@ -190,7 +195,7 @@ export default function HelpCentre() {
                 )}
               </dd>
             </div>
-          ))}
+          )))}
         </dl>
       </section>
 

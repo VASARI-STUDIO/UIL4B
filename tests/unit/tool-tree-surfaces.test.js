@@ -300,7 +300,7 @@ test('SiteMap lists visible tools through the shared data helper', () => {
   assert.ok(tools.some((t) => t.id === 'ai-prompt'), 'visible Soon tools remain listed')
   assert.ok(!tools.some((t) => t.hidden), 'SiteMap must omit hidden tools')
   const source = stripComments(read('src/pages/SiteMap.jsx'))
-  assert.match(source, /\{listedTools\(group\)\.map\(/,
+  assert.match(source, /listedTools\(group\)/,
     'SiteMap must render the filtered list from listedTools')
 })
 
@@ -311,17 +311,17 @@ test('Spectrum bench omits hidden live tools', async () => {
   assert.ok(!tools.some((t) => t.hidden), 'Spectrum bench must omit hidden tools')
 })
 
-test('llms tool lists omit hidden tools, including hidden Soon tools', async () => {
+test('llms tool lists omit hidden tools and every Soon tool', async () => {
   const { llmsRoutes } = await import('../../scripts/llms-txt.mjs')
   const group = CREATE_GROUPS.find((g) => g.id === 'ai')
   const fixture = { id: 'hidden-soon', label: 'Hidden Soon', route: '/create/hidden-soon', hidden: true, soon: true }
   group.tools.push(fixture)
   try {
-    const { tools, soon } = llmsRoutes()
-    assert.ok(tools.some((t) => t.route === '/create/alt-text'), 'live tools remain listed')
-    assert.ok(soon.some((t) => t.route === '/create/ai-prompt'), 'visible Soon tools remain listed')
-    assert.ok(!tools.some((t) => t.route === '/create/auto-builder'), 'llms live tools must omit Brand Starter')
-    assert.ok(!soon.some((t) => t.route === fixture.route), 'llms Soon tools must omit hidden tools')
+    const routes = llmsRoutes()
+    assert.ok(routes.tools.some((t) => t.route === '/create/alt-text'), 'live tools remain listed')
+    assert.ok(!routes.tools.some((t) => t.route === '/create/auto-builder'), 'llms live tools must omit Brand Starter')
+    assert.equal(routes.soon, undefined, 'llms lists no Soon tools at all')
+    assert.ok(!routes.tools.some((t) => t.route === '/create/ai-prompt' || t.route === fixture.route), 'llms tools must omit Soon tools')
   } finally {
     group.tools.splice(group.tools.indexOf(fixture), 1)
   }

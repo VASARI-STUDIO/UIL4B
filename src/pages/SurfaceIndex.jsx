@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import NavIcon from '../components/NavIcon'
 import { useReveal } from '../hooks/useReveal'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
 import LearnGuideIndex from '../components/LearnGuideIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
@@ -191,6 +192,8 @@ const SURFACES = {
     hue: 'imagery',
     groups: DISCOVER_GROUPS,
     hint: `${DISCOVER_LIVE} libraries open · ${DISCOVER_SOON} still being built`,
+    // What everyone but an admin sees: unfinished libraries are not mentioned.
+    liveHint: `${DISCOVER_LIVE} libraries open`,
     gridTitle: 'Every library, and what is in it.',
   },
   learn: {
@@ -210,6 +213,10 @@ const SURFACES = {
 export default function SurfaceIndex({ surface }) {
   useReveal()
   const s = SURFACES[surface] || SURFACES.discover
+  // Unfinished libraries and topics are shown, badged, to admins only.
+  const { isAdmin } = useIsAdmin()
+  const groups = s.groups.filter((g) => isAdmin || !g.soon)
+  const hint = isAdmin ? s.hint : (s.liveHint || s.hint)
   useEffect(() => {
     if (surface === 'discover') readCommunitySubmissions()
   }, [surface])
@@ -236,7 +243,7 @@ export default function SurfaceIndex({ surface }) {
           index under it is the page. */}
       <header className="home-hero home-hero--surface srf-head">
         <h1 className="home-hero-h1 srf-h1">{s.title}</h1>
-        <p className="home-hero-hint srf-hint">{s.hint}</p>
+        <p className="home-hero-hint srf-hint">{hint}</p>
       </header>
 
       {/* ── Learn only: the guides that exist, before the ones that do not ──
@@ -257,6 +264,7 @@ export default function SurfaceIndex({ surface }) {
           NAMED, so that it is a landmark: a <section> with no accessible name
           computes to `generic`, and the grid this comment calls "the page" was
           absent from the landmark list. The name is the h2 already here. */}
+      {groups.length > 0 && (
       <section className="srf-sec" aria-labelledby="surface-grid-heading">
         <div className="srf-sec-head" data-reveal>
           <h2 className="srf-h2" id="surface-grid-heading">{s.gridTitle}</h2>
@@ -264,7 +272,7 @@ export default function SurfaceIndex({ surface }) {
         </div>
 
         <div className="surface-grid">
-          {s.groups.map((g) => {
+          {groups.map((g) => {
             const hue = g.accent ? 'accent' : s.hue
             // Live libraries lead with what is inside them; the ones still on
             // the way stay a plain card, which is the honest difference and
@@ -310,6 +318,7 @@ export default function SurfaceIndex({ surface }) {
           })}
         </div>
       </section>
+      )}
       </main>
     </div>
   )

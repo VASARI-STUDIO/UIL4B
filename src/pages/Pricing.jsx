@@ -129,7 +129,7 @@ const FAQS = [
   },
   {
     q: 'Do my files get uploaded?',
-    a: 'Most image and video work runs in the browser. The AI features are the exception: the Alt Text Generator and the photo scan in the AI Image Prompt Generator send your image to an AI provider, and prompt writing sends your text.',
+    a: 'Most image and video work runs in the browser. The AI features are the exception: the Alt Text Generator sends your image to an AI provider, and prompt writing sends your text.',
   },
   {
     q: 'Which export formats can I actually get?',

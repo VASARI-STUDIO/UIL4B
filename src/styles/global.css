@@ -105,6 +105,15 @@
      point of the remap, so do NOT sweep them. --radius-2xl and --radius-pill are
      unchanged; --radius-3xl is new (full-width feature panels). */
   --radius-xs:8px;--radius-s:10px;--radius:12px;--radius-l:14px;--radius-xl:16px;--radius-2xl:18px;--radius-3xl:26px;--radius-pill:999px;
+  /* EVERY SEARCH BAR IS THIS HIGH: the header field, the library field, the font
+     browser's, the admin field and the /mobile mock. 44px is the touch floor the
+     library search was already held to, so one size serves a finger and a mouse.
+     Their border (1px solid var(--border)) and fill (var(--inp)) are the theme
+     tokens, written out in each rule because a token that names another theme
+     token would resolve against :root and miss a nested [data-theme]. Not part of
+     the family: the home command bar (.hcmd-bar, 60px), a hero input, and the
+     collapsed header search, which is a 36px icon button. */
+  --search-h:44px;
   /* Every button is a pill, and an icon-only square button a circle: one
      token, read by the .btn / .ui-pill / tool-button base rules and by every
      page rule that shapes a button. Not part of the rounding preference. */
@@ -1839,7 +1848,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
 @keyframes adm-pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* Admin tabs */
-.adm-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:28px;flex-wrap:wrap}
+.adm-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);margin-bottom:28px;flex-wrap:wrap}
 .adm-tab{padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--btn-radius);transition:all var(--dur-2) var(--ease-standard);position:relative;white-space:nowrap}
 .adm-tab:hover{color:var(--t0);background:var(--hvr)}
 .adm-tab.active{color:var(--t0);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}
@@ -2705,8 +2714,8 @@ html.lenis{scroll-behavior:auto!important}
    ink-faint, a mono "/" keycap at the end. It is a button that opens the
    command palette, which searches the same index. */
 .pnav-search{flex:1 1 240px;min-width:0;max-width:380px;display:flex}
-.pnav-search-field{display:flex;align-items:center;gap:10px;width:100%;height:41px;padding:0 11px 0 14px;border-radius:var(--radius);border:1px solid rgba(var(--ink-rgb),.09);background:rgba(var(--ink-rgb),.045);color:rgba(var(--ink-rgb),var(--ink-faint));font-family:var(--font);font-size:14px;font-weight:400;white-space:nowrap;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-@media(hover:hover){.pnav-search-field:hover{background:rgba(var(--ink-rgb),.07);border-color:rgba(var(--ink-rgb),.14)}}
+.pnav-search-field{display:flex;align-items:center;gap:10px;width:100%;height:var(--search-h);padding:0 11px 0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--inp);color:rgba(var(--ink-rgb),var(--ink-faint));font-family:var(--font);font-size:14px;font-weight:400;white-space:nowrap;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+@media(hover:hover){.pnav-search-field:hover{background:var(--bg-2);border-color:var(--bh)}}
 .pnav-search-ico{flex:0 0 auto;width:15px;height:15px}
 .pnav-search-ph{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .pnav-search-ph--typing{color:rgb(var(--ink-rgb))}
@@ -2787,7 +2796,7 @@ html.lenis{scroll-behavior:auto!important}
 /* Folding, so the row never wraps. Measured in the report. */
 @media(max-width:1099px){
   .pnav-search{flex:0 0 auto;max-width:none}
-  .pnav-search-field{width:41px;padding:0;justify-content:center}
+  .pnav-search-field{width:36px;height:36px;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
 }
 /* Labelled Export and Dashboard take the last of the room signed out, so the
@@ -2829,7 +2838,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-switch-status{margin:7px 10px 3px;padding:8px 10px;border-radius:var(--radius);background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim));font-size:12.5px;line-height:1.45}
 
 /* THEME SEGMENT — Light / Dark / System. Shared with /settings (ThemeChoice). */
-.theme-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;background:var(--bg-2);border-radius:var(--radius-l)}
+.theme-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:2px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .theme-seg-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:0;height:34px;padding:0 4px;border:none;background:none;border-radius:var(--btn-radius);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;line-height:1;white-space:nowrap;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
 .theme-seg-btn svg{flex:0 0 auto}
 .theme-seg-btn:hover{color:var(--t0)}
@@ -2950,13 +2959,13 @@ html.lenis{scroll-behavior:auto!important}
   .pnav .pnav-theme,.pnav-items,.pnav-act--dash,.pnav-login,.pnav-inner .pnav-upgrade,.pnav-more-wrap,.pnav-tip{display:none}
   .pnav-actions{margin-left:0;gap:10px}
   .pnav-search{flex:0 0 auto;max-width:none}
-  .pnav-search-field{width:36px;height:36px;padding:0;justify-content:center;border-radius:var(--radius-pill);border-color:rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
+  .pnav-search-field{color:rgb(var(--ink-rgb))}
   .pnav-search-ph,.pnav-search-kbd{display:none}
-  .pnav-act.pnav-export{width:36px;height:36px;border:1px solid rgba(var(--ink-rgb),.14);background:transparent;color:rgb(var(--ink-rgb))}
+  .pnav-act.pnav-export{width:36px;height:36px;border:1px solid var(--border);background:var(--inp);color:rgb(var(--ink-rgb))}
   .pnav-act.pnav-export[aria-disabled="true"]{color:rgba(var(--ink-rgb),.5)}
   .pnav-avatar-btn,.pnav-avatar{width:36px;height:36px}
   .pnav-avatar{font-size:12px}
-  .pnav-mobile{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:1px solid rgba(var(--ink-rgb),.14);border-radius:var(--radius-pill);background:transparent;color:rgb(var(--ink-rgb));cursor:pointer}
+  .pnav-mobile{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--inp);color:rgb(var(--ink-rgb));cursor:pointer}
   .pnav-mobile[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08)}
   .pnav-menu{display:none}
 }
@@ -3048,8 +3057,8 @@ html.lenis{scroll-behavior:auto!important}
 .snapv--edited .snapv-value,.snapv--edited .snapv-input{font-weight:700;color:var(--t0)}
 .snapv-value:hover{border-color:var(--border);color:var(--t0)}
 .snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
-.icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
-.icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
+.icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-seg button:hover{color:var(--t0)}
 .icust-seg button.active{background:var(--bg-0);color:var(--t0);box-shadow:var(--shadow-xs)}
 /* cpk — THE colour input for this app (src/components/ColorPickerPop.jsx).
@@ -3387,6 +3396,9 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
   .home-hero{padding-top:calc(var(--chrome-h) + var(--s-6))}
   .hcmd{margin-top:var(--s-4)}
 }
+/* The home command bar is NOT in the --search-h family: it is the hero input of
+   the page, deliberately 60px (54px on a phone) so it reads as the one thing to
+   do there. Every other search bar is 44px. */
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .hcmd-bar:focus-within{border-color:var(--accent)}
 /* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
@@ -3980,12 +3992,16 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    `.pgl-toolbar` and `.fg-controls` — and the other three surfaces never got
    it, which is the divergence this component was extracted to end. It is one
    rule now. */
-.lbry-toolbar{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;display:flex;flex-direction:column;gap:10px;margin:0 0 clamp(28px,4vw,52px);padding:10px;background:color-mix(in srgb,var(--bg-0) 88%,transparent);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:0 14px 42px rgba(10,10,18,.09);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.lbry-toolbar{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;display:flex;flex-direction:column;gap:10px;margin:0 0 clamp(28px,4vw,52px);padding:10px;background:color-mix(in srgb,var(--bg-0) 88%,transparent);border:1px solid var(--border);border-radius:var(--radius-pill);box-shadow:0 14px 42px rgba(10,10,18,.09);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+/* Wrapped onto a second row on a phone the bar steps down to a pill-ended box
+   (26px), as the palette and gradient bars already do, so its corners stay clear
+   of the search field and chips inset inside it. */
+@media(max-width:640px){.lbry-toolbar{border-radius:26px}}
 .lbry-toolbar-action{flex-shrink:0;margin-left:auto}
 
-.lbry-search{display:flex;align-items:center;gap:10px;flex:1 1 240px;min-width:0;min-height:46px;padding:0 12px 0 14px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.lbry-search{display:flex;align-items:center;gap:10px;flex:1 1 240px;min-width:0;min-height:var(--search-h);padding:0 12px 0 14px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-pill);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
 .lbry-search>svg{flex-shrink:0}
-/* `align-self:stretch` IS THE HIT AREA. The wrapper is `min-height:46px` and
+/* `align-self:stretch` IS THE HIT AREA. The wrapper is `min-height:var(--search-h)` (46px when this was measured) and
    a plain <div> — not a <label> — so it forwards nothing. With the flex
    default (`align-items:center`) the input sat at its own 18px content height
    in the middle of that 46px field, and the 14px of padding above and below it
@@ -3997,7 +4013,11 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    transparent and borderless, and the icon and clear button keep their own
    centring because this is `align-self` on one child, not `align-items` on
    the row. */
-.lbry-search input{align-self:stretch;width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;box-shadow:none;font-family:var(--font);font-size:13px}
+/* `border-radius:inherit` on the input: its own background is transparent, so the
+   one thing the engine paints on its box is the autofill ground. That box is a
+   rectangle, and a rectangle's corners sit against the wrapper's pill ends.
+   Taking the wrapper's radius makes the autofill ground follow the pill. */
+.lbry-search input{align-self:stretch;width:100%;min-width:0;padding:0;border-radius:inherit;color:var(--t0);background:transparent;border:0;outline:0;box-shadow:none;font-family:var(--font);font-size:13px}
 .lbry-search input::placeholder{color:var(--t3)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */
@@ -4021,7 +4041,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 
    Cost is one wrapped line on the narrowest phones, which is what the rest of
    this stylesheet already pays for the same class of fix. */
-.lbry-filters{position:relative;display:flex;flex-wrap:wrap;gap:3px;flex-shrink:0;max-width:100%;padding:3px;background:var(--bg-2);border-radius:var(--radius-xl)}
+.lbry-filters{position:relative;display:flex;flex-wrap:wrap;gap:3px;flex-shrink:0;max-width:100%;padding:2px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .lbry-filter{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:7px 13px;color:var(--t2);background:transparent;border:0;border-radius:var(--btn-radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .lbry-filter:hover{color:var(--t0)}
 .lbry-filter[data-active="true"]{color:var(--t0)}
@@ -4030,7 +4050,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    "on" state. Same fill and shadow the indicator would have drawn, applied to
    each of them, so the tray reads identically whether one or several are lit. */
 .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--card);box-shadow:var(--shadow-xs)}
-.lbry-filtertrig{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 14px;color:var(--t1);background:var(--bg-2);border:1px solid transparent;border-radius:var(--btn-radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.lbry-filtertrig{display:inline-flex;align-items:center;gap:8px;min-height:var(--search-h);padding:0 14px;color:var(--t1);background:var(--bg-2);border:1px solid transparent;border-radius:var(--btn-radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .lbry-filtertrig:hover{color:var(--t0)}
 .lbry-filtertrig[aria-expanded="true"]{color:var(--t0);border-color:var(--border);background:var(--card)}
 /* A collapsed group that is actually filtering has to say so from the outside;

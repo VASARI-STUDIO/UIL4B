@@ -1,5 +1,6 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { categoryDestination } from '../data/toolTree'
+import { categoryDestination, isSoonPath } from '../data/toolTree'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import FounderNote from './FounderNote'
 import { footerShowsOn } from './nav/footerRoutes'
 
@@ -78,6 +79,7 @@ const FOOTER_GROUPS = [
 export default function AppFooter({ compact = false }) {
   const { pathname } = useLocation()
   const year = new Date().getFullYear()
+  const { isAdmin } = useIsAdmin()
   if (!footerShowsOn(pathname)) return null
   return (
     <footer className={compact ? 'app-footer app-footer--compact' : 'app-footer'}>
@@ -111,7 +113,8 @@ export default function AppFooter({ compact = false }) {
           {FOOTER_GROUPS.map((group) => (
             <div className="app-footer-group" key={group.label}>
               <p>{group.label}</p>
-              {group.links.map(([to, label, soon]) => (
+              {/* Unfinished pages are listed for admins only. */}
+              {group.links.filter(([to, , soon]) => isAdmin || !(soon || isSoonPath(to))).map(([to, label, soon]) => (
                 soon ? (
                   <span className="app-footer-soon-link" key={to} aria-label={`${label} — coming soon`}>
                     {label} <em>Soon</em>
