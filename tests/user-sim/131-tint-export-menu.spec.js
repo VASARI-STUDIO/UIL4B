@@ -68,7 +68,10 @@ test.describe('Tint · Copy or save menu', () => {
     await expect(row(page, 'Copy CSS').locator('.tl-menu-row-hint'), 'copying is free, no hint').toHaveCount(0)
     for (const name of ['Save to project', 'Download']) {
       await expect(row(page, name).locator('.tl-menu-row-hint'), `${name} should say it needs an account`).toHaveText('Free account')
+      // Read by a screen reader as the row's description, not glued onto its name.
+      await expect(row(page, name), `${name}: the hint should be its description`).toHaveAccessibleDescription('Free account')
     }
+    await expect(row(page, 'Copy CSS'), 'copying is free, nothing to describe').toHaveAccessibleDescription('')
   })
 
   test('signed in, the account rows carry no hint', async ({ page }) => {

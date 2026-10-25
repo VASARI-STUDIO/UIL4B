@@ -13,7 +13,10 @@ import ToolIcon from './ToolIcon'
 //           Choosing a row closes the menu, returns focus to the button, then
 //           calls onSelect. Anything that needs an account asks for it inside
 //           onSelect (useExportGate / requireLogin), so a row is never inert.
-//           `hint` is the small mono text at the row's end ("Free account").
+//           `hint` is the small mono text at the row's end ("Free account"). It is
+//           kept out of the row's name (aria-hidden) and read as its description
+//           (aria-describedby), so the name stays "Save to project", not
+//           "Save to projectFree account".
 //           A disabled row stays focusable (aria-disabled) so a keyboard or
 //           screen reader user still finds it; choosing it does nothing.
 //   label   the button's text and the menu's accessible name.
@@ -93,11 +96,12 @@ export default function ExportMenu({ items, label = 'Copy or save', icon = 'copy
           className="tl-menu-row"
           data-export-item={item.id}
           aria-disabled={item.disabled ? true : undefined}
+          aria-describedby={item.hint ? `${menuId}-${item.id}-hint` : undefined}
           onClick={() => choose(item)}
         >
           {item.icon && <ToolIcon name={item.icon} size={16} />}
           <span className="tl-menu-row-label">{item.label}</span>
-          {item.hint && <span className="tl-menu-row-hint">{item.hint}</span>}
+          {item.hint && <span id={`${menuId}-${item.id}-hint`} className="tl-menu-row-hint" aria-hidden="true">{item.hint}</span>}
         </button>
       ))}
     </div>
