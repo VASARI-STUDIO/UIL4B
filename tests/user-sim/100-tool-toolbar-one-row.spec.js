@@ -49,7 +49,7 @@ const TOOLS = [
   },
   { route: '/create/gradient', actions: ['Random', 'From palette', 'Reset', 'Submit for review'], primary: /^Copy /, title: 'Gradient' },
   { route: '/create/contrast', actions: [], primary: /^Swap/, title: 'Contrast Checker' },
-  { route: '/create/tint', actions: [], primary: /^Copy /, title: 'Tint' },
+  { route: '/create/tint', actions: [], primary: /^Export/, title: 'Tint' },
   // Signed out, so "Add to project" (canSaveProjects) is not offered here.
   { route: '/create/semantic-color', actions: [], primary: /^Copy /, title: 'Semantic Colour' },
   // Studio tools. The converter's and the Brand Starter's run actions live

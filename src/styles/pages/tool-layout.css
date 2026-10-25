@@ -544,7 +544,7 @@
   outline-offset: -2px;
 }
 @media (pointer: coarse) {
-  :is(.tl, .tl-sheet-layer) .tl-export-rows .tl-menu-row { min-height: 44px; }
+  .tl .tl-export-rows .tl-menu-row { min-height: 44px; }
 }
 
 /* ── Save-to-project dialog (SaveToProjectDialog.jsx) ───────────────────────

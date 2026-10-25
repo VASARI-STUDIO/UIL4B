@@ -223,4 +223,4 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
 // Not tested: 'the Tint Scale audience switch is the one next to the
 // panel it changes'. The designer/developer switch and both of its panels went
 // with the rebuild to the design's drawn Tint screen, which has
-// one output — the scale — and one export, "Copy variables" in its toolbar.
+// one output — the scale — and one export, the Export menu in its toolbar.
