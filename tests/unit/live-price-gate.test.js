@@ -151,10 +151,10 @@ test('no saving unless the monthly price is live in the same currency', () => {
   assert.match(offerOf(both, 'yearly').savingLabel, /^Save \d+%$/)
 })
 
-test('the Yearly note names the monthly price only when it is the live one', () => {
+test('the Yearly note names no monthly price at all', () => {
   const page = stripComments(read('src/pages/Pricing.jsx'))
-  assert.match(page, /const monthlyForNote = price\.loaded \? offers\.find\(\(o\) => o\.id === 'monthly'\) : sizedMonthly/)
-  assert.match(page, /billedLine\(o, monthlyForNote\)/, 'the note reads the sized fallback monthly price again')
+  assert.doesNotMatch(page, /monthlyForNote|sizedMonthly/, 'the note reads a monthly price again')
+  assert.match(page, /billedLine\(o\)/, 'the note is no longer built from the offer alone')
 })
 
 test('the upgrade modal states no saving across two currencies', () => {

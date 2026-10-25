@@ -6,7 +6,7 @@
 //      is computed here from the stubbed /api/get-prices answer, never typed, so a
 //      page that starts typing a price goes red.
 //   2. THE PRO CTA FLOW. Signed in, straight to /checkout for the chosen cadence;
-//      signed out, through the sign-in flow and on to that same checkout.
+//      signed out, the same link: /checkout is public and asks for the sign-in itself.
 //   3. NOTHING MOVES. Switching cadence must not shift the Pro button, at a phone
 //      and a desktop width.
 //   4. THE DOCKED PLAN BAR below 1360px, and the offer-first layout below 1024px:
@@ -465,26 +465,28 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await expect(page.locator('.checkout-plan-cadence'), 'a quarterly plan summary rendered').toHaveCount(0)
   })
 
-  test('signed out, it opens sign-in and then continues to that checkout', async ({ page }) => {
+  test('signed out, every paid button goes to checkout for the chosen cadence, which names the plan and asks for an account', async ({ page }) => {
     watch(page, 'a visitor upgrading before they have an account')
     await stubPrices(page)
     await go(page, '/plans')
     await expectRendered(page)
 
-    await expect(proCta(page)).toHaveAttribute('href', '/login')
+    await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=yearly')
+    await expect(page.locator('.pr-close .pr-cta--pro')).toHaveAttribute('href', '/checkout?plan=yearly')
+    await expect(page.locator('.pr-bar-btn')).toHaveAttribute('href', '/checkout?plan=yearly')
+    await choose(page, 'Monthly')
+    await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=monthly')
+    await expect(page.locator('.pr-close .pr-cta--pro')).toHaveAttribute('href', '/checkout?plan=monthly')
+    await expect(page.locator('.pr-bar-btn')).toHaveAttribute('href', '/checkout?plan=monthly')
+
+    // Not the bare sign-in box: the visitor lands on the plan, its price and its trial.
+    await choose(page, 'Yearly')
     await proCta(page).click()
-
-    // The sign-in flow, carrying the checkout as where to go next.
-    await expect(page).toHaveURL(/\/login$/)
-    await expect(page.getByRole('dialog')).toBeVisible()
-    const from = await page.evaluate(() => window.history.state?.usr?.from)
-    expect(from, 'the sign-in flow does not know the visitor was headed to checkout').toBe('/checkout?plan=yearly')
-
-    // Complete it: the session exists on the next load, and /login, finding a
-    // user, forwards to the destination it was handed.
-    await signIn(page, { plan: 'free' })
-    await page.reload()
-    await expect(page).toHaveURL(/\/checkout\?plan=yearly$/, { timeout: 10000 })
+    await expect(page).toHaveURL(/\/checkout\?plan=yearly$/)
+    await expect(page.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
+    await expect(page.locator('.checkout-plan-amount')).not.toHaveText('—')
+    await expect(page.locator('.checkout-trial')).toContainText('7-day free trial')
+    await expect(page.getByText('Log in or create an account to pay').first()).toBeVisible()
   })
 
   test('a Pro account is sent to its account, not to a second checkout', async ({ page }) => {
@@ -560,12 +562,12 @@ test.describe('when one cadence has no price in the page currency', () => {
     await expectRendered(page)
 
     await expect(pro(page).locator('.pr-amt')).toHaveText('A$6.25')
-    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page)).toContainText('A$75 billed yearly.')
     await expect(note(page), 'a USD monthly price was set beside an AUD yearly one').not.toContainText(/billed monthly|US\$|A\$7(?!\d)/)
     await expect(page.locator('.pr-billing-save'), 'a saving was stated across two currencies').toHaveCount(0)
   })
 
-  test('the Yearly note names a monthly price that is live in AUD', async ({ page }) => {
+  test('the Yearly note reads the same when both cadences have an AUD price, and never adds the monthly one', async ({ page }) => {
     watch(page, 'an Australian visitor when both cadences have an AUD price')
     await stubPrices(page, {
       source: { monthly: 'live', yearly: 'live' },
@@ -575,7 +577,8 @@ test.describe('when one cadence has no price in the page currency', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    await expect(note(page)).toContainText('A$75 billed once a year, or A$11 billed monthly.')
+    await expect(note(page)).toContainText('A$75 billed yearly.')
+    await expect(note(page), 'the Yearly note offered a monthly billing alongside').not.toContainText(/billed monthly|A\$11/)
   })
 
   test('a live price with no option for AUD is not offered in AUD, whatever number the table carries', async ({ page }) => {
@@ -589,7 +592,7 @@ test.describe('when one cadence has no price in the page currency', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page)).toContainText('A$75 billed yearly.')
     await expect(note(page), 'an AUD figure with no live AUD price behind it was named').not.toContainText(/billed monthly|A\$11/)
     await go(page, '/plans?billing=monthly')
     await expectRendered(page)
@@ -607,7 +610,7 @@ test.describe('when one cadence has no price in the page currency', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    await expect(note(page)).toContainText('A$75 billed once a year.')
+    await expect(note(page)).toContainText('A$75 billed yearly.')
     await expect(note(page), 'a fallback default was named as a price').not.toContainText(/billed monthly|A\$11/)
   })
 
