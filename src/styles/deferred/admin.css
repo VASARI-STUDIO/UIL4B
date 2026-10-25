@@ -702,7 +702,7 @@
 .adm-tabs {
   background: transparent;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius-pill);
   padding: 2px 0;
   gap: 4px;
   margin-bottom: 18px;
