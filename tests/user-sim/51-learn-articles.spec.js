@@ -20,7 +20,7 @@
 //      scrollbar at 320px and 390px with every visible box inside the viewport.
 //      Nothing on disk shows that, and no render assertion notices it.
 import { test, expect } from './base.js'
-import { expectRendered, go, watch } from './helpers.js'
+import { expectRendered, go, signIn, watch } from './helpers.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 
@@ -31,7 +31,10 @@ test('the registry this spec walks is not empty', async () => {
 
 test.describe('Learn articles', () => {
   test('the Learn landing leads with guides that open and a roadmap that does not pretend to', async ({ page }) => {
-    watch(page, 'designer arriving at Learn for the first time')
+    watch(page, 'admin arriving at Learn for the first time')
+    // The roadmap of unwritten topics is an admin-only sight; a visitor sees
+    // the guides alone (128-soon-pages-hidden.spec.js).
+    await signIn(page, { admin: true })
     await go(page, '/learn')
 
     // Every published guide is a real link with its real destination.

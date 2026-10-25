@@ -1,6 +1,6 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, isListedTool } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, DISCOVER_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 
@@ -140,12 +140,13 @@ test.describe('public route contract', () => {
     }
   })
 
-  test('visual sitemap distinguishes the live Discover slice from non-actionable Soon destinations', async ({ page }) => {
+  test('visual sitemap lists only what opens for a visitor, with no Soon destinations (admins see them badged: 128)', async ({ page }) => {
     watch(page, 'visitor checking what is available before choosing a tool')
     await go(page, '/sitemap')
 
     const discover = page.locator('[data-sitemap-section="discover"]')
-    await expect(discover).toContainText(`${DISCOVER_GROUPS.filter((group) => !group.soon).length} live · more coming`)
+    await expect(discover).toContainText(`${DISCOVER_GROUPS.filter((group) => !group.soon).length} live`)
+    await expect(discover).not.toContainText('more coming')
 
     const gradient = discover.locator('[data-route="/discover/gradients"]')
     await expect(gradient).not.toHaveAttribute('data-soon')
@@ -160,8 +161,8 @@ test.describe('public route contract', () => {
     await expect(fonts.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
 
     const stagedDiscover = discover.locator('[data-soon="true"]')
-    await expect(stagedDiscover).toHaveCount(DISCOVER_GROUPS.filter((group) => group.soon).length)
-    await expect(stagedDiscover.locator('a')).toHaveCount(0)
+    // Signed out, no unfinished destination is on the map at all.
+    await expect(stagedDiscover).toHaveCount(0)
 
     // Learn is now BOTH: published guides that are real links, and a topic
     // roadmap whose rows are still non-actionable. The column asserted zero
@@ -172,7 +173,7 @@ test.describe('public route contract', () => {
     // LEARN_ROADMAP, not LEARN_GROUPS: a roadmap row whose guide has shipped
     // carries that guide's route, so the map lists it once — as the guide.
     const learn = page.locator('[data-sitemap-section="learn"]')
-    await expect(learn.locator('[data-soon="true"]')).toHaveCount(LEARN_ROADMAP.length)
+    await expect(learn.locator('[data-soon="true"]')).toHaveCount(0)
     await expect(learn.locator('[data-soon="true"] a')).toHaveCount(0)
     for (const article of LEARN_ARTICLES) {
       const row = learn.locator(`.smap-link[data-route="/learn/${article.slug}"]`)
@@ -180,10 +181,8 @@ test.describe('public route contract', () => {
       await expect(row.locator('a')).toHaveAttribute('href', `/learn/${article.slug}`)
     }
 
-    // A Create tool still in the workshop stays non-actionable on the map…
-    const stagedBoxShadow = page.locator('.smap-link[data-route="/create/box-shadow"]')
-    await expect(stagedBoxShadow).toHaveAttribute('data-soon', 'true')
-    await expect(stagedBoxShadow.locator('a')).toHaveCount(0)
+    // A Create tool still in the workshop is not on the map for a visitor…
+    await expect(page.locator('.smap-link[data-route="/create/box-shadow"]')).toHaveCount(0)
 
     // …while the three typography tools that just shipped are real links.
     for (const route of ['/create/font-gallery', '/create/font-pair', '/create/type-scale']) {

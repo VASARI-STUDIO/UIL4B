@@ -116,7 +116,10 @@ test.describe('the Discover surfaces say what they are made of', () => {
   })
 
   test('/discover fills the last row when only one card remains', async ({ page }) => {
-    watch(page, 'someone browsing the Discover grid')
+    watch(page, 'an admin browsing the Discover grid')
+    // Seven cards, one of them an unfinished library, which only an admin sees;
+    // the lone-last-card rule needs the odd count to be a test at all.
+    await signIn(page, { admin: true })
     for (const width of [768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/discover')

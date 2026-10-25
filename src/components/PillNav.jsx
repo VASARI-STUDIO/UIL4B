@@ -896,6 +896,7 @@ function AppHeader() {
         <MegaMenu
           ref={menuRef}
           section={activeSection}
+          showSoon={isAdmin}
           onMouseEnter={clearClose}
           onMouseLeave={hoverLeave}
           onKeyDown={onMenuKeyDown}
@@ -930,7 +931,7 @@ function AppHeader() {
                       </button>
                     )}
                     {/* Live rows only: a phone menu lists what
-                        opens. Soon rows stay in the desktop menu and /sitemap. */}
+                        opens. Soon rows show only in the desktop menu and /sitemap, and only to admins. */}
                     {section.columns.flat().map((col) => {
                       const live = col.tools.filter((t) => !t.soon)
                       if (!live.length) return null
@@ -1046,8 +1047,8 @@ function AppHeader() {
 //
 // It is a function component with a forwarded ref only in name: React 19
 // passes `ref` as a prop.
-function MegaMenu({ ref, section, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
-  const stacks = menuStacks(section)
+function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
+  const stacks = menuStacks(section, { showSoon })
   const promo = menuPromo(section)
   // The file opens every menu with its first row lit (feat = flatNav[0] when
   // nothing is hovered, App line 1414); CSS lights it only while no other row

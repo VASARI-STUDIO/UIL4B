@@ -29,6 +29,7 @@ import { stepName, stepPx } from '../utils/fluidType'
 import { DEFAULT_DESIGN, tintConfigFor } from '../data/designDefaults'
 import { EXPORT_FORMATS, freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
 import { LIVE_TOOLS, SOON_TOOLS } from '../data/helpStart'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 
 /** --bg-0 in each theme, from the :root blocks in src/styles/global.css. */
 const LIGHT_GROUND = '#F5F5F2'
@@ -312,6 +313,9 @@ export function ExportProof() {
  * badge a visitor actually meets on the ones that are not ready.
  */
 export function SoonProof() {
+  // The "still being built" figure is admin-only: unfinished tools are hidden
+  // from everyone else, so a count of them would promise a list they cannot see.
+  const { isAdmin } = useIsAdmin()
   return (
     <figure className="prn-sn">
       <div className="prn-sn-figures">
@@ -319,10 +323,12 @@ export function SoonProof() {
           <b>{LIVE_TOOLS.length}</b>
           <span>open now</span>
         </span>
-        <span className="prn-sn-fig" data-soon="true">
-          <b>{SOON_TOOLS.length}</b>
-          <span>still being built <span className="soon-badge">Soon</span></span>
-        </span>
+        {isAdmin && (
+          <span className="prn-sn-fig" data-soon="true">
+            <b>{SOON_TOOLS.length}</b>
+            <span>still being built <span className="soon-badge">Soon</span></span>
+          </span>
+        )}
       </div>
       <figcaption className="prn-cap">
         Counted from <code>CREATE_GROUPS</code> when this page rendered, not

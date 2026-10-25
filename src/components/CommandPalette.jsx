@@ -4,8 +4,7 @@ import { getCategory, localiseTools, localiseCategories } from '../data/tools'
 import { categoryPillFor, offerableCategories, queryCommandIndex } from '../data/toolIndex'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
-import { useAuth } from '../contexts/AuthContext'
-import { isAdminEmail } from '../utils/constants'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 // The stylesheet families this surface needs, split out of the one
@@ -46,10 +45,9 @@ export default function CommandPalette({ open, onClose }) {
     return () => { vv.removeEventListener('resize', sync); root.style.removeProperty('--vvh') }
   }, [open])
   const { recent } = useWorkspace()
-  const { user } = useAuth()
   const { t } = useI18n()
 
-  const isAdmin = isAdminEmail(user?.email)
+  const { isAdmin } = useIsAdmin()
   // Hide tools still in the workshop from search for everyone but admins.
   // `soon` is toolTree.js's own flag, reaching here through the derived index
   // — the same one the mega-menu dims and CreateTool.jsx renders the 🤫

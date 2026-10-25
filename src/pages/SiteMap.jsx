@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, listedTools } from '../data/toolTree'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 // The stylesheet families this surface needs, split out of the one
@@ -109,6 +110,19 @@ function MapLink({ label, route, note, soon }) {
 }
 
 export default function SiteMap() {
+  // Unfinished pages are listed, badged, for admins only; everyone else gets a
+  // map of what opens.
+  const { isAdmin } = useIsAdmin()
+  const showSoon = (flag) => isAdmin || !flag
+  const createGroups = CREATE_GROUPS
+    .map((group) => ({
+      group,
+      tools: listedTools(group).filter((tool) => showSoon(group.soon || tool.soon)),
+    }))
+    .filter(({ tools }) => tools.length)
+  const discoverGroups = DISCOVER_GROUPS.filter((g) => showSoon(g.soon))
+  const learnRoadmap = LEARN_ROADMAP.filter((g) => showSoon(g.soon))
+
   return (
     // `smap-page` is a SCOPE, not a rename: every existing `.smap-*` class is
     // untouched, and pages/sitemap.css hangs off this co-class so none of its
@@ -126,9 +140,13 @@ export default function SiteMap() {
             label. */}
         <h1>The whole <em>map</em>.</h1>
         <p>
-          Every page in UIL4B, laid out end to end. Categories still in the workshop
-          keep a <span className="smap-soon smap-soon--inline">Soon</span> badge, so
-          the map only ever promises what&rsquo;s actually live.
+          {isAdmin ? (
+            <>
+              Every page in UIL4B, laid out end to end. Categories still in the workshop
+              keep a <span className="smap-soon smap-soon--inline">Soon</span> badge, so
+              the map only ever promises what&rsquo;s actually live.
+            </>
+          ) : 'Every page in UIL4B, laid out end to end.'}
         </p>
       </div>
 
@@ -144,7 +162,7 @@ export default function SiteMap() {
           <p>Build colour, type, icons, media and AI systems.</p>
         </div>
         <div className="smap-grid">
-          {CREATE_GROUPS.map((group) => (
+          {createGroups.map(({ group, tools }) => (
             <div key={group.id} className="smap-cat" data-hue={group.hue}>
               <div className="smap-cat-h">
                 <span className="smap-cat-dot" aria-hidden="true" />
@@ -153,7 +171,7 @@ export default function SiteMap() {
               </div>
               <p className="smap-cat-desc">{group.desc}</p>
               <ul className="smap-links">
-                {listedTools(group).map((tool) => (
+                {tools.map((tool) => (
                   <MapLink
                     key={tool.id}
                     label={tool.label}
@@ -179,7 +197,7 @@ export default function SiteMap() {
               <span className="smap-cat-dot" aria-hidden="true" />
               <h3>Discover</h3>
               <span className="smap-stage">
-                {DISCOVER_GROUPS.filter((group) => !group.soon).length} live &middot; more coming
+                {DISCOVER_GROUPS.filter((group) => !group.soon).length} live{isAdmin && <> &middot; more coming</>}
               </span>
             </div>
             {/* The typed description is gone. It read "Community systems,
@@ -191,7 +209,7 @@ export default function SiteMap() {
                 so the column describes itself and cannot promise a group
                 the registry does not list. */}
             <ul className="smap-links">
-              {DISCOVER_GROUPS.map((g) => (
+              {discoverGroups.map((g) => (
                 <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
             </ul>
@@ -211,13 +229,17 @@ export default function SiteMap() {
               <span className="smap-cat-dot" aria-hidden="true" />
               <h3>Learn</h3>
             </div>
-            <p className="smap-cat-desc">Reference guides on colour, type and accessibility, plus the topics still to be written.</p>
+            <p className="smap-cat-desc">
+              {isAdmin
+                ? 'Reference guides on colour, type and accessibility, plus the topics still to be written.'
+                : 'Reference guides on colour, type and accessibility.'}
+            </p>
             <ul className="smap-links">
               {LEARN_ARTICLES.map((a) => (
                 <MapLink key={a.slug} label={a.title} route={`/learn/${a.slug}`} note={a.dek} />
               ))}
-              <MapLink label="Learn" route="/learn" note="The section landing, and what is on the way." />
-              {LEARN_ROADMAP.map((g) => (
+              <MapLink label="Learn" route="/learn" note={isAdmin ? 'The section landing, and what is on the way.' : 'The section landing.'} />
+              {learnRoadmap.map((g) => (
                 <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
             </ul>

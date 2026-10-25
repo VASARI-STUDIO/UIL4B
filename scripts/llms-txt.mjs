@@ -132,12 +132,9 @@ export function llmsRoutes() {
     .filter((g) => !g.soon && !liveRoutes.has(g.route) && g.route !== '/discover')
     .map((g) => mustBePrerendered(g.route, 'the Browse section'))
 
-  // Still in the workshop: every tool the tree marks Soon, group Soon included.
-  const soon = CREATE_GROUPS.flatMap((g) => (
-    g.tools.filter((t) => !t.hidden && (g.soon || t.soon))
-  )).map((t) => ({ label: t.label, route: t.route }))
-
-  return { tools, learn, browse, more, soon }
+  // Tools still in the workshop are not listed anywhere in this file: a page
+  // the site hides from visitors is not advertised to a crawler either.
+  return { tools, learn, browse, more }
 }
 
 /**
@@ -168,7 +165,7 @@ export function llmsClaims() {
 
 /** The whole file, LF line endings. */
 export function buildLlmsTxt() {
-  const { tools, learn, browse, more, soon } = llmsRoutes()
+  const { tools, learn, browse, more } = llmsRoutes()
   const claims = llmsClaims()
   const row = (route, suffix = '') => `- [${nameOf(route)}${suffix}](${canonicalUrl(route)}): ${descriptionOf(route)}`
 
@@ -198,11 +195,6 @@ export function buildLlmsTxt() {
     '## More',
     ...more.map((r) => row(r)),
     '',
-    '## Optional',
-    'Not yet built. These routes resolve to an honest "still in the workshop" state rather than a working tool, and should not be described as available:',
-    '',
-    ...soon.map((t) => `- ${t.label} (${t.route})`),
-    '',
   ].join('\n')
 }
 
@@ -210,9 +202,9 @@ export function buildLlmsTxt() {
 if (process.argv[1]?.endsWith('llms-txt.mjs')) {
   const text = buildLlmsTxt()
   await writeFile(path.join(root, 'public', 'llms.txt'), text, 'utf8')
-  const { tools, learn, browse, soon } = llmsRoutes()
+  const { tools, learn, browse } = llmsRoutes()
   console.log(
     `sync:llms — wrote public/llms.txt: ${tools.length} tools, ${learn.length} guides, `
-    + `${browse.length} browse pages, ${soon.length} still in the workshop`,
+    + `${browse.length} browse pages`,
   )
 }
