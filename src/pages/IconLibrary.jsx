@@ -33,7 +33,7 @@ import {
 import PhGlyph from '../components/spectrum/PhGlyph'
 import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 // WHO SEES WHICH PACK. One editable table, no pack name in this file's logic —
-// see src/data/iconPackTiers.js for the founder's rule and for how to move a
+// see src/data/iconPackTiers.js for the rule and for how to move a
 // pack between tiers with a one-word edit.
 import {
   ANIMATED_PACKS, ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, isAnimatedPack, tierOf, viewerTier, visiblePacks,
@@ -64,7 +64,7 @@ const API_LIMIT = 999
 // ONE HOST, BECAUSE THE OTHER TWO WERE NEVER A FALLBACK.
 // `api.simplesvg.com` and `api.unisvg.com` are Iconify's documented mirrors and
 // sat here as the retry path for exactly the outage this file keeps hitting.
-// MEASURED 2026-09-18, both from this machine and unauthenticated:
+// MEASURED, both from one machine and unauthenticated:
 //   api.iconify.design  /collection?prefix=lucide -> 200
 //   api.simplesvg.com   /collection?prefix=lucide -> 403
 //   api.unisvg.com      /collection?prefix=lucide -> 403
@@ -353,7 +353,7 @@ const prefetchIconSvg = (icon) => {
    one host, on top of the 25 `/collection` requests `browseAll` already sends —
    ~145 requests to api.iconify.design from one IP, per load, before the visitor
    has scrolled once. Cloudflare answers that with error 1015 (rate limited by
-   IP), which is precisely the 2026-09-15 breakage recorded at `noteGlyphFailure`
+   IP), which is precisely the breakage recorded at `noteGlyphFailure`
    below: the catalogue answered 200, every glyph came back 429, and because the
    API serves a rate-limited glyph as text/plain while the browser asked for an
    image, ORB blocked it and the <img> just failed. The page believed it was
@@ -361,19 +361,19 @@ const prefetchIconSvg = (icon) => {
 
    THE FIX. The Iconify API serves many icons in ONE request:
    `/{prefix}.json?icons=a,b,c` returns `{ icons: { a: {body}, … }, aliases, … }`.
-   MEASURED 2026-09-18: 60 lucide icons in a single response, HTTP 200, 14,977
+   MEASURED: 60 lucide icons in a single response, HTTP 200, 14,977
    bytes. So a 120-cell page costs one request per PACK PRESENT (≈25 on the
    mixed "All packs" view, far fewer on a single pack or a group) instead of 120
    — and scrolling to the next page is usually free, because a pack's tranche is
    fetched generously and cached for the session.
 
    WHY THE MARKUP IS STILL AN <img>, NOT INLINE SVG. The obvious way to use the
-   body is `dangerouslySetInnerHTML`. This repo does not contain a single use of
-   it — `grep -rn dangerouslySetInnerHTML src` returns nothing, which is a large
-   part of why the 2026-09-16 security review found no XSS — and third-party
-   markup is the worst possible place to introduce the first one. Composing the
-   body into a `data:image/svg+xml` URI keeps the exact same <img> element, the
-   same `ig-inv` tint, the same `loading="lazy"`, and the same canvas sampling in
+   body is `dangerouslySetInnerHTML`. The only use in src is PhIcon, which
+   injects the app's own bundled path data; third-party markup fetched at
+   runtime is the worst possible thing to inject the same way. (The customiser
+   stage is separate: it parses one SVG, sanitised on fetch or paste, into the
+   DOM to edit it.) Composing the body into a `data:image/svg+xml` URI keeps
+   the exact same <img> element, the same `ig-inv` tint, the same `loading="lazy"`, and the same canvas sampling in
    BrandGlyph (a data: URI does not taint a canvas, so that path stops needing
    CORS at all) — while SVG inside an <img> is a non-scripting context by spec,
    so a hostile body cannot run anything. Same pixels, no new attack surface.
@@ -982,8 +982,8 @@ function transformAttr(rotate, flipH, flipV, cx, cy) {
 }
 
 // Bake the live customiser values into REAL SVG attributes so copied/saved/
-// downloaded markup matches the Stage exactly (this is the Lucide copy-reset
-// #2794 workaround — never fall back to defaults).
+// downloaded markup matches the Stage exactly (a workaround for Lucide's copy
+// resetting to default attributes — never fall back to defaults).
 function serializeCustomizedSvg(rawSvg, opts = {}) {
   if (!rawSvg) return ''
   const { size = 48, color, stroke, isStroke, absStroke, cap, join, rotate = 0, flipH = false, flipV = false } = opts
@@ -1530,7 +1530,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   // Copying the SVG stays free; taking the FILE needs a free account.
-  // Founder decision 2026-09-15 — see src/hooks/useExportGate.js.
+  // See src/hooks/useExportGate.js.
   const handleDownload = async () => {
     if (!serializedOutput) return
     if (!(await requireExportAccount('download this icon'))) return
@@ -2110,7 +2110,7 @@ const packLabel = (p) => PACK_LABELS[p] || p
 
 /* ── THE CREDIT UNDER THE GRID ───────────────────────────────────────────────
 
-   WHAT THIS REPLACES. Until 2026-09-23 the whole product carried one
+   WHAT THIS REPLACES. The whole product used to carry one
    attribution string: the `<p className="ig-attrib">` further down, rendered
    only when `pack === 'logodev'`. Every other set on this screen was uncredited,
    and the one credit that existed vanished the moment the visitor changed packs.
@@ -2259,16 +2259,15 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
      than over them. The only blur is on the extra rows IconEndBand draws past
      the cap (see IconEndTease): those are decoration, not results.
 
-   Jasper (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd) puts the
-     plan word on the FILTER as well as on the card — its left-hand category
-     list carries a "Business" badge next to the category itself. That is
-     `lockMark` above: the pack menu and the group chips say which tier a set
+   A common pattern puts the plan word on the FILTER as well as on the card —
+     a left-hand category list carries a "Business" badge next to the category
+     itself. That is `lockMark` above: the pack menu and the group chips say which tier a set
      needs BEFORE it is chosen, so nothing is a dead end you discover by
      clicking.
 
-   Pinterest (mobbin.com/screens/4bf2a5e2-acb3-49ea-bf63-e711ba6377bc) is the
-     signed-out cap, and also the counter-example: its real grid sits behind a
-     "Log in to see more" dialog raised the moment you scroll. This wall raises
+   Some sites cap the signed-out grid, with a counter-example: the real grid
+     sits behind a "Log in to see more" dialog raised the moment you scroll.
+     This wall raises
      nothing on its own — the account dialog opens when the button is PRESSED,
      never on arrival or on scroll.
 
@@ -2380,7 +2379,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      sits BEFORE the request rather than on the rendered cell, which is the
      discipline src/utils/lockedPreview.js exists to enforce: a locked thing's
      payload never reaches the browser. Fetch-then-hide would leak the markup
-     AND spend the rate limit this page was rescued from on 2026-09-18.
+     AND spend the rate limit the batched fetch exists to avoid.
 
      TWO RESOLUTIONS, AND ONLY ONE IS WORTH WAITING FOR.
 
@@ -2524,7 +2523,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     })))
     setVisible(PAGE_SIZE)
     // "Built-in icons", not "Offline": this branch is reached when the icon
-    // SERVICE refused (a 429 rate limit was measured on 2026-09-08), and the
+    // SERVICE refused (a 429 rate limit was measured), and the
     // browser is online the whole time. The notice above the grid says what
     // happened; this line says what is being shown.
     setMode(cdnOk.current === false ? 'Built-in icons' : 'Embedded')
@@ -2533,12 +2532,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   /* ── WHEN THE CATALOGUE ANSWERS AND THE GLYPHS DO NOT ────────────────────
 
-     The 2026-09-08 outage work built a real refused-state — "Couldn't reach
+     The outage work built a real refused-state — "Couldn't reach
      the icon service — showing built-in icons", a Try again button, and the
      built-in set underneath — and keyed it on the CATALOGUE requests failing.
 
-     Measured 2026-09-15, the founder reported the library broken and it was
-     failing a way that state cannot see: all 24 /collection requests returned
+     The library was also failing a way that state cannot see: all 24 /collection requests returned
      200 while every individual glyph .svg came back 429 from Cloudflare
      (error 1015, rate limited by IP). The API answers a rate-limited glyph
      with text/plain, the browser had asked for an image, so ORB blocks it and
@@ -2788,7 +2786,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
     // and a free viewer may have none of them, so the chip is a wall; a mixed
     // group would fetch only the members the viewer is entitled to and say so
-    // in its own "· N packs" count. There is no mixed group today — the founder's
+    // in its own "· N packs" count. There is no mixed group today — the tier
     // line happens to fall on group boundaries — but the arithmetic is written
     // for the table rather than for today's contents, so moving one pack in
     // iconPackTiers.js cannot silently produce a group that fetches what it
@@ -2969,8 +2967,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Tell the masthead whether the grid under it is the CATALOGUE or the
   // built-in fallback. IconEmojiLibrary's status pill used to read
-  // navigator.onLine alone, so with every Iconify host refusing (429/403 —
-  // the 2026-09-08 outage) it said "Live library connected" in green directly
+  // navigator.onLine alone, so with every Iconify host refusing (429/403)
+  // it said "Live library connected" in green directly
   // above the notice saying the icon service could not be reached. `loadError`
   // is the same flag that renders that notice, so the pill and the notice can
   // never disagree again. Reported through a callback rather than lifted,
@@ -3214,13 +3212,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      active button and re-runs that measurement whenever the options array
      changes identity. Per-tier is a handful of times in a session. Per-render
      would be every keystroke, and the indicator would never settle. */
-  /* UNTIL 2026-09-23 THE GROUP TRAY CARRIED NO TIER MARKER, AND THAT WAS
+  /* THE GROUP TRAY USED TO CARRY NO TIER MARKER, AND THAT WAS
      MEASURED RATHER THAN PREFERRED — it was the one place this gate could not
      be shown without charging the gated viewer for it. (The history below is
      kept because it is WHY the marker that replaced it takes no width.)
 
-     Jasper's library (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd)
-     badges the CATEGORY as well as the card, which is the right instinct, and
+     Other libraries badge the CATEGORY as well as the card, which is the right instinct, and
      its categories are a vertical list with room to spare. This tray is a
      horizontal row inside a 68px toolbar. MEASURED at 1280, signed out:
        · " · Log in" / " · Pro" appended to five of the seven labels added 186px
@@ -3246,7 +3243,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      active button and re-runs that measurement whenever the options array
      changes identity. Per tier is a handful of times in a session; per render
      would be every keystroke, and the indicator would never settle. */
-  /* 2026-09-23 — THE ROW HAS SLACK NOW, AND THE MARKER IS BACK. The Spectrum
+  /* THE ROW HAS SLACK NOW, AND THE MARKER IS BACK. The Spectrum
      toolbar gives the filters a full-width row of their own, and the marker
      is a padlock badge positioned on the chip's corner rather than a word laid
      out inside it (see `lock` in LibraryFilterGroup), so it costs the tray no
@@ -3445,7 +3442,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // the word matches none of them the grid empties on the SEARCH's account, not
   // the service's.
   //
-  // MEASURED 2026-09-13 at 1280 and 390, light, with the icon service
+  // MEASURED at 1280 and 390, light, with the icon service
   // unreachable: `.ig` held 120 cells, typing "zzzqqqxyz" took it to 0, the
   // grid became `display:none`, and the ONLY live region left on the page was
   // the stale "Couldn't reach the icon service" notice. No empty state, no
@@ -3456,7 +3453,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // query the block below explains which of the two things went wrong, in the
   // sentence it already carries.
   //
-  // 2026-09-15: THE SAME SILENCE WAS STILL THERE FOR THE PACK AND COLLECTION
+  // THE SAME SILENCE WAS ALSO THERE FOR THE PACK AND COLLECTION
   // FILTERS, which is the half the fix above did not reach.
   //
   // The fallback set is 259 built-in icons and it does not cover every pack the
@@ -3476,7 +3473,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // search." for the query-less case, which is exactly true here and blames
   // nobody. The outage notice stays above it and still explains the cause.
   //
-  // 2026-09-18: AND NOT WHEN THE GRID IS EMPTY BECAUSE THE VIEWER MAY NOT HAVE
+  // AND NOT WHEN THE GRID IS EMPTY BECAUSE THE VIEWER MAY NOT HAVE
   // IT. "No icons to show — try another pack or search" is true of a pack that
   // holds nothing and false of one that holds thousands the visitor is not
   // entitled to; printing it over a gate would be the page blaming the
@@ -3671,21 +3668,17 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   }, [windowed, win, icons])
 
   // THE PACK LABEL ONLY EARNS ITS LINE WHEN IT DISCRIMINATES.
-  // #298 dropped it below 980px; above 980px it was still drawn under EVERY
+  // It is already dropped below 980px; above 980px it was still drawn under EVERY
   // cell - 120 of them on first paint, all reading "lucide" - while the line
   // that does tell icons apart, the icon's own name, was being truncated to
   // make room for it ("align-horizontal-…", "align-vertical-distribute-…").
   // A value identical across the whole grid discriminates nothing.
-  // Mobbin, platform web, and no reference labels the pack on the cell:
-  // Skiff (screens/85ca7e92-1c51-401d-92ed-6942e6beaf47) and Craft
-  // (screens/992cc0ba-f9d6-41e2-98d6-c624907d6593) give their pickers bare
-  // glyphs; Notion (screens/899cb181-5770-47d2-92c8-332ca9d9a733) heads the
-  // collection once; and Magnific, which has this exact job at this exact
-  // scale (screens/c215558c-23c8-415a-8b3d-917004d27adb), states "Special
-  // Lineal by Freepik · 288.1k icons in this collection" ONCE above the grid
-  // and labels not one cell. That is the same answer the CSS note reached:
-  // pack identity belongs to the GROUP.
-  // So it is kept for the case #298 reserved it for and no other - a result
+  // Comparable web pickers do not label the pack on the cell: some give bare
+  // glyphs, some head the collection once, and one states "Special Lineal by
+  // Freepik · 288.1k icons in this collection" ONCE above the grid and labels
+  // not one cell. That is the same answer the CSS note reached: pack identity
+  // belongs to the GROUP.
+  // So it is kept for the case the narrow-screen rule reserved it for and no other - a result
   // set that actually holds more than one pack, which is where the word tells
   // you something. Which pack is being browsed is already stated by the pack
   // filter in the toolbar above.
@@ -3771,8 +3764,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           Unreachable, and not inert: the block kept a second copy of the h1 and
           subtitle that the wrapper owns, which is a drift bug waiting for the
           next copy change, and the eyebrow was `sec-h-eyebrow` — the exact
-          element the founder marked "AI" and #382 deleted from every tool
-          masthead it reached. A retired motif that cannot be rendered still
+          element since deleted from every tool masthead it reached. A retired motif that cannot be rendered still
           reads as live code to the next person to open the file. */}
 
       {visibleRecents.length > 0 && !isMyIcons && (
@@ -3832,7 +3824,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed
             from the Prompt Library) and outlined `.pl-chip` pills — while the
             Palette and Gradient libraries had already converged on
-            src/components/library/. Founder request: make this and the Emoji
+            src/components/library/. The aim: make this and the Emoji
             Library match the galleries.
 
             THE PACK SELECT STAYS A SELECT. Twenty-six packs in six optgroups is
@@ -3937,7 +3929,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // role="status": the sentence is the only thing telling a
               // screen-reader user that the grid under it is the built-in set
               // rather than the catalogue they searched. Rendered with every
-              // Iconify host refused (429/403) on 2026-09-08 the state was
+              // Iconify host refused (429/403) the state was
               // otherwise complete — the sentence, Try again and the built-in
               // grid — but nothing announced it.
               //
@@ -3946,9 +3938,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // have refused it; carrying a stale "couldn't reach the icon
               // service" over a Pro wall would tell the visitor the network
               // broke when the product simply said no — and would hand the Try
-              // again button a retry for a pack they may not have. This is the
-              // same class of error as #435, where the masthead pill said "Live
-              // library connected" directly above this notice.
+              // again button a retry for a pack they may not have. It is the
+              // same class of error as a masthead pill saying "Live library
+              // connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
                 <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
@@ -4011,7 +4003,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             {/* THE GRID EMPTYING IS A STATUS MESSAGE, and it was silent.
                 Type a query that matches nothing and the grid drops from 120
                 cells to 0; this block appears, saying so and saying how to get
-                back. Nothing announced it — measured 2026-09-11 at 1280/light
+                back. Nothing announced it — measured at 1280/light
                 and 390/dark, where the only live region on the page was the
                 app toast, empty. So a screen-reader user searching for a word
                 the catalogue does not carry heard nothing at all and had no

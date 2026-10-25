@@ -5,7 +5,7 @@
 // /collection requests on first paint, a /search per query, an .svg per cell —
 // and nothing in the suite stood between those requests and the network. After
 // a day of full-suite runs from one machine, api.iconify.design answered 429
-// and both fallbacks 403 without CORS headers (measured 2026-09-08 with curl
+// and both fallbacks 403 without CORS headers (measured with curl
 // and the suite's own Origin). 25-layout-target-sweep's pack-label test then failed
 // with "one pack name under every cell", every visit logged ~100 CORS findings,
 // and the gate for unrelated PRs was decided by a third party's rate limit.
@@ -18,7 +18,7 @@
 // page that never asked.
 //
 // The last two tests answer the product question the outage raised: what a
-// visitor sees when every host refuses. Rendered on 2026-09-08 with all three
+// visitor sees when every host refuses. Rendered with all three
 // hosts routed to 429/403 the page was NOT an empty grid: within a second it
 // showed "Couldn't reach the icon service — showing built-in icons." with a
 // Try again button and the 259 built-in icons underneath, at 1280 and at 390
@@ -44,7 +44,7 @@ const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, 
 const REFUSED = 'visitor whose icon catalogue is refused'
 
 /**
- * Answer every Iconify host the way the network did on 2026-09-08. Fulfilled,
+ * Answer every Iconify host the way the network did in the outage. Fulfilled,
  * not aborted, and stamped so the context's audit counts it as a deliberate
  * refusal rather than a response that reached the real API.
  */
@@ -88,7 +88,7 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   const page = await ctx.newPage()
   watch(page, 'designer opening the icon library')
   // SIGNED IN AS PRO, BECAUSE THE SUBJECT IS THE FIXTURE AND NOT THE PAYWALL.
-  // /create/icons is tiered as of 2026-09-18 (src/data/iconPackTiers.js): a
+  // /create/icons is tiered (src/data/iconPackTiers.js): a
   // signed-out visitor browses five packs, not twenty-five, so "one /collection
   // per pack the page browses on first paint" would be measuring the gate here
   // rather than the stub. Pro is the tier that browses everything, which is the
@@ -204,7 +204,7 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
 //
 // When the catalogue is unreachable the surface falls back to its built-in set
 // and says so in the notice above. That set does not cover every pack the
-// control offers, and until 2026-09-15 the empty state was suppressed for the
+// control offers, and the empty state used to be suppressed for the
 // whole of a load error unless the visitor had typed something — so choosing
 // one of the uncovered packs emptied the grid and announced nothing.
 //
@@ -216,8 +216,7 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
 // quarters of that menu looked like a control that does nothing, under a banner
 // about a different problem.
 //
-// That is the same silence the search half of this defect was fixed for on
-// 2026-09-13, reached by a different route. Narrowing to a pack is a user
+// That is the same silence the search half of this defect was fixed for, reached by a different route. Narrowing to a pack is a user
 // action like typing, so an empty result is an answer to it.
 test('choosing a pack the built-in set does not cover answers instead of emptying', async ({ browser }) => {
   test.skip(isLiveIconify(), LIVE)
@@ -544,11 +543,10 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   await ctx.close()
 })
 
-// THE GROUP CHIPS ANNOUNCE THE GATE BEFORE IT IS CLICKED (Spectrum, 2026-09-23).
+// THE GROUP CHIPS ANNOUNCE THE GATE BEFORE IT IS CLICKED.
 //
-// SPECTRUM-REVIEW's follow-up for the rebuilt toolbar: "put a marker back on
-// the locked group chips — that is the one place the gate is currently
-// discovered by clicking rather than announced." The marker is a padlock badge
+// The locked group chips need a marker, because otherwise the gate is
+// discovered by clicking rather than announced. The marker is a padlock badge
 // POSITIONED on the chip (no width) with the tier word in the accessible name.
 //
 // Three things are held, one per rung, and the last is the reason the marker

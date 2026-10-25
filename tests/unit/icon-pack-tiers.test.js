@@ -1,7 +1,7 @@
 // WHO SEES WHICH ICON PACK — the table, and the page's agreement with it.
 //
 // src/data/iconPackTiers.js is the single editable answer to "may this viewer
-// browse this pack". The founder moves a pack between tiers by changing one
+// browse this pack". A pack moves between tiers by changing one
 // word on one line; nothing in src/pages/IconLibrary.jsx knows a pack name.
 //
 // THE TEST THIS FILE EXISTS FOR is the first one: the set of packs the library
@@ -78,7 +78,7 @@ test('every line carries a tier the code understands and a justification a human
   for (const [prefix, row] of Object.entries(ICON_PACK_TIERS)) {
     assert.ok(TIER_ORDER.includes(row.tier), `${prefix} has tier "${row.tier}", which is not one of ${TIER_ORDER.join(' | ')}`)
     assert.equal(typeof row.why, 'string', `${prefix} has no justification`)
-    // The founder's rule is "does its creator run a free browser for it", so a
+    // The rule is "does its creator run a free browser for it", so a
     // justification that names neither a browser nor the absence of one records
     // nothing. Short strings are how a row rots into an unexplained decision.
     assert.ok(row.why.trim().length >= 40,
@@ -107,7 +107,7 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   for (const p of anon) assert.ok(free.includes(p), `${p} is visible signed out but not signed in — the tiers do not widen`)
   for (const p of free) assert.ok(paid.includes(p), `${p} is visible free but not on Pro — the tiers do not widen`)
 
-  // The concrete cases the founder named, so a refactor that inverts the
+  // The concrete cases that matter, so a refactor that inverts the
   // comparison cannot pass by being internally consistent.
   assert.equal(canSeePack('lucide', 'anon'), true, 'Lucide is the signed-out sample')
   assert.equal(canSeePack('material-symbols', 'anon'), false, 'a solid set needs an account')
@@ -185,7 +185,7 @@ test('IconLibrary consults the table — it does not carry a second copy of the 
     const inCondition = new RegExp(`(?:if|\\?|&&|\\|\\|)[^\\n]{0,80}['"\`]${brand}['"\`]`)
     assert.doesNotMatch(page, inCondition,
       `"${brand}" appears inside a condition in ${PAGE}. Tiering is a table, not a conditional — `
-      + 'the founder must be able to move a pack by editing one line of src/data/iconPackTiers.js.')
+      + 'a pack must be movable by editing one line of src/data/iconPackTiers.js.')
   }
 })
 
@@ -195,7 +195,7 @@ test('a gated scope never becomes the refused-service state, and never the empty
   //   loadError → "Couldn't reach the icon service" (the network said no)
   //   gated     → the wall (the product said no)
   //   searchEmpty → "No icons match" (the catalogue has nothing)
-  // Letting any two share a rendering is the defect #435 fixed for the first
+  // Letting any two share a rendering is the defect already fixed for the first
   // pair; these assertions stop it being reintroduced through the third.
   assert.match(page, /\{loadError && !gated && \(/,
     'the "couldn\'t reach the icon service" notice must be suppressed for a gated scope — nothing was asked for, so nothing refused it')
