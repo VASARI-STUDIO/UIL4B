@@ -529,3 +529,37 @@
 @media (forced-colors: active) {
   :is(.tl, .tl-sheet-layer) .tl-pill.is-on { border: 2px solid Highlight; }
 }
+
+/* ── Export menu (ExportMenu.jsx) ─────────────────────────────────────────
+   The button is the one .tl-btn--accent; the list reuses the overflow's
+   popover (.tl-pop) and bottom sheet (.tl-sheet) and its rows (.tl-menu-row),
+   with pill rows to match the button. */
+.tl .tl-export { position: relative; display: flex; align-items: center; }
+.tl-export-caret { margin-right: -3px; }
+.tl-export-btn[aria-expanded="true"] .tl-export-caret { transform: rotate(180deg); }
+:is(.tl, .tl-sheet-layer) .tl-export-pop { min-width: 196px; padding: 6px; border-radius: 24px; }
+:is(.tl, .tl-sheet-layer) .tl-export-rows .tl-menu-row { border-radius: var(--radius-pill); padding-inline: 14px; }
+:is(.tl, .tl-sheet-layer) .tl-export-rows .tl-menu-row:focus-visible {
+  background: var(--tl-wash-2);
+  outline-offset: -2px;
+}
+@media (pointer: coarse) {
+  :is(.tl, .tl-sheet-layer) .tl-export-rows .tl-menu-row { min-height: 44px; }
+}
+
+/* ── Save-to-project dialog (SaveToProjectDialog.jsx) ───────────────────────
+   Chrome is the global .ui-modal; the dialog renders inside the tool root, so
+   only the form is styled here. */
+.tl-save-form { display: grid; gap: 14px; }
+.tl-save-summary { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+.tl-save-field { display: grid; gap: 6px; }
+.tl-save-field > span { font-size: 11.5px; font-weight: 600; color: var(--t1); }
+.tl-save-field input { width: 100%; }
+.tl-save-err { margin: 0; font-size: 12px; font-weight: 500; color: var(--err-strong); }
+.tl-save-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.tl-save-actions .btn { justify-content: center; }
+@media (pointer: coarse) {
+  .tl-save-actions .btn,
+  .tl-save-x { min-height: 44px; }
+  .tl-save-x { min-width: 44px; }
+}
