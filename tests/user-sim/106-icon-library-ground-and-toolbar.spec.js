@@ -109,7 +109,7 @@ const openFlagGrid = async (browser, scheme, width) => {
   return { ctx, page }
 }
 
-// A chip whose glyph has arrived: it has left the pending skeleton (--wait).
+// A chip whose glyph has arrived: it has left the pending, empty slot (--wait).
 const LOADED_CHIP = '.ig .ic .ig-chip:not(.ig-chip--wait):has(img)'
 
 const chipPaint = (page) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map((c) => {

@@ -1,13 +1,13 @@
 // THE CATALOGUE CAN ANSWER WHILE EVERY GLYPH REFUSES, AND THAT IS WHAT BROKE.
 //
-// The 2026-09-08 outage work built a real refused-state for the Icon Library:
+// The outage work built a real refused-state for the Icon Library:
 // "Couldn't reach the icon service — showing built-in icons", a Try again
 // button, the built-in set underneath, and a masthead pill that reads the same
 // flag so it can never say "Live library connected" over a dead grid. All of it
 // keys on the CATALOGUE requests failing.
 //
-// Founder, 2026-09-15: "the icon library is broken and so is alot of other
-// resources". Measured the same day against the live API: all 24 /collection
+// The reported symptom was a broken icon library. Measured against the live
+// API: all 24 /collection
 // requests returned 200 while every individual glyph .svg came back 429 from
 // Cloudflare (error 1015 — rate limited per IP, Retry-After 257). The API
 // answers a rate-limited glyph with text/plain; the browser had asked for an
@@ -32,7 +32,7 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
     await refuseIconifyGlyphs(page)
     await go(page, '/create/icons')
 
-    // The notice the 2026-09-08 work built, reached by a route it could not see.
+    // The notice the outage work built, reached by a route it could not see.
     const notice = page.getByText(/couldn.t reach the icon service/i)
     await expect(notice, 'the grid is refusing glyphs and saying nothing').toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: /try again/i })).toBeVisible()
@@ -59,7 +59,7 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
   })
 
   test('the masthead pill cannot claim a live library over a fallback grid', async ({ page }) => {
-    // The 2026-09-09 follow-up wired the pill to the same loadError flag so the
+    // The pill is wired to the same loadError flag so the
     // two could never disagree. It has to hold for THIS failure too, which is
     // the one that reaches the flag by a different road.
     watch(page, PERSONA)

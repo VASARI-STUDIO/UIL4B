@@ -115,8 +115,8 @@ test('the GRID takes its markup from the batch endpoint, never one request per c
   // `<img src={`https://api.iconify.design/${pack}/${name}.svg?…`}>`, so a
   // 120-cell first paint fired 120 image requests at one host on top of the 25
   // /collection requests — measured at ~145, which is what Cloudflare answered
-  // with error 1015 and what left the founder looking at a grid of blank cells
-  // on 2026-09-15. Comment-blind, so the note explaining the change cannot be
+  // with error 1015 and what left a grid of blank cells.
+  // Comment-blind, so the note explaining the change cannot be
   // what satisfies the rule.
   const page = strip(read('src/pages/IconLibrary.jsx'))
   assert.match(page, /\.json\?icons=/,
@@ -126,14 +126,14 @@ test('the GRID takes its markup from the batch endpoint, never one request per c
     + 'pattern that rate-limited the page into a grid of blank cells; the glyph comes from the '
     + 'batched endpoint, composed into a data: URI.')
 
-  // The dead mirrors. Both answered 403 to every path when measured on
-  // 2026-09-18, so listing them only bought three round trips per failure.
+  // The dead mirrors. Both answered 403 to every path when measured,
+  // so listing them only bought three round trips per failure.
   assert.doesNotMatch(page, /api\.simplesvg\.com|api\.unisvg\.com/,
     'api.simplesvg.com and api.unisvg.com refuse this origin outright (403). They are not a '
     + 'fallback; re-adding one puts a guaranteed-failing hop back in front of every retry.')
 
   // Third-party markup must never become HTML. The whole repo is free of this
-  // and that is a large part of why the 2026-09-16 security review found no XSS.
+  // and that keeps the page free of HTML injection from that route.
   assert.doesNotMatch(page, /dangerouslySetInnerHTML/,
     'A batched body is remote third-party markup. It goes into a data: URI inside an <img>, '
     + 'which is a non-scripting context, never into the DOM as HTML.')

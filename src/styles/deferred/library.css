@@ -95,7 +95,7 @@
 
    The cost is height and it is the largest this sweep has spent: the emoji row
    goes 29px → 169px at 320px wide, 29 → 134 at 390, 29 → 64 at 1180. That is
-   accepted on the same reasoning PR #271 recorded for .stc-bundles — a page
+   accepted on the same reasoning as .stc-bundles — a page
    that already scrolls vertically can afford rows; an undiscoverable gesture
    costs the option entirely. .grg-chips already wraps at ≥821px, so this is the
    established look on one of the four surfaces rather than a new one. */
@@ -117,15 +117,12 @@
 .pl-card:hover{transform:translateY(-4px);box-shadow:var(--warm-shadow-lg);border-color:var(--bh)}
 
 /* ── The prompt preview: the card shows the ARTEFACT ────────────────────────
-   The founder asked the library to "preivew the prompts" and referenced
-   motionsites.com, a gallery whose cards continuously auto-play a scrolling
+   The brief was to preview the prompts, after motionsites.com, a gallery whose cards continuously auto-play a scrolling
    preview of the real page behind them, with the title and category beneath
    and a badge on the paid entries. The transferable half is that the card
    carries the artefact rather than a NAME for it, so the body of a prompt card
    is now the prompt's own text, set in --mono exactly as .pl-modal-prompt sets
-   the same text one activation away. Reference screens are cited in
-   PromptCard.jsx (WRITER's prompt library, Sana AI's workflow grid).
-
+   the same text one activation away. 
    THE WINDOW IS NOT A SCROLL CONTAINER, and that is deliberate. Making it one
    would put a nested scroller under the pointer on twenty cards, which the
    app-wide Lenis instance then has to arbitrate on every wheel event —
@@ -265,7 +262,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    control, so on a desktop "end" is the case that keeps all six tones on
    screen — measured cut off at 1280, 1440 and 1920 before this. */
 .emoji-tone-pop[data-pop-align="end"]{left:auto;right:0}
-/* clamp follows usePopover's convention after #434: the hook writes --pop-x
+/* clamp follows usePopover's convention: the hook writes --pop-x
    (the panel's left edge pinned EDGE_PAD from the viewport), not a centre. */
 .emoji-tone-pop[data-pop-align="clamp"]{left:var(--pop-x,0px)}
 .emoji-tone-pop[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
@@ -496,9 +493,9 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    The slot is the cell's full content width (118px cell less its 6px side
    padding) and stays 36px TALL — the same height as the square chip — so a row
    that contains a wide item is exactly as tall as one that does not and the
-   grid rhythm is untouched. No column span, so nothing is re-ordered: #298
-   rejected visual re-ordering on this codebase's grids on WCAG 2.4.3 grounds
-   and that reasoning holds here.
+   grid rhythm is untouched. No column span, so nothing is re-ordered: this
+   codebase's grids reject visual re-ordering on WCAG 2.4.3 grounds and that
+   reasoning holds here.
 
    overflow:hidden with a centred, full-width image is what reaches devicon's
    `-wordmark` entries. Their canvas is square, so `width:100%` renders them
@@ -507,15 +504,13 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    Artwork that is genuinely wide never reaches the clip — at 106px wide it is
    already shorter than 36px — so one rule serves both causes.
 
-   WHY A WIDER CELL RATHER THAN A SQUARE ONE, from the Mobbin pass: Squarespace's
-   Asset Library gives a wide logotype a double-width cell in an otherwise
-   uniform grid; Air lays assets out at a fixed row height with the cell width
-   following each asset's aspect; Google Ads' logo picker keeps a uniform
-   landscape thumbnail and fits the art inside it at its natural aspect, naming
-   the aspect on the card. Arcade's Brand Kit goes furthest and splits
-   "Logotypes" from "Icons" into two sections with different cell shapes. None of
-   them letterboxes a lockup into a square. This is the Google Ads answer, which
-   is the one that transplants into a dense icon grid without re-ordering it. */
+   WHY A WIDER CELL RATHER THAN A SQUARE ONE: asset libraries commonly give a
+   wide logotype a double-width cell in an otherwise uniform grid, or lay assets
+   out at a fixed row height with the cell width following each asset's aspect,
+   or keep a uniform landscape thumbnail and fit the art inside it at its
+   natural aspect, or split "Logotypes" from "Icons" into two sections with
+   different cell shapes. None of them letterboxes a lockup into a square. This
+   is the uniform-thumbnail answer, which is the one that transplants into a dense icon grid without re-ordering it. */
 .ig-chip--wide{width:100%;height:36px;overflow:hidden;position:relative}
 /* NOTHING IS EVER CROPPED. `--ig-wide-cap` is measured per icon in sampleGlyph:
    how many multiples of this slot height the element may be drawn wide before
@@ -551,7 +546,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 /* The ?hero=a|b|c direction explorer that lived here is GONE, with
    src/components/HomeHeroDirections.jsx and its three variants' rules
    (.home-hero--dir, .hero-dir-*, .hero-a-*, .hero-b-*, .hero-c-*).
-   Founder, 2026-09-07: "Retire it, V2 hero decides." The shipped hero above
+   The shipped hero above
    is the decision; the exploration has no second reader. */
 
 
@@ -559,7 +554,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 
 
 /* ══ V2 homepage ═══════════════════════════════════════════════════════════════
-   Built against docs/reference/design-language-v2.md. Colour comes entirely
+   Colour comes entirely
    from existing role tokens, so this block inherits the V2 palette the moment
    feat/v2-token-foundation remaps them — nothing here names a hex.
 
@@ -580,7 +575,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    note in Home.jsx. What replaces it is a single quiet category line, the way a
    product page names its own category rather than opening with proof. */
 /* .home-hero-kicker's rule is gone with its element — the "UI system
-   toolkit" tagline, removed 2026-09-07. */
+   toolkit" tagline, since removed. */
 /* The catalogue figures, now beside the toolset grid they describe. A
    definition list because that is what they are: a number and what it counts. */
 .htools-facts{display:flex;flex-wrap:wrap;gap:var(--s-6);margin:var(--s-5) 0 0;padding:0}
@@ -607,9 +602,8 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 /* ══════════════════════════════════════════════════════════════════════════
    SPECTRUM — the library surfaces take the app design's anatomy
    ══════════════════════════════════════════════════════════════════════════
-   Source: `UIL4B App.dc.html`, the Palette Library screen (lines 219–282) and
-   the icons page (lines 284–327). Those two screens ARE this app's browse
-   language; where they and the shipping stylesheet disagree, they win.
+   The Palette Library screen and the icons page ARE this app's browse
+   language; where they and the older stylesheet disagree, they win.
 
    WHY THE RULES LIVE HERE AND NOT WHERE THE ORIGINALS DO. The shared browse
    vocabulary (`.dgh-`, `.lbry-`, `.ig`/`.ic`) is split across `global.css` and
@@ -735,32 +729,25 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    control: "My Icons · Coloured · Brand logos · Flags · Emoji" is five
    adjacent words. One shared class, six surfaces.
 
-   THE FIX IS THE DESIGN'S OWN ANSWER, not an invention. `UIL4B App.dc.html`
-   line 307 gives every icon filter `border:1px solid {{ f.border }}` where the
+   THE FIX IS THE DESIGN'S OWN ANSWER, not an invention. The app design gives
+   every icon filter `border:1px solid {{ f.border }}` where the
    resting border is `rgba(ink,.12)` and the selected one inverts to a solid
    `PAPER` fill with `var(--page)` ink. So: a hairline chip at rest, a solid
    ink chip when on, and the rail goes away — with a border on every option the
    tray fill is a second, weaker statement of the same thing.
 
-   MOBBIN, and the citation is the argument rather than decoration:
-     · ElevenLabs Voices/Explore — mobbin.com/screens/609210af-c2ba-4d78-8176-3b41197e5dc2
-       every resting filter carries a visible border plus an icon, next to an
+   THE PATTERNS THIS FOLLOWS:
+     · Every resting filter carries a visible border plus an icon, next to an
        explicit rail control. Resting state is a control, not a word.
-     · PlayAI — mobbin.com/screens/afeb4284-ec4b-4d62-bd1c-7106f8f152cf
-       removable chips with Clear All: the chip is the unit, and it is outlined.
-     · WRITER — mobbin.com/screens/1c2a36be-2d18-467a-905f-8baec911f81d
-       unselected rows stay plainly rows. Which is why the collapsed MENU here
+     · Removable chips with Clear All: the chip is the unit, and it is outlined.
+     · Unselected rows stay plainly rows. Which is why the collapsed MENU here
        is deliberately NOT given chips — a list row is a row.
-     · Google Ads Asset studio — mobbin.com/screens/41430f1a-8fb3-4b1f-81d5-6af768f99cb0
-       (searched fresh for this change) a full-width chip row under the tabs
-       where selected AND unselected both carry the pill border; the selected
-       one adds fill and a check.
-     · Air — mobbin.com/screens/b28a4a1f-979e-49c1-a83f-7f0ac454e614
-       the same row, plus the quiet count line above the grid.
-     · Perplexity Artifacts — mobbin.com/screens/7e18e989-a84f-45de-94b8-4816e3f63024
-       the counter-example, and the useful one: bare-text options with a filled
-       selection read fine THERE because one is always selected. That is the
-       exact condition /create/icons does not meet.
+     · A full-width chip row under the tabs where selected AND unselected both
+       carry the pill border; the selected one adds fill and a check, with a
+       quiet count line above the grid.
+     · The counter-example: bare-text options with a filled selection read fine
+       where one is always selected. That is the exact condition /create/icons
+       does not meet.
 
    THE SLIDING INDICATOR STAYS and becomes the fill it is now pointing at.
    15-discover-library-parity pins that it measures itself onto the active
@@ -836,7 +823,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    same hex, and `--card` is the menu's own ground, so the rule above paints the
    chosen row in exactly the colour beneath it: rgb(25,26,29) on rgb(25,26,29),
    a selection that differs from an unselected row by text colour alone.
-   global.css has carried the dark value since 2026-09-08
+   global.css already carries the dark value
    (`[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]`,
    `--bg-3`) — but that is (0,4,0), EQUAL to the rule above, and this sheet
    loads after it, so the restyle silently took the fix back and
@@ -1079,7 +1066,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    the name 97px at 320, 103px at 640 and 104px at 1280, against a widest curated
    name ("Harmonic Energy") of 127px: 20 of 100 names ellipsized at 320, 15 at
    640 and 13 at 1280 — the last of those at a width 25-layout-target-sweep:942 does not
-   even walk, so the founder's "no gradient name or meta line is truncated at any
+   even walk, so the rule "no gradient name or meta line is truncated at any
    width" was failing wider than its own guard could see.
 
    THE TYPE IS NOT THE FIX, though the 16px below is what exposed it. Rendered
@@ -1102,7 +1089,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    would have left the middle of every band truncating exactly as before.
 
    `white-space:normal` is the floor under both. A name wider than the whole
-   card cannot be fixed by any share of the line, and the founder's rule has no
+   card cannot be fixed by any share of the line, and that rule has no
    width exception — so the last resort is two lines, never three dots. */
 .lib-surface .lbry-card .lbry-card-foot{padding:16px 18px 18px;flex-wrap:wrap}
 .lib-surface .lbry-card .lbry-card-id{flex:1 1 128px}
@@ -1214,7 +1201,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 /* ══════════════════════════════════════════════════════════════════════════
    APP CONTROLS on every library surface
    ══════════════════════════════════════════════════════════════════════════
-   DECISION (director, 2026-09-23, from `UIL4B App.dc.html`): app controls —
+   DECISION (from the app design): app controls —
    toolbar buttons, fields, secondary buttons — are 10–12px rectangles over a
    hairline; 999px is kept for meters, for the marketing page, and here for
    the two things the app file itself draws as pills because they TOGGLE (the
@@ -1249,11 +1236,8 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    themes with no patch. Accent fills stay for the account and upgrade asks,
    so blue keeps meaning "the product is asking you for something".
 
-   Mobbin, for a detail dialog's actions: Bloom's image detail
-   (mobbin.com/screens/6e00a735-3e9f-4bdd-9d17-5dd1bba60907), Magnific's icon
-   detail (mobbin.com/screens/3d8c2256-598b-46f4-b79b-1831ba0a0ddb) and
-   Descript's prompt template (mobbin.com/screens/34c75374-2f13-4b12-b47a-80d2e9f156fa)
-   — one filled rectangle, hairline rectangles beside it, no pills. */
+   Detail dialogs commonly put their actions as one filled rectangle with
+   hairline rectangles beside it, no pills. */
 .lib-surface .lib-btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   min-height:40px;padding:0 16px;
@@ -1363,10 +1347,10 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 
 
 /* ══ The colour libraries' pill toolbar (Palette + Gradient) ════════════════
-   UIL4B App.dc.html, palettes screen, lines 227–250. The Gradient Library is
-   not drawn in that file; it is the palettes screen's sibling, so it takes
+   The app design's palettes screen. The Gradient Library is
+   not drawn there; it is the palettes screen's sibling, so it takes
    the same bar. */
-/* ── ONE pill bar (line 227): a 999px track at a 5% ink wash
+/* ── ONE pill bar: a 999px track at a 5% ink wash
    over an 8% hairline, 10px in. Opaque rather than a wash because it is
    sticky and cards scroll under it. On a phone it carries a second row (the
    collection chips), so its radius steps down to stay a pill-ended box. */
