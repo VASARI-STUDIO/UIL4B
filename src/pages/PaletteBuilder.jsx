@@ -2315,7 +2315,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const toolbarItems = [
     {
       id: 'back', priority: 2,
-      render: () => <ToolBack to="/projects" label="Back to projects" />,
+      render: () => <ToolBack to="/projects" label="Back to projects" history={false} />,
       menu: { label: 'Back to projects', icon: 'arrow-left', onSelect: () => navigate('/projects') },
     },
     { id: 'seed', priority: 3, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },

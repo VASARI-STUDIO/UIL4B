@@ -1,7 +1,9 @@
 import MenuSelect from './tool/MenuSelect'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import usePopover from '../hooks/usePopover'
+import usePopover, { topObstruction } from '../hooks/usePopover'
+import useMediaQuery from '../hooks/useMediaQuery'
+import { getLenis } from '../hooks/useSmoothScroll'
 import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
 
@@ -138,6 +140,10 @@ const HUE_KEYS = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
 ])
 
+// On a phone the portalled panel is a bottom sheet (global.css, the same width
+// the notation sheet switches at) rather than a popover hung off its trigger.
+const SHEET_QUERY = '(max-width: 767px)'
+
 const DEFAULT_SWATCHES = [
   '#18181b', '#f4f4f5', '#ef4444', '#f59e0b', '#22c55e',
   '#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#78716c',
@@ -183,7 +189,15 @@ export default function ColorPickerPop({
   // Land on the saturation/value pad, not the panel: this popover's whole
   // purpose is that one control, and anything else costs a keyboard user a tab
   // every single time they open it.
-  const { triggerRef, popRef } = usePopover(open, close, { initialFocus: '.cpk-pad', portalled: portal })
+  //
+  // A portalled panel is placed in viewport coordinates, so scrolling the trigger
+  // away would leave it clamped under the nav; it closes instead. A sheet stays
+  // put on purpose, so it is exempt.
+  const phone = useMediaQuery(SHEET_QUERY)
+  const sheet = portal && phone
+  const { triggerRef, popRef } = usePopover(open, close, {
+    initialFocus: '.cpk-pad', portalled: portal, closeWhenAnchorLeaves: portal && !sheet,
+  })
 
   useLayoutEffect(() => {
     if (!open || !portal) return
@@ -194,6 +208,49 @@ export default function ColorPickerPop({
     }
     popRef.current?.style.setProperty('--cpk-layer', String(layer))
   }, [open, portal, popRef, triggerRef])
+
+  // A panel that is shorter than its content scrolls, and a scrolling panel that
+  // looks complete is the bug: a half-visible preset row reads as the end of the
+  // list. `data-more` is set while content remains below the fold, and the
+  // stylesheet draws a fade at the bottom edge for exactly that state.
+  useLayoutEffect(() => {
+    const panel = popRef.current
+    if (!open || !panel) return undefined
+    const update = () => {
+      const more = panel.scrollHeight - panel.scrollTop - panel.clientHeight > 2
+      if (panel.hasAttribute('data-more') !== more) panel.toggleAttribute('data-more', more)
+    }
+    update()
+    panel.addEventListener('scroll', update, { passive: true })
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(panel)
+    return () => {
+      panel.removeEventListener('scroll', update)
+      observer?.disconnect()
+    }
+  }, [open, popRef, recents.length, sheet])
+
+  // The sheet is pinned to the bottom edge, and a trigger that happens to sit in
+  // the lower half of the page would be under it. Lift the page by just enough to
+  // bring the trigger into the clear space above the sheet — never past the
+  // fixed chrome at the top, and not at all when it already clears.
+  useLayoutEffect(() => {
+    const panel = popRef.current
+    const trigger = triggerRef.current
+    if (!open || !sheet || !panel || !trigger) return undefined
+    const frame = requestAnimationFrame(() => {
+      // Worked out from the CSS position, not getBoundingClientRect: the sheet is
+      // still mid-way through its entry transform on the first frame.
+      const sheetTop = window.innerHeight - (Number.parseFloat(getComputedStyle(panel).bottom) || 0) - panel.offsetHeight
+      const box = trigger.getBoundingClientRect()
+      const lift = Math.min(box.bottom + 12 - sheetTop, box.top - topObstruction() - 8)
+      if (lift <= 0) return
+      const lenis = getLenis()
+      if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true })
+      else window.scrollBy({ top: lift, behavior: 'instant' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open, sheet, popRef, triggerRef, recents.length])
 
   const renderPopover = panel => portal ? createPortal(panel, document.body) : panel
 
