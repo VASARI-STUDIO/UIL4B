@@ -95,7 +95,7 @@ function monthStr() {
 
 // ── alt-text ─────────────────────────────────────────────────────────────────
 
-// A markdown-structured brief rather than the flat bullet list this used to be.
+// A markdown-structured brief rather than a flat bullet list.
 // Three things the old shape kept getting wrong and this one fixes:
 //   1. Headed sections separate the non-negotiable output contract from the
 //      advice. As one undifferentiated list, the "plain text only" rule carried
@@ -470,10 +470,10 @@ async function callGemini(userMessage, opts = {}) {
 // THE DEFECT THIS EXISTS FOR. The failover above is silent and total: a wrong,
 // revoked or rate-limited OpenRouter key produces a perfectly good generation
 // from Gemini, the user sees nothing, and the app looks healthy while the
-// primary provider is dead. Until now the only trace a failover left anywhere
-// was one console.error in a Vercel function log — never counted, never
+// primary provider is dead. Without this, the only trace a failover leaves is
+// one console.error in a Vercel function log — never counted, never
 // aggregated, never alerted on, short retention, no admin surface. OpenRouter
-// could have been dead since August and nothing in the product would say so.
+// could be dead for weeks and nothing in the product would say so.
 //
 // The test being answered: would an operator who is NOT looking at devtools
 // find out, within a day, that every generation is coming from the fallback?
@@ -1025,7 +1025,8 @@ function timingSafeEqual(a, b) {
 // verified-admin check /api/ai?diag=1 uses.
 // tests/unit/admin-chunk-carries-no-backlog.test.js DERIVES the internal boards
 // from src/data/ by shape and fails the build if a row of any of them is back
-// in the output — so a new board is covered the day it is written.
+// in the output — so a new board is covered the day it is written. It derives
+// its needles from the board files, so on a checkout without them it skips.
 //
 // ── WHY THIS ROUTE AND NOT A NEW ONE ───────────────────────────────────────
 // api/ holds exactly twelve deployed functions and Vercel allows twelve on this
@@ -1157,11 +1158,10 @@ export default async function handler(req, res) {
   // GET /api/ai?diag=1 reports whether the AI keys and the Firebase credential
   // are present and valid — presence and length only, never a value.
   //
-  // THIS USED TO BE GATED ON A STRING COMMITTED TO THIS FILE. That is not a
-  // secret; it is a published password, and it opened an endpoint that
-  // enumerates which of the deployment's secrets exist. It is now gated on a
-  // VERIFIED ADMINISTRATOR, using the same allowlist + email_verified check as
-  // /api/verify-admin.
+  // GATED ON A VERIFIED ADMINISTRATOR, not on a shared string: a string in this
+  // file would be a published password, and this endpoint enumerates which of
+  // the deployment's secrets exist. It uses the same allowlist +
+  // email_verified check as /api/verify-admin.
   //
   // The break-glass matters and is not laziness. The single most useful thing
   // this endpoint reports is "the Firebase credential is broken" — and admin
@@ -1204,10 +1204,10 @@ export default async function handler(req, res) {
 
   // ── Authentication comes FIRST ────────────────────────────────────────────
   // Ahead of the task lookup, and — the part that matters — ahead of
-  // task.configured(). It used to run after, and the ordering was a secret
-  // oracle: an anonymous POST that answered 401 meant "that provider's key is
+  // task.configured(). Run after it, the ordering would be a secret
+  // oracle: an anonymous POST that answered 401 would mean "that provider's key is
   // set", and one that answered 500 ("AI is not configured on the server:
-  // GEMINI_API_KEY is missing") meant it is not. Because each task declares its
+  // GEMINI_API_KEY is missing") would mean it is not. Because each task declares its
   // OWN configured() — the vision tasks need Gemini, generate-prompt takes
   // either — three unauthenticated requests enumerated which provider keys the
   // deployment holds. No key VALUE ever leaked, only its existence, which is

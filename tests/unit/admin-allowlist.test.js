@@ -214,8 +214,8 @@ test('no Authorization header is 401, before the allowlist is consulted at all',
 // ── And the literal must not come back ──────────────────────────────────────
 
 test('no file under /api holds an email address any more', () => {
-  // The defect was a literal in tracked, public source. A future "just put it
-  // back for now" is exactly how it returns, so this reads the BYTES of every
+  // A literal in tracked source would publish the account. A future "just put
+  // it in for now" is exactly how one arrives, so this reads the BYTES of every
   // server file rather than trusting that the env var is still being used.
   //
   // Address-SHAPED, not a search for one address: a grep for an admin's
