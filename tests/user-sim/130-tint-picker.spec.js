@@ -12,11 +12,14 @@
 //
 // MUTATIONS (each should fail the test named after it):
 //   · ToolBack: drop the `navigate(-1)` branch                -> "back arrow … palette"
+//   · ToolBack: test `key !== 'default'` again              -> "a redirect landing (/tints) …"
 //   · usePopover: drop `closeWhenAnchorLeaves` from the picker -> "scrolling … closes"
 //   · global.css: delete the `@media(max-width:767px)` cpk sheet block
 //                                                              -> "390 · the picker is a sheet …"
 //   · global.css: delete the `@media(pointer:coarse)` cpk block -> "390 · … 44px"
-//   · global.css: delete the `[data-theme="dark"] .cpk-swatch` rule -> "dark · the black preset"
+//   · global.css: delete the `.cpk-swatch{border-color:color-mix…}` rule -> "dark/light · every preset …"
+//   · global.css: delete the `.cpk-swatch{min-width:44px…}` / `.pop.cpk-pop{width:260px}` pair -> "768 · touch swatches"
+//   · ColorPickerPop: drop the scrim, the Close button or lockScroll -> "390 · closing the sheet"
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -67,6 +70,20 @@ test.describe('the Tint back arrow', () => {
     watch(page, 'designer opening Tint from a bookmark')
     await go(page, '/create/tint')
     const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to workspace' })
+    await expect(back).toHaveAttribute('href', '/projects')
+    await back.click()
+    await expect(page).toHaveURL(/\/projects$/)
+  })
+
+  test('a redirect landing (/tints) keeps the workspace fallback, not a dead "previous page"', async ({ page }) => {
+    watch(page, 'designer opening an old /tints bookmark')
+    await go(page, '/tints')
+    await expect(page).toHaveURL(/\/create\/tint$/)
+    // The redirect replaced the entry, so nothing in the app is behind it.
+    expect(await page.evaluate(() => window.history.state?.idx)).toBe(0)
+    const toolbar = page.locator('[data-tool-toolbar]')
+    await expect(toolbar.getByRole('link', { name: 'Back to previous page' })).toHaveCount(0)
+    const back = toolbar.getByRole('link', { name: 'Back to workspace' })
     await expect(back).toHaveAttribute('href', '/projects')
     await back.click()
     await expect(page).toHaveURL(/\/projects$/)
@@ -207,40 +224,131 @@ test.describe('390x520 · a short phone', () => {
   })
 })
 
-test.describe('dark · the swatches', () => {
-  test.use({ viewport: { width: 1440, height: 900 } })
+// The ratio between a swatch's edge and the panel behind it. The border is
+// painted over the swatch's own fill (background-clip is border-box), so the
+// edge is composited over the swatch colour, then over the panel, the way the
+// browser draws it, and compared with the bare panel.
+async function edgeContrast(swatch) {
+  const [ring, ground] = await swatch.evaluate((el) => {
+    const pixel = (...layers) => {
+      const c = document.createElement('canvas')
+      c.width = c.height = 1
+      const g = c.getContext('2d')
+      for (const css of layers) { g.fillStyle = css; g.fillRect(0, 0, 1, 1) }
+      const [r, gr, b] = g.getImageData(0, 0, 1, 1).data
+      return [r, gr, b]
+    }
+    const style = getComputedStyle(el)
+    const panel = getComputedStyle(el.closest('.cpk-pop')).backgroundColor
+    return [pixel(panel, style.backgroundColor, style.borderTopColor), pixel(panel)]
+  })
+  const luminance = ([r, g, b]) => [r, g, b].map((v) => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0)
+  const [hi, lo] = [luminance(ring), luminance(ground)].sort((a, b) => b - a)
+  return { ratio: (hi + 0.05) / (lo + 0.05), ring, ground }
+}
 
-  test('the black preset has a ring that reads against the panel', async ({ page }) => {
-    watch(page, 'designer using the dark theme')
-    await page.addInitScript(() => localStorage.setItem('vs-t', 'dark'))
-    await go(page, '/create/tint')
-    await triggerOf(page).click()
-    const picker = pickerOf(page)
-    await expect(picker).toBeVisible()
+for (const theme of ['dark', 'light']) {
+  test.describe(`${theme} · the swatches`, () => {
+    test.use({ viewport: { width: 1440, height: 900 } })
 
-    // The first preset is #18181b. Composite the border over the panel's own
-    // ground the way the browser paints it, then compare.
-    const black = picker.locator('.cpk-section:not(.cpk-recents) .cpk-swatch').first()
-    await expect(black).toHaveAttribute('aria-label', '#18181b')
-    const [ring, ground] = await black.evaluate((el) => {
-      const pixel = (...layers) => {
-        const c = document.createElement('canvas')
-        c.width = c.height = 1
-        const g = c.getContext('2d')
-        for (const css of layers) { g.fillStyle = css; g.fillRect(0, 0, 1, 1) }
-        const [r, gr, b] = g.getImageData(0, 0, 1, 1).data
-        return [r, gr, b]
+    test(`every preset has a ring that reads against the ${theme} panel`, async ({ page }) => {
+      watch(page, `designer using the ${theme} theme`)
+      await page.addInitScript((t) => localStorage.setItem('vs-t', t), theme)
+      await go(page, '/create/tint')
+      await triggerOf(page).click()
+      const picker = pickerOf(page)
+      await expect(picker).toBeVisible()
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+
+      const presets = picker.locator('.cpk-section:not(.cpk-recents) .cpk-swatch')
+      // #18181b vanished on dark and #f4f4f5 on light: both ends are in the list.
+      await expect(presets.nth(0)).toHaveAttribute('aria-label', '#18181b')
+      await expect(presets.nth(1)).toHaveAttribute('aria-label', '#f4f4f5')
+      const count = await presets.count()
+      for (let i = 0; i < count; i += 1) {
+        const swatch = presets.nth(i)
+        const { ratio, ring, ground } = await edgeContrast(swatch)
+        expect(ratio, `${await swatch.getAttribute('aria-label')}: ring ${ring} on ground ${ground}`).toBeGreaterThanOrEqual(3)
       }
-      const panel = getComputedStyle(el.closest('.cpk-pop')).backgroundColor
-      const edge = getComputedStyle(el).borderTopColor
-      return [pixel(panel, edge), pixel(panel)]
     })
-    const luminance = ([r, g, b]) => [r, g, b].map((v) => {
-      const s = v / 255
-      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
-    }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0)
-    const [hi, lo] = [luminance(ring), luminance(ground)].sort((a, b) => b - a)
-    const ratio = (hi + 0.05) / (lo + 0.05)
-    expect(ratio, `ring ${ring} on ground ${ground}`).toBeGreaterThanOrEqual(3)
+  })
+}
+
+test.describe('768 · touch swatches', () => {
+  // isMobile + hasTouch are what make pointer:coarse true.
+  test.use({ viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true })
+
+  test('presets and Recent are 44px and the panel grows to hold them', async ({ page }) => {
+    watch(page, 'designer picking a tint colour on a tablet')
+    await go(page, '/create/tint')
+    const picker = await openWithRecent(page)
+    const swatches = picker.locator('.cpk-swatch')
+    const count = await swatches.count()
+    expect(count, 'Recent and presets are both there').toBeGreaterThanOrEqual(11)
+
+    const pop = await rect(page, '.cpk-pop')
+    expect(pop.left).toBeGreaterThanOrEqual(0)
+    expect(pop.right).toBeLessThanOrEqual(768)
+    // Nothing is clipped or pushed sideways inside the panel.
+    expect(await picker.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+
+    for (let i = 0; i < count; i += 1) {
+      const box = await swatches.nth(i).evaluate((el) => {
+        const b = el.getBoundingClientRect()
+        const p = el.closest('.cpk-pop').getBoundingClientRect()
+        return { w: b.width, h: b.height, inside: b.left >= p.left && b.right <= p.right }
+      })
+      expect(Math.min(box.w, box.h), `swatch ${i + 1} is a touch target`).toBeGreaterThanOrEqual(44)
+      expect(box.inside, `swatch ${i + 1} is inside the panel`).toBe(true)
+    }
+  })
+})
+
+test.describe('390 · closing the sheet', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('the Close button is 44px, closes the sheet and gives focus back to the trigger', async ({ page }) => {
+    watch(page, 'designer finished with a colour on a phone')
+    await go(page, '/create/tint')
+    const picker = await openWithRecent(page)
+    const close = picker.getByRole('button', { name: 'Close', exact: true })
+    await expect(close).toBeVisible()
+    const box = await close.boundingBox()
+    expect(box.height, 'Close height').toBeGreaterThanOrEqual(44)
+    expect(box.width, 'Close width').toBeGreaterThanOrEqual(44)
+    await close.tap()
+    await expect(picker).toHaveCount(0)
+    await expect(triggerOf(page)).toBeFocused()
+    await expect(page.locator('.cpk-scrim')).toHaveCount(0)
+  })
+
+  test('the page behind is dimmed and locked, and a tap on it only closes the sheet', async ({ page }) => {
+    watch(page, 'designer tapping outside the colour sheet')
+    await go(page, '/create/tint')
+    const picker = await openWithRecent(page)
+    const scrim = page.locator('.cpk-scrim')
+    await expect(scrim).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.style.overflow), 'page scroll is locked').toBe('hidden')
+    const scrimBg = await scrim.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(scrimBg, 'the scrim dims the page').not.toBe('rgba(0, 0, 0, 0)')
+
+    // Any click that reaches something other than the scrim is a tap that fell through.
+    await page.evaluate(() => {
+      window.__strayClicks = []
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.cpk-scrim')) window.__strayClicks.push(e.target.className || e.target.tagName)
+      }, true)
+    })
+    const pop = await rect(page, '.cpk-pop')
+    const url = page.url()
+    // A point above the sheet, over the page content (the tool header region).
+    await page.touchscreen.tap(195, Math.max(120, pop.top / 2))
+    await expect(picker).toHaveCount(0)
+    expect(await page.evaluate(() => window.__strayClicks), 'nothing under the scrim was hit').toEqual([])
+    expect(page.url()).toBe(url)
+    expect(await page.evaluate(() => document.documentElement.style.overflow), 'page scroll is released').toBe('')
   })
 })

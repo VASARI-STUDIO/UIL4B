@@ -316,18 +316,23 @@ export function ToolToolbar({
 // ── ToolBack ──────────────────────────────────────────────────────────────
 // The 36px hairline square with the left arrow.
 //
-// Where it goes depends on how the person got here. React Router gives an entry
-// a real `key` only once an in-app navigation has pushed it; the entry a tab
-// first loads on is 'default'. So a non-default key means the page before this
-// one is inside the app (Palette Builder -> Tint, say) and the arrow steps back
-// to it, as the browser's own back does. A direct landing has nothing in the app
-// behind it and keeps the fixed `to` ("Back to workspace"). A modified click
-// (new tab, new window) keeps the plain link, and a tool that names its own
-// destination passes `history={false}`.
+// Where it goes depends on how the person got here. React Router writes an `idx`
+// into history.state: 0 for the entry a tab first loads on, one higher for every
+// in-app push. A replace keeps the idx, so a redirect landing (a retired path, or
+// the return from login) is still 0 and has nothing in the app behind it. So
+// idx > 0 means the page before this one is inside the app (Palette Builder ->
+// Tint, say) and the arrow steps back to it, as the browser's own back does. A
+// landing keeps the fixed `to` ("Back to workspace"). A modified click (new tab,
+// new window) keeps the plain link, and a tool that names its own destination
+// passes `history={false}`.
+const hasAppHistory = () => typeof window !== 'undefined' && window.history.state?.idx > 0
+
 export function ToolBack({ to = '/projects', label = 'Back to workspace', history = true }) {
   const navigate = useNavigate()
-  const { key } = useLocation()
-  const stepBack = history && key !== 'default'
+  // history.state is read on every render; subscribing to the location makes
+  // each navigation render this again.
+  useLocation()
+  const stepBack = history && hasAppHistory()
   const name = stepBack ? 'Back to previous page' : label
   const onClick = (event) => {
     if (!stepBack || event.defaultPrevented || event.button !== 0) return

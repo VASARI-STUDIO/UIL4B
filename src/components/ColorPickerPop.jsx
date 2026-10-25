@@ -6,6 +6,7 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
+import { lockScroll } from '../utils/scrollLock'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
 // THE colour input for this app. Not "a shared component available to surfaces
@@ -195,6 +196,7 @@ export default function ColorPickerPop({
   // put on purpose, so it is exempt.
   const phone = useMediaQuery(SHEET_QUERY)
   const sheet = portal && phone
+  const scrimRef = useRef(null)
   const { triggerRef, popRef } = usePopover(open, close, {
     initialFocus: '.cpk-pad', portalled: portal, closeWhenAnchorLeaves: portal && !sheet,
   })
@@ -207,7 +209,16 @@ export default function ColorPickerPop({
       layer = Math.max(layer, (Number.parseInt(getComputedStyle(node).zIndex, 10) || 0) + 1)
     }
     popRef.current?.style.setProperty('--cpk-layer', String(layer))
-  }, [open, portal, popRef, triggerRef])
+    // The scrim sits one layer under the panel, so it carries the same number.
+    scrimRef.current?.style.setProperty('--cpk-layer', String(layer))
+  }, [open, portal, popRef, triggerRef, sheet])
+
+  // A sheet is modal in effect: it dims the page and a tap outside closes it, so
+  // the page behind must not scroll under a finger that misses the panel.
+  useEffect(() => {
+    if (!open || !sheet) return undefined
+    return lockScroll()
+  }, [open, sheet])
 
   // A panel that is shorter than its content scrolls, and a scrolling panel that
   // looks complete is the bug: a half-visible preset row reads as the end of the
@@ -246,7 +257,8 @@ export default function ColorPickerPop({
       const lift = Math.min(box.bottom + 12 - sheetTop, box.top - topObstruction() - 8)
       if (lift <= 0) return
       const lenis = getLenis()
-      if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true })
+      // `force`: the sheet has locked the page, which stops Lenis.
+      if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true, force: true })
       else window.scrollBy({ top: lift, behavior: 'instant' })
     })
     return () => cancelAnimationFrame(frame)
@@ -384,7 +396,16 @@ export default function ColorPickerPop({
       </button>
 
       {open && renderPopover(
-        <div className="pop cpk-pop" data-pop-fixed={portal || undefined} ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
+        <>
+        {/* Phone sheet only: the dimmed page behind it, the same scrim the notation
+            sheet draws. usePopover skips presses on `data-pop-scrim` that matches the
+            panel id, so the press reaches this click handler instead of closing the
+            sheet on pointer-down and letting the tap fall through to the page. */}
+        {sheet && (
+          <div ref={scrimRef} className="menu-select-scrim cpk-scrim" aria-hidden="true" data-pop-scrim={`${ids}-pop`}
+            onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); close() }} />
+        )}
+        <div id={`${ids}-pop`} className="pop cpk-pop" data-pop-fixed={portal || undefined} ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
           {/* The panel says which colour it is editing, in the shared .pop-head
               voice. Near-free on a surface with one picker; the difference
               between usable and guesswork on a gradient with five stops, a
@@ -394,6 +415,13 @@ export default function ColorPickerPop({
           <p className="pop-head cpk-head">
             <span className="cpk-head-name">{ariaLabel}</span>
             <span className="cpk-chip" style={{ '--cpk-chip-color': liveHex }} aria-hidden="true" />
+            {/* The sheet has no trigger in reach and no Escape key, so it carries
+                its own way out, and puts focus back on the trigger like Escape does. */}
+            {sheet && (
+              <button type="button" className="cpk-close" onClick={() => { triggerRef.current?.focus({ preventScroll: true }); close() }}>
+                Close
+              </button>
+            )}
           </p>
 
           {/* Pad and hue are ONE instrument, not two stacked fields: they share
@@ -543,6 +571,7 @@ export default function ColorPickerPop({
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   )
