@@ -14,14 +14,22 @@
 // Each route lists the selectors it must still have, so a renamed class fails
 // the count instead of silently measuring nothing.
 //
+// The emoji and icon libraries mount their search and toolbar only after their
+// data has loaded (the emoji index, the icon registry), which is after go()
+// has seen the route arrive. So each selector is waited for, by presence, up to
+// a limit before it is counted: a slow load is waited out, a renamed class is
+// still reported as missing once the limit passes.
+//
 // Height: the library search field is one height on every page, and every
 // bordered search carries the same 1px hairline.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
-// Painted search bars and pill toolbars, by route.
+// Painted search bars and pill toolbars, by route. The home page is the one
+// route that carries no PillNav (it has its own command bar), so the nav's
+// search field is measured on the library pages, which all mount it.
 const SURFACES = [
-  ['/', ['.pnav-search-field', '.hcmd-bar', '.sp-seg', '.sp-seeds']],
+  ['/', ['.hcmd-bar', '.sp-seg', '.sp-seeds']],
   ['/discover/palettes', ['.pnav-search-field', '.lbry-search', '.lbry-toolbar']],
   ['/discover/gradients', ['.lbry-search', '.lbry-toolbar']],
   ['/discover/prompts', ['.lbry-search', '.lbry-toolbar']],
@@ -40,6 +48,8 @@ const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.spm
 // The toolbar that may step down when it wraps.
 const WRAPS = '.lbry-toolbar'
 const WRAPPED_RADIUS = 26
+// How long a surface may take to mount after its route has arrived.
+const APPEAR_MS = 15000
 
 const measure = (els, selector) => els
   .filter((el) => {
@@ -77,6 +87,7 @@ for (const width of [1440, 390]) {
     for (const [route, selectors] of SURFACES) {
       await go(page, route)
       for (const selector of selectors) {
+        await page.locator(selector).first().waitFor({ state: 'attached', timeout: APPEAR_MS }).catch(() => {})
         const found = await page.locator(selector).evaluateAll(measure, selector)
         if (!found.length) { missing.push(`${route} ${selector}`); continue }
         for (const f of found) {
