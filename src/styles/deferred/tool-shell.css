@@ -1243,9 +1243,9 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
        filter group onto a line of its own. Measured at 834px: a 774px search
        field, above a filter tray with a third of the row empty beside it.
      · `.lbry-toolbar-action{margin-left:auto}` then strands the action on a
-       ragged last row, hard right, alone. That is the same shape `.pl-toolbar`
-       accepts as a deliberate cost (the Submit prompt action lands on a third
-       row of its own), reproduced here on five more surfaces by one shared
+       ragged last row, hard right, alone. That is the same shape the old
+       `.pl-toolbar` carried as an accepted cost (its Submit prompt action landed
+       on a third row of its own), reproduced here on five more surfaces by one shared
        rule, which is the argument for fixing it in the shared component.
 
    The cap is 360px because that is `.pl-search-wrap`'s existing desktop
@@ -1272,8 +1272,8 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
    share it. Above 980 the tray usually can, so the fault stayed hidden on five
    of the six surfaces and shipped on the sixth.
 
-   The toolbar changed height when switching from the emoji to the icon library,
-   which broke the bar on a standard desktop.
+   On the sixth, the toolbar changed height when switching from the emoji to
+   the icon library, which broke the bar on a standard desktop.
 
    MEASURED at 1440x900 before this change:
 
