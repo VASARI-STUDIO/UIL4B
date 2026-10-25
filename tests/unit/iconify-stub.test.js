@@ -132,8 +132,8 @@ test('the GRID takes its markup from the batch endpoint, never one request per c
     'api.simplesvg.com and api.unisvg.com refuse this origin outright (403). They are not a '
     + 'fallback; re-adding one puts a guaranteed-failing hop back in front of every retry.')
 
-  // Third-party markup must never become HTML. The whole repo is free of this
-  // and that keeps the page free of HTML injection from that route.
+  // Batched third-party markup must not become HTML: IconLibrary.jsx carries no
+  // dangerouslySetInnerHTML, and glyph bodies stay inside a data: URI <img>.
   assert.doesNotMatch(page, /dangerouslySetInnerHTML/,
     'A batched body is remote third-party markup. It goes into a data: URI inside an <img>, '
     + 'which is a non-scripting context, never into the DOM as HTML.')

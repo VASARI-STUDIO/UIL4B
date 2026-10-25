@@ -370,7 +370,9 @@ const prefetchIconSvg = (icon) => {
    WHY THE MARKUP IS STILL AN <img>, NOT INLINE SVG. The obvious way to use the
    body is `dangerouslySetInnerHTML`. The only use in src is PhIcon, which
    injects the app's own bundled path data; third-party markup fetched at
-   runtime is the worst possible thing to inject the same way. Composing the
+   runtime is the worst possible thing to inject the same way. (The customiser
+   stage is separate: it parses one sanitised SVG into the DOM to edit it.)
+   Composing the
    body into a `data:image/svg+xml` URI keeps the exact same <img> element, the
    same `ig-inv` tint, the same `loading="lazy"`, and the same canvas sampling in
    BrandGlyph (a data: URI does not taint a canvas, so that path stops needing
@@ -981,8 +983,8 @@ function transformAttr(rotate, flipH, flipV, cx, cy) {
 }
 
 // Bake the live customiser values into REAL SVG attributes so copied/saved/
-// downloaded markup matches the Stage exactly (this is the Lucide copy-reset
-// #2794 workaround — never fall back to defaults).
+// downloaded markup matches the Stage exactly (a workaround for Lucide's copy
+// resetting to default attributes — never fall back to defaults).
 function serializeCustomizedSvg(rawSvg, opts = {}) {
   if (!rawSvg) return ''
   const { size = 48, color, stroke, isStroke, absStroke, cap, join, rotate = 0, flipH = false, flipV = false } = opts
@@ -3937,9 +3939,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // have refused it; carrying a stale "couldn't reach the icon
               // service" over a Pro wall would tell the visitor the network
               // broke when the product simply said no — and would hand the Try
-              // again button a retry for a pack they may not have. This is the
-              // same class of error as #435, where the masthead pill said "Live
-              // library connected" directly above this notice.
+              // again button a retry for a pack they may not have. It is the
+              // same class of error as a masthead pill saying "Live library
+              // connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
                 <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
