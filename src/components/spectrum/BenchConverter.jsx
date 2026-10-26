@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import PhIcon from './PhIcon'
 import { prefersReducedMotion } from './reducedMotion'
 import { route } from './spectrumFacts'
+import { navigatesThisTab } from '../../utils/handoffSlot'
+import { setImageHandoff } from '../../utils/imageHandoff'
 import {
   CONVERTER_SOURCE,
   FRAME_COUNTS,
@@ -15,7 +17,7 @@ import {
   formatBytes,
 } from './spectrumKit'
 
-// 04 · FILE CONVERTER — the design's window, with its Tasmanian sunset photograph.
+// FILE CONVERTER — the design's window, with its Tasmanian sunset photograph.
 //
 // THE SIZES ARE MEASURED, NOT TABLED. The photo is drawn to a canvas and
 // encoded with `canvas.toBlob` at the format and quality on screen, and the
@@ -154,7 +156,7 @@ export default function BenchConverter() {
     setOut(null)
     setSrc(null)
     setFailed(false)
-    setPick({ name: file.name, size: file.size, url: URL.createObjectURL(file) })
+    setPick({ name: file.name, size: file.size, url: URL.createObjectURL(file), file })
   }
   const takeClip = (file) => { if (file) setClip({ name: file.name, size: file.size }) }
 
@@ -193,6 +195,20 @@ export default function BenchConverter() {
   })
   const target = MODEL_OUTPUTS[outFmt]
   const fileToolHref = route('file-converter')
+  // "Continue in the converter" carries the dropped image through the File
+  // Converter's own in-memory hand-off, with the format and quality on screen as
+  // its starting settings. The slot is staged only when this tab will navigate
+  // (a modified click opens a new tab that would never consume it). A dropped
+  // clip has no hand-off, so it keeps the plain "Open File Converter".
+  const carryImage = (e) => {
+    if (!pick?.file || !navigatesThisTab(e)) return
+    const [label, type] = IMG_FORMATS[fmt]
+    setImageHandoff([pick.file], {
+      resolution: 'original',
+      format: type,
+      compression: label === 'PNG' ? 'lossless' : quality >= 90 ? 'high' : 'balanced',
+    })
+  }
   // Both bars share one scale, so a file that grew draws longer than the one it
   // came from; a result that is not smaller is drawn in a neutral fill.
   const top = Math.max(before || 0, out || 0) || 1
@@ -270,12 +286,12 @@ export default function BenchConverter() {
           </p>
           <div className="sp-bars">
             <div className="sp-bar">
-              <div className="sp-bar-row"><small>BEFORE</small>{barValue(imageName, before)}</div>
+              <div className="sp-bar-row"><small>Before</small>{barValue(imageName, before)}</div>
               <span className="sp-bar-track"><span className="sp-bar-fill" style={{ width: before ? `${Math.round((before / top) * 100)}%` : '100%' }} /></span>
             </div>
             <div className="sp-bar">
               <div className="sp-bar-row">
-                <small>AFTER</small>
+                <small>After</small>
                 {barValue(`${stem}.${IMG_FORMATS[fmt][0].toLowerCase()}`, out)}
               </div>
               <span className="sp-bar-track">
@@ -359,7 +375,7 @@ export default function BenchConverter() {
           <div className="sp-frames-row">
             <div role="group" aria-label="Frame count">
               {FRAME_COUNTS.map((n) => (
-                <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} FRAMES</button>
+                <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} frames</button>
               ))}
             </div>
             <small>{frameCount > 8 ? `Eight of ${frameCount} frames, evenly sampled` : `${frameCount} frames`}</small>
@@ -390,8 +406,8 @@ export default function BenchConverter() {
             <Link className="sp-ghost" to={fileToolHref}>File Converter</Link>
           </>
           : <>
-            <Link className="sp-pill" to={fileToolHref}>
-              <span>{pick || clip ? 'Continue in the converter' : 'Open File Converter'}</span>
+            <Link className="sp-pill" to={fileToolHref} onClick={carryImage}>
+              <span>{pick ? 'Continue in the converter' : 'Open File Converter'}</span>
               <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
             </Link>
             <Link className="sp-ghost" to={route('ratio')}>Aspect &amp; Resolution</Link>
