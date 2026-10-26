@@ -456,7 +456,7 @@
     "interruptSignUp": "You were about to {reason}. Once your account is set up, you'll come back to this page.",
     "resetSub": "Enter the email you log in with and we'll send a link to set a new password.",
     "sentSub": "If there's an account for {email}, a reset link is on its way. It can take a few minutes, so check spam too.",
-    "switchSub": "Log in as {email}. You stay logged in to your current account unless this works.",
+    "switchSub": "Log in as {email}. You'll stay logged in as you are unless this works.",
     "whyWeAsk": "Why we ask first",
     "continueWithGoogle": "Continue with Google",
     "googleLoading": "Opening Google…",
@@ -502,7 +502,7 @@
       "network": "We couldn't reach the server. Check your connection and try again.",
       "popupBlocked": "Your browser blocked the Google window. Allow pop-ups for this site, or log in with email.",
       "googleUnavailable": "Google log-in isn't working right now. Use your email instead.",
-      "generic": "That didn't work. Try again in a moment. If it keeps happening, use the other way to log in.",
+      "generic": "That didn't work. Try again in a moment.",
       "offline": "You're offline. Logging in needs a connection, so this will work once you're back.",
       "serviceUnavailable": "Service temporarily unavailable",
       "userNotFound": "No account found with this email"
