@@ -25,7 +25,7 @@ const TARGETS = [
   '.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search',
   // pill toolbars and segmented trays
   '.lbry-toolbar', '.lbry-filters', '.lbry-filter-ind', '.theme-seg', '.sp-seeds', '.sp-seed',
-  '.icust-seg', '.icust-seg button', '.icust-seg-static', '.adm-tabs', '.plb-modal-tabs', '.fc-seg', '.fc-seg-opt',
+  '.icust-seg', '.icust-seg button', '.icust-seg-static', '.adm-tabs', '.fc-seg', '.fc-seg-opt',
 ]
 
 /** Split a selector list on the commas that are not inside parentheses. */
@@ -121,7 +121,7 @@ for (const target of SEARCH_BARS) {
 // took the hairline. Each tray below must declare a 1px hairline somewhere (a
 // border, or the converter's inset ring).
 const TRAYS = [
-  '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.icust-seg', '.adm-tabs', '.plb-modal-tabs',
+  '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.icust-seg', '.adm-tabs',
   '.sp-seeds', '.sp-seg', '.seo-seg', '.pr-billing', '.fc-seg',
 ]
 for (const target of TRAYS) {
