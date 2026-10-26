@@ -499,7 +499,7 @@
   },
   "privacy": {
     "title": "プライバシーポリシー",
-    "lastUpdated": "最終更新日：2026年3月",
+    "lastUpdated": "最終更新日：2026年10月27日",
     "s1Title": "1. 本ポリシーについて",
     "s1Text": "UIL4B（「当社」）は、オーストラリアプライバシー法1988（Cth）およびオーストラリアプライバシー原則（APPs）に従い、お客様の個人情報の保護に努めています。本ポリシーは、お客様の個人情報の収集、利用、開示、および保護の方法について説明します。",
     "s2Title": "2. 収集する情報（APP 3）",
@@ -515,6 +515,7 @@
       "アカウントとツールキット機能の提供および維持",
       "デバイス間でのデザイン設定の同期",
       "重要なサービス通知の送信（アカウントセキュリティ、ポリシー変更）",
+      "Provide AI features: the text and images you submit to AI tools are sent to the AI providers listed in section 6",
       "お客様のデータを第三者に販売したり、広告に使用することは一切ありません"
     ],
     "s4Title": "4. データの保管とセキュリティ（APP 8 & 11）",
@@ -539,6 +540,8 @@
       "Firebase/Google Cloud — 認証とデータベース（シドニーリージョン）",
       "Google Fonts — フォント読み込み（個人データは送信されません）",
       "Iconify — アイコン検索 API（個人データは送信されません）",
+      "Google Gemini — AI processing of the images and text you submit to AI tools",
+      "OpenRouter — passes the text you submit to AI tools to a third-party AI model host set not to retain or train on it",
       "Stripe — 決済処理（PCI DSS 準拠、オーストラリア法人）"
     ],
     "s7Title": "7. お問い合わせ",
@@ -547,7 +550,7 @@
   },
   "terms": {
     "title": "利用規約",
-    "lastUpdated": "最終更新日：2026年3月",
+    "lastUpdated": "最終更新日：2026年10月27日",
     "s1Title": "1. 同意",
     "s1Text": "UIL4B Design Toolkit（「本サービス」）を利用することにより、お客様はこの利用規約に同意したものとみなされます。本サービスはオーストラリアを拠点とする事業体である UIL4B が提供しています。本規約はオーストラリアの法律に準拠します。",
     "s2Title": "2. アカウント",

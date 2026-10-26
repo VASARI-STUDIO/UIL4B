@@ -499,7 +499,7 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "lastUpdated": "Dernière mise à jour : mars 2026",
+    "lastUpdated": "Dernière mise à jour : 27 octobre 2026",
     "s1Title": "1. À propos de cette politique",
     "s1Text": "UIL4B (« nous », « notre ») s'engage à protéger vos informations personnelles conformément à la loi australienne sur la protection de la vie privée de 1988 (Cth) et aux Principes australiens de protection de la vie privée (APPs). Cette politique explique comment nous collectons, utilisons, divulguons et protégeons vos informations personnelles.",
     "s2Title": "2. Informations que nous collectons (APP 3)",
@@ -515,6 +515,7 @@
       "Fournir et maintenir votre compte et les fonctionnalités du toolkit",
       "Synchroniser vos configurations de design entre vos appareils",
       "Envoyer des notifications de service essentielles (sécurité du compte, changements de politique)",
+      "Provide AI features: the text and images you submit to AI tools are sent to the AI providers listed in section 6",
       "Nous ne vendrons JAMAIS vos données à des tiers et ne les utiliserons pas à des fins publicitaires"
     ],
     "s4Title": "4. Stockage et sécurité des données (APP 8 et 11)",
@@ -539,6 +540,8 @@
       "Firebase/Google Cloud — Authentification et base de données (région de Sydney)",
       "Google Fonts — Chargement de polices (aucune donnée personnelle envoyée)",
       "Iconify — API de recherche d'icônes (aucune donnée personnelle envoyée)",
+      "Google Gemini — AI processing of the images and text you submit to AI tools",
+      "OpenRouter — passes the text you submit to AI tools to a third-party AI model host set not to retain or train on it",
       "Stripe — Traitement des paiements (conforme PCI DSS, entité australienne)"
     ],
     "s7Title": "7. Contact",
@@ -547,7 +550,7 @@
   },
   "terms": {
     "title": "Conditions d'utilisation",
-    "lastUpdated": "Dernière mise à jour : mars 2026",
+    "lastUpdated": "Dernière mise à jour : 27 octobre 2026",
     "s1Title": "1. Acceptation",
     "s1Text": "En utilisant UIL4B Design Toolkit (« le Service »), vous acceptez les présentes Conditions d'utilisation. Le Service est fourni par UIL4B, une entreprise basée en Australie. Ces conditions sont régies par les lois de l'Australie.",
     "s2Title": "2. Compte",
