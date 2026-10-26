@@ -51,6 +51,7 @@ import { semanticShades, SEMANTIC_STEPS } from '../data/semanticPresets.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 import { SUBSET_RANGES } from './kitFonts.js'
 import { readIdentity } from './kitIdentity.js'
+import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 
 export const KIT_TIERS = Object.freeze(['free', 'pro'])
 
@@ -449,14 +450,6 @@ const ICONS = {
 }
 const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`
 
-const toBase64 = (text) => {
-  if (globalThis.Buffer) return globalThis.Buffer.from(text, 'utf8').toString('base64')
-  const bytes = new TextEncoder().encode(text)
-  let bin = ''
-  bytes.forEach((b) => { bin += String.fromCharCode(b) })
-  return btoa(bin)
-}
-
 /** JSON that is safe inside a <script> element. */
 const scriptJson = (value) => JSON.stringify(value)
   .replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
@@ -480,7 +473,6 @@ const ROLES = [
  * @param options
  *   tier           'free' | 'pro' — from verified entitlement, never from a UI toggle
  *   template       the text of src/templates/uiKit.html
- *   markSvg        the publisher mark's SVG source (public/favicon.svg)
  *   fonts          selected fonts by family, see embeddable()
  *   publisherFonts [{ family: 'Geist', axis: '300 700', faces: [{ subset, base64 }] }]
  *   publisherLicense  Geist's licence text
@@ -490,7 +482,7 @@ const ROLES = [
  * @returns { html, filename, selections, embedded, missing }
  */
 export function renderUiKit(design, {
-  tier = 'free', template, markSvg = '', fonts = {}, publisherFonts = [], publisherLicense = '',
+  tier = 'free', template, fonts = {}, publisherFonts = [], publisherLicense = '',
   logo = null, date = new Date(),
 } = {}) {
   if (typeof template !== 'string' || !template.includes('@@DATA@@')) throw new Error('The UI kit template is missing.')
@@ -532,8 +524,9 @@ export function renderUiKit(design, {
   }
   if (publisherLicense) licenses += `\nGeist and Geist Mono (publisher interface)\n${publisherLicense}\n`
 
-  const mark = `data:image/svg+xml;base64,${toBase64(markSvg)}`
-  const lockup = `<span class="publisher-lockup"><img src="${mark}" alt="" width="26" height="26"><span>UIL4B</span></span>`
+  // The lockup is drawn from the shared logo geometry, sized in em, so the
+  // template's existing font-size rules size it wherever it appears.
+  const lockup = `<span class="publisher-lockup">${logoSvg({ attrs: `style="height:1.1em;width:${(1.1 * LOCKUP_WIDTH / LOGO_HEIGHT).toFixed(3)}em" role="img" aria-label="UI L4B"` })}</span>`
   const publisher = `<a class="publisher-link" href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer" aria-label="Visit UIL4B (opens in a new tab)">${lockup}</a>`
   const watermark = free ? `<span class="section-watermark">Made with ${publisher}</span>` : ''
 

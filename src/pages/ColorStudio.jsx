@@ -5,6 +5,7 @@ import {
   resolveStateShades, readSemanticStates,
 } from '../data/semanticPresets'
 import { useProject } from '../contexts/ProjectContext'
+import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo'
 import {
   ToolLayout, ToolButton, ToolPills, ToolSlider, ToolSelect, ToolCode, ToolIcon,
 } from '../components/tool/ToolLayout'
@@ -407,7 +408,7 @@ ${stateVars}
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--ds-bg); color: var(--ds-text); line-height: 1.6; display: flex; min-height: 100vh; -webkit-font-smoothing: antialiased; }
 .sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--ds-sidebar); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-right: 1px solid var(--ds-border); padding: 24px 0; overflow-y: auto; z-index: 10; }
 .sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid var(--ds-border); margin-bottom: 12px; }
-.sidebar-brand h3 { font-size: 14px; font-weight: 800; letter-spacing: -.02em; }
+.sidebar-brand h3 { line-height: 0; }
 .sidebar-brand .brand-sub { font-size: 10px; color: var(--ds-accent); display: block; margin-top: 2px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .sidebar-brand .brand-date { font-size: 10px; color: var(--ds-text3); display: block; margin-top: 4px; }
 .sidebar .nav-label { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ds-text3); padding: 16px 20px 6px; }
@@ -465,7 +466,7 @@ pre.code { background: var(--ds-code-bg); color: var(--ds-code-text); padding: 2
 <body>
   <button class="theme-toggle" onclick="var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;this.textContent=t==='dark'?'Light Mode':'Dark Mode'">${isDark ? 'Light Mode' : 'Dark Mode'}</button>
   <nav class="sidebar">
-    <div class="sidebar-brand"><h3>UIL4B</h3><span class="brand-sub">Design System</span><span class="brand-date">Generated ${new Date().toLocaleDateString()}</span></div>
+    <div class="sidebar-brand"><h3>${logoSvg({ attrs: `height="14" width="${Math.round(14 * LOCKUP_WIDTH / LOGO_HEIGHT)}" role="img" aria-label="UI L4B"` })}</h3><span class="brand-sub">Design System</span><span class="brand-date">Generated ${new Date().toLocaleDateString()}</span></div>
     <div class="nav-label">Sections</div>
     <a href="#colours" class="active">Colours</a>
     <a href="#tint-scale">Tint Scale</a>
