@@ -28,10 +28,10 @@ import {
 // THE BENCH — "Say goodbye to bookmark folders."
 // ═════════════════════════════════════════════════════════════════════════════
 //
-// The design's four tool windows: Palette builder, Icon library,
-// Font Gallery and File converter, each a fixed 700px window in its own
-// full-screen step, beside a sticky numbered rail. Every control the design
-// draws is here and works: seeds, harmonies, roles you can copy, COPY AS; icon
+// The design's four tool windows: Palette Builder, Icon Library,
+// Font Gallery and File Converter, each a fixed 700px window in its own
+// step with a little air above and below, beside a sticky numbered rail. Every
+// control the design draws is here and works: seeds, harmonies, roles you can copy, Copy as; icon
 // search, five weights, four sizes, three formats and a Copy SVG that copies a
 // real icon; font search, categories, your own preview words and a size slider
 // over six self-hosted families; and a converter that measures real encodes.
@@ -44,7 +44,7 @@ import {
 // Destinations come off the tool tree through `route()`, so a renamed tool
 // fails the build rather than shipping a dead link.
 
-const RAIL = ['Palette builder', 'Icon library', 'Font gallery', 'File conversion']
+const RAIL = ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter']
 
 function copyText(value) {
   // Clipboard access is permission-gated and throws on an insecure origin. The
@@ -66,14 +66,11 @@ function useFlash(ms) {
   return [on, flash]
 }
 
-function Chrome({ no, name, action, children }) {
+function Chrome({ name, action, children }) {
   return (
     <div className="sp-panel-in">
       <div className="sp-panel-bar">
         <div className="sp-panel-title">
-          <span className="sp-panel-lights" aria-hidden="true"><i /><i /><i /></span>
-          <span className="sp-panel-rule" aria-hidden="true" />
-          <span className="sp-panel-no">{no}</span>
           <span className="sp-panel-name">{name}</span>
         </div>
         {action}
@@ -105,8 +102,7 @@ function PalettePanel({ base, onBase }) {
 
   return (
     <Chrome
-      no="01"
-      name="Palette builder"
+      name="Palette Builder"
       action={(
         <button type="button" className="sp-shuffle" onClick={shuffle} aria-label="Shuffle the seed" title="Shuffle the seed">
           <PhIcon name="shuffle" /><span>Shuffle</span>
@@ -165,7 +161,7 @@ function PalettePanel({ base, onBase }) {
             >
               <span className="sp-role-name">{r.name}</span>
               <span className="sp-role-row">
-                <span className="sp-role-val" aria-live="polite">{copied === r.hex ? 'COPIED' : r.value}</span>
+                <span className="sp-role-val" aria-live="polite">{copied === r.hex ? 'Copied' : r.value}</span>
                 <span className="sp-role-aa">{r.aa}</span>
               </span>
             </button>
@@ -174,14 +170,14 @@ function PalettePanel({ base, onBase }) {
 
         <div className="sp-prev" style={{ background: surface }}>
           <span className="sp-prev-say" style={{ color: prevInk }}>
-            <small>SURFACE AND INK</small>
-            <b>Total £48.00</b>
+            <small>Surface and ink</small>
+            <b>Total A$48.00</b>
           </span>
           <span className="sp-prev-btn" style={{ background: primary, color: prevBtnFg }}>Pay now</span>
         </div>
 
         <div className="sp-copyas">
-          <span className="sp-label">COPY AS</span>
+          <span className="sp-label">Copy as</span>
           <div role="group" aria-label="Copy format">
             {FORMATS.map((f, i) => (
               <button key={f} type="button" className="sp-utab" aria-pressed={fmt === i} onClick={() => setFmt(i)}>{f}</button>
@@ -231,7 +227,7 @@ function IconPanel() {
   }
 
   return (
-    <Chrome no="02" name="Icon library">
+    <Chrome name="Icon Library">
       <div className="sp-panel-body">
         <div className="sp-ico-strip">
           <label className="sp-find">
@@ -272,7 +268,7 @@ function IconPanel() {
         <div className="sp-ico-detail">
           <span className="sp-ico-big"><PhIcon body={bodyOf(pick[0])} /></span>
           <span className="sp-ico-meta">
-            <b>{`${pick[1]}, ${ICON_WEIGHTS[weight][0]}, ${size}px`.toUpperCase()}</b>
+            <b>{`${pick[1]}, ${ICON_WEIGHTS[weight][0].toLowerCase()}, ${size}px`}</b>
             <span className="sp-ico-opts">
               {ICON_SIZES.map((px) => (
                 <button key={px} type="button" className="sp-utab" aria-pressed={size === px} onClick={() => setSize(px)}>{px}px</button>
@@ -312,7 +308,7 @@ function FontPanel({ font, onFont }) {
   const spec = FONTS[font]
 
   return (
-    <Chrome no="03" name="Font Gallery">
+    <Chrome name="Font Gallery">
       <div className="sp-panel-body">
         <div className="sp-font-strip">
           <label className="sp-find">
@@ -336,7 +332,7 @@ function FontPanel({ font, onFont }) {
 
         <div className="sp-font-ctl">
           <label>
-            <span className="sp-label">PREVIEW</span>
+            <span className="sp-label">Preview</span>
             <input
               type="text"
               value={preview}
@@ -349,17 +345,16 @@ function FontPanel({ font, onFont }) {
             />
           </label>
           <label>
-            <span className="sp-label">SIZE</span>
+            <span className="sp-label">Size</span>
             <input type="range" min="24" max="72" step="2" value={size} onChange={(e) => setSize(parseInt(e.target.value, 10))} aria-label="Preview size" />
             <output>{size}px</output>
           </label>
         </div>
 
         <div className="sp-fontlist">
-          {rows.map(({ f, i }, n) => (
+          {rows.map(({ f, i }) => (
             <button key={f.name} type="button" className="sp-fontrow" aria-pressed={font === i} onClick={() => onFont(i)}>
               <span className="sp-fontrow-top">
-                <span className="sp-fontrow-no">{String(n + 1).padStart(2, '0')}</span>
                 <span className="sp-fontrow-main">
                   <span className="sp-fontrow-name" style={{ fontFamily: f.family, fontSize: `${size}px` }}>{f.name}</span>
                   <span className="sp-fontrow-sample" style={{ fontFamily: f.family }}>{preview.trim() ? preview : FONT_SAMPLE}</span>
@@ -368,7 +363,7 @@ function FontPanel({ font, onFont }) {
                     <span>Semibold</span>
                   </span>
                 </span>
-                <span className="sp-fontrow-add" aria-hidden="true">{font === i ? '✓' : '+'}</span>
+                <span className="sp-fontrow-add" aria-hidden="true"><PhIcon name={font === i ? 'check' : 'plus'} /></span>
               </span>
               <span className="sp-fontrow-meta">
                 <span>{`${f.cat.charAt(0)}${f.cat.slice(1).toLowerCase()}, ${f.styles}`}</span>
@@ -462,7 +457,6 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
               >
                 <span className="sp-rail-no">{`0${i + 1}`}</span>
                 <span className="sp-rail-label">{label}</span>
-                <span className="sp-rail-mark" aria-hidden="true">{step === i ? '●' : ''}</span>
               </button>
             </li>
           ))}
@@ -481,7 +475,7 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
         </div>
         <div className="sp-step">
           <article className="sp-panel" data-panel="3" ref={setRef(3)}>
-            <Chrome no="04" name="File converter"><BenchConverter /></Chrome>
+            <Chrome name="File Converter"><BenchConverter /></Chrome>
           </article>
         </div>
       </div>

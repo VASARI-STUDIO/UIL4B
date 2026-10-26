@@ -273,12 +273,17 @@ test('every glyph the page asks for is one the page ships', () => {
 
 test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
   // The design's 4 bench tool windows, not the 5 category panels.
-  const names = [...BENCH_SRC.matchAll(/<Chrome\s+no="(\d\d)"\s+name="([^"]+)"/g)].map((m) => `${m[1]} ${m[2]}`)
-  assert.deepEqual(names, ['01 Palette builder', '02 Icon library', '03 Font Gallery', '04 File converter'])
+  const names = [...BENCH_SRC.matchAll(/<Chrome\s+name="([^"]+)"/g)].map((m) => m[1])
+  assert.deepEqual(names, ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'])
   const panels = [...BENCH_SRC.matchAll(/data-panel="(\d)"/g)].map((m) => m[1])
   assert.deepEqual(panels, ['0', '1', '2', '3'], 'the bench no longer renders four [data-panel] windows')
-  assert.match(BENCH_SRC, /const RAIL = \['Palette builder', 'Icon library', 'Font gallery', 'File conversion'\]/,
-    'the rail no longer lists the design\'s four rows')
+  assert.match(BENCH_SRC, /const RAIL = \['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'\]/,
+    'the rail no longer lists the four tools by their own names, matching the window titles')
+  // No fake window chrome, no duplicate numbering, no glyph-as-icon marks.
+  for (const gone of ['sp-panel-lights', 'sp-panel-no', 'sp-fontrow-no', 'sp-rail-mark']) {
+    assert.ok(!BENCH_SRC.includes(gone), `the bench renders .${gone} again`)
+  }
+  assert.ok(!/['"`>](?:●|✓|\+)['"`<]/.test(BENCH_SRC), 'the bench draws a unicode glyph as an icon again')
   // AI Studio is not one of the design's windows.
   assert.ok(!/AI Studio/.test(BENCH_SRC), 'the bench has an AI Studio window again')
 })
