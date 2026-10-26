@@ -58,7 +58,10 @@
      of truth for one price IS the defect, and a unit test fails the build if a
      price-shaped string reappears in this file. -->
 <!--uil4b:jsonld-->
-<!-- Manrope + JetBrains Mono are self-hosted (see the @font-face block at the top
+<!-- Switzer (the UI face) + Geist Mono. Switzer is NOT in the repo: scripts/fetch-switzer.mjs
+     downloads it into public/fonts/switzer/ at build time (ITF FFL v2.0, see
+     scripts/SWITZER-LICENCE.md), so this preload 404s on a checkout that has not been built.
+     Older note, from the Manrope era: Manrope + JetBrains Mono are self-hosted (see the @font-face block at the top
      of global.css for why). Preloaded because a font is only DISCOVERED once the
      stylesheet parses; without this it starts a round trip late and swaps
      mid-entrance. BOTH families are preloaded now: V2 makes mono load-bearing
@@ -67,7 +70,7 @@
      Latin only — latin-ext is rare enough that preloading it would cost every
      visitor bandwidth to save a few. `crossorigin` is required even same-origin:
      fonts are fetched in CORS mode, and a preload without it is fetched twice. -->
-<link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/switzer/Switzer-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Critical theme base — applied before the main stylesheet loads so SVG icons
@@ -79,7 +82,7 @@ html[data-theme="light"]{background:#F5F5F2;color:#0F0F10;color-scheme:light}
 body{background:inherit;color:inherit}
 svg{color:inherit}
 #root{min-height:100vh}
-.boot-shell{min-height:100vh;padding:18px clamp(18px,4vw,48px);font-family:Geist,system-ui,sans-serif}
+.boot-shell{min-height:100vh;padding:18px clamp(18px,4vw,48px);font-family:Switzer,'Switzer Fallback',system-ui,sans-serif}
 .boot-status{position:fixed;left:50%;bottom:18px;z-index:1;transform:translateX(-50%);font-size:11px;font-weight:600;letter-spacing:.04em;color:rgba(71,85,105,.72)}
 .boot-nav{display:flex;align-items:center;justify-content:space-between;max-width:1180px;height:52px;margin:0 auto;border:1px solid rgba(15,23,42,.1);border-radius:16px;padding:0 16px;background:rgba(255,255,255,.82)}
 .boot-mark{font-weight:800;letter-spacing:-.04em}

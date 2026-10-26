@@ -37,6 +37,10 @@ ui-debug.log
 database-debug.log
 pubsub-debug.log
 
+# Switzer is fetched at build time (scripts/fetch-switzer.mjs) and must never be
+# committed: the ITF FFL v2.0 bans putting it in a public repository.
+public/fonts/switzer/
+
 # Env
 .env
 .env.local
