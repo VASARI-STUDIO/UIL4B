@@ -526,7 +526,7 @@ export function renderUiKit(design, {
 
   // The lockup is drawn from the shared logo geometry, sized in em, so the
   // template's existing font-size rules size it wherever it appears.
-  const lockup = `<span class="publisher-lockup">${logoSvg({ attrs: `style="height:1.1em;width:${(1.1 * LOCKUP_WIDTH / LOGO_HEIGHT).toFixed(3)}em" role="img" aria-label="UI L4B"` })}</span>`
+  const lockup = `<span class="publisher-lockup">${logoSvg({ attrs: `style="height:1.1em;width:${(1.1 * LOCKUP_WIDTH / LOGO_HEIGHT).toFixed(3)}em" aria-hidden="true"` })}<span class="sr-only">UIL4B</span></span>`
   const publisher = `<a class="publisher-link" href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer" aria-label="Visit UIL4B (opens in a new tab)">${lockup}</a>`
   const watermark = free ? `<span class="section-watermark">Made with ${publisher}</span>` : ''
 
