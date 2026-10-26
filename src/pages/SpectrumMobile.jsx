@@ -10,6 +10,7 @@ import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { FREE_SAVE_LIMITS } from '../config/plans'
 import '../styles/pages/spectrum-mobile.css'
+import { BrandLockup } from '../components/BrandLogo'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // /mobile — the "On mobile" screen of "UIL4B - Spectrum.dc.html".
@@ -121,7 +122,7 @@ function Phone({ children, tab }) {
         <span className="spm-home" />
         <div className="spm-app">
           <div className="spm-apphead">
-            <span className="spm-appword">UI L<span>4</span>B</span>
+            <span className="spm-appword"><BrandLockup /></span>
             <span className="spm-round"><PhGlyph d={PH['magnifying-glass']} size={12} /></span>
             <span className="spm-round spm-round--me">TM</span>
             <span className="spm-round"><PhGlyph d={PH.list} size={12} /></span>

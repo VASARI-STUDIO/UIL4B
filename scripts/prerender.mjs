@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
 import { SITE_ORIGIN, canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
 import { prerenderRoutes } from './route-matrix.mjs'
-import { DEFAULT_CARD, cardFor, cardUrl } from './share-cards.mjs'
+import { DEFAULT_CARD, cardFor, cardUrl, twitterCardUrl } from './share-cards.mjs'
 import { breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
 import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 import { buildLlmsTxt } from './llms-txt.mjs'
@@ -154,7 +154,7 @@ export function rewriteHead(html, { title, description, robots, canonical, card,
     sub('og:image:alt', /<meta\s+property="og:image:alt"\s+content="[^"]*"\s*\/?>/,
       `<meta property="og:image:alt" content="${attr(card.alt)}" />`)
     sub('twitter:image', /<meta\s+name="twitter:image"\s+content="[^"]*"\s*\/?>/,
-      `<meta name="twitter:image" content="${attr(src)}" />`)
+      `<meta name="twitter:image" content="${attr(twitterCardUrl(ORIGIN, card))}" />`)
   }
 
   // ── Per-route structured data ─────────────────────────────────────────────
