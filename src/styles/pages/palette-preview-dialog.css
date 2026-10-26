@@ -125,6 +125,7 @@
 
 /* Compare actions. */
 .pvd-actions{flex:none;padding:var(--s-3) var(--s-5);border-top:1px solid var(--border)}
+.pvd-actions .btn{min-height:40px;font-size:13px}
 .plb-modal--preview[data-layout="strip"] .pvd-actions .btn{width:100%;min-height:44px}
 
 /* 390: chip strip docked at the bottom, with a Colours button. */
@@ -139,7 +140,7 @@
 .pvd-colours{order:-1;flex:none;height:44px;padding:0 var(--s-4);font-size:var(--fs-body-s);font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer}
 .pvd-sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;max-height:80dvh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4) 0 calc(var(--s-4) + env(safe-area-inset-bottom));
   background:var(--card);border-top:1px solid var(--border);border-radius:var(--radius-xl) var(--radius-xl) 0 0;box-shadow:var(--warm-shadow-lg)}
-.pvd-sheet-x{position:absolute;top:var(--s-2);right:var(--s-2)}
+.plb-modal--preview .pvd-sheet-x{position:absolute;top:var(--s-2);right:var(--s-2)}
 .pvd-sheet .pvd-legend{border-top:0;padding-top:0;padding-right:var(--s-4);padding-left:var(--s-4)}
 .pvd-sheet .pvd-chip{min-height:44px}
 .pvd-sheet .pvd-note{padding:0 var(--s-4)}

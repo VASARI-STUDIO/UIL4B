@@ -178,7 +178,7 @@
 /* ── 4. Phone app ─────────────────────────────────────────────────────────── */
 .pvs-phone{display:flex;justify-content:center;padding:var(--s-5)}
 .pvs-device{
-  display:flex;flex-direction:column;overflow:hidden;width:min(100%,390px);height:clamp(560px,calc(var(--stage-room,100cqh) - 44px),780px);
+  display:flex;flex-direction:column;overflow:hidden;width:min(100%,390px);height:clamp(480px,calc(var(--stage-room,100cqh) - 52px),780px);
   background:var(--pv-canvas);border:2px solid var(--pv-border-strong);border-radius:44px;
 }
 .pvs-statusbar{display:flex;align-items:center;justify-content:space-between;padding:var(--s-3) var(--s-5) 0;font-size:13px;font-weight:600}
@@ -333,6 +333,12 @@
   .pvs-plans{padding:var(--s-5) var(--s-4)}
   .pvs-planlist{grid-template-columns:1fr}
   .pvs-plan.is-pick{order:-1}
+}
+
+/* A short stage trims the landing page's vertical padding so more of it shows. */
+@container pvstage (max-height:700px){
+  .pvs-hero{padding-block:var(--s-5)}
+  .pvs-plans{padding-block:var(--s-5)}
 }
 
 /* The phone is a framed device only where there is room for one. */
