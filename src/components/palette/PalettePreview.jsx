@@ -377,25 +377,47 @@ export default function PreviewScene({ roles, sceneId, highlight = null, onRoles
   const failKey = roles.fails.map((f) => f.role).join(',')
 
   // Mark every role-bearing element: which are in the highlighted role, and
-  // which sit in a role that fails its floor. Containers (an element holding
+  // which carry a role that fails its floor. Containers (an element holding
   // another role-bearing one) never dim, or the highlighted child would dim
-  // with them.
+  // with them. A failing role is flagged on one element, the largest it paints
+  // at this width, so a chart of twelve bars shows one outline rather than
+  // twelve. The marks are redone when the scene is resized, because a layout
+  // change can hide the element that was flagged.
   useEffect(() => {
     const root = rootRef.current
-    if (!root) return
-    const failing = new Set(failKey ? failKey.split(',') : [])
-    const used = new Set()
-    root.querySelectorAll('[data-role]').forEach((el) => {
-      const rs = el.dataset.role.split(' ')
-      rs.forEach((r) => used.add(r))
-      const isLeaf = !el.querySelector('[data-role]')
-      if (highlight && rs.includes(highlight)) el.dataset.hit = 'on'
-      else if (highlight && isLeaf) el.dataset.hit = 'off'
-      else delete el.dataset.hit
-      if (rs.some((r) => failing.has(r))) el.dataset.fail = 'on'
-      else delete el.dataset.fail
-    })
-    if (onRoles) onRoles([...used])
+    if (!root) return undefined
+    const failing = failKey ? failKey.split(',') : []
+    const mark = () => {
+      const els = [...root.querySelectorAll('[data-role]')]
+      const used = new Set()
+      const flagged = new Set()
+      for (const role of failing) {
+        let best = null
+        let area = 0
+        for (const el of els) {
+          if (!el.dataset.role.split(' ').includes(role)) continue
+          const r = el.getBoundingClientRect()
+          if (r.width * r.height > area) { best = el; area = r.width * r.height }
+        }
+        if (best) flagged.add(best)
+      }
+      for (const el of els) {
+        const rs = el.dataset.role.split(' ')
+        rs.forEach((r) => used.add(r))
+        const isLeaf = !el.querySelector('[data-role]')
+        if (highlight && rs.includes(highlight)) el.dataset.hit = 'on'
+        else if (highlight && isLeaf) el.dataset.hit = 'off'
+        else delete el.dataset.hit
+        if (flagged.has(el)) el.dataset.fail = 'on'
+        else delete el.dataset.fail
+      }
+      if (onRoles) onRoles([...used])
+    }
+    mark()
+    if (typeof ResizeObserver === 'undefined' || !failKey) return undefined
+    const ro = new ResizeObserver(mark)
+    ro.observe(root)
+    return () => ro.disconnect()
   }, [highlight, scene.id, failKey, onRoles, roles.mode])
 
   return (

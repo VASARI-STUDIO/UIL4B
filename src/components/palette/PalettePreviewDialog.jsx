@@ -2,11 +2,13 @@
 // named list, with a legend that traces every colour role to the elements it
 // paints.
 //
-// The list takes three shapes, chosen once by width (useMediaQuery, so only one
-// tree is mounted): a grouped rail from 1024px, a "Dashboard" button that opens
-// the same list as a popover from 768px, and a chip strip docked at the bottom
-// below that. All three are one listbox contract: arrows, Home and End move and
-// select, and only the selected option is a tab stop.
+// The list takes three shapes, chosen once by width and height (useMediaQuery,
+// so only one tree is mounted): a grouped rail from 1024px, a "Dashboard"
+// button that opens the same list as a popover from 768px, and a chip strip
+// docked at the bottom below that, or whenever the window is under 500px tall
+// (a phone on its side keeps the strip, which leaves the scene the most room).
+// All three are one listbox contract: arrows, Home and End move and select,
+// and only the selected option is a tab stop.
 //
 // The dialog owns its modal contract (useModalDialog). That hook closes on
 // Escape in the capture phase, before any handler in the tree, so an open
@@ -21,6 +23,7 @@ import { PREVIEW_GROUPS, PREVIEW_SCENES, sceneById } from '../../data/palettePre
 import { BRAND_ROLES, derivePaletteRoles } from '../../utils/palettePreviewRoles'
 import { roleLabel } from '../../utils/paletteRoles'
 import { simCvd } from '../../utils/colors'
+import { prefersReducedMotion } from '../spectrum/reducedMotion'
 import '../../styles/pages/palette-preview-dialog.css'
 
 // Roles the export does not write; the legend labels them as suggestions.
@@ -34,6 +37,9 @@ const SUGGESTED = [
 
 // How long a colour tapped in the phone sheet stays outlined in the scene.
 const PIN_MS = 3000
+
+// Scenes with no surface to sit on: a ratio "on surface" means nothing there.
+const SURFACELESS = new Set(['poster'])
 
 const sentence = (s) => s.charAt(0) + s.slice(1).toLowerCase()
 
@@ -60,7 +66,9 @@ function useEscapeLayer(layerRef, open, close) {
 
 // ── The scene list ──────────────────────────────────────────────────────────
 
-function SceneListbox({ grouped, orientation, sceneId, onPick, isLocked, label, className, listRef, onScroll }) {
+// `onChoose` fires on a click or Enter/Space on an option, not on the arrow keys
+// that also select, so a popover can close on a choice and stay open to browse.
+function SceneListbox({ grouped, orientation, sceneId, onPick, onChoose, isLocked, label, className, listRef, onScroll }) {
   const uid = useId()
   const innerRef = useRef(null)
   const ref = listRef || innerRef
@@ -93,7 +101,7 @@ function SceneListbox({ grouped, orientation, sceneId, onPick, isLocked, label, 
         tabIndex={on ? 0 : -1}
         data-scene-id={s.id}
         className={on ? 'pvd-opt is-on' : 'pvd-opt'}
-        onClick={() => onPick(s.id)}
+        onClick={() => { onPick(s.id); if (onChoose) onChoose() }}
       >
         <span className="pvd-opt-name">{s.name}</span>
         {isLocked(s) && (
@@ -167,6 +175,7 @@ function SceneMenu({ scene, sceneId, onPick, isLocked, layerRef }) {
             sceneId={sceneId}
             isLocked={isLocked}
             onPick={onPick}
+            onChoose={close}
             className="pvd-list"
           />
         </div>
@@ -241,7 +250,7 @@ function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) 
           </span>
         )}
         {i != null && unset.has(role) && <span className="pvd-chip-note">Not set, using Primary</span>}
-        {off && <span className="pvd-chip-note">Not in this preview</span>}
+        {off && <span className="sr-only">Not in this preview</span>}
         {hover === role && <span className="sr-only">Outlined in the preview</span>}
       </button>
     )
@@ -254,7 +263,6 @@ function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) 
   return (
     <div className={sheet ? 'pvd-legend is-sheet' : 'pvd-legend'}>
       <p className="pvd-legend-t">Where each colour lands</p>
-      {note && <p className="pvd-legend-note">{note}</p>}
       <div className="pvd-chips" role="group" aria-label="Your colours">
         {BRAND_ROLES.map((role, i) => chip(role, sentence(roleLabel(harmony, i)), i))}
       </div>
@@ -262,6 +270,7 @@ function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) 
       <div className="pvd-chips" role="group" aria-label="Suggested colours">
         {SUGGESTED.map(([role, label]) => chip(role, label, null))}
       </div>
+      {note && <p className="pvd-legend-note">{note}</p>}
       {roles.errorShifted && <p className="pvd-legend-note">Error shifted to stay distinct from your primary</p>}
     </div>
   )
@@ -278,15 +287,17 @@ function Stage({ scene, roles, highlight, onRoles, gate, onUnlock }) {
       </div>
       {locked && (
         <div className="pvd-lock">
-          <ToolIcon name="lock-simple" size={20} />
-          {gate === 'pending' ? (
-            <p>Checking your plan</p>
-          ) : (
-            <>
-              <p>{scene.name} is a Pro preview</p>
-              <button type="button" className="btn btn-s btn-accent" onClick={() => onUnlock(scene)}>Unlock preview</button>
-            </>
-          )}
+          <div className="pvd-lock-card">
+            <ToolIcon name="lock-simple" size={20} />
+            {gate === 'pending' ? (
+              <p>Checking your plan</p>
+            ) : (
+              <>
+                <p>{scene.name} is a Pro preview</p>
+                <button type="button" className="btn btn-accent pvd-lock-btn" onClick={() => onUnlock(scene)}>Unlock preview</button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -317,7 +328,8 @@ export default function PalettePreviewDialog({
 }) {
   const wide = useMediaQuery('(min-width: 1024px)')
   const mid = useMediaQuery('(min-width: 768px)')
-  const layout = wide ? 'rail' : mid ? 'menu' : 'strip'
+  const tall = useMediaQuery('(min-height: 500px)')
+  const layout = !tall ? 'strip' : wide ? 'rail' : mid ? 'menu' : 'strip'
 
   const layerRef = useRef(null)
   const requestClose = useCallback(() => {
@@ -337,13 +349,18 @@ export default function PalettePreviewDialog({
     () => (vision === 'normal' ? colors : colors.map((c) => simCvd(c, vision))),
     [colors, vision],
   )
-  const roles = useMemo(() => derivePaletteRoles(shown, { mode, harmony }), [shown, mode, harmony])
+  // A scene with no surface has no "on surface" floor to fail, so it flags and
+  // lists nothing.
+  const surfaceless = SURFACELESS.has(scene.id)
+  const scoped = useCallback((r) => (surfaceless && r.fails.length ? { ...r, fails: [] } : r), [surfaceless])
+  const baseRoles = useMemo(() => derivePaletteRoles(shown, { mode, harmony }), [shown, mode, harmony])
+  const roles = useMemo(() => scoped(baseRoles), [scoped, baseRoles])
   const compareColors = compare?.colors
   const compareRoles = useMemo(() => {
     if (!compareColors) return null
     const cols = vision === 'normal' ? compareColors : compareColors.map((c) => simCvd(c, vision))
-    return derivePaletteRoles(cols, { mode, harmony })
-  }, [compareColors, vision, mode, harmony])
+    return scoped(derivePaletteRoles(cols, { mode, harmony }))
+  }, [compareColors, vision, mode, harmony, scoped])
 
   // Legend state: hover and focus outline transiently; a click pins.
   const [hover, setHover] = useState(null)
@@ -354,6 +371,25 @@ export default function PalettePreviewDialog({
   }, [])
   const live = (r) => (r && (!used || used.includes(r)) ? r : null)
   const highlight = live(hover) || live(pinned)
+
+  // A highlighted role can sit below the fold of a tall scene. When none of its
+  // elements is in view, bring the first into view (instantly under reduced
+  // motion); when one already is, leave the scene where it is.
+  const stageRef = useRef(null)
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!highlight || !stage) return
+    const hits = [...stage.querySelectorAll('[data-hit="on"]')]
+      .filter((el) => el.getBoundingClientRect().height > 0)
+    if (!hits.length) return
+    const view = stage.getBoundingClientRect()
+    const seen = hits.some((el) => {
+      const r = el.getBoundingClientRect()
+      const overlap = Math.min(r.bottom, view.bottom) - Math.max(r.top, view.top)
+      return overlap >= Math.min(r.height, 24) && r.right > view.left && r.left < view.right
+    })
+    if (!seen) hits[0].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [highlight, scene.id])
 
   // The phone sheet of colours.
   const [sheet, setSheet] = useState(false)
@@ -488,14 +524,21 @@ export default function PalettePreviewDialog({
               </div>
             )}
 
-            {layout === 'strip' && pinned && (
+            {layout === 'strip' && !compare && (
               <div className="pvd-showing" role="status">
-                <span>Showing: <b>{pinnedLabel}</b></span>
-                <button type="button" className="pvd-link" onClick={unpin}>Clear</button>
+                {pinned ? (
+                  <>
+                    <span>Showing: <b>{pinnedLabel}</b></span>
+                    <button type="button" className="pvd-link" onClick={unpin}>Clear</button>
+                  </>
+                ) : (
+                  <span className="pvd-showing-hint" aria-hidden="true">Tap Colours to trace a colour</span>
+                )}
               </div>
             )}
 
             <div
+              ref={stageRef}
               className={compare ? 'pvd-stage is-compare' : 'pvd-stage'}
               onTouchStart={layout === 'strip' ? onTouchStart : undefined}
               onTouchEnd={layout === 'strip' ? onTouchEnd : undefined}

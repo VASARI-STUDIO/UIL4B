@@ -7,6 +7,11 @@
  * The root is a size container: every layout change below is a container query
  * on the width the scene is given, never on the viewport, and nothing is scaled,
  * so text stays at its real pixel size. Type scale: 12 / 13 / 15 / 20 / 28 / 44px.
+ *
+ * A fixed-aspect scene (poster, social tile, phone) fits the height of the
+ * stage it sits in. The dialog makes the stage a size container named pvstage
+ * and var(--stage-room) is the height it offers; outside the dialog both fall
+ * back to the viewport.
  */
 
 .pvs{
@@ -40,7 +45,7 @@
 .pvs-muted{font-size:13px;color:var(--pv-muted)}
 .pvs-foot{margin-top:auto;padding-top:var(--s-2);font-size:12px;color:var(--pv-muted)}
 .pvs-fig{font-size:44px;font-weight:600;line-height:1.1;letter-spacing:-.02em;color:var(--pv-text)}
-.pvs-fig--s{font-size:28px}
+.pvs-fig--s{font-size:28px;white-space:nowrap}
 .pvs-err{font-weight:600;color:var(--pv-error-ink)}
 .pvs-msg{font-size:13px}
 
@@ -119,7 +124,7 @@
 .pvs-chart>i.is-now{background:var(--pv-primary)}
 .pvs-axis{display:flex;justify-content:space-between;font-size:12px;color:var(--pv-muted)}
 
-.pvs-week{display:flex;gap:var(--s-2);margin-top:var(--s-3)}
+.pvs-week{display:flex;justify-content:space-between;gap:var(--s-1);margin-top:var(--s-3)}
 .pvs-day{display:flex;flex-direction:column;align-items:center;gap:var(--s-1);font-size:12px;color:var(--pv-muted)}
 .pvs-dot{width:16px;height:16px;border-radius:50%}
 .pvs-dot.is-logged{background:var(--pv-secondary)}
@@ -173,7 +178,7 @@
 /* ── 4. Phone app ─────────────────────────────────────────────────────────── */
 .pvs-phone{display:flex;justify-content:center;padding:var(--s-5)}
 .pvs-device{
-  display:flex;flex-direction:column;overflow:hidden;width:min(100%,390px);min-height:680px;
+  display:flex;flex-direction:column;overflow:hidden;width:min(100%,390px);height:clamp(560px,calc(var(--stage-room,100cqh) - 44px),780px);
   background:var(--pv-canvas);border:2px solid var(--pv-border-strong);border-radius:44px;
 }
 .pvs-statusbar{display:flex;align-items:center;justify-content:space-between;padding:var(--s-3) var(--s-5) 0;font-size:13px;font-weight:600}
@@ -183,7 +188,7 @@
 .pvs-signal>i:nth-child(2){height:6px}
 .pvs-signal>i:nth-child(3){height:8px}
 .pvs-signal>i:nth-child(4){height:10px}
-.pvs-phone-body{display:flex;flex:1;flex-direction:column;gap:var(--s-4);padding:var(--s-4) var(--s-5)}
+.pvs-phone-body{display:flex;flex:1;flex-direction:column;gap:var(--s-4);min-height:0;overflow:hidden;padding:var(--s-4) var(--s-5)}
 .pvs-timer{
   display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-2);padding:var(--s-4);
   background:var(--pv-primary);color:var(--pv-on-primary);border:1px solid var(--pv-pborder);border-radius:16px;font-size:13px;
@@ -250,10 +255,10 @@
 .pvs[data-scene="social"]{display:grid;place-items:center;overflow:visible;background:transparent;border:0;border-radius:0}
 .pvs-poster,
 .pvs-social{container-type:inline-size;position:relative;overflow:hidden;border:1px solid var(--pv-border);border-radius:4px}
-.pvs-poster{display:grid;grid-template-rows:55fr 30fr 15fr;width:min(100%,calc(64dvh / 1.414));aspect-ratio:1 / 1.414}
+.pvs-poster{display:grid;grid-template-rows:55fr 30fr 15fr;width:min(100%,max(240px,calc(var(--stage-room,100cqh) / 1.414)));aspect-ratio:1 / 1.414}
 .pvs-band{display:flex;flex-direction:column;justify-content:flex-start;min-width:0;padding:7cqi}
 .pvs-band>h2{font-size:clamp(24px,12cqi,56px);font-weight:700;line-height:1;letter-spacing:-.02em}
-.pvs-band>p{max-width:62%;font-size:clamp(13px,4.2cqi,20px);line-height:1.35}
+.pvs-band>p{max-width:62%;font-size:clamp(13px,4.2cqi,20px);line-height:1.35;text-wrap:balance}
 .pvs-band--1{background:var(--pv-primary);color:var(--pv-on-primary)}
 .pvs-band--2{background:var(--pv-secondary);color:var(--pv-on-secondary)}
 .pvs-band--3{justify-content:center;background:var(--pv-deep);color:var(--pv-on-deep)}
@@ -261,7 +266,7 @@
 .pvs-circle{position:absolute;right:9cqi;top:calc(55% - 9cqi);width:18cqi;aspect-ratio:1;border-radius:50%;background:var(--pv-accent)}
 
 .pvs-social{
-  display:flex;flex-direction:column;width:min(100%,calc(64dvh * .8));aspect-ratio:4 / 5;padding:7cqi;
+  display:flex;flex-direction:column;width:min(100%,max(240px,calc(var(--stage-room,100cqh) * .8)));aspect-ratio:4 / 5;padding:7cqi;
   background:var(--pv-primary);color:var(--pv-on-primary);border-color:var(--pv-pborder);
 }
 .pvs-social>h2{max-width:11ch;font-size:clamp(28px,13cqi,56px);font-weight:700;line-height:1.05;letter-spacing:-.02em}
@@ -281,12 +286,18 @@
 .pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
 .pvs [data-hit="off"]{opacity:.4}
 
-/* ── Narrow scenes: container width under 640px ───────────────────────────── */
-@container pvs (max-width:639px){
+/* ── Medium scenes: container width under 800px ───────────────────────────────
+ * The dashboard drops its 200px nav for a top bar, so its right-hand panel keeps
+ * the room "$2,940.00" and a seven-day row need. */
+@container pvs (max-width:799px){
   .pvs-dash{grid-template-columns:1fr;min-height:0}
   .pvs-nav{padding:var(--s-3) var(--s-4);border-right:0;border-bottom:1px solid var(--pv-border)}
   .pvs-menu{display:inline-flex}
   .pvs-navlist{display:none}
+}
+
+/* ── Narrow scenes: container width under 640px ───────────────────────────── */
+@container pvs (max-width:639px){
   .pvs-main{padding:var(--s-4)}
   .pvs-main .pvs-actions>.pvs-select{display:none}
   .pvs-grid{grid-template-columns:1fr}
@@ -297,11 +308,10 @@
   .pvs-filters>.pvs-select:last-child{display:none}
   .pvs-row--head{display:none}
   .pvs-row{
-    grid-template-columns:minmax(0,1fr) auto auto;
+    grid-template-columns:minmax(0,1fr) 72px 120px;
     grid-template-areas:"client client amount" "no due status";
     row-gap:var(--s-1);
   }
-  .pvs-row>span{grid-column:auto}
   .pvs-check,.pvs-issued{display:none}
   .pvs-client{grid-area:client}
   .pvs-amount{grid-area:amount}
@@ -328,7 +338,8 @@
 /* The phone is a framed device only where there is room for one. */
 @container pvs (max-width:520px){
   .pvs-phone{padding:0}
-  .pvs-device{width:100%;min-height:0;border:0;border-radius:0}
+  .pvs-device{width:100%;height:auto;border:0;border-radius:0}
+  .pvs-phone-body{overflow:visible}
   .pvs-statusbar{display:none}
 }
 
