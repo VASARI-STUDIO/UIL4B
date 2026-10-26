@@ -82,7 +82,8 @@ export function rampOf(base) {
     const c = base.c * (1 - Math.abs(i - 4) / 9)
     const hex = oklchToHex(L, c, base.h)
     const ink = inkOn(hex)
-    const cr = ratio(hex, ink)
+    // Graded on the one-decimal figure the row prints, so a label never contradicts its number.
+    const cr = Math.round(ratio(hex, ink) * 10) / 10
     return { step: STEP_LABELS[i], L, c, hex, ink, cr, aa: cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : 'Fails' }
   })
 }

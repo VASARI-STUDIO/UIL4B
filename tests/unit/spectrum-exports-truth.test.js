@@ -54,7 +54,7 @@ test('every step is graded against the ink that reads on it', () => {
   for (const base of BASES) {
     for (const r of rampOf(base)) {
       assert.equal(r.ink, inkOn(r.hex))
-      assert.equal(r.cr, ratio(r.hex, r.ink))
+      assert.equal(r.cr, Math.round(ratio(r.hex, r.ink) * 10) / 10, 'graded on the printed one-decimal ratio')
       const want = r.cr >= 7 ? 'AAA' : r.cr >= 4.5 ? 'AA' : 'Fails'
       assert.equal(r.aa, want, `${base.label} ${r.step}`)
       assert.notEqual(r.aa, 'LOW', 'the old verdict against near-black is back')
