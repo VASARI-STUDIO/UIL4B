@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import FontPicker from '../components/FontPicker'
 import UIKitGuide from '../components/UIKitGuide'
-import SaveTypeSystem from '../components/SaveTypeSystem'
+import { SaveTypeSystemPanel } from '../components/SaveTypeSystem'
+import { useSaveTypeSystemToolbar } from '../hooks/useSaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolIcon,
@@ -460,6 +461,16 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   const formatLabel = format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'
 
+  // Keeping the scale in a project is the one step here that asks for an
+  // account; everything else on the page works signed out. The trigger is a
+  // toolbar action, so it stays on screen while the page scrolls.
+  const save = useSaveTypeSystemToolbar({
+    gate: 'type-save-type-scale',
+    label: 'this type scale',
+    summary: `${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}. Kept with the project’s palette and tokens.`,
+    toast,
+  })
+
   // The toolbar's actions exist in every state so the row keeps its shape
   // while the catalogue loads.
   const items = [
@@ -490,6 +501,23 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Copy font import', icon: 'copy', onSelect: () => importUrl && onCopy?.(importUrl), disabled: !importUrl },
     },
+    {
+      id: 'save',
+      priority: 3,
+      render: () => (
+        <ToolButton
+          ref={save.triggerRef}
+          icon="bookmark-simple"
+          className="tsc-save"
+          aria-expanded={save.open}
+          aria-haspopup="dialog"
+          onClick={save.trigger}
+        >
+          Save to a project
+        </ToolButton>
+      ),
+      menu: { label: 'Save to a project', icon: 'bookmark-simple', onSelect: save.trigger },
+    },
   ]
   const primary = (
     <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={() => onExport?.(currentExport)}>
@@ -498,6 +526,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   )
   const layout = (body) => (
     <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={primary}>
+      <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
       {body}
     </ToolLayout>
   )
@@ -746,21 +775,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
                 </div>
               )}
-            </div>
-
-            {/* Outside the tabpanel, so the save exists for both views. The
-                controls above work signed out; keeping the scale in a project
-                is the step that asks for an account. */}
-            <div className="tsc-keep">
-              <SaveTypeSystem
-                gate="type-save-type-scale"
-                label="this type scale"
-                summary={`${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}.`}
-                toast={toast}
-              />
-              <p className="tsc-keep-note">
-                Keeps the scale and both families with the project’s palette and tokens.
-              </p>
             </div>
           </section>
         </ToolMain>
