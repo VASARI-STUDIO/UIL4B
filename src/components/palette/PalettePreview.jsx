@@ -43,7 +43,7 @@ function LeadPanel() {
       <p className="pvs-delta" data-role="success"><Arrow /> 18% on September</p>
       <div className="pvs-chart" aria-hidden="true">
         {FERNWAY.months.map((h, i) => (
-          <i key={i} className={i === FERNWAY.months.length - 1 ? 'is-now' : ''} data-role="primary" style={{ '--h': `${h}%` }} />
+          <i key={i} className={i === FERNWAY.months.length - 1 ? 'is-now' : ''} data-role="primary" style={{ '--pv-h': `${h}%` }} />
         ))}
       </div>
       <div className="pvs-axis" aria-hidden="true"><span>Nov</span><span>Oct</span></div>
@@ -233,7 +233,7 @@ function Phone() {
           </section>
           <section>
             <p className="pvs-between"><span>This week</span><span className="pvs-muted">31h 20m of 38h</span></p>
-            <div className="pvs-progress" aria-hidden="true"><i data-role="secondary" style={{ '--w': '82%' }} /></div>
+            <div className="pvs-progress" aria-hidden="true"><i data-role="secondary" style={{ '--pv-w': '82%' }} /></div>
           </section>
           <ul className="pvs-entries">
             {FERNWAY.entries.map((e) => (

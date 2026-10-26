@@ -147,6 +147,10 @@ test('4 . every --pv-* the stylesheet reads is set by pvVars', () => {
   const css = stripJs(ALL_CSS)
   const used = new Set([...css.matchAll(/var\((--pv-[a-z0-9-]+)/g)].map((x) => x[1]))
   const set = new Set(Object.keys(pvVars(derivePaletteRoles(['#3b5bdb', '#f08c00', '#0ca678', '#e8f0fe', '#1c2541'], {}))))
+  // A bar's height or a progress fill's width is set on that one element, not
+  // on the root; those names count as set when the component writes them.
+  const scenes = stripJs(fs.readFileSync(path.join(process.cwd(), 'src/components/palette/PalettePreview.jsx'), 'utf8'))
+  for (const [, name] of scenes.matchAll(/style=\{\{\s*'(--pv-[a-z0-9-]+)'\s*:/g)) set.add(name)
   assert.ok(used.size > 15, `only ${used.size} --pv-* names found in the stylesheets - the scan is not reading the preview CSS`)
   const orphans = [...used].filter((name) => !set.has(name)).sort()
   assert.deepEqual(orphans, [], 'these custom properties are read by the stylesheet but never set on the scene root')

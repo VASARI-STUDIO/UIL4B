@@ -108,8 +108,9 @@ function semanticRole(role, mode, primaryL, primaryC, primaryHue, neutrals) {
   let hue = SEMANTIC_HUE[role]
   let shifted = false
   if (role === 'error' && hueGap(primaryHue, hue) < ERROR_MIN_HUE_GAP) {
-    // Toward magenta: lower hue, to at least the minimum gap from the primary.
-    hue = (primaryHue - (ERROR_MIN_HUE_GAP + 1) + 360) % 360
+    // Toward magenta: lower hue, past the minimum gap from the primary by
+    // enough that rounding to an 8-bit hex cannot pull the painted gap under it.
+    hue = (primaryHue - (ERROR_MIN_HUE_GAP + 4) + 360) % 360
     shifted = true
   }
   const L0 = clamp(primaryL, 0.5, 0.72)

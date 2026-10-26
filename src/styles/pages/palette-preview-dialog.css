@@ -33,7 +33,7 @@
 
 .pvd-vision,.pvd-showing{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);flex:none;padding:var(--s-2) var(--s-4);background:var(--bg-2);border-bottom:1px solid var(--border);font-size:13px;color:var(--t1)}
 .pvd-vision b,.pvd-showing b{font-weight:600;color:var(--t0)}
-.pvd-link{padding:var(--s-1) var(--s-2);font-size:13px;font-weight:600;color:var(--accent-text);background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.pvd-link{padding:var(--s-1) var(--s-2);font-size:13px;font-weight:600;color:var(--accent-text);background:none;border:0;border-radius:var(--btn-radius);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .pvd-link:hover{color:var(--t0)}
 
 /* Body: rail and main. */
@@ -59,7 +59,7 @@
 /* 768 to 1023: the list behind one button. */
 .pvd-pickbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);flex:none;padding:var(--s-3) var(--s-5) 0}
 .pvd-menu{position:relative}
-.pvd-menu-btn{display:inline-flex;align-items:center;gap:var(--s-2);height:36px;padding:0 var(--s-3);font-size:var(--fs-body-s);font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer}
+.pvd-menu-btn{display:inline-flex;align-items:center;gap:var(--s-2);height:36px;padding:0 var(--s-3);font-size:var(--fs-body-s);font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer}
 .pvd-pop{position:absolute;top:calc(100% + var(--s-1));left:0;z-index:5;width:240px;max-height:min(60dvh,420px);overflow-y:auto;overscroll-behavior:contain;padding:var(--s-2);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
 
 /* Stage. */
@@ -123,5 +123,6 @@
 .plb-modal--preview[data-layout="strip"] .plb-modal-card--preview{position:relative}
 
 @media (prefers-reduced-motion:reduce){
-  .pvd-opt,.pvd-chip,.plb-modal--preview .plb-mode{transition:none}
+  html:not([data-reduced-motion="false"]) :is(.pvd-opt,.pvd-chip,.plb-modal--preview .plb-mode){transition:none}
 }
+html[data-reduced-motion="true"] :is(.pvd-opt,.pvd-chip,.plb-modal--preview .plb-mode){transition:none}
