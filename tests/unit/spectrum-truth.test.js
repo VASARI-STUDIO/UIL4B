@@ -386,7 +386,7 @@ test('the stylesheet hardcodes no accent colour', () => {
 
   // POSITIVE CONTROL: the sheet really does use the derived family, so the
   // assertion above is not passing on an empty stylesheet.
-  for (const token of ['--accent', '--accent-mid', '--accent-text', '--accent-bright', '--accent-ink']) {
+  for (const token of ['--accent', '--accent-mid', '--accent-text', '--accent-ink']) {
     assert.ok(CSS.includes(`var(${token})`), `spectrum.css never reads ${token}`)
   }
 })

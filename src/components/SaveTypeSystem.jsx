@@ -1,10 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
-import { useProject } from '../contexts/ProjectContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
-import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { reportUpgradeGate, useProModal } from '../contexts/ProModalContext'
-import { projectQuota } from '../utils/projectQuota'
+import { useSaveTypeSystem } from '../hooks/useSaveTypeSystem'
 
 // Where the typography tools meet the paywall — and the ONLY place they do.
 //
@@ -99,15 +95,19 @@ import { projectQuota } from '../utils/projectQuota'
 //
 // Gamma (mobbin.com/screens/ad4dc9a0-ad1b-440c-a7ec-2c7a577af805) placed the
 // control: in its Fonts panel "Save theme" is the panel's terminal action,
-// after the live editing rather than above it. Both tools mount this in their
-// delivery section for that reason.
+// after the live editing rather than above it. Font Pair mounts this in its
+// delivery section for that reason. Type Scale puts the trigger in its tool
+// toolbar instead (useSaveTypeSystemToolbar), where the colour tools keep their
+// own save, so it never sits at the foot of a long page.
 //
-// -- Why this file exports two components -----------------------------------
+// -- Why the view and the connected logic are separate ------------------------
 //
 // SaveTypeSystemMenu is the VIEW and holds no entitlement logic at all. It is
 // handed a resolved quota and renders what that quota allows; at the cap it is
-// given nothing to draw a save control WITH. SaveTypeSystem is the connected
-// half that resolves the quota from the real store and owns every refusal.
+// given nothing to draw a save control WITH. The connected half is the
+// useSaveTypeSystem hook (hooks/useSaveTypeSystem.js), which resolves the quota
+// from the real store and owns every refusal; SaveTypeSystem below is that hook
+// plus a trigger.
 //
 // That is the same split utils/lockedPreview.js makes and for the same reason:
 // a view that cannot receive a payload cannot leak one by mistake. It also
@@ -218,36 +218,12 @@ export function SaveTypeSystemMenu({
 }
 
 /**
- * The connected control. Owns the store, the entitlement and every refusal.
- *
- * @param {string} gate     the id this wall reports to trackUpgradeGate. Names
- *                          WHICH surface converted, so two tools sharing one
- *                          component still measure separately.
- * @param {string} label    what is being saved, in the user's words ("this
- *                          pairing", "this type scale"). Used in the login
- *                          prompt and the saved-confirmation toast.
- * @param {string} summary  one line naming the families/values that will be
- *                          written, so the user can see what a save captures.
- * @param {Function} toast  the page's toast channel.
+ * The control with its own trigger, for a page that places it in its body.
+ * Takes the same props as useSaveTypeSystem.
  */
-export default function SaveTypeSystem({ gate, label, summary, toast }) {
-  const { saveProject, overwriteProject, projects, canSaveProjects, projectLimit } = useProject()
-  const { isPro } = useSubscription()
-  const { requireLogin } = useLoginPrompt()
-  const { openProModal } = useProModal()
-
-  const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
+export default function SaveTypeSystem(props) {
+  const { open, setOpen, trigger, menuProps } = useSaveTypeSystem(props)
   const wrapRef = useRef(null)
-
-  // The count that refuses the save is the SAME array saveProject() counts, so
-  // the number shown and the rule enforced cannot drift apart. Pro resolves to
-  // Infinity upstream, which projectQuota answers as 'unlimited' -- no count,
-  // no wall, nothing to dismiss.
-  const quota = useMemo(
-    () => projectQuota(projects.length, projectLimit),
-    [projects.length, projectLimit],
-  )
 
   // Dismiss on outside pointerdown or Escape, matching every other menu on
   // these surfaces. Focus returns to the trigger on Escape so a keyboard user
@@ -268,66 +244,7 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
       document.removeEventListener('pointerdown', onDown)
       document.removeEventListener('keydown', onKey)
     }
-  }, [open])
-
-  const raiseWall = useCallback(() => {
-    openProModal({
-      gate,
-      eyebrow: 'Pro projects',
-      title: 'Keep every type system you build',
-      subtitle: `The free plan holds ${quota.limit} saved projects — palette, fonts and type scale together. Pro removes the cap, so every pairing and scale you build keeps its own project.`,
-    })
-  }, [gate, openProModal, quota.limit])
-
-  // Saving is free and only needs an account, exactly as in PaletteBuilder and
-  // IconLibrary. `free: true` keeps the login popup's copy off the Pro pitch --
-  // this is not the upsell, it is the prerequisite.
-  //
-  // `signup: true` OPENS ON THE CREATE-ACCOUNT FORM, and it was missing here.
-  // The branch only runs for somebody who cannot save projects, which signed
-  // out means somebody with no account — and they were being greeted with
-  // "Log in to continue", a form for an account they do not have, at the moment
-  // they first tried to keep their work. PaletteBuilder's save and the export
-  // gate both pass it (useExportGate.js:81 records the rule); this and the
-  // Gradient community submit were the two that did not.
-  const trigger = useCallback(async () => {
-    if (!canSaveProjects) {
-      const user = await requireLogin(`save ${label}`, { free: true, signup: true })
-      if (!user) return
-    }
-    setOpen((v) => !v)
-  }, [canSaveProjects, label, requireLogin])
-
-  // Re-resolve rather than trust the render that drew the button. The at-cap
-  // branch renders no save control at all, so this is belt-and-braces -- but it
-  // is the brace that survives someone reintroducing a disabled button later.
-  const commit = useCallback(() => {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    if (projectQuota(projects.length, projectLimit).atLimit) {
-      setOpen(false)
-      raiseWall()
-      return
-    }
-    try {
-      saveProject(trimmed)
-      setName('')
-      setOpen(false)
-      toast?.(`${trimmed} saved — fonts and type scale included`)
-    } catch {
-      // saveProject throws only on the cap. Name the paid edge rather than
-      // surfacing its raw message as a failure (P-003: a gate must never read
-      // as the product breaking).
-      setOpen(false)
-      raiseWall()
-    }
-  }, [name, projects.length, projectLimit, raiseWall, saveProject, toast])
-
-  const overwrite = useCallback((project) => {
-    overwriteProject(project.id)
-    setOpen(false)
-    toast?.(`Updated: ${project.name}`)
-  }, [overwriteProject, toast])
+  }, [open, setOpen])
 
   return (
     <div className="svt-wrap" ref={wrapRef}>
@@ -341,20 +258,21 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
         <BookmarkIcon /> Save to a project
       </button>
 
-      {open && (
-        <SaveTypeSystemMenu
-          quota={quota}
-          projects={projects}
-          isPro={isPro}
-          label={label}
-          summary={summary}
-          name={name}
-          onName={setName}
-          onSave={commit}
-          onOverwrite={overwrite}
-          onUpgrade={() => { reportUpgradeGate('type-save-cap'); setOpen(false) }}
-        />
-      )}
+      {open && <SaveTypeSystemMenu {...menuProps} />}
+    </div>
+  )
+}
+
+/**
+ * The menu for useSaveTypeSystemToolbar: pinned under the toolbar, a bottom
+ * sheet on a phone. Takes the hook's `open`, `popRef` (as `panelRef`) and
+ * `menuProps`.
+ */
+export function SaveTypeSystemPanel({ open, panelRef, menuProps }) {
+  if (!open) return null
+  return (
+    <div ref={panelRef} className="svt-pop">
+      <SaveTypeSystemMenu {...menuProps} />
     </div>
   )
 }

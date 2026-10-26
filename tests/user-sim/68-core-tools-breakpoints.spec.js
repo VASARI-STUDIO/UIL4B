@@ -277,14 +277,21 @@ for (const [route, tab] of [['/create/type-scale', 'Developer handoff'], ['/crea
     await signIn(page, { plan: 'free', projects: 3 })
     await go(page, route)
     if (tab) await page.getByRole('tab', { name: tab }).click()
-    const trigger = page.getByRole('button', { name: 'Save to a project' })
-    // The fault depends on where the button sits when it is pressed: the menu
-    // opens upward, so a button 100px under the nav has no room above it.
-    // Pin that position rather than inherit whatever scrollIntoView chose —
-    // with the button mid-screen the old menu happened to fit on Type Scale
-    // and the test proved nothing.
-    await trigger.evaluate((el) => { el.scrollIntoView({ block: 'start', behavior: 'instant' }); window.scrollBy(0, -100) })
-    await trigger.click()
+    if (route === '/create/type-scale') {
+      // Type Scale keeps its save in the toolbar, where a 390px row has moved it
+      // into the More sheet; the menu it opens is the same bottom sheet.
+      await page.getByRole('button', { name: 'More', exact: true }).click()
+      await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Save to a project' }).click()
+    } else {
+      const trigger = page.getByRole('button', { name: 'Save to a project' })
+      // The fault depends on where the button sits when it is pressed: the menu
+      // opens upward, so a button 100px under the nav has no room above it.
+      // Pin that position rather than inherit whatever scrollIntoView chose —
+      // with the button mid-screen the old menu happened to fit on Type Scale
+      // and the test proved nothing.
+      await trigger.evaluate((el) => { el.scrollIntoView({ block: 'start', behavior: 'instant' }); window.scrollBy(0, -100) })
+      await trigger.click()
+    }
     const menu = page.locator('.svt-menu')
     await expect(menu).toBeVisible()
     await expect(page.getByTestId('type-save-wall'), 'this is the at-cap menu, with the wall').toBeVisible()
