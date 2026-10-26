@@ -28,7 +28,7 @@
 //                    64-computed-style-snapshot.spec.js passing on
 //                    /create/palette against a baseline that was not
 //                    regenerated for the move. What is here is the assertion
-//                    that the page still paints all eighteen scenes THROUGH the
+//                    that the page still paints all eight scenes THROUGH the
 //                    module it now imports them from.
 //
 //   /login           dimensions 3 and 4, 7 → 8. Two non-copy causes, both
@@ -323,44 +323,54 @@ test.describe('the gradient stop hex reads as a field', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the lifted preview module is what /create/palette paints', () => {
-  // MUTATION: delete any one entry from `PREVIEW_SCENES.ui` in
-  // src/data/palettePreviewScenes.js. This goes red on the count for that tab.
-  // Deleting the `import { PREVIEW_SCENES }` line instead takes the whole route
-  // down, which this also catches — on the modal never opening.
-  test('all eighteen scenes render, each with the full --pv-* role set', async ({ page }) => {
+  // MUTATION: delete any one entry from `PREVIEW_SCENES` in
+  // src/data/palettePreviewScenes.js. This goes red on the count of options.
+  // Deleting the import of the preview component instead takes the whole route
+  // down, which this also catches, on the dialog never opening.
+  test('all eight scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     await go(page, '/create/palette')
     await clickPaletteAction(page, 'Preview on a UI')
-    await expect(page.locator('.plb-pv').first()).toBeVisible()
+    await expect(page.locator('.pvs')).toHaveCount(1)
 
-    const ROLES = ['--pv-bg', '--pv-surface', '--pv-primary', '--pv-onprimary', '--pv-accent',
-      '--pv-text', '--pv-muted', '--pv-border', '--pv-pborder', '--pv-accent-ink', '--pv-primary-ink']
+    const VARS = ['--pv-canvas', '--pv-surface', '--pv-raised', '--pv-border', '--pv-border-strong',
+      '--pv-text', '--pv-muted', '--pv-disabled', '--pv-primary', '--pv-secondary', '--pv-accent',
+      '--pv-subtle', '--pv-deep', '--pv-on-primary', '--pv-primary-ink', '--pv-accent-ink',
+      '--pv-pborder', '--pv-success', '--pv-success-ink', '--pv-success-tint', '--pv-warning',
+      '--pv-warning-ink', '--pv-error', '--pv-error-ink', '--pv-info', '--pv-info-ink']
+    const NAMES = ['Dashboard', 'Invoices', 'Settings', 'Phone app', 'Landing page', 'Email receipt', 'Poster', 'Social tile']
+
+    const rail = page.getByRole('listbox', { name: 'Previews' })
+    await expect(rail.getByRole('option')).toHaveCount(8)
 
     const seen = new Set()
-    for (const tab of ['UI', 'Brand', 'Graphic Design']) {
-      await page.getByRole('tab', { name: tab }).click()
-      await expect(page.getByRole('tab', { name: tab })).toHaveAttribute('aria-selected', 'true')
+    for (const name of NAMES) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(rail.getByRole('option', { name: new RegExp(`^${name}`) })).toHaveAttribute('aria-selected', 'true')
+      // One scene at a time, and it is the one picked.
+      await expect(page.locator('.pvs')).toHaveCount(1)
+      await expect(page.locator(`.pvs[data-preview-scene="${name}"]`)).toBeVisible()
 
-      const scenes = await page.evaluate((roles) => [...document.querySelectorAll('.plb-preview-grid .plb-pv')].map((el) => {
+      const s = await page.evaluate((vars) => {
+        const el = document.querySelector('.pvs')
         const cs = getComputedStyle(el)
         return {
           name: el.dataset.previewScene,
           label: el.getAttribute('aria-label'),
-          missing: roles.filter((r) => !cs.getPropertyValue(r).trim()),
+          role: el.getAttribute('role'),
+          missing: vars.filter((v) => !cs.getPropertyValue(v).trim()),
         }
-      }), ROLES)
+      }, VARS)
 
-      expect(scenes.length, `${tab} does not render six scenes`).toBe(6)
-      for (const s of scenes) {
-        expect(s.name, `${tab}: a scene rendered with no data-preview-scene`).toBeTruthy()
-        expect(s.label, `${tab}/${s.name}: the scene lost its accessible name`).toBe(`${s.name} palette preview`)
-        // `pvRef` moved with the components. If it had not, every one of these
-        // would resolve to nothing and the scenes would paint unstyled.
-        expect(s.missing, `${tab}/${s.name}: pvRef did not write ${s.missing.join(', ')}`).toEqual([])
-        seen.add(`${tab}/${s.name}`)
-      }
+      expect(s.name, `${name}: the scene rendered with the wrong data-preview-scene`).toBe(name)
+      expect(s.role, `${name}: the scene is not exposed as one image`).toBe('img')
+      expect(s.label, `${name}: the scene lost its accessible name`).toBe(`${name} preview using your palette, light theme`)
+      // pvVars moved with the components. If it had not, every one of these
+      // would resolve to nothing and the scenes would paint unstyled.
+      expect(s.missing, `${name}: pvVars did not write ${s.missing.join(', ')}`).toEqual([])
+      seen.add(s.name)
     }
-    expect(seen.size, 'eighteen distinct scenes did not render').toBe(18)
+    expect(seen.size, 'eight distinct scenes did not render').toBe(8)
   })
 })
 

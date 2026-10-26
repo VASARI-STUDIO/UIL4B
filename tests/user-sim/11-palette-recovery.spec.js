@@ -298,25 +298,50 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
     await page.keyboard.press('Escape')
     await clickPaletteAction(page, 'Preview on a UI')
-    await expect(page.locator('.plb-preview-item')).toHaveCount(6)
-    await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
-    await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(3)
-    await expect(page.locator('[data-preview-scene="Commerce checkout"]')).toContainText('Order summary')
-    await expect(page.locator('[data-preview-scene="Account settings"]')).toContainText('Email address')
-    await expect(page.locator('[data-preview-scene="Support inbox"]')).toContainText('Unable to export tokens')
-    await expect(page.locator('[data-preview-scene="Finance overview"]')).toContainText('Recent transactions')
-    await page.getByRole('tab', { name: 'Brand' }).click()
-    await expect(page.locator('.plb-preview-item')).toHaveCount(6)
-    await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
-    await expect(page.locator('[data-preview-scene="Architecture studio"]')).toContainText('Courtyard House')
-    await expect(page.locator('[data-preview-scene="Conference"]')).toContainText('Opening keynote')
-    await expect(page.locator('[data-preview-scene="Hospitality"]')).toContainText('Check rooms')
-    await page.getByRole('tab', { name: 'Graphic Design' }).click()
-    await expect(page.locator('[data-preview-scene="Album cover"]')).toContainText('Signal One')
-    await expect(page.locator('[data-preview-scene="Packaging"]')).toContainText('ORIGIN')
-    await expect(page.locator('[data-preview-scene="Magazine cover"]')).toContainText('Brisbane')
-    await page.getByRole('button', { name: 'Dark', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    const dialog = page.getByRole('dialog', { name: 'Palette preview' })
+    const rail = dialog.getByRole('listbox', { name: 'Previews' })
+    const options = rail.getByRole('option')
+    // Eight previews of one product, four open to a free account and four
+    // marked Pro in the list.
+    await expect(options).toHaveCount(8)
+    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(4)
+    await expect(rail.getByRole('option', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('[data-preview-scene="Dashboard"]')).toContainText('Paid this month')
+    await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+
+    const FREE = [
+      ['Invoices', 'Harbour Physio'],
+      ['Phone app', 'Brand refresh'],
+      ['Landing page', 'Send the invoice before you close the laptop.'],
+    ]
+    for (const [name, text] of FREE) {
+      await rail.getByRole('option', { name }).click()
+      await expect(rail.getByRole('option', { name })).toHaveAttribute('aria-selected', 'true')
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toContainText(text)
+      await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+    }
+
+    // A locked preview still shows its real scene, blurred and not reachable,
+    // behind a plain Unlock preview button.
+    const LOCKED = [
+      ['Settings', 'Business name'],
+      ['Email receipt', "You've been paid"],
+      ['Poster', 'Open studio night'],
+      ['Social tile', 'Fernway now does GST.'],
+    ]
+    for (const [name, text] of LOCKED) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      const scene = page.locator(`[data-preview-scene="${name}"]`)
+      await expect(scene).toContainText(text)
+      await expect(page.getByText(`${name} is a Pro preview`)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(1)
+      await expect(page.locator('.pvd-scene-in')).toHaveCSS('filter', 'blur(6px)')
+      await expect(page.locator('.pvd-scene-in')).toHaveAttribute('inert', '')
+    }
+
+    await dialog.getByRole('button', { name: 'Dark', exact: true }).click()
+    await expect(dialog.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.pvs')).toHaveAttribute('data-mode', 'dark')
   })
 
   test('contrast and HCT stay attached to each swatch with clear Pro explanations', async ({ page }) => {
