@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import PhIcon from './PhIcon'
 import { FREE_SAVE_LIMITS } from '../../config/plans'
-import { numberWord } from './spectrumFacts'
+import { numberWord, route } from './spectrumFacts'
 import { prefersReducedMotion } from './reducedMotion'
 import {
   BASES,
@@ -10,13 +11,19 @@ import {
   EX_PIECES,
   FONTS,
   GLYPHS,
+  ICON_FORMATS,
   KIT_FILES,
   KIT_PAGES,
+  KIT_ROLES,
   PROJECTS,
+  TYPE_LABELS,
   TYPE_STEPS,
+  exFileIcon,
   exFileOf,
+  formatBytes,
   rampOf,
   ratio,
+  remPx,
 } from './spectrumKit'
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -30,13 +37,13 @@ import {
 //                                              nest C ─ card 2 (sticky 148) · tail
 //
 // so card 0 stays pinned for the whole length of A (which holds 1 and 2), card
-// 1 for the length of B, card 2 for C and its 26dvh tail. Built as three sibling
+// 1 for the length of B, card 2 for C and its tail. Built as three sibling
 // slots, the previous version never pinned at all (tops 203 → −142 → −492).
 //
 // ── THE COVERED CARDS SHRINK AND DIM (`syncStack`) ─────────────────────────
 // For each card, count the cards after it that are docked at their own top;
 // scale it by 1 − 0.045 per docked card and dim it by 1 − 0.05, from its top
-// edge, over the .4s transition in spectrum.css. Two cards on top of card 0
+// edge, over the 240ms transition in spectrum.css. Two cards on top of card 0
 // give .91; one on card 1 gives .955. Skipped under reduced motion and, by the
 // CSS, below 900px, where the stack is three ordinary cards.
 //
@@ -105,18 +112,28 @@ function OnePiece({ base, font }) {
   const ramp = rampOf(seed)
   const file = exFileOf(piece, fmt, seed)
   const spec = FONTS[font]
+  // Palette and Type scale offer CSS / Tailwind / JSON; Icons offers its own
+  // three; Compressed files has nothing to choose, so it shows a line of text.
+  const fmts = piece === 3 ? ICON_FORMATS : EX_FMTS.map(([label]) => label)
   const copy = useCallback(() => {
     navigator.clipboard?.writeText(file.text).catch(() => {})
     setCopied(true)
     clearTimeout(timer.current)
     timer.current = setTimeout(() => setCopied(false), 1200)
   }, [file.text])
+  // The Icons formats mean something else from the others', so moving into or
+  // out of Icons starts again at the first format.
+  const pick = (i) => {
+    if ((i === 3) !== (piece === 3)) setFmt(0)
+    setPiece(i)
+    setCopied(false)
+  }
 
   return (
     <div className="sp-ex">
       <div className="sp-ex-pieces" role="group" aria-label="What to export">
         {EX_PIECES.map((label, i) => (
-          <button key={label} type="button" className="sp-ex-piece" aria-pressed={piece === i} onClick={() => { setPiece(i); setCopied(false) }}>{label}</button>
+          <button key={label} type="button" className="sp-ex-piece" aria-pressed={piece === i} onClick={() => pick(i)}>{label}</button>
         ))}
       </div>
 
@@ -125,10 +142,10 @@ function OnePiece({ base, font }) {
           <div className="sp-ex-rows">
             {ramp.map((r) => (
               <span key={r.step}>
-                <span className="sp-ex-sw" style={{ background: r.hex }} />
+                <span className="sp-ex-sw" aria-hidden="true" style={{ background: r.hex, color: r.ink }}>Aa</span>
                 <span className="sp-ex-step">{r.step}</span>
                 <span className="sp-ex-hex">{r.hex}</span>
-                <span className={r.aa === 'AA' ? 'sp-ex-aa is-pass' : 'sp-ex-aa'}>{r.aa}</span>
+                <span className={r.cr >= 4.5 ? 'sp-ex-aa is-pass' : 'sp-ex-aa'}>{`${r.aa} ${r.cr.toFixed(1)}`}</span>
               </span>
             ))}
           </div>
@@ -138,8 +155,8 @@ function OnePiece({ base, font }) {
             {TYPE_STEPS.map(([name, value]) => (
               <span key={name}>
                 <small>{name}</small>
-                <b style={{ fontFamily: spec.family, fontSize: `${Math.min(34, Math.round(parseFloat(value) * 13))}px` }}>{spec.name}</b>
-                <i>{value}</i>
+                <b style={{ fontFamily: spec.family, fontSize: `clamp(12px, calc(${value} * 0.72), 36px)` }}>Ag<span className="sp-ex-tname">{` ${TYPE_LABELS[name]}`}</span></b>
+                <i>{`${value}, ${remPx(value)}px`}</i>
               </span>
             ))}
           </div>
@@ -151,13 +168,14 @@ function OnePiece({ base, font }) {
                 <span>
                   <PhIcon name={icon} />
                   <b>{name}</b>
-                  <small>{was < 1024 ? `${was} KB` : `${(was / 1024).toFixed(2)} MB`}</small>
+                  <small>{formatBytes(was * 1024)}</small>
                   <PhIcon name="arrow-right" className="sp-ex-arrow" />
-                  <strong>{now < 1024 ? `${now} KB` : `${(now / 1024).toFixed(2)} MB`}</strong>
+                  <strong><span className="sp-ex-tname">{`${name.replace(/\.png$/, '')}.webp `}</span>{formatBytes(now * 1024)}</strong>
                 </span>
                 <span className="sp-ex-track"><span style={{ width: `${Math.max(4, Math.round((now / was) * 100))}%` }} /></span>
               </span>
             ))}
+            <p className="sp-ex-cap">Example sizes. The converter in the bench above measures your own file.</p>
           </div>
         )}
         {piece === 3 && (
@@ -173,19 +191,30 @@ function OnePiece({ base, font }) {
       </div>
 
       <div className="sp-ex-filebar">
-        <PhIcon name={piece >= 2 ? 'file-zip' : piece === 1 ? 'text-aa' : 'file-css'} />
+        <PhIcon name={exFileIcon(piece, fmt)} />
         <b>{file.name}</b>
         <small>{file.kb}</small>
       </div>
       <div className="sp-ex-actions">
-        <div className="sp-ex-fmts" role="group" aria-label="File format">
-          {EX_FMTS.map(([label], i) => (
-            <button key={label} type="button" className="sp-ex-fmt" aria-pressed={fmt === i} onClick={() => { setFmt(i); setCopied(false) }}>{label}</button>
-          ))}
-        </div>
-        <button type="button" className="sp-pill sp-ex-copy" onClick={copy}>
-          <PhIcon name="copy" /><span aria-live="polite">{copied ? 'Copied' : 'Copy file'}</span>
-        </button>
+        {piece === 2 ? (
+          <span className="sp-ex-fmtnote">PNG in, WebP out</span>
+        ) : (
+          <div className="sp-ex-fmts" role="group" aria-label="File format">
+            {fmts.map((label, i) => (
+              <button key={label} type="button" className="sp-ex-fmt" aria-pressed={fmt === i} onClick={() => { setFmt(i); setCopied(false) }}>{label}</button>
+            ))}
+          </div>
+        )}
+        {piece === 2 ? (
+          <Link className="sp-pill sp-ex-copy sp-ex-copy--link" to={route('file-converter')}>
+            <span>Open File Converter</span>
+            <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
+          </Link>
+        ) : (
+          <button type="button" className="sp-pill sp-ex-copy" onClick={copy}>
+            <PhIcon name="copy" /><span aria-live="polite">{copied ? 'Copied' : 'Copy file'}</span>
+          </button>
+        )}
       </div>
     </div>
   )
@@ -199,13 +228,9 @@ function KitDocument({ base, font }) {
   const ramp = rampOf(seed)
   const spec = FONTS[font]
   const inkOnPaper = (hex) => (ratio(hex, '#F7F6F1') >= ratio(hex, '#18221E') ? '#F7F6F1' : '#18221E')
-  const swatches = [
-    [seed.label, ramp[4].hex, 'Signature accent. Moments that deserve attention.'],
-    ['Anchor', ramp[7].hex, 'Ground expressive layouts and key actions.'],
-    ['Support', ramp[2].hex, 'The softer side. Quiet moments and stories.'],
-    ['Canvas', ramp[0].hex, 'The breathing room. Let content come forward.'],
-    ['Ink', ramp[8].hex, 'The definition. Keep reading clear.'],
-  ]
+  // The exported kit's own five roles and notes, in its order; only the fill
+  // comes from the seed's ramp.
+  const swatches = KIT_ROLES.map(({ role, note, at }) => [role, ramp[at].hex, note])
   const headStyle = { fontFamily: spec.family }
 
   return (
@@ -215,7 +240,6 @@ function KitDocument({ base, font }) {
           {KIT_PAGES.map((label, i) => (
             <button key={label} type="button" className="sp-kit-tab" aria-pressed={page === i} onClick={() => setPage(i)}>{label}</button>
           ))}
-          <span className="sp-kit-ed">Free edition</span>
         </div>
 
         <div className="sp-kit-body">
@@ -333,12 +357,9 @@ export default function SpectrumExports({ base, font }) {
                 roles, the type specimen and scale, the spacing and grid foundations, and a files page
                 holding every download.
               </p>
-              {/* The design's chip row, minus Figma and React, which the product
-                  does not export. */}
-              <div className="sp-kitchips">
-                <span className="is-on">PDF</span>
-                <span>Tokens</span>
-              </div>
+              {/* The design's chip row (PDF, Tokens) is a sentence: the kit has no
+                  PDF path, and its Files page lists .html, .css and .json. */}
+              <p>Leaves as one HTML document, with the CSS and JSON tokens beside it.</p>
               <p className="sp-stack-note">The Free edition exports every page. Pro removes the mark.</p>
             </div>
             <KitDocument base={base} font={font} />
@@ -349,22 +370,25 @@ export default function SpectrumExports({ base, font }) {
             <Card index={2} setRef={setRef(2)}>
               <div className="sp-stack-say">
                 <h3>You can come back to it anytime.</h3>
-                {/* The design's sentence, cut to what is true: a project keeps
-                    no version history and no record of exports, and saved work
-                    is a "project", never a "kit". */}
-                <p>Reopen a project and pull the exact version you shipped.</p>
+                {/* What is true: a project keeps its palette, fonts and icons,
+                    and no version history or record of exports. Saved work is a
+                    "project", never a "kit". */}
+                <p>Reopen a project and it&apos;s where you left it: the palette, the fonts, the icons. Export it again whenever you need to.</p>
                 <p className="sp-stack-note">
                   {numberWord(FREE_SAVE_LIMITS.projects, { capital: true })} projects on Free, unlimited on Pro.
                 </p>
               </div>
-              <ul className="sp-projects">
-                {PROJECTS.map(([name, when, parts]) => (
-                  <li key={name}>
-                    <span className="sp-projects-ico" aria-hidden="true"><PhIcon name="folder-simple" /></span>
-                    <span><b>{name}</b><small>{when}, {parts}</small></span>
-                  </li>
-                ))}
-              </ul>
+              <div className="sp-projects-wrap">
+                <p className="sp-projects-cap">Example projects</p>
+                <ul className="sp-projects">
+                  {PROJECTS.map(([name, when, parts]) => (
+                    <li key={name}>
+                      <span className="sp-projects-ico" aria-hidden="true"><PhIcon name="folder-simple" /></span>
+                      <span><b>{name}</b><small>{when}, {parts}</small></span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </Card>
             <div className="sp-stack-pad sp-stack-pad--tail" aria-hidden="true" />
           </div>

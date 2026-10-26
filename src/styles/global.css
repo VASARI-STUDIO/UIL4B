@@ -4709,6 +4709,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
      of .svt-wrap, so the outside-press dismissal is unchanged. */
   .svt-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-height:min(76dvh,560px);padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70}
   .svt-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
+  /* Above the phone tab bar, as .menu-select-list does, so the last row stays tappable. */
+  html.has-tabbar .svt-menu{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));max-height:min(calc(76dvh - var(--tabbar-h)),560px);padding-bottom:16px}
   .svt-wrap{width:100%}
   .svt-trigger{width:100%;justify-content:center}
 }
