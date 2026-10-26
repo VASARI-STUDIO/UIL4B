@@ -17,7 +17,9 @@ import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
-import { createCollectionLoader } from '../utils/iconifyCollectionCache'
+import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
+import { matchesRegular } from '../data/iconRegularRules'
+import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, monochromeSvg } from '../utils/iconPaint'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
@@ -217,18 +219,6 @@ function writeStickyStroke(v) {
   try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
 }
 
-// Each pack's Regular weight excludes its alternate glyph variants.
-const REGULAR_RULES = {
-  ph: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n),
-  heroicons: n => !/-solid$/.test(n),
-  iconoir: n => !/-solid$/.test(n),
-  tabler: n => !/-filled$/.test(n),
-  mdi: n => !/-outline$/.test(n),
-  'material-symbols': n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n),
-  solar: n => /-bold(?:-duotone)?$/.test(n),
-}
-const matchesRegular = (pack, name) => REGULAR_RULES[pack]?.(name) ?? true
-
 // ── Weights: Regular / Bold / Fill / Duo ─────────────────────────────────────
 // the Regular/Bold/Fill/Duo tabs
 // on the design's phone mock are built for real. A weight is not a CSS effect: it swaps
@@ -292,13 +282,17 @@ function buildSvgUrl(host, pack, name, params = {}) {
 }
 
 async function fetchWithFallback(path, timeout = 4000) {
+  let retryAfter = null
   for (const host of API_HOSTS) {
     try {
       const r = await fetch(`${host}${path}`, { signal: AbortSignal.timeout(timeout) })
       if (r.ok) return r
+      // A 429 says how long to wait, when the browser is allowed to read the header
+      // (a refusal sent without CORS headers reaches us as a network error instead).
+      if (r.status === 429) retryAfter = Number(r.headers.get('retry-after')) || retryAfter
     } catch { /* try next host */ }
   }
-  throw new Error('All API hosts failed')
+  throw Object.assign(new Error('All API hosts failed'), { retryAfter })
 }
 
 // Base SVG markup cache. Only the parameterless variant is cached — it's the
@@ -1992,18 +1986,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   )
 }
 
-// Flatten a /collection response into a flat, de-duplicated list of icon names.
-// Combines categorised + uncategorised icons; aliases/hidden are skipped so the
-// grid only shows canonical, renderable icons.
-function collectionToNames(d) {
-  const seen = new Set()
-  const names = []
-  const push = (n) => { if (n && !seen.has(n)) { seen.add(n); names.push(n) } }
-  if (Array.isArray(d.uncategorized)) d.uncategorized.forEach(push)
-  if (d.categories) Object.values(d.categories).forEach(arr => Array.isArray(arr) && arr.forEach(push))
-  return names
-}
-
 // ── Collection cache ──────────────────────────────────────────────────────────
 // Parsed catalogues survive remounts in memory and reloads in localStorage.
 // Each caller applies its own style filter to the unfiltered names.
@@ -2013,13 +1995,23 @@ const COLLECTION_CACHE = new Map()
 // Only 'chip' carries the retry floor; Try again requests at once.
 const retryOptions = (retry) => ({ manualRetry: !!retry, chipRetry: retry === 'chip' })
 
+// /collection is the one endpoint the API rate-limits hard (about six requests in a
+// few seconds is refused for an hour, every prefix at once), so at most two are in
+// flight and the default "All packs" listing never uses it: see src/data/iconHeads.js.
+const collectionGate = createLimiter(2)
 // info=1 includes registry attribution in the same catalogue request.
+// When the request fails and nothing is stored, the committed head of the pack
+// stands in (marked `sample`, never cached) so the pack still shows live glyphs.
 const getPublicCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
-  fetchEntry: async (pack) => {
+  fetchEntry: (pack) => collectionGate(async () => {
     const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
     const d = await r.json()
     return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
+  }),
+  lastResort: async (pack) => {
+    const head = await loadPackHead(pack)
+    return { names: head.names, title: head.title, credit: null, sample: true }
   },
 })
 // The animated sets' listing comes from the server's Pro check, and is kept in
@@ -2046,6 +2038,23 @@ getCollectionNames.failed = (pack) => (
   isAnimatedPack(pack) ? getAnimatedCollectionNames : getPublicCollectionNames
 ).failed(pack)
 
+// The names the default "All packs" listing starts from for one pack. Regular weight
+// (the default) never asks /collection: the catalogue this session already holds if
+// there is one, else the pack's committed head, which is what keeps a visit from
+// spending the API's /collection allowance on twenty-five packs at once. Another
+// weight needs names the head leaves out, and only the packs that draw it, so only
+// those are requested. `degraded` marks names standing in for a refresh that failed.
+function defaultPackNames(pack, weight, manualRetry) {
+  if (weight === 'regular') {
+    const live = COLLECTION_CACHE.get(pack)
+    if (live) return Promise.resolve({ names: live.names })
+    return loadPackHead(pack).then(({ names }) => ({ names }))
+  }
+  if (!WEIGHT_RULES[weight]?.[pack]) return Promise.resolve({ names: [] })
+  return getCollectionNames(pack, { ...retryOptions(manualRetry), allowSample: false })
+    .then(({ names }) => ({ names, degraded: getCollectionNames.failed(pack) }))
+}
+
 /** Forget everything fetched for the animated sets (the viewer is no longer Pro). */
 const forgetAnimatedSets = () => purgeAnimatedCaches({
   byPack: [COLLECTION_CACHE, GLYPH_ASKED, GLYPH_RETRY_AFTER],
@@ -2056,6 +2065,12 @@ const forgetAnimatedSets = () => purgeAnimatedCaches({
 const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
 
 const PAGE_SIZE = 120
+
+const SOFT_NOTICE_COPY = {
+  partial: 'Some icon sets couldn’t load.',
+  stale: 'Couldn’t refresh this set — showing the copy saved on this device.',
+  sample: 'Couldn’t load the whole set — showing its first icons.',
+}
 
 function firstPageReady(count, settled, total, pageSize, timedOut = false) {
   return (timedOut && count > 0) || count >= pageSize || settled >= total
@@ -2433,6 +2448,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const [mode, setMode] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  /* The catalogue is on screen but not all of it, and the notice says which:
+     'partial' (some packs of a listing did not load), 'stale' (the saved copy of
+     this pack stands in for a refresh that failed) or 'sample' (only the first
+     names of this pack could be had). Quieter than `loadError`, which means
+     nothing live or saved could be shown at all and the built-in set replaced it. */
+  const [softNotice, setSoftNotice] = useState(null)
   /* Why an animated set cannot be shown, when the reason is the viewer's session
      or plan rather than the icon service: 'auth' (sign in again) or 'forbidden'
      (the plan does not include the set). Scoped to the animated pack on screen:
@@ -2570,11 +2591,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
-    setLoadError(false); setAnimatedNotice(null)
+    setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setVisible(PAGE_SIZE); setMode('')
-    // ALLOWED, NOT ALL. This is the line that decides how many third-party
-    // requests a visit costs: a signed-out visit asks five hosts for a
-    // catalogue instead of twenty-five, and never names a gated pack in a URL.
+    // ALLOWED, NOT ALL. This is the line that decides how many packs a visit
+    // lists: a signed-out visit lists five instead of twenty-five, and never
+    // names a gated pack in a URL.
     const lists = allowedPacks.map(() => [])
 
     // Warm-cache fast path: if every pack is already cached (e.g. returning to
@@ -2610,12 +2631,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       }
     }
     setFirstPageTimeout(() => () => reveal(true))
+    let degraded = 0
     allowedPacks.forEach((p, idx) => {
-      getCollectionNames(p, retryOptions(manualRetry))
-        .then(({ names: raw }) => {
+      defaultPackNames(p, weightRef.current, manualRetry)
+        .then(({ names: raw, degraded: wasDegraded }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
           okCount++
+          if (wasDegraded) degraded++
           const names = keepWeight(p, raw, weightRef.current).slice(0, perPackCap)
           lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
           // Default sort = pack-by-pack: lists stays in allowedPacks order and
@@ -2634,13 +2657,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           const sets = lists.filter(l => l.length).length
           setMode(scopeLine(merged.length, sets))
         })
-        .catch(() => { /* this pack failed — others may still resolve */ })
+        .catch(() => { degraded++ /* this pack failed — others may still resolve */ })
         .finally(() => {
           if (rid !== reqId.current) return
           settled++
           reveal()
           if (settled === allowedPacks.length) {
+            // Nothing at all to show is the only case that swaps in the built-in set.
             if (okCount === 0) { cdnOk.current = false; setLoadError(true); renderLocal('', '') }
+            else if (degraded > 0) setSoftNotice('partial')
           }
         })
     })
@@ -2668,7 +2693,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     retryRef.current = null
     setGated({ label, need })
     setIcons([]); setVisible(PAGE_SIZE); setMode('')
-    setLoading(false); setLoadError(false); setAnimatedNotice(null)
+    setLoading(false); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
   }, [])
 
   /* A FAILED ANIMATED LISTING, WHEN THE CAUSE IS THE SESSION OR THE PLAN. The
@@ -2700,7 +2725,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
-    setLoadError(false); setAnimatedNotice(null)
+    setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
     setVisible(PAGE_SIZE)
     setMode(`Brand logos · ${LOGODEV_BRANDS.length} popular brands`)
@@ -2713,7 +2738,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const searchLogos = useCallback((q) => {
     reqId.current++
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
-    setLoadError(false); setAnimatedNotice(null)
+    setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     const term = (q || '').trim()
     if (term.length < 2) { browseLogos(); return }
     const lower = term.toLowerCase()
@@ -2746,13 +2771,16 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (packFilter === 'logodev') { browseLogos(); return }
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter, groupKey, true)
-    setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
-    getCollectionNames(packFilter, retryOptions(manualRetry))
-      .then(({ names: raw, title }) => {
+    setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
+    // The pack's head may stand in for a failed request only when it holds what is
+    // being asked for: it is Regular-weight names, so not for another weight.
+    const allowSample = weightRef.current === 'regular' || !!groupKey
+    getCollectionNames(packFilter, { ...retryOptions(manualRetry), allowSample })
+      .then(({ names: raw, title, sample }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
-        // An old saved list is still shown when its refresh failed; the notice and Try again stay up.
-        if (getCollectionNames.failed(packFilter)) setLoadError(true)
+        // A saved or partial list is still shown when its refresh failed; the notice and Try again stay up.
+        if (getCollectionNames.failed(packFilter)) setSoftNotice(sample ? 'sample' : 'stale')
         const names = capList(keepWeight(packFilter, raw, weightRef.current, groupKey))
         // A weight this pack does not draw is an empty answer, not a failure:
         // the built-in fallback would show Regular glyphs under a Bold label.
@@ -2764,7 +2792,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
-        setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${names.length.toLocaleString()} icons`)
+        setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${sample ? 'first ' : ''}${names.length.toLocaleString()} icons`)
         setLoading(false)
       })
       .catch((error) => {
@@ -2796,16 +2824,18 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => browseGroup(groupKey, true)
     setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
-    setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
+    setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
     Promise.all(packs.map(p =>
       getCollectionNames(p, retryOptions(manualRetry))
-        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').sort().slice(0, PER_PACK_CAP), pack: p, ok: true }))
+        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').sort().slice(0, PER_PACK_CAP), pack: p, ok: !getCollectionNames.failed(p) }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
         if (rid !== reqId.current) return
-        if (!results.some(r => r.ok)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
+        // The built-in set replaces the grid only when no pack gave anything to show.
+        if (!results.some(r => r.ok || r.names.length)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
         cdnOk.current = true
+        if (results.some(r => !r.ok)) setSoftNotice('partial')
         const lists = results.map(r => r.names.map(n => ({ id: `${r.pack}:${n}`, pack: r.pack, name: n, cdn: true })))
         // Share the anonymous allowance per pack; a final slice could hide later packs.
         const groupCap = capped ? Math.floor(ANON_ICON_CAP / packs.length) : PER_PACK_CAP
@@ -2837,7 +2867,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack(''); setGated(null)
-    setQuery(''); setLoadError(false); setAnimatedNotice(null)
+    setQuery(''); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     const list = readCustomIcons()
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
@@ -2872,7 +2902,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       const rid = ++reqId.current
       retryRef.current = () => doSearch(q, scope)
       setSource('search')
-      setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
+      setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
       // The names are hyphenated, so "arrow up" has to match arrow-up.
       const needle = q.toLowerCase().replace(/\s+/g, '-')
       getCollectionNames(packFilter)
@@ -2905,7 +2935,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => doSearch(q, scope)
     setSource('search')
-    setLoading(true); setLoadError(false); setAnimatedNotice(null); glyphFails.current = 0
+    setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
     // the collection of results; chip alone fans out to the
     // whole collection's packs.
@@ -3943,6 +3973,17 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
+              </div>
+            )}
+
+            {/* PART OF THE CATALOGUE, NOT NONE OF IT. The grid below is live (or the
+                copy saved on this device); the line says what is missing, once and
+                quietly, instead of the grid just being shorter. Never beside the
+                loud notice above: that one means the built-in set replaced the grid. */}
+            {softNotice && !loadError && !gated && (
+              <div className="ig-notice ig-notice-quiet" role="status">
+                <span>{SOFT_NOTICE_COPY[softNotice]}</span>
                 <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
               </div>
             )}

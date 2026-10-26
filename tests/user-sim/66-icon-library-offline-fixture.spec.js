@@ -119,7 +119,8 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
 
   const tally = iconifyRequests(ctx)
   expect(tally, 'the stub is installed on this context').not.toBeNull()
-  expect(tally.collection, 'one /collection request per pack the page browses on first paint').toBe(packs.length)
+  // The default listing names its packs from the committed heads, so a first paint spends none of the rate-limited /collection allowance.
+  expect(tally.collection, 'the default grid must not request /collection per pack').toBe(0)
   expect(tally.missing, 'every request had an answer in the fixture').toEqual([])
   expect(tally.escaped, 'no response came from a real Iconify host').toEqual([])
   // THE GRID'S GLYPHS, WHICH ARE NO LONGER ONE REQUEST EACH. This read
@@ -196,7 +197,8 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   await expect(notice).toHaveCount(0, { timeout: 20000 })
   await expect(page.getByText(new RegExp(`All packs · [\\d,]+ icons · ${fixturePacks().length} sets`)))
     .toBeVisible({ timeout: 20000 })
-  expect(iconifyRequests(ctx).collection, 'Try again fetched the catalogue again').toBe(fixturePacks().length)
+  expect(iconifyRequests(ctx).collection, 'Try again lists from the heads, not /collection').toBe(0)
+  expect(iconifyRequests(ctx).batch, 'Try again fetched the glyphs again').toBeGreaterThan(0)
   await ctx.close()
 })
 

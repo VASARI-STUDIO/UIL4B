@@ -119,6 +119,31 @@ export async function refuseIconifyGlyphs(page) {
     }),
   )
 }
+/**
+ * True for a request the /collection rate limit refuses: the listing endpoint
+ * for any prefix not named in `except`. /collections (plural), /search and the
+ * batched glyph endpoint are NOT matched; those stay answerable under it.
+ */
+export function refusesCollection(url, except = []) {
+  return ICONIFY_HOSTS[0] === url.hostname && url.pathname === '/collection'
+    && !except.includes(url.searchParams.get('prefix'))
+}
+
+/**
+ * Refuse ONLY /collection on this PAGE, the way api.iconify.design did when a
+ * visit's burst of listing requests tripped Cloudflare's per-IP limit (error
+ * 1015): 429 on /collection for every prefix, while /collections, /search and
+ * /{prefix}.json?icons= kept answering 200. Like the other refusals it carries
+ * no CORS headers, so the browser sees a network error, which is also what a
+ * real 1015 looks like to a page. `except` lists prefixes that still answer
+ * (they fall through to the fixture). Call before go().
+ */
+export async function refuseIconifyCollections(page, { except = [] } = {}) {
+  const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
+  await page.route((u) => refusesCollection(u, except),
+    (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'error code: 1015' }))
+}
+
 /** Set this (to anything non-empty) to bypass the fixture and hit the live API. */
 export const LIVE_ICONIFY_ENV = 'UIL4B_LIVE_ICONIFY'
 

@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { answerIconify, fixturePacks, ICONIFY_HOSTS } from '../user-sim/iconify-stub.js'
+import { answerIconify, fixturePacks, ICONIFY_HOSTS, refusesCollection } from '../user-sim/iconify-stub.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -163,4 +163,15 @@ test('the stub is installed once, in base.js, and checked by the teardown', () =
   assert.doesNotMatch(exempt, /\.abort\(/, `${EXEMPT} must fulfil the refusal, not abort it`)
   assert.match(exempt, /\[ICONIFY_STUB_HEADER\]:\s*REFUSED_VALUE/,
     `${EXEMPT} must stamp its refusals with REFUSED_VALUE, or the teardown reads them as requests that reached the network`)
+})
+
+test('refusesCollection matches /collection for a prefix and nothing else the API still answers', () => {
+  const u = (p) => new URL(`${HOST}${p}`)
+  assert.equal(refusesCollection(u('/collection?prefix=lucide&info=1')), true)
+  assert.equal(refusesCollection(u('/collection?prefix=lucide'), ['lucide']), false)
+  assert.equal(refusesCollection(u('/collection?prefix=tabler'), ['lucide']), true)
+  for (const ok of ['/collections', '/search?query=a', '/lucide.json?icons=zap', '/lucide/zap.svg']) {
+    assert.equal(refusesCollection(u(ok)), false, `${ok} stays answerable while /collection is refused`)
+  }
+  assert.equal(refusesCollection(new URL('https://api.unisvg.com/collection?prefix=lucide')), false)
 })

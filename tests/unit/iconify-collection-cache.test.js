@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  COLLECTION_TTL, COLLECTION_RETRY_DELAY, CHIP_RETRY_FLOOR, createCollectionLoader,
+  COLLECTION_TTL, COLLECTION_RETRY_DELAY, COLLECTION_REFUSAL_MAX, CHIP_RETRY_FLOOR, collectionToNames, createCollectionLoader, createLimiter,
   readCollectionCache, writeCollectionCache,
 } from '../../src/utils/iconifyCollectionCache.js'
 
@@ -295,4 +295,113 @@ test('https credit links survive a round trip through storage', () => {
   const credit = { name: 'Lucide', url: 'https://lucide.dev', licenceUrl: 'https://example.com/LICENSE' }
   writeCollectionCache(PREFIX, { ...DATA, credit }, { storage: () => store, now: NOW })
   assert.deepEqual(readCollectionCache(PREFIX, { storage: () => store, now: NOW }).data.credit, credit)
+})
+
+// ── A refused /collection: wait it out, and show something saved or partial meanwhile ──
+
+const SAMPLE = { names: ['house'], title: 'Lucide', credit: null, sample: true }
+const refusal = (retryAfter) => Object.assign(new Error('All API hosts failed'), { retryAfter })
+
+test('a Retry-After refusal holds back every prefix, Try again included, until it passes', async () => {
+  const clock = { now: NOW }
+  const asked = []
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => clock.now,
+    fetchEntry: async (prefix) => { asked.push(prefix); throw refusal(120) } })
+  await assert.rejects(load('lucide'))
+  // The limit is on the endpoint: another prefix, and a manual retry, wait too.
+  await assert.rejects(load('tabler'))
+  await assert.rejects(load('lucide', { manualRetry: true }))
+  assert.deepEqual(asked, ['lucide'])
+  assert.equal(load.failed('tabler'), true)
+  clock.now += 120 * 1000
+  await assert.rejects(load('tabler'))
+  assert.deepEqual(asked, ['lucide', 'tabler'])
+})
+
+test('without a Retry-After, Try again still bypasses the 60 second cooldown', async () => {
+  let calls = 0
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
+    fetchEntry: async () => { calls++; throw refusal(null) } })
+  await assert.rejects(load('lucide'))
+  await assert.rejects(load('lucide', { manualRetry: true }))
+  assert.equal(calls, 2)
+})
+
+test('a Retry-After beyond an hour is held for an hour, not longer', async () => {
+  const clock = { now: NOW }
+  let calls = 0
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => clock.now,
+    fetchEntry: async () => { calls++; throw refusal(10 * 24 * 3600) } })
+  await assert.rejects(load('lucide'))
+  clock.now += COLLECTION_REFUSAL_MAX - 1
+  await assert.rejects(load('lucide', { manualRetry: true }))
+  assert.equal(calls, 1)
+  clock.now += 1
+  await assert.rejects(load('lucide', { manualRetry: true }))
+  assert.equal(calls, 2)
+})
+
+test('the last resort stands in when a request fails and nothing is stored, and is never cached', async () => {
+  const cache = new Map()
+  const load = createCollectionLoader({ cache, storage: () => memoryStorage(), now: () => NOW,
+    fetchEntry: async () => { throw refusal(null) }, lastResort: async () => SAMPLE })
+  assert.deepEqual(await load(PREFIX), SAMPLE)
+  assert.equal(cache.has(PREFIX), false)
+  assert.equal(load.failed(PREFIX), true)
+})
+
+test('stale stored data wins over the last resort', async () => {
+  const store = memoryStorage()
+  writeCollectionCache(PREFIX, DATA, { storage: () => store, now: NOW - 2 * COLLECTION_TTL })
+  const load = createCollectionLoader({ cache: new Map(), storage: () => store, now: () => NOW,
+    fetchEntry: async () => { throw refusal(null) }, lastResort: async () => SAMPLE })
+  assert.deepEqual(await load(PREFIX), DATA)
+})
+
+test('allowSample: false, a missing last resort and a failing one all surface the original failure', async () => {
+  const error = refusal(null)
+  const make = (extra) => createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
+    fetchEntry: async () => { throw error }, ...extra })
+  await assert.rejects(make({ lastResort: async () => SAMPLE })(PREFIX, { allowSample: false }), (e) => e === error)
+  await assert.rejects(make({})(PREFIX), (e) => e === error)
+  await assert.rejects(make({ lastResort: async () => { throw Error('chunk failed') } })(PREFIX), (e) => e === error)
+  await assert.rejects(make({ lastResort: async () => null })(PREFIX), (e) => e === error)
+})
+
+test('the last resort also answers inside the cooldown, without a request', async () => {
+  let calls = 0
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
+    fetchEntry: async () => { calls++; throw refusal(null) }, lastResort: async () => SAMPLE })
+  await load(PREFIX)
+  assert.deepEqual(await load(PREFIX), SAMPLE)
+  assert.equal(calls, 1)
+})
+
+test('a limiter runs at most `max` at once and keeps order', async () => {
+  const limit = createLimiter(2)
+  let active = 0
+  let peak = 0
+  const started = []
+  const job = (i) => limit(async () => {
+    started.push(i); active++; peak = Math.max(peak, active)
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    active--
+    return i
+  })
+  assert.deepEqual(await Promise.all([0, 1, 2, 3, 4].map(job)), [0, 1, 2, 3, 4])
+  assert.equal(peak, 2)
+  assert.deepEqual(started, [0, 1, 2, 3, 4])
+})
+
+test('a limiter keeps going after a failed job', async () => {
+  const limit = createLimiter(1)
+  const bad = limit(async () => { throw Error('no') })
+  const good = limit(async () => 'ok')
+  await assert.rejects(bad)
+  assert.equal(await good, 'ok')
+})
+
+test('collectionToNames lists uncategorised names first, then categories, without repeats', () => {
+  assert.deepEqual(collectionToNames({ uncategorized: ['b', 'a', 'b'], categories: { X: ['c', 'a'], Y: ['d'] } }), ['b', 'a', 'c', 'd'])
+  assert.deepEqual(collectionToNames({}), [])
 })

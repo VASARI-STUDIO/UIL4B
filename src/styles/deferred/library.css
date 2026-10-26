@@ -442,6 +442,8 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 /* Fetch-fallback notice, skeletons, status line, sentinel, CDN invert, pack tag */
 .ig-notice{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--warn) 40%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--warn) 8%,var(--bg-1));font-size:var(--fs-body-s);color:var(--t1)}
 .ig-notice span{flex:1;min-width:180px}
+/* Part of the catalogue is missing but the grid is real: no warning tint. */
+.ig-notice-quiet{padding:8px 16px;border-color:var(--border);background:var(--bg-1);color:var(--t2)}
 .ig-skel{pointer-events:none}
 .ig-skel-slot{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0}
 .ig-skel-slot--mono{width:24px;height:24px}
