@@ -81,7 +81,7 @@ const WEBSITE_COPY = Object.freeze({
   category: 'Interface specimen',
   caption: 'A layout specimen using the selected colours, fonts, and component tokens.',
 })
-const SLOT_COPY = Object.freeze({
+export const SLOT_COPY = Object.freeze({
   citron: { role: 'Signature accent', note: 'The spark. Use for moments that deserve attention.', share: 20 },
   pine: { role: 'Primary brand', note: 'The anchor. Ground expressive layouts and key actions.', share: 25 },
   lilac: { role: 'Supporting colour', note: 'The softer side. Give stories and quiet moments a home.', share: 10 },
@@ -89,7 +89,7 @@ const SLOT_COPY = Object.freeze({
   ink: { role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', share: 5 },
 })
 // The template's slot order: it sets the swatch grid's column widths.
-const SLOT_ORDER = ['citron', 'pine', 'lilac', 'chalk', 'ink']
+export const SLOT_ORDER = ['citron', 'pine', 'lilac', 'chalk', 'ink']
 const SEMANTIC_COPY = Object.freeze({
   success: { id: 'success', name: 'Success', message: 'Changes saved', guidance: 'Confirm a completed action.' },
   warning: { id: 'warning', name: 'Warning', message: 'Review before publishing', guidance: 'Highlight something that needs attention.' },
