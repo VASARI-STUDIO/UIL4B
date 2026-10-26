@@ -220,24 +220,11 @@ test('every SURFACE_LINE mapping has a surface that actually reads it', () => {
   }
 })
 
-test('the share card says what the hero says', () => {
-  // The card is generated from the same module the hero renders from, so the
-  // check is that the GENERATED artefact agrees — cards.json is committed, and
-  // a stale one means somebody changed the headline without running og:cards.
+test('the homepage share card does not quote the hero', () => {
+  // The default card is now the brand kit's static logo card, so it cannot go
+  // stale against the headline. cards.json must not record a hero again.
   const cards = JSON.parse(read('public/previews/cards.json'))
-  const cardHeadline = cards.hero.headline.map((r) => r.text).join('').trim()
-  assert.equal(
-    cardHeadline, heroHeadlineText(),
-    'public/previews/cards.json disagrees with the hero headline. Run `npm run og:cards`.',
-  )
-  assert.equal(
-    cards.hero.sub, SPECTRUM_HERO_SUB,
-    'the share card sub disagrees with the hero sub-line. Run `npm run og:cards`.',
-  )
-  assert.equal(
-    cards.hero.kicker, null,
-    'the share card has an eyebrow again — the "UI system toolkit" tagline is retired.',
-  )
+  assert.equal(cards.hero, undefined, 'cards.json records a homepage hero the generator no longer draws')
 })
 
 test('the hero keeps exactly one highlighted run', () => {

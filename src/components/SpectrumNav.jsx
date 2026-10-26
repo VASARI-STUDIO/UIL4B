@@ -13,7 +13,7 @@ import '../styles/pages/spectrum-chrome.css'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
-import { BrandLockup } from './BrandLogo'
+import { BrandLockup, BrandSymbol } from './BrandLogo'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
@@ -283,7 +283,8 @@ export default function SpectrumNav() {
             {/* One accessible name for the pair, so a screen reader meets
                 "UI L4B home" and not "UI L 4 B" then "TOOLKIT". */}
             <span className="spnav-word" aria-hidden="true">
-              <BrandLockup />
+              <BrandLockup className="brand-logo-wide" />
+              <BrandSymbol className="brand-logo-narrow" />
             </span>
             <span className="spnav-eyebrow" aria-hidden="true">TOOLKIT</span>
             <span className="sr-only">UI L4B home</span>

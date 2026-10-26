@@ -34,7 +34,7 @@ import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
-import { BrandLockup } from './BrandLogo'
+import { BrandLockup, BrandSymbol } from './BrandLogo'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
 // Discover pane's counts too — they render only inside the open Discover menu,
@@ -669,7 +669,7 @@ function AppHeader() {
             onClick={onLogoClick}
             aria-label={onDashboard ? 'UIL4B, go to the home page' : 'UIL4B, go to your dashboard'}
           >
-            <span className="pnav-word"><BrandLockup /></span>
+            <span className="pnav-word"><BrandLockup className="brand-logo-wide" /><BrandSymbol className="brand-logo-narrow" /></span>
           </Link>
 
           <div className={searchHot ? 'pnav-search is-hot' : 'pnav-search'}>
