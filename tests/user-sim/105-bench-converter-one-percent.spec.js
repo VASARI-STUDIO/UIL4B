@@ -79,7 +79,7 @@ for (const theme of THEMES) {
 
       // AFTER LABEL: no figure on it.
       const afterLabel = (await compressPane(page).locator('.sp-bar').nth(1).locator('small').innerText()).trim()
-      expect.soft(afterLabel, 'the AFTER label carries something besides the word AFTER').toBe('AFTER')
+      expect.soft(afterLabel, 'the After label carries something besides the word After').toBe('After')
 
       // ONE TOKEN, and it is the saving line; the Quality row prints no figure.
       const row = (await compressPane(page).locator('.sp-saving').innerText()).replace(/\s+/g, ' ').trim()
