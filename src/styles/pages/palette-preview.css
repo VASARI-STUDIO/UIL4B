@@ -288,6 +288,7 @@
   .pvs-menu{display:inline-flex}
   .pvs-navlist{display:none}
   .pvs-main{padding:var(--s-4)}
+  .pvs-main .pvs-actions>.pvs-select{display:none}
   .pvs-grid{grid-template-columns:1fr}
   .pvs-lead{grid-row:auto}
   .pvs-fig{font-size:28px}
