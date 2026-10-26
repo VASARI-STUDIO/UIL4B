@@ -93,7 +93,7 @@
 .lart .lart-prose{max-width:var(--lart-measure);line-height:1.7;color:var(--t1)}
 .lart .lart-prose>section{scroll-margin-top:calc(var(--nav-clear) + var(--s-4))}
 .lart .lart-prose>section+section{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border)}
-.lart .lart-prose h2{font-family:var(--display);font-size:clamp(21px,2.4vw,27px);font-weight:600;letter-spacing:-.03em;line-height:1.25;color:var(--t0);margin-bottom:var(--s-4);text-wrap:balance}
+.lart .lart-prose h2{font-family:var(--display);font-size:clamp(21px,2.4vw,27px);font-weight:600;letter-spacing:-.015em;line-height:1.25;color:var(--t0);margin-bottom:var(--s-4);text-wrap:balance}
 .lart .lart-prose h3{font-size:16.5px;font-weight:560;letter-spacing:-.01em;line-height:1.4;color:var(--t0);margin-top:var(--s-6);margin-bottom:var(--s-2)}
 .lart .lart-prose p{margin-bottom:var(--s-4)}
 .lart .lart-prose p:last-child{margin-bottom:0}
