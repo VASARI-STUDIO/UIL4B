@@ -421,7 +421,9 @@ export function ToolSection({ label, labelId, heading = false, aside, className,
 // Buttons with aria-pressed; the group is named by `label` or `labelledBy`.
 // mono:  the 10.5px Geist Mono variant (OKLCH/sRGB, "Step 500").
 // shape: 'pill' (999px, default) | 'block' (r12, stretched — Text/Background).
-export function ToolPills({ options, value, onChange, label, labelledBy, mono = false, shape = 'pill', className, disabledValues }) {
+// Options may carry `ariaLabel` (the button's accessible name) and `title`
+// (hover text); `describedBy` points the group at a visible description.
+export function ToolPills({ options, value, onChange, label, labelledBy, describedBy, mono = false, shape = 'pill', className, disabledValues }) {
   const opts = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o))
   return (
     <div
@@ -429,6 +431,7 @@ export function ToolPills({ options, value, onChange, label, labelledBy, mono = 
       role="group"
       aria-label={labelledBy ? undefined : label}
       aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
     >
       {opts.map((o) => (
         <button
@@ -437,6 +440,7 @@ export function ToolPills({ options, value, onChange, label, labelledBy, mono = 
           className={cx('tl-pill', mono && 'tl-pill--mono', o.value === value && 'is-on')}
           aria-pressed={o.value === value}
           aria-label={o.ariaLabel}
+          title={o.title}
           disabled={disabledValues?.includes(o.value)}
           onClick={() => onChange?.(o.value)}
         >
