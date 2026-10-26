@@ -8,10 +8,11 @@
 // stack without its webfont and measures both. Every duration in the prose is
 // inside a <Spec> and quoted from the clause it links to.
 //
-// The one arithmetic claim made about this product's own faces — how many code
-// points the two subsets share — is recomputed from src/styles/global.css by
-// tests/unit/learn-figures.test.js rather than trusted, which is the same
-// arrangement the colour guides use for their hexes.
+// The claims made about this product's own faces — the inventory, which
+// families are subset, how many code points the two subsets of a split family
+// share, and the numbers on the fallback faces — are recomputed from
+// src/styles/global.css by tests/unit/learn-type-figures.test.js rather than
+// trusted, which is the same arrangement the colour guides use for their hexes.
 
 import { Aside, Spec } from '../../components/LearnParts'
 import FallbackShiftTable from '../../components/FallbackShiftTable'
@@ -104,9 +105,10 @@ export default function FontLoading() {
         </p>
         <p>
           Every face declared on this page uses <code>swap</code>, which the
-          table in the next section reads back out of the stylesheet rather than
-          restating. The cost of that choice is the subject of the section after
-          it.
+          table in a later section reads back out of the stylesheet rather than
+          restating. That includes the local stand-in faces, which could do
+          without it, since an installed font never waits. The cost of the
+          choice is the subject of the next section.
         </p>
         <Aside>
           The recommended durations are recommendations. The specification notes
@@ -127,11 +129,15 @@ export default function FontLoading() {
         <FallbackShiftTable />
 
         <p>
-          Both rows are real declarations measured in this browser, so the
-          difference between them is the shift this page performs on a cold
-          load — on this machine, with these fonts installed. It is a different
-          number on a machine whose system sans is a different face, which is
-          why it is measured here rather than quoted.
+          Every row is a real declaration measured in this browser. The first
+          is the page with its webfont and the second is what it paints while
+          the file is still on its way: a local face this page adjusts to the
+          webfont&rsquo;s widths, described in the last section, so the second
+          row sits close to the first. The third removes that adjusted
+          stand-in and leaves the system fonts the stack ends with, which is
+          the shift an unadjusted page performs on a cold load. The third
+          figure is a different number on a machine whose system sans is a
+          different face, which is why it is measured here rather than quoted.
         </p>
         <p>
           The effect compounds down the page. A paragraph that re-breaks from
@@ -148,7 +154,10 @@ export default function FontLoading() {
         <p>
           A typeface with full Latin coverage is large, and most pages render a
           small part of it. The descriptor that resolves this states a character
-          range per file and lets the browser decide which files it needs.
+          range per file and lets the browser decide which files it needs. It
+          is a choice rather than a requirement: a rule with no range covers
+          every code point, and the browser fetches that one file as soon as
+          any text uses the face.
         </p>
 
         <Spec source="CSS Fonts Module Level 4 — the unicode-range descriptor" href={`${FONTS4}/#unicode-range-desc`}>
@@ -162,17 +171,22 @@ export default function FontLoading() {
         <FontFaceTable />
 
         <p>
-          Three families, six rules, each family split at U+0100 — and the second
-          file of each pair is only fetched when a character in its range is
-          actually rendered. That is what the last column measures: it asks
-          whether the file that would draw the first printable character of each
-          range has been downloaded, so the answer changes with what is on the
-          page.
+          Four families, eight rules, and only two of the families are subset.
+          The interface face ships whole: one variable file for the upright and
+          one for the italic, each declared with no range, so each reads as
+          covering every code point and is fetched the first time text in that
+          style is drawn. Its stand-in is a pair of local faces, which have no
+          file to fetch. The monospace face and the handwritten annotation face
+          are each split at U+0100, and the second file of each pair is only
+          fetched when a character in its range is actually rendered. That is
+          what the last column measures: it asks whether the file that would
+          draw the first printable character of each range has been downloaded,
+          so the answer changes with what is on the page.
         </p>
         <p>
-          The two ranges of a pair are not quite disjoint. Seven code points
-          appear in both, and they are the ones a page cannot do without even in
-          the narrow subset: the dotless i, the Œ and œ ligatures, three
+          The two ranges of a split pair are not quite disjoint. Seven code
+          points appear in both, and they are the ones a page cannot do without
+          even in the narrow subset: the dotless i, the Œ and œ ligatures, three
           combining marks, and the dagger. A combining mark has to live wherever
           the letter it sits on lives, so duplicating a handful of them is
           cheaper than making an accented word pull down a second file.
@@ -188,7 +202,7 @@ export default function FontLoading() {
       <section id="matching-the-fallback">
         <h2>Making the stand-in fit</h2>
         <p>
-          The shift measured above is not inevitable. It exists because the
+          The shift measured above is not inevitable. It exists whenever the
           fallback was never adjusted to occupy the same space, and CSS provides
           descriptors that do exactly that.
         </p>
@@ -211,6 +225,16 @@ export default function FontLoading() {
           <code> line-gap-override</code> for the same purpose on the line box,
           so the fallback can be made to occupy the same vertical space as well
           as the same horizontal one.
+        </p>
+        <p>
+          This page does exactly that. Its stand-in is two rules that point at
+          the installed Arial, with Liberation Sans and Helvetica behind it for
+          other systems. The regular rule covers weights 100 to 599 at a
+          size-adjust of 100%, and the bold rule covers 600 to 900 at 96%,
+          because the installed bold is wider than the webfont&rsquo;s. Both
+          carry ascent, descent and line-gap overrides taken from the
+          webfont&rsquo;s own vertical metrics, which is why the second row of
+          the first table sits so close to the first.
         </p>
         <p>
           Two consequences are worth holding onto. The first is that

@@ -12,7 +12,8 @@
 // here rather than imported — the adjusted-font-size formula, the unicode-range
 // interval arithmetic, the weight span — and every number in either guide is
 // matched against the result. The product's own facts (the font stacks, the
-// declared weight ranges, the four @font-face rules and their character ranges)
+// declared weight ranges, the @font-face rules, which of them are subset and
+// their character ranges, and the fallback faces' adjustments)
 // are read back out of src/styles/global.css rather than trusted, which is the
 // arrangement the colour guides use for their hexes.
 //
@@ -54,23 +55,35 @@ const uncited = (source) => proseOf(source.replace(/<Spec[\s\S]*?<\/Spec>/g, ' '
 
 /* ── the product's own type facts, read out of global.css ────────────────── */
 
-/** Every @font-face rule in global.css, parsed. */
+/**
+ * Every @font-face rule in global.css, parsed. `range` is null for a face that
+ * ships whole: a rule with no unicode-range covers every code point, and that
+ * is a fact about the face, not a parse failure.
+ */
 function fontFaces() {
   return [...css.matchAll(/@font-face\{([^}]*)\}/g)].map(([, body]) => {
+    const find = (name) => new RegExp(`${name}\\s*:\\s*([^;}]+)`).exec(body)?.[1].trim() ?? null
     const value = (name) => {
-      const found = new RegExp(`${name}\\s*:\\s*([^;}]+)`).exec(body)
+      const found = find(name)
       assert.ok(found, `an @font-face rule in global.css no longer declares ${name}`)
-      return found[1].trim()
+      return found
     }
+    const src = value('src')
     return {
       family: value('font-family').replace(/^['"]|['"]$/g, ''),
+      style: value('font-style'),
       weight: value('font-weight'),
       display: value('font-display'),
-      range: value('unicode-range'),
-      src: value('src'),
+      range: find('unicode-range'),
+      src,
+      local: !/url\(/.test(src),
+      body,
     }
   })
 }
+
+/** The rules of one family, in the order global.css declares them. */
+const facesOf = (family) => fontFaces().filter((f) => f.family === family)
 
 /**
  * One custom property off the :root block, so a theme block cannot answer
@@ -233,18 +246,23 @@ test('THE PRECISION ONE: the em is large enough for the decimals the table print
 
 test('the weight range the guide quotes is the one global.css declares', () => {
   const bodyFamily = firstFamily(rootToken('--font'))
-  const face = fontFaces().find((f) => f.family === bodyFamily)
-  assert.ok(face, `global.css declares no @font-face for ${bodyFamily}, the family --font asks for first`)
+  const bodyFaces = facesOf(bodyFamily)
+  assert.ok(bodyFaces.length, `global.css declares no @font-face for ${bodyFamily}, the family --font asks for first`)
 
-  const [low, high] = face.weight.split(/\s+/).map(Number)
-  // Geist since the Spectrum adoption, 2026-09-18. These were 200/800 under
-  // Manrope; the guide quotes whatever the shipped face actually declares, and
-  // this test is what stops the two drifting apart.
-  assert.equal(low, 300)
-  assert.equal(high, 700)
+  // Upright and italic are separate rules and the guide says "upright and
+  // italic alike", so every rule of the family has to declare the same range.
+  const ranges = [...new Set(bodyFaces.map((f) => f.weight))]
+  assert.equal(ranges.length, 1, `${bodyFamily}'s rules declare different weight ranges: ${ranges.join(' | ')}`)
+  assert.deepEqual(bodyFaces.map((f) => f.style).sort(), ['italic', 'normal'],
+    `${bodyFamily} is no longer declared as one upright and one italic rule`)
+  const [low, high] = ranges[0].split(/\s+/).map(Number)
+  // The guide quotes whatever the shipped face actually declares, and this test
+  // is what stops the two drifting apart.
+  assert.equal(low, 100)
+  assert.equal(high, 900)
   // The two derived figures in the sentence, recomputed. font-weight accepts
   // 1 through 1000, so the span the property allows is 999 units wide.
-  assert.equal(high - low, 400, `the declared weight span is now ${high - low} units`)
+  assert.equal(high - low, 800, `the declared weight span is now ${high - low} units`)
   assert.equal(1000 - 1, 999)
 
   assert.match(metricsProse, new RegExp(`font-weight: ${low} ${high}`),
@@ -257,23 +275,64 @@ test('the weight range the guide quotes is the one global.css declares', () => {
 
 test('the inventory the guide describes is the inventory global.css declares', () => {
   const faces = fontFaces()
-  // Three since Caveat joined for the handwritten annotation (Spectrum,
-  // 2026-09-18). The count is asserted rather than derived on purpose: a family
-  // appearing or disappearing is a first-paint decision, and this is where the
-  // guide's sentence and the stylesheet are held to the same number.
-  assert.equal(faces.length, 6, `global.css now declares ${faces.length} @font-face rules`)
+  // The count is asserted rather than derived on purpose: a family appearing or
+  // disappearing is a first-paint decision, and this is where the guide's
+  // sentence and the stylesheet are held to the same number.
+  assert.equal(faces.length, 8, `global.css now declares ${faces.length} @font-face rules`)
   const families = [...new Set(faces.map((f) => f.family))]
-  assert.equal(families.length, 3, `global.css now declares ${families.length} families`)
-  assert.match(loadingProse, /Three families, six rules/)
+  assert.equal(families.length, 4, `global.css now declares ${families.length} families`)
+  assert.match(loadingProse, /Four families, eight rules/)
 
-  for (const family of families) {
-    const pair = faces.filter((f) => f.family === family)
+  // Which families are subset, and which ship whole, is the claim the section
+  // turns on. The UI face is the one that must carry no range at all; the
+  // stand-in is local; the other two are the split pairs.
+  const uiFamily = firstFamily(rootToken('--font'))
+  const standIn = firstFamily(rootToken('--font').split(',').slice(1).join(','))
+  const split = families.filter((f) => facesOf(f).every((r) => r.range !== null))
+  assert.deepEqual(split.sort(), ['Caveat', 'Geist Mono'],
+    `the families split by unicode-range are now ${split.join(', ')}`)
+  for (const face of facesOf(uiFamily)) {
+    assert.equal(face.range, null, `${uiFamily} declares a unicode-range, so it is no longer shipped whole`)
+    assert.equal(face.local, false, `${uiFamily} is no longer a downloaded file`)
+  }
+  assert.equal(facesOf(uiFamily).length, 2, `${uiFamily} is no longer one upright file and one italic file`)
+  assert.ok(facesOf(standIn).length === 2 && facesOf(standIn).every((f) => f.local && f.range === null),
+    `${standIn}, the stack's second entry, is no longer a pair of local faces`)
+  assert.match(loadingProse, /only two of the families are subset/)
+  assert.match(loadingProse, /one variable file for the upright and one for the italic/)
+
+  for (const family of split) {
+    const pair = facesOf(family)
     assert.equal(pair.length, 2, `${family} is no longer split into two files`)
     const starts = pair.map((f) => intervalsOf(f.range)[0][0]).sort((a, b) => a - b)
     assert.equal(starts[1], 0x100,
       `${family}'s second file no longer starts at U+0100 but at U+${starts[1].toString(16)}`)
   }
-  assert.match(loadingProse, /each family split at U\+0100/)
+  assert.match(loadingProse, /each split at U\+0100/)
+})
+
+test('the stand-in faces carry the adjustments the guide quotes', () => {
+  const standIn = firstFamily(rootToken('--font').split(',').slice(1).join(','))
+  const [regular, bold] = facesOf(standIn)
+  assert.ok(regular && bold, `${standIn} is no longer a regular rule and a bold rule`)
+  const get = (face, name) => new RegExp(`${name}\\s*:\\s*([\\d.]+)%`).exec(face.body)?.[1]
+
+  // The split is at the first bold weight the guide names, and each half
+  // carries its own size-adjust. A guide quoting 100% and 96% against a
+  // stylesheet that now says something else is the failure this is for.
+  assert.equal(regular.weight, '100 599')
+  assert.equal(bold.weight, '600 900')
+  assert.equal(get(regular, 'size-adjust'), '100')
+  assert.equal(get(bold, 'size-adjust'), '96')
+  for (const face of [regular, bold]) {
+    for (const descriptor of ['ascent-override', 'descent-override', 'line-gap-override']) {
+      assert.ok(get(face, descriptor), `a ${standIn} rule no longer declares ${descriptor}`)
+    }
+    assert.ok(face.local, `a ${standIn} rule no longer points at an installed font`)
+  }
+  assert.match(loadingProse, /weights 100 to 599 at a size-adjust of 100%/)
+  assert.match(loadingProse, /covers 600 to 900 at 96%/)
+  assert.match(loadingProse, /ascent, descent and line-gap overrides/)
 })
 
 test('every face declares the display policy the guide says it does', () => {
@@ -287,9 +346,12 @@ test('THE OTHER ONE THAT MATTERS: the two subsets share exactly the code points 
   // The guide states a count and then names what is in it. Both halves are
   // recomputed: a re-subset that changes the overlap makes the sentence wrong
   // in a way no reviewer would ever see.
-  const faces = fontFaces()
+  // Only the split families have two ranges to compare; a face with no range
+  // covers everything and shares nothing in particular with anything.
+  const faces = fontFaces().filter((f) => f.range !== null)
   const families = [...new Set(faces.map((f) => f.family))]
   const expected = [0x131, 0x152, 0x153, 0x304, 0x308, 0x329, 0x2020]
+  assert.equal(families.length, 2, `${families.join(', ')} are subset, not two families`)
 
   for (const family of families) {
     const [a, b] = faces.filter((f) => f.family === family).map((f) => codepointsOf(f.range))
@@ -322,6 +384,12 @@ test('the two loading tables measure rather than restate', () => {
     'FontFaceTable no longer asks whether the file has been downloaded')
   assert.match(faceTable, /sizeOf\(intervals\)/,
     'FontFaceTable no longer computes the code-point count from the range')
+  // A rule with no unicode-range is a whole face, not a row to drop: the table
+  // has to read it as covering every code point and say that it has no range.
+  assert.match(faceTable, /range !== ''/, 'FontFaceTable no longer tells a subset from a face with no range')
+  assert.match(faceTable, /\[\[0, 0x10FFFF\]\]/,
+    'FontFaceTable no longer counts a face with no range as covering every code point')
+  assert.match(faceTable, /url\\\(/, 'FontFaceTable no longer tells a download from an installed font')
 
   assert.match(shiftTable, /getPropertyValue\('--font'\)/,
     'FallbackShiftTable no longer reads the declared stack')
@@ -331,6 +399,8 @@ test('the two loading tables measure rather than restate', () => {
     'FallbackShiftTable no longer measures the sample')
   assert.match(shiftTable, /entries\.slice\(1\)/,
     'FallbackShiftTable no longer paints the stack with its webfont removed')
+  assert.match(shiftTable, /entries\.slice\(2\)/,
+    'FallbackShiftTable no longer paints the stack without its adjusted stand-in')
 
   assert.match(loadingSource, /<FallbackShiftTable \/>/, 'the guide no longer renders FallbackShiftTable')
   assert.match(loadingSource, /<FontFaceTable \/>/, 'the guide no longer renders FontFaceTable')
