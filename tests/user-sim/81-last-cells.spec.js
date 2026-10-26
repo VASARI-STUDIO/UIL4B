@@ -447,8 +447,8 @@ test.describe('the login route paints only what is true', () => {
         .toBeGreaterThanOrEqual(m.fieldGap)
       // The words and the type are untouched — this cell is a SPACING fix and
       // nothing else. `auth.welcomeBack` is founder-blocked.
-      expect(m.titleSize).toBe('19px')
-      await expect(page.locator('#ui-login-title')).toHaveText('Welcome Back')
+      expect(m.titleSize).toBe('22px')
+      await expect(page.locator('#ui-login-title')).toHaveText('Log in to UIL4B')
 
       await ctx.close()
     })

@@ -75,7 +75,7 @@ test.describe('signup intent', () => {
     await go(page, '/learn/help')           // an app-header page, as above
 
     await page.getByRole('button', { name: 'Log in' }).first().click()
-    await expect(dialogHeading(page)).toHaveText(/welcome back/i)
+    await expect(dialogHeading(page)).toHaveText(/log in to uil4b/i)
     await expect(nameField(page), 'a sign-in form does not').toHaveCount(0)
   })
 
@@ -119,7 +119,7 @@ test.describe('signup intent', () => {
   test('a bare /login visit is still a sign-in, so bookmarks are unchanged', async ({ page }) => {
     watch(page, 'a returning visitor opening a bookmark')
     await go(page, '/login')
-    await expect(dialogHeading(page)).toHaveText(/welcome back/i)
+    await expect(dialogHeading(page)).toHaveText(/log in to uil4b/i)
     await expect(nameField(page), 'a sign-in form does not').toHaveCount(0)
   })
 

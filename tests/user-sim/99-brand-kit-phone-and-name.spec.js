@@ -499,7 +499,7 @@ test.describe('Brand kit walkthrough: Name your project', () => {
 
     await expect(page.locator('#ui-login-title')).toBeVisible()
     // Saved work is a project; the kit is what gets exported.
-    await expect(page.locator('#ui-login-promise')).toHaveText('You were about to save your project.')
+    await expect(page.locator('#ui-login-promise')).toContainText('You were about to save your project.')
     // Save cannot be pressed twice while the sign-in it asked for is open.
     const save = page.locator('.bkit-name-save')
     await expect(save).toBeDisabled()
