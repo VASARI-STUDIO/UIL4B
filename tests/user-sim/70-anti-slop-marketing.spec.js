@@ -201,7 +201,7 @@ test.describe('the footer', () => {
 
       const footer = page.locator('.app-footer')
       await expect(footer).toHaveCount(1)
-      await expect(footer.locator('.app-footer-mark')).toHaveText('UIL4B')
+      await expect(footer.locator('.app-footer-mark svg')).toHaveAttribute('aria-label', 'UI L4B')
       await expect(footer.locator('.app-footer-tagline'), 'the footer tagline is back').toHaveCount(0)
       // '/create/color' until the colour landing was deleted. The link is built
       // from categoryDestination('colour'), which now answers with the group's

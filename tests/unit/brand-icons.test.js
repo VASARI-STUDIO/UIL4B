@@ -1,43 +1,27 @@
-// The site icons.
+// The site icons: the UI L4B brand kit's own files, committed as exported.
 //
-// ── What was broken ─────────────────────────────────────────────────────────
+// Two failure modes this file guards:
 //
-// public/favicon.svg was 491 bytes and the ONLY icon the site shipped, and it
-// drew its mark with <text>L4B</text> in `font-family: Inter, system-ui, …`.
-// Inter is not one of the faces this project ships — it self-hosts Geist, Geist
-// Mono and Caveat — so the mark fell back to whatever the visitor's OS supplied
-// and rendered a DIFFERENT SHAPE ON EVERY MACHINE. Three glyphs set at 248px in
-// a 512 viewport, then shown at 16px, is a smudge whichever face won.
+// A MARK THAT DEPENDS ON THE VIEWER. The favicon must contain no text and name
+// no font: a mark whose outline is chosen by the visitor's font stack is not a
+// mark. (An earlier favicon set <text> in Inter, which this project never
+// shipped, and drew a different shape on every machine.)
 //
-// It also used #3B82F6 and #0A0A0A, neither of which is a token here. And there
-// was no ICO, so /favicon.ico — which browsers and link scrapers request off
-// the site root with no <link> telling them to — returned nothing; no
-// apple-touch-icon, so an iOS home-screen save used a SCREENSHOT of the page;
-// and no manifest, so an Android shortcut invented its own icon.
-//
-// ── The two failure modes this file exists for ─────────────────────────────
-//
-// A MARK THAT DEPENDS ON THE VIEWER. The first test below is the one that
-// matters: the favicon must contain no text and name no font, ever again.
-//
-// A GENERATED, COMMITTED ARTEFACT GOING STALE. Same contract as the share
-// cards: scripts/brand-icons.mjs writes public/brand-icons.json recording the
-// accent and the geometry the icons were drawn from, and the staleness test
-// re-reads those from source and compares.
+// A LINKED ICON THAT DOES NOT EXIST. Browsers and scrapers fail silently on a
+// 404 icon, so every file index.html and the manifest name is checked here.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { createHash } from 'node:crypto'
-import { MARK, pointAt } from '../../scripts/brand-mark.mjs'
-import {
-  APPLE_SIZE,
-  ICON_FILES,
-  ICO_SIZES,
-  MANIFEST_SIZE,
-  MASKABLE_SCALE,
-  readIconTokens,
-} from '../../scripts/brand-icons.mjs'
+import { logoMarkup } from '../../src/config/brandLogo.js'
+
+const ICO_SIZES = [16, 32, 48, 64]
+const APPLE_SIZE = 180
+const ICON_FILES = ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png', 'site.webmanifest']
+const MANIFEST_ICONS = [
+  ['web-app-192.png', 192, 'any'], ['web-app-512.png', 512, 'any'],
+  ['web-app-maskable-192.png', 192, 'maskable'], ['web-app-maskable-512.png', 512, 'maskable'],
+]
 
 const REPO = process.cwd()
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8')
@@ -60,69 +44,22 @@ function pngHeader(file) {
 // ── The mark ────────────────────────────────────────────────────────────────
 
 test('THE ONE THAT MATTERS: the favicon draws no text and names no font', () => {
-  // The whole defect, stated as a rule rather than as today's code. A mark whose
-  // outline is chosen by the viewer's font stack is not a mark, and this is the
-  // only place that can be enforced.
   const svg = read('public/favicon.svg')
-  assert.ok(!/<text[\s>]/i.test(svg),
-    'favicon.svg contains a <text> element. The mark must be paths and circles: '
-    + 'text renders in whatever face the visitor happens to have.')
-  assert.ok(!/font-family|font-size|font-weight/i.test(svg),
-    'favicon.svg names a font. Nothing in an icon may depend on a typeface.')
-  // And it is actually drawing something.
-  assert.match(svg, /<path\b/, 'favicon.svg has no path — the ring is missing')
-  assert.equal((svg.match(/<circle\b/g) || []).length, 2,
-    'favicon.svg should carry exactly two circles: the centre dot and the satellite')
+  assert.ok(!/<text[s>]/i.test(svg), 'favicon.svg contains <text>; the mark must be paths')
+  assert.ok(!/font-family|font-size|font-weight/i.test(svg), 'favicon.svg names a font')
+  assert.equal((svg.match(/<path[ >]/g) || []).length, 2, 'favicon.svg should carry the two symbol paths')
 })
 
-test('the favicon is drawn in the brand accent and nothing else', async () => {
-  const { accent } = await readIconTokens()
-  const svg = read('public/favicon.svg')
-  const colours = [...svg.matchAll(/(?:fill|stroke)="(#[0-9a-fA-F]{3,8})"/g)].map((m) => m[1].toUpperCase())
-  assert.ok(colours.length >= 3, 'favicon.svg declares almost no colours — is it still drawing the mark?')
-  for (const c of new Set(colours)) {
-    assert.ok(c === accent || c === '#FFFFFF',
-      `favicon.svg paints ${c}, which is neither --accent (${accent}) nor the white it `
-      + 'knocks the mark out in. The old file hard-coded #3B82F6, a blue this project never had.')
-  }
-  assert.ok(colours.includes(accent), `favicon.svg never uses --accent (${accent})`)
+test('the favicon draws the same symbol the components draw', () => {
+  // One geometry source: src/config/brandLogo.js. A hand edit to either side fails here.
+  const symbol = logoMarkup('symbol').match(/d="([^"]+)"/g)
+  const fav = read('public/favicon.svg').match(/d="([^"]+)"/g)
+  assert.deepEqual(fav, symbol)
 })
 
-test('the mark stays on the pixel grid at 16px, which is the size it is used at', () => {
-  // Designing at 512 and hoping is what produced the smudge this replaces. Every
-  // band across the middle of the mark must be a whole device pixel at 16px, so
-  // on a 32 grid every band must be an even number of units.
-  const { ring, dot, grid } = MARK
-  const outer = ring.r + ring.stroke / 2
-  const inner = ring.r - ring.stroke / 2
-  const bands = {
-    margin: grid / 2 - outer,
-    stroke: ring.stroke,
-    moat: inner - dot.r,
-    dotDiameter: dot.r * 2,
-  }
-  for (const [name, units] of Object.entries(bands)) {
-    assert.ok(units >= 2, `the ${name} band is ${units} units — under 1px at 16px, so it disappears`)
-    assert.equal(units % 2, 0,
-      `the ${name} band is ${units} units, which is a half pixel at 16px and will blur`)
-  }
-})
-
-test('the ring break actually clears the satellite', () => {
-  // The satellite sits ON the ring's centre line, so if the break is too narrow
-  // the two merge into a blob and the mark loses the feature that distinguishes
-  // it from a plain target.
-  const { ring, satellite } = MARK
-  const half = (Math.atan2(satellite.r, ring.r) * 180) / Math.PI
-  const leading = (satellite.bearing - half) - ring.gapFrom
-  const trailing = ring.gapTo - (satellite.bearing + half)
-  assert.ok(leading > 4, `only ${leading.toFixed(1)}° of clearance before the satellite`)
-  assert.ok(trailing > 4, `only ${trailing.toFixed(1)}° of clearance after the satellite`)
-  // And the satellite is on the ring's line, which is what makes it read as
-  // sitting IN the break rather than floating beside it.
-  const p = pointAt(MARK.cx, MARK.cy, ring.r, satellite.bearing)
-  const d = Math.hypot(p.x - MARK.cx, p.y - MARK.cy)
-  assert.ok(Math.abs(d - ring.r) < 0.01, 'the satellite has left the ring line')
+test('the boot shell in index.html carries the same lockup the components draw', () => {
+  assert.ok(read('index.html').includes(logoMarkup('lockup')),
+    'index.html boot-mark SVG has drifted from src/config/brandLogo.js')
 })
 
 // ── The files ───────────────────────────────────────────────────────────────
@@ -171,25 +108,18 @@ test('apple-touch-icon is 180px, square and opaque', () => {
   assert.ok(!read('public/favicon.svg').includes('apple'), 'sanity: wrong file read')
 })
 
-test('the manifest icon fits the maskable safe zone', () => {
-  const h = pngHeader(pub('icon-512.png'))
-  assert.equal(h.width, MANIFEST_SIZE)
-  assert.equal(h.height, MANIFEST_SIZE)
-
-  // Android crops a maskable icon to a shape of its choosing and only
-  // guarantees the middle 80%. The mark's furthest point is the outer edge of
-  // the satellite; scaled, it has to stay inside that circle or the launcher
-  // will shave a bite out of the logo.
-  const furthest = (MARK.ring.r + MARK.satellite.r) * MASKABLE_SCALE
-  const safeRadius = MARK.grid * 0.4
-  assert.ok(furthest <= safeRadius,
-    `the mark reaches ${furthest.toFixed(2)} units but the maskable safe radius is ${safeRadius}`)
-
+test('the manifest names the four web-app icons, and each is the size it claims', () => {
   const manifest = JSON.parse(read('public/site.webmanifest'))
-  const icon = manifest.icons.find((i) => i.src === '/icon-512.png')
-  assert.ok(icon, 'site.webmanifest does not name /icon-512.png')
-  assert.equal(icon.sizes, `${MANIFEST_SIZE}x${MANIFEST_SIZE}`)
-  assert.match(icon.purpose, /\bmaskable\b/, 'the manifest icon is not declared maskable')
+  assert.equal(manifest.icons.length, MANIFEST_ICONS.length)
+  for (const [file, size, purpose] of MANIFEST_ICONS) {
+    const icon = manifest.icons.find((i) => i.src === `/${file}`)
+    assert.ok(icon, `site.webmanifest does not name /${file}`)
+    assert.equal(icon.sizes, `${size}x${size}`)
+    assert.equal(icon.purpose, purpose)
+    const h = pngHeader(pub(file))
+    assert.equal(h.width, size)
+    assert.equal(h.height, size)
+  }
 })
 
 test('the manifest does not promise an app the product is not', () => {
@@ -280,32 +210,3 @@ test('the runtime chrome tint reads the token instead of restating it', () => {
     'the runtime theme-color should read --bg-0 rather than hard-code the grounds')
 })
 
-// ── Staleness ───────────────────────────────────────────────────────────────
-
-test('THE STALENESS ONE: the committed icons were drawn from today\'s sources', async () => {
-  // A committed PNG cannot fail a build when the brand moves underneath it, so
-  // the generator records what it drew FROM and this compares against source.
-  const manifest = JSON.parse(read('public/brand-icons.json'))
-  const { accent, ground } = await readIconTokens()
-
-  assert.equal(manifest.accent, accent,
-    'the accent has moved since the icons were drawn, so the favicon is the wrong '
-    + 'blue. Run `npm run icons`.')
-  assert.equal(manifest.ground, ground,
-    'the light ground has moved since the manifest was written. Run `npm run icons`.')
-  assert.deepEqual(manifest.mark, JSON.parse(JSON.stringify(MARK)),
-    'the mark geometry in scripts/brand-mark.mjs has changed since the icons were '
-    + 'drawn, so the ICO and the PNGs no longer match the SVG. Run `npm run icons`.')
-  assert.equal(manifest.maskableScale, MASKABLE_SCALE)
-
-  // And the SVG itself, so a hand-edit to the committed file is caught too —
-  // the rasters are renderings OF it and would silently disagree.
-  // Normalised the same way the generator does: core.autocrlf is true, so the
-  // file is LF in the repo and CRLF in the working tree, and hashing raw bytes
-  // would fail on a clean checkout rather than on a real edit.
-  const sha = createHash('sha256')
-    .update(read('public/favicon.svg').replace(/\r\n/g, '\n')).digest('hex')
-  assert.equal(manifest.faviconSvgSha256, sha,
-    'public/favicon.svg has been edited by hand since the rasters were generated, '
-    + 'so favicon.ico and the PNGs no longer show the same mark. Run `npm run icons`.')
-})

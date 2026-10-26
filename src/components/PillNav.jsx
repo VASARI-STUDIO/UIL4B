@@ -34,6 +34,7 @@ import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
+import { BrandLockup, BrandSymbol } from './BrandLogo'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
 // Discover pane's counts too — they render only inside the open Discover menu,
@@ -657,16 +658,18 @@ function AppHeader() {
         onMouseLeave={hoverLeave}
       >
         <div className="pnav-inner">
-          {/* 19px / 600 / -.035em with the "4" in the accent (App line 102).
-              It goes to the dashboard from every app page, and from the
-              dashboard to the sales home page. */}
+          {/* The logo lockup, sized from .pnav-word's font-size so the phone
+              header's 21px and the desktop 19px still set its height. It goes
+              to the dashboard from every app page, and from the dashboard to
+              the sales home page. The link's aria-label is its name; the SVG
+              is decorative. */}
           <Link
             className="pnav-logo"
             to={onDashboard ? '/home' : '/projects'}
             onClick={onLogoClick}
             aria-label={onDashboard ? 'UIL4B, go to the home page' : 'UIL4B, go to your dashboard'}
           >
-            <span className="pnav-word">UIL<span className="pnav-word-mark">4</span>B</span>
+            <span className="pnav-word"><BrandLockup className="brand-logo-wide" /><BrandSymbol className="brand-logo-narrow" /></span>
           </Link>
 
           <div className={searchHot ? 'pnav-search is-hot' : 'pnav-search'}>

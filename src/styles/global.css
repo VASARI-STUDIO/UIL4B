@@ -1529,6 +1529,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
+.app-footer-mark .brand-logo{display:block;height:.85em}
 .app-footer-tagline{max-width:42ch;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 /* The footer's one call to action, and it measured 133x23.1 — under the 24px
    minimum by nine tenths of a pixel, at every width. Mobbin/Retool gives the
@@ -1787,6 +1788,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:none;padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .onb-brand{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
+.onb-brand .brand-logo{display:block;height:1.1em}
 
 
 .onb-step{animation:onb-fade var(--dur-3) var(--ease-entrance)}
@@ -2702,12 +2704,20 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-inner{display:flex;align-items:center;flex-wrap:nowrap;gap:clamp(10px,1.6vw,20px);height:100%;padding:0 clamp(14px,2vw,22px)}
 .pnav-logo{flex:0 0 auto;display:flex;align-items:center;padding:4px 2px;border-radius:8px;color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
-/* 19px / 600 / -.035em (App line 102). */
+/* The logo lockup is an SVG drawn in currentColor, so it follows the ink colour
+   in both themes. Its height is set in em from the wrapper's font-size and its
+   width follows the viewBox; the wrapper keeps the 19px (21px on the phone
+   header) it always had, so the bar's height does not move. */
+.brand-logo{display:inline-block;flex:none;height:1em;width:auto;vertical-align:baseline;overflow:visible}
+.brand-logo--lockup{aspect-ratio:1195.5/200}
+.brand-logo--symbol{aspect-ratio:323.61/200}
 .pnav-word{font-size:19px;font-weight:600;letter-spacing:-.035em;line-height:1.2;color:rgb(var(--ink-rgb));white-space:nowrap}
-/* The file sets the "4" in the accent. At 19px/600 that is normal-size text,
-   and the bare fill measures 3.80:1 on the dark page, so it takes the accent's
-   text member: 6.02:1 light, 7.28:1 dark. */
-.pnav-word-mark{color:var(--accent-mid)}
+.pnav-word .brand-logo{display:block;height:.85em}
+/* The lockup is 35px wider than the old text wordmark, which overflows the row between 768 and 939px, so there the symbol stands alone. */
+.brand-logo-narrow{display:none}
+.pnav-word .brand-logo-narrow{display:none}
+@media(min-width:768px) and (max-width:939px){.pnav-word .brand-logo-wide{display:none}.pnav-word .brand-logo-narrow{display:block}}
+@media(min-width:768px) and (max-width:899px){.spnav-word .brand-logo-wide{display:none}.spnav-word .brand-logo-narrow{display:inline-block}}
 
 /* Search (App lines 103-107): flex 1 1 240px up to 380px, 41px, 12px radius,
    an ink .045 wash inside an ink .09 hairline, the magnifier and placeholder in
@@ -3046,7 +3056,12 @@ html.lenis{scroll-behavior:auto!important}
 .icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
 .icust-stage-host svg,.icust-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join)}
 .icust-stage.is-abs .icust-stage-host svg,.icust-stage.is-abs .icust-stage-host svg *{vector-effect:non-scaling-stroke}
-.icust-meta{display:flex;flex-wrap:wrap;gap:6px;padding:12px 24px 0}
+/* Tags on the left, Reset on the right: one row that never wraps. The name tag
+   gives way (ellipsis) before anything else does. */
+.icust-meta{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:12px 24px 0}
+.icust-tags{display:flex;gap:6px;min-width:0;flex:0 1 auto}
+.icust-tags .icust-tag{flex:none}
+.icust-tags .icust-tag--name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .icust-tag{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.03em;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px 9px}
 /* Controls */
 .icust-controls{display:flex;flex-direction:column;gap:14px;padding:18px 24px 4px}
@@ -3215,8 +3230,9 @@ html.lenis{scroll-behavior:auto!important}
 /* Locked panel is fully clickable — any click opens the Pro upgrade modal
    (no hover veil; less disruptive to the flow). */
 .icust-pro.is-locked{cursor:pointer}
-/* Footer + Pro save-lock — the four actions share the row width evenly and only
-   wrap to a second line when the footer is genuinely too narrow, so none clip. */
+/* Footer + Pro save-lock — the actions share the row width evenly. On the icon
+   page the footer holds one row at every width (see icon-emoji-library.css); the
+   wrap here is the fallback for anywhere else it is used. */
 .icust-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
 /* overflow / scrollbar / edge fade come from `.rail-overflow` (see the block by
    the global scrollbar rules). This was the eighth instance of the hidden-
@@ -4942,6 +4958,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
      of .svt-wrap, so the outside-press dismissal is unchanged. */
   .svt-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-height:min(76dvh,560px);padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70}
   .svt-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
+  /* Above the phone tab bar, as .menu-select-list does, so the last row stays tappable. */
+  html.has-tabbar .svt-menu{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));max-height:min(calc(76dvh - var(--tabbar-h)),560px);padding-bottom:16px}
   .svt-wrap{width:100%}
   .svt-trigger{width:100%;justify-content:center}
 }

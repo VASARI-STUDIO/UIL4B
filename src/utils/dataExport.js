@@ -59,6 +59,7 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-recent-icons': { purpose: 'Recently viewed icons', pii: 'no' },
   'vs-icon-stroke': { purpose: 'Icon stroke-width preference (pre-2.8 viewBox units)', pii: 'no' },
   'vs-icon-stroke-px': { purpose: 'Icon stroke-width preference, in pixels', pii: 'no' },
+  'vs-icon-download-format': { purpose: 'Icon download format (SVG or PNG scale)', pii: 'no' },
   'vs-icon-copy-day': { purpose: 'Daily icon copy counter', pii: 'no' },
   'vs-prompts': { purpose: 'Your AI prompt library', pii: 'local' },
   'vs-saved-prompt-ids': { purpose: 'Community prompts you saved', pii: 'no' },
