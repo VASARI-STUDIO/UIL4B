@@ -297,7 +297,7 @@
   font-weight: 600;
   font-size: clamp(40px, 6.6vw, 98px);
   line-height: .96;
-  letter-spacing: -.045em;
+  letter-spacing: -.03em; /* Switzer is set tight already; Geist needed -.045em. */
 }
 .sp-hero-sub {
   margin: 28px auto 0;
