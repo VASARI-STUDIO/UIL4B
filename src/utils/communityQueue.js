@@ -63,7 +63,7 @@ export function buildQueueRecord({ kind, payload, user, name }) {
     name: title || `Untitled ${kind}`,
     authorUid: user.uid,
     // Display name only. The email is deliberately NOT copied here: this
-    // collection is readable by every signed-in user (same as community-prompts),
+    // collection is readable by every signed-in user once an item is approved,
     // and a submission does not need to disclose an address to be reviewed.
     authorName: (user.displayName || 'Anonymous').slice(0, 60),
     status: CLIENT_WRITABLE_STATUS,
