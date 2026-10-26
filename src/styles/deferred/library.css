@@ -656,7 +656,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .lib-surface .dgh-hero h1{
   max-width:min(20ch,100%);
   font-size:clamp(28px,4.2vw,52px);font-weight:600;
-  letter-spacing:-.04em;line-height:.96;color:#F7F7F4;
+  letter-spacing:-.02em;line-height:.96;color:#F7F7F4;
 }
 .lib-surface .dgh-hero p{
   max-width:min(58ch,100%);margin:10px 0 0;
@@ -1474,7 +1474,7 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 .ig-end-copy{padding:56px 0 48px;text-align:center}
 .ig-end .ig-end-h{
   margin:0 auto;max-width:min(22ch,100%);
-  font-family:var(--display);font-size:28px;font-weight:560;line-height:1.05;letter-spacing:-.035em;
+  font-family:var(--display);font-size:28px;font-weight:560;line-height:1.05;letter-spacing:-.015em;
   color:var(--t0);text-wrap:balance;
 }
 .ig-end .ig-end-p{

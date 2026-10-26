@@ -90,6 +90,8 @@
 @font-face{font-family:'Switzer';font-style:italic;font-weight:100 900;font-display:swap;src:url('/fonts/switzer/Switzer-VariableItalic.woff2') format('woff2')}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:100 599;font-display:swap;src:local('Arial'),local('Liberation Sans'),local('Helvetica');size-adjust:101%;ascent-override:98%;descent-override:25%;line-gap-override:9%}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:600 900;font-display:swap;src:local('Arial Bold'),local('Arial-BoldMT'),local('Liberation Sans Bold'),local('Helvetica Bold');size-adjust:96%;ascent-override:102.1%;descent-override:26%;line-gap-override:9.4%}
+@font-face{font-family:'Switzer Fallback';font-style:italic;font-weight:100 599;font-display:swap;src:local('Arial Italic'),local('Arial-ItalicMT'),local('Liberation Sans Italic'),local('Helvetica Oblique');size-adjust:101%;ascent-override:98%;descent-override:25%;line-gap-override:9%}
+@font-face{font-family:'Switzer Fallback';font-style:italic;font-weight:600 900;font-display:swap;src:local('Arial Bold Italic'),local('Arial-BoldItalicMT'),local('Liberation Sans Bold Italic'),local('Helvetica Bold Oblique');size-adjust:96%;ascent-override:102.1%;descent-override:26%;line-gap-override:9.4%}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 /* Caveat: the handwritten annotation only. NOT preloaded — see the note above. */
@@ -124,6 +126,11 @@
      contrast, that is a founder call on the type system, not a token rename.
      Contrast in this system comes from Manrope vs JetBrains Mono, plus
      weight and scale. Fallback stacks are unchanged from the Outfit era. */
+  /* Display tracking scale. Switzer's word space is narrow, so heavy negative
+     tracking closes the gaps between words at large sizes. By size: 28-42px
+     headings -.015em, 43px and up -.02em, the .dgh-hero headline -.025em at most.
+     Text under 28px keeps its own value. Figures have no word gaps but use the
+     same tiers so a price sits level with the heading beside it. */
   --font:'Switzer','Switzer Fallback',system-ui,-apple-system,sans-serif;--display:'Switzer','Switzer Fallback',system-ui,-apple-system,sans-serif;--mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   /* The handwritten annotation, and nothing else. It has ONE job — the "give it
      a try" note the founder drew on the homepage — so it is a token rather than
@@ -3945,7 +3952,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 .dgh-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,7vw,110px);align-items:start;margin:-4px 0 24px;padding:clamp(28px,5vw,64px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 28px 80px rgba(6,6,10,.18)}
 /* RETIRED (#surface-headers-read-as-ai): .dgh-eyebrow. A taxonomy path in
    mono caps restating the h1 underneath it. */
-.dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.88;letter-spacing:-.065em;overflow-wrap:break-word}
+.dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.95;letter-spacing:-.025em;overflow-wrap:break-word}
 .dgh-hero p{max-width:630px;margin:28px 0 0;font-size:clamp(15px,1.5vw,19px);line-height:1.55;color:rgba(255,255,255,.68)}
 .dgh-action .btn{display:inline-flex;align-items:center;gap:8px;color:#0a0a0b;background:#fff;border-color:#fff}
 .dgh-action .btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
@@ -3960,9 +3967,9 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    column and only --controls declares a second one. */
 .drh-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 .drh-head span{display:block;margin-bottom:7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
-.drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
+.drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.02em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
-.gcta-q{margin:0;font-family:var(--display);font-size:clamp(21px,2.6vw,30px);font-weight:500;letter-spacing:-.035em;color:var(--t0)}
+.gcta-q{margin:0;font-family:var(--display);font-size:clamp(21px,2.6vw,30px);font-weight:500;letter-spacing:-.015em;color:var(--t0)}
 .gcta-detail{margin:0;max-width:52ch;font-size:13px;line-height:1.55;color:var(--t2)}
 @media(max-width:480px){
   .dgh-hero h1{font-size:clamp(38px,12vw,56px)}}

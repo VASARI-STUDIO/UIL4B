@@ -104,7 +104,7 @@
 .plb-pvg-campaign header,.plb-pvg-campaign footer,.plb-pvg-social header,.plb-pvg-social footer{display:flex;justify-content:space-between;font-size:8px}
 .plb-pvg-campaign .plb-pvg-title{font-size:52px;line-height:.8}
 .plb-pvg-package .plb-pvg-title{font-size:38px}
-.plb-pvg-magazine header strong{font-size:32px;letter-spacing:-.06em}
+.plb-pvg-magazine header strong{font-size:32px;letter-spacing:-.015em}
 .plb-pvg-magazine .plb-pvg-title{margin-top:32px;font-size:52px}
 .plb-pvg-social .plb-pvg-title{font-size:48px}
 .plb-dice{flex-shrink:0;padding-left:10px;padding-right:10px}
