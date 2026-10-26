@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { FIRST_WINS, FIRST_WIN_SKIPPED } from '../utils/firstWin'
 import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
 import { onboardingDestination, knownProfile, localOnboardingFlag, SIGNED_IN_HOME } from '../utils/onboardingState'
+import { BrandLockup } from '../components/BrandLogo'
 
 // Where a brand-new account lands when it does NOT pick a starting point.
 //
@@ -202,7 +203,7 @@ export default function Onboarding() {
     <div className="onb">
       <div className="onb-card" id="main" tabIndex={-1}>
         <div className="onb-top">
-          <div className="onb-brand">UIL4B</div>
+          <div className="onb-brand"><BrandLockup label="UI L4B" /></div>
         </div>
 
         {/* One screen, so there is no progress bar and no corner Skip: a row of

@@ -1529,6 +1529,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
+.app-footer-mark .brand-logo{display:block;height:.85em}
 .app-footer-tagline{max-width:42ch;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 /* The footer's one call to action, and it measured 133x23.1 — under the 24px
    minimum by nine tenths of a pixel, at every width. Mobbin/Retool gives the
@@ -1787,6 +1788,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:none;padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .onb-brand{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
+.onb-brand .brand-logo{display:block;height:1.1em}
 
 
 .onb-step{animation:onb-fade var(--dur-3) var(--ease-entrance)}
@@ -2702,12 +2704,20 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-inner{display:flex;align-items:center;flex-wrap:nowrap;gap:clamp(10px,1.6vw,20px);height:100%;padding:0 clamp(14px,2vw,22px)}
 .pnav-logo{flex:0 0 auto;display:flex;align-items:center;padding:4px 2px;border-radius:8px;color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
-/* 19px / 600 / -.035em (App line 102). */
+/* The logo lockup is an SVG drawn in currentColor, so it follows the ink colour
+   in both themes. Its height is set in em from the wrapper's font-size and its
+   width follows the viewBox; the wrapper keeps the 19px (21px on the phone
+   header) it always had, so the bar's height does not move. */
+.brand-logo{display:inline-block;flex:none;height:1em;width:auto;vertical-align:baseline;overflow:visible}
+.brand-logo--lockup{aspect-ratio:1195.5/200}
+.brand-logo--symbol{aspect-ratio:323.61/200}
 .pnav-word{font-size:19px;font-weight:600;letter-spacing:-.035em;line-height:1.2;color:rgb(var(--ink-rgb));white-space:nowrap}
-/* The file sets the "4" in the accent. At 19px/600 that is normal-size text,
-   and the bare fill measures 3.80:1 on the dark page, so it takes the accent's
-   text member: 6.02:1 light, 7.28:1 dark. */
-.pnav-word-mark{color:var(--accent-mid)}
+.pnav-word .brand-logo{display:block;height:.85em}
+/* The lockup is 35px wider than the old text wordmark, which overflows the row between 768 and 939px, so there the symbol stands alone. */
+.brand-logo-narrow{display:none}
+.pnav-word .brand-logo-narrow{display:none}
+@media(min-width:768px) and (max-width:939px){.pnav-word .brand-logo-wide{display:none}.pnav-word .brand-logo-narrow{display:block}}
+@media(min-width:768px) and (max-width:899px){.spnav-word .brand-logo-wide{display:none}.spnav-word .brand-logo-narrow{display:inline-block}}
 
 /* Search (App lines 103-107): flex 1 1 240px up to 380px, 41px, 12px radius,
    an ink .045 wash inside an ink .09 hairline, the magnifier and placeholder in
