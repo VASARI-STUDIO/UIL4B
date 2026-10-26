@@ -15,24 +15,6 @@
     "ground": "#F5F5F2",
     "ink": "#0F0F10"
   },
-  "hero": {
-    "kicker": null,
-    "headline": [
-      {
-        "text": "Build and export UI and brand kits from ",
-        "hi": false
-      },
-      {
-        "text": "one place",
-        "hi": true
-      },
-      {
-        "text": ".",
-        "hi": false
-      }
-    ],
-    "sub": "Pick your colours, type, icons and imagery in the browser, then export the whole kit as one file."
-  },
   "sections": [
     {
       "id": "colour",
