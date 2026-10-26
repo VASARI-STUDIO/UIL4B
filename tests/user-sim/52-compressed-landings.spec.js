@@ -36,7 +36,7 @@
 //   which is the same request taken one notch deeper — see the test.
 import { test, expect } from './base.js'
 import { go, restingScrollY, watch, wheelToRest } from './helpers.js'
-import { DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { DISCOVER_GROUPS } from '../../src/data/toolTree.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 
 const COMPRESSED = ['/discover', '/learn']
@@ -46,7 +46,9 @@ const COMPRESSED = ['/discover', '/learn']
 // unit a reader scrolls past: one <header> plus one <section> on /discover, and
 // one extra on /learn for the guides that exist (which are links, so they
 // belong).
-const EXPECTED_BANDS = { '/discover': 2, '/learn': 3 }
+// Signed out. The roadmap of unwritten topics is an admin-only band, so /learn
+// is a head and the guides.
+const EXPECTED_BANDS = { '/discover': 2, '/learn': 2 }
 
 // Where each page's real destinations live.
 const LINKS = {
@@ -106,23 +108,22 @@ test.describe('the secondary landings stay compressed', () => {
     // The hero and cards share the registry's live and upcoming counts.
     await go(page, '/discover')
     const live = DISCOVER_GROUPS.filter((g) => !g.soon).length
-    const soon = DISCOVER_GROUPS.length - live
     const discoverHint = await page.locator('.home-hero-hint').innerText()
     expect(discoverHint, 'the Discover hint no longer matches the group data')
-      .toMatch(new RegExp(`\\b${live}\\b[\\s\\S]*\\b${soon}\\b`))
+      .toMatch(new RegExp(`\\b${live}\\b`))
+    // Signed out, unfinished libraries are neither counted nor drawn.
+    expect(discoverHint).not.toMatch(/still being built/i)
 
-    // The live cards and the Soon cards are the two halves of that same count,
-    // so the hint cannot disagree with the grid beneath it.
     await expect(page.locator('.surface-card--link')).toHaveCount(live)
-    await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(soon)
+    await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(0)
 
     await go(page, '/learn')
     const learnHint = await page.locator('.home-hero-hint').innerText()
     expect(learnHint, 'the Learn hint no longer matches the article registry')
       .toContain(String(LEARN_ARTICLES.length))
     await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
-    await expect(page.locator('.surface-card:not(.surface-card--link)'))
-      .toHaveCount(LEARN_GROUPS.filter((g) => g.soon).length)
+    // The unwritten-topics roadmap is an admin-only sight.
+    await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(0)
 
     // /create/color's third assertion is gone with the page. It read one
     // `.surface-card--link` per LIVE colour tool, so the landing could not

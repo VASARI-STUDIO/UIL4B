@@ -71,7 +71,7 @@
    `.rail-content` is rendered only by CreateTool.jsx and the sole consumer of
    `.pl-toolbar` is PromptLibrary, which is not inside it. A correct rule
    scoped to a selector that never matches is the shape this defect had. */
-/* RETIRED (#323). `.pl-toolbar` and `.pl-search-*` were the last one-off
+/* RETIRED. `.pl-toolbar` and `.pl-search-*` were the last one-off
    browse toolbar in the app — the Prompt Library was the only consumer, and
    it is now on the shared `LibraryToolbar` / `.lbry-toolbar` like every
    other browse surface. The sticky-offset reasoning above is preserved
@@ -93,9 +93,9 @@
    The Emoji Library was still hiding 5 of 12 at 1180px, so this was never only
    a phone defect. Category is the primary navigation for a 1,655-item library.
 
-   The cost is height and it is the largest this sweep has spent: the emoji row
+   The cost is height, and it is the largest on this page: the emoji row
    goes 29px → 169px at 320px wide, 29 → 134 at 390, 29 → 64 at 1180. That is
-   accepted on the same reasoning PR #271 recorded for .stc-bundles — a page
+   accepted on the same reasoning as .stc-bundles — a page
    that already scrolls vertically can afford rows; an undiscoverable gesture
    costs the option entirely. .grg-chips already wraps at ≥821px, so this is the
    established look on one of the four surfaces rather than a new one. */
@@ -117,14 +117,9 @@
 .pl-card:hover{transform:translateY(-4px);box-shadow:var(--warm-shadow-lg);border-color:var(--bh)}
 
 /* ── The prompt preview: the card shows the ARTEFACT ────────────────────────
-   The founder asked the library to "preivew the prompts" and referenced
-   motionsites.com, a gallery whose cards continuously auto-play a scrolling
-   preview of the real page behind them, with the title and category beneath
-   and a badge on the paid entries. The transferable half is that the card
-   carries the artefact rather than a NAME for it, so the body of a prompt card
+   The card carries the artefact rather than a NAME for it, so the body of a prompt card
    is now the prompt's own text, set in --mono exactly as .pl-modal-prompt sets
-   the same text one activation away. Reference screens are cited in
-   PromptCard.jsx (WRITER's prompt library, Sana AI's workflow grid).
+   the same text one activation away.
 
    THE WINDOW IS NOT A SCROLL CONTAINER, and that is deliberate. Making it one
    would put a nested scroller under the pointer on twenty cards, which the
@@ -206,14 +201,15 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .pl-modal-author{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--t2)}
 .pl-modal-body{flex:1;overflow-y:auto;padding:20px 28px}
 
-/* ── The prompt / output tabs ─────────────────────────────────────────────
+/* ── The prompt / output tabs: the app's pill segmented control ──────────────────────────────────────────────────────
    Only rendered for a prompt whose output has been built, so the modal is
    unchanged for a user-submitted one. */
-.pl-modal-views{display:flex;gap:2px;padding:14px 28px 0;flex-shrink:0}
-.pl-modal-view{appearance:none;background:none;border:none;border-bottom:2px solid transparent;border-radius:var(--btn-radius);padding:8px 2px;margin-right:18px;font:inherit;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.pl-modal-views{display:flex;gap:3px;width:max-content;max-width:calc(100% - 56px);margin:14px 28px 0;padding:3px;flex-shrink:0;background:color-mix(in srgb,var(--t0) 4%,transparent);border:1px solid var(--border);border-radius:var(--radius-pill)}
+.pl-modal-view{appearance:none;background:none;border:none;border-radius:var(--radius-pill);padding:0 16px;min-height:32px;font:inherit;font-size:13px;font-weight:600;line-height:1;white-space:nowrap;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pl-modal-view:hover{color:var(--t0)}
-.pl-modal-view.is-on{color:var(--t0);border-bottom-color:var(--accent)}
-.pl-modal-view:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.pl-modal-view.is-on{color:var(--t0);background:color-mix(in srgb,var(--t0) 9%,transparent)}
+.pl-modal-view:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media(pointer:coarse){.pl-modal-view{min-height:44px}}
 
 /* ── The live output ──────────────────────────────────────────────────────
    A 16:10 box because the poster is captured at 1280x800 and a frame of a
@@ -265,7 +261,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    control, so on a desktop "end" is the case that keeps all six tones on
    screen — measured cut off at 1280, 1440 and 1920 before this. */
 .emoji-tone-pop[data-pop-align="end"]{left:auto;right:0}
-/* clamp follows usePopover's convention after #434: the hook writes --pop-x
+/* clamp follows usePopover's convention: the hook writes --pop-x
    (the panel's left edge pinned EDGE_PAD from the viewport), not a centre. */
 .emoji-tone-pop[data-pop-align="clamp"]{left:var(--pop-x,0px)}
 .emoji-tone-pop[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
@@ -315,7 +311,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-stage--light{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .icust-stage-img{display:block;max-width:100%;height:auto}
 /* A selected state with nothing to switch to: reads like .icust-seg button.active. */
-.icust-seg-static{flex:1;padding:6px 8px;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-align:center;color:var(--t0);background:var(--bg-0);box-shadow:var(--shadow-xs);cursor:default}
+.icust-seg-static{flex:1;padding:6px 8px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-align:center;color:var(--t0);background:var(--bg-0);box-shadow:var(--shadow-xs);cursor:default}
 .icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:rgba(244,244,245,.55)}
 .icust-stage--light .icust-stage-msg{color:rgba(10,10,11,.5)}
 .icust-note{flex:1;font-size:var(--fs-caption);color:var(--t2);font-style:italic}
@@ -500,9 +496,9 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    The slot is the cell's full content width (118px cell less its 6px side
    padding) and stays 36px TALL — the same height as the square chip — so a row
    that contains a wide item is exactly as tall as one that does not and the
-   grid rhythm is untouched. No column span, so nothing is re-ordered: #298
-   rejected visual re-ordering on this codebase's grids on WCAG 2.4.3 grounds
-   and that reasoning holds here.
+   grid rhythm is untouched. No column span, so nothing is re-ordered: this
+   codebase's grids reject visual re-ordering on WCAG 2.4.3 grounds and that
+   reasoning holds here.
 
    overflow:hidden with a centred, full-width image is what reaches devicon's
    `-wordmark` entries. Their canvas is square, so `width:100%` renders them
@@ -511,15 +507,13 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    Artwork that is genuinely wide never reaches the clip — at 106px wide it is
    already shorter than 36px — so one rule serves both causes.
 
-   WHY A WIDER CELL RATHER THAN A SQUARE ONE, from the Mobbin pass: Squarespace's
-   Asset Library gives a wide logotype a double-width cell in an otherwise
-   uniform grid; Air lays assets out at a fixed row height with the cell width
-   following each asset's aspect; Google Ads' logo picker keeps a uniform
-   landscape thumbnail and fits the art inside it at its natural aspect, naming
-   the aspect on the card. Arcade's Brand Kit goes furthest and splits
-   "Logotypes" from "Icons" into two sections with different cell shapes. None of
-   them letterboxes a lockup into a square. This is the Google Ads answer, which
-   is the one that transplants into a dense icon grid without re-ordering it. */
+   WHY A WIDER CELL RATHER THAN A SQUARE ONE: asset libraries commonly give a
+   wide logotype a double-width cell in an otherwise uniform grid, or lay assets
+   out at a fixed row height with the cell width following each asset's aspect,
+   or keep a uniform landscape thumbnail and fit the art inside it at its
+   natural aspect, or split "Logotypes" from "Icons" into two sections with
+   different cell shapes. None of them letterboxes a lockup into a square. This
+   is the uniform-thumbnail answer, which is the one that transplants into a dense icon grid without re-ordering it. */
 .ig-chip--wide{width:100%;height:36px;overflow:hidden;position:relative}
 /* NOTHING IS EVER CROPPED. `--ig-wide-cap` is measured per icon in sampleGlyph:
    how many multiples of this slot height the element may be drawn wide before
@@ -555,7 +549,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 /* The ?hero=a|b|c direction explorer that lived here is GONE, with
    src/components/HomeHeroDirections.jsx and its three variants' rules
    (.home-hero--dir, .hero-dir-*, .hero-a-*, .hero-b-*, .hero-c-*).
-   Founder, 2026-09-07: "Retire it, V2 hero decides." The shipped hero above
+   The shipped hero above
    is the decision; the exploration has no second reader. */
 
 
@@ -563,9 +557,9 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 
 
 /* ══ V2 homepage ═══════════════════════════════════════════════════════════════
-   Built against docs/reference/design-language-v2.md. Colour comes entirely
-   from existing role tokens, so this block inherits the V2 palette the moment
-   feat/v2-token-foundation remaps them — nothing here names a hex.
+   Colour comes entirely
+   from existing role tokens, so this block follows any remap of them —
+   nothing here names a hex.
 
    ⚠️ ACCENT CONTRAST: the V2 accent is blue #0F6FFF,
    which measures ≈3.85:1 on the page ground — fine for fills, borders, icons,
@@ -575,7 +569,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    text colour here, check its size first.
 
    The five V2 tokens this block consumes — --hi, --hi-fg, --radius-3xl,
-   --shadow-cmd, --shadow-panel — are owned by feat/v2-token-foundation. */
+   --shadow-cmd, --shadow-panel — are defined with the V2 tokens. */
 
 /* ── Hero ────────────────────────────────────────────────────────────────────
    Composition is the page's existing centred measure; every TYPE and SPACING
@@ -584,7 +578,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    note in Home.jsx. What replaces it is a single quiet category line, the way a
    product page names its own category rather than opening with proof. */
 /* .home-hero-kicker's rule is gone with its element — the "UI system
-   toolkit" tagline, removed 2026-09-07. */
+   toolkit" tagline, since removed. */
 /* The catalogue figures, now beside the toolset grid they describe. A
    definition list because that is what they are: a number and what it counts. */
 .htools-facts{display:flex;flex-wrap:wrap;gap:var(--s-6);margin:var(--s-5) 0 0;padding:0}
@@ -600,7 +594,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .lbry-select:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 @media(max-width:640px){.lbry-select{max-width:100%;width:100%}}
 
-/* `.pl-sort` is retired with `.pl-toolbar` (#323): the Prompt Library's sort is
+/* `.pl-sort` is retired with `.pl-toolbar`: the Prompt Library's sort is
    a LibraryFilterGroup now, so it reflows with every other filter tray instead
    of needing its own 320px rescue. `.pl-chips` stays — five other surfaces
    (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
@@ -611,9 +605,8 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 /* ══════════════════════════════════════════════════════════════════════════
    SPECTRUM — the library surfaces take the app design's anatomy
    ══════════════════════════════════════════════════════════════════════════
-   Source: `UIL4B App.dc.html`, the Palette Library screen (lines 219–282) and
-   the icons page (lines 284–327). Those two screens ARE this app's browse
-   language; where they and the shipping stylesheet disagree, they win.
+   The Palette Library screen and the icons page ARE this app's browse
+   language; where they and the older stylesheet disagree, they win.
 
    WHY THE RULES LIVE HERE AND NOT WHERE THE ORIGINALS DO. The shared browse
    vocabulary (`.dgh-`, `.lbry-`, `.ig`/`.ic`) is split across `global.css` and
@@ -739,32 +732,25 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    control: "My Icons · Coloured · Brand logos · Flags · Emoji" is five
    adjacent words. One shared class, six surfaces.
 
-   THE FIX IS THE DESIGN'S OWN ANSWER, not an invention. `UIL4B App.dc.html`
-   line 307 gives every icon filter `border:1px solid {{ f.border }}` where the
+   THE FIX IS THE DESIGN'S OWN ANSWER, not an invention. The app design gives
+   every icon filter `border:1px solid {{ f.border }}` where the
    resting border is `rgba(ink,.12)` and the selected one inverts to a solid
    `PAPER` fill with `var(--page)` ink. So: a hairline chip at rest, a solid
    ink chip when on, and the rail goes away — with a border on every option the
    tray fill is a second, weaker statement of the same thing.
 
-   MOBBIN, and the citation is the argument rather than decoration:
-     · ElevenLabs Voices/Explore — mobbin.com/screens/609210af-c2ba-4d78-8176-3b41197e5dc2
-       every resting filter carries a visible border plus an icon, next to an
+   THE PATTERNS THIS FOLLOWS:
+     · Every resting filter carries a visible border plus an icon, next to an
        explicit rail control. Resting state is a control, not a word.
-     · PlayAI — mobbin.com/screens/afeb4284-ec4b-4d62-bd1c-7106f8f152cf
-       removable chips with Clear All: the chip is the unit, and it is outlined.
-     · WRITER — mobbin.com/screens/1c2a36be-2d18-467a-905f-8baec911f81d
-       unselected rows stay plainly rows. Which is why the collapsed MENU here
+     · Removable chips with Clear All: the chip is the unit, and it is outlined.
+     · Unselected rows stay plainly rows. Which is why the collapsed MENU here
        is deliberately NOT given chips — a list row is a row.
-     · Google Ads Asset studio — mobbin.com/screens/41430f1a-8fb3-4b1f-81d5-6af768f99cb0
-       (searched fresh for this change) a full-width chip row under the tabs
-       where selected AND unselected both carry the pill border; the selected
-       one adds fill and a check.
-     · Air — mobbin.com/screens/b28a4a1f-979e-49c1-a83f-7f0ac454e614
-       the same row, plus the quiet count line above the grid.
-     · Perplexity Artifacts — mobbin.com/screens/7e18e989-a84f-45de-94b8-4816e3f63024
-       the counter-example, and the useful one: bare-text options with a filled
-       selection read fine THERE because one is always selected. That is the
-       exact condition /create/icons does not meet.
+     · A full-width chip row under the tabs where selected AND unselected both
+       carry the pill border; the selected one adds fill and a check, with a
+       quiet count line above the grid.
+     · The counter-example: bare-text options with a filled selection read fine
+       where one is always selected. That is the exact condition /create/icons
+       does not meet.
 
    THE SLIDING INDICATOR STAYS and becomes the fill it is now pointing at.
    15-discover-library-parity pins that it measures itself onto the active
@@ -776,7 +762,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    wraps", below), so both tabs of /create/icons share one toolbar height
    (25-layout-target-sweep: 68px vs 213px). */
 .lib-surface .lbry-toolbar-filters{gap:10px}
-.lib-surface .lbry-filters{gap:6px;padding:0;background:none;border-radius:0}
+.lib-surface .lbry-filters{gap:6px;padding:0;background:none;border:0;border-radius:0}
 .lib-surface .lbry-filters .lbry-filter{
   min-height:40px;padding:9px 15px;
   border:1px solid var(--bh);border-radius:var(--radius-pill);
@@ -828,7 +814,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
   color:var(--t0);border-color:var(--bh);background:var(--card);box-shadow:none;
 }
 .lib-surface .lbry-filtertrig-k{font-size:10px;letter-spacing:.06em}
-/* The menu keeps rows as rows (WRITER, above): no chip border in a list. */
+/* The menu keeps rows as rows: no chip border in a list. */
 .lib-surface .lbry-filtermenu .lbry-filter{
   border-color:transparent;border-radius:var(--radius-s);
   min-height:38px;background:transparent;
@@ -840,7 +826,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    same hex, and `--card` is the menu's own ground, so the rule above paints the
    chosen row in exactly the colour beneath it: rgb(25,26,29) on rgb(25,26,29),
    a selection that differs from an unselected row by text colour alone.
-   global.css has carried the dark value since 2026-09-08
+   global.css already carries the dark value
    (`[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]`,
    `--bg-3`) — but that is (0,4,0), EQUAL to the rule above, and this sheet
    loads after it, so the restyle silently took the fix back and
@@ -888,7 +874,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 
    THE FILTER ROW IS FULL WIDTH — `flex:1 1 100%` above. That is the design's
    `flex:1 1 100%` on its own filter div, and it is also what gives the row the
-   slack the review asked for: at 1280 the icons row-1 now carries the search,
+   slack it needs: at 1280 the icons row-1 now carries the search,
    the pack select and the action with ~500px spare, where before the seven
    group chips shared it. */
 /* The seam under the panel is the design's, not the old clamp(28px,4vw,52px):
@@ -901,11 +887,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   box-shadow:var(--shadow-s);
   -webkit-backdrop-filter:none;backdrop-filter:none;
 }
-.lib-surface .lbry-search{
-  min-height:44px;padding:0 13px;
-  border-radius:var(--radius);
-  background:color-mix(in srgb,var(--t0) 4.5%,transparent);
-}
+/* Height, fill, hairline and shape come from the base .lbry-search (--search-h,
+   --inp, --border, the pill); this surface only sets the inset. */
+.lib-surface .lbry-search{padding:0 13px}
 .lib-surface .lbry-search input{font-size:15px}
 /* The Icon Library's pack menu trigger shares the filter row with the chips, so
    it takes their height and their hairline. NOT their 999px radius: this one
@@ -1083,7 +1067,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    the name 97px at 320, 103px at 640 and 104px at 1280, against a widest curated
    name ("Harmonic Energy") of 127px: 20 of 100 names ellipsized at 320, 15 at
    640 and 13 at 1280 — the last of those at a width 25-layout-target-sweep:942 does not
-   even walk, so the founder's "no gradient name or meta line is truncated at any
+   even walk, so the rule "no gradient name or meta line is truncated at any
    width" was failing wider than its own guard could see.
 
    THE TYPE IS NOT THE FIX, though the 16px below is what exposed it. Rendered
@@ -1106,7 +1090,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    would have left the middle of every band truncating exactly as before.
 
    `white-space:normal` is the floor under both. A name wider than the whole
-   card cannot be fixed by any share of the line, and the founder's rule has no
+   card cannot be fixed by any share of the line, and that rule has no
    width exception — so the last resort is two lines, never three dots. */
 .lib-surface .lbry-card .lbry-card-foot{padding:16px 18px 18px;flex-wrap:wrap}
 .lib-surface .lbry-card .lbry-card-id{flex:1 1 128px}
@@ -1172,10 +1156,19 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .ic>span:not(.ic-pack){font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
 @media(max-width:640px){
   .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
-  .lib-surface .ic{gap:6px;min-height:72px;padding:12px 4px;border-radius:var(--radius)}
-  .lib-surface .ic>span:not(.ic-pack){-webkit-line-clamp:1;line-clamp:1}
-  .lib-surface .ig .ic-name{min-height:12.5px}
-  .lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:80.5px}
+  .lib-surface .ic{gap:6px;padding:12px 2px;border-radius:var(--radius)}
+  /* Names stay at the base 10px on up to two lines of 12.5px. */
+  .lib-surface .ig .ic-name{line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:25px;flex-shrink:0}
+  /* Every glyph takes 24px of layout: a 36px chip overflows 6px into the padding and the gap, as in a pack cell. */
+  .lib-surface .ig .ic .ig-chip{margin-block:-6px}
+  .lib-surface .ig .ig-skel .ig-skel-slot{height:24px}
+  .lib-surface .ig .ig-skel-labels{height:25px}
+  /* 1 border + 12 padding + 24 glyph + 6 gap + 25 name + 12 padding + 1 border. */
+  .lib-surface .ig .ic,.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:81px}
+}
+/* Below 360px a 4-up name box is 60px, too narrow for long names on two lines. */
+@media(max-width:359px){
+  .lib-surface .ig{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
 
@@ -1209,7 +1202,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 /* ══════════════════════════════════════════════════════════════════════════
    APP CONTROLS on every library surface
    ══════════════════════════════════════════════════════════════════════════
-   DECISION (director, 2026-09-23, from `UIL4B App.dc.html`): app controls —
+   DECISION (from the app design): app controls —
    toolbar buttons, fields, secondary buttons — are 10–12px rectangles over a
    hairline; 999px is kept for meters, for the marketing page, and here for
    the two things the app file itself draws as pills because they TOGGLE (the
@@ -1244,11 +1237,8 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    themes with no patch. Accent fills stay for the account and upgrade asks,
    so blue keeps meaning "the product is asking you for something".
 
-   Mobbin, for a detail dialog's actions: Bloom's image detail
-   (mobbin.com/screens/6e00a735-3e9f-4bdd-9d17-5dd1bba60907), Magnific's icon
-   detail (mobbin.com/screens/3d8c2256-598b-46f4-b79b-1831ba0a0ddb) and
-   Descript's prompt template (mobbin.com/screens/34c75374-2f13-4b12-b47a-80d2e9f156fa)
-   — one filled rectangle, hairline rectangles beside it, no pills. */
+   Detail dialogs commonly put their actions as one filled rectangle with
+   hairline rectangles beside it, no pills. */
 .lib-surface .lib-btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   min-height:40px;padding:0 16px;
@@ -1419,7 +1409,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
    library control is floored at in tool-shell.css. */
 @media(pointer:coarse){
   .lib-surface .btn{min-height:44px}
-  .lib-surface .lbry-search input{min-height:44px}
+  .lib-surface .lbry-search input{min-height:var(--search-h)}
 }
 
 
@@ -1473,23 +1463,23 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 
 
 /* ══ The colour libraries' pill toolbar (Palette + Gradient) ════════════════
-   UIL4B App.dc.html, palettes screen, lines 227–250. The Gradient Library is
-   not drawn in that file; it is the palettes screen's sibling, so it takes
+   The app design's palettes screen. The Gradient Library is
+   not drawn there; it is the palettes screen's sibling, so it takes
    the same bar. */
-/* ── ONE pill bar (line 227): a 999px track at a 5% ink wash
+/* ── ONE pill bar: a 999px track at a 5% ink wash
    over an 8% hairline, 10px in. Opaque rather than a wash because it is
    sticky and cards scroll under it. On a phone it carries a second row (the
    collection chips), so its radius steps down to stay a pill-ended box. */
 .lib-surface .lbry-toolbar:is(.pgl-toolbar,.grg-toolbar){
   padding:10px;border-radius:var(--radius-pill);
   background:color-mix(in srgb,var(--t0) 5%,var(--bg-0));
-  border:1px solid color-mix(in srgb,var(--t0) 8%,transparent);box-shadow:none;
+  border:1px solid var(--border);box-shadow:none;
 }
 @media(max-width:640px){.lib-surface .lbry-toolbar:is(.pgl-toolbar,.grg-toolbar){border-radius:26px}}
-/* The search pill (line 228): the card ground, 999px, 11px/18px. */
+/* The search pill (line 228): 18px inset. Its ground and hairline are the shared
+   search tokens, so it matches every other search bar. */
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-search{
-  min-height:44px;padding:0 18px;border-radius:var(--radius-pill);
-  background:var(--card);border:1px solid color-mix(in srgb,var(--t0) 10%,transparent);
+  padding:0 18px;
 }
 /* The rule above is (0,3,0) and comes after the generic focus ring near the top
    of this file, so it covered that ring's accent border and left only the wash.
@@ -1500,7 +1490,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
    segment a 9% ink wash in full ink — not the solid ink chip the icon filters
    use, which is a different control in the file. */
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters{
-  gap:2px;padding:3px;border-radius:var(--radius-pill);
+  gap:2px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-pill);
   background:color-mix(in srgb,var(--t0) 5%,transparent);
 }
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter{
@@ -1518,7 +1508,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig{
   min-height:44px;padding:0 16px;border-radius:var(--radius-pill);
   background:color-mix(in srgb,var(--t0) 5%,transparent);
-  border:1px solid color-mix(in srgb,var(--t0) 8%,transparent);
+  border:1px solid var(--border);
 }
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig-k{
   font-size:12.5px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t2);
@@ -1542,3 +1532,137 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   html:not([data-reduced-motion="false"]) .lib-surface.pgl-page .pgl-build-link:hover .pgl-build-icon{transform:none}
 }
 
+
+
+/* ── The end of the icon grid ────────────────────────────────────────────────
+   The closing band under the results: a display sentence, one dim line, one
+   ink pill with the arrow bubble and, signed out, a ghost pill. It mirrors the
+   homepage's closing band using the app's own tokens (ink is --t0, the page is
+   --bg-0, the dim line is --t1); the homepage's scoped tokens do not exist
+   here. No card, no box.
+
+   Signed out, two rows of blurred built-in icons continue the grid above it.
+   The rows are decoration: the band's words and buttons are always on screen,
+   and the "Log in to see more" chip is an echo for a fine pointer only.
+   Opacity steps fade the second row; there is no gradient mask. */
+.ig-end{margin-top:8px}
+
+.ig-end-tease{
+  --ig-end-cols:8;
+  position:relative;isolation:isolate;
+  display:grid;grid-template-columns:repeat(var(--ig-end-cols),minmax(0,1fr));gap:10px;
+  margin-top:4px;
+}
+.ig-end-cell{
+  position:relative;box-sizing:border-box;display:grid;place-items:start center;
+  min-height:var(--ig-end-cell-h,92px);padding-top:16px;color:var(--t0);
+}
+.ig-end-cell>svg{width:24px;height:24px;filter:blur(3px)}
+.ig-end-chip svg{flex:0 0 auto;width:12px;height:12px}
+.ig-end-cell[data-row="0"]>svg{opacity:.72}
+.ig-end-cell[data-row="1"]>svg{opacity:.42}
+@media(max-width:640px){
+  .ig-end-tease{gap:2px}
+  .ig-end-cell{min-height:var(--ig-end-cell-h,72px);padding-top:12px}
+}
+
+/* The chip. Absent on touch, where the band says the same thing in words. */
+.ig-end-chip{display:none}
+@media (hover:hover) and (pointer:fine){
+  .ig-end-cell{cursor:pointer}
+  .ig-end-chip{
+    position:absolute;left:50%;top:28px;z-index:1;transform:translate(-50%,-50%);
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;border-radius:var(--radius-pill);
+    background:var(--t0);color:var(--bg-0);
+    font:500 12px/1 var(--font);white-space:nowrap;
+    opacity:0;pointer-events:none;
+    transition:opacity 150ms cubic-bezier(.23,1,.32,1);
+  }
+  .ig-end-cell:hover .ig-end-chip{opacity:1}
+  /* Edge columns keep the chip inside the grid. */
+  .ig-end-cell[data-edge="first"] .ig-end-chip{left:0;transform:translateY(-50%)}
+  .ig-end-cell[data-edge="last"] .ig-end-chip{left:auto;right:0;transform:translateY(-50%)}
+}
+/* From 1200px the page gutter is wider than the chip's overhang, so the edge
+   chips can centre on their cell like the others. */
+@media (hover:hover) and (pointer:fine) and (min-width:1200px){
+  .ig-end-cell[data-edge] .ig-end-chip{left:50%;right:auto;transform:translate(-50%,-50%)}
+}
+
+.ig-end-copy{padding:56px 0 48px;text-align:center}
+.ig-end .ig-end-h{
+  margin:0 auto;max-width:min(22ch,100%);
+  font-family:var(--display);font-size:28px;font-weight:560;line-height:1.05;letter-spacing:-.035em;
+  color:var(--t0);text-wrap:balance;
+}
+.ig-end .ig-end-p{
+  margin:12px auto 0;max-width:min(52ch,100%);
+  font-size:15px;line-height:1.6;color:var(--t1);text-wrap:balance;
+}
+.ig-end-cta{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px}
+
+.ig-end-pill,.ig-end-ghost{
+  box-sizing:border-box;display:inline-flex;align-items:center;min-height:48px;
+  border-radius:var(--radius-pill);
+  font-family:var(--font);font-size:15px;line-height:1.2;
+  white-space:nowrap;text-decoration:none;cursor:pointer;
+}
+.ig-end-pill{
+  gap:11px;padding:10px 10px 10px 22px;border:0;
+  background:var(--t0);color:var(--bg-0);font-weight:540;
+  transition:background-color var(--dur-1) ease,transform 140ms cubic-bezier(.23,1,.32,1);
+}
+.ig-end-pill-icon{
+  flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;
+  border-radius:var(--radius-pill);
+  background:color-mix(in srgb,currentColor 14%,transparent);
+  transition:transform var(--dur-1) cubic-bezier(.23,1,.32,1);
+}
+.ig-end-pill:active{transform:scale(.97)}
+.ig-end-ghost{
+  padding:13px 22px;border:1px solid var(--border);
+  background:transparent;color:var(--t0);font-weight:500;
+  transition:background-color var(--dur-1) ease,border-color var(--dur-1) ease;
+}
+@media (hover:hover) and (pointer:fine){
+  .ig-end-pill:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
+  .ig-end-pill:hover .ig-end-pill-icon{transform:rotate(45deg)}
+  .ig-end-ghost:hover{
+    background:color-mix(in srgb,var(--t0) 5%,transparent);
+    border-color:color-mix(in srgb,var(--t0) 24%,transparent);
+    color:var(--t0);text-decoration:none;
+  }
+}
+.ig-end-pill:focus-visible,.ig-end-ghost:focus-visible{outline:2px solid var(--link,var(--accent-text));outline-offset:3px}
+
+@media(min-width:641px){
+  .ig-end .ig-end-p{font-size:16px}
+  .ig-end-cta{margin-top:28px}
+}
+@media(min-width:761px){
+  .ig-end-copy{padding:64px 0 56px}
+  .ig-end .ig-end-h{font-size:32px}
+}
+@media(min-width:1200px){
+  .ig-end-copy{padding:72px 0 64px}
+  .ig-end .ig-end-h{font-size:44px}
+}
+@media (forced-colors:active){
+  .ig-end-pill{border:1px solid ButtonText}
+}
+
+/* Reduced motion: the in-app choice wins in both directions, then the OS
+   setting. The chip appears and goes with no fade; the arrow does not rotate
+   and the press does not scale. */
+html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-pill-icon,.ig-end-ghost,.ig-end-chip){transition:none}
+html[data-reduced-motion="true"] .ig-end-pill:is(:hover,:active){transform:none}
+html[data-reduced-motion="true"] .ig-end-pill:hover .ig-end-pill-icon{transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-pill-icon,.ig-end-ghost,.ig-end-chip){transition:none}
+  html:not([data-reduced-motion="false"]) .ig-end-pill:is(:hover,:active){transform:none}
+  html:not([data-reduced-motion="false"]) .ig-end-pill:hover .ig-end-pill-icon{transform:none}
+}
+
+/* Dark --inp matches the toolbar card, so library and font-browser search fields step up to --bg-3 to stay visible against it. */
+[data-theme="dark"] :is(.lib-surface,.fbd-overlay) .lbry-search{background:var(--bg-3)}

@@ -115,7 +115,18 @@ function VercelSection() {
   )
 }
 
-/* Three of the eleven clauses have no translation key — they were written
+/* The font tools and the kit export request font files and licences from
+   Google Fonts and jsDelivr in the visitor's browser, so those hosts see the
+   request like any web request. */
+function FontHostsSection() {
+  return (
+    <p className="lgl-p">
+      The font tools and kit export load fonts from Google Fonts and jsDelivr, which receive your IP address and browser details when they do.
+    </p>
+  )
+}
+
+/* Four of the twelve clauses have no translation key — they were written
    directly into the page — so they carry a literal `heading` and a `render`
    instead of a key. They stay in the document order they were in: between
    clause 3 (how we use your information) and clause 4 (storage and security),
@@ -127,6 +138,7 @@ const SECTIONS = [
   { id: 'privacy-storage', heading: 'What we store on your device', render: StorageSection },
   { id: 'privacy-aggregate', heading: 'Aggregate usage counts', render: AggregateSection },
   { id: 'privacy-vercel', heading: 'Vercel Web Analytics', render: VercelSection },
+  { id: 'privacy-fonts', heading: 'Fonts from Google Fonts and jsDelivr', render: FontHostsSection },
   { id: 'privacy-s4', title: 'privacy.s4Title', intro: 'privacy.s4Text', items: 'privacy.s4Items' },
   { id: 'privacy-s5', title: 'privacy.s5Title', intro: 'privacy.s5Intro', items: 'privacy.s5Items' },
   { id: 'privacy-s6', title: 'privacy.s6Title', items: 'privacy.s6Items' },

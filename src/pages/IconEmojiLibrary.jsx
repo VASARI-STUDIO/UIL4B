@@ -131,7 +131,7 @@ export default function IconEmojiLibrary({ onCopy }) {
           Library"), which tests/user-sim/15-discover-library-parity.spec.js
           already pins for them. "Icons for every interface." was a sentence, so
           it sat outside that vocabulary AND disagreed with the <title> the same
-          route ships ("UI L4B | Icon Library"). The two tabs still differ from
+          route ships (which names the Icon Library). The two tabs still differ from
           each other, which is the constraint that matters: /create/icons and
           /create/emoji are two indexable URLs and must not share an h1. */}
       <DiscoverGalleryHero

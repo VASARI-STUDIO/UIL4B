@@ -109,7 +109,7 @@ const openFlagGrid = async (browser, scheme, width) => {
   return { ctx, page }
 }
 
-// A chip whose glyph has arrived: it has left the pending skeleton (--wait).
+// A chip whose glyph has arrived: it has left the pending, empty slot (--wait).
 const LOADED_CHIP = '.ig .ic .ig-chip:not(.ig-chip--wait):has(img)'
 
 const chipPaint = (page) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map((c) => {
@@ -923,6 +923,8 @@ for (const width of [1440, 390]) {
     watch(page, `someone browsing the Flags group at ${width}px`)
     await page.setViewportSize({ width, height: width === 1440 ? 500 : 900 })
     const packs = ['circle-flags', 'flag', 'flagpack', 'cif']
+    // The grid labels a cell with the set's real name, not its Iconify prefix.
+    const packLabels = { 'circle-flags': 'Circle Flags', flag: 'Flag Icons', flagpack: 'Flagpack', cif: 'Currency Flags' }
     const collections = new Map(packs.map(pack => [pack,
       JSON.parse(readFileSync(new URL(`./fixtures/iconify/collection/${pack}.json`, import.meta.url), 'utf8')),
     ]))
@@ -966,7 +968,7 @@ for (const width of [1440, 390]) {
       await expect(cells).toHaveCount(120)
       const firstCell = cells.first()
       await expect(firstCell.locator('.ic-pack')).toBeVisible()
-      await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('circle-flags'))
+      await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('Circle Flags'))
       const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
       // Focus retains the original cell while rows above the viewport are windowed.
       await firstCell.focus()
@@ -979,7 +981,7 @@ for (const width of [1440, 390]) {
     }
     await expect(cells).toHaveCount(expected.length)
     await expect(cells.locator('.ic-name')).toHaveText(expected.map(icon => icon.name))
-    await expect.poll(() => cells.locator('.ic-pack').allTextContents()).toEqual(expected.map(icon => icon.pack))
+    await expect.poll(() => cells.locator('.ic-pack').allTextContents()).toEqual(expected.map(icon => packLabels[icon.pack]))
     if (width === 1440) {
       await choosePack(page, 'circle-flags')
       await expect(cells).toHaveCount(120)

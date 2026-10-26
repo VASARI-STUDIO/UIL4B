@@ -68,7 +68,8 @@ test.describe('Tint workflows', () => {
     await page.getByRole('radio', { name: 'Show scale 1' }).click()
     await expect(page.getByRole('radio', { name: 'Show scale 1' })).toHaveAttribute('aria-checked', 'true')
 
-    await page.getByRole('button', { name: 'Copy variables' }).click()
+    await page.locator('.tl-export-btn').click()
+    await page.getByRole('menuitem', { name: 'Copy CSS' }).click()
     const text = await page.evaluate(() => navigator.clipboard.readText())
     expect(text).toContain('--tint-1-50:')
     expect(text).toContain('--tint-2-950:')
@@ -77,7 +78,8 @@ test.describe('Tint workflows', () => {
     // One scale's own CSS, unnumbered when it is the only one.
     await page.getByRole('button', { name: 'Remove base colour 2' }).click()
     await expect(page.locator('.tt-src')).toHaveCount(1)
-    await page.getByRole('button', { name: 'Copy variables' }).click()
+    await page.locator('.tl-export-btn').click()
+    await page.getByRole('menuitem', { name: 'Copy CSS' }).click()
     const single = await page.evaluate(() => navigator.clipboard.readText())
     expect(single).toContain('--tint-50:')
     expect(single).not.toContain('--tint-1-')

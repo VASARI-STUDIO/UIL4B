@@ -472,6 +472,7 @@ export default function AnimationBuilder({ toast }) {
           <input id="fc-an-width" className="fc-field fc-field--num" type="number" min={16} max={MAX_ANIMATION_SIDE} value={effWidth} disabled={busy}
             onChange={e => setWidth(e.target.value === '' ? '' : Math.max(0, Math.min(MAX_ANIMATION_SIDE, Math.round(+e.target.value))))}
             onBlur={() => setWidth(width === '' || !(Number(width) > 0) ? lastWidth.current : Math.max(16, Number(width)))} />
+          <p className="fc-note">Up to {MAX_ANIMATION_SIDE} px on the longer side</p>
           <div className="fc-outsize">
             <span className="fc-outsize-k">Output</span>
             <span className="fc-outsize-v"><strong>{size.w}×{size.h}</strong> px — the first frame sets the shape</span>

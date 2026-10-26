@@ -4,7 +4,7 @@ import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolTray, ToolIcon,
+  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
 import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
@@ -919,6 +919,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const ctxMenuRef = useRef(null)
   const ctxTriggerRef = useRef(null)
+  const moreHiddenAtPressRef = useRef(false) // a non-mouse press landed while the More button was still faded out
   useLayoutEffect(() => {
     const el = ctxMenuRef.current
     if (!ctxMenu || !el) return
@@ -978,6 +979,31 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Combined community-gallery popup (Discover hand-in): one large popup with
   // Community / Variations / Brands tabs, applying a pick straight onto the board.
   const [galleryTab, setGalleryTab] = useState('community') // community | variations | brands
+  // The toolbar button that opened the gallery, or null when it was opened from
+  // the Extra tools menu, which has no button on screen to sit under.
+  const [galleryAnchor, setGalleryAnchor] = useState(null)
+  const galleryRef = useRef(null)
+  // Above phone width the gallery opens under the button that opened it, kept
+  // 16px inside the viewport; without one on screen it keeps its docked place.
+  useLayoutEffect(() => {
+    const wrap = galleryRef.current
+    if (!galleryOpen || !wrap) return undefined
+    const place = () => {
+      const btn = galleryAnchor?.isConnected && galleryAnchor.getClientRects().length ? galleryAnchor : null
+      if (!btn || window.innerWidth <= 640) {
+        wrap.style.top = ''; wrap.style.left = ''; wrap.style.right = ''
+        return
+      }
+      const r = btn.getBoundingClientRect()
+      const max = window.innerWidth - wrap.offsetWidth - 16
+      wrap.style.top = `${Math.round(r.bottom + 8)}px`
+      wrap.style.right = 'auto'
+      wrap.style.left = `${Math.round(Math.max(16, Math.min(r.left, max)))}px`
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [galleryOpen, galleryAnchor])
   // Which community palette is currently "imported" (ticked). Clicking that same
   // card again reverts to the pre-import system; any edit clears the tick because
   // the palette is now an edited derivative, not the untouched import.
@@ -1274,8 +1300,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setToolsIdx(null) }
     const onDown = (e) => {
       // The image dialog is a modal of its own (it closes on its scrim), so a
-      // drag inside it is not an outside press.
-      if (!e.target.closest('.plb-menuwrap, .plb-modal')) closeAllMenus()
+      // drag inside it is not an outside press. Nor is a press in the sign-in
+      // dialog a gallery like opened: the gallery stays put behind it.
+      if (!e.target.closest('.plb-menuwrap, .plb-modal, [aria-labelledby="ui-login-title"]')) closeAllMenus()
       if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) closePops()
     }
     const onEsc = (e) => {
@@ -1960,6 +1987,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
   }
 
+  // The Contrast Checker reads the project's palette. The board is written
+  // first so an edit still inside the 200ms save delay above goes with it.
+  const openInContrast = () => {
+    closeAllMenus()
+    setPalette({
+      ...persistedPalette(colors, adjust),
+      base: seed,
+      harmony,
+      extraColors: adjusted.slice(ROLES.length),
+      locked: [...locked],
+      activeIdx: 0,
+    })
+    setLiveMsg('Opening your palette in the Contrast Checker')
+    navigate('/create/contrast')
+  }
+
   const openInTint = (hex) => {
     if (!setTintDraft([hex])) { toast?.('That colour couldn’t be handed over — try another'); return }
     setTintsIdx(null)
@@ -2218,7 +2261,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     }))
 
-  const openGallery = (tab) => { closeAllMenus(); setGalleryTab(tab); setGalleryOpen(true) }
+  const openGallery = (tab, anchor = null) => { closeAllMenus(); setGalleryTab(tab); setGalleryAnchor(anchor); setGalleryOpen(true) }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
   const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, mark: h.free || isPro ? '' : 'Pro' }))
@@ -2262,17 +2305,17 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     </span>
   )
   const undoRedo = (
-    <ToolTray label="History">
+    <span className="plb-history" role="group" aria-label="History">
       <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
       <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />
-    </ToolTray>
+    </span>
   )
 
   // Secondary actions move into Extra tools when the toolbar runs out of room.
   const toolbarItems = [
     {
       id: 'back', priority: 2,
-      render: () => <ToolBack to="/projects" label="Back to projects" />,
+      render: () => <ToolBack to="/projects" label="Back to projects" history={false} />,
       menu: { label: 'Back to projects', icon: 'arrow-left', onSelect: () => navigate('/projects') },
     },
     { id: 'seed', priority: 3, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
@@ -2289,13 +2332,29 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       id: 'suggest', priority: 1,
       render: () => (
         <span className="plb-menuwrap">
-          <ToolButton icon="magic-wand" collapse onClick={() => (galleryOpen && galleryTab === 'variations' ? closeAllMenus() : openGallery('variations'))} aria-label="Suggest a palette" title="Suggest a palette" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'variations'}>Suggest</ToolButton>
+          <ToolButton icon="magic-wand" collapse onClick={(e) => (galleryOpen && galleryTab === 'variations' ? closeAllMenus() : openGallery('variations', e.currentTarget))} aria-label="Suggest a palette" title="Suggest a palette" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'variations'}>Suggest</ToolButton>
         </span>
       ),
       menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
     },
+    {
+      id: 'explore', priority: 2,
+      render: () => (
+        <span className="plb-menuwrap">
+          <ToolButton icon="swatches" collapse onClick={(e) => (galleryOpen && galleryTab === 'community' ? closeAllMenus() : openGallery('community', e.currentTarget))} aria-label="Explore palettes" title="Explore palettes" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'community'}>Explore</ToolButton>
+        </span>
+      ),
+      menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') },
+    },
     { id: 'system', priority: 0, align: 'end', render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
     { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
+    {
+      id: 'preview', priority: 2,
+      render: () => (
+        <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
+      ),
+      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) } },
+    },
     { id: 'div', priority: 0, divider: true },
     { id: 'undo', priority: 5, render: () => undoRedo, menu: () => <div className="plb-menu-tray">{undoRedo}</div> },
     {
@@ -2304,9 +2363,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       menu: { label: 'Randomise', icon: 'shuffle', hint: 'SPACE', onSelect: randomize },
     },
     // Overflow only — never on the row.
-    { id: 'explore', inline: false, menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') } },
-    { id: 'preview', inline: false, menu: { label: 'Preview on a UI', icon: 'image', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) } } },
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
+    { id: 'contrast', inline: false, menu: { label: 'Check in Contrast Checker', icon: 'check-circle', onSelect: openInContrast } },
     { id: 'history', inline: false, menu: { label: 'History', icon: 'arrow-counter-clockwise', onSelect: () => { closeAllMenus(); setHistOpen(true) } } },
     { id: 'reset', inline: false, menu: { label: 'Reset palette', icon: 'arrow-clockwise', onSelect: resetPalette } },
   ]
@@ -2509,7 +2567,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     aria-label={`More actions for ${role}`}
                     aria-haspopup="menu"
                     aria-expanded={actionsOpen}
+                    // a tap on a control that is still faded out must not act
+                    onPointerDown={(e) => { moreHiddenAtPressRef.current = e.pointerType !== 'mouse' && parseFloat(getComputedStyle(e.currentTarget).opacity) < 0.5 }}
+                    onPointerCancel={() => { moreHiddenAtPressRef.current = false }}
                     onClick={(e) => {
+                      if (e.detail !== 0 && moreHiddenAtPressRef.current) { moreHiddenAtPressRef.current = false; return }
+                      moreHiddenAtPressRef.current = false
                       const r = e.currentTarget.getBoundingClientRect()
                       ctxTriggerRef.current = e.currentTarget
                       setTintsIdx(null); setPickerIdx(null)
@@ -2714,12 +2777,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       )}
 
       {/* ── The floating panels: Suggest / Explore, History, Save or share ──
-          Fixed under the toolbar (a bottom sheet on a phone) rather than
-          anchored to a button, because on a phone the button that opened one
-          may be in the Extra tools sheet. `.plb-menuwrap` keeps the page's one
-          dismiss layer from closing a panel on a press inside it. */}
+          Fixed under the toolbar (a bottom sheet on a phone). The gallery is
+          moved under the button that opened it when there is one on screen;
+          opened from the Extra tools sheet it stays docked. `.plb-menuwrap`
+          keeps the page's one dismiss layer from closing a panel on a press
+          inside it. */}
       {galleryOpen && (
-        <div className="plb-menuwrap plb-float">
+        <div className="plb-menuwrap plb-float" ref={galleryRef}>
           <div className="plb-menu plb-galpopup" role="dialog" aria-label="Colour gallery" data-lenis-prevent>
             <div className="plb-galpopup-head">
               <div className="plb-menu-title">{galleryTab === 'community' ? 'Community gallery' : galleryTab === 'variations' ? 'Suggestions' : 'Brand systems'}</div>

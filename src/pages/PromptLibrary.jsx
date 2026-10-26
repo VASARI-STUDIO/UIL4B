@@ -115,7 +115,9 @@ export default function PromptLibrary({ onCopy, toast }) {
   // Save is a toggle, the same on the card and in the modal. Saving adds the
   // saved id and a copy in My Prompts; saving again removes both and offers
   // Undo. The store is read fresh inside the toggle (utils/promptStore).
-  const toggleCommunitySave = useCallback((cp) => {
+  // Signed out, a press asks to sign in first and saves once it succeeds.
+  const toggleCommunitySave = useCallback(async (cp) => {
+    if (!await requireLogin('save prompts', { free: true, signup: true })) return
     const result = toggleStoredCommunitySave(cp)
     setPrompts(result.prompts)
     setSavedIds(result.savedIds)
@@ -135,7 +137,7 @@ export default function PromptLibrary({ onCopy, toast }) {
         },
       },
     )
-  }, [toast])
+  }, [requireLogin, toast])
 
   const closeModal = useCallback(() => setModalPrompt(null), [])
 

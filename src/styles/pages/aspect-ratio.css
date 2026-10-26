@@ -263,6 +263,8 @@
   font-variant-numeric: tabular-nums;
 }
 .arc-page input[type="number"]:focus { border-color: var(--tl-line-on); }
+/* The tool's outline is the one focus ring; drop the global input halo under it. */
+.arc-page input[type="number"]:focus-visible { box-shadow: none; }
 .arc-page .rc-ratio-row { display: flex; align-items: center; gap: 8px; }
 .arc-page .rc-ratio-row input { flex: 0 1 96px; }
 .arc-page .rc-colon { color: var(--tl-faint); font-family: var(--mono); font-size: 13px; }

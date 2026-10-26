@@ -13,7 +13,7 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
   await expect(google).toBeFocused()
   await expect(dialog.getByLabel('Email')).toBeVisible()
   await expect(dialog.getByLabel('Password')).toBeVisible()
-  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden')
+  await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe('hidden')
 
   const close = dialog.getByRole('button', { name: 'Close' })
   await close.focus()
@@ -24,7 +24,7 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
 
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
-  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('')
+  await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe('')
 })
 
 test('dismissing an in-place auth prompt restores its persistent opener', async ({ page }) => {

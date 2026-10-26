@@ -1,10 +1,7 @@
-// The defect sweep — the leftovers of the two August 2026 QA audits.
+// The defect sweep — layout checks from two QA audits.
 //
 // The responsive audit (M1, M6, N1–N8) and the mobile audit (S3, S4, S5, S10,
-// and S16 above 768px) — both deleted 2026-09-05; what each number was and what
-// holds it now is in docs/qa/defect-register-2026-08.md,
-// minus everything PR #263 and PR #271 already landed and minus every
-// homepage-scoped finding (the founder is reworking that surface separately).
+// and S16 above 768px). Homepage-scoped findings are not covered here.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY EVERY ASSERTION HERE IS RENDERED GEOMETRY
@@ -29,12 +26,12 @@ import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
-// EVERY CREATE PATH BELOW IS A `/create/*` URL, and that is not cosmetic. PR
-// #266 moved the Create tools (/emoji → /create/emoji, /color/palette →
+// EVERY CREATE PATH BELOW IS A `/create/*` URL, and that is not cosmetic. The
+// Create tools moved (/emoji → /create/emoji, /color/palette →
 // /create/palette, and 22 more — src/data/legacyRoutes.js has the table) and
-// gave every retired URL a 301. Playwright FOLLOWS a redirect, so this file went
-// on passing while exercising the redirect rather than the route, and nothing in
-// the run said so. A route that has to be redirected to before it can be
+// every retired URL gets a 301. Playwright FOLLOWS a redirect, so a test on an
+// old URL would pass while exercising the redirect rather than the route, and
+// nothing in the run would say so. A route that has to be redirected to before it can be
 // measured is not the route the test claims to cover, and the day one of those
 // 301s is dropped the test would start measuring a 404 shell instead.
 
@@ -108,11 +105,10 @@ async function open(browser, width, height, path, waitFor, { touch = true, as = 
   // is unchanged and browses signed out, which is what most of this file is
   // about.
   if (as) await signIn(page, as)
-  // One Tap used to be routed here, per page. It is stubbed for the whole suite
-  // in base.js now — on the context, so it covers this hand-built one too — and
-  // this copy is gone rather than racing it: a page route takes precedence over
-  // a context route, so leaving it would have made the per-spec stub the silent
-  // winner. Same reasoning, one place; see base.js.
+  // One Tap is not stubbed here. It is stubbed for the whole suite in base.js,
+  // on the context, so it covers this hand-built one too. A per-page stub would
+  // race it: a page route takes precedence over a context route, so the
+  // per-spec stub would be the silent winner. One place; see base.js.
   await go(page, path)
   await page.waitForLoadState('load').catch(() => {})
   if (waitFor) await page.locator(waitFor).first().waitFor({ state: 'attached', timeout: 15000 })
@@ -127,7 +123,6 @@ async function open(browser, width, height, path, waitFor, { touch = true, as = 
 // ─────────────────────────────────────────────────────────────────────────────
 // /info accordion regions have an accessible name
 // ─────────────────────────────────────────────────────────────────────────────
-// Found while landing S9 in PR #271 and deliberately left for its own commit.
 // Each panel's `aria-labelledby` named the panel's OWN id, so the region was
 // labelled by itself and computed no accessible name — a screen-reader user
 // opening one heard "region" and nothing that said which of the twelve it was.
@@ -169,22 +164,22 @@ test('/info · every accordion panel is a region with its section name', async (
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// S16 above 768px · the half of it PR #271 scoped out
+// S16 above 768px · the half the phone test does not cover
 // ─────────────────────────────────────────────────────────────────────────────
 // 24-mobile-overhaul.spec.js pins the phone half of S16 (≤768px). This is the
-// rest: 3 to 5 of the 9 specimens were still cut from 769px upward, showing
-// 31–59% of the string, on the reasoning that those viewports are wider. Being
-// wider was not enough.
+// rest: from 769px upward, being wider than a phone is not enough on its
+// own, because specimens can still be cut (3 to 5 of the 9, showing 31–59% of
+// the string).
 //
-// Measured on BOTH axes for the same reason the phone test does: the old fault
-// clipped horizontally, a line clamp would clip vertically, and a width-only
+// Measured on BOTH axes for the same reason the phone test does: the fault
+// clips horizontally, a line clamp would clip vertically, and a width-only
 // check calls the second one clean. The assertion is the fraction of the string
 // that renders.
 //
 // 1024x768 is in the list and is the worst case — worse than 769 — because the
-// two-column grid arrives at 981px and takes 340px back. That grid belongs to
-// PR #263; this test asserts the specimen is whole whatever width the grid ends
-// up giving it, so it should hold across that merge rather than fight it.
+// two-column grid arrives at 981px and takes 340px back. This test asserts the
+// specimen is whole whatever width the grid gives it, so it does not depend on
+// the grid's column widths.
 
 const TSC_WIDE = [[769, 900], [800, 600], [834, 1194], [844, 390], [900, 900], [980, 900], [1024, 768], [1180, 820], [1280, 900], [1440, 900]]
 
@@ -216,11 +211,10 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // ─────────────────────────────────────────────────────────────────────────────
 // S3 / S4 · chip rows that were scrollers with no affordance
 // ─────────────────────────────────────────────────────────────────────────────
-// Fifth, sixth and — via the shared Library tray PR #254 introduced — seventh
-// instances of one shape in this stylesheet: a row of options turned into
+// One shape recurs across this stylesheet: a row of options turned into
 // `overflow-x:auto` with the scrollbar suppressed, which under touch emulation
-// paints nothing at all to say it scrolls. S1, S2 and S8 were the same and were
-// fixed by wrapping in PR #271.
+// paints nothing at all to say it scrolls. S1, S2 and S8 are the same shape and
+// are fixed by wrapping.
 //
 // Counting chips in the DOM proves nothing — they were all present the whole
 // time. What is asserted is how many sit inside their own container's box.
@@ -233,15 +227,12 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS TEST CARRIES A SELECTOR PER SURFACE
 // ─────────────────────────────────────────────────────────────────────────────
-// It used to hard-code `.pl-chips` / `.pl-chip` for all four routes, because all
-// four genuinely shared that markup when it was written. PR #254 then rebuilt
-// /discover/gradients on the shared Library components while this branch waited
-// to merge, and that surface now renders `.lbry-filters` / `.lbry-filter` and no
-// `.pl-chips` at all. The old selector stopped matching anything.
+// A single hard-coded `.pl-chips` / `.pl-chip` pair would match nothing on a
+// surface built on the shared Library components: /discover/gradients renders
+// `.lbry-filters` / `.lbry-filter` and no `.pl-chips` at all.
 //
 // Two idioms are live, so the table names each surface's own container and item
-// classes rather than assuming one shape for all of them. That is the part that
-// went stale, so it is the part the table has to record.
+// classes rather than assuming one shape for all of them.
 //
 // THE ROW AND ITEM COUNTS ARE BOTH ASSERTED, and that is deliberate:
 //
@@ -279,18 +270,17 @@ const TRAY_WIDTHS = [320, 390, 1180]
 const COLLAPSED_WIDTHS = [768, 834]
 
 // The original `.pl-chips` idiom — one wrapping row of outlined pills — no
-// longer has a browse consumer. /create/emoji and /create/icons left it for the
-// shared Library tray, and #323 took the Prompt Library, the last one, with
-// them. The measurement did not go away: every surface that used to be here is
-// in FILTER_TRAYS below, asked the same question through the shared selectors.
+// longer has a browse consumer. /create/emoji, /create/icons and the Prompt
+// Library all use the shared Library tray. Every browse surface is in
+// FILTER_TRAYS below, asked the same question through the shared selectors.
 //
 // `.pl-chip` itself is still live OUTSIDE this suite's scope (BoxShadow presets,
 // Projects folders, the AI prompt and alt-text pickers, ColorStudio's
 // named-library switch). None of them is a browse filter row, which is what
 // this block measures, so none of them belongs in it.
 
-// The shared Library segmented tray (PR #254), which replaced the chip row on
-// the browse surfaces. /discover/gradients mounts TWO trays — 8 mood options and
+// The shared Library segmented tray, which is the filter row on the browse
+// surfaces. /discover/gradients mounts TWO trays — 8 mood options and
 // 4 type options — so it is the surface the single-row shape could not describe.
 // /discover/palettes is here for the reason the list above is
 // wider than the audit: the tray is shared CSS, and a fix measured on one
@@ -299,15 +289,15 @@ const COLLAPSED_WIDTHS = [768, 834]
 // [path, box, item, expandedRows, expandedChips, onlyWidths, collapsedTriggers]
 //
 // The last field exists because a surface's EXPANDED tray count and its
-// COLLAPSED trigger count stopped being the same number on 2026-09-07. It
-// defaults to `expandedRows`, so every row that was correct before still is.
+// COLLAPSED trigger count are not always the same number. It defaults to
+// `expandedRows`.
 const FILTER_TRAYS = [
-  // ONE expanded tray since 2026-09-16 — Type, 4 chips. Mood (8 options) is a
+  // ONE expanded tray — Type, 4 chips. Mood (8 options) is a
   // labelled menu at every width, as on palettes below and for the same
   // measured reason: beside the type tray it wrapped the sticky toolbar to
-  // two rows (122px) at 1024. Two triggers in the collapsed band, as before.
+  // two rows (122px) at 1024. Two triggers in the collapsed band.
   ['/discover/gradients', '.lbry-filters', '.lbry-filter', 1, 4, null, 2],
-  // TWO GROUPS since 2026-09-07, with two different shapes on purpose.
+  // TWO GROUPS, with two different shapes on purpose.
   // Collection (All palettes / Curated / Brand) is the page's primary split and
   // stays a visible segmented row — that is the one expanded tray with 3 chips
   // measured here. Mood is a nine-value facet and is a labelled menu at EVERY
@@ -315,37 +305,34 @@ const FILTER_TRAYS = [
   // sticky toolbar to 314px at 320px wide and wrapped it to two rows at 1280.
   // The two together are the two triggers the collapsed test below counts.
   ['/discover/palettes', '.lbry-filters', '.lbry-filter', 1, 3, null, 2],
-  // The two Create libraries the founder asked to match the galleries. Emoji
+  // The two Create libraries, which match the galleries. Emoji
   // carries the widest tray in the app — 12 categories — which is what makes it
   // the surface any tray regression shows up on first.
   // EMOJI IS MEASURED NARROW ONLY, and that is a statement about the fix rather
   // than an exemption. Its tray wants 1478px — twelve categories each carrying a
   // glyph, a label and a count — so it needs 1928px of toolbar row before it
   // fits beside a capped search field and the skin-tone control. No desktop
-  // anyone has offers that, and until 2026-09-04 the tray simply wrapped and
-  // took the toolbar to 213px against 68px on the icon tab: a 145px jump on a
-  // tab switch, on one page, which is what the founder reported. It now
-  // collapses to its trigger wherever it does not fit, so at 1180px there is no
+  // anyone has offers that, so the tray collapses to its trigger wherever it
+  // does not fit. Wrapping would take the toolbar to 213px against 68px on the
+  // icon tab: a 145px jump on a tab switch, on one page. At 1180px there is no
   // expanded tray to measure and the surface is asserted in the collapsed test
   // below instead.
   //
-  // AND SINCE 2026-09-13 THERE IS NO EXPANDED TRAY AT ANY WIDTH, which is why
-  // this row now names zero rows, zero chips and no widths at all. "Below 641
-  // it is a full-width column stack and the chips are all there" is what this
-  // row used to check at 320 and 390, and that turned out to be the defect
-  // rather than the baseline: twelve chips wrapped to SEVEN rows at 320 and six
-  // at 390, took the toolbar to 414px — 49% of an 844px phone — and put ZERO
-  // emoji on the first screen at 320, 360, 390 and 430. An emoji library
-  // showing no emoji.
+  // THERE IS NO EXPANDED TRAY AT ANY WIDTH, which is why this row names zero
+  // rows, zero chips and no widths at all. Showing the chips as a full-width
+  // column stack below 641 would be the defect rather than the baseline:
+  // twelve chips wrap to SEVEN rows at 320 and six at 390, take the toolbar to
+  // 414px — 49% of an 844px phone — and put ZERO emoji on the first screen at
+  // 320, 360, 390 and 430. An emoji library showing no emoji.
   //
-  // So this surface took the same decision `/discover/palettes` took for mood
+  // So this surface makes the same decision as `/discover/palettes` mood
   // nine rows above, for the same reason and with a larger facet: twelve values
   // is a labelled menu at EVERY width. It contributes a trigger and no chip
   // row, so the expanded measurement has nothing to measure and the collapsed
   // test below owns the surface — `collapsedTriggers` is stated explicitly
   // because it can no longer default to the (now zero) group count.
   //
-  // Coverage did not shrink: 87-tools-breakpoints asserts this trigger, its
+  // Coverage: 87-tools-breakpoints asserts this trigger, its
   // `aria-haspopup`/`aria-expanded` contract and the absence of the tray at all
   // ten breakpoints in both themes, and hit-tests every option in the open menu.
   ['/create/emoji', '.lbry-filters', '.lbry-filter', 0, 0, [], 1],
@@ -354,7 +341,7 @@ const FILTER_TRAYS = [
   // groups step past the trigger form into the one Filters control — the
   // no-wrap S4 test above asserts that form.
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7, null, 0],
-  // #323 moved the Prompt Library onto the shared toolbar. It mounts TWO trays
+  // The Prompt Library uses the shared toolbar. It mounts TWO trays
   // — sort (2 options) and category (All + 5) — which is why the totals column
   // exists rather than a per-row count.
   ['/discover/prompts', '.lbry-filters', '.lbry-filter', 2, 8],
@@ -434,11 +421,11 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
   expect(damage, damage.join('\n')).toEqual([])
 })
 
-// THE TAB SWITCH THE FOUNDER REPORTED, measured as one number.
+// THE TAB SWITCH, measured as one number.
 //
 // /create/icons and /create/emoji mount the same component and toggle `hidden`,
-// so a difference in toolbar height is one page moving under the cursor. It was
-// 68px against 213px at 1440 on 2026-09-04. The tray collapsing when it does not
+// so a difference in toolbar height is one page moving under the cursor (68px
+// against 213px at 1440 when the tray wraps). The tray collapsing when it does not
 // fit is what removes the difference, so this asserts the OUTCOME (the two
 // toolbars agree) rather than the mechanism, and separately that the collapse
 // did not simply throw the options away.
@@ -446,8 +433,8 @@ test('S4 · the Icon and Emoji toolbars are the same height on a desktop, and th
   budget(2)
   const heights = {}
   for (const path of ['/create/icons', '/create/emoji']) {
-    // A FINE POINTER, deliberately, unlike the rest of this block. The founder
-    // reported this "on a standard desktop", and under coarse-pointer metrics
+    // A FINE POINTER, unlike the rest of this block. This is the standard
+    // desktop case, and under coarse-pointer metrics
     // the two tabs legitimately differ by 4px: @media(pointer:coarse) floors
     // .lbry-filter at the WCAG 44px target, which makes the icon tray 50px tall
     // against the 46px collapsed trigger on the emoji side. That is the touch
@@ -951,23 +938,21 @@ test('N1 · no font family name is truncated down to the 320px floor', async ({ 
 // while quietly making the grid 262% taller, and this suite has been caught by a
 // fix that helped the page and hurt the cards before.
 //
-// THE NAME AND META SELECTORS WERE STALE, in the same way and by the same PR as
-// S4's above. PR #254 moved this card's anatomy onto the shared `LibraryCard`,
-// so the footer lines are `.lbry-card-name` / `.lbry-card-meta` and `.grg-name`
-// / `.grg-meta` no longer exist. Unlike S4 that did not fail: the census loops
-// over `querySelectorAll`, which returned nothing, so it found no truncation and
-// reported none, at all nine widths, for as long as it took to notice. Both are
-// scoped through `.grg-card` — the shared class is on four surfaces now, and
-// this test is about this one — and the per-card counts below are asserted so a
-// third rename cannot make it vacuous again instead of red.
+// THE NAME AND META SELECTORS. This card's anatomy is the shared `LibraryCard`,
+// so the footer lines are `.lbry-card-name` / `.lbry-card-meta`, not `.grg-name`
+// / `.grg-meta`. A stale selector would not fail: the census loops over
+// `querySelectorAll`, which would return nothing, so it would find no
+// truncation and report none at every width. Both are scoped through
+// `.grg-card` — the shared class is on four surfaces, and this test is about
+// this one — and the per-card counts below are asserted so a selector rename
+// turns the test red instead of leaving it vacuous.
 
-/* 1024 AND 1280 WERE ADDED AFTER THE SWEEP MISSED A LIVE DEFECT.
+/* 1024 AND 1280 ARE IN THE LIST BECAUSE A LIST ENDING AT 1180 CAN MISS A DEFECT.
  *
- * The founder's rule here is that no gradient name or meta line is truncated at
- * ANY width. This list stopped at 1180, and when the library restyle bumped the
- * card name from 14px to 16px it cut **13 of 100 names at 1280** and one at
- * 1024 — neither width swept, so the sweep stayed green while the rule was
- * being broken on the commonest desktop size there is.
+ * The rule here is that no gradient name or meta line is truncated at
+ * ANY width. With the name as a single-line 16px label, 13 of 100 names were
+ * cut at 1280 and one at 1024; a list that stopped at 1180 would have stayed
+ * green while the rule was broken on the commonest desktop size there is.
  *
  * The narrow widths below are where a card is tightest, which is the intuition
  * that built this list. It is the wrong intuition: the name's room is decided by
@@ -1047,14 +1032,14 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder report 2026-08-24 · Palette Builder on a short DESKTOP viewport
+// Palette Builder on a short DESKTOP viewport
 // ─────────────────────────────────────────────────────────────────────────────
-// "there are still clipping issues on the pallete builder on smaller desktop
-// screens and other shapes like 4:3".
+// Symptom: clipping on the Palette Builder on smaller desktop screens and
+// other shapes like 4:3.
 //
 // Both audits swept WIDTH at a fixed 900px height and only went short at PHONE
-// widths, so this combination — desktop width, short viewport — was never
-// tested. It is not exotic: a 1024x768 or 1366x768 screen with browser chrome
+// widths, so this combination — desktop width, short viewport — needs its own
+// test. It is not exotic: a 1024x768 or 1366x768 screen with browser chrome
 // leaves roughly a 608px viewport, and that is inside the broken band.
 //
 // The fault is vertical, and it is the same SHAPE as the two blockers this
@@ -1345,9 +1330,9 @@ test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a 
 })
 
 // THE PACK LABEL UNDER EVERY ICON CELL.
-// The 2026-09-01 audit found /create/icons repeating a tiny pack label under
-// every cell; #298 dropped it below 980px and left it above, where it still
-// drew "LUCIDE" under all 120 cells of the default single-pack grid. A word
+// /create/icons must not repeat a tiny pack label under every cell: a label
+// shown above 980px would draw "LUCIDE" under all 120 cells of the default
+// single-pack grid. A word
 // identical across the whole grid discriminates nothing, and it was costing a
 // line to the one thing that does discriminate - the icon's own name.
 // Both halves are asserted, because only the pair is the actual rule. Dropping
@@ -1381,6 +1366,9 @@ test('the icon grid labels the pack only when the results actually mix packs', a
       labels: visible.length,
       words: [...new Set(visible.map((n) => n.textContent.trim().toLowerCase()))],
       fontSize: visible[0] ? Math.round(parseFloat(getComputedStyle(visible[0]).fontSize)) : null,
+      textTransform: visible[0] ? getComputedStyle(visible[0]).textTransform : null,
+      whiteSpace: visible[0] ? getComputedStyle(visible[0]).whiteSpace : null,
+      tracking: visible[0] ? parseFloat(getComputedStyle(visible[0]).letterSpacing) || 0 : null,
     }
   })
 
@@ -1414,8 +1402,11 @@ test('the icon grid labels the pack only when the results actually mix packs', a
 
   const mixed = await read()
   expect(mixed.labels, 'every cell in a mixed set carries its pack').toBe(mixed.cells)
-  // 9px was below the smallest size in the type scale; --fs-micro is 11px.
-  expect(mixed.fontSize, 'the pack label must not sit under the type scale floor')
-    .toBeGreaterThanOrEqual(11)
+  // The label matches the icon name's 10px and must stay no louder than it.
+  expect(mixed.fontSize, 'the pack label must be the same size as the icon name')
+    .toBe(10)
+  expect(mixed.textTransform, 'quiet label: normal case').toBe('none')
+  expect(mixed.whiteSpace, 'the pack label stays on one line').toBe('nowrap')
+  expect(mixed.tracking, 'quiet label: no letter-spacing').toBe(0)
   await ctx.close()
 })

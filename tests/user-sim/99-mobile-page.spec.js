@@ -109,7 +109,7 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     await menu.locator('.spnav-mi', { hasText: 'On mobile' }).click()
     await expect(page).toHaveURL(/\/mobile$/)
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow), 'the menu\'s scroll lock outlived it').not.toBe('hidden')
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'the menu\'s scroll lock outlived it').not.toBe('hidden')
     await ctx.close()
   })
 
@@ -274,6 +274,7 @@ test.describe('the phone row', () => {
 test.describe('reduced motion', () => {
   test('nothing moves: no word entrance, no menu stagger, no exit wait', async ({ browser }) => {
     const { ctx, page } = await ctxAt(browser, 1440, { reducedMotion: 'reduce' })
+    await page.clock.install()
     await go(page, '/mobile')
     // Mutation: drop prefersReducedMotion() from heroLit → .is-in lands.
     await expect(page.locator('.spm-hero')).not.toHaveClass(/is-in/)
@@ -282,8 +283,16 @@ test.describe('reduced motion', () => {
     const running = await page.evaluate(() => (document.getAnimations?.() || [])
       .filter((a) => a.playState === 'running' && a.effect?.target?.closest?.('.spnav-menu')).length)
     expect(running, 'the menu still animates under reduced motion').toBe(0)
+    // "Leaves at once" is proved on a frozen clock, not a wall-clock budget: a
+    // 150ms real-time wait failed on a loaded CI runner while the menu was still
+    // on its way out. With time stopped, only 50 virtual ms pass, well short of
+    // the design's 260ms exit, so the menu can only be gone if the exit wait was
+    // skipped. Mutation: use MENU_EXIT_MS under reduced motion in SpectrumNav
+    // and the menu stays, so this times out.
+    await page.clock.pauseAt(new Date(Date.now() + 60_000))
     await page.keyboard.press('Escape')
-    await expect(page.locator('.spnav-menu')).toHaveCount(0, { timeout: 150 })
+    await page.clock.runFor(50)
+    await expect(page.locator('.spnav-menu')).toHaveCount(0)
     await ctx.close()
   })
 })

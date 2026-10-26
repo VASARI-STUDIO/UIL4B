@@ -34,9 +34,20 @@ export function publishedGuideCount() {
  * + Your library; Guides | Foundations + Growth and help), while the tree deals
  * each group into its own column, so every column after the first is stacked
  * into one. Presentation only: the tree's own shape is untouched.
+ *
+ * `showSoon: false` drops every unfinished row first, and any column or stack
+ * that leaves empty, so a visitor who may not see unfinished pages is never
+ * shown a heading over nothing.
  */
-export function menuStacks(section) {
-  const cols = section.columns || []
+export function menuStacks(section, { showSoon = true } = {}) {
+  const all = section.columns || []
+  const cols = showSoon
+    ? all
+    : all
+      .map((stack) => stack
+        .map((col) => ({ ...col, tools: col.tools.filter((t) => !t.soon) }))
+        .filter((col) => col.tools.length))
+      .filter((stack) => stack.length)
   if (section.id === 'create' || cols.length <= 2) return cols
   return [cols[0], cols.slice(1).flat()]
 }

@@ -32,10 +32,12 @@ import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { lockScroll } from '../utils/scrollLock'
+import { markScrollContainers } from '../utils/scrollContainment.js'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
-// Discover pane's counts too — the resources list behind one of them is 20 KB
-// no other always-loaded module needs.
+// Discover pane's counts too — they render only inside the open Discover menu,
+// and the prompt count comes from a data module nothing else here imports.
 const CommandPalette = lazy(() => import('./CommandPalette'))
 const ExportPanel = lazy(() => import('./ExportPanel'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
@@ -472,9 +474,10 @@ function AppHeader() {
   // The sheet locks the page's scroll and keeps Tab inside itself.
   useEffect(() => {
     if (!sheet) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlockScroll = lockScroll()
     const panel = sheetRef.current
+    // The page is locked and Lenis stopped; marking the panel's scroll boxes lets the wheel still scroll them.
+    const unmark = markScrollContainers(panel)
     const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
     focusable()[0]?.focus()
     const trap = (event) => {
@@ -494,7 +497,8 @@ function AppHeader() {
     panel?.addEventListener('keydown', trap)
     return () => {
       panel?.removeEventListener('keydown', trap)
-      document.body.style.overflow = prev
+      unlockScroll()
+      unmark()
     }
   }, [sheet])
 
@@ -892,6 +896,7 @@ function AppHeader() {
         <MegaMenu
           ref={menuRef}
           section={activeSection}
+          showSoon={isAdmin}
           onMouseEnter={clearClose}
           onMouseLeave={hoverLeave}
           onKeyDown={onMenuKeyDown}
@@ -926,7 +931,7 @@ function AppHeader() {
                       </button>
                     )}
                     {/* Live rows only: a phone menu lists what
-                        opens. Soon rows stay in the desktop menu and /sitemap. */}
+                        opens. Soon rows show only in the desktop menu and /sitemap, and only to admins. */}
                     {section.columns.flat().map((col) => {
                       const live = col.tools.filter((t) => !t.soon)
                       if (!live.length) return null
@@ -1042,8 +1047,8 @@ function AppHeader() {
 //
 // It is a function component with a forwarded ref only in name: React 19
 // passes `ref` as a prop.
-function MegaMenu({ ref, section, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
-  const stacks = menuStacks(section)
+function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
+  const stacks = menuStacks(section, { showSoon })
   const promo = menuPromo(section)
   // The file opens every menu with its first row lit (feat = flatNav[0] when
   // nothing is hovered, App line 1414); CSS lights it only while no other row

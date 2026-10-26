@@ -291,7 +291,8 @@ test('THE ONE THAT KEEPS IT TRUE: every parent crumb points at a page that exist
 })
 
 test('crumb names come from the page\'s own title, without the site name', () => {
-  assert.equal(crumbName('/create/contrast'), 'Colour Contrast Checker')
+  assert.equal(crumbName('/create/contrast'), 'Color Contrast Checker for WCAG AA and AAA')
+  assert.equal(crumbName('/learn'), 'Learn')
   assert.equal(crumbName('/discover'), 'Discover')
   assert.equal(crumbName('/nope'), null)
   // No crumb repeats the site name on every level.

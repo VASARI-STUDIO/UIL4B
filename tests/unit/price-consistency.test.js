@@ -1,6 +1,5 @@
-// One ladder, quoted identically everywhere. The founder's requirement, from
-// the 2026-08-20 batch, was "make sure anywhere you show pricing you show the
-// same pricing."
+// One ladder, quoted identically everywhere. The requirement is that
+// anywhere pricing is shown, it is the same pricing.
 //
 // Half of that is already guarded. tests/unit/price-ladder.test.js ties
 // src/config/planLadder.js to api/_lib/pricing.js, so the client fallback and
@@ -91,24 +90,16 @@ const SCANNED = /\.(?:jsx?|css|json)$/
 // stripper has no way to tell the difference, so they were being scanned.
 //
 // They are not shown to anyone. tests/unit/admin-chunk-carries-no-backlog.test.js
-// proves they reach no client chunk at all; the founder reads them through
+// proves they reach no client chunk at all; they are read through
 // GET /api/ai?backlog=1 behind requireAdmin(). A price in a note is a record of
 // what something cost, not an offer. tests/unit/no-orphan-routes.test.js
 // excludes the same two files for the same reason, in its words: "a route is
 // not reachable because we wrote about it."
 //
-// MEASURED 2026-09-16, and this is why it matters rather than being tidy.
-// Across src/, 28 price-shaped strings; 7 of them were in ONE pipeline.js row
-// ($48, $48.00, $4.00 — a note about a yearly total), and all 7 survived the
-// allowlist and were counted as CHECKED. The "checked >= 6" floor at the foot
-// of this file — the assertion whose whole job is to prove the guard still has
-// teeth — was therefore being held up by a backlog note. The two prices this
-// guard actually compares against the ladder on a rendered surface are in
-// Plans.jsx and Settings.jsx, and there are two of them.
-//
-// That came to light because the boards left the repository on 2026-09-16 (the
-// founder's decision; .gitignore carries it), so CI runs without them and the
-// floor failed. The floor was wrong before they left, and is honest now.
+// It matters for more than tidiness: a price in a board note would count as
+// CHECKED and prop up the "checked >=" floor at the foot of this file, whose job
+// is to prove the guard still has teeth. Only a few literal amounts remain on
+// rendered surfaces; the floor's own comment names them.
 const NOT_A_SURFACE = new Set([
   path.join(SRC, 'data', 'pipeline.js'),
   path.join(SRC, 'data', 'moduleBoard.js'),
@@ -159,7 +150,7 @@ const WINDOW = 400
 // next closing marker — 819 lines, and a price with them, when this guard was
 // written. Nothing goes red; the scan simply stops being able to see.
 //
-// PROVEN EQUIVALENT before the copy was removed, on 2026-09-10: the private
+// PROVEN EQUIVALENT before the copy was removed: the private
 // implementation and the shared one produced byte-identical output on all 635
 // .js/.jsx/.css/.json files in src/, api/ and tests/, in BOTH lineComments
 // modes — 1,270 comparisons, 0 differences. The canary below now exercises the
@@ -185,7 +176,7 @@ const NOT_A_PLAN_PRICE = [
       + 'and a notebook, not tiers of UIL4B.',
   },
   {
-    // Was src/pages/PaletteBuilder.jsx until 2026-09-11, when the preview block
+    // Was src/pages/PaletteBuilder.jsx before the preview block
     // moved to its own module. The entry follows the code rather than being
     // widened to cover both files — "no allowlist entry outlives the thing it
     // excuses" below is what forced the choice, and it is the right one: an
@@ -227,7 +218,7 @@ const NOT_A_PLAN_PRICE = [
     why: 'Not money at all: normalizeCustomBase substitutes with the backreference '
       + '"$1" when rewriting an SVG stroke and fill.',
   },
-  // FOUR MORE ENTRIES CAME OFF for the same reason, on 2026-09-06:
+  // FOUR MORE ENTRIES CAME OFF for the same reason:
   // src/pages/DocsDesign.jsx, DocsMarketing.jsx, DocsSocial.jsx and
   // DocsThemes.jsx. They were unrouted, unimported draft Learn pages — absent
   // from every sourcemap in a production build — and the dead-source sweep
@@ -345,7 +336,7 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   const { files, occurrences } = scan()
   assert.ok(files.length >= 150,
     `expected to walk the whole of src/, found only ${files.length} files`)
-  // 30 → 20 on 2026-09-06, and the reason matters more than the number. The
+  // 30 → 20, and the reason matters more than the number. The
   // dead-source sweep deleted four unrouted Learn drafts whose mock-ups held 22
   // fake amounts, so the RAW population fell 51 → 29 and the old floor failed on
   // a tree that had lost no coverage at all. Measured either side, with the same
@@ -355,7 +346,7 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   // money in files nothing could render. The floor below is re-set against 29
   // with headroom, and `checked >= 6` underneath is untouched.
   //
-  // 20 → 18 on 2026-09-16, when the two internal boards stopped being scanned
+  // 20 → 18, when the two internal boards stopped being scanned
   // (see NOT_A_SURFACE at the top for why they never should have been). They
   // held 7 of the 28 hits, so the raw population is 21 and the old floor of 20
   // would have been one hit from failing on a tree that lost no coverage.
@@ -366,20 +357,6 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   // than waved through by the allowlist. If this drops, either the app stopped
   // quoting prices in code or NOT_A_PLAN_PRICE has grown wide enough to swallow
   // the thing it was meant to leave exposed.
-  //
-  // 6 → 2 on 2026-09-16, AND THIS IS THE FLOOR BEING CORRECTED RATHER THAN
-  // LOWERED. All 7 board hits were CHECKED — they are real ladder amounts
-  // quoted inside one backlog note — so "six prices are still being compared"
-  // was, for as long as it has existed, five prose mentions and one or two
-  // surfaces. What the guard compares today is Plans.jsx and Settings.jsx: two
-  // literal amounts, because every other surface now renders the ladder through
-  // its own arithmetic instead of typing the number, which is the outcome this
-  // whole file was arguing for.
-  //
-  // So two is the truth, and a floor that says two is worth more than a floor
-  // of six that a note can satisfy. RAISE IT the day a surface starts quoting
-  // an amount literally again; do not let it fall below two without asking
-  // whether anything is being compared at all.
   //
   // The floor is 1 because /plans renders its "$0" through
   // formatMoney(0, currency), so Pricing.jsx quotes no amount by hand and the

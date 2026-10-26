@@ -11,6 +11,8 @@ import '../styles/pages/spectrum-chrome.css'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { lockScroll } from '../utils/scrollLock'
+import { markScrollContainers } from '../utils/scrollContainment.js'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
@@ -218,19 +220,25 @@ export default function SpectrumNav() {
     setOpen(false)
     const el = document.getElementById(href.slice(1))
     if (!el) return
-    const lenis = getLenis()
-    // Lenis reads the target's scroll-margin-top itself.
-    if (lenis) lenis.scrollTo(el)
-    else el.scrollIntoView({ block: 'start' })
+    // The open menu holds the page's scroll lock, which keeps Lenis stopped, and
+    // a stopped Lenis ignores scrollTo. The lock is released when the close
+    // commits, so the scroll waits one frame.
+    requestAnimationFrame(() => {
+      const lenis = getLenis()
+      // Lenis reads the target's scroll-margin-top itself.
+      if (lenis) lenis.scrollTo(el)
+      else el.scrollIntoView({ block: 'start' })
+    })
   }, [setOpen])
 
   // Scroll lock + focus move-in + focus trap: a full-screen layer that leaves
   // the page scrolling behind it and lets Tab walk out the back is not a dialog.
   useEffect(() => {
     if (!open) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlockScroll = lockScroll()
     const panel = sheetRef.current
+    // The page is locked and Lenis stopped; marking the panel's scroll boxes lets the wheel still scroll them.
+    const unmark = markScrollContainers(panel)
     const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
       .filter((el) => el.getClientRects().length > 0)
     focusable()[0]?.focus()
@@ -251,7 +259,8 @@ export default function SpectrumNav() {
     panel?.addEventListener('keydown', trap)
     return () => {
       panel?.removeEventListener('keydown', trap)
-      document.body.style.overflow = prev
+      unlockScroll()
+      unmark()
     }
   }, [open])
 

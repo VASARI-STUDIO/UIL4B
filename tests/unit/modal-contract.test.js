@@ -28,7 +28,7 @@
 // ── WHAT CHANGED, AND WHY ───────────────────────────────────────────────────
 //
 // The hook's own contract used to be asserted by REGEX over useModalDialog.js:
-// a match for `document.body.style.overflow = 'hidden'`, one for `e.key ===
+// a match for the scroll lock assignment, one for `e.key ===
 // 'Escape'`, one for `e.key !== 'Tab'`, and — for the focus restore — a
 // twenty-line static tracer that followed the identifier holding
 // `document.activeElement` through assignments and `.push()` calls to see
@@ -61,6 +61,7 @@ import { stripJs } from '../helpers/strip-comments.js'
 
 const SRC = path.join(process.cwd(), 'src')
 const HOOK_PATH = 'src/hooks/useModalDialog.js'
+const LOCK_PATH = 'src/utils/scrollLock.js'
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -207,9 +208,13 @@ function makeDom() {
   const body = new El(dom, 'body')
   body.isConnected = true
   body.style = { overflow: '' }
+  // The scroll lock lives on <html>: the root's overflow-x: clip stops a body
+  // overflow reaching the viewport. Both lock properties are read back here.
+  const documentElement = { style: { overflow: '', scrollbarGutter: '' } }
 
   dom.document = {
     body,
+    documentElement,
     activeElement: body,
     addEventListener: (type, fn, capture) => dom.listeners.push({ type, fn, capture }),
     removeEventListener: (type, fn) => {
@@ -241,6 +246,7 @@ function makeDom() {
 // The repository's answer is the vm harness in
 // reduced-motion-resolution.test.js, and this uses the same one.
 const hookSource = fs.readFileSync(path.join(process.cwd(), HOOK_PATH), 'utf8')
+const lockSource = fs.readFileSync(path.join(process.cwd(), LOCK_PATH), 'utf8')
 
 const loadHook = (dom) => {
   let out = hookSource
@@ -254,11 +260,20 @@ const loadHook = (dom) => {
   }
 
   rewrite(/import \{ useEffect, useRef \} from 'react'/, '', 'the react import')
-  rewrite(/import \{ getLenis \} from '\.\/useSmoothScroll\.js'/, '', 'the useSmoothScroll import')
+  rewrite(/import \{ lockScroll \} from '\.\.\/utils\/scrollLock\.js'/, '', 'the scrollLock import')
   rewrite(/import \{ markScrollContainers \} from '\.\.\/utils\/scrollContainment\.js'/, '',
     'the scrollContainment import')
   rewrite(/^export default function useModalDialog/m, 'function useModalDialog',
     'the hook export')
+
+  // The shared lock the hook calls is run from its real source too, with only
+  // its Lenis import stubbed, so the hook and the lock are tested together.
+  assert.match(lockSource, /import \{ getLenis \} from '\.\.\/hooks\/useSmoothScroll\.js'/,
+    `${LOCK_PATH} no longer imports getLenis the way this harness stubs it`)
+  assert.match(lockSource, /^export function lockScroll/m, `${LOCK_PATH} no longer exports lockScroll`)
+  out = lockSource
+    .replace(/import \{ getLenis \} from '\.\.\/hooks\/useSmoothScroll\.js'/, '')
+    .replace(/^export function lockScroll/m, 'function lockScroll') + '\n' + out
 
   assert.ok(!/^\s*import\s/m.test(out),
     `${HOOK_PATH} has gained a static import this harness does not stub:\n  `
@@ -392,23 +407,27 @@ test('initialFocus moves the landing point to that one control', () => {
 
 test('the background scroll is locked on open and released on close', () => {
   const s = scene()
-  assert.equal(s.dom.document.body.style.overflow, 'hidden', 'the body lock was not applied')
+  const root = s.dom.document.documentElement.style
+  assert.equal(root.overflow, 'hidden', 'the root scroll lock was not applied')
+  assert.equal(s.dom.document.body.style.overflow, '',
+    'the lock went on <body>: with overflow-x: clip on the root that makes body its own scroll box and a sticky footer drops')
   assert.equal(s.dom.lenis.stopped, 1, 'Lenis was not stopped — the page behind can still scroll')
   assert.equal(s.dom.marked, 1, 'the dialog was not marked scrollable while Lenis is stopped')
 
   s.close()
-  assert.equal(s.dom.document.body.style.overflow, '', 'the body lock was not released')
+  assert.equal(root.overflow, '', 'the root scroll lock was not released')
+  assert.equal(s.dom.document.body.style.overflow, '', 'closing left a body overflow behind')
   assert.equal(s.dom.lenis.started, 1, 'Lenis was never restarted — the page is frozen for good')
   assert.equal(s.dom.unmarked, 1, 'the scroll-container marks were not cleaned up')
 })
 
-test('with Lenis absent the body lock still holds, and closing does not throw', () => {
+test('with Lenis absent the root lock still holds, and closing does not throw', () => {
   // Reduced motion never instantiates Lenis, so getLenis() returns null and the
-  // browser is doing the scrolling again — the case the body lock does hold.
+  // browser is doing the scrolling again — the case the root lock does hold.
   const s = scene({ lenis: false })
-  assert.equal(s.dom.document.body.style.overflow, 'hidden')
+  assert.equal(s.dom.document.documentElement.style.overflow, 'hidden')
   s.close()
-  assert.equal(s.dom.document.body.style.overflow, '')
+  assert.equal(s.dom.document.documentElement.style.overflow, '')
 })
 
 test('Escape closes, and does not collapse the surface that opened it', () => {
@@ -561,8 +580,10 @@ test('enabled:false does nothing at all, so a closed dialog cannot lock the page
   // Several modals stay mounted and toggle on an `open` prop. Without this
   // guard the scroll lock applies to a closed dialog and never comes off.
   const s = scene({ enabled: false })
-  assert.equal(s.dom.document.body.style.overflow, '',
+  assert.equal(s.dom.document.documentElement.style.overflow, '',
     'a disabled dialog locked the background scroll')
+  assert.equal(s.dom.document.body.style.overflow, '',
+    'a disabled dialog locked the body')
   assert.equal(s.dom.listeners.length, 0, 'a disabled dialog installed a key handler')
   assert.equal(s.dom.document.activeElement, s.opener, 'a disabled dialog stole focus')
   assert.equal(s.dom.lenis.stopped, 0, 'a disabled dialog stopped Lenis')

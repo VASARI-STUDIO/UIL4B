@@ -1,7 +1,7 @@
 // WHO SEES WHICH ICON PACK — the table, and the page's agreement with it.
 //
 // src/data/iconPackTiers.js is the single editable answer to "may this viewer
-// browse this pack". The founder moves a pack between tiers by changing one
+// browse this pack". A pack moves between tiers by changing one
 // word on one line; nothing in src/pages/IconLibrary.jsx knows a pack name.
 //
 // THE TEST THIS FILE EXISTS FOR is the first one: the set of packs the library
@@ -78,7 +78,7 @@ test('every line carries a tier the code understands and a justification a human
   for (const [prefix, row] of Object.entries(ICON_PACK_TIERS)) {
     assert.ok(TIER_ORDER.includes(row.tier), `${prefix} has tier "${row.tier}", which is not one of ${TIER_ORDER.join(' | ')}`)
     assert.equal(typeof row.why, 'string', `${prefix} has no justification`)
-    // The founder's rule is "does its creator run a free browser for it", so a
+    // The rule is "does its creator run a free browser for it", so a
     // justification that names neither a browser nor the absence of one records
     // nothing. Short strings are how a row rots into an unexplained decision.
     assert.ok(row.why.trim().length >= 40,
@@ -107,7 +107,7 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   for (const p of anon) assert.ok(free.includes(p), `${p} is visible signed out but not signed in — the tiers do not widen`)
   for (const p of free) assert.ok(paid.includes(p), `${p} is visible free but not on Pro — the tiers do not widen`)
 
-  // The concrete cases the founder named, so a refactor that inverts the
+  // The concrete cases that matter, so a refactor that inverts the
   // comparison cannot pass by being internally consistent.
   assert.equal(canSeePack('lucide', 'anon'), true, 'Lucide is the signed-out sample')
   assert.equal(canSeePack('material-symbols', 'anon'), false, 'a solid set needs an account')
@@ -185,7 +185,7 @@ test('IconLibrary consults the table — it does not carry a second copy of the 
     const inCondition = new RegExp(`(?:if|\\?|&&|\\|\\|)[^\\n]{0,80}['"\`]${brand}['"\`]`)
     assert.doesNotMatch(page, inCondition,
       `"${brand}" appears inside a condition in ${PAGE}. Tiering is a table, not a conditional — `
-      + 'the founder must be able to move a pack by editing one line of src/data/iconPackTiers.js.')
+      + 'a pack must be movable by editing one line of src/data/iconPackTiers.js.')
   }
 })
 
@@ -195,35 +195,45 @@ test('a gated scope never becomes the refused-service state, and never the empty
   //   loadError → "Couldn't reach the icon service" (the network said no)
   //   gated     → the wall (the product said no)
   //   searchEmpty → "No icons match" (the catalogue has nothing)
-  // Letting any two share a rendering is the defect #435 fixed for the first
+  // Letting any two share a rendering is the defect already fixed for the first
   // pair; these assertions stop it being reintroduced through the third.
   assert.match(page, /\{loadError && !gated && \(/,
     'the "couldn\'t reach the icon service" notice must be suppressed for a gated scope — nothing was asked for, so nothing refused it')
   assert.match(page, /const searchEmpty = [^\n]*!gated/,
     '"No icons to show" must be suppressed for a gated scope — it blames the catalogue for a decision the product made')
-  assert.match(page, /const capWall = [^\n]*!gated/,
-    'the signed-out cap wall and a gated scope are different answers and must not stack')
+  assert.match(page, /const endKind = endBandKind\(\{[^}]*\bgated\b/,
+    'the end band and a gated scope are different answers and must not stack: the page has to hand `gated` to endBandKind')
 })
 
 test('the gate copy is complete, count-driven, and reuses the app\'s own action labels', () => {
-  for (const key of ['anon', 'lockedFree', 'lockedPro']) {
-    const c = ICON_GATE_COPY[key]
+  for (const key of ['end.anon', 'end.free', 'lockedFree', 'lockedPro']) {
+    const c = key.split('.').reduce((o, k) => o?.[k], ICON_GATE_COPY)
     assert.ok(c, `ICON_GATE_COPY.${key} is missing — a wall would render undefined`)
     assert.ok(c.action && c.action.trim(), `ICON_GATE_COPY.${key}.action is empty — the wall would have an unlabelled button`)
   }
   // "Log in" is the nav trigger's own word and "See what Pro includes" is what
   // the Palette and Prompt libraries already say. Neither is coined here.
-  assert.equal(ICON_GATE_COPY.anon.action, 'Log in')
+  assert.equal(ICON_GATE_COPY.end.anon.action, 'Log in')
+  assert.equal(ICON_GATE_COPY.end.free.action, 'See what Pro includes')
   assert.equal(ICON_GATE_COPY.lockedFree.action, 'Log in')
   assert.equal(ICON_GATE_COPY.lockedPro.action, 'See what Pro includes')
 
   // NO HARD-CODED NUMBER. Every count in a wall comes from the live table, so
   // moving a pack changes the sentence. A typed number would be a claim that
   // stops being true the first time the table is edited.
-  assert.match(ICON_GATE_COPY.anon.heading(5), /\b5\b/, 'the heading must render the count it is handed')
-  assert.match(ICON_GATE_COPY.anon.heading(1), /\bpack\b/, 'one pack is singular')
-  assert.match(ICON_GATE_COPY.anon.heading(2), /\bpacks\b/, 'two packs are plural')
-  assert.match(ICON_GATE_COPY.anon.body(ANON_ICON_CAP), new RegExp(`\\b${ANON_ICON_CAP}\\b`))
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 5), /\b5\b/, 'the body must render the pack count it is handed')
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 1), /\bpack\b/, 'one pack is singular')
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 2), /\bpacks\b/, 'two packs are plural')
+  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 5), new RegExp(`\\b${ANON_ICON_CAP}\\b`))
+  assert.match(ICON_GATE_COPY.end.free.body(16, 10), /\b16\b[^.]*\b10\b/, 'the free body must render both counts it is handed')
+  assert.doesNotMatch(ICON_GATE_COPY.end.anon.heading + ICON_GATE_COPY.end.free.heading, /\d/,
+    'a fixed heading must not quote a count it cannot keep true')
+  for (const text of [
+    ICON_GATE_COPY.end.anon.heading, ICON_GATE_COPY.end.anon.body(60, 5), ICON_GATE_COPY.end.anon.chip,
+    ICON_GATE_COPY.end.free.heading, ICON_GATE_COPY.end.free.body(16, 10),
+  ]) {
+    assert.doesNotMatch(text, /—/, 'no em dash in the end band copy')
+  }
   assert.doesNotMatch(ICON_GATE_COPY.lockedPro.body, /\d/, 'a fixed sentence must not quote a count it cannot keep true')
   assert.doesNotMatch(ICON_GATE_COPY.lockedFree.body, /\d/)
 

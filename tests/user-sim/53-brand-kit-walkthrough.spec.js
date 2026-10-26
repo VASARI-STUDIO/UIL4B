@@ -101,10 +101,16 @@ const card = (page) => page.getByRole('dialog', { name: 'Four steps to a full sy
  * plausible number of milliseconds: a stopwatch passes on a fast machine and
  * lies on a slow one, and two equal pixel reads prove only that nothing moved
  * between them.
+ *
+ * Only finite animations are awaited. The help button's chromatic outline spins
+ * forever while it is hovered or keyboard-focused (focus returns to it when the
+ * panel closes), and an infinite animation never finishes.
  */
 async function settle(locator) {
   await locator.evaluate((el) => Promise.all(
-    el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})),
+    el.getAnimations({ subtree: true })
+      .filter((a) => Number.isFinite(a.effect.getComputedTiming().endTime))
+      .map((a) => a.finished.catch(() => {})),
   ))
 }
 
@@ -222,7 +228,7 @@ test.describe('Brand kit walkthrough', () => {
     // version blocked the step: position:fixed inset:0 with a backdrop blur.
     const blocked = await page.evaluate(() => ({
       overlay: !!document.querySelector('.uikit-intro-overlay'),
-      bodyLocked: getComputedStyle(document.body).overflow === 'hidden',
+      bodyLocked: getComputedStyle(document.documentElement).overflow === 'hidden' || getComputedStyle(document.body).overflow === 'hidden',
     }))
     expect(blocked.overlay).toBe(false)
     expect(blocked.bodyLocked).toBe(false)
@@ -293,8 +299,10 @@ test.describe('Brand kit walkthrough', () => {
     // Jump to the last step. The colour step still reads as done AND still
     // shows its swatches — that is the whole point of a guided flow rather than
     // four bookmarks, and it is carried by the saved design, not by a cursor.
-    // From 1024px the bar itself shows no swatches (one 55px row of count,
-    // steps and buttons); the colours step one built are in the help card.
+    // The bar shows a built step's artefact only once its content box is 1240px
+    // wide (a container query). Below that the bar is the one 56px row of steps
+    // and buttons with no swatches, and the colours step one built are in the
+    // help panel; at 1440px the bar carries them itself.
     await page.getByRole('link', { name: /Icons/ }).first().click()
     await expect(page).toHaveURL(/\/create\/icons$/)
     const colourChip = rail(page).getByRole('link', { name: /Colours/ })
@@ -303,15 +311,20 @@ test.describe('Brand kit walkthrough', () => {
     // arrives, and a locator-level toBeHidden() passes in that empty moment.
     // 'absent' is not 'hidden', so only swatches that exist AND are not
     // displayed satisfy this.
-    await expect.poll(() => rail(page).evaluate((el) => {
+    const barSwatches = () => rail(page).evaluate((el) => {
       const sw = [...el.querySelectorAll('.bkit-step-swatches')]
       if (!sw.length) return 'absent'
       return sw.every((s) => getComputedStyle(s).display === 'none') ? 'hidden' : 'shown'
-    }), { message: 'the bar still shows swatches; from 1024px they live in the help card' }).toBe('hidden')
-    await page.getByRole('button', { name: /What.s this\?/ }).click()
-    await expect(card(page)).toBeVisible()
+    })
     const built = await page.evaluate((k) => (JSON.parse(localStorage.getItem(k) || '{}').palette?.colors || []).length, DESIGN_KEY)
     expect(built, 'step one saved no colours').toBeGreaterThan(0)
+    await expect.poll(barSwatches, { message: 'the bar does not show the colours step one built at 1440px' }).toBe('shown')
+    await expect(rail(page).locator('.bkit-step.is-done .bkit-step-swatch')).toHaveCount(built)
+    await page.setViewportSize({ width: 1100, height: 900 })
+    await expect.poll(barSwatches, { message: 'the bar shows swatches below 1240px of bar width; they live in the help panel there' }).toBe('hidden')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.getByRole('button', { name: /What.s this\?/ }).click()
+    await expect(card(page)).toBeVisible()
     await expect(card(page).locator('.bkit-card-artefact .bkit-step-swatch')).toHaveCount(built)
     await page.keyboard.press('Escape')
     await expect(card(page)).toBeHidden()
@@ -373,10 +386,10 @@ test.describe('Brand kit walkthrough', () => {
     await expect(rail(page)).toBeHidden()
   })
 
-  // The desktop bar is chrome, not a card: full-bleed, 55px, fixed flush to the
+  // The desktop bar is chrome, not a card: full-bleed, 56px, fixed flush to the
   // foot of the viewport, with no radius or shadow. Measured, not read from the
   // stylesheet, so a rule that stops applying fails here.
-  test('1440px: the bar is a flush 55px strip with no radius or shadow, and on Colours it sits on the Adjust-all row', async ({ page }) => {
+  test('1440px: the bar is a flush 56px strip with no radius or shadow, and on Colours it sits on the Adjust-all row', async ({ page }) => {
     watch(page, 'designer on a desktop with the walkthrough bar up')
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(([g, s]) => {
@@ -399,7 +412,7 @@ test.describe('Brand kit walkthrough', () => {
         shadow: cs.boxShadow,
       }
     })
-    expect(bar).toEqual({ height: 55, bottomGap: 0, left: 0, right: 0, position: 'fixed', radius: '0px', shadow: 'none' })
+    expect(bar).toEqual({ height: 56, bottomGap: 0, left: 0, right: 0, position: 'fixed', radius: '0px', shadow: 'none' })
 
     // Colours: the Adjust-all row is the toolbar the bar rides on, so the bar's
     // bottom edge is the toolbar's top edge.
@@ -416,7 +429,7 @@ test.describe('Brand kit walkthrough', () => {
       height: el.getBoundingClientRect().height,
       toolbarBottomGap: window.innerHeight - document.querySelector('.plb-adjust').getBoundingClientRect().bottom,
     }))
-    expect(colours).toEqual({ height: 55, toolbarBottomGap: 0 })
+    expect(colours).toEqual({ height: 56, toolbarBottomGap: 0 })
   })
 
   test('the Palette page no longer offers Build UI system to anyone', async ({ page }) => {

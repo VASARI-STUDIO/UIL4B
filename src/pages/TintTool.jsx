@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ColorPickerPop from '../components/ColorPickerPop'
+import ExportMenu from '../components/tool/ExportMenu'
+import SaveToProjectDialog from '../components/tool/SaveToProjectDialog'
+import { useGatedDownload } from '../components/converter/shared'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
 import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch'
 import { useProject } from '../contexts/ProjectContext'
 import { contrastRatio, textColorForBg } from '../utils/colors'
+import { getLenis } from '../hooks/useSmoothScroll'
+import { refreshScrollLimit } from '../utils/hashLanding'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
 import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
@@ -14,9 +20,11 @@ import '../styles/pages/tint.css'
 
 // Tint — /create/tint, rebuilt to the design (UIL4B
 // App.dc.html, `isTint`, D:793-869, view model D:1432-1444 and D:1936-1975).
-// A sticky tool toolbar with accent "Copy variables"; the scale
+// A sticky tool toolbar with the accent "Copy or save" menu; the scale
 // as full-height step columns over a LIGHTNESS PER STEP chart; and one side
-// card of HUE AND CHROMA, STEPS / CURVE pills and CONTRAST NOTES.
+// card of HUE AND CHROMA and STEPS / CURVE pills. CONTRAST NOTES are a
+// grid card under the chart (a list in the side card made the page taller than a
+// laptop screen); below 901px everything stacks and they follow the controls.
 //
 // THE GENERATOR IS THE DESIGN'S: an OKLCH lightness curve from 0.97 down, one
 // hue, and a chroma that peaks mid-scale (D:1436-1442), with 9 / 11 / 13 steps
@@ -26,9 +34,9 @@ import '../styles/pages/tint.css'
 // The drawn card is ONE scale; ours can hold several. So the card gains a
 // SOURCES section above the drawn one: each source is a row (swatch picker, hex, select,
 // copy, remove — the same row shape as the gradient's STOPS), the selected
-// source drives the columns, the chart, the sliders and the notes, and "Copy
-// variables" exports every scale (`--tint-<step>` for one, `--tint-<n>-<step>`
-// for several — the previous build's names). The Hue and Chroma sliders edit
+// source drives the columns, the chart, the sliders and the notes, and the "Copy or save"
+// menu (Copy CSS, Save to project, Download) takes every scale (`--tint-<step>` for one,
+// `--tint-<n>-<step>` for several — the previous build's names). The Hue and Chroma sliders edit
 // the SELECTED source's own hue and chroma, so a hex typed or picked there and
 // the sliders are one piece of state, not two.
 
@@ -87,7 +95,9 @@ const HUE_TRACK = `linear-gradient(90deg,${[0, 60, 120, 180, 240, 300, 360].map(
 // onCopy only: Tint has no row in src/config/activationExports.js, so it must
 // not call the export hook (tests/unit/activation-exports.test.js).
 export default function TintTool({ onCopy, toast }) {
-  const { design, setTints } = useProject()
+  const { design, setTints, saveProject, canSaveProjects } = useProject()
+  const { requireLogin } = useLoginPrompt()
+  const gatedDownload = useGatedDownload()
   const { lumBias, satDecay, oled } = design?.tints || {}
   const carried = readTintDraft()
   // With no hand-off, a project that already has colours is tinted from its own
@@ -101,7 +111,7 @@ export default function TintTool({ onCopy, toast }) {
   const [steps, setSteps] = useState(11)
   const [curve, setCurve] = useState(0)
   const [copiedHex, setCopiedHex] = useState('')
-  const [copiedAll, setCopiedAll] = useState(false)
+  const [saveOpen, setSaveOpen] = useState(false)
 
   // Commit the Palette Builder hand-off exactly once (effects only run for a
   // committed tree).
@@ -111,6 +121,10 @@ export default function TintTool({ onCopy, toast }) {
     consumeTintDraft()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Lenis re-measures on a debounce, so a wheel in the first moments after the
+  // route mounts would stop at the previous page's limit.
+  useEffect(() => { refreshScrollLimit(getLenis) }, [])
 
   const selIndex = Math.max(0, sources.findIndex((s) => s.id === selectedId))
   const selected = sources[selIndex] || sources[0]
@@ -125,9 +139,9 @@ export default function TintTool({ onCopy, toast }) {
   // THE PROJECT'S TINTS PART. The ramp the project keeps is eleven stops (the
   // shape every reader of design.tints.scale labels by index) of the selected
   // source, made by the project's own generator (`tintsFor`, the one the Colour
-  // Studio uses) with the project's tint settings. The curves and step counts
-  // on this page shape what is drawn and copied; they are not what the project
-  // keeps, so the same colour is the same ramp wherever it was made. Only
+  // Studio uses) with the project's tint settings. That is the WORKING design's
+  // ramp, written as the source colour changes. "Save to project" is different:
+  // it keeps the ramp on screen (steps and curve included, see saveTints). Only
   // `tints` is written: this tool reads the palette and never writes it. A
   // project with colours and no ramp gets one as soon as this opens, and so
   // does one recorded as made from another colour than the project's own;
@@ -211,12 +225,38 @@ export default function TintTool({ onCopy, toast }) {
     setCopiedHex(hex)
     setTimeout(() => setCopiedHex((h) => (h === hex ? '' : h)), 1000)
   }
-  const copyAll = async () => {
-    const ok = await onCopy?.(allCss)
-    if (ok === false) return
-    setCopiedAll(true)
-    setTimeout(() => setCopiedAll(false), 1200)
+
+  // The Copy or save menu. Copying is free; keeping the tints in a project and taking
+  // a file away both need an account, asked for through the shared gates.
+  const copyCss = () => { onCopy?.(allCss) }
+  const downloadCss = () => {
+    const stem = `tint-${selected.hex.replace('#', '').toLowerCase()}${multi ? `-plus-${sources.length - 1}` : ''}`
+    return gatedDownload(new Blob([`${allCss}\n`], { type: 'text/css' }), `${stem}.css`, 'download these tints')
   }
+  const startSave = async () => {
+    if (!canSaveProjects) {
+      const user = await requireLogin('save these tints', { free: true, signup: true })
+      if (!user) return
+    }
+    setSaveOpen(true)
+  }
+  // The selected source's ramp AS DRAWN (its steps, curve, hue and chroma) is
+  // folded into the saved copy, so the project keeps exactly what is on screen
+  // and copied. `tintsFor` supplies only the three tint settings (with their
+  // defaults) and `from`; its own eleven-stop scale is replaced.
+  const saveTints = (name) => {
+    const tints = { ...tintsFor(selected.hex, { lumBias, satDecay, oled }), scale: scale.steps.map((t) => t.hex) }
+    saveProject(name, { patch: { tints } })
+    setSaveOpen(false)
+    toast?.(`Saved to ${name}. Tints included.`)
+  }
+  // Signed out, the two rows that need an account say so before they are pressed.
+  const accountHint = canSaveProjects ? undefined : 'Free account'
+  const exportItems = [
+    { id: 'copy-css', label: 'Copy CSS', icon: 'copy', onSelect: copyCss },
+    { id: 'save', label: 'Save to project', icon: 'bookmark-simple', hint: accountHint, onSelect: startSave },
+    { id: 'download', label: 'Download', icon: 'download-simple', hint: accountHint, onSelect: downloadCss },
+  ]
 
   const hueDeg = Math.round(scale.hue)
   const chroma100 = Math.round(scale.chroma * 100)
@@ -227,19 +267,18 @@ export default function TintTool({ onCopy, toast }) {
       className="tt"
       title="Tint"
       titleId="tt-title"
-      items={[
-        {
-          id: 'import', priority: 1,
-          render: () => <ToolButton icon="swatches" onClick={importPalette} title="Replace the sources with your palette's colours">Import from palette</ToolButton>,
-          menu: { label: 'Import from palette', icon: 'swatches', onSelect: importPalette },
-        },
-      ]}
-      primary={(
-        <ToolButton variant="accent" icon="copy" iconSize={14} onClick={copyAll}>
-          {copiedAll ? 'Copied' : 'Copy variables'}
-        </ToolButton>
-      )}
+      items={[]}
+      primary={<ExportMenu items={exportItems} />}
     >
+      {saveOpen && (
+        <SaveToProjectDialog
+          title="Save tints to a project"
+          summary={`The project keeps the ${steps}-step ramp of ${selected.hex}${multi ? ` (scale ${selIndex + 1} of ${sources.length})` : ''}.`}
+          defaultName={`Tint ${selected.hex}`}
+          onSave={saveTints}
+          onClose={() => setSaveOpen(false)}
+        />
+      )}
       <ToolGrid>
         <ToolMain>
           <div className="tt-cols" role="group" aria-label={`${multi ? `Scale ${selIndex + 1}, ` : ''}${steps} steps`}>
@@ -327,6 +366,8 @@ export default function TintTool({ onCopy, toast }) {
             {sources.length < MAX_SOURCES && (
               <ToolButton variant="dashed" icon="plus" iconSize={13} className="tt-add" onClick={addSource}>Add a colour</ToolButton>
             )}
+            {/* Importing replaces the sources, so it sits with them. */}
+            <ToolButton icon="swatches" iconSize={13} className="tt-import" onClick={importPalette} title="Replace the sources with your palette's colours">Import from palette</ToolButton>
           </ToolSection>
 
           <ToolSection label="Hue and chroma" className="tt-hc">
@@ -373,8 +414,10 @@ export default function TintTool({ onCopy, toast }) {
               onChange={setCurve}
             />
           </ToolSection>
-
-          <ToolSection label="Contrast notes" className="tt-notes">
+        </ToolPanel>
+        <div className="tt-notes" role="group" aria-labelledby="tt-notes-label">
+          <span className="tl-sec-label" id="tt-notes-label">Contrast notes</span>
+          <div className="tt-notes-list">
             {scale.steps.map((t) => {
               const aa = contrastRatio(t.hex, INK_DARK) >= 4.5 ? 'AA on dark' : contrastRatio(t.hex, INK_LIGHT) >= 4.5 ? 'AA on light' : 'Low'
               return (
@@ -386,8 +429,8 @@ export default function TintTool({ onCopy, toast }) {
                 </button>
               )
             })}
-          </ToolSection>
-        </ToolPanel>
+          </div>
+        </div>
       </ToolGrid>
     </ToolLayout>
   )

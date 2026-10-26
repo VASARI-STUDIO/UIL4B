@@ -25,7 +25,7 @@
 //     to the button), on a press outside, and on tabbing past either end.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
@@ -315,9 +315,33 @@ export function ToolToolbar({
 
 // ── ToolBack ──────────────────────────────────────────────────────────────
 // The 36px hairline square with the left arrow.
-export function ToolBack({ to = '/projects', label = 'Back to workspace' }) {
+//
+// Where it goes depends on how the person got here. React Router writes an `idx`
+// into history.state: 0 for the entry a tab first loads on, one higher for every
+// in-app push. A replace keeps the idx, so a redirect landing (a retired path, or
+// the return from login) is still 0 and has nothing in the app behind it. So
+// idx > 0 means the page before this one is inside the app (Palette Builder ->
+// Tint, say) and the arrow steps back to it, as the browser's own back does. A
+// landing keeps the fixed `to` ("Back to workspace"). A modified click (new tab,
+// new window) keeps the plain link, and a tool that names its own destination
+// passes `history={false}`.
+const hasAppHistory = () => typeof window !== 'undefined' && window.history.state?.idx > 0
+
+export function ToolBack({ to = '/projects', label = 'Back to workspace', history = true }) {
+  const navigate = useNavigate()
+  // history.state is read on every render; subscribing to the location makes
+  // each navigation render this again.
+  useLocation()
+  const stepBack = history && hasAppHistory()
+  const name = stepBack ? 'Back to previous page' : label
+  const onClick = (event) => {
+    if (!stepBack || event.defaultPrevented || event.button !== 0) return
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    navigate(-1)
+  }
   return (
-    <Link to={to} className="tl-btn tl-btn--square" aria-label={label} title={label}>
+    <Link to={to} className="tl-btn tl-btn--square" aria-label={name} title={name} onClick={onClick}>
       <ToolIcon name="arrow-left" size={15} />
     </Link>
   )

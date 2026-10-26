@@ -247,9 +247,9 @@ for (const [label, opts] of [
 
 // The "About this project" panel is portalled to <body>, so opening it while
 // the page is still sliding off the footer leaves the footer's position and
-// layer alone: no switch for the panel to be covered by. (The scroll lock may
-// shift where a pinned footer paints while the panel is open; it is back where
-// it was on close.)
+// layer alone: no switch for the panel to be covered by. (The scroll lock is on
+// <html>, so it does not move where a pinned footer paints either; the last test in this file
+// holds it to that at half reveal.)
 for (const [width, height] of [[390, 844], [1440, 900]]) {
   test(`the About panel opens and closes mid-reveal without changing the footer's layering (${width}x${height})`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width, height })
@@ -301,6 +301,58 @@ for (const [width, height] of [[390, 844], [1440, 900]]) {
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
     expect(await page.evaluate(() => document.activeElement === document.querySelector('.app-footer-note')), 'focus did not return to the trigger').toBe(true)
     expect(await state(), 'the footer is not where it started once the panel closed').toEqual(before)
+    await ctx.close()
+  })
+}
+
+// THE FOOTER MUST NOT MOVE WHEN A DIALOG LOCKS THE PAGE.
+//
+// The root sets overflow-x: clip, so a body overflow no longer reaches the
+// viewport. A lock put on <body> turned body into its own scroll box and the
+// sticky curtain footer, half revealed at the foot of the page, dropped to where
+// it would sit unstuck (measured: top 303 -> 600.9 at 1440x900, 158 -> 591.1 at
+// 768x1024). The lock now goes on <html>, so the footer's top is the same with
+// the panel open as before it opened and after it closed.
+//
+// Half reveal on purpose: at the very end of the page a pinned and an unpinned
+// footer sit in the same place, so only a mid-reveal offset can tell them apart.
+// The trigger is clicked from script rather than with the pointer because at
+// half reveal the page still covers it, and a real click would first scroll the
+// page, which is the position this test is trying to hold.
+for (const [label, opts] of [
+  ['1440x900', { width: 1440, height: 900 }],
+  ['768x1024', { width: 768, height: 1024 }],
+  ['1440x900, reduced motion', { width: 1440, height: 900, reducedMotion: 'reduce' }],
+]) {
+  test(`the footer stays put while the About panel locks the page at half reveal (${label})`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, opts)
+    await go(page, '/')
+    const footer = page.locator('footer.sp-footer')
+    if (!opts.reducedMotion) {
+      await expect(footer, 'the curtain did not switch on, so there is no pinned footer to hold still').toHaveAttribute('data-curtain', 'true')
+    }
+    const footerH = await footer.evaluate((el) => el.offsetHeight)
+    const endY = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
+    await scrollToY(page, Math.max(0, endY - Math.round(footerH / 2)))
+
+    const top = () => footer.evaluate((el) => el.getBoundingClientRect().top)
+    const frames = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+    const before = await top()
+
+    await page.evaluate(() => document.querySelector('.app-footer-note').click())
+    const dialog = page.locator('.fnote')
+    await expect(dialog).toBeVisible()
+    await frames()
+    expect(Math.abs((await top()) - before), `the footer moved while the panel was open (${before} -> ${await top()})`).toBeLessThanOrEqual(1)
+    // Under reduced motion the footer is in normal flow and does not move even
+    // with the broken lock, so this is what guards that case: the lock is on the root.
+    expect(await page.evaluate(() => document.documentElement.style.overflow), 'the page is not locked on the root').toBe('hidden')
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await frames()
+    expect(await page.evaluate(() => document.documentElement.style.overflow), 'the root lock was not released').toBe('')
+    expect(Math.abs((await top()) - before), `the footer is not where it started once the panel closed (${before} -> ${await top()})`).toBeLessThanOrEqual(1)
     await ctx.close()
   })
 }

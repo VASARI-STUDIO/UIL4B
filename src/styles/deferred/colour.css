@@ -602,7 +602,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-pvg-swatches{position:relative;z-index:1;display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--pv-border)}
 .plb-pvg-sw{flex:1;background:var(--plb-rc)}
 /* Preview-context tabs in the modal head (UI / Brand / Graphic Design) */
-.plb-modal-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-modal-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .plb-modal-tab{padding:5px 12px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:var(--btn-radius);cursor:pointer;transition:all var(--t);white-space:nowrap}
 .plb-modal-tab:hover{color:var(--t0)}
 .plb-modal-tab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
@@ -670,24 +670,15 @@ button.plb-varrow:hover{background:var(--bg-2)}
    The type badge that used to be `.grg-pill` — hover-only — is now the shared
    `.lbry-card-badge` and is visible at rest.
 
-   THE SWATCH IS LANDSCAPE, and it is `height:196px` rather than a ratio for one
-   reason: that is exactly what `.pgal-stripes` on /discover/palettes is. These
-   two galleries were extracted into one shared browse language (.lbry-) because
-   they had solved the same problem twice and disagreed on every part of it —
-   and then they still disagreed about the only thing a browser actually looks
-   at, the shape of the tile. `aspect-ratio:3/4` was never overridden at any
-   breakpoint, so at 390px one portrait tile was 358x477 — 57% of the screen for
-   a single gradient — and the page ran to 57,839px against the palette
-   gallery's landscape rows. Two sibling galleries sharing one browse language
-   browsed completely differently.
-   A ratio cannot fix it, because a ratio is what caused it: the tile has to
-   stop growing when the column does. A fixed height is also what every colour
-   gallery worth copying does — Adobe Color, Relume's palette library and
-   Semrush's brand kits are all landscape and dense, and none of them uses a
-   portrait swatch. Measured, shipped rule against the old one injected back:
-   57,839px → 29,706px at 390px, and 31,330px → 15,330px at 834px. Half the
-   page, for the same number of gradients. */
-.grg-swatch{display:block;height:196px;border:1px solid var(--border);border-radius:inherit;box-shadow:var(--shadow-s)}
+   THE SWATCH IS PORTRAIT, 4:5, so a gradient reads as a tall panel rather than
+   a banner. A tall tile costs page length, so the length is recovered in the
+   grid instead: the phone grid is two columns (pages/gradient-gallery.css), a
+   tile there is about 175x219, and the desktop column minimum is low enough
+   for four columns. 4:5 rather than 3:4 because it is clearly portrait while a
+   two-up phone or tablet row still fits inside one screen. The ratio sits on
+   `.grg-swatch` alone, never on `.lbry-card-shot`, which the Palette Library
+   and the Font Gallery share. */
+.grg-swatch{display:block;aspect-ratio:4/5;border:1px solid var(--border);border-radius:inherit;box-shadow:var(--shadow-s)}
 .grg-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .grg-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .grg-copy{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.04em;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);padding:6px 11px;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}

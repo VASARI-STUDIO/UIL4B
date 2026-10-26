@@ -27,3 +27,13 @@
 .lib-surface.grg-wrap .grg-queue-status{border-radius:var(--radius-xs)}
 /* The like button measured 32px on a coarse pointer. */
 @media(pointer:coarse){.lib-surface.grg-wrap .grg-like{width:44px;height:44px}}
+
+/* Phones get two columns of the portrait swatch. `.lbry-grid` (global.css) sets
+   its own auto-fill track list after the grid rule in the ≤640px block there,
+   so this is rooted at the page and names the browse grid only; the locked
+   teaser grid keeps the shared columns. 12px between columns keeps a 320px
+   screen at about 140px a card, and the footer's two actions are already
+   stacked at this width, so names and meta lines stay whole. */
+@media(max-width:640px){
+  .lib-surface.grg-wrap .grg-grid--swatch{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 12px}
+}

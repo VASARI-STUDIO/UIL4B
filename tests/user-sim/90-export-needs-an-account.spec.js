@@ -264,12 +264,14 @@ test.describe('copying stays free, and that is half the decision', () => {
   // "Copy CSS" (D:617). The name is per route rather than one regex: a
   // loose /copy/i would also match Tint's "Copy row", which copies a single step
   // and would let this pass while saying nothing about the CSS.
-  for (const [route, label] of [['/create/tint', 'Copy variables'], ['/create/gradient', 'Copy CSS']]) {
+  for (const [route, label, role, menu] of [['/create/tint', 'Copy CSS', 'menuitem', '.tl-export-btn'], ['/create/gradient', 'Copy CSS', 'button', null]]) {
     test(`${route} copies without asking for anything`, async ({ page }) => {
       watch(page, PERSONA)
       await go(page, route)
 
-      const copy = page.getByRole('button', { name: label, exact: true }).first()
+      // Tint's Copy CSS is a row in its Export menu, which opens for anybody.
+      if (menu) await page.locator(menu).click()
+      const copy = page.getByRole(role, { name: label, exact: true }).first()
       // POSITIVE CONTROL: a route with no copy control cannot demonstrate that
       // copying is free. Waiting on the control itself is also the readiness
       // signal — it exists only once the tool has rendered its output.

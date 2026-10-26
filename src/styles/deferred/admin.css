@@ -702,7 +702,7 @@
 .adm-tabs {
   background: transparent;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius-pill);
   padding: 2px 0;
   gap: 4px;
   margin-bottom: 18px;
@@ -942,8 +942,11 @@
 }
 
 .adm-search {
-  border-radius: var(--radius);
-  background: var(--bg-2);
+  box-sizing: border-box;
+  height: var(--search-h);
+  padding-inline: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--inp);
   border: 1px solid var(--border);
 }
 
@@ -1085,6 +1088,24 @@
 
 .adm-bar-label {
   font-size: 11px;
+}
+
+.adm-top-list .adm-bar-label {
+  min-width: 0;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* Long stage names: the label takes 28% of the row (100px to 220px) and wraps. */
+.adm-top-list--wide .adm-bar-label {
+  width: clamp(100px, 28%, 220px);
+}
+
+.adm-top-list .adm-bar-value {
+  min-width: max-content;
+  white-space: nowrap;
 }
 
 /* ── THE ICON TILE ─────────────────────────────────────────────────────────

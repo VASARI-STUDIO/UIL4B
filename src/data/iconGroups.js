@@ -36,7 +36,7 @@
 // glyphs reach a viewer. glyphRequestPlan() is the only source of names the
 // group view fetches, and it leaves locked groups out entirely.
 
-import { canSeePack, tierOf, TIER_ORDER } from './iconPackTiers.js'
+import { canSeePack, isAnimatedPack, tierOf, TIER_ORDER } from './iconPackTiers.js'
 
 export const ICON_GROUPS_ROUTE = '/create/icons/groups'
 
@@ -215,6 +215,8 @@ export function glyphRequestPlan(groups, tier, { limit = Infinity } = {}) {
     for (const ref of g.icons.slice(0, limit)) {
       const { pack, name } = parseIconRef(ref)
       if (!canSeePack(pack, tier)) continue
+      // The animated sets are not group material and never load from the Iconify host.
+      if (isAnimatedPack(pack)) continue
       if (!plan.has(pack)) plan.set(pack, [])
       const names = plan.get(pack)
       if (!names.includes(name)) names.push(name)

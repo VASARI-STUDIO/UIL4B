@@ -70,7 +70,7 @@ test.describe('first-time visitor', () => {
     }
     // /plans is the design's Pricing screen:
     // the design's h1, and a Free card that prices at $0.
-    await expect(page.getByRole('heading', { level: 1, name: /less than 1 coffee per month/ })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: /less than 1 cup of coffee\s+per month/ })).toBeVisible()
     await expect(page.locator('.pr-head--free')).toContainText('$0')
   })
 

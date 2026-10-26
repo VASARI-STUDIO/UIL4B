@@ -129,10 +129,6 @@
   font-size:12px;color:var(--accent-mid);text-decoration:none;
 }
 .plib-page .pl-modal-profile:hover{text-decoration:underline}
-/* A tab's underline is a straight rule: on the pill radius the button shape
-   bent it into an arc. */
-.plib-page .pl-modal-view{border-radius:0}
-.plib-page .pl-modal-view.is-on{border-bottom-color:var(--t0)}
 .plib-page .pl-modal-prompt{border-radius:var(--radius);background:color-mix(in srgb,var(--t0) 4%,transparent)}
 .plib-page .pl-modal-prompt:hover{background:color-mix(in srgb,var(--t0) 6.5%,transparent)}
 /* Was an inline `opacity:1` over the resting .5 — the modal's copy hint is
@@ -189,7 +185,7 @@
   .plib-page .pl-modal.has-live{height:100vh;height:100dvh}
   .plib-page .pl-modal-close{top:12px;right:12px}
   .plib-page .pl-modal-header{padding:20px 16px 0}
-  .plib-page .pl-modal-views{padding:10px 16px 0}
+  .plib-page .pl-modal-views{margin:10px 16px 0;max-width:calc(100% - 32px)}
   .plib-page .pl-modal-body{padding:16px}
   .plib-page .pl-modal-footer{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
   .plib-page .pl-modal.is-live .pl-modal-stage{min-height:320px}

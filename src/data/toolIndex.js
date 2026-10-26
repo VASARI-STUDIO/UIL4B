@@ -221,7 +221,7 @@ export const CREATE_TOOL_SEARCH = {
   },
   icons: {
     description: 'Search icons from the open-source packs, then copy SVG or JSX.',
-    keywords: ['icon', 'icons', 'icon library', 'svg', 'jsx', 'symbol', 'glyph', 'iconify', 'pictogram'],
+    keywords: ['icon', 'icons', 'icon library', 'svg', 'jsx', 'symbol', 'glyph', 'iconify', 'pictogram', 'export', 'download'],
   },
   emoji: {
     description: 'Browse and copy every emoji, organised by category.',
@@ -425,11 +425,41 @@ export function groupBySubcategory(tools) {
 // "search" starts offering tools the product does not have, or hiding ones it
 // does. Callers pass an already-localised index so the predicate never has to
 // know about i18n.
+const GENERIC_QUERY_WORDS = new Set([
+  'generator', 'builder', 'maker', 'tool', 'tools', 'finder', 'creator',
+  'free', 'online', 'the', 'a', 'an', 'for', 'to', 'and', 'of',
+])
+
+function singularToken(word) {
+  return word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
+    ? word.slice(0, -1) : word
+}
+
+function searchTokens(text) {
+  return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(singularToken)
+}
+
+function tokenMatchRank(item, q) {
+  const words = q.trim().toLowerCase().split(/\s+/)
+  if (words.length < 2) return 5
+  const significant = words.filter(word => !GENERIC_QUERY_WORDS.has(word))
+  const terms = (significant.length ? significant : words).map(singularToken)
+  const allMatch = (tokens) => terms.every(word => tokens.some(token => (
+    word.length <= 2 ? token === word : token.startsWith(word)
+  )))
+  const labelTokens = searchTokens(item.label)
+  if (allMatch(labelTokens)) return 1
+  const keywordTokens = [...labelTokens, ...searchTokens((item.keywords || []).join(' '))]
+  if (allMatch(keywordTokens)) return 3
+  if (allMatch([...keywordTokens, ...searchTokens(item.description || '')])) return 4
+  return 5
+}
+
 export function matchesQuery(item, q) {
   if (item.label.toLowerCase().includes(q)) return true
   if (item.description && item.description.toLowerCase().includes(q)) return true
   if (item.keywords && item.keywords.some(k => k.includes(q))) return true
-  return false
+  return tokenMatchRank(item, q) < 5
 }
 
 // ── How well a row matches ──────────────────────────────────────────────────
@@ -448,7 +478,7 @@ export function matchRank(item, q) {
   if (keywords.some(k => k === q)) return 2
   if (keywords.some(k => k.includes(q))) return 3
   if (item.description && item.description.toLowerCase().includes(q)) return 4
-  return 5
+  return tokenMatchRank(item, q)
 }
 
 // Stable within a rank: the index tie-break is explicit rather than relying on
@@ -471,7 +501,7 @@ export function offerableCategories(categories) {
 }
 
 export function queryCommandIndex(query, { tools = [], categories = [], actions = [] }) {
-  const q = query.trim().toLowerCase()
+  const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
   if (!q) return { query: '', tools: [], categories: [], actions: [], total: 0 }
   const hitTools = rankedMatches(tools, q)
   // A category row is only offered when it is somewhere you can be SENT. The

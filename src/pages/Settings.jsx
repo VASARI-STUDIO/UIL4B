@@ -1191,7 +1191,7 @@ export default function Settings({ toast }) {
           <section id="set-language" className="settings-section" role="tabpanel" aria-labelledby="settab-language" hidden={active !== 'language'}>
             <div className="settings-section-h">
               <h2>Language</h2>
-              <p>Choose the interface language. Affects all menus, labels, and copy.</p>
+              <p>UIL4B is in English for now. Choosing a language here changes only a few labels; menus, tools and pages stay in English.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body settings-card-body--grid">

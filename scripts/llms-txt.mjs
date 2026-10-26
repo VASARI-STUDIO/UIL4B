@@ -50,7 +50,7 @@ import { freeFormats, proOnlyFormats, unbuiltFormats } from '../src/config/expor
 import { cheapestPerMonth, formatMoney, resolvePlanLadder } from '../src/config/planLadder.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../src/data/toolTree.js'
 import { LEARN_ARTICLES } from '../src/data/learnIndex.js'
-import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { PAGE_DESCRIPTIONS, PAGE_TITLES, pageName } from '../src/data/routeMetaMap.js'
 import { TOOL_ENTRIES } from '../src/data/toolIndex.js'
 import { canonicalUrl } from '../src/utils/routeMeta.js'
 import { CURRENCY_CODE, pricingSentence } from './site-pricing.mjs'
@@ -58,14 +58,13 @@ import { prerenderRoutes } from './route-matrix.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// "UI L4B | Palette Generator" → "Palette Generator". The title table is the
+// The title without the site name (pageName). The title table is the
 // one place every public route already has a human name; the tool tree's
 // labels are nav-length ("Palette", "Tint") and read as fragments in a list.
-const TITLE_PREFIX = /^UI L4B \| /
 const nameOf = (route) => {
   const title = PAGE_TITLES[route]
   if (!title) throw new Error(`llms-txt: ${route} has no title in routeMetaMap.js`)
-  return title.replace(TITLE_PREFIX, '')
+  return pageName(title)
 }
 const descriptionOf = (route) => {
   const desc = PAGE_DESCRIPTIONS[route]
@@ -133,12 +132,9 @@ export function llmsRoutes() {
     .filter((g) => !g.soon && !liveRoutes.has(g.route) && g.route !== '/discover')
     .map((g) => mustBePrerendered(g.route, 'the Browse section'))
 
-  // Still in the workshop: every tool the tree marks Soon, group Soon included.
-  const soon = CREATE_GROUPS.flatMap((g) => (
-    g.tools.filter((t) => !t.hidden && (g.soon || t.soon))
-  )).map((t) => ({ label: t.label, route: t.route }))
-
-  return { tools, learn, browse, more, soon }
+  // Tools still in the workshop are not listed anywhere in this file: a page
+  // the site hides from visitors is not advertised to a crawler either.
+  return { tools, learn, browse, more }
 }
 
 /**
@@ -169,7 +165,7 @@ export function llmsClaims() {
 
 /** The whole file, LF line endings. */
 export function buildLlmsTxt() {
-  const { tools, learn, browse, more, soon } = llmsRoutes()
+  const { tools, learn, browse, more } = llmsRoutes()
   const claims = llmsClaims()
   const row = (route, suffix = '') => `- [${nameOf(route)}${suffix}](${canonicalUrl(route)}): ${descriptionOf(route)}`
 
@@ -199,11 +195,6 @@ export function buildLlmsTxt() {
     '## More',
     ...more.map((r) => row(r)),
     '',
-    '## Optional',
-    'Not yet built. These routes resolve to an honest "still in the workshop" state rather than a working tool, and should not be described as available:',
-    '',
-    ...soon.map((t) => `- ${t.label} (${t.route})`),
-    '',
   ].join('\n')
 }
 
@@ -211,9 +202,9 @@ export function buildLlmsTxt() {
 if (process.argv[1]?.endsWith('llms-txt.mjs')) {
   const text = buildLlmsTxt()
   await writeFile(path.join(root, 'public', 'llms.txt'), text, 'utf8')
-  const { tools, learn, browse, soon } = llmsRoutes()
+  const { tools, learn, browse } = llmsRoutes()
   console.log(
     `sync:llms — wrote public/llms.txt: ${tools.length} tools, ${learn.length} guides, `
-    + `${browse.length} browse pages, ${soon.length} still in the workshop`,
+    + `${browse.length} browse pages`,
   )
 }

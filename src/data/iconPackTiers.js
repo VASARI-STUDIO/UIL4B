@@ -102,7 +102,28 @@ export const ICON_PACK_TIERS = {
   'fluent-emoji':     { tier: 'paid', why: 'No browser — Microsoft ship it as a GitHub repo. Named paid with the other emoji sets.' },
   noto:               { tier: 'paid', why: 'No icon browser — Google ship a font specimen and a GitHub repo. Named paid with the other emoji sets.' },
   openmoji:           { tier: 'paid', why: 'openmoji.org is the creator’s own free browser — named paid by the founder with the other emoji sets.' },
+
+  // ── paid · animated ──────────────────────────────────────────────────────
+  // Iconify's free animated sets (all MIT), Pro only. `animated: true` is the
+  // flag the rest of the app reads: these prefixes are NEVER requested from
+  // api.iconify.design by the browser. Their listing and glyphs come from
+  // GET /api/ai?animatedIcons=<prefix>, which checks the plan on the server
+  // (api/_lib/icons/animated.js keeps the matching allowlist, and
+  // tests/unit/animated-icons-endpoint.test.js pins the two together).
+  'line-md':          { tier: 'paid', animated: true, why: 'Material Line Icons — animated line icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  'svg-spinners':     { tier: 'paid', animated: true, why: 'SVG Spinners — animated loaders, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  meteocons:          { tier: 'paid', animated: true, why: 'Meteocons — animated weather icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
 }
+
+/** Is this one of the animated sets, which only ever load through the server's Pro check? */
+export function isAnimatedPack(prefix) {
+  return ICON_PACK_TIERS[prefix]?.animated === true
+}
+
+/** Every animated prefix in the table, in table order. */
+export const ANIMATED_PACKS = Object.freeze(
+  Object.keys(ICON_PACK_TIERS).filter((p) => ICON_PACK_TIERS[p].animated === true),
+)
 
 /* ── THE SIGNED-OUT CAP ─────────────────────────────────────────────────────
  *
@@ -190,11 +211,25 @@ export function visiblePacks(packs, tier) {
  * is the nav trigger's own label; "See what Pro includes" is what the palette
  * and prompt libraries already say). */
 export const ICON_GATE_COPY = {
-  // Under the capped signed-out grid.
-  anon: {
-    heading: (n) => `Another ${n.toLocaleString()} icon ${n === 1 ? 'pack' : 'packs'} with a free account`,
-    body: (cap) => `Signed out, this grid shows the first ${cap} icons from the outlined packs.`,
-    action: 'Log in',
+  // The band at the end of the grid (IconEndBand). `anon` sits under the capped
+  // signed-out grid; `free` sits at the end of a signed-in free viewer's
+  // results. Counts are passed in, never typed.
+  end: {
+    anon: {
+      heading: 'Log in to keep browsing.',
+      // `cap` is ANON_ICON_CAP; `n` is how many solid packs an account adds.
+      body: (cap, n) => `Signed out, you see the first ${cap} icons. A free account lifts that cap and adds ${n.toLocaleString()} solid ${n === 1 ? 'pack' : 'packs'}.`,
+      action: 'Log in',
+      secondary: 'See the plans',
+      // The hover chip on a blurred icon.
+      chip: 'Log in to see more',
+    },
+    free: {
+      heading: 'Brand marks, flags and emoji are on Pro.',
+      // `p` is how many packs Pro adds; `d` is the free daily copy allowance.
+      body: (p, d) => `Pro adds ${p.toLocaleString()} more ${p === 1 ? 'pack' : 'packs'}, line caps and joins in the editor, and copying past ${d.toLocaleString()} icons a day.`,
+      action: 'See what Pro includes',
+    },
   },
   // When a signed-out visitor picks a pack or group that needs an account.
   // `label` is a pack name OR a group name, so the sentence has to read for

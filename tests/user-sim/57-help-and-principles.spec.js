@@ -14,7 +14,7 @@
 // use the reveal, so both are asserted on COMPUTED opacity after the observer
 // has had the element in view, not on toBeVisible().
 import { test, expect } from './base.js'
-import { expectRendered, go, watch } from './helpers.js'
+import { expectRendered, go, signIn, watch } from './helpers.js'
 import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
@@ -102,10 +102,10 @@ test.describe('Help & Getting Started', () => {
     // one of the four sanctioned appearances.
     await expect(page.locator('.hlp-hero .home-mark')).toHaveCount(1)
 
-    // THE WIRING. The counts come from CREATE_GROUPS above, not from the module
-    // the page imports, so a page that stopped deriving them fails here.
-    await expect(page.locator('.hlp-hint'))
-      .toHaveText(`${LIVE} tools open now · ${SOON} still being built`)
+    // THE WIRING. The count comes from CREATE_GROUPS above, not from the module
+    // the page imports, so a page that stopped deriving it fails here. The
+    // "still being built" half is admin-only (see "Soon counts" below).
+    await expect(page.locator('.hlp-hint')).toHaveText(`${LIVE} tools open now`)
 
     // The retired names the old page advertised must not be anywhere on it.
     const body = await page.evaluate(() => document.body.innerText)
@@ -275,8 +275,9 @@ test.describe('Design Principles', () => {
     await expect(page.locator('.prn-ex-col[data-unbuilt="true"] .soon-badge'))
       .toHaveCount(UNBUILT_FORMATS.length)
 
-    // The two counts, against the registry computed at the top of this file.
-    await expect(page.locator('.prn-sn-fig b')).toHaveText([String(LIVE), String(SOON)])
+    // The open-now count, against the registry computed at the top of this
+    // file. The unfinished count is admin-only (see "Soon counts" below).
+    await expect(page.locator('.prn-sn-fig b')).toHaveText([String(LIVE)])
 
     // The type ladder is the arithmetic, rendered at the sizes it produces.
     const { base, ratio } = DEFAULT_DESIGN.typeScale
@@ -368,5 +369,36 @@ test.describe('/help opens on what the founder said', () => {
     const lede = page.locator('.hlp-hero .hlp-lede')
     await expect(lede).toHaveCount(1)
     await expect(lede).toContainText(line(SURFACE_LINE.helpOpening))
+  })
+})
+
+/* ── Unfinished tools are counted for admins only ────────────────────────── */
+
+test.describe('Soon counts', () => {
+  test('a signed-out visitor is told nothing about tools they cannot see', async ({ page }) => {
+    watch(page, 'a first-time visitor reading the help page')
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
+    await expect(page.locator('.hlp-hint')).toHaveText(`${LIVE} tools open now`)
+    await expect(page.locator('.hlp-answer-q', { hasText: 'What is not built yet?' })).toHaveCount(0)
+    await expect(page.locator('.hlp-answers')).not.toContainText(/Soon badge/i)
+
+    await go(page, '/learn/principles')
+    await expectRendered(page, '/learn/principles')
+    await expect(page.locator('.prn-sn-fig[data-soon="true"]')).toHaveCount(0)
+    await expect(page.locator('.prn-sn')).not.toContainText(/still being built/i)
+  })
+
+  test('an admin still sees the counts', async ({ page }) => {
+    watch(page, 'admin reading the help page')
+    await signIn(page, { admin: true })
+    await go(page, '/learn/help')
+    await expectRendered(page, '/learn/help')
+    await expect(page.locator('.hlp-hint')).toHaveText(`${LIVE} tools open now · ${SOON} still being built`)
+    await expect(page.locator('.hlp-answer-q', { hasText: 'What is not built yet?' })).toHaveCount(1)
+
+    await go(page, '/learn/principles')
+    await expectRendered(page, '/learn/principles')
+    await expect(page.locator('.prn-sn-fig b')).toHaveText([String(LIVE), String(SOON)])
   })
 })

@@ -174,6 +174,11 @@ export const ICON_PACK_CREDITS = {
   'fluent-emoji': { name: 'Fluent Emoji', author: 'Microsoft Corporation', url: 'https://github.com/microsoft/fluentui-emoji', spdx: 'MIT' },
   noto: { name: 'Noto Emoji', author: 'Google Inc', url: 'https://github.com/googlefonts/noto-emoji', spdx: 'Apache-2.0' },
 
+  // ── The animated sets (Pro). All three MIT, read out of the Iconify registry. ──
+  'line-md': { name: 'Material Line Icons', author: 'Vjacheslav Trushkin', url: 'https://github.com/cyberalien/line-md', spdx: 'MIT' },
+  'svg-spinners': { name: 'SVG Spinners', author: 'Utkarsh Verma', url: 'https://github.com/n3r4zzurr0/svg-spinners', spdx: 'MIT' },
+  meteocons: { name: 'Meteocons', author: 'Bas Milius', url: 'https://github.com/basmilius/weather-icons', spdx: 'MIT' },
+
   /* THE ONE PACK THAT IS NOT ICONIFY AT ALL, and the one whose attribution was
      already here. img.logo.dev is a commercial API on our publishable token,
      and its free tier's condition is a visible link back to logo.dev wherever

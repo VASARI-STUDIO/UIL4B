@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { trackActivation } from '../utils/analytics'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
-import { getLenis } from '../hooks/useSmoothScroll'
+import { lockScroll } from '../utils/scrollLock'
 import useExportDesign from '../hooks/useExportDesign'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import useExportGate from '../hooks/useExportGate'
@@ -85,8 +85,10 @@ export default function ExportPanel({ onClose }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // A finished export that still has something to say (a font it could not
-  // embed). Announced politely, and never styled as an error.
-  const [notice, setNotice] = useState('')
+  // embed, a print window the browser blocked). { lead, detail }: the lead says
+  // what happened, the detail what follows from it. Announced politely, and
+  // never styled as an error.
+  const [notice, setNotice] = useState(null)
   // Which step a long export is on, for the button label: 'fonts' | 'building'.
   const [stage, setStage] = useState('')
   // An export finished and the panel stayed open to say something about it.
@@ -191,7 +193,7 @@ export default function ExportPanel({ onClose }) {
 
     setBusy(true)
     setError('')
-    setNotice('')
+    setNotice(null)
     setDone(false)
     // Which activation this export completed, and whether the panel may close.
     let activation = 'style-guide'
@@ -214,7 +216,10 @@ export default function ExportPanel({ onClose }) {
         if (missing.length) {
           // The kit WAS produced and says the same inside itself; the panel
           // stays open to carry the notice rather than closing over it.
-          setNotice(`Your UI kit downloaded. ${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`)
+          setNotice({
+            lead: 'Your UI kit downloaded.',
+            detail: `${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`,
+          })
           setBusy(false)
           setStage('')
           keepOpen = true
@@ -228,7 +233,7 @@ export default function ExportPanel({ onClose }) {
         if (!printBook(html, `${slug}-design-system-book.html`)) {
           // The book WAS produced, so this is a notice and not an error — the
           // panel stays open to carry it rather than closing over it.
-          setError('Your browser blocked the print window, so the book was downloaded instead. Open it and print to PDF.')
+          setNotice({ lead: 'The book downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           setBusy(false)
           keepOpen = true
         }
@@ -240,7 +245,8 @@ export default function ExportPanel({ onClose }) {
         const html = buildBrandGuidelines(design, { projectName })
         activation = 'brand-guidelines'
         if (!printBook(html, `${slug}-brand-guidelines.html`)) {
-          setError('Your browser blocked the print window, so the guidelines were downloaded instead. Open the file and print to PDF.')
+          // Also a produced file, so a notice and not an error.
+          setNotice({ lead: 'The guidelines downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           setBusy(false)
           keepOpen = true
         }
@@ -299,19 +305,42 @@ export default function ExportPanel({ onClose }) {
     }
   }
   const panelRef = useRef(null)
+  const exportBtnRef = useRef(null)
+  // What a finished export said (the notice, the error line) belongs to the
+  // format that produced it, and the footer keeps it in view. Choosing another
+  // format starts clean, so "Your UI kit downloaded" never sits beside "Export CSS".
+  const pickFormat = (id) => {
+    if (id === format) return
+    setFormat(id)
+    setNotice(null)
+    setError('')
+    // The secondary button reads Close only while a finished export's message is
+    // on screen; with the message gone there is something to cancel again.
+    setDone(false)
+  }
+  // Export disables while it builds, and a disabled button drops focus to the
+  // page behind, so the next Tab would leave the dialog. Hold focus on the panel
+  // while it builds, then hand it back to the Export button once it is enabled.
+  const wasBusy = useRef(false)
+  useEffect(() => {
+    if (busy) {
+      wasBusy.current = true
+      panelRef.current?.focus()
+    } else if (wasBusy.current) {
+      wasBusy.current = false
+      const btn = exportBtnRef.current
+      if (btn && !btn.disabled) btn.focus()
+    }
+  }, [busy])
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
-  // Lock body scroll while open; restore focus to the opener when we unmount.
-  // Also pause the app-wide Lenis so its rAF loop doesn't fight the locked body
-  // (a no-op when reduced motion is on and Lenis was never instantiated).
+  // Lock page scroll while open (this also pauses the app-wide Lenis); restore
+  // focus to the opener when we unmount.
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    getLenis()?.stop()
+    const unlockScroll = lockScroll()
     const opener = restoreRef.current
     return () => {
-      document.body.style.overflow = prev
-      getLenis()?.start()
+      unlockScroll()
       if (opener && typeof opener.focus === 'function') opener.focus()
     }
   }, [])
@@ -408,7 +437,7 @@ export default function ExportPanel({ onClose }) {
                   role="radio"
                   aria-checked={active}
                   className={active ? 'exp-fmt is-active' : 'exp-fmt'}
-                  onClick={() => setFormat(f.id)}
+                  onClick={() => pickFormat(f.id)}
                 >
                   <span className="exp-fmt-check" aria-hidden="true" />
                   <span className="exp-fmt-text">
@@ -439,14 +468,23 @@ export default function ExportPanel({ onClose }) {
             scroll position, instead of below the last format row. */}
         <div className="exp-dock">
           {error && <p className="exp-error" role="alert">{error}</p>}
-          {notice && <p className="exp-notice" role="status" aria-live="polite">{notice}</p>}
+          {/* The live region is mounted empty and stays mounted, so a screen
+              reader is already watching it when the text arrives. Empty, it
+              adds nothing to the dock. */}
+          <div className="exp-live" role="status" aria-live="polite">
+            {notice && (
+              <p className="exp-notice">
+                <span className="exp-notice-lead">{notice.lead}</span>{' '}{notice.detail}
+              </p>
+            )}
+          </div>
 
           <div className="exp-foot">
             <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
               {done ? 'Close' : 'Cancel'}
             </button>
             {activeFormat?.live ? (
-              <button type="button" className="btn btn-accent exp-act" onClick={runExport} disabled={busy}>
+              <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={runExport} disabled={busy}>
                 {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
               </button>
             ) : (

@@ -105,8 +105,8 @@ import { useToolbarMode } from './toolbarMode'
 //
 // So the condition is now MEASURED rather than assumed: collapse when this
 // group's own tray is wider than the column it has to live in. The band stays
-// as a floor — below 981px the collapse is unconditional, which is #318's
-// decision and is about touch room rather than about fit.
+// as a floor — below 981px the collapse is unconditional, for touch room
+// rather than fit.
 //
 // WHY THIS CANNOT OSCILLATE, which is the obvious hazard in a
 // measure-then-change-layout loop. Both sides of the comparison are chosen so
@@ -179,7 +179,7 @@ export default function LibraryFilterGroup({
   // So this is a decision about the OPTIONS rather than about a viewport, taken
   // once at the call site: nine options is a menu everywhere, not a row of chips
   // that is a row of chips at some widths. That also removes the shape change
-  // itself, which is the fault #323 was fixing when it collapsed the emoji tray.
+  // itself, the fault that collapsing the emoji tray was meant to fix.
   alwaysCollapsed = false,
 }) {
   const trayRef = useRef(null)

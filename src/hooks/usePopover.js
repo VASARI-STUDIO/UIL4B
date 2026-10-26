@@ -56,6 +56,17 @@ const setIfChanged = (el, name, value) => {
   if (el.getAttribute(name) !== value) el.setAttribute(name, value)
 }
 
+// The bottom edge of the pinned bar matching `selector`, when it is one of
+// `kinds` and is in contact with `reach` px from the top of the viewport; else 0.
+const clearedBy = (selector, kinds, reach) => {
+  const bar = document.querySelector(selector)
+  if (!bar) return 0
+  const style = getComputedStyle(bar)
+  if (!kinds.includes(style.position) || style.visibility === 'hidden' || style.display === 'none') return 0
+  const box = bar.getBoundingClientRect()
+  return box.top <= reach && box.bottom > 0 ? box.bottom : 0
+}
+
 // How far down the viewport is painted over by FIXED top chrome, in px.
 //
 // Read off the element rather than off `--nav-clear`, which is the token the
@@ -69,13 +80,31 @@ const setIfChanged = (el, name, value) => {
 // that has no nav at all: a prerendered shell before hydration, and the
 // standalone checkout and onboarding routes. Anything other than a fixed bar
 // resting against the top of the viewport contributes nothing.
-const topObstruction = () => {
-  const bar = document.querySelector('.pnav')
-  if (!bar) return 0
-  const style = getComputedStyle(bar)
-  if (style.position !== 'fixed' || style.visibility === 'hidden' || style.display === 'none') return 0
-  const box = bar.getBoundingClientRect()
-  return box.top <= 0 && box.bottom > 0 ? box.bottom : 0
+//
+// A tool page also pins its own toolbar (`.tl-toolbar`, sticky) directly under
+// the nav, and it is just as much a thing a popover must not sit on: the tint
+// picker pinned itself over "Copy variables" because only the nav was counted.
+// It counts only while it is in contact with the nav's bottom edge (or the top
+// of the viewport when there is no nav), which is exactly when it is chrome.
+export const topObstruction = () => {
+  const nav = clearedBy('.pnav', ['fixed'], 0)
+  return Math.max(nav, clearedBy('[data-tool-toolbar]', ['fixed', 'sticky'], nav + 1))
+}
+
+// The line fixed bottom tabs begin on (the viewport's bottom when there are none).
+const bottomObstruction = () => {
+  const tabs = document.querySelector('.pnav-tabs')
+  return tabs && getComputedStyle(tabs).position === 'fixed' ? Math.min(window.innerHeight, tabs.getBoundingClientRect().top) : window.innerHeight
+}
+
+// True once the trigger has scrolled wholly out of the band the page is visible
+// in: behind the fixed chrome above, behind the tabs below, or off a side. A
+// panel clamped to the edge of that band is not attached to anything.
+export function anchorOutOfView(trigger) {
+  if (!trigger) return false
+  const box = trigger.getBoundingClientRect()
+  return box.bottom <= topObstruction() || box.top >= bottomObstruction()
+    || box.right <= 0 || box.left >= window.innerWidth
 }
 
 // Decide which side the panel hangs off and whether it opens upward, by
@@ -92,8 +121,7 @@ export function placePopover(trigger, panel) {
 
   // Portalled listboxes use viewport coordinates and clear both fixed bars.
   if (panel.dataset.popFixed === 'true') {
-    const tabs = document.querySelector('.pnav-tabs')
-    const bottom = tabs && getComputedStyle(tabs).position === 'fixed' ? Math.min(vh, tabs.getBoundingClientRect().top) : vh
+    const bottom = bottomObstruction()
     const top = topObstruction() + EDGE_PAD
     const below = Math.max(0, bottom - Math.max(top, anchor.bottom) - EDGE_PAD * 2)
     const above = Math.max(0, Math.min(bottom, anchor.top) - top - EDGE_PAD)
@@ -209,7 +237,7 @@ function focusableAfter(trigger, panel) {
   return all.slice(at + 1).find(el => !panel.contains(el)) || null
 }
 
-export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true, arrowNav = false, portalled = false } = {}) {
+export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true, arrowNav = false, portalled = false, closeWhenAnchorLeaves = false } = {}) {
   const triggerRef = useRef(null)
   const popRef = useRef(null)
   const closeRef = useRef(onClose)
@@ -245,6 +273,15 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
   //
   // `passive` because neither handler calls preventDefault: it tells the browser
   // it never has to wait on this listener before it scrolls.
+  //
+  // `closeWhenAnchorLeaves` is for a panel that is placed in viewport
+  // coordinates (the portalled colour picker). Such a panel is clamped to the
+  // band below the fixed chrome, so once its trigger scrolls out of that band
+  // the clamp keeps it pinned under the nav, detached from anything and over the
+  // controls behind it. It closes instead, without taking focus: the person is
+  // scrolling, not choosing, and a focus() would scroll the page back. The
+  // check follows the placement, so a later scroll event is what triggers it —
+  // never the first placement at open, which would close a panel on arrival.
   useLayoutEffect(() => {
     if (!open) return undefined
     let frame = 0
@@ -252,7 +289,11 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       frame = 0
       placePopover(triggerRef.current, popRef.current)
     }
-    const schedule = () => { if (!frame) frame = requestAnimationFrame(place) }
+    const follow = () => {
+      place()
+      if (closeWhenAnchorLeaves && anchorOutOfView(triggerRef.current)) closeRef.current?.()
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(follow) }
     place()
     window.addEventListener('resize', schedule, { passive: true })
     window.addEventListener('scroll', schedule, { capture: true, passive: true })
@@ -261,7 +302,7 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       window.removeEventListener('resize', schedule)
       window.removeEventListener('scroll', schedule, true)
     }
-  }, [open])
+  }, [open, closeWhenAnchorLeaves])
 
   useEffect(() => {
     if (!open) return undefined

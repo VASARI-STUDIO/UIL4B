@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { getLenis } from './useSmoothScroll.js'
+import { lockScroll } from '../utils/scrollLock.js'
 import { markScrollContainers } from '../utils/scrollContainment.js'
 
 // The keyboard contract every modal surface in the app owes its user: a focus
@@ -76,9 +76,9 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // at all. ExportPanel and IconLibrary had both worked this out and written
     // it by hand; it belongs here, where every dialog gets it.
     //
-    // The body lock STAYS, and is not redundant: with reduced motion on, Lenis
+    // The overflow lock STAYS, and is not redundant: with reduced motion on, Lenis
     // is never instantiated, `getLenis()` returns null and the browser is doing
-    // the scrolling again — which is exactly the case the body lock does hold.
+    // the scrolling again — which is exactly the case the overflow lock does hold.
     // The two cover each other's gap.
     //
     // Marking the dialog and its scroll containers `data-lenis-prevent` is what
@@ -87,8 +87,11 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // gesture reaches the browser and the dialog scrolls natively. Without it a
     // stopped Lenis would freeze the dialog's body along with the page — the bug
     // wearing its opposite coat.
-    document.body.style.overflow = 'hidden'
-    getLenis()?.stop()
+    //
+    // lockScroll() puts the lock on <html> (see utils/scrollLock.js for why not
+    // <body>) and stops Lenis. It is counted, so a dialog opened over another
+    // surface leaves the outer lock in place until the last one closes.
+    const unlockScroll = lockScroll()
     const unmark = markScrollContainers(node)
 
     const focusables = () => Array.from(
@@ -115,8 +118,7 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     document.addEventListener('keydown', onKey, true)
     return () => {
       document.removeEventListener('keydown', onKey, true)
-      document.body.style.overflow = ''
-      getLenis()?.start()
+      unlockScroll()
       unmark()
       // THE RESTORE WAITS ONE FRAME. It used to run right here, synchronously,
       // and the flow audit (#436) caught what that does, with a trace:

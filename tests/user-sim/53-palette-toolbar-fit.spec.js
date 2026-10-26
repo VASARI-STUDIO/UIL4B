@@ -101,8 +101,14 @@ test.describe('palette toolbar fits the row it is given', () => {
     const panel = page.getByRole('dialog', { name: 'Extra tools' })
     await expect(panel).toBeVisible()
     // Always in Extra tools, at every width.
-    for (const name of ['Explore palettes', 'Preview on a UI', 'Open in Gradient', 'History', 'Reset palette']) {
+    for (const name of ['Open in Gradient', 'History', 'Reset palette']) {
       await expect(panel.getByRole('button', { name, exact: true })).toBeVisible()
+    }
+    // Explore and Preview are priority-2 buttons: below 768px they are icon-only
+    // and still fit, so at 662 they are on the row, not in Extra tools.
+    for (const name of ['Explore palettes', 'Preview on a UI']) {
+      await expect(page.locator(BAR).getByRole('button', { name, exact: true }), `${name} is on the row at 662px`).toBeVisible()
+      await expect(panel.getByRole('button', { name, exact: true }), `${name} is not doubled in Extra tools`).toHaveCount(0)
     }
     // And at 662 the row has handed over its lowest-priority controls too: the
     // System and Vision selects (priority 0) are here, not on the row.
@@ -114,6 +120,35 @@ test.describe('palette toolbar fits the row it is given', () => {
     // What is in Extra tools does something: Open in Gradient hands the palette on.
     await panel.getByRole('button', { name: 'Open in Gradient', exact: true }).click()
     await expect(page).toHaveURL(/\/create\/gradient/)
+  })
+
+  test('Explore and Preview are on the row where it has room, and in Extra tools where it has not', async ({ page }) => {
+    // 768 and 1024 are the two sides of the line: at 768 the labelled buttons do
+    // not fit, so both live in Extra tools (and open from there); from 1024 both
+    // are buttons on the row and Extra tools no longer lists them.
+    const bar = page.locator(BAR)
+    const onRow = (name) => bar.getByRole('button', { name, exact: true })
+    const panel = page.getByRole('dialog', { name: 'Extra tools' })
+    const names = ['Explore palettes', 'Preview on a UI']
+    await go(page, '/create/palette')
+
+    await page.setViewportSize({ width: 768, height: 900 })
+    await settle(page)
+    for (const name of names) await expect(onRow(name), `768px: ${name} left the row`).toHaveCount(0)
+    await bar.getByRole('button', { name: 'Extra tools' }).click()
+    for (const name of names) await expect(panel.getByRole('button', { name, exact: true }), `768px: ${name} is in Extra tools`).toBeVisible()
+    await panel.getByRole('button', { name: 'Preview on a UI', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
+    await page.getByRole('button', { name: 'Close preview' }).click()
+
+    await page.setViewportSize({ width: 1024, height: 900 })
+    await settle(page)
+    for (const name of names) await expect(onRow(name), `1024px: ${name} is a button on the row`).toBeVisible()
+    await bar.getByRole('button', { name: 'Extra tools' }).click()
+    for (const name of names) await expect(panel.getByRole('button', { name, exact: true }), `1024px: ${name} is not doubled in Extra tools`).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await onRow('Preview on a UI').click()
+    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
   })
 
   test('one row on every laptop and tablet width, nothing clipped', async ({ page }) => {

@@ -61,7 +61,21 @@ const PRO_EXPORTS = proOnlyFormats()
 
 // The page headline, on both billing states. One constant, so Monthly and
 // Yearly cannot end up with different wording.
-const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'
+const HEADLINE_LEAD = 'Improve your design systems for less than 1 cup of'
+const HEADLINE_TAIL = 'per month.'
+
+// A takeaway cup, drawn inline: the icon set has no coffee glyph.
+function TakeawayCup() {
+  return (
+    <svg className="pr-h1-cup" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" focusable="false"
+      fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 6h14" />
+      <path d="M6.5 3.5h11L19 6" />
+      <path d="M5 6l1.6 14.5h10.8L19 6" />
+      <path d="M5.8 11h12.4" />
+    </svg>
+  )
+}
 
 // The ceilings side by side. "Six times" would be true of the daily limit and
 // false of the monthly one (300 against 40), so the sub-line quotes both ends
@@ -115,7 +129,7 @@ const FAQS = [
   },
   {
     q: 'Do my files get uploaded?',
-    a: 'Most image and video work runs in the browser. The AI features are the exception: the Alt Text Generator and the photo scan in the AI Image Prompt Generator send your image to an AI provider, and prompt writing sends your text.',
+    a: 'Most image and video work runs in the browser. The AI features are the exception: the Alt Text Generator sends your image to an AI provider, and prompt writing sends your text.',
   },
   {
     q: 'Which export formats can I actually get?',
@@ -124,14 +138,13 @@ const FAQS = [
 ]
 
 // The billed line under the Pro price, per offer. A cadence over one month
-// states both prices plainly; the one-month cadence says whether it carries a trial.
-function billedLine(offer, monthlyOffer) {
+// states its own total and how often it bills, in the words the card uses at
+// every width and with no other cadence's price beside it; the one-month
+// cadence says whether it carries a trial.
+function billedLine(offer) {
   if (offer.months > 1) {
     if (!offer.totalLabel) return ''
-    const other = monthlyOffer?.totalLabel
-      ? `, or ${monthlyOffer.totalLabel} ${OFFER_BY_ID.monthly.cadence}`
-      : ''
-    return `${offer.totalLabel} ${OFFER_BY_ID[offer.id].cadence}${other}.`
+    return `${cardLines(offer).billed}.`
   }
   return offer.trialDays
     ? `Billed monthly after a ${offer.trialDays}-day free trial.`
@@ -211,13 +224,11 @@ export default function Pricing() {
   const otherOffer = offers.find((o) => o.id !== offer.id && o.amountLabel)
   const freeAmount = formatMoney(0, currency)
 
-  // THE PRO CTA IS THE REAL CHECKOUT WIRING. Signed in it goes straight to
-  // /checkout for the chosen cadence; signed out it opens the sign-in popup
-  // via /login with `from` set, and LoginRoute sends the visitor on to that
-  // checkout once they are in.
-  const checkoutHref = `/checkout?plan=${offer.checkoutPlan}`
-  const proTo = user ? checkoutHref : '/login'
-  const proState = user ? undefined : { from: checkoutHref, returnTo: `${location.pathname}${location.search || ''}` }
+  // THE PRO CTA IS THE REAL CHECKOUT WIRING. Every paid button goes straight to
+  // /checkout for the chosen cadence, signed in or not. /checkout is a public
+  // route: it shows the plan, the price and the trial, and a signed-out visitor
+  // is asked to log in or create an account there, with the cadence kept.
+  const proTo = `/checkout?plan=${offer.checkoutPlan}`
   const proBusy = subLoading || !price.loaded
   const label = ctaLabel(offer)
 
@@ -297,7 +308,7 @@ export default function Pricing() {
           <span className="pr-bar-name">Pro<span className="pr-bar-bill"> · billed {BILLED_EVERY[offer.id]}</span></span>
           <span className="pr-bar-amt">{offer.amountLabel ? `${offer.amountLabel} / month` : ''}</span>
         </span>
-        <Link className="pr-bar-btn" to={proTo} state={proState} tabIndex={-1}>{label}</Link>
+        <Link className="pr-bar-btn" to={proTo} tabIndex={-1}>{label}</Link>
       </span>
     </div>
   )
@@ -343,7 +354,6 @@ export default function Pricing() {
         ref={ctaRef}
         className="pr-cta pr-cta--pro"
         to={proTo}
-        state={proState}
         aria-disabled={proBusy ? 'true' : undefined}
         onClick={(event) => { if (proBusy) event.preventDefault() }}
       >
@@ -358,9 +368,7 @@ export default function Pricing() {
   // notes are sized with the ladder's fallback amounts, shown as the approved USD
   // amounts the way resolvePlanLadder quotes them, never as the visitor's
   // currency. On a page in another currency they carry "US$", so a bare "$"
-  // never reads as the page's own dollar. Once the prices have landed the notes
-  // name only live amounts: the monthly price a longer cadence is set beside
-  // (`monthlyForNote`) is the live one in this currency, or it is left out.
+  // never reads as the page's own dollar.
   const qualify = currency !== APPROVED_CURRENCY
   const sized = offers.map((o) => {
     const fallback = OFFER_BY_ID[o.id]
@@ -371,9 +379,7 @@ export default function Pricing() {
     }
   })
   const sizedBest = sized.find((o) => o.id === DEFAULT_BILLING)
-  const sizedMonthly = sized.find((o) => o.id === 'monthly')
   const bestLive = !!offers.find((o) => o.id === DEFAULT_BILLING)?.amountLabel
-  const monthlyForNote = price.loaded ? offers.find((o) => o.id === 'monthly') : sizedMonthly
   // The unavailable state is two short lines, each one line wide at 320px, so it
   // is never the tallest state in the slot and never sizes it. One cadence
   // unpriced: say so and name the one that can be bought. Nothing priced: say the
@@ -387,7 +393,7 @@ export default function Pricing() {
   const noteStates = [
     ...sized.map((o) => ({
       id: o.id,
-      lines: [billedLine(o, monthlyForNote), CANCEL_LINE].filter(Boolean),
+      lines: [billedLine(o), CANCEL_LINE].filter(Boolean),
       under: underLine(o, sizedBest, bestLive),
     })),
     { id: 'unavailable', lines: unavailableLines, under: FREE_LINE },
@@ -418,7 +424,6 @@ export default function Pricing() {
     <Link
       className="pr-cta pr-cta--pro"
       to={proTo}
-      state={proState}
       aria-disabled={proBusy ? 'true' : undefined}
       onClick={(event) => { if (proBusy) event.preventDefault() }}
     >
@@ -456,7 +461,7 @@ export default function Pricing() {
 
       <main id="main" tabIndex={-1}>
         <section id="pricing" className="pr-hero pr-shell" aria-labelledby="pricing-h1">
-          <h1 className="pr-h1" id="pricing-h1">{HEADLINE}</h1>
+          <h1 className="pr-h1" id="pricing-h1">{HEADLINE_LEAD}{' '}<span className="pr-h1-nowrap">coffee{' '}<TakeawayCup /></span>{' '}{HEADLINE_TAIL}</h1>
           <p className="pr-sub">{HERO_SUB}</p>
         </section>
 

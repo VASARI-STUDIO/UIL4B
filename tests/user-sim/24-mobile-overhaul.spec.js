@@ -869,41 +869,45 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
 // ──────────────────────────────────────────────────────────────────────────────
 // The 834px tool stack [palette-swatch-actions-tablet]
 // ──────────────────────────────────────────────────────────────────────────────
-// The REVEAL_CASES above ask whether a control is invisible-but-live. This asks
-// the opposite question, and neither one implies the other: are there simply
-// TOO MANY of them, permanently, on top of the thing the page exists to show?
+// From 768px up a swatch column is vertical and the quick tools (Edit in HCT,
+// Swap, Remove) run down it between the lock and the overflow control. A mouse
+// reveals them on hover; a device with no hover has nothing to reveal them with,
+// so on a touch tablet they are on show from the start and have to be pressable
+// at rest: painted, taking pointer events, and not covered by anything else.
+// The overflow control stays beside them.
 //
-// The defect was composed, not written. Above 768px a swatch column is vertical
-// and the tool stack runs down it; `@media(hover:hover)` was the only thing
-// hiding that stack at rest. An iPad in landscape is 834px wide AND reports
-// hover:none, so it took the desktop vertical column and the permanent
-// visibility together: seven unlabelled 32px icons stacked over ~450px of
-// swatch, five columns at once, 35 buttons sitting on the colours. 1280 hid
-// them until hover; 390 laid them out as a short row under the name and hex.
+// The 700px-tall viewport is shorter than 760px. A mouse screen that short swaps
+// the stack for the overflow menu; a touch screen keeps it. Under 600px tall
+// (a landscape phone, 768px or wider) every pointer drops the stack, which would
+// otherwise push the name, hex and ramp off screen, and the column keeps only
+// Lock and More actions.
 //
-// COUNT is what is asserted: only the lock and the overflow control are on a
-// colour in this band. (PLACEMENT was asserted too, the row below the name and
-// hex; the design's drawn board puts the lock at the column's top corner, D:1021, so
-// that half went with the redraw.)
-//
-// And the overflow control must be PRESENT, not merely the others absent: the
-// cheap way to pass a count assertion is to delete the actions outright, which
-// would be a worse product than the one being fixed.
-//
-// REAL DEVICE METRICS ARE THE WHOLE TEST. `hover:none` is what makes this bug
-// exist. A desktop Chromium narrowed to 834px reports hover:hover, renders the
-// correct desktop layout, and would pass every assertion below on a fully
-// reverted stylesheet. The caps assertion is therefore not a formality — it is
-// the half that makes the rest mean anything.
+// REAL DEVICE METRICS ARE THE WHOLE TEST. `hover:none` is what puts a device in
+// this branch of the stylesheet. A desktop Chromium narrowed to 834px reports
+// hover:hover, hides the stack until hover, and would fail every assertion below
+// for the wrong reason. The caps assertion is therefore not a formality: it
+// makes the rest mean what they say.
 const PINNED_BAND = [
-  [834, 1194],  // iPad portrait — the width the audit reported
-  [1180, 820],  // iPad Pro landscape
-  [1024, 768],  // the old 4:3 tablet, still above the 768px cutover
+  // [width, height, whether the quick stack is expected]
+  [834, 1194, true],   // iPad portrait
+  [1180, 820, true],   // iPad Pro landscape
+  [1024, 768, true],   // the old 4:3 tablet, still above the 768px cutover
+  [1024, 700, true],   // a touch screen under 760px tall keeps the stack
+  [844, 390, false],   // a landscape phone drops the stack
 ]
 
-test('S11b · the touch band collapses the swatch tool stack instead of pinning seven icons open', async ({ browser }) => {
+// [name, label, is a quick tool]
+const TABLET_TOOLS = [
+  ['Lock', /^(Lock|Unlock) /, false],
+  ['Edit in HCT', /^Edit .+ in HCT$/, true],
+  ['Swap', /^Choose a direction to swap /, true],
+  ['Remove', /^Remove /, true],
+  ['More actions', /^More actions for /, false],
+]
+
+test('S11b · on a touch tablet the swatch quick tools are on show and pressable at rest', async ({ browser }) => {
   const damage = []
-  for (const [w, h] of PINNED_BAND) {
+  for (const [w, h, withStack] of PINNED_BAND) {
     const { ctx, page } = await openTouch(browser, w, h, '/create/palette', true, '.plb-col')
 
     const caps = await page.evaluate(() => ({
@@ -913,39 +917,51 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
     expect(caps, `${w}x${h}: device emulation lost — this test is meaningless without hover:none, because the defect only exists on a device that cannot hover`)
       .toEqual({ hover: false, coarse: true })
 
-    const r = await page.evaluate(() => {
-      const shown = (el) => {
-        if (!el || el.offsetParent === null) return false
-        const s = getComputedStyle(el)
-        if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return false
-        const b = el.getBoundingClientRect()
-        return b.width > 0 && b.height > 0
+    const r = await page.evaluate((wanted) => {
+      const effOpacity = (el) => {
+        let o = 1
+        for (let n = el; n && n !== document.body; n = n.parentElement) o *= parseFloat(getComputedStyle(n).opacity)
+        return o
       }
       const cols = [...document.querySelectorAll('.plb-col')].filter(c => c.offsetParent !== null)
       return cols.map((col, i) => {
-        const tools = [...col.querySelectorAll('.plb-tool')].filter(shown)
-        return {
-          i,
-          count: tools.length,
-          labels: tools.map(t => t.getAttribute('aria-label') || t.className),
-          hasOverflow: tools.some(t => t.classList.contains('plb-tool--more')),
-        }
+        const buttons = [...col.querySelectorAll('.plb-tool')]
+        const found = wanted.map(([name, source, quick]) => {
+          const re = new RegExp(source)
+          const tool = buttons.find(t => re.test(t.getAttribute('aria-label') || ''))
+          if (!tool) return { name, quick, missing: true }
+          if (tool.getBoundingClientRect().width > 0) tool.scrollIntoView({ block: 'nearest' })
+          const b = tool.getBoundingClientRect()
+          const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)
+          return {
+            name,
+            quick,
+            missing: false,
+            laidOut: b.width > 0 && b.height > 0,
+            opacity: effOpacity(tool),
+            pointerEvents: getComputedStyle(tool).pointerEvents,
+            hitsItself: !!hit && (hit === tool || tool.contains(hit)),
+          }
+        })
+        return { i, found }
       })
-    })
+    }, TABLET_TOOLS.map(([name, re, quick]) => [name, re.source, quick]))
     await ctx.close()
 
     // The sample cannot collapse to nothing: five columns, each with controls.
     expect(r.length, `${w}x${h}: no palette columns rendered, so this proves nothing`).toBeGreaterThan(2)
 
     for (const c of r) {
-      if (c.count > 2) {
-        damage.push(`${w}x${h} col${c.i}: ${c.count} controls pinned open — ${c.labels.join(', ')}`)
-      }
-      if (c.count === 0) {
-        damage.push(`${w}x${h} col${c.i}: no controls at all — touch must keep persistent controls`)
-      }
-      if (!c.hasOverflow) {
-        damage.push(`${w}x${h} col${c.i}: no .plb-tool--more, so the hidden actions are unreachable on touch`)
+      for (const t of c.found) {
+        if (t.quick && !withStack) {
+          if (!t.missing && t.laidOut) damage.push(`${w}x${h} col${c.i}: ${t.name} is laid out, but this screen is too short for the stack`)
+          continue
+        }
+        if (t.missing) { damage.push(`${w}x${h} col${c.i}: no ${t.name} control`); continue }
+        if (!t.laidOut) damage.push(`${w}x${h} col${c.i}: ${t.name} takes no space`)
+        else if (t.opacity < 0.99) damage.push(`${w}x${h} col${c.i}: ${t.name} is not painted at rest (opacity ${t.opacity})`)
+        else if (t.pointerEvents === 'none') damage.push(`${w}x${h} col${c.i}: ${t.name} takes no pointer events at rest`)
+        else if (!t.hitsItself) damage.push(`${w}x${h} col${c.i}: ${t.name} is covered by another element`)
       }
     }
   }

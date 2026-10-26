@@ -1,15 +1,22 @@
 export const COLLECTION_TTL = 7 * 24 * 60 * 60 * 1000
 export const COLLECTION_RETRY_DELAY = 60 * 1000
+export const CHIP_RETRY_FLOOR = 3 * 1000
 const storageKey = (prefix) => `uil4b:iconify:collection:${prefix}`
 const defaultStorage = () => globalThis.localStorage
 const CREDIT_FIELDS = ['name', 'author', 'url', 'spdx', 'licenceUrl']
+const CREDIT_LINK_FIELDS = new Set(['url', 'licenceUrl'])
+const isHttpsUrl = (value) => /^https:\/\//.test(value)
 
 // Persist only the flattened catalogue and attribution fields used by the UI.
+// Stored values are untrusted on read: credit links must be https:// or they are dropped.
+// info=1 on the collection request returns the attribution in the same response, so it costs no extra request.
 function compactData(data) {
   if (!data || !Array.isArray(data.names) || !data.names.every(n => typeof n === 'string' && n)
     || typeof data.title !== 'string') return null
   const credit = data.credit && typeof data.credit === 'object'
-    ? Object.fromEntries(CREDIT_FIELDS.filter(k => typeof data.credit[k] === 'string').map(k => [k, data.credit[k]]))
+    ? Object.fromEntries(CREDIT_FIELDS
+      .filter(k => typeof data.credit[k] === 'string' && (!CREDIT_LINK_FIELDS.has(k) || isHttpsUrl(data.credit[k])))
+      .map(k => [k, data.credit[k]]))
     : null
   return { names: [...new Set(data.names)], title: data.title, credit }
 }
@@ -30,11 +37,18 @@ export function writeCollectionCache(prefix, data, { storage = defaultStorage, n
   } catch { /* Storage can be unavailable or full; memory still holds the catalogue. */ }
 }
 
-// Concurrent callers share a request; only an explicit retry bypasses the failure cooldown.
-export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now }) {
+// Concurrent callers share a request; an explicit retry bypasses the failure cooldown (a chip retry only after the floor below).
+// A chip-driven retry (chipRetry, with manualRetry) waits CHIP_RETRY_FLOOR after the last failure, so
+// clicking chips against a service that fails fast does not re-request every pack; Try again never waits.
+// A failed refresh of stale stored data still resolves with that data, but it is never put in
+// the in-memory cache, so the cooldown and manual retries can request again. failed(prefix) tells
+// the UI that the last request for a prefix failed and nothing newer has loaded since.
+// `cooldownExempt(error)` marks failures that must not start the cooldown (a session
+// problem is fixed by the viewer, not by waiting).
+export function createCollectionLoader({ cache, fetchEntry, storage = defaultStorage, now = Date.now, cooldownExempt = () => false }) {
   const pending = new Map()
   const failures = new Map()
-  return function getCollectionNames(prefix, { manualRetry = false } = {}) {
+  function getCollectionNames(prefix, { manualRetry = false, chipRetry = false } = {}) {
     if (cache.has(prefix)) return Promise.resolve(cache.get(prefix))
     if (pending.has(prefix)) return pending.get(prefix)
     const stored = readCollectionCache(prefix, { storage, now: now() })
@@ -43,8 +57,9 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
       return Promise.resolve(stored.data)
     }
     const failed = failures.get(prefix)
-    if (!manualRetry && failed && now() - failed.at < COLLECTION_RETRY_DELAY) {
-      return Promise.reject(failed.error)
+    const bypass = manualRetry && !(chipRetry && failed && now() - failed.at < CHIP_RETRY_FLOOR)
+    if (!bypass && failed && now() - failed.at < COLLECTION_RETRY_DELAY) {
+      return stored ? Promise.resolve(stored.data) : Promise.reject(failed.error)
     }
     const request = Promise.resolve().then(() => fetchEntry(prefix))
       .then(data => {
@@ -54,13 +69,14 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
         return data
       })
       .catch(error => {
-        failures.set(prefix, { at: now(), error })
+        if (!cooldownExempt(error)) failures.set(prefix, { at: now(), error })
         if (!stored) throw error
-        cache.set(prefix, stored.data)
         return stored.data
       })
       .finally(() => pending.delete(prefix))
     pending.set(prefix, request)
     return request
   }
+  getCollectionNames.failed = (prefix) => failures.has(prefix) && !cache.has(prefix)
+  return getCollectionNames
 }
