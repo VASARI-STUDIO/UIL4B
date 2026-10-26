@@ -171,7 +171,7 @@ function PalettePanel({ base, onBase }) {
         <div className="sp-prev" style={{ background: surface }}>
           <span className="sp-prev-say" style={{ color: prevInk }}>
             <small>Surface and ink</small>
-            <b>Total A$48.00</b>
+            <b>3 items in your bag</b>
           </span>
           <span className="sp-prev-btn" style={{ background: primary, color: prevBtnFg }}>Pay now</span>
         </div>

@@ -189,14 +189,6 @@ const NOT_A_PLAN_PRICE = [
       + 'plus an invented account balance.',
   },
   {
-    file: 'src/components/spectrum/SpectrumBench.jsx',
-    context: /Surface and ink|Total A\$48\.00|Pay now/,
-    why: 'The front door\'s Palette Builder window, from the Spectrum design: '
-      + 'a "Surface and ink" preview that paints the chosen surface and primary on a '
-      + 'sample checkout ("Total A$48.00", "Pay now"). Set dressing a palette is judged '
-      + 'against, in the site\'s own currency, and not a tier of UIL4B.',
-  },
-  {
     file: 'src/data/communityPrompts.js',
     // Excused only while the surrounding text says nothing about our own plans:
     // a prompt that quoted a UIL4B tier would still be checked against the ladder.
