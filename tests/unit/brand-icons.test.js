@@ -47,7 +47,7 @@ test('THE ONE THAT MATTERS: the favicon draws no text and names no font', () => 
   const svg = read('public/favicon.svg')
   assert.ok(!/<text[s>]/i.test(svg), 'favicon.svg contains <text>; the mark must be paths')
   assert.ok(!/font-family|font-size|font-weight/i.test(svg), 'favicon.svg names a font')
-  assert.equal((svg.match(/<path/g) || []).length, 2, 'favicon.svg should carry the two symbol paths')
+  assert.equal((svg.match(/<path[ >]/g) || []).length, 2, 'favicon.svg should carry the two symbol paths')
 })
 
 test('the favicon draws the same symbol the components draw', () => {

@@ -159,7 +159,7 @@ test('THE STALENESS ONE: the committed cards were drawn from today\'s tokens', a
     + 'so a card is advertising the wrong tools. Run `npm run og:cards`.')
 })
 
-test('the default card and its X card are the brand kit's own files', () => {
+test('the default card and its X card are the brand kit own files', () => {
   // The homepage card is committed as the kit exported it (logo on ivory), not
   // drawn by og-cards.mjs, so it is not in cards.json. X gets the 2:1 card.
   const og = pngSize(previews(DEFAULT_CARD.file))
