@@ -162,8 +162,26 @@
 
 .tsc-page .tsc-developer-view { display: grid; gap: 10px; min-width: 0; }
 .tsc-page .tsc-export { max-height: 420px; overflow: auto; font-size: 12px; }
-.tsc-page .tsc-keep { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
-.tsc-page .tsc-keep-note { flex: 1; min-width: 200px; margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+
+/* The save menu (SaveTypeSystemPanel). The trigger is a toolbar action, so the
+   menu hangs under the toolbar at the right: fixed, because the trigger may be
+   in the overflow and the toolbar is sticky. Below 561px the menu is already a
+   bottom sheet (global.css .svt-menu), so this wrapper adds no box of its own. */
+.tsc-page .svt-pop { display: contents; }
+@media (min-width: 561px) {
+  .tsc-page .svt-pop {
+    --tsc-bar-h: 55px;
+    display: block;
+    position: fixed;
+    top: calc(var(--chrome-h) + var(--tsc-bar-h) + 6px);
+    right: var(--tl-pad);
+    z-index: 60;
+  }
+  .tsc-page .svt-pop .svt-menu { position: static; }
+}
+@media (min-width: 561px) and (pointer: coarse) {
+  .tsc-page .svt-pop { --tsc-bar-h: 63px; }
+}
 
 /* ── The panel ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-sample-input {
@@ -236,7 +254,6 @@
 @media (pointer: coarse) {
   /* 8px between neighbouring targets, and every control 44px on a finger. */
   .tsc-page .tl-pills { gap: 8px; }
-  .tsc-page .svt-trigger { min-height: 44px; }
   .tsc-page .snapv input[type="range"] { height: 44px; }
   .tsc-page .tsc-sample-input,
   .tsc-page .tsc-select,

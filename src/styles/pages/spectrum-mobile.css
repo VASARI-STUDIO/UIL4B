@@ -247,7 +247,7 @@
 .spm .spm-app { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 6px; }
 .spm .spm-apphead { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 0 10px; }
 .spm .spm-appword { flex: 1; min-width: 0; font-family: var(--display); font-weight: 560; font-size: 15px; letter-spacing: -.01em; }
-.spm .spm-appword > span { color: var(--accent-mid); }
+.spm .spm-appword .brand-logo { display: block; height: .9em; }
 .spm .spm-round {
   flex: none;
   width: 26px;

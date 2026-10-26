@@ -21,7 +21,6 @@
     "sync:sitemap": "node scripts/sync-sitemap.mjs",
     "sync:llms": "node scripts/llms-txt.mjs",
     "sync:credits": "node scripts/sync-credits.mjs",
-    "icons": "node scripts/brand-icons.mjs",
     "design:md": "node scripts/design-md.mjs"
   },
   "dependencies": {
@@ -53,7 +52,7 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "firebase-tools": "^14.27.0",
+    "firebase-tools": "^15.34.1",
     "globals": "^17.4.0",
     "vite": "^8.0.1"
   }

@@ -84,10 +84,9 @@ test('the accent stays swappable — no hardcoded brand blue anywhere in the nav
    * is color-mix()'d off `--accent`, which is what makes the derivation the
    * theme mechanism. The marketing wordmark already read it, so the two are now
    * one token instead of two that happened to look alike. */
-  assert.match(css, /\.pnav-word-mark\{color:var\(--accent-mid\)\}/,
-    'the app header wordmark must take the accent from the derived family')
-  assert.match(css, /\.spnav-word-mark\{color:var\(--accent-mid\)\}/,
-    'the marketing wordmark must take the accent from the derived family')
+    // The wordmark is now the monochrome SVG lockup (currentColor), so neither
+  // nav carries an accent-coloured "4" any more.
+  assert.ok(!/.pnav-word-mark|.spnav-word-mark/.test(css), 'a nav still styles the old text "4"')
 })
 
 test('every nav weight sits inside Geist\'s 300..700 axis', () => {

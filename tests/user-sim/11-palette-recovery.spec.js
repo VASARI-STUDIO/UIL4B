@@ -239,12 +239,21 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     // Preview is a button on the toolbar row at 1440px and a row in the Extra
     // tools overflow at 768px. Each is pressed with Space (in the overflow, the
     // trigger too), and none may reach the page's randomise.
+    const swatchHexes = page.locator('.plb-col .plb-hex')
+    const liveMessage = page.locator('.plb > .tl-body > p[aria-live="polite"]')
     for (const { where, width } of [{ where: 'row', width: 1440 }, { where: 'overflow', width: 768 }]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
-      await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
-      const before = await page.locator('.plb-col .plb-hex').allTextContents()
       await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
+      await expect(swatchHexes).toHaveText(Array(5).fill(/^#[0-9A-F]{6}$/))
+      // Randomise announces 'Palette randomised' even if it draws the same
+      // colours again, so the message catches what the hex values could miss.
+      await expect(liveMessage).toHaveText('')
+      const before = await swatchHexes.allTextContents()
+      const expectUnchangedPalette = async () => {
+        await expect(swatchHexes).toHaveText(before)
+        await expect(liveMessage).toHaveText('')
+      }
 
       const onRow = paletteToolbar(page).getByRole('button', { name: 'Preview on a UI', exact: true })
       let preview
@@ -253,24 +262,39 @@ test.describe('Palette Builder recovery and tool continuity', () => {
         await expect(preview, `${width}px: Preview is a button on the row`).toBeVisible()
       } else {
         await expect(onRow, `${width}px: Preview has left the row`).toHaveCount(0)
-        await paletteToolbar(page).getByRole('button', { name: 'Extra tools' }).focus()
+        const tools = paletteToolbar(page).getByRole('button', { name: 'Extra tools' })
+        await tools.focus()
+        await expect(tools).toBeFocused()
         await page.keyboard.press('Space')
-        preview = page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview on a UI' })
+        await expect(tools).toHaveAttribute('aria-expanded', 'true')
+        const overflow = page.getByRole('dialog', { name: 'Extra tools' })
+        preview = overflow.getByRole('button', { name: 'Preview on a UI' })
         await expect(preview).toBeVisible()
+        // The popover moves focus to its first control one frame after it
+        // opens. A row focused before that lands is overridden, and Space then
+        // presses the wrong control. Wait for the hand-off to finish.
+        await expect(overflow.locator(':focus')).toHaveCount(1)
       }
-      expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+      await expectUnchangedPalette()
       await preview.focus()
+      await expect(preview).toBeFocused()
       await page.keyboard.press('Space')
-      await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
-      await page.getByRole('button', { name: 'Dark', exact: true }).focus()
+      const previewDialog = page.getByRole('dialog', { name: 'Palette preview' })
+      await expect(previewDialog).toBeVisible()
+      await expectUnchangedPalette()
+      const dark = previewDialog.getByRole('button', { name: 'Dark', exact: true })
+      await dark.focus()
+      await expect(dark).toBeFocused()
       await page.keyboard.press('Space')
-      await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
+      await expect(dark).toHaveAttribute('aria-pressed', 'true')
+      await expectUnchangedPalette()
       const close = page.getByRole('button', { name: 'Close preview' })
       await close.focus()
+      await expect(close).toBeFocused()
       await page.keyboard.press('Space')
-      await expect(page.getByRole('dialog', { name: 'Palette preview' })).toHaveCount(0)
+      await expect(previewDialog).toHaveCount(0)
 
-      expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+      await expectUnchangedPalette()
     }
   })
 

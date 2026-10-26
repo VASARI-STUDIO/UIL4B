@@ -3,8 +3,15 @@ rules_version = '2';
 // Firebase Storage security rules for UIL4B.
 //
 // community-media/{uid}/**  — media attached to community-prompt submissions.
-//   - Public read: approved prompts render these URLs in <img>/<video> tags,
-//     so signed-out visitors must be able to load them.
+//   - Read and list: only the owner of the folder and reviewers. Storage rules
+//     cannot tell whether the prompt a file belongs to has been approved (the
+//     path carries no prompt id), so unreviewed media is closed to everyone
+//     else, and so is guessing or listing paths.
+//   - Public display does not go through these rules. Approved prompts render
+//     the download URL that getDownloadURL returned at upload time; its token
+//     is what authorises the <img>/<video> request. That URL lives in the
+//     prompt document, which firestore.rules only shows to other users once
+//     the prompt is approved.
 //   - Write: only the authenticated owner may write under their own uid folder,
 //     each object is capped at 25MB, and it must declare an image or video
 //     content type.
@@ -12,8 +19,16 @@ rules_version = '2';
 // Everything else is denied by default.
 service firebase.storage {
   match /b/{bucket}/o {
+    // Same claims as isReviewer() in firestore.rules, set by api/verify-admin.js.
+    function isReviewer() {
+      return request.auth != null
+        && (request.auth.token.admin == true
+            || request.auth.token.moderator == true);
+    }
+
     match /community-media/{uid}/{allPaths=**} {
-      allow read: if true;
+      allow read: if isReviewer()
+        || (request.auth != null && request.auth.uid == uid);
       allow write: if request.auth != null
         && request.auth.uid == uid
         && request.resource.size < 25 * 1024 * 1024

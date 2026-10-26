@@ -5,13 +5,17 @@
 // [storage-rules-no-content-type], from the 2026-09-06 engineering review.
 //
 // WHY THIS COLLECTION OF OBJECTS IS DIFFERENT FROM EVERY OTHER STORE HERE.
-// `community-media/**` is PUBLICLY READABLE by design: approved prompts render
-// these URLs in <img> and <video> tags for signed-out visitors. So every object
-// under it is a page any stranger can open, on firebasestorage.googleapis.com,
-// under this project's name. The write rule checked auth, the owner's uid and a
-// 25 MB cap — and nothing at all about WHAT was being stored. "Media attached to
-// a prompt" was a description of what the uploader happened to send, not a rule.
+// Objects under `community-media/**` used to be readable by anyone, signed out
+// included, so every one was a page any stranger could open, on
+// firebasestorage.googleapis.com, under this project's name, and the folder
+// could be listed. The write rule checked auth, the owner's uid and a 25 MB cap
+// — and nothing at all about WHAT was being stored. "Media attached to a
+// prompt" was a description of what the uploader happened to send, not a rule.
 // A signed-in account could store text/html there and have a browser render it.
+//
+// READ IS NOW OWNER-AND-REVIEWER ONLY (see the last section). Approved prompts
+// still render in <img>/<video> through the tokenised URL getDownloadURL
+// returned, which does not go through these rules.
 //
 // storage.rules is NOT on the founder-gated list in
 // docs/reference/human-validation-zones.md (firestore.rules and
@@ -22,6 +26,7 @@
 // legitimate content type. Without that pairing a rules file with a syntax
 // error — which refuses everything — would make this suite green.
 import test, { after, before, beforeEach } from 'node:test'
+import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import {
@@ -29,7 +34,7 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing'
-import { ref, uploadBytes, getBytes } from 'firebase/storage'
+import { ref, uploadBytes, getBytes, listAll } from 'firebase/storage'
 
 const RULES_PATH = fileURLToPath(new URL('../../storage.rules', import.meta.url))
 const ALICE = 'alice-uid'
@@ -74,14 +79,10 @@ for (const type of ['image/webp', 'image/png', 'image/jpeg', 'image/gif', 'video
   })
 }
 
-test('POSITIVE CONTROL: an uploaded object is still publicly readable', async () => {
-  // Public read is the whole reason the content type matters, and it is also
-  // the control that proves an upload really landed rather than being silently
-  // dropped.
-  await testEnv.withSecurityRulesDisabled(async (ctx) => {
-    await uploadBytes(ref(ctx.storage(), mine('published.webp')), BYTES, { contentType: 'image/webp' })
-  })
-  await assertSucceeds(getBytes(ref(anonStore(), mine('published.webp'))))
+test('POSITIVE CONTROL: an uploaded object is readable by its owner', async () => {
+  // Proves an upload really landed rather than being silently dropped.
+  await assertSucceeds(put(aliceStore(), mine('published.webp'), 'image/webp'))
+  await assertSucceeds(getBytes(ref(aliceStore(), mine('published.webp'))))
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -157,4 +158,56 @@ test('paths outside community-media are still denied by default', async () => {
   await assertFails(put(aliceStore(), 'anything-else/x.webp', 'image/webp'))
   await assertFails(put(aliceStore(), `users/${ALICE}/x.webp`, 'image/webp'))
   await assertSucceeds(put(aliceStore(), mine('inside.webp'), 'image/webp'))
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Read and list: owner and reviewers only
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Storage rules cannot see whether the prompt a file belongs to is approved, so
+// the object itself is closed to everyone but its owner and reviewers (the same
+// `admin` / `moderator` claims firestore.rules calls isReviewer()). Each refusal
+// below sits beside a read that succeeds on the same object.
+
+const modStore = () => testEnv.authenticatedContext('mod-uid', { moderator: true }).storage()
+const adminStore = () => testEnv.authenticatedContext('admin-uid', { admin: true }).storage()
+
+async function seedMedia(name) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await uploadBytes(ref(ctx.storage(), mine(name)), BYTES, { contentType: 'image/webp' })
+  })
+}
+
+test('an uploaded object is readable by its owner and by reviewers, and not by anyone else', async () => {
+  await seedMedia('pending.webp')
+  await assertSucceeds(getBytes(ref(aliceStore(), mine('pending.webp'))))
+  await assertSucceeds(getBytes(ref(modStore(), mine('pending.webp'))))
+  await assertSucceeds(getBytes(ref(adminStore(), mine('pending.webp'))))
+
+  await assertFails(getBytes(ref(bobStore(), mine('pending.webp'))))
+  await assertFails(getBytes(ref(anonStore(), mine('pending.webp'))))
+})
+
+test('a folder cannot be listed by the public, and can by its owner and reviewers', async () => {
+  // Its own subfolder, so files other tests leave in Alice's folder can't
+  // change what this listing returns.
+  await seedMedia('list-check/a.webp')
+  await seedMedia('list-check/b.webp')
+  const folder = `community-media/${ALICE}/list-check`
+  const own = await assertSucceeds(listAll(ref(aliceStore(), folder)))
+  assert.deepEqual(own.items.map((i) => i.name).sort(), ['a.webp', 'b.webp'])
+  await assertSucceeds(listAll(ref(modStore(), folder)))
+
+  await assertFails(listAll(ref(bobStore(), folder)))
+  await assertFails(listAll(ref(anonStore(), folder)))
+  // The parent folder would list every account's uploads. No rule matches it,
+  // so it is denied by default.
+  await assertFails(listAll(ref(anonStore(), 'community-media')))
+  await assertFails(listAll(ref(bobStore(), 'community-media')))
+})
+
+test('being a reviewer opens reads only, not writes into someone else\'s folder', async () => {
+  await assertSucceeds(put(aliceStore(), mine('own.webp'), 'image/webp'))
+  await assertFails(put(modStore(), mine('moderator-upload.webp'), 'image/webp'))
+  await assertFails(put(adminStore(), mine('admin-upload.webp'), 'image/webp'))
 })
