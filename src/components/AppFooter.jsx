@@ -3,6 +3,7 @@ import { categoryDestination, isSoonPath } from '../data/toolTree'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import FounderNote from './FounderNote'
 import { footerShowsOn } from './nav/footerRoutes'
+import { BrandLockup } from './BrandLogo'
 
 // Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
 // decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
@@ -85,7 +86,7 @@ export default function AppFooter({ compact = false }) {
     <footer className={compact ? 'app-footer app-footer--compact' : 'app-footer'}>
       <div className="app-footer-inner">
         <div className="app-footer-brand">
-          <span className="app-footer-mark">UIL4B</span>
+          <span className="app-footer-mark"><BrandLockup label="UI L4B" /></span>
           {/* THE TAGLINE IS GONE — anti-slop audit, 2026-09-09. Under the
               wordmark sat "The operating workspace for building, validating
               and exporting interface foundations." on every page of the site:
