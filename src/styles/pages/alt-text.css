@@ -33,6 +33,12 @@
   color: var(--tl-dim);
 }
 
+.alt-page .ai-image-consent a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
 .alt-page .alt-btn {

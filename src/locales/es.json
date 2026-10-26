@@ -499,7 +499,7 @@
   },
   "privacy": {
     "title": "Política de privacidad",
-    "lastUpdated": "Última actualización: marzo de 2026",
+    "lastUpdated": "Última actualización: 27 de octubre de 2026",
     "s1Title": "1. Acerca de esta política",
     "s1Text": "UIL4B (\"nosotros\", \"nos\", \"nuestro\") se compromete a proteger su información personal de conformidad con la Ley de Privacidad de Australia de 1988 (Cth) y los Principios de Privacidad Australianos (APPs). Esta política explica cómo recopilamos, usamos, divulgamos y protegemos su información personal.",
     "s2Title": "2. Información que recopilamos (APP 3)",
@@ -515,6 +515,7 @@
       "Proporcionar y mantener su cuenta y las funciones del toolkit",
       "Sincronizar sus configuraciones de diseño entre dispositivos",
       "Enviar notificaciones esenciales del servicio (seguridad de la cuenta, cambios de política)",
+      "Provide AI features: the text and images you submit to AI tools are sent to the AI providers listed in section 6",
       "NUNCA venderemos sus datos a terceros ni los usaremos para publicidad"
     ],
     "s4Title": "4. Almacenamiento y seguridad de datos (APP 8 y 11)",
@@ -523,7 +524,7 @@
       "Cifrado en reposo y en tránsito (TLS 1.3)",
       "Reglas de seguridad de Firestore para el control de acceso",
       "Auditorías de seguridad periódicas de nuestra configuración de Firebase",
-      "Sin transferencia de datos transfronteriza sin protecciones de privacidad equivalentes"
+      "AI features send what you submit to providers that may process it outside Australia, as section 6 describes"
     ],
     "s5Title": "5. Sus derechos (APP 12 y 13)",
     "s5Intro": "Usted tiene derecho a:",
@@ -539,6 +540,8 @@
       "Firebase/Google Cloud — Autenticación y base de datos (región de Sídney)",
       "Google Fonts — Carga de fuentes (no se envían datos personales)",
       "Iconify — API de búsqueda de iconos (no se envían datos personales)",
+      "Google Gemini — AI processing of the images and text you submit to AI tools",
+      "OpenRouter — passes the text you submit to AI tools to a third-party AI model host set not to retain or train on it",
       "Stripe — Procesamiento de pagos (compatible con PCI DSS, entidad australiana)"
     ],
     "s7Title": "7. Contacto",
@@ -547,7 +550,7 @@
   },
   "terms": {
     "title": "Términos de servicio",
-    "lastUpdated": "Última actualización: marzo de 2026",
+    "lastUpdated": "Última actualización: 27 de octubre de 2026",
     "s1Title": "1. Aceptación",
     "s1Text": "Al utilizar UIL4B Design Toolkit (\"el Servicio\"), usted acepta estos Términos de servicio. El Servicio es proporcionado por UIL4B, una empresa con sede en Australia. Estos términos se rigen por las leyes de Australia.",
     "s2Title": "2. Cuenta",
