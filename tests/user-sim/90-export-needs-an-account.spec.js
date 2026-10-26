@@ -178,7 +178,7 @@ test.describe('a file needs a free account', () => {
     // — a picture of a download arrow — instead of the customizer's Download
     // button, clicks it, and then reports that nothing was gated. That is
     // exactly how the first pass at this test failed.
-    const download = page.getByRole('button', { name: 'Download', exact: true })
+    const download = page.getByRole('button', { name: 'Download SVG', exact: true })
     // POSITIVE CONTROL: without a reachable download control this test is
     // asserting nothing, and that is what a closed customizer looks like.
     await expect(download, 'no Download control appeared after choosing an icon')

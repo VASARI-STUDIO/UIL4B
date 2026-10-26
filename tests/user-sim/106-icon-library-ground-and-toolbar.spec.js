@@ -334,7 +334,7 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
       const actions = {
         'Copy SVG': page.getByRole('button', { name: 'Copy SVG', exact: true }),
         Save: page.getByRole('button', { name: 'Save to project', exact: true }),
-        Download: page.getByRole('button', { name: 'Download', exact: true }),
+        Download: page.getByRole('button', { name: 'Download SVG', exact: true }),
         'the code box': page.locator('.icust-code-box'),
       }
       for (const [label, button] of Object.entries(actions)) {
@@ -767,7 +767,7 @@ for (const [name, body, multicolour] of [
     expect(copied).toContain('color="#000000"')
     expect(copied).not.toContain('#161614')
     const downloaded = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Download', exact: true }).click()
+    await page.getByRole('button', { name: 'Download SVG', exact: true }).click()
     const stream = await (await downloaded).createReadStream()
     const chunks = []
     for await (const chunk of stream) chunks.push(chunk)
