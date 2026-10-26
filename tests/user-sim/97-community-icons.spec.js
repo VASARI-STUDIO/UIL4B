@@ -217,10 +217,10 @@ test.describe('community icon submissions', () => {
           payload: { svg: ICON, author: 'Freya Free' },
           createdAt: '2026-09-18T09:00:00.000Z',
         },
-        // Somebody else's, in the same collection. The queue is readable by
-        // every signed-in user by design (firestore.rules `allow read: if
-        // isSignedIn()`), so "only mine" is a property of the QUERY and has to
-        // be asserted rather than assumed.
+        // Somebody else's, in the same collection. The suite's Firestore
+        // double does not enforce firestore.rules (which now refuse a read of
+        // another user's pending item), so "only mine" is a property of the
+        // QUERY and has to be asserted rather than assumed.
         'community-submissions/not-yours': {
           kind: 'icon',
           name: 'Belongs to someone else',

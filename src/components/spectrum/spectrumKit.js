@@ -111,7 +111,7 @@ export function rolesOf(base, harmony, fmt) {
       ? `oklch(${spec.L.toFixed(2)} ${spec.c.toFixed(3)} ${Math.round(spec.h)})`
       : fmt === 2 ? `--${slug}-${name.toLowerCase()}` : hex
     const cr = name === 'Surface' ? ratio(hex, inkHex) : name === 'Ink' ? ratio(hex, surfHex) : ratio(hex, inkOn(hex))
-    return { name, use, hex, value, ink: inkOn(hex), span: span || 'auto', aa: `${cr >= 4.5 ? 'AA' : 'LOW'} ${cr.toFixed(1)}` }
+    return { name, use, hex, value, ink: inkOn(hex), span: span || 'auto', aa: `${cr >= 4.5 ? 'AA' : 'Fails'} ${cr.toFixed(1)}` }
   })
 }
 
@@ -161,7 +161,7 @@ export const FONTS = [
   ['Instrument Sans', "'Instrument Sans','Geist',sans-serif", 'SANS', '8 styles', 'Variable: width, weight, italic', 'Literata', "'Literata',serif"],
 ].map(([name, family, cat, styles, axes, pair, pairFamily]) => ({ name, family, cat, styles, axes, pair, pairFamily }))
 export const FONT_CATS = ['All', 'Sans', 'Serif', 'Mono', 'Display']
-export const FONT_SAMPLE = 'The quick brown fox jumps over the lazy dog. 0123456789 £$€ &@?!'
+export const FONT_SAMPLE = 'The quick brown fox jumps over the lazy dog. 0123456789 $€ &@?!'
 
 /* ── the converter panel ───────────────────────────────────────────────────── */
 

@@ -55,13 +55,14 @@ import '../styles/pages/legal.css'
 
 /* Each row names the keys it renders and nothing else. `items` marks the one
    clause that is a list rather than a paragraph; `contact` marks the one that
-   ends in a mailto. Both were already true of this page — they are recorded
-   here so the renderer below has no per-section special cases in its markup. */
+   ends in a mailto; `more` is a further paragraph after `text`. They are
+   recorded here so the renderer below has no per-section special cases in its
+   markup. A `more` key missing from a locale falls back to English. */
 const SECTIONS = [
   { id: 'terms-s1', title: 'terms.s1Title', text: 'terms.s1Text' },
   { id: 'terms-s2', title: 'terms.s2Title', text: 'terms.s2Text' },
   { id: 'terms-s3', title: 'terms.s3Title', text: 'terms.s3Text' },
-  { id: 'terms-s4', title: 'terms.s4Title', text: 'terms.s4Text' },
+  { id: 'terms-s4', title: 'terms.s4Title', text: 'terms.s4Text', more: 'terms.s4AiText' },
   { id: 'terms-s5', title: 'terms.s5Title', intro: 'terms.s5Intro', items: 'terms.s5Items' },
   { id: 'terms-s6', title: 'terms.s6Title', text: 'terms.s6Text' },
   { id: 'terms-s7', title: 'terms.s7Title', text: 'terms.s7Text' },
@@ -119,6 +120,7 @@ export default function Terms() {
                     )}
                   </p>
                 )}
+                {s.more && <p className="lgl-p">{t(s.more)}</p>}
               </section>
             )
           })}

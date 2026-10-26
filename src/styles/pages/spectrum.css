@@ -17,7 +17,7 @@
    ── THE ACCENT IS NEVER A HEX HERE ──────────────────────────────────────────
    Every accent surface reads --accent or its derived family, so a theme
    template that moves --accent moves this page. The fixed colours that remain
-   are neutrals, the window dots, and the paper of the exported UI kit drawn in
+   are neutrals, and the paper of the exported UI kit drawn in
    the second exports card (a picture of a document, not a product colour).   */
 
 .spectrum {
@@ -397,13 +397,17 @@
 }
 .spectrum .sp-rail-row { transition: none; }
 .sp-rail-row.is-on { background: rgba(var(--sp-ink-rgb), .07); color: var(--sp-ink); }
-.sp-rail-no { font-size: 10px; letter-spacing: .1em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-rail-row.is-on .sp-rail-no, .sp-rail-row.is-on .sp-rail-mark { color: var(--accent-text); }
+.sp-rail-no { font-size: 12px; letter-spacing: .02em; font-variant-numeric: tabular-nums; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-rail-row.is-on .sp-rail-no { color: var(--accent-text); }
 .sp-rail-label { flex: 1; min-width: 0; }
-.sp-rail-mark { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 
 .sp-steps { display: grid; gap: 0; min-width: 0; }
-.sp-step { min-width: 0; min-height: 100dvh; display: flex; align-items: center; scroll-snap-align: center; }
+.sp-step { min-width: 0; min-height: 0; display: flex; align-items: center; scroll-snap-align: center; }
+/* A little air around each window instead of a screen of it. Scoped above the
+   stacked breakpoint, where the windows already sit a gap apart. */
+@media (min-width: 1001px) {
+  .sp-step { padding-block: clamp(24px, 4dvh, 48px); }
+}
 
 .sp-panel {
   position: relative;
@@ -430,18 +434,11 @@
   gap: 14px;
   min-height: 46px;
   padding: 0 clamp(12px, 1.6vw, 16px);
-  background: linear-gradient(180deg, rgba(var(--sp-ink-rgb), .065), rgba(var(--sp-ink-rgb), .03));
+  background: rgba(var(--sp-ink-rgb), .035);
   border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
-  box-shadow: inset 0 1px 0 rgba(var(--sp-ink-rgb), .07);
 }
 .sp-panel-title { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.sp-panel-lights { display: flex; gap: 6px; flex: 0 0 auto; }
-.sp-panel-lights i { width: 11px; height: 11px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
-.sp-panel-lights i:nth-child(1) { background: #ED6A5E; }
-.sp-panel-lights i:nth-child(2) { background: #F4BF4F; }
-.sp-panel-lights i:nth-child(3) { background: #61C554; }
 .sp-panel-rule { width: 1px; height: 15px; background: rgba(var(--sp-ink-rgb), .14); flex: 0 0 auto; }
-.sp-panel-no { font-size: 10px; letter-spacing: .14em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-panel-name { font-size: 14px; font-weight: 540; color: var(--sp-ink); white-space: nowrap; }
 .sp-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sp-panel-body--pad { gap: 12px; padding: clamp(15px, 2vw, 22px); overflow: auto; }
@@ -457,8 +454,8 @@
   background: transparent;
   color: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
   font-family: var(--font);
-  font-size: 10.5px;
-  letter-spacing: .1em;
+  font-size: 12px;
+  letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
   /* 25px floors, not the design's text-width boxes: WCAG 2.2's 24px target
@@ -468,7 +465,7 @@
 }
 .spectrum .sp-utab { transition: color .18s ease; }
 .sp-utab[aria-pressed="true"] { border-bottom-color: var(--sp-ink); color: var(--sp-ink); }
-.sp-label { font-size: 9.5px; letter-spacing: .16em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-label { font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 
 /* 01 · Palette builder */
 .sp-shuffle { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); background: var(--sp-card); color: rgba(var(--sp-ink-rgb), .84); font-family: var(--font); font-size: 12.5px; cursor: pointer; }
@@ -490,11 +487,11 @@
 .sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 999px; display: grid; place-items: center; cursor: pointer; font-size: 11px; }
 .sp-seed-name { display: grid; gap: 1px; min-width: 0; }
 .sp-seed-name b { font-size: 13px; font-weight: 560; color: var(--sp-ink); white-space: nowrap; }
-.sp-seed-name small { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-seed-name small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-seg { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); overflow-x: auto; scrollbar-width: none; min-width: 0; max-width: 100%; }
 .sp-seg button { padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; font-weight: 440; cursor: pointer; white-space: nowrap; }
 .sp-seg button[aria-pressed="true"] { background: var(--sp-card); color: var(--sp-ink); font-weight: 560; }
-.sp-roles { flex: 1; min-height: 210px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border-radius: 12px; overflow: hidden; background: rgba(var(--sp-ink-rgb), .1); }
+.sp-roles { flex: 1; min-height: 232px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border-radius: 12px; overflow: hidden; background: rgba(var(--sp-ink-rgb), .1); }
 .sp-role {
   display: flex;
   flex-direction: column;
@@ -511,13 +508,14 @@
 .spectrum .sp-role { transition: filter .18s ease; }
 @media (hover: hover) and (pointer: fine) { .sp-role:hover { filter: brightness(1.08); } }
 .spectrum .sp-role:active { transform: scale(.986); }
-.sp-role-name { font-size: 9.5px; letter-spacing: .18em; opacity: .85; }
+.sp-role-name { font-size: 12px; letter-spacing: .02em; opacity: .85; }
 .sp-role-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; }
 .sp-role-val { font-size: 13px; letter-spacing: .02em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-role-aa { font-size: 9.5px; letter-spacing: .14em; opacity: .85; }
+/* .sp-roles prefix: the coarse-pointer rule near the end sets .sp-role-aa to 11px. */
+.sp-roles .sp-role-aa { font-size: 12px; letter-spacing: .02em; font-variant-numeric: tabular-nums; opacity: .85; }
 .sp-prev { flex: none; border-radius: 12px; padding: 15px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .sp-prev-say { display: grid; gap: 3px; min-width: 0; }
-.sp-prev-say small { font-size: 9px; letter-spacing: .18em; opacity: .7; }
+.sp-prev-say small { font-size: 12px; letter-spacing: 0; opacity: .75; }
 .sp-prev-say b { font-size: 15px; font-weight: 560; }
 .sp-prev-btn { display: inline-flex; align-items: center; padding: 9px 17px; border-radius: 999px; font-size: 13px; font-weight: 540; }
 .sp-copyas { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
@@ -545,7 +543,7 @@
 .sp-ico-meta { flex: 1; min-width: 0; display: grid; gap: 12px; }
 .sp-ico-meta b { font-size: 15px; font-weight: 540; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-ico-opts { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
-.sp-ico-opts .sp-utab { padding: 4px 0; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-ico-opts .sp-utab { padding: 4px 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-ico-opts .sp-utab[aria-pressed="true"] { color: var(--sp-ink); }
 .sp-ico-opts .sp-panel-rule { height: 14px; }
 .sp-ico-foot { flex: none; display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); flex-wrap: wrap; padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
@@ -565,23 +563,22 @@
 .sp-font-ctl label:last-child { flex: 0 1 200px; min-width: 150px; }
 .sp-font-ctl input[type="text"] { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13.5px; box-shadow: none; }
 .sp-font-ctl input[type="text"]::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
-.sp-font-ctl output { font-size: 11px; color: var(--sp-ink); white-space: nowrap; min-width: 38px; text-align: right; }
+.sp-font-ctl output { font-size: 12px; color: var(--sp-ink); white-space: nowrap; min-width: 38px; text-align: right; }
 .sp-fontlist { flex: 1; min-height: 0; overflow: auto; }
 .sp-fontrow { width: 100%; display: grid; gap: 12px; padding: clamp(16px, 2vw, 22px) clamp(14px, 1.8vw, 20px); border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08); background: transparent; cursor: pointer; text-align: left; color: var(--sp-ink); }
 .spectrum .sp-fontrow { transition: background .18s ease; }
 .spectrum .sp-fontrow:active { transform: none; }
 @media (hover: hover) and (pointer: fine) { .sp-fontrow:hover { background: rgba(var(--sp-ink-rgb), .04); } }
 .sp-fontrow-top { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
-.sp-fontrow-no { font-size: 10px; letter-spacing: .1em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); padding-top: .5em; flex: 0 0 auto; }
 .sp-fontrow-main { flex: 1; min-width: 0; display: grid; gap: 10px; }
 .sp-fontrow-name { line-height: 1.24; padding-bottom: .06em; letter-spacing: -.02em; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-fontrow-sample { font-size: 15px; line-height: 1.45; color: rgba(var(--sp-ink-rgb), .82); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-fontrow-w { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; font-size: 18px; }
 .sp-fontrow-w span:first-child { font-weight: 400; color: rgba(var(--sp-ink-rgb), .78); }
 .sp-fontrow-w span:last-child { font-weight: 600; color: var(--sp-ink); }
-.sp-fontrow-add { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .14); display: grid; place-items: center; font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-fontrow-add { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .14); display: grid; place-items: center; font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-fontrow[aria-pressed="true"] .sp-fontrow-add { border-color: var(--sp-ink); background: var(--sp-ink); color: var(--sp-page); }
-.sp-fontrow-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 10px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-fontrow-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-font-foot { flex: none; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
 .sp-font-pair { display: flex; align-items: baseline; gap: 9px; min-width: 0; flex: 1 1 180px; }
 .sp-font-pair small { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
@@ -686,8 +683,8 @@
 .sp-bars { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; min-width: 0; }
 .sp-bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
 .sp-bar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.sp-bar-row small { flex: none; font-size: 10px; letter-spacing: .12em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 11.5px; color: var(--sp-dim); }
+.sp-bar-row small { flex: none; font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 12px; color: var(--sp-dim); }
 /* The value fills the rest of the row, right-aligned: "name," then the size. The
    size sits in a grid cell sized by a hidden full-width pad ("0000 KB"), with the
    real figure right-aligned over it, so the name's start never moves when the
@@ -710,11 +707,11 @@
 .sp-model-stage { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--sp-hair); background: var(--sp-page); }
 .sp-model-stage img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .sp-model-conv { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.sp-model-chip { flex: none; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sp-line-strong); color: var(--sp-dim); font-size: 10.5px; letter-spacing: .1em; }
+.sp-model-chip { flex: none; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sp-line-strong); color: var(--sp-dim); font-size: 12px; letter-spacing: .02em; }
 .sp-model-chip.is-out { border-color: var(--accent-border); color: var(--accent-text); }
 .sp-model-wire { flex: 1; max-width: 120px; min-width: 24px; display: flex; align-items: center; justify-content: flex-end; height: 1px; background: var(--sp-line-strong); color: var(--sp-dim); }
 .sp-model-wire .sp-ph { font-size: 13px; margin-right: -2px; }
-.sp-model-unit { font-size: 11px; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sp-model-unit { font-size: 12px; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sp-model-say { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--sp-dim); }
 /* Wide enough to hold a mouse: the from → to row is the tab's answer, so it is
    drawn larger than a caption. */
@@ -728,17 +725,17 @@
 .sp-ratio { display: grid; align-content: start; gap: 12px; }
 .sp-ratio-stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); background: var(--sp-page); display: grid; place-items: center; padding: 10px; }
 .sp-ratio-stage img { display: block; width: 100%; max-width: 100%; max-height: 150px; border-radius: 8px; object-fit: cover; }
-.sp-ratio-size { position: absolute; right: 10px; bottom: 9px; font-size: 9.5px; letter-spacing: .1em; padding: 4px 8px; border-radius: 8px; background: rgba(var(--sp-page-rgb), .72); color: var(--sp-ink); }
-.sp-ratio-half { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-ratio-size { position: absolute; right: 10px; bottom: 9px; font-size: 12px; letter-spacing: .02em; padding: 4px 8px; border-radius: 8px; background: rgba(var(--sp-page-rgb), .72); color: var(--sp-ink); }
+.sp-ratio-half { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-frames { display: grid; align-content: start; gap: 12px; }
 .sp-strip { position: relative; display: flex; gap: 2px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); }
 .sp-strip > span:not(.sp-art-over) { position: relative; flex: 1; min-width: 0; height: 152px; overflow: hidden; display: block; }
 .sp-strip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.sp-strip small { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); font-size: 8px; color: var(--sp-page); background: rgba(241, 244, 255, .92); border-radius: 8px; padding: 2px 4px; }
+.sp-strip small { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); font-size: 12px; color: var(--sp-page); background: rgba(241, 244, 255, .92); border-radius: 8px; padding: 2px 4px; }
 .sp-frames-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .sp-frames-row > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .sp-frames-row .sp-utab { padding: 5px 0; margin-right: 18px; }
-.sp-frames-row > small { font-size: 10px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-frames-row > small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-conv-foot { margin-top: auto; flex: none; display: flex; gap: 8px; flex-wrap: wrap; }
 
 .sp-quality input[type="range"]:disabled { opacity: .4; }
@@ -747,7 +744,7 @@
    scrolling inside a fixed height. Compress sets that height; the other panes
    stretch to it, and their stage takes the spare room. */
 @media (max-width: 760px) {
-  .sp-panel:has(.sp-cv) { height: auto; }
+  .sp-panel:has(.sp-cv), .sp-panel:has(.sp-roles) { height: auto; }
   .sp-cv { overflow: visible; }
   .sp-cv-panes { flex: none; grid-template-rows: auto; }
   .sp-conv-art { flex: none; min-height: 0; aspect-ratio: 16 / 9; }
@@ -779,7 +776,7 @@
    same 44px targets and 12px text floor as a phone. */
 @media (max-width: 760px), (pointer: coarse) {
   .sp-modes .sp-utab { min-height: 48px; }
-  .sp-bar-row small { font-size: 12px; letter-spacing: .08em; }
+  .sp-bar-row small { font-size: 12px; letter-spacing: 0; }
   .sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 13px; }
   .sp-cv .sp-fmtrow .sp-utab, .sp-frames-row .sp-utab { padding: 12px 0; min-height: 44px; font-size: 13px; }
   .sp-quality > span, .sp-model-say { font-size: 13px; }

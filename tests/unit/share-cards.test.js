@@ -35,6 +35,7 @@ import {
   cardFor,
   cardUrl,
   toolNamesFor,
+  twitterCardUrl,
 } from '../../scripts/share-cards.mjs'
 import {
   breadcrumbFor,
@@ -42,7 +43,7 @@ import {
   crumbName,
   parentOf,
 } from '../../scripts/route-schema.mjs'
-import { railSections, readHero, readTokens } from '../../scripts/og-cards.mjs'
+import { readTokens } from '../../scripts/og-cards.mjs'
 
 const REPO = process.cwd()
 const ORIGIN = 'https://uil4b.com'
@@ -158,42 +159,15 @@ test('THE STALENESS ONE: the committed cards were drawn from today\'s tokens', a
     + 'so a card is advertising the wrong tools. Run `npm run og:cards`.')
 })
 
-test('THE OTHER STALENESS ONE: the homepage card quotes the homepage', async () => {
-  // ── What this is for ─────────────────────────────────────────────────────
-  //
-  // The homepage card used to be hand-made art sitting outside the generator,
-  // and it drifted exactly the way a hand-made artefact does: it advertised
-  // "No more tab hoarding" for weeks after the homepage stopped saying it —
-  // src/pages/Onboarding.jsx records that line being removed from the anonymous
-  // sales page. The front door's share card promised a sentence that appeared
-  // nowhere on the page it linked to, and nothing could notice.
-  //
-  // The card is now drawn from Home.jsx's own hero, and this is what makes a
-  // hero rewrite fail loudly here instead of silently mis-selling the product.
-  const manifest = JSON.parse(read('public/previews/cards.json'))
-  const hero = await readHero()
-  assert.deepEqual(manifest.hero, hero,
-    'the homepage hero has changed since the front-door card was drawn, so the '
-    + 'card is quoting a headline the page no longer shows. Run `npm run og:cards`.')
-
-  // The highlighted phrase is the claim the page stakes itself on, so the card
-  // has to carry it as a highlight rather than flattening it into plain words.
-  assert.ok(hero.headline.some((run) => run.hi && run.text.length > 2),
-    'the homepage no longer highlights a phrase in its h1 — the card composition '
-    + 'in og-cards.mjs assumes one and would print an unremarkable sentence')
-})
-
-test('the homepage rail names every toolkit area exactly once', () => {
-  // The rail is the front-door card's whole claim: this is the toolkit, not one
-  // area of it. A hue losing its section, or two sections claiming one hue,
-  // would quietly shrink that claim.
-  const rail = railSections()
-  assert.equal(rail.length, 6, `the rail shows ${rail.length} areas, expected 6`)
-  assert.equal(new Set(rail.map((r) => r.hue)).size, 6, 'a hue appears twice in the rail')
-  assert.equal(new Set(rail.map((r) => r.label)).size, 6, 'two rail bands carry the same label')
-  // Plans is deliberately absent: it reuses the colour hue and owns no band.
-  assert.ok(!rail.some((r) => r.label === 'Plans'),
-    'Plans has taken a rail band, but it shares --hue-colour and owns none')
+test('the default card and its X card are the brand kit own files', () => {
+  // The homepage card is committed as the kit exported it (logo on ivory), not
+  // drawn by og-cards.mjs, so it is not in cards.json. X gets the 2:1 card.
+  const og = pngSize(previews(DEFAULT_CARD.file))
+  assert.deepEqual(og, { width: 1200, height: 630 })
+  const x = pngSize(previews(DEFAULT_CARD.twitterFile))
+  assert.deepEqual(x, { width: 1200, height: 600 })
+  assert.equal(JSON.parse(read('public/previews/cards.json')).hero, undefined,
+    'cards.json still records a homepage hero the generator no longer draws')
 })
 
 test('no card is heavy enough to be dropped or to cost a reader real bandwidth', () => {
@@ -378,7 +352,7 @@ test('the built shells carry the images and the breadcrumbs', {
     const src = cardUrl(ORIGIN, card)
     assert.equal(meta(html, 'property', 'og:image'), src,
       `dist${route}/index.html does not point og:image at ${card.file}`)
-    assert.equal(meta(html, 'name', 'twitter:image'), src,
+    assert.equal(meta(html, 'name', 'twitter:image'), twitterCardUrl(ORIGIN, card),
       `dist${route}/index.html does not point twitter:image at ${card.file}`)
     assert.equal(meta(html, 'property', 'og:image:alt'), card.alt,
       `dist${route}/index.html describes a different card than it shows`)

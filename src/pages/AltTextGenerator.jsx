@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
 } from '../components/tool/ToolLayout'
@@ -10,7 +11,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
-import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
+import { AI_IMAGE_SENT, AI_TERMS_PATH } from '../config/aiImageConsent'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { toCsv } from '../utils/csv'
 // The `alt-text` page stylesheet. Imported here rather than from global.css so
@@ -390,8 +391,12 @@ export default function AltTextGenerator({ toast }) {
               to know BEFORE uploading forty images, not after the eighth refusal. */}
           <QuotaMeter quota={quota} className="quota--tool" />
           {/* The line saying where an uploaded image goes sits here, between the
-              allowance and the dropzone, and describes the dropzone. */}
-          <p id="alt-ai-consent" className="ai-image-consent">{AI_IMAGE_CONSENT}</p>
+              allowance and the dropzone, and describes the dropzone. What the
+              provider may do with it is in the Terms, linked rather than
+              repeated. */}
+          <p id="alt-ai-consent" className="ai-image-consent">
+            {AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link>
+          </p>
           <div
             aria-describedby="alt-ai-consent"
             className={`alt-dropzone${isDragging ? ' dragging' : ''}`}
