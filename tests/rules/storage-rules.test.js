@@ -189,9 +189,11 @@ test('an uploaded object is readable by its owner and by reviewers, and not by a
 })
 
 test('a folder cannot be listed by the public, and can by its owner and reviewers', async () => {
-  await seedMedia('a.webp')
-  await seedMedia('b.webp')
-  const folder = `community-media/${ALICE}`
+  // Its own subfolder, so files other tests leave in Alice's folder can't
+  // change what this listing returns.
+  await seedMedia('list-check/a.webp')
+  await seedMedia('list-check/b.webp')
+  const folder = `community-media/${ALICE}/list-check`
   const own = await assertSucceeds(listAll(ref(aliceStore(), folder)))
   assert.deepEqual(own.items.map((i) => i.name).sort(), ['a.webp', 'b.webp'])
   await assertSucceeds(listAll(ref(modStore(), folder)))
