@@ -318,11 +318,11 @@ test('the stand-in faces carry the adjustments the guide quotes', () => {
   const get = (face, name) => new RegExp(`${name}\\s*:\\s*([\\d.]+)%`).exec(face.body)?.[1]
 
   // The split is at the first bold weight the guide names, and each half
-  // carries its own size-adjust. A guide quoting 100% and 96% against a
+  // carries its own size-adjust. A guide quoting 101% and 96% against a
   // stylesheet that now says something else is the failure this is for.
   assert.equal(regular.weight, '100 599')
   assert.equal(bold.weight, '600 900')
-  assert.equal(get(regular, 'size-adjust'), '100')
+  assert.equal(get(regular, 'size-adjust'), '101')
   assert.equal(get(bold, 'size-adjust'), '96')
   for (const face of [regular, bold]) {
     for (const descriptor of ['ascent-override', 'descent-override', 'line-gap-override']) {
@@ -330,7 +330,7 @@ test('the stand-in faces carry the adjustments the guide quotes', () => {
     }
     assert.ok(face.local, `a ${standIn} rule no longer points at an installed font`)
   }
-  assert.match(loadingProse, /weights 100 to 599 at a size-adjust of 100%/)
+  assert.match(loadingProse, /weights 100 to 599 at a size-adjust of 101%/)
   assert.match(loadingProse, /covers 600 to 900 at 96%/)
   assert.match(loadingProse, /ascent, descent and line-gap overrides/)
 })

@@ -230,7 +230,7 @@ export default function FontLoading() {
           This page does exactly that. Its stand-in is two rules that point at
           the installed Arial, with Liberation Sans and Helvetica behind it for
           other systems. The regular rule covers weights 100 to 599 at a
-          size-adjust of 100%, and the bold rule covers 600 to 900 at 96%,
+          size-adjust of 101%, and the bold rule covers 600 to 900 at 96%,
           because the installed bold is wider than the webfont&rsquo;s. Both
           carry ascent, descent and line-gap overrides taken from the
           webfont&rsquo;s own vertical metrics, which is why the second row of
