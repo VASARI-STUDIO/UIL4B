@@ -70,7 +70,7 @@ const TOOLS = [
   },
   {
     route: '/create/type-scale',
-    actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
+    actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import', 'Save to a project'],
     primary: /^Copy CSS/,
     title: 'Type Scale',
   },

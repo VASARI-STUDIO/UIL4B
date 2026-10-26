@@ -90,7 +90,8 @@ const stripComments = (src) => src
 const GALLERY = read('src/pages/FontGallery.jsx')
 const MATCHER = read('src/pages/FontMatcher.jsx')
 const SCALE = read('src/pages/TypeScale.jsx')
-const SAVE = read('src/components/SaveTypeSystem.jsx')
+// The view and the connected hook are two files; the assertions below read both.
+const SAVE = `${read('src/components/SaveTypeSystem.jsx')}\n${read('src/hooks/useSaveTypeSystem.js')}`
 const CSS = ALL_CSS
 const PLANS = read('src/pages/Pricing.jsx')
 
@@ -331,17 +332,25 @@ test('4 · the tools that build a type system offer a way to keep it', () => {
   // Before this change typography had NO save path — the tools wrote to the
   // working kit and stopped — so "saving is Pro" gated nothing. The affordance
   // existing is half the decision.
-  for (const [name, src] of [['FontMatcher', MATCHER], ['TypeScale', SCALE]]) {
-    assert.match(src, /^import SaveTypeSystem from '\.\.\/components\/SaveTypeSystem'$/m,
-      `${name} does not mount the save gate`)
-    // Word-boundaried on purpose: /<SaveTypeSystem/ alone is a PREFIX match and
-    // stays green against <SaveTypeSystemRemoved, <SaveTypeSystemStub or any
-    // other rename that takes the real control off the page.
-    assert.match(src, /<SaveTypeSystem[\s/>]/, `${name} imports the save gate but never renders it`)
-  }
+  assert.match(MATCHER, /^import SaveTypeSystem from '\.\.\/components\/SaveTypeSystem'$/m,
+    'FontMatcher does not mount the save gate')
+  // Word-boundaried on purpose: /<SaveTypeSystem/ alone is a PREFIX match and
+  // stays green against <SaveTypeSystemRemoved, <SaveTypeSystemStub or any
+  // other rename that takes the real control off the page.
+  assert.match(MATCHER, /<SaveTypeSystem[\s/>]/, 'FontMatcher imports the save gate but never renders it')
+  // Type Scale keeps its save in the tool toolbar: the hook draws no markup, so
+  // the page must call it, put a trigger in the toolbar items and mount the panel.
+  assert.match(SCALE, /^import \{ useSaveTypeSystemToolbar \} from '\.\.\/hooks\/useSaveTypeSystem'$/m,
+    'TypeScale does not use the save gate')
+  assert.match(SCALE, /useSaveTypeSystemToolbar\(\{/, 'TypeScale imports the save gate but never calls it')
+  assert.match(SCALE, /onClick=\{save\.trigger\}/, 'TypeScale has no toolbar button wired to the save gate')
+  assert.match(SCALE, /<SaveTypeSystemPanel[\s/>]/, 'TypeScale never mounts the save menu')
   // Distinct gate ids, so P-001's funnel can say WHICH surface converted rather
   // than reporting one merged number for both tools.
-  const ids = [MATCHER, SCALE].map(src => /gate="([a-z-]+)"/.exec(src)?.[1])
+  const ids = [
+    /gate="([a-z-]+)"/.exec(MATCHER)?.[1],
+    /gate: '([a-z-]+)'/.exec(SCALE)?.[1],
+  ]
   assert.deepEqual(ids, ['type-save-font-pair', 'type-save-type-scale'])
 })
 
