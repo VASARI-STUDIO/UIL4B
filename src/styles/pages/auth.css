@@ -81,7 +81,7 @@
 .ui-login-pane{padding:32px}
 .ui-login .ui-login-x{top:12px;right:12px;width:40px;height:40px;color:var(--t2);transition:color 150ms ease-out,background-color 150ms ease-out}
 @media(hover:hover){.ui-login .ui-login-x:hover{color:var(--t0)}}
-@media(pointer:coarse){.ui-login-x::after{content:"";position:absolute;inset:-2px}}
+@media(pointer:coarse){.ui-login-x::after{content:"";position:absolute;inset:-4px}}
 .ui-login .ui-login-x{position:absolute;z-index:2}
 
 /* Phone: a bottom sheet. */
@@ -92,16 +92,34 @@
 }
 @keyframes auth-sheet-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
-/* Short landscape phones: spend vertical rhythm, remove nothing. */
+/* Short viewports (small phones in portrait, phones on their side): the whole
+   dialog has to fit, or at worst scroll with the submit and the mode links in
+   reach. Spend vertical rhythm first; controls stay at the 44px touch minimum. */
+@media(max-height:600px){
+  .auth-form-root{--ctl:44px}
+  .ui-login-pane{padding-top:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .auth-form-root .auth-links{margin-top:8px}
+}
+/* Phones on their side: tighter again. "Not now" goes; Close (top right) and
+   Escape do the same thing and every sign-in method stays. */
 @media(max-height:460px){
   .ui-modal.ui-login{max-height:calc(100dvh - 16px)}
-  .ui-login-pane{padding-block:20px}
-  .auth-body{margin-top:16px}
-  .auth-form-root .auth-divider{margin:8px 0}
+  .ui-login-pane{padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  .auth-form-root .auth-title{font-size:20px}
+  .auth-body{margin-top:12px}
+  .auth-form-root .auth-divider{margin:4px 0}
+  .auth-form-root .auth-form{gap:8px}
+  .auth-form-root .auth-field label{margin-bottom:4px}
+  .auth-form-root .auth-submit{margin-top:0}
+  .auth-legal{margin-top:8px}
+  .auth-notnow{display:none}
 }
 
+html[data-reduced-motion="true"] .auth-swap--in{animation:none}
+html[data-reduced-motion="true"] .ui-modal.ui-login{animation:auth-fade 150ms linear}
+html[data-reduced-motion="true"] .auth-spin{animation-duration:2.4s}
 @media(prefers-reduced-motion:reduce){
-  .auth-swap--in{animation:none}
-  .ui-modal.ui-login{animation:auth-fade 150ms linear}
-  .auth-spin{animation-duration:2.4s}
+  html:not([data-reduced-motion="false"]) .auth-swap--in{animation:none}
+  html:not([data-reduced-motion="false"]) .ui-modal.ui-login{animation:auth-fade 150ms linear}
+  html:not([data-reduced-motion="false"]) .auth-spin{animation-duration:2.4s}
 }

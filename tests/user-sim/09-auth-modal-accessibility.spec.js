@@ -7,7 +7,7 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
   watch(page, PERSONA)
   await go(page, '/login')
 
-  const dialog = page.getByRole('dialog', { name: /welcome back|log in to continue/i })
+  const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
   await expect(dialog).toBeVisible()
   const google = dialog.getByRole('button', { name: /continue with google/i })
   await expect(google).toBeFocused()
@@ -17,8 +17,14 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
 
   const close = dialog.getByRole('button', { name: 'Close' })
   await close.focus()
+  // Shift+Tab off the first control wraps to the LAST one, which is now the
+  // "Not now" way out below the form; "Forgot password?" is the one before it.
+  await page.keyboard.press('Shift+Tab')
+  await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Shift+Tab')
   await expect(dialog.getByRole('button', { name: /forgot password/i })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(close).toBeFocused()
 
@@ -117,7 +123,7 @@ test('a reason-less sign-up says what the account is for before asking for one',
   // Every "Start for Free" control opens this popup with signup:true and NO
   // reason, so the pane used to be suppressed on the four highest-traffic paths
   // into the product: a bare three-field form and nothing saying what for.
-  await expect(dialog).toContainText('Save palettes, type scales and icon sets')
+  await expect(dialog).toContainText('Save palettes, type scales and gradients')
   // No default unlock list: the pane's height goes to the Terms/Privacy line.
 })
 

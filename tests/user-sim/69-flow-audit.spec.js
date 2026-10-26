@@ -117,7 +117,7 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
       await expect(dialog).toBeVisible()
       // Says WHAT was interrupted and WHAT HAPPENS NEXT, in that order.
       await expect(dialog).toContainText(/about to save this palette/i)
-      await expect(dialog).toContainText(/hands you straight back to it/i)
+      await expect(dialog).toContainText(/you'll come back to this page/i)
       // The fast path has focus the moment it opens.
       expect(await focused(page), 'focus must land on the one-click path').toMatch(/Continue with Google/)
 

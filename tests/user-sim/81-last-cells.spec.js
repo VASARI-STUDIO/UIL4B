@@ -418,9 +418,9 @@ test.describe('the login route paints only what is true', () => {
     })
   }
 
-  // MUTATION: in src/styles/global.css change
-  //   .ui-login .ui-modal-body{padding-top:18px}
-  // back to `padding-top:8px`. Every width below goes red.
+  // MUTATION: in src/styles/pages/auth.css change
+  //   .auth-body{margin-top:24px}
+  // to margin-top:8px. Every width below goes red.
   for (const width of WIDTHS) {
     test(`the dialog title has more space beneath it than its fields do at ${width}`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
@@ -431,7 +431,7 @@ test.describe('the login route paints only what is true', () => {
 
       const m = await page.evaluate(() => {
         const title = document.querySelector('#ui-login-title')
-        const first = document.querySelector('.ui-modal-body .auth-google-btn')
+        const first = document.querySelector('.ui-login .auth-google-btn')
         const form = document.querySelector('.auth-form')
         return {
           gap: +(first.getBoundingClientRect().top - title.getBoundingClientRect().bottom).toFixed(1),
@@ -454,15 +454,19 @@ test.describe('the login route paints only what is true', () => {
     })
   }
 
-  // The short-viewport exemption, which is the half a naive spacing change
-  // would have broken. `@media(max-height:460px)` exists because at 844x390
-  // this dialog hid 133px below the fold, including the submit button; the
-  // 18px above is deliberately NOT spent there.
+  // The short-viewport rules, which are the half a naive spacing change would
+  // have broken. `@media(max-height:460px)` in src/styles/pages/auth.css exists
+  // because a landscape phone has ~370px for a dialog that wants ~540: without
+  // it the mode links and the legal line sit well below the fold. The dialog
+  // cannot be made to fit at this height without dropping a sign-in method (an
+  // auth change), so the contract is: tighter rhythm, the submit button whole,
+  // and the sign-up / forgot-password row at least peeking, so a scrolling
+  // dialog still says there is more.
   //
-  // MUTATION: delete the `@media(max-height:460px){.ui-login .ui-modal-body
-  // {padding-top:8px}}` block that follows the 18px rule. The gap becomes 18
-  // and this goes red — as does the budget assertion, by 12px.
-  test('a landscape phone keeps the tighter rhythm and the submit button', async ({ browser }) => {
+  // MUTATION: delete the `@media(max-height:460px){...}` block in auth.css.
+  // The title gap becomes 24, the pane padding 32 and the cost assertion goes
+  // red; the submit button is then also sliced by the dialog edge.
+  test('a landscape phone keeps the tighter rhythm, the submit button and the mode links', async ({ browser }) => {
     const ctx = await browser.newContext({
       viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IOS_UA,
     })
@@ -473,36 +477,48 @@ test.describe('the login route paints only what is true', () => {
     await settled(page)
 
     // Measured twice on the same rendered dialog: as the stylesheet leaves it,
-    // and again with the 18px forced back on. The difference is what the
-    // exemption is WORTH here, which is a stronger thing to assert than any
-    // absolute pixel count — the dialog's content has changed several times
-    // since the height query was written and will change again.
+    // and again with the tall-viewport title gap forced back on. The difference
+    // is what the short-viewport rule is WORTH here, which is a stronger thing
+    // to assert than any absolute pixel count: the dialog's content has changed
+    // several times and will change again.
     const m = await page.evaluate(() => {
       const dialog = document.querySelector('.ui-login')
-      const body = document.querySelector('.ui-login .ui-modal-body')
+      const body = document.querySelector('.ui-login .auth-body')
+      const pane = document.querySelector('.ui-login .ui-login-pane')
       const title = document.querySelector('#ui-login-title')
-      const first = document.querySelector('.ui-modal-body .auth-google-btn')
+      const first = document.querySelector('.ui-login .auth-google-btn')
+      const submit = document.querySelector('.ui-login .auth-submit')
+      const links = document.querySelector('.ui-login .auth-links')
+      const dr = dialog.getBoundingClientRect()
       const hidden = () => dialog.scrollHeight - dialog.clientHeight
       const exempt = {
-        padTop: getComputedStyle(body).paddingTop,
+        padTop: getComputedStyle(pane).paddingTop,
         gap: +(first.getBoundingClientRect().top - title.getBoundingClientRect().bottom).toFixed(1),
         hidden: hidden(),
         scrolls: dialog.scrollHeight > dialog.clientHeight,
+        submitSliced: Math.round(submit.getBoundingClientRect().bottom - dr.bottom) > 0,
+        linksPeek: Math.round(dr.bottom - links.getBoundingClientRect().top),
+        notNowShown: !!document.querySelector('.ui-login .auth-notnow')?.getClientRects().length,
       }
-      body.style.paddingTop = '18px'
+      body.style.marginTop = '24px'
       void dialog.offsetHeight
       const cost = hidden() - exempt.hidden
-      body.style.paddingTop = ''
+      body.style.marginTop = ''
       return { ...exempt, cost }
     })
-    expect(m.padTop, 'the landscape exemption stopped applying').toBe('8px')
-    expect(m.gap, 'the title is taking the tall-viewport gap on a landscape phone').toBeLessThan(12)
-    // The whole 10px, not some of it — anything less means the two rules are
+    expect(m.padTop, 'the landscape rule stopped applying to the dialog padding').toBe('12px')
+    expect(m.gap, 'the title is taking the tall-viewport gap on a landscape phone').toBeLessThan(16)
+    // The whole 12px, not some of it: anything less means two rules are
     // fighting rather than the later one winning outright.
-    expect(m.cost, 'spending the title gap here would cost nothing, so the exemption is dead code').toBe(10)
-    // And what IS below the fold stays reachable: .ui-modal scrolls, with the
+    expect(m.cost, 'spending the title gap here would cost nothing, so the rule is dead code').toBe(12)
+    expect(m.submitSliced, 'the submit button is cut by the dialog edge').toBe(false)
+    expect(m.linksPeek, 'the sign-up / forgot-password row is entirely below the fold').toBeGreaterThan(0)
+    // What IS below the fold stays reachable: .ui-modal scrolls, with the
     // pure-CSS scroll shadow that tells the reader there is more.
     expect(m.scrolls, 'the dialog does not scroll, so anything below the fold is lost').toBe(true)
+    // "Not now" is the one control that gives way, and only here: Close is in
+    // the corner and Escape works. Pinned so it cannot go missing elsewhere.
+    expect(m.notNowShown, '"Not now" should give way on a landscape phone').toBe(false)
 
     await ctx.close()
   })
