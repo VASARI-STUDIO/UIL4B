@@ -191,7 +191,9 @@ for (const tool of TOOLS) {
 
 test('/create/gradient · an action run from the phone overflow still does its job', async ({ page }) => {
   watch(page, 'a designer randomising a gradient from the bottom sheet')
-  await page.setViewportSize({ width: 390, height: 844 })
+  // 360: the narrowest phone, where Random is always in the overflow. At 390 the
+  // tightened row can keep it inline.
+  await page.setViewportSize({ width: 360, height: 844 })
   await go(page, '/create/gradient')
   const code = page.locator('.grd-code-text code')
   const before = await code.textContent()

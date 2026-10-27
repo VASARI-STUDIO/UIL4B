@@ -42,7 +42,7 @@
   color: var(--cc-fg, #000000);
 }
 .cc .cc-preview p { margin: 0; }
-.cc .cc-spec-h { font-size: clamp(28px, 4.6vw, 52px); font-weight: 600; letter-spacing: -.035em; line-height: 1.02; }
+.cc .cc-spec-h { font-size: clamp(28px, 4.6vw, 52px); font-weight: 600; letter-spacing: -.02em; line-height: 1.02; }
 .cc .cc-spec-large { font-size: clamp(15px, 1.8vw, 19px); line-height: 1.5; max-width: min(42ch, 100%); }
 .cc .cc-spec-body { font-size: 14px; line-height: 1.6; max-width: min(56ch, 100%); }
 .cc .cc-spec-btn {
@@ -105,7 +105,7 @@
 .cc .cc-ratio-num {
   font-size: clamp(34px, 5vw, 46px);
   font-weight: 600;
-  letter-spacing: -.04em;
+  letter-spacing: -.02em;
   line-height: 1;
   color: var(--tl-ink);
   font-variant-numeric: tabular-nums;

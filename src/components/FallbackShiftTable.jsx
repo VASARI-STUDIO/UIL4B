@@ -19,10 +19,12 @@
 // global.css declares it. Row two is the same stack with the webfont removed,
 // which is exactly what the browser paints during the swap period. The
 // difference between those two rows is the shift, and both halves of it are
-// real measurements of real declarations.
+// real measurements of real declarations. Row three removes the adjusted
+// stand-in as well, so the page's own size-adjust work is measured against
+// what the browser would have painted without it.
 //
 // It renders nothing if the canvas cannot measure, if the stack has fewer than
-// two entries to remove one from, or if the product's own detector cannot
+// three entries to remove two from, or if the product's own detector cannot
 // confirm that the first family actually rendered — because the whole table is
 // a comparison against the loaded webfont, and without it there is nothing to
 // compare to.
@@ -34,7 +36,7 @@ import { detectCanvasFontRendered } from '../utils/fontDetection'
 const AT_PX = 16
 const SAMPLE = 'Every figure cited or computed'
 
-/** `'Geist'` → `Geist`. */
+/** `'Switzer'` → `Switzer`. */
 const unquote = (value) => String(value || '').trim().replace(/^['"]|['"]$/g, '')
 
 function readRows() {
@@ -44,16 +46,19 @@ function readRows() {
 
   const stack = getComputedStyle(document.documentElement).getPropertyValue('--font').trim()
   const entries = stack.split(',').map((s) => s.trim()).filter(Boolean)
-  if (entries.length < 2) return null
+  if (entries.length < 3) return null
 
   // Without a confident yes, row one is not the webfont and the table is a
   // comparison of the fallback with itself.
   if (detectCanvasFontRendered(ctx, unquote(entries[0])) !== true) return null
 
+  // The stack's second entry is the adjusted stand-in (a local face declared
+  // with size-adjust and the metric overrides), so the third row removes it as
+  // well: what the swap would paint if nothing had been adjusted.
   const declarations = [
     { id: 'declared', label: 'The stack as declared', value: entries.join(', ') },
     { id: 'swap', label: 'What the swap period paints', value: entries.slice(1).join(', ') },
-    { id: 'last', label: 'The last family in the stack', value: entries[entries.length - 1] },
+    { id: 'unadjusted', label: 'The same stack without the adjusted stand-in', value: entries.slice(2).join(', ') },
   ]
 
   const rows = []
@@ -124,7 +129,9 @@ export default function FallbackShiftTable() {
         each declaration and measured with <code>measureText()</code>. Every row is a font-family
         value a browser can resolve, so no row names a family that might not be installed. The
         second row is the first with its webfont removed: the width a reader sees before the file
-        arrives, against the width they see after it.
+        arrives, against the width they see after it. The third also removes the stand-in that
+        was adjusted to match, which is the width the same swap would move by had nothing been
+        adjusted.
       </figcaption>
     </figure>
   )

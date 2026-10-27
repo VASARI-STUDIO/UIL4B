@@ -10,7 +10,7 @@
 //
 // The one product fact stated in prose — the weight range this page's face
 // declares — is read back out of src/styles/global.css by
-// tests/unit/learn-figures.test.js rather than trusted, which is the same
+// tests/unit/learn-type-figures.test.js rather than trusted, which is the same
 // arrangement the two colour guides use for their hexes.
 
 import { Aside, Formula, Spec } from '../../components/LearnParts'
@@ -149,10 +149,11 @@ c = 19.51px`}
 
         <p>
           A variable font declares the span it actually contains. The face this
-          page is set in declares <code>font-weight: 300 700</code> on its
-          <code> @font-face</code> rule: 400 units of the 999 the property
-          allows, continuous rather than stepped, so <code>font-weight: 437</code>
-          is a real instruction and not a rounding to 400.
+          page is set in declares <code>font-weight: 100 900</code> on its
+          <code> @font-face</code> rules, upright and italic alike: 800 units of
+          the 999 the property allows, continuous rather than stepped, so
+          <code> font-weight: 437</code> is a real instruction and not a
+          rounding to 400.
         </p>
         <p>
           Asking for a weight outside a declared range does not fail. The
@@ -171,8 +172,8 @@ c = 19.51px`}
         <p>
           The practical consequence is that a type scale built on weights the
           face does not contain will look correct in the design tool, which has
-          the full family, and wrong in the browser, which has the subset that
-          was shipped. The weights available are a fact about the file, and the
+          the full family, and wrong in the browser, which has whatever was
+          shipped. The weights available are a fact about the file, and the
           <code> @font-face</code> rule states them.
         </p>
       </section>
