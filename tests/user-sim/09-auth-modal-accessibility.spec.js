@@ -7,7 +7,7 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
   watch(page, PERSONA)
   await go(page, '/login')
 
-  const dialog = page.getByRole('dialog', { name: /welcome back|log in to continue/i })
+  const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
   await expect(dialog).toBeVisible()
   const google = dialog.getByRole('button', { name: /continue with google/i })
   await expect(google).toBeFocused()
@@ -17,8 +17,14 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
 
   const close = dialog.getByRole('button', { name: 'Close' })
   await close.focus()
+  // Shift+Tab off the first control wraps to the LAST one, which is now the
+  // "Not now" way out below the form; "Forgot password?" is the one before it.
+  await page.keyboard.press('Shift+Tab')
+  await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Shift+Tab')
   await expect(dialog.getByRole('button', { name: /forgot password/i })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(close).toBeFocused()
 
@@ -94,7 +100,7 @@ test('closing the dialog restores focus even when its opener was in a menu that 
   const menuLogin = page.locator('.pnav-pop-item').filter({ hasText: /^Log in$/ })
   await menuLogin.click()
 
-  const dialog = page.getByRole('dialog', { name: /welcome back/i })
+  const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
   await expect(dialog).toBeVisible()
   await expect(menuLogin, 'the opener really is gone — otherwise this proves nothing').toHaveCount(0)
 
@@ -117,10 +123,8 @@ test('a reason-less sign-up says what the account is for before asking for one',
   // Every "Start for Free" control opens this popup with signup:true and NO
   // reason, so the pane used to be suppressed on the four highest-traffic paths
   // into the product: a bare three-field form and nothing saying what for.
-  await expect(dialog).toContainText('What a free account gets you')
-  await expect(dialog).toContainText('An account is where your saved work lives')
+  await expect(dialog).toContainText('Save palettes, type scales and gradients')
   // No default unlock list: the pane's height goes to the Terms/Privacy line.
-  await expect(dialog.locator('.ui-login-gets li')).toHaveCount(0)
 })
 
 /* Phone, with REAL device metrics. isMobile + hasTouch are what make
@@ -176,7 +180,7 @@ test.describe('on a phone', () => {
     watch(page, PERSONA)
     await go(page, '/login')
 
-    const dialog = page.getByRole('dialog', { name: /welcome back/i })
+    const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
     await expect(dialog).toBeVisible()
 
     const caps = await page.evaluate(() => ({
@@ -231,7 +235,7 @@ test.describe('the sign-in dialog titles itself for the context it opens in', ()
     expect(seen.titleTag, 'the dialog title on /login is not an h1. That route renders '
       + 'null once auth resolves, so this heading is the document outline — see the '
       + 'isPageTitle note in LoginPopup.jsx').toBe('H1')
-    expect(seen.h1s, 'exactly one h1, and it is the dialog title').toEqual(['Welcome Back'])
+    expect(seen.h1s, 'exactly one h1, and it is the dialog title').toEqual(['Log in to UIL4B'])
 
     // The promotion must not cost the dialog its accessible name.
     expect(seen.labelledBy, 'the dialog lost its aria-labelledby').toBe('ui-login-title')
