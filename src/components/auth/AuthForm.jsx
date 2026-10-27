@@ -284,7 +284,7 @@ export default function AuthForm({
                 <button type="button" className="auth-link" onClick={() => go('login')} disabled={disabled}>{t('auth.haveAccount')} <span className="auth-link-strong">{t('auth.haveAccountAction')}</span></button>
               )}
               {(mode === 'reset' || mode === 'sent') && (
-                <button type="button" className="auth-link" onClick={() => go('login')} disabled={disabled}>{t('auth.backToLogIn')}</button>
+                <button type="button" className="auth-link auth-link--quiet" onClick={() => go('login')} disabled={disabled}>{t('auth.backToLogIn')}</button>
               )}
             </div>
           )}
