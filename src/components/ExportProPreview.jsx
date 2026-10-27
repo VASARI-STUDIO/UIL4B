@@ -15,6 +15,8 @@ import ExportProTag from './ExportProTag'
 // so the dock does not move when the images arrive.
 
 const KIND_NAME = { book: 'design system book', guidelines: 'brand guidelines' }
+// The short line under the strip: what the pictures are of.
+const KIND_CAPTION = { book: 'Your book, pages', guidelines: 'Your guidelines, slides' }
 const PAGE_COUNT = 3
 
 // Finished previews, kept so choosing another row and coming back is instant.
@@ -77,24 +79,38 @@ export default function ExportProPreview({ kind, design, projectName, blurred })
 
   return (
     <div className={`exp-preview is-${kind}`}>
-      <div className="exp-preview-strip" data-state={ready.failed ? 'failed' : ready.pages.length ? 'ready' : 'loading'}>
-        {ready.pages.length
-          ? ready.pages.map((p, i) => (
-            <img
-              key={p.id}
-              className="exp-thumb"
-              src={p.url}
-              width={p.width}
-              height={p.height}
-              alt={`${blurred ? 'Blurred preview' : 'Preview'} of your ${name}, page ${i + 1}: ${p.title}`}
-              data-blurred={blurred ? 'true' : 'false'}
-              draggable="false"
-            />
-          ))
-          : Array.from({ length: PAGE_COUNT }, (_, i) => <span key={i} className="exp-thumb exp-thumb-wait" aria-hidden="true" />)}
+      {/* The stage is as wide as the pictures (up to the box), so the Pro chip
+          centres over them and not over the empty room beside them. */}
+      <div className="exp-preview-stage">
+        {/* Scrolls sideways when the pictures outgrow the box, so it is a Tab
+            stop with a name: a keyboard can reach the pictures past the edge. */}
+        <div
+          className="exp-preview-strip"
+          data-state={ready.failed ? 'failed' : ready.pages.length ? 'ready' : 'loading'}
+          tabIndex={0}
+          role="group"
+          aria-label={`Pages of your ${name}`}
+        >
+          {ready.pages.length
+            ? ready.pages.map((p, i) => (
+              <img
+                key={p.id}
+                className="exp-thumb"
+                src={p.url}
+                width={p.width}
+                height={p.height}
+                alt={`${blurred ? 'Blurred preview' : 'Preview'} of your ${name}, page ${i + 1}: ${p.title}`}
+                data-blurred={blurred ? 'true' : 'false'}
+                draggable="false"
+              />
+            ))
+            : Array.from({ length: PAGE_COUNT }, (_, i) => <span key={i} className="exp-thumb exp-thumb-wait" aria-hidden="true" />)}
+        </div>
+        {blurred && <span className="exp-preview-lock"><ExportProTag className="exp-preview-tag" /></span>}
       </div>
-      {blurred && <span className="exp-preview-lock"><ExportProTag className="exp-preview-tag" /></span>}
-      {ready.failed && <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>}
+      {ready.failed
+        ? <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>
+        : <p className="exp-preview-caption" aria-hidden="true">{KIND_CAPTION[kind]} 1 to {PAGE_COUNT}</p>}
     </div>
   )
 }

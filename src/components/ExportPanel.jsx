@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { trackActivation } from '../utils/analytics'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
@@ -511,8 +511,8 @@ export default function ExportPanel({ onClose }) {
         </div>
 
         {/* The five things you can take, one radiogroup. The paid documents sit
-            below a gap and a hairline, so free and paid are told apart by space
-            rather than by a tinted box. Pro rows stay selectable for a free
+            below a hairline-edged band (free accounts only), so free and paid
+            are told apart by a divider rather than by a tinted box. Pro rows stay selectable for a free
             account: choosing one is how the preview and the way to Pro are seen. */}
         <div className="exp-formats" role="radiogroup" aria-labelledby="exp-title">
           {EXPORT_GROUPS.map((g, i) => {
@@ -520,28 +520,32 @@ export default function ExportPanel({ onClose }) {
             const paid = isGroupPro(g.id)
             // Pro for a free account only: a Pro user sees neither lock nor word.
             const showPro = paid && !isPro
-            const startsPaid = paid && i > 0 && !isGroupPro(EXPORT_GROUPS[i - 1].id)
+            // The band between free and paid is for a free account only: to a
+            // Pro account every row is theirs, so there is nothing to divide.
+            const startsPaid = showPro && i > 0 && !isGroupPro(EXPORT_GROUPS[i - 1].id)
             return (
-              <button
-                key={g.id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                aria-label={showPro ? `${g.name}, Pro` : g.name}
-                aria-describedby={`exp-desc-${g.id}`}
-                tabIndex={active ? 0 : -1}
-                ref={(el) => { rowRefs.current[i] = el }}
-                className={`exp-fmt${active ? ' is-active' : ''}${startsPaid ? ' is-paid-start' : ''}`}
-                onClick={() => pickGroup(g.id)}
-                onKeyDown={(e) => onRowKeyDown(e, i)}
-              >
-                <span className="exp-fmt-check" aria-hidden="true" />
-                <span className="exp-fmt-text">
-                  <span className="exp-fmt-name">{g.name}</span>
-                  <span className="exp-fmt-desc" id={`exp-desc-${g.id}`}>{g.desc}</span>
-                </span>
-                {showPro && <ExportProTag />}
-              </button>
+              <Fragment key={g.id}>
+                {startsPaid && <div className="exp-fmt-gap" aria-hidden="true" />}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  aria-label={showPro ? `${g.name}, Pro` : g.name}
+                  aria-describedby={`exp-desc-${g.id}`}
+                  tabIndex={active ? 0 : -1}
+                  ref={(el) => { rowRefs.current[i] = el }}
+                  className={`exp-fmt${active ? ' is-active' : ''}`}
+                  onClick={() => pickGroup(g.id)}
+                  onKeyDown={(e) => onRowKeyDown(e, i)}
+                >
+                  <span className="exp-fmt-check" aria-hidden="true" />
+                  <span className="exp-fmt-text">
+                    <span className="exp-fmt-name">{g.name}</span>
+                    <span className="exp-fmt-desc" id={`exp-desc-${g.id}`}>{g.desc}</span>
+                  </span>
+                  {showPro && <ExportProTag />}
+                </button>
+              </Fragment>
             )
           })}
         </div>
