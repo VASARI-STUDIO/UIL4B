@@ -139,6 +139,7 @@ self.onmessage = async (e) => {
 export const atlas = {
   gen: 0,             // bumped whenever the drawing setup changes; older replies are dropped
   config: null,       // { key, scale, font, fontSize, advance, baseline, slotH } once measured from a real cell
+  measureFailed: false, // a measure found a cell with no size (hidden, not laid out): config stays null
   dpr: 0,             // the pixel ratio that config was measured at
   sprites: new Map(), // glyph string -> { style, sheet }
   textOnly: new Set(),// glyphs the worker judged cannot be a bitmap: they stay text
@@ -173,10 +174,14 @@ export const atlasSupported = () => (
 // made a search or a fast scroll freeze (about 7 ms a cell at 4x CPU). Text stays
 // the answer for a glyph in `textOnly` (the worker found it cannot be a bitmap,
 // such as a flag the font has no picture for), once the atlas has failed, and
-// wherever the atlas is not supported at all.
+// wherever the atlas is not supported at all. Before the first measure the
+// placeholder shows (the page must not paint a screenful of text cells while it
+// waits); a measure that was tried and found no size sends no job, so until a
+// later one succeeds the cells keep their text.
 let supported
 export function atlasPending(ch) {
   if (atlas.failed || atlas.textOnly.has(ch)) return false
+  if (!atlas.config && atlas.measureFailed) return false
   if (supported === undefined) supported = atlasSupported()
   return supported
 }
@@ -220,6 +225,7 @@ function atlasTeardown() {
   if (atlas.listeners.size) return
   atlasReset()
   atlas.config = null
+  atlas.measureFailed = false
   if (atlas.worker) { atlas.worker.terminate(); atlas.worker = null }
 }
 
@@ -292,13 +298,27 @@ function glyphBytes() {
 }
 
 let jobId = 0
-// Queue the glyphs on screen now. They go ahead of everything waiting; anything
-// already drawn, in flight, queued to go first or known to stay text is skipped, and a glyph still
+// The glyphs of a grid's mounted cells ordered by how far their row is from the
+// viewport. `rowOf[i]` is the row ({ top, h }) holding `chars[i]`; `top` is the
+// scroll position in the grid's own coordinates and `height` the viewport's.
+// A stable sort, so glyphs at the same distance (all those in view are at 0)
+// keep their reading order.
+export function nearestFirst({ chars, rowOf }, top, height) {
+  const bottom = top + height
+  const gap = (row) => (row.top + row.h < top ? top - (row.top + row.h) : row.top > bottom ? row.top - bottom : 0)
+  return chars.map((ch, i) => [ch, gap(rowOf[i])]).sort((a, b) => a[1] - b[1]).map(c => c[0])
+}
+
+// Queue the glyphs on screen now, `chars` being nearest the viewport first. Every
+// call rebuilds the urgent part of the queue from this list, so after a scroll
+// what is now closest goes first even when an older urgent job holds it; a glyph
+// that has left the list drops out of the urgent jobs (the background pass takes
+// it up again if there is room). They go ahead of everything waiting. Anything
+// already drawn, in flight or known to stay text is skipped, and a glyph still
 // sitting in a waiting background chunk is pulled forward.
 export function atlasWant(chars) {
   if (atlas.failed || !atlas.config) return
   const flying = atlas.current ? new Set(atlas.current.chars) : new Set()
-  atlas.queue.forEach(job => { if (job.urgent) job.chars.forEach(ch => flying.add(ch)) })
   const seen = new Set()
   const missing = []
   for (const ch of chars) {
@@ -306,9 +326,10 @@ export function atlasWant(chars) {
     seen.add(ch)
     missing.push(ch)
   }
-  if (!missing.length) return
+  if (!missing.length && !atlas.queue.some(job => job.urgent)) return
   atlas.queue = atlas.queue
-    .map(job => (job.urgent ? job : { ...job, chars: job.chars.filter(ch => !seen.has(ch)) }))
+    .filter(job => !job.urgent)
+    .map(job => ({ ...job, chars: job.chars.filter(ch => !seen.has(ch)) }))
     .filter(job => job.chars.length)
   const jobs = []
   for (let i = 0; i < missing.length; i += URGENT_CHUNK) jobs.push({ id: ++jobId, urgent: true, chars: missing.slice(i, i + URGENT_CHUNK) })
@@ -416,7 +437,14 @@ export function atlasConfigure(host) {
   const fontSize = parseFloat(style.fontSize)
   const family = style.fontFamily
   host.removeChild(probe)
-  if (!spanRect.height || !fontSize) return
+  if (!spanRect.height || !fontSize) {
+    // Nothing to measure (the grid is hidden or not laid out yet). With no config
+    // no job is sent, so cells waiting on a bitmap fall back to their text until a
+    // later measure succeeds; tell the grid, which is showing placeholders.
+    if (!atlas.config && !atlas.measureFailed) { atlas.measureFailed = true; atlasEmit() }
+    return
+  }
+  atlas.measureFailed = false
   const dpr = window.devicePixelRatio || 1
   const scale = Math.round(SLOT * dpr) / SLOT
   // The bitmap box is the text's own line box plus a whole 2px margin above and

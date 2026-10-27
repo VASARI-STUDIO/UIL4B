@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore, memo } from 'react'
-import { atlas, atlasPending, atlasSubscribe, atlasVersion, atlasConfigure, atlasMounted, atlasWant, atlasWarm, atlasTrim } from './emojiAtlas'
+import { atlas, atlasPending, atlasSubscribe, atlasVersion, atlasConfigure, atlasMounted, atlasWant, atlasWarm, atlasTrim, nearestFirst } from './emojiAtlas'
 
 // The Emoji Library's windowed grid, kept in its own component so the scroll
 // state (which row range is mounted, which cell just copied) re-renders THIS
@@ -59,15 +59,6 @@ function windowOf(rows, minY, maxY) {
   let end = start
   while (end < rows.length && rows[end].top < maxY) end++
   return { start, end }
-}
-
-// The glyphs of `cells` ordered by how far their row is from the viewport
-// (`top` is the page scroll position in the grid's own coordinates). A stable
-// sort, so the glyphs inside the viewport keep their reading order.
-function nearestFirst({ chars, rowOf }, top) {
-  const bottom = top + window.innerHeight
-  const gap = (row) => (row.top + row.h < top ? top - (row.top + row.h) : row.top > bottom ? row.top - bottom : 0)
-  return chars.map((ch, i) => [ch, gap(rowOf[i])]).sort((a, b) => a[1] - b[1]).map(c => c[0])
 }
 
 const NO_WINDOW = { layout: null, start: 0, end: 0 }
@@ -229,7 +220,7 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
   // screen each way, and the glyphs on screen must not queue behind the ones above.
   useEffect(() => {
     if (!atlas.config || !virtEl) return
-    atlasWant(nearestFirst(visibleCells, -virtEl.getBoundingClientRect().top))
+    atlasWant(nearestFirst(visibleCells, -virtEl.getBoundingClientRect().top, window.innerHeight))
   }, [visibleCells, virtEl, atlasGen])
 
   useEffect(() => {

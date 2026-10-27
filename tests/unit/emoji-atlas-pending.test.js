@@ -8,7 +8,11 @@
 //    (140 replies in one touch scroll used to re-render it 140 times), and trimming
 //    must not notify either. A reply holding a mounted glyph notifies once.
 // 3. Urgent chunks hold 24 glyphs and keep the order the grid gave them (nearest
-//    the viewport first).
+//    the viewport first). nearestFirst does that ordering; every atlasWant call
+//    rebuilds the urgent queue from its list, so a scroll reorders older jobs too.
+// 4. Before the first measure a glyph is pending (cold load shows placeholders); a
+//    measure that found no size (hidden grid) sends no job, so the cells fall back
+//    to text, the grid is told, and a later successful measure restores the wait.
 //
 // The worker is the one thing outside our code, so it is faked: a Worker class
 // that records what it was sent and lets the test hand back a reply.
@@ -148,4 +152,154 @@ test('urgent sheets hold 24 glyphs and keep the order the grid gave them', async
   assert.deepEqual(w.sent[0].chars, want.slice(0, 24), 'first sheet is the first (nearest) glyphs')
   assert.deepEqual(m.atlas.queue.map(j => j.chars.length), [24, 2])
   assert.deepEqual(m.atlas.queue[0].chars, want.slice(24, 48))
+})
+
+// ---- Nearest the viewport first -------------------------------------------
+
+// Rows as the grid lays them out: { top, h } in the grid's own coordinates. The
+// viewport here runs from 1000 to 1800.
+const VIEW_TOP = 1000
+const VIEW_H = 800
+const row = (top, h = 40) => ({ top, h })
+
+test('nearestFirst: rows inside the viewport lead, then above and below by how far they sit from it', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  const [farAbove, nearAbove, straddlesTop, inside, nearBelow, farBelow] = glyphs(6)
+  const cells = {
+    chars: [farAbove, nearAbove, straddlesTop, inside, nearBelow, farBelow],
+    rowOf: [row(100), row(850), row(980), row(1200), row(1900), row(3000)],
+  }
+  // gaps: 860, 110, 0 (its bottom edge is in view), 0, 100, 1200
+  assert.deepEqual(m.nearestFirst(cells, VIEW_TOP, VIEW_H), [straddlesTop, inside, nearBelow, nearAbove, farAbove, farBelow])
+})
+
+test('nearestFirst: equal distance, and glyphs in the same row, keep their reading order', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  const [a, b, c, d, e, f] = glyphs(6)
+  // a and b share the row above (gap 100); c and d are in view; e is 100 below, f in view too.
+  const cells = {
+    chars: [a, b, c, d, e, f],
+    rowOf: [row(860), row(860), row(1100), row(1100), row(1900), row(1500)],
+  }
+  assert.deepEqual(m.nearestFirst(cells, VIEW_TOP, VIEW_H), [c, d, f, a, b, e])
+})
+
+test('nearestFirst: a row above and a row below at the same distance keep reading order, and an empty list is fine', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  const [above, below, view] = glyphs(3)
+  const cells = { chars: [above, view, below], rowOf: [row(860), row(1100), row(1900)] }
+  assert.deepEqual(m.nearestFirst(cells, VIEW_TOP, VIEW_H), [view, above, below])
+  assert.deepEqual(m.nearestFirst({ chars: [], rowOf: [] }, VIEW_TOP, VIEW_H), [])
+})
+
+test('duplicate glyphs: nearestFirst keeps both, and the one nearest the viewport is the one atlasWant queues', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  m.atlas.config = CONFIG
+  const [dup, other, third] = glyphs(3)
+  // dup sits far above AND in view; reading order puts the far one first.
+  const cells = { chars: [dup, other, dup, third], rowOf: [row(100), row(1100), row(1200), row(3000)] }
+  const sorted = m.nearestFirst(cells, VIEW_TOP, VIEW_H)
+  assert.deepEqual(sorted, [other, dup, dup, third])
+  m.atlasWant(sorted)
+  assert.deepEqual(FakeWorker.all[0].sent[0].chars, [other, dup, third], 'each glyph is drawn once, at its nearest place')
+})
+
+// ---- The urgent queue follows the latest call ------------------------------
+
+const queuedUrgent = (m) => m.atlas.queue.filter(j => j.urgent).flatMap(j => j.chars)
+
+test('a later atlasWant puts glyphs now in view ahead of ones an older urgent job still holds', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  m.atlas.config = CONFIG
+  const all = glyphs(60)
+  m.atlasWant(all)                 // first 24 are with the worker; [24..47] and [48..59] wait
+  assert.deepEqual(m.atlas.queue.map(j => j.chars.length), [24, 12])
+  // The user scrolled to the end: the last ten are now nearest.
+  const scrolled = [...all.slice(50), ...all.slice(0, 50)]
+  m.atlasWant(scrolled)
+  assert.deepEqual(m.atlas.queue[0].chars.slice(0, 10), all.slice(50), 'the newly visible glyphs lead the next sheet')
+  assert.deepEqual(queuedUrgent(m), [...all.slice(50), ...all.slice(24, 50)], 'rest follows in the new order, nothing doubled')
+  assert.deepEqual(m.atlas.queue.map(j => j.chars.length), [24, 12])
+  assert.equal(m.atlas.current.chars.length, 24, 'the job in flight is left alone')
+})
+
+test('a glyph that left the view drops out of the urgent jobs, and a call with nothing missing clears them', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  m.atlas.config = CONFIG
+  const all = glyphs(60)
+  m.atlasWant(all)
+  m.atlasWant(all.slice(55))
+  assert.deepEqual(queuedUrgent(m), all.slice(55))
+  m.atlasWant([])
+  assert.deepEqual(queuedUrgent(m), [], 'nothing in view, nothing urgent')
+})
+
+test('rebuilding the urgent jobs leaves the background queue alone, minus glyphs now urgent', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  m.atlas.config = CONFIG
+  const [busy, ...rest] = glyphs(40)
+  m.atlasWant([busy])              // in flight
+  m.atlas.queue.push({ id: 900, urgent: false, chars: rest })
+  m.atlasWant([rest[3], rest[1]])
+  assert.deepEqual(m.atlas.queue[0].chars, [rest[3], rest[1]])
+  assert.equal(m.atlas.queue[0].urgent, true)
+  const bg = m.atlas.queue.find(j => !j.urgent)
+  assert.deepEqual(bg.chars, rest.filter(ch => ch !== rest[1] && ch !== rest[3]))
+})
+
+// ---- A measure that finds nothing ------------------------------------------
+
+// A stand-in for the cell the atlas measures. `height` 0 is a grid that is hidden
+// or not laid out yet.
+function withDom(height, run) {
+  const span = {
+    firstElementChild: { getBoundingClientRect: () => ({ bottom: 20 }) },
+    getBoundingClientRect: () => ({ top: 0, height, width: 24 }),
+  }
+  globalThis.document = { createElement: () => ({ style: {}, setAttribute() {}, firstChild: span }) }
+  globalThis.getComputedStyle = () => ({ fontSize: height ? '24px' : '0px', fontFamily: 'x' })
+  globalThis.window = { devicePixelRatio: 1 }
+  try { return run({ appendChild() {}, removeChild() {} }) } finally {
+    delete globalThis.document
+    delete globalThis.getComputedStyle
+    delete globalThis.window
+  }
+}
+
+test('before any measure a cell is pending (the cold load shows placeholders, not 120 text cells)', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  assert.equal(m.atlas.config, null)
+  assert.equal(m.atlasPending('\u{1F600}'), true)
+})
+
+test('a measure that finds no size sends no job, so cells fall back to text and the grid is told once', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  const calls = quiet(m)
+  withDom(0, host => { m.atlasConfigure(host); m.atlasConfigure(host) })
+  assert.equal(m.atlas.config, null)
+  m.atlasWant(glyphs(3))
+  assert.equal(FakeWorker.all.length, 0, 'no worker, no job')
+  assert.equal(m.atlasPending('\u{1F600}'), false, 'not stuck as a placeholder')
+  assert.equal(calls(), 1, 'one notification, so the grid re-renders its cells as text; the second miss adds none')
+})
+
+test('a later measure that succeeds turns the cells back into waiting placeholders and draws', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  const calls = quiet(m)
+  withDom(0, host => m.atlasConfigure(host))
+  assert.equal(m.atlasPending('\u{1F600}'), false)
+  const before = calls()
+  withDom(24, host => m.atlasConfigure(host))
+  assert.ok(m.atlas.config, 'measured this time')
+  assert.equal(m.atlasPending('\u{1F600}'), true, 'a bitmap is on its way again')
+  assert.ok(calls() > before, 'the grid is told, so it re-renders and asks for sheets')
+  m.atlasWant(glyphs(2))
+  assert.equal(FakeWorker.all[0].sent[0].chars.length, 2)
+})
+
+test('a glyph the worker ruled out stays text whether or not a measure failed', async () => {
+  const m = await freshAtlas(supportedBrowser)
+  withDom(0, host => m.atlasConfigure(host))
+  m.atlas.textOnly.add('\u{1F1E6}\u{1F1FA}')
+  assert.equal(m.atlasPending('\u{1F1E6}\u{1F1FA}'), false)
 })
