@@ -55,10 +55,14 @@ const hexes = (page) => page.locator('.plb-col .plb-hex').allTextContents()
 
 // Every card in the dialog as its name and the colours painted on its strip, so
 // one list can be compared with another.
-const cardList = (dialog) => dialog.locator('.plb-sg-card').evaluateAll((cards) => cards.map((card) => {
-  const cells = [...card.querySelectorAll('.plb-sg-cell')].map((cell) => cell.style.getPropertyValue('--plb-rc').trim().toUpperCase())
-  return `${card.querySelector('.plb-sg-name')?.textContent || ''}: ${cells.join(' ')}`
-}))
+// The list fills in a moment after the dialog opens, so it waits for cards first.
+async function cardList(dialog) {
+  await expect(dialog.locator('.plb-sg-card').nth(3), 'the list has cards').toBeVisible()
+  return dialog.locator('.plb-sg-card').evaluateAll((cards) => cards.map((card) => {
+    const cells = [...card.querySelectorAll('.plb-sg-cell')].map((cell) => cell.style.getPropertyValue('--plb-rc').trim().toUpperCase())
+    return `${card.querySelector('.plb-sg-name')?.textContent || ''}: ${cells.join(' ')}`
+  }))
+}
 
 const suggestDialog = (page) => page.getByRole('dialog', { name: 'Suggest', exact: true })
 
