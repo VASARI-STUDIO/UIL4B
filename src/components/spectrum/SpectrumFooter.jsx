@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { categoryDestination } from '../../data/toolTree'
 import FounderNote from '../FounderNote'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import PhGlyph from './PhGlyph'
 import { PH_ARROW_UP_RIGHT } from './phosphorNav'
 import { crossRouteHashClick, salesHref } from './salesLinks'
@@ -152,7 +153,14 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
   const footerRef = useRef(null)
-  const curtain = useCurtain(footerRef, reveal && !reducedMotion)
+  // A phone's toolbar resizes the window as it scrolls, which would switch the
+  // curtain on and off mid-scroll, so a coarse pointer gets a plain footer.
+  const coarse = useMediaQuery('(pointer: coarse)')
+  // On a phone the three legal links leave their column and sit in the baseline
+  // row; from 761px up they are the fourth column, as drawn. One tree, chosen
+  // here, so no link exists twice in the DOM.
+  const phone = useMediaQuery('(max-width: 760px)')
+  const curtain = useCurtain(footerRef, reveal && !reducedMotion && !coarse)
 
   return (
     <footer
@@ -197,17 +205,26 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
                 <li key={to}><NavLink to={to}>{label}</NavLink></li>
               ))}
             </Column>
-            <Column heading="LEGAL">
-              {LEGAL.map(([to, label]) => (
-                <li key={to}><NavLink to={to}>{label}</NavLink></li>
-              ))}
-            </Column>
+            {!phone && (
+              <Column heading="LEGAL">
+                {LEGAL.map(([to, label]) => (
+                  <li key={to}><NavLink to={to}>{label}</NavLink></li>
+                ))}
+              </Column>
+            )}
           </nav>
         </div>
 
         <div className="sp-footer-legal">
           <span className="sp-footer-copy">© {year} UI L4B. Spectrum.</span>
           <FounderNote />
+          {phone && (
+            <nav className="sp-footer-legal-links" aria-label="Legal">
+              {LEGAL.map(([to, label]) => (
+                <NavLink key={to} to={to}>{label}</NavLink>
+              ))}
+            </nav>
+          )}
           <span className="sp-footer-place">
             Built in Brisbane by{' '}
             <a

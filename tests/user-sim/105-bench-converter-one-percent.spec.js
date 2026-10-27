@@ -58,6 +58,11 @@ for (const theme of THEMES) {
       watch(page, 'a visitor trying the homepage converter')
       await go(page, '/')
 
+      // At 1000px and below the bench is a tool switcher and only the selected
+      // window can be touched, so pick the Converter tab first.
+      const switcherTab = page.getByRole('tab', { name: 'Converter', exact: true })
+      if (await switcherTab.count()) await switcherTab.click()
+
       const panel = panelOf(page)
       await panel.locator('.sp-modes').scrollIntoViewIfNeeded()
 

@@ -13,8 +13,8 @@
 // anchor jump). A rail that lags a window, sticks after a fling, only updates
 // in one direction or lights two rows fails one of these.
 //
-// Mobile first: the same walk runs at 390, where the rail sits
-// above the windows rather than beside them but still lights the one in view.
+// At 1000px and below there is no scroll-lit rail: the bench is a tool switcher
+// (see 144-home-phone-layouts), so this walk runs on the wide layout only.
 import { test, expect } from './base.js'
 import { go, watch, wheelToRest, restAfterMove } from './helpers.js'
 
@@ -74,7 +74,7 @@ async function walk(page, dy, where) {
   return seen
 }
 
-for (const width of [390, 1440]) {
+for (const width of [1440]) {
   test.describe(`the bench rail at ${width}px`, () => {
     test.use({ viewport: { width, height: width === 390 ? 844 : 900 } })
     test.beforeEach(async ({ page }) => { watch(page, 'a visitor reading the bench on the sales page') })

@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
 import { crossRouteHashClick, normPath, salesHref } from './spectrum/salesLinks'
@@ -121,6 +121,9 @@ export default function SpectrumNav() {
   const quietHref = (q) => q.to || salesHref(q.hash, location.pathname)
 
   const [hidden, setHidden] = useState(false)
+  // True while the page's own "Open the toolkit" row is on screen, so the pill
+  // does not offer the same action a second time (spectrum-chrome.css hides it).
+  const [heroCta, setHeroCta] = useState(false)
   // 'closed' → 'in' while open → 'out' for the design's exit, then 'closed'.
   // The menu stays MOUNTED through 'out' so the close animation has something
   // to play on.
@@ -176,6 +179,24 @@ export default function SpectrumNav() {
       returnTimer.current = null
     }
   }, [])
+
+  // One observer on the hero's action row. A page without one (pricing,
+  // mobile) never sets the flag, and the pill keeps its own button. The flag is
+  // seeded from the row's position before paint, so the pill's button never
+  // shows for a frame on load. The top margin is the pill's height: a hero row
+  // hidden under the pill counts as out of view, so one button always shows.
+  useLayoutEffect(() => {
+    const row = document.querySelector('.sp-hero-cta')
+    if (!row || typeof IntersectionObserver === 'undefined') return undefined
+    const PILL = 72
+    // A microtask still runs before the first paint, and keeps the setState
+    // out of the effect body.
+    const r = row.getBoundingClientRect()
+    queueMicrotask(() => setHeroCta(r.bottom > PILL && r.top < window.innerHeight))
+    const io = new IntersectionObserver(([entry]) => setHeroCta(entry.isIntersecting), { threshold: 0, rootMargin: `-${PILL}px 0px 0px 0px` })
+    io.observe(row)
+    return () => { io.disconnect(); setHeroCta(false) }
+  }, [location.pathname])
 
   // ESCAPE CLOSES AND GIVES FOCUS BACK TO THE BURGER (WCAG 2.4.3 / APG). The
   // SEARCH_KEY branch is the same contract PillNav holds: "/" opens the command
@@ -277,6 +298,7 @@ export default function SpectrumNav() {
         className="spnav"
         aria-label="Primary"
         data-nav-hidden={hidden ? '1' : '0'}
+        data-hero-cta={heroCta ? '1' : '0'}
       >
         <div className="spnav-bar">
           <Link className="spnav-mark" to="/" onClick={() => setOpen(false)}>
