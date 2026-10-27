@@ -1,13 +1,15 @@
 // The font-loading article's inventory of the faces this page declares — read
 // out of the running stylesheet rather than copied out of it.
 //
-// The section around this table says that a family is not one file, that each
-// file carries a character range, and that a range the page never renders is a
-// file the browser never asks for. All four of those facts are properties of
-// the @font-face rules this document is actually serving, so all four are read
-// from the CSSOM at render: the family, the weight range, the font-display
-// value, the unicode-range and — from document.fonts — whether the face has in
-// fact been downloaded.
+// The section around this table says that a family may be one file or several,
+// that a split family gives each file a character range, and that a range the
+// page never renders is a file the browser never asks for. Every one of those
+// facts is a property of the @font-face rules this document is actually
+// serving, so all of them are read from the CSSOM at render: the family, the
+// style, the weight range, the font-display value, the unicode-range (absent
+// on a face that ships whole, which the CSS initial value reads as every code
+// point), whether the source is a download or an installed font, and — from
+// document.fonts — whether a downloaded face has in fact been fetched.
 //
 // The code-point count is COMPUTED from the range rather than stated. A range
 // like U+0000-00FF,U+0131,U+2000-206F is three tokens of three different shapes
@@ -24,6 +26,9 @@
 // character on it, that face reports as not downloaded, which is the whole
 // argument of the section standing in front of the reader.
 //
+// A face whose source is local() has no file, so its status column says so
+// rather than asking a question with no answer.
+//
 // It renders nothing if the stylesheet cannot be read (a cross-origin sheet
 // throws on .cssRules), if no @font-face rule is found, or if any range fails
 // to parse. A partial inventory would misstate the thing it is inventorying.
@@ -33,7 +38,7 @@ import { useEffect, useState } from 'react'
 /** Below this, code points are controls and separators rather than characters. */
 const FIRST_PRINTABLE = 0x21
 
-/** `'Geist'` → `Geist`. The CSSOM keeps the quotes the author wrote. */
+/** `'Geist Mono'` → `Geist Mono`. The CSSOM keeps the quotes the author wrote. */
 const unquote = (value) => String(value || '').trim().replace(/^['"]|['"]$/g, '')
 
 /**
@@ -106,26 +111,36 @@ function readRows() {
     const family = unquote(rule.style.getPropertyValue('font-family'))
     const weight = rule.style.getPropertyValue('font-weight').trim()
     const display = rule.style.getPropertyValue('font-display').trim()
+    const style = rule.style.getPropertyValue('font-style').trim() || 'normal'
     // A face with no unicode-range covers every code point (the CSS initial value).
     const range = rule.style.getPropertyValue('unicode-range').trim()
-    const intervals = range ? intervalsOf(range) : [[0, 0x10FFFF]]
+    const subset = range !== ''
+    const intervals = subset ? intervalsOf(range) : [[0, 0x10FFFF]]
     if (!family || !weight || !display || !intervals) return null
+    const local = !/url\(/.test(rule.style.getPropertyValue('src'))
 
     const probe = probeOf(intervals)
     if (probe === null) return null
     const character = String.fromCodePoint(probe)
 
     let downloaded = null
-    try {
-      downloaded = document.fonts?.check(`1em "${family}"`, character) ?? null
-    } catch {
-      downloaded = null
+    if (!local) {
+      try {
+        // The face's own style goes into the query: an italic file is a
+        // different download from the upright one in the same family.
+        downloaded = document.fonts?.check(`${style} 1em "${family}"`, character) ?? null
+      } catch {
+        downloaded = null
+      }
+      if (typeof downloaded !== 'boolean') return null
     }
-    if (typeof downloaded !== 'boolean') return null
 
     rows.push({
-      id: `${family}-${intervals[0][0]}`,
+      id: `${family}-${style}-${weight}-${intervals[0][0]}`,
       family,
+      style,
+      subset,
+      local,
       from: intervals[0][0].toString(16).toUpperCase().padStart(4, '0'),
       weight,
       display,
@@ -179,15 +194,24 @@ export default function FontFaceTable() {
               <tr key={r.id}>
                 <th scope="row">
                   <span className="lart-hex" data-nowrap="true">{r.family}</span>
-                  <span className="lart-face-role">range starts U+{r.from}</span>
+                  <span className="lart-face-role">
+                    {r.style !== 'normal' && `${r.style}, `}
+                    {r.subset ? `range starts U+${r.from}` : 'no unicode-range, one face'}
+                  </span>
                 </th>
                 <td data-num="true">{r.weight}</td>
                 <td><code>{r.display}</code></td>
                 <td data-num="true">{r.points.toLocaleString('en-GB')}</td>
                 <td data-nowrap="true">
-                  {r.downloaded ? 'Yes' : 'No'}
+                  {r.local ? 'Local' : r.downloaded ? 'Yes' : 'No'}
                   <span className="lart-face-role">
-                    probed with U+{r.probe} <span style={{ fontFamily: `"${r.family}", serif` }}>{r.character}</span>
+                    {r.local
+                      ? 'installed font, no file'
+                      : (
+                        <>
+                          probed with U+{r.probe} <span style={{ fontFamily: `"${r.family}", serif`, fontStyle: r.style }}>{r.character}</span>
+                        </>
+                      )}
                   </span>
                 </td>
               </tr>
@@ -198,9 +222,11 @@ export default function FontFaceTable() {
       <figcaption className="lart-table-cap">
         Read at render from this document&rsquo;s own <code>@font-face</code> rules. The code-point
         count is computed from each rule&rsquo;s <code>unicode-range</code> by summing its
-        intervals; the last column asks <code>document.fonts.check()</code> whether the file that
-        would draw the first printable character in that range has been downloaded, which is a
-        different question for every row and depends on what is on this page.
+        intervals, and a face with no range counts as covering them all; the last column asks
+        <code> document.fonts.check()</code> whether the file that would draw the first printable
+        character in that range has been downloaded, which is a different question for every row
+        and depends on what is on this page. A face whose source is an installed font has no file
+        to ask about.
       </figcaption>
     </figure>
   )

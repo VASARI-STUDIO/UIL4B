@@ -10,8 +10,10 @@ import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
   autoTonalFromSeed, contrastRatio, generateHarmony, hctToHex,
   hexToHct, hexToHsl, hslToHex, mixHex, randomSystemPalette, simCvd, textColorForBg,
-  tonalRamp,
 } from '../utils/colors'
+// The Tint Generator's own ramp (one function, so the swatch tints and the
+// generator cannot drift): the strip is five of its steps, the popover all 11.
+import { swatchStripHexes, tintRampForHex } from '../utils/tintRamp'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
 // Column titles + the community-submit dice name share one vocabulary — see
 // utils/paletteNames.js for why `colorName` is deterministic and
@@ -170,9 +172,6 @@ const ADJUST_TRACKS = {
   b: 'linear-gradient(90deg,#14224A,#7D9FFF,#FAFAF8)',
   temp: 'linear-gradient(90deg,#3FAFA0,#8E93A0,#E8845F)',
 }
-
-// Tones for the expanded per-colour tints panel (click the mini ramp to open).
-const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
 const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social name
 
@@ -1061,23 +1060,23 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // not a colour the palette contains.
   const shownSeed = normaliseHex(adjusted[0]) || seed
 
-  // Per-column derivations that are NOT the swatch itself. tonalRamp is six
-  // CAM16 solves per colour, so on a full 10-colour board that is 60 solves —
-  // three times the cost of the whole adjust lens — and it was being redone on
-  // every frame of every slider drag. Deferring it hands React permission to
-  // drop the mini-ramps to a lower priority while the user is scrubbing: the
-  // swatch colour and hex readout still track the slider frame for frame, and
-  // the ramps catch up the moment the drag settles.
+  // Per-column derivations that are NOT the swatch itself. The strip was six
+  // CAM16 solves per colour (60 on a full 10-colour board, three times the cost
+  // of the whole adjust lens) redone on every frame of every slider drag; it is
+  // cheaper now but still per colour per frame, so it stays deferred. That hands
+  // React permission to drop the mini-ramps to a lower priority while the user
+  // is scrubbing: the swatch colour and hex readout still track the slider
+  // frame for frame, and the ramps catch up the moment the drag settles.
   const deferredAdjusted = useDeferredValue(adjusted)
   const columnMeta = useMemo(
-    () => deferredAdjusted.map(c => ({ ramp: tonalRamp(c), contrast: contrastPair(c) })),
+    () => deferredAdjusted.map(c => ({ ramp: swatchStripHexes(c), contrast: contrastPair(c) })),
     [deferredAdjusted],
   )
   // The column TITLE names the colour in the slot, so it is keyed on the
   // DISPLAYED palette and NOT on the deferred one: a title that lags the hex
   // beside it by a frame is the same "this label describes the colour that was
   // here a moment ago" fault the fixed role labels had, just briefer. It costs
-  // one CAM16 solve per colour against the six the tonal ramp above spends, so
+  // one CAM16 solve per colour, against the strip's OKLCH ramp above, so
   // it is cheap enough to keep in step. Pure over the hex list
   // (utils/paletteNames.js), so a re-render that changes no colour produces the
   // identical array and nothing re-titles.
@@ -2455,7 +2454,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             const ink = textColorForBg(sim)
             const anti = ink === '#000000' ? '#FFFFFF' : '#000000'
             const meta = columnMeta[i]
-            const ramp = meta ? meta.ramp : tonalRamp(c)
+            const ramp = meta ? meta.ramp : swatchStripHexes(c)
             const name = columnNames[i]
             const role = roleLabel(harmony, i)
             const isLocked = locked.has(i)
@@ -2616,8 +2615,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 <button
                   type="button"
                   className="plb-ramp"
-                  title="View tints"
-                  aria-label={`Tonal ramp of ${adjusted[i]} — view all tints`}
+                  title={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900`}
+                  aria-label={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900 — view all tints`}
                   onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
                 >
                   {ramp.map((rc, k) => (
@@ -2658,10 +2657,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                       <button type="button" className="plb-pop-x" aria-label="Close tints" onClick={() => setTintsIdx(null)}><IcoX /></button>
                     </div>
                     <div className="plb-tint-list">
-                      {tonalRamp(adjusted[i], TINT_TONES).map((tc, k) => (
-                        <button key={k} type="button" className="plb-tint-row" onClick={() => onCopy?.(normaliseHex(tc) || tc)}>
+                      {tintRampForHex(adjusted[i]).map(({ label, hex: tc }) => (
+                        <button key={label} type="button" className="plb-tint-row" onClick={() => onCopy?.(normaliseHex(tc) || tc)}>
                           <span className="plb-tint-chip" ref={barRef(tc)} aria-hidden="true" />
-                          <span className="plb-tint-tone">T{TINT_TONES[k]}</span>
+                          <span className="plb-tint-tone">{label}</span>
                           <span className="plb-tint-hex">{(normaliseHex(tc) || tc)}</span>
                         </button>
                       ))}

@@ -53,7 +53,7 @@
 .lart .lart-head{max-width:var(--lart-measure);margin-bottom:var(--s-6)}
 /* Capped at 38px, not the site's 52px. In a 581px column a 44px title took
    three lines and half the first screen; 38px lands the same title in two. */
-.lart .lart-head h1{font-family:var(--display);font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.035em;line-height:1.12;color:var(--t0);text-wrap:balance}
+.lart .lart-head h1{font-family:var(--display);font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.015em;line-height:1.12;color:var(--t0);text-wrap:balance}
 .lart .lart-dek{margin-top:var(--s-3);font-size:clamp(16px,1.7vw,19px);line-height:1.6;color:var(--t1);max-width:56ch}
 .lart .lart-meta{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-5);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--t2)}
 /* A classification, so a word and not a pill. */
@@ -93,7 +93,7 @@
 .lart .lart-prose{max-width:var(--lart-measure);line-height:1.7;color:var(--t1)}
 .lart .lart-prose>section{scroll-margin-top:calc(var(--nav-clear) + var(--s-4))}
 .lart .lart-prose>section+section{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border)}
-.lart .lart-prose h2{font-family:var(--display);font-size:clamp(21px,2.4vw,27px);font-weight:600;letter-spacing:-.03em;line-height:1.25;color:var(--t0);margin-bottom:var(--s-4);text-wrap:balance}
+.lart .lart-prose h2{font-family:var(--display);font-size:clamp(21px,2.4vw,27px);font-weight:600;letter-spacing:-.015em;line-height:1.25;color:var(--t0);margin-bottom:var(--s-4);text-wrap:balance}
 .lart .lart-prose h3{font-size:16.5px;font-weight:560;letter-spacing:-.01em;line-height:1.4;color:var(--t0);margin-top:var(--s-6);margin-bottom:var(--s-2)}
 .lart .lart-prose p{margin-bottom:var(--s-4)}
 .lart .lart-prose p:last-child{margin-bottom:0}

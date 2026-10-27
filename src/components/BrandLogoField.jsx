@@ -126,7 +126,7 @@ async function shrinkRaster(dataUrl) {
 const USE_COPY = {
   guidelines: {
     set: 'Used on the cover, the mark page, every brand ground and the clear-space rule.',
-    empty: 'Optional. It adds the mark, the mark on every brand ground, and the clear-space rule. Without one those pages are left out, and the last page says so.',
+    empty: 'Optional. It adds the mark, the mark on every brand ground, and the clear-space rule. Without one, those pages are left out, and the last page says so.',
     grounds: true,
   },
   kit: {

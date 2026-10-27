@@ -43,6 +43,7 @@
 //        fails "every unbuilt format … refuses in words"; the control passes.
 //   `buildStyleGuideHtml(design, { watermark: !isPro })` → `watermark: false`
 //        fails the watermark test on its FREE half only; everything else passes.
+import { chooseFormat } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
@@ -71,34 +72,34 @@ async function exportStyleGuide(page, plan) {
   await signIn(page, { plan })
   await go(page, WORKED_BOARD)
   await openPanel(page)
-  await page.getByRole('radio', { name: /Style guide \(HTML\)/i }).click()
+  await chooseFormat(page, 'html')
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Export HTML', exact: true }).click(),
+    page.getByRole('button', { name: 'Export style guide (HTML)', exact: true }).click(),
   ])
   return readDownload(download)
 }
 
 test.describe('the export panel, as a free account', () => {
-  test('every unbuilt format is badged, and refuses in words when chosen', async ({ page }) => {
-    watch(page, 'a designer picking an export format that is not built yet')
+  test('every unbuilt format is named in one quiet line, and has no row and no button', async ({ page }) => {
+    // MUTATION: render a row for every EXPORT_FORMATS entry (not only the built
+    // groups) or restore the disabled "Export — Soon" button, and this fails.
+    watch(page, 'a designer looking for an export format that is not built yet')
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     await openPanel(page)
 
     expect(UNBUILT.length, 'this test is vacuous if nothing is unbuilt').toBeGreaterThan(0)
+    const panel = page.getByRole('dialog', { name: /Export your design system/i })
 
     for (const fmt of UNBUILT) {
-      const row = page.getByRole('radio', { name: new RegExp(fmt.name, 'i') })
-      await expect(row.locator('.exp-fmt-soon'),
-        `${fmt.name} must carry a Soon badge before it is chosen`).toBeVisible()
-
-      await row.click()
-      const action = page.getByRole('button', { name: /^Export — Soon$/ })
-      await expect(action, `${fmt.name} must not offer a working button`).toBeVisible()
-      await expect(action, `${fmt.name}'s button must be disabled, not merely relabelled`)
-        .toBeDisabled()
+      await expect(panel.getByRole('radio', { name: new RegExp(fmt.name, 'i') }),
+        `${fmt.name} is not built, so it must not be a row`).toHaveCount(0)
+      await expect(panel.locator('.exp-coming'),
+        `${fmt.name} must be named in the "on the way" line`).toContainText(fmt.coming.replace(/^an? /, ''), { ignoreCase: true })
     }
+    await expect(panel.locator('.exp-fmt-soon')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /Export — Soon/ })).toHaveCount(0)
   })
 
   test('a built free format hands over a real file — the control', async ({ page }) => {

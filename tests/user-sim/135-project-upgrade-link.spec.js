@@ -65,7 +65,15 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 768, heig
     await expect(billed).toHaveCount(0)
 
     // 2. It answered with nothing live in this currency.
+    // "See Pro" reads the same before and after this answer, so the text cannot
+    // say it has landed. Wait for the response itself, then two frames for the
+    // page to draw it, so the no-price state is measured and not the loading one.
+    const answered = page.waitForResponse('**/api/get-prices*')
     release()
+    await answered
+    await page.evaluate(() => new Promise((done) => {
+      requestAnimationFrame(() => requestAnimationFrame(done))
+    }))
     await expect(link).toHaveText('See Pro')
     const none = await place()
 

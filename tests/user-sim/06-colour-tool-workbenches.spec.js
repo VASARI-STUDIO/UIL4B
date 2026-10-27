@@ -2,7 +2,7 @@
 // These flows deliberately use invalid values, repeated actions, keyboard-only
 // adjustments, and narrow screens so the workbenches fail safely under pressure.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 import { normalizeClipboardText } from '../../src/hooks/useClipboard.js'
 
 test.describe('Gradient Generator workbench resilience', () => {
@@ -158,16 +158,33 @@ test.describe('Semantic Colour system workflow', () => {
     expect(await alias()).not.toBe(at500)
     await expect(page.locator('[data-role="success"] .stc-cell.is-base')).toHaveAttribute('aria-label', /^Copy 600, /)
 
-    // Custom: a hue slider, and a pasted hex rotated into the role's arc.
-    await chooseMenuOption(page, page.getByRole('button', { name: 'Success preset' }), 'custom')
+    // Custom: the last chip in the role's row. It brings a hue slider and a
+    // pasted hex that is rotated into the role's arc.
+    const successRow = page.locator('[data-role="success"]')
+    const customChip = successRow.getByRole('group', { name: 'Success preset' }).getByRole('button', { name: 'Custom' })
+    await expect(customChip).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByRole('slider', { name: 'success custom hue' })).toHaveCount(0)
+    await customChip.click()
+    await expect(customChip).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByRole('slider', { name: 'success custom hue' })).toBeVisible()
     const successHex = page.getByRole('textbox', { name: 'Import a hex colour for success' })
+    // A bad hex is explained under the field, in the row, and linked to it.
+    const hexErr = successRow.locator('.stc-hue-err')
+    await expect(hexErr).toBeHidden()
     await successHex.fill('bad')
     await successHex.press('Enter')
-    await expect(page.getByText(/Enter a six-digit hex colour/)).toBeVisible()
+    await expect(hexErr).toBeVisible()
+    await expect(hexErr).toHaveText('Enter a six-digit hex colour, for example #16A34A')
+    await expect(successHex).toHaveAttribute('aria-invalid', 'true')
+    await expect(successHex).toHaveAttribute('aria-describedby', await hexErr.getAttribute('id'))
+    // The explanation goes away on the next keystroke.
+    await successHex.pressSequentially('x')
+    await expect(hexErr).toBeHidden()
+    await expect(successHex).not.toHaveAttribute('aria-invalid', 'true')
     await successHex.fill('#16A34A')
     await successHex.press('Enter')
     await expect(successHex).toHaveValue('')
+    await expect(hexErr).toBeHidden()
 
     await page.screenshot({ path: test.info().outputPath('semantic-colours-desktop.png'), fullPage: true })
   })
@@ -188,7 +205,7 @@ test.describe('Semantic Colour system workflow', () => {
     // Four family rows, and the depiction shows Information as "underway".
     await expect(page.locator('.stc-fam')).toHaveCount(4)
     await expect(page.locator('.stc-fam-name')).toHaveText(['✓Success', '!Warning', '×Error', 'iInformation'])
-    await expect(page.locator('.stc-alert--info').filter({ hasText: 'Publishing design system' })).toHaveCount(1)
+    await expect(page.locator('.stc-sc--info').filter({ hasText: 'Publishing design system' })).toHaveCount(1)
     const body = await page.evaluate(() => document.querySelector('main').innerText)
     expect(body, 'pending is still on the page').not.toMatch(/pending/i)
 
@@ -198,8 +215,9 @@ test.describe('Semantic Colour system workflow', () => {
     expect(blue).toContain('--color-info-500: #3b82f6')
 
     // Purple, and the cached shades other exports read.
-    await page.getByRole('button', { name: 'Purple', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Purple', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('button', { name: 'Purple family' }).click()
+    await expect(page.getByRole('button', { name: 'Purple family' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Blue family' })).toHaveAttribute('aria-pressed', 'false')
     await page.getByRole('button', { name: 'Copy tokens' }).click()
     const purple = await page.evaluate(() => navigator.clipboard.readText())
     expect(purple).toContain('--color-info-500: #8b5cf6')
@@ -225,16 +243,19 @@ test.describe('Semantic Colour system workflow', () => {
       .not.toHaveProperty('pending')
   })
 
-  // The preset trigger announces its current value.
+  // Each role's presets are chips in a named group, and exactly one says it is on.
   test('each role says which preset is on, and it follows a change', async ({ page }) => {
     watch(page, 'a designer on a screen reader choosing a success green')
     await go(page, '/create/semantic-color')
-    const success = page.getByRole('button', { name: 'Success preset' })
-    await expect(success).toHaveAttribute('value', '1')
-    await expect(success).toHaveAccessibleName(/Success preset: Green/)
-    await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Green')
-    await chooseMenuOption(page, success, { label: 'Teal' })
-    await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Teal')
+    const success = page.locator('[data-role="success"]').getByRole('group', { name: 'Success preset' })
+    const chips = success.getByRole('button')
+    await expect(chips).toHaveText(['Emerald', 'Green', 'Teal', 'Apple', 'Material', 'Tailwind', 'Custom'])
+    await expect(success.getByRole('button', { name: 'Green' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(success.locator('[aria-pressed="true"]')).toHaveCount(1)
+    await success.getByRole('button', { name: 'Teal' }).click()
+    await expect(success.getByRole('button', { name: 'Teal' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(success.getByRole('button', { name: 'Green' })).toHaveAttribute('aria-pressed', 'false')
+    await expect(success.locator('[aria-pressed="true"]')).toHaveCount(1)
     // The bundle no longer matches, so no bundle claims the selection.
     await expect(page.locator('.stc-bundles [aria-checked="true"]')).toHaveCount(0)
   })

@@ -182,15 +182,14 @@ test.describe('the UI kit export', () => {
         expect(at.top, `${what} starts inside the panel: ${JSON.stringify(at)}`).toBeGreaterThanOrEqual(at.viewTop)
         expect(at.bottom, `${what} ends above the footer and the fold: ${JSON.stringify(at)}`).toBeLessThanOrEqual(at.viewBottom)
       }
-      // Directly under the kit row, before any other format.
+      // In the kit row's options region, under the list of rows.
       const order = await panel.evaluate((el) => {
         const kit = el.querySelector('.exp-fmt[aria-checked="true"]')
         const fields = el.querySelector('.exp-identity')
-        const next = kit.parentElement.querySelectorAll('.exp-fmt')[1]
         const follows = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
-        return { afterKit: follows(kit, fields), beforeNext: follows(fields, next) }
+        return { afterKit: follows(kit, fields), inOptions: Boolean(fields.closest('[role="region"]')) }
       })
-      expect(order).toEqual({ afterKit: true, beforeNext: true })
+      expect(order).toEqual({ afterKit: true, inOptions: true })
     })
 
     test(`free at ${size.width}: the panel opens with no identity fields`, async ({ page }) => {

@@ -56,12 +56,24 @@ test('every declared face is served from /fonts, never from a catalogue', () => 
   assert.ok(faces.length >= 2, `expected self-hosted @font-face rules, found ${faces.length}`)
   for (const face of faces) {
     const urls = [...face.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)].map(m => m[1])
+    // 'Switzer Fallback' is the one face with no file: a local() Arial scaled to
+    // Switzer's metrics. It must say local(), so a download cannot hide in it.
+    if (/font-family:\s*'Switzer Fallback'/.test(face)) {
+      assert.deepEqual(urls, [], 'the Switzer fallback must be local() only')
+      assert.match(face, /src:\s*local\(/)
+      continue
+    }
     assert.ok(urls.length, 'a @font-face with no src tells us nothing')
     for (const u of urls) {
       assert.ok(u.startsWith('/fonts/'), `@font-face src must be self-hosted, got ${u}`)
+      // /fonts/switzer/* is BUILD-FETCHED, not committed (ITF FFL v2.0 bans a
+      // public copy): scripts/fetch-switzer.mjs puts it in public/ before a
+      // build, `npm run test:unit` and CI. A miss here means that step did not
+      // run, and the page would be shipping its fallback face.
+      const hint = u.startsWith('/fonts/switzer/') ? ' - it is downloaded, not committed: run `npm run fonts:fetch`' : ''
       assert.ok(
         fs.existsSync(path.join(ROOT, 'public', u.replace(/^\//, ''))),
-        `${u} is declared but not present in public/ — the face would 404`,
+        `${u} is declared but not present in public/ — the face would 404${hint}`,
       )
     }
   }

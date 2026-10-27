@@ -29,7 +29,7 @@
   font-size: clamp(26px, 3.6vw, 40px);
   font-weight: 600;
   line-height: 1.02;
-  letter-spacing: -.035em;
+  letter-spacing: -.015em;
   color: var(--t0);
   text-wrap: balance;
 }

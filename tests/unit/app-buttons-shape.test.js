@@ -48,7 +48,7 @@ const KEEP = {
     'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
-    'fg-card-open', 'arc-stat', 'icust-code-box'],
+    'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
   // underline and folder tabs, and the phone tab bar's items

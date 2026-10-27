@@ -43,7 +43,7 @@
 /* ─── ColorStudio UI Preview bento ─── */
 
 /* ─── Hero (Dashboard) ─── */
-.hero-title{font-size:clamp(40px,6vw,72px);font-weight:700;letter-spacing:-.045em;line-height:1.1;color:var(--t0);margin-bottom:18px;position:relative;z-index:1}
+.hero-title{font-size:clamp(40px,6vw,72px);font-weight:700;letter-spacing:-.02em;line-height:1.1;color:var(--t0);margin-bottom:18px;position:relative;z-index:1}
 .hero-title em{font-style:normal;color:var(--accent)}
 
 @media(max-width:640px){
@@ -611,7 +611,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uis-mode-switch>span{color:var(--t3)}
 .uis-mode-switch button{padding:0;font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .uis-mode-switch strong{font:inherit;color:var(--t0)}
-.uis-title-block h1{font-size:clamp(26px,3vw,42px);line-height:1.02;letter-spacing:-.035em}
+.uis-title-block h1{font-size:clamp(26px,3vw,42px);line-height:1.02;letter-spacing:-.015em}
 .uis-title-block>p{max-width:68ch;margin-top:var(--s-3);font-size:14px;line-height:1.55;color:var(--t2)}
 
 .uis-command{position:sticky;top:var(--chrome-h);z-index:28;display:flex;align-items:center;gap:var(--s-4);padding:var(--s-3) var(--page-inline);background:color-mix(in srgb,var(--bg-0) 94%,transparent);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}

@@ -210,7 +210,7 @@ test.describe('the values are set in the product\'s own face', () => {
     // test above is satisfied by setting the whole page in Geist Mono, which
     // would destroy the contrast it exists to create.
     const prose = await familyOf(page, '.adm-detail-foot, .adm-roster-line')
-    expect(prose).toContain('geist')
+    expect(prose).toContain('switzer')
     expect(prose).not.toContain('geist mono')
   })
 
