@@ -235,8 +235,15 @@ test('390px: the footer links sit in two columns, and there is no curtain on a c
   const footer = page.locator('footer.sp-footer')
   await footer.scrollIntoViewIfNeeded()
   const m = await footerColumns(page)
-  expect(m.groups, 'the footer lost link groups').toBeGreaterThanOrEqual(4)
+  // Tools, Project and Explore are columns; Privacy, Terms and Credits sit in the baseline row.
+  expect(m.groups, 'the footer lost link groups').toBe(3)
   expect(m.columns, 'the footer links are not in two columns').toBe(2)
+  const legal = footer.locator('.sp-footer-legal').getByRole('link')
+  await expect(legal.filter({ hasText: /^(Privacy|Terms|Credits)$/ }), 'the legal links left the baseline row').toHaveCount(3)
+  for (const name of ['Privacy', 'Terms', 'Credits']) {
+    const box = await footer.locator('.sp-footer-legal').getByRole('link', { name, exact: true }).boundingBox()
+    expect(box.height, `${name} is under a 44px target`).toBeGreaterThanOrEqual(44)
+  }
   await page.waitForTimeout(500)
   await expect(footer, 'a coarse pointer got the curtain').not.toHaveAttribute('data-curtain', /.*/)
   await ctx.close()
