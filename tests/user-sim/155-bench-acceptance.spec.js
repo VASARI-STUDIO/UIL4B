@@ -32,9 +32,11 @@ async function openTool(page, i) {
   const panel = page.locator(`.sp-panel[data-panel="${i}"]`)
   await panel.scrollIntoViewIfNeeded()
   await expect(panel).toBeVisible()
-  // Settle on the tool switch's fade and the row-expand ease.
+  // Settle on the tool switch's fade and the row-expand ease. The windows' depth
+  // (a view timeline at 1001px and up) never finishes: it follows the scroll
+  // position, so only time-driven animations are waited for.
   await page.evaluate(() => Promise.all(document.getAnimations()
-    .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
+    .filter((a) => a.timeline instanceof DocumentTimeline && a.effect?.getComputedTiming().endTime !== Infinity)
     .map((a) => a.finished.catch(() => {}))))
   return panel
 }
