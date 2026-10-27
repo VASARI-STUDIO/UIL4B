@@ -47,16 +47,17 @@ const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1)
  * @returns {Object<string,string>} the template's placeholders, without the @@
  */
 export function manualParts(sel, h) {
-  const { tokens, esc, on, g, contrast, grade, roles, date, tokenCount, embedded = {}, chrome = [] } = h
+  const { tokens, esc, g, contrast, grade, roles, date, tokenCount, embedded = {}, chrome = [] } = h
   const hex = (v) => safeHex(v, '#000000')
   const iso = date.toISOString().slice(0, 10)
   const copy = (value, label, text = value) => `<button class="cv" data-copy="${esc(value)}" aria-label="Copy ${esc(label)}"><code>${esc(text)}</code></button>`
   const variable = (key, label) => copy(`var(--${key})`, `${label} CSS variable`, `--${key}`)
   const chip = (value) => `<i class="chip" style="background:${hex(value)}"></i>`
   // A ratio and its word, so a pass or a fail never rests on colour.
-  const ratioCell = (ratio) => {
+  // `label` names the column in the stacked layout, where the header row is gone.
+  const ratioCell = (ratio, label = '') => {
     const word = grade(ratio)
-    return `<td class="ct${ratio < 4.5 ? ' weak' : ''}"><b>${ratio.toFixed(2)}:1</b><small>${word}</small></td>`
+    return `<td class="ct${ratio < 4.5 ? ' weak' : ''}">${label ? `<small class="lbl">${label}</small>` : ''}<b>${ratio.toFixed(2)}:1</b><small>${word}</small></td>`
   }
   const families = new Set([sel.fonts.display.name, sel.fonts.body.name])
 
@@ -71,14 +72,28 @@ export function manualParts(sel, h) {
     `Issued ${iso}`,
   ].join(' · ')
 
-  // ── Colour: two rows per colour, so a colour never splits across a page ──
-  const colourTable = sel.colours.map((c) => {
-    const stops = Object.entries(c.scale).map(([stop, value]) => {
-      const v = hex(value)
-      return `<button class="stop" style="background:${v};color:${on(v)}" data-copy="${v}" aria-label="Copy ${esc(c.name)} ${stop}, ${v}"><span>${stop}${stop === '500' ? ' · Base' : ''}</span><code>${v}</code></button>`
-    }).join('')
-    return `<tbody class="colour"><tr><th scope="row">${chip(c.hex)}<span class="nm"><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span></th><td>${variable(c.token.slice(2), c.name)}</td><td>${copy(c.hex, `${c.name} hex`)}</td><td>${copy(c.oklch, `${c.name} OKLCH`)}</td>${ratioCell(c.onCanvas)}${ratioCell(c.onText)}<td class="lands">${esc(capital(c.lands))}</td></tr><tr class="ramp"><td colspan="7"><div class="stops" role="group" aria-label="${esc(c.name)} tints, 50 to 950">${stops}</div></td></tr></tbody>`
+  // ── Colour: one row per colour; its tints are a 16 px ramp, their values sit in the Tints table ──
+  const canvasHex = hex(tokens['color-background']).toLowerCase()
+  const textHex = hex(tokens['color-text']).toLowerCase()
+  // A colour graded against itself is no result: the cell names the role instead.
+  const gradeOrRole = (c, ratio, label, own, word) => (hex(c.hex).toLowerCase() === own
+    ? `<td class="ct self"><small class="lbl">${label}</small><small>${word}</small></td>`
+    : ratioCell(ratio, label))
+  const colourRows = sel.colours.map((c) => {
+    const ramp = Object.entries(c.scale).map(([stop, value]) => `<i${stop === '500' ? ' class="base"' : ''} style="background:${hex(value)}" title="${stop}${stop === '500' ? ' (base)' : ''} ${hex(value)}"></i>`).join('')
+    return `<tr><th scope="row">${chip(c.hex)}<span class="nm"><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span></th><td><small class="lbl">Variable</small>${variable(c.token.slice(2), c.name)}</td><td><small class="lbl">Hex</small>${copy(c.hex, `${c.name} hex`)}</td><td><small class="lbl">OKLCH</small>${copy(c.oklch, `${c.name} OKLCH`)}</td>${gradeOrRole(c, c.onCanvas, 'On canvas', canvasHex, 'Canvas colour')}${gradeOrRole(c, c.onText, 'On text', textHex, 'Text colour')}<td class="c-ramp"><small class="lbl">Tints, 50 to 950</small><span class="ramp" role="img" aria-label="${esc(c.name)} tints, 50 to 950. The values are in the Tints table.">${ramp}</span></td><td class="lands"><small class="lbl">Where it lands</small>${esc(capital(c.lands))}</td></tr>`
   }).join('')
+  const colourTable = `<tbody>${colourRows}</tbody>`
+  // The tints' values, one row per colour, so a printed page and a keyboard reach them.
+  const tintHead = Object.keys(sel.colours[0]?.scale || {}).map((stop) => `<th scope="col">${stop}</th>`).join('')
+  const tintRows = sel.colours.map((c) => {
+    const cells = Object.entries(c.scale).map(([stop, value]) => {
+      const v = hex(value)
+      return `<td>${copy(v, `${c.name} ${stop}, ${v}`)}</td>`
+    }).join('')
+    return `<tr><th scope="row">${chip(c.hex)}<span class="nm"><b>${esc(c.name)}</b></span></th>${cells}</tr>`
+  }).join('')
+  const tintTable = `<thead><tr><th scope="col">Colour</th>${tintHead}</tr></thead><tbody>${tintRows}</tbody>`
   const cut = sel.colourCount > sel.colours.length
   const colourNote = cut
     ? `The first ${sel.colours.length} of ${sel.colourCount} colours are shown. All ${sel.colourCount} are in the CSS and JSON downloads.`
@@ -141,6 +156,7 @@ export function manualParts(sel, h) {
     FACTS: esc(facts),
     COLOUR_NOTE: esc(colourNote),
     COLOUR_TABLE: colourTable,
+    TINT_TABLE: tintTable,
     TYPE_TABLE: typeTable,
     SPACE_ROWS: spaceRows,
     RADIUS_ROWS: radiusRows,

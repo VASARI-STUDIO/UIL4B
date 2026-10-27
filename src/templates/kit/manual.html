@@ -88,16 +88,18 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 .ct.weak small{font-weight:600;color:var(--color-text)}
 .lands{color:var(--color-text-muted)}
 .long{overflow-wrap:anywhere}
-.colours{min-width:880px}
-.colours tbody{border-top:var(--hair) solid var(--color-border)}
-.colours .ramp td{border-top:0;padding:0 0 14px}
-.colours tbody tr:first-child>*{border-top:var(--hair) solid var(--color-border)}
-.colours tbody tr:first-child>*:first-child{padding-bottom:6px}
-.stops{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:2px}
-.stop{display:flex;flex-direction:column;justify-content:space-between;gap:14px;min-height:52px;padding:8px 7px;border:0;text-align:left;box-shadow:inset 0 0 0 var(--hair) var(--color-border)}
-.stop span{font-size:11px;white-space:nowrap}
-.stop code{font-size:10px}
-.stop:focus-visible{outline-color:currentColor;outline-offset:-4px}
+.colours{min-width:1000px}
+.colours .lbl{display:none}
+.colours td:nth-child(4) code{white-space:nowrap}
+.ct.self small:not(.lbl){color:var(--color-text);font-weight:600}
+/* The tint ramp: eleven 16 px chips in a row, the base outlined. Values live in the Tints table. */
+.ramp{display:flex;gap:2px;padding:1px 0}
+.ramp i{display:block;flex:none;width:16px;height:16px;box-shadow:inset 0 0 0 var(--hair) var(--color-border)}
+.ramp i.base{outline:var(--hair) solid var(--color-text);outline-offset:1px}
+.tints{min-width:820px}
+.tints th,.tints td{padding-right:8px;white-space:nowrap}
+.tints tbody th{position:sticky;left:0;background:var(--color-background);padding-right:12px}
+.tints thead th:first-child{position:sticky;left:0;background:var(--color-background)}
 .spec p{max-width:none;overflow-wrap:anywhere}
 .type{min-width:720px}
 .type .cv code,.type th small{white-space:nowrap}
@@ -185,6 +187,18 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .cover-title{font-size:calc(var(--cover-size) * .55px)}
   .index-files{grid-template-columns:1fr}
 }
+/* At 600 px the colour and role rows stack, so nothing waits behind a sideways scroll. */
+@media(max-width:600px){
+  .colours,.roles{min-width:0}
+  .colours,.colours tbody,.roles,.roles tbody{display:block}
+  .colours colgroup,.colours thead,.roles thead,.roles td:nth-child(3){display:none}
+  .colours tr,.roles tr{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:6px 12px;padding:12px 0;border-top:var(--hair) solid var(--color-border)}
+  .colours tbody tr:first-child,.roles tbody tr:first-child{border-top:var(--hair) solid var(--color-text)}
+  .colours th,.colours td,.roles th,.roles td{display:block;padding:0;border:0;min-width:0}
+  .colours th,.colours td:nth-child(2),.colours .c-ramp,.colours .lands,.roles th,.roles td{grid-column:1/-1}
+  .colours .c-ramp{order:1}
+  .colours .lbl{display:block;margin-bottom:1px}
+}
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .toast{transition:none}
@@ -219,23 +233,29 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .bhead{margin:8mm 0 3mm;break-after:avoid}
   .t th,.t td{padding:2mm 3mm 2mm 0}
   .t thead th{font-size:7pt;padding-bottom:1.5mm}
-  .t tr,.t tbody,.stop{break-inside:avoid}
+  .t tr,.t tbody{break-inside:avoid}
   .tbl-wrap{overflow:visible}
-  .colours,.type,.pairs,.states,.roles,.comp{min-width:0}
-  .colours{table-layout:fixed}
+  .colours,.type,.pairs,.states,.roles,.comp,.tints{min-width:0}
+  .colours,.tints{table-layout:fixed}
   .colours thead th:last-child,.colours .lands{display:none}
-  .colours col:nth-child(1){width:19%!important}
-  .colours col:nth-child(2){width:24%!important}
-  .colours col:nth-child(3){width:11%!important}
-  .colours col:nth-child(4){width:24%!important}
-  .colours col:nth-child(5),.colours col:nth-child(6){width:11%!important}
+  .colours col:nth-child(1){width:16%!important}
+  .colours col:nth-child(2){width:17%!important}
+  .colours col:nth-child(3){width:9%!important}
+  .colours col:nth-child(4){width:21%!important}
+  .colours col:nth-child(5),.colours col:nth-child(6){width:8%!important}
+  .colours td:nth-child(4) code{white-space:normal}
+  .colours col:nth-child(7){width:21%!important}
+  .colours .nm small{white-space:nowrap}
   .colours col:last-child{width:0!important}
+  .ramp{gap:.4mm;print-color-adjust:exact}
+  .ramp i{width:2.6mm;height:2.6mm}
+  .tints th,.tints td{padding-right:1mm}
+  .tints tbody th{position:static;width:30mm;white-space:normal;background:none}
+  #tints{break-inside:avoid}
+  .tints thead th:first-child{position:static;width:30mm;background:none}
+  .tints code{font-size:6.5pt}
   .scroll-hint{display:none!important}
   .ct b{font-size:7.5pt}
-  .stop{min-height:9mm;padding:1mm;gap:2mm;print-color-adjust:exact}
-  .stop span{font-size:7pt}
-  .stop code{font-size:7pt}
-  .colours .ramp td{padding-bottom:3mm}
   .btn{min-height:9mm;padding:2mm 3mm;font-size:8pt}
   .field-box{min-height:9mm;font-size:9pt}
   .smp{padding:1.5mm 3mm;font-size:8pt}
@@ -270,8 +290,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 <div class="section-head"><h2 id="tokens-title">Tokens</h2><p>Every value below is a CSS variable in the CSS and JSON downloads. Select a value to copy it.</p></div>
 
 <div class="block" id="colour"><div class="bhead"><h3>Colour</h3><p>@@COLOUR_NOTE@@</p></div>
-<div class="tbl-wrap" tabindex="0" role="region" aria-label="Colour table"><table class="t colours"><caption class="sr-only">Colours, with contrast, tints and where each lands</caption><colgroup><col style="width:18%"><col style="width:17%"><col style="width:10%"><col style="width:20%"><col style="width:8%"><col style="width:8%"><col style="width:19%"></colgroup><thead><tr><th scope="col">Colour</th><th scope="col">Variable</th><th scope="col">Hex</th><th scope="col">OKLCH</th><th scope="col">On canvas</th><th scope="col">On text</th><th scope="col">Where it lands</th></tr></thead>@@COLOUR_TABLE@@</table></div>
-<p class="tbl-note">On canvas and On text are contrast ratios against this kit’s canvas and text colours. Each colour’s tints run from 50 to 950; 500 is the colour itself.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Colour table"><table class="t colours"><caption class="sr-only">Colours, with contrast, tints and where each lands</caption><colgroup><col style="width:14%"><col style="width:16%"><col style="width:8%"><col style="width:17%"><col style="width:7%"><col style="width:7%"><col style="width:18%"><col style="width:13%"></colgroup><thead><tr><th scope="col">Colour</th><th scope="col">Variable</th><th scope="col">Hex</th><th scope="col">OKLCH</th><th scope="col">On canvas</th><th scope="col">On text</th><th scope="col">Tints</th><th scope="col">Where it lands</th></tr></thead>@@COLOUR_TABLE@@</table></div>
+<p class="tbl-note">On canvas and On text are contrast ratios against this kit’s canvas and text colours. Each ramp runs from 50 to 950, and the outlined chip, 500, is the colour itself. The values are in the Tints table below.</p></div>
+
+<div class="block" id="tints"><div class="bhead"><h3>Tints</h3><p>Every tint of every colour, 50 to 950. Select a value to copy it.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Tints table"><table class="t tints"><caption class="sr-only">Tint values of each colour, from 50 to 950</caption>@@TINT_TABLE@@</table></div></div>
 
 <div class="block" id="roles"><div class="bhead"><h3>Interface roles</h3><p>Use roles in components, so a change to one value reaches every instance.</p></div>
 <div class="tbl-wrap" tabindex="0" role="region" aria-label="Interface roles table"><table class="t roles"><caption class="sr-only">Interface colour roles and CSS custom properties</caption><thead><tr><th scope="col">Role</th><th scope="col">Variable</th><th scope="col">Value</th><th scope="col">Use</th></tr></thead><tbody>@@ROLE_ROWS@@</tbody></table></div></div>

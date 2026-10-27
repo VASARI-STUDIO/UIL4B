@@ -22,6 +22,9 @@ const SAMPLE_FIT = Object.freeze({ maxLines: 3, steps: [128, 96, 72, 56], measur
 const SCALE_FIT = Object.freeze({ roomMm: 170, widthMm: 100, padMm: 6, textMm: 14 })
 // The most of a name a waterfall row sets: a longer one is cut at a whole word.
 const STEP_CHARS = 24
+// The heading band's character set, and the monospace stack the token listing sets.
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789'
+const MONO_STACK = "ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace"
 
 // Stripe heights in units: the primary, a brand colour, a neutral. If the page
 // cannot give every stripe 9 mm at these, the weights close up (still in order).
@@ -93,9 +96,18 @@ export function showcaseParts(sel, h) {
     `Issued ${iso}`,
   ].join(' · ')
 
-  // ── Heading band: the project's name ──────────────────────────────────────
+  // The tokens take the user's own face when a monospace family is chosen for body or headings
+  // (the design has no separate mono slot); otherwise the system monospace stack.
+  const ownMono = body.fallback === 'monospace' ? body : display.fallback === 'monospace' ? display : null
+  const monoFace = ownMono ? (ownMono === body ? 'var(--font-body)' : 'var(--font-display)') : null
+  const tokenNote = ownMono
+    ? `Set in ${ownMono.name}, your ${ownMono === body ? 'body' : 'heading'} face, with tabular figures.`
+    : 'Set in your system’s monospace face (ui-monospace, SF Mono, Menlo, Consolas), with tabular figures.'
+
+  // ── Heading band: the project's name, then the face's alphabet and figures at the H2 step ──
   const nameFit = fitTitle(title, SAMPLE_FIT)
   const headSample = nameFit.clamp ? clampTitle(title, nameFit.size, SAMPLE_FIT) : title
+  const alphaSize = sel.typeScale.find((t) => t.name === 'Heading 2')?.size || 32
 
   // ── Body band: the identity description, else the palette's names ─────────
   const palette = sel.colours.map((c) => `${c.name} ${hex(c.hex)}`)
@@ -120,9 +132,9 @@ export function showcaseParts(sel, h) {
     const key = t.name.toLowerCase().replace(/ /g, '-')
     const family = sel.fonts[t.font].name
     const leading = g(Math.round(t.size * t.line * 10) / 10)
-    return `<tr><th scope="row"><span class="nm"><b>${esc(t.name)}</b><small>${esc(family)}</small></span></th><td class="vals">${copy(`var(--text-${key})`, `${t.name} size`, `${g(t.size)} px / ${g(t.line)} / ${t.weight}`)}<small>Size, line height, weight</small><small class="var">--text-${key}</small><small>${leading} px line</small></td><td class="spec"><p style="--s:${g(t.size)};line-height:${t.line};font-family:var(--font-${t.font});font-weight:${t.weight}">${esc(stepSample(t))}</p></td></tr>`
+    return `<tr><th scope="row"><span class="nm"><b>${esc(t.name)}</b><small>${esc(family)}</small></span></th><td class="vals">${copy(`var(--text-${key})`, `${t.name} size`, `${g(t.size)} px / ${g(t.line)} / ${t.weight}`)}<small class="var">--text-${key}</small><small>${leading} px line</small></td><td class="spec"><p style="--s:${g(t.size)};line-height:${t.line};font-family:var(--font-${t.font});font-weight:${t.weight}">${esc(stepSample(t))}</p></td></tr>`
   }).join('')
-  const scaleTable = `<thead><tr><th scope="col">Step</th><th scope="col">Values</th><th scope="col">${specimenHead.startsWith('Specimen, ') ? `Specimen<span class="pr-only">${esc(specimenHead.slice(8))}</span>` : esc(specimenHead)}</th></tr></thead><tbody>${scaleRows}</tbody>`
+  const scaleTable = `<thead><tr><th scope="col">Step</th><th scope="col">Size / line height / weight</th><th scope="col">${specimenHead.startsWith('Specimen, ') ? `Specimen<span class="pr-only">${esc(specimenHead.slice(8))}</span>` : esc(specimenHead)}</th></tr></thead><tbody>${scaleRows}</tbody>`
 
   // ── Colour: stripes weighted by how much room the colour should have ──────
   const weightsFor = (set) => sel.colours.map((c, i) => (i === 0 ? set[0] : isNeutral(c.hex) ? set[2] : set[1]))
@@ -135,9 +147,10 @@ export function showcaseParts(sel, h) {
   const unitMm = Math.round(Math.min(STRIPE_MAX_MM, STRIPE_ROOM_MM / Math.max(units, 1)) * 10) / 10
   const stripes = sel.colours.map((c, i) => {
     const v = hex(c.hex)
+    const selfGrade = v.toLowerCase() === canvas.toLowerCase()
     const ink = on(v)
     const pale = contrast(v, canvas) < PALE_RATIO
-    return `<li><button class="stripe${pale ? ' pale' : ''}" style="--w:${weights[i]};background:${v};color:${ink}" data-copy="${v}"><span class="s-name"><span class="sr-only">Copy </span><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span><code>${v}</code><span class="s-lands"><small>Where it lands</small>${esc(capital(c.lands))}</span><span class="s-grade"><small>As text on the canvas</small><b>${c.onCanvas.toFixed(2)}:1</b> ${grade(c.onCanvas)}</span></button></li>`
+    return `<li><button class="stripe${pale ? ' pale' : ''}" style="--w:${weights[i]};background:${v};color:${ink}" data-copy="${v}"><span class="s-name"><span class="sr-only">Copy </span><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span><code>${v}</code><span class="s-lands"><small>Where it lands</small>${esc(capital(c.lands))}</span><span class="s-grade"><small>As text on the canvas</small>${selfGrade ? '<b>Canvas colour</b>' : `<b>${c.onCanvas.toFixed(2)}:1</b> ${grade(c.onCanvas)}`}</span></button></li>`
   }).join('')
   const colourNote = cut
     ? `The first ${sel.colours.length} of ${sel.colourCount} colours are shown. All ${sel.colourCount} are in the CSS and JSON downloads.`
@@ -185,7 +198,7 @@ export function showcaseParts(sel, h) {
     ['Body', body.name],
   ].filter(([, family], i, all) => all.findIndex(([, f]) => f === family) === i)
     .map(([role, family]) => `<tr><th scope="row">${esc(family)}</th><td>${role === 'Headings' && display.name === body.name ? 'Headings and body' : role}</td><td>${esc(licenceOf(family))}</td></tr>`)
-    .concat([`<tr><th scope="row">Monospace</th><td>Token listing</td><td>Your system’s own face. Not included in this file.</td></tr>`])
+    .concat(ownMono ? [] : [`<tr><th scope="row">Monospace</th><td>Token listing</td><td>Your system’s own face. Not included in this file.</td></tr>`])
     .concat(chrome.map((family) => `<tr><th scope="row">${esc(family)}</th><td>This document</td><td>SIL Open Font License. Included in this file.</td></tr>`))
     .join('')
   const docRows = [
@@ -202,6 +215,10 @@ export function showcaseParts(sel, h) {
     FACTS: esc(facts),
     HEAD_SAMPLE: esc(headSample),
     HEAD_SIZE: String(nameFit.size),
+    HEAD_ALPHABET: ALPHABET,
+    ALPHA_SIZE: String(alphaSize),
+    TOKEN_MONO: monoFace ? `${monoFace},${MONO_STACK}` : MONO_STACK,
+    TOKEN_NOTE: esc(tokenNote),
     HEAD_LICENCE: esc(licenceOf(display.name)),
     BODY_NAME: esc(bodyName),
     BODY_NAME_SIZE: String(bodyFit.size),
