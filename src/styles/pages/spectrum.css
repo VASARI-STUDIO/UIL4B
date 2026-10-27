@@ -1113,7 +1113,8 @@
   .sp-proof-head { margin: 0; text-align: left; }
   .sp-proof-row { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 8px 0; }
   .sp-proof-row > div {
-    grid-template-columns: 4.2ch minmax(0, 1fr);
+    /* A fixed column, not `ch`: ch is the row's 16px text, and "101" at 40px is wider than 4.2 of those. */
+    grid-template-columns: 88px minmax(0, 1fr);
     align-items: baseline;
     column-gap: 16px;
     gap: 0 16px;
