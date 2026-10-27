@@ -277,11 +277,18 @@ export function ProjectProvider({ children }) {
     })
     return copy.id
   }, [userKey, allProjects, projectLimit])
-  const updateProject = useCallback((id, patch) => {
+  // `opts.touch === false` writes the patch and leaves `updatedAt` alone. "Last edited" and the
+  // workspace's lead project are read from `updatedAt`, so a change that is not an edit of the
+  // design (the icon) must not move a project to the front. The caller stamps its own field
+  // (`iconAt`) so the change still syncs.
+  const updateProject = useCallback((id, patch, opts) => {
     if (!userKey) return
+    const touch = opts?.touch !== false
     setAllProjects(prev => {
       const list = prev[userKey] || []
-      const next = list.map(p => p.id === id ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p)
+      const next = list.map(p => p.id === id
+        ? { ...p, ...patch, ...(touch ? { updatedAt: new Date().toISOString() } : null) }
+        : p)
       const updated = { ...prev, [userKey]: next }
       saveAllProjects(updated)
       return updated
@@ -573,9 +580,9 @@ export function ProjectProvider({ children }) {
     saveProject,
     duplicateProject,
     overwriteProject,
-    // Exported for the workspace's project icon, which is stored
-    // ON the project so it syncs with it. It stamps updatedAt like every other
-    // edit, which is what lets the change win a merge on the next device.
+    // Exported for the workspace's project icon, which is stored ON the project so it syncs with
+    // it. An icon write passes { touch: false } and stamps `iconAt` instead of `updatedAt`, so
+    // choosing an icon never changes when a project was last edited.
     updateProject,
     renameProject,
     loadProject,

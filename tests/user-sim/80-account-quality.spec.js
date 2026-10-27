@@ -173,7 +173,7 @@ test.describe('projects states only quotas the product enforces', () => {
       watch(page, `a ${plan} user looking for the folders that used to be here`)
       await signIn(page, { plan, projects: 2 })
       await go(page, '/projects')
-      await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
+      await expect(page.locator('.proj-card')).toHaveCount(2)
 
       await expect(page.locator('.proj-folders'), 'the chip row is gone').toHaveCount(0)
       await expect(page.locator('.proj-folder-chip'), 'no chip survives').toHaveCount(0)
@@ -202,8 +202,8 @@ test.describe('projects states only quotas the product enforces', () => {
     // Removing the false quota must not have taken the true one with it.
     const quota = page.locator('[data-testid="project-quota-note"]')
     await expect(quota).toBeVisible()
-    // The workspace's plan strip: "Project slots  3 of 3".
-    await expect(quota).toContainText('Project slots')
+    // The workspace's plan strip: "Projects  3 of 3".
+    await expect(quota).toContainText('Projects')
     await expect(quota).toContainText('3 of 3')
   })
 })

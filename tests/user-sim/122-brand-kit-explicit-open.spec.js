@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, overlaysSettled } from './helpers.js'
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
 const card = (page) => page.getByRole('dialog', { name: 'Four steps to a full system.' })
@@ -34,6 +34,10 @@ for (const width of [390, 1440]) {
 
       expect(await page.evaluate(() => localStorage.getItem('vs-uikit-guide-seen'))).toBe('1')
 
+      // At 390 the card opens from the menu sheet. Its route link pushes past the
+      // sheet's history entry, so nothing is handed back; the wait is a guard in
+      // case that ever changes, since a reload during a back-traversal is cancelled.
+      await overlaysSettled(page, 'the menu sheet')
       await page.reload()
       await expect(page).toHaveURL(/\/create\/palette$/)
       await expect(rail(page)).toBeVisible()
