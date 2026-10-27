@@ -1030,6 +1030,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // The sheet belongs to the phone layout. Leaving it (rotating wider) closes
   // it, so rotating back does not bring it up unasked.
   useEffect(() => { if (!phone) setCssSheetOpen(false) }, [phone])
+  // Stable, because useModalDialog re-focuses the dialog whenever onClose changes.
+  const closeCssSheet = useCallback(() => setCssSheetOpen(false), [])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
@@ -3423,7 +3425,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         {phone && cssSheetOpen && (
           <PaletteCssSheet
             css={cssExport}
-            onClose={() => setCssSheetOpen(false)}
+            onClose={closeCssSheet}
             onCopy={async () => {
               // Shut the sheet only once the copy has gone through; a refused
               // copy keeps it open beside the toast that says why.

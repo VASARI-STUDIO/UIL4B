@@ -11,11 +11,12 @@ export function colourFormats(hex) {
   const [hue, s, l] = hexToHsl(up)
   const [hueB, hs, hb] = hexToHsv(up)
   // Both converters round the hue after scaling, so a hue just under a full turn
-  // comes back as 360; a person expects 0.
+  // comes back as 360; a person expects 0. OKLCH rounds the same way.
   const h = hue % 360
   const hh = hueB % 360
   const [c, m, y, k] = hexToCmyk(up)
-  const [ol, oc, oh] = hexToOklch(up)
+  const [ol, oc, ohRaw] = hexToOklch(up)
+  const oh = ohRaw % 360
   return [
     { key: 'hex', label: 'HEX', value: up },
     { key: 'rgb', label: 'RGB', value: `rgb(${r}, ${g}, ${b})` },

@@ -94,3 +94,9 @@ test('white and grey are neutral in OKLCH: zero chroma', { todo: 'hexToOklch thi
 test('a saturated blue prints its true OKLCH chroma and hue', { todo: 'hexToOklch third cone weights are wrong' }, () => {
   assert.equal(values('#2563EB').oklch, 'oklch(54.6% 0.215 262.9)')
 })
+
+test('a hue that rounds up to a full turn prints as 0, not 360', () => {
+  assert.match(values('#FF0001').hsl, /^hsl\(0, /)
+  assert.match(values('#FF0001').hsb, /^hsb\(0, /)
+  assert.doesNotMatch(values('#2D0012').oklch, / 360\)$/)
+})
