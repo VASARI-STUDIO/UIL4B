@@ -616,7 +616,7 @@ export function renderUiKit(design, {
   }
 
   const tintRows = sel.palette.map((p) => {
-    const chips = Object.entries(p.scale).map(([stop, value]) => `<button class="tint-chip" style="background:${value};color:${on(value)}" data-copy="${value}" aria-label="Copy ${esc(p.name)} ${stop}, ${value}"><span>${stop}${stop === '500' ? ' · Base' : ''}</span><code>${value}</code></button>`).join('')
+    const chips = Object.entries(p.scale).map(([stop, value]) => `<button class="tint-chip" style="background:${value};color:${on(value)}" data-copy="${value}" aria-label="Copy ${esc(p.name)} ${stop}, ${value}"><span>${stop}${stop === '500' ? '<span class="tint-base"><span class="tint-sep"> · </span>Base</span>' : ''}</span><code>${value}</code></button>`).join('')
     return `<article class="tint-row"><div class="tint-heading"><h4>${esc(p.name)}</h4><small>${esc(p.source)}</small></div><div class="tint-scale">${chips}</div></article>`
   }).join('')
 

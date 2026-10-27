@@ -85,7 +85,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 .cv code{display:inline;overflow-wrap:anywhere}
 .cv:hover code{text-decoration:underline dotted;text-underline-offset:3px}
 .ct b{display:block;font:600 12px/1.4 var(--mono)}
-.ct.weak small{font-weight:600;color:var(--color-text)}
+.ct.weak small:not(.lbl){font-weight:600;color:var(--color-text)}
 .lands{color:var(--color-text-muted)}
 .long{overflow-wrap:anywhere}
 .colours{min-width:1000px}
@@ -237,18 +237,17 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .tbl-wrap{overflow:visible}
   .colours,.type,.pairs,.states,.roles,.comp,.tints{min-width:0}
   .colours,.tints{table-layout:fixed}
-  .colours thead th:last-child,.colours .lands{display:none}
-  .colours col:nth-child(1){width:16%!important}
-  .colours col:nth-child(2){width:17%!important}
+  .colours col:nth-child(1){width:15%!important}
+  .colours col:nth-child(2){width:14%!important}
   .colours col:nth-child(3){width:9%!important}
-  .colours col:nth-child(4){width:21%!important}
+  .colours col:nth-child(4){width:14%!important}
   .colours col:nth-child(5),.colours col:nth-child(6){width:8%!important}
   .colours td:nth-child(4) code{white-space:normal}
-  .colours col:nth-child(7){width:21%!important}
+  .colours col:nth-child(7){width:17%!important}
   .colours .nm small{white-space:nowrap}
-  .colours col:last-child{width:0!important}
-  .ramp{gap:.4mm;print-color-adjust:exact}
-  .ramp i{width:2.6mm;height:2.6mm}
+  .colours col:last-child{width:15%!important}
+  .ramp{gap:.3mm;print-color-adjust:exact}
+  .ramp i{width:2.2mm;height:2.2mm}
   .tints th,.tints td{padding-right:1mm}
   .tints tbody th{position:static;width:30mm;white-space:normal;background:none}
   #tints{break-inside:avoid}
