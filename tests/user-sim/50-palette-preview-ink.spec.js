@@ -125,7 +125,7 @@ const SWEEP = `((inkVars, fillVars) => {
     const role = inkRole ? inkRole.slice(5) : fillRole ? 'fill:' + fillRole.slice(5) : 'other'
     const size = parseFloat(cs.fontSize)
     out.push({
-      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled'),
+      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'),
       ink: hex, ground: hexOf(g), ratio: ratio(ink, g),
       floor: (size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700)) ? 3 : 4.5,
     })
@@ -217,10 +217,11 @@ test.describe('Palette Builder preview ink', () => {
           // still held to the floor.
           // The second is the sold-out size in the Product page (Orra Workroom): a
           // struck-through size chip in the disabled ink, shown on purpose beside
-          // the sizes that can be picked. It is named by scene, class and ink role, so
-          // any other node in the Product page is still held to the floor.
+          // the sizes that can be picked. It is named by scene, class and ink role, and
+          // it must be marked aria-disabled, so any other node in the Product page is
+          // still held to the floor, and so is a sold-out look that is not announced.
           const inactive = (name === 'Settings' && s.inactive)
-            || (name === 'Product page' && s.cls.split(' ').includes('is-off') && s.role === 'disabled')
+            || (name === 'Product page' && s.inactive && s.cls.split(' ').includes('is-off') && s.role === 'disabled')
           if (inactive) disabledSeen++
           else if (s.ratio < s.floor) failures.push('  ' + where)
           // The type floor for every scene.

@@ -18,6 +18,9 @@
 //   6. no text under 12px in any example at 390, 768 and 1440
 //   7. every text node clears 4.5:1 (3:1 large) on the ground it is really
 //      painted on, for a mid, a pale and a dark palette, both preview themes
+//   7b. the Energy dashboard's series labels keep clear of the now line, the now
+//      label and each other (a box test; the contrast walk cannot see a line
+//      drawn under a label's plate)
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //
 // HOW GROUND IS FOUND (7). Not by walking ancestors: a label that sits on a
@@ -33,7 +36,10 @@
 // to `color:var(--pv-disabled)` (7 goes red); set one example font-size to 10px
 // (6); set PIN_MS in PalettePreviewDialog.jsx to 30000 (4); make Stage drop its
 // old scene by calling onChange without startTransition (5); delete the .catch in
-// registry.js (8); stop PalettePreview from writing data-hit (2, 3).
+// registry.js (8); stop PalettePreview from writing data-hit (2, 3); remove the
+// `if (exampleLoading()) return` in main.jsx (8, the page reloads); drop
+// `overflow:hidden` from `.or-thumb .or-garment` (7, the Pocket label); render the
+// Sundial Solar tag as plain `sd-tag` (7b, 3 red).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
@@ -457,8 +463,9 @@ function sweepContrast() {
       label, size, large, floor: large ? 3 : 4.5, ratio: Math.round(worst.ratio * 100) / 100,
       ink: hex(worst.ink), ground: hex(worst.ground),
       // The sold-out size in the Product page: struck through, in the disabled
-      // ink, on purpose. Text of an inactive control is exempt from 1.4.3.
-      exempt: !!el.closest('.or-size.is-off'),
+      // ink, on purpose. Text of an inactive control is exempt from 1.4.3, so it
+      // is exempt only while it is marked aria-disabled.
+      exempt: !!el.closest('.or-size.is-off[aria-disabled="true"]'),
     })
   }
   return { rows, problems: [...new Set(problems)] }
@@ -506,6 +513,49 @@ test.describe('contrast on the real ground', () => {
         expect(misses, `text below its floor on its real ground (${measured} measured):\n${misses.join('\n')}`).toEqual([])
       })
     }
+  }
+})
+
+// ── 7b. the Sundial chart's labels keep clear of the now line ────────────────
+// The contrast walk cannot see this: the now line is drawn under a label's plate,
+// so the text is never "covered", yet the line would run through the label's box.
+// So the boxes are compared directly: no series label touches the now line, the
+// now label or another series label, and each stays inside the plot.
+
+test.describe('the Energy dashboard chart labels', () => {
+  for (const width of [390, 768, 1440]) {
+    test(`no series label touches the now line, the now label or another label at ${width}px, in both themes`, async ({ page }) => {
+      watch(page, `designer reading the Energy dashboard chart at ${width}px`)
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
+      await seed(page, PALETTES.mid)
+      const dialog = await openDialog(page)
+      for (const theme of ['Light', 'Dark']) {
+        await setTheme(dialog, theme)
+        await pickScene(dialog, 'Energy dashboard')
+        await settle(page)
+        const boxes = await page.evaluate(() => {
+          const r = (el) => { const b = el.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom } }
+          const plot = document.querySelector('.sd-plot')
+          return {
+            plot: plot && r(plot),
+            line: document.querySelector('.sd-now-line') && r(document.querySelector('.sd-now-line')),
+            nowText: document.querySelector('.sd-now-t') && r(document.querySelector('.sd-now-t')),
+            tags: [...document.querySelectorAll('.sd-tag')].map((el) => ({ name: el.textContent.trim(), ...r(el) })),
+          }
+        })
+        expect(boxes.plot && boxes.line && boxes.nowText, `${theme}: the chart, its now line and its now label were found`).toBeTruthy()
+        expect(boxes.tags.map((t) => t.name), `${theme}: the three series labels were found`).toEqual(['Solar', 'Battery', 'Grid'])
+        const touch = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t
+        const problems = []
+        boxes.tags.forEach((t, i) => {
+          if (touch(t, boxes.line)) problems.push(`${t.name} runs across the now line`)
+          if (touch(t, boxes.nowText)) problems.push(`${t.name} overlaps the now label`)
+          if (t.l < boxes.plot.l - 0.5 || t.r > boxes.plot.r + 0.5 || t.t < boxes.plot.t - 0.5) problems.push(`${t.name} sticks out of the plot`)
+          boxes.tags.slice(i + 1).forEach((u) => { if (touch(t, u)) problems.push(`${t.name} overlaps ${u.name}`) })
+        })
+        expect(problems, `${theme} at ${width}px`).toEqual([])
+      }
+    })
   }
 })
 
