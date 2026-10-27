@@ -11,10 +11,11 @@ import { LockGlyph, LockedTeaseCta } from '../library/LockedTease'
 import { NEAREST_SYSTEMS } from '../../data/nearest/index.js'
 import { loadSystem } from '../../utils/nearestSystems'
 import { BANDS, bandLabel, formatDE, matchSystem } from '../../utils/nearestMatch'
+import ToolIcon from '../tool/ToolIcon'
 
 const GROUPS = [
   { id: 'screen', title: 'Screen colours', note: '' },
-  { id: 'physical', title: 'Physical colour systems', note: ' · Approximate. Check a physical swatch.' },
+  { id: 'physical', title: 'Physical colour systems', note: 'Approximate. Check a physical swatch.' },
 ]
 // Second line of a row: the system, then its code when it has one.
 const SYSTEM_LINE = { tailwind: 'Tailwind v4', munsell: 'Munsell 1943 renotation', material: 'Material 2014' }
@@ -37,6 +38,13 @@ function useSystems(enabled) {
   return [state, retry]
 }
 
+// A code prints in <code>; a "No. 182" prints its "No." as text and only the
+// number in <code>, so the monospace does not add a second gap after the dot.
+function codeNode(code) {
+  const m = /^(No\.)\s+(.+)$/.exec(code)
+  return m ? <>{m[1]} <code>{m[2]}</code></> : <code>{code}</code>
+}
+
 function Seam({ left, right }) {
   return (
     <span className="plb-match-seam" aria-hidden="true">
@@ -47,7 +55,9 @@ function Seam({ left, right }) {
 }
 
 export default function NearestMatchPanel({ hex, isPro, planKnown, onCopy, onClose, closeIcon, copyIcon }) {
-  const live = useDeferredValue(String(hex || '').toUpperCase())
+  // The colour the shown matches were computed for. It trails the live hex while a
+  // drag is in flight, so a row's seam, name and difference always agree.
+  const shown = useDeferredValue(String(hex || '').toUpperCase())
   const [state, retry] = useSystems(isPro && planKnown)
   const upper = String(hex || '').toUpperCase()
   const unlocked = planKnown && isPro
@@ -57,10 +67,10 @@ export default function NearestMatchPanel({ hex, isPro, planKnown, onCopy, onClo
     const out = {}
     NEAREST_SYSTEMS.forEach((s) => {
       const st = state[s.id]
-      out[s.id] = st && st.status === 'ready' ? matchSystem(live, st.data) : null
+      out[s.id] = st && st.status === 'ready' ? matchSystem(shown, st.data) : null
     })
     return out
-  }, [state, live])
+  }, [state, shown])
 
   const failed = NEAREST_SYSTEMS.filter((s) => state[s.id]?.status === 'error')
   const allFailed = unlocked && failed.length === NEAREST_SYSTEMS.length
@@ -119,10 +129,10 @@ export default function NearestMatchPanel({ hex, isPro, planKnown, onCopy, onClo
     return (
       <li key={s.id} className="plb-match-row">
         <button type="button" className={`plb-match-btn${m.band === 'not-close' ? ' is-far' : ''}`} aria-label={label} onClick={() => onCopy?.(m.copy)}>
-          <Seam left={upper} right={m.hex} />
+          <Seam left={shown} right={m.hex} />
           <span className="plb-match-main">
             <span className="plb-match-name">{m.name}</span>
-            <span className="plb-match-meta">{line2}{m.code && s.id !== 'tailwind' ? <> · <code>{m.code}</code></> : null}</span>
+            <span className="plb-match-meta">{line2}{m.code && s.id !== 'tailwind' ? <> · {codeNode(m.code)}</> : null}</span>
           </span>
           <span className="plb-match-near">
             <span className="plb-match-word">{word}</span>
@@ -145,24 +155,43 @@ export default function NearestMatchPanel({ hex, isPro, planKnown, onCopy, onClo
       </div>
       <div className="plb-match-scroll">
         <p className="plb-match-legend">Yours on the left, the match on the right.</p>
-        {allFailed ? (
-          <div className="plb-match-allfail" role="status">
-            <p>Couldn’t load the colour systems. Check your connection.</p>
-            <button type="button" className="btn btn-s" onClick={() => retry(NEAREST_SYSTEMS.map((s) => s.id))}>Try again</button>
-          </div>
-        ) : GROUPS.map((g) => {
+        {/* One live region, always mounted so a screen reader hears the text when it
+            arrives: the full-width message and its retry when every system failed,
+            else a spoken-only line naming the rows that did. */}
+        <div role="status" className={allFailed ? 'plb-match-allfail' : 'plb-match-sr'}>
+          {allFailed ? (
+            <>
+              <p>Couldn’t load the colour systems. Check your connection.</p>
+              <button type="button" className="btn btn-s" onClick={() => retry(NEAREST_SYSTEMS.map((s) => s.id))}>Try again</button>
+            </>
+          ) : failed.map((s) => `Couldn’t load ${s.label}`).join('. ')}
+        </div>
+        {allFailed ? null : GROUPS.map((g) => {
           const rows = NEAREST_SYSTEMS.filter((s) => s.group === g.id)
           if (!rows.length) return null
           return (
             <section key={g.id} className="plb-match-group">
-              <h3 id={`plb-match-h-${g.id}`} className="plb-match-h">{g.title}{g.note}</h3>
+              <h3 id={`plb-match-h-${g.id}`} className="plb-match-h">
+                {g.title}
+                {g.note ? <>{' '}<span className="plb-match-h-note">{g.note}</span></> : null}
+              </h3>
               <ul className={`plb-match-list${locked ? ' plb-match-list--locked' : ''}`} aria-labelledby={`plb-match-h-${g.id}`}>
                 {rows.map(renderRow)}
               </ul>
             </section>
           )
         })}
-        {failed.length > 0 && !allFailed ? <p className="plb-match-sr" role="status">{failed.map((s) => `Couldn’t load ${s.label}`).join('. ')}</p> : null}
+        <details className="plb-match-how">
+          <summary>
+            How this works
+            <span className="plb-match-caret" aria-hidden="true"><ToolIcon name="caret-down" size={14} /></span>
+          </summary>
+          <p>Closeness is the CIEDE2000 colour difference between your colour and the match. Under {BANDS[1].min} is very close, {BANDS[1].min} to {BANDS[2].min} close, {BANDS[2].min} to {BANDS[3].min} near, and {BANDS[3].min} or more not close.</p>
+          <p>Physical systems are measured colours shown on a screen. Your screen and the light you’re in change how they look, so check a physical swatch before you buy or specify.</p>
+          <p>Munsell runs only from N1 to N9, so black and white match the nearest dark and light samples.</p>
+          <ul>{NEAREST_SYSTEMS.map((s) => <li key={s.id}>{s.credit}</li>)}</ul>
+        </details>
+        {/* After "How this works" in the page order, so Tab reaches the upgrade link last. */}
         {locked ? (
           <LockedTeaseCta
             gate="palette-nearest-match"
@@ -171,12 +200,6 @@ export default function NearestMatchPanel({ hex, isPro, planKnown, onCopy, onClo
             action="Upgrade to Pro"
           />
         ) : null}
-        <details className="plb-match-how">
-          <summary>How this works</summary>
-          <p>Closeness is the CIEDE2000 colour difference between your colour and the match. Under {BANDS[1].min} is very close, {BANDS[1].min} to {BANDS[2].min} close, {BANDS[2].min} to {BANDS[3].min} near, and {BANDS[3].min} or more not close.</p>
-          <p>Physical systems are measured colours shown on a screen. Your screen and the light you’re in change how they look, so check a physical swatch before you buy or specify.</p>
-          <ul>{NEAREST_SYSTEMS.map((s) => <li key={s.id}>{s.credit}</li>)}</ul>
-        </details>
       </div>
     </div>
   )

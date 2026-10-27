@@ -129,6 +129,26 @@ test.describe('Pro: nearest named colours', () => {
     const cssRow = panel.getByRole('button', { name: /^CSS: cornflowerblue, very close, difference 0\.0\. Copy cornflowerblue$/ })
     await expect(cssRow).toBeVisible()
     await expect(cssRow.locator('.plb-match-word')).toHaveText('Very close')
+    // A row is a list row: 8px corners, not the pill radius buttons take.
+    expect(await cssRow.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe('8px')
+    // ISCC-NBS names read with a capital ("Moderate blue"); its "No." is text and only the number is code.
+    const isccRow = panel.getByRole('button', { name: /^ISCC-NBS: [A-Z][a-z]/ })
+    await expect(isccRow).toBeVisible()
+    await expect(isccRow.locator('.plb-match-name')).toHaveText(/^[A-Z]/)
+    await expect(isccRow.locator('.plb-match-meta')).toContainText(/ISCC-NBS · No\. \d+$/)
+    await expect(isccRow.locator('.plb-match-meta code')).toHaveText(/^\d+$/)
+    // The caveat sits on its own line under the group title.
+    await expect(panel.locator('.plb-match-h-note')).toHaveText('Approximate. Check a physical swatch.')
+    // One live region, mounted from the start and empty while nothing has failed.
+    await expect(panel.locator('[role="status"]')).toHaveCount(1)
+    await expect(panel.locator('[role="status"]')).toHaveText('')
+    // "How this works" has a caret that turns over when it opens.
+    const how = panel.locator('.plb-match-how')
+    await expect(how.locator('.plb-match-caret svg')).toHaveCount(1)
+    await how.locator('summary').click()
+    await expect(how.locator('.plb-match-caret')).toHaveCSS('transform', /^matrix\(-1, /)
+    await expect(how).toContainText('black and white match the nearest dark and light samples')
+    await how.locator('summary').click()
     // Positive control for the Free test's "no request": a Pro panel asks for each file once.
     expect([...new Set(chunks.map((c) => c.split('/').pop().replace(/-[\w-]{8}\.json$/, '')))].sort()).toEqual([...SYSTEMS].sort())
 
@@ -186,6 +206,10 @@ test.describe('Free: the locked panel', () => {
     // The wall.
     const wall = panel.getByRole('link', { name: 'Upgrade to Pro' })
     await expect(wall).toHaveAttribute('href', '/plans')
+    // Tab order: "How this works" first, then the Upgrade link (it is after it on the page too).
+    await panel.locator('.plb-match-how summary').focus()
+    await page.keyboard.press('Tab')
+    await expect(wall).toBeFocused()
     await wall.click()
     await expect(page).toHaveURL(/\/plans(\?|#|$)/)
     expect(chunks, 'still no colour-system request after the wall').toEqual([])

@@ -3067,7 +3067,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('tints', ctxMenu.i)}><IcoEye /> View tints</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('values', ctxMenu.i)}><ToolIcon name="swatches" size={14} /> Colour values</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('match', ctxMenu.i)}><ToolIcon name="tag" size={14} /> Nearest named colours{!isPro && <span className="plb-ctx-pro">Pro</span>}</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('match', ctxMenu.i)}><ToolIcon name="tag" size={14} /> Nearest named colours{planKnown && !isPro && <span className="plb-ctx-pro">Pro</span>}</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>

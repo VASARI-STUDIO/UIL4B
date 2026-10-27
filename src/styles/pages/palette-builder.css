@@ -616,6 +616,20 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* A short fade pinned to the bottom edge while there is more below, so a cut-off
+   "How this works" reads as "keep scrolling". It rests on the last child's margin
+   once scrolled to the end, so it never covers content there. */
+.plb .plb-match-scroll > :last-child { margin-bottom: 20px; }
+.plb .plb-match-scroll::after {
+  content: "";
+  display: block;
+  position: sticky;
+  bottom: 0;
+  height: 20px;
+  margin-top: -20px;
+  background: linear-gradient(to bottom, transparent, var(--card));
+  pointer-events: none;
+}
 .plb .plb-match-legend { margin: 0 0 8px; font-size: 12px; line-height: 1.4; color: var(--t1); }
 .plb .plb-match-protag { margin-left: 8px; font-size: 12px; vertical-align: middle; }
 .plb .plb-match-protag .lockt-glyph { width: 11px; height: 11px; }
@@ -626,6 +640,8 @@
   border-top: 1px solid var(--border);
 }
 .plb .plb-match-h { margin: 0 0 4px; font-size: 12px; font-weight: 600; line-height: 1.4; color: var(--t1); }
+/* The caveat sits on its own line, lighter, so no single word is left alone on one. */
+.plb .plb-match-h-note { display: block; font-weight: 400; text-wrap: balance; }
 .plb .plb-match-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
 /* Locked: a dashed edge so it reads as locked, not as a failed load. */
 .plb .plb-match-list--locked { padding: 4px; border: 1px dashed var(--bh); border-radius: 10px; }
@@ -642,13 +658,14 @@
   min-height: 52px;
   padding: 6px 4px;
 }
+/* Rows are list rows, not pill buttons: 8px, the same on every state of a row. */
+.plb .plb-match-btn,
 .plb .plb-match-row--locked,
 .plb .plb-match-row--loading,
 .plb .plb-match-row--failed { border-radius: 8px; }
 .plb .plb-match-btn {
   width: 100%;
   border: 0;
-  border-radius: var(--btn-radius);
   background: transparent;
   color: var(--t0);
   font: inherit;
@@ -673,7 +690,8 @@
 }
 [data-theme="dark"] .plb .plb-match-seam::after { box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.1); }
 .plb .plb-match-seam-empty { background: var(--bg-3); }
-.plb .plb-match-blur { filter: blur(4px); }
+/* clip-path keeps the blur inside its own half, so the seam edge stays crisp. */
+.plb .plb-match-blur { filter: blur(4px); clip-path: inset(0); }
 
 .plb .plb-match-main { display: grid; gap: 2px; min-width: 0; }
 .plb .plb-match-name { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--t0); overflow-wrap: break-word; }
@@ -693,6 +711,8 @@
 
 /* Locked: the bars hold the place of a name and a word. */
 .plb .plb-match-bar { display: block; filter: blur(3px); }
+/* --bg-4 sinks into the dark card; one step up is --bh. */
+[data-theme="dark"] .plb .plb-match-bar { background: var(--bh); }
 .plb .plb-match-bar--short { margin-left: auto; }
 
 /* Loading: the skeleton shows only after 150ms, so a cached load never flashes.
@@ -735,11 +755,20 @@
 .plb .plb-match-how summary {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   min-height: 32px;
   border-radius: 6px;
   font-size: 12px;
   color: var(--t1);
   cursor: pointer;
+  list-style: none;
+}
+.plb .plb-match-how summary::-webkit-details-marker { display: none; }
+.plb .plb-match-caret { display: grid; place-items: center; color: var(--t2); transition: transform 150ms ease-out; }
+.plb .plb-match-caret svg { display: block; }
+.plb .plb-match-how[open] .plb-match-caret { transform: rotate(180deg); }
+@media (hover: hover) and (pointer: fine) {
+  .plb .plb-match-how summary:hover .plb-match-caret { color: var(--t0); }
 }
 .plb .plb-match-how p,
 .plb .plb-match-how li { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: var(--t1); }
@@ -761,9 +790,11 @@
 
 :where(html[data-reduced-motion="true"]) .plb .plb-match-row--loading .plb-match-skel,
 :where(html[data-reduced-motion="true"]) .plb .plb-match-row--loading .plb-match-seam-empty { animation: plb-match-in 1ms linear 150ms both; }
+:where(html[data-reduced-motion="true"]) .plb .plb-match-caret { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .plb .plb-match-row--loading .plb-match-skel,
   :where(html:not([data-reduced-motion="false"])) .plb .plb-match-row--loading .plb-match-seam-empty { animation: plb-match-in 1ms linear 150ms both; }
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-match-caret { transition: none; }
 }
 @media (forced-colors: active) {
   .plb .plb-match-seam { forced-color-adjust: none; }

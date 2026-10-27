@@ -114,7 +114,7 @@ test('known matches in the other systems', () => {
   assert.ok(m.dE < 0.01)
   const n5 = sys('munsell').rows.find((r) => r[0] === 'N 5/')
   assert.equal(nearest(hexOfRow(n5), sys('munsell').rows).row[0], 'N 5/')
-  assert.equal(matchSystem('#FFFFFF', sys('iscc-nbs')).name, 'white')
+  assert.equal(matchSystem('#FFFFFF', sys('iscc-nbs')).name, 'White')
 })
 
 test('a copy of null means the name, and a far colour is "not close" but still gets a match', () => {
@@ -156,12 +156,13 @@ test('Munsell and ISCC-NBS rows are inside sRGB, named by notation and by block'
     }
   }
   const iscc = sys('iscc-nbs').rows
-  assert.deepEqual(iscc.find((r) => r[0] === 'moderate blue').slice(0, 3), ['moderate blue', 'No. 182', null])
+  assert.deepEqual(iscc.find((r) => r[0] === 'Moderate blue').slice(0, 3), ['Moderate blue', 'No. 182', null])
+  assert.ok(iscc.every((r) => /^[A-Z]/.test(r[0])), 'every ISCC-NBS name starts with a capital')
   assert.ok(sys('munsell').rows.every((r) => /^(N \d\/|\d+(\.\d)?[A-Z]{1,2} \d+\/\d+)$/.test(r[0])))
-  // vivid red is red, white is light, black is dark.
-  const vivid = iscc.find((r) => r[0] === 'vivid red')
+  // vivid red is red, white is light, black is dark (names start with a capital).
+  const vivid = iscc.find((r) => r[0] === 'Vivid red')
   assert.ok(vivid[4] > 40 && vivid[5] > 20)
-  assert.ok(iscc.find((r) => r[0] === 'white')[3] > 90 && iscc.find((r) => r[0] === 'black')[3] < 20)
+  assert.ok(iscc.find((r) => r[0] === 'White')[3] > 90 && iscc.find((r) => r[0] === 'Black')[3] < 20)
 })
 
 // Seeded generator so the distribution is the same on every run.

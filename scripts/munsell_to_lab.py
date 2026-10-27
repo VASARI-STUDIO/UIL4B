@@ -5,7 +5,7 @@ Run through build-nearest-data.mjs, or directly:
     uv run --with colour-science==0.4.7 python -I scripts/munsell_to_lab.py --out-dir src/data/nearest
 
 Munsell: the 1943 renotation "real" samples bundled with colour-science (CIE xyY
-under illuminant C, Y scaled by 1/0.975). Each is converted to XYZ, adapted from
+under illuminant C, Y multiplied by 0.975). Each is converted to XYZ, adapted from
 illuminant C to D50 with Bradford, and stored as Lab (D50). Samples outside sRGB
 are dropped, so a swatch shows the real colour.
 
@@ -193,6 +193,7 @@ def build_iscc(meta, tsv):
             lab, was_mapped = reduce_chroma(lab)
             if was_mapped:
                 mapped.append(int(number))
+            name = name[:1].upper() + name[1:]  # "moderate blue" -> "Moderate blue"
             rows.append([name, "No. %s" % number, None, num(lab[0]), num(lab[1]), num(lab[2])])
     return rows, mapped
 
