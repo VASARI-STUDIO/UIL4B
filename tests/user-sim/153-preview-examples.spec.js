@@ -22,11 +22,10 @@
 //      label and each other (a box test; the contrast walk cannot see a line
 //      drawn under a label's plate)
 //   7c. tracing a colour leaves no outline on a drawn (SVG) part
-//   7d. Orra's colourway names fit under their swatches at 1440, 768 and 390
+//   7d. Orra's five colourways sit in one row at 360, 390, 768, 1024 and 1440; names hidden under 960, fitting at 1440
 //   7e. Orra's shirt stays inside its stage and off the buy column at 1440, 768, 390
 //   7f. the legend: at most two chip rows, the adjusted-as-text caption is one line and its chips point at it
 //   7g. the Slack Water headline runs to at most three lines at 1440 and 768
-//   7h. the Orra colourways sit in one row of five at 390, every name fitting
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //
 // HOW GROUND IS FOUND (7). Not by walking ancestors: a label that sits on a
@@ -47,8 +46,8 @@
 // `overflow:hidden` from `.or-thumb .or-garment` (7, the Pocket label); render the
 // Sundial Solar tag as plain `sd-tag` (7b, 3 red); delete `.pvs svg [data-role]{outline:none}`
 // in palette-preview.css (7c, 3 red); put `.or-sw` back to its old width and
-// `.or-sw-t` back to ellipsis (7d, 3 red); `aria-describedby` off the chips (7f), chips min-width 330px (7f, 3),
-// the headline clamp back to 6.4cqi (7g), Orra swatches flex-wrap (7h); put previewLoader back to Promise.all, or
+// `.or-sw-t` back to ellipsis; `aria-describedby` off the chips (7f), chips min-width 330px (7f, 3),
+// the headline clamp back to 6.4cqi (7g), Orra swatches back to flex-wrap and a 60px width (7d); put previewLoader back to Promise.all, or
 // React lazy back in PaletteBuilder (9).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
@@ -404,6 +403,9 @@ function sweepContrast() {
     const cs = getComputedStyle(el)
     if (cs.display === 'none' || cs.visibility === 'hidden') continue
     done.add(el)
+    // Text that is visually hidden on purpose (a 1px clip box, kept for a screen reader, as the
+    // Orra colourway names are under 960px) paints nothing, so it has no ground to read.
+    { const hb = el.getBoundingClientRect(); if (hb.width <= 1 && hb.height <= 1 && cs.clipPath !== 'none') continue }
     el.scrollIntoView({ block: 'center', inline: 'center' })
 
     const range = document.createRange()
@@ -599,32 +601,99 @@ test.describe('the legend highlight on a drawing', () => {
   }
 })
 
-// ── 7d. Orra's colourway names fit under their swatch ────────────────────────
+// ── 7d. Orra's five colourways: one row at every width ───────────────────────
+// The row is a five-column grid. Under a 960px container the names are hidden from
+// the eye (a 1px clip box, still read by a screen reader) and the selected name is
+// printed beside "Colourway"; from 960 the names show under the swatches.
 
-test.describe('the Orra colourway names', () => {
-  for (const width of [1440, 768, 390]) {
-    test(`no colourway name is cut off at ${width}px, in both themes`, async ({ page }) => {
+const swatchRow = (page) => page.evaluate(() => {
+  const row = [...document.querySelectorAll('.or-sw')].map((el) => {
+    const r = el.getBoundingClientRect()
+    const t = el.querySelector('.or-sw-t')
+    const i = el.querySelector(':scope > i').getBoundingClientRect()
+    const tb = t.getBoundingClientRect()
+    const range = document.createRange()
+    range.selectNodeContents(t)
+    const rects = [...range.getClientRects()].filter((q) => q.width > 0)
+    return {
+      name: t.textContent.trim(), top: Math.round(r.top), width: r.width, circle: [i.width, i.height],
+      box: [tb.width, tb.height], textWidth: Math.max(0, ...rects.map((q) => q.width)),
+      lines: new Set(rects.map((q) => Math.round(q.top))).size,
+    }
+  })
+  const sel = document.querySelector('.or-opt-l b')
+  return { row, selected: sel && sel.textContent.trim(), first: row[0] && row[0].name }
+})
+
+test.describe('the Orra colourways on a phone', () => {
+  for (const width of [360, 390]) {
+    test(`five swatches share one row at ${width}px, 40px circles, names hidden from the eye and the selected one printed`, async ({ page }) => {
       watch(page, `designer reading the Orra colourways at ${width}px`)
-      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
+      await page.setViewportSize({ width, height: 844 })
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       for (const theme of ['Light', 'Dark']) {
         await setTheme(dialog, theme)
         await pickScene(dialog, 'Product page')
         await settle(page)
-        const labels = await page.evaluate(() => [...document.querySelectorAll('.or-sw-t')].map((el) => {
-          const box = el.parentElement.getBoundingClientRect()
-          const r = el.getBoundingClientRect()
-          return { text: el.textContent.trim(), scroll: el.scrollWidth, client: el.clientWidth, inside: r.left >= box.left - 0.5 && r.right <= box.right + 0.5 }
-        }))
-        expect(labels.length, `${theme}: the five colourway names were found`).toBe(5)
-        for (const l of labels) {
-          expect(l.scroll, `${theme}: "${l.text}" is wider than its box`).toBe(l.client)
-          expect(l.inside, `${theme}: "${l.text}" sticks out of its swatch column`).toBe(true)
+        const { row, selected, first } = await swatchRow(page)
+        expect(row.length, `${theme}: five colourways`).toBe(5)
+        expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
+        for (const s of row) {
+          expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
+          expect(s.circle, `${theme}: the "${s.name}" circle is not 40px`).toEqual([40, 40])
+          expect(s.box[0], `${theme}: "${s.name}" is still visible (wider than its 1px clip box)`).toBeLessThanOrEqual(1)
+          expect(s.box[1], `${theme}: "${s.name}" is still visible (taller than its 1px clip box)`).toBeLessThanOrEqual(1)
         }
+        expect(selected, `${theme}: the selected colourway's name is printed in the option label`).toBe(first)
       }
     })
   }
+})
+
+test.describe('the Orra colourways on a tablet', () => {
+  for (const width of [768, 1024]) {
+    test(`five swatches share one row at ${width}px`, async ({ page }) => {
+      watch(page, `designer reading the Orra colourways at ${width}px`)
+      await page.setViewportSize({ width, height: 900 })
+      await seed(page, PALETTES.mid)
+      const dialog = await openDialog(page)
+      for (const theme of ['Light', 'Dark']) {
+        await setTheme(dialog, theme)
+        await pickScene(dialog, 'Product page')
+        await settle(page)
+        const { row, selected, first } = await swatchRow(page)
+        expect(row.length, `${theme}: five colourways`).toBe(5)
+        expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
+        for (const s of row) expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
+        expect(selected, `${theme}: the selected colourway's name is printed in the option label`).toBe(first)
+      }
+    })
+  }
+})
+
+test.describe('the Orra colourway names where they show', () => {
+  test('at 1440px each name is on one line with room to spare inside its swatch, in both themes', async ({ page }) => {
+    watch(page, 'designer reading the Orra colourway names at 1440px')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page, PALETTES.mid)
+    const dialog = await openDialog(page)
+    for (const theme of ['Light', 'Dark']) {
+      await setTheme(dialog, theme)
+      await pickScene(dialog, 'Product page')
+      await settle(page)
+      const { row } = await swatchRow(page)
+      expect(row.length, `${theme}: five colourways`).toBe(5)
+      expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
+      for (const s of row) {
+        expect(s.box[0], `${theme}: "${s.name}" is hidden at 1440`).toBeGreaterThan(8)
+        expect(s.lines, `${theme}: "${s.name}" wraps onto ${s.lines} lines`).toBe(1)
+        // The width of the text itself (a Range), not its box: a box that is as wide as its
+        // column hides a word that is exactly as wide, or wider, and breaks it.
+        expect(s.width - s.textWidth, `${theme}: "${s.name}" (${s.textWidth.toFixed(1)}px) leaves under 8px in a ${s.width.toFixed(1)}px swatch`).toBeGreaterThanOrEqual(8)
+      }
+    }
+  })
 })
 
 // ── 7e. Orra's shirt stays inside its stage ──────────────────────────────────
@@ -752,34 +821,6 @@ test.describe('the Slack Water headline', () => {
       }
     })
   }
-})
-
-// ── 7h. Orra's five colourways sit in one row on a phone ─────────────────────
-
-test.describe('the Orra colourways on a phone', () => {
-  test('five swatches share one row at 390px and every name fits under its swatch', async ({ page }) => {
-    watch(page, 'designer reading the Orra colourways on a phone')
-    await page.setViewportSize({ width: 390, height: 844 })
-    await seed(page, PALETTES.mid)
-    const dialog = await openDialog(page)
-    for (const theme of ['Light', 'Dark']) {
-      await setTheme(dialog, theme)
-      await pickScene(dialog, 'Product page')
-      await settle(page)
-      const sw = await page.evaluate(() => [...document.querySelectorAll('.or-sw')].map((el) => {
-        const r = el.getBoundingClientRect()
-        const t = el.querySelector('.or-sw-t')
-        return { name: t.textContent.trim(), top: r.top, width: r.width, scroll: t.scrollWidth, client: t.clientWidth, lines: Math.round(t.getBoundingClientRect().height / parseFloat(getComputedStyle(t).lineHeight)) }
-      }))
-      expect(sw.length, `${theme}: five colourways`).toBe(5)
-      expect(new Set(sw.map((s) => Math.round(s.top))).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
-      for (const s of sw) {
-        expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
-        expect(s.scroll, `${theme}: "${s.name}" is wider than its box`).toBe(s.client)
-        expect(s.lines, `${theme}: "${s.name}" wraps onto a second line`).toBe(1)
-      }
-    }
-  })
 })
 
 // ── 8. a chunk that never arrives ────────────────────────────────────────────
