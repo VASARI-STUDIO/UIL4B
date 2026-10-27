@@ -641,11 +641,14 @@
   gap: 12px;
   min-height: 52px;
   padding: 6px 4px;
-  border-radius: 8px;
 }
+.plb .plb-match-row--locked,
+.plb .plb-match-row--loading,
+.plb .plb-match-row--failed { border-radius: 8px; }
 .plb .plb-match-btn {
   width: 100%;
   border: 0;
+  border-radius: var(--btn-radius);
   background: transparent;
   color: var(--t0);
   font: inherit;
@@ -707,7 +710,7 @@
   min-height: 32px;
   padding: 0 4px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--btn-radius);
   background: none;
   color: var(--tl-link, var(--accent));
   font: inherit;
@@ -747,7 +750,8 @@
   .plb .plb-match-row--locked,
   .plb .plb-match-row--loading,
   .plb .plb-match-row--failed { min-height: 56px; }
-  .plb .plb-match-retry { min-height: 44px; }
+  .plb .plb-match-retry,
+  .plb .plb-match-allfail .btn { min-height: 44px; }
   .plb .plb-match-how summary { min-height: 44px; }
   .plb .plb-matchpop .lockt-cta-btn { min-height: 44px; }
 }
