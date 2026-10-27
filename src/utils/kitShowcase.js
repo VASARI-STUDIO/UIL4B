@@ -51,7 +51,7 @@ export function cutWords(text, max) {
     if (next.length > max - 1) break
     out = next
   }
-  return `${(out || words[0]).replace(/[\s,;:.\-]+$/, '')}…`
+  return `${(out || words[0]).replace(/[\s,;:.-]+$/, '')}…`
 }
 
 // The body sample's size by its length, so a long description sets smaller.
