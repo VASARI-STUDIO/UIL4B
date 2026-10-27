@@ -1,0 +1,82 @@
+/* E1, Slack Water (SlackWater.jsx). Colour only from --pv-* and the three
+ * --sw-* inks the component measures; layout by container query on .pvs.
+ * Literata loads only when this example opens, under its own alias. */
+@font-face{font-family:'PV Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
+
+.sw{display:flex;flex-direction:column;min-height:100%;font-family:var(--font);color:var(--pv-text);background:var(--pv-canvas)}
+
+.sw-mast{display:flex;align-items:center;gap:var(--s-5);min-height:64px;padding:0 var(--s-6);border-bottom:1px solid var(--pv-border)}
+.sw-name{font-family:'PV Literata',Georgia,serif;font-size:20px;font-weight:600;line-height:1.25;letter-spacing:-.01em}
+.sw-issue{font-family:var(--mono);font-size:13px;color:var(--pv-muted)}
+.sw-nav{display:flex;gap:var(--s-5);margin-left:auto;font-size:15px}
+.sw-navi{position:relative}
+.sw-ul{position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--pv-secondary)}
+.sw-cta{display:inline-flex;align-items:center;height:40px;padding:0 var(--s-4);font-size:13px;font-weight:600;white-space:nowrap;
+  color:var(--pv-on-primary);background:var(--pv-primary);border:1px solid var(--pv-pborder);border-radius:8px}
+
+/* Wide: copy over columns 1 to 5, the field 6 to 12. The field sits flush under
+ * the masthead hairline and runs to the right and bottom edges. */
+.sw-hero{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:24px;flex:1;min-height:480px}
+.sw-copy{grid-column:1 / 6;display:flex;flex-direction:column;gap:var(--s-4);padding:var(--s-7) 0 var(--s-6) var(--s-6)}
+.sw-head{font-family:'PV Literata',Georgia,serif;font-size:clamp(36px,6.4cqi,76px);font-weight:300;line-height:1;letter-spacing:-.03em;text-wrap:balance}
+.sw-tail{color:var(--pv-muted)}
+.sw-stand{max-width:44ch;font-size:17px;line-height:1.5;color:var(--pv-muted)}
+.sw-by{margin-top:auto;font-family:var(--mono);font-size:13px;color:var(--pv-muted)}
+
+.sw-field{grid-column:6 / -1;display:flex;flex-direction:column;justify-content:center;gap:var(--s-3);margin:0;padding:var(--s-5);
+  background:var(--pv-primary);border-left:1px solid var(--sw-edge);border-bottom:1px solid var(--sw-edge)}
+.sw-chart{position:relative;width:100%;aspect-ratio:480 / 360}
+.sw-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.sw-water{fill:var(--pv-primary)}
+.sw-land{fill:var(--pv-subtle)}
+.sw-routeline{fill:none;stroke:var(--sw-ink);stroke-width:2;stroke-dasharray:6 5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.sw-wharf{fill:var(--pv-deep);stroke:var(--sw-ink);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.sw-ferry path{fill:var(--pv-accent);stroke:var(--sw-ink);stroke-width:1;vector-effect:non-scaling-stroke}
+.sw-label{position:absolute;transform:translate(-50%,8px);font-size:12px;line-height:1.25;white-space:nowrap;color:var(--sw-ink)}
+.sw-label.is-above{transform:translate(-50%,calc(-100% - 8px))}
+.sw-cap{font-family:var(--mono);font-size:12px;color:var(--sw-ink)}
+
+/* The one signature moment: the route wipes in left to right, then the ferry
+ * arrives. Authored in its final state; reduced motion skips both. */
+.sw-route{animation:sw-route 700ms cubic-bezier(.23,1,.32,1) both}
+.sw-ferry{animation:sw-fade 150ms ease-out 700ms both}
+@keyframes sw-route{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes sw-fade{from{opacity:0}to{opacity:1}}
+
+.sw-contents{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-6)}
+.sw-kicker{font-family:var(--mono);font-size:12px;color:var(--pv-muted)}
+.sw-list{margin:0;padding:0;list-style:none}
+.sw-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:baseline;gap:var(--s-4);padding:var(--s-3) 0;border-top:1px solid var(--pv-border)}
+.sw-row:last-child{border-bottom:1px solid var(--pv-border)}
+.sw-page{font-family:var(--mono);font-size:15px;color:var(--pv-muted)}
+.sw-page.is-on{font-weight:600;color:var(--sw-sec)}
+.sw-title{font-family:'PV Literata',Georgia,serif;font-size:20px;line-height:1.25}
+.sw-desk{font-size:13px;color:var(--pv-muted)}
+.sw-next{font-size:13px;color:var(--pv-muted)}
+
+/* Mid: copy 1 to 6, field 7 to 12. */
+@container pvs (max-width:959px){
+  .sw-copy{grid-column:1 / 7}
+  .sw-field{grid-column:7 / -1}
+  .sw-issue{display:none}
+}
+
+/* Narrow: the field leads, full width; masthead is wordmark and Subscribe. */
+@container pvs (max-width:599px){
+  .sw-mast{gap:var(--s-3);padding:0 var(--s-4)}
+  .sw-nav{display:none}
+  .sw-cta{margin-left:auto}
+  .sw-hero{display:flex;flex-direction:column;min-height:0}
+  .sw-field{order:-1;padding:var(--s-3);border-left:0}
+  .sw-label:not(.is-keep){display:none}
+  .sw-copy{padding:var(--s-5) var(--s-4)}
+  .sw-head{font-size:36px}
+  .sw-contents{padding:var(--s-5) var(--s-4)}
+  .sw-row{grid-template-columns:40px minmax(0,1fr)}
+  .sw-desk{grid-column:2}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.sw-route,.sw-ferry){animation:none}
+}
+html[data-reduced-motion="true"] :is(.sw-route,.sw-ferry){animation:none}

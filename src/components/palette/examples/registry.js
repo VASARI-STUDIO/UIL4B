@@ -7,8 +7,14 @@
 // costs the dialog and one example, not all of them.
 import { lazy } from 'react'
 
-// id -> () => import('./<id>.jsx'). Empty until the first example lands.
-const LOADERS = {}
+// scene id -> () => import('./<File>.jsx'). Each default-exports the example.
+const LOADERS = {
+  editorial: () => import('./SlackWater.jsx'),
+  energy: () => import('./Sundial.jsx'),
+  product: () => import('./OrraWorkroom.jsx'),
+}
+
+export const hasExample = (id) => Object.hasOwn(LOADERS, id)
 
 // One lazy component per example, made once at module level: a component made
 // in render would be a new type every render and remount the scene.
