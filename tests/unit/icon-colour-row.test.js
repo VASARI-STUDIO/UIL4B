@@ -43,11 +43,12 @@ test('an icon outside the coloured packs never waits', () => {
   assert.equal(colourRowState({ inColouredPack: false, svg: null }).row, 'choose')
 })
 
-test('the waiting row is hidden but keeps its height', () => {
+test('the waiting row hides its control but keeps its height and its label', () => {
   const jsx = stripJs(readFileSync(new URL('../../src/pages/IconLibrary.jsx', import.meta.url), 'utf8'))
   assert.match(jsx, /icust-row\$\{colourRow === 'wait' \? ' icust-row--wait' : ''\}/)
   const css = stripCss(readFileSync(new URL('../../src/styles/deferred/library.css', import.meta.url), 'utf8'))
-  assert.match(css, /\.icust-row--wait\s*\{\s*visibility:\s*hidden\s*\}/)
+  assert.match(css, /\.icust-row--wait\s*>\s*:not\(label\)\s*\{\s*visibility:\s*hidden\s*\}/)
+  assert.doesNotMatch(css, /\.icust-row--wait\s*\{/)
 })
 
 test('the "Original colours" text is a plain value, never a Default pill', () => {

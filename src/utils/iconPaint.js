@@ -70,8 +70,11 @@ export function isMulticolourSvg(svg) {
 // The one paint colour of single-colour artwork (lowercase, as normalizePaint
 // writes it), or null when it has several, a gradient or none. Shapes with no paint
 // of their own are black, so they are the colour of an icon that sets none.
+// Art coloured some way the attributes do not show (a <style> block, an <image>,
+// <text>, a <use> or a <foreignObject>) is null: its colour is not knowable here.
+const HIDDEN_PAINT = /<(?:style|image|text|use|foreignObject)[\s>/]/i
 export function singlePaint(svg) {
-  if (!svg || isMulticolourSvg(svg)) return null
+  if (!svg || HIDDEN_PAINT.test(svg) || isMulticolourSvg(svg)) return null
   const paints = new Set()
   mapPaints(svg, value => {
     const paint = normalizePaint(value)

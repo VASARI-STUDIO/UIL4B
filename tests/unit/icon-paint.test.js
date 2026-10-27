@@ -60,6 +60,18 @@ test('single paint: one colour, the implicit black, or nothing to name', () => {
   assert.equal(singlePaint(null), null)
 })
 
+test('single paint is null when colour hides outside the attributes', () => {
+  assert.equal(singlePaint('<svg><style>.a{fill:#e60000}</style><path class="a"/></svg>'), null)
+  assert.equal(singlePaint('<svg><style>path{fill:#fff}</style><path fill="#000"/></svg>'), null)
+  assert.equal(singlePaint('<svg><style type="text/css">.a{fill:red}</style><path class="a"/></svg>'), null)
+  assert.equal(singlePaint('<svg><image href="a.png"/></svg>'), null)
+  assert.equal(singlePaint('<svg><text x="0">Hi</text></svg>'), null)
+  assert.equal(singlePaint('<svg><defs><path id="a" fill="#000"/></defs><use href="#a"/></svg>'), null)
+  assert.equal(singlePaint('<svg><foreignObject><div/></foreignObject></svg>'), null)
+  // Plain shapes, even ones whose tag starts alike, still read as before.
+  assert.equal(singlePaint('<svg><path fill="#000"/></svg>'), '#000000')
+})
+
 test('luminance of plain colours', () => {
   assert.equal(paintLuminance('black'), 0)
   assert.equal(paintLuminance('white'), 1)
