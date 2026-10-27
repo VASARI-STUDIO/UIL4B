@@ -170,7 +170,7 @@ test('external and data: hrefs are dropped; a fragment href to an element in the
     'data:image/svg+xml;base64,PHN2Zy8+', 'x.svg#a', '', '#', '#a b', '#"><script>']) {
     const out = run(wrap(`<path id="a" d="M0 0"/><use href="${href.replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>`))
     assert.ok(out, href)
-    assert.equal(out.svg, wrap('<path id="a" d="M0 0"/>'), href)
+    assert.equal(out.svg, wrap('<path d="M0 0"/>'), href, 'the id nothing kept points at is dropped too')
   }
   const ok = run(wrap('<defs><path id="a" d="M0 0"/></defs><use href="#a" x="1"/><use xlink:href="#a"/>', ' xmlns:xlink="http://www.w3.org/1999/xlink"'))
   assert.equal(ok.svg, wrap('<defs><path id="a" d="M0 0"/></defs><use href="#a" x="1"/><use href="#a"/>'))
@@ -183,7 +183,7 @@ test('a <use> that points at nothing in the cleaned document is dropped, so it c
   // The only element with that id was inside a dropped subtree.
   assert.equal(run(wrap('<foreignObject><g id="a"/></foreignObject><use href="#a"/>')).svg, EMPTY)
   // href is only meaningful on <use>.
-  assert.equal(run(wrap('<path id="a" d="M0 0" href="#a"/>')).svg, wrap('<path id="a" d="M0 0"/>'))
+  assert.equal(run(wrap('<path id="a" d="M0 0" href="#a"/>')).svg, wrap('<path d="M0 0"/>'))
 })
 
 test('url(#local) survives in fill, stroke, clip-path and mask; any other url() does not', () => {
@@ -295,6 +295,28 @@ test('markup inside <title> is dropped, and text cannot break out of it', () => 
   assert.equal(out.svg, wrap('<title>x</title><desc>&lt;/desc&gt;&lt;script&gt;</desc>'))
 })
 
+test('no element survives inside <title> or <desc>, allow-listed or not, so inlining cannot close the <svg> early', () => {
+  for (const [src, note] of [
+    ['<title><g/></title><path d="M0 0"/>', '<g>'],
+    ['<desc><path d="M0 0"/></desc><path d="M1 1"/>', '<path>'],
+    ['<title><title/></title><path d="M2 2"/>', '<title>'],
+    ['<desc><g><title>deep</title></g></desc><path d="M3 3"/>', '<g>'],
+  ]) {
+    const out = run(wrap(src))
+    assert.ok(out, src)
+    assert.equal(out.ok, false, src)
+    assert.ok(out.removed.includes(note), `${src}: ${out.removed}`)
+    // Nothing between <title>/<desc> and its closing tag but text.
+    for (const m of out.svg.matchAll(/<(title|desc)>([^]*?)<\/\1>/g)) assert.doesNotMatch(m[2], /</, `${src}: element inside <${m[1]}>`)
+    assert.ok(out.svg.endsWith('/></svg>'), `${src}: the markup after it is still there`)
+    assertInert(out.svg, src)
+  }
+  assert.equal(run(wrap('<title><g/></title>')).svg, wrap('<title/>'))
+  // Text beside the dropped child stays; a plain title is untouched.
+  assert.equal(run(wrap('<title>a<g/>b</title>')).svg, wrap('<title>ab</title>'))
+  assert.deepEqual(run(wrap('<title>Flame</title><desc>A flame</desc>')), { ok: true, svg: wrap('<title>Flame</title><desc>A flame</desc>'), removed: [] })
+})
+
 test('attribute values cannot break out of their quotes on the way out', () => {
   for (const evil of [`red" onload="alert(1)`, `red' onload='alert(1)`, 'red"/><script>alert(1)</script><x a="', 'red&quot; onload=&quot;alert(1)']) {
     // Entity-encode the quotes and '<' so the file stays well-formed and the decoded value is the payload.
@@ -335,6 +357,11 @@ test('an allowed attribute name with a hostile value is dropped', () => {
     ['stroke-linecap', 'round;x'], ['stroke-linejoin', 'inherit'], ['fill-rule', 'evenodd '.repeat(2)], ['gradientUnits', 'x'],
     ['stroke-dasharray', '1 javascript:'], ['preserveAspectRatio', 'xMidYMid meet onload'], ['vector-effect', 'url(#a)'],
     ['id', 'a b'], ['id', '1a'], ['id', 'a"b'], ['id', 'a:b'], ['stop-color', 'url(#a)'],
+    // Only XML whitespace separates values: NBSP, U+2028 and U+3000 do not.
+    ['d', 'M0 0L1 1'], ['d', 'M0 0 L1 1'], ['points', '1,2 3,4'], ['viewBox', '0 0 24 24'],
+    ['viewBox', ' 0 0 24 24'], ['transform', 'translate(1 2)'], ['transform', 'translate(1 2)　rotate(5)'],
+    ['stroke-dasharray', '1 2'], ['fill', 'rgb(0,0,0 )'], ['fill', 'url(#a) red'],
+    ['preserveAspectRatio', 'xMidYMid slice'],
   ]
   for (const [name, value] of cases) {
     const out = run(wrap(`<defs><linearGradient id="a"/></defs><rect ${name}="${value.replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>`))
@@ -354,14 +381,23 @@ test('ordinary values of every kind pass through untouched', () => {
   assert.equal(out.svg, wrap(body, ' width="24" height="24" preserveAspectRatio="xMidYMid slice"'))
 })
 
+test('tab, CR and LF still separate values, as in a pretty-printed or wrapped path', () => {
+  const body = '<path d="M0\t0\r\nL1 1\n" transform="translate(1\n2)" stroke-dasharray="1\t2"/><polygon points="0,0\r\n4,4"/>'
+    + '<rect fill="rgb(0,\n0,\t0)" width="2" height="2"/>'
+  const out = run(wrap(body, ' preserveAspectRatio="xMidYMid\tslice"'))
+  assert.equal(out.ok, true, out.removed.join())
+  assert.match(out.svg, /preserveAspectRatio="xMidYMid\tslice"/)
+  assert.match(out.svg, /<path d="M0\t0\r\nL1 1" transform="translate\(1\n2\)" stroke-dasharray="1\t2"\/>/)
+})
+
 test('version, xml:space and xmlns:* declarations are dropped without a finding', () => {
   const out = run(`<svg xmlns="${NS}" version="1.1" xml:space="preserve" xmlns:xlink="http://www.w3.org/1999/xlink" baseProfile="full"/>`)
   assert.deepEqual(out, { ok: true, svg: `<svg xmlns="${NS}"/>`, removed: [] })
 })
 
 test('a duplicate id loses the second copy, so a reference cannot be ambiguous', () => {
-  const out = run(wrap('<path id="a" d="M0 0"/><path id="a" d="M1 1"/>'))
-  assert.equal(out.svg, wrap('<path id="a" d="M0 0"/><path d="M1 1"/>'))
+  const out = run(wrap('<path id="a" d="M0 0"/><path id="a" d="M1 1"/><use href="#a"/>'))
+  assert.equal(out.svg, wrap('<path id="a" d="M0 0"/><path d="M1 1"/><use href="#a"/>'))
   assert.equal(out.ok, false)
 })
 
@@ -424,8 +460,8 @@ test('idPrefix renames every id and every reference to one, fallback colour kept
     + '<path d="M0 0" fill="url(#g) red" stroke="url(#g)" clip-path="url(#c)"/><use href="#r"/>')
   const out = run(src, { idPrefix: 'ic1' })
   assert.equal(out.ok, true)
-  assert.equal(out.svg, wrap('<defs><linearGradient id="ic1g"/><clipPath id="ic1c"><rect id="ic1r" width="1" height="1"/></clipPath></defs>'
-    + '<path d="M0 0" fill="url(#ic1g) red" stroke="url(#ic1g)" clip-path="url(#ic1c)"/><use href="#ic1r"/>'))
+  assert.equal(out.svg, wrap('<defs><linearGradient id="ic1.g"/><clipPath id="ic1.c"><rect id="ic1.r" width="1" height="1"/></clipPath></defs>'
+    + '<path d="M0 0" fill="url(#ic1.g) red" stroke="url(#ic1.g)" clip-path="url(#ic1.c)"/><use href="#ic1.r"/>'))
   assertInert(out.svg)
 })
 
@@ -433,16 +469,63 @@ test('two icons with the same ids share none once prefixed, and the sprite stays
   const a = run(wrap('<defs><clipPath id="c"/></defs><g clip-path="url(#c)"/>'), { idPrefix: 'a-' })
   const b = run(wrap('<defs><clipPath id="c"/></defs><g clip-path="url(#c)"/>'), { idPrefix: 'b-' })
   const ids = (svg) => [...svg.matchAll(/ id="([^"]+)"/g)].map(m => m[1])
-  assert.deepEqual(ids(a.svg), ['a-c'])
-  assert.deepEqual(ids(b.svg), ['b-c'])
-  assert.match(a.svg, /clip-path="url\(#a-c\)"/)
-  assert.match(b.svg, /clip-path="url\(#b-c\)"/)
+  assert.deepEqual(ids(a.svg), ['a-.c'])
+  assert.deepEqual(ids(b.svg), ['b-.c'])
+  assert.match(a.svg, /clip-path="url\(#a-\.c\)"/)
+  assert.match(b.svg, /clip-path="url\(#b-\.c\)"/)
 })
 
 test('a prefixed id is still a valid id and cannot be used to smuggle a reference', () => {
   const out = run(wrap('<path id="a" d="M0 0"/><use href="#a"/>'), { idPrefix: 'p_1-x' })
-  assert.match(out.svg, /id="p_1-xa"/)
-  assert.match(out.svg, /href="#p_1-xa"/)
+  assert.match(out.svg, /id="p_1-x\.a"/)
+  assert.match(out.svg, /href="#p_1-x\.a"/)
+})
+
+test('different (prefix, id) pairs never give the same prefixed id', () => {
+  // A prefix cannot contain the separator, so the first "." always ends the prefix.
+  const idOut = (prefix, id) => run(wrap(`<path id="${id}" d="M0 0"/>`), { idPrefix: prefix }).svg.match(/ id="([^"]+)"/)[1]
+  const pairs = [['ab', '_x'], ['a', 'b_x'], ['a_', 'x'], ['a', '_x'], ['a', 'b.x'], ['a-', 'x'], ['a', '_-x']]
+  const seen = new Map()
+  for (const [prefix, id] of pairs) {
+    const out = idOut(prefix, id)
+    assert.ok(!seen.has(out), `${prefix}+${id} collides with ${seen.get(out)} as ${out}`)
+    seen.set(out, `${prefix}+${id}`)
+  }
+  assert.equal(seen.size, pairs.length)
+})
+
+test('without an idPrefix, ids nothing points at are dropped so they cannot reach the host page', () => {
+  const out = run('<svg xmlns="' + NS + '" id="main-nav" viewBox="0 0 24 24"><g id="app"/><path id="label" d="M0 0"/></svg>')
+  assert.equal(out.svg, wrap('<g/><path d="M0 0"/>'))
+  assert.equal(out.ok, true, 'a dropped id is noise, not a finding')
+  assert.deepEqual(out.removed, [])
+})
+
+test('without an idPrefix, ids that a kept url(#id) or <use href> points at stay, references intact', () => {
+  const src = wrap('<defs><linearGradient id="g"/><clipPath id="c"/><path id="p" d="M0 0"/><g id="loose"/></defs>'
+    + '<rect fill="url(#g) red" clip-path="url(#c)"/><use href="#p"/>')
+  const out = run(src)
+  assert.equal(out.svg, wrap('<defs><linearGradient id="g"/><clipPath id="c"/><path id="p" d="M0 0"/><g/></defs>'
+    + '<rect fill="url(#g) red" clip-path="url(#c)"/><use href="#p"/>'))
+  assert.equal(out.ok, true)
+  // The reference can come before its target.
+  assert.equal(run(wrap('<use href="#p"/><path id="p" d="M0 0"/>')).svg, wrap('<use href="#p"/><path id="p" d="M0 0"/>'))
+})
+
+test('without an idPrefix, an id only a dropped reference pointed at is dropped', () => {
+  // The <use> goes (its href names nothing, or was refused), so its fill reference counts for nothing.
+  for (const href of ['#missing', 'http://evil.example/x.svg#g']) {
+    const out = run(wrap(`<linearGradient id="g"/><use fill="url(#g)" href="${href}"/>`))
+    assert.equal(out.svg, wrap('<linearGradient/>'), href)
+  }
+  // A reference to an id in the page, not the file, is dropped and keeps no id alive.
+  assert.equal(run(wrap('<g id="a"/><rect fill="url(#b)"/>')).svg, wrap('<g/><rect/>'))
+})
+
+test('with an idPrefix, every id is kept (prefixed), referenced or not', () => {
+  const out = run(wrap('<g id="app"/><path id="p" d="M0 0"/><use href="#p"/>'), { idPrefix: 'ic' })
+  assert.equal(out.svg, wrap('<g id="ic.app"/><path id="ic.p" d="M0 0"/><use href="#ic.p"/>'))
+  assert.equal(out.ok, true)
 })
 
 test('a bad idPrefix is a caller bug and throws', () => {
@@ -516,15 +599,21 @@ test('the committed sprite (symbols, clipPath, fill-rule, url(#clip)) keeps its 
   const out = run(src)
   assert.ok(out)
   assert.equal(out.ok, true, `the sprite lost: ${out.removed}`)
-  assert.deepEqual(shape(out.svg), shape(src))
+  // No prefix: only the clipPath id is referenced inside the file, so the
+  // <symbol> ids (used from outside it) are gone.
+  const keepReferencedId = (attrs) => attrs.filter(a => !a.startsWith('id=') || a === 'id=bluesky-clip')
+  assert.deepEqual(shape(out.svg), shape(src).map(([t, attrs]) => [t, keepReferencedId(attrs)]))
   const tags = shape(out.svg).map(([t]) => t)
   for (const t of ['symbol', 'clipPath', 'defs', 'g', 'path']) assert.ok(tags.includes(t), t)
   assert.match(out.svg, /clip-path="url\(#bluesky-clip\)"/)
+  assert.doesNotMatch(out.svg, /<symbol id=/)
 
+  // With a prefix every id stays, so the same sprite is whole once the prefix is peeled off.
   const prefixed = run(src, { idPrefix: 'sp' })
-  assert.match(prefixed.svg, /clip-path="url\(#spbluesky-clip\)"/)
-  assert.match(prefixed.svg, /<clipPath id="spbluesky-clip">/)
-  assert.match(prefixed.svg, /<symbol id="spbluesky-icon"/)
+  assert.match(prefixed.svg, /clip-path="url\(#sp\.bluesky-clip\)"/)
+  assert.match(prefixed.svg, /<clipPath id="sp\.bluesky-clip">/)
+  assert.match(prefixed.svg, /<symbol id="sp\.bluesky-icon"/)
+  assert.deepEqual(shape(prefixed.svg.replace(/sp\./g, '')), shape(src))
 })
 
 test('a pretty-printed multi-pack icon with gradient, mask and symbol round-trips', () => {

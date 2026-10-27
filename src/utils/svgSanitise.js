@@ -32,6 +32,8 @@
 //    <animate>, <set>, <text>, <filter>, metadata, every prefixed element, plus
 //    style / class / on* attributes, comments, processing instructions, CDATA
 //    outside <title>/<desc>. A dropped element takes its whole subtree with it.
+//  · <title> and <desc> keep text only: any element inside one is dropped, even
+//    an allow-listed one (an HTML parser would end the <svg> at it).
 //  · `class` is dropped on purpose: inlined, it would hook the host page's own
 //    stylesheet (position: fixed overlays, display: none, spoofed UI).
 //
@@ -54,10 +56,14 @@
 //  sanitizeSvgMarkup() in IconLibrary, so swapping this in is a one-line change.
 //
 // OPTIONS: `idPrefix` (letters, digits, `-`, `_`; starts with a letter) is put in
-// front of every id and every reference to one, so several icons inlined into
-// one page, or one sprite, cannot collide. A bad prefix throws RangeError: it is
-// a caller bug, not untrusted input. `maxBytes`, `maxElements`, `maxDepth` and
-// `maxUse` override SVG_LIMITS.
+// front of every id and every reference to one, joined with a `.` (`ic1.g`), so
+// several icons inlined into one page, or one sprite, cannot collide. A bad
+// prefix throws RangeError: it is a caller bug, not untrusted input. `maxBytes`,
+// `maxElements`, `maxDepth` and `maxUse` override SVG_LIMITS.
+//  · Without an idPrefix, an id survives only when a kept url(#id) or <use href>
+//    in the file points at it; every other id is dropped without a note, so
+//    author ids do not reach the host page's id namespace. A sprite whose
+//    <symbol>s are used from outside the file needs an idPrefix to keep its ids.
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -83,17 +89,19 @@ const TEXT_ELEMENTS = new Set(['title', 'desc'])
 // to drop the attribute. They return the author's own text where it is valid, so
 // a clean icon comes out byte-for-byte as it went in.
 
+// Value regexes name XML whitespace (space, tab, CR, LF) outright: `\s` also
+// matches NBSP, U+2028 and other Unicode spaces that no SVG value grammar allows.
 const NUMBER_RE = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/
 const LENGTH_RE = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?(?:px|em|rem|ex|pt|pc|mm|cm|in|%)?$/
 const ID_RE = /^[A-Za-z_][\w.-]*$/
 const HEX_RE = /^#[0-9a-fA-F]{3,8}$/
-const COLOUR_FN_RE = /^(?:rgb|rgba|hsl|hsla)\(\s*[-+\d.%\s,/a-z]*\)$/i
+const COLOUR_FN_RE = /^(?:rgb|rgba|hsl|hsla)\([ \t\r\n]*[-+\d.% \t\r\n,/a-z]*\)$/i
 const KEYWORD_RE = /^[a-zA-Z]{1,24}$/
-const URL_REF_RE = /^url\(\s*["']?#([A-Za-z_][\w.-]*)["']?\s*\)(?:\s+(\S.*))?$/
-const PATH_DATA_RE = /^[\sMmLlHhVvCcSsQqTtAaZz\d.,eE+-]*$/
-const POINTS_RE = /^[\s\d.,eE+-]*$/
-const TRANSFORM_STEP = /\s*(?:matrix|translate|scale|rotate|skewX|skewY)\s*\([-+\d.eE\s,]*\)[\s,]*/y
-const ASPECT_RE = /^(?:defer\s+)?(?:none|x(?:Min|Mid|Max)Y(?:Min|Mid|Max))(?:\s+(?:meet|slice))?$/
+const URL_REF_RE = /^url\([ \t\r\n]*["']?#([A-Za-z_][\w.-]*)["']?[ \t\r\n]*\)(?:[ \t\r\n]+(\S.*))?$/
+const PATH_DATA_RE = /^[ \t\r\nMmLlHhVvCcSsQqTtAaZz\d.,eE+-]*$/
+const POINTS_RE = /^[ \t\r\n\d.,eE+-]*$/
+const TRANSFORM_STEP = /[ \t\r\n]*(?:matrix|translate|scale|rotate|skewX|skewY)[ \t\r\n]*\([-+\d.eE \t\r\n,]*\)[ \t\r\n,]*/y
+const ASPECT_RE = /^(?:defer[ \t\r\n]+)?(?:none|x(?:Min|Mid|Max)Y(?:Min|Mid|Max))(?:[ \t\r\n]+(?:meet|slice))?$/
 // eslint-disable-next-line no-control-regex
 const CLOAK_RE = /[\u0000- \u007f-\u009f]/g
 // Matched after stripping whitespace and control characters, so `java\tscript:`
@@ -102,7 +110,7 @@ const HOSTILE_RE = /(?:javascript|vbscript|data|file|blob):|expression\(|@import
 
 const length = (v) => { const t = v.trim(); return LENGTH_RE.test(t) ? t : null }
 const oneOf = (...values) => { const set = new Set(values); return (v) => { const t = v.trim(); return set.has(t) ? t : null } }
-const tokens = (v) => v.trim().split(/[\s,]+/).filter(Boolean)
+const tokens = (v) => v.split(/[ \t\r\n,]+/).filter(Boolean)
 
 function simplePaint(t) {
   return HEX_RE.test(t) || COLOUR_FN_RE.test(t) || KEYWORD_RE.test(t)
@@ -362,6 +370,11 @@ function cleanElement(node, ctx) {
       if (TEXT_ELEMENTS.has(node.name)) children.push(child)
       continue
     }
+    // <title> and <desc> are HTML integration points: an element inside one is
+    // parsed as HTML when the SVG is inlined, can close the <svg> early and
+    // swallow the markup after it. Only text may stay, so every element child
+    // goes, whatever its name.
+    if (TEXT_ELEMENTS.has(node.name)) { ctx.note(`<${child.name.slice(0, 40)}>`); continue }
     const kept = cleanElement(child, ctx)
     if (kept) children.push(kept)
   }
@@ -383,32 +396,52 @@ function collectIds(node, ids, ctx) {
   for (const c of node.children) if (c.name) collectIds(c, ids, ctx)
 }
 
+// The prefix and the id are joined with a character no prefix can contain, so the
+// pair can be read back and two different (prefix, id) pairs never give the same
+// result (`a_` + `x` and `a` + `_x` would both be `a__x` with `_`).
+const ID_SEP = '.'
+const prefixed = (prefix, id) => (prefix ? `${prefix}${ID_SEP}${id}` : id)
+
 // Drops references that leave the document and applies the id prefix. Returns
-// false when the node itself must go (a <use> with nothing to point at).
+// false when the node itself must go (a <use> with nothing to point at). The ids
+// that kept references point at are added to ctx.referenced, unprefixed.
 function resolveRefs(node, ids, ctx) {
   const prefix = ctx.idPrefix
   const attrs = []
+  const refs = []
   for (const [name, value] of node.attrs) {
-    if (name === 'id') { attrs.push([name, prefix + value]); continue }
+    if (name === 'id') { attrs.push([name, prefixed(prefix, value)]); continue }
     if (name === 'href') {
       if (!ids.has(value.slice(1))) { ctx.note(`<${node.name}>`); return false }
-      attrs.push([name, `#${prefix}${value.slice(1)}`])
+      refs.push(value.slice(1))
+      attrs.push([name, `#${prefixed(prefix, value.slice(1))}`])
       continue
     }
     const ref = value.startsWith('url(#') ? URL_REF_RE.exec(value) : null
     if (ref) {
       if (!ids.has(ref[1])) { ctx.note(`@${name}`); continue }
-      attrs.push([name, `url(#${prefix}${ref[1]})${ref[2] ? ` ${ref[2]}` : ''}`])
+      refs.push(ref[1])
+      attrs.push([name, `url(#${prefixed(prefix, ref[1])})${ref[2] ? ` ${ref[2]}` : ''}`])
       continue
     }
     attrs.push([name, value])
   }
   // A <use> whose href was refused draws nothing, so it goes rather than staying
-  // behind as an empty shell.
+  // behind as an empty shell. Its other references go with it, uncounted.
   if (node.name === 'use' && !attrs.some(a => a[0] === 'href')) { ctx.note('<use>'); return false }
+  for (const id of refs) ctx.referenced.add(id)
   node.attrs = attrs
   node.children = node.children.filter(c => c.text !== undefined || resolveRefs(c, ids, ctx))
   return true
+}
+
+// Without an idPrefix an author id would land in the host page's own id space
+// (CSS #id hooks, getElementById, label and aria targets), so only the ids that
+// a kept reference inside the file needs are left.
+function dropUnreferencedIds(node, referenced) {
+  const id = idOf(node)
+  if (id !== undefined && !referenced.has(id)) node.attrs = node.attrs.filter(a => a[0] !== 'id')
+  for (const c of node.children) if (c.name) dropUnreferencedIds(c, referenced)
 }
 
 // ── output ──────────────────────────────────────────────────────────────────
@@ -452,6 +485,7 @@ export function sanitiseSvgInline(source, options = {}) {
     limits,
     idPrefix,
     uses: 0,
+    referenced: new Set(),
     note: (what) => { if (removed.size < MAX_REMOVED_NOTES) removed.add(what) },
   }
 
@@ -463,6 +497,7 @@ export function sanitiseSvgInline(source, options = {}) {
     const ids = new Set()
     collectIds(clean, ids, ctx)
     resolveRefs(clean, ids, ctx)
+    if (!idPrefix) dropUnreferencedIds(clean, ctx.referenced)
     const notes = [...removed]
     return { ok: notes.length === 0, svg: serialise(clean), removed: notes }
   } catch (err) {
