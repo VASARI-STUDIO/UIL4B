@@ -24,6 +24,9 @@
 //   7c. tracing a colour leaves no outline on a drawn (SVG) part
 //   7d. Orra's colourway names fit under their swatches at 1440, 768 and 390
 //   7e. Orra's shirt stays inside its stage and off the buy column at 1440, 768, 390
+//   7f. the legend: at most two chip rows, the adjusted-as-text caption is one line and its chips point at it
+//   7g. the Slack Water headline runs to at most three lines at 1440 and 768
+//   7h. the Orra colourways sit in one row of five at 390, every name fitting
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //
 // HOW GROUND IS FOUND (7). Not by walking ancestors: a label that sits on a
@@ -44,7 +47,9 @@
 // `overflow:hidden` from `.or-thumb .or-garment` (7, the Pocket label); render the
 // Sundial Solar tag as plain `sd-tag` (7b, 3 red); delete `.pvs svg [data-role]{outline:none}`
 // in palette-preview.css (7c, 3 red); put `.or-sw` back to its old width and
-// `.or-sw-t` back to ellipsis (7d, 3 red).
+// `.or-sw-t` back to ellipsis (7d, 3 red); `aria-describedby` off the chips (7f), chips min-width 330px (7f, 3),
+// the headline clamp back to 6.4cqi (7g), Orra swatches flex-wrap (7h); put previewLoader back to Promise.all, or
+// React lazy back in PaletteBuilder (9).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
@@ -656,6 +661,127 @@ test.describe('the Orra product stage', () => {
   }
 })
 
+// ── 7f. the legend stays compact, and its note is attached to the chips ──────
+// The "darker as text, so it reads" note used to sit inside a chip and push the
+// row onto a third line. It is now a one-line caption under the chips, and every
+// chip it speaks of points at it with aria-describedby.
+
+test.describe('the legend', () => {
+  for (const ex of EXAMPLES) {
+    test(`${ex.name}: at most two chip rows, and the adjusted-as-text caption is one line that its chips are described by`, async ({ page }) => {
+      watch(page, `designer reading the legend beside ${ex.name}`)
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await seed(page, PALETTES.mid)
+      const dialog = await openDialog(page)
+      await pickScene(dialog, ex.name)
+      await settle(page)
+      const legend = await page.evaluate(() => {
+        const root = document.querySelector('.pvd-legend')
+        if (!root) return null
+        const chips = [...root.querySelectorAll('.pvd-chip')]
+        const rows = new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top)))
+        const cap = root.querySelector('.pvd-legend-adj')
+        const capBox = cap && cap.getBoundingClientRect()
+        const names = cap ? cap.textContent.split(':')[0].split(',').map((s) => s.trim()) : []
+        return {
+          chipCount: chips.length,
+          rows: rows.size,
+          caption: cap && {
+            id: cap.id, text: cap.textContent.trim(), size: parseFloat(getComputedStyle(cap).fontSize), height: capBox.height,
+            inChip: !!cap.closest('.pvd-chip'),
+            below: capBox.top >= Math.max(...chips.slice(0, 5).map((c) => c.getBoundingClientRect().bottom)) - 1,
+          },
+          described: chips.map((c) => ({
+            label: c.querySelector('.pvd-chip-l').textContent.trim(),
+            by: c.getAttribute('aria-describedby'),
+            target: c.getAttribute('aria-describedby') && !!document.getElementById(c.getAttribute('aria-describedby')),
+          })),
+          names,
+        }
+      })
+      expect(legend, 'the legend was found').toBeTruthy()
+      expect(legend.chipCount, 'ten chips: five colours and five suggested').toBe(10)
+      expect(legend.rows, 'the chips run to more than two rows').toBeLessThanOrEqual(2)
+      // The caption names the roles this scene uses that were read darker as text, so it is
+      // required where the mid palette has one (Editorial hero) and held to its rules wherever it appears.
+      if (ex.id === 'editorial') expect(legend.caption, 'the mid palette has a colour read darker as text, so a caption is expected').toBeTruthy()
+      if (!legend.caption) { for (const d of legend.described) expect(d.by, `"${d.label}" points at a caption that is not there`).toBeNull(); return }
+      expect(legend.caption.inChip, 'the caption is inside a chip').toBe(false)
+      expect(legend.caption.below, 'the caption is not under the colour chips').toBe(true)
+      expect(legend.caption.size, 'caption type is under the 12px floor').toBeGreaterThanOrEqual(12)
+      expect(legend.caption.height, `the caption takes more than one line: "${legend.caption.text}"`).toBeLessThan(24)
+      expect(legend.names.length, 'the caption names at least one colour').toBeGreaterThan(0)
+      for (const name of legend.names) {
+        const chip = legend.described.find((d) => d.label === name)
+        expect(chip, `the caption names "${name}", which is not a chip`).toBeTruthy()
+        expect(chip.by, `the "${name}" chip is not described by the caption`).toBe(legend.caption.id)
+        expect(chip.target, `the "${name}" chip points at an id that is not on the page`).toBe(true)
+      }
+      for (const d of legend.described.filter((x) => x.by)) {
+        expect(legend.names, `"${d.label}" is described by the caption but is not named in it`).toContain(d.label)
+      }
+    })
+  }
+})
+
+// ── 7g. Slack Water's headline stays within three lines ──────────────────────
+
+test.describe('the Slack Water headline', () => {
+  for (const width of [1440, 768]) {
+    test(`runs to at most three lines at ${width}px, in both themes`, async ({ page }) => {
+      watch(page, `designer reading the Slack Water headline at ${width}px`)
+      await page.setViewportSize({ width, height: 900 })
+      await seed(page, PALETTES.mid)
+      const dialog = await openDialog(page)
+      for (const theme of ['Light', 'Dark']) {
+        await setTheme(dialog, theme)
+        await pickScene(dialog, 'Editorial hero')
+        await settle(page)
+        const lines = await page.evaluate(() => {
+          const h = document.querySelector('.sw-head')
+          if (!h) return null
+          const range = document.createRange()
+          range.selectNodeContents(h)
+          const tops = new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top / 4)))
+          return { lines: tops.size, text: h.textContent.trim(), size: parseFloat(getComputedStyle(h).fontSize) }
+        })
+        expect(lines, `${theme}: the headline was found`).toBeTruthy()
+        expect(lines.text, 'the headline text is the one this test was written for').toContain('Manly')
+        expect(lines.lines, `${theme}: "${lines.text}" runs to ${lines.lines} lines at ${lines.size}px`).toBeLessThanOrEqual(3)
+        expect(lines.lines, `${theme}: the line count was read from real boxes`).toBeGreaterThanOrEqual(2)
+      }
+    })
+  }
+})
+
+// ── 7h. Orra's five colourways sit in one row on a phone ─────────────────────
+
+test.describe('the Orra colourways on a phone', () => {
+  test('five swatches share one row at 390px and every name fits under its swatch', async ({ page }) => {
+    watch(page, 'designer reading the Orra colourways on a phone')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await seed(page, PALETTES.mid)
+    const dialog = await openDialog(page)
+    for (const theme of ['Light', 'Dark']) {
+      await setTheme(dialog, theme)
+      await pickScene(dialog, 'Product page')
+      await settle(page)
+      const sw = await page.evaluate(() => [...document.querySelectorAll('.or-sw')].map((el) => {
+        const r = el.getBoundingClientRect()
+        const t = el.querySelector('.or-sw-t')
+        return { name: t.textContent.trim(), top: r.top, width: r.width, scroll: t.scrollWidth, client: t.clientWidth, lines: Math.round(t.getBoundingClientRect().height / parseFloat(getComputedStyle(t).lineHeight)) }
+      }))
+      expect(sw.length, `${theme}: five colourways`).toBe(5)
+      expect(new Set(sw.map((s) => Math.round(s.top))).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
+      for (const s of sw) {
+        expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
+        expect(s.scroll, `${theme}: "${s.name}" is wider than its box`).toBe(s.client)
+        expect(s.lines, `${theme}: "${s.name}" wraps onto a second line`).toBe(1)
+      }
+    }
+  })
+})
+
 // ── 8. a chunk that never arrives ────────────────────────────────────────────
 
 test.describe('an example that fails to download', () => {
@@ -681,5 +807,87 @@ test.describe('an example that fails to download', () => {
     await pickScene(dialog, 'Dashboard')
     await expect(dialog).toBeVisible()
     expect(navigations, 'the page reloaded when the chunk failed').toBe(0)
+  })
+})
+
+// ── 9. the dialog's own chunk fails ──────────────────────────────────────────
+// Opposite to an example. A failed EXAMPLE is answered inside the dialog and must
+// not reload (section 8). The DIALOG's file failing is a stale or dropped page
+// file like any other: main.jsx answers it with one guarded reload, and until the
+// reload lands the page must wait, not paint the error boundary or file a crash.
+// The reload is held (asked for, never served) so the old document keeps running.
+// Playwright will not read a document whose navigation is held, so the page says
+// what it shows over the console (the same way spec 46 does).
+
+test.describe('the preview dialog fails to download', () => {
+  test('the page asks for one reload and shows no error card, no crash report and no dialog while it waits', async ({ page }) => {
+    watch(page, 'visitor whose preview dialog never arrives')
+    const PROBE = '[dialog-probe]'
+    const probe = []
+    const reports = []
+    const defaultThrows = []
+    const posted = []
+    page.on('console', (m) => {
+      const t = m.text()
+      if (t.startsWith(PROBE)) probe.push(t.slice(PROBE.length + 1))
+      if (t.includes('[crash report, not sent outside production]')) reports.push(t)
+    })
+    page.on('pageerror', (e) => { if (/reading 'default'|'default' in undefined/.test(String(e && e.message))) defaultThrows.push(e.message) })
+    page.on('request', (r) => { if (r.url().includes('/api/support')) posted.push(r.url()) })
+
+    await seed(page, PALETTES.mid)
+    await go(page, '/create/palette')
+    await page.evaluate((tag) => {
+      const say = (what) => console.log(`${tag} ${what}`)
+      const state = () => `card=${!!document.querySelector('.error-boundary')} dialog=${!!document.querySelector('[role="dialog"][aria-label="Palette preview"]')}`
+      let crashed = false
+      new MutationObserver(() => {
+        if (!crashed && document.querySelector('.error-boundary')) { crashed = true; say('error card mounted') }
+      }).observe(document.documentElement, { childList: true, subtree: true })
+      window.addEventListener('beforeunload', () => {
+        say('reload started')
+        setTimeout(() => say(`reload pending ${state()}`), 1500)
+      })
+    }, PROBE)
+
+    const failed = { count: 0 }
+    // The dialog fails a moment after the click, as a dropped connection does, and the
+    // first example is slow: if the example were requested alongside the dialog it would
+    // be in flight when the dialog's failure is raised, and main.jsx would take that
+    // failure for the example's and not reload. So no example may be requested at all.
+    const exampleRequests = []
+    await page.route(/\/assets\/(?:SlackWater|Sundial|OrraWorkroom)-[^/]+\.js$/, async (route) => {
+      exampleRequests.push(route.request().url())
+      await new Promise((resolve) => setTimeout(resolve, 2500))
+      await route.continue().catch(() => {})
+    })
+    await page.route('**/assets/PalettePreviewDialog-*.js', async (route) => {
+      failed.count += 1
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      await route.abort().catch(() => {})
+    })
+    const held = []
+    await page.route((url) => url.pathname === '/create/palette', (route) => {
+      if (route.request().resourceType() !== 'document') return route.continue()
+      held.push(route)
+      return undefined
+    })
+
+    await clickPaletteAction(page, 'Preview on a UI')
+    await expect.poll(() => held.length, { message: 'the failed dialog chunk should have asked for exactly one reload' }).toBe(1)
+    await expect.poll(() => probe.find((p) => p.startsWith('reload pending')), { message: 'the in-page probe never reported, so this test read nothing', timeout: 10000 }).toBeTruthy()
+    expect(failed.count, 'the dialog chunk request must actually have been failed').toBeGreaterThan(0)
+    expect(held.length, 'more than one reload was asked for').toBe(1)
+    expect(exampleRequests, 'an example was requested while the dialog was still failing').toEqual([])
+    expect(probe, 'the error card was shown for a page that is reloading').not.toContain('error card mounted')
+    expect(probe.find((p) => p.startsWith('reload pending')), 'the page should wait with no card and no dialog').toBe('reload pending card=false dialog=false')
+    expect(defaultThrows, "React threw on the missing module's .default").toEqual([])
+    expect(reports, 'a crash was reported for a page that is reloading').toEqual([])
+    expect(posted).toEqual([])
+
+    await page.unroute('**/assets/PalettePreviewDialog-*.js')
+    const reloaded = page.waitForEvent('domcontentloaded')
+    await held[0].continue()
+    await reloaded
   })
 })
