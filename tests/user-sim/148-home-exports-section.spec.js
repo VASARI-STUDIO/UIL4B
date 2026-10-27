@@ -524,8 +524,10 @@ test.describe('plate swap motion', () => {
     const started = await swapAndWatch(page)
     const swapped = await durations(page)
     expect(swapped.some((r) => parseFloat(r.transition) === 0.15), `a 150ms fade: ${JSON.stringify(swapped)}`).toBe(true)
-    expect(swapped.some((r) => parseFloat(r.animation) === 0.24), `a 240ms slide on the shown picture: ${JSON.stringify(swapped)}`).toBe(true)
-    expect(started, 'motion seen running on a plate picture').toEqual(['animation', 'transition'])
+    expect(swapped.some((r) => parseFloat(r.transition) === 0.24), `a 240ms rise on the shown picture: ${JSON.stringify(swapped)}`).toBe(true)
+    // Transitions only: an interrupted keyframe animation would snap the
+    // picture it leaves to transparent instead of fading it from where it is.
+    expect(started, 'motion seen running on a plate picture').toEqual(['transition'])
     await ctx.close()
   })
 

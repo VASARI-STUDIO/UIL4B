@@ -444,7 +444,6 @@ function PlatePicture({ item, on, failed, imgRef, onLoad, onError }) {
 function usePlate() {
   const [active, setActive] = useState(0)
   const [shown, setShown] = useState(0)
-  const [swapped, setSwapped] = useState(false)
   const [mounted, setMounted] = useState(() => new Set([0]))
   const [failed, setFailed] = useState(() => new Set())
   const activeRef = useRef(0)
@@ -464,7 +463,6 @@ function usePlate() {
     if (i === activeRef.current) return
     activeRef.current = i
     setActive(i)
-    setSwapped(true)
     mount(i)
     const el = imgs.current[i]
     if (el && el.complete && el.naturalWidth > 0) reveal(i)
@@ -476,12 +474,12 @@ function usePlate() {
     if (activeRef.current === i) setShown(i)
   }
 
-  return { active, shown, swapped, mounted, failed, imgs, mount, select, onLoad, onError }
+  return { active, shown, mounted, failed, imgs, mount, select, onLoad, onError }
 }
 
 function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead }) {
   const tabs = role === 'tab'
-  const { active, shown, swapped, mounted, failed, imgs, mount, select, onLoad, onError } = plate
+  const { active, shown, mounted, failed, imgs, mount, select, onLoad, onError } = plate
 
   return (
     <div className="sp-stage">
@@ -492,7 +490,7 @@ function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead })
         aria-labelledby={tabs ? `${uid}-pills-${active}` : undefined}
         tabIndex={tabs ? 0 : undefined}
       >
-        <div className={swapped ? 'sp-plate-art is-swap' : 'sp-plate-art'}>
+        <div className="sp-plate-art">
           {items.map((item, i) => (mounted.has(i) ? (
             <PlatePicture
               key={item.id}

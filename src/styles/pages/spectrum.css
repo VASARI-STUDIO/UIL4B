@@ -996,12 +996,12 @@
 .sp-stage::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(var(--sp-ink-rgb), .12); pointer-events: none; }
 .sp-plate { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
 .sp-plate-art { position: relative; min-height: 0; }
-.sp-plate-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transition: opacity 150ms ease; }
-.sp-plate-art img.is-on { opacity: 1; }
-/* The arriving picture rises 8px as it fades in; the leaving one only fades, so
-   nothing jumps. The first picture is not animated (no .is-swap yet). */
-.sp-plate-art.is-swap img.is-on { animation: sp-plate-in 240ms var(--sp-ease) backwards; }
-@keyframes sp-plate-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* Transitions, not a keyframe animation: an interrupted swap then fades each
+   picture from wherever it is, so a quick second click never drops the plate
+   to empty. The arriving picture rises 8px over 240ms; the leaving one fades
+   over 150ms. The first picture is on from its first paint, so it never moves. */
+.sp-plate-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transform: translateY(8px); transition: opacity 150ms ease, transform 150ms ease; }
+.sp-plate-art img.is-on { opacity: 1; transform: none; transition: opacity 240ms var(--sp-ease), transform 240ms var(--sp-ease); }
 .sp-plate-fail { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
 .sp-plate-cap { display: grid; justify-items: center; gap: 2px; padding: 0 16px 12px; text-align: center; font-size: 12px; line-height: 1.4; color: var(--sp-dim); }
 .sp-plate-cap b { font-weight: 540; color: var(--sp-ink); }
