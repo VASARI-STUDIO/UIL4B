@@ -227,18 +227,24 @@ function markImg(logo, { cls = '', alt = '', height = '' } = {}) {
 export function guidelineSections(d) {
   const sections = []
   if (d.logo) {
+    // A logo that states no proportions has no clear-space page, so neither the abstract nor the leaves claim one.
+    const clear = Boolean(d.logo.aspect)
     sections.push({
       id: 'logo',
       title: 'Logo',
-      abstract: 'The mark as supplied, checked on every ground the system provides, and the space it is entitled to keep.',
-      leaves: ['The mark', 'On grounds', 'Clear space'],
+      abstract: `The mark as supplied, checked on every ground the system provides${clear ? ', and the space it is entitled to keep' : ''}.`,
+      leaves: clear ? ['The mark', 'On grounds', 'Clear space'] : ['The mark', 'On grounds'],
     })
   }
   if (d.palette.length) {
+    const count = Math.min(d.palette.length, MAX_SLOTS)
+    const said = count < d.palette.length
+      ? `The first ${count} of ${d.palette.length} colours`
+      : `${count} ${count === 1 ? 'colour' : 'colours'}`
     sections.push({
       id: 'colour',
       title: 'Colour',
-      abstract: `${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'} on ${systemName(d.harmony)} relationships, each named, specified, and shown carrying real type.`,
+      abstract: `${said} on ${systemName(d.harmony)} relationships, each named, specified, and shown carrying real type.`,
       leaves: ['The palette', 'In use'],
     })
   }
@@ -365,7 +371,8 @@ function groundList(d, roles) {
   return [
     { bg: roles.paper, label: 'Paper', border: true },
     { bg: roles.ink, label: 'Ink' },
-    ...d.palette.slice(0, 4).map((hex, i) => ({ bg: hex, label: sentence(roleLabel(d.harmony, i)) })),
+    // A brand colour near the paper gets the same hairline the paper tile has.
+    ...d.palette.slice(0, 4).map((hex, i) => ({ bg: hex, label: sentence(roleLabel(d.harmony, i)), border: nearPaper(hex, roles.paper) })),
   ].map((g) => ({ ...g, ink: inkFor(g.bg).ink, soft: softInk(inkFor(g.bg).ink, g.bg, contrast) }))
 }
 
@@ -416,7 +423,7 @@ function palettePage(ctx, folio) {
   const card = ({ i, span }) => {
     const s = slots[i]
     const { soft } = inkPair(s.hex)
-    return `<figure class="sw${i === 0 ? ' sw-primary' : ''}" style="flex:${span} 1 0;background:${s.hex};color:${s.ink};--soft:${soft}">
+    return `<figure class="sw${i === 0 ? ' sw-primary' : ''}${nearPaper(s.hex, ctx.roles.paper) ? ' sw-edge' : ''}" style="flex:${span} 1 0;background:${s.hex};color:${s.ink};--soft:${soft}">
       <figcaption class="sw-top">
         <span class="sw-role">${esc(s.role)}</span>
         <span class="sw-name">${esc(s.name)}</span>
@@ -565,7 +572,9 @@ function scalePage(ctx, ladder, folio) {
  */
 function scopeFacts(ctx) {
   const d = ctx.d
-  const covers = ctx.sections.map(s => `${s.title}: ${s.leaves.join(', ').toLowerCase()}`)
+  // ctx.sections carries the leaves of the deck the template builds, so this list is that deck's contents.
+  const cut = d.palette.length > MAX_SLOTS ? ` (the first ${MAX_SLOTS} of ${d.palette.length} colours)` : ''
+  const covers = ctx.sections.map(s => `${s.title}: ${s.leaves.join(', ').toLowerCase()}${s.id === 'colour' ? cut : ''}`)
   const absent = []
   if (!d.logo) {
     absent.push(`A logo section: ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel and these pages are generated from it.`)
@@ -600,7 +609,10 @@ function scopePage(ctx, folio) {
 </section>`
 }
 
-/** The colours as slot objects for a template: name, role, kind, ink and where each lands. */
+/** A colour this close to the paper (under 1.5:1) needs a hairline to be seen as a shape on it. */
+const nearPaper = (hex, paper) => contrast(hex, paper) < 1.5
+
+/** The first MAX_SLOTS colours as slot objects for a template: name, role, kind, ink and where each lands. */
 function buildSlots(d) {
   return d.palette.slice(0, MAX_SLOTS).map((hex, i) => {
     const { ink, ratio } = inkFor(hex)
@@ -622,7 +634,9 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
   const tpl = Object.hasOwn(GUIDELINES_TEMPLATES, template) ? GUIDELINES_TEMPLATES[template] : GUIDELINES_TEMPLATES[DEFAULT_TEMPLATE]
   const d = readGuidelines(design)
   // The generator decides which sections exist; the template orders them.
+  // A template that builds its own deck (`slides`) may name the leaves it has: tpl.leaves(section, d) -> string[].
   const sections = orderSections(guidelineSections(d), tpl.sectionOrder, (s) => s.id)
+    .map((s) => ({ ...s, leaves: tpl.leaves?.(s, d) ?? s.leaves }))
   const ctx = { d, projectName, sections }
   const iso = date.toISOString().slice(0, 10)
   const year = iso.slice(0, 4)
@@ -652,7 +666,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
   if (tpl.slides) tpl.slides(ctx).filter(Boolean).forEach(push)
   for (const section of tpl.slides ? [] : sections) {
     const openField = section.id === 'colour' ? field : roles.ink
-    push(opening(section, openField, inkFor(openField).ink, d.palette))
+    push(opening(section, openField, inkFor(openField).ink, d.palette.slice(0, MAX_SLOTS)))
 
     if (section.id === 'logo') {
       numbered((f) => markPage(ctx, f))
@@ -663,7 +677,8 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
 
     if (section.id === 'colour') {
       numbered((f) => palettePage(ctx, f))
-      balanced(d.palette.slice(0, IN_USE_PER_PAGE * 2), IN_USE_PER_PAGE).forEach((group, gi) => {
+      // Every colour the palette page shows is shown in use too.
+      balanced(d.palette.slice(0, MAX_SLOTS), IN_USE_PER_PAGE).forEach((group, gi) => {
         numbered((f) => inUsePage(ctx, group, gi === 0, f))
       })
     }

@@ -4,6 +4,16 @@
 // deck and the Grid sentences cannot drift apart. Plain data: no markup, no colour.
 
 /**
+ * The clear-space unit as printed: whole millimetres from 1 mm up, one decimal below, and '' when
+ * it would print as 0 (an extreme proportion), so a caption never says X is "0mm".
+ * @param {number} xMm
+ */
+export function unitMm(xMm) {
+  if (!(xMm >= 0.05)) return ''
+  return `${xMm >= 1 ? xMm.toFixed(0) : xMm.toFixed(1)}mm`
+}
+
+/**
  * @param {object} d      the guidelines reading (logo, heading, body, ratio, baseSize, lineHeight, ...)
  * @param {object[]} slots the colour slots (the first is the primary)
  * @param {object} words  where a sentence points, for a layout that gathers the notes away from their pages:
@@ -31,12 +41,12 @@ export function guidelineNotes(d, slots = [], words = {}) {
     ],
     /** `xMm`: the clear-space unit as drawn on the page that prints it. */
     clearSpace: (xMm) => [
-      `Keep a margin of X on every side of the mark, where X is half the height of the mark itself. At the size drawn ${w.drawn} that is ${xMm.toFixed(0)}mm.`,
+      `Keep a margin of X on every side of the mark, where X is half the height of the mark itself. ${unitMm(xMm) ? `At the size drawn ${w.drawn} that is ${unitMm(xMm)}.` : ''}`.trim(),
       'This is the default rule this document applies, not a decision already taken. Replace it if your mark asks for more room, but replace it deliberately.',
     ],
     palette: slots.length ? [
       `Every colour carries a name as well as a value. Say “${slots[0].name}” in a review and the decision survives; say the hex and it does not.`,
-      `The ink noted on each ${w.swatch} is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.`,
+      `The ink noted on each ${w.swatch} is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.${d.palette?.length > slots.length ? ` The first ${slots.length} of ${d.palette.length} colours are shown.` : ''}`,
     ] : [],
     inUse: [
       `The name set in ${d.heading} on each colour, in the ink that reads on it. This is the palette doing its actual job rather than sitting in a row of chips.`,

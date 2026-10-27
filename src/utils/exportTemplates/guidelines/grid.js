@@ -8,7 +8,7 @@
 
 import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale } from '../shared.js'
 import { mixHex } from '../roles.js'
-import { guidelineNotes } from './notes.js'
+import { guidelineNotes, unitMm } from './notes.js'
 
 const CHROME = Object.freeze({ family: 'Schibsted Grotesk', weights: '400 900', file: 'schibsted-grotesk-latin.woff2' })
 
@@ -85,8 +85,10 @@ function cover(ctx) {
 const CHIP_MM = { primary: 0.85, accent: 0.62, neutral: 0.5 }
 
 function colourTable(ctx) {
-  // Rows share the height the slide has: 18 mm at most (few colours), about 7.7 mm at thirteen.
-  const row = Math.min(18, 100 / Math.max(1, ctx.slots.length))
+  // Rows share the height the slide has: 18 mm at most (few colours), about 7.7 mm at thirteen. A palette
+  // longer than that is cut to its first thirteen, and a line under the table says so (6 mm of the height).
+  const cut = ctx.d.palette.length > ctx.slots.length
+  const row = Math.min(18, (cut ? 94 : 100) / Math.max(1, ctx.slots.length))
   const rows = ctx.slots.map((s) => {
     const chip = (row * (CHIP_MM[s.kind] || 0.62)).toFixed(1)
     return `<tr class="${s.kind === 'primary' ? 'is-primary' : ''}">
@@ -104,7 +106,7 @@ function colourTable(ctx) {
     <colgroup><col style="width:${chipCol.toFixed(1)}mm"><col style="width:40mm"><col style="width:25mm"><col style="width:19mm"><col style="width:32mm"><col></colgroup>
     <thead><tr><th scope="col"></th><th scope="col">Colour</th><th scope="col">Role</th><th scope="col">Hex</th><th scope="col">Reads with</th><th scope="col">Where it lands</th></tr></thead>
     <tbody>${rows}</tbody>
-  </table>`
+  </table>${cut ? `<p class="ct-note">The first ${ctx.slots.length} of ${ctx.d.palette.length} colours are shown.</p>` : ''}`
 }
 
 function faceBlock(ctx, face) {
@@ -154,7 +156,7 @@ function logoSlide(ctx, n) {
       <span class="xs xs-a" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
       <span class="xs xs-b" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
       <span class="mbox" style="width:${cs.markWidth.toFixed(1)}mm;height:${cs.markHeight.toFixed(1)}mm">${ctx.markImg({ cls: 'gd-mark-cs', height: `${cs.markHeight.toFixed(1)}mm` })}</span>
-    </div></div><p class="cap">X is half the height of the mark. At this size X is ${cs.x.toFixed(0)}mm.</p>`])
+    </div></div><p class="cap">X is half the height of the mark.${unitMm(cs.x) ? ` At this size X is ${unitMm(cs.x)}.` : ''}</p>`])
   }
   return slide(ctx, n, 'Logo', 'gd-logo', parts.map(([title, body]) => topic(title, spans(parts.length), body)))
 }
@@ -291,6 +293,7 @@ function css(ctx) {
   .ct th,.ct td{text-align:left;font-weight:400;padding:0 2mm 0 0;height:var(--row);vertical-align:middle;border-top:.25mm solid var(--rule);overflow-wrap:anywhere}
   .ct thead th{height:6mm;color:var(--muted);border-top:0;border-bottom:.35mm solid var(--ink)}
   .ct tbody th{font-weight:600}
+  .ct-note{margin-top:1.5mm;color:var(--muted)}
   .ct tr.is-primary th,.ct tr.is-primary td{height:calc(var(--row) + 2mm)}
   .ct-chip i{display:block;border:.25mm solid var(--rule)}
 
@@ -349,6 +352,8 @@ function css(ctx) {
 export default Object.freeze({
   id: 'grid',
   sectionOrder: Object.freeze(['colour', 'logo', 'type']),
+  // One colour table; there is no "In use" slide.
+  leaves: (section) => (section.id === 'colour' ? ['The palette'] : undefined),
   cover,
   slides,
   css,

@@ -169,6 +169,7 @@ function css(ctx) {
   .swatches{display:flex;flex-direction:column;gap:4mm;flex:1 1 auto;min-height:0}
   .sw-row{display:flex;gap:4mm;flex:1 1 0;min-height:0}
   .sw{display:flex;flex-direction:column;justify-content:space-between;gap:2mm;margin:0;padding:4.5mm;min-width:0;overflow:hidden}
+  .sw-edge{box-shadow:inset 0 0 0 .25mm var(--line)}
   .sw-top{display:flex;flex-direction:column;gap:1.5mm}
   .sw-role{font-size:7pt;color:var(--soft)}
   .sw-name{font-family:var(--head);font-weight:${d.headingWeight};font-size:12pt;line-height:1.1;overflow-wrap:anywhere}

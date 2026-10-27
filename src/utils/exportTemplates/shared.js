@@ -218,11 +218,14 @@ const PX_MM = 25.4 / 96
  * @returns {{ k: number, label: string }} `label` is the column head: "Specimen", or "Specimen, at 72%"
  */
 export function specimenScale(ladder, { roomMm, widthMm, padMm, textMm, lineHeight = 1.15 }) {
+  // A specimen never drops under 1px (it would print as 0), even when that overflows the table: a clipped row beats an empty one.
+  const minPx = Math.min(...ladder.map((s) => s.px))
+  const floorK = Number.isFinite(minPx) && minPx > 0 ? Math.min(1, Math.ceil(100 / minPx) / 100) : 0.1
   const height = (k) => ladder.reduce((sum, s) => sum + Math.max(s.px * k * lineHeight * PX_MM, textMm) + padMm, 0)
   const widest = Math.max(...ladder.map((s) => String(s.name).length * 0.6 * s.px * PX_MM))
   let k = Math.min(1, widthMm / widest)
   if (height(k) > roomMm) {
-    let lo = 0.1
+    let lo = 0.01
     let hi = k
     for (let i = 0; i < 24; i += 1) {
       const mid = (lo + hi) / 2
@@ -231,6 +234,6 @@ export function specimenScale(ladder, { roomMm, widthMm, padMm, textMm, lineHeig
     }
     k = lo
   }
-  k = Math.floor(k * 100) / 100
+  k = Math.max(floorK, Math.floor(k * 100) / 100)
   return { k, label: k < 1 ? `Specimen, at ${Math.round(k * 100)}%` : 'Specimen' }
 }

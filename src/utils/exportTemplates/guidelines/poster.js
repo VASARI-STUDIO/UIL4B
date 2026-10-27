@@ -92,14 +92,17 @@ function summarySlide(ctx, n) {
   const list = rest.length
     ? `<ul class="pn-list">${rest.map((s) => `<li><i style="background:${safeHex(s.hex, 'GrayText')}"></i><b>${esc(s.name)}</b> ${esc(s.hex)}<span>${esc(s.lands)}</span></li>`).join('')}</ul>`
     : ''
-  return slide(n, 'Colour', { bg: ctx.roles.paper, fg: ctx.roles.ink, cls: 'sl-bands', body: `<div class="pn-bands">${bands}</div>${list}` })
+  // Only the first MAX_SLOTS colours are laid out; say so when the palette was longer.
+  const cut = ctx.d.palette.length > slots.length ? `<p class="pn-note">The first ${slots.length} of ${ctx.d.palette.length} colours are shown.</p>` : ''
+  return slide(n, 'Colour', { bg: ctx.roles.paper, fg: ctx.roles.ink, cls: 'sl-bands', body: `<div class="pn-bands">${bands}</div>${list}${cut}` })
 }
 
 function markSlide(ctx, n) {
-  const facts = ctx.logoFacts.map(([k, v]) => `${esc(k)} ${esc(v)}`).join(', ')
+  // Each fact as its own sentence: "Format: SVG vector. Supplied at 64 × 32. Proportion 2.00 : 1."
+  const facts = ctx.logoFacts.map(([k, v]) => `${esc(k)}${k === 'Format' ? ':' : ''} ${esc(v)}.`).join(' ')
   return slide(n, 'The mark', {
     bg: ctx.roles.paper, fg: ctx.roles.ink, cls: 'sl-mark',
-    body: `<div class="pn-stage">${ctx.markImg({ cls: 'pn-mark', alt: `${ctx.projectName} logo` })}</div><p class="pn-cap">The artwork as supplied. ${facts}.</p>`,
+    body: `<div class="pn-stage">${ctx.markImg({ cls: 'pn-mark', alt: `${ctx.projectName} logo` })}</div><p class="pn-cap">The artwork as supplied. ${facts}</p>`,
   })
 }
 
@@ -250,6 +253,7 @@ function css(ctx) {
   .pn-list li{break-inside:avoid;padding:0 0 1.6mm;overflow-wrap:anywhere}
   .pn-list i{display:inline-block;width:3mm;height:3mm;margin-right:1.6mm;vertical-align:-.4mm;border:.25mm solid var(--rule)}
   .pn-list span{display:block;color:var(--muted)}
+  .pn-note{flex:none;margin-top:3mm;font-size:8pt;color:var(--muted)}
 
   /* logo slides */
   .pn-stage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
@@ -293,6 +297,8 @@ function css(ctx) {
 export default Object.freeze({
   id: 'poster',
   sectionOrder: Object.freeze(['colour', 'logo', 'type']),
+  // The deck has a slide per colour and one with all of them; there is no "In use" slide.
+  leaves: (section) => (section.id === 'colour' ? ['Each colour', 'All colours together'] : undefined),
   cover,
   slides,
   css,

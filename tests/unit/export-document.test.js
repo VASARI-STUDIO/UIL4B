@@ -497,7 +497,33 @@ test('the client sends only the design fields the documents read, with the accou
   assert.equal(body.format, 'book')
   assert.equal(body.design.states, undefined)
   assert.equal(body.design.name, undefined)
-  assert.deepEqual(Object.keys(documentDesign(null)).sort(), ['fonts', 'gradient', 'logo', 'palette', 'typeScale'])
+  assert.deepEqual(Object.keys(documentDesign(null)).sort(), ['fonts', 'gradient', 'identity', 'logo', 'palette', 'typeScale'])
+})
+
+test('of the identity only the description is sent: trimmed, folded, capped at 280, and absent when blank', () => {
+  const long = 'x'.repeat(400)
+  assert.deepEqual(documentDesign({ identity: { name: 'Harbour', description: '  A calm\n  harbour.  ', extra: 1 } }).identity, { description: 'A calm harbour.' })
+  assert.equal(documentDesign({ identity: { description: long } }).identity.description.length, 280)
+  for (const identity of [undefined, null, 'text', { description: '   ' }, { description: 7 }, { name: 'Only a name' }]) {
+    assert.equal(documentDesign({ identity }).identity, undefined, JSON.stringify(identity))
+  }
+})
+
+test('a description sent to the server reaches the Grid cover, escaped, and nothing else of the identity does', async () => {
+  const { deps } = fakeDeps()
+  const description = 'Calm <b>water</b> & "light"'
+  const res = await ask('tok-pro', {
+    format: 'guidelines', template: 'grid', projectName: 'Harbour',
+    design: { ...DESIGN, identity: { name: 'SECRET-NAME', description, extra: 'SECRET-EXTRA' } },
+  }, deps)
+  assert.equal(res.code, 200)
+  assert.ok(res.body.html.includes('<p class="cv-stand">Calm &lt;b&gt;water&lt;/b&gt; &amp; &quot;light&quot;</p>'), 'the escaped description is the cover standfirst')
+  assert.ok(!res.body.html.includes('<b>water</b>'), 'the description is never raw markup')
+  assert.ok(!res.body.html.includes('SECRET-'), 'only the description is read from the identity')
+  const capped = await ask('tok-pro', { format: 'guidelines', template: 'grid', design: { ...DESIGN, identity: { description: `${'a'.repeat(280)}OVER` } } }, deps)
+  assert.ok(capped.body.html.includes(`<p class="cv-stand">${'a'.repeat(280)}</p>`) && !capped.body.html.includes('OVER'), 'capped at 280 on the server too')
+  const none = await ask('tok-pro', { format: 'guidelines', template: 'grid', design: DESIGN }, deps)
+  assert.ok(!none.body.html.includes('cv-stand">'), 'no description, no standfirst')
 })
 
 test('signed out never reaches the network', async () => {

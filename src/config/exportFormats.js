@@ -78,7 +78,7 @@ export const EXPORT_GROUPS = Object.freeze([
   Object.freeze({ id: 'guide', name: 'Style guide', desc: 'A printable A4 guide to your palette and type.' }),
   Object.freeze({ id: 'tokens', name: 'Design tokens', desc: 'Your palette, tints and type as code.' }),
   Object.freeze({ id: 'book', name: 'Design system book', desc: 'An A4 book of your system, ready to save as PDF.', preview: 'book' }),
-  Object.freeze({ id: 'guidelines', name: 'Brand guidelines', desc: 'A 16:9 brand deck with your logo on every ground.', preview: 'guidelines' }),
+  Object.freeze({ id: 'guidelines', name: 'Brand guidelines', desc: 'Your logo, colour and type as 16:9 slides.', preview: 'guidelines' }),
 ])
 
 // The built formats of one row, in the order the switch shows them.
