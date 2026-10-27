@@ -145,6 +145,14 @@ export function watch(page, persona) {
     const deliberateIconifyRefusal = persona === 'visitor whose icon catalogue is refused'
       && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)/.test(url)
     if (deliberateIconifyRefusal) return
+    // 153-preview-examples.spec.js aborts one preview example's chunk ON PURPOSE,
+    // to see the dialog's "This example didn't load" stand in for it. Chromium
+    // logs the aborted fetch; keyed on the persona AND the example chunk, so a
+    // failed download anywhere else still surfaces.
+    const deliberateExampleAbort = persona === 'visitor whose preview example never arrives'
+      && /ERR_FAILED/.test(msg.text())
+      && /assets\/(?:Sundial|SlackWater|OrraWorkroom)-/.test(url)
+    if (deliberateExampleAbort) return
     if (isExpectedNoise(msg.text(), url)) return
     const source = url
       ? ` (${url}${location.lineNumber != null ? `:${location.lineNumber}:${location.columnNumber || 0}` : ''})`

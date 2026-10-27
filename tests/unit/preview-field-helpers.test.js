@@ -30,10 +30,21 @@ test('inkOnField clears its floor for 8,000 palettes x 2 modes, body and large',
       const r = derivePaletteRoles(pal, { mode })
       for (const large of [false, true]) {
         const floor = large ? 3 : 4.5
-        const got = inkOnField(r.primary, { on: r.onPrimary, text: r.text, canvas: r.canvas }, { large })
-        const real = contrastRatio(got.hex, r.primary)
-        if (real < floor - 1e-9) misses.push(`${pal[0]} ${mode} large=${large} ${got.hex} ${real.toFixed(3)}`)
-        assert.ok(['on', 'neutral', 'pole'].includes(got.step))
+        // The derived inks nearly always pass at the first step, which would leave the
+        // neutral and pole steps unrun. So each palette is also tried with the on-ink
+        // set to the fill itself (forces neutral) and with every ink set to the fill
+        // (forces the pole), the cases a hand-picked brand colour can produce.
+        const inkSets = [
+          { on: r.onPrimary, text: r.text, canvas: r.canvas },
+          { on: r.primary, text: r.text, canvas: r.canvas },
+          { on: r.primary, text: r.primary, canvas: r.primary },
+        ]
+        for (const inks of inkSets) {
+          const got = inkOnField(r.primary, inks, { large })
+          const real = contrastRatio(got.hex, r.primary)
+          if (real < floor - 1e-9) misses.push(`${pal[0]} ${mode} large=${large} ${got.hex} ${real.toFixed(3)}`)
+          assert.ok(['on', 'neutral', 'pole'].includes(got.step))
+        }
       }
     }
   }
