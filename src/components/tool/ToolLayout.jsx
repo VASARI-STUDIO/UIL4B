@@ -191,11 +191,15 @@ export function ToolToolbar({
     ro.observe(row)
     return () => ro.disconnect()
   }, [])
-  // Webfonts change label widths after first paint.
+  // Webfonts change label widths after first paint. `ready` alone can settle
+  // before a face has even started loading (it starts when text first uses
+  // it), so every later finished load re-measures too.
   useEffect(() => {
     let alive = true
-    document.fonts?.ready?.then(() => { if (alive) setMeasuring(true) }).catch(() => {})
-    return () => { alive = false }
+    const remeasure = () => { if (alive) setMeasuring(true) }
+    document.fonts?.ready?.then(remeasure).catch(() => {})
+    document.fonts?.addEventListener?.('loadingdone', remeasure)
+    return () => { alive = false; document.fonts?.removeEventListener?.('loadingdone', remeasure) }
   }, [])
 
   const overflow = needsMeasure ? [] : items.filter((it) => (it.inline === false || hidden.has(it.id)) && !it.divider && it.menu !== false)
