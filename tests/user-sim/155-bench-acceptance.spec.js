@@ -535,13 +535,18 @@ for (const width of [320, 360, 390]) {
     await page.setViewportSize({ width, height: 900 })
     await go(page, '/')
     const panel = await openTool(page, 0)
-    const vals = await panel.locator('.sp-role-val').evaluateAll((els) => els.map((el) => ({
-      text: el.textContent.trim(), scroll: el.scrollWidth, client: el.clientWidth,
-    })))
+    // The value, and every element inside it: the hex is drawn by an inner span
+    // (the copy-swap) that carries its own overflow, so the outer box can look
+    // whole while the text in it is cut with an ellipsis.
+    const vals = await panel.locator('.sp-role-val').evaluateAll((els) => els.map((el) => {
+      const boxes = [el, ...el.querySelectorAll('*')]
+      const worst = boxes.reduce((w, b) => (b.scrollWidth - b.clientWidth > w.over ? { over: b.scrollWidth - b.clientWidth, text: b.textContent.trim() } : w), { over: 0, text: '' })
+      return { text: el.firstElementChild?.firstElementChild?.textContent.trim() || el.textContent.trim(), client: el.clientWidth, over: worst.over }
+    }))
     expect(vals.length, 'no palette value was measured').toBeGreaterThanOrEqual(5)
     for (const v of vals) {
       expect(v.client, `"${v.text}" has no width`).toBeGreaterThan(0)
-      expect(v.scroll, `"${v.text}" is clipped (${v.scroll}px of text in ${v.client}px) at ${width}px`).toBeLessThanOrEqual(v.client)
+      expect(v.over, `"${v.text}" is clipped by ${v.over}px at ${width}px`).toBe(0)
     }
   })
 }
