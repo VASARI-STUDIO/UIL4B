@@ -58,29 +58,6 @@ import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '.
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
 
-// THE OPENING SENTENCE. Empty on purpose, and the empty string is the
-// deliverable: the founder is writing this line himself (2026-09-13, “Build
-// the slot, then I’ll write the line”). The heading area below renders the
-// paragraph only when there is something in it, so the page has no blank gap
-// while it is empty and needs no second edit when it is filled.
-//
-// The shape to match is the one its three siblings already ship, and
-// `tests/user-sim/58-tool-lede-states-the-model.spec.js` pins each of them
-// verbatim — one sentence naming the MODEL the tool works on, then one saying
-// that everything below is that model. Not the workflow, which the controls
-// already show:
-//
-//   /create/tint       “One base colour and one curve. Every step below is
-//                       that colour at a measured tone.”
-//   /create/gradient    “Colour stops and where each one sits. Everything
-//                       below is those two facts, as CSS, Tailwind or SVG.”
-//   /create/font-pair   “Two families — one for headings, one for body. Every
-//                       preview below is those two, together.”
-//
-// When this is filled in, add /create/palette to that spec's LEDES table so
-// the sentence is pinned the same way the other three are.
-const PALETTE_LEDE = ''
-
 // Pointer-opened menus must not leave a keyboard reveal latched on Escape.
 function returnMenuFocus(el, pointer) {
   if (!el) return
