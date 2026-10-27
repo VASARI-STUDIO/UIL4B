@@ -335,6 +335,7 @@ html[data-reduced-motion="true"] .uh *:active { transform: none; }
 .uh .uh-greet { min-height: 24px; margin: 0 0 var(--s-2); display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); font-size: 17px; font-weight: 500; line-height: 1.4; color: var(--t1); }
 .uh .uh-textbtn { min-height: 44px; margin-block: -10px; padding: 0 var(--s-1); border: 0; background: none; font-family: var(--font); font-size: 15px; color: var(--ws-acc-text); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .uh .uh-ask { position: relative; isolation: isolate; }
+.uh .uh-scrim { display: none; }
 .uh .uh-pop { position: absolute; top: calc(100% + var(--s-2)); left: 0; z-index: 2; width: min(300px, 80vw); padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-1); box-shadow: 0 8px 24px -12px rgba(0, 0, 0, .35); font-size: 15px; font-weight: 400; }
 .uh .uh-pop form { display: grid; gap: var(--s-2); }
 .uh .uh-pop label { font-size: 13px; color: var(--t2); }
@@ -583,8 +584,15 @@ h2.uh-continue-name { white-space: normal; }
   .uh .uh-pro-cta { width: 100%; justify-content: center; }
   .uh .uh-pro-cta-row { display: grid; justify-items: start; gap: var(--s-2); }
   .uh .uh-pro-cta-row .uh-pro-cta { justify-self: stretch; }
-  /* The name form is a bottom sheet over the tab bar, so the keyboard does not cover Save. */
-  .uh .uh-pop { position: fixed; z-index: 2; left: 0; right: 0; top: auto; bottom: calc(var(--tabbar-h, 61px) + env(safe-area-inset-bottom)); width: auto; border-radius: var(--radius-xl) var(--radius-xl) 0 0; border-bottom: 0; padding-bottom: var(--s-4); }
+  /* The name form is a bottom sheet over the tab bar, with a scrim behind it. Stack order: the page
+     (auto), the tab bar (118) and nav (120), this sheet and its scrim (299, 300), then the app's modals
+     (500 and up). `.uh-ask` drops its isolation here, or the sheet's z-index would be local to it and
+     the later positioned `.uh-new-wrap` and `.uh-disc-lock` would paint over Save. JS (Greeting.jsx)
+     sets --uh-kb to the height the on-screen keyboard covers and --uh-vvh to the visible height, so the
+     sheet sits above the keyboard when there is one and above the tab bar when there is not. */
+  .uh .uh-ask { isolation: auto; }
+  .uh .uh-scrim { display: block; position: fixed; inset: 0; z-index: 299; background: var(--scrim); touch-action: none; }
+  .uh .uh-pop { position: fixed; z-index: 300; left: 0; right: 0; top: auto; bottom: max(calc(var(--tabbar-h, 61px) + env(safe-area-inset-bottom)), var(--uh-kb, 0px)); width: auto; max-height: calc(var(--uh-vvh, 100dvh) - var(--s-4)); overflow-y: auto; overscroll-behavior: contain; border-radius: var(--radius-xl) var(--radius-xl) 0 0; border-bottom: 0; padding-bottom: var(--s-4); }
   .uh .uh-pop-actions > * { flex: 1; }
 }
 
