@@ -1076,6 +1076,7 @@ function isBoardModuleMissing(err) {
 }
 
 async function serveBacklog(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store')
   const admin = await requireAdmin(req)
   // 404, not 403 — see requireAdmin. A caller who is not the administrator
   // learns nothing about whether this surface exists, which matters more here
@@ -1207,6 +1208,7 @@ export default async function handler(req, res) {
   // server-only env var with NO default: unset (the shipped state) means the
   // break-glass does not exist and admin auth is the only way in.
   if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'private, no-store')
     if (!('diag' in (req.query || {}))) {
       res.setHeader('Allow', 'POST')
       return res.status(405).json({ error: 'Method not allowed' })
