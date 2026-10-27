@@ -349,7 +349,7 @@
    are fixed, so a longer word (Temperature) cannot take length from its track,
    and the grid gives every slider the same column width however it wraps. */
 .plb .plb-adjust {
-  --plb-sl-k: 4.75rem;
+  --plb-sl-k: 5rem;
   --plb-sl-v: 34px;
   --plb-sl-track: 20px;
   --plb-sl-thumb: 15px;
@@ -587,6 +587,8 @@
 @media (pointer: coarse) {
   .plb .plb-val-row { grid-template-columns: 44px minmax(0, 1fr) 44px; }
   .plb .plb-val-copy { width: 44px; height: 44px; }
+  /* The close button of this panel and of the tints panel it is built on. */
+  .plb .plb-tintpop .plb-pop-x { width: 44px; height: 44px; }
 }
 @media (max-width: 767px) {
   .plb .plb-valpop { width: calc(100% - 24px); }
