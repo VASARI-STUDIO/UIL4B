@@ -120,7 +120,11 @@ export default function BenchConverter({ onResult }) {
       canvas.getContext('2d').drawImage(img, 0, 0)
       canvasRef.current = canvas
       const before = pick ? pick.size : await encode(canvas, 'image/png')
-      if (!cancelled) setSrc({ w: img.naturalWidth, h: img.naturalHeight, before })
+      if (cancelled) return
+      // A zero-size image, or one past the browser's canvas limit, cannot be
+      // measured; it reports as unsupported rather than waiting for a figure.
+      if (!img.naturalWidth || !img.naturalHeight || !before) { setSrc(null); setFailed(true); return }
+      setSrc({ w: img.naturalWidth, h: img.naturalHeight, before })
     }).catch(() => { if (!cancelled) { setSrc(null); if (pick) setFailed(true) } })
     return () => { cancelled = true }
   }, [near, pick])
@@ -134,7 +138,9 @@ export default function BenchConverter({ onResult }) {
       const size = await encode(canvasRef.current, type, type === 'image/png' ? undefined : quality / 100)
       // The size is stored with the format it was encoded as, so a reading
       // from the previous format is never shown under the new one's name.
-      if (!cancelled) setOut({ size, format: IMG_FORMATS[fmt][0] })
+      if (cancelled) return
+      if (size == null) { setFailed(true); return }
+      setOut({ size, format: IMG_FORMATS[fmt][0] })
     }, 150)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [src, fmt, quality])
