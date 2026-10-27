@@ -56,7 +56,6 @@ test.describe('swatch "..." menu hands focus back', () => {
   const STAYS = [
     ['Copy hex', 2, 2],
     ['Use as seed', 2, 2],
-    ['View tints', 2, 2],
     ['Lock', 2, 2],
     ['Swap left', 2, 1],   // the swatch moved left, focus follows it
     ['Swap right', 2, 3],  // ... and right
@@ -70,6 +69,25 @@ test.describe('swatch "..." menu hands focus back', () => {
       await choose(page, item)
       await expect(page.getByRole('menu', { name: 'Colour actions' })).toHaveCount(0)
       await expect.poll(() => focusPlace(page), { message: `focus after ${item}` }).toEqual({ col: to, onMore: true, tag: 'BUTTON' })
+      await ctx.close()
+    })
+  }
+
+  // View tints and Colour values open a panel, so focus goes into it (its close
+  // button) and comes back to that swatch's "..." when the panel closes.
+  // MUTATION: drop the focus call in the panel's open effect, or the return in its close.
+  for (const item of ['View tints', 'Colour values']) {
+    test(`${item}: focus goes into the panel, then back to the "..." of swatch 3 on Escape`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, 1440)
+      await openMenu(page, 2)
+      await choose(page, item)
+      await expect(page.getByRole('menu', { name: 'Colour actions' })).toHaveCount(0)
+      await expect.poll(() => page.evaluate(() => {
+        const el = document.activeElement
+        return { col: el?.closest('.plb-col') ? [...document.querySelectorAll('.plb-col')].indexOf(el.closest('.plb-col')) : -1, inPanel: !!el?.closest('.plb-tintpop'), tag: el?.tagName }
+      }), { message: `focus after ${item}` }).toEqual({ col: 2, inPanel: true, tag: 'BUTTON' })
+      await page.keyboard.press('Escape')
+      await expect.poll(() => focusPlace(page), { message: `focus after closing ${item}` }).toEqual({ col: 2, onMore: true, tag: 'BUTTON' })
       await ctx.close()
     })
   }
