@@ -377,6 +377,102 @@ test.describe('a swap never blanks the plate', () => {
   })
 })
 
+test.describe("card 3's shelf stacking while a pick moves", () => {
+  // z-index does not tween, so the shelf holds it for 120ms (half of the 240ms move) and flips it on
+  // both covers in the same frame: the leaving front cover stays on top for the first half, and the
+  // two never tie. These read the computed z-index and opacity of the three covers on every frame.
+
+  /**
+   * Make the picks in the page (the page draws the new state on the next frame, which is "frame 1" of that pick)
+   * and read the three covers on every animation frame until `until` ms after the first pick.
+   * picks: [{ index, at }] with `at` the ms since the start (the first is 0).
+   * Returns every frame's time, z-index, opacity and data-pos for the three covers, and `pickFrames`: the
+   * index in `frames` of the frame each pick was made in (it is read before the page draws the pick).
+   */
+  const sampleShelf = (page, picks, until) => page.evaluate(({ picks, until }) => new Promise((resolve) => {
+    const cardEl = document.querySelectorAll('.sp-stack-card')[2]
+    const radioEls = [...cardEl.querySelectorAll('[role="radio"]')]
+    const imgs = [...cardEl.querySelectorAll('.sp-shelf img')]
+    const frames = []
+    const pickFrames = []
+    const picked = []
+    let next = 0
+    const t0 = performance.now()
+    const tick = (now) => {
+      while (next < picks.length && now - t0 >= picks[next].at) {
+        radioEls[picks[next].index].click()
+        pickFrames.push(frames.length)
+        picked.push(Math.round(now - t0))
+        next++
+      }
+      const cs = imgs.map((el) => getComputedStyle(el))
+      frames.push({ t: Math.round(now - t0), z: cs.map((c) => c.zIndex), o: cs.map((c) => Number(c.opacity)), pos: imgs.map((el) => el.dataset.pos) })
+      if (now - t0 < until) requestAnimationFrame(tick)
+      else resolve({ pickFrames, frames, picked })
+    }
+    requestAnimationFrame(tick)
+  }), { picks, until })
+
+  /** The cover (its DOM index) in front in frame `i`. */
+  const frontIn = (frames, i) => frames[i].pos.indexOf('front')
+
+  async function openShelf(browser) {
+    const { ctx, page } = await open(browser, { width: 1440, height: 900, reducedMotion: 'no-preference' })
+    await go(page, '/')
+    await show(page, 2)
+    await waitShown(page, 2, (await projectId(page, 0)))
+    await expect(card(page, 2).locator('.sp-shelf img')).toHaveCount(3)
+    await twoFrames(page)
+    return { ctx, page }
+  }
+
+  test('the leaving front cover stays above the arriving one until the midpoint, then they swap and never tie', async ({ browser }) => {
+    const { ctx, page } = await openShelf(browser)
+    const { pickFrames, frames: all } = await sampleShelf(page, [{ index: 1, at: 0 }], 320)
+    expect(pickFrames, 'the pick was made on the first frame read').toEqual([0])
+    const oldFront = frontIn(all, 0)
+    const arriving = frontIn(all, 1)
+    const frames = all.slice(1) // frame 1 is the first frame that draws the pick
+    expect(arriving, 'the pick brought another cover to the front').not.toBe(oldFront)
+    expect(frames.length, 'frames read').toBeGreaterThanOrEqual(12)
+    const z = (f, i) => Number(f.z[i])
+    // Frame 1: the arriving cover has not jumped over the leaving one.
+    expect(z(frames[0], oldFront), 'old front z-index on frame 1').toBeGreaterThan(z(frames[0], arriving))
+    // No frame has them level (a tie would leave the paint order to the DOM order).
+    const ties = frames.filter((f) => z(f, oldFront) === z(f, arriving)).map((f) => `${f.t}ms z=${f.z}`)
+    expect(ties, 'frames where the two covers share a z-index').toEqual([])
+    // The flip is held for the first half of the move and has happened by the end.
+    const flipAt = frames.findIndex((f) => z(f, arriving) > z(f, oldFront))
+    expect(flipAt, 'the arriving cover reaches the top').toBeGreaterThan(0)
+    expect(frames[flipAt].t, 'ms before the flip (the midpoint is 120)').toBeGreaterThanOrEqual(100)
+    const last = frames[frames.length - 1]
+    expect(z(last, arriving), 'arriving cover z-index at the end').toBe(3)
+    expect(z(last, oldFront), 'old front cover z-index at the end').toBe(1)
+    // After the flip it stays flipped: no flicker back.
+    expect(frames.slice(flipAt).every((f) => z(f, arriving) > z(f, oldFront)), 'the order holds once flipped').toBe(true)
+    await ctx.close()
+  })
+
+  test('a second pick 60ms into the first keeps every cover visible and ends with the new front on top (3) and the others at 1', async ({ browser }) => {
+    const { ctx, page } = await openShelf(browser)
+    const { pickFrames, frames: all, picked } = await sampleShelf(page, [{ index: 1, at: 0 }, { index: 2, at: 60 }], 520)
+    const oldFront = frontIn(all, 0)
+    const a = frontIn(all, pickFrames[0] + 1)
+    const b = frontIn(all, pickFrames[1] + 1)
+    const frames = all.slice(1)
+    expect(new Set([oldFront, a, b]).size, 'three different covers came to the front in turn').toBe(3)
+    expect(picked[1], 'the second pick landed before the midpoint of the first').toBeLessThan(120)
+    expect(Math.min(...frames.flatMap((f) => f.o)), 'the faintest cover in any frame').toBeGreaterThan(0)
+    // The first pick's cover never reaches the top: its pick was replaced before its flip.
+    const z = (f, i) => Number(f.z[i])
+    expect(frames.some((f) => z(f, a) > z(f, oldFront) && z(f, a) > z(f, b)), 'the replaced pick never took the top').toBe(false)
+    const last = frames[frames.length - 1]
+    expect(last.z.map(Number), 'final z-index of each cover').toEqual([0, 1, 2].map((i) => (i === b ? 3 : 1)))
+    expect(last.pos[b], 'the second pick is in front').toBe('front')
+    await ctx.close()
+  })
+})
+
 // ── 3. the picture is sharp enough for where it is painted ─────────────────────
 
 /**
