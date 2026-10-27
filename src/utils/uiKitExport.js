@@ -698,12 +698,13 @@ export function renderUiKit(design, {
     }))
   }
 
-  // split/join rather than String.replace: a replacement string is never
-  // interpreted, so a `$&` in someone's project name stays literal.
-  let html = template
-  for (const [key, value] of Object.entries(replacements)) html = html.split(`@@${key}@@`).join(value)
-  const unresolved = /@@[A-Z_]+@@/.exec(html)
-  if (unresolved) throw new Error(`Unresolved UI kit placeholder ${unresolved[0]}`)
+  // One pass over the template: each placeholder is looked up in the map. The
+  // function form means a replacement is never interpreted (a `$&` in a project
+  // name stays literal) and never re-scanned (a name holding a placeholder stays text).
+  const html = template.replace(/@@([A-Z][A-Z0-9_]*)@@/g, (whole, key) => {
+    if (!Object.prototype.hasOwnProperty.call(replacements, key)) throw new Error(`Unresolved UI kit placeholder ${whole}`)
+    return replacements[key]
+  })
 
   return {
     html,
