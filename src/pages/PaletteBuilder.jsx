@@ -82,6 +82,51 @@ function usePhone() {
   return phone
 }
 
+// The Suggest footer: the score before and after, and a "?" that shows a one-line
+// explanation instead of leaving it to a tooltip (a tooltip never shows on touch
+// or to a keyboard). The line is always in the DOM so the button's
+// aria-describedby always has something to point at; `hidden` keeps it out of
+// sight until the button is pressed. Its own state, so it closes when the footer
+// goes away.
+function BalanceScoreFoot({ before, after }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="plb-sg-foot">
+      <span>Balance score <b>{before}</b> &rarr; <b>{after}</b></span>
+      <button
+        type="button"
+        className="plb-sg-info"
+        aria-label="What the balance score measures"
+        aria-expanded={open}
+        aria-describedby="plb-sg-score-help"
+        onClick={() => setOpen(o => !o)}
+      >
+        <span aria-hidden="true">?</span>
+      </button>
+      <p id="plb-sg-score-help" className="plb-sg-foot-help" hidden={!open}>It scores tone range, evenness, chroma profile and distinctness.</p>
+    </div>
+  )
+}
+
+// Marks a scrolling body that has more below it, so the CSS can fade its bottom
+// edge. A ref callback with a cleanup: it measures on mount, on scroll and when
+// the body resizes, and writes one data attribute straight to the element
+// rather than through React state.
+function scrollCue(el) {
+  if (!el) return undefined
+  const check = () => {
+    el.dataset.more = el.scrollHeight - el.scrollTop - el.clientHeight > 4 ? 'true' : 'false'
+  }
+  check()
+  el.addEventListener('scroll', check, { passive: true })
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null
+  ro?.observe(el)
+  return () => {
+    el.removeEventListener('scroll', check)
+    ro?.disconnect()
+  }
+}
+
 // Palette CSS on a phone: the toolbar overflow's bottom sheet (the .tl-sheet
 // classes in tool-layout.css), holding the CSS and its copy button. The scrim
 // and Escape close it; useModalDialog traps focus and returns it to the button
@@ -1196,8 +1241,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Freeze a snapshot the first time the variations tab is viewed (or after
   // invalidation). The variations grid now lives inside the combined Gallery
   // popup, so the snapshot freezes when that popup is open on the variations tab.
+  // While a brand or variation is applied, the board is not the user's own: the
+  // list is derived from the Suggest snapshot ("mine"), so opening Variations
+  // after a brand shows variations of the user's palette, not of the brand.
   useEffect(() => {
-    if (galleryOpen && galleryTab === 'variations' && !varBase) setVarBase(applyAdjust(colors, adjust))
+    if (galleryOpen && galleryTab === 'variations' && !varBase) {
+      setVarBase(suggestSnapRef.current?.mine || applyAdjust(colors, adjust))
+    }
   }, [galleryOpen, galleryTab, varBase, colors, adjust])
 
   // Keep ProjectContext in sync so Save/overwrite capture the live palette and
@@ -1814,10 +1864,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Apply a whole ready-made palette (variation or brand). Resets the adjust
   // lens — the incoming colours ARE the new baseline. Locked slots survive.
+  // Returns true once the apply has gone through, false when fewer than two valid
+  // colours remain and nothing changed, so a caller can skip its own bookkeeping
+  // for an apply that never happened.
   const applyPalette = (hexes, msg) => {
     setColPanel(null)
     const next = hexes.map(c => normaliseHex(c)).filter(Boolean).slice(0, HARD_MAX)
-    if (next.length < 2) return
+    if (next.length < 2) return false
     setColors(prev => {
       const out = next.length >= prev.length ? next : [...next, ...prev.slice(next.length)]
       return out.map((c, i) => (locked.has(i) && prev[i] ? prev[i] : c))
@@ -1825,6 +1878,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setAdjust(ZERO_ADJUST)
     if (!locked.has(0)) { setSeed(next[0]); setSeedInput(next[0]) }
     if (msg) { setLiveMsg(msg); toast?.(msg) }
+    return true
   }
 
   const resetPalette = () => {
@@ -2006,25 +2060,28 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const openVariationGate = () => openProModal({ gate: 'palette-variation-apply', eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
   // The board as it was before the first apply from the Suggest panel. Moving
   // from one card to another never replaces it, so Back always lands on the
-  // user's own palette.
-  const snapForPanel = () => {
-    if (!suggestSnapRef.current) {
-      suggestSnapRef.current = { colors: [...colors], adjust: { ...adjust }, seed, seedInput, harmony, before: paletteScore, mine: adjusted }
-    }
-    return suggestSnapRef.current
-  }
+  // user's own palette. This only reads the stored one (or builds the candidate);
+  // `keepPanelSnap` stores it once an apply has gone through, so an apply that
+  // is refused never leaves a snapshot behind.
+  const panelSnap = () => suggestSnapRef.current
+    || { colors: [...colors], adjust: { ...adjust }, seed, seedInput, harmony, before: paletteScore, mine: adjusted }
+  const keepPanelSnap = (snap) => { suggestSnapRef.current = snap }
   // True when applying `hexes` would leave the board exactly as it is.
   const isNoopApply = (hexes) => hexes.map(c => normaliseHex(c)).filter(Boolean).join(',') === colors.join(',') && !ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
   const pickVariation = (v, gated) => {
     if (gated) { openVariationGate(); return }
     if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) return
     if (isNoopApply(v.colors)) return
-    const snap = snapForPanel()
+    const snap = panelSnap()
+    if (!applyPalette(v.colors, `Applied variation: ${v.label}`)) return
+    keepPanelSnap(snap)
     // Keep the frozen list across this apply, so the panel shows the same
-    // variations with this one ticked instead of rotating to a fresh set.
+    // variations with this one ticked instead of rotating to a fresh set. The
+    // flag swallows the next invalidation, so it is set only once the apply is
+    // certain; after a refused apply it would sit armed and swallow the user's
+    // next real edit.
     skipVarInvalidate.current = true
     setPanelApplied({ kind: 'variation', id: v.id, name: v.label, before: snap.before, after: v.score, mine: snap.mine })
-    applyPalette(v.colors, `Applied variation: ${v.label}`)
     setLiveMsg(`${v.label} applied. Back to my palette undoes it.`)
   }
   // Put the board back as the first apply found it: colours, lens, seed and system.
@@ -2041,6 +2098,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     suggestSnapRef.current = null
     setPanelApplied(null)
     setLiveMsg('Your palette is back.')
+    // The button disables itself now it has nothing left to undo, which would
+    // drop focus to the page. The selected tab is the next stop in the dialog.
+    document.getElementById(`plb-sg-tab-${galleryTab}`)?.focus({ preventScroll: true })
   }
   const compareVariation = (v) => {
     setGalleryOpen(false)
@@ -2069,6 +2129,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       setAdjust(snap.adjust)
       setSeed(snap.seed)
       setSeedInput(snap.seedInput)
+      // Present when "mine" was taken from the Suggest snapshot, where a brand
+      // may have changed the system as well.
+      if (snap.harmony) setHarmony(snap.harmony)
       preImportRef.current = null
       importedSigRef.current = null
       setImportedGalleryId(null)
@@ -2079,9 +2142,25 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // Snapshot only the user's own palette — the one in place before any gallery
     // import. Switching gallery A → B must NOT overwrite it, so revert always
     // lands on the user's work, not the previously-selected gallery item.
-    if (!preImportRef.current) preImportRef.current = { colors, adjust, seed, seedInput }
+    //
+    // After a variation or brand was applied from Suggest, the board is not the
+    // user's own any more. The Suggest snapshot is, so "mine" is taken from it:
+    // unticking an Explore card then lands on the user's palette, not on
+    // Variation X. An Explore import is a real change to the board, so it ends
+    // the Suggest session (the snapshot, the tick and Back all clear below).
+    // Explore has its own undo, and that one returns to the original palette.
+    const mine = suggestSnapRef.current
+    const original = preImportRef.current || (mine
+      ? { colors: mine.colors, adjust: mine.adjust, seed: mine.seed, seedInput: mine.seedInput, harmony: mine.harmony }
+      : { colors, adjust, seed, seedInput })
+    // A refused apply (fewer than two valid colours) changes nothing, and must
+    // not leave a snapshot or a cleared Suggest session behind.
+    if (!applyPalette(cols, `Loaded ${name}`)) return
+    preImportRef.current = original
     importedSigRef.current = null // let the effect record the imported baseline
-    applyPalette(cols, `Loaded ${name}`)
+    suggestSnapRef.current = null
+    setPanelApplied(null)
+    setVarBase(null)
     setImportedGalleryId(id)
     // Keep the gallery popup open so selecting swatches reads as a live toggle —
     // the user can compare picks (and untick to revert) without reopening it.
@@ -2112,11 +2191,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // can't smuggle in the paid harmony engine when they start editing.
     const sys = resolveSystem(b.system || 'custom')
     if (sys === harmony && isNoopApply(b.colors)) return
-    const snap = snapForPanel()
+    const snap = panelSnap()
+    // The system is set only if the colours go through, so a brand with fewer
+    // than two valid colours changes nothing at all.
+    if (!applyPalette(b.colors, `Loaded the ${b.name} palette`)) return
+    setHarmony(sys)
+    keepPanelSnap(snap)
     skipVarInvalidate.current = true
     setPanelApplied({ kind: 'brand', id: b.id, name: b.name, before: snap.before, after: null, mine: snap.mine })
-    setHarmony(sys)
-    applyPalette(b.colors, `Loaded the ${b.name} palette`)
     setLiveMsg(`${b.name} applied. Back to my palette undoes it.`)
   }
 
@@ -2494,15 +2576,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setGalleryTab(tabs[to])
     document.getElementById(`plb-sg-tab-${tabs[to]}`)?.focus({ preventScroll: true })
   }
-  // The pinned row shows it on wider screens; the phone sheet shows the copy in
-  // its head. Only one is ever displayed.
-  const backButton = (className) => (
-    <button type="button" className={`tl-btn ${className}`} disabled={!panelApplied} aria-label="Back to my palette" onClick={backToMine}>
-      <span className="plb-sg-back-long">Back to my palette</span>
-      <span className="plb-sg-back-short">Back to mine</span>
-      <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
-    </button>
-  )
   const historyButton = (kind) => (kind === 'undo'
     ? <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
     : <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />)
@@ -2524,7 +2597,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     },
     { id: 'system', priority: 1, render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
     { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
-    { id: 'div', priority: 0, divider: true },
+    { id: 'div', priority: 2, divider: true },
     { id: 'undo', priority: 5, render: () => historyButton('undo'), menu: { label: 'Undo', icon: 'arrow-counter-clockwise', disabled: !canUndo, onSelect: undoPalette } },
     { id: 'redo', priority: 4, render: () => historyButton('redo'), menu: { label: 'Redo', icon: 'arrow-clockwise', disabled: !canRedo, onSelect: redoPalette } },
     {
@@ -3014,7 +3087,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                       role="tab"
                       id={`plb-sg-tab-${tab}`}
                       aria-selected={galleryTab === tab}
-                      aria-controls={`plb-sg-panel-${tab}`}
+                      aria-controls={galleryTab === tab ? `plb-sg-panel-${tab}` : undefined}
                       tabIndex={galleryTab === tab ? 0 : -1}
                       className={galleryTab === tab ? 'tl-pill is-on' : 'tl-pill'}
                       onClick={() => setGalleryTab(tab)}
@@ -3024,12 +3097,20 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   ))}
                 </div>
               )}
-              {!exploring && backButton('plb-sg-back plb-sg-back--head')}
+              {/* One Back button, between the tabs and Close in the DOM, so the tab
+                  order is the visual order at every width. Its text shows where it
+                  fits; below that it is an icon and the label carries the name. */}
+              {!exploring && (
+                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" onClick={backToMine}>
+                  <span className="plb-sg-back-text">Back to my palette</span>
+                  <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
+                </button>
+              )}
               <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
             </div>
 
             {exploring && (
-              <div className="plb-galpopup-body">
+              <div className="plb-galpopup-body" ref={scrollCue}>
                 <PaletteGalleryGrid
                   toast={toast}
                   palettes={communityRows}
@@ -3051,10 +3132,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
             {!exploring && (
               <div className="plb-sg-pin">
-                <div className="plb-sg-pin-row">
-                  <span className="plb-sg-pin-label">Your palette</span>
-                  {backButton('plb-sg-back')}
-                </div>
+                <span className="plb-sg-pin-label">Your palette</span>
                 <div className="plb-sg-pin-strip" aria-hidden="true">
                   {(panelApplied?.mine || adjusted).map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}
                 </div>
@@ -3062,7 +3140,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             )}
 
             {!exploring && galleryTab === 'variations' && (
-              <div className="plb-galpopup-body" role="tabpanel" id="plb-sg-panel-variations" aria-labelledby="plb-sg-tab-variations">
+              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-sg-panel-variations" aria-labelledby="plb-sg-tab-variations">
                 {variations.length === 0 ? (
                   <p className="plb-sg-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
                 ) : (
@@ -3117,7 +3195,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             )}
 
             {!exploring && galleryTab === 'brands' && (
-              <div className="plb-galpopup-body" role="tabpanel" id="plb-sg-panel-brands" aria-labelledby="plb-sg-tab-brands">
+              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-sg-panel-brands" aria-labelledby="plb-sg-tab-brands">
                 <p className="plb-sg-intro">Loads the brand&rsquo;s colours and its colour system.</p>
                 {/* openBrands holds only the rows this viewer may load; a
                     Pro-gated brand's colours never enter the DOM. */}
@@ -3178,10 +3256,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             )}
 
             {!exploring && galleryTab === 'variations' && panelApplied?.kind === 'variation' && (
-              <div className="plb-sg-foot">
-                <span>Balance score <b>{panelApplied.before}</b> &rarr; <b>{panelApplied.after}</b></span>
-                <button type="button" className="plb-sg-info" aria-label="What the balance score measures" title="Palette quality score: tone range, evenness, chroma profile and distinctness">?</button>
-              </div>
+              <BalanceScoreFoot before={panelApplied.before} after={panelApplied.after} />
             )}
           </div>
         </div>
