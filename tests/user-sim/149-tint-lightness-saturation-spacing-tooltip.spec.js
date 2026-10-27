@@ -332,6 +332,7 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
       tabindex: el.getAttribute('tabindex'),
       ghost: tip.classList.contains('tt-tip--ghost'), pointerEvents: getComputedStyle(tip).pointerEvents,
       noteRects: [...document.querySelectorAll('.tt-note')].map(R),
+      panel: R(document.querySelector('.tt-panel')),
       above: tip.classList.contains('tt-tip--above'), compact: tip.classList.contains('tt-tip--compact'),
       side: tip.classList.contains('tt-tip--right') ? 'right' : tip.classList.contains('tt-tip--left') ? 'left' : '',
       helpShown: getComputedStyle(help).display !== 'none' && help.getBoundingClientRect().height > 0,
@@ -348,7 +349,7 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
   }
   // The card's whole height, help paragraph and all, with its 6px bridge off (about 224px).
-  const FULL = 224
+  const FULL = 238
 
   test('a hover card opens below its note, whole, when the room allows; whatever the room, it never meets the header or the toolbar', async ({ page }) => {
     await openTint(page, 'someone pointing along the notes')
@@ -496,6 +497,103 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
       await walkNotes(page, BACK)
       await page.mouse.move(5, 5, { steps: 6 })
       await expect(openTip(page), 'the card goes when the pointer leaves').toHaveCount(0)
+    })
+
+    test('a click-through card holds no pointer, and a note under it that the pointer rests on gets its own card', async ({ page }) => {
+      await openTint(page, 'someone resting on a note under a card at 768')
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
+      await settle(page, 1)
+      const m = await cardFit(page, 1)
+      expect(m.ghost, 'the card beside note 1 is click-through at 768').toBe(true)
+      expect(m.pointerEvents).toBe('none')
+      const c2 = await centreOf(page, 2)
+      await page.mouse.move(c2.x, c2.y, { steps: 6 })
+      await expect(openTip(page).locator('.tt-tip-head'), 'resting on note 2, under the card, opens its own').toHaveText(/^200 · #/, { timeout: 700 })
+    })
+  })
+
+  // ── The card's tint chip, the far card's place, and the hover-intent hold ──
+  test('every card carries its tint as a 20px chip with a 6px radius, hidden from a screen reader', async ({ page }) => {
+    await openTint(page, 'someone reading a card')
+    for (let i = 0; i < 11; i++) {
+      await settle(page, i)
+      const chip = await openTip(page).locator('.tt-tip-sw').evaluate((el) => {
+        const cs = getComputedStyle(el)
+        const r = el.getBoundingClientRect()
+        const hex = el.closest('.tt-tip').querySelector('.tt-tip-head').textContent.match(/#[0-9A-Fa-f]{6}/)[0]
+        const want = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16))
+        return { w: r.width, h: r.height, radius: cs.borderTopLeftRadius, bg: cs.backgroundColor, want: `rgb(${want.join(', ')})`, hidden: el.getAttribute('aria-hidden') }
+      })
+      expect([chip.w, chip.h], `note ${i}: chip size`).toEqual([20, 20])
+      expect(chip.radius, `note ${i}: chip radius`).toBe('6px')
+      expect(chip.bg, `note ${i}: the chip is the tint`).toBe(chip.want)
+      expect(chip.hidden, `note ${i}: the chip is decoration`).toBe('true')
+    }
+  })
+
+  test('a card parked past the notes takes the controls panel\'s left edge and width', async ({ page }) => {
+    await openTint(page, 'someone reading a far card')
+    let far = 0
+    const notesRight = await page.locator('.tt-notes').evaluate((el) => el.getBoundingClientRect().right)
+    for (let i = 0; i < 11; i++) {
+      await settle(page, i)
+      const m = await cardFit(page, i)
+      if (!(m.side && m.card.left >= notesRight - 1)) continue
+      far++
+      expect(Math.abs(m.card.left - m.panel.left), `note ${i}: the far card starts at the panel's left`).toBeLessThanOrEqual(1)
+      expect(Math.abs(m.card.w - m.panel.w), `note ${i}: and is the panel's width`).toBeLessThanOrEqual(1)
+      expect(m.card.w, `note ${i}: and is at least 224px`).toBeGreaterThanOrEqual(224)
+    }
+    expect(far, 'some cards are parked past the notes at 1440x900').toBeGreaterThan(0)
+  })
+
+  // A far card is reached by crossing other notes. While the pointer is heading for
+  // it they wait (the hold), so the card is still there once it arrives.
+  for (const steps of [12, 1]) {
+    test(`a pointer going from a note onto its far card, in ${steps} step${steps > 1 ? 's' : ''}, finds the card still open after 700ms`, async ({ page }) => {
+      await openTint(page, 'someone moving from a note to its card')
+      for (const i of [5, 6, 9]) {
+        await page.mouse.move(5, 5)
+        await expect(openTip(page), `note ${i}: clear`).toHaveCount(0)
+        const c = await centreOf(page, i)
+        await page.mouse.move(30, c.y)
+        await page.mouse.move(c.x, c.y, { steps: 10 })
+        const label = await labelOf(page, i)
+        await expect(openTip(page).locator('.tt-tip-head'), `note ${i}`).toHaveText(new RegExp(`^${label} · #`))
+        const box = await openTip(page).locator('.tt-tip-card').boundingBox()
+        // Along the note's own row to the card (the card is far, past the notes).
+        await page.mouse.move(box.x + 20, Math.min(Math.max(c.y, box.y + 5), box.y + box.height - 5), { steps })
+        await page.waitForTimeout(700)
+        await expect(openTip(page), `note ${i}: the card is still open`).toHaveCount(1)
+        await expect(openTip(page).locator('.tt-tip-head'), `note ${i}: and it is the same card`).toHaveText(new RegExp(`^${label} · #`))
+      }
+    })
+  }
+
+  test('a pointer that rests on another note on its way to a card gets that note\'s card once it dwells', async ({ page }) => {
+    await openTint(page, 'someone stopping on a note')
+    const c5 = await centreOf(page, 5)
+    await page.mouse.move(30, c5.y)
+    await page.mouse.move(c5.x, c5.y, { steps: 10 })
+    await expect(openTip(page).locator('.tt-tip-head')).toHaveText(/^500 · #/)
+    // Toward the card and over note 6, then still: the hold runs out and note 6 takes the card.
+    const c6 = await centreOf(page, 6)
+    await page.mouse.move(c6.x, c6.y, { steps: 6 })
+    await expect(openTip(page).locator('.tt-tip-head'), 'resting on note 6 opens its card within 700ms').toHaveText(/^600 · #/, { timeout: 700 })
+  })
+
+  // A tap pins; a virtual click (a script, or assistive technology, detail 0) is a copy.
+  test.describe('a tap, then a virtual click', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+    test('the tap pins the card and the virtual click on another note copies it instead of pinning', async ({ page }) => {
+      await openTint(page, 'someone using a screen reader after a tap')
+      await note(page, 2).tap()
+      await expect(page.locator('.tt-tip--inline'), 'a tap pins').toHaveCount(1)
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.tt-tip--inline')).toHaveCount(0)
+      await note(page, 3).evaluate((el) => el.click())
+      await expect(note(page, 3).locator('.tt-note-hex'), 'a virtual click copies').toHaveText('Copied')
+      await expect(page.locator('.tt-tip--inline'), 'and does not pin').toHaveCount(0)
     })
   })
 
@@ -1049,7 +1147,8 @@ for (const [width, touch] of [[1440, false], [390, true]]) {
       await openTint(page, `someone wondering what Spacing does at ${width}`)
       const noteLine = page.locator('.tt-spacing-note')
       await expect(noteLine).toBeVisible()
-      await expect(noteLine).toHaveText('Perceived looks even. Linear spaces by light.')
+      // Only the active pill's sentence shows; the other pill's goes with it.
+      await expect(noteLine).toHaveText('Perceived: steps look evenly spaced.')
       const pills = page.getByRole('group', { name: 'Spacing', exact: true })
       await expect(pills).toHaveAttribute('aria-describedby', await noteLine.getAttribute('id'))
       const [p, n] = [await docBox(pills), await docBox(noteLine)]
@@ -1080,7 +1179,7 @@ for (const theme of ['light', 'dark']) {
         const css = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop]
         const probe = (token) => { const el = document.createElement('span'); el.style.color = `var(${token})`; document.querySelector('.tt').appendChild(el); const c = getComputedStyle(el).color; el.remove(); return c }
         return {
-          tokens: { ok: probe('--ok-strong'), warn: probe('--warn-strong'), err: probe('--err-strong') },
+          tokens: { ok: probe('--ok-strong'), warn: probe('--warn-strong'), err: probe('--err-strong'), dim: probe('--tl-dim') },
           marks: {
             pass: css('.tt-tip-row[data-pass="true"] .tt-tip-mark', 'color'),
             large: css('.tt-tip-row[data-grade="large"] .tt-tip-mark', 'color'),
@@ -1093,7 +1192,7 @@ for (const theme of ['light', 'dark']) {
       })
 
       const rgb = (c) => rgbOfCss(page, c)
-      const tokens = { ok: await rgb(read.tokens.ok), warn: await rgb(read.tokens.warn), err: await rgb(read.tokens.err) }
+      const tokens = { ok: await rgb(read.tokens.ok), warn: await rgb(read.tokens.warn), err: await rgb(read.tokens.err), dim: await rgb(read.tokens.dim) }
       const cardBg = await rgb(read.cardBg)
       const panelBg = await rgb(read.panelBg)
       expect(cardBg[3], 'the card is opaque, so the ratio below means something').toBe(255)
@@ -1107,7 +1206,7 @@ for (const theme of ['light', 'dark']) {
       expect(read.words.length).toBe(11)
       for (const w of read.words) {
         const colour = await rgb(w.color)
-        expect(colour, `the "${w.text}" word is in --ok-strong`).toEqual(tokens.ok)
+        expect(colour, `the "${w.text}" word is in --tl-dim, plain ink (the marks carry the pass colours)`).toEqual(tokens.dim)
         expect(ratioRgb(colour, panelBg), `the "${w.text}" word on the notes panel (${theme})`).toBeGreaterThanOrEqual(4.5)
       }
     } finally {
