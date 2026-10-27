@@ -309,7 +309,7 @@ test.describe('the Explore the library panel', () => {
     // withheld row a change might reach for.
     const toHex = (n) => Number(n).toString(16).padStart(2, '0')
     const found = [
-      ...[...swatchStyles.matchAll(/#([0-9a-f]{6})/g)].map((m) => m[1].toUpperCase()),
+      ...[...swatchStyles.matchAll(/#([0-9a-f]{6})(?![0-9a-f])/gi)].map((m) => m[1].toUpperCase()),
       ...[...swatchStyles.matchAll(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/g)].map((m) => (toHex(m[1]) + toHex(m[2]) + toHex(m[3])).toUpperCase()),
     ]
     const openHexes = new Set(GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.anonymous).flatMap((g) => g.stops.map((st) => st.color.replace('#', '').toUpperCase())))
