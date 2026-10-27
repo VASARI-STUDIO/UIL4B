@@ -70,10 +70,6 @@
 .aw--strip .aw-strip{padding:16px}
 .aw--strip .aw-set{padding-bottom:0}
 
-/* Keep still while the form is in use, the tab is hidden, the wall is
-   offscreen or the visitor pressed pause. */
-.aw[data-paused="true"] .aw-track,.aw[data-hidden="true"] .aw-track,.aw[data-offscreen="true"] .aw-track,.auth-page-form:focus-within ~ .aw .aw-track{animation-play-state:paused}
-
 @keyframes auth-drift-up{from{transform:translateY(0)}to{transform:translateY(-50%)}}
 @keyframes auth-drift-down{from{transform:translateY(-50%)}to{transform:translateY(0)}}
 @keyframes auth-drift-left{from{transform:translateX(0)}to{transform:translateX(-50%)}}
@@ -129,6 +125,12 @@
   .auth-page{grid-template-columns:minmax(440px,640px) 1fr}
   .aw-cols{grid-template-columns:repeat(3,minmax(0,300px));justify-content:center}
 }
+
+/* Keep still while the form is in use, the tab is hidden, the wall is
+   offscreen or the visitor pressed pause. This sits after every `animation`
+   shorthand (the band's above, the page's inside the 1024 query): the shorthand
+   resets the play state, and these selectors have the same specificity. */
+.aw[data-paused="true"] .aw-track,.aw[data-hidden="true"] .aw-track,.aw[data-offscreen="true"] .aw-track,.auth-page-form:focus-within ~ .aw .aw-track{animation-play-state:paused}
 
 /* Reduced motion: no settle, no drift. The copy and the pause button are not
    rendered either; this keeps a half-applied state from animating. */
