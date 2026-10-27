@@ -18,7 +18,8 @@ function allowedNouns(d) {
 }
 
 function nounsInside(description, allowed) {
-  let rest = description.toLowerCase()
+  // "night sky" is the Curtains scene's fixed wording, not the colour Sky.
+  let rest = description.toLowerCase().replace(/\bnight sky\b/g, ' ')
   for (const phrase of [...allowed].sort((a, b) => b.length - a.length)) rest = rest.split(phrase).join(' ')
   rest = rest.replace(/\b(paler|deeper|dusty|misty)\b/g, ' ')
   return lexicon.filter((w) => new RegExp(`\\b${w}\\b`).test(rest))
