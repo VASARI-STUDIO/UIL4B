@@ -25,9 +25,9 @@ import '../styles/pages/spectrum-tools.css'
 // THE SIX CARDS are the colour, type, icons and images path, in the order a kit
 // is built. The first four are live: they run the same maths the homepage ships
 // (rampOf, ratio, FONTS, the modular scale). Icon Library and File Converter
-// are shown by name and description until their captures are committed.
+// are real screenshots (SHOTS, from scripts/tool-shots.mjs).
 // THE LIST is derived: every listed, live tool that is not a card, grouped by the
-// nav's own labels. Counts are never typed.
+// nav's own labels. Counts are never typed. A row has a screenshot when SHOTS has one.
 
 const CARD_IDS = ['palette', 'contrast', 'font-gallery', 'type-scale', 'icons', 'file-converter']
 const LIVE = createTools().filter((t) => !t.soon)
@@ -42,6 +42,43 @@ const GROUPS = NAV_SECTIONS.find((s) => s.id === 'create').columns
   .filter((g) => g.tools.length)
 const WORKSHOP = createTools().filter((t) => t.soon).map((t) => t.label)
 const joinNames = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
+
+// Alt text for each screenshot: the tool and the state it is photographed in.
+const SHOTS = {
+  icons: 'Icon Library showing the Lucide pack, the icon grid filled with arrows, chevrons, files and media controls',
+  'file-converter': 'File Converter after compressing tasmanian-sunset.webp to WebP at 70% quality, the result line reading 139.1 KB to 115.7 KB, 17% smaller',
+  semantic: 'Semantic Colour with success, warning, error and info roles, each shown as a ten-step ramp beside the CSS tokens',
+  tint: 'Tint showing an eleven-step ramp from a blue seed, with the lightness per step and contrast notes below',
+  'font-pair': 'Font Pair with Schibsted Grotesk for headings over Literata for body text, in the article preview',
+  emoji: 'Emoji Library on All categories, the Smileys and Hands groups filling the grid',
+  ratio: 'Aspect & Resolution with 16:9 solved at 1920 by 1080, with its decimal, diagonal and physical size',
+  'alt-text': 'Alt Text Generator before any image is added, with examples of good and avoid alt text and the tips beneath',
+}
+const SHOT_THEMES = ['light', 'dark']
+
+// Two pictures per screenshot, one for each theme. The stylesheet hides the one
+// that does not match the page's data-theme (or, before that is set, the
+// system setting), so the other is never painted.
+function Shot({ id, sizes, width, height }) {
+  const tool = BY_ID.get(id)
+  return SHOT_THEMES.map((theme) => (
+    <picture key={theme} className={`spt-shot spt-shot--${theme}`}>
+      <img
+        src={`/tools/${id}-${theme}-1280.webp`}
+        srcSet={`/tools/${id}-${theme}-640.webp 640w, /tools/${id}-${theme}-1280.webp 1280w`}
+        sizes={sizes}
+        width={width}
+        height={height}
+        loading="lazy"
+        decoding="async"
+        alt={SHOTS[id] || tool.label}
+      />
+    </picture>
+  ))
+}
+
+const CARD_SIZES = '(max-width: 760px) calc(100vw - 80px), 560px'
+const ROW_SIZES = '(max-width: 760px) 112px, 160px'
 
 const RATIOS = [1.2, 1.25, 1.333]
 const SCALE_STEPS = [3, 2, 1, 0, -1].map((n) => n)
@@ -135,6 +172,7 @@ function Card({ id }) {
   return (
     <article className="spt-card" data-tool={id}>
       {Demo ? <div className="spt-preview"><Demo /></div> : null}
+      {SHOTS[id] ? <div className="spt-preview spt-preview--shot"><Shot id={id} sizes={CARD_SIZES} width={1280} height={800} /></div> : null}
       <h3>{tool.label}</h3>
       <p>{describe(id)}</p>
       <OpenPill to={route(id)}>{`Open ${tool.label}`}</OpenPill>
@@ -145,11 +183,13 @@ function Card({ id }) {
 function Row({ tool }) {
   const grad = tool.id === 'gradient' ? LIBRARY_GRADIENT_ROWS.find((g) => g.stops) : null
   const model = tool.id === '3d-converter'
+  const shot = Boolean(SHOTS[tool.id])
   return (
     <li>
       <Link className="spt-row" to={route(tool.id)}>
-        <span className="spt-thumb" aria-hidden="true" style={grad ? { background: gradientCss(grad.type, grad.angle, grad.stops) } : undefined}>
+        <span className="spt-thumb" aria-hidden={shot ? undefined : 'true'} style={grad ? { background: gradientCss(grad.type, grad.angle, grad.stops) } : undefined}>
           {model ? <img src={MODEL_PREVIEW.poster} alt="" width={MODEL_PREVIEW.width} height={MODEL_PREVIEW.height} loading="lazy" decoding="async" /> : null}
+          {shot ? <Shot id={tool.id} sizes={ROW_SIZES} width={160} height={100} /> : null}
         </span>
         <span className="spt-row-text">
           <b>{tool.label}{tool.beta ? ' Beta' : ''}</b>

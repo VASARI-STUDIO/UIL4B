@@ -67,3 +67,23 @@
 @media (prefers-reduced-motion: reduce) {
   .spt .spt-ramp li { transition: none; }
 }
+
+/* Screenshots: one picture per theme in the markup; the page's theme decides which
+   is painted. data-theme is the site's own switch; the media query covers a page
+   that has not set it yet. */
+.spt .spt-preview--shot { padding: 0; outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
+.spt .spt-shot { display: block; width: 100%; height: 100%; }
+.spt .spt-shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+html[data-theme="light"] .spt .spt-shot--dark,
+html[data-theme="dark"] .spt .spt-shot--light,
+:root:not([data-theme]) .spt .spt-shot--dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .spt .spt-shot--light { display: none; }
+  :root:not([data-theme]) .spt .spt-shot--dark { display: block; }
+}
+html[data-theme="dark"] .spt .spt-preview--shot,
+html[data-theme="dark"] .spt .spt-thumb { outline-color: oklch(1 0 0 / .1); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .spt .spt-preview--shot,
+  :root:not([data-theme]) .spt .spt-thumb { outline-color: oklch(1 0 0 / .1); }
+}
