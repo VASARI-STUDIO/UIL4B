@@ -16,7 +16,7 @@ import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
-import { openMoods } from '../utils/gradientMoods'
+import { openGradientRows } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
@@ -67,25 +67,13 @@ const PRESETS = [
   { n: 'Tidepool', use: 'Cool focal background', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#58B2D4', position: 0 }, { color: '#1E5FB8', position: 50 }, { color: '#0A1D4D', position: 100 }] },
 ]
 
-// A taste of the library for its panel: one gradient a free account can open in
-// full for each of six moods, so the strip shows range instead of six warm rows.
-// Each chip links to the library filtered to that mood (`?mood=`, read by
-// GradientGallery). An id that is not in the bundle, or is a name-only stub, is
-// skipped rather than painted blank. A signed-out visitor can only search the
-// first few library rows, so the chips shown are narrowed again to the moods
-// those rows carry (exploreTaste in the component).
-const EXPLORE_MOODS = [
-  ['warm', 'sunset-blaze'],
-  ['cool', 'rosewater'],
-  ['dark', 'ember-fade'],
-  ['light', 'mango-pulp'],
-  ['pastel', 'peach-melba'],
-  ['vivid', 'sun-flare'],
-]
-const EXPLORE_TASTE = EXPLORE_MOODS
-  .map(([mood, id]) => ({ mood, row: LIBRARY_GRADIENT_ROWS.find((g) => g.id === id) }))
-  .filter(({ row }) => Array.isArray(row?.stops))
-  .map(({ mood, row }) => ({ ...row, mood }))
+// A taste of the library for its panel: one chip per mood, each painted with a
+// gradient this viewer can open in full, so the strip shows range instead of six
+// warm rows. Each chip links to the library filtered to that mood (`?mood=`,
+// read by GradientGallery). The swatch is picked in the component from the rows
+// the viewer's tier can open (exploreTaste), never from a fixed row, so a row
+// the library withholds from them never reaches the page.
+const EXPLORE_MOODS = ['warm', 'cool', 'dark', 'light', 'pastel', 'vivid']
 
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -166,7 +154,7 @@ const tailwindValue = (css) => `bg-[${css.replace(/ /g, '_')}]`
 // too). `srgb` is gamma-encoded sRGB, the CSS default — not linear light — so
 // it is "Standard", not "Linear".
 const SPACES = [
-  { value: 'oklch', label: 'Perceived', real: 'OKLCH', hint: 'OKLCH — blends the way the eye sees colour, so steps look even' },
+  { value: 'oklch', label: 'Perceived', real: 'OKLCH', hint: 'OKLCH: blends the way the eye sees colour, so steps look even' },
   { value: 'srgb', label: 'Standard', real: 'sRGB', hint: 'sRGB — the CSS default, blends the raw red, green and blue values' },
 ].map((o) => ({ ...o, ariaLabel: `${o.label} (${o.real})`, title: o.hint }))
 function gradientCssIn(type, angle, stops, space) {
@@ -332,8 +320,22 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // reads as signed out, as it does in the gallery.
   const exploreTier = galleryTier({ isPro, signedIn: user != null })
   const exploreTaste = useMemo(() => {
-    const open = openMoods(LIBRARY_GRADIENT_ROWS, exploreTier, EXPLORE_TASTE.map((g) => g.mood))
-    return EXPLORE_TASTE.filter((g) => open.includes(g.mood))
+    // Pro opens the whole library, but only the free-open rows ship in full (the
+    // rest are stubs with no stops), so Pro's swatches come from those.
+    const open = openGradientRows(LIBRARY_GRADIENT_ROWS, exploreTier === 'pro' ? 'free' : exploreTier)
+      .filter((g) => Array.isArray(g.stops) && Array.isArray(g.tags))
+    // The first open row carrying the mood, preferring one no earlier chip took,
+    // so moods that share a row (warm and vivid) do not paint the same swatch.
+    const used = new Set()
+    const taste = []
+    for (const mood of EXPLORE_MOODS) {
+      const carrying = open.filter((g) => g.tags.includes(mood))
+      const row = carrying.find((g) => !used.has(g.id)) || carrying[0]
+      if (!row) continue
+      used.add(row.id)
+      taste.push({ ...row, mood })
+    }
+    return taste
   }, [exploreTier])
 
   // A palette handed over from the Palette Builder's Gradient button. Read (not
@@ -348,9 +350,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // saved stops are used and a stop still null falls back to the matching colour
   // of the live palette.
   const [type, setType] = useState(() => design?.gradient?.type || PRESETS[0].type)
-  // The design's untouched default carries a placeholder 135deg with no colours;
-  // only a gradient that has real stops owns its angle. Otherwise the
-  // default angle is used, so a first visit and Reset draw the same thing.
+  // The design's untouched default carries a placeholder 135deg with no colours,
+  // so it does not count as a saved angle. A gradient with real stops keeps its
+  // saved angle, and so does a palette carried over from the Palette Builder
+  // (its stops are rebuilt, the saved angle stays). Otherwise the default angle
+  // is used, so a first visit and Reset draw the same thing.
   const [angle, setAngle] = useState(() => {
     const saved = design?.gradient
     const hasOwn = !!carriedPalette || saved?.stops?.some?.((s) => s?.color)
@@ -1107,7 +1111,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             label="Stops"
             aside={(
               <span className="grd-sec-tools">
-                <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
+                <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked, unlock to randomise it' : 'Lock the number of stops when randomising'} />
                 <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
                   <ToolIcon name="arrows-left-right" size={13} />
                 </button>
@@ -1241,7 +1245,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 value={type}
                 onChange={(t) => { if (guardEdit()) setType(t) }}
               />
-              <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked — unlock to randomise it' : 'Lock type when randomising'} />
+              <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked, unlock to randomise it' : 'Lock type when randomising'} />
             </div>
             {angleActive && (
               <div className="grd-row">
@@ -1254,7 +1258,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   locked={editLocked}
                   onLockedPress={guardEdit}
                 />
-                <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked — unlock to randomise it' : 'Lock angle when randomising'} />
+                <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked, unlock to randomise it' : 'Lock angle when randomising'} />
               </div>
             )}
             <div className="grd-interp">

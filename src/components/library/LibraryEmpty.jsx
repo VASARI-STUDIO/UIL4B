@@ -27,10 +27,11 @@ export default function LibraryEmpty({
       {detail && <span>{detail}</span>}
       {/* `action` is a first step when the filters are not the cause (sign in
           for rows the tier withholds); the reset stays beside it, never in its
-          place. */}
+          place, and steps back to a quiet secondary so the action is the one
+          primary. */}
       <div className="lbry-empty-actions">
         {action}
-        <button type="button" className="lbry-empty-clear" onClick={onClear}>
+        <button type="button" className={`lbry-empty-clear${action ? ' lbry-empty-clear--quiet' : ''}`} onClick={onClear}>
           {clearLabel}
         </button>
       </div>

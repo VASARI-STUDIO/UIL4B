@@ -26,14 +26,21 @@ test('the panel heading is no bigger than the presets heading (18px)', () => {
 test('each taste chip is a link to the library filtered by its own, distinct mood', () => {
   const src = read('src/pages/GradientGenerator.jsx')
   assert.match(src, /to=\{`\/discover\/gradients\?mood=\$\{g\.mood\}`\}/)
-  const pairs = [...src.matchAll(/\['(\w+)', '([a-z-]+)'\],/g)].map((m) => [m[1], m[2]])
-  assert.equal(pairs.length, 6)
-  assert.equal(new Set(pairs.map(([mood]) => mood)).size, 6, 'six different moods')
-  for (const [mood, id] of pairs) {
-    const row = LIBRARY_GRADIENT_ROWS.find((g) => g.id === id)
-    assert.ok(Array.isArray(row?.stops), `${id} has its stops`)
-    assert.ok(row.tags.includes(mood), `${id} is tagged ${mood}`)
+  const list = src.match(/const EXPLORE_MOODS = \[([^\]]*)\]/)
+  assert.ok(list, 'EXPLORE_MOODS is a list of mood names')
+  const moods = [...list[1].matchAll(/'(\w+)'/g)].map((m) => m[1])
+  assert.equal(moods.length, 6)
+  assert.equal(new Set(moods).size, 6, 'six different moods')
+  for (const mood of moods) {
+    assert.ok(LIBRARY_GRADIENT_ROWS.some((g) => Array.isArray(g.stops) && g.tags.includes(mood)), `a full row carries ${mood}`)
   }
+})
+
+test('a chip is painted from the rows the tier can open, never from a named row', () => {
+  const src = read('src/pages/GradientGenerator.jsx')
+  assert.match(src, /openGradientRows\(LIBRARY_GRADIENT_ROWS, /)
+  const list = src.match(/const EXPLORE_MOODS = \[[^\]]*\]/)[0]
+  for (const g of LIBRARY_GRADIENT_ROWS) assert.ok(!list.includes(g.id), `EXPLORE_MOODS does not name ${g.id}`)
 })
 
 test('the library reads the mood from ?mood= and ignores an unknown one', () => {

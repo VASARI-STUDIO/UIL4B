@@ -297,6 +297,11 @@ test.describe('the Explore the library panel', () => {
     await expect(chips.locator('.grd-explore-mood')).toHaveText(['warm', 'light', 'vivid'])
     const hrefs = await chips.evaluateAll((els) => els.map((el) => el.getAttribute('href')))
     expect(hrefs).toEqual(['/discover/gradients?mood=warm', '/discover/gradients?mood=light', '/discover/gradients?mood=vivid'])
+    // No withheld row's colours reach the page: Sun Flare (row 8) is withheld
+    // from a signed-out visitor and ends on #7C2D12.
+    const swatchStyles = (await explore.locator('.grd-explore-swatch').evaluateAll((els) => els.map((el) => el.getAttribute('style') || ''))).join(' ').toLowerCase()
+    expect(swatchStyles, 'the chips are painted').toContain('gradient')
+    expect(swatchStyles).not.toMatch(/7c2d12|rgb\(124,\s*45,\s*18\)/)
 
     const link = explore.getByRole('link', { name: 'Browse all gradients' })
     await expect(link).toHaveAttribute('href', '/discover/gradients')
@@ -426,11 +431,19 @@ test.describe('the library when the signed-out cap empties a mood', () => {
     await expect(page.getByRole('button', { name: 'Mood Dark' }), 'the filter really is on').toBeVisible()
     await expect(page.locator('.grg-card'), 'nothing listed').toHaveCount(0)
 
-    await expect(empty).toContainText('None of the gradients you can open match those filters.')
+    await expect(empty).toContainText('Nothing open to you matches those filters.')
     // The first ten rows carry two dark ones (Bloody Mary, Ember Fade).
     await expect(empty).toContainText('A free account opens 2 that fit these filters.')
     await expect(empty.getByRole('button', { name: 'Clear filters' })).toBeVisible()
-    const signIn = empty.getByRole('button', { name: 'Sign in to see 2' })
+    // The sign-in action is the primary: Clear filters is the quiet secondary
+    // (no fill, a 1px ring).
+    const clearStyle = await empty.getByRole('button', { name: 'Clear filters' }).evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { bg: cs.backgroundColor, ring: cs.borderTopWidth }
+    })
+    expect(clearStyle.bg, 'Clear filters has no fill beside the sign-in action').toBe('rgba(0, 0, 0, 0)')
+    expect(clearStyle.ring).toBe('1px')
+    const signIn =empty.getByRole('button', { name: 'Open 2 with a free account' })
     await expect(signIn).toBeVisible()
     await expect(page.getByRole('dialog'), 'no prompt before the click').toHaveCount(0)
 
@@ -454,15 +467,15 @@ test.describe('the library when the signed-out cap empties a mood', () => {
     watch(page, 'a signed-out visitor searching inside Dark')
     await go(page, `${LIBRARY}?mood=dark`)
     // POSITIVE CONTROL: the sign-in state is what this page shows before the search.
-    await expect(emptyOf(page).getByRole('button', { name: 'Sign in to see 2' })).toBeVisible()
+    await expect(emptyOf(page).getByRole('button', { name: 'Open 2 with a free account' })).toBeVisible()
 
     // Ember Fade is a withheld dark gradient: a search that names it must not be
     // answered with a count of withheld rows matching, however it is worded.
     await page.getByLabel('Search gradients').fill('Ember')
     const empty = emptyOf(page)
     await expect(empty).toContainText('No gradients match “Ember”.')
-    await expect(empty).not.toContainText('None of the gradients you can open')
-    await expect(empty.getByRole('button', { name: /^Sign in/ })).toHaveCount(0)
+    await expect(empty).not.toContainText('Nothing open to you')
+    await expect(empty.getByRole('button', { name: /with a free account$/ })).toHaveCount(0)
     await expect(empty.getByRole('button', { name: 'Clear filters' })).toBeVisible()
   })
 

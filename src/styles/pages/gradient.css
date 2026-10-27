@@ -115,7 +115,7 @@
   background: rgba(10, 11, 13, .9);
   color: #fff;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1;
   white-space: nowrap;
   opacity: 0;
@@ -193,7 +193,7 @@
 }
 .grd .grd-stop-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
 .grd .grd-stop-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
-.grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); }
+.grd .grd-stop-pos { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); }
 .grd .grd-iconbtn {
   display: grid;
   place-items: center;
@@ -267,7 +267,7 @@
   background: var(--tl-card);
   border: 1px solid var(--tl-line-2);
   color: var(--t0);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 

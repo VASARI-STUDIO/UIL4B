@@ -7,8 +7,8 @@
 // chips are filtered through the same split the gallery runs rather than a
 // hand-kept list that drifts when the library or the cap changes.
 
-import { LIBRARY_RULES } from './libraryRules'
-import { splitLockedLibrary, galleryLimit } from './lockedPreview'
+import { LIBRARY_RULES } from './libraryRules.js'
+import { splitLockedLibrary, galleryLimit } from './lockedPreview.js'
 
 // The rows a tier can open, in canonical order. Same call the gallery makes.
 export function openGradientRows(rows, tier) {
