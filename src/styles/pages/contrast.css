@@ -100,7 +100,7 @@
   color: var(--cc-fg, #000000);
 }
 .cc .cc-preview p { margin: 0; }
-.cc .cc-spec-h { font-size: 40px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; }
+.cc .cc-spec-h { font-size: 40px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
 .cc .cc-spec-large { font-size: 24px; font-weight: 400; line-height: 1.35; }
 .cc .cc-spec-bold { font-size: 19px; font-weight: 700; line-height: 1.4; }
 .cc .cc-spec-body { max-width: min(60ch, 100%); font-size: 16px; font-weight: 400; line-height: 1.6; }
@@ -176,7 +176,7 @@
 .cc .cc-ratio-num {
   font-size: clamp(34px, 5vw, 46px);
   font-weight: 600;
-  letter-spacing: -.04em;
+  letter-spacing: -.02em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }

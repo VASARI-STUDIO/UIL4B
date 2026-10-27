@@ -234,7 +234,7 @@
 .stg .sub-tier { gap: 14px; padding: 22px 20px; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .stg .sub-tier-pro { border-left: 1px solid var(--stg-hair); box-shadow: none; }
 .stg .sub-tier-name { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--t1); }
-.stg .sub-tier-amount { font-family: var(--display); font-size: 34px; font-weight: 600; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.stg .sub-tier-amount { font-family: var(--display); font-size: 34px; font-weight: 600; letter-spacing: -.015em; font-variant-numeric: tabular-nums; }
 .stg .sub-tier-per { color: var(--t1); }
 /* "Unavailable" is a word, not a figure: set at the reading size so it
    does not fill the panel at the price's display size. */

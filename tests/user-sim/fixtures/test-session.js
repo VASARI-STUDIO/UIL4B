@@ -355,9 +355,31 @@ export const denials = DECLARED?.deny || []
 export function readDelayFor(path) {
   let ms = 0
   for (const entry of DECLARED?.slowReads || []) {
-    if (entry?.path && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
+    // A `hold` entry belongs to the listener below, not to getDoc.
+    if (entry?.path && !entry.hold && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
   }
   return ms
+}
+
+/* A LISTENER THAT DOES NOT ANSWER UNTIL THE SPEC SAYS SO.
+ * `signIn(page, { slowReads: [{ path, hold: true }] })` keeps every onSnapshot
+ * whose path contains `path` silent: it fires no snapshot, first or later, until
+ * the page calls `window.__UIL4B_TEST_HOLD__.release()`. That is the state the
+ * app sits in while a signed-in account's entitlement is still on the way
+ * (SubscriptionContext `planKnown` false), held open for as long as a spec
+ * needs to look at it instead of for a guessed number of milliseconds. */
+const HELD_PATHS = (DECLARED?.slowReads || []).filter((e) => e?.path && e.hold).map((e) => e.path)
+const heldFires = new Set()
+let holdReleased = false
+export function heldWatch(path, fire) {
+  if (!HELD_PATHS.some((p) => String(path).includes(p))) return fire
+  return () => { if (holdReleased) fire(); else heldFires.add(fire) }
+}
+function releaseHeldWatches() {
+  holdReleased = true
+  const queued = [...heldFires]
+  heldFires.clear()
+  queued.forEach((fire) => fire())
 }
 
 /* AN AUTH CALL THAT CAN BE TOLD TO REFUSE, for the same reason as `deny`.
@@ -406,5 +428,6 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
+  try { window.__UIL4B_TEST_HOLD__ = { release: releaseHeldWatches } } catch { /* no window */ }
   try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }

@@ -38,14 +38,14 @@ import { detectCanvasFontRendered } from '../utils/fontDetection'
  * value would do arithmetically — but not to the precision this table prints.
  *
  * At 100px Chromium returns the ink extents already rounded to whole pixels:
- * Geist's x came back as exactly 53 and its H as exactly 71, which is 0.530
- * and 0.710 per em, a third decimal place invented in both. At 1000px the same
- * measurements are 531.25 and 718.75, so 0.531 and 0.719 are measured rather
- * than rounded. Three decimals is what the table shows, and this is what makes
- * the third one real.
+ * an x-height came back as a whole 53 and a cap height as a whole 71, which is
+ * 0.530 and 0.710 per em, a third decimal place invented in both. At 1000px the
+ * same measurements can carry a fraction of a pixel, so the third place is
+ * measured rather than rounded. Three decimals is what the table shows, and
+ * this is what makes the third one real.
  *
  * That is Chromium on Windows. On Linux FreeType rounds ink bounds to whole
- * pixels at EVERY size (CI measured 532 and 719), and 1000px still suffices:
+ * pixels at EVERY size, and 1000px still suffices:
  * a whole pixel at 1000px is a thousandth of an em, which is the third place.
  */
 const EM = 1000
@@ -56,7 +56,7 @@ const AT_PX = 16
 /**
  * The product's own two families, by the custom property that holds each stack.
  * --display is deliberately absent: global.css defines it as an alias of --font
- * (the same Geist, named for the job), so a row for it would be a second copy
+ * (the same face, named for the job), so a row for it would be a second copy
  * of the first row's measurements wearing a different label.
  */
 const PRODUCT_FACES = [

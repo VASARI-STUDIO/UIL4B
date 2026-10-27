@@ -560,8 +560,7 @@ export default function UIKitGuide({ step }) {
           onEscape={() => setShowName(false)}
         >
           <p className="bkit-card-body">
-            The name goes on the project and on the kit you export. You can change it
-            later in Export.
+            The name goes on the project and on the kit you export.
           </p>
           <form className="bkit-name-form" onSubmit={submitName} noValidate aria-busy={saving ? 'true' : undefined}>
             <label className="bkit-name-label" htmlFor={`${nameCardId}-name`}>Project name</label>

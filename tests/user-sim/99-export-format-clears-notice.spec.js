@@ -2,6 +2,7 @@
 // the buttons. That line belongs to the format that produced it: once someone
 // picks another format, "Your UI kit downloaded." must not sit beside an
 // "Export CSS tokens" button that has not been pressed.
+import { chooseFormat } from './export-rows.js'
 import fs from 'node:fs'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
@@ -43,10 +44,10 @@ test('choosing another format clears the finished-export notice', async ({ page 
   // With the message on screen the left button closes the panel.
   await expect(panel.getByRole('button', { name: 'Close', exact: true })).toBeVisible()
 
-  await panel.getByRole('radio', { name: /^CSS tokens/ }).click()
+  await chooseFormat(panel, 'css')
 
-  await expect(panel.getByRole('radio', { name: /^CSS tokens/ })).toHaveAttribute('aria-checked', 'true')
-  await expect(panel.getByRole('button', { name: 'Export CSS', exact: true })).toBeEnabled()
+  await expect(panel.getByRole('radio', { name: 'CSS', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(panel.getByRole('button', { name: 'Export CSS tokens', exact: true })).toBeEnabled()
   // The status region is always mounted (a screen reader needs it present before
   // the text arrives), so the check is on the words, not on the region.
   await expect(panel.locator('.exp-notice'), 'the kit confirmation is gone once another format is chosen').toHaveCount(0)

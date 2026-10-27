@@ -227,7 +227,9 @@ test('the export panel offers the kit as a free format, and the plan lines say s
   assert.ok(PRO_POINTS.some((l) => /UI kit with no “Made with UIL4B” line/.test(l)))
   const panel = read('src/components/ExportPanel.jsx')
   assert.match(panel, /useState\('kit'\)/, 'the kit is the panel\'s default format')
-  assert.match(panel, /tier: isPro \? 'pro' : 'free'/, 'the kit tier comes from the live entitlement')
+  assert.match(panel, /let proNow = isPro\b/, 'the export starts from the live entitlement')
+  assert.match(panel, /proNow = live\.current\.isPro/, 'an account that signed in at the gate is re-read before building')
+  assert.match(panel, /tier: proNow \? 'pro' : 'free'/, 'the kit tier comes from the live entitlement')
   // The kit's identity comes from the working design inside the renderer. The
   // design has no `name`, so passing one from here personalised nothing.
   const call = panel.slice(panel.indexOf('buildUiKit(design'), panel.indexOf('download(blob, filename)'))

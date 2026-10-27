@@ -11,7 +11,7 @@
    `--sp-hair`, `--sp-wash`), the film grain, the colour band and the footer
    (spectrum.css, shared with `/`). Nothing here restyles a `.sp-*` class.
 
-   Type is Geist only, sentence case: 64 display (clamp), 56 price, 36 h2
+   Type is Switzer only, sentence case: 64 display (clamp), 56 price, 36 h2
    (clamp), 20 plan name, 16 group / question / button, 15 body and rows,
    14 notes, 13 small. Money is tabular. Space is the --s-1…--s-9 scale.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -50,7 +50,7 @@
   font-weight: 560;
   font-size: clamp(40px, 4.4vw, 64px);
   line-height: 1.04;
-  letter-spacing: -.035em;
+  letter-spacing: -.02em;
   text-wrap: balance;
   color: var(--sp-ink);
 }
@@ -178,7 +178,7 @@
   font-weight: 560;
   font-size: 56px;
   line-height: 1;
-  letter-spacing: -.035em;
+  letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
   color: var(--sp-ink);
 }
