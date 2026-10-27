@@ -9,14 +9,15 @@ import {
 } from '../components/tool/ToolLayout'
 import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch'
 import { useProject } from '../contexts/ProjectContext'
-import { contrastRatio, textColorForBg } from '../utils/colors'
+import { textColorForBg } from '../utils/colors'
+import { contrastNotes, GRADE_WORDS } from '../utils/tintContrast'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { refreshScrollLimit } from '../utils/hashLanding'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
 import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
 // The ramp is shared with the Palette Builder's swatch tints.
-import { buildRamp } from '../utils/tintRamp'
+import { buildRamp, LIGHTNESS_RANGE, SATURATION_MAX } from '../utils/tintRamp'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -24,9 +25,11 @@ import '../styles/pages/tint.css'
 // App.dc.html, `isTint`, D:793-869, view model D:1432-1444 and D:1936-1975).
 // A sticky tool toolbar with the accent "Copy or save" menu; the scale
 // as full-height step columns over a LIGHTNESS PER STEP chart; and one side
-// card of HUE AND CHROMA and STEPS / CURVE pills. CONTRAST NOTES are a
-// grid card under the chart (a list in the side card made the page taller than a
-// laptop screen); below 901px everything stacks and they follow the controls.
+// card of LIGHTNESS AND SATURATION sliders and STEPS / CURVE / SPACING pills.
+// CONTRAST NOTES are a grid card under the chart (a list in the side card made
+// the page taller than a laptop screen); below 901px everything stacks and they
+// follow the controls. Each note is a tint value; hovering, focusing or tapping
+// it opens its contrast against white and black.
 //
 // THE GENERATOR IS THE DESIGN'S: an OKLCH lightness curve from 0.97 down, one
 // hue, and a chroma that peaks mid-scale (D:1436-1442), with 9 / 11 / 13 steps
@@ -38,9 +41,10 @@ import '../styles/pages/tint.css'
 // copy, remove — the same row shape as the gradient's STOPS), the selected
 // source drives the columns, the chart, the sliders and the notes, and the "Copy or save"
 // menu (Copy CSS, Save to project, Download) takes every scale (`--tint-<step>` for one,
-// `--tint-<n>-<step>` for several — the previous build's names). The Hue and Chroma sliders edit
-// the SELECTED source's own hue and chroma, so a hex typed or picked there and
-// the sliders are one piece of state, not two.
+// `--tint-<n>-<step>` for several — the previous build's names). Hue and chroma
+// come from the source colour (its picker and hex field); the Lightness and
+// Saturation sliders and the Spacing pills shape every scale, the way Steps and
+// Curve do, and sit at their neutral values (0, 100%, Perceived) on open.
 
 const MAX_SOURCES = 8
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -53,8 +57,12 @@ function normaliseHex(raw) {
 }
 
 const CURVES = ['Even', 'Soft ends', 'High contrast']
-const INK_DARK = '#0B0C0E'
-const INK_LIGHT = '#F7F7F4'
+const SPACINGS = [
+  { value: 'perceived', label: 'Perceived', title: 'Steps look evenly spaced (OKLCH lightness)' },
+  { value: 'linear', label: 'Linear', title: 'Steps are evenly spaced in light (linear sRGB)' },
+]
+// The widest a contrast tooltip gets; tint.css reads the same number.
+const TIP_WIDTH = 280
 
 let seq = 0
 const mkSource = (hex) => ({ id: ++seq, hex, input: hex })
@@ -74,7 +82,30 @@ function barRef(color, pct) {
   }
 }
 
-const HUE_TRACK = `linear-gradient(90deg,${[0, 60, 120, 180, 240, 300, 360].map((h) => oklchToHex(0.62, 0.14, h)).join(',')})`
+// What a tint's contrast against white and black means, in the words a person
+// without the vocabulary can use. Always in the page (hidden until open) so a
+// screen reader gets it as the button's description.
+function ContrastTip({ id, step, open, end }) {
+  const notes = contrastNotes(step.hex)
+  return (
+    <span id={id} role="tooltip" className={end ? 'tt-tip tt-tip--end' : 'tt-tip'} data-open={open ? 'true' : undefined}>
+      <span className="tt-tip-card">
+        <span className="tt-tip-head">{step.label} · {step.hex}</span>
+        {notes.map((n) => (
+          <span key={n.key} className="tt-tip-row" data-pass={n.pass ? 'true' : 'false'} data-grade={n.grade}>
+            <span className="tt-tip-mark" aria-hidden="true"><ToolIcon name={n.grade === 'fail' ? 'x' : 'check'} size={12} /></span>
+            <span className="tt-tip-who">{n.label}</span>
+            <span className="tt-tip-ratio">{n.text}</span>
+            <span className="tt-tip-grade">{GRADE_WORDS[n.grade]}</span>
+          </span>
+        ))}
+        <span className="tt-tip-help">
+          Contrast is how far apart two colours are in lightness, from 1:1 (the same) to 21:1 (black on white). Body text needs 4.5:1 to pass AA; large text needs 3:1.
+        </span>
+      </span>
+    </span>
+  )
+}
 
 // onCopy only: Tint has no row in src/config/activationExports.js, so it must
 // not call the export hook (tests/unit/activation-exports.test.js).
@@ -94,6 +125,13 @@ export default function TintTool({ onCopy, toast }) {
   const [selectedId, setSelectedId] = useState(() => sources[0].id)
   const [steps, setSteps] = useState(11)
   const [curve, setCurve] = useState(0)
+  const [spacing, setSpacing] = useState('perceived')
+  const [lightness, setLightness] = useState(0)
+  const [saturation, setSaturation] = useState(100)
+  // The contrast tooltip: which tint is open, whether a tap pinned it, and
+  // whether it opens leftward (a note near the right edge).
+  const [tip, setTip] = useState(null)
+  const pointerTypeRef = useRef('mouse')
   const [copiedHex, setCopiedHex] = useState('')
   const [saveOpen, setSaveOpen] = useState(false)
 
@@ -116,8 +154,8 @@ export default function TintTool({ onCopy, toast }) {
 
   const scales = useMemo(() => sources.map((s) => {
     const [, C, H] = hexToOklchRaw(s.hex)
-    return { id: s.id, hue: H, chroma: C, steps: buildRamp(H, C, steps, curve) }
-  }), [sources, steps, curve])
+    return { id: s.id, hue: H, chroma: C, steps: buildRamp(H, C, steps, curve, { spacing, lightness, saturation }) }
+  }), [sources, steps, curve, spacing, lightness, saturation])
   const scale = scales[selIndex] || scales[0]
 
   // THE PROJECT'S TINTS PART. The ramp the project keeps is eleven stops (the
@@ -165,15 +203,35 @@ export default function TintTool({ onCopy, toast }) {
   const setSourceHex = (id, hex) => setSources((prev) => prev.map((s) => (s.id === id ? { ...s, hex, input: hex } : s)))
   const blurSource = (id) => setSources((prev) => prev.map((s) => (s.id === id ? { ...s, input: s.hex } : s)))
 
-  // The sliders edit the selected source's own OKLCH hue / chroma, keeping its
-  // lightness, so the source hex and the sliders never disagree.
-  const setHue = (h) => {
-    const [L, C] = hexToOklchRaw(selected.hex)
-    setSourceHex(selected.id, oklchToHex(L, C, h))
+  // A pinned tooltip (opened by a tap) closes on Escape or a press anywhere
+  // outside the note that holds it. One that follows hover or focus closes
+  // itself when the pointer or focus leaves.
+  const tipOpen = tip != null
+  useEffect(() => {
+    if (!tipOpen) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setTip(null) }
+    const onDown = (e) => { if (!e.target.closest?.('.tt-note-wrap')) setTip((cur) => (cur?.pinned ? null : cur)) }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onDown)
+    }
+  }, [tipOpen])
+  const openTip = (label, el, pinned = false) => {
+    const end = el.getBoundingClientRect().left + TIP_WIDTH > window.innerWidth - 12
+    setTip({ label, pinned, end })
   }
-  const setChroma = (c100) => {
-    const [L, , H] = hexToOklchRaw(selected.hex)
-    setSourceHex(selected.id, oklchToHex(L, c100 / 100, H))
+  const closeTip = (label) => setTip((cur) => (cur && cur.label === label && !cur.pinned ? null : cur))
+  const pressNote = (t, el) => {
+    copyHex(t.hex)
+    // A tap has no hover and a phone may not focus a button, so a tap pins the
+    // tooltip open (and a second tap on the same note closes it). A mouse click
+    // leaves it to hover, and a key press to focus.
+    if (pointerTypeRef.current === 'touch') {
+      if (tip?.label === t.label && tip.pinned) setTip(null)
+      else openTip(t.label, el, true)
+    }
   }
 
   const addSource = () => {
@@ -242,9 +300,10 @@ export default function TintTool({ onCopy, toast }) {
     { id: 'download', label: 'Download', icon: 'download-simple', hint: accountHint, onSelect: downloadCss },
   ]
 
-  const hueDeg = Math.round(scale.hue)
-  const chroma100 = Math.round(scale.chroma * 100)
-  const chromaTrack = `linear-gradient(90deg,${oklchToHex(0.62, 0, scale.hue)},${oklchToHex(0.62, 0.2, scale.hue)})`
+  const lightnessLabel = lightness === 0 ? '0' : `${lightness > 0 ? '+' : '\u2212'}${Math.abs(lightness)}`
+  const trackChroma = Math.min(0.12, scale.chroma)
+  const lightnessTrack = `linear-gradient(90deg,${oklchToHex(0.3, trackChroma, scale.hue)},${oklchToHex(0.93, trackChroma, scale.hue)})`
+  const saturationTrack = `linear-gradient(90deg,${oklchToHex(0.62, 0, scale.hue)},${oklchToHex(0.62, Math.max(0.04, scale.chroma * 1.5), scale.hue)})`
 
   return (
     <ToolLayout
@@ -354,32 +413,34 @@ export default function TintTool({ onCopy, toast }) {
             <ToolButton icon="swatches" iconSize={13} className="tt-import" onClick={importPalette} title="Replace the sources with your palette's colours">Import from palette</ToolButton>
           </ToolSection>
 
-          <ToolSection label="Hue and chroma" className="tt-hc">
+          <ToolSection label="Lightness and saturation" className="tt-ls">
             <ToolSlider
               wide
-              label="Hue"
-              min={0}
-              max={360}
+              label="Lightness"
+              min={-LIGHTNESS_RANGE}
+              max={LIGHTNESS_RANGE}
               step={1}
-              value={hueDeg}
-              onChange={setHue}
-              display={`${hueDeg}°`}
-              track={HUE_TRACK}
-              ariaLabel="Hue"
-              ariaValueText={`${hueDeg} degrees`}
+              value={lightness}
+              onChange={setLightness}
+              display={lightnessLabel}
+              track={lightnessTrack}
+              defaultValue={0}
+              ariaLabel="Lightness"
+              ariaValueText={lightness === 0 ? 'Unchanged' : `${Math.abs(lightness)} ${lightness > 0 ? 'lighter' : 'darker'}`}
             />
             <ToolSlider
               wide
-              label="Chroma"
+              label="Saturation"
               min={0}
-              max={Math.max(20, chroma100)}
+              max={SATURATION_MAX}
               step={1}
-              value={chroma100}
-              onChange={setChroma}
-              display={(chroma100 / 100).toFixed(2)}
-              track={chromaTrack}
-              ariaLabel="Chroma"
-              ariaValueText={(chroma100 / 100).toFixed(2)}
+              value={saturation}
+              onChange={setSaturation}
+              display={`${saturation}%`}
+              track={saturationTrack}
+              defaultValue={100}
+              ariaLabel="Saturation"
+              ariaValueText={`${saturation} percent of the source colour`}
             />
           </ToolSection>
 
@@ -397,20 +458,52 @@ export default function TintTool({ onCopy, toast }) {
               value={curve}
               onChange={setCurve}
             />
+            <span className="tl-sec-label" id="tt-spacing-label">Spacing</span>
+            <ToolPills
+              labelledBy="tt-spacing-label"
+              describedBy="tt-spacing-desc"
+              options={SPACINGS}
+              value={spacing}
+              onChange={setSpacing}
+            />
+            <span id="tt-spacing-desc" className="sr-only">
+              Perceived spaces the steps evenly to the eye. Linear spaces them evenly in light, which sits the middle steps lighter.
+            </span>
           </ToolSection>
         </ToolPanel>
         <div className="tt-notes" role="group" aria-labelledby="tt-notes-label">
-          <span className="tl-sec-label" id="tt-notes-label">Contrast notes</span>
+          <div className="tt-notes-head">
+            <span className="tl-sec-label" id="tt-notes-label">Contrast notes</span>
+            <span className="tt-notes-hint">Hover, focus or tap a tint for its contrast</span>
+          </div>
           <div className="tt-notes-list">
             {scale.steps.map((t) => {
-              const aa = contrastRatio(t.hex, INK_DARK) >= 4.5 ? 'AA on dark' : contrastRatio(t.hex, INK_LIGHT) >= 4.5 ? 'AA on light' : 'Low'
+              const open = tip?.label === t.label
+              const tipId = `tt-tip-${t.label}`
               return (
-                <button key={t.label} type="button" className="tt-note" onClick={() => copyHex(t.hex)} aria-label={`Copy ${t.label} ${t.hex}, ${aa}`}>
-                  <span className="tt-note-sw" ref={cellRef(t.hex)} aria-hidden="true" />
-                  <span className="tt-note-step">{t.label}</span>
-                  <span className="tt-note-hex">{copiedHex === t.hex ? 'Copied' : t.hex}</span>
-                  <span className="tt-note-aa">{aa}</span>
-                </button>
+                <div
+                  key={t.label}
+                  className="tt-note-wrap"
+                  onPointerEnter={(e) => { if (e.pointerType !== 'touch' && !tip?.pinned) openTip(t.label, e.currentTarget) }}
+                  onPointerLeave={(e) => { if (e.pointerType !== 'touch') closeTip(t.label) }}
+                  onFocus={(e) => { if (!tip?.pinned || tip.label !== t.label) openTip(t.label, e.currentTarget) }}
+                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) closeTip(t.label) }}
+                >
+                  <button
+                    type="button"
+                    className="tt-note"
+                    onPointerDown={(e) => { pointerTypeRef.current = e.pointerType }}
+                    onKeyDown={() => { pointerTypeRef.current = 'keyboard' }}
+                    onClick={(e) => pressNote(t, e.currentTarget.parentElement)}
+                    aria-label={`Copy ${t.label} ${t.hex}`}
+                    aria-describedby={tipId}
+                  >
+                    <span className="tt-note-sw" ref={cellRef(t.hex)} aria-hidden="true" />
+                    <span className="tt-note-step">{t.label}</span>
+                    <span className="tt-note-hex">{copiedHex === t.hex ? 'Copied' : t.hex}</span>
+                  </button>
+                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} />
+                </div>
               )
             })}
           </div>

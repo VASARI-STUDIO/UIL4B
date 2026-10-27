@@ -152,7 +152,7 @@ test('PaletteBuilder.jsx takes both its ramps from utils/tintRamp, not a ramp of
 
 test('TintTool.jsx imports buildRamp from the util and does not define one', () => {
   const src = stripComments(read('src/pages/TintTool.jsx'))
-  assert.match(src, /import \{ buildRamp \} from '\.\.\/utils\/tintRamp'/)
+  assert.match(src, /import \{[^}]*\bbuildRamp\b[^}]*\} from '\.\.\/utils\/tintRamp'/)
   assert.ok(!/function buildRamp/.test(src), 'no second buildRamp in the page')
 })
 
