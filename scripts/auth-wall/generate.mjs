@@ -12,8 +12,10 @@
 //   public/auth-wall/*.webp          the 11 raster tiles (palettes, pair specimens, style guide)
 //   src/data/authWall.generated.js   icon SVGs, tint ramps, CSS excerpts, hashes, size floors
 //
-// Re-running on the same build gives the same bytes (checked by hashing both
-// outputs; see tests/unit/auth-wall.test.js for what is asserted on them).
+// Re-running on the same build, the same Chromium and a warm .cache/auth-wall/
+// gives the same bytes. Icon SVGs come from the live Iconify API (jsDelivr as
+// fallback) and font faces from Google Fonts, so a cold cache can pull newer
+// upstream glyphs; compare the hashes in the generated file after such a run.
 //
 // Exits 1 when a download does not arrive within 15s, a pair's body face is not
 // among the tool's own suggestions, a size is not the one expected, or a tile's
@@ -631,9 +633,9 @@ async function main() {
   }
   const server = await startPreview(dist)
   baseURL = server.base
-  browser = await chromium.launch()
-  util = await browser.newPage()
   try {
+    browser = await chromium.launch()
+    util = await browser.newPage()
     for (const row of AUTH_WALL) {
       console.log(`${row.id} ...`)
       if (row.kind === 'palette') await palette(row)
@@ -650,7 +652,7 @@ async function main() {
     console.log(`wrote ${Object.keys(assets).length} WebPs (${total} bytes) and ${path.relative(root, OUT_DATA)}`)
     for (const [pack, source] of iconifySources) console.log(`icons: ${pack} from ${source}`)
   } finally {
-    await browser.close()
+    await browser?.close()
     server.child.kill()
   }
 }
