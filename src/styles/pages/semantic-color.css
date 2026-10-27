@@ -1,114 +1,104 @@
-/* semantic-color.css — /create/semantic-color, rebuilt to the design
- * (UIL4B App.dc.html, `isSemantic`, D:871-943;
- * the set: Success, Warning, Error, Information, steps 50–900; Information
- * blue or purple).
+/* semantic-color.css — /create/semantic-color.
+ * Lead and bundle cards, one section of role rows (preset chips, a ten-step ramp
+ * with the step printed on each swatch), a preview panel with its own
+ * Light / Dark switch, and the token handoff with its code well.
  *
- * The toolbar and the shared controls (pills, sliders, select, code well)
- * come from pages/tool-layout.css; this sheet is the design's two cards, the family
- * rows and the save panel. Every selector is scoped `.stc …`.
+ * The toolbar and the shared controls (pills, slider, code well) come from
+ * pages/tool-layout.css. Every selector is scoped `.stc …`.
  *
- * The role colours reach the "colours at work" card as custom properties
- * written by ColorStudio.jsx (--stc-success, --stc-success-wash, …) from the
- * chosen base step, so the card can only ever show colours the set contains. */
+ * The role colours reach the preview panel as custom properties written by
+ * ColorStudio.jsx (--stc-success, --stc-success-wash, …) from the chosen ramps,
+ * so the panel can only ever show colours the set contains. */
 
-.stc .stc-body { display: grid; gap: clamp(12px, 1.6vw, 18px); }
-.stc .stc-grid {
+.stc .stc-body { display: grid; gap: 40px; align-content: start; }
+.stc .stc-intro { display: grid; gap: 16px; }
+.stc .stc-lead { margin: 0; max-width: 64ch; font-size: 14px; line-height: 1.5; color: var(--tl-dim); }
+.stc .stc-lead code { font-family: var(--mono); font-size: 12.5px; color: var(--tl-ink); }
+.stc .stc-h2 { margin: 0; font-family: var(--font); font-size: 15px; font-weight: 560; line-height: 1.3; letter-spacing: -.01em; color: var(--tl-ink); }
+.stc .stc-label { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
+.stc .stc-scenes, .stc .stc-ramps { display: grid; gap: 16px; align-content: start; }
+.stc .stc-ramps { gap: 0; }
+
+/* ── Bundles ─────────────────────────────────────────────────────────────── */
+.stc .stc-bundles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stc .stc-bundle:first-child { grid-column: span 2; }
+.stc .stc-bundle {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(12px, 1.6vw, 18px);
-}
-.stc .stc-card {
-  display: grid;
-  gap: 10px;
   align-content: start;
+  gap: 8px;
   min-width: 0;
-  padding: clamp(16px, 2vw, 22px);
-  border-radius: 18px;
+  padding: 12px;
   border: 1px solid var(--tl-line);
+  border-radius: 14px;
   background: var(--tl-card);
-}
-.stc .stc-seed { gap: 12px; }
-
-/* ── The colours at work (D:883-907) ────────────────────────────────────── */
-.stc .stc-work-body { display: grid; gap: 10px; }
-.stc .stc-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.stc .stc-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 17px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent);
   color: var(--tl-ink);
-  font-size: 13.5px;
+  font-family: var(--font);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease;
 }
-.stc .stc-btn--primary {
-  border-color: transparent;
-  background: var(--stc-brand, var(--accent-fill));
-  color: var(--stc-brand-ink, var(--accent-ink));
-  font-weight: 540;
+.stc .stc-bundle.is-on { border-color: var(--tl-line-on); background: color-mix(in srgb, var(--t0) 6%, var(--tl-card)); }
+.stc .stc-bundle.is-on .stc-bundle-desc { color: var(--tl-soft); }
+@media (forced-colors: active) { .stc .stc-bundle.is-on { border-color: Highlight; } }
+.stc .stc-bundle-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
+.stc .stc-bundle-name { font-size: 14px; font-weight: 560; line-height: 1.4; }
+.stc .stc-bundle-check { color: var(--tl-ink); flex: 0 0 auto; }
+.stc .stc-bundle-strip { display: flex; height: 6px; overflow: hidden; border-radius: 999px; }
+.stc .stc-bundle-strip i { flex: 1; background: var(--stc-bundle-c, transparent); }
+.stc .stc-bundle-desc { font-size: 12px; line-height: 1.35; color: var(--tl-dim); }
+.stc .stc-mix { margin: 0; font-size: 12.5px; color: var(--tl-dim); }
+@media (hover: hover) and (pointer: fine) {
+  .stc .stc-bundle:not(.is-on):hover { border-color: var(--tl-line-2); }
 }
-.stc .stc-alert {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-size: 13px;
-  color: var(--tl-ink);
+@media (min-width: 600px) {
+  .stc .stc-bundles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .stc .stc-bundle:first-child { grid-column: span 2; }
 }
-.stc .stc-alert > span { flex: 1; min-width: 0; }
-.stc .stc-alert-ico { flex: 0 0 auto; }
-.stc .stc-alert--success { background: var(--stc-success-wash, transparent); border: 1px solid var(--stc-success, currentColor); }
-.stc .stc-alert--success .stc-alert-ico { color: var(--stc-success, currentColor); }
-.stc .stc-alert--warning { background: var(--stc-warning-wash, transparent); border: 1px solid var(--stc-warning, currentColor); }
-.stc .stc-alert--warning .stc-alert-ico { color: var(--stc-warning, currentColor); }
-.stc .stc-alert--info { background: var(--stc-info-wash, transparent); border: 1px solid var(--stc-info, currentColor); }
-.stc .stc-alert--info .stc-alert-ico { color: var(--stc-info, currentColor); }
-.stc .stc-spin { animation: stc-spin 1.1s linear infinite; }
-@keyframes stc-spin { to { transform: rotate(360deg); } }
-.stc .stc-field { display: grid; gap: 6px; }
-.stc .stc-field-k { font-size: 12.5px; color: var(--tl-dim); }
-.stc .stc-field-input {
-  display: flex;
-  align-items: center;
-  padding: 11px 13px;
-  border-radius: 12px;
-  border: 1px solid var(--stc-error, currentColor);
-  color: var(--tl-ink);
-  font-size: 13px;
+@media (min-width: 1200px) {
+  .stc .stc-bundles { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .stc .stc-bundle:first-child { grid-column: span 1; }
 }
-.stc .stc-field-err { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--stc-error-text, currentColor); }
 
-/* ── Seed and base step (D:909-925) ─────────────────────────────────────── */
-.stc .stc-bundles { display: flex; flex-wrap: wrap; gap: 5px; }
-.stc .stc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.stc .stc-row-k { font-size: 12.5px; color: var(--tl-dim); }
-.stc .stc-code { max-height: 280px; }
-
-/* ── The families (D:928-942) ───────────────────────────────────────────── */
-.stc .stc-families { display: grid; gap: 10px; }
-.stc .stc-fam {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  column-gap: clamp(10px, 1.6vw, 18px);
-  row-gap: 6px;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: 18px;
-  border: 1px solid var(--tl-line);
-  background: var(--tl-card);
-}
-.stc .stc-fam-id { display: contents; }
-.stc .stc-fam-name { grid-column: 1; grid-row: 1; display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 540; color: var(--tl-ink); }
+/* ── Ramps ───────────────────────────────────────────────────────────────── */
+.stc .stc-ramps-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
+.stc .stc-base { display: flex; flex: none; align-items: center; gap: 10px; white-space: nowrap; }
+.stc .stc-base .tl-pills { flex-wrap: nowrap; }
+.stc .stc-fam { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--tl-hair); }
+.stc .stc-fam-head { display: grid; gap: 8px; }
+.stc .stc-fam-id { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-width: 0; }
+.stc .stc-fam-name { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 560; color: var(--tl-ink); }
 .stc .stc-fam-cue { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); }
-.stc .stc-fam-token { grid-column: 1; grid-row: 2; font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
-.stc .stc-fam-preset { grid-column: 1; grid-row: 3; justify-self: start; max-width: 132px; height: 32px; padding: 0 28px 0 10px; }
-.stc .stc-fam-preset .tl-select-k { display: none; }
-.stc .stc-fam-preset .tl-select-v { font-size: 12.5px; }
-.stc .stc-fam-preset .tl-select-caret { right: 9px; }
-.stc .stc-ramp { grid-column: 2; grid-row: 1 / span 3; display: flex; gap: 4px; min-width: 0; }
-.stc .stc-hue { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
-.stc .stc-hue .tl-slider { flex: 1; min-width: 0; }
+.stc .stc-fam-meaning { font-size: 12.5px; color: var(--tl-dim); }
+.stc .stc-fam-token { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
+.stc .stc-fam-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.stc .stc-family { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.stc .stc-fam-rule { display: none; width: 1px; height: 24px; background: var(--tl-line); }
+@media (min-width: 1200px) {
+  .stc .stc-fam-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .stc .stc-fam-opts { flex-wrap: nowrap; }
+  .stc .stc-fam-rule { display: block; }
+}
+
+.stc .stc-ramp { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; min-width: 0; }
+@media (min-width: 600px) { .stc .stc-ramp { grid-template-columns: repeat(10, minmax(0, 1fr)); } }
+.stc .stc-cell {
+  display: grid;
+  place-items: center;
+  height: 52px;
+  min-width: 24px;
+  border-radius: 8px;
+  background: var(--stc-c, transparent);
+  color: var(--stc-ink, inherit);
+  cursor: pointer;
+}
+@media (min-width: 600px) { .stc .stc-cell { height: 56px; } }
+.stc .stc-cell.is-base { box-shadow: inset 0 0 0 2px var(--t0); }
+.stc .stc-cell-tone { font-family: var(--mono); font-size: 11px; font-weight: 600; line-height: 1; }
+.stc .stc-cell:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+
+.stc .stc-hue { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding-top: 4px; }
+.stc .stc-hue .tl-slider { flex: 1; min-width: 200px; }
 .stc .stc-hue-hex {
   width: 110px;
   height: 32px;
@@ -120,23 +110,98 @@
   font-family: var(--mono);
   font-size: 12px;
 }
-.stc .stc-cell {
-  flex: 1;
-  min-width: 0;
+.stc .stc-hue-err { flex-basis: 100%; margin: 0; min-height: 0; font-size: 12px; color: var(--stc-error-text, var(--err-strong)); }
+.stc .stc-hue-err:empty { display: none; }
+
+/* ── The preview panel ───────────────────────────────────────────────────── */
+/* Its own data-theme re-scopes --card and --t0, but the --tl-* mixes were
+   resolved on .tl for the PAGE theme, so they are written again here. */
+.stc .stc-work {
+  --tl-ink: var(--t0);
+  --tl-dim: color-mix(in srgb, var(--t0) 68%, var(--card));
+  --tl-faint: color-mix(in srgb, var(--t0) 58%, var(--card));
+  --tl-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --tl-line: color-mix(in srgb, var(--t0) 10%, transparent);
+  --tl-line-2: color-mix(in srgb, var(--t0) 13%, transparent);
+  --tl-line-on: color-mix(in srgb, var(--t0) 22%, transparent);
+  --tl-wash: color-mix(in srgb, var(--t0) 5%, transparent);
+  --tl-wash-2: color-mix(in srgb, var(--t0) 7%, transparent);
+  --tl-wash-on: color-mix(in srgb, var(--t0) 10%, transparent);
+  --tl-link: var(--link, var(--accent-text));
   display: grid;
-  gap: 5px;
-  cursor: pointer;
-  border-radius: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid var(--tl-line);
+  background: var(--card);
+  color: var(--t0);
 }
-.stc .stc-cell-swatch {
-  display: block;
-  height: 44px;
-  border-radius: 8px;
-  background: var(--stc-c, transparent);
+.stc .stc-work[data-theme="light"] { --tl-dim: color-mix(in srgb, var(--t0) 82%, var(--card)); --tl-faint: color-mix(in srgb, var(--t0) 74%, var(--card)); }
+.stc .stc-work-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.stc .stc-work-head strong { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
+.stc .stc-work-head span { font-size: 12px; color: var(--tl-dim); }
+.stc .stc-work-switch .tl-pill { padding: 5px 11px; font-size: 12px; }
+.stc .stc-work-body { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 4px; }
+@media (min-width: 600px) { .stc .stc-work-body { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .stc .stc-work-body { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.stc .stc-sc {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--stc-info, currentColor);
+  background: var(--stc-info-wash, transparent);
+  color: var(--t0);
+  font-size: 13px;
 }
-.stc .stc-cell.is-base .stc-cell-swatch { box-shadow: inset 0 0 0 2px var(--t0); }
-.stc .stc-cell-tone { font-family: var(--mono); font-size: 9.5px; text-align: center; color: var(--tl-faint); }
-.stc .stc-cell:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.stc .stc-sc--success { border-color: var(--stc-success, currentColor); background: var(--stc-success-wash, transparent); }
+.stc .stc-sc--warning { border-color: var(--stc-warning, currentColor); background: var(--stc-warning-wash, transparent); }
+.stc .stc-sc--error { border-color: var(--stc-error, currentColor); background: var(--stc-error-wash, transparent); }
+.stc .stc-sc--success .stc-sc-ico { color: var(--stc-success, currentColor); }
+.stc .stc-sc--warning .stc-sc-ico { color: var(--stc-warning, currentColor); }
+.stc .stc-sc--error .stc-sc-ico { color: var(--stc-error, currentColor); }
+.stc .stc-sc--info .stc-sc-ico { color: var(--stc-info, currentColor); }
+.stc .stc-sc-ico { flex: 0 0 auto; }
+.stc .stc-sc-lead { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.stc .stc-sc-lead strong { font-weight: 560; }
+.stc .stc-sc-lead small { font-size: 12px; color: var(--tl-dim); }
+.stc .stc-sc-lead small.stc-sc-errtext { color: var(--stc-error-text, currentColor); }
+.stc .stc-sc-switch { position: relative; flex: 0 0 auto; width: 36px; height: 20px; border-radius: 999px; background: var(--stc-success, currentColor); }
+.stc .stc-sc-switch i { position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--card); }
+.stc .stc-sc--field { display: grid; gap: 6px; }
+.stc .stc-sc-k { font-size: 12.5px; color: var(--tl-dim); }
+.stc .stc-sc-input { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--stc-warning, currentColor); background: var(--card); }
+.stc .stc-sc-help { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.stc .stc-sc-help > span:nth-child(2) { flex: 1; min-width: 0; }
+.stc .stc-sc-link { flex: 0 0 auto; font-weight: 560; text-decoration: underline; text-underline-offset: 2px; }
+.stc .stc-sc-solid { flex: 0 0 auto; padding: 8px 12px; border-radius: 10px; background: var(--stc-error-fill, currentColor); color: var(--stc-error-ink, var(--card)); font-weight: 560; }
+.stc .stc-sc-badge { flex: 0 0 auto; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--stc-info, currentColor); font-size: 12px; }
+
+/* ── Token names ─────────────────────────────────────────────────────────── */
+.stc .stc-tokens { display: grid; gap: 16px; align-items: start; }
+.stc .stc-tokens-copy { display: grid; gap: 12px; justify-items: start; }
+.stc .stc-tokens-code { display: grid; gap: 10px; justify-items: start; min-width: 0; }
+.stc .stc-code-wrap { width: 100%; min-width: 0; }
+.stc .stc-code { padding-bottom: 16px; }
+.stc .stc-code-wrap:not(.is-open) .stc-code { max-height: 168px; overflow-y: auto; }
+@media (min-width: 900px) {
+  .stc .stc-tokens { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--tl-gap); }
+}
+
+@media (max-width: 599px) {
+  .stc .stc-body { gap: 24px; }
+  .stc .stc-work { padding: 16px; }
+}
+@media (max-width: 359px) {
+  .stc .stc-ramp { gap: 2px; }
+  .stc .stc-ramps-head { flex-wrap: wrap; }
+}
 
 /* ── The save panel (ours: keeps "Add to project" and loading) ──────────── */
 .stc .stc-save-panel {
@@ -191,37 +256,16 @@
   .stc .stc-save-item:hover { background: var(--tl-wash-2); }
 }
 
-@media (max-width: 900px) {
-  .stc .stc-grid { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 560px) {
-  .stc .stc-fam { grid-template-columns: minmax(0, 1fr) auto; }
-  .stc .stc-fam-name { grid-column: 1; grid-row: 1; }
-  .stc .stc-fam-token { grid-column: 1; grid-row: 2; }
-  .stc .stc-fam-preset { grid-column: 2; grid-row: 1 / span 2; }
-  .stc .stc-ramp { grid-column: 1 / -1; grid-row: 3; }
-  .stc .stc-cell-swatch { height: 36px; }
-  /* Ten 24px targets (WCAG 2.5.8) fit a 320px row with 2px between them. */
-  .stc .stc-ramp { gap: 2px; }
-  .stc .stc-cell { min-width: 24px; }
-  .stc .stc-fam { padding: 12px 10px; }
-}
 @media (max-width: 640px) {
   .stc .stc-save-input,
   .stc .stc-hue-hex { font-size: 16px; }
 }
 @media (pointer: coarse) {
-  .stc .stc-fam-preset,
   .stc .stc-hue-hex { height: 44px; }
   .stc .stc-save-input,
   .stc .stc-save-item { min-height: 44px; }
 }
-
-:where(html[data-reduced-motion="true"]) .stc .stc-spin { animation: none !important; }
-@media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .stc .stc-spin { animation: none !important; }
-}
 @media (forced-colors: active) {
-  .stc .stc-cell-swatch { forced-color-adjust: none; }
-  .stc .stc-cell.is-base .stc-cell-swatch { outline: 2px solid Highlight; }
+  .stc .stc-cell { forced-color-adjust: none; }
+  .stc .stc-cell.is-base { outline: 2px solid Highlight; }
 }
