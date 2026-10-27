@@ -554,3 +554,41 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-disc-lock-label { position: absolute; left: var(--s-2); bottom: var(--s-2); max-width: calc(100% - var(--s-4)); display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-1) var(--s-2); border: 0; border-radius: var(--radius-xs); background: color-mix(in srgb, var(--bg-1) 92%, transparent); color: var(--t0); font-size: 13px; font-weight: 500; line-height: 1.3; }
 .uh .uh-disc-lock-label svg { flex: none; color: var(--t1); }
 .uh .uh-disc-note { display: block; padding: var(--s-3) 13px 0; font-size: 13px; line-height: 1.3; color: var(--t1); }
+
+/* ══ Tablet, 641 to 1000: tools 3 x 2, Discover four across ══════════════════════════════════════════ */
+@media (min-width: 641px) and (max-width: 1000px) {
+  .uh .uh-quick, .uh .uh-start--lead .uh-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .uh .uh-lead { grid-column: 1 / -1; }
+  .uh .uh-disc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ══ Phone, 640 and under ════════════════════════════════════════════════════════════════════════════
+   The body already clears the live tab bar and the safe area (global.css, html.has-tabbar). The page adds
+   room for the Feedback button (44px) and a step, so the last card never sits under either. */
+@media (max-width: 640px) {
+  .uh .uh-main { padding-bottom: calc(44px + var(--s-5)); }
+  .uh .uh-strip, .uh .uh-strip-empty, .uh .uh-strip-skel { height: 96px; }
+  .uh .uh-continue-body { padding: var(--s-4); }
+  .uh .uh-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uh .uh-parts li { align-items: flex-start; }
+  .uh .uh-continue-actions { display: grid; justify-items: stretch; gap: var(--s-1); }
+  .uh .uh-continue-actions .uh-cta, .uh .uh-continue-actions .uh-ghost { width: 100%; white-space: normal; text-align: center; }
+  .uh .uh-continue-actions .uh-open { justify-content: center; }
+  /* Two-line rows: the strip spans both lines, the name above, the meta under it. */
+  .uh .uh-row-link { display: grid; grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: var(--s-3); row-gap: 0; align-items: center; }
+  .uh .uh-row-link .uh-mini { grid-row: 1 / span 2; }
+  .uh .uh-row-meta { grid-column: 2; flex-basis: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .uh .uh-pro-cta { width: 100%; justify-content: center; }
+  .uh .uh-pro-cta-row { display: grid; justify-items: start; gap: var(--s-2); }
+  .uh .uh-pro-cta-row .uh-pro-cta { justify-self: stretch; }
+  /* The name form is a bottom sheet over the tab bar, so the keyboard does not cover Save. */
+  .uh .uh-pop { position: fixed; z-index: 2; left: 0; right: 0; top: auto; bottom: calc(var(--tabbar-h, 61px) + env(safe-area-inset-bottom)); width: auto; border-radius: var(--radius-xl) var(--radius-xl) 0 0; border-bottom: 0; padding-bottom: var(--s-4); }
+  .uh .uh-pop-actions > * { flex: 1; }
+}
+
+/* Feedback rides above the tab bar on this page and is hidden while any sheet is open. These two sit
+   outside `.uh` because the button is mounted app-wide; `:has(.uh)` keeps them to this page. */
+@media (max-width: 767px) {
+  html.has-tabbar:has(.uh) .global-feedback-btn { bottom: calc(var(--tabbar-h) + var(--s-4) + env(safe-area-inset-bottom)); }
+  html:has(.uh .uh-pop, .pnav-sheet) .global-feedback-btn { display: none; }
+}
