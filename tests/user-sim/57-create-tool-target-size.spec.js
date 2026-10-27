@@ -56,7 +56,8 @@ const HANDOFF = [
   ['/create/font-gallery', '.fg-pair-link', 'Build a font pair'],
   // '/create/contrast' is not listed: its drawn screen has no
   // cross-tool links (the Create menu carries them), so the link is gone.
-  ['/create/gradient', '.grd-lib', 'Gradient Library'],
+  // '/create/gradient' is not listed: its header link to the library is gone
+  // (the Explore panel is the one way in).
 ]
 
 test.describe('cross-tool handoff links meet the 24px target floor', () => {

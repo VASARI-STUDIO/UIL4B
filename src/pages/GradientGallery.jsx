@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
@@ -80,7 +80,13 @@ export default function GradientGallery({ toast }) {
   // state still resolving shows the tier below, never the one above.
   const tier = galleryTier({ isPro: ready, signedIn: user != null })
   const [rawQuery, setRawQuery] = useState('')
-  const [tag, setTag] = useState('all')
+  // `?mood=warm` opens the library already filtered (the Gradient Generator's
+  // taste chips link here). Anything that is not a known mood reads as All.
+  const [searchParams] = useSearchParams()
+  const [tag, setTag] = useState(() => {
+    const mood = searchParams.get('mood')
+    return GRADIENT_TAGS.includes(mood) ? mood : 'all'
+  })
   // An ARRAY, because the type tray is multi-select (founder request,
   // 2026-08-08). `['all']` is the unfiltered state; picking every type collapses
   // straight back to it, which LibraryFilterGroup handles.

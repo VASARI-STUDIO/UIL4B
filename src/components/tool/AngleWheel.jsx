@@ -3,7 +3,7 @@ import { angleFromPoint, normaliseAngle, parseAngleInput, snapAngle, stepAngle }
 
 // A rotary angle control: drag round the dial, press an arrow key, or type the
 // number. The dial is the slider (role="slider", 0-359, spoken as degrees); the
-// number field beside it is the exact way in. Both write through `onChange`, so
+// number field beside it is the exact way in (360 wraps to 0). Both write through `onChange`, so
 // a caller that gates editing gates every path at the one place.
 //
 // `locked` is the Pro lock: the controls stay in the page and look locked, and a
@@ -108,7 +108,7 @@ export default function AngleWheel({
           type="number"
           className="grd-angle-input"
           min={0}
-          max={360}
+          max={359}
           step={1}
           inputMode="numeric"
           value={shown}

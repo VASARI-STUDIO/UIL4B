@@ -19,7 +19,7 @@ import ToolIcon from './ToolIcon'
 const EDGE = 8
 
 export default function StopTintMenu({
-  color, stopNumber, x, y, isPro, focusFirst = false, returnTo, onApply, onGate, onClose,
+  color, stopNumber, x, y, isPro, focusFirst = false, returnTo, ignoreDownOn = null, onApply, onGate, onClose,
 }) {
   const ref = useRef(null)
   const tints = useMemo(() => tintRampForHex(color, 11), [color])
@@ -50,10 +50,16 @@ export default function StopTintMenu({
       onClose()
       if (restoreFocus) returnTo?.focus?.({ preventScroll: true })
     }
-    const onDown = (e) => { if (!el?.contains(e.target)) close(false) }
+    // A press on the control that opened the menu is left to that control, so a
+    // second press on the Tints button closes the menu once (its click does it)
+    // instead of closing on pointerdown and reopening on click.
+    const onDown = (e) => { if (!el?.contains(e.target) && !ignoreDownOn?.contains?.(e.target)) close(false) }
     const onKey = (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); close(true); return }
-      if (e.key === 'Tab') { close(false); return }
+      // Tab leaves the menu. It is the last node in the body, so without this focus
+      // would fall off the page: put it back on the opener and let the Tab carry
+      // on from there (no preventDefault).
+      if (e.key === 'Tab') { close(true); return }
       const list = items()
       const next = popoverArrowTarget(e.key, list.indexOf(document.activeElement), list.length)
       if (next < 0) return
@@ -73,7 +79,7 @@ export default function StopTintMenu({
       window.removeEventListener('resize', onAway)
       window.removeEventListener('scroll', onScroll, true)
     }
-  }, [focusFirst, returnTo, onClose])
+  }, [focusFirst, returnTo, ignoreDownOn, onClose])
 
   return createPortal(
     <div

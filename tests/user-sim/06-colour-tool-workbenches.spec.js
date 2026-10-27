@@ -122,11 +122,10 @@ test.describe('Gradient Generator workbench resilience', () => {
     const start = page.getByRole('region', { name: 'Start from a preset' })
     await expect(start).toBeVisible()
     await expect(start.locator('.grd-preset').first()).toBeVisible()
-    // Eleven curated presets (the unit test holds the set to 8-12), plus a tile per saved palette.
-    const presetCount = await start.locator('.grd-preset').count()
-    expect(presetCount).toBeGreaterThanOrEqual(8)
-    expect(presetCount).toBeLessThanOrEqual(12)
-    await expect(start.getByRole('link', { name: /Gradient Library/ })).toBeVisible()
+    // Twelve curated presets (the unit test holds the set at exactly 12); no saved palette here.
+    await expect(start.locator('.grd-preset')).toHaveCount(12)
+    // The way into the library is the Explore panel below, not a second link up here.
+    await expect(start.getByRole('link', { name: /Gradient Library/ })).toHaveCount(0)
 
     const numbered = await page.locator('.grd').evaluate((root) =>
       [...root.querySelectorAll('*')].filter((el) => el.children.length === 0 && /^0\d\s*·/.test(el.textContent.trim())).length)

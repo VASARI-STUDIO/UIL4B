@@ -1,4 +1,4 @@
-// The Gradient Generator's start-from presets: a small set of ready-to-use
+// The Gradient Generator's start-from presets: twelve ready-to-use
 // gradients, mostly linear, drawn in OKLCH so no ramp goes muddy in the middle,
 // and none of them a copy of a gradient in the library.
 //
@@ -16,8 +16,9 @@ const src = read('src/pages/GradientGenerator.jsx')
 const block = src.slice(src.indexOf('const PRESETS = ['), src.indexOf('\n]\n', src.indexOf('const PRESETS = [')) + 2)
 const PRESETS = new Function(`return ${block.replace('const PRESETS = ', '')}`)()
 
-test('there are 8 to 12 presets, each with a name and a use', () => {
-  assert.ok(PRESETS.length >= 8 && PRESETS.length <= 12, `got ${PRESETS.length}`)
+test('there are exactly 12 presets, each with a name and a use', () => {
+  // 12 divides into whole rows at 6, 4 and 2 columns, so the grid never ends short.
+  assert.equal(PRESETS.length, 12)
   for (const p of PRESETS) {
     assert.ok(p.n && p.n.length <= 20, `name: ${p.n}`)
     assert.ok(p.use && p.use.length > 8 && p.use.length <= 32, `use: ${p.use}`)
@@ -41,6 +42,43 @@ test('every stop is a six-digit hex, ascending from 0 to 100', () => {
       assert.match(s.color, /^#[0-9A-F]{6}$/, `${p.n} stop ${i}`)
       if (i) assert.ok(s.position > p.stops[i - 1].position, `${p.n} positions must ascend`)
     })
+  }
+})
+
+test('the set has range: two-stop ramps, a long hue travel, both value directions, and a radial', () => {
+  const lightness = (c) => hexToOklchRaw(c)[0]
+  const sorted = (p) => [...p.stops].sort((a, b) => a.position - b.position)
+  assert.ok(PRESETS.filter((p) => p.stops.length === 2).length >= 2, 'at least two two-stop ramps')
+  assert.ok(PRESETS.some((p) => p.type === 'Radial'), 'a radial')
+  assert.ok(PRESETS.some((p) => { const s = sorted(p); return lightness(s[0].color) - lightness(s[s.length - 1].color) > 0.3 }), 'a light-to-dark ramp')
+  assert.ok(PRESETS.some((p) => { const s = sorted(p); return lightness(s[s.length - 1].color) - lightness(s[0].color) > 0.3 }), 'a dark-to-light ramp')
+  const travel = (p) => {
+    const hues = sorted(p).map((s) => hexToOklchRaw(s.color)).filter(([, c]) => c >= 0.04).map(([, , h]) => h)
+    let total = 0
+    for (let i = 1; i < hues.length; i++) { const d = Math.abs(hues[i] - hues[i - 1]); total += Math.min(d, 360 - d) }
+    return total
+  }
+  assert.ok(PRESETS.some((p) => travel(p) >= 120), 'a ramp that travels 120 degrees or more round the hue wheel')
+})
+
+test('no preset vanishes on a light or a dark page: its far end has a visible edge', () => {
+  // Sage Paper was near-white on a light page and Carbon near-black on a dark
+  // one. A preset that starts near-white must end at a clear mid-light edge, and
+  // one that starts near-black must end at a clear mid-tone, so it shows on either.
+  for (const p of PRESETS) {
+    const s = [...p.stops].sort((a, b) => a.position - b.position)
+    const first = hexToOklchRaw(s[0].color)[0]
+    const last = hexToOklchRaw(s[s.length - 1].color)[0]
+    if (first > 0.9) assert.ok(last <= 0.8, `${p.n}: ends at L ${last.toFixed(2)}, too close to a white page`)
+    if (first < 0.3) assert.ok(last >= 0.5, `${p.n}: ends at L ${last.toFixed(2)}, too close to a black page`)
+  }
+})
+
+test('the soft radials keep a coloured centre, not a near-white lamp', () => {
+  for (const n of ['Rose Ember', 'Tidepool']) {
+    const p = PRESETS.find((x) => x.n === n)
+    assert.equal(p.type, 'Radial')
+    assert.ok(hexToOklchRaw(p.stops[0].color)[0] < 0.82, `${n}'s centre is too bright`)
   }
 })
 
@@ -91,6 +129,24 @@ test('the page applies a preset\'s interpolation space and paints its tile in it
 test('the first-visit gradient and Reset come from the first preset, not a fixed type', () => {
   assert.match(src, /design\?\.gradient\?\.type \|\| PRESETS\[0\]\.type/)
   assert.match(src, /const reset = useCallback\(\(\) => applyPreset\(PRESETS\[0\]\)/)
+})
+
+test('the starter grid steps 2, 4, 6 columns, which all divide twelve, and holds only the starters', () => {
+  const css = read('src/styles/pages/gradient.css')
+  assert.doesNotMatch(css, /grd-preset-grid\s*\{[^}]*auto-fill/)
+  assert.match(css, /\.grd \.grd-preset-grid,\s*\.grd \.grd-mine-grid \{[^}]*repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(css, /min-width: 720px\)[\s\S]*?repeat\(4, minmax\(0, 1fr\)\)/)
+  assert.match(css, /min-width: 1200px\)[\s\S]*?repeat\(6, minmax\(0, 1fr\)\)/)
+  // The user's own palettes render into a different grid than PRESETS.
+  assert.match(src, /<div className="grd-mine-grid">\{palettePresets\.map/)
+  assert.match(src, /<div className="grd-preset-grid">\{PRESETS\.map/)
+})
+
+test('preset text is 12px or more, and the presets do not transition background-color', () => {
+  const css = read('src/styles/pages/gradient.css')
+  assert.match(css, /\.grd-preset-meta \{ font-size: 12px;/)
+  assert.match(css, /\.grd-tintmenu-hex \{[^}]*font-size: 12px; color: var\(--t1\)/)
+  assert.doesNotMatch(css.match(/\.grd \.grd-preset \{[^}]*\}/)[0], /background-color/)
 })
 
 test('the presets section is not a card, so there is no panel inside a panel', () => {

@@ -33,39 +33,57 @@ import '../styles/pages/gradient.css'
 // The standalone /create/gradient tool, rebuilt to the design
 // (UIL4B App.dc.html, `isGradient`, D:610-716): the shared sticky
 // tool toolbar, a canvas + stop rail + code well on the left, and a 336px card
-// of STOPS / SELECTED STOP / GEOMETRY on the right, with a 6-up preset strip
-// under both. Every function the previous build had is kept and placed in that
-// layout — see the notes at each block. It reads + writes the shared
-// design.gradient (ProjectContext) so a gradient authored here survives a jump
-// to any other colour tool. (Class prefix `grd-`.)
+// of STOPS / SELECTED STOP / GEOMETRY on the right, with the twelve presets
+// under both (6x2, 4x3 or 2x6 by width). Every function the previous build had is
+// kept and placed in that layout — see the notes at each block. It reads + writes
+// the shared design.gradient (ProjectContext) so a gradient authored here survives
+// a jump to any other colour tool. (Class prefix `grd-`.)
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 
-// Starter presets: ready-to-use gradients for real interfaces, mostly linear
-// with a few radial. Each carries what it is good for, so the list reads as a
-// set of answers rather than a spread of colours. They are drawn in OKLCH
-// (`space`), so a ramp between two hues keeps its lightness and chroma instead
-// of going grey in the middle; stops are placed where the hue changes. None
-// repeats a gradient from the library.
+// Starter presets: twelve ready-to-use gradients for real interfaces, nine
+// linear and three radial. Each carries what it is good for, so the list reads
+// as a set of answers rather than a spread of colours. They differ in shape on
+// purpose: two- and three-stop ramps, dark-to-light and light-to-dark, a ramp
+// that travels a long way round the hue wheel (Aurora), and soft radials whose
+// centre is a colour, not a lamp. They are drawn in OKLCH (`space`), so a ramp
+// between two hues keeps its lightness and chroma instead of going grey in the
+// middle; stops are placed where the hue changes. None repeats a gradient from
+// the library. The grid shows exactly these twelve, 6x2, 4x3 or 2x6.
 const PRESETS = [
   { n: 'Indigo Night', use: 'App or hero background', type: 'Linear', angle: 160, space: 'oklch', stops: [{ color: '#0A0F2C', position: 0 }, { color: '#27348B', position: 55 }, { color: '#6E6BFF', position: 100 }] },
   { n: 'Rose Quartz', use: 'Soft hero or card wash', type: 'Linear', angle: 135, space: 'oklch', stops: [{ color: '#FFE3EC', position: 0 }, { color: '#F7A8C4', position: 50 }, { color: '#B58CF0', position: 100 }] },
   { n: 'Citrus Glow', use: 'Banner or call to action', type: 'Linear', angle: 120, space: 'oklch', stops: [{ color: '#FFD84D', position: 0 }, { color: '#FF8A3D', position: 55 }, { color: '#F0436A', position: 100 }] },
   { n: 'Deep Water', use: 'Dashboard or header', type: 'Linear', angle: 180, space: 'oklch', stops: [{ color: '#04243A', position: 0 }, { color: '#0B6E8A', position: 55 }, { color: '#3CD6C0', position: 100 }] },
-  { n: 'Carbon', use: 'Dark surface or button', type: 'Linear', angle: 145, space: 'oklch', stops: [{ color: '#14161B', position: 0 }, { color: '#2C313B', position: 50 }, { color: '#565D6B', position: 100 }] },
-  { n: 'Forest Mist', use: 'Calm section background', type: 'Linear', angle: 150, space: 'oklch', stops: [{ color: '#0F2A1F', position: 0 }, { color: '#2F7A5B', position: 55 }, { color: '#B6E6C8', position: 100 }] },
-  { n: 'Afterglow', use: 'Landing page hero', type: 'Linear', angle: 125, space: 'oklch', stops: [{ color: '#2A0F5C', position: 0 }, { color: '#D63A9E', position: 60 }, { color: '#FF9A6B', position: 100 }] },
-  { n: 'Sage Paper', use: 'Quiet page background', type: 'Linear', angle: 160, space: 'oklch', stops: [{ color: '#F6F1E7', position: 0 }, { color: '#CFE0D3', position: 100 }] },
+  { n: 'Carbon', use: 'Dark surface or button', type: 'Linear', angle: 145, space: 'oklch', stops: [{ color: '#0F1116', position: 0 }, { color: '#707A8E', position: 100 }] },
+  { n: 'Aurora', use: 'Feature band or banner', type: 'Linear', angle: 100, space: 'oklch', stops: [{ color: '#0B1B3A', position: 0 }, { color: '#1FB6A6', position: 55 }, { color: '#C6F36B', position: 100 }] },
+  { n: 'Afterglow', use: 'Landing page hero', type: 'Linear', angle: 170, space: 'oklch', stops: [{ color: '#14234F', position: 0 }, { color: '#E0788C', position: 55 }, { color: '#FFD9A0', position: 100 }] },
+  { n: 'Sage Paper', use: 'Quiet page background', type: 'Linear', angle: 160, space: 'oklch', stops: [{ color: '#F8F3E6', position: 0 }, { color: '#9FC2A8', position: 100 }] },
+  { n: 'Fog Bank', use: 'Header or footer fade', type: 'Linear', angle: 180, space: 'oklch', stops: [{ color: '#F0F3F8', position: 0 }, { color: '#64738E', position: 100 }] },
   { n: 'Lilac Halo', use: 'Spotlight behind a card', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#F4F1FF', position: 0 }, { color: '#C9BEFF', position: 55 }, { color: '#8E7CF0', position: 100 }] },
-  { n: 'Rose Ember', use: 'Glow behind a product', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#FFD6C2', position: 0 }, { color: '#F2557D', position: 50 }, { color: '#3A0F3D', position: 100 }] },
-  { n: 'Tidepool', use: 'Cool focal background', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#7FE5F0', position: 0 }, { color: '#1E6FD9', position: 50 }, { color: '#071A4A', position: 100 }] },
+  { n: 'Rose Ember', use: 'Glow behind a product', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#F4A58C', position: 0 }, { color: '#D4476B', position: 55 }, { color: '#3A1238', position: 100 }] },
+  { n: 'Tidepool', use: 'Cool focal background', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#58B2D4', position: 0 }, { color: '#1E5FB8', position: 50 }, { color: '#0A1D4D', position: 100 }] },
 ]
 
-// A taste of the library for its panel: the first few gradients a free account
-// can open in full. Rows without stops are name-only stubs and are skipped.
-const EXPLORE_TASTE = LIBRARY_GRADIENT_ROWS.filter((g) => Array.isArray(g.stops)).slice(0, 6)
+// A taste of the library for its panel: one gradient a free account can open in
+// full for each of six moods, so the strip shows range instead of six warm rows.
+// Each chip links to the library filtered to that mood (`?mood=`, read by
+// GradientGallery). An id that is not in the bundle, or is a name-only stub, is
+// skipped rather than painted blank.
+const EXPLORE_MOODS = [
+  ['warm', 'sunset-blaze'],
+  ['cool', 'rosewater'],
+  ['dark', 'ember-fade'],
+  ['light', 'mango-pulp'],
+  ['pastel', 'peach-melba'],
+  ['vivid', 'sun-flare'],
+]
+const EXPLORE_TASTE = EXPLORE_MOODS
+  .map(([mood, id]) => ({ mood, row: LIBRARY_GRADIENT_ROWS.find((g) => g.id === id) }))
+  .filter(({ row }) => Array.isArray(row?.stops))
+  .map(({ mood, row }) => ({ ...row, mood }))
 
-const slugify =(s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 // A palette colour counts only if it's a full 6-digit hex (3-digit shorthand
 // and blanks are rejected) — shared by every palette-sampling path below so the
@@ -312,9 +330,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // nothing and the tool seeds from the saved gradient as usual.
   const carriedPalette = readGradientDraft()
 
-  // Seed from the saved gradient. Null stop colours (the untouched default,
-  // "use my palette") resolve to the live palette; a fully-default gradient seeds
-  // the first preset so a first-time visitor lands on a finished look.
+  // Seed from the saved gradient. The untouched default has two null-coloured
+  // stops, which count as nothing saved: that case seeds the first preset, so a
+  // first-time visitor lands on a finished look. Once any stop has a colour, the
+  // saved stops are used and a stop still null falls back to the matching colour
+  // of the live palette.
   const [type, setType] = useState(() => design?.gradient?.type || PRESETS[0].type)
   // The design's untouched default carries a placeholder 135deg with no colours;
   // only a gradient that has real stops owns its angle. Otherwise the
@@ -542,6 +562,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       x: fromKeys ? box.left : e.clientX,
       y: fromKeys ? box.bottom + 4 : e.clientY,
       focusFirst: fromKeys,
+      fromButton,
       returnTo: returnTo || e.currentTarget,
     })
   }, [])
@@ -558,9 +579,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       subtitle: 'Open the tints of a stop and put one on it in a single press. Free accounts can see the ramp; applying a tint is a Pro tool.',
       features: [
         'Eleven tints of any stop colour, light to dark',
-        'Apply one from the stop’s right-click menu',
-        'Edit gallery gradients stop by stop',
-        'Unlimited saved projects across every colour tool',
+        'Put one on the stop in a single press',
+        'Open the ramp from the Tints button or a right-click on a stop',
       ],
     })
   }, [openProModal])
@@ -882,11 +902,32 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // itself there, which for a radial or conic would put no stop where its
   // handle sits.
   const railCss = gradientCssIn('Linear', 90, stops, supportsOklchGradients ? space : 'srgb')
-  const allPresets = [...palettePresets, ...PRESETS]
   const presetOn = (p) => p.type === type
     && p.stops.length === stops.length
     && [...p.stops].sort((a, b) => a.position - b.position)
       .every((s, i) => s.color.toUpperCase() === sortedForBar[i].color.toUpperCase() && Math.round(s.position) === Math.round(sortedForBar[i].position))
+  // One tile. The user's own palettes and the twelve starters share it but sit in
+  // separate grids, so the starter grid always holds exactly its twelve.
+  const renderPreset = (p, key) => {
+    const on = presetOn(p)
+    return (
+      <button
+        key={key}
+        type="button"
+        className={`grd-preset${p.mine ? ' grd-preset--mine' : ''}${on ? ' is-on' : ''}`}
+        aria-pressed={on}
+        onClick={() => applyPreset(p)}
+        title={p.mine ? `Gradient from ${p.n}` : undefined}
+      >
+        <span className="grd-preset-swatch" style={{ background: gradientCssIn(p.type, p.angle, p.stops, supportsOklchGradients ? p.space : 'srgb') }} aria-hidden="true" />
+        <span className="grd-preset-row">
+          <span className="grd-preset-name">{p.n}</span>
+          <span className="grd-preset-meta">{p.mine ? `${p.stops.length} stops` : p.type}</span>
+        </span>
+        <span className="grd-preset-use">{p.mine ? 'From your palettes' : p.use}</span>
+      </button>
+    )
+  }
   const fmtLabel = EXPORT_FORMATS.find((f) => f.id === effFmt)?.label || 'CSS'
 
   return (
@@ -1148,13 +1189,20 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <button
                   type="button"
                   className="grd-iconbtn grd-tints-btn"
-                  onClick={(e) => openTintMenu(e, activeStop, e.currentTarget, true)}
+                  onClick={(e) => {
+                    // A second press closes the menu it opened. The menu leaves a
+                    // press on this button alone (ignoreDownOn), so this click is
+                    // what sees it.
+                    if (tintMenu?.fromButton && tintMenu.idx === activeStop) { closeTintMenu(); return }
+                    openTintMenu(e, activeStop, e.currentTarget, true)
+                  }}
                   aria-haspopup="menu"
                   aria-expanded={tintMenu?.idx === activeStop}
                   aria-label={isPro ? `Tints of stop ${activeStop + 1}` : `Tints of stop ${activeStop + 1} (Pro)`}
-                  title={isPro ? 'Tints of this stop' : 'Tints of this stop — Pro'}
+                  title={isPro ? 'Tints of this stop' : 'Tints of this stop (Pro)'}
                 >
                   <ToolIcon name={isPro ? 'swatches' : 'lock-simple'} size={14} />
+                  <span className="grd-tints-label">Tints</span>
                 </button>
               </div>
             )}
@@ -1212,35 +1260,17 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         <div className="grd-presets-head">
           <div className="grd-presets-title">
             <h2 id="grd-presets-title">Start from a preset</h2>
-            <p>Ready-to-use gradients. Pick one, then make it yours.</p>
+            <p>Ready-to-use gradients. Pick one to edit it.</p>
           </div>
-          <Link className="grd-lib" to="/discover/gradients">
-            <span>Gradient Library</span>
-            <ToolIcon name="caret-right" size={12} className="grd-lib-caret" />
-          </Link>
         </div>
-        <div className="grd-preset-grid">
-          {allPresets.map((p, i) => {
-            const on = presetOn(p)
-            return (
-              <button
-                key={`${p.mine ? 'mine' : 'p'}-${i}`}
-                type="button"
-                className={`grd-preset${p.mine ? ' grd-preset--mine' : ''}${on ? ' is-on' : ''}`}
-                aria-pressed={on}
-                onClick={() => applyPreset(p)}
-                title={p.mine ? `Gradient from ${p.n}` : undefined}
-              >
-                <span className="grd-preset-swatch" style={{ background: gradientCssIn(p.type, p.angle, p.stops, supportsOklchGradients ? p.space : 'srgb') }} aria-hidden="true" />
-                <span className="grd-preset-row">
-                  <span className="grd-preset-name">{p.n}</span>
-                  <span className="grd-preset-meta">{p.mine ? `${p.stops.length} stops` : p.type}</span>
-                </span>
-                <span className="grd-preset-use">{p.mine ? 'From your palettes' : p.use}</span>
-              </button>
-            )
-          })}
-        </div>
+        {palettePresets.length > 0 && (
+          <>
+            <h3 className="grd-presets-sub">Your palettes</h3>
+            <div className="grd-mine-grid">{palettePresets.map((p, i) => renderPreset(p, `mine-${i}`))}</div>
+            <h3 className="grd-presets-sub">Starters</h3>
+          </>
+        )}
+        <div className="grd-preset-grid">{PRESETS.map((p, i) => renderPreset(p, `p-${i}`))}</div>
       </section>
 
       {/* The way into the full library: a full-width panel under the presets,
@@ -1248,16 +1278,21 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       <section className="grd-explore" aria-labelledby="grd-explore-title">
         <div className="grd-explore-copy">
           <h2 id="grd-explore-title">Explore the library</h2>
-          <p>Browse the gradient library, filter by mood, and open any gradient here to adjust it.</p>
+          <p>Browse by mood, then open any gradient here to adjust it.</p>
           <ToolButton as={Link} to="/discover/gradients" variant="accent" icon="caret-right" iconSize={13} className="grd-explore-cta">
-            Explore the library
+            Browse all gradients
           </ToolButton>
         </div>
-        <div className="grd-explore-taste" aria-hidden="true">
+        <ul className="grd-explore-taste" aria-label="Browse the library by mood">
           {EXPLORE_TASTE.map((g) => (
-            <span key={g.id} className="grd-explore-chip" style={{ background: gradientCss(g.type, g.angle, g.stops) }} />
+            <li key={g.id}>
+              <Link className="grd-explore-chip" to={`/discover/gradients?mood=${g.mood}`} aria-label={`${g.mood[0].toUpperCase()}${g.mood.slice(1)} gradients in the library`}>
+                <span className="grd-explore-swatch" style={{ background: gradientCss(g.type, g.angle, g.stops) }} aria-hidden="true" />
+                <span className="grd-explore-mood">{g.mood}</span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
       {tintMenu && stops[tintMenu.idx] && (
@@ -1269,6 +1304,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           isPro={isPro}
           focusFirst={tintMenu.focusFirst}
           returnTo={tintMenu.returnTo}
+          ignoreDownOn={tintMenu.fromButton ? tintMenu.returnTo : null}
           onApply={applyTint}
           onGate={gateTints}
           onClose={closeTintMenu}

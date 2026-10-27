@@ -97,6 +97,11 @@ test.describe('the angle wheel', () => {
     await field.fill('370') // wraps, as the wheel does
     await expect.poll(() => cssAngle(page)).toBe(10)
 
+    await field.fill('360') // a full turn is 0, and the field and the dial agree (max 359)
+    await expect.poll(() => cssAngle(page)).toBe(0)
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', '0')
+    await expect(field).toHaveAttribute('max', await wheelOf(page).getAttribute('aria-valuemax'))
+
     await field.fill('-10')
     await expect.poll(() => cssAngle(page)).toBe(350)
 
@@ -193,6 +198,42 @@ test.describe('the stop tints menu', () => {
     await expect(button).toBeFocused()
   })
 
+  test('the Tints button has a visible label, and pressing it again closes the menu it opened', async ({ page }) => {
+    watch(page, 'a Pro designer opening and closing tints with the mouse')
+    await signIn(page, { plan: 'pro' })
+    await open(page)
+
+    const button = page.getByRole('button', { name: 'Tints of stop 1', exact: true })
+    await expect(button).toContainText('Tints')
+    const menu = page.getByRole('menu', { name: /^Tints of stop 1,/ })
+
+    await button.click()
+    await expect(menu).toBeVisible()
+    await button.click() // used to close on pointerdown and reopen on click
+    await expect(menu).toBeHidden()
+    await expect(button).toHaveAttribute('aria-expanded', 'false')
+    await button.click()
+    await expect(menu).toBeVisible()
+  })
+
+  test('Tab leaves the menu with focus back on the Tints button, not lost off the page', async ({ page }) => {
+    watch(page, 'a Pro designer tabbing out of the tints menu')
+    await signIn(page, { plan: 'pro' })
+    await open(page)
+
+    const button = page.getByRole('button', { name: 'Tints of stop 1', exact: true })
+    await button.focus()
+    await page.keyboard.press('Enter')
+    const menu = page.getByRole('menu', { name: /^Tints of stop 1,/ })
+    await expect(menu.getByRole('menuitem').first()).toBeFocused()
+
+    await page.keyboard.press('Tab')
+    await expect(menu).toBeHidden()
+    // Focus carried on from the opener into the page: it is on a real control, not <body>.
+    const tag = await page.evaluate(() => document.activeElement?.tagName)
+    expect(tag, 'focus fell off the page').not.toBe('BODY')
+  })
+
   test('a free account sees the ramp, and pressing a tint raises the Pro modal and leaves the stop alone', async ({ page }) => {
     watch(page, 'a free designer meeting the Tints gate')
     await signIn(page, { plan: 'free' })
@@ -214,6 +255,8 @@ test.describe('the stop tints menu', () => {
     await page.keyboard.press('Enter')
     const modal = page.getByRole('dialog', { name: 'Tint any stop' })
     await expect(modal).toBeVisible()
+    await expect(modal, 'the modal leads with tints').toContainText('Eleven tints')
+    await expect(modal, 'and drops the unrelated bullets').not.toContainText('Unlimited saved projects')
     await expect(menu).toBeHidden()
     expect((await stopHex(page, 1).innerText()).trim(), 'a free account does not get the tint').toBe(before)
   })
@@ -232,7 +275,7 @@ test.describe('the stop tints menu', () => {
 })
 
 test.describe('the Explore the library panel', () => {
-  test('it is a named region under the presets and its button opens the gradient library', async ({ page }) => {
+  test('it is a named region under the presets, its button opens the library and each mood chip opens it filtered', async ({ page }) => {
     watch(page, 'a designer looking for more gradients')
     await go(page, ROUTE)
     const presets = page.getByRole('region', { name: 'Start from a preset' })
@@ -241,21 +284,42 @@ test.describe('the Explore the library panel', () => {
     const above = await Promise.all([presets, explore].map((l) => l.evaluate((el) => el.getBoundingClientRect().top)))
     expect(above[0], 'the presets sit above the Explore panel').toBeLessThan(above[1])
 
-    const link = explore.getByRole('link', { name: 'Explore the library' })
+    // One way in from the presets: the header carries no second link to the library.
+    await expect(presets.getByRole('link', { name: /Gradient Library/ })).toHaveCount(0)
+    expect(await explore.evaluate((el) => parseFloat(getComputedStyle(el.querySelector('h2')).fontSize)), 'the panel heading is no bigger than the presets heading').toBeLessThanOrEqual(
+      await presets.evaluate((el) => parseFloat(getComputedStyle(el.querySelector('h2')).fontSize)))
+
+    // Six different moods, each a real link filtered by its own mood.
+    const chips = explore.getByRole('list', { name: 'Browse the library by mood' }).getByRole('link')
+    await expect(chips).toHaveCount(6)
+    const hrefs = await chips.evaluateAll((els) => els.map((el) => el.getAttribute('href')))
+    expect(new Set(hrefs).size, 'six distinct moods').toBe(6)
+    for (const href of hrefs) expect(href).toMatch(/^\/discover\/gradients\?mood=[a-z]+$/)
+
+    const link = explore.getByRole('link', { name: 'Browse all gradients' })
     await expect(link).toHaveAttribute('href', '/discover/gradients')
     await link.click()
     await expect(page).toHaveURL(/\/discover\/gradients$/)
   })
+
+  test('a mood chip lands on the library already filtered to that mood', async ({ page }) => {
+    watch(page, 'a designer following a mood chip')
+    await go(page, ROUTE)
+    await page.getByRole('link', { name: 'Dark gradients in the library' }).click()
+    await expect(page).toHaveURL(/\/discover\/gradients\?mood=dark$/)
+    // The filter is on: a dark gradient is listed and a warm-only one is not.
+    await expect(page.getByText('Ember Fade').first()).toBeVisible()
+    await expect(page.getByText('Sunset Blaze')).toHaveCount(0)
+  })
 })
 
 test.describe('the presets', () => {
-  test('there are 8 to 12, and a preset switches the interpolation to OKLCH even after sRGB was chosen', async ({ page }) => {
+  test('there are exactly 12, and a preset switches the interpolation to OKLCH even after sRGB was chosen', async ({ page }) => {
     watch(page, 'a designer picking a preset')
     await go(page, ROUTE)
     const tiles = page.locator('.grd-preset')
     const count = await tiles.count()
-    expect(count).toBeGreaterThanOrEqual(8)
-    expect(count).toBeLessThanOrEqual(12)
+    expect(count, 'twelve fills 6x2, 4x3 and 2x6 with no short row').toBe(12)
 
     const oklch = page.getByRole('button', { name: 'Perceived (OKLCH)', exact: true })
     const srgb = page.getByRole('button', { name: 'Standard (sRGB)', exact: true })

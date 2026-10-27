@@ -203,6 +203,8 @@
   .grd .grd-iconbtn:hover { background: var(--tl-wash-2); color: var(--tl-ink); }
 }
 .grd .grd-add { width: 100%; font-size: 13px; }
+/* The Tints button reads as a word beside its icon, not a bare glyph. */
+.grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 
 /* ── SELECTED STOP (D:657-668) ──────────────────────────────────────────── */
 .grd .grd-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -338,7 +340,7 @@
   border: 2px solid var(--tl-card);
 }
 .grd .grd-angle.is-locked .grd-wheel { opacity: .55; cursor: not-allowed; }
-.grd .grd-angle-num { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--tl-dim); }
+.grd .grd-angle-num { display: inline-flex; align-items: center; gap: 4px; color: var(--tl-dim); }
 .grd .grd-angle-input {
   width: 64px;
   height: 32px;
@@ -368,8 +370,10 @@
 
 /* ── Start from a preset ────────────────────────────────────────────────────
    Not a card: the heading sits on the page and each preset is its own tile, so
-   there is no panel inside a panel. The grid fills to the width: two across on a
-   phone, up to six on a wide screen. */
+   there is no panel inside a panel. The twelve starters sit in explicit column
+   steps (2, 4, 6) that divide twelve, so the last row is never short: 2x6 on a
+   phone, 4x3 from 720px, 6x2 from 1200px. The person's own palettes are a
+   separate grid above them on the same steps, so they never break the twelve. */
 .grd .grd-presets { margin-top: clamp(20px, 3vw, 32px); }
 .grd .grd-presets-head {
   display: flex;
@@ -382,25 +386,21 @@
 .grd .grd-presets-title { display: grid; gap: 4px; min-width: 0; }
 .grd .grd-presets-head h2 { margin: 0; font-size: 18px; font-weight: 560; letter-spacing: -.015em; line-height: 1.2; color: var(--tl-ink); }
 .grd .grd-presets-title p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
-.grd .grd-lib {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 13px;
-  border: 1px solid color-mix(in srgb, var(--t0) 11%, transparent);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--tl-soft);
-  font-size: 12.5px;
-  text-decoration: none;
-}
-.grd .grd-lib:hover { text-decoration: none; background: var(--tl-wash-2); color: var(--tl-ink); }
-.grd .grd-lib-caret { color: var(--tl-faint); }
-.grd .grd-preset-grid {
+.grd .grd-presets-sub { margin: 0 0 8px; font-size: 13px; font-weight: 560; line-height: 1.3; color: var(--tl-dim); }
+.grd .grd-mine-grid { margin-bottom: 24px; }
+.grd .grd-preset-grid,
+.grd .grd-mine-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+@media (min-width: 720px) {
+  .grd .grd-preset-grid,
+  .grd .grd-mine-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 1200px) {
+  .grd .grd-preset-grid,
+  .grd .grd-mine-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 .grd .grd-preset {
   display: grid;
@@ -414,7 +414,7 @@
   text-align: left;
   color: inherit;
   font-family: var(--font);
-  transition: border-color .16s ease, background-color .16s ease;
+  transition: border-color .16s ease;
 }
 .grd .grd-preset:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .grd .grd-preset-swatch {
@@ -427,7 +427,7 @@
 .grd .grd-preset.is-on { border-color: var(--t0); }
 .grd .grd-preset-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; padding: 0 4px; }
 .grd .grd-preset-name { font-size: 13px; font-weight: 520; color: var(--tl-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.grd .grd-preset-meta { font-size: 10.5px; color: var(--tl-faint); white-space: nowrap; }
+.grd .grd-preset-meta { font-size: 12px; color: var(--tl-faint); white-space: nowrap; }
 .grd .grd-preset-use { padding: 0 4px; font-size: 12px; line-height: 1.4; color: var(--tl-dim); text-wrap: pretty; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-preset:hover { border-color: color-mix(in srgb, var(--t0) 28%, transparent); }
@@ -456,17 +456,26 @@
   background: var(--tl-card);
 }
 .grd .grd-explore-copy { display: grid; justify-items: start; gap: 12px; min-width: 0; }
-.grd .grd-explore h2 { margin: 0; font-size: clamp(20px, 2.4vw, 26px); font-weight: 560; letter-spacing: -.02em; line-height: 1.15; color: var(--tl-ink); }
+.grd .grd-explore h2 { margin: 0; font-size: 18px; font-weight: 560; letter-spacing: -.015em; line-height: 1.2; color: var(--tl-ink); }
 .grd .grd-explore p { margin: 0; max-width: 46ch; font-size: 14px; line-height: 1.55; color: var(--tl-dim); text-wrap: pretty; }
 .grd .grd-explore-cta { margin-top: 4px; }
-.grd .grd-explore-taste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 0; }
-.grd .grd-explore-chip { display: block; height: 72px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--tl-line); }
+.grd .grd-explore-taste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.grd .grd-explore-taste > li { min-width: 0; }
+/* Each chip is a link to the library filtered to its mood: the gradient, then
+   the mood in words so it does not rest on colour alone. */
+.grd .grd-explore-chip { display: grid; gap: 6px; border-radius: 12px; color: var(--tl-dim); text-decoration: none; }
+.grd .grd-explore-swatch { display: block; height: 72px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--tl-line); }
+.grd .grd-explore-mood { font-size: 12px; line-height: 1.3; text-transform: capitalize; }
+.grd .grd-explore-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-explore-chip:hover { text-decoration: none; color: var(--tl-ink); }
+}
 @media (max-width: 767px) {
   .grd .grd-explore { grid-template-columns: minmax(0, 1fr); }
-  .grd .grd-explore-chip { height: 56px; }
+  .grd .grd-explore-swatch { height: 56px; }
 }
 @media (pointer: coarse) { .grd .grd-explore-cta { min-height: 44px; } }
-@media (forced-colors: active) { .grd .grd-explore-chip { forced-color-adjust: none; } }
+@media (forced-colors: active) { .grd .grd-explore-swatch { forced-color-adjust: none; } }
 
 /* ── The tints menu a stop opens (portalled to the body, so these selectors are
    not under `.grd`). Global tokens only: the `.tl` aliases are not in scope. ── */
@@ -496,7 +505,8 @@
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .grd-tintmenu { animation-name: grd-tintmenu-fade; }
 }
-.grd-tintmenu:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The page's link colour (--tl-link is not in scope out here, so its source). */
+.grd-tintmenu:focus-visible { outline: 2px solid var(--link, var(--accent-text)); outline-offset: 2px; }
 .grd-tintmenu-head { padding: var(--s-2); font-size: 12px; color: var(--t2); }
 .grd-tintmenu-pro { display: inline-flex; align-items: center; gap: var(--s-2); }
 .grd-tintmenu-item {
@@ -516,13 +526,13 @@
   cursor: pointer;
 }
 .grd-tintmenu-item[aria-disabled="true"] { color: var(--t2); }
-.grd-tintmenu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.grd-tintmenu-item:focus-visible { outline: 2px solid var(--link, var(--accent-text)); outline-offset: -2px; }
 @media (hover: hover) and (pointer: fine) {
   .grd-tintmenu-item:hover { background: color-mix(in srgb, var(--t0) 6%, transparent); }
 }
 .grd-tintmenu-chip { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 6px; box-shadow: inset 0 0 0 1px oklch(0 0 0 / .12); }
 .grd-tintmenu-label { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
-.grd-tintmenu-hex { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--t2); }
+.grd-tintmenu-hex { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--t1); }
 @media (pointer: coarse) { .grd-tintmenu-item { min-height: 44px; } }
 @media (forced-colors: active) {
   .grd-tintmenu-chip { forced-color-adjust: none; }
@@ -536,11 +546,11 @@
    iOS does not zoom the page when it takes focus. ────────────────────────── */
 @media (pointer: coarse) {
   .grd .grd-iconbtn { width: 44px; height: 44px; }
+  .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
   .grd .grd-swatch { width: 44px; height: 44px; }
   .grd .grd-hex { height: 44px; font-size: 16px; }
   .grd .grd-pick-swatch .cpk-trigger { width: 44px; height: 44px; }
-  .grd .grd-lib { height: 44px; }
   .grd .grd-fmt-btn { min-height: 44px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
