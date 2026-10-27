@@ -1,4 +1,4 @@
-import { isMulticolourSvg } from './iconPaint'
+import { isMulticolourSvg } from './iconPaint.js'
 
 // What the customiser's Colour row shows for an icon.
 //
