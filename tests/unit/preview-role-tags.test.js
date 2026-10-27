@@ -30,7 +30,10 @@ function taggedRoles(name) {
   for (const m of `${jsx}\n${data}`.matchAll(/\brole: '([a-z ]+)'/g)) add(m[1])
   // Tally's transactions carry their state as tone: 'warning' and the like, and
   // Hale & Okoro hands each roof its role as roof="secondary"; both end up in data-role.
-  for (const m of `${jsx}\n${data}`.matchAll(/\b(?:tone: '|roof=")([a-z ]+)['"]/g)) add(m[1])
+  // A value only counts when the .jsx really writes it into data-role.
+  const via = (prop, re) => { if (re.test(jsx)) for (const m of `${jsx}\n${data}`.matchAll(prop)) add(m[1]) }
+  via(/\btone: '([a-z ]+)'/g, /data-role=\{[\w.]*tone\}/)
+  via(/\broof="([a-z ]+)"/g, /data-role=\{roof\}/)
   for (const m of data.matchAll(/SWATCH_ROLES = \[([^\]]*)\]/g)) for (const r of m[1].matchAll(/'([a-z]+)'/g)) add(r[1])
   return found
 }

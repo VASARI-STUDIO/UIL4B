@@ -15,6 +15,8 @@
 //   6. the Editorial headline is larger than the body text (the example's own
 //      stylesheet loaded after the page's, so its sizes are the ones that apply)
 //   7. at 390px the Product button reads "Product" and the page does not scroll sideways
+//   8. at rest one part carries the failing test's mark; a chosen test outlines every part of it
+//   9. the outline colour is picked per pair; the legend sits above the example; no empty Card day
 //
 // To make each go red: 2 set a text colour in HaleOkoro.css/Tally.css/OrraWorkroom.css to a
 // literal (#444); 3 change a threshold in palettePairSizes.js SIZE_CLASSES; 4 drop UI_PARTS.card;
@@ -186,5 +188,67 @@ test.describe('the Contrast Checker views on a phone', () => {
     await openPair(page)
     const product = page.getByRole('group', { name: 'Preview the pair on' }).getByRole('button', { name: 'Product page', exact: true })
     expect(await product.evaluate((b) => b.innerText.trim())).toBe('Product page')
+  })
+})
+
+test.describe('the Contrast Checker marks, outline colour and layout', () => {
+  test('at rest each failing test marks exactly one part and a passing test marks none', async ({ page }) => {
+    watch(page, 'designer reading which part misses its test')
+    await openPair(page)
+    for (const v of VIEWS) {
+      const pv = await pickView(page, v.name)
+      await settle(page)
+      const marked = await pv.locator('[data-fail="on"]').evaluateAll((els) => els.map((e) => e.dataset.size))
+      // 4.48:1 fails body text only, so there is one mark, on a body part, the largest one.
+      expect(marked, `${v.name}: one mark at rest, on the failing test`).toEqual(['body'])
+      await expect(pv.locator('[data-hit="on"]'), `${v.name}: nothing is outlined as a choice at rest`).toHaveCount(0)
+    }
+  })
+
+  test('choosing a test outlines every part of it, not just one', async ({ page }) => {
+    watch(page, 'designer choosing a test')
+    await openPair(page)
+    const legend = page.getByRole('group', { name: 'Tests' })
+    for (const v of VIEWS) {
+      const pv = await pickView(page, v.name)
+      await settle(page)
+      await legend.getByRole('button', { name: /^Body text/ }).hover()
+      const total = await pv.locator('[data-size="body"]').count()
+      expect(total, `${v.name}: several body parts`).toBeGreaterThan(3)
+      await expect(pv.locator('[data-hit="on"]'), `${v.name}: every body part is outlined`).toHaveCount(total)
+      await expect(pv.locator('[data-fail="on"]'), `${v.name}: no resting mark while a test is chosen`).toHaveCount(0)
+      await page.mouse.move(2, 2)
+    }
+  })
+
+  test('the outline is near-black for a mid-grey pair and blue for black on white, never the pair\'s own colour', async ({ page }) => {
+    watch(page, 'designer checking the outline colour')
+    await openPair(page)
+    const pv = await pickView(page, 'Editorial')
+    // #111111 scores 4.2:1 on #777777, where the usual blue scores 1.3.
+    expect(await pv.evaluate((el) => getComputedStyle(el).getPropertyValue('--pv-hit').trim().toLowerCase())).toBe('#111111')
+    await go(page, '/create/contrast?fg=000000&bg=FFFFFF')
+    const pv2 = await pickView(page, 'Editorial')
+    expect(await pv2.evaluate((el) => getComputedStyle(el).getPropertyValue('--pv-hit').trim().toLowerCase())).toBe('#1d63d1')
+  })
+
+  test('the legend sits above the example it marks', async ({ page }) => {
+    watch(page, 'designer choosing a test without scrolling')
+    await openPair(page)
+    for (const v of VIEWS) {
+      const pv = await pickView(page, v.name)
+      const legendBottom = await page.getByRole('group', { name: 'Tests' }).evaluate((el) => el.getBoundingClientRect().bottom)
+      const exampleTop = await pv.evaluate((el) => el.getBoundingClientRect().top)
+      expect(legendBottom, `${v.name}: the legend ends above where the example starts`).toBeLessThanOrEqual(exampleTop + 1)
+    }
+  })
+
+  test('the Card view leaves no day heading over an empty list', async ({ page }) => {
+    watch(page, 'designer reading the Card view')
+    await openPair(page)
+    const pv = await pickView(page, 'Card')
+    const days = await pv.locator('.ty-day').evaluateAll((els) => els.map((d) => ({ name: d.querySelector('.ty-dayname')?.textContent, rows: d.querySelectorAll('.ty-tx').length })))
+    expect(days.length, 'the days were found').toBeGreaterThan(0)
+    expect(days.filter((d) => d.rows === 0), 'a day with a heading and no rows').toEqual([])
   })
 })
