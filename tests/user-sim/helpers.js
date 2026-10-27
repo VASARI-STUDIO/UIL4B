@@ -305,6 +305,11 @@ function seedProject(i, design) {
  *   projectTombstones  deletes this account already made, keyed by project id
  *              -> ISO timestamp, seeded into the same localStorage key
  *              ProjectContext writes them to.
+ *   creationTime  when the account was made, as a millisecond timestamp or
+ *              anything `new Date()` takes. Default: a day ago, so the account
+ *              is not new. Pass `Date.now() - 2 * 60_000` for an account made two
+ *              minutes ago, which the workspace greets as "Welcome, <name>."
+ *              rather than "Welcome back, <name>.".
  *   subscription / docs / claims / email / uid / displayName — direct overrides
  *              for anything the four above do not cover. `docs` is merged over
  *              the seeded Firestore documents, keyed by path.
@@ -329,6 +334,7 @@ export async function signIn(page, opts = {}) {
     displayName,
     emailVerified = true,
     lateSignIn = false,
+    creationTime,
   } = opts
 
   const email = (opts.email || (admin ? TEST_ADMIN_EMAIL : `${plan}.user@uil4b.test`)).toLowerCase()
@@ -357,6 +363,8 @@ export async function signIn(page, opts = {}) {
     provider: 'password',
     emailVerified,
     lateSignIn,
+    // Firebase reports creationTime as a UTC string; undefined leaves the double's own default.
+    creationTime: creationTime === undefined ? undefined : new Date(creationTime).toUTCString(),
     claims,
     deny,
     slowReads,
@@ -786,6 +794,28 @@ function describeStall(s) {
   if (s && s.booting) return 'the app never replaced the static boot shell'
   if (s && s.dataLoading) return 'the tool never got past its own data-loading state'
   return 'the route never got past its lazy-loading fallback'
+}
+
+/**
+ * Waits until no overlay still owns a history entry.
+ *
+ * Every overlay (the Export panel, the phone menu sheet, the palette, the
+ * feedback and prompt dialogs) pushes one entry while it is open, and closing
+ * it any way but the Back gesture gives that entry back with `history.back()`.
+ * That call returns at once and the same-document traversal finishes later,
+ * with the entry's `__overlays` stack empty once it has. A `page.reload()` or
+ * `page.goto()` issued inside that gap is cancelled by the traversal and never
+ * settles: `page.reload: Test timeout exceeded`, or `net::ERR_ABORTED; maybe
+ * frame was detached?`. The closed panel being hidden does not say the
+ * traversal is over, because the panel unmounts first and calls `back()` from
+ * its cleanup. Call this after closing or handing over from an overlay, before
+ * navigating away from the page.
+ */
+export async function overlaysSettled(page, what = 'the overlay') {
+  await expect.poll(
+    () => page.evaluate(() => (window.history.state?.__overlays || []).length),
+    { message: `${what} has given back its history entry`, timeout: 10000 },
+  ).toBe(0)
 }
 
 export async function ready(page, what) {
