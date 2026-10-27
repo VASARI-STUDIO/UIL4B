@@ -119,6 +119,76 @@ export async function refuseIconifyGlyphs(page) {
     }),
   )
 }
+/**
+ * True for a request the /collection rate limit refuses: the listing endpoint
+ * for any prefix not named in `except`. /collections (plural), /search and the
+ * batched glyph endpoint are NOT matched; those stay answerable under it.
+ */
+export function refusesCollection(url, except = []) {
+  return ICONIFY_HOSTS[0] === url.hostname && url.pathname === '/collection'
+    && !except.includes(url.searchParams.get('prefix'))
+}
+
+/**
+ * Refuse ONLY /collection on this PAGE, the way api.iconify.design did when a
+ * visit's burst of listing requests tripped Cloudflare's per-IP limit (error
+ * 1015): 429 on /collection for every prefix, while /collections, /search and
+ * /{prefix}.json?icons= kept answering 200. Like the other refusals it carries
+ * no CORS headers, so the browser sees a network error, which is also what a
+ * real 1015 looks like to a page. `except` lists prefixes that still answer
+ * (they fall through to the fixture). Call before go().
+ */
+export async function refuseIconifyCollections(page, { except = [] } = {}) {
+  const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
+  await page.route((u) => refusesCollection(u, except),
+    (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'error code: 1015' }))
+}
+
+const HEADS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'src', 'data', 'iconHeads')
+
+/** The packs that have a committed head file (src/data/iconHeads/<pack>.json). */
+export function headPackNames() {
+  return fs.readdirSync(HEADS_DIR).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort()
+}
+
+/**
+ * The pack a request for a pack's head file is about, or null for any other URL.
+ * The built site serves each head as its own chunk, /assets/<pack>-<8-character
+ * hash>.js; the dev server serves /src/data/iconHeads/<pack>.json. Pure, so the
+ * unit tests can pin it without a browser.
+ */
+export function headPackOfUrl(urlString, packs = headPackNames()) {
+  let pathname
+  try { pathname = new URL(urlString).pathname } catch { return null }
+  const built = pathname.match(/^\/assets\/(.+)-[\w-]{8}\.js$/)
+  if (built && packs.includes(built[1])) return built[1]
+  const dev = pathname.match(/^\/src\/data\/iconHeads\/([^/]+)\.json$/)
+  return dev && packs.includes(dev[1]) ? dev[1] : null
+}
+
+/**
+ * Hold the requests the default "All packs" listing now waits on: the packs'
+ * head files, which name the icons before any glyph is fetched. Nothing is
+ * answered until `release()`; `delay(pack)` may return a further wait (ms) for
+ * one pack once released. `requested` lists the packs asked for, in order, so a
+ * spec can prove the hold caught something. Call before go().
+ */
+export async function holdIconHeads(page, { delay = () => 0 } = {}) {
+  let release
+  const held = new Promise((resolve) => { release = resolve })
+  const state = { requested: [], answered: [], release }
+  await page.route((u) => headPackOfUrl(u.href) !== null, async (route) => {
+    const pack = headPackOfUrl(route.request().url())
+    state.requested.push(pack)
+    await held
+    const wait = delay(pack)
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
+    state.answered.push(pack)
+    await route.fallback().catch(() => { /* page closed while held */ })
+  })
+  return state
+}
+
 /** Set this (to anything non-empty) to bypass the fixture and hit the live API. */
 export const LIVE_ICONIFY_ENV = 'UIL4B_LIVE_ICONIFY'
 
