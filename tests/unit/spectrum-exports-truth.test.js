@@ -1,10 +1,14 @@
 // THE EXPORT CARDS SHOW, AND COPY, WHAT THE PRODUCT REALLY PRODUCES.
 //
-// Section "Studio quality exports" on the landing (SpectrumExports.jsx) draws a
-// picture of each file it talks about. Each assertion here pins one place where
-// the picture used to differ from the thing: the kit's colour role names, the
-// contrast verdict, the copied icon files, and the copy that named a PDF and a
-// version history the product does not have.
+// Section "Studio quality exports" on the landing (SpectrumExports.jsx) has three
+// cards. Card 1 is a live panel that builds and copies a real file (palette, type
+// scale, compressed files, icons); this file pins it to the product: the contrast
+// verdict, the copied icon files, the compressed-files total. Cards 2 and 3 show
+// pictures of real exports (public/home-exports/, listed in homeExports.generated.js
+// and checked by home-exports-assets.test.js), so there is no drawn document left to
+// differ from the thing; what remains to pin there is the copy around them, which
+// used to name a PDF and a version history the product does not have. The kit's
+// five colour role names are still pinned below against the real kit.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SLOT_COPY, SLOT_ORDER } from '../../src/utils/uiKitExport.js'
@@ -33,7 +37,7 @@ test('the stripper still works, so the source reads below can be trusted', () =>
   assertStripperWorks(assert)
 })
 
-test('the kit card names its five colours as the real kit does', () => {
+test('the kit colour roles kept in spectrumKit.js match the real kit', () => {
   // spectrumKit.js keeps a copy (importing uiKitExport.js would pull the colour
   // and token code into the home chunk). The copy has to match the original,
   // role and note, in the kit's own order.
