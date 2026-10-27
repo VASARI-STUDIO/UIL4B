@@ -911,6 +911,28 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     return v == null ? null : { kind: 'tints', i: v }
   }), [])
   const setValuesIdx = useCallback((i) => setColPanel(i == null ? null : { kind: 'values', i }), [])
+  // The panel's index means "that column of this palette", so anything that
+  // swaps the palette or changes how many columns there are closes it; a stale
+  // index would point past the end and leave an open panel nobody can see.
+  const colPanelRef = useRef(null)
+  colPanelRef.current = colPanel
+  useEffect(() => { setColPanel((cur) => (cur ? null : cur)) }, [colors.length])
+  // Closing the panel hands focus back to the control that opened it: the
+  // column's "..." button, or its tint strip. The panel's own close button
+  // unmounts while it holds focus, which would otherwise drop focus to <body>.
+  const panelOpenerRef = useRef('more')
+  const panelReturnRef = useRef(null)
+  const closeColPanel = useCallback(() => {
+    const cur = colPanelRef.current
+    if (cur) panelReturnRef.current = { i: cur.i, opener: panelOpenerRef.current }
+    setColPanel(null)
+  }, [])
+  useLayoutEffect(() => {
+    const back = panelReturnRef.current
+    if (!back) return
+    panelReturnRef.current = null
+    columnRefs.current[back.i]?.querySelector(back.opener === 'ramp' ? '.plb-ramp' : '.plb-tool--more')?.focus({ preventScroll: true })
+  })
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const columnRefs = useRef([])
   const removeFocusRef = useRef(null)
@@ -1005,6 +1027,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
   const phone = usePhone()
   const [cssSheetOpen, setCssSheetOpen] = useState(false) // Palette CSS bottom sheet (phone)
+  // The sheet belongs to the phone layout. Leaving it (rotating wider) closes
+  // it, so rotating back does not bring it up unasked.
+  useEffect(() => { if (!phone) setCssSheetOpen(false) }, [phone])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
@@ -1225,6 +1250,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Regenerate the current system over the UNLOCKED role slots; extras stay.
   const regen = (fromSeed, type) => {
+    setColPanel(null)
     // Free users can't regenerate through a paid/brand system — collapse to a
     // free default and snap the visible system back so the UI matches the engine.
     const sys = resolveSystem(type)
@@ -1276,6 +1302,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Only 'auto' is tonal now. Locked colours always survive; HSL fallback if
   // the HCT solver ever throws.
   const randomize = useCallback(() => {
+    setColPanel(null)
     // Same free-system guard as regen: a free user randomising from a paid/brand
     // system gets a free system instead, and the UI snaps to match.
     const sys = resolveSystem(harmony)
@@ -1364,11 +1391,30 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // drag inside it is not an outside press. Nor is a press in the sign-in
       // dialog a gallery like opened: the gallery stays put behind it.
       if (!e.target.closest('.plb-menuwrap, .plb-modal, [aria-labelledby="ui-login-title"]')) closeAllMenus()
-      if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) closePops()
+      if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) {
+        // An open panel that held focus hands it back to its opener, unless the
+        // press landed on something that takes focus itself. The press's own
+        // focus change comes after this handler, so the hand-back waits a tick.
+        const cp = colPanelRef.current
+        const heldFocus = cp && document.activeElement?.closest('.plb-tintpop')
+        const opener = panelOpenerRef.current
+        closePops()
+        const takesFocus = 'a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="menuitem"]'
+        if (heldFocus && !e.target.closest(takesFocus)) {
+          setTimeout(() => {
+            // Page furniture (the body, a scroll region) took the press's focus;
+            // a real control the person moved to keeps it.
+            if (document.activeElement?.matches(takesFocus)) return
+            columnRefs.current[cp.i]?.querySelector(opener === 'ramp' ? '.plb-ramp' : '.plb-tool--more')?.focus({ preventScroll: true })
+          }, 0)
+        }
+      }
     }
     const onEsc = (e) => {
       if (e.key !== 'Escape') return
       if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') returnMenuFocus(ctxTriggerRef.current, !ctxMenu?.keyboard)
+      const cp = colPanelRef.current
+      if (cp && !ctxMenu) panelReturnRef.current = { i: cp.i, opener: panelOpenerRef.current }
       closeAllMenus(); closePops(); setPreview(null)
     }
     window.addEventListener('pointerdown', onDown)
@@ -1405,6 +1451,26 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Close the "…" menu after a choice and hand focus to the "…" of swatch `at`.
   const closeCtxMenu = (at) => { ctxReturnRef.current = at; setCtxMenu(null) }
+
+  // Opening a column's tints or colour values from the "..." menu: the menu
+  // closes without sending focus back to "..." (closeCtxMenu would), and focus
+  // goes into the panel instead, with the panel named for a screen reader. This
+  // runs after the layout effects above, so nothing takes focus back from it.
+  const openColPanel = (kind, i) => {
+    panelOpenerRef.current = 'more'
+    setCtxMenu(null)
+    if (kind === 'tints') setTintsIdx(i); else setValuesIdx(i)
+  }
+  useEffect(() => {
+    if (!colPanel) return
+    const panel = columnRefs.current[colPanel.i]?.querySelector('.plb-tintpop')
+    panel?.querySelector('.plb-pop-x')?.focus({ preventScroll: true })
+    const hex = String(adjusted[colPanel.i] || '').toUpperCase()
+    setLiveMsg(colPanel.kind === 'values' ? `Colour values for ${hex}` : `Tints of ${hex}`)
+  // Only a newly opened panel moves focus; the colours behind an open one can
+  // change without it grabbing focus again.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colPanel])
 
   const toggleLock = (i) => {
     setLocked(prev => {
@@ -1747,6 +1813,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Apply a whole ready-made palette (variation or brand). Resets the adjust
   // lens — the incoming colours ARE the new baseline. Locked slots survive.
   const applyPalette = (hexes, msg) => {
+    setColPanel(null)
     const next = hexes.map(c => normaliseHex(c)).filter(Boolean).slice(0, HARD_MAX)
     if (next.length < 2) return
     setColors(prev => {
@@ -1759,6 +1826,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
 
   const resetPalette = () => {
+    setColPanel(null)
     const current = {
       colors: [...colors],
       seed,
@@ -1846,6 +1914,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     vision, showContrast, importedGalleryId, at: Date.now(),
   })
   const applySnapshot = (h) => {
+    setColPanel(null)
     const restored = h.colors.slice(0, HARD_MAX)
     setColors(restored)
     setSeed(h.seed || restored[0])
@@ -1873,6 +1942,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
   const canRedo = redoTick >= 0 && redoRef.current.length > 0
   const undoPalette = () => {
+    setColPanel(null)
     const leaving = boardNow()
     redoRef.current.push(leaving)
     setRedoTick((t) => t + 1)
@@ -1967,6 +2037,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the board is now a derivative. Enabling a palette applies it directly — no
   // info popup — so the whole gallery swatch reads as a one-click select.
   const importGalleryPalette = (cols, name, id) => {
+    setColPanel(null)
     if (importedGalleryId === id && preImportRef.current) {
       const snap = preImportRef.current
       setColors(snap.colors)
@@ -2672,7 +2743,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   className="plb-ramp"
                   title={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900`}
                   aria-label={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900 — view all tints`}
-                  onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
+                  onClick={() => { panelOpenerRef.current = 'ramp'; setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
                 >
                   {ramp.map((rc, k) => (
                     <span key={k} className="plb-ramp-bar" ref={barRef(rc)} aria-hidden="true" />
@@ -2709,7 +2780,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <div className="plb-pop plb-tintpop" role="dialog" aria-label={`Tints of ${adjusted[i]}`}>
                     <div className="plb-pop-head">
                       <span className="plb-pop-title">Tints</span>
-                      <button type="button" className="plb-pop-x" aria-label="Close tints" onClick={() => setTintsIdx(null)}><IcoX /></button>
+                      <button type="button" className="plb-pop-x" aria-label="Close tints" onClick={closeColPanel}><IcoX /></button>
                     </div>
                     <div className="plb-tint-list">
                       {tintRampForHex(adjusted[i]).map(({ label, hex: tc }) => (
@@ -2733,7 +2804,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <div className="plb-pop plb-tintpop plb-valpop" role="dialog" aria-label={`Colour values for ${adjusted[i]}`}>
                     <div className="plb-pop-head">
                       <span className="plb-pop-title">Colour values</span>
-                      <button type="button" className="plb-pop-x" aria-label="Close colour values" onClick={() => setValuesIdx(null)}><IcoX /></button>
+                      <button type="button" className="plb-pop-x" aria-label="Close colour values" onClick={closeColPanel}><IcoX /></button>
                     </div>
                     <ul className="plb-val-list">
                       {colourFormats(adjusted[i]).map(({ key, label, value }) => (
@@ -2846,8 +2917,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Copy hex</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoEye /> View tints</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setValuesIdx(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Colour values</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('tints', ctxMenu.i)}><IcoEye /> View tints</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('values', ctxMenu.i)}><ToolIcon name="swatches" size={14} /> Colour values</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>
@@ -3342,7 +3413,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             screens copy it straight away. */}
         {phone ? (
           <button type="button" className="plb-copycss" aria-haspopup="dialog" aria-expanded={cssSheetOpen} onClick={() => setCssSheetOpen(true)}>
-            <ToolIcon name="copy" size={14} /><span>Palette CSS</span>
+            <ToolIcon name="code" size={14} /><span>Palette CSS</span>
           </button>
         ) : (
           <button type="button" className="plb-copycss" onClick={copyCssExport}>
@@ -3353,7 +3424,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <PaletteCssSheet
             css={cssExport}
             onClose={() => setCssSheetOpen(false)}
-            onCopy={() => { copyCssExport(); setCssSheetOpen(false) }}
+            onCopy={async () => {
+              // Shut the sheet only once the copy has gone through; a refused
+              // copy keeps it open beside the toast that says why.
+              if (await copyCssExport() === true) setCssSheetOpen(false)
+            }}
           />
         )}
       </footer>
