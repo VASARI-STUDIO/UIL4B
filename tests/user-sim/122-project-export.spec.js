@@ -50,7 +50,7 @@ for (const width of [390, 1440]) {
           await activate(opener)
           const panel = page.getByRole('dialog', { name: 'Export your design system' })
           await expect(panel).toBeVisible()
-          await expect(panel).toBeFocused()
+          await expect(panel.getByRole('heading', { name: 'Export your design system' })).toBeFocused()
           await expect(page.locator('#main')).toHaveAttribute('inert', '')
           await activate(panel.getByRole('radio', { name: /^UI kit/ }))
 

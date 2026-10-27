@@ -27,15 +27,16 @@
 //     "the blur is in the pixels" fails, because the free thumbnail is as sharp
 //     as the Pro one.
 //   - Render `<ExportProTag />` for every account (drop `showPro &&`): the Pro
-//     account sees a lock, so "a Pro account sees no lock" fails.
+//     account sees a lock, so "a Pro account has no intro, no Pro words" and
+//     "the blur is in the pixels, and a Pro account sees ... no lock" fail.
 //   - Put role="group" back on .exp-formats, or leave a Soon row in: "exactly
 //     five radios in one radiogroup" fails.
 //   - Change a format's `group` in config/exportFormats.js so it has no row:
 //     "every live format is reachable" fails.
 //   - Re-add the eyebrow span or an em dash to the panel copy: "no eyebrow and
 //     no em dash" fails.
-//   - Remove `tabIndex={active ? 0 : -1}` from the rows: "the rows are one Tab
-//     stop" fails.
+//   - Remove `tabIndex={active ? 0 : -1}` from the rows: "keyboard: focus
+//     starts on the title, the rows are one Tab stop..." fails.
 //   - Restore "You can change it later in Export" in UIKitGuide.jsx: "the
 //     walkthrough no longer promises a rename in Export" fails.
 import fs from 'node:fs'
@@ -56,6 +57,8 @@ async function open(page) {
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
   const panel = exportPanel(page)
   await expect(panel).toBeVisible()
+  // The sheet rises in; measuring its buttons before that ends reads a moving box.
+  await panel.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
   return panel
 }
 
@@ -273,9 +276,14 @@ for (const size of SIZES) {
       const primary = panel.locator('.exp-foot .btn-accent')
       const top = async () => (await primary.boundingBox()).y
 
-      const opened = await top()
+      // A row with a switch is taller than the kit row, so picking it may move the
+      // button on a desktop dialog; the file type inside the row must not.
+      await chooseFormat(panel, 'html')
+      const inRow = await top()
       await chooseFormat(panel, 'png')
-      expect(await top(), 'switching the file type leaves the button where it was').toBeCloseTo(opened, 0)
+      expect(await top(), 'switching the file type leaves the button where it was').toBeCloseTo(inRow, 0)
+      await chooseFormat(panel, 'md')
+      expect(await top(), 'and so does the next one').toBeCloseTo(inRow, 0)
 
       // No horizontal overflow of the page, and the switch stays on one line.
       const pills = await panel.locator('.exp-pill').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))

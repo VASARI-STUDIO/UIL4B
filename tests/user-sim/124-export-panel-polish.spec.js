@@ -3,7 +3,8 @@
 // 1. A finished download closes the panel, and the close says nothing about the
 //    file. ExportPanel raises the app's one toast, "Downloaded <filename>". It
 //    must name the file the browser actually received, and it must be on screen.
-// 2. While more format rows are below what is showing, the panel carries
+// 2. While more of the panel is below what is showing (a window too short for the
+//    five rows and their options), the panel carries
 //    `has-more` and the dock's ::before fade is opaque; at the bottom of the list
 //    both are gone, so the cue never points at nothing.
 //
@@ -39,6 +40,8 @@ const SIZES = [
   { width: 390, height: 844 },
   { width: 1440, height: 900 },
 ]
+// The five rows, their options and the dock fit in about 570px; below that the panel scrolls.
+const SHORT_HEIGHT = 440
 
 async function openPanel(page) {
   await signIn(page, { plan: 'free', projects: [savedProject()] })
@@ -81,9 +84,11 @@ for (const { width, height } of SIZES) {
     })
 
     test('the scroll fade shows while rows are below the fold', async ({ page }) => {
-      watch(page, 'a designer opening the export panel on a long format list')
+      watch(page, 'a designer opening the export panel in a window too short for it')
       const panel = await openPanel(page)
-      // The premise: the list really does run past the panel's edge here.
+      // The five rows fit a normal screen, so the premise is made on a short one.
+      await page.setViewportSize({ width, height: SHORT_HEIGHT })
+      // The premise: the panel really does run past the window's edge here.
       await expect.poll(() => panel.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(40)
       expect(await panel.evaluate((el) => el.scrollTop)).toBe(0)
 
@@ -94,8 +99,9 @@ for (const { width, height } of SIZES) {
     })
 
     test('the scroll fade is gone once the list is scrolled to its end', async ({ page }) => {
-      watch(page, 'a designer scrolling the export panel to the last format')
+      watch(page, 'a designer scrolling the export panel to its end')
       const panel = await openPanel(page)
+      await page.setViewportSize({ width, height: SHORT_HEIGHT })
       await expect.poll(() => panel.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(40)
       await expect(panel).toHaveClass(/\bhas-more\b/)
 
