@@ -105,17 +105,50 @@ function expandBraces(text) {
 }
 
 /**
+ * Expands `*` inside a path (one segment, never across a `/`, as in Vercel's glob)
+ * against the files that really exist under src/:
+ * 'utils/exportTemplates/*\/*.js' -> every .js one directory down.
+ * A pattern with no `*` comes back as it is, even if the file does not exist, so the
+ * import walk still reports it by name. A `*` that matches nothing expands to
+ * nothing, which the reached/bundled comparison then reports as missing.
+ */
+function expandStars(rel) {
+  if (!rel.includes('*')) return [rel]
+  const segments = rel.split('/')
+  let paths = ['']
+  segments.forEach((segment, i) => {
+    const last = i === segments.length - 1
+    const next = []
+    for (const base of paths) {
+      if (!segment.includes('*')) {
+        next.push(base ? `${base}/${segment}` : segment)
+        continue
+      }
+      const pattern = new RegExp(`^${segment.replace(/[.+^$()|\\]/g, '\\$&').replace(/\*/g, '[^/]*')}$`)
+      const dir = path.join(root, 'src', base)
+      if (!fs.existsSync(dir)) continue
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (!pattern.test(entry.name) || (last ? !entry.isFile() : !entry.isDirectory())) continue
+        next.push(base ? `${base}/${entry.name}` : entry.name)
+      }
+    }
+    paths = next
+  })
+  return paths
+}
+
+/**
  * `src/data/{pipeline,moduleBoard}.js` -> ['data/pipeline.js', 'data/moduleBoard.js'].
  * Brace groups may nest. A glob this cannot read fails loudly below rather than
  * expanding to nothing, because expanding to nothing would read as "bundles no
- * files" and pass.
+ * files" and pass. A `*` is expanded against the real src/ tree by expandStars().
  */
 function bundledFiles() {
   const glob = includeFilesGlob()
   if (!glob) return []
   const under = /^src\/(.+)$/.exec(glob)
   assert.ok(under, `includeFiles is "${glob}", which does not start at src/ — this file cannot read it`)
-  const files = expandBraces(under[1])
+  const files = expandBraces(under[1]).flatMap(expandStars)
   for (const f of files) {
     assert.doesNotMatch(f, /[{}*?[\]]/,
       `includeFiles is "${glob}", a glob shape this file has never seen. Teach bundledFiles() to `
@@ -203,6 +236,7 @@ test('the api functions import exactly the two internal boards and the Pro expor
   // bundle at all), and vercel.json bundles them.
   assert.deepEqual(IMPORTED, [
     'config/exportFormats.js',
+    'config/exportTemplates.js',
     'data/moduleBoard.js',
     'data/pipeline.js',
     'utils/brandGuidelines.js',
@@ -310,4 +344,34 @@ test('includeFiles fits the 256-character limit Vercel enforces', () => {
 test('CONTROL: nested brace groups expand to every path', () => {
   assert.deepEqual(expandBraces('a/{b,c/{d,e}}.js'), ['a/b.js', 'a/c/d.js', 'a/c/e.js'])
   assert.deepEqual(expandBraces('x.js'), ['x.js'])
+})
+
+test('CONTROL: a `*` expands to the real files one directory level at a time', () => {
+  const templates = ['book/index.js', 'book/specification.js', 'guidelines/index.js', 'guidelines/presentation.js']
+    .map((rel) => `utils/exportTemplates/${rel}`)
+  assert.deepEqual(expandStars('utils/exportTemplates/*/*.js').sort(), templates,
+    '`*/*.js` should reach the files one directory down and not the ones beside it')
+  assert.ok(!expandStars('utils/exportTemplates/*.js').includes('utils/exportTemplates/book/index.js'),
+    'a `*` must not cross a `/`')
+  assert.deepEqual(expandStars('utils/colors.js'), ['utils/colors.js'])
+  assert.deepEqual(expandStars('utils/noSuchFolder/*.js'), [],
+    'a `*` that matches nothing must expand to nothing, so the gap is reported')
+})
+
+// The export templates are loaded by name at run time, so a layout file left out
+// of includeFiles is a function that answers every Pro export with a 500.
+test('includeFiles covers every file under src/utils/exportTemplates/', () => {
+  const dir = path.join(root, 'src', 'utils', 'exportTemplates')
+  const onDisk = []
+  const walk = (d) => {
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(path.join(d, entry.name))
+      else onDisk.push(path.relative(path.join(root, 'src'), path.join(d, entry.name)).replace(/\\/g, '/'))
+    }
+  }
+  walk(dir)
+  assert.ok(onDisk.length >= 5, 'the template folder looks empty, so this check proves nothing')
+  const bundled = new Set(bundledFiles())
+  assert.deepEqual(onDisk.filter((rel) => !bundled.has(rel)).sort(), [],
+    'a file under src/utils/exportTemplates/ is not matched by includeFiles, so the deploy will not carry it')
 })

@@ -1,4 +1,4 @@
-// The UI kit export: src/templates/uiKit.html filled from a saved design by
+// The UI kit export: src/templates/kit/studio.html filled from a saved design by
 // src/utils/uiKitExport.js, with its fonts gathered by src/utils/kitFonts.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -13,7 +13,7 @@ import { EXPORT_FORMATS, freeFormats, styleGuideFormats } from '../../src/config
 import { FREE_POINTS, PRO_POINTS } from '../../src/config/planFacts.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
-const TEMPLATE = read('src/templates/uiKit.html')
+const TEMPLATE = read('src/templates/kit/studio.html')
 const DATE = new Date('2026-01-02T00:00:00Z')
 const OFL = { name: 'SIL Open Font License', text: 'Copyright 2020 The Test Project Authors\nSIL OPEN FONT LICENSE Version 1.1' }
 

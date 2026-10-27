@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import useRovingRadio from '../hooks/useRovingRadio'
 
 // The file-type switch inside a row's options: HTML, Markdown, PNG, JPEG for the
 // style guide; CSS, JSON for the tokens. One stop in the Tab order (the checked
@@ -9,25 +9,7 @@ import { useRef } from 'react'
 // a phone, and never wrapped: if the pills outgrow the row (a 320px screen) the
 // row scrolls sideways and the chosen pill is brought into view.
 export default function ExportFormatSwitch({ label, options, value, onChange }) {
-  const refs = useRef([])
-  const move = (to) => {
-    const next = (to + options.length) % options.length
-    onChange(options[next].id)
-    const btn = refs.current[next]
-    if (btn) {
-      btn.focus()
-      btn.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
-    }
-  }
-  const onKeyDown = (e, i) => {
-    const key = e.key
-    if (key === 'ArrowRight' || key === 'ArrowDown') move(i + 1)
-    else if (key === 'ArrowLeft' || key === 'ArrowUp') move(i - 1)
-    else if (key === 'Home') move(0)
-    else if (key === 'End') move(options.length - 1)
-    else return
-    e.preventDefault()
-  }
+  const { refs, onKeyDown } = useRovingRadio(options.length, (i) => onChange(options[i].id))
 
   return (
     <>
