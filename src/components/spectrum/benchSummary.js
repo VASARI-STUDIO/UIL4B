@@ -1,4 +1,4 @@
-import { BASES, FONTS, HARMONIES, ICONS, ICON_WEIGHTS } from './spectrumKit'
+import { BASES, FONTS, HARMONIES, ICONS, ICON_WEIGHTS } from './spectrumKit.js'
 
 // The rail's second line at 1001px and up: what each tool window holds right now.
 // One pure function, so the strings are tested without a browser. Nothing here is

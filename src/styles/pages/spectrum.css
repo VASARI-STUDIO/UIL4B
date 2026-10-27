@@ -1333,7 +1333,6 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   /* On a phone the windows grow to their content and the cell takes the tallest. */
   .sp-step > .sp-panel { height: auto; }
   .sp-panel { border-radius: 16px; }
-  .sp-panel:has(.sp-fontlist) { max-height: 620px; }
   /* A family name wraps instead of ending in an ellipsis. */
   .sp-fontrow-name { white-space: normal; overflow-wrap: anywhere; text-wrap: balance; line-height: 1.02; }
 }

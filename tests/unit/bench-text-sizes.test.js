@@ -6,7 +6,7 @@
 // `font-size` in a rule that names a bench class and is not one of those, so a
 // 12.5px, 13.5px, 14px, .9375rem or 11px cannot creep back in.
 //
-// WHAT THIS CATCHES THAT THE BROWSER CHECK CANNOT. tests/user-sim/149-bench-
+// WHAT THIS CATCHES THAT THE BROWSER CHECK CANNOT. tests/user-sim/155-bench-
 // acceptance.spec.js measures computed sizes on the rendered bench, which is the
 // truth about what a visitor sees, but the cascade can hide a wrong rule: a
 // `.sp-quality > span { font-size: 12.5px }` loses to the more specific
