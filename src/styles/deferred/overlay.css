@@ -141,6 +141,9 @@
   /* The title and close stay put while the list scrolls under them, as the dock
      does at the foot. An opaque ground, so rows never show through. */
   .exp-head{position:sticky;top:0;z-index:2;background:var(--bg-1)}
+  /* Once rows have scrolled under the head, a hairline marks its edge. A shadow
+     ring rather than a border, so the head does not grow by a pixel. */
+  .exp-panel.is-scrolled .exp-head{box-shadow:0 1px 0 var(--border)}
 }
 
 /* ── Export panel · the chosen row's options ────────────────────────────────
@@ -172,6 +175,8 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 /* The file-type switch: pills, 44px, one line. If they outgrow the row (a 320px
    screen) the row scrolls sideways rather than wrapping. The padding and
    negative margin keep the focus ring inside the scroll box. */
+.exp-switch-label{display:none;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
+@media(max-width:560px){.exp-switch-label{display:block}}
 .exp-switch{display:flex;gap:8px;padding:4px;margin:-4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none}
 .exp-switch::-webkit-scrollbar{display:none}
 .exp-pill{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;scroll-snap-align:center;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font:inherit;font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
@@ -223,7 +228,7 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 .exp-logo-chip img{max-width:38px;max-height:38px;width:auto;height:auto;object-fit:contain}
 .exp-logo-text{display:flex;flex-direction:column;gap:3px;min-width:0}
 .exp-logo-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow-wrap:anywhere}
-.exp-logo-hint{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+.exp-logo-hint{font-size:var(--fs-caption);color:var(--t1);line-height:1.45}
 .exp-logo-acts{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
 .exp-logo-drop{padding:0;background:none;border:0;font-size:var(--fs-micro);color:var(--t2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .exp-logo-drop:hover{color:var(--t0)}

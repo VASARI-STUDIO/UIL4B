@@ -36,7 +36,10 @@ function designKey(design, projectName) {
   ])
 }
 
-export default function ExportProPreview({ kind, design, projectName, blurred }) {
+// `blurred` decides the pixels and stays on while the plan is read, so a Pro
+// document is never shown sharp on a guess. `showLock` is only the chip over the
+// strip, which the panel holds back until it knows the account is not Pro.
+export default function ExportProPreview({ kind, design, projectName, blurred, showLock = blurred }) {
   const key = `${kind}|${blurred ? 'blur' : 'sharp'}|${designKey(design, projectName)}`
   const [result, setResult] = useState({ key: '', pages: [], failed: false })
 
@@ -106,7 +109,7 @@ export default function ExportProPreview({ kind, design, projectName, blurred })
             ))
             : Array.from({ length: PAGE_COUNT }, (_, i) => <span key={i} className="exp-thumb exp-thumb-wait" aria-hidden="true" />)}
         </div>
-        {blurred && <span className="exp-preview-lock"><ExportProTag className="exp-preview-tag" /></span>}
+        {showLock && <span className="exp-preview-lock"><ExportProTag className="exp-preview-tag" /></span>}
       </div>
       {ready.failed
         ? <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>

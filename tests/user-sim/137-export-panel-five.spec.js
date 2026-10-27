@@ -581,3 +581,103 @@ test.describe('the sheet head on a phone', () => {
     await expect(panel.getByRole('button', { name: 'Close export' })).toBeInViewport()
   })
 })
+
+test.describe('while the plan is still loading, the Pro furniture is held back', () => {
+  // MUTATION: ExportPanel.jsx `const showPro = paid && !isPro && !checking` ->
+  // `paid && !isPro`. A Pro account then sees the tags and the band while its plan
+  // loads, so the "held" step fails. Dropping `showLock` from the preview fails
+  // the lock step.
+  for (const plan of ['free', 'pro']) {
+    test(`a ${plan} account: no tag, band or lock until the plan answers${plan === 'free' ? ', then all of them' : ', and never after'}`, async ({ page }) => {
+      watch(page, `a ${plan} account opening Export before its plan has answered`)
+      const uid = `test-uid-furniture-${plan}`
+      await signIn(page, { plan, uid, slowReads: [{ path: `users/${uid}`, hold: true }] })
+      await go(page, WORKED_BOARD)
+      const panel = await open(page)
+      await rowFor(panel, 'Brand guidelines').click()
+      await expect(panel.locator('.exp-preview-strip[data-state="ready"]')).toHaveCount(1)
+
+      await expect(panel.locator('.exp-fmt-pro'), 'held: no Pro tag on any row').toHaveCount(0)
+      await expect(panel.locator('.exp-fmt-gap'), 'held: no divider band').toHaveCount(0)
+      await expect(panel.locator('.exp-preview-lock'), 'held: no lock over the preview').toHaveCount(0)
+
+      await page.evaluate(() => window.__UIL4B_TEST_HOLD__.release())
+      await expect(panel.locator('.exp-foot .btn-accent')).toBeEnabled()
+      const furniture = plan === 'free' ? 1 : 0
+      await expect(panel.locator('.exp-fmt-gap')).toHaveCount(furniture)
+      await expect(panel.locator('.exp-preview-lock')).toHaveCount(furniture)
+      await expect(panel.locator('.exp-fmt-pro')).toHaveCount(furniture * 2)
+    })
+  }
+})
+
+test.describe('an account that signs in at the export gate', () => {
+  // MUTATION: ExportPanel.jsx, delete the `if (signedOut) { ... waitForPlan ... }`
+  // block in runExport. A Pro account that signs in at the gate then gets a file
+  // built on the signed-out visitor's plan, with the credit line, and this test
+  // fails on the credit.
+  test('a Pro account gets a clean file: the export waits for its plan and reads it again', async ({ page }) => {
+    watch(page, 'a Pro visitor, signed out, exporting design tokens and signing in at the gate')
+    const uid = 'test-uid-gate-pro'
+    await signIn(page, { plan: 'pro', uid, lateSignIn: true, slowReads: [{ path: `users/${uid}`, hold: true }] })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await chooseFormat(panel, 'css')
+    const action = panel.locator('.exp-foot .btn-accent')
+    await expect(action).toHaveText('Export CSS tokens')
+
+    const downloads = []
+    page.on('download', (d) => downloads.push(d))
+    await action.click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+    // The fixture cannot mint a new account, so this Pro account logs in instead.
+    await page.getByRole('button', { name: /Have an account?/ }).click()
+    await page.locator('#ui-login-email').fill('someone@uil4b.test')
+    await page.locator('#ui-login-password').fill('a-long-password')
+    await page.locator('form.auth-form button[type="submit"]').click()
+    await expect(page.locator('#ui-login-title')).toHaveCount(0)
+
+    // Signed in, plan not yet read: the panel is open, says so, and has built nothing.
+    await expect(action, 'the button reports the plan check').toHaveText('Checking your plan…')
+    await page.waitForTimeout(300)
+    expect(downloads, 'a file was built before the plan was known').toHaveLength(0)
+
+    const waiting = page.waitForEvent('download')
+    await page.evaluate(() => window.__UIL4B_TEST_HOLD__.release())
+    const download = await waiting
+    const stream = await download.createReadStream()
+    const chunks = []
+    for await (const chunk of stream) chunks.push(chunk)
+    const body = Buffer.concat(chunks).toString('utf8')
+    expect(body, 'the file holds the palette on the board').toContain('#1F4B8E')
+    expect(body, 'a Pro account got the free credit line').not.toContain('Made with UIL4B')
+  })
+})
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 600 } })
+
+  // MUTATION: overlay.css, drop `.exp-switch-label{display:block}` from the phone
+  // block (the caption then never shows), or `.exp-panel.is-scrolled .exp-head`
+  // (the head gets no edge once rows scroll under it).
+  test('the file-type switch is captioned, and the head gets an edge once rows scroll under it', async ({ page }) => {
+    watch(page, 'a free account on a phone choosing a style guide file type')
+    await signIn(page, { plan: 'free' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await rowFor(panel, 'Style guide').click()
+    await expect(panel.locator('.exp-switch-label')).toBeVisible()
+    await expect(panel.locator('.exp-switch-label')).toHaveText('File type')
+    const order = await panel.evaluate((el) => {
+      const label = el.querySelector('.exp-switch-label').getBoundingClientRect()
+      const group = el.querySelector('.exp-switch').getBoundingClientRect()
+      return label.bottom <= group.top
+    })
+    expect(order, 'the caption sits above the switch').toBe(true)
+
+    const edge = () => panel.evaluate((el) => getComputedStyle(el.querySelector('.exp-head')).boxShadow)
+    expect(await edge(), 'at rest the head has no edge').toBe('none')
+    await panel.evaluate((el) => { el.scrollTop = 60 })
+    await expect.poll(edge, 'scrolled, the head has a hairline').not.toBe('none')
+  })
+})

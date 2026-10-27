@@ -5,6 +5,7 @@ import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { lockScroll } from '../utils/scrollLock'
 import useExportDesign from '../hooks/useExportDesign'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useAuth } from '../contexts/AuthContext'
 import useExportGate from '../hooks/useExportGate'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } from '../config/exportFormats'
@@ -88,6 +89,11 @@ const PRO_GATE = {
 // What the action button says while a kit is being made.
 const BUSY_LABEL = { fonts: 'Embedding fonts…', building: 'Building the kit…' }
 
+// How long an export waits for the plan of an account that signed in at its own
+// gate. The entitlement is one document read, so this is generous; past it the
+// export stops rather than build on a guess.
+const PLAN_WAIT_MS = 8000
+
 export default function ExportPanel({ onClose }) {
   // Mounted only while open: Back closes it (audit A3) and the page is inert (A12).
   useCloseOnBack(true, onClose)
@@ -107,6 +113,7 @@ export default function ExportPanel({ onClose }) {
   const [done, setDone] = useState(false)
   const design = useExportDesign()
   const { isPro, planKnown } = useSubscription()
+  const { user } = useAuth()
   // A file needs an account; a copy never does. See useExportGate.js.
   const requireExportAccount = useExportGate()
   const navigate = useNavigate()
@@ -123,6 +130,31 @@ export default function ExportPanel({ onClose }) {
   // someone who is about to turn out to be Pro, nor run the gate on a guess, and
   // a free row must not build a watermarked file for someone who is Pro.
   const checking = planKnown === false
+  // What an export in flight reads AFTER its awaits. runExport's closure holds
+  // the render it was clicked in, which for a visitor who signs in at the account
+  // gate is the signed-out one: free, and "known". These follow the latest render.
+  const live = useRef({ isPro, planKnown, user })
+  useEffect(() => { live.current = { isPro, planKnown, user } })
+  // False once the panel has unmounted, so an export waiting on the plan does
+  // not go on to build for a dialog nobody can see.
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
+  // Resolves true once an account is signed in AND its own plan has been read
+  // (planKnown is false from the render the account appears until its entitlement
+  // answers), false if the panel closes or the wait runs out.
+  const waitForPlan = () => new Promise((resolve) => {
+    const until = Date.now() + PLAN_WAIT_MS
+    const tick = () => {
+      if (!mounted.current) resolve(false)
+      else if (live.current.user && live.current.planKnown) resolve(true)
+      else if (Date.now() > until) resolve(false)
+      else setTimeout(tick, 50)
+    }
+    tick()
+  })
 
   // Build and download in the browser. No server round trip: the document is a
   // pure function of the saved design (see utils/styleGuideExport.js), so there
@@ -194,12 +226,14 @@ export default function ExportPanel({ onClose }) {
     // asking them to sign in first would put a login popup in front of a Pro
     // CTA. The gate id is still reported, so the funnel can say WHICH wall
     // converted.
-    if (FORMATS.find(f => f.id === format)?.pro && !isPro) {
+    const proFormatGate = (pro) => {
+      if (!FORMATS.find(f => f.id === format)?.pro || pro) return false
       reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
       onClose()
       navigate('/plans')
-      return
+      return true
     }
+    if (proFormatGate(isPro)) return
 
     // ── ACCOUNT GATE ──────────────────────────────────────────────────────
     // Producing a FILE needs a free account; copying a value never does
@@ -207,7 +241,25 @@ export default function ExportPanel({ onClose }) {
     // src/hooks/useExportGate.js for the map that puts the line here.
     const tokenFile = format === 'css' || format === 'json'
     const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : 'export this style guide'
+    const signedOut = !user
     if (!(await requireExportAccount(reason))) return
+
+    // ── THE PLAN OF AN ACCOUNT THAT JUST SIGNED IN. ───────────────────────
+    // `isPro` above is the signed-out visitor's: free. Someone who is Pro and
+    // signs in at the gate would get a watermarked, free-tier file, so wait for
+    // their own entitlement and read it again. If it does not arrive the export
+    // stops with the panel open: the button already says "Checking your plan…"
+    // or has the right label by then, and a file built on a guess cannot be
+    // taken back.
+    let proNow = isPro
+    if (signedOut) {
+      if (!(await waitForPlan())) {
+        if (mounted.current) setError('You are signed in, but your plan has not loaded yet. Try again in a moment.')
+        return
+      }
+      proNow = live.current.isPro
+      if (proFormatGate(proNow)) return
+    }
 
     setBusy(true)
     setError('')
@@ -227,7 +279,7 @@ export default function ExportPanel({ onClose }) {
         const { buildUiKit } = await import('../utils/uiKitAssets')
         activation = 'ui-kit'
         const { blob, filename, missing } = await buildUiKit(design, {
-          tier: isPro ? 'pro' : 'free',
+          tier: proNow ? 'pro' : 'free',
           onStage: setStage,
         })
         savedFile = download(blob, filename)
@@ -276,8 +328,8 @@ export default function ExportPanel({ onClose }) {
         activation = 'design-tokens'
         const css = format === 'css'
         const body = css
-          ? buildTokensCss(design, { projectName, watermark: !isPro })
-          : buildTokensJson(design, { projectName, watermark: !isPro })
+          ? buildTokensCss(design, { projectName, watermark: !proNow })
+          : buildTokensJson(design, { projectName, watermark: !proNow })
         savedFile = download(
           new Blob([body], { type: css ? 'text/css;charset=utf-8' : 'application/json;charset=utf-8' }),
           `${slug}.tokens.${css ? 'css' : 'json'}`,
@@ -287,13 +339,13 @@ export default function ExportPanel({ onClose }) {
         // at the top of utils/styleGuideRaster.js. Loaded on demand so the
         // raster path costs nothing to anyone exporting HTML.
         const { renderStyleGuideImage } = await import('../utils/styleGuideRaster')
-        const blob = await renderStyleGuideImage(design, { projectName, watermark: !isPro, format })
+        const blob = await renderStyleGuideImage(design, { projectName, watermark: !proNow, format })
         savedFile = download(blob, `${slug}-style-guide.${format === 'jpeg' ? 'jpg' : 'png'}`)
       } else {
         const markdown = format === 'md'
         const body = markdown
-          ? buildStyleGuideMarkdown(design, { projectName, watermark: !isPro })
-          : buildStyleGuideHtml(design, { projectName, watermark: !isPro })
+          ? buildStyleGuideMarkdown(design, { projectName, watermark: !proNow })
+          : buildStyleGuideHtml(design, { projectName, watermark: !proNow })
         savedFile = download(
           new Blob([body], { type: markdown ? 'text/markdown;charset=utf-8' : 'text/html;charset=utf-8' }),
           `${slug}-style-guide.${markdown ? 'md' : 'html'}`,
@@ -389,12 +441,20 @@ export default function ExportPanel({ onClose }) {
   // Whether the panel scrolls and has more below what is showing, for the fade
   // above the dock. Re-measured on scroll and whenever a child changes size
   // (a selected row opening its fields, a notice arriving, the window resizing).
+  // `scrolled` is the panel being off its top, for the phone head's hairline.
   const [moreBelow, setMoreBelow] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const measureRef = useRef(null)
   useEffect(() => {
     const el = panelRef.current
     if (!el) return undefined
-    const measure = () => setMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
+    const measure = () => {
+      // The last 20px under the dock is the bottom padding of the final block,
+      // so a state that overflows by less than that has nothing cut off and
+      // gets no fade over its last line.
+      setMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 20)
+      setScrolled(el.scrollTop > 0)
+    }
     measureRef.current = measure
     measure()
     el.addEventListener('scroll', measure, { passive: true })
@@ -474,6 +534,7 @@ export default function ExportPanel({ onClose }) {
           design={design}
           projectName={design?.name || 'Design System'}
           blurred={!isPro}
+          showLock={!isPro && !checking}
         />
       )}
       {/* Its own block under the preview, not a control inside the guidelines
@@ -487,7 +548,7 @@ export default function ExportPanel({ onClose }) {
   return (
     <div className="exp-overlay" onMouseDown={onClose}>
       <div
-        className={moreBelow ? 'exp-panel has-more' : 'exp-panel'}
+        className={`exp-panel${moreBelow ? ' has-more' : ''}${scrolled ? ' is-scrolled' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="exp-title"
@@ -519,7 +580,9 @@ export default function ExportPanel({ onClose }) {
             const active = g.id === activeFormat?.group
             const paid = isGroupPro(g.id)
             // Pro for a free account only: a Pro user sees neither lock nor word.
-            const showPro = paid && !isPro
+            // Held back while the plan is read, so a Pro account never sees the
+            // tag, the band or the lock appear and then leave, shifting the list.
+            const showPro = paid && !isPro && !checking
             // The band between free and paid is for a free account only: to a
             // Pro account every row is theirs, so there is nothing to divide.
             const startsPaid = showPro && i > 0 && !isGroupPro(EXPORT_GROUPS[i - 1].id)

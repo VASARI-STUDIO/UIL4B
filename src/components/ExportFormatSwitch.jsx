@@ -30,25 +30,31 @@ export default function ExportFormatSwitch({ label, options, value, onChange }) 
   }
 
   return (
-    <div className="exp-switch" role="radiogroup" aria-label={label}>
-      {options.map((o, i) => {
-        const checked = o.id === value
-        return (
-          <button
-            key={o.id}
-            type="button"
-            role="radio"
-            aria-checked={checked}
-            tabIndex={checked ? 0 : -1}
-            className={checked ? 'exp-pill is-active' : 'exp-pill'}
-            ref={(el) => { refs.current[i] = el }}
-            onClick={() => onChange(o.id)}
-            onKeyDown={(e) => onKeyDown(e, i)}
-          >
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
+    <>
+      {/* The caption is for the eye: on a phone the switch sits under every row,
+          Pro ones included, and would otherwise read as part of them. The group
+          keeps its own accessible name, which ends in the same words. */}
+      <span className="exp-switch-label" aria-hidden="true">File type</span>
+      <div className="exp-switch" role="radiogroup" aria-label={label}>
+        {options.map((o, i) => {
+          const checked = o.id === value
+          return (
+            <button
+              key={o.id}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              className={checked ? 'exp-pill is-active' : 'exp-pill'}
+              ref={(el) => { refs.current[i] = el }}
+              onClick={() => onChange(o.id)}
+              onKeyDown={(e) => onKeyDown(e, i)}
+            >
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+    </>
   )
 }
