@@ -1,17 +1,20 @@
 // THE EXPORT TEMPLATE PICKER (export templates, slice 1).
 //
-// The picker is built and tested but hidden: it renders only when a row has two or
-// more LIVE templates, and today every row has exactly one. So this spec does two
-// jobs.
+// The picker renders only when a row has two or more LIVE templates. The design system
+// book now has three (Specification, Monograph, Atlas); the kit and the guidelines
+// still have one each. So this spec does three jobs.
 //
-//   1. As shipped, no row shows a picker, for a Free or a Pro account.
-//   2. With a second template live, the picker works for a person: arrow keys move
+//   1. As shipped, the book row shows a three-tile picker for a Free and a Pro account,
+//      choosing Monograph sends `template: 'monograph'`, a Free account sees the tiles
+//      but is held at the Pro button, and the kit and guidelines rows show no picker.
+//   2. With a second kit or guidelines template made live, the picker works for a person: arrow keys move
 //      and choose (and wrap), Home and End jump, Tab enters on the chosen tile, the
 //      choice is kept on the project and survives a reload, it fits at 390, and a
 //      Free account choosing a Pro template still never reaches the document route.
 //
-// THE FIXTURE. A second template is made live by rewriting the built panel chunk as
-// it is served (the `live` flag of the named templates, in src/config/exportTemplates.js).
+// THE FIXTURE. For the kit and the guidelines, a second template is made live by rewriting
+// the built panel chunk as it is served (the `live` flag of the named templates, in
+// src/config/exportTemplates.js). The book row is NOT patched: it is live for real users.
 // Nothing in src/ knows about the test. If the build ever stops matching, the
 // rewrite finds nothing, `fixture.patched` stays short and the test says so by name,
 // rather than passing against a picker that is not there.
@@ -62,7 +65,6 @@ async function makeLive(context, ids) {
 }
 
 const KIT = ['manual', 'showcase']
-const BOOK = ['monograph', 'atlas']
 const GUIDELINES = ['poster']
 
 async function openProject(page, plan = 'free', url = BOARD) {
@@ -92,17 +94,42 @@ const storedDesign = (page) => page.evaluate(() => JSON.parse(localStorage.getIt
 /* ── as shipped ───────────────────────────────────────────────────────────── */
 
 for (const plan of ['free', 'pro']) {
-  test(`as shipped, no export row shows a template picker (${plan})`, async ({ page }) => {
+  test(`as shipped, the book row shows Specification, Monograph and Atlas, and the kit and guidelines rows show no picker (${plan})`, async ({ page }) => {
     watch(page, `a ${plan} account looking for a template choice`)
     await openProject(page, plan)
-    for (const id of ['kit', 'book', 'guidelines']) {
+    for (const id of ['kit', 'guidelines']) {
       await chooseFormat(page, id)
       await expect(rowFor(exportPanel(page), groupOfFormat(id).name), `the ${id} row is chosen`).toHaveAttribute('aria-checked', 'true')
       await expect(group(page), `the ${id} row has one template, so there is nothing to choose`).toHaveCount(0)
       await expect(exportPanel(page).locator('.exp-tpl')).toHaveCount(0)
     }
+    await chooseFormat(page, 'book')
+    await expect(rowFor(exportPanel(page), groupOfFormat('book').name)).toHaveAttribute('aria-checked', 'true')
+    await expect(group(page)).toHaveCount(1)
+    await expect(group(page).getByRole('radio')).toHaveText([/Specification/, /Monograph/, /Atlas/])
+    expect(await state(page), 'the default is chosen and is the only tab stop').toEqual({ checked: ['Specification'], focused: [], tabbable: ['Specification'] })
   })
 }
+
+test('Free sees the book tiles clear and the preview locked, and the button still says Unlock with Pro', async ({ page }) => {
+  watch(page, 'a free account looking at the book templates')
+  await openProject(page, 'free')
+  await chooseFormat(page, 'book')
+  await expect(group(page).getByRole('radio')).toHaveCount(3)
+  await expect(exportPanel(page).locator('.exp-preview-lock'), 'the page strip is locked for Free').toBeVisible()
+  await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i })).toBeVisible()
+  // The tiles carry no per-tile lock: all three are Pro, so the row's own mark says it once.
+  await expect(group(page).locator('.exp-tpl-tile .exp-preview-tag, .exp-tpl-tile [class*="pro-tag"]')).toHaveCount(0)
+})
+
+test('Pro sees no lock on the book row, and the button names the export', async ({ page }) => {
+  watch(page, 'a Pro account looking at the book templates')
+  await openProject(page, 'pro')
+  await chooseFormat(page, 'book')
+  await expect(group(page).getByRole('radio')).toHaveCount(3)
+  await expect(exportPanel(page).locator('.exp-preview-lock')).toHaveCount(0)
+  await expect(exportPanel(page).getByRole('button', { name: actionLabel('book'), exact: true })).toBeVisible()
+})
 
 /* ── with a second template live ──────────────────────────────────────────── */
 
@@ -117,8 +144,8 @@ test('the picker appears when a row has a second live template, and only on that
   await expect(group(page).getByRole('radio')).toHaveText([/Studio/, /Manual/, /Showcase/])
   expect(await state(page)).toEqual({ checked: ['Studio'], focused: [], tabbable: ['Studio'] })
 
-  // The other rows still have one template each.
-  await chooseFormat(page, 'book')
+  // The guidelines row still has one template.
+  await chooseFormat(page, 'guidelines')
   await expect(group(page)).toHaveCount(0)
 })
 
@@ -212,10 +239,10 @@ test('a stored id that is not a live template is ignored: the default tile, and 
   await makeLive(context, KIT)
   const asked = await watchDocumentRequests(page, () => ({ ok: true, format: 'book', template: 'specification', html: buildDesignSystemBook(DESIGN, { projectName: 'Stub' }) }))
   await signIn(page, { plan: 'pro' })
-  // Written before the app starts, once. `kit` names nothing; `book` names a template that is not live yet.
+  // Written before the app starts, once. Neither `kit` nor `book` names a template that exists.
   await page.addInitScript(() => {
     if (!localStorage.getItem('vs-current-design')) {
-      localStorage.setItem('vs-current-design', JSON.stringify({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] }, exportTemplates: { kit: 'nonesuch', book: 'monograph' } }))
+      localStorage.setItem('vs-current-design', JSON.stringify({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] }, exportTemplates: { kit: 'nonesuch', book: 'nonesuch' } }))
     }
   })
   await go(page, BOARD)
@@ -229,14 +256,14 @@ test('a stored id that is not a live template is ignored: the default tile, and 
     exportPanel(page).getByRole('button', { name: actionLabel('book'), exact: true }).click(),
   ])
   await expect.poll(() => asked.length).toBe(1)
-  expect(asked[0].template, 'a stored id that is not live must not reach the server').toBe('specification')
+  expect(asked[0].template, 'a stored id that is not a live template must not reach the server').toBe('specification')
 })
 
 for (const width of [390, 768]) {
   test(`at ${width} the tiles fit the panel: no sideways scroll and no name cut off`, async ({ page, context }) => {
     watch(page, `a designer choosing a template at ${width}`)
     await page.setViewportSize({ width, height: 844 })
-    const fixture = await makeLive(context, [...KIT, ...BOOK, ...GUIDELINES])
+    const fixture = await makeLive(context, [...KIT, ...GUIDELINES])
     await openProject(page)
 
     for (const id of ['kit', 'book', 'guidelines']) {
@@ -280,14 +307,14 @@ for (const width of [390, 768]) {
         expect(fit.picked, where).toBe('none')
       }
     }
-    expect(fixture.patched.sort()).toEqual([...KIT, ...BOOK, ...GUIDELINES].sort())
+    expect(fixture.patched.sort()).toEqual([...KIT, ...GUIDELINES].sort())
   })
 }
 
 test('the longest names are measured, not assumed: Specification and Presentation each fit a tile at 390', async ({ page, context }) => {
   watch(page, 'a designer on a phone')
   await page.setViewportSize({ width: 390, height: 844 })
-  await makeLive(context, [...BOOK, ...GUIDELINES])
+  await makeLive(context, GUIDELINES)
   await openProject(page)
   await chooseFormat(page, 'book')
   await expect(tile(page, 'Specification')).toBeVisible()
@@ -308,9 +335,8 @@ async function watchDocumentRequests(page, reply) {
   return asked
 }
 
-test('a Free account that chooses a Pro template is sent to /plans and no document is requested', async ({ page, context }) => {
+test('a Free account that chooses the Monograph is sent to /plans and no document is requested', async ({ page }) => {
   watch(page, 'a free account choosing the Monograph book')
-  await makeLive(context, BOOK)
   const asked = await watchDocumentRequests(page, () => ({ ok: true, format: 'book', html: '<html></html>' }))
   await openProject(page, 'free')
   await chooseFormat(page, 'book')
@@ -328,8 +354,7 @@ test('a Free account that chooses a Pro template is sent to /plans and no docume
 test('CONTROL: a Pro account that chooses the same template does send it to the server', async ({ page, context }) => {
   watch(page, 'a Pro account choosing the Monograph book')
   await context.addInitScript(() => { window.print = () => {} })
-  await makeLive(context, BOOK)
-  const asked = await watchDocumentRequests(page, () => ({ ok: true, format: 'book', template: 'specification', html: buildDesignSystemBook(DESIGN, { projectName: 'Stub' }) }))
+  const asked = await watchDocumentRequests(page, () => ({ ok: true, format: 'book', template: 'monograph', html: buildDesignSystemBook(DESIGN, { projectName: 'Stub' }) }))
   await openProject(page, 'pro')
   await chooseFormat(page, 'book')
   await tile(page, 'Monograph').click()
