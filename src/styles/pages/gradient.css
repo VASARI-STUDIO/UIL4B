@@ -236,7 +236,11 @@
   letter-spacing: .02em;
   text-transform: uppercase;
 }
-.grd .grd-hex:focus { border-color: color-mix(in srgb, var(--t0) 30%, transparent); }
+/* The offset outline from :focus-visible is the one focus indicator. The global
+   input:focus border and halo would be a second ring round the same box, so the
+   field gives them up (same as .grd-angle-input below and .cpk-hex in global.css).
+   Sits before the aria-invalid rule so an invalid field keeps its error border. */
+.grd .grd-hex:focus-visible { border-color: var(--tl-hair); box-shadow: none; }
 .grd .grd-hex[aria-invalid="true"] { border-color: var(--err); }
 .grd .grd-field-error {
   position: absolute;
