@@ -1630,7 +1630,9 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
     text-align: center;
   }
   .sp-rail--tabs .sp-rail-label { flex: 0 1 auto; white-space: nowrap; }
-  .sp-rail--tabs .sp-rail-row.is-on { color: var(--sp-page); }
+  /* The label's colour travels with the pill; the pill alone paints the selected tab. */
+  .spectrum .sp-rail--tabs .sp-rail-row { transition: color var(--sp-t-ui) var(--sp-ease); }
+  .sp-rail--tabs .sp-rail-row.is-on { color: var(--sp-page); background: none; }
   /* The selected tab's pill: one segment wide (the row, less its padding and its
      three 4px gaps, over four), moved by whole segments. */
   .sp-rail--tabs { position: relative; isolation: isolate; }
@@ -1793,10 +1795,10 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 :where(html[data-reduced-motion="true"]) .spectrum .sp-shelf img { animation: none !important; }
 /* The hero's arrival, the windows' depth and switch, the tab pill and the library fade: the content is already in place, so these only lose their movement. */
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta), .sp-ramp--arrive .sp-ramp-bar, .sp-panel, .sp-disc-grid) { animation: none !important; }
-:where(html[data-reduced-motion="true"]) .spectrum .sp-rail-ind { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-rail-ind, .sp-rail-row) { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta), .sp-ramp--arrive .sp-ramp-bar, .sp-panel, .sp-disc-grid) { animation: none !important; }
-  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-rail-ind { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-rail-ind, .sp-rail-row) { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, .sp-shelf img, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }

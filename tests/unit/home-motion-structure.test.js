@@ -18,7 +18,7 @@
 //       the headline stays the page's one settled, full-size largest paint.
 //
 // These read the stylesheet as TEXT, which cannot see a runtime fault; the
-// behaviour is in tests/user-sim/160-home-motion.spec.js. What the text can see
+// behaviour is in tests/user-sim/161-home-motion.spec.js. What the text can see
 // is a missing guard or a selector that drifted, which is why a guard is looked
 // up by the class its animation is attached to rather than counted.
 import test from 'node:test'
