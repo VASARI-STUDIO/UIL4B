@@ -396,7 +396,7 @@
   background: transparent;
   color: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
   font-family: var(--font);
-  font-size: 15.5px;
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
 }
@@ -456,7 +456,7 @@
 .sp-label { font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 
 /* 01 · Palette builder */
-.sp-shuffle { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); background: var(--sp-card); color: rgba(var(--sp-ink-rgb), .84); font-family: var(--font); font-size: 12.5px; cursor: pointer; }
+.sp-shuffle { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); background: var(--sp-card); color: rgba(var(--sp-ink-rgb), .84); font-family: var(--font); font-size: 13px; cursor: pointer; }
 .sp-shuffle .sp-ph { font-size: 14px; }
 @media (hover: hover) and (pointer: fine) { .sp-shuffle:hover { background: rgba(var(--sp-ink-rgb), .06); } }
 .sp-pal-strip {
@@ -471,12 +471,12 @@
   border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
 }
 .sp-seeds { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); }
-.sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 999px; display: grid; place-items: center; cursor: pointer; font-size: 11px; }
+.sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 999px; display: grid; place-items: center; cursor: pointer; font-size: 12px; }
 .sp-seed-name { display: grid; gap: 1px; min-width: 0; }
 .sp-seed-name b { font-size: 13px; font-weight: 560; color: var(--sp-ink); white-space: nowrap; }
 .sp-seed-name small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-seg { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); overflow-x: auto; scrollbar-width: none; min-width: 0; max-width: 100%; }
-.sp-seg button { padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; font-weight: 440; cursor: pointer; white-space: nowrap; }
+.sp-seg button { padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 13px; font-weight: 440; cursor: pointer; white-space: nowrap; }
 .sp-seg button[aria-pressed="true"] { background: var(--sp-card); color: var(--sp-ink); font-weight: 560; }
 .sp-roles { flex: 1; min-height: 232px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border-radius: 12px; overflow: hidden; background: rgba(var(--sp-ink-rgb), .1); }
 .sp-role {
@@ -498,7 +498,6 @@
 .sp-role-name { font-size: 12px; letter-spacing: .02em; opacity: .85; }
 .sp-role-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; }
 .sp-role-val { font-size: 13px; letter-spacing: .02em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* .sp-roles prefix: the coarse-pointer rule near the end sets .sp-role-aa to 11px. */
 .sp-roles .sp-role-aa { font-size: 12px; letter-spacing: .02em; font-variant-numeric: tabular-nums; opacity: .85; }
 .sp-prev { flex: none; border-radius: 12px; padding: 15px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .sp-prev-say { display: grid; gap: 3px; min-width: 0; }
@@ -512,13 +511,13 @@
 .sp-ico-strip { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); flex-wrap: wrap; padding: 0 clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); }
 .sp-find { flex: 1 1 180px; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px 0; }
 .sp-find .sp-ph { font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-find input { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 14px; box-shadow: none; }
+.sp-find input { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13px; box-shadow: none; }
 .sp-find input::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
 .sp-find:focus-within { box-shadow: inset 0 -2px 0 var(--sp-link); }
 .sp-find input:focus { box-shadow: none; }
 .sp-find input:focus-visible { outline-color: transparent; }
 .sp-tabs-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.sp-tabs-row .sp-utab { padding: 13px 0; font-size: 12.5px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-tabs-row .sp-utab { padding: 13px 0; font-size: 13px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-tabs-row .sp-utab[aria-pressed="true"] { color: var(--sp-ink); font-weight: 560; }
 /* 24 small tiles on fixed 44px rows, centred in the space the window gives them: the whole
    set always fits in one frame at any width, so the grid never scrolls. */
@@ -543,7 +542,7 @@
 .sp-font-ctl label { display: flex; align-items: center; gap: 11px; }
 .sp-font-ctl label:first-child { flex: 1 1 200px; min-width: 0; }
 .sp-font-ctl label:last-child { flex: 0 1 200px; min-width: 150px; }
-.sp-font-ctl input[type="text"] { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13.5px; box-shadow: none; }
+.sp-font-ctl input[type="text"] { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13px; box-shadow: none; }
 .sp-font-ctl input[type="text"]::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
 .sp-font-ctl output { font-size: 12px; color: var(--sp-ink); white-space: nowrap; min-width: 38px; text-align: right; }
 .sp-fontlist { flex: 1; min-height: 0; overflow: auto; }
@@ -561,7 +560,7 @@
 .sp-fontrow[aria-pressed="true"] .sp-fontrow-add { border-color: var(--sp-ink); background: var(--sp-ink); color: var(--sp-page); }
 .sp-fontrow-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-font-pair { display: flex; align-items: baseline; gap: 9px; min-width: 0; flex: 1 1 180px; }
-.sp-font-pair small { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-font-pair small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-font-pair b { font-weight: 400; font-size: 18px; line-height: 1.2; color: var(--sp-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* The range slider, as the design draws it inside a panel. */
@@ -651,7 +650,7 @@
 .sp-saving-num { min-width: 2.05em; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--accent-text); }
 .sp-saving-num.is-plain, .sp-saving-num.is-noloss { color: var(--sp-ink); }
 .sp-saving-num.is-wait { color: var(--sp-faint); }
-.sp-saving-word { font-size: .9375rem; font-weight: 500; letter-spacing: 0; color: var(--sp-ink); }
+.sp-saving-word { font-size: var(--bt-l); font-weight: 500; letter-spacing: 0; color: var(--sp-ink); }
 /* The figure and its words stay on one line, so the line's height never depends on
    the format; the words are what gives way (ellipsis) in a narrow panel. */
 .sp-saving-num { flex: none; white-space: nowrap; }
@@ -680,7 +679,7 @@
 .sp-fmtrow { display: flex; flex-wrap: nowrap; gap: 18px; padding-top: 2px; }
 .sp-fmtrow .sp-utab { padding: 5px 0; }
 .sp-quality { display: grid; gap: 8px; }
-.sp-quality > span { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-quality > span { font-size: 13px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 
 /* The 3D tab: the same skeleton as Compress, so the footer never moves. */
 .sp-model-stage { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--sp-hair); background: var(--sp-page); }
@@ -691,14 +690,14 @@
 .sp-model-wire { flex: 1; max-width: 120px; min-width: 24px; display: flex; align-items: center; justify-content: flex-end; height: 1px; background: var(--sp-line-strong); color: var(--sp-dim); }
 .sp-model-wire .sp-ph { font-size: 13px; margin-right: -2px; }
 .sp-model-unit { font-size: 12px; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.sp-model-say { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--sp-dim); }
+.sp-model-say { margin: 0; font-size: 13px; line-height: 1.5; color: var(--sp-dim); }
 /* Wide enough to hold a mouse: the from → to row is the tab's answer, so it is
    drawn larger than a caption. */
 @media (min-width: 761px) {
-  .sp-model-chip { padding: 8px 16px; font-size: .9375rem; font-weight: 600; letter-spacing: .06em; line-height: 1.2; }
+  .sp-model-chip { padding: 8px 16px; font-size: var(--bt-l); font-weight: 600; letter-spacing: .06em; line-height: 1.2; }
   .sp-model-wire { max-width: 160px; }
   .sp-model-wire .sp-ph { font-size: 16px; }
-  .sp-model-unit { font-size: .9375rem; font-weight: 500; color: var(--sp-ink); }
+  .sp-model-unit { font-size: var(--bt-l); font-weight: 500; color: var(--sp-ink); }
 }
 
 .sp-ratio { display: grid; align-content: start; gap: 12px; }
@@ -861,7 +860,13 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   .sp-ico-prev > .sp-ico-meta { grid-column: 2; }
   .sp-ico-peek { display: none; }
 }
-@media (max-width: 480px) { .sp-panel .sp-icogrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .sp-panel .sp-ico { max-width: none; } }
+/* 4 columns, 4 rows at 480px and below: sixteen 65px tiles keep the window short on a
+   phone. The rest of the set is one tap away on the footer's Open Icon Library pill. */
+@media (max-width: 480px) {
+  .sp-panel .sp-icogrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sp-panel .sp-ico { max-width: none; }
+  .sp-panel .sp-icogrid > .sp-ico:nth-child(n + 17) { display: none; }
+}
 
 .sp-empty { display: grid; justify-items: start; align-content: center; gap: 4px; min-height: 160px; padding: var(--bt-pad); font-size: 13px; color: var(--sp-dim); }
 .sp-empty p { margin: 0; }
@@ -1309,7 +1314,7 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
     min-height: 44px;
     padding: 0 4px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 540;
     color: var(--sp-dim);
     text-align: center;
@@ -1429,7 +1434,7 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 /* Data-bearing marks stay at 11px or larger on a phone: the AA verdicts are
    facts a reader acts on. The design's decorative mono labels keep their size. */
 @media (max-width: 760px) {
-  .sp-role-aa, .sp-ex-aa { font-size: 11px; }
+  .sp-ex-aa { font-size: 11px; }
 }
 
 /* ── focus ────────────────────────────────────────────────────────────────────
