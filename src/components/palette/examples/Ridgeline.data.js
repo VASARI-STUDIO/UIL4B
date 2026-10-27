@@ -99,7 +99,10 @@ export const SUMMARY = {
 const PW = 240
 const PH = 70
 const lo = Math.min(...ELEV) - 10
-const hi = Math.max(...ELEV) + 10
+// Headroom above the peak, so its label sits over the line, not on it.
+const top = Math.max(...ELEV)
+const hi = top + 70
+const peak = ELEV.indexOf(top)
 const cum = KM.reduce((a, k) => [...a, a[a.length - 1] + k], [0])
 const px = (i) => (cum[i] / cum[cum.length - 1]) * PW
 const py = (e) => PH - ((e - lo) / (hi - lo)) * PH
@@ -110,7 +113,10 @@ export const PROFILE = {
   area: `${line}L${PW} ${PH}L0 ${PH}Z`,
   steep: `M${px(steepest).toFixed(1)} ${py(ELEV[steepest]).toFixed(1)}L${px(steepest + 1).toFixed(1)} ${py(ELEV[steepest + 1]).toFixed(1)}`,
   low: `${lo + 10} m`,
-  high: `${hi - 10} m`,
+  high: `${top} m`,
+  // Where the peak sits, as a share of the box, for the label above it.
+  peakX: Math.round((px(peak) / PW) * 100),
+  peakY: Math.round((py(top) / PH) * 100),
 }
 
 /**

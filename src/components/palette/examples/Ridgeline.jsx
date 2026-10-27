@@ -63,7 +63,7 @@ function Summary({ tabAdjusted }) {
             <path className="rl-prof-line" data-role="secondary" d={PROFILE.line} />
             <path className="rl-prof-steep" data-role="accent" d={PROFILE.steep} />
           </svg>
-          <span className="rl-prof-hi">{PROFILE.high}</span>
+          <span className="rl-prof-hi" style={{ left: `${PROFILE.peakX}%`, bottom: `${100 - PROFILE.peakY}%` }}>{PROFILE.high}</span>
           <span className="rl-prof-lo">{PROFILE.low}</span>
         </div>
         <ul className="rl-splits">

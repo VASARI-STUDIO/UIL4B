@@ -25,10 +25,12 @@ export const PREVIEW_GROUPS = [
 export const PREVIEW_SCENES = [
   { id: 'energy', name: 'Energy dashboard', group: 'product', free: true, example: true },
   { id: 'trail', name: 'Trail run app', group: 'product', free: true, example: true },
+  { id: 'card', name: 'Spending card', group: 'product', free: false, example: true },
   { id: 'dashboard', name: 'Dashboard', group: 'product', free: true },
   { id: 'phone', name: 'Phone app', group: 'product', free: true },
   { id: 'editorial', name: 'Editorial hero', group: 'marketing', free: true, example: true },
   { id: 'product', name: 'Product page', group: 'marketing', free: true, example: true },
+  { id: 'studio', name: 'Architect portfolio', group: 'marketing', free: false, example: true },
   { id: 'landing', name: 'Landing page', group: 'marketing', free: true },
   { id: 'receipt', name: 'Email receipt', group: 'marketing', free: false },
   { id: 'poster', name: 'Poster', group: 'graphic', free: false },

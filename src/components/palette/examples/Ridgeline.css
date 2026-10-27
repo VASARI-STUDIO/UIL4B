@@ -75,11 +75,14 @@
 .rl-prof-area{fill:color-mix(in srgb,var(--pv-secondary) 20%,var(--pv-surface))}
 .rl-prof-line{fill:none;stroke:var(--pv-secondary);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .rl-prof-steep{fill:none;stroke:var(--pv-accent);stroke-width:4;stroke-linecap:round;vector-effect:non-scaling-stroke}
-.rl-prof-hi,.rl-prof-lo{position:absolute;right:0;font-size:12px;color:var(--pv-muted)}
-.rl-prof-hi{top:0}
-.rl-prof-lo{bottom:var(--s-1)}
-.rl-splits li{display:grid;grid-template-columns:28px 44px minmax(0,1fr) auto;align-items:center;gap:var(--s-2);height:30px;font-size:13px}
+.rl-prof-hi,.rl-prof-lo{position:absolute;font-size:12px;line-height:18px;color:var(--pv-muted)}
+/* Centred over the peak, a few pixels clear of the line. */
+.rl-prof-hi{transform:translateX(-50%);margin-bottom:var(--s-2);white-space:nowrap}
+.rl-prof-lo{right:0;bottom:var(--s-1)}
+.rl-splits li{display:grid;grid-template-columns:28px 44px minmax(0,1fr) 52px;align-items:center;gap:var(--s-2);height:30px;font-size:13px}
 .rl-n,.rl-pace{color:var(--pv-muted)}
+/* The bar column is the same width on every row (the label has its own), so a bar's length is its speed. */
+.rl-pace{text-align:right}
 .rl-bar{display:block;height:10px}
 .rl-bar>i{display:block;height:100%;border-radius:999px;background:var(--pv-primary);border:1px solid var(--rl-bar-edge)}
 .rl-bar>i[data-role="success"]{background:var(--pv-success);border-color:transparent}
