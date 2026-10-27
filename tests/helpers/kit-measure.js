@@ -69,11 +69,6 @@ export function pdfPages(buffer) {
   const text = buffer.toString('latin1')
   const objects = new Map()
   for (const m of text.matchAll(/(\d+) 0 obj\b/g)) objects.set(Number(m[1]), m.index)
-  const body = (n) => {
-    const at = objects.get(n)
-    if (at === undefined) return ''
-    return text.slice(at, text.indexOf('endobj', at))
-  }
   const stream = (n) => {
     const at = objects.get(n)
     if (at === undefined) return ''
