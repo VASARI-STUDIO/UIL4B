@@ -182,7 +182,7 @@ for (const [layout, tier, design] of CASES) {
       const off = base.map((p, i) => ({ p, i })).filter(({ p }) => !p.w || Math.abs(p.w - A4_PT.w) > 1 || Math.abs(p.h - A4_PT.h) > 1)
       expect(off.map(({ p, i }) => `PDF page ${i + 1} is ${p.w} x ${p.h}`), 'every PDF page is A4 portrait').toEqual([])
       for (const [w] of VIEWPORTS) {
-        expect(pdfs[w].map((p, i) => (p.text ? '' : `page ${i + 1}`)).filter(Boolean), `${w}: a PDF page has no text on it`).toEqual([])
+        expect(pdfs[w].map((p, i) => (p.blank ? `page ${i + 1} (${p.bytes} bytes)` : '')).filter(Boolean), `${w}: a PDF page holds nothing but its footer`).toEqual([])
         expect(pdfs[w].length, `${w} px window: the page count differs from the 1440 px window's ${base.length}`).toBe(base.length)
       }
     })

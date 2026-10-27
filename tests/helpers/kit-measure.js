@@ -60,9 +60,11 @@ export async function buildKit({ layout, tier, colours, name, description = '', 
 }
 
 /**
- * The pages of a PDF: its size, and whether anything is written on it. A page is blank
- * when its content stream shows no text (Skia writes every glyph with a Tj or TJ operator).
+ * The pages of a PDF: its size, and whether anything is written on it. Every page carries its margin
+ * boxes (the page number, and the Free credit), which are 176 to 400 bytes of drawing operators once
+ * inflated; the lightest real page of a kit is over 3 000. A page under BLANK_BYTES holds a footer and nothing else.
  */
+const BLANK_BYTES = 800
 export function pdfPages(buffer) {
   const text = buffer.toString('latin1')
   const objects = new Map()
@@ -88,7 +90,7 @@ export function pdfPages(buffer) {
     const contents = /\/Contents\s*(?:\[([^\]]*)\]|(\d+)\s+0\s+R)/.exec(object)
     const ids = contents ? [...(contents[1] || `${contents[2]} 0 R`).matchAll(/(\d+)\s+0\s+R/g)].map((x) => Number(x[1])) : []
     const ops = ids.map(stream).join('\n')
-    pages.push({ w: box ? Number(box[3]) - Number(box[1]) : null, h: box ? Number(box[4]) - Number(box[2]) : null, text: /\b(?:Tj|TJ)\b/.test(ops), bytes: ops.length })
+    pages.push({ w: box ? Number(box[3]) - Number(box[1]) : null, h: box ? Number(box[4]) - Number(box[2]) : null, text: /\b(?:Tj|TJ)\b/.test(ops), bytes: ops.length, blank: ops.length < BLANK_BYTES })
   }
   return pages
 }
