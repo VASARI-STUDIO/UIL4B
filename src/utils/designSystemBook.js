@@ -44,9 +44,10 @@
 
 import { contrast, grade, inkFor, typeLadder } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
-import { roleLabel } from './paletteRoles.js'
+import { roleLabel, slotLands } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
-import { esc, orderSections } from './exportTemplates/shared.js'
+import { esc, orderSections, fitTitle, MAX_SLOTS } from './exportTemplates/shared.js'
+import { deriveRoles, isNeutral, mixHex } from './exportTemplates/roles.js'
 import { BOOK_TEMPLATES } from './exportTemplates/book/index.js'
 
 const DEFAULT_TEMPLATE = 'specification'
@@ -199,7 +200,7 @@ function slugRole(harmony, index) {
  * style guide, which carries its credit line. A gate that produces a degraded
  * paid artefact teaches the user that the paid thing is worse.
  */
-export function buildDesignSystemBook(design, { projectName = 'Design System', date = new Date(), template = DEFAULT_TEMPLATE } = {}) {
+export function buildDesignSystemBook(design, { projectName = 'Design System', date = new Date(), template = DEFAULT_TEMPLATE, fontData = null } = {}) {
   // The id is only a lookup key; the layout is the module in BOOK_TEMPLATES.
   const tpl = Object.hasOwn(BOOK_TEMPLATES, template) ? BOOK_TEMPLATES[template] : BOOK_TEMPLATES[DEFAULT_TEMPLATE]
   const d = readBook(design)
@@ -216,8 +217,14 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   const hasPalette = d.palette.length > 0
 
   const fontHref = googleFontHref(d)
+  // The page roles and the per-colour facts, worked out once so every template
+  // paints from the same numbers.
+  const roles = deriveRoles(d.palette, { contrast, primary: d.base || d.palette[0] })
+  const slots = buildSlots(d, roles)
+  const fit = fitTitle(projectName, tpl.titleFit)
   // What a template may read: the resolved book model and the facts computed above.
-  const ctx = { d, projectName, field, fieldInk, iso, year }
+  // `fontData(file)` is the server's reader for a chrome font (null in the browser).
+  const ctx = { d, projectName, field, fieldInk, iso, year, slots, roles, fit, ladder, tokens, contrast, grade, fontData }
 
   // ── contents ────────────────────────────────────────────────────────────
   // Built as data first so the folios in the contents list can never drift from
@@ -229,25 +236,44 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   // `leaf` is the contents entry for this page. Continuation pages pass none —
   // a contents that lists "Custom properties" three times is an index, not a
   // contents, and it tells the reader nothing the first entry did not.
-  const addNumbered = (inner, section, leaf = null) => {
+  // `opts` go to the template's frame (a template reads `cls` to dress a page).
+  const addNumbered = (inner, section, leaf = null, opts = {}) => {
     folio += 1
     if (leaf) contents.push({ title: leaf, folio, sub: true })
-    add(tpl.frame(ctx, inner, { section, folio }))
+    add(tpl.frame(ctx, inner, { section, folio, ...opts }))
     return folio
   }
+  // A template's page hook returns one page or a list: { inner, leaf, ...frameOpts }.
+  const addPages = (list, section) => {
+    for (const { inner, leaf = null, ...opts } of [].concat(list || [])) addNumbered(inner, section, leaf, opts)
+  }
   const addOpening = (num, title, abstract, bg, ink) => {
+    // Only a numbered template shows section numerals.
+    const label = tpl.numbered ? num : ''
+    if (tpl.openings === false) {
+      // No opening page: the contents entry points at the section's first page.
+      contents.push({ num: label, title, folio: folio + 1 })
+      return
+    }
+    // An opening that must fall on a right-hand (odd) page leaves the page before
+    // it blank, folio only, which still counts as a page.
+    if (tpl.openOnRecto && (folio + 1) % 2 === 0) {
+      folio += 1
+      add(tpl.frame(ctx, '', { section: '', folio, cls: 'pg-blank' }))
+    }
     folio += 1
-    contents.push({ num, title, folio })
-    add(tpl.opening(ctx, { num, title, abstract, field: bg, ink }))
+    contents.push({ num: label, title, folio })
+    add(tpl.opening(ctx, { num: label, title, abstract, field: bg, ink }))
   }
 
-  // ── 1 · cover ───────────────────────────────────────────────────────────
-  add(tpl.cover(ctx))
+  // ── 1 · front matter: the cover, or whatever the template puts before the contents
+  const front = tpl.front ? [].concat(tpl.front(ctx)) : [tpl.cover(ctx)]
+  front.forEach(add)
 
   // ── 2 · contents (rendered last, placed here) ───────────────────────────
   const contentsSlot = pages.length
   add('')
-  folio = 2 // the cover is i, the contents ii; the body starts its count at 3
+  folio = front.length + 1 // the front matter and the contents are numbered in roman; the body continues the count
 
   // Each section adds its own pages; the template decides their order.
   const sections = {}
@@ -261,12 +287,17 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
         `${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'} built on ${article(sys)} ${sys} system, each with the ink that reads on it and the ratio that proves it.`,
         field, fieldInk,
       )
-      let seen = 0
-      balancedChunk(d.palette, BANDS_PER_PAGE).forEach((group, gi) => {
-        addNumbered(colourBands(d, group, seen, gi === 0), 'Colour', gi === 0 ? 'The palette' : null)
-        seen += group.length
-      })
-      addNumbered(matrixPage(d), 'Colour', 'Contrast matrix')
+      if (tpl.swatches) {
+        addPages(tpl.swatches(ctx, slots), 'Colour')
+      } else {
+        let seen = 0
+        balancedChunk(d.palette, BANDS_PER_PAGE).forEach((group, gi) => {
+          addNumbered(colourBands(d, group, seen, gi === 0), 'Colour', gi === 0 ? 'The palette' : null)
+          seen += group.length
+        })
+      }
+      if (tpl.matrix) addPages(tpl.matrix(ctx, slots), 'Colour')
+      else addNumbered(matrixPage(d), 'Colour', 'Contrast matrix')
     }
 
     if (d.gradient) {
@@ -281,8 +312,12 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
       `${d.heading} for headings, ${d.body} for reading, on a ${d.ratio} scale from ${d.baseSize}px.`,
       '#111114', '#FFFFFF',
     )
-    addNumbered(familiesPage(d), 'Typography', 'The families')
-    addNumbered(scalePage(d, ladder), 'Typography', 'The scale')
+    if (tpl.typography) {
+      addPages(tpl.typography(ctx), 'Typography')
+    } else {
+      addNumbered(familiesPage(d), 'Typography', 'The families')
+      addNumbered(scalePage(d, ladder), 'Typography', 'The scale')
+    }
   }
 
   // ── tokens ──────────────────────────────────────────────────────────────
@@ -305,12 +340,14 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   // rather than to a section, and filing it under "03 — Tokens" said it was
   // part of the token chapter, which it is not.
   folio += 1
-  contents.push({ num: '', title: 'Colophon', folio })
-  add(tpl.frame(ctx, colophonPage(d, projectName, iso), { section: 'Colophon', folio }))
+  const colophonTitle = tpl.colophonTitle || 'Colophon'
+  contents.push({ num: '', title: colophonTitle, folio })
+  add(tpl.frame(ctx, tpl.colophon ? tpl.colophon(ctx) : colophonPage(d, projectName, iso), { section: colophonTitle, folio }))
 
   // Section openings are the only entries in the contents: a contents page that
   // lists every leaf is an index, and an index of eleven pages is noise.
-  pages[contentsSlot] = contentsPage({ d, projectName, contents, tokens, iso })
+  const contentsData = { d, projectName, contents, tokens, iso, folio: front.length + 1 }
+  pages[contentsSlot] = tpl.contents ? tpl.contents(ctx, contentsData) : contentsPage(contentsData)
 
   return `<!doctype html>
 <html lang="en">
@@ -356,9 +393,32 @@ function systemName(harmony) {
   return SYSTEM_NAMES[harmony] || 'tonal'
 }
 
+/** The colours as slot objects, the one shape every template reads. `kind` is the
+ *  palette's primary (slot 0), a neutral (OKLCH chroma under the neutral line) or an
+ *  accent; `tints` is the colour at 80, 60, 40 and 20% over `roles.paper`. */
+function buildSlots(d, roles) {
+  return d.palette.slice(0, MAX_SLOTS).map((hex, i) => {
+    const { ink, ratio } = inkFor(hex)
+    return {
+      i,
+      hex,
+      name: colorName(hex),
+      role: roleLabel(d.harmony, i),
+      kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent',
+      ink,
+      ratio,
+      grade: grade(ratio),
+      lands: slotLands(i),
+      tints: [80, 60, 40, 20].map((pct) => ({ pct, hex: mixHex(hex, roles.paper, pct / 100) })),
+    }
+  })
+}
+
 /* ── pages ───────────────────────────────────────────────────────────────── */
 
-function contentsPage({ d, projectName, contents, tokens, iso }) {
+const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi']
+
+function contentsPage({ d, projectName, contents, tokens, iso, folio = 2 }) {
   const rows = contents.map(c => `<li${c.sub ? ' class="is-sub"' : ''}>
     <span class="ct-num">${c.sub ? '' : esc(c.num)}</span>
     <span class="ct-title">${esc(c.title)}</span>
@@ -383,7 +443,7 @@ function contentsPage({ d, projectName, contents, tokens, iso }) {
       </dl>
     </aside>
   </div>
-  <footer class="foot"><span>Contents</span><span class="folio">ii</span></footer>
+  <footer class="foot"><span>Contents</span><span class="folio">${ROMAN[folio - 1] || folio}</span></footer>
 </section>`
 }
 

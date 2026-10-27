@@ -251,6 +251,10 @@ function css({ d }) {
 
 export default Object.freeze({
   id: 'specification',
+  // Section numerals appear only here, because the contents page lists real folios.
+  numbered: true,
+  // Cover title: sizes in pt, largest first, in a 150 mm measure (425 pt).
+  titleFit: Object.freeze({ steps: Object.freeze([52, 40, 30]), maxLines: 3, measure: 425 }),
   // The ids of the sections the generator builds, in the order this template
   // lays them out.
   sectionOrder: Object.freeze(['colour', 'typography', 'tokens']),
