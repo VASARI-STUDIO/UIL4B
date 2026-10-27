@@ -6,15 +6,17 @@
 // Every plate is a page the product's own export code produced: the UI kit
 // (renderUiKit, over src/templates/uiKit.html, the Free tier with its mark), the
 // Design system book (buildDesignSystemBook) and the Brand guidelines deck
-// (buildBrandGuidelines). The three covers are the book's own cover page for
-// each example project. The only processing is crop, compose onto a transparent
-// ground, downscale and WebP encode. Run by hand; not part of CI. The outputs
-// are committed.
+// (buildBrandGuidelines). The three project plates are the book's own cover page
+// for each example project: the A4 cover on its own (phones) and the cover beside
+// its contents page as a facing spread (wider screens). The only processing is
+// crop, compose onto a transparent ground with a thin page outline, downscale and
+// WebP encode. Run by hand; not part of CI. The outputs are committed.
 //
 // Writes
 //   public/home-exports/<id>-<w>.webp        landscape plates (>= 761px wide screens)
 //   public/home-exports/<id>-p-<w>.webp      portrait plates (<= 760px)
-//   public/home-exports/cover-<name>-<w>.webp  the three book covers
+//   public/home-exports/cover-<name>-<w>.webp         the three book covers, A4 on its own (<= 760px)
+//   public/home-exports/cover-<name>-spread-<w>.webp  cover + contents page, facing (>= 761px)
 //   src/data/homeExports.generated.js        the manifest (shape written at its top)
 //   .cache/home-exports/master/*.png         the 3840px masters (gitignored, never committed)
 //
@@ -72,6 +74,12 @@ const LAND = { ratio: SQRT2, masterH: 2715, widths: [800, 1600, 2400] } // 3840 
 const PORT = { ratio: 4 / 5, masterH: 4800, widths: [400, 800, 1200] } // 4:5, tall
 const COVER = { ratio: 1 / SQRT2, masterH: 2263, widths: [360, 720, 1080] } // A4 portrait at 1600
 const ASPECT_TOLERANCE = 0.005
+// A thin outline baked into every page of every plate, inset on the page's own
+// edge. The pages are light paper (or a pale web page) on the stage's wash, and a
+// CSS ring cannot hug an object-fit picture, so the edge is part of the render:
+// 6px at the 3840 master is about one CSS pixel at the widest display.
+const EDGE_PX = 6
+const EDGE_COLOUR = 'rgba(17, 17, 20, 0.2)'
 
 // The most a page title may be small at: CSS px at the narrowest display. The
 // plate sits in a box with 4% padding either side (the spec's .sp-plate img), so
@@ -105,7 +113,7 @@ const HARMONY_INDEX = 1 // HARMONIES in spectrumKit.js: Mono, Analogous, Complem
 const PROJECT = { northbeam: 'Northbeam', halcyon: 'Halcyon', ferrule: 'Ferrule' }
 
 // Page positions in each document, checked against the page's own text.
-const BOOK_PAGES = { cover: 0, opening: 2, palette: 3 } // .pg
+const BOOK_PAGES = { cover: 0, contents: 1, opening: 2, palette: 3 } // .pg
 const DECK_PAGES = { cover: 0, palette: 2, inUse: 3 } // .sl
 
 // The kit crops. The kit is a scrolling web page, so a crop is a rectangle of it.
@@ -232,9 +240,11 @@ async function shootElement(page, { locator, title, label }) {
 // ── Compose, downscale, encode ──────────────────────────────────────────────
 
 // Draw layers onto a transparent canvas and return the PNG. A layer is
-// { png, x, y, w, h } in canvas pixels.
+// { png, x, y, w, h } in canvas pixels; each gets the thin page outline, inside its
+// own edge, scaled to the canvas width (EDGE_PX is for a 3840 master).
 async function compose(W, H, layers) {
-  const b64 = await util.evaluate(async ({ W: cw, H: ch, list }) => {
+  const edge = Math.max(1, Math.round(EDGE_PX * W / MASTER_W))
+  const b64 = await util.evaluate(async ({ W: cw, H: ch, list, edge: ew, colour }) => {
     const c = document.createElement('canvas')
     c.width = cw
     c.height = ch
@@ -244,13 +254,16 @@ async function compose(W, H, layers) {
     for (const l of list) {
       const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(l.b64), (ch2) => ch2.charCodeAt(0))], { type: 'image/png' }))
       g.drawImage(bmp, l.x, l.y, l.w, l.h)
+      g.strokeStyle = colour
+      g.lineWidth = ew
+      g.strokeRect(l.x + ew / 2, l.y + ew / 2, l.w - ew, l.h - ew)
     }
     const blob = await new Promise((r) => c.toBlob(r, 'image/png'))
     const out = new Uint8Array(await blob.arrayBuffer())
     let s = ''
     for (let i = 0; i < out.length; i += 0x8000) s += String.fromCharCode(...out.subarray(i, i + 0x8000))
     return btoa(s)
-  }, { W, H, list: layers.map((l) => ({ b64: l.png.toString('base64'), x: l.x, y: l.y, w: l.w, h: l.h })) })
+  }, { W, H, edge, colour: EDGE_COLOUR, list: layers.map((l) => ({ b64: l.png.toString('base64'), x: l.x, y: l.y, w: l.w, h: l.h })) })
   const buf = Buffer.from(b64, 'base64')
   const got = pngSize(buf)
   if (got.w !== W || got.h !== H) fail(`composed ${got.w}x${got.h}, expected ${W}x${H}`)
@@ -358,6 +371,7 @@ async function bookPlates(name) {
     })))
     const at = (i) => found[i] || fail(`the book has no page ${i}`)
     if (!at(BOOK_PAGES.cover).cls.includes('pg-cover')) fail(`book page ${BOOK_PAGES.cover} is not the cover`)
+    if (!at(BOOK_PAGES.contents).cls.includes('pg-contents')) fail(`book page ${BOOK_PAGES.contents} is not the contents page`)
     if (!at(BOOK_PAGES.opening).cls.includes('pg-open') || at(BOOK_PAGES.opening).text !== 'Colour') fail(`book page ${BOOK_PAGES.opening} is not the Colour opening`)
     if (!at(BOOK_PAGES.palette).band || at(BOOK_PAGES.palette).text !== 'The palette') fail(`book page ${BOOK_PAGES.palette} is not The palette`)
   }
@@ -399,6 +413,25 @@ async function bookPlates(name) {
 
   if (wanted(ids.cover)) {
     const pageW = 793.7008
+
+    // Landscape: the cover and its contents page, facing, 1920 wide each.
+    const contentsTitle = { selector: '.lbl', text: 'Contents' }
+    const facing = await withDocument(html, { viewport: { width: 1000, height: 1300 }, dsf: (MASTER_W / 2) / pageW }, async (page) => {
+      await check(page)
+      const pages = page.locator('.pg')
+      const a = await shootElement(page, { locator: pages.nth(BOOK_PAGES.cover), title: coverTitle, label: `${name} cover (spread)` })
+      const b = await shootElement(page, { locator: pages.nth(BOOK_PAGES.contents), title: contentsTitle, label: `${name} contents` })
+      return { a, b }
+    })
+    const half = MASTER_W / 2
+    const masterS = await compose(MASTER_W, LAND.masterH, [
+      { png: facing.a.png, x: 0, y: 0, w: half, h: LAND.masterH },
+      { png: facing.b.png, x: half, y: 0, w: half, h: LAND.masterH },
+    ])
+    noteTitle(ids.cover, 'landscape', facing.a, MASTER_W, half)
+    noteTitle(ids.cover, 'landscape', facing.b, MASTER_W, half, false) // the contents page's own label: reported, not the plate's title
+
+    // Portrait: the cover on its own.
     const shot = await withDocument(html, { viewport: { width: 1000, height: 1300 }, dsf: COVER_MASTER_W / pageW }, async (page) => {
       await check(page)
       return shootElement(page, { locator: page.locator('.pg').nth(BOOK_PAGES.cover), title: coverTitle, label: `${name} cover` })
@@ -406,9 +439,12 @@ async function bookPlates(name) {
     const masterC = await compose(COVER_MASTER_W, COVER.masterH, [{ png: shot.png, x: 0, y: 0, w: COVER_MASTER_W, h: COVER.masterH }])
     noteTitle(ids.cover, 'cover', shot, COVER_MASTER_W, COVER_MASTER_W)
     await finish({
-      id: ids.cover, kind: 'cover', tab: PROJECT[name], tabName: `${PROJECT[name]} book cover`,
-      alt: `Design system book cover for ${PROJECT[name]}.`, html,
-      variants: { portrait: { name: `${ids.cover}-master`, master: masterC, spec: COVER } },
+      id: ids.cover, kind: 'cover', tab: PROJECT[name], tabName: `${PROJECT[name]} book cover and contents`,
+      alt: `Design system book for ${PROJECT[name]}, the cover and the contents page.`, html,
+      variants: {
+        landscape: { name: `${ids.cover}-spread-master`, master: masterS, spec: LAND },
+        portrait: { name: `${ids.cover}-master`, master: masterC, spec: COVER },
+      },
     })
   }
   return result
@@ -488,8 +524,48 @@ async function kitPlates() {
     box.top = Math.max(cropTop, box.guideEnd)
     if (box.explainerEnd > box.top + shape.crop.h) fail('kit: the crop cuts through the tint paragraph')
     if (!box.titleText.includes(title.text)) fail(`kit: the colour title reads "${box.titleText}"`)
-    // Hide the sticky section nav so no crop can carry it; nothing else changes.
+    // Hide the sticky section nav so no crop can carry it, and everything that
+    // comes after the tint paragraph (the next row is only half in the crop, so
+    // it would be a line of text cut through). The paragraph and all above it
+    // stay. Nothing else changes.
     await page.addStyleTag({ content: '.nav-wrap{position:static!important}' })
+    await page.evaluate(() => {
+      for (let n = document.querySelector('.tint-explainer'); n && n !== document.body; n = n.parentElement) {
+        for (let s = n.nextElementSibling; s; s = s.nextElementSibling) s.style.visibility = 'hidden'
+      }
+    })
+    // Exit 1 if any text still showing is cut by the crop's edge, or lies in it
+    // only in part.
+    const cut = await page.evaluate(({ top, h, w }) => {
+      const out = []
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+      const range = document.createRange()
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent.trim()
+        const host = node.parentElement
+        if (!text || !host || ['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(host.tagName)) continue
+        const cs = getComputedStyle(host)
+        if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) continue
+        // Visually hidden text (a one-pixel clipped box, as in .sr-only) is not on the picture.
+        let clipped = false
+        for (let el = host; el && el !== document.body; el = el.parentElement) {
+          const er = el.getBoundingClientRect()
+          if ((er.width <= 1 || er.height <= 1) && getComputedStyle(el).overflow !== 'visible') clipped = true
+        }
+        if (clipped) continue
+        range.selectNodeContents(node)
+        for (const r of range.getClientRects()) {
+          if (r.width < 1 || r.height < 1) continue
+          const t = r.top + window.scrollY
+          const b = r.bottom + window.scrollY
+          const inside = t >= top && b <= top + h && r.left >= 0 && r.right <= w
+          const apart = b <= top || t >= top + h
+          if (!inside && !apart) out.push(`"${text.slice(0, 40)}" (${host.tagName.toLowerCase()}.${host.className} at ${Math.round(t)}-${Math.round(b)}, crop ${Math.round(top)}-${Math.round(top + h)})`)
+        }
+      }
+      return out
+    }, { top: box.top, h: shape.crop.h, w: shape.crop.w })
+    if (cut.length) fail(`kit: the ${shape.crop.w}x${shape.crop.h} crop cuts through text: ${[...new Set(cut)].join(', ')}`)
     const png = await page.screenshot({ type: 'png', animations: 'disabled', caret: 'hide', fullPage: true, clip: { x: 0, y: box.top, width: shape.crop.w, height: shape.crop.h } })
     return { png, cssW: shape.crop.w, cssH: shape.crop.h, titlePx: box.titlePx, titleText: box.titleText }
   })
@@ -521,7 +597,7 @@ function checks() {
   let total = 0
   for (const o of outputs) {
     for (const [orient, m] of Object.entries(o.made)) {
-      const shape = o.kind === 'cover' ? 'cover' : orient
+      const shape = o.kind === 'cover' && orient === 'portrait' ? 'cover' : orient // a cover's spread is a landscape plate
       const budget = BUDGET[shape]
       const plate = m.spec
       for (const f of m.files) {
@@ -540,11 +616,12 @@ function checks() {
 }
 
 function fileName(o, orient, w) {
-  if (o.kind === 'cover') return `${o.id}-${w}.webp`
+  if (o.kind === 'cover') return orient === 'portrait' ? `${o.id}-${w}.webp` : `${o.id}-spread-${w}.webp`
   return orient === 'portrait' ? `${o.id}-p-${w}.webp` : `${o.id}-${w}.webp`
 }
 
-const ORDER = ['kit-colour', 'book-colour', 'guide-palette', 'cover-northbeam', 'cover-halcyon', 'cover-ferrule']
+// Tab order of the export card: the two Pro pages first, the free kit last.
+const ORDER = ['book-colour', 'guide-palette', 'kit-colour', 'cover-northbeam', 'cover-halcyon', 'cover-ferrule']
 
 async function writeOutputs(total) {
   await fs.mkdir(OUT_DIR, { recursive: true })
@@ -589,8 +666,8 @@ async function writeOutputs(total) {
 //     version: 1,
 //     dir: '/home-exports/',                       public path prefix
 //     design: { seed, harmony, colors[5], heading: { family, weight }, body: { family, weight } },
-//     totalBytes,                                  all 27 files together
-//     plates: [Item, Item, Item],                  tab order: UI kit, Book, Brand deck
+//     totalBytes,                                  all 36 files together
+//     plates: [Item, Item, Item],                  tab order: Book, Brand deck, UI kit
 //     covers: [Item, Item, Item],                  Northbeam, Halcyon, Ferrule (one tab each)
 //   }
 //   Item = {
@@ -600,8 +677,8 @@ async function writeOutputs(total) {
 //     tabName,       the tab's full accessible name
 //     alt,           the image's alt text
 //     sourceSha256,  sha256 of the export HTML the image was rendered from
-//     landscape,     Variant for screens 761px and wider; null for a cover
-//     portrait,      Variant for screens 760px and narrower; for a cover this is the A4 cover at EVERY width
+//     landscape,     Variant for screens 761px and wider; a cover's is the cover beside its contents page, facing
+//     portrait,      Variant for screens 760px and narrower; for a cover this is the A4 cover on its own
 //   }
 //   Variant = {
 //     master: { w, h },   the uncommitted master this was downscaled from
@@ -610,8 +687,8 @@ async function writeOutputs(total) {
 //     srcset,             'path 800w, path 1600w, path 2400w', ready for an <img srcset> or <source srcset>
 //     files: [{ file, w, h, bytes, sha256 }],   smallest to largest; file is relative to public/home-exports/
 //   }
-//   Plates are drawn on a transparent ground (the page supplies it); covers are the A4 page edge to edge.
-//   File names: landscape <id>-<w>.webp, portrait <id>-p-<w>.webp, covers <id>-<w>.webp.
+//   Plates are drawn on a transparent ground (the page supplies it), each page with a thin outline baked in.
+//   File names: landscape <id>-<w>.webp, portrait <id>-p-<w>.webp, covers <id>-<w>.webp, cover spreads <id>-spread-<w>.webp.
 
 `
   await fs.writeFile(OUT_DATA, `${header}export const HOME_EXPORTS = ${JSON.stringify(data, null, 2)}\n`)
