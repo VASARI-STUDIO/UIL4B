@@ -18,7 +18,7 @@ const FAMILY_FIT = Object.freeze({ steps: Object.freeze([140, 110, 88, 68, 52]),
 const WEIGHT = { primary: 3, accent: 2, neutral: 1 }
 const BAND_AREA_MM = 269
 // A band this wide or wider carries its own "where it lands" line.
-const BAND_TEXT_MM = 20
+const BAND_TEXT_MM = 28
 
 const pad = (n) => String(n).padStart(2, '0')
 const fam = (name) => `'${esc(name)}',system-ui,sans-serif`
@@ -69,8 +69,8 @@ function summarySlide(ctx, n) {
   const total = slots.reduce((sum, s) => sum + WEIGHT[s.kind], 0)
   const wide = (s) => BAND_AREA_MM * WEIGHT[s.kind] / total >= BAND_TEXT_MM
   const bands = slots.map((s) => `<div class="pn-band" style="flex:${WEIGHT[s.kind]} 1 0;background:${safeHex(s.hex, 'GrayText')};color:${safeHex(s.ink, 'CanvasText')}">${wide(s)
-    ? `<b>${esc(s.name)}</b><span>${esc(s.hex)}</span><span>${esc(s.lands)}</span>`
-    : `<span>${esc(s.hex)}</span>`}</div>`).join('')
+    ? `<b>${esc(s.name)}</b><span class="pn-hex">${esc(s.hex)}</span><span>${esc(s.lands)}</span>`
+    : `<span class="pn-hex">${esc(s.hex)}</span>`}</div>`).join('')
   const rest = slots.filter((s) => !wide(s))
   const list = rest.length
     ? `<ul class="pn-list">${rest.map((s) => `<li><i style="background:${safeHex(s.hex, 'GrayText')}"></i><b>${esc(s.name)}</b> ${esc(s.hex)}<span>${esc(s.lands)}</span></li>`).join('')}</ul>`
@@ -204,9 +204,10 @@ function css(ctx) {
   /* the summary: every colour as a band */
   .sl-bands{padding-bottom:var(--m)}
   .pn-bands{display:flex;height:88mm;margin-top:6mm;border:.25mm solid var(--rule)}
-  .pn-band{min-width:0;padding:4mm 3mm;display:flex;flex-direction:column;justify-content:flex-end;gap:2mm;font-size:8pt;line-height:1.3;overflow:hidden}
-  .pn-band b{font-family:var(--head);font-weight:${d.headingWeight};font-size:11pt;line-height:1.1;overflow-wrap:anywhere}
-  .pn-band span{overflow-wrap:anywhere}
+  .pn-band{min-width:0;padding:4mm 1.5mm;display:flex;flex-direction:column;justify-content:flex-end;gap:2mm;font-size:8pt;line-height:1.3;overflow:hidden}
+  .pn-band b{font-family:var(--head);font-weight:${d.headingWeight};font-size:10pt;line-height:1.1;overflow-wrap:break-word}
+  .pn-band span{overflow-wrap:break-word}
+  .pn-band .pn-hex{white-space:nowrap;font-size:7pt;letter-spacing:-.01em}
   .pn-list{list-style:none;padding:0;margin-top:5mm;columns:3;column-gap:6mm;font-size:8pt;line-height:1.35}
   .pn-list li{break-inside:avoid;padding:0 0 1.6mm;overflow-wrap:anywhere}
   .pn-list i{display:inline-block;width:3mm;height:3mm;margin-right:1.6mm;vertical-align:-.4mm;border:.25mm solid var(--rule)}
