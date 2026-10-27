@@ -38,7 +38,8 @@
 //   DiscoverPicks  drop ' · Pro' from the locked meta               -> "a locked Discover card says what it is"
 //   LocalClock     hour: '2-digit'                                  -> "the hour has no leading zero"
 //   projects.css   remove `.uh-new-wrap--head.is-after-work { display: none }` -> "New project is one outlined button under the work"
-//   projects.css   `.uh-steps a` text-decoration: none             -> "the starter's steps ... underlined links"
+//   StarterCard    wrap each step's label in <Link to=...>          -> "the starter's steps are one column ... not links" (3 sizes) and "an account with no projects"
+//   projects.css   `.uh .uh-steps li` min-height/line-height 44px    -> "the starter's steps are one column ... not links" (32px rows)
 //   projects.css   `.uh-clock-line` font-size 12px                  -> "no text is smaller than 13px" (390 cases)
 //   projects.css   `.uh-today { display: block }` at 641-1000      -> "on a tablet, Today is one row"
 //   projects.css   drop the phone's hide rule for Semantic and Palette Library -> "Start something is four tools"
@@ -232,8 +233,8 @@ for (const size of SIZES) {
       const starter = page.getByTestId('starter-card')
       await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
       await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colour', 'Type', 'Type scale', 'Tints'])
-      expect(await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href'))))
-        .toEqual(['/create/palette', '/create/font-pair', '/create/type-scale', '/create/tint'])
+      // The steps are text: Start the walkthrough is the way in, so the list holds no link.
+      await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link'), 'a step is a link again').toHaveCount(0)
       // No lead, no rows, and it is the first block under the title.
       await expect(page.locator('.uh-rows')).toHaveCount(0)
       await expect(page.locator('.uh-dash-main > .uh-continue')).toHaveCount(1)
@@ -242,9 +243,9 @@ for (const size of SIZES) {
       const start = await box(page, '.uh-start')
       expect(s.top, 'the starter is not under the title').toBeGreaterThanOrEqual(h.bottom - 1)
       expect(start.top, 'Start something is above the starter').toBeGreaterThanOrEqual(s.bottom - 1)
-      // Every step is a 44px target, and the list ends inside the card.
-      const steps = await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link').evaluateAll((a) => a.map((x) => Math.round(x.getBoundingClientRect().height)))
-      expect(Math.min(...steps), `a starter step is under 44px tall: ${steps}`).toBeGreaterThanOrEqual(44)
+      // Every step is a 32px text row (nothing to tap).
+      const steps = await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem').evaluateAll((a) => a.map((x) => Math.round(x.getBoundingClientRect().height)))
+      expect(steps, `the starter's steps are not 32px rows: ${steps}`).toEqual([32, 32, 32, 32])
     })
 
     for (const theme of ['light', 'dark']) {
@@ -628,8 +629,101 @@ test.describe('Discover for a Pro account', () => {
   })
 })
 
+// The meta line has one form across the row: "<mood>, N colours" on every card, or "N colours" on every card.
+// Never a mix. A locked card has no colours to classify, so a row with one is "N colours" throughout.
+const discoverMetas = (page) => page.locator('.uh-disc-card .uh-disc-meta').evaluateAll((els) => els.map((el) => el.textContent.trim()))
+const hasMood = (meta) => /^[A-Za-z][\w -]*, \d+ colours?$/.test(meta)
+
+test.describe('Discover shows a mood on every card or on none', () => {
+  for (const size of SIZES) {
+    test(`at ${size.width}px a free account's row is N colours throughout`, async ({ page }) => {
+      watch(page, 'a free designer looking at what is new in Discover')
+      await open(page, size)
+      await page.locator('.uh-disc').scrollIntoViewIfNeeded()
+      await expect(page.locator('.uh-disc-card')).toHaveCount(4)
+      expect(await page.locator('.uh-disc-card.is-locked').count(), 'no locked card on a free account: the row cannot mix').toBeGreaterThan(0)
+      const metas = await discoverMetas(page)
+      expect(metas.filter(hasMood), `a card shows a mood next to a card that cannot: ${JSON.stringify(metas)}`).toEqual([])
+      // Pins the free fixture's form. It cannot tell a mixed row from a uniform one while all four cards are locked
+      // (tried: the per-card mood code stays green here); the Pro tests below, with a library we supply, are the guard.
+      // Locked cards say what they are after the count; a card that is held (if the fixture has one) is the bare count.
+      for (const m of metas) expect(m, 'the meta is not "N colours"').toMatch(/^\d+ colours?( · Pro)?$/)
+    })
+  }
+
+  // A Pro account is answered with a library of our choosing, so the moods are hand-checked strings:
+  // classifyPalette gives these four Warm, Cool, Neutral and Warm (the first of its moods in the page's order),
+  // and gives PRUSSIAN none at all (the library's own Prussian & Peach, which is among its four newest).
+  const NEW = (id, name, colors, added) => ({ id, name, colors, added, kind: 'curated' })
+  const WARM = ['#7A2E12', '#C4521E', '#F2A488', '#FDEDE4']
+  const COOL = ['#0B2A45', '#1F4E79', '#5B9BD5', '#DCEBF7']
+  const NEUTRAL = ['#2B2B2B', '#6B6B6B', '#B5B5B5', '#F2F2F2']
+  const PRUSSIAN = ['#0B2A45', '#1F4E79', '#F2A488', '#FDEDE4']
+  async function openProRow(page, rows) {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await signIn(page, { plan: 'pro', projects: THREE })
+    // Registered after signIn's own route for the library, so it answers first.
+    await page.route(/\/api\/ai\?library=palettes/, (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ kind: 'palettes', total: rows.length, items: rows }),
+    }))
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-disc-card')).toHaveCount(4)
+    return discoverMetas(page)
+  }
+
+  test('when every card has a mood, every card shows it — the control', async ({ page }) => {
+    watch(page, 'a Pro designer whose newest palettes can all be classified')
+    const metas = await openProRow(page, [
+      NEW('a', 'Ember', WARM, '2026-09-04'), NEW('b', 'Tide', COOL, '2026-09-03'), NEW('c', 'Slate', NEUTRAL, '2026-09-02'), NEW('d', 'Clay', WARM, '2026-09-01'),
+    ])
+    expect(metas).toEqual(['Warm, 4 colours', 'Cool, 4 colours', 'Neutral, 4 colours', 'Warm, 4 colours'])
+  })
+
+  test('when one card has no mood, no card shows one', async ({ page }) => {
+    watch(page, 'a Pro designer with one palette that has no mood among the newest')
+    const metas = await openProRow(page, [
+      NEW('a', 'Ember', WARM, '2026-09-04'), NEW('b', 'Tide', COOL, '2026-09-03'), NEW('c', 'Slate', NEUTRAL, '2026-09-02'), NEW('d', 'Prussian', PRUSSIAN, '2026-09-01'),
+    ])
+    expect(metas, 'the row mixes "Warm, 4 colours" with "4 colours"').toEqual(['4 colours', '4 colours', '4 colours', '4 colours'])
+  })
+
+  test('the library\'s own newest four are one form, whichever it is', async ({ page }) => {
+    watch(page, 'a Pro designer looking at what is new in Discover')
+    await open(page, SIZES[2], { plan: 'pro' })
+    await expect(page.locator('.uh-disc-card')).toHaveCount(4)
+    const metas = await discoverMetas(page)
+    expect(new Set(metas.map(hasMood)).size, `the row mixes two forms: ${JSON.stringify(metas)}`).toBe(1)
+  })
+})
+
 test.describe('on a phone, the page is composed for a thumb', () => {
   const phone = SIZES[0]
+
+  test('the project-limit notice sits in the flow under New project, clear of the meters', async ({ page }) => {
+    watch(page, 'a free designer at the project limit pressing New project on a phone')
+    await open(page, phone)
+    await expect(page.getByTestId('project-quota-note')).toContainText('3 of 3')
+    // At 640 and under the head copy of New project is hidden and the one under the work is the button.
+    const button = page.locator('.uh-new-wrap--foot .uh-new')
+    await button.scrollIntoViewIfNeeded()
+    await button.click()
+    const refusal = page.getByTestId('project-create-refusal')
+    await expect(refusal).toBeVisible()
+    await expect(refusal.getByRole('link', { name: 'See plans' })).toBeVisible()
+    const where = await page.evaluate(() => {
+      const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { top: b.top + scrollY, bottom: b.bottom + scrollY, left: b.left, right: b.right } }
+      return { button: r('.uh-new-wrap--foot .uh-new'), cap: r('[data-testid="project-create-refusal"]'), meters: r('.uh-meters'), position: getComputedStyle(document.querySelector('[data-testid="project-create-refusal"]')).position }
+    })
+    expect(where.cap.top, 'the notice starts above the bottom of the button').toBeGreaterThanOrEqual(where.button.bottom - 1)
+    // No overlap with the meters: the notice ends before they start, or starts after they end.
+    const overlaps = where.cap.top < where.meters.bottom - 1 && where.cap.bottom > where.meters.top + 1
+      && where.cap.left < where.meters.right && where.cap.right > where.meters.left
+    expect(overlaps, `the notice (${where.cap.top}-${where.cap.bottom}) covers the meters (${where.meters.top}-${where.meters.bottom})`).toBe(false)
+    expect(where.cap.right, 'the notice runs off the right edge').toBeLessThanOrEqual(phone.width)
+    expect(where.cap.left, 'the notice runs off the left edge').toBeGreaterThanOrEqual(0)
+    expect(where.position, 'the notice floats over the page instead of sitting in it').toBe('static')
+  })
 
   test('the date and time are one line under the title, and the big clock is not drawn', async ({ page }) => {
     watch(page, 'a designer glancing at the top of their workspace on a phone')
@@ -779,35 +873,30 @@ test.describe('on a tablet, Today is one row', () => {
 
 test.describe('the starter\'s steps', () => {
   for (const size of SIZES) {
-    test(`at ${size.width}px are one column of numbered, underlined links in the accent`, async ({ page }) => {
+    test(`at ${size.width}px are one column of numbered plain text in 32px rows, not links`, async ({ page }) => {
       watch(page, 'a new account reading the walkthrough')
       await open(page, size, { projects: [] })
-      const steps = await page.getByTestId('starter-card').getByRole('list', { name: 'The walkthrough' }).evaluate((ol) => {
-        const probe = document.createElement('i')
-        probe.style.color = 'var(--ws-acc-text)'
-        ol.append(probe)
-        const accent = getComputedStyle(probe).color
-        probe.remove()
-        return {
-          tag: ol.tagName,
-          marker: getComputedStyle(ol).listStyleType,
-          rows: [...ol.querySelectorAll('li')].map((li) => {
-            const r = li.getBoundingClientRect()
-            const a = li.querySelector('a')
-            const cs = getComputedStyle(a)
-            return { top: Math.round(r.top), left: Math.round(r.left), underline: cs.textDecorationLine, accent: cs.color === accent }
-          }),
-        }
-      })
+      const steps = await page.getByTestId('starter-card').getByRole('list', { name: 'The walkthrough' }).evaluate((ol) => ({
+        tag: ol.tagName,
+        marker: getComputedStyle(ol).listStyleType,
+        interactive: ol.querySelectorAll('a, button, [tabindex]').length,
+        rows: [...ol.querySelectorAll('li')].map((li) => {
+          const r = li.getBoundingClientRect()
+          const cs = getComputedStyle(li)
+          return { top: Math.round(r.top), left: Math.round(r.left), height: Math.round(r.height), underline: cs.textDecorationLine, size: cs.fontSize }
+        }),
+      }))
       expect(steps.tag).toBe('OL')
       expect(steps.marker, 'the steps are a numbered sequence').toBe('decimal')
+      expect(steps.interactive, 'a step is something to click or focus').toBe(0)
       expect(steps.rows).toHaveLength(4)
       for (let i = 1; i < steps.rows.length; i++) {
-        expect(steps.rows[i].top, `step ${i + 1} is not under step ${i}`).toBeGreaterThan(steps.rows[i - 1].top)
         expect(steps.rows[i].left, `step ${i + 1} is not in the same column`).toBe(steps.rows[0].left)
+        expect(steps.rows[i].top - steps.rows[i - 1].top, `step ${i + 1} is not 32px under step ${i}`).toBe(32)
       }
-      expect(steps.rows.map((r) => r.underline), 'a link is not underlined').toEqual(Array(4).fill('underline'))
-      expect(steps.rows.map((r) => r.accent), 'a link is not the accent colour').toEqual(Array(4).fill(true))
+      expect(steps.rows.map((r) => r.height), 'a step row is not 32px').toEqual([32, 32, 32, 32])
+      expect(steps.rows.map((r) => r.underline), 'a step looks like a link').toEqual(Array(4).fill('none'))
+      expect(steps.rows.map((r) => r.size), 'a step is not 15px').toEqual(Array(4).fill('15px'))
     })
   }
 })
