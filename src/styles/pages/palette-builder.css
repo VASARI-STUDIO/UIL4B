@@ -2,7 +2,7 @@
  *
  * Source: "UIL4B App.dc.html", `isPalette` (D:945-1051), its phone rules
  * (D:65-76) and view model (D:1535-1570, D:2126-2181). The toolbar, its
- * overflow ("Tools") and the slider rows come from pages/tool-layout.css; this
+ * overflow ("Extra tools") and the slider rows come from pages/tool-layout.css; this
  * sheet is the board, the ADD rail, the ADJUST ALL bar and the floating panels.
  *
  * Every selector is scoped `.plb …`. The previous board, toolbar and adjust
