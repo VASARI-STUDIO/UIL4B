@@ -929,7 +929,7 @@
 .sp-ex { container: sp-ex / inline-size; min-width: 0; min-height: 0; border-radius: 18px; background: var(--sp-page); border: 1px solid rgba(var(--sp-ink-rgb), .12); overflow: hidden; display: flex; flex-direction: column; }
 .sp-ex-pieces { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 11px clamp(12px, 1.4vw, 16px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); }
 .sp-ex-piece { padding: 7px 13px; border: 1px solid rgba(var(--sp-ink-rgb), .13); border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
-.sp-ex-piece[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
+.sp-ex-piece[aria-selected="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
 .spectrum .sp-ex-piece:active, .spectrum .sp-ex-fmt:active { transform: scale(.96); }
 .sp-ex-body { flex: 1 1 0; min-height: 0; padding: clamp(14px, 1.6vw, 20px); overflow: auto; }
 .sp-ex-rows { display: grid; gap: 6px; }
@@ -990,7 +990,10 @@
    a transparent ground, so the ground here is the page's own wash and one set of
    files serves both themes. The picture is object-fit: contain in a box of its
    own aspect: never cropped, never scaled by CSS beyond the srcset step. */
-.sp-stage { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; border-radius: 18px; background: var(--sp-wash-2); overflow: hidden; isolation: isolate; }
+.sp-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; border-radius: 18px; background: var(--sp-wash-2); overflow: hidden; isolation: isolate; }
+/* An inset ring on the stage, the same edge as card 1's panel (.sp-ex), so the
+   three stages read as one set. It is over the picture, which is inset 4%. */
+.sp-stage::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(var(--sp-ink-rgb), .12); pointer-events: none; }
 .sp-plate { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
 .sp-plate-art { position: relative; min-height: 0; }
 .sp-plate-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transition: opacity 150ms ease; }
@@ -1002,6 +1005,7 @@
 .sp-plate-fail { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
 .sp-plate-cap { display: grid; justify-items: center; gap: 2px; padding: 0 16px 12px; text-align: center; font-size: 12px; line-height: 1.4; color: var(--sp-dim); }
 .sp-plate-cap b { font-weight: 540; color: var(--sp-ink); }
+.sp-cap-short, .sp-lab-short { display: none; }
 
 .sp-pick { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
 .sp-pick::-webkit-scrollbar { display: none; }
@@ -1017,15 +1021,33 @@
   .sp-pick-btn:not([aria-selected="true"], [aria-checked="true"]):hover { border-color: rgba(var(--sp-ink-rgb), .3); color: var(--sp-ink); }
 }
 
+/* The same switch as rows, at the foot of the copy column (1200px and up; below
+   that the pills above are shown and this is display: none). A marker, the name,
+   and what is in it, between hairlines. */
+.sp-rows { display: none; margin-top: auto; border-top: 1px solid rgba(var(--sp-ink-rgb), .12); }
+.sp-rows-btn { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 16px; row-gap: 2px; min-height: 52px; padding: 12px 4px 12px 24px; border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); border-radius: 0; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 15px; line-height: 1.3; text-align: left; cursor: pointer; transition: color 150ms ease, background-color 150ms ease; }
+.sp-rows-btn::before { content: ""; position: absolute; left: 4px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; border: 1.5px solid rgba(var(--sp-ink-rgb), .3); box-sizing: border-box; transition: background-color 150ms ease, border-color 150ms ease; }
+.sp-rows-lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-rows-hint { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-rows-sub { grid-column: 1 / -1; font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-rows-btn[aria-selected="true"], .sp-rows-btn[aria-checked="true"] { color: var(--sp-ink); }
+.sp-rows-btn[aria-selected="true"]::before, .sp-rows-btn[aria-checked="true"]::before { background: var(--sp-ink); border-color: var(--sp-ink); }
+.sp-rows-btn:active { background: rgba(var(--sp-ink-rgb), .06); }
+.spectrum .sp-rows-btn:focus-visible { outline-offset: -2px; }
+@media (hover: hover) {
+  .sp-rows-btn:not([aria-selected="true"], [aria-checked="true"]):hover { color: var(--sp-ink); background: rgba(var(--sp-ink-rgb), .04); }
+}
+
 /* ── ONE CARD SYSTEM ──────────────────────────────────────────────────────────
    All three cards are the same size at a width: a fixed height, never a minimum, so
    what is inside can never make one card taller than another. A copy column and a
    stage: 1440 is 640 tall with the stage on the right; 768 is a single column,
-   a 184px copy box over the stage; 390 is 710 tall with a 216px copy box.
+   the copy over the stage; 390 is 710 tall. Below 1200 the copy row is as tall as
+   its copy (auto) and the stage takes the rest, so the card's height never moves.
    From 761 to 1199 the stage is a full-width picture, so the height follows the
    card's own width (the stack is a size container for the cqw): padding 28 x 2,
-   the copy box 184, a gap of 24, the picture at the card's inner width over the
-   landscape export's aspect (1.4142), and the 56px button row.
+   a 184px allowance for the copy, a gap of 24, the picture at the card's inner width
+   over the landscape export's aspect (1.4142), and the 56px button row.
    Below 1200 the stack is three ordinary cards: at 1000px one card is about 930px
    tall, which a screen cannot pin. */
 @media (max-width: 1199px) {
@@ -1037,7 +1059,7 @@
     filter: none !important;
     height: calc(56px + 184px + 24px + (100cqw - 56px) / 1.4142 + 56px);
   }
-  .sp-stack-grid { padding: 28px; gap: 24px; grid-template-columns: minmax(0, 1fr); grid-template-rows: 184px minmax(0, 1fr); }
+  .sp-stack-grid { padding: 28px; gap: 24px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   /* 40px between the three cards so they read as one group; the tail is 24px, so
      with the next section's own top padding the gap after the last card is never
      under the --sp-sec floor (80px) and is twice the gap inside the group. */
@@ -1048,12 +1070,25 @@
   .sp-spec-head { margin: 0; text-align: left; }
   .sp-spec-head p { margin-left: 0; }
   .sp-stack-card { height: 710px; }
-  .sp-stack-grid { padding: 16px; gap: 16px; grid-template-rows: 216px minmax(0, 1fr); }
+  .sp-stack-grid { padding: 16px; gap: 24px; }
   .sp-stack-say { padding-top: 0; }
   .sp-stack-say > p { margin-top: 12px; }
   .sp-stack-say > p.sp-stack-note { margin-top: 12px; }
   .sp-pick { padding: 2px 8px; }
   .sp-pick-label, .sp-pick-ico { display: none; }
+  /* One line under the picture: the short caption in card 2; in card 3 only the
+     time and parts (the project's name is on the selected pill). */
+  .sp-cap-long { display: none; }
+  .sp-cap-short { display: inline; }
+  .sp-plate-cap { grid-template-columns: minmax(0, 1fr); padding: 0 12px 8px; }
+  .sp-plate-cap > span { justify-self: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sp-plate-cap--proj b { display: none; }
+}
+/* Fine pointers from 761px: a 36px pill. The row keeps its height (36 + 2 x 10 + the
+   hairline = 57, as 44 + 2 x 6 + 1 was), so the picture does not change size. */
+@media (min-width: 761px) and (pointer: fine) {
+  .sp-pick-btn { min-height: 36px; }
+  .sp-pick { padding-block: 10px; }
 }
 /* On a phone card 1's panel is a little tighter inside (the rows of the palette,
    the format row), with every figure and line of copy kept. */
@@ -1064,6 +1099,20 @@
   /* The format switch and Copy share one line at 390px (the switch is 165px, Copy 105px). */
   .sp-ex-actions { gap: 8px; padding-inline: 12px; }
   .sp-ex-fmt { padding-inline: 8px; }
+  /* Card 1's four pieces on one line: the short names. */
+  .sp-ex-piece .sp-lab-full { display: none; }
+  .sp-ex-piece .sp-lab-short { display: inline; }
+}
+
+/* 1200px and up: the switch moves from under the stage to rows at the foot of the
+   copy column, in all three cards. The pills are display: none (out of the
+   accessibility tree, not merely hidden); the rows are shown. The copy reads from
+   the top of the column, level with the stage (no top padding). */
+@media (min-width: 1200px) {
+  .sp-stack-say { align-self: stretch; display: flex; flex-direction: column; padding-top: 0; }
+  .sp-stack-say > p.sp-stack-note { margin-bottom: 24px; }
+  .sp-rows { display: flex; flex-direction: column; }
+  .sp-pick, .sp-ex-pieces, .sp-plate-cap--proj { display: none; }
 }
 
 /* ── "Don't just take it from us" (#index) ────────────────────────────────────
@@ -1308,7 +1357,7 @@
 @media (forced-colors: active) {
   .spectrum .sp-chip[aria-pressed="true"],
   .spectrum .sp-seg button[aria-pressed="true"],
-  .spectrum .sp-ex-piece[aria-pressed="true"],
+  .spectrum .sp-ex-piece[aria-selected="true"],
   .spectrum .sp-ex-fmt[aria-pressed="true"],
   .spectrum .sp-pick-btn[aria-selected="true"],
   .spectrum .sp-pick-btn[aria-checked="true"],
@@ -1318,4 +1367,8 @@
   .spectrum .sp-ramp, .spectrum .sp-roles { forced-color-adjust: none; }
   /* The card edge is a shadow ring, which this mode removes. */
   .spectrum .sp-stack-card { border: 1px solid CanvasText; }
+  /* The stage's ring is a shadow too, and the rows' marker is a fill. */
+  .spectrum .sp-stage::after { box-shadow: none; border: 1px solid CanvasText; }
+  .spectrum .sp-rows-btn[aria-selected="true"]::before,
+  .spectrum .sp-rows-btn[aria-checked="true"]::before { background: Highlight; border-color: Highlight; forced-color-adjust: none; }
 }

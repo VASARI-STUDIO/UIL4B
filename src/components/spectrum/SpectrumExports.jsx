@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PhIcon from './PhIcon'
 import { FREE_SAVE_LIMITS } from '../../config/plans'
@@ -50,6 +50,13 @@ import {
 // system"): a copy column and a stage. Card 1's stage is its live panel. Cards 2
 // and 3 put a plate in the stage: real renders of the product's own exports, made
 // by scripts/home-exports/generate.mjs and listed in src/data/homeExports.generated.js.
+//
+// ── ONE SWITCH, DRAWN TWICE ─────────────────────────────────────────────────
+// Each card has one choice (card 1's piece, card 2's export, card 3's project).
+// Its state lives in the card, and the picker is rendered twice from it: as pills
+// under the stage (1199px and below) and as rows at the foot of the copy column
+// (1200px and up). CSS shows one and hides the other with display: none, so the
+// hidden one is out of the accessibility tree. The two have distinct ids.
 //
 // ── WHAT IS LIVE ────────────────────────────────────────────────────────────
 // Card 1's panel builds a real file from the seed chosen in the bench's palette
@@ -103,27 +110,103 @@ function Card({ index, setRef, children }) {
   )
 }
 
+/* ── the switch ───────────────────────────────────────────────────────────── */
+//
+// One list of choices as buttons: tabs (cards 1 and 2) or radios (card 3), with a
+// roving tabindex and Left/Right/Up/Down/Home/End. `variant` is how it is drawn:
+// pills under the stage, or rows at the foot of the copy column. Each item is
+// { key, label, short?, name, rowLabel?, rowName, hint?, sub?, icon? }.
+
+function PickList({ uid, variant, items, role, label, active, onSelect, onWarm, panelId, wrapClass, btnClass, lead }) {
+  const tabs = role === 'tab'
+  const rows = variant === 'rows'
+  const refs = useRef([])
+  const idOf = (i) => `${uid}-${variant}-${i}`
+
+  const choose = (i) => {
+    onSelect(i)
+    if (!rows) refs.current[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }
+
+  const onKeyDown = (e) => {
+    const n = items.length
+    let to = -1
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (active + 1) % n
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (active - 1 + n) % n
+    else if (e.key === 'Home') to = 0
+    else if (e.key === 'End') to = n - 1
+    if (to < 0) return
+    e.preventDefault()
+    choose(to)
+    refs.current[to]?.focus()
+  }
+
+  return (
+    <div className={wrapClass} role={tabs ? 'tablist' : 'radiogroup'} aria-label={label} onKeyDown={onKeyDown}>
+      {lead}
+      {items.map((item, i) => (
+        <button
+          key={item.key}
+          ref={(el) => { refs.current[i] = el }}
+          id={idOf(i)}
+          type="button"
+          className={btnClass}
+          role={role}
+          aria-selected={tabs ? active === i : undefined}
+          aria-checked={tabs ? undefined : active === i}
+          aria-controls={tabs ? panelId : undefined}
+          aria-label={rows ? item.rowName : item.name}
+          tabIndex={active === i ? 0 : -1}
+          onClick={() => choose(i)}
+          onPointerEnter={onWarm ? () => onWarm(i) : undefined}
+          onFocus={onWarm ? () => onWarm(i) : undefined}
+        >
+          {rows ? (
+            <>
+              <span className="sp-rows-lab">{item.rowLabel || item.label}</span>
+              {item.hint ? <span className="sp-rows-hint">{item.hint}</span> : null}
+              {item.sub ? <span className="sp-rows-sub">{item.sub}</span> : null}
+            </>
+          ) : (
+            <>
+              {item.icon ? <PhIcon name={item.icon} className="sp-pick-ico" /> : null}
+              {item.short ? (
+                <>
+                  <span className="sp-lab-full">{item.label}</span>
+                  <span className="sp-lab-short">{item.short}</span>
+                </>
+              ) : <span>{item.label}</span>}
+            </>
+          )}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /* ── card 1 · one piece ───────────────────────────────────────────────────── */
 
-function OnePiece({ base, font }) {
+// At 560px and below the pills show these, so the four fit one line.
+const PIECE_SHORT = ['Palette', 'Type', 'Files', 'Icons']
+const FORMATS_HINT = EX_FMTS.map(([label]) => label).join(', ')
+const PIECE_HINT = [FORMATS_HINT, FORMATS_HINT, 'PNG in, WebP out', ICON_FORMATS.join(', ')]
+const PIECE_ITEMS = EX_PIECES.map((label, i) => ({
+  key: label,
+  label,
+  short: PIECE_SHORT[i],
+  name: label,
+  hint: PIECE_HINT[i],
+  rowName: `${label}, ${PIECE_HINT[i]}`,
+}))
+
+// The card owns which piece is open, so its two switches (pills in the panel,
+// rows beside the copy) read one state.
+function useOnePiece() {
   const [piece, setPiece] = useState(0)
   const [fmt, setFmt] = useState(0)
   const [copied, setCopied] = useState(false)
   const timer = useRef(0)
   useEffect(() => () => clearTimeout(timer.current), [])
-  const seed = BASES[base]
-  const ramp = rampOf(seed)
-  const file = exFileOf(piece, fmt, seed)
-  const spec = FONTS[font]
-  // Palette and Type scale offer CSS / Tailwind / JSON; Icons offers its own
-  // three; Compressed files has nothing to choose, so it shows a line of text.
-  const fmts = piece === 3 ? ICON_FORMATS : EX_FMTS.map(([label]) => label)
-  const copy = useCallback(() => {
-    navigator.clipboard?.writeText(file.text).catch(() => {})
-    setCopied(true)
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => setCopied(false), 1200)
-  }, [file.text])
   // The Icons formats mean something else from the others', so moving into or
   // out of Icons starts again at the first format.
   const pick = (i) => {
@@ -131,16 +214,41 @@ function OnePiece({ base, font }) {
     setPiece(i)
     setCopied(false)
   }
+  const copyText = (text) => {
+    navigator.clipboard?.writeText(text).catch(() => {})
+    setCopied(true)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setCopied(false), 1200)
+  }
+  return { piece, fmt, copied, setFmt, setCopied, pick, copyText }
+}
+
+function OnePiece({ base, font, st, uid, panelId }) {
+  const { piece, fmt, copied, setFmt, setCopied, pick, copyText } = st
+  const seed = BASES[base]
+  const ramp = rampOf(seed)
+  const file = exFileOf(piece, fmt, seed)
+  const spec = FONTS[font]
+  // Palette and Type scale offer CSS / Tailwind / JSON; Icons offers its own
+  // three; Compressed files has nothing to choose, so it shows a line of text.
+  const fmts = piece === 3 ? ICON_FORMATS : EX_FMTS.map(([label]) => label)
 
   return (
     <div className="sp-ex">
-      <div className="sp-ex-pieces" role="group" aria-label="What to export">
-        {EX_PIECES.map((label, i) => (
-          <button key={label} type="button" className="sp-ex-piece" aria-pressed={piece === i} onClick={() => pick(i)}>{label}</button>
-        ))}
-      </div>
+      <PickList
+        uid={uid}
+        variant="pills"
+        items={PIECE_ITEMS}
+        role="tab"
+        label="What to export"
+        active={piece}
+        onSelect={pick}
+        panelId={panelId}
+        wrapClass="sp-ex-pieces"
+        btnClass="sp-ex-piece"
+      />
 
-      <div className="sp-ex-body">
+      <div className="sp-ex-body" id={panelId} role="tabpanel" aria-labelledby={`${uid}-pills-${piece}`} tabIndex={0}>
         {piece === 0 && (
           <div className="sp-ex-rows">
             {ramp.map((r) => (
@@ -214,7 +322,7 @@ function OnePiece({ base, font }) {
             <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
           </Link>
         ) : (
-          <button type="button" className="sp-pill sp-ex-copy" onClick={copy}>
+          <button type="button" className="sp-pill sp-ex-copy" onClick={() => copyText(file.text)}>
             <PhIcon name="copy" /><span aria-live="polite">{copied ? 'Copied' : 'Copy file'}</span>
           </button>
         )}
@@ -223,39 +331,83 @@ function OnePiece({ base, font }) {
   )
 }
 
+function OneCard({ index, setRef, base, font }) {
+  const uid = useId()
+  const st = useOnePiece()
+  const panelId = `${uid}-panel`
+  return (
+    <Card index={index} setRef={setRef}>
+      <div className="sp-stack-say">
+        <h3>Whether it&apos;s just one thing.</h3>
+        <p>
+          Pull out the palette on its own, the type scale on its own, a folder of compressed
+          assets or a custom icon kit. Each one leaves as a real file, named and ready to commit.
+        </p>
+        <p className="sp-stack-note">Free on every plan.</p>
+        <PickList
+          uid={uid}
+          variant="rows"
+          items={PIECE_ITEMS}
+          role="tab"
+          label="What to export"
+          active={st.piece}
+          onSelect={st.pick}
+          panelId={panelId}
+          wrapClass="sp-rows"
+          btnClass="sp-rows-btn"
+        />
+      </div>
+      <OnePiece base={base} font={font} st={st} uid={uid} panelId={panelId} />
+    </Card>
+  )
+}
+
 /* ── cards 2 and 3 · the plate ────────────────────────────────────────────── */
 //
-// A plate is a picture of a real export on the stage's ground, with a row of
-// buttons under it that picks which one. Card 2 uses it as a tab strip (UI kit,
-// Book, Brand deck); card 3 as a radio group of the example projects.
+// A plate is a picture of a real export on the stage's ground, with a switch that
+// picks which one. Card 2 uses it as a tab strip (Book, Brand deck, UI kit); card 3
+// as a radio group of the example projects, each shown as its book's cover beside
+// its contents page (a single cover on a phone).
 //
-// Loading: only the shown picture is fetched. A tab's picture is mounted on its
-// first pointerenter, focus or press, and every picture is lazy. The shown
+// Loading: only the shown picture is fetched. A picture is mounted on its first
+// pointerenter, focus or press of its button, and every picture is lazy. The shown
 // picture changes only once the new one has decoded, so a swap never shows an
 // empty plate (the old one is held until then). Both pictures stay stacked in the
 // same box, so nothing below the card moves.
 
 const PLATE_SIZES = '(min-width: 1200px) min(700px, 52vw), calc(100vw - 118px)'
 const PORTRAIT_SIZES = 'calc(100vw - 72px)'
-const COVER_SIZES = '(min-width: 1200px) 340px, 280px'
+const COVER_SIZES = '280px'
 
-const TAB_ITEMS = HOME_EXPORTS.plates.map((p) => ({
-  id: p.id,
-  label: p.tab,
+const TAB_ITEMS = HOME_EXPORTS.plates.map((p) => {
   // The accessible name has to contain the visible label ("Brand deck").
-  name: p.tabName.toLowerCase().includes(p.tab.toLowerCase()) ? p.tabName : `${p.tab}, ${p.tabName}`,
-  alt: p.alt,
-  variants: p,
-}))
+  const name = p.tabName.toLowerCase().includes(p.tab.toLowerCase()) ? p.tabName : `${p.tab}, ${p.tabName}`
+  return {
+    id: p.id,
+    key: p.id,
+    label: p.tab,
+    name,
+    rowName: name,
+    hint: p.tabName.split(', ').pop(), // 'Pro' or 'Free'
+    alt: p.alt,
+    variants: p,
+  }
+})
 
-// The three example projects, each with its book cover. PROJECTS and the covers
-// are in the same order (Northbeam, Halcyon, Ferrule).
+// The three example projects, each with its book cover and contents page. PROJECTS
+// and the covers are in the same order (Northbeam, Halcyon, Ferrule).
 const PROJECT_ITEMS = PROJECTS.map(([name, when, parts], i) => {
   const cover = HOME_EXPORTS.covers[i]
   return {
     id: cover.id,
+    key: cover.id,
     label: name.split(/[\s,]/)[0],
+    icon: 'folder-simple',
     name,
+    rowLabel: name,
+    rowName: `${name}, ${when}, ${parts}`,
+    hint: when,
+    sub: parts,
     alt: cover.alt,
     variants: cover,
     when,
@@ -265,40 +417,31 @@ const PROJECT_ITEMS = PROJECTS.map(([name, when, parts], i) => {
 
 function PlatePicture({ item, on, failed, imgRef, onLoad, onError }) {
   const v = item.variants
-  const cover = v.landscape === null
-  const main = cover ? v.portrait : v.landscape
-  const img = (
-    <img
-      ref={imgRef}
-      className={on ? 'is-on' : undefined}
-      src={main.src}
-      srcSet={main.srcset}
-      sizes={cover ? COVER_SIZES : PLATE_SIZES}
-      width={main.width}
-      height={main.height}
-      loading="lazy"
-      decoding="async"
-      alt={item.alt}
-      aria-hidden={on ? undefined : true}
-      hidden={failed}
-      onLoad={onLoad}
-      onError={onError}
-    />
-  )
-  if (cover) return img
+  const cover = v.kind === 'cover'
   return (
     <picture>
-      <source media="(max-width: 760px)" type="image/webp" srcSet={v.portrait.srcset} sizes={PORTRAIT_SIZES} />
-      {img}
+      <source media="(max-width: 760px)" type="image/webp" srcSet={v.portrait.srcset} sizes={cover ? COVER_SIZES : PORTRAIT_SIZES} />
+      <img
+        ref={imgRef}
+        className={on ? 'is-on' : undefined}
+        src={v.landscape.src}
+        srcSet={v.landscape.srcset}
+        sizes={PLATE_SIZES}
+        width={v.landscape.width}
+        height={v.landscape.height}
+        loading="lazy"
+        decoding="async"
+        alt={item.alt}
+        aria-hidden={on ? undefined : true}
+        hidden={failed}
+        onLoad={onLoad}
+        onError={onError}
+      />
     </picture>
   )
 }
 
-function ExportPlate({ items, mode, label, caption }) {
-  const tabs = mode === 'tabs'
-  const uid = useId()
-  const panelId = `${uid}-panel`
-  const tabId = (i) => `${uid}-pick-${i}`
+function usePlate() {
   const [active, setActive] = useState(0)
   const [shown, setShown] = useState(0)
   const [swapped, setSwapped] = useState(false)
@@ -306,7 +449,6 @@ function ExportPlate({ items, mode, label, caption }) {
   const [failed, setFailed] = useState(() => new Set())
   const activeRef = useRef(0)
   const imgs = useRef([])
-  const buttons = useRef([])
 
   const mount = (i) => setMounted((prev) => (prev.has(i) ? prev : new Set(prev).add(i)))
 
@@ -326,7 +468,6 @@ function ExportPlate({ items, mode, label, caption }) {
     mount(i)
     const el = imgs.current[i]
     if (el && el.complete && el.naturalWidth > 0) reveal(i)
-    buttons.current[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }
 
   const onLoad = (i) => () => { if (activeRef.current === i) reveal(i) }
@@ -335,18 +476,12 @@ function ExportPlate({ items, mode, label, caption }) {
     if (activeRef.current === i) setShown(i)
   }
 
-  const onKeyDown = (e) => {
-    const n = items.length
-    let to = -1
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (active + 1) % n
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (active - 1 + n) % n
-    else if (e.key === 'Home') to = 0
-    else if (e.key === 'End') to = n - 1
-    if (to < 0) return
-    e.preventDefault()
-    select(to)
-    buttons.current[to]?.focus()
-  }
+  return { active, shown, swapped, mounted, failed, imgs, mount, select, onLoad, onError }
+}
+
+function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead }) {
+  const tabs = role === 'tab'
+  const { active, shown, swapped, mounted, failed, imgs, mount, select, onLoad, onError } = plate
 
   return (
     <div className="sp-stage">
@@ -354,7 +489,7 @@ function ExportPlate({ items, mode, label, caption }) {
         className="sp-plate"
         id={tabs ? panelId : undefined}
         role={tabs ? 'tabpanel' : undefined}
-        aria-labelledby={tabs ? tabId(active) : undefined}
+        aria-labelledby={tabs ? `${uid}-pills-${active}` : undefined}
         tabIndex={tabs ? 0 : undefined}
       >
         <div className={swapped ? 'sp-plate-art is-swap' : 'sp-plate-art'}>
@@ -371,43 +506,74 @@ function ExportPlate({ items, mode, label, caption }) {
           ) : null))}
           {failed.has(shown) && <p className="sp-plate-fail">{items[shown].alt}</p>}
         </div>
-        <div className="sp-plate-cap">{caption(items[shown])}</div>
+        {caption(items[shown])}
       </div>
 
-      <div
-        className="sp-pick"
-        role={tabs ? 'tablist' : 'radiogroup'}
-        aria-label={label}
-        onKeyDown={onKeyDown}
-      >
-        {!tabs && <span className="sp-pick-label" aria-hidden="true">Example projects</span>}
-        {items.map((item, i) => (
-          <button
-            key={item.id}
-            ref={(el) => { buttons.current[i] = el }}
-            id={tabs ? tabId(i) : undefined}
-            type="button"
-            className="sp-pick-btn"
-            role={tabs ? 'tab' : 'radio'}
-            aria-selected={tabs ? active === i : undefined}
-            aria-checked={tabs ? undefined : active === i}
-            aria-controls={tabs ? panelId : undefined}
-            aria-label={item.name}
-            tabIndex={active === i ? 0 : -1}
-            onClick={() => select(i)}
-            onPointerEnter={() => mount(i)}
-            onFocus={() => mount(i)}
-          >
-            {!tabs && <PhIcon name="folder-simple" className="sp-pick-ico" />}
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </div>
+      <PickList
+        uid={uid}
+        variant="pills"
+        items={items}
+        role={role}
+        label={label}
+        active={active}
+        onSelect={select}
+        onWarm={mount}
+        panelId={panelId}
+        wrapClass="sp-pick"
+        btnClass="sp-pick-btn"
+        lead={lead}
+      />
     </div>
   )
 }
 
+function PlateCard({ index, setRef, items, role, label, caption, lead, children }) {
+  const uid = useId()
+  const panelId = `${uid}-panel`
+  const plate = usePlate()
+  return (
+    <Card index={index} setRef={setRef}>
+      <div className="sp-stack-say">
+        {children}
+        <PickList
+          uid={uid}
+          variant="rows"
+          items={items}
+          role={role}
+          label={label}
+          active={plate.active}
+          onSelect={plate.select}
+          onWarm={plate.mount}
+          panelId={panelId}
+          wrapClass="sp-rows"
+          btnClass="sp-rows-btn"
+        />
+      </div>
+      <ExportPlate plate={plate} items={items} uid={uid} panelId={panelId} role={role} label={label} caption={caption} lead={lead} />
+    </Card>
+  )
+}
+
 /* ── the stack ────────────────────────────────────────────────────────────── */
+
+// One line under the plate: the long form from 761px, a short one on a phone.
+const exportCaption = () => (
+  <div className="sp-plate-cap">
+    <span className="sp-cap-long">Real exports, made from the Cobalt palette with Schibsted Grotesk and Literata.</span>
+    <span className="sp-cap-short">Real exports, Cobalt palette.</span>
+  </div>
+)
+
+// From 1200px the rows beside the copy carry the project's name, time and parts,
+// so the caption shows only below that; on a phone it is the one line of detail.
+const projectCaption = (item) => (
+  <div className="sp-plate-cap sp-plate-cap--proj">
+    <b>{item.name}</b>
+    <span>{item.when}, {item.parts}</span>
+  </div>
+)
+
+const PROJECT_LEAD = <span className="sp-pick-label" aria-hidden="true">Example projects</span>
 
 export default function SpectrumExports({ base, font }) {
   const cards = useRef([])
@@ -417,62 +583,31 @@ export default function SpectrumExports({ base, font }) {
   return (
     <div className="sp-stack">
       <div className="sp-stack-nest">
-        <Card index={0} setRef={setRef(0)}>
-          <div className="sp-stack-say">
-            <h3>Whether it&apos;s just one thing.</h3>
-            <p>
-              Pull out the palette on its own, the type scale on its own, a folder of compressed
-              assets or a custom icon kit. Each one leaves as a real file, named and ready to commit.
-            </p>
-            <p className="sp-stack-note">Free on every plan.</p>
-          </div>
-          <OnePiece base={base} font={font} />
-        </Card>
+        <OneCard index={0} setRef={setRef(0)} base={base} font={font} />
         <div className="sp-stack-pad" aria-hidden="true" />
 
         <div className="sp-stack-nest">
-          <Card index={1} setRef={setRef(1)}>
-            <div className="sp-stack-say">
-              <h3>Or a whole design system.</h3>
-              <p>
-                One click turns your colour, type and spacing into a UI kit. On Pro the same system
-                also leaves as a 12-page book and a 16:9 brand deck.
-              </p>
-              <p className="sp-stack-note">The UI kit is free. The book and the deck are Pro.</p>
-            </div>
-            <ExportPlate
-              items={TAB_ITEMS}
-              mode="tabs"
-              label="Export type"
-              caption={() => 'Real exports, made from the Cobalt palette with Schibsted Grotesk and Literata.'}
-            />
-          </Card>
+          <PlateCard index={1} setRef={setRef(1)} items={TAB_ITEMS} role="tab" label="Export type" caption={exportCaption}>
+            <h3>Or a whole design system.</h3>
+            <p>
+              One click turns your colour, type and spacing into a UI kit. On Pro the same system
+              also leaves as a 12-page book and a 16:9 brand deck.
+            </p>
+            <p className="sp-stack-note">The book and the deck are Pro. The UI kit is free.</p>
+          </PlateCard>
           <div className="sp-stack-pad" aria-hidden="true" />
 
           <div className="sp-stack-nest">
-            <Card index={2} setRef={setRef(2)}>
-              <div className="sp-stack-say">
-                <h3>You can come back to it anytime.</h3>
-                {/* What is true: a project keeps its palette, fonts and icons,
-                    and no version history or record of exports. Saved work is a
-                    "project", never a "kit". */}
-                <p>Reopen a project and it&apos;s where you left it: the palette, the fonts, the icons. Export it again whenever you need to.</p>
-                <p className="sp-stack-note">
-                  {numberWord(FREE_SAVE_LIMITS.projects, { capital: true })} projects on Free, unlimited on Pro.
-                </p>
-              </div>
-              <ExportPlate
-                items={PROJECT_ITEMS}
-                mode="radio"
-                label="Example projects"
-                caption={(item) => (
-                  <>
-                    <b>{item.name}</b>
-                    <span>{item.when}, {item.parts}</span>
-                  </>
-                )}
-              />
-            </Card>
+            <PlateCard index={2} setRef={setRef(2)} items={PROJECT_ITEMS} role="radio" label="Example projects" caption={projectCaption} lead={PROJECT_LEAD}>
+              <h3>You can come back to it anytime.</h3>
+              {/* What is true: a project keeps its palette, fonts and icons,
+                  and no version history or record of exports. Saved work is a
+                  "project", never a "kit". */}
+              <p>Reopen a project and it&apos;s where you left it: the palette, the fonts, the icons. Export it again whenever you need to.</p>
+              <p className="sp-stack-note">
+                {numberWord(FREE_SAVE_LIMITS.projects, { capital: true })} projects on Free, unlimited on Pro.
+              </p>
+            </PlateCard>
             <div className="sp-stack-pad sp-stack-pad--tail" aria-hidden="true" />
           </div>
         </div>
