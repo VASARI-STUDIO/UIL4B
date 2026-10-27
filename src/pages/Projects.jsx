@@ -207,7 +207,7 @@ export default function Projects() {
           ? <ContinueCard project={lead} />
           /* Every project is archived, so there is nothing to continue: the starter leads, with its one
              filled button, and the archived projects follow as rows. */
-          : <StarterCard design={design} onStart={() => startNew()} archived />}
+          : <StarterCard design={design} onStart={() => startNew()} archived limit={atProjectLimit ? projectLimit : null} />}
         <ProjectRows projects={lead ? rows : recent} total={projects.length} label={lead ? 'Other projects' : 'Archived projects'} />
       </>
     )

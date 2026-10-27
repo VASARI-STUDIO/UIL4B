@@ -19,9 +19,12 @@ const STARTER_STEPS = [
 // `archived` is the account whose projects are all archived: there is nothing to continue, so the
 // same card leads, says why, and the archived projects follow it as rows.
 //
+// `limit` is set when those archived projects already fill the Free plan: archived projects count
+// toward it, so the walkthrough would only be refused. The card says so and offers the plans instead.
+//
 // Start the walkthrough runs the same startNew() as New project. The card is gone once a project is
 // in play.
-export default function StarterCard({ design, onStart, archived = false }) {
+export default function StarterCard({ design, onStart, archived = false, limit = null }) {
   const colors = (design?.palette?.colors || []).filter(Boolean)
   const touched = partsPresent(design).palette && colors.length > 0
   return (
@@ -34,13 +37,17 @@ export default function StarterCard({ design, onStart, archived = false }) {
       <div className="uh-continue-body">
         <h2 id="uh-starter-h" className="uh-continue-name">{archived ? 'Start a new project' : 'Start your first project'}</h2>
         <p className="uh-starter-text">
-          {archived ? 'All your projects are archived. ' : ''}New project sets up colour, type, type scale and tints, and saves as you go.
+          {limit
+            ? `All your projects are archived, and archived projects count toward the Free plan's ${limit}. Delete one, or go Pro to keep them all and start another.`
+            : `${archived ? 'All your projects are archived. ' : ''}New project sets up colour, type, type scale and tints, and saves as you go.`}
         </p>
         <ol className="uh-steps" aria-label="The walkthrough">
           {STARTER_STEPS.map((s) => <li key={s.part}><Link to={s.tool}>{s.label}</Link></li>)}
         </ol>
         <div className="uh-continue-actions">
-          <button type="button" className="uh-cta" onClick={onStart}>Start the walkthrough</button>
+          {limit
+            ? <Link className="uh-cta" to="/plans">See plans</Link>
+            : <button type="button" className="uh-cta" onClick={onStart}>Start the walkthrough</button>}
           <Link className="uh-link" to="/learn/help">How projects work</Link>
         </div>
       </div>

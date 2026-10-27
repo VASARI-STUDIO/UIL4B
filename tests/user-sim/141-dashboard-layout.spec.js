@@ -42,6 +42,7 @@
 //   projects.css   drop the phone's hide rule for Semantic and Palette Library -> "Start something is four tools"
 //   projects.css   drop the phone's `.uh-today-clock` hide          -> "the date and time are one line under the title"
 //   useProjectIcons  writeIcon without { touch: false }              -> 52 "choosing an icon for an older project ..."
+//   Projects.jsx   StarterCard without `limit`                      -> "when archived projects already fill the Free plan ..."
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -396,6 +397,16 @@ for (const size of SIZES) {
       expect(r.top, 'the rows are not under the starter').toBeGreaterThanOrEqual(s.bottom - 1)
       // The one filled button on the first screen is the starter's; New project is outlined.
       expect(await filledOnFirstScreen(page)).toEqual(['Start the walkthrough'])
+    })
+
+    test('when archived projects already fill the Free plan, the starter offers the plans, not a walkthrough that is refused', async ({ page }) => {
+      watch(page, 'a Free designer whose three projects are all archived')
+      await open(page, size, { projects: [...ALL_ARCHIVED, { ...half('p-third', 'Third Archive', ago(90 * MINUTE)), archived: true }] })
+
+      const starter = page.getByTestId('starter-card')
+      await expect(starter).toContainText("archived projects count toward the Free plan's 3")
+      await expect(starter.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
+      await expect(starter.getByRole('button', { name: 'Start the walkthrough' }), 'the walkthrough would only hit the cap').toHaveCount(0)
     })
 
     test('the starter\'s button from an all-archived account starts the walkthrough', async ({ page }) => {
