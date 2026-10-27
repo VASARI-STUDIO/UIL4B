@@ -6,7 +6,7 @@
 // a number in HOURS and every one of them moves together, so the scene can
 // never print a total that disagrees with its own chart.
 //
-// Pure and DOM-free, so tests read ROLES, TEXT and the derived figures without
+// Pure and DOM-free, so tests read ROLES, TEXT_RECIPE and the derived figures without
 // rendering anything.
 import { brandAsText, fieldEdge } from '../../../utils/palettePreviewRoles.js'
 
@@ -19,7 +19,7 @@ export const ROLES = [
 
 // Text recipe: every text colour the scene sets and the floor it must clear.
 // `ink` names where the colour comes from, for the contrast test.
-export const TEXT = [
+export const TEXT_RECIPE = [
   { el: 'lead figure', ink: 'text', large: true },
   { el: 'labels, axis, meta', ink: 'muted', large: false },
   { el: 'credit line', ink: 'success-ink', large: false },

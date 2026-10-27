@@ -5,14 +5,14 @@
 // colourways beside it. Seams, buttons and the label tab take deep, subtle and
 // accent; the inside of the collar takes secondary.
 //
-// Pure and DOM-free, so tests read ROLES, TEXT and the per-palette colours
+// Pure and DOM-free, so tests read ROLES, TEXT_RECIPE and the per-palette colours
 // without rendering anything.
 import { contrastRatio, mixHex } from '../../../utils/colors.js'
 import { fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 
 export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral']
 
-export const TEXT = [
+export const TEXT_RECIPE = [
   { el: 'title', ink: 'text', large: true },
   { el: 'body, price, sizes', ink: 'text', large: false },
   { el: 'maker line, help, breadcrumb', ink: 'muted', large: false },

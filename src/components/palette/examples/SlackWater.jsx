@@ -1,17 +1,20 @@
 // E1, "Slack Water": an editorial landing hero. The palette's primary is the
 // harbour itself, a full-bleed field under the masthead; the land, the wharves
-// and the ferry are the other slots. Content lives in SlackWater.data.js.
+// and the ferry are the other slots. Content and chart geometry live in
+// SlackWater.data.js.
 import { memo } from 'react'
 import { brandAsText, fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles'
-import { CONTENTS, FERRY, HERO, MAST, NEXT, WHARVES } from './SlackWater.data'
+import { CHART_BOX, CONTENTS, FERRY, HERO, LAND, MAST, NEXT, ROUTE, WHARVES } from './SlackWater.data'
 import './SlackWater.css'
 
 const pct = (v, of) => `${(v / of) * 100}%`
 
 function SlackWater({ roles }) {
-  const ink = inkOnField(roles.primary, { on: roles.onPrimary, text: roles.text, canvas: roles.canvas })
+  const inks = { on: roles.onPrimary, text: roles.text, canvas: roles.canvas }
+  const ink = inkOnField(roles.primary, inks)
   const sec = brandAsText(roles.secondary, [roles.canvas])
   const vars = {
+    // Type set on the field: wharf labels, the caption, and the Subscribe button.
     '--sw-ink': ink.hex,
     '--sw-edge': fieldEdge(roles.primary, roles.canvas, roles.borderStrong),
     '--sw-sec': sec.hex,
@@ -39,27 +42,25 @@ function SlackWater({ roles }) {
           <p className="sw-by">{HERO.byline.join(' · ')}</p>
         </div>
 
-        <figure className="sw-field">
+        <figure className="sw-field" data-role="primary">
           <div className="sw-chart">
-            <svg viewBox="0 0 480 360" aria-hidden="true">
-              <rect className="sw-water" width="480" height="360" data-role="primary" />
-              <path className="sw-land" data-role="subtle" d="M0 0H480V118C462 126 448 112 430 116C404 122 384 150 352 146C326 142 310 104 278 102C250 100 236 132 208 130C182 128 172 108 140 110C108 112 96 136 66 134C40 132 20 118 0 122Z" />
-              <path className="sw-land" data-role="subtle" d="M0 360V254C30 248 52 266 82 262C120 256 132 232 172 238C212 244 222 276 262 270C300 264 316 238 352 244C368 246 376 238 384 222C392 202 402 194 412 198C424 204 426 238 440 262C452 270 468 256 480 252V360Z" />
+            <svg viewBox={`0 0 ${CHART_BOX.w} ${CHART_BOX.h}`} aria-hidden="true">
+              {LAND.map((d) => <path key={d} className="sw-land" data-role="subtle" d={d} />)}
               <g className="sw-route">
-                <path className="sw-routeline" d="M40 244C120 214 200 200 260 188S380 150 452 130" />
+                <path className="sw-routeline" d={ROUTE} />
               </g>
               {WHARVES.map((w) => (
                 <circle key={w.name} className="sw-wharf" cx={w.x} cy={w.y} r="4" data-role="deep" />
               ))}
-              <g className="sw-ferry" transform={`translate(${FERRY.x} ${FERRY.y}) rotate(-14)`}>
+              <g className="sw-ferry" transform={`translate(${FERRY.x} ${FERRY.y}) rotate(${FERRY.turn})`}>
                 <path d="M-8 -2H8L5 4H-5Z M-3 -6H3V-2H-3Z" data-role="accent" />
               </g>
             </svg>
             {WHARVES.map((w) => (
               <span
                 key={w.name}
-                className={`sw-label is-${w.side}${w.narrow ? ' is-keep' : ''}`}
-                style={{ left: pct(w.x, 480), top: pct(w.y, 360) }}
+                className={`sw-label is-${w.side}`}
+                style={{ left: pct(w.x, CHART_BOX.w), top: pct(w.y, CHART_BOX.h), '--gap': `${w.gap}px` }}
               >
                 {w.name}
               </span>
