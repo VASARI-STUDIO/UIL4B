@@ -103,3 +103,15 @@ test('flag packs and Twemoji never receive an edge in either theme', () => {
   assert.equal(halo('dark', 'light', 'logodev'), '')
   assert.equal(halo('light', 'dark', 'logodev'), '')
 })
+
+test('single-colour near-black pack art is drawn in the theme ink, not ringed', () => {
+  // The grid's threshold is the sampler's own near-black ceiling, so a chosen
+  // colour and a brand's baked colour agree on what counts as near-black.
+  assert.match(source, /const INK_DARK_MAX = 0\.05\b/)
+  assert.match(source, /isNearBlackMono\(text, INK_DARK_MAX\)/)
+  // Flags never take it, and a mixed wordmark never reaches it (one paint only).
+  assert.match(source, /function readsAsThemeInk\(pack, name\) \{\s*if \(FLAG_PACKS\.has\(pack\)\) return false/)
+  // The brand glyph then drops its ring and takes the mono icons' tint.
+  assert.match(source, /const halo = solidInk \? '' : haloFor\(shape\.ink, theme, pack\)/)
+  assert.match(source, /solidInk \? 'ig-inv' : ''/)
+})

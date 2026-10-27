@@ -453,10 +453,13 @@ const openLogos = async (browser, scheme) => {
 const chipOf = (page, name) => page.locator(`.ig .ic[aria-label="Customise ${name}"] .ig-chip`)
 
 test.describe('ink that matches the page ground gets a halo, never a box', () => {
-  test('dark theme: near-black marks get the light halo, white and coloured ones do not', async ({ browser }) => {
+  test('dark theme: single-colour near-black marks show in the theme ink, not a ring; white and coloured ones are untouched', async ({ browser }) => {
     const { ctx, page } = await openLogos(browser, 'dark')
-    await expect(chipOf(page, 'github-icon')).toHaveClass(/ig-chip--halo-light/)
-    await expect(chipOf(page, 'vercel-icon')).toHaveClass(/ig-chip--halo-light/)
+    // One near-black colour is drawn in the page ink like a mono icon: solid, no ring.
+    for (const name of ['github-icon', 'vercel-icon']) {
+      await expect(chipOf(page, name)).not.toHaveClass(/halo/)
+      await expect(chipOf(page, name).locator('img')).toHaveClass(/ig-inv/)
+    }
     await expect(chipOf(page, 'apple')).not.toHaveClass(/halo/)
     await expect(chipOf(page, 'gitlab')).not.toHaveClass(/halo/)
     // The halo is a filter on the glyph; the slot itself is still not a box.
@@ -464,8 +467,8 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       const c = document.querySelector('.ig .ic[aria-label="Customise github-icon"] .ig-chip')
       return { filter: getComputedStyle(c.querySelector('img')).filter, bg: getComputedStyle(c).backgroundImage }
     })
-    expect(m.filter, 'the near-black mark has no shape edge').toContain('#ig-edge-light')
-    expect(m.bg, 'the halo mark got a box').toBe('none')
+    expect(m.filter, 'the near-black mark is not drawn in the page ink').toBe('invert(1)')
+    expect(m.bg, 'the mark got a box').toBe('none')
     // A one-colour mark uses the theme ink once opened in the customizer.
     await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
     await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
@@ -504,6 +507,11 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       // The remote image has loaded and been looked at before the markup is released.
       await expect.poll(() => stage.locator('.icust-stage-img').evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 20000 }).toBe(true)
       await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+      // Whether the logo has colours is unknown yet, so the Colour row shows nothing
+      // (no Default, no "Original colours") rather than flashing and switching.
+      const colourRow = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+      await expect(colourRow).toBeHidden()
+      await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
       release()
       await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
       await expect(stage).not.toHaveClass(/icust-stage--halo-light/)
