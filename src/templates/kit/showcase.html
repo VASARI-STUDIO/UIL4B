@@ -92,16 +92,19 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 .nm{display:inline-block;vertical-align:top}
 .nm b{display:block;font-weight:600}
 .cv{display:inline;padding:0;border:0;background:none;text-align:left}
+.cv code{white-space:nowrap}
 .cv:hover code{text-decoration:underline dotted;text-underline-offset:3px}
 .ct b{display:block;font-size:13px}
 .ct.weak small{font-weight:600;color:var(--color-text)}
 .long{overflow-wrap:anywhere}
-.scale{min-width:720px}
+.scale{min-width:640px}
+.pr-only{display:none}
 .scale .vals{white-space:nowrap}
 .scale .vals .cv code{font-size:13px;font-weight:600}
 .scale .var{color:var(--color-text-muted)}
 .spec p{max-width:none;overflow-wrap:anywhere;font-size:calc(var(--s) * 1px * var(--k,1))}
 .states,.comp{min-width:640px}
+.comp.sel{min-width:0}
 .samples{white-space:nowrap}
 .smp{display:inline-block;padding:6px 12px;font:13px/1.4 var(--font-body);border:var(--hair) solid var(--color-border)}
 
@@ -150,7 +153,9 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 .tk .k{font-weight:600}
 .tk:hover code{text-decoration:underline dotted;text-underline-offset:3px}
 
-/* Identity (Pro), licences and the free credit. */
+/* Identity (Pro), licences and the free credit. The identity section's markup is shared with the other layouts and has no .wrap, so it carries the wrap's own bounds. */
+.personal-identity{max-width:1392px;margin:0 auto;padding:96px var(--pad) 0}
+.personal-identity .component-note{max-width:68ch}
 .identity-name{margin-top:20px;font:var(--weight-display) 56px/1.1 var(--font-display);overflow-wrap:anywhere}
 .identity-logo{margin-top:20px;padding:24px;border:var(--hair) solid var(--color-border)}
 .identity-logo img{display:block;max-width:100%;max-height:160px;object-fit:contain}
@@ -193,6 +198,16 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .nav .wrap{gap:16px}
   .index-name{flex-basis:96px}
   .stripes{--u:44px}
+  .sc-body{font-size:min(calc(var(--size) * 1px),max(18px,calc(var(--size) * var(--avail) / 600)))}
+  .personal-identity{padding-top:56px}
+  .identity-name{font-size:28px}
+  .scale{display:block;min-width:0}
+  .scale thead{display:none}
+  .scale tbody{display:block}
+  .scale tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);column-gap:16px;padding:12px 0;border-top:var(--hair) solid var(--color-border)}
+  .scale tbody tr:first-child{border-top:var(--hair) solid var(--color-text)}
+  .scale th,.scale td{padding:0;border-top:0}
+  .scale .spec{grid-column:1/-1;margin-top:8px}
   .spec p{font-size:min(calc(var(--s) * 1px),9vw)}
 }
 @media(hover:none){.stripe:hover{outline:0}}
@@ -207,8 +222,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   small,code,.tk code{font-size:7pt}
   h2{font-size:24pt}
   .skip,.toast,.js-only,.no-js,.license-details,.section-end,.nav-links{display:none!important}
-  .wrap{max-width:none}
-  .nav{position:static;border:0}
+  .wrap,.personal-identity{max-width:none}
+  .personal-identity{padding:10mm 0 0;margin:0;break-before:page}
+  .personal-identity+.section{break-before:auto}
+  .pr-only{display:inline}
+  .nav{position:static;border:0;background:none}
   .nav .wrap{min-height:0;padding-bottom:4mm;border-bottom:var(--hair) solid var(--color-text)}
   .cover{min-height:225mm;padding:0 0 10mm}
   .rule{height:2mm}
@@ -216,6 +234,9 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .sc-band,.section{padding:10mm 0 0;break-before:page}
   .sc-band.field,.sc-band.ink{min-height:240mm;padding:10mm 0}
   .sc-band.field .wrap,.sc-band.ink .wrap{padding:0 10mm}
+  .sc-band.field,.sc-band.ink{display:flex;flex-direction:column}
+  .sc-band.field .wrap,.sc-band.ink .wrap{flex:1;width:100%;display:flex;flex-direction:column}
+  .sc-band .sc-end{margin-top:auto;padding-top:6mm}
   .sc-label,.section-head{margin-bottom:8mm}
   .sc-body-name{margin-bottom:8mm}
   .sc-line,.sc-note{font-size:8.5pt;margin-top:6mm}
@@ -223,7 +244,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .t th,.t td{padding:2mm 3mm 2mm 0}
   .t thead th{font-size:7pt}
   .t tr,.stripe,.tk-group{break-inside:avoid}
-  .tbl-wrap{overflow:visible}
+  .tbl-wrap{overflow:visible;break-inside:avoid}
   .scale,.states,.comp{min-width:0}
   .scale{--k:var(--print-k,1)}
   .scale .vals .cv code{font-size:7.5pt}
@@ -235,11 +256,16 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .stripe:hover{outline:0}
   .tk-cols{columns:2;column-gap:10mm}
   .tk-group{margin-bottom:6mm}
-  .tk{padding:.4mm 0}
+  .tk{padding:.3mm 0;font-size:7pt;line-height:1.35}
+  #components .section-head{margin-bottom:5mm}
+  #components .bhead{margin:5mm 0 2mm}
+  #components .t th,#components .t td{padding:1.5mm 3mm 1.5mm 0}
   .btn{min-height:9mm;padding:2mm 3mm;font-size:8pt}
   .field-box{min-height:9mm;font-size:9pt}
   .smp{padding:1.5mm 3mm;font-size:8pt}
-  .identity-name{font-size:30pt}
+  .identity-name{font-size:26pt;margin-top:4mm}
+  .identity-logo{margin-top:4mm;padding:4mm}
+  .identity-logo img{max-height:28mm}
   .site-links{break-inside:avoid;margin-top:8mm;padding:5mm 0}
   .site-links nav a{min-height:0;padding:1mm 0}
   .site-links nav a::after{content:attr(href);font:400 7pt var(--mono);margin-left:3mm}
@@ -297,7 +323,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 <div class="bhead"><h3>Fields</h3><p>Explain an error beside the field that caused it.</p></div>
 <div class="tbl-wrap" tabindex="0" role="region" aria-label="Field states table"><table class="t comp"><caption class="sr-only">Text field states</caption><thead><tr><th scope="col">Component</th><th scope="col">Default</th><th scope="col">Focus</th><th scope="col">Error</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Text field</b><small>Email address</small></span></th><td><div class="field-box">alex@example.com</div></td><td><div class="field-box focus">alex@example.com<span class="caret" aria-hidden="true"></span></div></td><td><div class="field-box error">alex@</div><p class="field-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg>Enter a complete email address.</p></td></tr></tbody></table></div>
 <div class="bhead"><h3>Selection</h3><p>Selected states use the primary colour.</p></div>
-<div class="tbl-wrap" tabindex="0" role="region" aria-label="Selection states table"><table class="t comp"><caption class="sr-only">Selection control states</caption><thead><tr><th scope="col">Component</th><th scope="col">Selected</th><th scope="col">Unselected</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Checkbox</b></span></th><td><span class="box on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span></td><td><span class="box"></span></td></tr><tr><th scope="row"><span class="nm"><b>Radio</b></span></th><td><span class="dot on"></span></td><td><span class="dot"></span></td></tr><tr><th scope="row"><span class="nm"><b>Switch</b></span></th><td><span class="sw on"></span></td><td><span class="sw"></span></td></tr></tbody></table></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Selection states table"><table class="t comp sel"><caption class="sr-only">Selection control states</caption><thead><tr><th scope="col">Component</th><th scope="col">Selected</th><th scope="col">Unselected</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Checkbox</b></span></th><td><span class="box on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span></td><td><span class="box"></span></td></tr><tr><th scope="row"><span class="nm"><b>Radio</b></span></th><td><span class="dot on"></span></td><td><span class="dot"></span></td></tr><tr><th scope="row"><span class="nm"><b>Switch</b></span></th><td><span class="sw on"></span></td><td><span class="sw"></span></td></tr></tbody></table></div>
 <div class="bhead"><h3>State colours</h3><p>Pair each with a message and an icon, so colour is never the only cue.</p></div>
 <div class="tbl-wrap" tabindex="0" role="region" aria-label="State colours table"><table class="t states"><caption class="sr-only">Success, warning, error and information colours</caption><thead><tr><th scope="col">State</th><th scope="col">Text</th><th scope="col">Background</th><th scope="col">Contrast</th><th scope="col">Sample</th></tr></thead><tbody>@@STATE_ROWS@@</tbody></table></div>
 <div class="section-end">@@WATERMARK@@</div>

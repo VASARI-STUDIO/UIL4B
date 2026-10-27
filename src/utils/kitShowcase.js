@@ -122,7 +122,7 @@ export function showcaseParts(sel, h) {
     const leading = g(Math.round(t.size * t.line * 10) / 10)
     return `<tr><th scope="row"><span class="nm"><b>${esc(t.name)}</b><small>${esc(family)}</small></span></th><td class="vals">${copy(`var(--text-${key})`, `${t.name} size`, `${g(t.size)} px / ${g(t.line)} / ${t.weight}`)}<small>Size, line height, weight</small><small class="var">--text-${key}</small><small>${leading} px line</small></td><td class="spec"><p style="--s:${g(t.size)};line-height:${t.line};font-family:var(--font-${t.font});font-weight:${t.weight}">${esc(stepSample(t))}</p></td></tr>`
   }).join('')
-  const scaleTable = `<thead><tr><th scope="col">Step</th><th scope="col">Values</th><th scope="col">${esc(specimenHead)}</th></tr></thead><tbody>${scaleRows}</tbody>`
+  const scaleTable = `<thead><tr><th scope="col">Step</th><th scope="col">Values</th><th scope="col">${specimenHead.startsWith('Specimen, ') ? `Specimen<span class="pr-only">${esc(specimenHead.slice(8))}</span>` : esc(specimenHead)}</th></tr></thead><tbody>${scaleRows}</tbody>`
 
   // ── Colour: stripes weighted by how much room the colour should have ──────
   const weightsFor = (set) => sel.colours.map((c, i) => (i === 0 ? set[0] : isNeutral(c.hex) ? set[2] : set[1]))
