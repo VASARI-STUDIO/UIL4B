@@ -22,7 +22,7 @@ import {
   buildRamp, lightnessGamma, saturationScale, stepLightness, tintRampForHex,
   LIGHTNESS_RANGE, SATURATION_MAX, SPACINGS, TINT_LABELS,
 } from '../../src/utils/tintRamp.js'
-import { contrastGrade, contrastNotes, contrastSummary, POLES } from '../../src/utils/tintContrast.js'
+import { contrastGrade, contrastNotes, contrastSummary, GRADE_MARKS, POLES } from '../../src/utils/tintContrast.js'
 import { hexToOklchRaw } from '../../src/components/tool/oklch.js'
 import { read, stripComments } from './helpers/source-text.js'
 
@@ -299,6 +299,21 @@ test('the page has a perceived / linear switch that feeds the ramp', () => {
   assert.match(src, /value: 'perceived', label: 'Perceived'/)
   assert.match(src, /value: 'linear', label: 'Linear'/)
   assert.match(src, /buildRamp\(H, C, steps, curve, \{ spacing, lightness, saturation \}\)/)
+})
+
+test('the tooltip mark: a tick for a pass, a dash for large text only (never a tick), a cross for a fail', () => {
+  assert.equal(GRADE_MARKS.AAA, 'check')
+  assert.equal(GRADE_MARKS.AA, 'check')
+  assert.equal(GRADE_MARKS.large, 'minus')
+  assert.notEqual(GRADE_MARKS.large, 'check', 'a large-text-only row must not wear the pass tick')
+  assert.equal(GRADE_MARKS.fail, 'x')
+  const icons = read('src/components/tool/ToolIcon.jsx')
+  assert.match(icons, /^\s*minus:/m, 'ToolIcon draws the minus glyph the large grade uses')
+  const src = stripComments(read('src/pages/TintTool.jsx'))
+  assert.match(src, /name=\{GRADE_MARKS\[n\.grade\]\}/, 'the tooltip picks its mark from GRADE_MARKS')
+  assert.match(src, /data-grade=\{n\.grade\}/, 'the row carries data-grade')
+  const css = stripComments(read('src/styles/pages/tint.css'))
+  assert.match(css, /\[data-grade="large"\] \.tt-tip-mark\s*\{\s*color: var\(--warn-strong\)/)
 })
 
 test('a contrast note opens on hover, focus and press, and closes on Escape', () => {

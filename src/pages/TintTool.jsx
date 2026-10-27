@@ -10,7 +10,7 @@ import {
 import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch'
 import { useProject } from '../contexts/ProjectContext'
 import { textColorForBg } from '../utils/colors'
-import { contrastNotes, GRADE_WORDS } from '../utils/tintContrast'
+import { contrastNotes, GRADE_WORDS, GRADE_MARKS } from '../utils/tintContrast'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { refreshScrollLimit } from '../utils/hashLanding'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
@@ -93,7 +93,7 @@ function ContrastTip({ id, step, open, end }) {
         <span className="tt-tip-head">{step.label} · {step.hex}</span>
         {notes.map((n) => (
           <span key={n.key} className="tt-tip-row" data-pass={n.pass ? 'true' : 'false'} data-grade={n.grade}>
-            <span className="tt-tip-mark" aria-hidden="true"><ToolIcon name={n.grade === 'fail' ? 'x' : 'check'} size={12} /></span>
+            <span className="tt-tip-mark" aria-hidden="true"><ToolIcon name={GRADE_MARKS[n.grade]} size={12} /></span>
             <span className="tt-tip-who">{n.label}</span>
             <span className="tt-tip-ratio">{n.text}</span>
             <span className="tt-tip-grade">{GRADE_WORDS[n.grade]}</span>

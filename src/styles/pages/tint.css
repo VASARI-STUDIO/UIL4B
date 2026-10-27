@@ -193,6 +193,7 @@
 .tt .tt-tip-ratio { grid-area: ratio; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
 .tt .tt-tip-grade { grid-area: grade; font-size: 11px; color: var(--tl-dim); }
 .tt .tt-tip-row[data-pass="true"] .tt-tip-mark { color: var(--ok); }
+.tt .tt-tip-row[data-grade="large"] .tt-tip-mark { color: var(--warn-strong); }
 .tt .tt-tip-row[data-grade="fail"] .tt-tip-mark { color: var(--err); }
 .tt .tt-tip-help { padding-top: 6px; border-top: 1px solid var(--tl-line); font-size: 11px; line-height: 1.45; color: var(--tl-dim); }
 html[data-reduced-motion="true"] .tt .tt-tip[data-open="true"] { animation: none; }

@@ -44,6 +44,17 @@ export const GRADE_WORDS = {
   fail: 'Fails',
 }
 
+/**
+ * The ToolIcon each grade draws. A tick is only for a pass; large-text-only gets
+ * a dash so it never reads as a pass for body text, and a fail gets a cross.
+ */
+export const GRADE_MARKS = {
+  AAA: 'check',
+  AA: 'check',
+  large: 'minus',
+  fail: 'x',
+}
+
 /** The whole note as one sentence, for a screen reader and the copy tooltip. */
 export function contrastSummary(hex) {
   return contrastNotes(hex).map((n) => `${n.label} ${n.text}, ${GRADE_WORDS[n.grade]}`).join('. ')
