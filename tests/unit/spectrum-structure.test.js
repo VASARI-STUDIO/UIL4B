@@ -273,7 +273,9 @@ test('every glyph the page asks for is one the page ships', () => {
 
 test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
   // The design's 4 bench tool windows, not the 5 category panels.
-  const names = [...BENCH_SRC.matchAll(/<Chrome\s+(?:key="[^"]*"\s+)?name="([^"]+)"/g)].map((m) => m[1])
+  // The windows carry no title bar now: their names live on the rail list and in each article's aria-label.
+  const names = [...(/const RAIL = \[([^\]]+)\]/.exec(BENCH_SRC)?.[1] || '').matchAll(/'([^']+)'/g)].map((m) => m[1])
+  assert.ok(!BENCH_SRC.includes('sp-panel-bar') && !BENCH_SRC.includes('sp-panel-name'), 'the bench draws a window title bar again')
   assert.deepEqual(names, ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'])
   // One `windows` list feeds both layouts, and each entry is wrapped once in a
   // [data-panel] article numbered by its place in the list.
