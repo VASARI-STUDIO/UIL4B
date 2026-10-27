@@ -28,27 +28,44 @@ test.use({ viewport: { width: 390, height: 844 } })
 
 // `mode`: 'hold' swallows every atlas job (no reply, ever); 'flags-text' answers
 // each job with a sheet that draws every glyph except a flag, which it rules out
-// as text, as the real worker does for a flag the font has no picture for;
+// as text, as the real worker does for a flag the font has no picture for, BUT
+// holds any job that contains a flag until the test calls `window.__atlas.release()`.
+// The background warm pass reaches the flags long before a search does, so
+// without the hold the flag would be ruled out while no cell shows it, and the
+// test could pass with no reply ever reaching a mounted cell. Held, the flag is
+// first answered after the search has mounted its cell as a placeholder, which
+// is what the atlas's mounted-glyph gating has to turn into text.
 // 'no-offscreen' removes OffscreenCanvas, as an older phone browser lacks it.
 async function fakeAtlasWorker(page, mode) {
   await page.addInitScript((mode) => {
-    window.__atlas = { jobs: 0, flagsRuledOut: 0 }
+    const state = { jobs: 0, flagsRuledOut: 0, heldJobs: 0, open: false, held: null, release: null }
+    window.__atlas = state
     if (mode === 'no-offscreen') {
       Object.defineProperty(window, 'OffscreenCanvas', { value: undefined, configurable: true, writable: true })
       return
     }
     const RealWorker = window.Worker
     const isFlag = (ch) => /^[\u{1F1E6}-\u{1F1FF}]{2}$/u.test(ch)
+    const answer = (worker, msg) => {
+      const text = []
+      msg.chars.forEach((ch, i) => { if (isFlag(ch)) { text.push(i); state.flagsRuledOut++ } })
+      const reply = { gen: msg.gen, id: msg.id, blob: new Blob(['sheet']), rows: Math.ceil(msg.chars.length / msg.cols), w: 432, h: 36, text }
+      setTimeout(() => { if (worker.onmessage) worker.onmessage({ data: reply }) }, 0)
+    }
+    state.release = () => {
+      state.open = true
+      const held = state.held
+      state.held = null
+      if (held) answer(held.worker, held.msg)
+    }
     window.Worker = class extends RealWorker {
       postMessage(msg, ...rest) {
         const isAtlasJob = msg && Array.isArray(msg.chars) && msg.cols
         if (!isAtlasJob) return super.postMessage(msg, ...rest)
-        window.__atlas.jobs++
+        state.jobs++
         if (mode === 'hold') return
-        const text = []
-        msg.chars.forEach((ch, i) => { if (isFlag(ch)) { text.push(i); window.__atlas.flagsRuledOut++ } })
-        const reply = { gen: msg.gen, id: msg.id, blob: new Blob(['sheet']), rows: Math.ceil(msg.chars.length / msg.cols), w: 432, h: 36, text }
-        setTimeout(() => { if (this.onmessage) this.onmessage({ data: reply }) }, 0)
+        if (!state.open && msg.chars.some(isFlag)) { state.held = { worker: this, msg }; state.heldJobs++; return }
+        answer(this, msg)
       }
     }
   }, mode)
@@ -131,8 +148,18 @@ test.describe('emoji grid placeholder', () => {
     const flag = page.locator(`${CELL}[title*="${AUSTRALIA}"]`)
     await expect(flag).toHaveCount(1, { timeout: 15000 })
 
-    // Ruled out by the worker, so text. Waited for as a state, not a time.
-    await expect.poll(() => page.evaluate(() => window.__atlas.flagsRuledOut), { message: 'the worker was never asked about the flag' }).toBeGreaterThan(0)
+    // The worker has not answered for any flag yet (the fake holds those jobs), so
+    // the searched flag's cell is mounted as a placeholder, not already text.
+    await expect.poll(() => page.evaluate(() => window.__atlas.heldJobs), { message: 'the worker was never asked about a flag' }).toBeGreaterThan(0)
+    expect(await page.evaluate(() => window.__atlas.flagsRuledOut), 'a flag was ruled out before the search rendered').toBe(0)
+    await expect(flag).toHaveClass(/pending/)
+    await expect(flag.locator('.emoji-char')).toBeHidden()
+
+    // Now the worker rules the flag out. The cell is mounted, so the grid must
+    // re-render it as text; a reply the atlas thought nobody was showing would
+    // leave the placeholder in place and fail here.
+    await page.evaluate(() => window.__atlas.release())
+    await expect.poll(() => page.evaluate(() => window.__atlas.flagsRuledOut), { message: 'the worker never ruled the flag out' }).toBeGreaterThan(0)
     await expect(flag).not.toHaveClass(/pending/)
     await expect(flag).not.toHaveClass(/has-bitmap/)
     await expect(flag.locator('.emoji-char')).toBeVisible()
