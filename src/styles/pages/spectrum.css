@@ -999,11 +999,16 @@
 .sp-plate-art { position: relative; min-height: 0; }
 /* Transitions, not a keyframe animation: an interrupted swap then fades each
    picture from wherever it is, so a quick second click never drops the plate
-   to empty. The arriving picture rises 8px over 240ms; the leaving one fades
-   over 150ms. The first picture is on from its first paint, so it never moves. */
-.sp-plate-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transform: translateY(8px); transition: opacity 150ms ease, transform 150ms ease; }
-.sp-plate-art img.is-on { opacity: 1; transform: none; transition: opacity 240ms var(--sp-ease), transform 240ms var(--sp-ease); }
-.sp-plate-fail { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
+   to empty. The arriving picture rises 8px over 240ms. The leaving one holds at
+   full opacity for those 240ms and only then fades (150ms): with both fading at
+   once the plate read empty when the arriving fade started late on a slow
+   device. Transitions use the destination's properties, so the hold is the delay
+   on the picture without .is-on. The arriving picture is stacked above the
+   leaving one. The first picture is on from its first paint, so it never moves. */
+.sp-plate-art { isolation: isolate; }
+.sp-plate-art img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transform: translateY(8px); transition: opacity 150ms ease 240ms, transform 150ms ease 240ms; }
+.sp-plate-art img.is-on { z-index: 2; opacity: 1; transform: none; transition: opacity 240ms var(--sp-ease), transform 240ms var(--sp-ease); }
+.sp-plate-fail { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
 /* One line under the picture, left-aligned with it (4% in, the picture's own inset). */
 .sp-plate-cap { display: grid; justify-items: start; gap: 2px; padding: 0 4% 10px; text-align: left; font-size: 13px; line-height: 1.4; color: var(--sp-dim); }
 .sp-plate-cap b { font-weight: 540; color: var(--sp-ink); }
