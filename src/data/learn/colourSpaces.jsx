@@ -111,7 +111,7 @@ export default function ColourSpaces() {
   =  oklch(62.8% 0.2577 29.23)
 
 L = 62.8%   perceptual lightness, 0 to 100%
-C = 0.2577  chroma; 0 is grey, sRGB tops out at 0.342
+C = 0.2577  chroma; 0 is grey, sRGB tops out near ${hexToOklch('#FF00FF')[1].toFixed(2)} (magenta)
 H = 29.23   hue in degrees`}</Formula>
 
         <p>
@@ -151,7 +151,9 @@ H = 29.23   hue in degrees`}</Formula>
           paints <code>#00D600</code>, which reads back as{' '}
           <code>oklch({hexToOklch('#00D600')[0].toFixed(1)}% {hexToOklch('#00D600')[1].toFixed(2)} {hexToOklch('#00D600')[2].toFixed(1)})</code>.
           Every coordinate moved: the lightness rose by six points, the chroma
-          fell by a quarter, and the hue rotated eleven degrees.
+          fell from 0.4 to {hexToOklch('#00D600')[1].toFixed(3)}, and the hue
+          turned {(150 - hexToOklch('#00D600')[2]).toFixed(1)} degrees, from 150
+          back to {hexToOklch('#00D600')[2].toFixed(1)}.
         </p>
 
         <Aside>
@@ -170,12 +172,14 @@ H = 29.23   hue in degrees`}</Formula>
         </p>
         <p>
           There is no single chroma ceiling to stay under, because the boundary is
-          a shape rather than a number. The most chromatic colour sRGB can produce
-          at all is pure green, at{' '}
-          <code>oklch({hexToOklch('#00FF00')[0].toFixed(1)}% {hexToOklch('#00FF00')[1].toFixed(3)} {hexToOklch('#00FF00')[2].toFixed(1)})</code>,
-          and every other hue and lightness allows less — pure blue reaches{' '}
-          {hexToOklch('#0000FF')[1].toFixed(3)} and only at{' '}
-          {hexToOklch('#0000FF')[0].toFixed(1)}% lightness. Below about 0.15 chroma
+          a shape rather than a number. Of the six pure primaries and secondaries,
+          magenta is the most chromatic, at{' '}
+          <code>oklch({hexToOklch('#FF00FF')[0].toFixed(1)}% {hexToOklch('#FF00FF')[1].toFixed(3)} {hexToOklch('#FF00FF')[2].toFixed(1)})</code>.
+          Pure blue reaches {hexToOklch('#0000FF')[1].toFixed(3)} at{' '}
+          {hexToOklch('#0000FF')[0].toFixed(1)}% lightness and pure green{' '}
+          {hexToOklch('#00FF00')[1].toFixed(3)} at{' '}
+          {hexToOklch('#00FF00')[0].toFixed(1)}%, so each hue peaks at its own
+          lightness and the ceiling is different everywhere else. Below about 0.15 chroma
           a colour is comfortably inside the gamut at any hue, and above that the
           only reliable check is to paint it and read it back.
         </p>
