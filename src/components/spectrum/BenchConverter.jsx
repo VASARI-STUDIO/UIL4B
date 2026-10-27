@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import ToolFoot from './ToolFoot'
 import PhIcon from './PhIcon'
 import { prefersReducedMotion } from './reducedMotion'
 import { route } from './spectrumFacts'
@@ -77,7 +77,7 @@ function savingOf(pct, lossless) {
   return [`${pct}%`, lossless ? 'smaller, no quality lost' : 'smaller', pct > 0 ? 'win' : 'plain']
 }
 
-export default function BenchConverter() {
+export default function BenchConverter({ onResult }) {
   const uid = useId()
   const root = useRef(null)
   const stageRef = useRef(null)
@@ -184,6 +184,10 @@ export default function BenchConverter() {
   const before = src?.before ?? null
   const pct = before && out != null ? Math.round(100 - (out / before) * 100) : null
   const [numText, wordText, tone] = savingOf(pct, lossless)
+  const formatLabel = IMG_FORMATS[fmt][0]
+  // The rail's summary reads the latest measurement; a dropped file that failed
+  // to decode reports nothing.
+  useEffect(() => { onResult?.({ pct, format: formatLabel }) }, [onResult, pct, formatLabel])
   const [, rw, rh] = RATIO_PRESETS[ratioPreset]
   const stem = pick ? pick.name.replace(/\.[^.]+$/, '') : 'plateau-sunset'
   const imageName = pick ? pick.name : 'plateau-sunset.png'
@@ -235,9 +239,10 @@ export default function BenchConverter() {
   const paneClass = (id, cls) => `sp-cv-pane ${cls}${mode === id ? ' is-on' : ''}`
 
   return (
+    <>
     <div className="sp-panel-body sp-panel-body--pad sp-cv" ref={root}>
       <div className="sp-modes" role="tablist" aria-label="Mode">
-        {IMG_MODES.map(([id, label, icon, short], i) => (
+        {IMG_MODES.map(([id, label, , short], i) => (
           <button
             key={id}
             ref={(el) => { tabRefs.current[i] = el }}
@@ -252,7 +257,6 @@ export default function BenchConverter() {
             onClick={() => select(id)}
             onKeyDown={(e) => onTabKey(e, i)}
           >
-            {icon ? <PhIcon name={icon} /> : <span aria-hidden="true" />}
             <span className={short ? 'sp-mode-long' : undefined}>{label}</span>
             {short ? <span className="sp-mode-short" aria-hidden="true">{short}</span> : null}
           </button>
@@ -280,7 +284,10 @@ export default function BenchConverter() {
             {failed
               ? <span className="sp-saving-word">That file is not supported. Try a JPG, PNG or WebP.</span>
               : <>
-                <b className={tone === 'win' ? 'sp-saving-num' : `sp-saving-num is-${tone}`}>{numText}</b>
+                <b className={tone === 'win' ? 'sp-saving-num' : `sp-saving-num is-${tone}`}>
+                  <span className="sp-saving-pad" aria-hidden="true">100%</span>
+                  <span className="sp-saving-fig">{numText}</span>
+                </b>
                 <span className="sp-saving-word">{wordText}</span>
               </>}
           </p>
@@ -308,7 +315,10 @@ export default function BenchConverter() {
             ))}
           </div>
           <label className="sp-quality">
-            <span>{lossless ? 'Lossless, quality ignored' : 'Quality'}</span>
+            <span className="sp-quality-row">
+              <span>{lossless ? 'Lossless, quality not used' : 'Quality'}</span>
+              {lossless ? null : <output>{quality}%</output>}
+            </span>
             <input
               type="range"
               min="30"
@@ -396,23 +406,14 @@ export default function BenchConverter() {
         </div>
       </div>
 
-      <div className="sp-conv-foot">
-        {mode === 'model'
-          ? <>
-            <Link className="sp-pill" to={route('3d-converter')}>
-              <span>Open 3D Model Converter</span>
-              <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-            </Link>
-            <Link className="sp-ghost" to={fileToolHref}>File Converter</Link>
-          </>
-          : <>
-            <Link className="sp-pill" to={fileToolHref} onClick={carryImage}>
-              <span>{pick ? 'Continue in the converter' : 'Open File Converter'}</span>
-              <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-            </Link>
-            <Link className="sp-ghost" to={route('ratio')}>Aspect &amp; Resolution</Link>
-          </>}
-      </div>
     </div>
+      {mode === 'model'
+        ? <ToolFoot to={route('3d-converter')} secondary={{ to: fileToolHref, label: 'File Converter' }}>Open 3D Model Converter</ToolFoot>
+        : (
+          <ToolFoot to={fileToolHref} onClick={carryImage} secondary={{ to: route('ratio'), label: 'Aspect & Resolution' }}>
+            {pick ? 'Continue in the converter' : 'Open File Converter'}
+          </ToolFoot>
+        )}
+    </>
   )
 }
