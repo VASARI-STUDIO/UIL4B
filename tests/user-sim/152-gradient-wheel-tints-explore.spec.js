@@ -305,10 +305,14 @@ test.describe('the Explore the library panel', () => {
   test('a mood chip lands on the library already filtered to that mood', async ({ page }) => {
     watch(page, 'a designer following a mood chip')
     await go(page, ROUTE)
-    await page.getByRole('link', { name: 'Dark gradients in the library' }).click()
-    await expect(page).toHaveURL(/\/discover\/gradients\?mood=dark$/)
-    // The filter is on: a dark gradient is listed and a warm-only one is not.
-    await expect(page.getByText('Ember Fade').first()).toBeVisible()
+    // Light, because a signed-out visitor is shown only the first three library
+    // rows (Sunset Blaze, Golden Hour, Mango Pulp) and Mango Pulp is the only
+    // one of them tagged light. Dark, cool and pastel match none of the three.
+    await page.getByRole('link', { name: 'Light gradients in the library' }).click()
+    await expect(page).toHaveURL(/\/discover\/gradients\?mood=light$/)
+    await expect(page.getByRole('button', { name: 'Mood Light' })).toBeVisible()
+    // The filter is on: the light gradient is listed and a warm-only one is not.
+    await expect(page.getByText('Mango Pulp').first()).toBeVisible()
     await expect(page.getByText('Sunset Blaze')).toHaveCount(0)
   })
 })
@@ -334,6 +338,47 @@ test.describe('the presets', () => {
     await expect(codeOf(page)).toContainText('in oklch')
     await expect(stopHex(page, 1)).toContainText('#FFE3EC')
     expect(await cssAngle(page), 'the preset brings its own angle').toBe(135)
+  })
+
+  // MUTATION: set the 1200px column count in gradient.css to 5; this goes red at
+  // 1440 and 1280 (and the 1440 rail test in spec 36 does too). Set
+  // .grd-preset-meta back to 10.5px; the text-size check goes red.
+  test('the grid is 2 columns by 6 rows, 4 by 3, then 6 by 2, and no preset name is cut short', async ({ page }) => {
+    watch(page, 'a designer at three widths')
+    const shape = () => page.locator('.grd-preset-grid .grd-preset').evaluateAll((els) => {
+      const rows = new Set(els.map((el) => Math.round(el.getBoundingClientRect().top)))
+      const names = els.map((el) => el.querySelector('.grd-preset-name'))
+      return {
+        count: els.length,
+        rows: rows.size,
+        cols: els.length / rows.size,
+        cut: names.filter((n) => n.scrollWidth > n.clientWidth).map((n) => n.textContent),
+      }
+    })
+    for (const [width, cols, rows] of [[390, 2, 6], [768, 4, 3], [1200, 6, 2], [1280, 6, 2], [1440, 6, 2]]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, ROUTE)
+      const s = await shape()
+      expect(s, `${width}px`).toMatchObject({ count: 12, cols, rows, cut: [] })
+    }
+  })
+
+  test('no text in the presets or the Explore panel is under 12px', async ({ page }) => {
+    watch(page, 'a designer reading the small print')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, ROUTE)
+    const small = await page.locator('.grd-preset, .grd-explore').evaluateAll((roots) => {
+      const out = []
+      for (const root of roots) {
+        for (const el of [root, ...root.querySelectorAll('*')]) {
+          const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())
+          const px = parseFloat(getComputedStyle(el).fontSize)
+          if (own && px < 12) out.push(`${el.className || el.tagName}: ${px}px`)
+        }
+      }
+      return out
+    })
+    expect(small).toEqual([])
   })
 
   test('a radial preset applies as Radial and hides the angle wheel', async ({ page }) => {
@@ -440,5 +485,65 @@ test.describe('one starting gradient, one focus ring', () => {
     const on = await look()
     expect(on.shadow, 'no halo stacked on the outline').toBe('none')
     expect(on.border, 'the border does not also change colour').toBe(rest.border)
+  })
+})
+
+// A saved gradient owns its angle only when it has real stops. The design's
+// untouched default carries a placeholder angle and two stops with no colour, and
+// that must read as "nothing saved" (160deg), not as a saved angle.
+//
+// MUTATION: in src/pages/GradientGenerator.jsx make the saved-angle initialiser
+// return DEFAULT_ANGLE unconditionally; the first and third tests go red.
+const DESIGN_KEY = 'vs-current-design'
+
+async function seedGradient(page, gradient) {
+  await page.addInitScript(([key, value]) => {
+    try {
+      if (sessionStorage.getItem('__grd_seeded') === '1') return
+      sessionStorage.setItem('__grd_seeded', '1')
+      localStorage.setItem(key, value)
+    } catch { /* private mode */ }
+  }, [DESIGN_KEY, JSON.stringify({ gradient })])
+}
+
+test.describe('a saved gradient keeps its angle', () => {
+  test('90deg set in the tool is still 90deg after a reload, not the 160deg first-visit angle', async ({ page }) => {
+    watch(page, 'a designer returning to a saved gradient')
+    await open(page)
+    await fieldOf(page).fill('90')
+    await fieldOf(page).press('Enter')
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', '90')
+    // The tool writes the design as it changes; wait for the write, then leave.
+    await expect.poll(() => page.evaluate((k) => {
+      const g = JSON.parse(localStorage.getItem(k) || '{}').gradient
+      return g && g.angle
+    }, DESIGN_KEY)).toBe(90)
+
+    await page.reload()
+    await expect(wheelOf(page)).toBeVisible()
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', '90')
+    await expect.poll(() => cssAngle(page), { message: "the CSS carries the saved angle" }).toBe(90)
+  })
+
+  test('a design whose stops have no colour is nothing saved: its placeholder angle gives 160', async ({ page }) => {
+    watch(page, 'a visitor whose design has an empty gradient')
+    await seedGradient(page, {
+      type: 'Linear', angle: 45, space: 'oklch',
+      stops: [{ color: null, position: 0 }, { color: null, position: 100 }],
+    })
+    await go(page, ROUTE)
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', String(FIRST_ANGLE))
+    await expect.poll(() => cssAngle(page)).toBe(FIRST_ANGLE)
+  })
+
+  test('a saved angle of 0 is kept: 0 is an angle, not a missing one', async ({ page }) => {
+    watch(page, 'a designer who saved a vertical gradient')
+    await seedGradient(page, {
+      type: 'Linear', angle: 0, space: 'srgb',
+      stops: [{ color: '#112233', position: 0 }, { color: '#AABBCC', position: 100 }],
+    })
+    await go(page, ROUTE)
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', '0')
+    await expect.poll(() => cssAngle(page)).toBe(0)
   })
 })
