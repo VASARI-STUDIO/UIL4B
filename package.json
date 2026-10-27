@@ -22,6 +22,7 @@
     "prerender": "node scripts/prerender.mjs",
     "og:cards": "node scripts/og-cards.mjs",
     "auth-wall:generate": "node scripts/auth-wall/generate.mjs",
+    "home-exports:generate": "node scripts/home-exports/generate.mjs",
     "tools:shots": "node scripts/tool-shots.mjs",
     "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs",
     "sync:sitemap": "node scripts/sync-sitemap.mjs",

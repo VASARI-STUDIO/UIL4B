@@ -387,7 +387,8 @@ test('the landing is the design\'s six blocks in order, and pricing is not one o
   // so each card must sit in a wrapper that also holds the cards after it.
   const nests = EXPORTS_SRC.split('<div className="sp-stack-nest">').length - 1
   assert.equal(nests, 3, 'the exports stack no longer nests its three cards (A ⊃ B ⊃ C)')
-  const order = ['<Card index={0}', '<div className="sp-stack-nest">', '<Card index={1}', '<Card index={2}', 'sp-stack-pad--tail']
+  // Card 1 is the OneCard, cards 2 and 3 are PlateCards (each builds its own <Card>).
+  const order = ['<OneCard index={0}', '<div className="sp-stack-nest">', '<PlateCard index={1}', '<PlateCard index={2}', 'sp-stack-pad--tail']
   let at = EXPORTS_SRC.indexOf('<div className="sp-stack-nest">')
   for (const needle of order) {
     const next = EXPORTS_SRC.indexOf(needle, at)
