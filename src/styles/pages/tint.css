@@ -99,12 +99,15 @@
 .tt .tt-dot { width: 10px; height: 10px; border-radius: 999px; border: 1.5px solid currentColor; }
 .tt .tt-src-pick[aria-checked="true"] .tt-dot { background: var(--tl-ink); border-color: var(--tl-ink); }
 .tt .tt-add, .tt .tt-import { width: 100%; font-size: 13px; }
+.tt .tt-spacing-note { font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 @media (hover: hover) and (pointer: fine) {
   .tt .tt-iconbtn:hover { background: var(--tl-wash-2); color: var(--tl-ink); }
 }
 
-/* ── HUE AND CHROMA, STEPS, CURVE (D:827-852) ───────────────────────────── */
-.tt .tt-hc { gap: 14px; }
+/* ── LIGHTNESS AND SATURATION, STEPS, CURVE, SPACING (D:827-852) ─────────── */
+.tt .tt-ls { gap: 14px; }
+/* "Saturation" is a few pixels wider than the 56px label column the sliders share. */
+.tt .tt-ls .tl-slider--wide .tl-slider-k { width: 66px; }
 
 /* ── Contrast notes (D:853-863): a card under the chart, laid out as a grid, so
    the wide column carries them and the page is as tall as the taller column
@@ -116,12 +119,23 @@
   border-radius: 18px;
   border: 1px solid var(--tl-line);
   background: var(--tl-card);
+  isolation: isolate;
+}
+.tt .tt-notes-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.tt .tt-notes-hint { font-size: 12px; color: var(--tl-dim); }
+/* The hint says "Hover" for a mouse and "Tap" for a touch screen; the other
+   copy is not in the page (display:none), so a screen reader hears one. */
+.tt .tt-hint-coarse { display: none; }
+@media (pointer: coarse) {
+  .tt .tt-hint-fine { display: none; }
+  .tt .tt-hint-coarse { display: inline; }
 }
 .tt .tt-notes-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
   gap: 4px 8px;
 }
+.tt .tt-note-wrap { position: relative; min-width: 0; scroll-margin-bottom: 16px; }
 .tt .tt-note {
   display: flex;
   align-items: center;
@@ -136,11 +150,117 @@
   font-family: var(--font);
 }
 .tt .tt-note-sw { width: 20px; height: 20px; border-radius: 6px; flex: 0 0 auto; background: var(--tt-c, transparent); }
-.tt .tt-note-step { width: 30px; flex: 0 0 auto; font-family: var(--mono); font-size: 10.5px; color: var(--tl-faint); }
-.tt .tt-note-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); }
-.tt .tt-note-aa { font-size: 12px; color: color-mix(in srgb, var(--t0) 80%, var(--card)); white-space: nowrap; }
+.tt .tt-note-step { width: 34px; flex: 0 0 auto; font-family: var(--mono); font-size: 12px; color: var(--tl-faint); }
+.tt .tt-note-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+/* The text colour that reads best on a tint and its grade ("White AAA"). The
+   better of white and black always passes AA, so the word is plain dim ink: the
+   mark rows in the card carry the pass colours. */
+.tt .tt-note-best { flex: 0 0 auto; font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--tl-dim); }
 @media (hover: hover) and (pointer: fine) {
   .tt .tt-note:hover { background: var(--tl-wash-2); }
+}
+.tt .tt-note:focus-visible { outline-offset: -2px; }
+
+/* ── The contrast tooltip on a tint value. Closed it is display:none, which
+   still leaves it as the button's description for a screen reader and keeps it
+   out of the page's scrollable size; open it sits below the note (the page has
+   room under the notes card, and a card above would reach the notes header),
+   left-aligned with the note or, near the right edge, right-aligned with it.
+   The 6px padding is the bridge that lets the pointer cross from the note to
+   the tooltip without closing it. ───────────────────────────────────────── */
+.tt .tt-tip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 3;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  padding-top: 6px;
+  text-align: left;
+}
+.tt .tt-tip--end { left: auto; right: 0; }
+/* Less room below the note than above it (above clearing the sticky bars and the
+   notes header): open above it, with the bridge underneath. */
+.tt .tt-tip--above { top: auto; bottom: 100%; padding-top: 0; padding-bottom: 6px; }
+/* Not enough room above or below for the whole card: the help paragraph goes
+   (it stays in the page, outside the described body); the head and both rows
+   remain. */
+.tt .tt-tip--compact .tt-tip-help { display: none; }
+/* Not enough room above or below even for that: the card sits beside the notes.
+   The script sets its offsets (and, past the notes card, its left, width and
+   bridge) so it stays inside the window and under the sticky bars. Past the
+   notes card's right edge it lies over no note; where there is no room there it
+   sits right beside its note (the defaults here) over the next ones, and is
+   click-through (--ghost) so the pointer walking on still reaches them. */
+.tt .tt-tip--right { top: 0; left: 100%; padding: 0 0 0 6px; }
+.tt .tt-tip--left { top: 0; left: auto; right: 100%; padding: 0 6px 0 0; }
+.tt .tt-tip--ghost { pointer-events: none; }
+/* The last resort (no room beside either): the script gives the card a
+   max-height that fits the room it has, and it scrolls inside. */
+.tt .tt-tip-card { overflow-y: auto; overscroll-behavior: contain; }
+/* A tap pins the detail inline under the note, in the flow, so it covers
+   nothing and the page can scroll past it. */
+.tt .tt-tip--inline { position: static; width: auto; max-width: none; padding: 4px 0 0; }
+.tt .tt-tip-actions { display: flex; gap: 8px; margin-top: 6px; }
+.tt .tt-tip-copy,
+.tt .tt-tip-close {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--tl-hair);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  color: var(--tl-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tt .tt-tip-copy { flex: 1; min-width: 0; }
+.tt .tt-tip-close { flex: 0 0 auto; color: var(--tl-dim); }
+.tt .tt-tip-copy:focus-visible,
+.tt .tt-tip-close:focus-visible { outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tt .tt-tip-copy:hover,
+  .tt .tt-tip-close:hover { background: var(--tl-wash-2); }
+}
+.tt .tt-tip[data-open="true"] { display: block; animation: tt-tip-in var(--dur-1) var(--ease-entrance); }
+@keyframes tt-tip-in { from { opacity: 0; } to { opacity: 1; } }
+.tt .tt-tip-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--tl-ink);
+  box-shadow: var(--shadow-s);
+}
+.tt .tt-tip-body { display: grid; gap: 6px; }
+.tt .tt-tip-top { display: flex; align-items: center; gap: 8px; }
+/* The tint's own chip: the note's swatch, same size and radius. */
+.tt .tt-tip-sw { width: 20px; height: 20px; border-radius: 6px; flex: 0 0 auto; background: var(--tt-c, transparent); }
+.tt .tt-tip-head { font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+.tt .tt-tip-row {
+  display: grid;
+  grid-template-columns: 14px auto 1fr;
+  grid-template-areas: "mark who ratio" ". grade grade";
+  align-items: baseline;
+  gap: 0 8px;
+  font-size: 12px;
+}
+.tt .tt-tip-mark { grid-area: mark; align-self: center; display: grid; place-items: center; color: var(--tl-dim); }
+.tt .tt-tip-who { grid-area: who; color: var(--tl-ink); }
+.tt .tt-tip-ratio { grid-area: ratio; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
+.tt .tt-tip-grade { grid-area: grade; font-size: 12px; color: var(--tl-dim); }
+.tt .tt-tip-row[data-pass="true"] .tt-tip-mark { color: var(--ok-strong); }
+.tt .tt-tip-row[data-grade="large"] .tt-tip-mark { color: var(--warn-strong); }
+/* A dash is one thin line; at 14px, a 2px stroke so it reads on the light card. */
+.tt .tt-tip-row[data-grade="large"] .tt-tip-mark svg { stroke-width: 3.5; }
+.tt .tt-tip-row[data-grade="fail"] .tt-tip-mark { color: var(--err-strong); }
+.tt .tt-tip-help { padding-top: 6px; border-top: 1px solid var(--tl-line); font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+html[data-reduced-motion="true"] .tt .tt-tip[data-open="true"] { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tt .tt-tip[data-open="true"] { animation: none; }
 }
 
 /* ── Wide (901px and up): the notes card takes the wide column's second row and
@@ -167,6 +287,11 @@
 @media (max-width: 640px) {
   .tt .tt-hex-input { font-size: 16px; }
 }
+/* On a touch screen wide enough for several columns, a pinned card takes the
+   whole row, so the help text is not squeezed into one narrow, tall column. */
+@media (pointer: coarse) and (min-width: 768px) {
+  .tt .tt-note-wrap--pinned { grid-column: 1 / -1; }
+}
 @media (pointer: coarse) {
   .tt .tt-iconbtn,
   .tt .tt-picker { width: 44px; height: 44px; }
@@ -174,7 +299,9 @@
   .tt .tt-note { min-height: 44px; }
 }
 @media (forced-colors: active) {
+  .tt .tt-tip-card { border-color: CanvasText; }
   .tt .tt-cell,
   .tt .tt-bar,
-  .tt .tt-note-sw { forced-color-adjust: none; }
+  .tt .tt-note-sw,
+  .tt .tt-tip-sw { forced-color-adjust: none; }
 }
