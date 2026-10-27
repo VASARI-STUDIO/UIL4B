@@ -24,11 +24,11 @@
 // innerText, which leaves out hidden panes) and the drawn width of the AFTER
 // bar against the saving it states.
 //
-// The saving figure sits on a hidden "100%" pad (`.sp-saving-pad`, visibility
+// The saving figure sits on a hidden "00%" pad (`.sp-saving-pad`, visibility
 // hidden, aria-hidden) so the line never changes width as the figure changes.
 // The pad is in textContent but not in innerText, so every text read of the
 // saving line below uses innerText (`useInnerText`); a read of textContent would
-// see "100%92%smaller", a second figure that nobody can see.
+// see "00%92%smaller", a second figure that nobody can see.
 // Run at 390 / 768 / 1440 in both themes, in the settled state and across a
 // quality change, a format change and a switch to the lossless format.
 import zlib from 'node:zlib'
@@ -123,9 +123,9 @@ for (const theme of THEMES) {
       await expect.soft(compressPane(page).locator('.sp-quality output'), 'the Quality row does not print its setting').toHaveText('75%')
       expect.soft(row, 'the saving line is not a figure and its words').toMatch(/^\d+% (smaller|larger)/)
       expect.soft(await compressPane(page).locator('.sp-quality b').count(), 'the Quality row prints its value as a result figure').toBe(0)
-      // The "100%" pad that holds the figure's width is there, and is invisible to eyes and readers.
+      // The "00%" pad that holds the figure's width is there, and is invisible to eyes and readers.
       const pad = compressPane(page).locator('.sp-saving-pad')
-      await expect.soft(pad, 'the saving figure lost its width pad').toHaveText('100%')
+      await expect.soft(pad, 'the saving figure lost its width pad').toHaveText('00%')
       await expect.soft(pad, 'the width pad is exposed to assistive tech').toHaveAttribute('aria-hidden', 'true')
       expect.soft(await pad.evaluate((el) => getComputedStyle(el).visibility), 'the width pad is drawn').toBe('hidden')
 

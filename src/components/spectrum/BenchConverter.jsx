@@ -294,7 +294,7 @@ export default function BenchConverter({ onResult }) {
               ? <span className="sp-saving-word">That file is not supported. Try a JPG, PNG or WebP.</span>
               : <>
                 <b className={tone === 'win' ? 'sp-saving-num' : `sp-saving-num is-${tone}`}>
-                  <span className="sp-saving-pad" aria-hidden="true">100%</span>
+                  <span className="sp-saving-pad" aria-hidden="true">00%</span>
                   <span className="sp-saving-fig">{numText}</span>
                 </b>
                 <span className="sp-saving-word">{wordText}</span>

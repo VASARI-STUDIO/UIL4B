@@ -592,10 +592,12 @@
    drawn inside the tab rather than outside it. */
 .spectrum .sp-modes .sp-utab:focus-visible { outline-offset: -2px; }
 .sp-mode-short { display: none; }
-/* Too narrow for four full labels: four equal columns, short text labels. */
+/* Too narrow for four full labels: short text labels, each tab as wide as its own
+   text with at least an 8px gap between neighbours (equal columns left "Compress" and
+   "3D model" touching at 320px). A row that still cannot fit scrolls sideways. */
 @container sp-cv (max-width: 479px) {
-  .sp-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
-  .sp-modes .sp-utab { min-width: 0; min-height: 48px; margin-right: 0; padding: 0 2px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+  .sp-modes { justify-content: space-between; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .sp-modes .sp-utab { min-height: 48px; margin-right: 0; padding: 0; font-weight: 500; }
   .sp-modes .sp-utab[aria-selected="true"] { font-weight: 600; }
   .sp-modes .sp-utab > .sp-ph, .sp-modes .sp-utab > span[aria-hidden="true"]:empty, .sp-mode-long { display: none; }
   .sp-mode-short { display: inline; }
@@ -825,8 +827,19 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   .sp-panel .sp-seed { width: 22px; height: 22px; }
   .sp-panel .sp-seeds { gap: 2px; }
 }
+/* At 340px and below the six seeds leave the name about 38px: the strip wraps instead,
+   the seeds and Shuffle on the first line and "Cobalt  #4985DE" on its own line below. */
+@media (max-width: 340px) {
+  .sp-panel .sp-pal-strip { flex-wrap: wrap; row-gap: 2px; padding-block: 8px; }
+  .sp-panel .sp-shuffle { order: 1; margin-left: auto; }
+  .sp-panel .sp-seed-name { order: 2; flex: 1 1 100%; display: flex; align-items: baseline; gap: 8px; }
+}
 .sp-panel .sp-role { position: relative; }
-.sp-panel .sp-role-val { min-width: 0; font-size: var(--bt-m); }
+/* The hex is never clipped: when the figure and the contrast ratio do not share the
+   line, the ratio drops to a line of its own (right-aligned) rather than the hex losing its end. */
+.sp-panel .sp-role-row { flex-wrap: wrap; column-gap: 10px; row-gap: 0; }
+.sp-panel .sp-role-val { flex: none; min-width: 0; overflow: visible; text-overflow: clip; font-size: var(--bt-m); }
+.sp-roles .sp-role-aa { margin-left: auto; white-space: nowrap; }
 .sp-role-copy { position: absolute; top: 10px; right: 12px; font-size: 14px; opacity: 0; transition: opacity 150ms ease-out; }
 .sp-role:focus-visible .sp-role-copy { opacity: .85; }
 @media (hover: hover) and (pointer: fine) { .sp-role:hover .sp-role-copy { opacity: .85; } }
@@ -899,6 +912,14 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-fontrow-top { display: flex; align-items: center; gap: 16px; }
 .sp-panel .sp-fontrow-name { flex: 1; min-width: 0; }
 .sp-fontrow-meta { flex: none; max-width: 40%; font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); text-align: right; }
+/* On a narrow phone the name takes the row's full width, so a family name wraps at its
+   spaces, never inside a word ("Schibsted / Grotesk"); the category and the add
+   button sit on the line beneath it. */
+@media (max-width: 400px) {
+  .sp-fontrow-top { flex-wrap: wrap; gap: 4px 12px; }
+  .sp-panel .sp-fontrow-name { flex: 1 1 100%; }
+  .sp-fontrow-meta { flex: 1 1 0; min-width: 0; max-width: none; text-align: left; }
+}
 .sp-fontrow-more { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows 200ms ease-out, visibility 0s linear 200ms; }
 .sp-fontrow[aria-pressed="true"] .sp-fontrow-more { grid-template-rows: 1fr; visibility: visible; transition-delay: 0s; }
 .sp-fontrow-more-in { min-height: 0; overflow: hidden; display: grid; gap: 12px; }
@@ -925,6 +946,8 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 
 /* 04 · Converter */
 .sp-panel .sp-modes { margin: calc(var(--bt-pad) * -1) calc(var(--bt-pad) * -1) 0; padding: 0 var(--bt-pad); }
+/* The pad is "00%": the width of any two-digit saving (tabular digits), so "92%" sits
+   against its word at the line's own gap. A three-digit "934%" is wider and simply grows the box. */
 .sp-saving-num { display: inline-grid; justify-items: start; min-width: 0; }
 .sp-saving-pad { grid-area: 1 / 1; visibility: hidden; }
 .sp-saving-fig { grid-area: 1 / 1; }
@@ -1357,8 +1380,9 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   /* On a phone the windows grow to their content and the cell takes the tallest. */
   .sp-step > .sp-panel { height: auto; }
   .sp-panel { border-radius: 16px; }
-  /* A family name wraps instead of ending in an ellipsis. */
-  .sp-fontrow-name { white-space: normal; overflow-wrap: anywhere; text-wrap: balance; line-height: 1.02; }
+  /* A family name wraps instead of ending in an ellipsis, at spaces; a word breaks
+     only if it is wider than the whole row. */
+  .sp-fontrow-name { white-space: normal; overflow-wrap: break-word; text-wrap: balance; line-height: 1.02; }
 }
 /* At 761 to 1000px the segments are 48px tall, as the tablet switch is drawn. */
 @media (min-width: 761px) and (max-width: 1000px) {
