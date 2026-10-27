@@ -188,6 +188,14 @@ export default function AuthWall({ variant = 'page', still = false }) {
   const columns = Array.from({ length: cols }, (_, c) => rows.filter((_, i) => i % cols === c))
   const named = variant !== 'strip'
 
+  // Beside the caption in the page's top bar; inside the band's own slot below 1024.
+  const pause = animated && (
+    <button type="button" className="btn btn-s aw-pause" onClick={togglePause} aria-pressed={paused} aria-label={paused ? t('auth.wall.playLabel') : t('auth.wall.pauseLabel')}>
+      <PauseIcon paused={paused} />
+      <span className="aw-pause-text">{paused ? t('auth.wall.play') : t('auth.wall.pause')}</span>
+    </button>
+  )
+
   return (
     <section
       ref={rootRef}
@@ -224,14 +232,12 @@ export default function AuthWall({ variant = 'page', still = false }) {
         <div className="aw-strip"><TileSet rows={rows} /></div>
       )}
 
-      {variant === 'page' && <p className="aw-line-note">{t('auth.wall.note')}</p>}
-
-      {animated && (
-        <button type="button" className="btn btn-s aw-pause" onClick={togglePause} aria-pressed={paused} aria-label={paused ? t('auth.wall.playLabel') : t('auth.wall.pauseLabel')}>
-          <PauseIcon paused={paused} />
-          <span className="aw-pause-text">{paused ? t('auth.wall.play') : t('auth.wall.pause')}</span>
-        </button>
-      )}
+      {variant === 'page' ? (
+        <div className="aw-rail">
+          <p className="aw-line-note">{t('auth.wall.note')}</p>
+          {pause}
+        </div>
+      ) : pause}
     </section>
   )
 }
