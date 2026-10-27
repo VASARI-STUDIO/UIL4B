@@ -321,6 +321,9 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: 'Tints of stop 1', exact: true }).tap()
     const menu = page.getByRole('menu', { name: /^Tints of stop 1,/ })
     await expect(menu).toBeVisible()
+    // The menu pops in with a short scale animation; measured mid-way a 44px row
+    // reads 43. Wait for it to finish rather than for a timer.
+    await menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
 
     const read = await page.evaluate(() => {
       const m = document.querySelector('.grd-tintmenu')
