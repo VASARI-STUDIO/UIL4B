@@ -1,0 +1,10 @@
+{
+  "prefix": "mingcute",
+  "total": 20,
+  "title": "MingCute Icon",
+  "uncategorized": [
+    "home-1-line", "home-1-fill", "arrow-right-line", "arrow-left-line", "arrow-up-line", "arrow-down-line",
+    "search-line", "search-fill", "settings-3-line", "settings-3-fill", "user-3-line", "user-3-fill",
+    "heart-line", "heart-fill", "star-line", "star-fill", "bell-line", "bell-fill", "check-line", "close-line"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "prefix": "carbon",
+  "total": 20,
+  "title": "Carbon",
+  "uncategorized": [
+    "home", "settings", "user", "search", "add", "close", "arrow-right", "arrow-left", "chevron-down",
+    "notification", "calendar", "download", "cloud", "analytics", "data-base", "logo-github", "logo-slack",
+    "logo-figma", "logo-linkedin", "logo-youtube"
+  ]
+}

@@ -121,9 +121,9 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   // in our list at all; below Pro that must be refused rather than waved
   // through, and on Pro it must be allowed, because an unscoped Pro search has
   // always reached the whole Iconify registry.
-  assert.equal(canSeePack('mingcute', 'anon'), false)
-  assert.equal(canSeePack('mingcute', 'free'), false)
-  assert.equal(canSeePack('mingcute', 'paid'), true)
+  assert.equal(canSeePack('some-unlisted-set', 'anon'), false)
+  assert.equal(canSeePack('some-unlisted-set', 'free'), false)
+  assert.equal(canSeePack('some-unlisted-set', 'paid'), true)
 })
 
 test('viewerTier fails closed — only an explicit Pro is Pro, and an unresolved session is signed out', () => {

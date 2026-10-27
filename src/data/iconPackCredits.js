@@ -135,49 +135,61 @@ export const REQUIRES_ATTRIBUTION = Object.freeze(
  *   author  the person or organisation the licence says to credit.
  *   url     where the set lives. This is the attribution LINK.
  *   spdx    a key of LICENCES above.
+ *   copyright  the notice line the upstream licence file prints, quoted from it
+ *           (src/data/iconLicenceTexts.js writes it into the group download's
+ *           LICENSES.txt). null for CC0 and proprietary rows, which carry none.
+ *           MIT, ISC and Apache rows must have one: tests/unit/icon-licence-file.test.js.
+ *   licenceUrl  optional: the pack's own LICENSE file, when the registry names none.
+ *   alsoUnder  optional: a second licence covering part of the set (Lucide's
+ *           Feather-derived icons are MIT, the rest ISC).
  */
 export const ICON_PACK_CREDITS = {
-  lucide: { name: 'Lucide', author: 'Lucide Contributors', url: 'https://github.com/lucide-icons/lucide', spdx: 'ISC' },
-  tabler: { name: 'Tabler Icons', author: 'Paweł Kuna', url: 'https://github.com/tabler/tabler-icons', spdx: 'MIT' },
-  iconoir: { name: 'Iconoir', author: 'Luca Burgio', url: 'https://github.com/iconoir-icons/iconoir', spdx: 'MIT' },
-  heroicons: { name: 'Heroicons', author: 'Refactoring UI Inc', url: 'https://github.com/tailwindlabs/heroicons', spdx: 'MIT' },
-  ph: { name: 'Phosphor', author: 'Phosphor Icons', url: 'https://github.com/phosphor-icons/core', spdx: 'MIT' },
+  lucide: { name: 'Lucide', author: 'Lucide Contributors', url: 'https://github.com/lucide-icons/lucide', copyright: 'Copyright (c) 2026 Lucide Icons and Contributors', alsoUnder: [{ spdx: 'MIT', copyright: 'Copyright (c) 2013-present Cole Bemis', note: 'The Lucide icons derived from the Feather project' }], spdx: 'ISC' },
+  tabler: { name: 'Tabler Icons', author: 'Paweł Kuna', url: 'https://github.com/tabler/tabler-icons', copyright: 'Copyright (c) 2020-2026 Paweł Kuna', spdx: 'MIT' },
+  iconoir: { name: 'Iconoir', author: 'Luca Burgio', url: 'https://github.com/iconoir-icons/iconoir', copyright: 'Copyright (c) 2021 Luca Burgio', spdx: 'MIT' },
+  heroicons: { name: 'Heroicons', author: 'Refactoring UI Inc', url: 'https://github.com/tailwindlabs/heroicons', copyright: 'Copyright (c) Tailwind Labs, Inc.', spdx: 'MIT' },
+  ph: { name: 'Phosphor', author: 'Phosphor Icons', url: 'https://github.com/phosphor-icons/core', copyright: 'Copyright (c) 2023 Phosphor Icons', spdx: 'MIT' },
 
-  mdi: { name: 'Material Design Icons', author: 'Pictogrammers', url: 'https://github.com/Templarian/MaterialDesign', spdx: 'Apache-2.0' },
-  'material-symbols': { name: 'Material Symbols', author: 'Google', url: 'https://github.com/google/material-design-icons', spdx: 'Apache-2.0' },
+  mdi: { name: 'Material Design Icons', author: 'Pictogrammers', url: 'https://github.com/Templarian/MaterialDesign', copyright: 'Pictogrammers. The upstream licence file prints no copyright line.', spdx: 'Apache-2.0' },
+  'material-symbols': { name: 'Material Symbols', author: 'Google', url: 'https://github.com/google/material-design-icons', copyright: 'Google. The upstream licence file prints no copyright line.', spdx: 'Apache-2.0' },
   // ── One of the two CC-BY sets a signed-out visitor can see. ──
-  solar: { name: 'Solar', author: '480 Design', url: 'https://www.figma.com/community/file/1166831539721848736', spdx: 'CC-BY-4.0' },
+  solar: { name: 'Solar', author: '480 Design', url: 'https://www.figma.com/community/file/1166831539721848736', copyright: '480 Design', spdx: 'CC-BY-4.0' },
   // ── The other. Font Awesome's FREE icons are CC-BY-4.0; the Pro sets are not
   //    here at all. ──
-  'fa6-solid': { name: 'Font Awesome 6 Solid', author: 'Dave Gandy / Fonticons, Inc.', url: 'https://github.com/FortAwesome/Font-Awesome', spdx: 'CC-BY-4.0' },
-  bxs: { name: 'BoxIcons v2 Solid', author: 'Boxicons', url: 'https://github.com/box-icons/boxicons', spdx: 'MIT' },
+  'fa6-solid': { name: 'Font Awesome 6 Solid', author: 'Dave Gandy / Fonticons, Inc.', url: 'https://github.com/FortAwesome/Font-Awesome', copyright: 'Fonticons, Inc. (https://fontawesome.com)', spdx: 'CC-BY-4.0' },
+  bxs: { name: 'BoxIcons v2 Solid', author: 'Boxicons', url: 'https://github.com/box-icons/boxicons', copyright: 'Copyright (c) 2026 Boxicons', spdx: 'MIT' },
+  // ── Apache-2.0, read from the upstream LICENSE files on 2026-10-28. MingCute's
+  //    leaves the copyright line blank; Carbon's reads "Copyright 2015 IBM Corp."
+  //    Apache §6 grants no trademark rights: "Carbon (IBM)" is a credit, never an endorsement. ──
+  mingcute: { name: 'MingCute Icon', author: 'MingCute Design', url: 'https://github.com/Richard9394/MingCute', copyright: 'MingCute Design. The upstream licence file leaves its copyright line blank.', licenceUrl: 'https://github.com/Richard9394/MingCute/blob/main/LICENSE', spdx: 'Apache-2.0' },
+  carbon: { name: 'Carbon', author: 'IBM', url: 'https://github.com/carbon-design-system/carbon/tree/main/packages/icons', copyright: 'Copyright 2015 IBM Corp.', licenceUrl: 'https://github.com/carbon-design-system/carbon/blob/main/LICENSE', spdx: 'Apache-2.0' },
 
-  'simple-icons': { name: 'Simple Icons', author: 'Simple Icons Collaborators', url: 'https://github.com/simple-icons/simple-icons', spdx: 'CC0-1.0' },
-  logos: { name: 'SVG Logos', author: 'Gil Barbara', url: 'https://github.com/gilbarbara/logos', spdx: 'CC0-1.0' },
-  devicon: { name: 'Devicon', author: 'konpa and the Devicon contributors', url: 'https://github.com/devicons/devicon', spdx: 'MIT' },
-  'skill-icons': { name: 'Skill Icons', author: 'tandpfun', url: 'https://github.com/tandpfun/skill-icons', spdx: 'MIT' },
-  'vscode-icons': { name: 'VSCode Icons', author: 'Roberto Huertas', url: 'https://github.com/vscode-icons/vscode-icons', spdx: 'MIT' },
-  'token-branded': { name: 'Web3 Icons Branded', author: '0xa3k5', url: 'https://github.com/0xa3k5/web3icons', spdx: 'MIT' },
+  'simple-icons': { name: 'Simple Icons', author: 'Simple Icons Collaborators', url: 'https://github.com/simple-icons/simple-icons', copyright: null, spdx: 'CC0-1.0' },
+  logos: { name: 'SVG Logos', author: 'Gil Barbara', url: 'https://github.com/gilbarbara/logos', copyright: null, spdx: 'CC0-1.0' },
+  devicon: { name: 'Devicon', author: 'konpa and the Devicon contributors', url: 'https://github.com/devicons/devicon', copyright: 'Copyright (c) 2015 konpa', spdx: 'MIT' },
+  'skill-icons': { name: 'Skill Icons', author: 'tandpfun', url: 'https://github.com/tandpfun/skill-icons', copyright: 'Copyright (c) 2022 tandpfun', spdx: 'MIT' },
+  'vscode-icons': { name: 'VSCode Icons', author: 'Roberto Huertas', url: 'https://github.com/vscode-icons/vscode-icons', copyright: 'Copyright The vscode-icons Contributors', spdx: 'MIT' },
+  'token-branded': { name: 'Web3 Icons Branded', author: '0xa3k5', url: 'https://github.com/0xa3k5/web3icons', copyright: 'Copyright (c) 2024 0xa3k5', spdx: 'MIT' },
   // ── The registry publishes no licence URL for this one, so LICENCES supplies
   //    the canonical MIT text instead of the row carrying a guess. ──
-  'flat-color-icons': { name: 'Flat Color Icons', author: 'Icons8', url: 'https://github.com/icons8/flat-Color-icons', spdx: 'MIT' },
+  'flat-color-icons': { name: 'Flat Color Icons', author: 'Icons8', url: 'https://github.com/icons8/flat-Color-icons', copyright: 'Icons8. The upstream licence file prints no copyright line.', spdx: 'MIT' },
 
-  'circle-flags': { name: 'Circle Flags', author: 'HatScripts', url: 'https://github.com/HatScripts/circle-flags', spdx: 'MIT' },
-  flag: { name: 'Flag Icons', author: 'Panayiotis Lipiridis', url: 'https://github.com/lipis/flag-icons', spdx: 'MIT' },
-  flagpack: { name: 'Flagpack', author: 'Yummygum', url: 'https://github.com/Yummygum/flagpack-core', spdx: 'MIT' },
-  cif: { name: 'CoreUI Flags', author: 'creativeLabs Łukasz Holeczek', url: 'https://github.com/coreui/coreui-icons', spdx: 'CC0-1.0' },
+  'circle-flags': { name: 'Circle Flags', author: 'HatScripts', url: 'https://github.com/HatScripts/circle-flags', copyright: 'Copyright (c) 2026 HatScripts', spdx: 'MIT' },
+  flag: { name: 'Flag Icons', author: 'Panayiotis Lipiridis', url: 'https://github.com/lipis/flag-icons', copyright: 'Copyright (c) 2013 Panayiotis Lipiridis', spdx: 'MIT' },
+  flagpack: { name: 'Flagpack', author: 'Yummygum', url: 'https://github.com/Yummygum/flagpack-core', copyright: 'Copyright (c) 2021 Yummygum', spdx: 'MIT' },
+  cif: { name: 'CoreUI Flags', author: 'creativeLabs Łukasz Holeczek', url: 'https://github.com/coreui/coreui-icons', copyright: null, spdx: 'CC0-1.0' },
 
   // ── Two more CC-BY sets. Both are Pro, which changes who sees them and
   //    changes nothing about what is owed when they do. ──
-  twemoji: { name: 'Twemoji', author: 'Twitter, Inc and other contributors', url: 'https://github.com/jdecked/twemoji', spdx: 'CC-BY-4.0' },
-  openmoji: { name: 'OpenMoji', author: 'OpenMoji — the open-source emoji and icon project', url: 'https://openmoji.org/', spdx: 'CC-BY-SA-4.0' },
-  'fluent-emoji': { name: 'Fluent Emoji', author: 'Microsoft Corporation', url: 'https://github.com/microsoft/fluentui-emoji', spdx: 'MIT' },
-  noto: { name: 'Noto Emoji', author: 'Google Inc', url: 'https://github.com/googlefonts/noto-emoji', spdx: 'Apache-2.0' },
+  twemoji: { name: 'Twemoji', author: 'Twitter, Inc and other contributors', url: 'https://github.com/jdecked/twemoji', copyright: 'Copyright (c) 2014-2021 Twitter; Copyright (c) 2022-present Jason Sofonia & Justine De Caires', spdx: 'CC-BY-4.0' },
+  openmoji: { name: 'OpenMoji', author: 'OpenMoji — the open-source emoji and icon project', url: 'https://openmoji.org/', copyright: 'OpenMoji, the open-source emoji and icon project', spdx: 'CC-BY-SA-4.0' },
+  'fluent-emoji': { name: 'Fluent Emoji', author: 'Microsoft Corporation', url: 'https://github.com/microsoft/fluentui-emoji', copyright: 'Copyright (c) Microsoft Corporation.', spdx: 'MIT' },
+  noto: { name: 'Noto Emoji', author: 'Google Inc', url: 'https://github.com/googlefonts/noto-emoji', copyright: 'Copyright 2013 Google LLC', spdx: 'Apache-2.0' },
 
   // ── The animated sets (Pro). All three MIT, read out of the Iconify registry. ──
-  'line-md': { name: 'Material Line Icons', author: 'Vjacheslav Trushkin', url: 'https://github.com/cyberalien/line-md', spdx: 'MIT' },
-  'svg-spinners': { name: 'SVG Spinners', author: 'Utkarsh Verma', url: 'https://github.com/n3r4zzurr0/svg-spinners', spdx: 'MIT' },
-  meteocons: { name: 'Meteocons', author: 'Bas Milius', url: 'https://github.com/basmilius/weather-icons', spdx: 'MIT' },
+  'line-md': { name: 'Material Line Icons', author: 'Vjacheslav Trushkin', url: 'https://github.com/cyberalien/line-md', copyright: 'Copyright 2020 Vjacheslav Trushkin', spdx: 'MIT' },
+  'svg-spinners': { name: 'SVG Spinners', author: 'Utkarsh Verma', url: 'https://github.com/n3r4zzurr0/svg-spinners', copyright: 'Copyright (c) Utkarsh Verma', spdx: 'MIT' },
+  meteocons: { name: 'Meteocons', author: 'Bas Milius', url: 'https://github.com/basmilius/weather-icons', copyright: 'Copyright (c) 2020-present Bas Milius', spdx: 'MIT' },
 
   /* THE ONE PACK THAT IS NOT ICONIFY AT ALL, and the one whose attribution was
      already here. img.logo.dev is a commercial API on our publishable token,
@@ -190,6 +202,7 @@ export const ICON_PACK_CREDITS = {
     name: 'Logo.dev',
     author: 'Logo.dev',
     url: 'https://logo.dev',
+    copyright: null,
     spdx: 'proprietary',
     note: 'Company logos are the trademarks of their owners, served through the Logo.dev API. Its free tier requires this link wherever the logos appear.',
   },

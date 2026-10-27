@@ -122,13 +122,6 @@ function useProjectColours() {
   }, [design])
 }
 
-function licencesText(group) {
-  return groupPacks(group).map((p) => {
-    const c = packCredit(p)
-    return c ? `${c.name} — ${c.author} — ${c.licenceName} (${c.licenceUrl})\n${c.url}\n${c.licenceAsks}\n` : p
-  }).join('\n')
-}
-
 function GroupView({ group, tier, onCopy }) {
   const { requireLogin } = useLoginPrompt()
   const requireExportAccount = useExportGate()
@@ -162,7 +155,9 @@ function GroupView({ group, tier, onCopy }) {
       const dir = zip.folder(`${group.id}-icons`)
       entries.forEach((e, i) => dir.file(`svg/${names[i]}.svg`, groupIconSvg(e.glyph, { color, stroke })))
       dir.file(`${group.id}-sprite.svg`, groupSprite(entries, { color, stroke }))
-      dir.file('LICENSES.txt', licencesText(group))
+      // Loaded here, not at the top: the Apache text is 11 KB and only an export needs it.
+      const { licenceFileText } = await import('../data/iconLicenceTexts')
+      dir.file('LICENSES.txt', licenceFileText(groupPacks(group)))
       const blob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
