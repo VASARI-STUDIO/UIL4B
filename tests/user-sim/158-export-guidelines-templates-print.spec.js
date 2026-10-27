@@ -20,7 +20,7 @@
 //      landscape (read from its MediaBox).
 //   6. Slide numbers are true: Poster's and Grid's printed numbers are their slide's own,
 //      Grid's contents entries name the slide that carries their title, Presentation's
-//      folios run 01, 02, 03 without a gap.
+//      folios are each slide's place in the PDF, with none on the cover or the openings.
 //   7. Grid only: a slide holds one to three topics and two text sizes outside the
 //      masthead. The scale's specimens (`td.sp`) are set at the sizes they show and are
 //      excluded, and a control checks that they would break the rule if they were not.
@@ -54,14 +54,17 @@
 // Each of these was applied to the source (and restored), and turned the named test red.
 // The table with the results is in the lane report. Test names are the titles below.
 //   - "every box stays inside its slide"    poster.js `.pn-facts` margin-left:260mm
-//   - "nothing that clips hides content"    poster.js `.pn-bands` height 88mm -> 20mm
+//   - "nothing that clips hides content"    presentation.js `.sw` (swatch, overflow hidden) gains max-height:12mm,
+//                                           and grid.js `.stage` (logo stage, overflow hidden) height 62mm -> 10mm
 //   - "no text is under 7 pt"               presentation.js `.sw-role` 7pt -> 6pt
 //   - "the slide count"                     poster.js the closing slide left out
 //   - "printed to PDF"                      grid.js `@page` 297mm 167mm -> 297mm 210mm
 //   - "slide numbers are true"              poster.js `pad(n)` in slide() -> `pad(n + 1)`
 //   - "Grid: a slide holds ... two sizes"   grid.js `.kv dt` 9pt and `.kv dd` 10pt
 //   - "a cut name is printed whole"         grid.js the cover's `cv-full` line left out
-//   - "logo slides exist only with a logo"  brandGuidelines.js guidelineSections `if (d.logo)` -> `if (true)`
+//   - "logo slides exist only with a logo"  brandGuidelines.js guidelineSections `if (d.logo)` -> `if (d.logo || d.palette)`
+//                                           and the build's `if (section.id === 'logo')` -> `... && d.logo` (a Logo opening
+//                                           with no logo, and no page behind it)
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
