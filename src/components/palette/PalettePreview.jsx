@@ -196,7 +196,7 @@ function Settings() {
         <Field label="Payment terms"><span className="pvs-input pvs-input--select">14 days <Chevron /></span></Field>
         <Field label="Invoice email">
           <span className="pvs-input is-error" data-role="error">accounts@fernway</span>
-          <p className="pvs-err pvs-msg" data-role="error">Enter a full email address, like name@domain.com.au</p>
+          <p className="pvs-err pvs-msg" data-role="error">Enter a full email address, like name@example.com</p>
         </Field>
         <Field label="Logo" help="Available on the Studio plan."><span className="pvs-btn is-disabled">Upload</span></Field>
       </div>
@@ -309,7 +309,7 @@ function Receipt() {
   return (
     <div className="pvs-mail">
       <div className="pvs-mailbar" data-role="neutral">
-        <p><b>From</b> Fernway &lt;receipts@fernway.com.au&gt;</p>
+        <p><b>From</b> Fernway &lt;receipts@fernway.example&gt;</p>
         <p><b>Subject</b> Kiri Walker paid invoice FW-0142</p>
       </div>
       <div className="pvs-mailcol">
