@@ -47,7 +47,9 @@ const KEEP = {
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
     'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
-    'grd-stop-select', 'grd-tintmenu-item'],
+    'grd-stop-select', 'grd-tintmenu-item',
+    // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
+    'plb-match-btn'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle',

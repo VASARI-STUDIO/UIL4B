@@ -1279,7 +1279,13 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
 // a phone: the fixed menu stays between the header and tab bar, and scrolling
 // it brings every action fully into that band with a clear cue for more below.
 test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a short phone', async ({ browser }) => {
-  budget(PLB_VIEWPORTS.length)
+  // Six page loads, but also 30 menu opens, each walking every item (scroll,
+  // measure, hit-test) and then a keyboard pass. Counting only the loads gave
+  // 51s while CI measured 34-47s for this test on branches that never touched
+  // the menu, so one more menu item (Nearest named colours) tipped it over.
+  // Budget the menus too: 5 per viewport, 2s each, derived from the same loop.
+  const MENU_BUDGET_MS = 2000
+  test.setTimeout(15000 + PLB_VIEWPORTS.length * (LOAD_BUDGET_MS + 5 * MENU_BUDGET_MS))
   const damage = []
   for (const [w, h] of PLB_VIEWPORTS) {
     const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')

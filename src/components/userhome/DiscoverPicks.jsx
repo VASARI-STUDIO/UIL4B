@@ -21,7 +21,9 @@ import { newestPalettes } from './workspace'
 // strip is dropped and a line of text says the same thing, never a grey box. The card links to the
 // library, which shows what Pro opens. A Pro account fetches the whole library and sees the colours.
 //
-// The meta line is the design's "<mood>, <n> colours". The mood is the library's own
+// The meta line is the design's "<mood>, <n> colours" when every card in the row has a mood, and
+// "<n> colours" on every card when any does not (a locked card has no colours to classify), so the row
+// never mixes the two forms. The mood is the library's own
 // classifier (utils/paletteMood.js) — the one its Mood filter uses — never a tag
 // typed next to the palette. Warm / Cool / Neutral first, as drawn; a
 // palette that is none of the three gets the first mood it does have.
@@ -80,6 +82,10 @@ function LockedCard({ palette, count }) {
 export default function DiscoverPicks() {
   const pro = useProLibrary('palettes')
   const picks = useMemo(() => newestPalettes(pro.items ?? LIBRARY_PALETTE_ROWS, 4), [pro.items])
+  // One form across the row: a mood is shown only when every card has one. A locked card has no
+  // colours to classify, so any locked card in the row means "4 colours" on all of them.
+  const moods = useMemo(() => picks.map((p) => (isStub(p) ? null : moodOf(p.colors))), [picks])
+  const showMood = moods.length > 0 && moods.every(Boolean)
   return (
     <section className="uh-disc" aria-labelledby="uh-disc-h">
       <div className="uh-disc-head">
@@ -87,10 +93,10 @@ export default function DiscoverPicks() {
         <Link className="uh-disc-all" to="/discover/palettes">Browse all</Link>
       </div>
       <div className="uh-disc-grid">
-        {picks.map((p) => {
+        {picks.map((p, i) => {
           const held = !isStub(p)
           const size = held ? p.colors.length : rowSlots(p)
-          const mood = held ? moodOf(p.colors) : null
+          const mood = showMood ? moods[i] : null
           const count = `${size} colour${size === 1 ? '' : 's'}`
           if (!held) return <LockedCard key={p.id} palette={p} count={count} />
           return (
