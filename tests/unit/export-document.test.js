@@ -19,7 +19,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { serveExportDocument, BUILDERS, MAX_DESIGN_CHARS } from '../../api/_lib/exportDocument.js'
+import { serveExportDocument, BUILDERS, MAX_DESIGN_CHARS, MAX_COLOURS } from '../../api/_lib/exportDocument.js'
 import { proOnlyFormats, EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import {
   requestExportDocument, documentDesign, withPrintBootstrap, reservePrintWindow, showInPrintWindow, releasePrintWindow,
@@ -145,14 +145,41 @@ for (const format of proOnlyFormats().map((f) => f.id)) {
 }
 
 test('a verified admin email gets the document; an unverified one does not', async () => {
+  // The allowlist is read from ADMIN_EMAILS on every call, so the test sets its own
+  // and puts the old value back: the answer no longer depends on the machine's env.
+  const before = process.env.ADMIN_EMAILS
+  process.env.ADMIN_EMAILS = 'admin@example.test'
+  try {
+    const { deps } = fakeDeps()
+    const verified = await ask('tok-admin', { format: 'book', design: DESIGN }, deps)
+    assert.equal(verified.code, 200, 'a verified email on the allowlist is Pro, whatever the account record says')
+    assert.equal(verified.body.ok, true)
+    assert.equal(verified.headers.Vary, 'Authorization', 'the answer depends on who asked, so a cache must key on the token')
+
+    // The same address, unverified: the allowlist alone is not enough.
+    const unverified = fakeDeps({
+      verifyIdToken: async () => ({ uid: 'free-1', email: 'admin@example.test', email_verified: false }),
+    })
+    const refused = await ask('t', { format: 'book', design: DESIGN }, unverified.deps)
+    assert.equal(refused.code, 403)
+    assert.equal(refused.body.html, undefined)
+
+    // A verified email that is not on the list is just a Free account.
+    const stranger = fakeDeps({
+      verifyIdToken: async () => ({ uid: 'free-1', email: 'anyone@example.test', email_verified: true }),
+    })
+    assert.equal((await ask('t', { format: 'book', design: DESIGN }, stranger.deps)).code, 403)
+  } finally {
+    if (before === undefined) delete process.env.ADMIN_EMAILS
+    else process.env.ADMIN_EMAILS = before
+  }
+})
+
+test('every response carries Vary: Authorization, refusals included', async () => {
   const { deps } = fakeDeps()
-  // The admin allowlist is the real one; if the test email is not on it this proves
-  // only that the path exists, so the unverified case below is the one that bites.
-  const unverified = fakeDeps({
-    verifyIdToken: async () => ({ uid: 'free-1', email: 'anyone@example.test', email_verified: false }),
-  })
-  assert.equal((await ask('t', { format: 'book', design: DESIGN }, unverified.deps)).code, 403)
-  assert.ok([200, 403].includes((await ask('tok-admin', { format: 'book', design: DESIGN }, deps)).code))
+  for (const [token, body] of [[null, { format: 'book' }], ['tok-free', { format: 'book' }], ['tok-pro', { format: 'nope' }]]) {
+    assert.equal((await ask(token, body, deps)).headers.Vary, 'Authorization')
+  }
 })
 
 test('only Pro documents are served here: free, unbuilt and made-up ids all get the same 400', async () => {
@@ -196,6 +223,43 @@ test('an oversized design is refused with 413, after the plan check', async () =
   const huge = { ...DESIGN, logo: { src: 'x'.repeat(MAX_DESIGN_CHARS + 1) } }
   assert.equal((await ask('tok-pro', { format: 'book', design: huge }, deps)).code, 413)
   assert.equal((await ask('tok-free', { format: 'book', design: huge }, deps)).code, 403, 'a Free caller learns nothing about size limits')
+})
+
+test('more than MAX_COLOURS colours is a 400 too_many_colours, before any generator loads and after the plan check', async () => {
+  // MAX_DESIGN_CHARS bounds the request, not the document: 5,000 colours make a 17 MB book.
+  assert.equal(MAX_COLOURS, 200)
+  const colours = (n) => Array.from({ length: n }, (_, i) => `#${(i + 1).toString(16).padStart(6, '0').toUpperCase()}`)
+  const { loaded, table } = spyBuilders()
+  const { deps } = fakeDeps({ builders: table })
+
+  const over = { ...DESIGN, palette: { ...DESIGN.palette, colors: colours(MAX_COLOURS + 1) } }
+  for (const format of proOnlyFormats().map((f) => f.id)) {
+    const res = await ask('tok-pro', { format, design: over }, deps)
+    assert.equal(res.code, 400, `${format}: ${MAX_COLOURS + 1} colours were not refused`)
+    assert.equal(res.body.code, 'too_many_colours')
+    assert.equal(res.body.html, undefined)
+  }
+  assert.deepEqual(loaded, [], 'a generator ran for a palette it should have refused')
+
+  // The same cap on the gradient's stops, which the book also lays out one by one.
+  const stops = colours(MAX_COLOURS + 1).map((color, i) => ({ color, position: i }))
+  const overStops = { ...DESIGN, gradient: { stops } }
+  const res = await ask('tok-pro', { format: 'book', design: overStops }, deps)
+  assert.equal(res.code, 400)
+  assert.equal(res.body.code, 'too_many_colours')
+
+  // Junk entries count too: padding with non-colours must not dodge the cap.
+  const junk = { ...DESIGN, palette: { colors: Array.from({ length: MAX_COLOURS + 1 }, () => 'x') } }
+  assert.equal((await ask('tok-pro', { format: 'book', design: junk }, deps)).code, 400)
+
+  // After the plan check, so a Free caller learns nothing about the limit.
+  assert.equal((await ask('tok-free', { format: 'book', design: over }, deps)).code, 403)
+
+  // CONTROL: exactly MAX_COLOURS is served, so the 400 above is the cap and not a broken request.
+  const exact = { ...DESIGN, palette: { ...DESIGN.palette, colors: colours(MAX_COLOURS) } }
+  const fine = await ask('tok-pro', { format: 'book', design: exact }, deps)
+  assert.equal(fine.code, 200)
+  assert.deepEqual(loaded, ['book'])
 })
 
 test('a missing project name falls back, and a long one is cut', async () => {
@@ -334,6 +398,15 @@ test('403 is pro-required; 5xx, a network failure and a malformed 200 are errors
   assert.deepEqual(await run(async () => { throw new Error('offline') }), { status: 'error' })
   assert.deepEqual(await run(async () => reply(200, { ok: true, format: 'guidelines', html: '<p></p>' })), { status: 'error' }, 'a 200 for another format')
   assert.deepEqual(await run(async () => reply(200, { ok: true, format: 'book' })), { status: 'error' }, 'a 200 with no document')
+})
+
+test('413 and 400 too_many_colours get their own statuses; any other 400 stays a plain error', async () => {
+  const run = (fetchImpl) => requestExportDocument(sent, { loadAuth: sdkFor(async () => 't'), fetchImpl })
+  assert.deepEqual(await run(async () => reply(413, { code: 'design_too_large' })), { status: 'too-large' })
+  assert.deepEqual(await run(async () => reply(413, null)), { status: 'too-large' }, 'the platform\'s own 413 carries no JSON')
+  assert.deepEqual(await run(async () => reply(400, { code: 'too_many_colours' })), { status: 'too-many-colours' })
+  assert.deepEqual(await run(async () => reply(400, { code: 'unknown_format' })), { status: 'error' })
+  assert.deepEqual(await run(async () => ({ status: 400, ok: false, json: async () => { throw new Error('not json') } })), { status: 'error' })
 })
 
 test('the print bootstrap is added to a copy, once, before the closing body tag', () => {

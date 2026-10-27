@@ -273,8 +273,15 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
     await page.locator('.ig .ic').first().click()
     await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
-    // The Colour row has nothing to tint: a fixed Default and a note.
-    await expect(page.getByText('Original colours', { exact: true })).toBeVisible()
+    // The Colour row has nothing to tint: plain text, no Default pill or track.
+    const original = page.getByText('Original colours', { exact: true })
+    await expect(original).toBeVisible()
+    await expect(original).toHaveClass(/icust-value/)
+    await expect(original).toHaveCSS('font-style', 'normal')
+    await expect(original).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    const colourRow = page.locator('.icust-row').filter({ has: original })
+    await expect(colourRow.locator('.icust-seg')).toHaveCount(0)
+    await expect(colourRow.getByText('Default', { exact: true })).toHaveCount(0)
     // The markup is fetched on open; copying before it lands would copy nothing.
     await expect(page.locator('.icust-code code')).toContainText('<svg', { timeout: 20000 })
     const copy = page.getByRole('button', { name: /^Copy SVG$/ })
@@ -446,10 +453,13 @@ const openLogos = async (browser, scheme) => {
 const chipOf = (page, name) => page.locator(`.ig .ic[aria-label="Customise ${name}"] .ig-chip`)
 
 test.describe('ink that matches the page ground gets a halo, never a box', () => {
-  test('dark theme: near-black marks get the light halo, white and coloured ones do not', async ({ browser }) => {
+  test('dark theme: single-colour near-black marks show in the theme ink, not a ring; white and coloured ones are untouched', async ({ browser }) => {
     const { ctx, page } = await openLogos(browser, 'dark')
-    await expect(chipOf(page, 'github-icon')).toHaveClass(/ig-chip--halo-light/)
-    await expect(chipOf(page, 'vercel-icon')).toHaveClass(/ig-chip--halo-light/)
+    // One near-black colour is drawn in the page ink like a mono icon: solid, no ring.
+    for (const name of ['github-icon', 'vercel-icon']) {
+      await expect(chipOf(page, name)).not.toHaveClass(/halo/)
+      await expect(chipOf(page, name).locator('img')).toHaveClass(/ig-inv/)
+    }
     await expect(chipOf(page, 'apple')).not.toHaveClass(/halo/)
     await expect(chipOf(page, 'gitlab')).not.toHaveClass(/halo/)
     // The halo is a filter on the glyph; the slot itself is still not a box.
@@ -457,8 +467,8 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       const c = document.querySelector('.ig .ic[aria-label="Customise github-icon"] .ig-chip')
       return { filter: getComputedStyle(c.querySelector('img')).filter, bg: getComputedStyle(c).backgroundImage }
     })
-    expect(m.filter, 'the near-black mark has no shape edge').toContain('#ig-edge-light')
-    expect(m.bg, 'the halo mark got a box').toBe('none')
+    expect(m.filter, 'the near-black mark is not drawn in the page ink').toBe('invert(1)')
+    expect(m.bg, 'the mark got a box').toBe('none')
     // A one-colour mark uses the theme ink once opened in the customizer.
     await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
     await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
@@ -485,8 +495,20 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     await serveInk(page)
     let release
     const held = new Promise((resolve) => { release = resolve })
-    // Registered after serveInk, so it sees the request first and hands it on.
+    // Registered after serveInk, so it sees the request first and hands it on. Two
+    // things carry the markup: the grid's batch (logos.json) and the customiser's own
+    // fetch of the .svg. Both are held; the stage's <img> of the same .svg is a
+    // different resource type and loads straight away, so the picture is on screen
+    // while the markup is still unknown. (The customiser's fetch gives up after 3s, so
+    // everything before release() has to stay quick.)
     await page.route(/\/logos\.json\?.*icons=/, async (route) => { await held; await route.fallback() })
+    await page.route(
+      (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/logos\/[^/]+\.svg$/.test(u.pathname),
+      async (route) => {
+        if (route.request().resourceType() === 'fetch') await held
+        await route.fallback()
+      },
+    )
     try {
       await go(page, '/create/icons')
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
@@ -497,6 +519,13 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       // The remote image has loaded and been looked at before the markup is released.
       await expect.poll(() => stage.locator('.icust-stage-img').evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 20000 }).toBe(true)
       await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+      // Whether the logo has colours is unknown yet, so the Colour row shows nothing
+      // (no Default, no "Original colours") rather than flashing and switching. Its
+      // label stays, so the form has no blank spot.
+      const colourRow = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+      await expect(colourRow.locator('label')).toBeVisible()
+      await expect(colourRow.locator('.icust-value')).toBeHidden()
+      await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
       release()
       await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
       await expect(stage).not.toHaveClass(/icust-stage--halo-light/)
@@ -753,7 +782,7 @@ for (const [name, body, multicolour] of [
     await page.getByRole('button', { name: `Customise ${name}`, exact: true }).click()
     await expect(page.locator('.icust-code-box')).toBeEnabled()
     const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
-    await expect(colour.getByText('Default', { exact: true })).toHaveCount(multicolour ? 1 : 0)
+    await expect(colour.getByText('Default', { exact: true })).toHaveCount(0)
     await expect(colour.getByText('Original colours', { exact: true })).toHaveCount(multicolour ? 1 : 0)
     await expect(colour.getByRole('button', { name: 'Black', exact: true })).toHaveCount(multicolour ? 0 : 1)
     await expect(colour.getByRole('button', { name: 'White', exact: true })).toHaveCount(multicolour ? 0 : 1)
@@ -799,10 +828,10 @@ for (const scheme of ['dark', 'light']) {
         expect(stage.image).toBe('none')
         await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
         await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--light/)
-        const colourSeg = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg')
-        await expect(colourSeg.getByRole('button')).toHaveCount(0)
-        await expect(colourSeg).toHaveText('Default')
-        await expect(colourSeg.locator('.active')).toHaveCount(1)
+        const colourRow = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+        await expect(colourRow.getByRole('button')).toHaveCount(0)
+        await expect(colourRow.locator('.icust-seg')).toHaveCount(0)
+        await expect(colourRow.locator('.icust-value')).toHaveText('Original colours')
         expect(await page.locator('.icust-stage-img').getAttribute('src')).toMatch(/^data:/)
       } finally { await ctx.close() }
     })

@@ -77,25 +77,84 @@ function importedFromApi() {
 const includeFilesGlob = () => vercel.functions?.['api/ai.js']?.includeFiles || ''
 
 /**
+ * Expands brace groups, nested or not:
+ * `a/{b,c/{d,e}}.js` -> ['a/b.js', 'a/c/d.js', 'a/c/e.js'].
+ */
+function expandBraces(text) {
+  const open = text.indexOf('{')
+  if (open === -1) return [text]
+  let depth = 0
+  let close = -1
+  const parts = []
+  let start = open + 1
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === '{') depth++
+    else if (text[i] === '}') {
+      depth--
+      if (depth === 0) { close = i; break }
+    } else if (text[i] === ',' && depth === 1) {
+      parts.push(text.slice(start, i))
+      start = i + 1
+    }
+  }
+  assert.ok(close !== -1, `unbalanced braces in "${text}"`)
+  parts.push(text.slice(start, close))
+  const head = text.slice(0, open)
+  const tail = text.slice(close + 1)
+  return parts.flatMap((part) => expandBraces(`${head}${part.trim()}${tail}`))
+}
+
+/**
+ * Expands `*` inside a path (one segment, never across a `/`, as in Vercel's glob)
+ * against the files that really exist under src/:
+ * 'utils/exportTemplates/*\/*.js' -> every .js one directory down.
+ * A pattern with no `*` comes back as it is, even if the file does not exist, so the
+ * import walk still reports it by name. A `*` that matches nothing expands to
+ * nothing, which the reached/bundled comparison then reports as missing.
+ */
+function expandStars(rel) {
+  if (!rel.includes('*')) return [rel]
+  const segments = rel.split('/')
+  let paths = ['']
+  segments.forEach((segment, i) => {
+    const last = i === segments.length - 1
+    const next = []
+    for (const base of paths) {
+      if (!segment.includes('*')) {
+        next.push(base ? `${base}/${segment}` : segment)
+        continue
+      }
+      const pattern = new RegExp(`^${segment.replace(/[.+^$()|\\]/g, '\\$&').replace(/\*/g, '[^/]*')}$`)
+      const dir = path.join(root, 'src', base)
+      if (!fs.existsSync(dir)) continue
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (!pattern.test(entry.name) || (last ? !entry.isFile() : !entry.isDirectory())) continue
+        next.push(base ? `${base}/${entry.name}` : entry.name)
+      }
+    }
+    paths = next
+  })
+  return paths
+}
+
+/**
  * `src/data/{pipeline,moduleBoard}.js` -> ['data/pipeline.js', 'data/moduleBoard.js'].
- * One brace group, which is the only form this repository has ever used. A glob
- * this cannot read fails loudly below rather than expanding to nothing, because
- * expanding to nothing would read as "bundles no files" and pass.
+ * Brace groups may nest. A glob this cannot read fails loudly below rather than
+ * expanding to nothing, because expanding to nothing would read as "bundles no
+ * files" and pass. A `*` is expanded against the real src/ tree by expandStars().
  */
 function bundledFiles() {
   const glob = includeFilesGlob()
   if (!glob) return []
   const under = /^src\/(.+)$/.exec(glob)
   assert.ok(under, `includeFiles is "${glob}", which does not start at src/ — this file cannot read it`)
-  const rest = under[1]
-  const brace = /^([^{}]*)\{([^{}]+)\}([^{}]*)$/.exec(rest)
-  if (!brace) {
-    assert.doesNotMatch(rest, /[{}*?[\]]/,
+  const files = expandBraces(under[1]).flatMap(expandStars)
+  for (const f of files) {
+    assert.doesNotMatch(f, /[{}*?[\]]/,
       `includeFiles is "${glob}", a glob shape this file has never seen. Teach bundledFiles() to `
       + 'expand it — do not delete the check, because an unexpandable glob reads as "bundles nothing".')
-    return [rest]
   }
-  return brace[2].split(',').map((part) => `${brace[1]}${part.trim()}${brace[3]}`)
+  return files
 }
 
 /**
@@ -124,6 +183,51 @@ const NO_GIT = IGNORED === null
   && 'git cannot answer `check-ignore` in this directory, so which imports are deliberately '
   + 'local-only cannot be established here. This assertion needs a real work tree.'
 
+/**
+ * Every src/ file the functions reach, directly or through other src/ files,
+ * as paths under src/ ('utils/bookModel.js'). `includeFiles` has to carry ALL of
+ * them: the direct imports are only the first layer, and a generator's own imports
+ * are loaded at run time, so a missing one is a function that deploys green and
+ * answers every request with a 500.
+ *
+ * Roots that are gitignored (the two internal boards) are not walked: they are not
+ * in the deploy, so nothing they import is either, and walking them would make this
+ * answer differ between a clone and the founder's machine.
+ */
+function reachableFromApi(roots, ignored) {
+  const seen = new Set()
+  const stack = roots.filter((rel) => !ignored.has(`src/${rel}`))
+  while (stack.length) {
+    const rel = stack.pop()
+    if (seen.has(rel)) continue
+    seen.add(rel)
+    const file = path.join(root, 'src', rel)
+    assert.ok(fs.existsSync(file), `src/${rel} is imported but does not exist; the import walk cannot go on`)
+    if (!/\.(m?js|jsx)$/.test(rel)) continue
+    const text = fs.readFileSync(file, 'utf8')
+    // Static imports, re-exports and dynamic imports, relative specifiers only.
+    // Packages come from node_modules, which the function carries on its own.
+    for (const m of text.matchAll(/(?:from\s*|import\s*\(\s*|import\s+)['"](\.{1,2}\/[^'"]+)['"]/g)) {
+      const next = path.posix.normalize(path.posix.join(path.posix.dirname(rel), m[1]))
+      assert.ok(!next.startsWith('..'), `src/${rel} imports ${m[1]}, which leaves src/; includeFiles cannot name it`)
+      stack.push(next)
+    }
+  }
+  return seen
+}
+
+/** What `includeFiles` is missing, and what it carries that nothing reaches. */
+function bundleGaps(needed, bundled) {
+  const have = new Set(bundled)
+  const want = new Set(needed)
+  return {
+    missing: [...want].filter((rel) => !have.has(rel)).sort(),
+    extra: [...have].filter((rel) => !want.has(rel)).sort(),
+  }
+}
+
+const reached = () => reachableFromApi(IMPORTED, IGNORED)
+
 test('the api functions import exactly the two internal boards and the Pro export documents', () => {
   // Still the anchor: if a function starts importing something else out of src/,
   // it has to be classified below as bundled or as deliberately absent. The export files
@@ -132,6 +236,7 @@ test('the api functions import exactly the two internal boards and the Pro expor
   // bundle at all), and vercel.json bundles them.
   assert.deepEqual(IMPORTED, [
     'config/exportFormats.js',
+    'config/exportTemplates.js',
     'data/moduleBoard.js',
     'data/pipeline.js',
     'utils/brandGuidelines.js',
@@ -146,20 +251,51 @@ test('every src/ file api/ imports is either bundled by includeFiles or delibera
   const bundled = bundledFiles().sort()
   const localOnly = IMPORTED.filter((rel) => IGNORED.has(`src/${rel}`)).sort()
 
-  const classified = [...new Set([...bundled, ...localOnly])].sort()
-  assert.deepEqual(classified, IMPORTED,
-    'an api/ import is neither bundled into the function nor deliberately kept out of the '
-    + 'repository, so the deploy will not carry it and nothing says that was intended.\n'
-    + `  imported:   ${IMPORTED.join(', ') || '(none)'}\n`
-    + `  bundled:    ${bundled.join(', ') || '(none — vercel.json has no includeFiles)'}\n`
-    + `  local-only: ${localOnly.join(', ') || '(none)'}\n`
-    + 'Either add it to includeFiles, or gitignore it with the reason beside it.')
+  // The whole import graph, not just api/'s own imports: a generator imports
+  // other src/ files when it loads, and those have to be in the function too.
+  const reachedFiles = [...reached()].sort()
+  const gaps = bundleGaps(reachedFiles, bundled)
+  assert.deepEqual(gaps.missing, [],
+    'a src/ file the functions load (directly, or through another src/ file) is not in '
+    + 'includeFiles, so the deploy will not carry it and the function fails when it loads that module.\n'
+    + `  imported by api/:      ${IMPORTED.join(', ') || '(none)'}\n`
+    + `  reached from those:    ${reachedFiles.join(', ') || '(none)'}\n`
+    + `  bundled:               ${bundled.join(', ') || '(none — vercel.json has no includeFiles)'}\n`
+    + `  local-only:            ${localOnly.join(', ') || '(none)'}\n`
+    + 'Add the missing files to includeFiles, or gitignore the import with the reason beside it.')
+  assert.deepEqual(gaps.extra, [],
+    'includeFiles names src/ files that nothing the functions load reaches. They ship inside the '
+    + 'function on every deploy for nothing; remove them from the glob.')
 
   const both = bundled.filter((rel) => localOnly.includes(rel))
   assert.deepEqual(both, [],
     `includeFiles names ${both.join(', ')}, which git is ignoring. The deploy would be told to bundle `
     + 'a file that is in no clone — either the file came back into the repository and .gitignore is '
     + 'stale, or includeFiles is naming something that left it.')
+})
+
+test('CONTROL: the import walk follows imports to the leaves, and dropping any one file from the glob is caught', { skip: NO_GIT }, () => {
+  // Without this, the test above would pass if the walk went blind and saw only
+  // the direct imports (which is exactly the gap this was written for).
+  const reachedFiles = [...reached()].sort()
+  for (const rel of ['utils/bookModel.js', 'utils/paletteRoles.js', 'utils/colors.js', 'utils/paletteAdjust.js',
+    'utils/routeMeta.js', 'data/toolTree.js', 'data/routeMetaMap.js', 'data/learnIndex.js', 'utils/meshFormats.js']) {
+    assert.ok(reachedFiles.includes(rel), `the import walk no longer reaches src/${rel}`)
+  }
+  assert.ok(reachedFiles.length > IMPORTED.filter((rel) => !IGNORED.has(`src/${rel}`)).length,
+    'the walk found nothing beyond the direct imports, so it has gone blind')
+
+  // Drop each bundled file from the glob in turn: every one must be reported.
+  const bundled = bundledFiles()
+  assert.deepEqual(bundleGaps(reachedFiles, bundled), { missing: [], extra: [] },
+    'the glob and the walk disagree before anything is dropped, so the drops below prove nothing')
+  for (const rel of bundled) {
+    const without = bundled.filter((b) => b !== rel)
+    assert.deepEqual(bundleGaps(reachedFiles, without).missing, [rel],
+      `dropping ${rel} from includeFiles was not caught`)
+  }
+  assert.deepEqual(bundleGaps(reachedFiles, [...bundled, 'data/unused.js']).extra, ['data/unused.js'],
+    'a file nothing reaches was not reported as extra')
 })
 
 test('includeFiles does not bundle the whole data directory', () => {
@@ -196,4 +332,46 @@ test('CONTROL: the local-only detection really reads git, and does not call ever
     ['docs/backlog/archive-done-2026-09-16.js'],
     'the archived backlog rows are tracked again — they are 172 rows of the same candid prose '
     + 'the live board was taken out of the public repository to protect.')
+})
+
+// Vercel refuses the whole deploy when a function's includeFiles runs past 256
+// characters, so the bundling list has to stay inside that.
+test('includeFiles fits the 256-character limit Vercel enforces', () => {
+  const glob = includeFilesGlob()
+  assert.ok(glob.length <= 256, `includeFiles is ${glob.length} characters; Vercel rejects the deploy over 256`)
+})
+
+test('CONTROL: nested brace groups expand to every path', () => {
+  assert.deepEqual(expandBraces('a/{b,c/{d,e}}.js'), ['a/b.js', 'a/c/d.js', 'a/c/e.js'])
+  assert.deepEqual(expandBraces('x.js'), ['x.js'])
+})
+
+test('CONTROL: a `*` expands to the real files one directory level at a time', () => {
+  const templates = ['book/index.js', 'book/specification.js', 'guidelines/index.js', 'guidelines/presentation.js']
+    .map((rel) => `utils/exportTemplates/${rel}`)
+  assert.deepEqual(expandStars('utils/exportTemplates/*/*.js').sort(), templates,
+    '`*/*.js` should reach the files one directory down and not the ones beside it')
+  assert.ok(!expandStars('utils/exportTemplates/*.js').includes('utils/exportTemplates/book/index.js'),
+    'a `*` must not cross a `/`')
+  assert.deepEqual(expandStars('utils/colors.js'), ['utils/colors.js'])
+  assert.deepEqual(expandStars('utils/noSuchFolder/*.js'), [],
+    'a `*` that matches nothing must expand to nothing, so the gap is reported')
+})
+
+// The export templates are loaded by name at run time, so a layout file left out
+// of includeFiles is a function that answers every Pro export with a 500.
+test('includeFiles covers every file under src/utils/exportTemplates/', () => {
+  const dir = path.join(root, 'src', 'utils', 'exportTemplates')
+  const onDisk = []
+  const walk = (d) => {
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(path.join(d, entry.name))
+      else onDisk.push(path.relative(path.join(root, 'src'), path.join(d, entry.name)).replace(/\\/g, '/'))
+    }
+  }
+  walk(dir)
+  assert.ok(onDisk.length >= 5, 'the template folder looks empty, so this check proves nothing')
+  const bundled = new Set(bundledFiles())
+  assert.deepEqual(onDisk.filter((rel) => !bundled.has(rel)).sort(), [],
+    'a file under src/utils/exportTemplates/ is not matched by includeFiles, so the deploy will not carry it')
 })

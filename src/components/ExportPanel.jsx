@@ -352,6 +352,10 @@ export default function ExportPanel({ onClose }) {
         setStage('document')
         labelPrintWindow(printWin, doc.waiting)
         const answer = await requestExportDocument({ format, design, projectName, template: chosenTemplates[format] }, { loadAuth: loadAuthSdk })
+        // The panel can unmount while the server works (the route changed under
+        // it). Nobody is left to read a result, so close the blank window that was
+        // reserved and touch nothing else.
+        if (!mounted.current) { closePrintWin(); return }
         // A refusal stays in the panel and says so. It is not sent to /plans: this
         // account passed the Pro check on this page a moment ago, so the likely
         // cause is a plan that just ended or a stale read, and a pricing page
@@ -361,6 +365,14 @@ export default function ExportPanel({ onClose }) {
         }
         if (answer.status === 'signed-out') {
           throw new Error(`You’re signed out. Sign in again, then export the ${doc.noun}.`)
+        }
+        // These two are the design's fault, not the connection's, and trying again
+        // changes nothing, so they get their own words.
+        if (answer.status === 'too-large') {
+          throw new Error('This design is too large to export. Try a smaller logo.')
+        }
+        if (answer.status === 'too-many-colours') {
+          throw new Error('This palette has more colours than the document can hold (200 max).')
         }
         if (answer.status !== 'ok') {
           throw new Error(`The ${doc.noun} couldn’t be made. Check your connection and try again.`)
@@ -412,6 +424,9 @@ export default function ExportPanel({ onClose }) {
       // whether the product was useful. The book reports under its own name so
       // the paid deliverable is not averaged into the free one.
       try { trackActivation(activation, 'export') } catch { /* never break an export */ }
+      // A kit or file export that finished after the panel went away has already
+      // handed over its file; there is no dialog left to close or update.
+      if (!mounted.current) return
       if (!keepOpen) {
         onClose()
         // The panel closing says nothing about the file, so name it. Raised
@@ -425,11 +440,26 @@ export default function ExportPanel({ onClose }) {
       // The panel stays open on failure: closing it would leave the user with
       // no file and no explanation, which reads as the button doing nothing.
       closePrintWin()
+      if (!mounted.current) return
       setBusy(false)
       setStage('')
       setError(err?.message || 'The export could not be created. Please try again.')
     }
   }
+  // The click handler. A second click that lands before the first has set `busy`
+  // (the account gate and the plan wait both await before it) would reserve a
+  // second window and send a second request. The ref is set synchronously, so
+  // the second call sees it at once; state would not be updated yet.
+  const exporting = useRef(false)
+  const startExport = async () => {
+    if (exporting.current) return
+    exporting.current = true
+    try { await runExport() } finally { exporting.current = false }
+  }
+  // Escape, a click on the backdrop and the close button leave the panel, and
+  // while an export is in flight there is no way to take it back: the same rule
+  // the disabled Cancel button already states.
+  const requestClose = () => { if (!busy) onClose() }
   const panelRef = useRef(null)
   const exportBtnRef = useRef(null)
   // What a finished export said (the notice, the error line) belongs to the
@@ -539,7 +569,8 @@ export default function ExportPanel({ onClose }) {
   // Trap Tab within the panel, and close on Escape.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') { onClose(); return }
+      // Not while an export is in flight (see requestClose).
+      if (e.key === 'Escape') { if (!busy) onClose(); return }
       if (e.key !== 'Tab') return
       const focusables = panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -560,7 +591,7 @@ export default function ExportPanel({ onClose }) {
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, busy])
 
   // The intro is for a free account, and waits for the plan so a Pro account
   // never sees it flash.
@@ -611,7 +642,7 @@ export default function ExportPanel({ onClose }) {
   ) : null
 
   return (
-    <div className="exp-overlay" onMouseDown={onClose}>
+    <div className="exp-overlay" onMouseDown={requestClose}>
       <div
         className={`exp-panel${moreBelow ? ' has-more' : ''}${scrolled ? ' is-scrolled' : ''}`}
         role="dialog"
@@ -629,7 +660,7 @@ export default function ExportPanel({ onClose }) {
             <h2 className="exp-title" id="exp-title" tabIndex={-1} ref={titleRef}>Export your design system</h2>
             {showIntro && <p className="exp-sub" id="exp-intro">Pick what you need. Free files carry a small UIL4B mark.</p>}
           </div>
-          <button type="button" className="exp-close" onClick={onClose} aria-label="Close export">
+          <button type="button" className="exp-close" onClick={requestClose} disabled={busy} aria-label="Close export">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
@@ -709,7 +740,7 @@ export default function ExportPanel({ onClose }) {
             {/* Every row is built, so there is always a real action. The label
                 says what the click will do: unlock, wait for the plan, or the
                 file about to be made. */}
-            <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={runExport} disabled={busy || checking}>
+            <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={startExport} disabled={busy || checking}>
               {busy ? (BUSY_LABEL[stage] || 'Exporting…') : checking ? 'Checking your plan…' : locked ? 'Unlock with Pro' : activeFormat.action}
             </button>
           </div>

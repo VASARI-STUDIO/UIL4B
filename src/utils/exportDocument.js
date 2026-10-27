@@ -9,6 +9,9 @@
 //   { status: 'signed-out' }   no account, or the server refused the session twice
 //                              in a row (401, then 401 again on a fresh token)
 //   { status: 'pro-required' } signed in, but not Pro (403)
+//   { status: 'too-large' }    the design is over the server's size limit (413)
+//   { status: 'too-many-colours' }  a palette or gradient over the colour limit
+//                              (400 with code too_many_colours)
 //   { status: 'error' }        anything else: network failure, 5xx (an auth outage
 //                              included), a bad body. The caller treats this as
 //                              "no file", never as a reason to send a paying user
@@ -54,6 +57,14 @@ export async function requestExportDocument({ format, design, projectName, templ
       if (response.status === 401) return { status: 'signed-out' }
     }
     if (response.status === 403) return { status: 'pro-required' }
+    // Two refusals that retrying cannot fix, so the panel names them rather than
+    // asking for a connection check. Any 413 counts, the platform's own as well
+    // as the function's design_too_large.
+    if (response.status === 413) return { status: 'too-large' }
+    if (response.status === 400) {
+      const refusal = await response.json().catch(() => null)
+      return { status: refusal?.code === 'too_many_colours' ? 'too-many-colours' : 'error' }
+    }
     if (!response.ok) return { status: 'error' }
     const body = await response.json().catch(() => null)
     // A 200 must also say it is for this format and carry a document, so a stray

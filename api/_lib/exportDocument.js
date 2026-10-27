@@ -29,6 +29,8 @@
 //   template not live for the format    400  { code: 'unknown_template' }
 //     (any non-string; absent, null or '' means the format's default)
 //   design too large                     413  { code: 'design_too_large' }
+//   over 200 colours (palette colours    400  { code: 'too_many_colours' }
+//   or gradient stops)
 //   Pro format, Pro or admin             200  { ok: true, format, template, html }
 //   always                               Cache-Control: private, no-store
 //
@@ -56,6 +58,15 @@ export const BUILDERS = Object.freeze({
 // every tool version's extras and still sits far under Vercel's body limit.
 export const MAX_DESIGN_CHARS = 256 * 1024
 const MAX_NAME_CHARS = 200
+
+// The most colours either document will be asked to lay out, counted separately
+// for the palette and for the gradient's stops. MAX_DESIGN_CHARS bounds the INPUT
+// and not the OUTPUT: a colour is about 9 characters in, and the book prints a
+// specimen, three notations and a row and column of the contrast matrix for it.
+// The logic review measured 5,000 colours making a 17 MB document from a request
+// well under the cap. A real palette is a handful of colours; 200 is far above
+// any the tools produce.
+export const MAX_COLOURS = 200
 
 // The Firebase Admin error codes that are a verdict on the token itself (expired,
 // revoked, malformed, or its account disabled or gone). Anything else thrown by
@@ -187,6 +198,16 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
   try { size = JSON.stringify(design).length } catch { size = Infinity }
   if (size > MAX_DESIGN_CHARS) {
     return res.status(413).json({ error: 'That design is too large to export', code: 'design_too_large' })
+  }
+  // The input cap above does not bound the output, so the count is checked too,
+  // before any generator is loaded. It counts what the caller sent, valid colour
+  // or not, so padding with junk cannot be used to dodge it.
+  const colourCount = Math.max(
+    Array.isArray(design.palette?.colors) ? design.palette.colors.length : 0,
+    Array.isArray(design.gradient?.stops) ? design.gradient.stops.length : 0,
+  )
+  if (colourCount > MAX_COLOURS) {
+    return res.status(400).json({ error: `Use ${MAX_COLOURS} colours or fewer`, code: 'too_many_colours' })
   }
   const projectName = typeof body.projectName === 'string' && body.projectName.trim()
     ? body.projectName.trim().slice(0, MAX_NAME_CHARS)
