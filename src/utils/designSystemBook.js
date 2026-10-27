@@ -226,7 +226,8 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   // What a template may read: the resolved book model and the facts computed above.
   // `fontData(file)` is the server's reader for a chrome font (null in the browser).
   // `logo` is the uploaded mark, or null.
-  const ctx = { d, projectName, field, fieldInk, iso, year, slots, roles, fit, ladder, tokens, contrast, grade, fontData, logo: readLogo(design) }
+  // `white` and `black` are the two fixed grounds a contrast matrix adds to the palette.
+  const ctx = { d, projectName, field, fieldInk, iso, year, slots, roles, fit, ladder, tokens, contrast, grade, fontData, white: '#FFFFFF', black: '#000000', logo: readLogo(design) }
 
   // ── contents ────────────────────────────────────────────────────────────
   // Built as data first so the folios in the contents list can never drift from

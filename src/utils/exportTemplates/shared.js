@@ -114,3 +114,6 @@ export function chromeFace(chrome, base64) {
   if (!chrome || typeof base64 !== 'string' || base64.length > 160000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return ''
   return `@font-face{font-family:'${esc(chrome.family)}';src:url(data:font/woff2;base64,${base64}) format('woff2');font-weight:${esc(chrome.weights)};font-display:block}`
 }
+
+/** The name of a reading ink the generator hands over: black is all zeros, anything else is white. */
+export const inkName = (hex) => (/^#0+$/.test(String(hex)) ? 'Black' : 'White')

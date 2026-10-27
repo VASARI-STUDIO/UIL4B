@@ -32,8 +32,8 @@ test('the coherence check refuses what it should', () => {
 })
 
 test('isTemplate accepts only a live id of that format, and only strings', () => {
-  assert.equal(isTemplate('book', 'specification'), true)
-  for (const bad of ['monograph', 'studio', '', null, undefined, 7, {}, [], ['specification'], '__proto__', 'constructor']) {
+  for (const live of ['specification', 'monograph', 'atlas']) assert.equal(isTemplate('book', live), true, live)
+  for (const bad of ['poster', 'manual', 'studio', '', null, undefined, 7, {}, [], ['specification'], '__proto__', 'constructor']) {
     assert.equal(isTemplate('book', bad), false, String(bad))
   }
   for (const format of ['nope', '__proto__', 'constructor', undefined, 7]) assert.equal(isTemplate(format, 'specification'), false)

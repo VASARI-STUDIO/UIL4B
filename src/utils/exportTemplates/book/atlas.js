@@ -4,7 +4,7 @@
 // headings are the user's own face. There are no section openings: the plates are
 // the sections.
 
-import { esc, safeHex, fitTitle, chromeFor } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, chromeFor } from '../shared.js'
 import { mixHex } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Martian Mono', weights: '100 800', file: 'martian-mono-latin.woff2' })
@@ -24,9 +24,9 @@ const plateOrder = (slots) => [
 ]
 
 function cover(ctx) {
-  const { slots, field, fieldInk, projectName, roles, d, iso } = ctx
+  const { slots, fieldInk, projectName, roles, d, iso } = ctx
   const order = plateOrder(slots)
-  const bands = order.map((s) => `<i style="background:${safeHex(s.hex, '#888888')};flex:${WEIGHT[s.kind]} 1 0"></i>`).join('')
+  const bands = order.map((s) => `<i style="background:${safeHex(s.hex, 'GrayText')};flex:${WEIGHT[s.kind]} 1 0"></i>`).join('')
   const total = order.reduce((n, s) => n + WEIGHT[s.kind], 0)
   const primaryMm = total ? 210 * WEIGHT.primary / total : 210
   // The title sits on the primary band when it fits there whole, at 44, 34 or 26 pt;
@@ -36,18 +36,18 @@ function cover(ctx) {
   const fit = useBand ? onBand : ctx.fit
   const facts = `<p class="at-facts">${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'}<br>Issued ${esc(iso)}</p>`
   const text = `<h1 class="at-title${fit.clamp ? ' is-clamped' : ''}" style="font-size:${fit.size}pt">${esc(projectName)}</h1>${facts}`
-  const boxStyle = `background:${safeHex(roles.paper, '#F7F7F5')};color:${safeHex(roles.ink, '#1B1B1B')}`
+  const boxStyle = `background:${roles.paper};color:${roles.ink}`
   return `<section class="pg pg-cover">
   <div class="at-bands">${bands}</div>
   ${useBand
-    ? `<div class="at-on" style="width:${primaryMm.toFixed(1)}mm;color:${safeHex(fieldInk, '#000000')}">${text}</div>`
+    ? `<div class="at-on" style="width:${primaryMm.toFixed(1)}mm;color:${safeHex(fieldInk, 'CanvasText')}">${text}</div>`
     : `<div class="at-box" style="${boxStyle}">${text}</div>`}
 </section>`
 }
 
 /** A page with a running foot (the section, and the folio). A plate passes its own ground and ink. */
 function frame(ctx, inner, { section = '', folio = null, cls = '', bg = '', fg = '' } = {}) {
-  const style = bg ? ` style="background:${safeHex(bg, '#FFFFFF')};color:${safeHex(fg, '#000000')}"` : ''
+  const style = bg ? ` style="background:${safeHex(bg, 'Canvas')};color:${safeHex(fg, 'CanvasText')}"` : ''
   return `<section class="pg ${cls}"${style}>
   ${inner}
   ${folio === null ? '' : `<footer class="foot"><span>${esc(section)}</span><span class="folio">${folio}</span></footer>`}
@@ -62,7 +62,7 @@ function reads(ctx, s, slots) {
 function plate(ctx, s, slots) {
   const ok = reads(ctx, s, slots)
   const tints = [{ pct: 100, hex: s.hex }, ...s.tints]
-  const ink = s.ink === '#000000' ? 'Black' : 'White'
+  const ink = inkName(s.ink)
   return {
     leaf: `${s.name} · ${s.hex}`,
     bg: s.hex,
@@ -81,10 +81,10 @@ function plate(ctx, s, slots) {
       <dl class="pl-vals">
         <div><dt>Ink</dt><dd>${ink}, ${s.ratio}:1, ${esc(s.grade)}</dd></div>
         <div><dt>Passes as text here</dt><dd>${ok.length
-    ? ok.map((o) => `<span class="rd"><i style="background:${safeHex(o.hex, '#888888')}"></i>${esc(o.hex)}</span>`).join('')
+    ? ok.map((o) => `<span class="rd"><i style="background:${safeHex(o.hex, 'GrayText')}"></i>${esc(o.hex)}</span>`).join('')
     : `No other colour; use ${ink.toLowerCase()}`}</dd></div>
       </dl>
-      <div class="pl-tints">${tints.map((t) => `<span><i style="background:${safeHex(t.hex, '#888888')}"></i>${t.pct}%</span>`).join('')}</div>
+      <div class="pl-tints">${tints.map((t) => `<span><i style="background:${safeHex(t.hex, 'GrayText')}"></i>${t.pct}%</span>`).join('')}</div>
     </div>
   </div>`,
   }
@@ -101,7 +101,7 @@ function matrix(ctx, slots) {
   const size = Math.min(20, Math.floor((PAIRS_WIDTH_MM / n) * 10) / 10)
   let pass = 0
   let all = 0
-  const chip = (hex) => `<i class="pr-chip" style="background:${safeHex(hex, '#888888')}"></i>`
+  const chip = (hex) => `<i class="pr-chip" style="background:${safeHex(hex, 'GrayText')}"></i>`
   const head = slots.map((s) => `<div class="pr-h">${chip(s.hex)}</div>`).join('')
   const rows = slots.map((g) => `<div class="pr-h">${chip(g.hex)}</div>${slots.map((t) => {
     if (g.i === t.i) return '<div class="pt pt-self"></div>'
@@ -109,7 +109,7 @@ function matrix(ctx, slots) {
     all += 1
     if (r >= 4.5) {
       pass += 1
-      return `<div class="pt pt-ok" style="background:${safeHex(g.hex, '#888888')};color:${safeHex(t.hex, '#000000')}"><b>Aa</b><span>${r}</span></div>`
+      return `<div class="pt pt-ok" style="background:${safeHex(g.hex, 'GrayText')};color:${safeHex(t.hex, 'CanvasText')}"><b>Aa</b><span>${r}</span></div>`
     }
     return `<div class="pt pt-no"><span>${r}</span></div>`
   }).join('')}`).join('')
@@ -150,10 +150,10 @@ function typography(ctx) {
 
 function css(ctx) {
   const { d, roles } = ctx
-  const paper = safeHex(roles.paper, '#F7F7F5')
-  const ink = safeHex(roles.ink, '#1B1B1B')
-  const muted = safeHex(roles.muted, '#5B5B5B')
-  const rule = safeHex(roles.rule, '#DDDDDD')
+  const paper = roles.paper
+  const ink = roles.ink
+  const muted = roles.muted
+  const rule = roles.rule
   const desk = mixHex(muted, paper, 0.16)
   const shade = mixHex(ink, desk, 0.16)
   return `${chromeFor(CHROME, ctx.fontData)}

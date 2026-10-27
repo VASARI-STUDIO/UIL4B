@@ -8,7 +8,7 @@
 // column with a 6 mm gap. Recto pages (odd folios) put the margin column on the
 // outer right edge; verso pages mirror it, so a printed spread reads as a book.
 
-import { esc, safeHex, paletteLayout, chromeFor } from '../shared.js'
+import { esc, safeHex, inkName, paletteLayout, chromeFor } from '../shared.js'
 import { mixHex } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Literata', weights: '200 900', file: 'literata-latin.woff2' })
@@ -19,7 +19,6 @@ const MATRIX_MAX = 8
 const NEUTRALS_PER_PAGE = 12
 
 const side = (folio) => (folio % 2 === 1 ? 'rt' : 'vs')
-const cell = (list) => list.filter(Boolean).join('')
 const dl = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
 const roleName = (role) => String(role).toLowerCase()
 
@@ -43,7 +42,7 @@ function front(ctx) {
   const cover = `<section class="pg rt pg-cover">
   <div class="cv">
     ${title(ctx, fit.size, 'cv-title')}
-    <i class="cv-sq" style="background:${safeHex(field, '#111114')}"></i>
+    <i class="cv-sq" style="background:${safeHex(field, 'CanvasText')}"></i>
   </div>
   ${mark}
 </section>`
@@ -81,7 +80,7 @@ function contents(ctx, { contents: list, tokens, iso, folio }) {
 /** The tint strip under a plate: the colour, then 80, 60, 40 and 20% of it over paper. */
 function tints(s) {
   const all = [{ pct: 100, hex: s.hex }, ...s.tints]
-  return `<div class="tint">${all.map((t) => `<span><i style="background:${safeHex(t.hex, '#888888')}"></i>${t.pct}%</span>`).join('')}</div>`
+  return `<div class="tint">${all.map((t) => `<span><i style="background:${safeHex(t.hex, 'GrayText')}"></i>${t.pct}%</span>`).join('')}</div>`
 }
 
 /** What the margin column says about one colour. */
@@ -90,7 +89,7 @@ function specs(s) {
     <p class="nm">${esc(s.name)}</p>
     ${dl([
     ['Hex', s.hex], ['RGB', s.rgb], ['HSL', s.hsl], ['OKLCH', s.oklch],
-    ['Ink', `${s.ink === '#000000' ? 'Black' : 'White'}, ${s.ratio}:1, ${s.grade}`],
+    ['Ink', `${inkName(s.ink)}, ${s.ratio}:1, ${s.grade}`],
   ])}
     <p class="lands"><b>Where it lands</b>${esc(s.lands)}</p>`
 }
@@ -101,7 +100,7 @@ function swatches(ctx, slots) {
   const rows = paletteLayout(slots.length, 'monograph').map((row) => `<div class="ov-row">${row.map(({ i, span }) => {
     const s = slots[i]
     return `<div class="ov-cell${span > 1 ? ' is-primary' : ''}" style="grid-column:span ${span}">
-        <i class="ov-chip" style="background:${safeHex(s.hex, '#888888')}"></i>
+        <i class="ov-chip" style="background:${safeHex(s.hex, 'GrayText')}"></i>
         <p class="role">${esc(roleName(s.role))}</p>
         <p class="nm">${esc(s.name)}</p>
         <p class="hx">${esc(s.hex)}</p>
@@ -122,7 +121,7 @@ function swatches(ctx, slots) {
     pages.push({
       leaf: s.name,
       inner: `<div class="rw">
-      <div class="tx"><i class="plate" style="background:${safeHex(s.hex, '#888888')}"></i>${tints(s)}</div>
+      <div class="tx"><i class="plate" style="background:${safeHex(s.hex, 'GrayText')}"></i>${tints(s)}</div>
       <div class="mg">${specs(s)}</div>
     </div>`,
     })
@@ -138,7 +137,7 @@ function swatches(ctx, slots) {
     ? '<h3>Neutrals</h3><p class="lede">The quiet colours: grounds, text and rules.</p>'
     : '<h3 class="cont">Neutrals <span>continued</span></h3>'}</header>
     <div class="wide chips">${group.map((s) => `<div class="chip">
-        <i style="background:${safeHex(s.hex, '#888888')}"></i>
+        <i style="background:${safeHex(s.hex, 'GrayText')}"></i>
         <div><p class="role">${esc(roleName(s.role))}</p><p class="nm">${esc(s.name)}</p>
         <p class="hx">${esc(s.hex)} &middot; ${s.ratio}:1 ${esc(s.grade)}</p><p class="lands">${esc(s.lands)}</p></div>
       </div>`).join('')}</div>`,
@@ -149,9 +148,9 @@ function swatches(ctx, slots) {
 
 function matrix(ctx, slots) {
   const cols = slots.slice(0, MATRIX_MAX).map((s) => s.hex)
-  const axes = [...cols, '#FFFFFF', '#000000']
-  const head = axes.map((c) => `<th scope="col"><i class="dot" style="background:${safeHex(c, '#888888')}"></i><span>${esc(c.replace('#', ''))}</span></th>`).join('')
-  const rows = cols.map((row) => `<tr><th scope="row"><i class="dot" style="background:${safeHex(row, '#888888')}"></i>${esc(row)}</th>${axes.map((col) => {
+  const axes = [...cols, ctx.white, ctx.black]
+  const head = axes.map((c) => `<th scope="col"><i class="dot" style="background:${safeHex(c, 'GrayText')}"></i><span>${esc(c.replace('#', ''))}</span></th>`).join('')
+  const rows = cols.map((row) => `<tr><th scope="row"><i class="dot" style="background:${safeHex(row, 'GrayText')}"></i>${esc(row)}</th>${axes.map((col) => {
     if (row === col) return '<td class="mx-self">&mdash;</td>'
     const r = ctx.contrast(row, col)
     const [cls, word] = r >= 4.5 ? ['mx-pass', 'Pass'] : r >= 3 ? ['mx-mid', 'Large'] : ['mx-fail', 'Fail']
@@ -213,10 +212,10 @@ function colophon(ctx) {
 
 function css(ctx) {
   const { d, roles } = ctx
-  const paper = safeHex(roles.paper, '#F7F7F5')
-  const ink = safeHex(roles.ink, '#1B1B1B')
-  const muted = safeHex(roles.muted, '#5B5B5B')
-  const rule = safeHex(roles.rule, '#DDDDDD')
+  const paper = roles.paper
+  const ink = roles.ink
+  const muted = roles.muted
+  const rule = roles.rule
   const desk = mixHex(muted, paper, 0.16)
   const shade = mixHex(ink, desk, 0.16)
   return `${chromeFor(CHROME, ctx.fontData)}
@@ -262,7 +261,7 @@ function css(ctx) {
   h1,h2,h3{font-family:var(--head);font-weight:${d.headingWeight};margin:0;line-height:1.1}
   p{margin:0 0 1em}
   .pg-head{margin-bottom:9mm}
-  .pg-head h3,.ct-h{font-size:21pt;letter-spacing:-.01em;grid-column:var(--c-tx)}
+  .pg-head h3,.ct-h{font-family:var(--head);font-size:21pt;letter-spacing:-.01em;grid-column:var(--c-tx)}
   .pg-head h3.cont span{font-weight:400;color:var(--muted)}
   .pg-head .lede{grid-column:var(--c-mg);font-family:var(--chrome);font-size:8pt;line-height:1.45;color:var(--muted);margin:1.4mm 0 0}
   .note{grid-column:var(--c-mg);font-family:var(--chrome);font-size:8pt;line-height:1.45;color:var(--muted);margin:6mm 0 0}
@@ -280,7 +279,7 @@ function css(ctx) {
   .pg-half .cv-title{margin:0}
   .cv-sq{display:block;width:30mm;height:30mm}
   .cv-logo{position:absolute;left:var(--inner);bottom:24mm;height:12mm;width:auto;max-width:var(--text);object-fit:contain}
-  .op-title{font-size:34pt;letter-spacing:-.02em;overflow-wrap:anywhere}
+  .op-title{font-family:var(--head);font-size:34pt;letter-spacing:-.02em;overflow-wrap:anywhere}
 
   /* ── contents ──────────────────────────────────────────────────────── */
   .ct-h{grid-row:1;margin:0 0 9mm}
@@ -340,8 +339,8 @@ function css(ctx) {
 
   /* ── type ──────────────────────────────────────────────────────────── */
   .fm{padding:5mm 0 6mm;border-top:.25mm solid var(--ink)}
-  .fm-name{font-size:28pt;line-height:1.1;margin:0 0 5mm;overflow-wrap:anywhere}
-  .fm-set{font-size:12pt;line-height:1.6;margin:0;overflow-wrap:anywhere}
+  .fm-name{font-family:var(--head);font-size:28pt;line-height:1.1;margin:0 0 5mm;overflow-wrap:anywhere}
+  .fm-set{font-family:var(--body);font-size:12pt;line-height:1.6;margin:0;overflow-wrap:anywhere}
   .st{padding:3mm 0;border-top:.25mm solid var(--rule);align-items:baseline}
   .sp{margin:0;line-height:1.15;white-space:nowrap;overflow:hidden}
   .st .mg{padding-top:1mm}
