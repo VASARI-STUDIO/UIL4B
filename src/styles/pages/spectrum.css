@@ -1128,39 +1128,44 @@
   gap: clamp(26px, 4vw, 48px);
 }
 @media (max-width: 860px) { .sp-proof-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 460px) { .sp-proof-row { grid-template-columns: minmax(0, 1fr); } }
 .sp-proof-row > div { min-width: 0; text-align: center; display: grid; gap: 10px; }
 .sp-proof-n { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: -.02em; color: var(--sp-ink); font-variant-numeric: tabular-nums; }
 .sp-proof-l { font-size: 13.5px; line-height: 1.45; color: var(--sp-dim); max-width: min(22ch, 100%); margin: 0 auto; }
 
-/* ── phones and tablets: the library as a 2-up grid, the figures as rows ──── */
-@media (max-width: 760px) {
-  .sp-proof { padding-top: 96px; }
-  .sp-proof-head { margin: 0; text-align: left; }
-  .sp-proof-row { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 8px 0; }
+/* ── phones and tablets: the figures as left-aligned rows ──────────────────
+   From 860px down each figure sits in a fixed column with its label beside it,
+   between hairlines: two columns from 761 to 860px, one at 760px and below. The
+   heading stays centred above 760px. */
+@media (max-width: 860px) {
+  .sp-proof-row { gap: 0; padding: 8px 0; }
   .sp-proof-row > div {
-    /* A fixed column, not `ch`: ch is the row's 16px text, and "101" at 40px is wider than 4.2 of those. */
-    grid-template-columns: 88px minmax(0, 1fr);
+    /* A fixed column, not `ch`: ch is the row's 16px text, and "101" at 40px (67px) is wider than 4.2 of those. */
+    grid-template-columns: 72px minmax(0, 1fr);
     align-items: baseline;
-    column-gap: 16px;
-    gap: 0 16px;
+    gap: 0 14px;
     text-align: left;
     padding: 16px 0;
     border-top: 1px solid var(--sp-hair);
   }
-  .sp-proof-row > div:first-child { border-top: 0; }
   .sp-proof-n { font-size: 40px; }
   .sp-proof-l { font-size: 15px; max-width: none; margin: 0; }
 }
 @media (min-width: 761px) and (max-width: 860px) {
   .sp-proof-row { column-gap: 32px; }
+  /* The first row of the two columns has its rule from the row above. */
+  .sp-proof-row > div:nth-child(-n+2) { border-top: 0; }
+}
+@media (max-width: 760px) {
+  .sp-proof { padding-top: 96px; }
+  .sp-proof-head { margin: 0; text-align: left; }
+  .sp-proof-row { grid-template-columns: minmax(0, 1fr); }
+  .sp-proof-row > div:first-child { border-top: 0; }
 }
 @media (max-width: 560px) {
   .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .sp-disc-art { height: 96px; }
   .sp-disc-row { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; }
   .sp-disc-name { font-size: 14px; max-width: 100%; }
-  .sp-disc-meta { font-size: 12px; }
   .sp-disc-cta { min-height: 0; }
   .sp-disc-cta-say { font-size: 20px; }
   /* An odd count leaves no empty cell: the last card spans both columns. */
@@ -1168,6 +1173,10 @@
 }
 @media (min-width: 761px) and (max-width: 900px) {
   .sp-disc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* The meta line is 12px up to 900px, the size floor on a tablet as on a phone. */
+@media (max-width: 900px) {
+  .sp-disc-meta { font-size: 12px; }
 }
 
 /* ── the handoff ──────────────────────────────────────────────────────────── */
@@ -1180,7 +1189,7 @@
    page is a few screens shorter without touching any content. */
 @media (max-width: 560px) {
   .sp-section:not(.sp-proof) { padding-top: 64px; }
-  .sp-close { padding-top: 96px; }
+  .sp-proof, .sp-close { padding-top: 72px; }
 }
 
 /* ── responsive ───────────────────────────────────────────────────────────── */
