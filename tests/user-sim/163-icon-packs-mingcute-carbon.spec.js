@@ -69,11 +69,22 @@ async function packListed(page, title, count) {
   await expect(page.locator('.ig-status').filter({ hasText: new RegExp(`· ${title} · ${count} icons$`) })).toBeVisible({ timeout: 15000 })
 }
 
-/** Every glyph in the grid has drawn (a broken image is 0 wide). */
+/**
+ * Every glyph in the grid has drawn, and there are `count` of them. A monochrome icon is an
+ * `<svg class="ig-sym"><use href="#icsN"/></svg>` and is drawn when the sprite holds a non-empty
+ * <symbol> with that id (see 164-icon-grid-sprite.spec.js); an image-backed one is drawn when it
+ * has loaded (a broken image is 0 wide). A different count, or one undrawn cell, polls negative.
+ */
 async function allGlyphsDrawn(page, count) {
-  await expect.poll(() => page.locator('.ig .ic:not(.ig-skel) img').evaluateAll(
-    (imgs) => imgs.length > 0 && imgs.every((i) => i.complete && i.naturalWidth > 0) ? imgs.length : -imgs.length,
-  ), { timeout: 15000 }).toBe(count)
+  await expect.poll(() => page.locator('.ig .ic:not(.ig-skel) :is(img, svg.ig-sym)').evaluateAll((arts) => {
+    const symbols = new Map([...document.querySelectorAll('#ig-sprite symbol')].map((s) => [s.id, s]))
+    const drawn = (el) => {
+      if (el.tagName.toLowerCase() === 'img') return el.complete && el.naturalWidth > 0
+      const href = el.querySelector('use')?.getAttribute('href') || ''
+      return href.startsWith('#') && !!symbols.get(href.slice(1))?.firstElementChild
+    }
+    return arts.length > 0 && arts.every(drawn) ? arts.length : -arts.length
+  }), { timeout: 15000 }).toBe(count)
 }
 
 async function openLibrary(page, width, who, signedIn) {
