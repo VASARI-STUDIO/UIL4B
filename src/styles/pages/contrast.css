@@ -116,6 +116,44 @@
   line-height: 1.3;
 }
 
+/* ── Views: the specimen or a preview example ──────────────────────────── */
+.cc .cc-views .tl-pill { min-height: 36px; padding-block: 0; }
+.cc .cc-views-more { white-space: pre; }
+/* An example in the pair: the preview scene root, sized to the column. Its
+   hit colour is fixed, because the pair's own text colour can be the field. */
+.cc .cc-pv { border-radius: 18px; border-color: var(--tl-line); --pv-hit: #1d63d1; }
+.cc .cc-pv-wait { min-height: 320px; border: 1px solid var(--tl-line); border-radius: 18px; }
+
+/* ── Where each test lands ──────────────────────────────────────────────── */
+.cc .cc-lg { display: grid; gap: var(--s-2); }
+.cc .cc-lg-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
+.cc .cc-lg-chip {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+  min-height: 64px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: var(--tl-card);
+  color: var(--tl-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color .16s ease, background-color .16s ease;
+}
+.cc .cc-lg-chip[aria-pressed="true"] { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
+.cc .cc-lg-chip.is-fail { border-color: var(--err); }
+.cc .cc-lg-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+.cc .cc-lg-need { font: 400 12px/1.3 var(--mono); color: var(--tl-dim); }
+.cc .cc-lg-mark { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+@media (hover: hover) and (pointer: fine) {
+  .cc .cc-lg-chip:hover { border-color: var(--tl-line-on); }
+}
+
 /* ── Common pairs in this kit ───────────────────────────────────────────── */
 .cc .cc-pairs { display: grid; gap: var(--s-2); min-width: 0; }
 .cc .cc-pair-grid {
@@ -315,6 +353,7 @@
   .cc .cc-hex-input { height: 44px; font-size: 16px; }
 
   .cc .cc-preview { padding: var(--s-5); }
+  .cc .cc-views-more { display: none; }
   .cc .cc-spec-h { font-size: 32px; }
   .cc .cc-pair-grid { grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); }
 }

@@ -136,7 +136,8 @@ export default function OrraWorkroom({ roles, labels = [] }) {
             <p className="or-help">{PRODUCT.sizeHelp}</p>
           </div>
 
-          <p className="or-stock" data-role="success"><i aria-hidden="true" />{PRODUCT.stock}</p>
+          {/* A state line needs a colour of its own, which a two-colour pair has not got. */}
+          {!roles.pair && <p className="or-stock" data-role="success"><i aria-hidden="true" />{PRODUCT.stock}</p>}
 
           <div className="or-ctas">
             <span className="or-cta" data-role="primary">Add to bag · {price}</span>

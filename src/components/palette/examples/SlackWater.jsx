@@ -11,8 +11,12 @@ const pct = (v, of) => `${(v / of) * 100}%`
 
 function SlackWater({ roles }) {
   const inks = { on: roles.onPrimary, text: roles.text, canvas: roles.canvas }
-  const ink = inkOnField(roles.primary, inks)
-  const sec = brandAsText(roles.secondary, [roles.canvas])
+  // The Contrast Checker's pair is under test, so nothing is corrected: the type
+  // on the field is the background colour, and the one brand-coloured text is the
+  // text colour.
+  const pair = Boolean(roles.pair)
+  const ink = inkOnField(roles.primary, inks, { keep: pair })
+  const sec = pair ? { hex: roles.text, adjusted: false } : brandAsText(roles.secondary, [roles.canvas])
   const vars = {
     // Type set on the field: wharf labels, the caption, and the Subscribe button.
     '--sw-ink': ink.hex,

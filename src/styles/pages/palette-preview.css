@@ -135,10 +135,12 @@
  * The legend sets data-hit="on" on every element of the chosen role and "off"
  * on the leaves of every other role; data-fail marks a role under its floor.
  * Containers never dim, only leaves, so a highlighted child is not dimmed with
- * its parent. The outline sits transparent at rest so it can fade in. */
-.pvs [data-role]{outline:2px dashed transparent;outline-offset:2px;transition:outline-color 150ms ease-out,opacity 150ms ease-out}
+ * its parent. The outline sits transparent at rest so it can fade in.
+ * The Contrast Checker marks by data-size (body, large, ui) the same way: a
+ * hit is a size class chosen in its legend, a fail a test the pair misses. */
+.pvs :is([data-role],[data-size]){outline:2px dashed transparent;outline-offset:2px;transition:outline-color 150ms ease-out,opacity 150ms ease-out}
 .pvs [data-fail="on"]{outline:2px solid var(--pv-error)}
-.pvs [data-hit="on"]{outline:2px dashed var(--pv-text)}
+.pvs [data-hit="on"]{outline:2px dashed var(--pv-hit,var(--pv-text))}
 .pvs [data-hit="on"][data-role~="neutral"],
 .pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
 .pvs [data-hit="off"]{opacity:.4}
@@ -147,9 +149,9 @@
  * the outline and is stroked instead: dashed for "where this colour lands",
  * solid for a role under its floor. Hit comes last, as in the outline rules
  * above, so a hover on a failing role still shows the dashes. */
-.pvs svg [data-role]{outline:none}
+.pvs svg :is([data-role],[data-size]){outline:none}
 .pvs svg [data-fail="on"]{stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
-.pvs svg [data-hit="on"]{stroke:var(--pv-text);stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.pvs svg [data-hit="on"]{stroke:var(--pv-hit,var(--pv-text));stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 
 /* ── Medium scenes: container width under 800px ───────────────────────────── */
 @container pvs (max-width:799px){
