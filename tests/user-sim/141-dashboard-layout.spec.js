@@ -542,7 +542,7 @@ for (const size of SIZES) {
       expect(count, 'no locked card on a free account: the sweep measured nothing').toBeGreaterThan(0)
       await page.locator('.uh-disc').scrollIntoViewIfNeeded()
       await expect(page.locator('.uh-disc-note')).toHaveCount(count)
-      await expect(page.locator('.uh-disc-note')).toHaveText(Array(count).fill('Pro palette. Opens with Pro'))
+      await expect(page.locator('.uh-disc-note')).toHaveText(Array(count).fill('Pro palette'))
       await expect(page.locator('.uh-disc-lock'), 'the strip is dropped with the picture').toHaveCount(0)
       await expect(page.locator('.uh-disc-blur')).toHaveCount(0)
       // Still a card that names the palette and links to the library.

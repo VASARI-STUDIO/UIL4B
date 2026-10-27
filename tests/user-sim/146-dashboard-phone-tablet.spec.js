@@ -62,14 +62,14 @@ async function withExports(page) {
 
 /** A phone in a real touch context, signed in with a Free account, on /projects. Closes the context after `run`. */
 async function onPhone(browser, size, run, opts = {}) {
-  const { projects = PROJECTS, colorScheme, clock, touch = true } = opts
+  const { projects = PROJECTS, colorScheme, clock, touch = true, noName = false } = opts
   const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, hasTouch: touch, isMobile: touch, locale: 'en-AU', ...(colorScheme ? { colorScheme } : {}) })
   try {
     const page = await context.newPage()
     watch(page, `a thumb on a ${size.width}px phone`)
     await withExports(page)
     if (clock) await page.clock.setFixedTime(clock)
-    await signIn(page, { plan: 'free', projects })
+    await signIn(page, { plan: 'free', projects, noName })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
     await run(page)
@@ -89,6 +89,27 @@ const box = (page, selector) => page.evaluate((sel) => {
 const PHONE = { width: 390, height: 844 }
 
 test.describe('on a 390px phone, in a real touch context', () => {
+  // MUTATION: drop the focusin listener in Greeting.jsx's open effect: Tab past
+  // Not now leaves the sheet open over a focused, dimmed page.
+  test('the name sheet keeps focus: Escape returns it to the button, Tab past the sheet closes it', async ({ browser }) => {
+    await onPhone(browser, PHONE, async (page) => {
+      const ask = page.getByRole('button', { name: 'Add your name' })
+      await ask.click()
+      const sheet = page.locator('.uh-pop')
+      await expect(sheet).toBeVisible()
+      await expect(page.locator('#uh-name-input')).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(sheet).toHaveCount(0)
+      await expect(ask).toBeFocused()
+
+      await ask.click()
+      await expect(sheet).toBeVisible()
+      const inside = await sheet.locator('input, button').count()
+      for (let i = 0; i < inside; i++) await page.keyboard.press('Tab')
+      await expect(sheet, 'tabbing out of the sheet closes it').toHaveCount(0)
+    }, { noName: true })
+  })
+
   test('the sections run in the spec\'s order', async ({ browser }) => {
     await onPhone(browser, PHONE, async (page) => {
       // Greeting, title, the date and time line, the lead card, the rows, New project under the work, Today, Start something, Discover, Pro.

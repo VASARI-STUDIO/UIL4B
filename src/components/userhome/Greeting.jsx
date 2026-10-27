@@ -41,8 +41,15 @@ export default function Greeting({ resolving, signedOut }) {
     inputRef.current?.focus()
     const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); btnRef.current?.focus() } }
     const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    // Tab past the sheet closes it, the same as a press outside, so focus never
+    // sits on the dimmed page behind the scrim while the sheet is still open.
+    const onFocus = (e) => {
+      const pop = wrapRef.current?.querySelector('.uh-pop')
+      if (pop && !pop.contains(e.target) && e.target !== btnRef.current) setOpen(false)
+    }
     document.addEventListener('keydown', onKey)
     document.addEventListener('pointerdown', onDown)
+    document.addEventListener('focusin', onFocus)
     // The keyboard covers the bottom of the layout viewport on iOS and on Android with the default
     // resize behaviour, and fixed elements do not move for it. The visual viewport is what is left, so
     // the covered part is the layout height less the visual viewport's height and its offset.
@@ -58,6 +65,7 @@ export default function Greeting({ resolving, signedOut }) {
     vv?.addEventListener('scroll', lift)
     return () => {
       document.removeEventListener('keydown', onKey)
+      document.removeEventListener('focusin', onFocus)
       document.removeEventListener('pointerdown', onDown)
       vv?.removeEventListener('resize', lift)
       vv?.removeEventListener('scroll', lift)

@@ -67,7 +67,7 @@ function LockedCard({ palette, count }) {
   return (
     <Link className="uh-disc-card is-locked" to="/discover/palettes" aria-label={`${palette.name}, Pro palette, opens with Pro`}>
       {failed
-        ? <span className="uh-disc-note">Pro palette. Opens with Pro</span>
+        ? <span className="uh-disc-note">Pro palette</span>
         : <LockedStrip id={palette.id} onFail={fail} />}
       <span className="uh-disc-body">
         <span className="uh-disc-name">{palette.name}</span>
