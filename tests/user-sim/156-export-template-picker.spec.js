@@ -123,15 +123,6 @@ test('the picker appears when a row has a second live template, and only on that
 })
 
 test('each tile is named by its template name alone and described by its description', async ({ page, context }) => {
-  // KNOWN PRODUCT FAULT, found writing this spec: spec section 6.5 says the tile's
-  // accessible name is the template name and the description is its
-  // aria-describedby. ExportTemplatePicker.jsx gives the button no aria-labelledby,
-  // so its name is its whole text: "Studio A working page, components first.". A
-  // screen reader then reads the description twice. The fix is one attribute on the
-  // button (aria-labelledby the name span's id). `test.fail()` keeps this suite
-  // green while that stands and goes red the day it is fixed, so the marker is
-  // removed with the fix instead of rotting.
-  test.fail()
   watch(page, 'a screen reader user on the template choice')
   await makeLive(context, KIT)
   await openProject(page)

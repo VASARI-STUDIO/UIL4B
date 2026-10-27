@@ -24,7 +24,7 @@ export const EXPORT_TEMPLATES = Object.freeze({
   guidelines: Object.freeze([
     t('presentation', 'Presentation', 'A slide deck, one point per slide.', { isDefault: true, live: true }),
     t('poster', 'Poster', 'Big type, one colour per slide.'),
-    t('grid', 'Grid', 'Dense columns, for reading, not presenting.'),
+    t('grid', 'Grid', 'Dense columns, made to read, not present.'),
   ]),
 })
 

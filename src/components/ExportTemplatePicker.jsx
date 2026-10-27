@@ -31,6 +31,7 @@ export default function ExportTemplatePicker({ format, value, onChange, thumbs }
               type="button"
               role="radio"
               aria-checked={checked}
+              aria-labelledby={`${id}-${x.id}-name`}
               aria-describedby={`${id}-${x.id}`}
               tabIndex={checked ? 0 : -1}
               className={checked ? 'exp-tpl-tile is-active' : 'exp-tpl-tile'}
@@ -41,7 +42,7 @@ export default function ExportTemplatePicker({ format, value, onChange, thumbs }
               <span className="exp-tpl-frame" style={{ aspectRatio: RATIO[format] }}>
                 {pic && <img src={pic.src} srcSet={pic.srcSet} sizes={pic.sizes} alt="" loading="lazy" decoding="async" />}
               </span>
-              <span className="exp-tpl-name">{x.name}</span>
+              <span className="exp-tpl-name" id={`${id}-${x.id}-name`}>{x.name}</span>
               <span className="exp-tpl-desc" id={`${id}-${x.id}`}>{x.desc}</span>
             </button>
           )
