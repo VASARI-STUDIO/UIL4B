@@ -63,7 +63,8 @@ const PROBE = `
     .observe({ type: 'largest-contentful-paint', buffered: true }) } catch (e) { /* unsupported */ }
   try { new PerformanceObserver((l) => { for (const e of l.getEntries()) m.shifts.push({
     t: Math.round(e.startTime), v: e.value, input: e.hadRecentInput,
-    sources: (e.sources || []).map((s) => ({ prev: rect(s.previousRect), cur: rect(s.currentRect) })) }) })
+    sources: (e.sources || []).map((s) => ({ prev: rect(s.previousRect), cur: rect(s.currentRect),
+      inNav: !!(s.node && (s.node.closest ? s.node : s.node.parentElement) && (s.node.closest ? s.node : s.node.parentElement).closest('.spnav')) })) }) })
     .observe({ type: 'layout-shift', buffered: true }) } catch (e) { /* unsupported */ }
   const add = EventTarget.prototype.addEventListener
   const rem = EventTarget.prototype.removeEventListener
@@ -313,18 +314,28 @@ test('T3 with motion on at 390, the tool switch enters and the tab pill slides',
 // ── T4: no layout shift ─────────────────────────────────────────────────────
 
 /**
- * The shifts, split into the nav row's known 44x44 icon hit-area boxes (their own measured
- * source, below) and everything else. `content` is the number this slice is answerable for.
+ * The shifts, split into the nav row's known icon-box shift (pre-existing on origin/main, not this
+ * slice) and everything else. The box size and x depend on the font and platform (44x44 near x 117
+ * on a Windows run, 38x38 near x 449 on the CI runner), so the nav shift is identified by what it
+ * is, not by those numbers: every source is an element inside `.spnav`, its box keeps its size and
+ * its y (a pure sideways move), and all the sources moved by the same amount. A shift that touches
+ * anything outside the nav, or moves up or down, or resizes, stays in `other`.
  */
 async function shifts(page) {
   return page.evaluate(() => {
-    const nav = (r) => Math.abs(r.w - 44) < 1 && Math.abs(r.h - 44) < 1 && r.y > 10 && r.y < 32
+    const same = (a, b) => Math.abs(a - b) < 0.5
+    const navShift = (src) => {
+      if (!src.length || !src.every((x) => x.inNav)) return false
+      if (!src.every((x) => same(x.prev.w, x.cur.w) && same(x.prev.h, x.cur.h) && same(x.prev.y, x.cur.y))) return false
+      const dx = src[0].cur.x - src[0].prev.x
+      return Math.abs(dx) > 0.5 && src.every((x) => same(x.cur.x - x.prev.x, dx))
+    }
     let total = 0
     let navOnly = 0
     const other = []
     for (const s of window.__hm.shifts) {
       total += s.v
-      if (s.sources.length && s.sources.every((x) => nav(x.prev) && nav(x.cur))) navOnly += s.v
+      if (navShift(s.sources)) navOnly += s.v
       else other.push({ t: s.t, v: +s.v.toFixed(4), sources: s.sources })
     }
     return { total, navOnly, other }
@@ -345,7 +356,7 @@ for (const view of [1440, 768, 390]) {
     await pressChips(page)
     await page.waitForTimeout(600)
     const s = await shifts(page)
-    if (s.navOnly) info.annotations.push({ type: 'cls-nav', description: `${s.navOnly.toFixed(4)} from the nav's 44x44 icon hit areas (pre-existing, not this slice)` })
+    if (s.navOnly) info.annotations.push({ type: 'cls-nav', description: `${s.navOnly.toFixed(4)} from the nav's icon boxes moving sideways (pre-existing, not this slice)` })
     expect(s.other, 'a layout shift from the page itself').toEqual([])
     if (view === 1440) expect(s.total, 'CLS at 1440 is 0 in total').toBe(0)
     // At 390 the nav's two icon boxes move out at load and back at the first scroll: two shifts of
