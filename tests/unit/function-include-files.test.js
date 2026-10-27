@@ -77,25 +77,51 @@ function importedFromApi() {
 const includeFilesGlob = () => vercel.functions?.['api/ai.js']?.includeFiles || ''
 
 /**
+ * Expands brace groups, nested or not:
+ * `a/{b,c/{d,e}}.js` -> ['a/b.js', 'a/c/d.js', 'a/c/e.js'].
+ */
+function expandBraces(text) {
+  const open = text.indexOf('{')
+  if (open === -1) return [text]
+  let depth = 0
+  let close = -1
+  const parts = []
+  let start = open + 1
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === '{') depth++
+    else if (text[i] === '}') {
+      depth--
+      if (depth === 0) { close = i; break }
+    } else if (text[i] === ',' && depth === 1) {
+      parts.push(text.slice(start, i))
+      start = i + 1
+    }
+  }
+  assert.ok(close !== -1, `unbalanced braces in "${text}"`)
+  parts.push(text.slice(start, close))
+  const head = text.slice(0, open)
+  const tail = text.slice(close + 1)
+  return parts.flatMap((part) => expandBraces(`${head}${part.trim()}${tail}`))
+}
+
+/**
  * `src/data/{pipeline,moduleBoard}.js` -> ['data/pipeline.js', 'data/moduleBoard.js'].
- * One brace group, which is the only form this repository has ever used. A glob
- * this cannot read fails loudly below rather than expanding to nothing, because
- * expanding to nothing would read as "bundles no files" and pass.
+ * Brace groups may nest. A glob this cannot read fails loudly below rather than
+ * expanding to nothing, because expanding to nothing would read as "bundles no
+ * files" and pass.
  */
 function bundledFiles() {
   const glob = includeFilesGlob()
   if (!glob) return []
   const under = /^src\/(.+)$/.exec(glob)
   assert.ok(under, `includeFiles is "${glob}", which does not start at src/ — this file cannot read it`)
-  const rest = under[1]
-  const brace = /^([^{}]*)\{([^{}]+)\}([^{}]*)$/.exec(rest)
-  if (!brace) {
-    assert.doesNotMatch(rest, /[{}*?[\]]/,
+  const files = expandBraces(under[1])
+  for (const f of files) {
+    assert.doesNotMatch(f, /[{}*?[\]]/,
       `includeFiles is "${glob}", a glob shape this file has never seen. Teach bundledFiles() to `
       + 'expand it — do not delete the check, because an unexpandable glob reads as "bundles nothing".')
-    return [rest]
   }
-  return brace[2].split(',').map((part) => `${brace[1]}${part.trim()}${brace[3]}`)
+  return files
 }
 
 /**
@@ -272,4 +298,16 @@ test('CONTROL: the local-only detection really reads git, and does not call ever
     ['docs/backlog/archive-done-2026-09-16.js'],
     'the archived backlog rows are tracked again — they are 172 rows of the same candid prose '
     + 'the live board was taken out of the public repository to protect.')
+})
+
+// Vercel refuses the whole deploy when a function's includeFiles runs past 256
+// characters, so the bundling list has to stay inside that.
+test('includeFiles fits the 256-character limit Vercel enforces', () => {
+  const glob = includeFilesGlob()
+  assert.ok(glob.length <= 256, `includeFiles is ${glob.length} characters; Vercel rejects the deploy over 256`)
+})
+
+test('CONTROL: nested brace groups expand to every path', () => {
+  assert.deepEqual(expandBraces('a/{b,c/{d,e}}.js'), ['a/b.js', 'a/c/d.js', 'a/c/e.js'])
+  assert.deepEqual(expandBraces('x.js'), ['x.js'])
 })
