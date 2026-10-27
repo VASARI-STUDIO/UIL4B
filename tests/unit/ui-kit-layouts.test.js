@@ -43,6 +43,15 @@ test('every layout renders with no placeholder left, Free and Pro', () => {
   assert.throws(() => renderUiKit(design(), { template: '@@DATA@@ @@NOT_A_KEY@@' }), /Unresolved UI kit placeholder @@NOT_A_KEY@@/)
 })
 
+test('Studio: the cover floor is a number the template reads, 40 for a short name and 16 for a clamped one', () => {
+  const floorOf = (name) => /--cover-floor:(\d+(?:\.\d+)?)"/.exec(render('studio', design(BASE, { identity: { name } }), 'pro'))?.[1]
+  assert.ok(TEMPLATE.studio.includes('--cover-floor:@@COVER_FLOOR@@'), 'the template no longer reads the floor')
+  // 80 px is the first fitted step for a short name, and the phone floor is half of it.
+  assert.equal(floorOf('Harbour'), '40')
+  // 100 characters cannot be two whole lines at half size on a 300 px phone box: the floor is 16.
+  assert.equal(floorOf('Wharfside Marine Supply and Chandlery Trading Company of the Far North Quay and Beyond Limited'.slice(0, 100)), '16')
+})
+
 test('Free carries the mark in every section and the print credit, and Pro carries none', () => {
   for (const layout of LAYOUTS) {
     const free = render(layout, design(), 'free')
@@ -146,4 +155,94 @@ test('each layout loads its own chrome faces, all self-hosted, and loadPublisher
   assert.ok(asked.every((u) => /hanken|martian|HANKEN|MARTIAN/.test(u)), `an unrelated font was fetched: ${asked.join(' ')}`)
   const dflt = await loadPublisherFonts({ fetch })
   assert.deepEqual(dflt.publisherFonts.map((f) => f.family), ['Geist', 'Geist Mono'])
+})
+
+// ── the fix rounds: Studio, Manual and Showcase ─────────────────────────────
+
+const STEPS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']
+
+test('Studio: the cover and masthead carry the project name, a Free kit says "UI kit", and the section heads are plain nouns', () => {
+  const pro = render('studio', design(BASE, { identity: { name: 'Harbour' } }), 'pro')
+  assert.match(pro, /<h1 class="cover-title"[^>]*><span class="ct">Harbour<\/span><\/h1>/)
+  const free = render('studio', design(BASE, { identity: { name: 'Harbour' } }), 'free')
+  assert.match(free, /<h1 class="cover-title"[^>]*><span class="ct">UI kit<\/span><\/h1>/)
+  assert.ok(!free.includes('Harbour'), 'a Free kit named the project')
+  for (const [id, head] of [['colour-title', 'Colour'], ['type-title', 'Typography']]) {
+    assert.ok(pro.includes(`<h2 id="${id}">${head}</h2>`), `the ${head} head is not the plain noun`)
+  }
+})
+
+test('Studio: the tint label breaks as a block on a narrow column, so 500 reads "500" then "Base" with a separator that can hide', () => {
+  const html = render('studio', design())
+  assert.equal(count(html, '500<span class="tint-base"><span class="tint-sep"> · </span>Base</span>'), 5, 'one base label for each of the five tint rows')
+  assert.ok(!html.includes('500 · Base'), 'the label is a plain string again, which can end a line on the separator')
+})
+
+test('Studio: the rest of the palette comes after the Roles block, and a five-colour design has no such block', () => {
+  const html = render('studio', design(FIFTEEN))
+  const roles = html.indexOf('<div class="role-block">')
+  const more = html.indexOf('<h3>The rest of your palette</h3>')
+  assert.ok(roles > 0 && more > 0, 'a block is missing')
+  assert.ok(more > roles, 'the rest of the palette sits before the Roles table')
+  assert.ok(more < html.indexOf('id="typography"'), 'the rest of the palette left the Colour section')
+  const five = render('studio', design(BASE))
+  assert.ok(!five.includes('The rest of your palette'), 'a design with every colour placed shows a rest-of-palette block')
+  assert.ok(!five.includes('<div class="more-colours">'))
+})
+
+test('Manual: tints are a 16 px ramp and a Tints table of 11 steps, with no copy-button stops', () => {
+  const html = render('manual', design(FIFTEEN))
+  assert.ok(!html.includes('class="stop"') && !html.includes('class="stop '), 'a stop button is still drawn')
+  assert.equal(count(html, 'id="tints"'), 1)
+  const table = /<table class="t tints">[\s\S]*?<\/table>/.exec(html)[0]
+  const head = /<thead>([\s\S]*?)<\/thead>/.exec(table)[1]
+  assert.deepEqual([...head.matchAll(/<th scope="col">([^<]*)<\/th>/g)].map((m) => m[1]), ['Colour', ...STEPS])
+  assert.equal(count(table, '<tr><th scope="row">'), 13, 'one row for each of the 13 colours the kit shows')
+  const firstRow = /<tbody><tr>([\s\S]*?)<\/tr>/.exec(table)[1]
+  assert.equal(count(firstRow, '<td>'), 11, 'a row holds a value for each step')
+  assert.equal(count(firstRow, 'data-copy="#2F6B5A"'), 1, 'the 500 step is the colour itself')
+  // The ramp in the colour table has the same 11 tints, as swatches of 16 px.
+  const ramp = /<td class="c-ramp">[\s\S]*?<\/td>/.exec(html)[0]
+  assert.equal(count(ramp, '<i'), 11)
+  assert.match(html, /\.c-ramp[^{]*\{[^}]*\}/, 'the ramp has a style')
+})
+
+test('Manual: a colour graded against itself names its role, and does not print 1.00:1', () => {
+  const html = render('manual', design())
+  const colours = /<table class="t colours">[\s\S]*?<\/table>/.exec(html)[0]
+  assert.match(colours, /<td class="ct self"><small class="lbl">On text<\/small><small>Text colour<\/small><\/td>/)
+  assert.match(colours, /<td class="ct self"><small class="lbl">On canvas<\/small><small>Canvas colour<\/small><\/td>/)
+  assert.ok(!colours.includes('1.00:1'), 'a self-pair reads 1.00:1')
+})
+
+test('Showcase: the scale names its columns once in the head, not under every value', () => {
+  const html = render('showcase', design())
+  assert.equal(count(html, 'Size / line height / weight'), 1)
+  assert.ok(html.includes('<th scope="col">Size / line height / weight</th>'))
+  assert.ok(!html.includes('Size, line height, weight'), 'a row repeats the column name')
+  const rows = /<table class="t scale"[\s\S]*?<\/table>/.exec(html)[0]
+  assert.equal(count(rows, '<td class="vals">'), 6, 'a row for each of the six steps of the scale')
+})
+
+test('Showcase: the heading band sets the alphabet and figures at the Heading 2 step', () => {
+  const html = render('showcase', design())
+  const band = /<p class="sc-alpha" style="--size:([\d.]+)">([^<]*)<\/p>/.exec(html)
+  assert.ok(band, 'the alphabet line is missing')
+  assert.equal(band[2], 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789')
+  const h2 = /<code>([\d.]+) px \/ [\d.]+ \/ \d+<\/code><\/button><small class="var">--text-heading-2</.exec(html)[1]
+  assert.equal(band[1], h2, 'the line is not at the Heading 2 size the scale lists')
+  assert.ok(html.indexOf('class="sc-alpha"') < html.indexOf('id="colour"'), 'the line left the heading band')
+})
+
+test('Showcase: tokens are set in an explicit monospace stack, or in the mono face the person chose', () => {
+  const stack = "ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace"
+  const system = render('showcase', design())
+  assert.ok(system.includes(`style="--tk-mono:${stack}"`), 'the system stack is not spelled out')
+  assert.ok(system.includes('Set in your system’s monospace face'))
+  assert.ok(system.includes('<td>Your system’s own face. Not included in this file.</td>'))
+  // A monospace body face is the token face, said so, and the system-face licence row goes.
+  const own = render('showcase', design(BASE, { fonts: { heading: { family: 'Space Grotesk', weight: 600 }, body: { family: 'Work Sans', weight: 400, category: 'monospace' } } }))
+  assert.ok(own.includes(`style="--tk-mono:var(--font-body),${stack}"`), 'the person\'s mono face is not first in the stack')
+  assert.ok(own.includes('Set in Work Sans, your body face, with tabular figures.'))
+  assert.ok(!own.includes('Your system’s own face. Not included in this file.'))
 })

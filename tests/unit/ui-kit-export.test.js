@@ -78,7 +78,7 @@ test('a pro kit has none of the attribution, and shows the identity it was given
   }
   assert.match(html, /@page \{ @bottom-right/, 'Pro keeps page numbers only')
   assert.match(html, /<section class="chapter personal-identity" id="identity">[\s\S]*<div class="identity-name">Harbour<\/div>/)
-  assert.match(html, /<h2>Your identity\.<\/h2><p>Moorings and chandlery on the north quay\.<\/p>/,
+  assert.match(html, /<h2>Identity<\/h2><p>Moorings and chandlery on the north quay\.<\/p>/,
     'the description the person wrote replaces the template default')
   assert.ok(html.includes(`<img src="${logo.src}" alt="Harbour logo">`))
   assert.match(html, /<span class="pro-title">Harbour<\/span>/)
@@ -88,7 +88,7 @@ test('a pro kit has none of the attribution, and shows the identity it was given
 
   // A name with no description keeps the template's own line.
   const plain = render({ ...DESIGN, identity: { name: 'Harbour' } }, { tier: 'pro' })
-  assert.match(plain.html, /<h2>Your identity\.<\/h2><p>Your supplied identity, paired with the selected interface system\.<\/p>/)
+  assert.match(plain.html, /<h2>Identity<\/h2><p>Your supplied identity, paired with the selected interface system\.<\/p>/)
 
   // No name, no identity section — a logo or a description alone does not make one.
   const unnamed = render({ ...DESIGN, identity: { description: IDENTITY.description } }, { tier: 'pro', logo })
@@ -309,4 +309,28 @@ test('a self-hosted family is read from our own origin', async () => {
   const out = await loadKitFonts([{ family: 'Hanken Grotesk', weights: [400] }], { fetch: fakeFetch(routes) })
   assert.equal(out['Hanken Grotesk'].faces.length, 1)
   assert.equal(out['Hanken Grotesk'].faces[0].weight, '100 900')
+})
+
+test('kitSelections lists the first 13 colours in palette order, keeps the full count, and titles the kit by tier', () => {
+  const FIFTEEN = ['#2F6B5A', '#8C6BB1', '#E3B23C', '#EEF3EE', '#1B2A26', '#C0392B', '#2980B9', '#27AE60', '#8E44AD', '#D35400', '#16A085', '#7F8C8D', '#F39C12', '#34495E', '#E91E63']
+  const many = { ...DESIGN, palette: { base: FIFTEEN[0], harmony: 'auto', colors: FIFTEEN }, identity: IDENTITY }
+  const pro = kitSelections(many, { tier: 'pro' })
+  assert.equal(pro.colourCount, 15, 'the count is the design\'s, not the list\'s')
+  assert.deepEqual(pro.colours.map((c) => c.hex), FIFTEEN.slice(0, 13))
+  assert.deepEqual(pro.colours.map((c) => c.i), [...Array(13).keys()])
+  assert.equal(pro.colours[0].token, '--color-primary')
+  assert.equal(Object.keys(pro.colours[12].scale).length, 11)
+  assert.equal(pro.title, 'Harbour')
+  assert.equal(pro.name, 'Harbour')
+  // Free never takes the name, and the list and count follow the same rule.
+  const free = kitSelections(many, { tier: 'free' })
+  assert.equal(free.title, 'UI kit')
+  assert.notEqual(free.name, 'Harbour')
+  assert.equal(free.colourCount, 15)
+  assert.equal(free.colours.length, 13)
+  // The five-colour design lists all five and counts five; no identity titles a Pro kit "UI kit".
+  const five = kitSelections(DESIGN, { tier: 'pro' })
+  assert.equal(five.colourCount, 5)
+  assert.equal(five.colours.length, 5)
+  assert.equal(five.title, 'UI kit')
 })

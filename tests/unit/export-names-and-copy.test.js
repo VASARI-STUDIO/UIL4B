@@ -144,7 +144,7 @@ const kit = (design) => renderUiKit(design, {
   publisherFonts: [{ family: 'Geist', axis: '300 700', faces: [{ subset: 'latin', base64: 'R0VJU1Q=' }] }],
   publisherLicense: 'Geist licence text',
 }).html
-const swatchBlocks = (html) => [...html.matchAll(/<article class="swatch">[\s\S]*?<\/article>/g)].map((m) => m[0])
+const swatchBlocks = (html) => [...html.matchAll(/<article class="swatch(?: is-primary)?">[\s\S]*?<\/article>/g)].map((m) => m[0])
 
 test('a kit whose five colours are all the palette\'s own says nothing about derivation', () => {
   const slots = kitPalette(FULL)
