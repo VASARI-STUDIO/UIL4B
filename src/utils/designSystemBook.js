@@ -599,6 +599,3 @@ function colophonPage(d, projectName, iso) {
     </div>
   </div>`
 }
-
-/* ── the stylesheet ──────────────────────────────────────────────────────── */
-
