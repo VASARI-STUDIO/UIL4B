@@ -130,16 +130,46 @@ export const MAX_SLOTS = 13
 // Columns of each book template's swatch grid.
 const GRID_COLUMNS = { specification: 3, monograph: 3, atlas: 4 }
 
+// Presentation lays its swatches in one row up to this many colours, then in two.
+const ONE_ROW_MAX = 6
+// The widest a row of two may run, in cell widths (the primary counts for two).
+const ROW_UNITS_MAX = 8
+
+/**
+ * Presentation's rows: one up to six colours; 7 to 13 in two, the brand colours (the
+ * primary and the accents) above and the neutrals below when both rows then fit in
+ * ROW_UNITS_MAX cell widths, else the colours in order, split so the rows run as even as
+ * they can. The primary is a double-width cell wherever it sits.
+ */
+function presentationLayout(count, kinds) {
+  const cell = (i) => ({ i, span: i === 0 ? 2 : 1 })
+  const all = Array.from({ length: count }, (_, i) => i)
+  if (count <= ONE_ROW_MAX) return [all.map(cell)]
+  const units = (row) => row.reduce((sum, i) => sum + cell(i).span, 0)
+  if (Array.isArray(kinds)) {
+    const brand = all.filter((i) => i === 0 || (kinds[i] && kinds[i] !== 'neutral'))
+    const rest = all.filter((i) => !brand.includes(i))
+    if (rest.length && Math.max(units(brand), units(rest)) <= ROW_UNITS_MAX) return [brand.map(cell), rest.map(cell)]
+  }
+  const half = Math.ceil(units(all) / 2)
+  let take = 1
+  while (take < count - 1 && units(all.slice(0, take)) < half) take += 1
+  return [all.slice(0, take).map(cell), all.slice(take).map(cell)]
+}
+
 /**
  * Rows of cells for `n` colours: [[{ i, span }]], `i` the slot index and `span`
  * the columns it takes. The primary (slot 0) takes a whole row of its own, so its
- * cell is always the largest; the rest follow one column each. 0 colours is no
- * rows, and anything over MAX_SLOTS is cut to MAX_SLOTS.
+ * cell is always the largest; the rest follow one column each. 'presentation' is the
+ * exception: its rows are presentationLayout's, and `kinds` (each slot's 'primary',
+ * 'accent' or 'neutral') is what it tells brand colours from neutrals by. 0 colours is
+ * no rows, and anything over MAX_SLOTS is cut to MAX_SLOTS.
  */
-export function paletteLayout(n, template = 'specification') {
+export function paletteLayout(n, template = 'specification', kinds = null) {
   const count = Math.min(MAX_SLOTS, Math.max(0, Math.floor(Number(n) || 0)))
-  const cols = GRID_COLUMNS[Object.hasOwn(GRID_COLUMNS, template) ? template : 'specification']
   if (!count) return []
+  if (template === 'presentation') return presentationLayout(count, kinds)
+  const cols = GRID_COLUMNS[Object.hasOwn(GRID_COLUMNS, template) ? template : 'specification']
   const rows = [[{ i: 0, span: cols }]]
   for (let start = 1; start < count; start += cols) {
     const row = []

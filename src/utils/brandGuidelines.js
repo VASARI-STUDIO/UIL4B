@@ -106,21 +106,30 @@ import { contrast, grade, inkFor, readDesign, typeLadder } from './styleGuideExp
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
-import { esc, orderSections, MAX_SLOTS } from './exportTemplates/shared.js'
-import { deriveRoles, isNeutral } from './exportTemplates/roles.js'
+import { esc, orderSections, paletteLayout, MAX_SLOTS } from './exportTemplates/shared.js'
+import { deriveRoles, isNeutral, softInk } from './exportTemplates/roles.js'
 import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
 
 const DEFAULT_TEMPLATE = 'presentation'
 
-/** Swatch cards per spread. Five is what the harmony engine generates, so the
- *  ordinary palette fills exactly one row of the grid. */
-const SWATCHES_PER_PAGE = 5
 /** Tiles on an “In use” spread. Six is two rows of three at a size where the
  *  type on them is still being READ rather than merely seen. */
 const IN_USE_PER_PAGE = 6
 /** How tall the mark is drawn on the clear-space page, in mm. The X measurement
  *  is derived from it, so it is a constant rather than a magic number. */
 const CLEAR_SPACE_MARK_MM = 34
+
+/** "ALTERNATIVE 1" as "Alternative 1": a label in sentence case, since the layouts do not shout their labels. */
+const sentence = (text) => {
+  const lower = String(text ?? '').toLowerCase()
+  return lower.charAt(0).toUpperCase() + lower.slice(1)
+}
+
+/** The ink measured to read on `ground`, with a softer solid ink for secondary text (never an opacity). */
+function inkPair(ground) {
+  const { ink, ratio } = inkFor(ground)
+  return { ink, ratio, soft: softInk(ink, ground, contrast) }
+}
 
 function chunk(list, size) {
   const out = []
@@ -285,6 +294,7 @@ function spread(ctx, { section, title, notes = [], body, folio, cls = '' }) {
  * you can judge, so the graphic is the brand rather than a stand-in for it.
  */
 function opening(section, field, ink, palette) {
+  const soft = softInk(ink, field, contrast)
   const leaves = section.leaves.map(l => `<li>${esc(l)}</li>`).join('')
   // The GROUND is dropped from its own field. This is the defect
   // designSystemBook.js already records on its cover band: when the page is
@@ -296,7 +306,7 @@ function opening(section, field, ink, palette) {
   const field_ = bands.length
     ? `<div class="op-field" aria-hidden="true">${bands.map(c => `<i style="background:${c}"></i>`).join('')}</div>`
     : ''
-  return `<section class="sl sl-open" style="background:${field};color:${ink}">
+  return `<section class="sl sl-open" style="background:${field};color:${ink};--soft:${soft}">
   <div class="op-left">
     <p class="op-head"><span class="op-num">${esc(section.num)}</span> ${esc(section.title)}</p>
     <ul class="op-leaves">${leaves}</ul>
@@ -343,21 +353,21 @@ function markPage(ctx, folio) {
  * ground, because inventing a reversed lockup is inventing brand artwork. So the
  * page reads as a test rather than a specification, and says so.
  */
-/** The grounds the mark is checked on: paper, ink, then the first four brand colours. */
-function groundList(d) {
+/** The grounds the mark is checked on: the deck's paper and ink, then the first four brand colours. */
+function groundList(d, roles) {
   return [
-    { bg: '#FFFFFF', label: 'Paper', border: true },
-    { bg: '#111114', label: 'Ink' },
-    ...d.palette.slice(0, 4).map((hex, i) => ({ bg: hex, label: roleLabel(d.harmony, i) })),
-  ].map((g) => ({ ...g, ink: inkFor(g.bg).ink }))
+    { bg: roles.paper, label: 'Paper', border: true },
+    { bg: roles.ink, label: 'Ink' },
+    ...d.palette.slice(0, 4).map((hex, i) => ({ bg: hex, label: sentence(roleLabel(d.harmony, i)) })),
+  ].map((g) => ({ ...g, ink: inkFor(g.bg).ink, soft: softInk(inkFor(g.bg).ink, g.bg, contrast) }))
 }
 
 function groundsPage(ctx, folio) {
   const { logo } = ctx.d
-  const grounds = groundList(ctx.d)
+  const grounds = ctx.grounds
   const tiles = grounds.map((g, i) => `<div class="gr${g.border ? ' gr-edge' : ''}${fillRow(i, grounds.length)}" style="background:${g.bg}">
       ${markImg(logo, { cls: 'mk-tile' })}
-      <span class="gr-label" style="color:${inkFor(g.bg).ink}">${esc(g.label)}</span>
+      <span class="gr-label" style="color:${g.soft}">${esc(g.label)}</span>
     </div>`).join('')
   return spread(ctx, {
     section: 'logo',
@@ -398,31 +408,34 @@ function clearSpacePage(ctx, folio, cs) {
  * colour, in the ink measured to read on it, because a chip with a caption
  * underneath is a value and a chip carrying a name is a decision.
  */
-function palettePage(ctx, group, offset, first, folio) {
-  const cards = group.map((hex, i) => {
-    const idx = offset + i
-    const { ink, ratio } = inkFor(hex)
-    return `<figure class="sw" style="background:${hex};color:${ink}">
+function palettePage(ctx, folio) {
+  const { slots } = ctx
+  // The primary is the double-width cell, the rest one; up to six colours sit in one
+  // row and up to thirteen in two (paletteLayout).
+  const card = ({ i, span }) => {
+    const s = slots[i]
+    const { soft } = inkPair(s.hex)
+    return `<figure class="sw${i === 0 ? ' sw-primary' : ''}" style="flex:${span} 1 0;background:${s.hex};color:${s.ink};--soft:${soft}">
       <figcaption class="sw-top">
-        <span class="sw-role">${esc(roleLabel(ctx.d.harmony, idx))}</span>
-        <span class="sw-name">${esc(colorName(hex))}</span>
+        <span class="sw-role">${esc(s.role)}</span>
+        <span class="sw-name">${esc(s.name)}</span>
       </figcaption>
       <dl class="sw-spec">
-        <div><dt>Hex</dt><dd>${esc(hex)}</dd></div>
-        <div><dt>Reads with</dt><dd>${ink === '#000000' ? 'black' : 'white'} · ${ratio}:1</dd></div>
+        <div><dt>Hex</dt><dd>${esc(s.hex)}</dd></div>
+        <div><dt>Reads with</dt><dd>${s.ink === '#000000' ? 'black' : 'white'} · ${s.ratio}:1</dd></div>
+        <div class="sw-lands"><dt>Where it lands</dt><dd>${esc(s.lands)}</dd></div>
       </dl>
     </figure>`
-  }).join('')
+  }
+  const rows = paletteLayout(slots.length, 'presentation', slots.map((s) => s.kind))
   return spread(ctx, {
     section: 'colour',
-    title: first ? 'The palette' : 'The palette, continued',
-    notes: first
-      ? [
-        `Every colour carries a name as well as a value. Say “${colorName(group[0])}” in a review and the decision survives; say the hex and it does not.`,
-        'The ink noted on each card is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.',
-      ]
-      : ['The remainder of the palette, specified identically.'],
-    body: `<div class="swatches">${cards}</div>`,
+    title: 'The palette',
+    notes: [
+      `Every colour carries a name as well as a value. Say “${slots[0].name}” in a review and the decision survives; say the hex and it does not.`,
+      'The ink noted on each card is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.',
+    ],
+    body: `<div class="swatches">${rows.map((row) => `<div class="sw-row">${row.map(card).join('')}</div>`).join('')}</div>`,
     folio,
   })
 }
@@ -440,8 +453,8 @@ function palettePage(ctx, group, offset, first, folio) {
 function inUsePage(ctx, group, first, folio) {
   const phrase = ctx.projectName
   const tiles = group.map((hex, i) => {
-    const { ink, ratio } = inkFor(hex)
-    return `<div class="use${fillRow(i, group.length)}" style="background:${hex};color:${ink}">
+    const { ink, ratio, soft } = inkPair(hex)
+    return `<div class="use${fillRow(i, group.length)}" style="background:${hex};color:${ink};--soft:${soft}">
       <p class="use-set">${esc(phrase)}</p>
       <p class="use-meta">${esc(hex)} · ${ratio}:1 · ${esc(grade(ratio))}</p>
     </div>`
@@ -467,12 +480,37 @@ const FIGURES = '0123456789'.split('')
 /** The boxed alphabet grid — OpenPay's signature. Ten columns, hairline cells,
  *  set in the real face; the last row runs short and is left short, because a
  *  grid padded to squareness stops being a character set. */
-function alphabet(chars, family, weight) {
+function alphabet(chars, family, weight, cls = '') {
   const cells = chars.map(c => `<span>${esc(c)}</span>`).join('')
-  return `<div class="alpha" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}">${cells}</div>`
+  return `<div class="alpha${cls}" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}">${cells}</div>`
+}
+
+/** The weights `family` is set in by this document, heading's first: the weight of each role that uses it. */
+function weightsUsed(d, family) {
+  return [...new Set([family === d.heading ? d.headingWeight : null, family === d.body ? d.bodyWeight : null].filter(Boolean))]
+}
+
+/**
+ * The grids on a face's page. One weight: uppercase, lowercase and figures as three
+ * grids. A family set at two weights (one family for both roles): each weight's whole
+ * character set in one grid, so both are shown and the page still holds them.
+ */
+function alphabets(family, weights) {
+  if (weights.length < 2) {
+    const [weight] = weights
+    return `<p class="tf-lbl">Uppercase</p>
+        ${alphabet(UPPER, family, weight)}
+        <p class="tf-lbl">Lowercase</p>
+        ${alphabet(LOWER, family, weight)}
+        <p class="tf-lbl">Figures</p>
+        ${alphabet(FIGURES, family, weight)}`
+  }
+  return weights.map(weight => `<p class="tf-lbl">Weight ${esc(weight)}</p>
+        ${alphabet([...UPPER, ...LOWER, ...FIGURES], family, weight, ' alpha-all')}`).join('')
 }
 
 function facePage(ctx, { role, family, weight, spacing, folio, notes }) {
+  const weights = weightsUsed(ctx.d, family)
   return spread(ctx, {
     section: 'type',
     title: role,
@@ -484,12 +522,7 @@ function facePage(ctx, { role, family, weight, spacing, folio, notes }) {
         <p class="tf-ag" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}">Ag</p>
       </div>
       <div class="tf-right">
-        <p class="tf-lbl">Uppercase</p>
-        ${alphabet(UPPER, family, weight)}
-        <p class="tf-lbl">Lowercase</p>
-        ${alphabet(LOWER, family, weight)}
-        <p class="tf-lbl">Figures</p>
-        ${alphabet(FIGURES, family, weight)}
+        ${alphabets(family, weights)}
       </div>
     </div>`,
     folio,
@@ -578,7 +611,7 @@ function scopePage(ctx, folio) {
 function buildSlots(d) {
   return d.palette.slice(0, MAX_SLOTS).map((hex, i) => {
     const { ink, ratio } = inkFor(hex)
-    return { i, hex, name: colorName(hex), role: roleLabel(d.harmony, i), kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent', ink, ratio, grade: grade(ratio), lands: slotLandsBook(i), placed: slotPlaced(i) }
+    return { i, hex, name: colorName(hex), role: sentence(roleLabel(d.harmony, i)), kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent', ink, ratio, grade: grade(ratio), lands: slotLandsBook(i), placed: slotPlaced(i) }
   })
 }
 
@@ -603,16 +636,17 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
   const iso = date.toISOString().slice(0, 10)
   const year = iso.slice(0, 4)
 
-  const field = d.base || '#111114'
+  const roles = deriveRoles(d.palette, { contrast, primary: d.base || d.palette[0] })
+  const field = d.base || roles.ink
   const fieldInk = inkFor(field).ink
   const mark = d.logo ? markImg(d.logo, { cls: 'mk-cover', alt: `${projectName} logo` }) : esc(projectName)
   // What a template that composes its own deck (`slides`) may read, beside the sections:
   // the page roles, the colour slots, the logo's helpers and the scope facts.
   Object.assign(ctx, {
     field, fieldInk, year, iso, mark, fontData, contrast, ladder: typeLadder(d),
-    roles: deriveRoles(d.palette, { contrast, primary: d.base || d.palette[0] }),
+    roles,
     slots: buildSlots(d),
-    grounds: d.logo ? groundList(d) : [],
+    grounds: d.logo ? groundList(d, roles) : [],
     logoFacts: d.logo ? logoFactsOf(d.logo) : [],
     markImg: (opts) => markImg(d.logo, opts),
     clearSpaceAt: (mm) => clearSpace(d.logo, mm),
@@ -625,7 +659,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
 
   if (tpl.slides) tpl.slides(ctx).filter(Boolean).forEach(push)
   for (const section of tpl.slides ? [] : sections) {
-    const openField = section.id === 'colour' ? field : '#111114'
+    const openField = section.id === 'colour' ? field : roles.ink
     push(opening(section, openField, inkFor(openField).ink, d.palette))
 
     if (section.id === 'logo') {
@@ -636,12 +670,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
     }
 
     if (section.id === 'colour') {
-      let seen = 0
-      balanced(d.palette, SWATCHES_PER_PAGE).forEach((group, gi) => {
-        const offset = seen
-        numbered((f) => palettePage(ctx, group, offset, gi === 0, f))
-        seen += group.length
-      })
+      numbered((f) => palettePage(ctx, f))
       balanced(d.palette.slice(0, IN_USE_PER_PAGE * 2), IN_USE_PER_PAGE).forEach((group, gi) => {
         numbered((f) => inUsePage(ctx, group, gi === 0, f))
       })
@@ -679,7 +708,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
   if (!tpl.slides) numbered((f) => scopePage(ctx, f))
 
   return `<!doctype html>
-<html lang="en">
+<html lang="en-AU">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

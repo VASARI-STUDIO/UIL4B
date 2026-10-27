@@ -34,7 +34,7 @@ test('no template reads `design`', () => {
 // colours moved to roles, carries no raw hex: its colours are roles the generator
 // hands it.
 test('new templates carry no raw hex colour', () => {
-  const pinned = new Set(['presentation.js'])
+  const pinned = new Set()
   for (const f of files.filter((x) => !pinned.has(path.basename(x)))) {
     assert.doesNotMatch(code(f), /#[0-9a-fA-F]{3,8}\b/, f)
   }
