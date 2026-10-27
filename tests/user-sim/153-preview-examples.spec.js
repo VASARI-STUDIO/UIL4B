@@ -21,6 +21,8 @@
 //   7b. the Energy dashboard's series labels keep clear of the now line, the now
 //      label and each other (a box test; the contrast walk cannot see a line
 //      drawn under a label's plate)
+//   7c. tracing a colour leaves no outline on a drawn (SVG) part
+//   7d. Orra's colourway names fit under their swatches at 1440, 768 and 390
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //
 // HOW GROUND IS FOUND (7). Not by walking ancestors: a label that sits on a
@@ -39,7 +41,9 @@
 // registry.js (8); stop PalettePreview from writing data-hit (2, 3); remove the
 // `if (exampleLoading()) return` in main.jsx (8, the page reloads); drop
 // `overflow:hidden` from `.or-thumb .or-garment` (7, the Pocket label); render the
-// Sundial Solar tag as plain `sd-tag` (7b, 3 red).
+// Sundial Solar tag as plain `sd-tag` (7b, 3 red); delete `.pvs svg [data-role]{outline:none}`
+// in palette-preview.css (7c, 3 red); put `.or-sw` back to its old width and
+// `.or-sw-t` back to ellipsis (7d, 3 red).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
@@ -554,6 +558,64 @@ test.describe('the Energy dashboard chart labels', () => {
           boxes.tags.slice(i + 1).forEach((u) => { if (touch(t, u)) problems.push(`${t.name} overlaps ${u.name}`) })
         })
         expect(problems, `${theme} at ${width}px`).toEqual([])
+      }
+    })
+  }
+})
+
+// ── 7c. the legend's highlight on a drawing ──────────────────────────────────
+// A drawn part (an SVG path with a data-role) is traced by a stroke. Chromium
+// would also paint an `outline` round its bounding box, and in a chart with a
+// stretched viewBox that box is a heavy dashed bar across the plot, away from the
+// data. So no SVG part may carry an outline while a colour is traced.
+
+test.describe('the legend highlight on a drawing', () => {
+  for (const ex of EXAMPLES) {
+    test(`${ex.name}: tracing a colour puts no outline on any drawn part`, async ({ page }) => {
+      watch(page, `designer tracing colours on the drawings in ${ex.name}`)
+      await seed(page, PALETTES.mid)
+      const dialog = await openDialog(page)
+      await pickScene(dialog, ex.name)
+      const outlined = async () => page.evaluate(() => [...document.querySelectorAll('.pvs svg [data-role]')]
+        .filter((el) => getComputedStyle(el).outlineStyle !== 'none')
+        .map((el) => `${el.tagName}.${el.getAttribute('class') || ''}[${el.dataset.role}]`))
+      expect((await page.locator('.pvs svg [data-role]').count()), `${ex.name}: drawn parts with a role were found`).toBeGreaterThan(3)
+      let traced = 0
+      for (const role of ex.roles) {
+        await chipFor(dialog, role).hover()
+        await expect(hits(page), `${ex.name}: hovering ${role} marked nothing`).not.toHaveCount(0)
+        if (await page.locator('.pvs svg [data-hit="on"]').count()) traced++
+        expect(await outlined(), `${ex.name}: hovering ${role} left an outline on a drawn part`).toEqual([])
+        await page.mouse.move(2, 2)
+      }
+      expect(traced, `${ex.name}: at least one role traced a drawn part, so the check ran on a marked drawing`).toBeGreaterThan(0)
+    })
+  }
+})
+
+// ── 7d. Orra's colourway names fit under their swatch ────────────────────────
+
+test.describe('the Orra colourway names', () => {
+  for (const width of [1440, 768, 390]) {
+    test(`no colourway name is cut off at ${width}px, in both themes`, async ({ page }) => {
+      watch(page, `designer reading the Orra colourways at ${width}px`)
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
+      await seed(page, PALETTES.mid)
+      const dialog = await openDialog(page)
+      for (const theme of ['Light', 'Dark']) {
+        await setTheme(dialog, theme)
+        await pickScene(dialog, 'Product page')
+        await settle(page)
+        const labels = await page.evaluate(() => [...document.querySelectorAll('.or-sw-t')].map((el) => {
+          const box = el.parentElement.getBoundingClientRect()
+          const r = el.getBoundingClientRect()
+          return { text: el.textContent.trim(), scroll: el.scrollWidth, client: el.clientWidth, inside: r.left >= box.left - 0.5 && r.right <= box.right + 0.5 }
+        }))
+        expect(labels.length, `${theme}: the five colourway names were found`).toBe(5)
+        for (const l of labels) {
+          expect(l.scroll, `${theme}: "${l.text}" is wider than its box`).toBe(l.client)
+          expect(l.inside, `${theme}: "${l.text}" sticks out of its swatch column`).toBe(true)
+        }
       }
     })
   }
