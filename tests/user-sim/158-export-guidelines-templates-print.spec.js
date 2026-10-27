@@ -105,15 +105,15 @@ const design = (n, logo) => ({
 
 /**
  * The slides each deck has, from its structure (heading face and body face differ here).
- * Presentation: cover, a Colour opening, the palette, one "in use" page up to 6 colours and two
- * above, a Typography opening, two face pages, the scale, the scope; a logo adds its opening,
+ * Presentation: cover, a Colour opening, the palette, one "in use" page per six of the first 13
+ * colours, a Typography opening, two face pages, the scale, the scope; a logo adds its opening,
  * the mark, the grounds and the clear-space rule.
  * Poster: cover, one slide per colour, the summary, [mark, paper + ink + up to four brand
  * grounds, clear space], two face slides, the scale, the scope.
  * Grid: cover, colour and type, [logo], the scale, usage notes, scope.
  */
 const SLIDES = {
-  presentation: (n, logo) => 9 + (n > 6 ? 1 : 0) + (logo ? 4 : 0),
+  presentation: (n, logo) => 8 + Math.ceil(Math.min(n, 13) / 6) + (logo ? 4 : 0),
   poster: (n, logo) => 1 + n + 1 + (logo ? 1 + (2 + Math.min(4, n)) + 1 : 0) + 2 + 1 + 1,
   grid: (n, logo) => 5 + (logo ? 1 : 0),
 }
