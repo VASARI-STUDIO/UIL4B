@@ -62,7 +62,7 @@ export default function SpectrumProof() {
   return (
     <section id="index" className="sp-section sp-proof" aria-labelledby="sp-proof-h">
       <div className="sp-proof-head" data-sp-reveal>
-        <h2 id="sp-proof-h"><SpectrumWords text="Don't just take it from us" /></h2>
+        <h2 id="sp-proof-h"><SpectrumWords text="What's in the toolkit today." /></h2>
       </div>
       <div className="sp-proof-row" ref={row}>
         {PROOF_STATS.map((s) => (
