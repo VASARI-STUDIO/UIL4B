@@ -133,9 +133,10 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     const rowIndex = index++
     // An option may carry a one-line `desc`: visible text under the label, which
     // the option points at with aria-describedby so a screen reader reads it as
-    // the option's description after its name.
+    // the option's description after its name. The name is set to the label
+    // alone, so the description is not also read as part of the name.
     const descId = option.desc ? `${listId}-${rowIndex}-desc` : undefined
-    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={option.mark || groupMark ? `${option.label}, ${option.mark || groupMark}` : undefined} aria-describedby={descId} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
+    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={option.mark || groupMark ? `${option.label}, ${option.mark || groupMark}` : option.desc ? option.label : undefined} aria-describedby={descId} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
       className={`pop-item menu-select-option${option.desc ? ' menu-select-option--desc' : ''}${active === rowIndex ? ' is-active' : ''}`} data-option-index={rowIndex} data-value={String(option.value)}
       onPointerMove={() => { if (!option.disabled) setActive(rowIndex) }} onClick={() => choose(rowIndex)}>
       {option.desc

@@ -142,6 +142,14 @@ test.describe('Suggest and Explore, on a laptop', () => {
     expect(bad, `options with no description linked by aria-describedby: ${JSON.stringify(bad)}`).toEqual([])
     // A description is a sentence, not a repeat of the label.
     for (const r of report) expect(r.text.length, `${r.value}: description is too short to explain anything`).toBeGreaterThan(10)
+    // The description is read once, as the description: the option's name
+    // must not also contain it.
+    for (let i = 0; i < count; i++) {
+      const row = options.nth(i)
+      const desc = report[i].text
+      const name = await row.evaluate((el) => el.getAttribute('aria-label') || el.textContent || '')
+      expect(name.includes(desc), `${report[i].value}: the description is also in the option's name`).toBe(false)
+    }
   })
 })
 
