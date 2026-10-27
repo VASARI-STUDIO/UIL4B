@@ -477,8 +477,7 @@ export function hctToHex(hue, chroma, tone) {
   return solveToHex(hue, Math.max(0, chroma), clampDouble(0, 100, tone))
 }
 
-// HCT of a hex: tone from L*, hue + chroma from CAM16. Used by tonalRamp so the
-// ramp tracks the swatch's own hue/chroma.
+// HCT of a hex: tone from L*, hue + chroma from CAM16.
 export function hexToHct(hex) {
   const [r, g, b] = hexToRgb(hex)
   const lr = linearized(r), lg = linearized(g), lb = linearized(b)
@@ -515,17 +514,6 @@ export function hexToHct(hex) {
   const alpha = Math.pow(t, 0.9) * Math.pow(1.64 - Math.pow(0.29, VC.n), 0.73)
   const chroma = alpha * Math.sqrt(jScale / 100)
   return [hue, chroma, lstarFromY(yy)]
-}
-
-// 5-step tonal ramp of a hex at the given tones, preserving its hue/chroma.
-export function tonalRamp(hex, tones = [30, 45, 60, 75, 90]) {
-  let h, c
-  try { const hct = hexToHct(hex); h = hct[0]; c = hct[1] }
-  catch { const [hh, ss] = hexToHsl(hex); h = hh; c = ss * 0.6 }
-  return tones.map(t => {
-    try { return hctToHex(h, c, t) }
-    catch { return hslToHex(h, Math.min(100, c), t) }
-  })
 }
 
 // Default "Auto" tonal palette: 5 swatches mapped to the five ROLES off a

@@ -7,7 +7,7 @@
 // kept numerically identical so a scale built here matches the one drawn there.
 // Channels are clamped, so an out-of-gamut request lands on the sRGB edge
 // rather than throwing.
-import { hexToRgb } from '../../utils/colors'
+import { hexToRgb } from '../../utils/colors.js'
 
 const toHexByte = (u) => {
   const v = u <= 0.0031308 ? 12.92 * u : 1.055 * Math.pow(Math.max(u, 0), 1 / 2.4) - 0.055
