@@ -5,6 +5,7 @@
 // Explicit extension so `node --test` can import this module directly for the
 // unit suite; Vite resolves it identically.
 import { hexToRgb, contrastRatio } from './colors.js'
+import { logoSvg, SYMBOL_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 
 export const EXPORT_DARK_INK = '#0F172A'
 export const EXPORT_LIGHT_INK = '#F8FAFC'
@@ -323,7 +324,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 .sg-footer { margin-top: 80px; padding: 32px 0; border-top: 1px solid var(--sg-border); text-align: center; }
 .sg-footer-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--sg-text-3); font-weight: 500; text-decoration: none; transition: color var(--sg-t); }
 .sg-footer-brand:hover { color: var(--sg-text-2); }
-.sg-footer-mark { width: 18px; height: 18px; border-radius: 50%; background: ${primary}; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: ${primaryText}; font-family: '${headingFamily}', sans-serif; }
+.sg-footer-mark { display: inline-flex; align-items: center; line-height: 0; }
 .sg-main { flex: 1; min-width: 0; max-width: 1100px; padding: 56px clamp(24px, 5vw, 72px) 96px; }
 .sg-hero { margin-bottom: 56px; padding-bottom: 32px; border-bottom: 1px solid var(--sg-border); }
 .sg-hero-tag {
@@ -461,7 +462,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 
     <footer class="sg-footer">
       <a class="sg-footer-brand" href="https://uil4b.com" target="_blank" rel="noopener">
-        <span class="sg-footer-mark">U</span>
+        <span class="sg-footer-mark">${logoSvg({ kind: 'symbol', attrs: `height="12" width="${Math.round(12 * SYMBOL_WIDTH / LOGO_HEIGHT)}" aria-hidden="true"` })}</span>
         Built with UIL4B · ${date}
       </a>
     </footer>
