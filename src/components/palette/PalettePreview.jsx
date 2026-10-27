@@ -332,7 +332,7 @@ function Poster() {
   return (
     <div className="pvs-poster">
       <div className="pvs-band pvs-band--1" data-role="primary"><h2>Open studio night</h2></div>
-      <div className="pvs-band pvs-band--2" data-role="secondary"><p><span>Fri 14 Nov, 6 to 9 pm</span><span>22 Boundary St, West End</span></p></div>
+      <div className="pvs-band pvs-band--2" data-role="secondary"><p><span>Fri 14 Nov, 6 to 9 pm</span><span>22&nbsp;Boundary St, West End</span></p></div>
       <div className="pvs-band pvs-band--3" data-role="deep"><p>Free entry. Bring a friend.</p></div>
       <i className="pvs-circle" data-role="accent" />
     </div>
