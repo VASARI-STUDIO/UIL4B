@@ -3,7 +3,8 @@
 // Three stacking cards. Card 1 is a live panel; cards 2 and 3 each put a plate
 // (a real render of the product's own export, from public/home-exports/) in the
 // stage with a row of buttons under it: card 2 a tab strip (UI kit, Book, Brand
-// deck), card 3 a radio group of example projects showing a book cover.
+// deck), card 3 a radio group of example projects shown as a shelf of their three real
+// book covers (the chosen one in front).
 //
 //   1. ONE FRAME. All three .sp-stack-card boxes are the same width and height at
 //      390 (a touch phone), 768 and 1440, in light and dark. Read as layout sizes
@@ -33,8 +34,9 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 const CARD = '.sp-stack-card'
-const ART_IMG = '.sp-plate-art img'
-const SHOWN = '.sp-plate-art img.is-on'
+// Card 3's pictures are the shelf's covers; the one in front carries is-on, as a plate's shown picture does.
+const ART_IMG = '.sp-plate-art img, .sp-shelf img'
+const SHOWN = '.sp-plate-art img.is-on, .sp-shelf img.is-on'
 
 // Card 2 has the tabs UI kit, Book and Brand deck, card 3 the projects Northbeam, Halcyon
 // and Ferrule. Their ORDER is the design's to change, so nothing here counts on it: a
@@ -42,7 +44,8 @@ const SHOWN = '.sp-plate-art img.is-on'
 // Each button is known by what its accessible name starts with, because the same
 // choice is offered as pills under the plate (below 1200px) and as rows in the copy
 // column (from 1200px), and only the one on show is in the page's accessibility tree.
-const TAB_FILE = { 'Design system book': 'book-colour', 'Brand deck': 'guide-palette', 'UI kit': 'kit-colour' }
+// The deck's wide picture is guide-overview (the palette slide over a strip of slides); its phone plate is still guide-palette-p.
+const TAB_FILE = { 'Design system book': 'book-colour', 'Brand deck': 'guide-overview', 'UI kit': 'kit-colour' }
 const PROJECT_FILE = { Northbeam: 'cover-northbeam', Halcyon: 'cover-halcyon', Ferrule: 'cover-ferrule' }
 const fileOf = (table, name) => Object.entries(table).find(([k]) => name.startsWith(k))?.[1]
 
@@ -75,7 +78,9 @@ const nameOf = async (locator) => (await locator.getAttribute('aria-label')) || 
 async function tabId(page, i) {
   const name = await nameOf(tabs(page).nth(i))
   expect(fileOf(TAB_FILE, name), `tab ${i + 1} ("${name}") is a known tab`).toBeTruthy()
-  return fileOf(TAB_FILE, name)
+  const id = fileOf(TAB_FILE, name)
+  // Up to 760px the <picture> serves the portrait plate, and the deck's portrait is still guide-palette-p (the overview strip is landscape only).
+  return id === 'guide-overview' && page.viewportSize().width <= 760 ? 'guide-palette' : id
 }
 async function projectId(page, i) {
   const name = await nameOf(radios(page).nth(i))
@@ -106,7 +111,7 @@ const docTop = (page, sel) => page.locator(sel).evaluate((el) => el.getBoundingC
 const FRAMES = [
   { width: 390, height: 844, touch: true, tall: 710 },
   { width: 768, height: 1024, touch: false, tall: 780 },
-  { width: 1440, height: 900, touch: false, tall: 640 },
+  { width: 1440, height: 900, touch: false, tall: 592 },
 ]
 
 for (const { width, height, touch, tall } of FRAMES) {
@@ -177,7 +182,7 @@ for (const [width, height, touch] of [[1440, 900, false], [390, 844, true]]) {
         name: el.getAttribute('aria-label') || '',
       })))
       expect(shown.length, 'three tabs').toBe(3)
-      expect(shown.map((t) => fileOf(TAB_FILE, t.name)).sort(), 'the tabs are Book, Brand deck and UI kit').toEqual(['book-colour', 'guide-palette', 'kit-colour'])
+      expect(shown.map((t) => fileOf(TAB_FILE, t.name)).sort(), 'the tabs are Book, Brand deck and UI kit').toEqual(['book-colour', 'guide-overview', 'kit-colour'])
       await expect(card(page, 1).getByRole('tabpanel')).toHaveCount(1)
       shown.forEach((t, i) => expect(t.name.toLowerCase(), `tab ${i + 1}'s accessible name holds its visible label`).toContain(t.label.toLowerCase()))
       const s = await tabState(page)
@@ -314,17 +319,17 @@ test.describe("card 3's radio group", () => {
  * Reads the painted opacity, not the is-on class: a picture can hold the class
  * while an animation has it at 0.
  */
-const startOpacityWatch = (page, i) => card(page, i).evaluate((c) => {
+const startOpacityWatch = (page, i) => card(page, i).evaluate((c, sel) => {
   window.__minPeak = 1
   window.__frames = 0
   const tick = () => {
-    const peak = Math.max(0, ...[...c.querySelectorAll('.sp-plate-art img')].map((im) => parseFloat(getComputedStyle(im).opacity)))
+    const peak = Math.max(0, ...[...c.querySelectorAll(sel)].map((im) => parseFloat(getComputedStyle(im).opacity)))
     window.__minPeak = Math.min(window.__minPeak, peak)
     window.__frames += 1
     window.__peakRaf = requestAnimationFrame(tick)
   }
   tick()
-})
+}, ART_IMG)
 const stopOpacityWatch = (page) => page.evaluate(() => {
   cancelAnimationFrame(window.__peakRaf)
   return { minPeak: window.__minPeak, frames: window.__frames }
@@ -333,6 +338,7 @@ const stopOpacityWatch = (page) => page.evaluate(() => {
 test.describe('a swap never blanks the plate', () => {
   // A crossfade has the leaving picture at 1 falling to 0 over 150ms while the arriving
   // one rises from 0 over 240ms, so the brighter of the two is never below about 0.5.
+  // Card 3's shelf never fades a cover out: the front is at 1 and the others at .72.
   // Below 0.2 the plate is, to the eye, empty.
   const FLOOR = 0.2
 
@@ -369,6 +375,470 @@ test.describe('a swap never blanks the plate', () => {
     expect(seen.minPeak, 'the most visible picture, in the emptiest frame of the swaps').toBeGreaterThanOrEqual(FLOOR)
     await ctx.close()
   })
+})
+
+test.describe("card 3's shelf stacking while a pick moves", () => {
+  // z-index does not tween, so the shelf holds it for 120ms (half of the 240ms move) and flips it on
+  // both covers in the same frame: the leaving front cover stays on top for the first half, and the
+  // two never tie. These read the computed z-index and opacity of the three covers on every frame.
+
+  /**
+   * Make the picks in the page (the page draws the new state on the next frame, which is "frame 1" of that pick)
+   * and read the three covers on every animation frame until `until` ms after the first pick.
+   * picks: [{ index, at }] with `at` the ms since the start (the first is 0).
+   * Returns every frame's time, z-index, opacity and data-pos for the three covers, and `pickFrames`: the
+   * index in `frames` of the frame each pick was made in (it is read before the page draws the pick).
+   */
+  const sampleShelf = (page, picks, until) => page.evaluate(({ picks, until }) => new Promise((resolve) => {
+    const cardEl = document.querySelectorAll('.sp-stack-card')[2]
+    const radioEls = [...cardEl.querySelectorAll('[role="radio"]')]
+    const imgs = [...cardEl.querySelectorAll('.sp-shelf img')]
+    const frames = []
+    const pickFrames = []
+    const picked = []
+    let next = 0
+    // The clock starts at the first frame's own timestamp: a frame's timestamp can be earlier than a
+    // performance.now() taken before it, which would push the first pick on to the second frame.
+    let t0 = null
+    const tick = (now) => {
+      if (t0 === null) t0 = now
+      while (next < picks.length && now - t0 >= picks[next].at) {
+        radioEls[picks[next].index].click()
+        pickFrames.push(frames.length)
+        picked.push(Math.round(now - t0))
+        next++
+      }
+      const cs = imgs.map((el) => getComputedStyle(el))
+      frames.push({ t: Math.round(now - t0), z: cs.map((c) => c.zIndex), o: cs.map((c) => Number(c.opacity)), pos: imgs.map((el) => el.dataset.pos) })
+      if (now - t0 < until) requestAnimationFrame(tick)
+      else resolve({ pickFrames, frames, picked })
+    }
+    requestAnimationFrame(tick)
+  }), { picks, until })
+
+  /** The cover (its DOM index) in front in frame `i`. */
+  const frontIn = (frames, i) => frames[i].pos.indexOf('front')
+
+  /**
+   * Make one pick and read the three covers at exact times after it, however slowly the machine draws.
+   * The shelf's z-index step and opacity hold are CSS transitions, so once the page has drawn the pick the
+   * running transitions are paused and moved to each time in turn, and the computed z-index and opacity
+   * are read at that time. A real-time sampler on a busy CI runner can see as few as four frames in
+   * 320ms, which cannot show a 120ms hold; this reads the same cascade at any time asked for.
+   * Returns the covers' state `before` the pick, `running` (the property of each transition that was
+   * started) and `frames` (one per time, in the shape sampleShelf gives).
+   */
+  const seekShelf = (page, index, times) => page.evaluate(async ({ index, times }) => {
+    const cardEl = document.querySelectorAll('.sp-stack-card')[2]
+    const imgs = [...cardEl.querySelectorAll('.sp-shelf img')]
+    const read = (t) => {
+      const cs = imgs.map((el) => getComputedStyle(el))
+      return { t, z: cs.map((c) => c.zIndex), o: cs.map((c) => Number(c.opacity)), pos: imgs.map((el) => el.dataset.pos) }
+    }
+    const before = read(0)
+    cardEl.querySelectorAll('[role="radio"]')[index].click()
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const started = document.getAnimations().filter((a) => imgs.includes(a.effect?.target))
+    const running = started.map((a) => a.transitionProperty)
+    started.forEach((a) => a.pause())
+    const frames = times.map((t) => {
+      started.forEach((a) => { a.currentTime = t })
+      return read(t)
+    })
+    started.forEach((a) => a.cancel())
+    return { before, running, frames }
+  }, { index, times })
+
+  /** Every 10ms from the pick to 320ms, then 420ms (every move and delay is over by 240ms). */
+  const EVERY_10MS = [...Array.from({ length: 33 }, (_, i) => i * 10), 420]
+
+  async function openShelf(browser) {
+    const { ctx, page } = await open(browser, { width: 1440, height: 900, reducedMotion: 'no-preference' })
+    await go(page, '/')
+    await show(page, 2)
+    await waitShown(page, 2, (await projectId(page, 0)))
+    await expect(card(page, 2).locator('.sp-shelf img')).toHaveCount(3)
+    await twoFrames(page)
+    return { ctx, page }
+  }
+
+  const z = (f, i) => Number(f.z[i])
+
+  /**
+   * The z-index contract of one pick, over `frames` taken from the frame that draws the pick (t = ms since it):
+   * the leaving front cover stays above the arriving one at first, the two never tie, the arriving one takes
+   * the top once and stays there, and it ends in front (3) with the leaving one behind (1).
+   */
+  function expectStepOrder(frames, oldFront, arriving) {
+    expect(z(frames[0], oldFront), 'old front z-index on the first frame that draws the pick').toBeGreaterThan(z(frames[0], arriving))
+    // No frame has them level (a tie would leave the paint order to the DOM order).
+    const ties = frames.filter((f) => z(f, oldFront) === z(f, arriving)).map((f) => `${f.t}ms z=${f.z}`)
+    expect(ties, 'frames where the two covers share a z-index').toEqual([])
+    const flipAt = frames.findIndex((f) => z(f, arriving) > z(f, oldFront))
+    expect(flipAt, 'the arriving cover reaches the top').toBeGreaterThan(0)
+    expect(frames[flipAt].t, 'ms before the flip (the midpoint is 120)').toBeGreaterThanOrEqual(100)
+    const last = frames[frames.length - 1]
+    expect(z(last, arriving), 'arriving cover z-index at the end').toBe(3)
+    expect(z(last, oldFront), 'old front cover z-index at the end').toBe(1)
+    // After the flip it stays flipped: no flicker back.
+    expect(frames.slice(flipAt).every((f) => z(f, arriving) > z(f, oldFront)), 'the order holds once flipped').toBe(true)
+    return frames[flipAt].t
+  }
+
+  test('the leaving front cover stays above the arriving one until the midpoint, then they swap and never tie', async ({ browser }) => {
+    const { ctx, page } = await openShelf(browser)
+    const { pickFrames, frames: all } = await sampleShelf(page, [{ index: 1, at: 0 }], 320)
+    expect(pickFrames, 'the pick was made on the first frame read').toEqual([0])
+    const oldFront = frontIn(all, 0)
+    // The first frame that draws the pick: a slow machine can take more than one frame to draw it, so look for it.
+    const drawn = all.findIndex((f) => f.pos.indexOf('front') !== oldFront)
+    expect(drawn, 'the pick brought another cover to the front').toBeGreaterThan(0)
+    const arriving = frontIn(all, drawn)
+    // Times are taken from that frame. How many frames a runner draws in 320ms is the machine's, so only two are asked for here;
+    // the dense reading, every 10ms, is the next test's.
+    const frames = all.slice(drawn).map((f) => ({ ...f, t: f.t - all[drawn].t }))
+    expect(frames.length, 'frames read from the pick on').toBeGreaterThanOrEqual(2)
+    expectStepOrder(frames, oldFront, arriving)
+    await ctx.close()
+  })
+
+  test('read every 10ms after a pick, the z-index step flips at the midpoint (120ms) and the two covers never tie', async ({ browser }) => {
+    const { ctx, page } = await openShelf(browser)
+    const { before, running, frames } = await seekShelf(page, 1, EVERY_10MS)
+    expect(running, 'the pick started a z-index step and an opacity fade').toEqual(expect.arrayContaining(['z-index', 'opacity']))
+    const oldFront = frontIn({ 0: before }, 0)
+    const arriving = frontIn(frames, 0)
+    expect(arriving, 'the pick brought another cover to the front').not.toBe(oldFront)
+    expect(frames.length, 'times read').toBe(EVERY_10MS.length)
+    const flipped = expectStepOrder(frames, oldFront, arriving)
+    expect(flipped, 'the flip lands at the midpoint of the 240ms move').toBeLessThanOrEqual(130)
+    await ctx.close()
+  })
+
+  test('the leaving front cover holds full opacity until about the z flip (120ms), then fades to the back-cover opacity', async ({ browser }) => {
+    const { ctx, page } = await openShelf(browser)
+    const { before, running, frames } = await seekShelf(page, 1, EVERY_10MS)
+    expect(running, 'the pick started an opacity fade').toContain('opacity')
+    const oldFront = frontIn({ 0: before }, 0)
+    expect(frontIn(frames, 0), 'the pick moved the front').not.toBe(oldFront)
+    expect(before.o[oldFront], 'the leaving cover starts at 1 (it is the front)').toBe(1)
+    // The opacity fade starts after a 120ms delay; every time before 110ms must still read 1.
+    const early = frames.filter((f) => f.t < 110)
+    expect(early.length, 'times read inside the hold (not a test of nothing)').toBe(11)
+    expect(early.filter((f) => f.o[oldFront] !== 1).map((f) => `${f.t}ms o=${f.o[oldFront]}`), 'times before 110ms where the leaving cover had already faded').toEqual([])
+    // Then it does fade: it is below 1 by 200ms and at the back cover's .72 by the end.
+    expect(frames.some((f) => f.t >= 130 && f.t <= 260 && f.o[oldFront] < 1), 'the leaving cover fades after the hold').toBe(true)
+    expect(frames[frames.length - 1].o[oldFront], 'the leaving cover ends as a back cover').toBeCloseTo(0.72, 2)
+    await ctx.close()
+  })
+
+  test('a second pick 60ms into the first keeps every cover visible and ends with the new front on top (3) and the others at 1', async ({ browser }) => {
+    const { ctx, page } = await openShelf(browser)
+    const { pickFrames, frames: all, picked } = await sampleShelf(page, [{ index: 1, at: 0 }, { index: 2, at: 60 }], 520)
+    const oldFront = frontIn(all, 0)
+    const a = frontIn(all, pickFrames[0] + 1)
+    const b = frontIn(all, pickFrames[1] + 1)
+    const frames = all.slice(1)
+    expect(new Set([oldFront, a, b]).size, 'three different covers came to the front in turn').toBe(3)
+    expect(picked[1], 'the second pick landed before the midpoint of the first').toBeLessThan(120)
+    expect(Math.min(...frames.flatMap((f) => f.o)), 'the faintest cover in any frame').toBeGreaterThan(0)
+    // The first pick's cover never reaches the top: its pick was replaced before its flip.
+    const z = (f, i) => Number(f.z[i])
+    expect(frames.some((f) => z(f, a) > z(f, oldFront) && z(f, a) > z(f, b)), 'the replaced pick never took the top').toBe(false)
+    const last = frames[frames.length - 1]
+    expect(last.z.map(Number), 'final z-index of each cover').toEqual([0, 1, 2].map((i) => (i === b ? 3 : 1)))
+    expect(last.pos[b], 'the second pick is in front').toBe('front')
+    await ctx.close()
+  })
+})
+
+/**
+ * Come back when nothing on the shelf is moving. A pick starts a 240ms move (and a 120ms hold on the
+ * stacking order), so a cover's box read straight after a click is somewhere short of where it ends
+ * up, and a click aimed from that box lands on the front cover or the card instead. Waits on the
+ * running animations themselves, not a timer, after two frames so that a pick the page has just
+ * been given has started its moves.
+ */
+const shelfSettled = (page) => page.evaluate(async () => {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+  const moving = () => document.getAnimations().filter((a) => a.effect?.target?.closest?.('.sp-shelf') && a.playState !== 'finished')
+  for (let list = moving(), n = 0; list.length && n < 20; list = moving(), n += 1) await Promise.allSettled(list.map((a) => a.finished))
+})
+
+/**
+ * The strip of a back cover that shows, in the plate's own coordinates (CSS px), inset 2px from the front
+ * cover and the plate's edge (plus `plateLeft`, the plate's left edge in the window). From 451px to 760px
+ * the design clips each back cover to a window of its own plain band, so what shows is the part of
+ * the cover from 60% of its width to the front cover's edge on the left, and from the front cover's edge
+ * to 84% on the right. A cover's box is not clipped (getBoundingClientRect reports the whole picture),
+ * so that window is worked out here from the box. Below 451px and from 761px nothing is clipped and the
+ * whole of the cover beside the front one is in view. In the clipped widths `away` is the rest of the
+ * cover (outside the window), which has to show the plate's own colour.
+ */
+const stripOf = (page, side) => card(page, 2).evaluate((c, s) => {
+  const plate = c.querySelector('.sp-plate').getBoundingClientRect()
+  const cover = c.querySelector(`.sp-shelf img[data-pos="${s}"]`).getBoundingClientRect()
+  const front = c.querySelector('.sp-shelf img[data-pos="front"]').getBoundingClientRect()
+  const windowed = innerWidth >= 451 && innerWidth <= 760
+  const lo = s === 'right' ? Math.max(front.right, cover.left, plate.left) : Math.max(windowed ? cover.left + cover.width * 0.6 : cover.left, plate.left, 0)
+  const hi = s === 'right' ? Math.min(windowed ? cover.left + cover.width * 0.84 : cover.right, plate.right, innerWidth) : Math.min(front.left, cover.right, plate.right)
+  // Down to where the colour bar starts (the bar is the cover's last 4%); in from the top by 3px (the hairline).
+  const top = Math.max(cover.top + 3, plate.top)
+  const bottom = Math.min(cover.bottom - cover.height * 0.06, plate.bottom)
+  // Where the clip should have taken the cover away (the other side of the window from the front cover),
+  // so the plate's own colour should show there. With no clip the title or the year would show here, which
+  // is what the strip alone cannot see, because the strip is the window and the window is plain either way.
+  let away = null
+  if (windowed) {
+    const aLo = s === 'right' ? cover.left + cover.width * 0.84 : Math.max(cover.left, plate.left, 0)
+    const aHi = s === 'right' ? Math.min(cover.right, plate.right, innerWidth) : cover.left + cover.width * 0.6
+    away = { x: aLo + 2 - plate.left, y: top - plate.top, w: aHi - aLo - 4, h: bottom - top }
+  }
+  return { x: lo + 2 - plate.left, y: top - plate.top, w: hi - lo - 4, h: bottom - top, coverW: cover.width, coverLeft: cover.left - plate.left, plateLeft: plate.left, away }
+}, side)
+
+/**
+ * Aim at the middle of the part of the `side` back cover that shows: past the front cover's edge and
+ * inside the plate and the window (on a phone the plate crops a back cover; from 451px to 760px the
+ * cover is also clipped to its own window, and a click outside the window does not reach it). Returns
+ * the cover's file and a function that clicks there.
+ */
+async function aimAtBackCover(page, side) {
+  await shelfSettled(page)
+  const cover = card(page, 2).locator(`.sp-shelf img[data-pos="${side}"]`)
+  const src = await cover.evaluate((el) => el.currentSrc)
+  const strip = await stripOf(page, side)
+  const x = strip.plateLeft + strip.x + strip.w / 2
+  const box = await cover.boundingBox()
+  return { src, click: () => cover.click({ position: { x: x - box.x, y: box.height / 2 } }) }
+}
+
+test.describe("card 3's back covers", () => {
+  for (const [width, height, touch] of [[1440, 900, false], [600, 900, false], [390, 844, true]]) {
+    test(`at ${width}px a click on a back cover checks its project and brings its cover to the front`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height, touch })
+      await go(page, '/')
+      await show(page, 2)
+      await expect(radios(page)).toHaveCount(3)
+      const ids = [await projectId(page, 0), await projectId(page, 1), await projectId(page, 2)]
+      await waitShown(page, 2, ids[0])
+      const checked = () => radios(page).evaluateAll((els) => els.map((el, i) => (el.getAttribute('aria-checked') === 'true' ? i : -1)).filter((i) => i > -1))
+      expect(await checked(), 'the first project starts checked').toEqual([0])
+      // Right, left, right again: each click is on whichever cover is in that back position now.
+      for (const side of ['right', 'left', 'right']) {
+        const { src, click } = await aimAtBackCover(page, side)
+        const want = ids.findIndex((id) => src.includes(`/home-exports/${id}`))
+        expect(want, `the ${side} cover is one of the three projects (${src})`).toBeGreaterThan(-1)
+        const before = await checked()
+        expect(before, `before the click, the ${side} cover's project is not the checked one`).not.toEqual([want])
+        await click()
+        await expect.poll(checked, { message: `clicking the ${side} cover did not check its project`, timeout: 5000 }).toEqual([want])
+        await waitShown(page, 2, ids[want])
+      }
+      await ctx.close()
+    })
+  }
+
+  // The click also moves focus to that project's radio in whichever switch is on screen: the rows
+  // from 1200px, the pills below it. (The other switch is display: none, so it cannot take focus.)
+  for (const [width, height, touch, where] of [[390, 844, true, 'pills'], [768, 1024, false, 'pills'], [1199, 900, false, 'pills'], [1200, 900, false, 'rows'], [1440, 900, false, 'rows']]) {
+    test(`at ${width}px a click on a back cover puts focus on that project's radio in the ${where}`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height, touch })
+      await go(page, '/')
+      await show(page, 2)
+      await expect(radios(page)).toHaveCount(3)
+      const ids = [await projectId(page, 0), await projectId(page, 1), await projectId(page, 2)]
+      await waitShown(page, 2, ids[0])
+      for (const side of ['right', 'left']) {
+        const { src, click } = await aimAtBackCover(page, side)
+        const want = ids.findIndex((id) => src.includes(`/home-exports/${id}`))
+        expect(want, `the ${side} cover is one of the three projects (${src})`).toBeGreaterThan(-1)
+        await click()
+        await waitShown(page, 2, ids[want])
+        // The radio in the accessibility tree at this width has focus (not the picture that was clicked).
+        await expect(radios(page).nth(want), `after a click on the ${side} cover, focus is on its project's radio`).toBeFocused()
+        const focus = await page.evaluate(() => ({ tag: document.activeElement.tagName, row: !!document.activeElement.closest('.sp-rows'), pill: !!document.activeElement.closest('.sp-pick') }))
+        expect(focus, `focus is on a button in the ${where}`).toEqual({ tag: 'BUTTON', row: where === 'rows', pill: where === 'pills' })
+      }
+      await ctx.close()
+    })
+  }
+})
+
+// ── 2b. what the shelf's covers leave showing at the edges ─────────────────────
+
+// The covers are pictures, and each has its title, details and year drawn into it, so "is there text
+// in the side strip" is a question about pixels. Below 451px each back cover shows only a strip about
+// 40 to 50px wide beside the front cover, and the design puts the part of the cover that is plain
+// colour there (a back cover is plain from 57% to 86% of its width), so no half a word shows. From 451px
+// to 760px the strip is wider (59px at 451, 193px at 760), so each back cover is clipped to a window of
+// its own plain band (60% to 84% of its width). The check looks at a picture of the plate as it is
+// painted, over the strip and nothing else: every pixel of it must be within a few levels of the strip's
+// own colour. (The foot of the cover, where its colour bar is, is left out.)
+
+/** How many pixels of `png` (the plate, at `dpr`) inside `rect` are not the median colour of that rectangle, by more than `tol` levels in any channel. */
+const inkIn = (page, png, rect, dpr, tol) => page.evaluate(async ({ b64, rect, dpr, tol }) => {
+  const bin = atob(b64)
+  const bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0))
+  const bmp = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
+  const g = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })
+  g.drawImage(bmp, 0, 0)
+  const x = Math.ceil(rect.x * dpr), y = Math.ceil(rect.y * dpr)
+  const w = Math.floor(rect.w * dpr), h = Math.floor(rect.h * dpr)
+  const d = g.getImageData(x, y, w, h).data
+  const median = [0, 1, 2].map((ch) => {
+    const v = []
+    for (let i = ch; i < d.length; i += 4) v.push(d[i])
+    return v.sort((a, b) => a - b)[v.length >> 1]
+  })
+  let ink = 0, worst = 0
+  for (let i = 0; i < d.length; i += 4) {
+    const diff = Math.max(Math.abs(d[i] - median[0]), Math.abs(d[i + 1] - median[1]), Math.abs(d[i + 2] - median[2]))
+    worst = Math.max(worst, diff)
+    if (diff > tol) ink += 1
+  }
+  return { ink, worst, pixels: w * h, median }
+}, { b64: png.toString('base64'), rect, dpr, tol })
+
+test.describe('the side strips of the shelf below 761px', () => {
+  // 451 is where the clip to a back cover's plain band starts, 760 where it ends; 320 to 430 are phones (a touch screen).
+  for (const width of [320, 390, 430, 451, 520, 600, 680, 760]) {
+    for (const theme of ['light', 'dark']) {
+      test(`show only the cover's plain colour, no text, at ${width}px, ${theme}`, async ({ browser }) => {
+        const dpr = 2
+        const { ctx, page } = await open(browser, { width, height: 844, touch: width < 451, theme, dpr })
+        await go(page, '/')
+        await show(page, 2)
+        await expect(card(page, 2).locator('.sp-shelf img')).toHaveCount(3)
+        await waitShown(page, 2, (await projectId(page, 0)))
+        // Each back cover in turn is in the left and in the right: the three covers have different
+        // words in different places, so the strip is read once with each of them there.
+        for (const pick of [0, 1, 2]) {
+          await radios(page).nth(pick).click()
+          await waitShown(page, 2, (await projectId(page, pick)))
+          await shelfSettled(page)
+          for (const side of ['left', 'right']) {
+            const strip = await stripOf(page, side)
+            const where = `${side} strip with project ${pick + 1} in front at ${width}px, ${theme}`
+            // A strip that is not there would pass for plain colour, so it has to have a width worth the name.
+            expect(strip.w, `${where}: the strip has width (${strip.w.toFixed(1)}px)`).toBeGreaterThan(25)
+            expect(strip.h, `${where}: the strip has height`).toBeGreaterThan(100)
+            const png = await card(page, 2).locator('.sp-plate').screenshot()
+            const r = await inkIn(page, png, strip, dpr, 12)
+            expect(r.pixels, `${where}: pixels were read`).toBeGreaterThan(1000)
+            expect(r.ink, `${where}: ${r.ink} of ${r.pixels} pixels differ from the plain colour ${r.median} (largest difference ${r.worst} levels): text shows in the strip`).toBe(0)
+            // From 451px the cover is clipped to the window, so the rest of the cover must not show: it is the plate's colour.
+            if (width >= 451) {
+              expect(strip.away, `${where}: the part of the cover outside the window is worked out`).toBeTruthy()
+              if (width >= 520) expect(strip.away.w, `${where}: the part outside the window has width (${strip.away.w.toFixed(1)}px)`).toBeGreaterThan(20)
+              if (strip.away.w >= 8) {
+                const out = await inkIn(page, png, strip.away, dpr, 12)
+                expect(out.pixels, `${where}: pixels outside the window were read`).toBeGreaterThan(200)
+                expect(out.ink, `${where}: ${out.ink} of ${out.pixels} pixels outside the cover's window differ from ${out.median} (largest difference ${out.worst} levels): the cover is not clipped to its window`).toBe(0)
+              }
+            }
+          }
+        }
+        await ctx.close()
+      })
+    }
+  }
+})
+
+// ── 2c. the "Example projects" tag ─────────────────────────────────────────────
+
+test.describe('the "Example projects" tag', () => {
+  for (const [width, height, touch] of [[390, 844, true], [1200, 900, false], [1440, 900, false]]) {
+    test(`is in the plate's corner and clear of the covers at ${width}px`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height, touch })
+      await go(page, '/')
+      await show(page, 2)
+      await waitShown(page, 2, (await projectId(page, 0)))
+      await shelfSettled(page)
+      const tag = card(page, 2).locator('.sp-shelf-tag')
+      await expect(tag, 'the tag is on screen').toBeVisible()
+      await expect(tag).toHaveText('Example projects')
+      const m = await card(page, 2).evaluate((c) => {
+        const rectOf = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom } }
+        const tagBox = rectOf(c.querySelector('.sp-shelf-tag'))
+        const plate = rectOf(c.querySelector('.sp-plate'))
+        return { tag: tagBox, plate, covers: [...c.querySelectorAll('.sp-shelf img')].map((im) => ({ pos: im.dataset.pos, ...rectOf(im) })) }
+      })
+      // In the plate.
+      expect(m.tag.left, 'the tag starts inside the plate').toBeGreaterThanOrEqual(m.plate.left)
+      expect(m.tag.top, 'the tag starts inside the plate').toBeGreaterThanOrEqual(m.plate.top)
+      expect(m.tag.right, 'the tag ends inside the plate').toBeLessThanOrEqual(m.plate.right)
+      // Clear of every cover: the boxes do not share any area.
+      for (const c of m.covers) {
+        const w = Math.min(m.tag.right, c.right) - Math.max(m.tag.left, c.left)
+        const h = Math.min(m.tag.bottom, c.bottom) - Math.max(m.tag.top, c.top)
+        expect(w > 0 && h > 0, `the tag (${JSON.stringify(m.tag)}) overlaps the ${c.pos} cover (${JSON.stringify(c)})`).toBe(false)
+      }
+      await ctx.close()
+    })
+  }
+
+  for (const width of [768, 1199]) {
+    test(`is not shown at ${width}px, where the pills carry the label`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height: 900 })
+      await go(page, '/')
+      await show(page, 2)
+      await expect(card(page, 2).locator('.sp-shelf-tag')).toBeHidden()
+      await expect(card(page, 2).locator('.sp-pick').getByText('Example projects'), 'the pills row names the group').toBeVisible()
+      await ctx.close()
+    })
+  }
+})
+
+// ── 2d. the row hints can be read ──────────────────────────────────────────────
+
+/** WCAG contrast ratio of the text colour of each visible .sp-rows-hint against the ground it sits on (the ancestors' backgrounds laid over one another). */
+const hintContrasts = (page) => page.evaluate(() => {
+  const toRGBA = (css) => {
+    const m = /^rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)$/.exec(css)
+    if (m) return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : +m[4] }
+    // A colour space the page was written in (oklch, color-mix...): let the canvas turn it into sRGB.
+    const g = new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true })
+    g.fillStyle = css
+    g.fillRect(0, 0, 1, 1)
+    const [r, gg, b, a] = g.getImageData(0, 0, 1, 1).data
+    return { r, g: gg, b, a: a / 255 }
+  }
+  const over = (top, under) => {
+    const a = top.a + under.a * (1 - top.a)
+    const mix = (k) => (top[k] * top.a + under[k] * under.a * (1 - top.a)) / a
+    return { r: mix('r'), g: mix('g'), b: mix('b'), a }
+  }
+  const lum = ({ r, g, b }) => [r, g, b].map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0)
+  return [...document.querySelectorAll('.sp-rows-hint')].filter((el) => el.offsetParent !== null).map((el) => {
+    const chain = []
+    for (let e = el.parentElement; e; e = e.parentElement) chain.unshift(e)
+    // A ground that is not a flat colour (a picture, a gradient, a see-through layer) cannot be read from styles.
+    const notFlat = [el, ...chain].filter((e) => getComputedStyle(e).backgroundImage !== 'none' || getComputedStyle(e).opacity !== '1').map((e) => e.className)
+    let ground = { r: 255, g: 255, b: 255, a: 1 }
+    for (const e of chain) ground = over(toRGBA(getComputedStyle(e).backgroundColor), ground)
+    const ink = over(toRGBA(getComputedStyle(el).color), ground)
+    const [hi, lo] = [lum(ink), lum(ground)].sort((a, b) => b - a)
+    return { text: el.textContent, color: getComputedStyle(el).color, ground: [ground.r, ground.g, ground.b].map(Math.round), ratio: (hi + 0.05) / (lo + 0.05), notFlat }
+  })
+})
+
+test.describe('the hint under each project name', () => {
+  for (const theme of ['light', 'dark']) {
+    test(`is readable against its ground at 1440px, ${theme} (4.5:1)`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width: 1440, height: 900, theme })
+      await go(page, '/')
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+      await show(page, 2)
+      const hints = await hintContrasts(page)
+      expect(hints.length, 'the hints are on screen (one a row, in cards 2 and 3)').toBeGreaterThanOrEqual(3)
+      for (const h of hints) {
+        expect(h.notFlat, `"${h.text}": the ground is a flat colour, so a ratio can be worked out`).toEqual([])
+        expect(h.ratio, `"${h.text}" is ${h.color} on rgb(${h.ground}): ${h.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+      }
+      await ctx.close()
+    })
+  }
 })
 
 // ── 3. the picture is sharp enough for where it is painted ─────────────────────
@@ -454,17 +924,17 @@ const animationsSettled = (page) => page.evaluate(() => Promise.allSettled(docum
  * than what a style says might.
  */
 async function swapAndWatch(page) {
-  await page.evaluate(() => {
+  await page.evaluate((sel) => {
     window.__motion = new Set()
     const tick = () => {
       for (const a of document.getAnimations()) {
-        if (!a.effect?.target?.matches?.('.sp-plate-art img')) continue
+        if (!a.effect?.target?.matches?.(sel)) continue
         window.__motion.add(a instanceof CSSTransition ? 'transition' : a instanceof CSSAnimation ? 'animation' : 'other')
       }
       window.__motionRaf = requestAnimationFrame(tick)
     }
     tick()
-  })
+  }, ART_IMG)
   await show(page, 1)
   for (const i of [1, 2]) {
     await tabs(page).nth(i).click()
@@ -484,7 +954,12 @@ async function swapAndWatch(page) {
   })
 }
 
-const allZero = (rows, key) => rows.every((r) => r[key].split(',').every((d) => parseFloat(d) === 0))
+// A duration only matters when something is named to run: the shelf's covers have no animation at all
+// (animation-name none), and the site-wide reduced-motion clamp still reads 0.01ms on them. Running motion
+// is checked separately, frame by frame, by swapAndWatch.
+const allZero = (rows, key) => rows
+  .filter((r) => key !== 'animation' || r.name !== 'none')
+  .every((r) => r[key].split(',').every((d) => parseFloat(d) === 0))
 
 test.describe('plate swap motion', () => {
   test('is instant when the operating system asks for reduced motion', async ({ browser }) => {
@@ -565,10 +1040,10 @@ async function loadBothCards(page) {
 }
 
 test.describe('plate requests', () => {
-  /** The pictures the page should have asked for after load: what card 2 and card 3 open on. */
-  const openingIds = async (page) => [await tabId(page, 0), await projectId(page, 0)]
+  /** The pictures the page should have asked for after load: what card 2 opens on, and all three of card 3's covers (the shelf shows them together). */
+  const openingIds = async (page) => [await tabId(page, 0), ...(await Promise.all([0, 1, 2].map((i) => projectId(page, i))))]
 
-  test('only the selected tab and project are requested until another is hovered or focused', async ({ browser }) => {
+  test('only the selected tab is requested until another is hovered or focused (card 3 shows its three covers at once)', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 1440, height: 900 })
     const seen = trackExports(page)
     await loadBothCards(page)
@@ -600,19 +1075,19 @@ test.describe('plate requests', () => {
     await ctx.close()
   })
 
-  test('hovering a project asks for that project only', async ({ browser }) => {
+  test('picking a project asks for nothing new: the shelf already holds all three covers', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 1440, height: 900 })
     const seen = trackExports(page)
     await loadBothCards(page)
     const opening = await openingIds(page)
-    const other = await projectId(page, 1)
-    await radios(page).nth(1).hover()
-    await expect.poll(seen.ids, { message: `hovering ${other} never requested it` }).toContain(other)
-    expect(seen.ids(), 'hovering one project fetched only that project').toEqual([...opening, other].sort())
+    await radios(page).nth(1).click()
+    await waitShown(page, 2, await projectId(page, 1))
+    await twoFrames(page)
+    expect(seen.ids(), 'picking a project fetched something new').toEqual([...opening].sort())
     await ctx.close()
   })
 
-  test('a phone asks for one picture per card too (the portrait files)', async ({ browser }) => {
+  test('a phone asks for the opening tab picture (the portrait files) and the covers', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 390, height: 844, touch: true, dpr: 3 })
     const seen = trackExports(page)
     await loadBothCards(page)
@@ -684,6 +1159,65 @@ test.describe('fit', () => {
       await ctx.close()
     })
   }
+
+  for (const width of [1200, 1280, 1440]) {
+    test(`at ${width}px the outer covers sit at least 24px inside the plate`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height: 900 })
+      await go(page, '/')
+      await show(page, 2)
+      await waitShown(page, 2, (await projectId(page, 0)))
+      await expect(card(page, 2).locator('.sp-shelf img')).toHaveCount(3)
+      const margins = () => card(page, 2).evaluate((c) => {
+        const plate = c.querySelector('.sp-plate').getBoundingClientRect()
+        const boxes = [...c.querySelectorAll('.sp-shelf img')].map((im) => im.getBoundingClientRect())
+        return { left: Math.min(...boxes.map((b) => b.left)) - plate.left, right: plate.right - Math.max(...boxes.map((b) => b.right)), plateW: plate.width }
+      })
+      // Polled: the covers may still be settling from their first position.
+      await expect.poll(async () => { const m = await margins(); return Math.min(m.left, m.right) }, { message: `the nearest cover edge to the plate's edge at ${width}px`, timeout: 5000 }).toBeGreaterThanOrEqual(23.5)
+      // And it is the outer covers that set the margin, not a shelf that collapsed to nothing.
+      const m = await margins()
+      expect(m.left + m.right, 'the covers use the plate (the shelf has not collapsed)').toBeLessThan(m.plateW * 0.5)
+      await ctx.close()
+    })
+  }
+
+  for (const width of [1200, 1440]) {
+    test(`at ${width}px the list starts at most 64px under the copy, and its rows are tall enough`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height: 900 })
+      await go(page, '/')
+      await show(page, 2)
+      for (let i = 0; i < 3; i += 1) {
+        const m = await card(page, i).evaluate((c) => {
+          const say = c.querySelector('.sp-stack-say')
+          const rows = c.querySelector('.sp-rows')
+          const above = [...say.children].filter((k) => k !== rows && (rows.compareDocumentPosition(k) & Node.DOCUMENT_POSITION_PRECEDING) && k.getBoundingClientRect().height > 0)
+          const gap = rows.getBoundingClientRect().top - Math.max(...above.map((k) => k.getBoundingClientRect().bottom))
+          return { gap, above: above.length, rowH: [...rows.querySelectorAll('.sp-rows-btn')].map((b) => b.getBoundingClientRect().height) }
+        })
+        const where = `card ${i + 1} at ${width}px`
+        expect(m.above, `${where}: there is copy above the list to measure from`).toBeGreaterThan(0)
+        expect(m.gap, `${where}: the gap above the list`).toBeLessThanOrEqual(64)
+        expect(m.gap, `${where}: the list does not overlap the copy`).toBeGreaterThanOrEqual(0)
+        const min = i === 0 ? 56 : 72
+        expect(m.rowH.length, `${where}: rows`).toBeGreaterThanOrEqual(3)
+        expect(Math.min(...m.rowH), `${where}: shortest row (${m.rowH.map((h) => Math.round(h)).join(', ')})`).toBeGreaterThanOrEqual(min - 0.5)
+      }
+      await ctx.close()
+    })
+  }
+
+  test('the shelf caption is hidden from 1200px and showing at 1199px', async ({ browser }) => {
+    for (const [width, shown] of [[1199, true], [1200, false], [1440, false]]) {
+      const { ctx, page } = await open(browser, { width, height: 900 })
+      await go(page, '/')
+      await show(page, 2)
+      const cap = card(page, 2).locator('.sp-plate-cap--project')
+      await expect(cap, `the shelf caption at ${width}px`).toHaveCount(1)
+      if (shown) await expect(cap, `the shelf caption at ${width}px`).toBeVisible()
+      else await expect(cap, `the shelf caption at ${width}px`).toBeHidden()
+      await ctx.close()
+    }
+  })
 
   test('at 1199px the pills are showing and the rows are not', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 1199, height: 900 })

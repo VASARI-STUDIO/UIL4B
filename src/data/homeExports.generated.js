@@ -7,6 +7,7 @@
 //     dir: '/home-exports/',                       public path prefix
 //     design: { seed, harmony, colors[5], heading: { family, weight }, body: { family, weight } },
 //     totalBytes,                                  all 36 files together
+//     counts: { bookPages, deckSlides },           read from the real book and deck (the card's row sublines)
 //     plates: [Item, Item, Item],                  tab order: Book, Brand deck, UI kit
 //     covers: [Item, Item, Item],                  Northbeam, Halcyon, Ferrule (one tab each)
 //   }
@@ -18,6 +19,7 @@
 //     alt,           the image's alt text
 //     sourceSha256,  sha256 of the export HTML the image was rendered from
 //     landscape,     Variant for screens 761px and wider; a cover's is the cover beside its contents page, facing
+//                    (not drawn now); the deck's is guide-overview: the palette slide over three more whole
 //     portrait,      Variant for screens 760px and narrower; for a cover this is the A4 cover on its own
 //   }
 //   Variant = {
@@ -28,7 +30,7 @@
 //     files: [{ file, w, h, bytes, sha256 }],   smallest to largest; file is relative to public/home-exports/
 //   }
 //   Plates are drawn on a transparent ground (the page supplies it), each page with a thin outline baked in.
-//   File names: landscape <id>-<w>.webp, portrait <id>-p-<w>.webp, covers <id>-<w>.webp, cover spreads <id>-spread-<w>.webp.
+//   File names: landscape <id>-<w>.webp (the deck's: guide-overview-<w>.webp), portrait <id>-p-<w>.webp, covers <id>-<w>.webp, cover spreads <id>-spread-<w>.webp.
 
 export const HOME_EXPORTS = {
   "version": 1,
@@ -52,7 +54,11 @@ export const HOME_EXPORTS = {
       "weight": 400
     }
   },
-  "totalBytes": 1174750,
+  "totalBytes": 1204278,
+  "counts": {
+    "bookPages": 12,
+    "deckSlides": 9
+  },
   "plates": [
     {
       "id": "book-colour",
@@ -135,39 +141,39 @@ export const HOME_EXPORTS = {
       "kind": "plate",
       "tab": "Brand deck",
       "tabName": "Brand guidelines deck, Pro",
-      "alt": "Brand guidelines deck, palette page with five named colours.",
+      "alt": "Brand guidelines deck, the palette slide with five named colours, over three more slides: In use, Typography and Headline face.",
       "sourceSha256": "ab7bab1079dcb864ddbad62dc13bb7e8db1620bde59acbe2f3eab0c2123752b3",
       "landscape": {
         "master": {
           "w": 3840,
-          "h": 2715
+          "h": 2492
         },
-        "aspect": 1.4142,
-        "src": "/home-exports/guide-palette-1600.webp",
+        "aspect": 1.5409,
+        "src": "/home-exports/guide-overview-1600.webp",
         "width": 1600,
-        "height": 1131,
-        "srcset": "/home-exports/guide-palette-800.webp 800w, /home-exports/guide-palette-1600.webp 1600w, /home-exports/guide-palette-2400.webp 2400w",
+        "height": 1038,
+        "srcset": "/home-exports/guide-overview-800.webp 800w, /home-exports/guide-overview-1600.webp 1600w, /home-exports/guide-overview-2400.webp 2400w",
         "files": [
           {
-            "file": "guide-palette-800.webp",
+            "file": "guide-overview-800.webp",
             "w": 800,
-            "h": 566,
-            "bytes": 13346,
-            "sha256": "92cff1cf4f07e0d957ee0bed1bc4b455c932f7302be622567c860d44b63f4ef3"
+            "h": 519,
+            "bytes": 17304,
+            "sha256": "45e484fece2aeaab03956fcee48c6a781410260d370bd0ffbf42edbb6bee971b"
           },
           {
-            "file": "guide-palette-1600.webp",
+            "file": "guide-overview-1600.webp",
             "w": 1600,
-            "h": 1131,
-            "bytes": 37444,
-            "sha256": "a317256b441ec2067fff345161c2831c46c60e365a76ab458feb6cdce4035cbd"
+            "h": 1038,
+            "bytes": 46784,
+            "sha256": "95ad80c0744b7b312c9fd468b3623eedbe4fce7f89a86d66380a1aa3f6cdb1ec"
           },
           {
-            "file": "guide-palette-2400.webp",
+            "file": "guide-overview-2400.webp",
             "w": 2400,
-            "h": 1697,
-            "bytes": 66464,
-            "sha256": "69ca9221b4255f816b1d1d95796abde0d0f38f94c0620fb2677a2e4e362f0218"
+            "h": 1558,
+            "bytes": 82694,
+            "sha256": "f8282592dba911b1ced409880b711abd171db145280f87ba7843b3521ca70fcf"
           }
         ]
       },
@@ -288,8 +294,8 @@ export const HOME_EXPORTS = {
       "id": "cover-northbeam",
       "kind": "cover",
       "tab": "Northbeam",
-      "tabName": "Northbeam book cover and contents",
-      "alt": "Design system book for Northbeam, the cover and the contents page.",
+      "tabName": "Northbeam book cover",
+      "alt": "Design system book for Northbeam, the cover.",
       "sourceSha256": "4caa29c9da270a4e42c2de3e20b4dea66371875ecc5d00be09500e17906c2f1e",
       "landscape": {
         "master": {
@@ -364,8 +370,8 @@ export const HOME_EXPORTS = {
       "id": "cover-halcyon",
       "kind": "cover",
       "tab": "Halcyon",
-      "tabName": "Halcyon book cover and contents",
-      "alt": "Design system book for Halcyon, the cover and the contents page.",
+      "tabName": "Halcyon book cover",
+      "alt": "Design system book for Halcyon, the cover.",
       "sourceSha256": "3970b6677a51edd493474db321129ae8db957d00118f41d821ec989066e9f757",
       "landscape": {
         "master": {
@@ -440,8 +446,8 @@ export const HOME_EXPORTS = {
       "id": "cover-ferrule",
       "kind": "cover",
       "tab": "Ferrule",
-      "tabName": "Ferrule book cover and contents",
-      "alt": "Design system book for Ferrule, the cover and the contents page.",
+      "tabName": "Ferrule book cover",
+      "alt": "Design system book for Ferrule, the cover.",
       "sourceSha256": "3af3dfcde828df7410d48ff154e659e558dc22eb0784083e6fd12b89e0144a18",
       "landscape": {
         "master": {
