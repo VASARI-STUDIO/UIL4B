@@ -6,6 +6,8 @@
 /**
  * @param {object} d      the guidelines reading (logo, heading, body, ratio, baseSize, lineHeight, ...)
  * @param {object[]} slots the colour slots (the first is the primary)
+ * @param {object} words  where a sentence points, for a layout that gathers the notes away from their pages:
+ *   { mark: 'this page', ground: 'below', drawn: 'here', swatch: 'card' } is the page-by-page wording
  * @returns {{
  *   mark: string[], grounds: string[], clearSpace: (xMm: number) => string[],
  *   palette: string[], inUse: string[],
@@ -13,27 +15,28 @@
  *   scale: string[], scope: string[],
  * }}
  */
-export function guidelineNotes(d, slots = []) {
+export function guidelineNotes(d, slots = [], words = {}) {
+  const w = { mark: 'this page', ground: 'below', drawn: 'here', swatch: 'card', ...words }
   const one = d.heading === d.body
   return {
     mark: d.logo ? [
-      'This is the artwork as supplied, reproduced without alteration. Nothing on this page has been redrawn, recoloured or retraced.',
+      `This is the artwork as supplied, reproduced without alteration. Nothing on ${w.mark} has been redrawn, recoloured or retraced.`,
       d.logo.type === 'image/svg+xml'
         ? 'It is vector artwork, so it holds at any size, from a favicon to a building.'
         : 'It is a raster file, so there is a size past which it will soften. Supply vector artwork for anything printed large.',
     ] : [],
     grounds: [
       'The same artwork on paper, on ink and on each brand colour. Read it as a test: the mark is approved on a ground only where it still reads.',
-      'No reversed or single-colour version has been generated. Where the mark fails a ground below, that variant needs drawing; this document has not invented one for you.',
+      `No reversed or single-colour version has been generated. Where the mark fails a ground ${w.ground}, that variant needs drawing; this document has not invented one for you.`,
     ],
     /** `xMm`: the clear-space unit as drawn on the page that prints it. */
     clearSpace: (xMm) => [
-      `Keep a margin of X on every side of the mark, where X is half the height of the mark itself. At the size drawn here that is ${xMm.toFixed(0)}mm.`,
+      `Keep a margin of X on every side of the mark, where X is half the height of the mark itself. At the size drawn ${w.drawn} that is ${xMm.toFixed(0)}mm.`,
       'This is the default rule this document applies, not a decision already taken. Replace it if your mark asks for more room, but replace it deliberately.',
     ],
     palette: slots.length ? [
       `Every colour carries a name as well as a value. Say “${slots[0].name}” in a review and the decision survives; say the hex and it does not.`,
-      'The ink noted on each card is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.',
+      `The ink noted on each ${w.swatch} is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.`,
     ] : [],
     inUse: [
       `The name set in ${d.heading} on each colour, in the ink that reads on it. This is the palette doing its actual job rather than sitting in a row of chips.`,

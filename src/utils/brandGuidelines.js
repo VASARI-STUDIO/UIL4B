@@ -166,6 +166,13 @@ function fillRow(index, total, columns = 3) {
   return remainder === 1 ? ' is-span3' : ' is-span2'
 }
 
+// The identity description, as the UI kit reads it (utils/kitIdentity.js caps it at 280); read here
+// in a line because that file is not bundled with the server function.
+const DESCRIPTION_MAX = 280
+const descriptionOf = (design) => (typeof design?.identity?.description === 'string'
+  ? design.identity.description.replace(/\s+/g, ' ').trim().slice(0, DESCRIPTION_MAX)
+  : '')
+
 /**
  * Everything the document needs, normalised, with the logo resolved.
  *
@@ -183,6 +190,7 @@ export function readGuidelines(design) {
     headingSpacing: Number(ts.headingSpacing) || 0,
     bodySpacing: Number(ts.bodySpacing) || 0,
     logo: readLogo(design),
+    description: descriptionOf(design),
   }
 }
 
