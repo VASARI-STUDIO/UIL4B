@@ -127,6 +127,9 @@ test.describe('the icon weight segment', () => {
     await expect(bold).toHaveCSS('text-decoration-line', 'none')
     // The reason is in the name, not only in a tooltip a keyboard never sees.
     await expect(bold).toHaveAccessibleName(/drawn by Phosphor only/)
+    // Until Lucide's own listing lands the grid still shows the "All packs" cells, so a read
+    // taken now is the old view and differs from the Lucide list that replaces it.
+    await expect(page.locator('.ig-status').filter({ hasText: /· Lucide · [\d,]+ icons$/ })).toBeVisible({ timeout: 15000 })
     const before = await cellNames(page)
     await bold.click({ force: true })
     await expect(seg.getByRole('button', { name: 'Regular', exact: true })).toHaveAttribute('aria-pressed', 'true')
