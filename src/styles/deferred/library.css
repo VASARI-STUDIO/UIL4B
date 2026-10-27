@@ -310,11 +310,16 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-err{font-size:var(--fs-caption);color:var(--err-strong)}
 .icust-stage--light{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .icust-stage-img{display:block;max-width:100%;height:auto}
-/* A selected state with nothing to switch to: reads like .icust-seg button.active. */
-.icust-seg-static{flex:1;padding:6px 8px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-align:center;color:var(--t0);background:var(--bg-0);box-shadow:var(--shadow-xs);cursor:default}
 .icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:rgba(244,244,245,.55)}
 .icust-stage--light .icust-stage-msg{color:rgba(10,10,11,.5)}
-.icust-note{flex:1;font-size:var(--fs-caption);color:var(--t2);font-style:italic}
+/* A fact about the art, not a control: plain text in the row's control column, in
+   the label's tone. The block padding (3 track + 1 border + 6 button) gives it the
+   height the segmented track gave the row, so the row does not change size. */
+.icust-value{flex:1;display:flex;align-items:center;padding-block:10px;font-size:var(--fs-caption);color:var(--t1);white-space:nowrap}
+/* Whether the art has colours is unknown until its markup lands: the row keeps its
+   height and its "Colour" label, shows no control and cannot take focus, so no option
+   flashes and then goes. */
+.icust-row--wait>:not(label){visibility:hidden}
 /* Pro-gated line-style controls: buttons preview their own cap/join effect */
 .icust-seg--icon button{padding:6px}
 .icust-pro{display:flex;flex-direction:column;gap:12px;margin-top:2px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
@@ -1139,15 +1144,16 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 @media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:104px}}
 /* Glyphs and names start from the cell's top edge, so a cell reserved for a pack
    line does not float its glyph below the same glyph in a cell without one.
-   In a cell with a pack line, a glyph chip (coloured art, logo or wordmark) is a
-   36px box that draws its 24px, 28px or wide artwork centred, so it takes 24px
-   of layout like the mono glyph beside it (it overflows 6px each side into the
-   cell padding): the glyph tops and the name tops then line up across a mixed
-   row. Its loading slot takes the same 24px. The loading labels sit where the
-   name will appear. */
+   A glyph chip (coloured art, logo or wordmark) is a 36px box that draws its
+   24px, 28px or wide artwork centred, so in EVERY cell it takes 24px of layout
+   like the mono glyph beside it (it overflows 6px each side into the cell
+   padding). The icon slot is one fixed height whatever the art's shape and
+   whether or not the cell carries a pack line: the glyph tops and the name tops
+   line up across any row. Its loading slot takes the same 24px. The loading
+   labels sit where the name will appear. */
 .lib-surface .ig .ic{justify-content:flex-start}
-.lib-surface .ig .ic:has(.ic-pack) .ig-chip,.lib-surface .ig.ig--reserve-pack .ic .ig-chip{margin-block:-6px}
-.lib-surface .ig .ig-skel:has(.ig-skel-pack) .ig-skel-slot,.lib-surface .ig.ig--reserve-pack .ig-skel .ig-skel-slot{height:24px}
+.lib-surface .ig .ic .ig-chip{margin-block:-6px}
+.lib-surface .ig .ig-skel .ig-skel-slot{height:24px}
 .lib-surface .ig .ig-skel-labels{justify-content:flex-start;padding-top:2px}
 /* Hover only where a pointer can hover, so a tap does not leave the cell tinted;
    touch gets the same tint for the length of the press. */
@@ -1161,9 +1167,6 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .lib-surface .ic{gap:6px;padding:12px 2px;border-radius:var(--radius)}
   /* Names stay at the base 10px on up to two lines of 12.5px. */
   .lib-surface .ig .ic-name{line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:25px;flex-shrink:0}
-  /* Every glyph takes 24px of layout: a 36px chip overflows 6px into the padding and the gap, as in a pack cell. */
-  .lib-surface .ig .ic .ig-chip{margin-block:-6px}
-  .lib-surface .ig .ig-skel .ig-skel-slot{height:24px}
   .lib-surface .ig .ig-skel-labels{height:25px}
   /* 1 border + 12 padding + 24 glyph + 6 gap + 25 name + 12 padding + 1 border. */
   .lib-surface .ig .ic,.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:81px}

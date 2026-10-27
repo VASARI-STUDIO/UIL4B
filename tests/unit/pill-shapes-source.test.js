@@ -25,7 +25,7 @@ const TARGETS = [
   '.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search',
   // pill toolbars and segmented trays
   '.lbry-toolbar', '.lbry-filters', '.lbry-filter-ind', '.theme-seg', '.sp-seeds', '.sp-seed',
-  '.icust-seg', '.icust-seg button', '.icust-seg-static', '.adm-tabs', '.fc-seg', '.fc-seg-opt',
+  '.icust-seg', '.icust-seg button', '.adm-tabs', '.fc-seg', '.fc-seg-opt',
 ]
 
 /** Split a selector list on the commas that are not inside parentheses. */
