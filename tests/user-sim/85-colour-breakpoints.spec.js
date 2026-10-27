@@ -417,7 +417,7 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
 
       const read = await page.evaluate(() => ({
         headings: [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((h) => h.textContent.trim()),
-        specimenTags: [...document.querySelectorAll('.cc-spec-h, .cc-spec-large, .cc-spec-body')].map((e) => e.tagName),
+        specimenTags: [...document.querySelectorAll('.cc-spec-h, .cc-spec-large, .cc-spec-bold, .cc-spec-body')].map((e) => e.tagName),
         specimenText: [...document.querySelectorAll('.cc-preview')].map((e) => e.innerText).join(' '),
         body: document.body.innerText,
       }))
@@ -425,11 +425,11 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       // POSITIVE CONTROL. Every assertion under this line is an absence, and a
       // page that never rendered has an empty body that satisfies all of them.
       expect(read.headings.length, `${theme}: the page has headings`).toBeGreaterThanOrEqual(2)
-      expect(read.specimenTags.length, `${theme}: the specimen rows painted`).toBe(3)
+      expect(read.specimenTags.length, `${theme}: the specimen rows painted`).toBe(4)
       expect(read.specimenText.length, `${theme}: the preview has text in it`).toBeGreaterThan(60)
 
-      // A specimen is not a section of this document — "Sample heading" is a
-      // picture of a heading (the design's drawn copy, D:731), not an h2.
+      // A specimen is not a section of this document — "Headings read first" is a
+      // picture of a heading, not an h2.
       expect(read.specimenTags, `${theme}: no specimen row is a heading`).not.toContain('H2')
       expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Common pairs in this kit'])
 
@@ -440,9 +440,10 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
     }
   })
 
-  // The page must name its content. On the drawn screen that is
-  // the specimen, a region, and the side card — the ratio, the tests and both
-  // fields — a named complementary landmark.
+  // The page must name its content: the specimen is a region, the side card
+  // (the ratio and the tests) is a named complementary landmark, and the two
+  // colour fields sit in their own named group in the main column, above the
+  // specimen and outside the side card.
   test('the specimen and the instrument are both named landmarks', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440)
     await go(page, '/create/contrast')
@@ -451,9 +452,17 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
     const specimen = page.getByRole('region', { name: 'Preview of the pair' })
     await expect(instrument).toHaveCount(1)
     await expect(specimen).toHaveCount(1)
-    await expect(instrument.locator('#cc-fg')).toHaveCount(1)
-    await expect(instrument.locator('#cc-bg')).toHaveCount(1)
+    const fields = page.getByRole('group', { name: 'Colours to check' })
+    await expect(fields).toHaveCount(1)
+    await expect(fields.getByRole('textbox', { name: 'Text colour' })).toHaveCount(1)
+    await expect(fields.getByRole('textbox', { name: 'Background colour' })).toHaveCount(1)
+    await expect(instrument.locator('.cc-ratio-num')).toHaveCount(1)
+    await expect(instrument.locator('.cc-check')).toHaveCount(5)
+    await expect(instrument.locator('#cc-fg')).toHaveCount(0)
     await expect(specimen.locator('.cc-spec-body')).toHaveCount(1)
+    // The fields come first: above the specimen in the page.
+    const [fieldsTop, specimenTop] = await Promise.all([fields, specimen].map((l) => l.evaluate((e) => e.getBoundingClientRect().top)))
+    expect(fieldsTop, 'the colour fields sit above the specimen').toBeLessThan(specimenTop)
     await ctx.close()
   })
 
