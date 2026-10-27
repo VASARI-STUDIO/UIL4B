@@ -20,8 +20,8 @@ import { openFirebaseGate } from './utils/firebaseAccess'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
-import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaMap'
-import { LoginPromptProvider, useLoginPrompt } from './contexts/LoginPromptContext'
+import { DEFAULT_DESCRIPTION, LOGIN_SIGNUP_TITLE, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaMap'
+import { LoginPromptProvider } from './contexts/LoginPromptContext'
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
@@ -43,6 +43,7 @@ import { lazyRoute as lazy } from './utils/lazyRoute'
 // are what pays for that on the render-blocking budget.
 import Spectrum from './pages/Spectrum'
 import Onboarding from './pages/Onboarding'
+const LoginPage = lazy(() => import('./pages/LoginPage'))
 import CreateTool from './pages/CreateTool'
 
 // Lazy imports — the account, billing, legal and system pages (code-split),
@@ -170,78 +171,6 @@ function RequireAdmin({ children }) {
   return children
 }
 
-// The login "page" is a launcher for the app-wide LoginPopup (topmost z-index),
-// kept as a real route so bookmarks, RequireAuth redirects and Checkout's
-// `state.from` hand-off keep working. On success we send the user to where they
-// were headed (RequireAuth / Checkout set location.state.from); on dismiss we
-// return them there too so the URL never gets stuck on /login.
-//
-// The NAV no longer routes here — its "Log in" / "Start for Free" controls call
-// openLogin() in place (see PillNav), so the popup opens over the current page
-// and both dismiss and success leave the user exactly where they were. Routing
-// to /login for those was the bug: it unmounted the page before the popup
-// existed, and `from` defaulted to /home, so the X landed people on the
-// dashboard instead of back on the Palette Library.
-function LoginRoute() {
-  const { openLogin } = useLoginPrompt()
-  const { user, loading } = useAuth()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const from = location.state?.from || '/home'
-  // `/login?signup=1` (or `state.signup`) opens the sign-up form. The hero's
-  // "Start building free" is a real <Link> so it can be middle-clicked, which
-  // means the intent has to survive a full navigation — a prop cannot carry it.
-  const wantsSignup = location.state?.signup === true
-    || new URLSearchParams(location.search).get('signup') === '1'
-  const started = useRef(false)
-
-  useEffect(() => {
-    if (loading || started.current) return
-    started.current = true
-    if (user) {
-      navigate(from, { replace: true })
-      return
-    }
-    // `from` is passed through so LoginPromptProvider stashes the intended
-    // destination for a brand-new sign-up (AppInner intercepts those into
-    // onboarding, which would otherwise discard it — QA Q1). The stash lives in
-    // the provider now, so a nav-initiated sign-up that never touches this route
-    // resumes correctly too.
-    // isPageTitle: this route renders null below, so the dialog is the only
-    // thing in the document and its title has to be the h1. Measured before:
-    // /login served zero h1 and an empty <main>.
-    openLogin({ reason: '', from, signup: wantsSignup, isPageTitle: true }).then(() => {
-      navigate(from, { replace: true })
-    })
-  }, [loading, user, from, wantsSignup, navigate, openLogin])
-
-  // ── The spinner belongs to the ONE state that is still resolving ──────────
-  //
-  // This route painted a turning `.fg-loader` unconditionally, so it kept
-  // turning for as long as the dialog was open — which is until the visitor
-  // acts, i.e. indefinitely. Rendered at 320 through 1920 in both themes, it
-  // sits 146px from the top of the viewport, behind a 6px backdrop blur, as a
-  // grey smudge above the dialog: a loading indicator for a page that has
-  // finished loading, and the one thing on screen behind the sign-in form.
-  // `principle-ai-slop-diagnostic` names this exactly — "loading effects imply
-  // intelligence without explaining system state" — and it is the only motif on
-  // this route that carries no meaning.
-  //
-  // While `loading` is true there IS something to wait for: AuthContext has not
-  // yet said whether there is a session, and the popup has not been raised. The
-  // spinner is honest there and is kept, unchanged. After that, this route has
-  // no work left — it either navigates away or the dialog IS the page — so it
-  // draws nothing. `renderState()` in tests/user-sim/helpers.js already counts
-  // an open `[role="dialog"]` as the route's own content, which is why an empty
-  // `main` here is a rendered page rather than a blank one.
-  if (!loading) return null
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
-      <div className="fg-loader" />
-    </div>
-  )
-}
-
 function AppInner({ toast }) {
   const { user: authUser, userProfile, profileLoaded, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
@@ -364,9 +293,12 @@ function AppInner({ toast }) {
     // trailingSlash), so this reached a real visitor's tab, bookmark and any
     // crawler that runs JS.
     const metaPath = location.pathname.replace(/\/+$/, '') || '/'
+    // /login opened on its sign-up form (the page keeps the title in step after that).
+    const signupLogin = metaPath === '/login'
+      && (location.state?.signup === true || new URLSearchParams(location.search).get('signup') === '1')
     const title = missing
       ? 'UI L4B | Page not found'
-      : PAGE_TITLES[metaPath] || 'UI L4B | Design Toolkit'
+      : signupLogin ? LOGIN_SIGNUP_TITLE : PAGE_TITLES[metaPath] || 'UI L4B | Design Toolkit'
     const description = missing
       ? 'That page does not exist. Browse the tools, or head back to the homepage.'
       : PAGE_DESCRIPTIONS[metaPath] || DEFAULT_DESCRIPTION
@@ -378,6 +310,8 @@ function AppInner({ toast }) {
     // Canonical, og:*/twitter:* and the soon-route robots directive all track
     // the same title/description this route already computed (AUDIT B3).
     updateRouteMeta({ pathname: location.pathname, title, description })
+    // Keyed on the path alone: a mode change on /login (search only) keeps the title the page set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
 
   // ── THE FRONT DOOR ────────────────────────────────────────────────────
@@ -464,6 +398,19 @@ function AppInner({ toast }) {
   }
   if (location.pathname === '/onboarding') {
     return <Onboarding />
+  }
+  // /login is a full-screen page of its own: no PillNav, no app-shell, no
+  // AppFooter. It is not added to chromelessRoutes(), which feeds the CreateTool
+  // branch and the feedback button. One Tap mounts here as it did in the shell.
+  if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/login') {
+    return (
+      <>
+        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <LoginPage />
+        </Suspense>
+        <GoogleOneTap />
+      </>
+    )
   }
   // Retargeted with the colour landing's deletion: /create/color is no longer a
   // page, it is a category home that bounces to its first tool like the other
@@ -588,7 +535,6 @@ function AppInner({ toast }) {
 
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}
-              <Route path="/login" element={<LoginRoute />} />
               {/* THE USER HOME, and deliberately NOT behind RequireAuth any more.
 
                   RequireAuth holds a loader until Firebase resolves and then sends a

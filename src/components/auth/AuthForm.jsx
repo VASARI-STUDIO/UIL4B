@@ -58,7 +58,7 @@ const Spinner = () => <span className="auth-spin" aria-hidden="true" />
 
 export default function AuthForm({
   mode, onModeChange, initialEmail = '', lockEmail = false, onSuccess,
-  headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange,
+  headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange, showLoginSub = false,
 }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
@@ -168,7 +168,7 @@ export default function AuthForm({
     : mode === 'sent' ? fill(t('auth.sentSub'), { email: strong(email) })
       : mode === 'switch' ? fill(t('auth.switchSub'), { email: strong(email) })
         : interrupt ? fill(t(mode === 'signup' ? 'auth.interruptSignUp' : 'auth.interruptLogIn'), { reason: strong(reason) })
-          : mode === 'signup' ? t('auth.signUpSub') : null
+          : mode === 'signup' ? t('auth.signUpSub') : showLoginSub ? t('auth.logInSub') : null
 
   const whyList = isEntry && Array.isArray(reasons) ? reasons.filter((r) => typeof r === 'string' && r.trim()) : []
   const unlockList = interrupt && free && !whyList.length && Array.isArray(unlocks)
@@ -180,9 +180,11 @@ export default function AuthForm({
   const errKey = error?.key
   const emailBad = errKey === 'invalidEmail' || errKey === 'emailInUse' || errKey === 'invalidCredential'
   const pwBad = errKey === 'weakPassword' || errKey === 'invalidCredential'
-  const submitLabel = busy === 'submit'
-    ? t({ login: 'auth.loadingLogin', signup: 'auth.loadingSignup', reset: 'auth.loadingReset', switch: 'auth.loadingSwitch' }[mode])
-    : t({ login: 'auth.submitLogin', signup: 'auth.submitSignup', reset: 'auth.sendResetLink', switch: 'auth.submitSwitch' }[mode])
+  // The sent screen has no submit button, so it has no label to look up.
+  const submitKey = (busy === 'submit'
+    ? { login: 'auth.loadingLogin', signup: 'auth.loadingSignup', reset: 'auth.loadingReset', switch: 'auth.loadingSwitch' }
+    : { login: 'auth.submitLogin', signup: 'auth.submitSignup', reset: 'auth.sendResetLink', switch: 'auth.submitSwitch' })[mode]
+  const submitLabel = submitKey ? t(submitKey) : ''
 
   const emailField = (
     <div className="auth-field">
@@ -282,7 +284,7 @@ export default function AuthForm({
                 <button type="button" className="auth-link" onClick={() => go('login')} disabled={disabled}>{t('auth.haveAccount')} <span className="auth-link-strong">{t('auth.haveAccountAction')}</span></button>
               )}
               {(mode === 'reset' || mode === 'sent') && (
-                <button type="button" className="auth-link" onClick={() => go('login')} disabled={disabled}>{t('auth.backToLogIn')}</button>
+                <button type="button" className="auth-link auth-link--quiet" onClick={() => go('login')} disabled={disabled}>{t('auth.backToLogIn')}</button>
               )}
             </div>
           )}

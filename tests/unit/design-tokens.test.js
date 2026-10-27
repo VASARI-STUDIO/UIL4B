@@ -62,6 +62,10 @@ const RUNTIME_FAMILIES = [
   '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-',
 ]
 
+// Exact names set inline by a component, not a family: the /login wall gives
+// each column its index as --i (AuthWall.jsx) for the settle stagger.
+const RUNTIME_EXACT = new Set(['--i'])
+
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()
   const missing = new Set()
@@ -70,6 +74,7 @@ test('no stylesheet token is used without being defined or set at runtime', () =
     if (m[2]) continue                                   // a fallback keeps it valid
     if (defined.has(m[1])) continue
     if (RUNTIME_FAMILIES.some(pre => m[1].startsWith(pre))) continue
+    if (RUNTIME_EXACT.has(m[1])) continue
     missing.add(m[1])
   }
 

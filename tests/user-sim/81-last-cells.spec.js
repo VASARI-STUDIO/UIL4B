@@ -38,7 +38,7 @@
 //                    the same dialog get between them. The heading's WORDS are
 //                    untouched and stay founder-blocked; see the PR body.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { go, signIn, watch, openChosenDialog } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -375,36 +375,39 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// /login — nothing turns behind the dialog, and the title has its own space
+// /login — nothing turns on the page, and the dialog's title has its own space
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('the login route paints only what is true', () => {
-  // MUTATION: in src/App.jsx delete the line
-  //   if (!loading) return null
-  // from LoginRoute. Every cell below goes red on the loader.
+test.describe('the login surfaces paint only what is true', () => {
+  // MUTATION: in src/pages/LoginPage.jsx add
+  //   <div className="fg-loader" />
+  // after the <AuthForm ... /> element. Every cell below goes red on the loader.
   for (const width of WIDTHS) {
     for (const theme of ['light', 'dark']) {
-      test(`no loading indicator behind the dialog at ${width} in ${theme}`, async ({ browser }) => {
+      test(`no loading indicator on the page at ${width} in ${theme}`, async ({ browser }) => {
         const { ctx, page } = await at(browser, width, theme)
         watch(page, `visitor arriving on /login at ${width} ${theme}`)
         await go(page, '/login')
-        await expect(page.locator('.ui-login')).toBeVisible()
+        await expect(page.locator('main .auth-page-form .auth-google-btn')).toBeVisible()
         await settled(page)
 
-        const behind = await page.evaluate(() => {
+        const seen = await page.evaluate(() => {
           const main = document.querySelector('#main, main')
           return {
             loaders: document.querySelectorAll('.fg-loader').length,
-            mainText: (main?.innerText || '').trim(),
-            // The dialog is what the route's content actually is, and
-            // renderState() in helpers.js counts it. Asserted so "main is
-            // empty" can never be read as "the page rendered nothing".
-            dialog: (document.querySelector('[role="dialog"]')?.innerText || '').length,
+            checking: document.querySelectorAll('.auth-checking').length,
+            mainText: (main?.innerText || '').trim().length,
+            dialogs: document.querySelectorAll('[role="dialog"]').length,
           }
         })
-        expect(behind.loaders, `${width}/${theme}: a spinner is still turning behind the dialog`).toBe(0)
-        expect(behind.mainText, `${width}/${theme}: main is not empty`).toBe('')
-        expect(behind.dialog, `${width}/${theme}: the dialog rendered nothing`).toBeGreaterThan(40)
+        expect(seen.loaders, `${width}/${theme}: a spinner is still turning on the page`).toBe(0)
+        // The one line that stands in for the form while auth resolves is gone
+        // once it has resolved.
+        expect(seen.checking, `${width}/${theme}: the checking line outlived the auth check`).toBe(0)
+        // The page is the route's content, and renderState() counts main. Asserted
+        // so a blank main can never be read as a rendered page.
+        expect(seen.mainText, `${width}/${theme}: main rendered next to nothing`).toBeGreaterThan(40)
+        expect(seen.dialogs, `${width}/${theme}: the page opened a dialog`).toBe(0)
 
         await ctx.close()
       })
@@ -413,17 +416,17 @@ test.describe('the login route paints only what is true', () => {
 
   // The same assertion for a visitor who has asked for less motion. It is not a
   // duplicate: `html[data-reduced-motion="true"] .fg-loader{animation:none}`
-  // already stopped the spinning for this person, which made a permanent,
-  // MOTIONLESS grey ring the thing behind their dialog — the defect without the
-  // one cue that it was a loader.
+  // already stopped the spinning for this person, which would make a permanent,
+  // MOTIONLESS grey ring the thing on their page: the defect without the one
+  // cue that it was a loader.
   for (const width of [390, 1440]) {
-    test(`nothing turns behind the dialog at ${width} with reduced motion`, async ({ browser }) => {
+    test(`nothing turns on the page at ${width} with reduced motion`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width, 'light', { reduced: true })
       watch(page, `visitor who asked for less motion, on /login at ${width}`)
       await go(page, '/login')
-      await expect(page.locator('.ui-login')).toBeVisible()
+      await expect(page.locator('main .auth-page-form .auth-google-btn')).toBeVisible()
       await settled(page)
-      expect(await page.locator('.fg-loader').count(), 'a ring is still painted behind the dialog').toBe(0)
+      expect(await page.locator('.fg-loader').count(), 'a ring is still painted on the page').toBe(0)
       await ctx.close()
     })
   }
@@ -435,7 +438,7 @@ test.describe('the login route paints only what is true', () => {
     test(`the dialog title has more space beneath it than its fields do at ${width}`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
       watch(page, `visitor reading the login dialog at ${width}`)
-      await go(page, '/login')
+      await openChosenDialog(page, 'Log in')
       await expect(page.locator('.ui-login')).toBeVisible()
       await settled(page)
 
@@ -482,7 +485,7 @@ test.describe('the login route paints only what is true', () => {
     })
     const page = await ctx.newPage()
     watch(page, 'visitor signing in on a landscape phone')
-    await go(page, '/login')
+    await openChosenDialog(page, 'Log in')
     await expect(page.locator('.ui-login')).toBeVisible()
     await settled(page)
 
@@ -492,7 +495,9 @@ test.describe('the login route paints only what is true', () => {
     // to assert than any absolute pixel count: the dialog's content has changed
     // several times and will change again.
     const m = await page.evaluate(() => {
-      const dialog = document.querySelector('.ui-login')
+      // At 768 and up the chosen variant is a clipped two-pane dialog and the
+      // form pane is what scrolls, so that is the box measured then.
+      const dialog = document.querySelector('.ui-login--strip .ui-login-pane') || document.querySelector('.ui-login')
       const body = document.querySelector('.ui-login .auth-body')
       const pane = document.querySelector('.ui-login .ui-login-pane')
       const title = document.querySelector('#ui-login-title')

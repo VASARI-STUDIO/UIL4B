@@ -16,13 +16,11 @@ import { go, watch } from './helpers.js'
 const PERSONA = 'a first-time visitor clicking the primary call to action'
 
 /** The popup's own heading tells you which form you are looking at. */
-// BY ID, NOT BY TAG. This read `.ui-login h2` and broke when the
-// dialog began titling itself for its context: on the /login ROUTE it is an h1,
-// because LoginRoute renders null and the dialog is the whole document, and
-// everywhere else it stays an h2 over a page that has its own h1. Three of the
-// six cases below open it on the route, so a tag selector is asserting the
-// heading LEVEL while pretending to assert the text. `#ui-login-title` is what
-// aria-labelledby points at and is identical in both branches — the level is
+// BY ID, NOT BY TAG. The form title is an h1 on the /login page and an h2 in the
+// dialog that opens over any other page. Some cases below open it on the page,
+// so a tag selector would be asserting the heading LEVEL while pretending to
+// assert the text. `#ui-login-title` is identical in both and is what the
+// dialog's aria-labelledby points at; the level is
 // 09-auth-modal-accessibility's to police, and it does.
 const dialogHeading = (page) => page.locator('#ui-login-title').first()
 

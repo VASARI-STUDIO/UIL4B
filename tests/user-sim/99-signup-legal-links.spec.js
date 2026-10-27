@@ -2,13 +2,17 @@
 // log-in can create an account), with the Terms and Privacy pages one click
 // away in a new tab so the form survives. Reset and switch never show it.
 import { test, expect } from './base.js'
-import { go } from './helpers.js'
+import { go, openChosenDialog } from './helpers.js'
 
 const LEGAL = 'By continuing, you agree to the Terms and Privacy Policy. You must be 16 or older to create an account.'
 
-test('the log-in and sign-up forms link Terms and Privacy; reset does not', async ({ page }) => {
-  await go(page, '/login')
-  const dialog = page.getByRole('dialog')
+// The same form sits in the /login page and in the dialog; both are walked.
+for (const [where, open, scope] of [
+  ['the /login page', (page) => go(page, '/login'), (page) => page.locator('main .auth-page-form')],
+  ['the sign-in dialog', (page) => openChosenDialog(page, 'Log in'), (page) => page.getByRole('dialog')],
+]) test(`${where}: the log-in and sign-up forms link Terms and Privacy; reset does not`, async ({ page }) => {
+  await open(page)
+  const dialog = scope(page)
   await expect(dialog).toBeVisible()
   await expect(dialog.locator('.auth-legal'), 'log-in can create an account through Google').toHaveText(LEGAL)
 

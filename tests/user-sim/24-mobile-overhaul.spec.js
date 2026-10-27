@@ -437,9 +437,28 @@ test('S12 · the touch action row does not cover the palette it acts on', async 
 // it has to scroll; the defect was that nothing said so, and the primary submit
 // was sliced across the scroll boundary, which reads as a rendering fault.
 
+// The dialog opens over a page now (/login is a page of its own), from the
+// header's Menu. "Log in" carries no reason, so this is the chosen variant.
+async function openLoginDialog(browser, width, height) {
+  const t = await openTouch(browser, width, height, '/learn/help', width >= 700)
+  const desktopMenu = t.page.getByRole('button', { name: 'Menu', exact: true })
+  if (await desktopMenu.isVisible()) {
+    await desktopMenu.click()
+    await t.page.locator('.pnav-pop-item').filter({ hasText: /^Log in$/ }).click()
+  } else {
+    await t.page.getByRole('button', { name: 'Open menu' }).click()
+    await t.page.locator('.pnav-sheet').getByRole('button', { name: 'Log in', exact: true }).click()
+  }
+  await t.page.locator('.ui-modal').first().waitFor({ state: 'visible', timeout: 15000 })
+  await t.page.waitForTimeout(400)
+  return t
+}
+
 async function loginGeometry(page) {
   return page.evaluate(() => {
-    const m = document.querySelector('.ui-modal')
+    // The chosen variant at 768 and up is a clipped two-pane dialog whose form
+    // pane is the thing that scrolls, so that is what is measured then.
+    const m = document.querySelector('.ui-login--strip .ui-login-pane') || document.querySelector('.ui-modal')
     const mr = m.getBoundingClientRect()
     const visibleHeight = (el) => {
       const r = el.getBoundingClientRect()
@@ -475,7 +494,7 @@ async function loginGeometry(page) {
 // nothing should be buried at all; before the fix Forgot password? was.
 for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
   test(`S7 · Login at ${w}x${h} shows a whole Sign In button and does not bury sign-up`, async ({ browser }) => {
-    const { ctx, page } = await openTouch(browser, w, h, '/login', w >= 700, '.ui-modal')
+    const { ctx, page } = await openLoginDialog(browser, w, h)
     const g = await loginGeometry(page)
     await ctx.close()
 
@@ -499,17 +518,19 @@ for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
   })
 }
 
-test('S7 · portrait viewports still need no scrolling at all', async ({ browser }) => {
-  // The short-height rules must not leak upward. These four were measured clean
-  // by the audit and are the regression guard for the max-height:460px block.
-  for (const [w, h] of [[360, 560], [390, 640], [390, 844], [768, 1024]]) {
-    const { ctx, page } = await openTouch(browser, w, h, '/login', w >= 700, '.ui-modal')
+// One test per viewport: each opens its own context and walks the nav to the
+// dialog, which is too much for one test's time budget when run in a loop.
+// The short-height rules must not leak upward. These four were measured clean
+// by the audit and are the regression guard for the max-height:460px block.
+for (const [w, h] of [[360, 560], [390, 640], [390, 844], [768, 1024]]) {
+  test(`S7 · portrait ${w}x${h} still needs no scrolling at all`, async ({ browser }) => {
+    const { ctx, page } = await openLoginDialog(browser, w, h)
     const g = await loginGeometry(page)
     await ctx.close()
     expect(g.hiddenPx, `${w}x${h}: the login dialog scrolls by ${g.hiddenPx}px and should not`).toBe(0)
     expect(g.submitVisibleH).toBe(g.submitH)
-  }
-})
+  })
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // S8 · every Settings section is on screen, and no label loses a letter

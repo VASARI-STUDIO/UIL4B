@@ -57,10 +57,15 @@ export function AccountSwitcher({ onDone }) {
       await flushAccountSync()
       const res = await switchAccount(acct)
       if (res.outcome === 'requiresPassword') {
-        setStatus(`Enter the password for ${res.email}. Your current session stays active until sign-in succeeds.`)
+        setStatus(`Enter the password for ${res.email}. Your current session stays active until you've logged in as them.`)
+        // The dialog says it all, so the menu closes rather than sit open behind it.
+        onDone?.()
         const switched = await openLogin({ force: true, free: false, email: res.email, lockEmail: true, mode: 'switch', reason: `switch to ${res.email}` })
         if (switched) { setStatus(`Signed in as ${switched.email || acct.email}.`); onDone?.() }
-        else setStatus('Account switch cancelled. Your current session is still active.')
+        else {
+          setStatus('Account switch cancelled. Your current session is still active.')
+          onDone?.() // the menu is already closed; this hands focus back to the avatar
+        }
       } else if (res.outcome === 'switched') {
         setStatus(`Switched to ${acct.email || 'the selected account'}.`)
         onDone?.()
