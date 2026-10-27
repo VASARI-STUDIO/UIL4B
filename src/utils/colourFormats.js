@@ -8,8 +8,12 @@ import { hexToCmyk, hexToHsl, hexToHsv, hexToOklch, hexToRgb } from './colors.js
 export function colourFormats(hex) {
   const up = String(hex).toUpperCase()
   const [r, g, b] = hexToRgb(up)
-  const [h, s, l] = hexToHsl(up)
-  const [hh, hs, hb] = hexToHsv(up)
+  const [hue, s, l] = hexToHsl(up)
+  const [hueB, hs, hb] = hexToHsv(up)
+  // Both converters round the hue after scaling, so a hue just under a full turn
+  // comes back as 360; a person expects 0.
+  const h = hue % 360
+  const hh = hueB % 360
   const [c, m, y, k] = hexToCmyk(up)
   const [ol, oc, oh] = hexToOklch(up)
   return [
