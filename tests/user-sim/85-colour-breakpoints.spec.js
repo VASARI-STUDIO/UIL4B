@@ -522,7 +522,6 @@ test.describe('the palette board, read and pressed', () => {
     const cols = await page.locator('.plb-col').evaluateAll((els) => els.map((col) => {
       const c = col.getBoundingClientRect()
       const name = col.querySelector('.plb-name')
-      const n = name.getBoundingClientRect()
       // The text's own ink box, so a centred block of full column width can't pass.
       const r = document.createRange(); r.selectNodeContents(name)
       const t = r.getBoundingClientRect()
