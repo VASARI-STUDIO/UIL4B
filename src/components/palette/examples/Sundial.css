@@ -1,7 +1,7 @@
 /* Sundial (Sundial.jsx): an energy dashboard painted with the user's palette.
  *
- * Colour comes only from --pv-* (set by the dialog) and the two --sd-* inks the
- * scene works out per palette. Layout is a container query on .sd, never the
+ * Colour comes only from --pv-* (set by the dialog) and the --sd-* inks the
+ * scene works out per palette (the now label and the three alert rows). Layout is a container query on .sd, never the
  * viewport: wide 960+, mid 600 to 959, narrow under 600.
  * Type: 12 / 13 / 15 / 17 / 20 / 28px, plus one display figure in clamp().
  * Figures and axes are Geist Mono (already global); everything else is Geist,
@@ -141,9 +141,9 @@
 .sd-alert .sd-ico{margin-top:2px}
 .sd-alert b{font-weight:600}
 .sd-alert u{text-underline-offset:2px;font-weight:600}
-.sd-alert[data-tone="warning"]{background:var(--pv-warning-tint);color:var(--pv-warning-ink)}
-.sd-alert[data-tone="error"]{background:var(--pv-error-tint);color:var(--pv-error-ink)}
-.sd-alert[data-tone="info"]{background:var(--pv-info-tint);color:var(--pv-info-ink)}
+.sd-alert[data-tone="warning"]{background:var(--pv-warning-tint);color:var(--sd-warning-ink)}
+.sd-alert[data-tone="error"]{background:var(--pv-error-tint);color:var(--sd-error-ink)}
+.sd-alert[data-tone="info"]{background:var(--pv-info-tint);color:var(--sd-info-ink)}
 
 /* ── Table ── */
 .sd-thead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s-1) var(--s-4);margin-bottom:var(--s-3)}

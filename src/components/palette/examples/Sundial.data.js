@@ -8,7 +8,7 @@
 //
 // Pure and DOM-free, so tests read ROLES, TEXT_RECIPE and the derived figures without
 // rendering anything.
-import { brandAsText, fieldEdge } from '../../../utils/palettePreviewRoles.js'
+import { brandAsText, fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 
 // The roles the scene paints. A test renders the scene and checks that every
 // one of these is on at least one leaf element.
@@ -23,8 +23,10 @@ export const TEXT_RECIPE = [
   { el: 'lead figure', ink: 'text', large: true },
   { el: 'labels, axis, meta', ink: 'muted', large: false },
   { el: 'credit line', ink: 'success-ink', large: false },
-  { el: 'now label', ink: 'brandAsText:accent', large: false },
-  { el: 'alert rows', ink: 'warning-ink|error-ink|info-ink', large: false },
+  // The label sits on a --pv-canvas plate over the plot, so its grounds are [surface, canvas].
+  { el: 'now label', ink: 'brandAsText:accent', grounds: ['surface', 'canvas'], large: false },
+  // Each alert row's text is inkOnField(tint, {on: <tone>-ink, text, canvas}) on its own tint.
+  { el: 'alert rows', ink: 'inkOnField:warning-tint|error-tint|info-tint', large: false },
   { el: 'ring percentage', ink: 'text', large: true },
 ]
 
@@ -161,20 +163,30 @@ export const CHART = {
   kw: [6, 4, 2, 0],
 }
 
+const ALERT_TONES = ['warning', 'error', 'info']
+
 /**
  * The colours this scene works out per palette and mode: the accent set as
- * text, and an edge for the solar field when it would melt into the surface.
+ * text, an ink for each alert row on its own tint, and an edge for the solar
+ * field when it would melt into the surface.
+ *
+ * The "Now" label sits on a canvas plate over the plot (a surface), so the
+ * accent is measured against both grounds, not the surface alone.
  * @param {object} r derivePaletteRoles() output
  */
 export function sundialVars(r) {
-  const now = brandAsText(r.accent, [r.surface])
-  return {
-    vars: {
-      '--sd-now-ink': now.hex,
-      '--sd-solar-edge': fieldEdge(r.primary, r.surface, r.borderStrong),
-      // Neutral linework holds at the dark canvas only one step stronger.
-      '--sd-line': r.mode === 'dark' ? r.borderStrong : r.border,
-    },
-    nowAdjusted: now.adjusted,
+  const now = brandAsText(r.accent, [r.surface, r.canvas])
+  const vars = {
+    '--sd-now-ink': now.hex,
+    '--sd-solar-edge': fieldEdge(r.primary, r.surface, r.borderStrong),
+    // Neutral linework holds at the dark canvas only one step stronger.
+    '--sd-line': r.mode === 'dark' ? r.borderStrong : r.border,
   }
+  // The tone's own ink is kept when it clears 4.5:1 on its tint; otherwise the
+  // neutral text or canvas, or a pole, does.
+  for (const tone of ALERT_TONES) {
+    const { ink, tint } = r[tone]
+    vars[`--sd-${tone}-ink`] = inkOnField(tint, { on: ink, text: r.text, canvas: r.canvas }).hex
+  }
+  return { vars, nowAdjusted: now.adjusted }
 }
