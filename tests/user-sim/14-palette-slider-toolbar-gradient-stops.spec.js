@@ -10,7 +10,7 @@ import { go, watch } from './helpers.js'
 /* ── 1 · The adjust tracks preview the palette they would produce ─────────────
  * The drawn Adjust bar (D:1037-1044) paints each slider as a 20px gradient
  * pill (the 24px control around it is taller; the focus ring is drawn on the
- * pill itself, see 140-palette-colour-values-css-sheet-adjust) with a light
+ * pill itself, see 143-palette-colour-values-css-sheet-adjust) with a light
  * 15px thumb centred in it that carries its own dark shadow. The earlier "lens"
  * thumb, which sampled the track colour into its centre, went with that
  * redraw; what these tests keep is that the tracks are painted from the
