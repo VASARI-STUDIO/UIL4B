@@ -341,6 +341,8 @@ function seedProject(i, design) {
  *              is not new. Pass `Date.now() - 2 * 60_000` for an account made two
  *              minutes ago, which the workspace greets as "Welcome, <name>."
  *              rather than "Welcome back, <name>.".
+ *   noName     true leaves the profile without a name, so the workspace greets
+ *              with "Welcome back." and offers "Add your name". Default false.
  *   subscription / docs / claims / email / uid / displayName — direct overrides
  *              for anything the four above do not cover. `docs` is merged over
  *              the seeded Firestore documents, keyed by path.
@@ -363,6 +365,7 @@ export async function signIn(page, opts = {}) {
     authFail = null,
     projectTombstones = null,
     displayName,
+    noName = false,
     emailVerified = true,
     lateSignIn = false,
     creationTime,
@@ -370,7 +373,7 @@ export async function signIn(page, opts = {}) {
 
   const email = (opts.email || (admin ? TEST_ADMIN_EMAIL : `${plan}.user@uil4b.test`)).toLowerCase()
   const uid = opts.uid || `test-uid-${admin ? 'admin' : plan}`
-  const name = displayName || (admin ? 'Founder' : plan === 'pro' ? 'Pia Pro' : 'Freya Free')
+  const name = noName ? '' : displayName || (admin ? 'Founder' : plan === 'pro' ? 'Pia Pro' : 'Freya Free')
 
   // The entitlement, expressed as the document Stripe's webhook would have
   // written. `planForSubscription` in SubscriptionContext is what turns it into
