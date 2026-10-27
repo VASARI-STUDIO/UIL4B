@@ -41,6 +41,7 @@ const GLYPHS = {
   'dots-three': (<><circle cx="5.25" cy="12" r="1.1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" /><circle cx="18.75" cy="12" r="1.1" fill="currentColor" stroke="none" /></>),
   'sliders-horizontal': (<><path d="M13.5 16.5h6.75" /><path d="M3.75 16.5h6.75" /><circle cx="12" cy="16.5" r="1.5" /><path d="M6.75 7.5h13.5" /><path d="M3.75 7.5h0" /><circle cx="5.25" cy="7.5" r="1.5" /></>),
   'info': (<><circle cx="12" cy="12" r="9" /><path d="M11.25 11.25H12v5.25h.75" /><circle cx="11.81" cy="7.88" r=".38" /></>),
+  'tag': (<><path d="M3.75 12.4V4.5a.75.75 0 0 1 .75-.75h7.9a.75.75 0 0 1 .53.22l7.35 7.35a.75.75 0 0 1 0 1.06l-7.9 7.9a.75.75 0 0 1-1.06 0L3.97 12.93a.75.75 0 0 1-.22-.53Z" /><circle cx="8.25" cy="8.25" r="1.1" /></>),
   'circle-notch': (<path d="M16.5 4.2a9 9 0 1 1-9 0" />),
 }
 
