@@ -193,13 +193,24 @@ export function ToolToolbar({
   }, [])
   // Webfonts change label widths after first paint. `ready` alone can settle
   // before a face has even started loading (it starts when text first uses
-  // it), so every later finished load re-measures too.
+  // it), so later finished loads are checked too. Pages such as the Font
+  // Gallery load many faces the row never uses, and a re-measure re-renders
+  // the row (closing an open menu), so a load only re-measures when an item
+  // on the row has actually changed width.
   useEffect(() => {
     let alive = true
-    const remeasure = () => { if (alive) setMeasuring(true) }
-    document.fonts?.ready?.then(remeasure).catch(() => {})
-    document.fonts?.addEventListener?.('loadingdone', remeasure)
-    return () => { alive = false; document.fonts?.removeEventListener?.('loadingdone', remeasure) }
+    document.fonts?.ready?.then(() => { if (alive) setMeasuring(true) }).catch(() => {})
+    const onLoaded = () => {
+      const row = rowRef.current
+      if (!alive || !row) return
+      const changed = [...row.querySelectorAll(':scope > [data-tl-item]')].some((el) => {
+        const was = widths.current.get(el.getAttribute('data-tl-item'))
+        return was !== undefined && Math.abs(el.getBoundingClientRect().width - was) > 0.5
+      })
+      if (changed) setMeasuring(true)
+    }
+    document.fonts?.addEventListener?.('loadingdone', onLoaded)
+    return () => { alive = false; document.fonts?.removeEventListener?.('loadingdone', onLoaded) }
   }, [])
 
   const overflow = needsMeasure ? [] : items.filter((it) => (it.inline === false || hidden.has(it.id)) && !it.divider && it.menu !== false)
