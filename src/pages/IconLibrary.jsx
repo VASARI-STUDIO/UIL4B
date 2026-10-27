@@ -34,6 +34,7 @@ import {
   stickyStrokePx, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
+import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
 import {
   endBandKind, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
@@ -468,6 +469,10 @@ async function loadGlyphBatchOutcome(pack, names) {
   }
   // An animated answer that lands after the viewer left Pro is dropped, not stored.
   if (!applyGlyphData(pack, names, data, GLYPH_STORES)) return { ok: false, kind: classifyAnimatedFailure(staleAnimatedAnswer()) }
+  // Put the batch in the sprite before the answer is reported, so the cells that
+  // paint on the tick that follows find their symbols already there.
+  // A sprite failure must not hold the batch: its icons fall back to their data URIs.
+  try { await registerGlyphSymbols(pack, names) } catch { /* drawn as images instead */ }
   return { ok: true }
 }
 const loadGlyphBatch = async (pack, names) => (await loadGlyphBatchOutcome(pack, names)).ok
@@ -506,6 +511,32 @@ function glyphDataUri(pack, name) {
     GLYPH_URI.delete(GLYPH_URI.keys().next().value)
   }
   return uri
+}
+
+// ── Inline sprite for monochrome packs ───────────────────────────────────────
+// A monochrome pack icon is drawn as `<svg><use href="#id"/></svg>` from the one
+// hidden sprite (utils/iconSprite.js) instead of as an <img> data: URI, which cost
+// the browser one SVG document per icon. Coloured packs keep their <img>: the
+// brand chip samples the decoded image for its contrast halo and aspect ratio,
+// which a <use> has no pixels to give. Animated packs keep it too, because the
+// sanitiser drops their <animate> elements.
+const inSprite = (pack) => !COLORED_PACKS.has(pack) && !isAnimatedPack(pack)
+// Sanitising a cold batch of 100 icons is one 28 ms task at 4x CPU (measured, median
+// of 5), so it goes in runs of SPRITE_SLICE with a yield between them: the longest
+// run is then about 15 ms.
+const SPRITE_SLICE = 25
+async function registerGlyphSymbols(pack, names) {
+  if (!inSprite(pack)) return
+  await registerSymbolsSliced(names.map((name) => ({ key: svgKey(pack, name), text: glyphSvgText(pack, name) })), SPRITE_SLICE)
+}
+/**
+ * `#id` of the icon's symbol, '' when it is not in the sprite (use the data: URI).
+ * Read-only: every body arrives through loadGlyphBatchOutcome, which registers
+ * its batch, so a render never writes to the page. An icon the sprite has since
+ * let go of (see SPRITE_MAX) is drawn from its data: URI instead.
+ */
+function glyphSymbolRef(pack, name) {
+  return inSprite(pack) ? symbolRef(svgKey(pack, name)) : ''
 }
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
@@ -847,6 +878,18 @@ function LogoDevGlyph({ icon }) {
   )
 }
 
+// A sprite cell. The effect is the one place a drawn icon is marked as recently
+// used: it runs when the cell mounts (a page revealed, a ghost restored), not on
+// every render of the grid.
+function SpriteGlyph({ href, symKey, className }) {
+  useEffect(() => { touchSymbol(symKey) }, [symKey])
+  return (
+    <svg width="24" height="24" className={className} aria-hidden="true" focusable="false">
+      <use href={href} />
+    </svg>
+  )
+}
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
@@ -865,6 +908,12 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     // already handled where it can be read. A name the service has no icon for
     // is an empty slot, not a skeleton.
     if (!src) return <span className={gone ? 'ig-glyph-gone' : 'ig-glyph-wait'} aria-hidden="true" />
+    // A `#id` is a symbol in the sprite: it exists as soon as the body does, so
+    // there is no load to wait for and no state to hold. The cell's own
+    // aria-label names it, as it did the <img> alt.
+    if (src.charCodeAt(0) === 35) {
+      return <SpriteGlyph href={src} symKey={svgKey(icon.pack, icon.name)} className={`ig-sym ${invClass(icon.pack)}`.trim()} />
+    }
     return <MonoGlyph src={src} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
   }
   return (
@@ -2166,6 +2215,8 @@ const forgetAnimatedSets = () => purgeAnimatedCaches({
 const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
 
 const PAGE_SIZE = 120
+// Cells mounted per frame when a page is revealed (PAGE_SIZE / 3).
+const REVEAL_CHUNK = 40
 
 const SOFT_NOTICE_COPY = {
   partial: 'Some icon sets couldn’t load.',
@@ -3170,15 +3221,39 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // Infinite scroll — reveal another page as the sentinel comes into view. The
   // `visible` dep makes the observer reconnect after each reveal so it keeps
   // draining while the sentinel stays inside the rootMargin (fixes the stall).
+  //
+  // A page is revealed REVEAL_CHUNK cells per frame, not all 120 in one commit:
+  // mounting a whole page at once was one 65-95 ms task on a phone. The chain of
+  // frames lives in a ref because each chunk changes `visible`, which re-runs the
+  // effect below; its cleanup must not cancel the chain it is part of.
+  //
+  // `icons` itself is a dependency, not just its length: a replaced listing of
+  // the same length ends the chain (the effect after this one) and must also
+  // start a fresh observer. An observer only reports when the sentinel's
+  // visibility changes, but a new one always reports once on observe(), so the
+  // reveal restarts from the current `visible` instead of waiting for a scroll.
+  const revealRef = useRef(0)
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
     const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) setVisible(v => Math.min(v + PAGE_SIZE, icons.length))
+      if (!e.isIntersecting || revealRef.current) return
+      const target = Math.min(visible + PAGE_SIZE, icons.length)
+      if (target <= visible) return
+      let upTo = visible
+      const step = () => {
+        revealRef.current = 0
+        upTo = Math.min(upTo + REVEAL_CHUNK, target)
+        setVisible(upTo)
+        if (upTo < target) revealRef.current = requestAnimationFrame(step)
+      }
+      step()
     }, { rootMargin: '600px' })
     obs.observe(el)
     return () => obs.disconnect()
-  }, [icons.length, visible])
+  }, [icons, visible])
+  // A new listing (or leaving the page) ends any page still being revealed.
+  useEffect(() => () => { cancelAnimationFrame(revealRef.current); revealRef.current = 0 }, [icons])
 
   const debounceSearch = useCallback((q, scope) => {
     clearTimeout(timer.current)
@@ -3565,7 +3640,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // identity to the counter is what lets a cell that first rendered blank
   // repaint with its markup.
   const glyphSrc = useCallback(
-    (pack, name) => glyphDataUri(pack, name),
+    (pack, name) => glyphSymbolRef(pack, name) || glyphDataUri(pack, name),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [glyphTick]
   )
@@ -3722,13 +3797,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const grid = gridRef.current
     if (!grid) return
     let timer = null
-    const scan = () => {
-      const waiting = [...grid.querySelectorAll('.ig-skel,.ig-glyph-wait,.ig-glyph-pending,.ig-chip--wait')]
-        .some(el => {
-          const rect = el.getBoundingClientRect()
-          return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth
-        })
-      if (!waiting) {
+    let raf = 0
+    // Which waiting elements are on screen is the IntersectionObserver's job: it
+    // reports after layout, so nothing here reads geometry (a rect read inside the
+    // mutation callback forced a layout of the cells React had just mounted, and
+    // the scroll listener forced one per scroll event).
+    const onscreen = new Set()
+    const settle = () => {
+      for (const el of onscreen) if (!el.isConnected) onscreen.delete(el)
+      if (!onscreen.size) {
         clearTimeout(timer)
         timer = null
         setWaitingStatus(false)
@@ -3736,17 +3813,32 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         timer = setTimeout(() => setWaitingStatus(true), 600)
       }
     }
-    const observer = new MutationObserver(scan)
+    const io = new IntersectionObserver((entries) => {
+      for (const { target, isIntersecting } of entries) {
+        if (isIntersecting && target.isConnected) onscreen.add(target)
+        else onscreen.delete(target)
+      }
+      settle()
+    })
+    const watched = new Set()
+    // Cheap: selector matching only, no style or layout. At most once a frame.
+    const scan = () => {
+      raf = 0
+      const now = new Set(grid.querySelectorAll('.ig-skel,.ig-glyph-wait,.ig-glyph-pending,.ig-chip--wait'))
+      for (const el of now) if (!watched.has(el)) { watched.add(el); io.observe(el) }
+      for (const el of watched) if (!now.has(el)) { watched.delete(el); io.unobserve(el); onscreen.delete(el) }
+      settle()
+    }
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(scan) }
+    const observer = new MutationObserver(schedule)
     observer.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
-    window.addEventListener('scroll', scan, { passive: true })
-    window.addEventListener('resize', scan)
     scan()
     return () => {
       observer.disconnect()
+      io.disconnect()
+      if (raf) cancelAnimationFrame(raf)
       clearTimeout(timer)
       setWaitingStatus(false)
-      window.removeEventListener('scroll', scan)
-      window.removeEventListener('resize', scan)
     }
   }, [gated, source])
   const [win, setWin] = useState({ list: icons, upTo: 0, h: [], keep: -1 })
@@ -3756,16 +3848,29 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const grid = gridRef.current
     if (!windowed || !grid || win.list !== icons) return
     let raf = 0
-    let width = grid.clientWidth
+    // The width comes from a ResizeObserver, which reports after layout; reading
+    // `clientWidth` here instead forced a layout on every update that followed a
+    // commit.
+    let width = -1
+    let widthChanged = false
+    let seen = -1
     const update = () => {
       raf = 0
       // A new width reflows every row, so every stored height is stale.
-      if (grid.clientWidth !== width) {
-        width = grid.clientWidth
+      if (widthChanged) {
+        widthChanged = false
         if (win.upTo) setWin({ list: icons, upTo: 0, h: [], keep: -1 })
         return
       }
       const kids = grid.children
+      // Cells were added (or swapped for ghosts) since the last read, so the page
+      // has layout pending. Reading a rect now would force it inside this
+      // callback; the frame lays it out anyway, and the next frame reads clean.
+      if (kids.length !== seen) {
+        seen = kids.length
+        raf = requestAnimationFrame(update)
+        return
+      }
       // First cell whose bottom is still inside the overscan above the viewport.
       let lo = 0
       let hi = kids.length
@@ -3790,6 +3895,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       setWin({ list: icons, upTo, h, keep })
     }
     const schedule = () => { if (!raf) raf = requestAnimationFrame(update) }
+    const sizeWatch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width
+      if (width >= 0 && w !== width) { widthChanged = true; schedule() }
+      width = w
+    })
+    sizeWatch?.observe(grid)
     schedule()
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('resize', schedule)
@@ -3797,6 +3908,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     grid.addEventListener('focusin', schedule)
     grid.addEventListener('focusout', schedule)
     return () => {
+      sizeWatch?.disconnect()
       if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)
@@ -3862,7 +3974,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       // new pack or query), so a position prefix costs no reconciliation.
       key={`${idx}:${icon.id || icon.key || icon.name || ''}`}
       icon={icon}
-      src={icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
+      // A ghost draws no glyph, so it asks for no source.
+      src={!ghost && icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
       gone={!!icon.cdn && !icon.custom && !icon.logo && GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
       showPack={showPack}
       picked={isPicked(icon)}
@@ -3936,8 +4049,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                   // a rail waiting one tick for its tranche would have counted
                   // itself past the eight-failure threshold and thrown the whole
                   // library into its refused state.
-                  glyphSrc(r.pack, r.name) ? (
-                    <img src={glyphSrc(r.pack, r.name)} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
+                  glyphDataUri(r.pack, r.name) ? (
+                    <img src={glyphDataUri(r.pack, r.name)} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
                   ) : (
                     <span className="ig-glyph-wait" aria-hidden="true" />
                   )

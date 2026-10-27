@@ -680,11 +680,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    than a readable grid. A wider cell is what makes a two-line 11px name fit;
    below ~336px `calc(100%/3)` still takes over and holds three columns. */
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(112px,calc(100%/3)),1fr));gap:4px}
-.ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
+.ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:background-color var(--t),border-color var(--t),transform var(--t)}
 @media (hover:hover){.ic:hover{background:var(--bg-2);border-color:var(--border)}}
 .ic:active{transform:scale(.95)}
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+/* A sprite glyph (<use> of a pack icon) is drawn as it was inside an <img>: a plain
+   black SVG document, so `currentColor` is black and nothing is inherited from the
+   line-icon rule above. `.ig-inv` still flips it for the dark page. */
+.ic svg.ig-sym{color:#000;fill:#000;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter}
+/* Windows High Contrast: the system chooses the ink, so the theme filter comes off.
+   Left on, `.ig-inv` would invert the system text colour (white on a black
+   Canvas) back to black and the glyph would vanish. `forced-color-adjust:none`
+   was the other option; it keeps the black ink, which is invisible on a black Canvas. */
+@media (forced-colors:active){
+  .ic svg.ig-sym{color:CanvasText;fill:CanvasText;filter:none}
+}
 /* Long icon names must stay inside the cell — otherwise they paint past the
    hover background and look clipped against neighbouring cells. */
 /* THE LABEL EXISTS TO TELL TWO NEIGHBOURING ICONS APART. It was 8.5px dropping

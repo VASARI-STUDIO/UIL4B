@@ -38,27 +38,32 @@ function alphaOf(css) {
 test.describe('the icon grid while glyph images are still loading', () => {
   test.skip(isLiveIconify(), 'the live API decides how long a glyph takes; this spec controls it')
 
-  test('a pending glyph is transparent and the class is gone once it has loaded', async ({ page }) => {
+  test('a mono slot stays the wait box until the batch lands, then every cell is a drawn symbol with no fade', async ({ page }) => {
     watch(page, PERSONA)
 
+    // Mono glyphs are `<svg class="ig-sym"><use href="#icsN"/></svg>` cells of one hidden sprite: there is
+    // no image to load, so no pending state and no fade. Each cell is sampled the moment it is inserted.
     await page.addInitScript(() => {
       const seen = new WeakSet()
-      window.__pendingGlyphs = []
+      window.__symCells = []
+      window.__pendingImgs = 0
       window.__waitStarted = null
       window.__statusStarted = null
-      const sample = (img) => {
-        if (seen.has(img) || !img.classList.contains('ig-glyph-pending')) return
-        seen.add(img)
-        window.__pendingGlyphs.push({
-          background: getComputedStyle(img).backgroundColor,
-          animation: getComputedStyle(img).animationName,
-          loaded: img.complete && img.naturalWidth > 0,
+      const sample = (cell) => {
+        if (seen.has(cell)) return
+        seen.add(cell)
+        const ref = cell.querySelector('use')?.getAttribute('href') || ''
+        window.__symCells.push({
+          drawn: !!document.querySelector(`#ig-sprite ${ref}`),
+          opacity: getComputedStyle(cell).opacity,
+          animation: getComputedStyle(cell).animationName,
         })
       }
       const scan = (node) => {
         if (node.nodeType !== 1) return
-        if (node.tagName === 'IMG') sample(node)
-        node.querySelectorAll?.('img.ig-glyph-pending').forEach(sample)
+        if (node.matches('svg.ig-sym')) sample(node)
+        node.querySelectorAll?.('svg.ig-sym').forEach(sample)
+        if (node.matches('img.ig-glyph-pending') || node.querySelector?.('img.ig-glyph-pending')) window.__pendingImgs += 1
       }
       new MutationObserver((records) => {
         if (window.__waitStarted === null && document.querySelector('.ig-skel,.ig-glyph-wait')) window.__waitStarted = performance.now()
@@ -87,7 +92,7 @@ test.describe('the icon grid while glyph images are still loading', () => {
     // While the glyph requests are held the cells are the wait box.
     await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible({ timeout: 20_000 })
     await expect.poll(() => heldRequests, { timeout: 20_000 }).toBeGreaterThan(0)
-    expect(await page.locator('.ig .ic img').count(), 'no glyph has arrived yet').toBe(0)
+    expect(await page.locator('.ig .ic :is(img, svg.ig-sym)').count(), 'no glyph has arrived yet').toBe(0)
     const waiting = await page.locator('.ig .ic .ig-glyph-wait').first()
       .evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(alphaOf(waiting)).toBe(0)
@@ -97,47 +102,43 @@ test.describe('the icon grid while glyph images are still loading', () => {
     await expect(status).toBeVisible()
     const delay = await page.evaluate(() => window.__statusStarted - window.__waitStarted)
     expect(delay).toBeGreaterThanOrEqual(580)
-    const before = await page.locator('.ig .ic').first().boundingBox()
+    const before = await page.locator('.ic').first().boundingBox()
 
     release()
 
     await expect
-      .poll(() => page.evaluate(() => window.__pendingGlyphs.length), { timeout: 20_000 })
+      .poll(() => page.evaluate(() => window.__symCells.length), { timeout: 20_000 })
       .toBeGreaterThan(8)
-    const pending = await page.evaluate(() => window.__pendingGlyphs)
-    for (const sample of pending) {
-      expect(sample.loaded, 'sampled before the image finished loading').toBe(false)
-      expect(alphaOf(sample.background), `a pending glyph paints ${sample.background}`)
-        .toBe(0)
-      expect(sample.animation).toBe('none')
+    const inserted = await page.evaluate(() => window.__symCells)
+    for (const cell of inserted) {
+      expect(cell.drawn, 'a cell was inserted before its symbol was in the sprite').toBe(true)
+      expect(cell.opacity, 'a mono glyph starts faded out').toBe('1')
+      expect(cell.animation).toBe('none')
     }
+    expect(await page.evaluate(() => window.__pendingImgs), 'a mono glyph went through the image pending state').toBe(0)
 
-    // Once the images have loaded nothing is left pending and the glyphs drew.
+    // Once the batch has landed nothing is left waiting and every cell draws from the sprite.
     await expect
-      .poll(() => page.evaluate(() => {
-        const cells = [...document.querySelectorAll('.ig .ic img')]
-        return {
-          total: cells.length,
-          pending: cells.filter((i) => i.classList.contains('ig-glyph-pending')).length,
-          painted: cells.filter((i) => i.complete && i.naturalWidth > 0).length,
-        }
-      }), { timeout: 20_000 })
-      .toMatchObject({ pending: 0 })
+      .poll(() => page.evaluate(() => ({
+        wait: document.querySelectorAll('.ig .ic .ig-glyph-wait').length,
+        pending: document.querySelectorAll('.ig .ic img.ig-glyph-pending').length,
+      })), { timeout: 20_000 })
+      .toEqual({ wait: 0, pending: 0 })
     const after = await page.evaluate(() => {
-      const cells = [...document.querySelectorAll('.ig .ic img')]
-      return { total: cells.length, painted: cells.filter((i) => i.complete && i.naturalWidth > 0).length }
+      const cells = [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')]
+      return {
+        total: cells.length,
+        drawn: cells.filter((c) => c.matches('svg') && document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`)).length,
+      }
     })
     expect(after.total, 'the grid drew glyphs').toBeGreaterThan(8)
-    expect(after.painted, 'every glyph that is no longer pending has decoded').toBe(after.total)
-    await expect(page.locator('.ig .ic .ig-glyph-wait')).toHaveCount(0)
+    expect(after.drawn, 'every default-grid glyph is a symbol the sprite holds').toBe(after.total)
     await expect(status).toHaveCount(0)
-    const afterBox = await page.locator('.ig .ic').first().boundingBox()
+    const afterBox = await page.locator('.ic').first().boundingBox()
     expect(Math.abs(afterBox.y - before.y)).toBeLessThanOrEqual(2)
     expect(afterBox.height).toBeCloseTo(before.height, 1)
-    await page.emulateMedia({ reducedMotion: 'no-preference' })
-    await expect(page.locator('.ig .ic img').first()).toHaveCSS('transition-property', 'opacity')
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await expect(page.locator('.ig .ic img').first()).toHaveCSS('transition-property', 'none')
+    // The tile transitions its hover/press properties only, never `all`.
+    await expect(page.locator('.ig .ic').first()).toHaveCSS('transition-property', 'background-color, border-color, transform')
   })
 })
 
@@ -240,7 +241,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     // skeleton's cells are .ic too and carry no wait box, so wait for it to go and
     // for real artwork first: otherwise the next line passes before any batch left.
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('.ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0, { timeout: 20_000 })
 
     const missing = await answerWithMissing(page, 'logos', (names) => names.find((n) => n === 'arrow-kit'))
@@ -272,7 +273,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     // skeleton's cells are .ic too and carry no wait box, so wait for it to go and
     // for real artwork first: otherwise the next line passes before any batch left.
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('.ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0, { timeout: 20_000 })
 
     // By identity, not position: a stray batch from another listing must not
@@ -283,7 +284,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
     missing.release()
 
-    await expect(page.locator('.ig .ic img').nth(8)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').nth(8)).toBeVisible({ timeout: 20_000 })
     expect(missing.name, 'the answer listed nothing as not found').toBeTruthy()
     const cell = page.locator(`.ig .ic[aria-label="Customise ${missing.name}"]`)
     await expect(cell.locator('.ig-glyph-gone'), 'the missing name has no empty slot').toHaveCount(1)
@@ -564,7 +565,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       // Open the icon once its own glyph has drawn, so the stage uses that cached
       // markup and the only images held are the Similar tiles'.
       const opened = page.locator('.ig .ic[aria-label="Customise arrow-right"]')
-      await expect(opened.locator('img')).toBeVisible({ timeout: 20_000 })
+      await expect(opened.locator(':is(img, svg.ig-sym)')).toBeVisible({ timeout: 20_000 })
       await opened.click()
       const row = page.locator('.icust-similar-row')
       const tiles = row.locator('.icust-similar-btn')
@@ -701,7 +702,7 @@ test('staggered catalogues keep the signed-out first page intact at 768', async 
     release()
     await expect(page.locator('.ig-skel')).toHaveCount(0)
     await expect(page.locator('.ig .ic')).toHaveCount(60)
-    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     await expect(page.locator('.ig .ig-glyph-wait')).toHaveCount(0)
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
     expect(new Set(arrivals).size).toBe(packs.length)
@@ -773,7 +774,7 @@ for (const scheme of ['light', 'dark']) {
             release()
             await expect(page.locator('.ig-skel')).toHaveCount(0)
             await expect(page.locator('.ig .ic')).toHaveCount(before.count)
-            await expect(page.locator('.ig .ic img').nth(before.columns)).toBeVisible()
+            await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').nth(before.columns)).toBeVisible()
             await expect(page.locator('.ig .ig-glyph-wait,.ig .ig-chip--wait')).toHaveCount(0)
             const after = await page.locator('.ig').evaluate((grid, columns) => {
               const cell = grid.children[columns]
@@ -928,19 +929,21 @@ test.describe('a result row that mixes mono and coloured glyphs at 1440', () => 
     await page.setViewportSize({ width: 1440, height: 900 })
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic img').nth(3)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').nth(3)).toBeVisible({ timeout: 20_000 })
     await page.getByLabel('Search icons').first().fill('star')
     await expect(page.locator('.ig .ic .ig-chip img').first()).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('.ig .ig-skel, .ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0)
-    await expect.poll(() => page.locator('.ig .ic img').evaluateAll(
-      (imgs) => imgs.every((img) => img.complete && img.naturalWidth > 0 && getComputedStyle(img).opacity === '1'),
+    await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').evaluateAll(
+      (cells) => cells.length > 0 && cells.every((c) => getComputedStyle(c).opacity === '1' && (c.matches('svg')
+        ? !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`)
+        : c.complete && c.naturalWidth > 0)),
     )).toBe(true)
 
     const rows = await page.locator('.ig').evaluate((grid) => {
       const byRow = new Map()
       for (const cell of grid.querySelectorAll('.ic')) {
         const top = Math.round(cell.getBoundingClientRect().top)
-        const img = cell.querySelector('img').getBoundingClientRect().top
+        const img = cell.querySelector('img, svg.ig-sym').getBoundingClientRect().top
         const name = cell.querySelector('.ic-name').getBoundingClientRect().top
         const list = byRow.get(top) || []
         list.push({ coloured: !!cell.querySelector('.ig-chip'), packed: !!cell.querySelector('.ic-pack'), img, name })
@@ -995,7 +998,7 @@ test.describe('the search skeleton in a multi-pack scope at 1440', () => {
       release()
       await expect(page.locator('.ig-skel')).toHaveCount(0)
       await expect(page.locator('.ig .ic .ig-chip img').first()).toBeVisible({ timeout: 20_000 })
-      const loaded = await offsets('img')
+      const loaded = await offsets('img, svg.ig-sym')
       for (let i = 0; i < Math.min(waiting.length, loaded.length); i += 1) {
         expect(Math.abs(loaded[i].top - waiting[i].top), `glyph ${i} moved when the results arrived`).toBeLessThanOrEqual(1)
       }

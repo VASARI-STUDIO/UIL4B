@@ -35,13 +35,16 @@ test('signed out, with /collection refused, the default grid is live and says no
   await refuseIconifyCollections(page)
   const asked = collectionRequests(page)
   await go(page, '/create/icons')
-  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20_000 }).toBeGreaterThan(20)
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000 }).toBeGreaterThan(20)
 
   await expect(page.getByText(BUILT_IN)).toHaveCount(0)
   await expect(page.locator('.ig-notice')).toHaveCount(0)
   expect(asked, 'the default listing must not spend the /collection allowance').toEqual([])
-  // Live glyphs (data: URIs composed from the batched answer), not the built-in set.
-  const live = await page.evaluate(() => [...document.querySelectorAll('.ig .ic img')].filter((i) => i.src.startsWith('data:') && i.naturalWidth > 0).length)
+  // Live glyphs composed from the batched answer (a symbol in the page's sprite, or a
+  // data: URI for the packs kept as images), not the built-in set.
+  const live = await page.evaluate(() => [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')].filter((c) => (
+    c.matches('svg') ? !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`) : c.src.startsWith('data:') && c.naturalWidth > 0
+  )).length)
   expect(live, 'the cells are catalogue glyphs').toBeGreaterThan(20)
 })
 
@@ -59,7 +62,7 @@ test('one pack whose listing is refused still shows its first icons, with a quie
   await expect(quiet).toBeVisible({ timeout: 15_000 })
   await expect(quiet.getByRole('button', { name: 'Try again' })).toBeVisible()
   await expect(page.getByText(BUILT_IN)).toHaveCount(0)
-  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20_000 }).toBeGreaterThan(20)
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000 }).toBeGreaterThan(20)
 })
 
 test('a group with three of its four listings refused shows what loaded and says some sets did not', async ({ page }) => {
