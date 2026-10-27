@@ -83,7 +83,16 @@ for (const kind of rows) {
         assert.equal(p.width, size.width)
         assert.equal(p.height, size.height)
         assert.ok(p.id && p.title, 'each page is named for its alt text')
-        assert.ok(p.ops.length > 3, `${p.id} has content`)
+        // A cover is a ground, the name and (Monograph) a square of the seed colour: three
+        // operations is a whole page, so the floor is three, not "more than three".
+        assert.ok(p.ops.length >= 3, `${p.id} has content`)
+        assert.ok(p.ops.some((o) => o.op === 'text'), `${p.id} sets some text`)
+        // The first operation is the ground: one rect over the page, or (Atlas's cover) the
+        // first full-height band, with the bands together reaching the right edge.
+        const ground = p.ops[0]
+        const rects = p.ops.filter((o) => o.op === 'rect')
+        assert.ok(ground.op === 'rect' && ground.x === 0 && ground.y === 0 && ground.h === size.height, `${p.id} starts with a ground at the top left, page high`)
+        assert.ok(Math.max(...rects.map((o) => o.x + o.w)) >= size.width, `${p.id}: the ground reaches the right edge`)
       }
       assert.ok(texts(pages).includes('Harbour'), 'the name is set on the cover')
       const seed = new Set(pages.flatMap((p) => [...fills(p)]))
@@ -126,8 +135,18 @@ test('the default templates, and any id that is not a template, are left to proP
   assert.equal(buildTemplatePreviewPages('book', 'specification', design, { size }), null)
   assert.equal(buildTemplatePreviewPages('guidelines', 'presentation', design, { size: GUIDELINES_PAGE }), null)
   assert.equal(buildTemplatePreviewPages('book', 'poster', design, { size }), null)
-  assert.equal(buildTemplatePreviewPages('book', '__proto__', design, { size }), null)
   assert.equal(buildTemplatePreviewPages('kit', 'studio', design, { size }), null)
+  assert.equal(buildTemplatePreviewPages('book', 'monograph', design, {}), null, 'no page box, nothing to draw')
+})
+
+test('a name that only exists on Object.prototype is not a template or a row', () => {
+  for (const kind of ['__proto__', 'constructor', 'toString']) {
+    assert.equal(buildTemplatePreviewPages(kind, 'monograph', design, { size: BOOK_PAGE }), null, `row ${kind}`)
+  }
+  for (const id of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) {
+    assert.equal(buildTemplatePreviewPages('book', id, design, { size: BOOK_PAGE }), null, `book template ${id}`)
+    assert.equal(buildTemplatePreviewPages('guidelines', id, design, { size: GUIDELINES_PAGE }), null, `guidelines template ${id}`)
+  }
 })
 
 test('the logo is drawn on the guidelines covers that carry one, and a book never asks for it', () => {
