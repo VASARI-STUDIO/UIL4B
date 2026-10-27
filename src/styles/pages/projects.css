@@ -381,9 +381,10 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-parts li.is-done { color: var(--t0); }
 .uh .uh-part-mark { flex: none; color: var(--t2); }
 .uh .uh-part-mark.is-done { color: var(--ok-strong); }
+/* The starter's steps are plain text, not links: 15px --t1 in 32px rows, the numbers in --t2. */
 .uh .uh-steps { list-style: decimal inside; grid-template-columns: minmax(0, 1fr); gap: 0; font-size: 15px; color: var(--t1); }
-.uh .uh-steps a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; color: var(--ws-acc-text); text-decoration: underline; text-underline-offset: 3px; }
-@media (hover: hover) and (pointer: fine) { .uh .uh-steps a:hover { color: var(--ws-acc-hover); } }
+.uh .uh-steps li { min-height: 32px; line-height: 32px; }
+.uh .uh-steps li::marker { color: var(--t2); }
 .uh .uh-starter-text { margin: 0; font-size: 15px; line-height: 1.5; color: var(--t1); max-width: 60ch; }
 .uh .uh-continue-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); }
 .uh .uh-fail-text, .uh .uh-resolving p, .uh .uh-offline-note { margin: 0; font-size: 15px; color: var(--t1); }
