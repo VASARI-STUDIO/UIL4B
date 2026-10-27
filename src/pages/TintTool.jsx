@@ -65,7 +65,7 @@ const SPACINGS = [
 const TIP_WIDTH = 280
 // The tallest the floating tooltip gets (its card and the 6px bridge), so a
 // note knows whether it fits below itself.
-const TIP_HEIGHT = 230
+const TIP_HEIGHT = 244
 // The card without the long help paragraph (the head and both rows), border
 // and padding included. A squeezed card drops to this before anything else.
 const TIP_COMPACT_HEIGHT = 136
@@ -77,6 +77,9 @@ const TIP_BRIDGE = 6
 const TIP_EDGE = 12
 // The space between the notes card and a card parked past its right edge.
 const TIP_GAP = 8
+// How long the pointer must go without nearing a card before a note it is over
+// takes the hover from that card (see the hold in TintTool).
+const TIP_HOLD_MS = 300
 
 let seq = 0
 const mkSource = (hex) => ({ id: ++seq, hex, input: hex })
@@ -109,7 +112,11 @@ function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, s
       {/* tabIndex -1: a card that scrolls would otherwise be a Tab stop of its own. */}
       <span className="tt-tip-card" tabIndex={-1} style={maxHeight ? { maxHeight } : undefined}>
         <span id={id} role="tooltip" className="tt-tip-body">
-          <span className="tt-tip-head">{step.label} · {step.hex}</span>
+          <span className="tt-tip-top">
+            {/* The tint's own chip, so a card parked away from its note is still tied to it. */}
+            <span className="tt-tip-sw" style={{ '--tt-c': step.hex }} aria-hidden="true" />
+            <span className="tt-tip-head">{step.label} · {step.hex}</span>
+          </span>
           {notes.map((n) => (
             <span key={n.key} className="tt-tip-row" data-pass={n.pass ? 'true' : 'false'} data-grade={n.grade}>
               <span className="tt-tip-mark" aria-hidden="true"><ToolIcon name={GRADE_MARKS[n.grade]} size={n.grade === 'large' ? 14 : 12} /></span>
@@ -120,20 +127,30 @@ function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, s
           ))}
         </span>
         <span className="tt-tip-help">
-          Contrast is how far apart two colours are in lightness, from 1:1 (the same) to 21:1 (black on white). Body text needs 4.5:1 to pass AA; large text needs 3:1.
+          Contrast is how far apart two colours are in lightness, from 1:1 (the same) to 21:1 (black on white). Body text needs 4.5:1 to pass AA and 7:1 to pass AAA. Large text (24px, or about 18.7px bold) needs only 3:1 for AA.
         </span>
       </span>
     </span>
   )
 }
 
+// A note's tooltip box: its card and the padding that bridges the card to the note.
+const tipBox = (label) => document.getElementById(`tt-tip-${label}`)?.closest('.tt-tip')
+
 // The click-through card beside its note stays while the pointer is on the note
-// or anywhere in the card's box; the pointer on another note under the card
-// opens that note's card instead.
+// or anywhere in the card's box (the bridge included); the pointer on another
+// note under the card opens that note's card instead.
 function pointerHolds(e, label) {
-  const card = document.getElementById(`tt-tip-${label}`)?.closest('.tt-tip-card')
-  const rects = [card, card?.closest('.tt-note-wrap')].filter(Boolean).map((n) => n.getBoundingClientRect())
+  const tip = tipBox(label)
+  const rects = [tip?.querySelector('.tt-tip-card'), tip, tip?.closest('.tt-note-wrap')].filter(Boolean).map((n) => n.getBoundingClientRect())
   return rects.some((r) => e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom)
+}
+
+// How far a point is from a note's tooltip box (0 inside it).
+function distToTip(label, x, y) {
+  const r = tipBox(label)?.getBoundingClientRect()
+  if (!r) return Infinity
+  return Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom))
 }
 
 // onCopy only: Tint has no row in src/config/activationExports.js, so it must
@@ -162,7 +179,16 @@ export default function TintTool({ onCopy, toast }) {
   // edge) and whether it opens above the note (it opens below by default).
   const [tip, setTip] = useState(null)
   const pointerTypeRef = useRef('mouse')
+  const pointerDownRef = useRef(false)
   const refocusRef = useRef(false)
+  // The hover-intent hold. A card that is far from its note (past the notes card)
+  // or lies over the next notes (click-through) can only be reached by crossing
+  // other notes, which would each take the hover. So while the pointer is heading
+  // for such a card, the notes it crosses wait: `held` is the note whose card is
+  // being reached, `pending` the note the pointer is over meanwhile, and `timer`
+  // runs out TIP_HOLD_MS after the pointer last got nearer the card. Then a
+  // pointer that stays over a note opens it, and one over none lets the card go.
+  const holdRef = useRef({ held: null, pending: null, timer: 0, inside: null, last: null })
   const [copiedHex, setCopiedHex] = useState('')
   const [saveOpen, setSaveOpen] = useState(false)
 
@@ -249,7 +275,58 @@ export default function TintTool({ onCopy, toast }) {
       document.removeEventListener('pointerdown', onDown)
     }
   }, [tipOpen])
+  const clearHold = () => {
+    const h = holdRef.current
+    clearTimeout(h.timer)
+    h.held = null
+    h.pending = null
+    h.timer = 0
+  }
+  // The hold ends TIP_HOLD_MS after the pointer last got nearer the card: the note
+  // the pointer is over takes the hover, or, over no note, the card goes.
+  const expireHold = () => {
+    const { held, pending, inside } = holdRef.current
+    clearHold()
+    if (pending?.el.isConnected) {
+      openTip(pending.label, pending.el, false, true)
+    } else if (held && inside !== held) {
+      setTip((cur) => (cur?.label === held && !cur.pinned ? null : cur))
+    }
+  }
+  const armHold = () => {
+    const h = holdRef.current
+    clearTimeout(h.timer)
+    h.timer = setTimeout(expireHold, TIP_HOLD_MS)
+  }
+  const startHold = (label) => {
+    holdRef.current.held = label
+    holdRef.current.pending = null
+    armHold()
+  }
+  // Whether a pointer event is on its way to a note's card: inside the card's box,
+  // or nearer to it than the pointer was at its last move.
+  const nearer = (label, e) => {
+    const prev = holdRef.current.last
+    const d = distToTip(label, e.clientX, e.clientY)
+    return d === 0 || (!!prev && d < distToTip(label, prev.x, prev.y) - 0.5)
+  }
+  useEffect(() => {
+    const h = holdRef.current
+    const onMove = (e) => {
+      if (e.pointerType === 'touch') return
+      const prev = h.last
+      h.last = { x: e.clientX, y: e.clientY }
+      if (h.held && prev && distToTip(h.held, e.clientX, e.clientY) < distToTip(h.held, prev.x, prev.y) - 0.5) armHold()
+    }
+    document.addEventListener('pointermove', onMove)
+    return () => {
+      document.removeEventListener('pointermove', onMove)
+      clearTimeout(h.timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const openTip = (label, el, pinned = false, byPointer = false) => {
+    clearHold()
     const rect = el.getBoundingClientRect()
     const end = rect.left + TIP_WIDTH > window.innerWidth - 12
     // The card opens below the note, where the page has room. It flips above
@@ -274,7 +351,7 @@ export default function TintTool({ onCopy, toast }) {
     const roomBelow = window.innerHeight - TIP_EDGE - rect.bottom - TIP_BRIDGE
     const roomAbove = rect.top - TIP_BRIDGE - clearTop
     const full = TIP_HEIGHT - TIP_BRIDGE
-    const place = { above: false, compact: false, side: undefined, sideStyle: undefined, maxHeight: undefined, ghost: false }
+    const place = { above: false, compact: false, side: undefined, sideStyle: undefined, maxHeight: undefined, ghost: false, far: false }
     if (roomBelow >= full) {
       // Below, whole.
     } else if (roomAbove >= full) {
@@ -298,11 +375,18 @@ export default function TintTool({ onCopy, toast }) {
       const roomPast = notesCard ? window.innerWidth - TIP_EDGE - notesCard.right - TIP_GAP : 0
       let clear = null
       if (notesCard && roomPast >= TIP_MIN_WIDTH) {
-        const cw = Math.min(TIP_WIDTH, Math.floor(roomPast))
+        let cw = Math.min(TIP_WIDTH, Math.floor(roomPast))
+        let left = notesCard.right + TIP_GAP
+        // The controls panel's column, when the panel starts clear of the notes card
+        // and is wide enough: the card takes its left edge and width, so it reads as
+        // part of that column.
+        if (panel && panel.left >= left && panel.width >= TIP_MIN_WIDTH && panel.right <= window.innerWidth - TIP_EDGE) {
+          left = Math.round(panel.left)
+          cw = Math.floor(panel.width)
+        }
         const compact = roomTall < full || cw < TIP_WIDTH
         const h = compact ? TIP_COMPACT_HEIGHT : full
         const top = Math.max(clearTop, Math.min(rect.top, window.innerHeight - TIP_EDGE - h))
-        const left = notesCard.right + TIP_GAP
         const hitsPanel = !!panel && left < panel.right && left + cw > panel.left && top < panel.bottom && top + h > panel.top
         if (!hitsPanel) clear = { cw, compact, h, top, left }
       }
@@ -317,6 +401,7 @@ export default function TintTool({ onCopy, toast }) {
         })
         const bridge = lastInRow ? clear.left - rect.right : 0
         place.side = 'right'
+        place.far = true
         place.compact = clear.compact
         place.sideStyle = { top: Math.round(clear.top - rect.top), left: Math.round(clear.left - bridge - rect.left), width: clear.cw + bridge, paddingLeft: bridge }
         if (roomTall < clear.h) place.maxHeight = Math.max(0, Math.floor(roomTall))
@@ -349,7 +434,10 @@ export default function TintTool({ onCopy, toast }) {
     document.addEventListener('pointermove', onMove)
     return () => document.removeEventListener('pointermove', onMove)
   }, [ghostHeld, tip?.label])
-  const closeTip = (label) => setTip((cur) => (cur && cur.label === label && !cur.pinned ? null : cur))
+  const closeTip = (label) => {
+    if (holdRef.current.held === label) clearHold()
+    setTip((cur) => (cur && cur.label === label && !cur.pinned ? null : cur))
+  }
   // A mouse click or a key press copies. A tap has no hover, so it pins the
   // detail inline under the note instead (a second tap on the same note closes
   // it); copying from there is the Copy button, so one tap never does both.
@@ -610,7 +698,9 @@ export default function TintTool({ onCopy, toast }) {
               value={spacing}
               onChange={setSpacing}
             />
-            <span id="tt-spacing-desc" className="tt-spacing-note">Perceived looks even. Linear spaces by light.</span>
+            <span id="tt-spacing-desc" className="tt-spacing-note">
+              {spacing === 'linear' ? 'Linear: steps are evenly spaced in actual light.' : 'Perceived: steps look evenly spaced.'}
+            </span>
           </ToolSection>
         </ToolPanel>
         <div className="tt-notes" role="group" aria-labelledby="tt-notes-label">
@@ -631,11 +721,27 @@ export default function TintTool({ onCopy, toast }) {
                 <div
                   key={t.label}
                   className={pinned ? 'tt-note-wrap tt-note-wrap--pinned' : 'tt-note-wrap'}
-                  onPointerEnter={(e) => { if (e.pointerType !== 'touch' && !tip?.pinned) openTip(t.label, e.currentTarget, false, true) }}
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === 'touch' || tip?.pinned) return
+                    const h = holdRef.current
+                    h.inside = t.label
+                    // Heading for another note's far or click-through card: this note waits.
+                    if (h.held && h.held !== t.label && nearer(h.held, e)) {
+                      h.pending = { label: t.label, el: e.currentTarget }
+                      return
+                    }
+                    openTip(t.label, e.currentTarget, false, true)
+                  }}
                   onPointerLeave={(e) => {
                     if (e.pointerType === 'touch') return
-                    // Onto the click-through card's box: the pointer is still on it.
-                    if (open && tip.ghost && tip.pointer && pointerHolds(e, t.label)) return
+                    const h = holdRef.current
+                    if (h.inside === t.label) h.inside = null
+                    if (h.pending?.label === t.label) h.pending = null
+                    // A far or click-through card holds the hover while the pointer is in its box or heading for it.
+                    if (open && tip.pointer && (tip.ghost || tip.far) && (pointerHolds(e, t.label) || nearer(t.label, e))) {
+                      startHold(t.label)
+                      return
+                    }
                     closeTip(t.label)
                   }}
                   onFocus={(e) => {
@@ -648,9 +754,15 @@ export default function TintTool({ onCopy, toast }) {
                   <button
                     type="button"
                     className="tt-note"
-                    onPointerDown={(e) => { pointerTypeRef.current = e.pointerType }}
-                    onKeyDown={() => { pointerTypeRef.current = 'keyboard' }}
-                    onClick={(e) => pressNote(t, e.currentTarget.parentElement)}
+                    onPointerDown={(e) => { pointerTypeRef.current = e.pointerType; pointerDownRef.current = true }}
+                    onPointerCancel={() => { pointerDownRef.current = false }}
+                    onKeyDown={() => { pointerTypeRef.current = 'keyboard'; pointerDownRef.current = false }}
+                    onClick={(e) => {
+                      // A click with no press before it (a screen reader's virtual click) is not a tap, whatever pointer last touched a note.
+                      if (!pointerDownRef.current || e.detail === 0) pointerTypeRef.current = 'mouse'
+                      pointerDownRef.current = false
+                      pressNote(t, e.currentTarget.parentElement)
+                    }}
                     aria-label={`Copy ${t.label} ${t.hex}`}
                     aria-describedby={tipId}
                   >
