@@ -79,6 +79,9 @@ function mixHex(a, b, t = 0.5) {
   return '#' + [0, 1, 2].map(i => Math.round(c1[i] + (c2[i] - c1[i]) * t).toString(16).padStart(2, '0')).join('').toUpperCase()
 }
 
+// The starting look is the first preset: its stops, and this one angle. A first
+// visit and Reset both read it (Reset applies PRESETS[0]), so they cannot drift.
+const DEFAULT_ANGLE = PRESETS[0].angle
 const DEFAULT_STOPS = () => PRESETS[0].stops.map(s => ({ ...s }))
 const MAX_STOPS = 12
 
@@ -313,7 +316,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // "use my palette") resolve to the live palette; a fully-default gradient seeds
   // the first preset so a first-time visitor lands on a finished look.
   const [type, setType] = useState(() => design?.gradient?.type || PRESETS[0].type)
-  const [angle, setAngle] = useState(() => design?.gradient?.angle ?? PRESETS[0].angle)
+  // The design's untouched default carries a placeholder 135deg with no colours;
+  // only a gradient that has real stops owns its angle. Otherwise the
+  // default angle is used, so a first visit and Reset draw the same thing.
+  const [angle, setAngle] = useState(() => {
+    const saved = design?.gradient
+    const hasOwn = !!carriedPalette || saved?.stops?.some?.((s) => s?.color)
+    return hasOwn ? (saved?.angle ?? DEFAULT_ANGLE) : DEFAULT_ANGLE
+  })
   const [stops, setStops] = useState(() => {
     if (carriedPalette) return stopsFromColors(carriedPalette.colors)
     const saved = design?.gradient?.stops
