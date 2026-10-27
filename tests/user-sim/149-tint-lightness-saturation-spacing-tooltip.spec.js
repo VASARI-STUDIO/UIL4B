@@ -307,19 +307,81 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     }
   })
 
-  test('a hover card opens below its note by default and never meets the notes header', async ({ page }) => {
-    await openTint(page, 'someone pointing along the notes with room below')
-    const head = page.locator('.tt-notes-head')
-    for (let i = 0; i < 11; i++) {
-      await note(page, i).hover()
-      const card = openTip(page).locator('.tt-tip-card')
-      await expect(card, `note ${i}`).toBeVisible()
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
-      const [c, n, h] = [await docBox(card), await docBox(note(page, i)), await docBox(head)]
-      expect(c.y, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(n.y + n.h - 2)
-      expect(overlap(c, h), `note ${i}: the card meets the notes header`).toBe(false)
-      expect(openTip(page), `note ${i}: no flip above when there is room below`).not.toHaveClass(/tt-tip--above/)
+  // What the open card and its note look like against the window, read in one go
+  // (viewport coordinates: the page does not scroll at these sizes).
+  const cardFit = (page, i) => openTip(page).locator('.tt-tip-card').evaluate((el, idx) => {
+    const c = el.getBoundingClientRect()
+    const n = document.querySelectorAll('.tt-note')[idx].getBoundingClientRect()
+    const h = document.querySelector('.tt-notes-head').getBoundingClientRect()
+    return {
+      cardTop: c.top, cardBottom: c.bottom, cardH: c.height, noteTop: n.top, noteBottom: n.bottom,
+      headBottom: h.bottom, winH: innerHeight, scrollH: el.scrollHeight, clientH: el.clientHeight,
+      capped: !!el.style.maxHeight,
+      overflowY: getComputedStyle(el).overflowY,
+      above: !!el.closest('.tt-tip').classList.contains('tt-tip--above'),
+      // Room under the note once the card keeps 6px from it and 12px from the window's foot.
+      roomBelow: innerHeight - 12 - n.bottom - 6,
     }
+  }, i)
+  const settle = async (page, i) => {
+    await note(page, i).hover()
+    await expect(openTip(page).locator('.tt-tip-card'), `note ${i}`).toBeVisible()
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+  }
+
+  test('a hover card opens below its note when the room allows and never meets the notes header', async ({ page }) => {
+    await openTint(page, 'someone pointing along the notes')
+    for (let i = 0; i < 11; i++) {
+      await settle(page, i)
+      const m = await cardFit(page, i)
+      const [c, n, h] = [await docBox(openTip(page).locator('.tt-tip-card')), await docBox(note(page, i)), await docBox(page.locator('.tt-notes-head'))]
+      // "Below, no flip, not cut short" binds only a note with room under it for the whole card (about 224px).
+      if (m.roomBelow >= m.scrollH) {
+        expect(c.y, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(n.y + n.h - 2)
+        expect(m.above, `note ${i}: no flip above when there is room below`).toBe(false)
+        expect(m.capped, `note ${i}: a card with room below is not cut short`).toBe(false)
+      }
+      // The header is never covered, roomy note or squeezed.
+      expect(overlap(c, h), `note ${i}: the card meets the notes header`).toBe(false)
+    }
+  })
+
+  test('a squeezed hover card is no taller than its room, scrolls inside, and the page does not grow', async ({ page }) => {
+    await openTint(page, 'someone pointing along the notes in a short window')
+    const docH0 = await page.evaluate(() => document.documentElement.scrollHeight)
+    let squeezed = 0
+    for (let i = 0; i < 11; i++) {
+      await settle(page, i)
+      const m = await cardFit(page, i)
+      if (m.roomBelow >= m.scrollH) continue // roomy: the test above holds it
+      squeezed++
+      // The room on the side the card took: under the note to 12px short of the foot, or over it down from the header.
+      const room = m.above ? m.noteTop - 6 - m.headBottom : m.roomBelow
+      expect(m.cardH, `note ${i}: the squeezed card is taller than the room it took`).toBeLessThanOrEqual(room + 1)
+      if (m.above) expect(m.cardTop, `note ${i}: the card rises over the notes header`).toBeGreaterThanOrEqual(m.headBottom - 1)
+      else expect(m.cardBottom, `note ${i}: the card reaches past 12px from the window's foot`).toBeLessThanOrEqual(m.winH - 12 + 1)
+      expect(m.capped, `note ${i}: a squeezed card carries a max-height`).toBe(true)
+      expect(m.overflowY, `note ${i}: a capped card scrolls, not clips or spills`).toBe('auto')
+      expect(m.scrollH, `note ${i}: a capped card scrolls inside`).toBeGreaterThan(m.clientH)
+      expect(await page.evaluate(() => document.documentElement.scrollHeight), `note ${i}: the page grew`).toBeLessThanOrEqual(docH0)
+    }
+    expect(squeezed, 'at 1440x900 the notes leave under 224px below, so some card is squeezed').toBeGreaterThan(0)
+  })
+
+  test.describe('in a tall window', () => {
+    test.use({ viewport: { width: 1440, height: 1300 } })
+    test('every hover card has room, opens below its note and is not cut short', async ({ page }) => {
+      await openTint(page, 'someone pointing along the notes in a tall window')
+      for (let i = 0; i < 11; i++) {
+        await settle(page, i)
+        const m = await cardFit(page, i)
+        expect(m.roomBelow, `note ${i}: a 1300px window leaves room for the whole card`).toBeGreaterThanOrEqual(m.scrollH)
+        expect(m.cardTop, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(m.noteBottom - 2)
+        expect(m.above, `note ${i}: no flip above`).toBe(false)
+        expect(m.capped, `note ${i}: not cut short`).toBe(false)
+        expect(m.scrollH, `note ${i}: nothing to scroll`).toBeLessThanOrEqual(m.clientH)
+      }
+    })
   })
 
   test('Escape closes a tooltip that hover opened', async ({ page }) => {
