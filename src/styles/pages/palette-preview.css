@@ -289,11 +289,16 @@
 /* ── Medium scenes: container width under 800px ───────────────────────────────
  * The dashboard drops its 200px nav for a top bar, so its right-hand panel keeps
  * the room "$2,940.00" and a seven-day row need. */
+/* The poster's details: date, then address, each on its own line. */
+.pvs-band--2 p>span{display:block}
 @container pvs (max-width:799px){
   .pvs-dash{grid-template-columns:1fr;min-height:0}
   .pvs-nav{padding:var(--s-3) var(--s-4);border-right:0;border-bottom:1px solid var(--pv-border)}
   .pvs-menu{display:inline-flex}
   .pvs-navlist{display:none}
+  /* Invoices drop the Issued column here so the client name keeps its room. */
+  .pvs-row{grid-template-columns:18px minmax(0,1.6fr) 80px 64px 148px 88px}
+  .pvs-issued,.pvs-row--head>span:nth-child(4){display:none}
 }
 
 /* ── Narrow scenes: container width under 640px ───────────────────────────── */
