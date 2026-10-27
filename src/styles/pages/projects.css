@@ -552,6 +552,12 @@ h2.uh-continue-name { white-space: normal; }
      html.has-tabbar a scroll-padding-bottom of the bar's height, which lands the notice flush on the bar;
      this adds only 12px of air, so the notice ends 12px above the bar (not bar + 12 twice over). */
   html.has-tabbar .uh .uh-cap { scroll-margin-bottom: var(--s-3); }
+  /* The Feedback pill floats s-4 above the bar, 44px tall, and covers the notice's right edge. Where it is
+     shown (it is display:none on a coarse pointer), stop the notice above the pill too: the same lift the
+     toast takes (--toast-lift, global.css), so the gap becomes s-4 + 44px + s-3 = 72px. */
+  @media not all and (pointer: coarse) {
+    html.has-tabbar .uh .uh-cap { scroll-margin-bottom: calc(var(--s-4) + 44px + var(--s-3)); }
+  }
   /* Start something: four tools and an "All thirteen tools" row, 56px each. */
   .uh .uh-start-head .uh-alltools { display: none; }
   .uh .uh-tool[data-tool="semantic"], .uh .uh-tool[data-tool="palettes"] { display: none; }
