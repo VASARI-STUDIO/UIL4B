@@ -155,10 +155,11 @@ export const CHART = {
   ],
   // Direct labels: each sits on its own area at the hour it is thickest.
   labels: [
-    { name: 'Solar', role: 'primary', h: 13, kw: tops.solar[13] },
+    { name: 'Solar', role: 'primary', h: 13, kw: tops.solar[13], beforeNow: true },
     { name: 'Battery', role: 'secondary', h: 19, kw: tops.battery[19] },
     { name: 'Grid', role: 'deep', h: 3, kw: tops.grid[3] },
-  ].map((l) => ({ ...l, left: ((l.h + 0.5) / 24) * 100, top: (y(l.kw) / H) * 100 })),
+  // A label that would straddle the now line ends at it instead, so the line never crosses its text.
+  ].map((l) => ({ ...l, left: l.beforeNow ? (NOW_H / 24) * 100 : ((l.h + 0.5) / 24) * 100, top: (y(l.kw) / H) * 100 })),
   ticks: [0, 3, 6, 9, 12, 15, 18, 21, 24],
   kw: [6, 4, 2, 0],
 }

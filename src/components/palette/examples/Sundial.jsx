@@ -55,7 +55,7 @@ function Chart() {
           </g>
         </svg>
         {CHART.labels.map((l) => (
-          <span key={l.name} className="sd-tag" style={{ left: `${l.left}%`, top: `${l.top}%` }}>
+          <span key={l.name} className={l.beforeNow ? 'sd-tag sd-tag--before-now' : 'sd-tag'} style={{ left: `${l.left}%`, top: `${l.top}%` }}>
             <i data-role={l.role} />{l.name}
           </span>
         ))}

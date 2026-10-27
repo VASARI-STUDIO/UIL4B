@@ -101,6 +101,8 @@
   padding:0 var(--s-2);border-radius:6px;background:var(--pv-surface);border:1px solid var(--pv-border);
   font-size:12px;font-weight:600;white-space:nowrap;
 }
+/* Ends 6px short of the now line, which sits at this tag's left value. */
+.sd-tag--before-now{transform:translate(calc(-100% - 6px),calc(-100% - 6px))}
 .sd-tag>i{width:8px;height:8px;border-radius:2px}
 .sd-tag>i[data-role="primary"]{background:var(--pv-primary)}
 .sd-tag>i[data-role="secondary"]{background:var(--pv-secondary)}

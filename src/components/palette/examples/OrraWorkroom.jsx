@@ -126,7 +126,7 @@ export default function OrraWorkroom({ roles, labels = [] }) {
             <p className="or-opt-l">Size <b>M</b><span className="or-guide">Size guide</span></p>
             <div className="or-sizes">
               {PRODUCT.sizes.map((s) => (
-                <span key={s.id} className={`or-size${s.on ? ' is-on' : ''}${s.off ? ' is-off' : ''}`}>{s.id}</span>
+                <span key={s.id} className={`or-size${s.on ? ' is-on' : ''}${s.off ? ' is-off' : ''}`} aria-disabled={s.off ? 'true' : undefined}>{s.id}</span>
               ))}
             </div>
             <p className="or-help">{PRODUCT.sizeHelp}</p>
