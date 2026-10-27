@@ -23,8 +23,8 @@ const ROUTE = '**/api/ai?export=document'
 const DESIGN = { palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }
 
 const DOCS = {
-  book: { html: () => buildDesignSystemBook(DESIGN, { projectName: 'Stub' }), title: /Stub — Design System/, noun: 'book' },
-  guidelines: { html: () => buildBrandGuidelines(DESIGN, { projectName: 'Stub' }), title: /Stub — Brand Guidelines/, noun: 'guidelines' },
+  book: { html: () => buildDesignSystemBook(DESIGN, { projectName: 'Stub' }), title: /Stub \| Design System/, noun: 'book' },
+  guidelines: { html: () => buildBrandGuidelines(DESIGN, { projectName: 'Stub' }), title: /Stub \| Brand Guidelines/, noun: 'guidelines' },
 }
 
 async function open(browser, plan) {
