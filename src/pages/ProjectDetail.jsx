@@ -146,7 +146,7 @@ function ProjectDetail({ id, toast }) {
   const next = project.archived
     ? { label: 'Restore', run: () => { archiveProject(project.id); toast(`"${project.name}" restored`) } }
     : complete
-      ? { label: 'Export the project', run: startExport }
+      ? { label: 'Export project', run: startExport }
       : { label: 'Continue building', run: () => openIn(digest.next.tool) }
 
   const onCopy = (slot) => {
@@ -333,7 +333,7 @@ function ProjectDetail({ id, toast }) {
           </span>
           <button
             type="button"
-            className={`pjd-export-cta${complete ? ' is-accent' : ''}`}
+            className="pjd-export-cta"
             onClick={complete ? startExport : () => openIn(digest.next.tool)}
           >
             <Glyph name="download-simple" size={14} />

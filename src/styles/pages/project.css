@@ -58,6 +58,7 @@
   .pjd .pjd-slot-cta:hover,
   .pjd .pjd-slot-foot button:hover,
   .pjd .pjd-row:hover { background: color-mix(in srgb, var(--t0) 7%, transparent); }
+  .pjd .pjd-export-cta:hover { background: color-mix(in srgb, var(--t0) 12%, transparent); }
 }
 
 /* ── Project progress ───────────────────────────────────────────────────────── */
@@ -106,8 +107,6 @@
   background: color-mix(in srgb, var(--t0) 7%, transparent); color: var(--t0);
   font-family: var(--font); font-size: 13.5px; font-weight: 540; cursor: pointer;
 }
-.pjd .pjd-export-cta.is-accent { background: var(--accent); color: var(--accent-ink); }
-.pjd .pjd-export-cta.is-accent:hover { background: var(--ws-acc-hover); }
 
 /* ── Other projects ─────────────────────────────────────────────────────── */
 .pjd .pjd-others { margin-top: clamp(26px, 3.4vw, 40px); }
