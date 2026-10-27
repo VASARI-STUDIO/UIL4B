@@ -252,7 +252,7 @@ function css(ctx) {
 
   /* the masthead: project name, section and slide number over a rule in the brand's field colour */
   .mh{flex:none;height:18mm;display:flex;align-items:flex-end;gap:8mm;padding-bottom:3mm;margin-bottom:5mm;border-bottom:.8mm solid var(--field,var(--ink));font-size:13pt;line-height:1.1}
-  .mh-name{flex:1 1 auto;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mh-name{flex:1 1 auto;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:.15em}
   .mh-sec{flex:none}
   .mh-num{flex:none;min-width:8mm;text-align:right;font-weight:600}
 
