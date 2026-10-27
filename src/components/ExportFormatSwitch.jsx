@@ -1,0 +1,54 @@
+import { useRef } from 'react'
+
+// The file-type switch inside a row's options: HTML, Markdown, PNG, JPEG for the
+// style guide; CSS, JSON for the tokens. One stop in the Tab order (the checked
+// pill); the arrow keys move and choose, Home and End jump, and the ends wrap,
+// as a native radio group does.
+//
+// `options` is [{ id, label }]. Rendered as pills at 44px so the targets hold on
+// a phone, and never wrapped: if the pills outgrow the row (a 320px screen) the
+// row scrolls sideways and the chosen pill is brought into view.
+export default function ExportFormatSwitch({ label, options, value, onChange }) {
+  const refs = useRef([])
+  const move = (to) => {
+    const next = (to + options.length) % options.length
+    onChange(options[next].id)
+    const btn = refs.current[next]
+    if (btn) {
+      btn.focus()
+      btn.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
+    }
+  }
+  const onKeyDown = (e, i) => {
+    const key = e.key
+    if (key === 'ArrowRight' || key === 'ArrowDown') move(i + 1)
+    else if (key === 'ArrowLeft' || key === 'ArrowUp') move(i - 1)
+    else if (key === 'Home') move(0)
+    else if (key === 'End') move(options.length - 1)
+    else return
+    e.preventDefault()
+  }
+
+  return (
+    <div className="exp-switch" role="radiogroup" aria-label={label}>
+      {options.map((o, i) => {
+        const checked = o.id === value
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            tabIndex={checked ? 0 : -1}
+            className={checked ? 'exp-pill is-active' : 'exp-pill'}
+            ref={(el) => { refs.current[i] = el }}
+            onClick={() => onChange(o.id)}
+            onKeyDown={(e) => onKeyDown(e, i)}
+          >
+            {o.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
