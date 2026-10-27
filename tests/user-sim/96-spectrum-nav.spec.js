@@ -62,7 +62,7 @@ test.describe('the marketing pill', () => {
     // Pricing is the design's separate Pricing screen, which is /plans.
     expect(links.find((l) => l.label === 'Pricing').href).toBe('/plans')
     // The sales page is the design's "Tools" screen, so Tools is the current one.
-    expect(links.map((l) => l.current)).toEqual(['page', null, null])
+    expect(links.map((l) => l.current), '/ marks no quiet link as current').toEqual([null, null, null])
   })
 
   test('the bar hides on the way down and comes back on the way up', async ({ page }) => {
@@ -181,7 +181,7 @@ test.describe('the full-screen menu carries what the pill drops', () => {
       label: a.textContent.trim(), href: a.getAttribute('href'),
     })))
     expect(items).toEqual([
-      { label: 'Tools', href: '#bench' },
+      { label: 'Tools', href: '/tools' },
       { label: 'Pricing', href: '/plans' },
       { label: 'On mobile', href: '/mobile' },
       { label: 'Open the toolkit ↗', href: '/projects' },

@@ -113,19 +113,12 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     await ctx.close()
   })
 
-  test('Tools from /mobile lands ON the bench of the sales page', async ({ page }) => {
+  test('Tools from /mobile opens the /tools page', async ({ page }) => {
     await go(page, '/mobile')
     await page.locator('.spnav-quiet-link', { hasText: 'Tools' }).click()
-    await expect(page).toHaveURL(/\/home#bench$/)
-    // Mutation: skip lenis.resize() in landOnHash → Lenis clamps to the /mobile
-    // page's own scroll limit (measured stopping at 1186px) and the section
-    // stays far below the fold.
-    await expect.poll(async () => page.evaluate(() => {
-      const r = document.getElementById('bench')?.getBoundingClientRect()
-      return r ? Math.round(r.top) : null
-    }), { message: 'the bench never came to the top of the viewport' }).toBeLessThan(200)
-    const top = await page.evaluate(() => document.getElementById('bench').getBoundingClientRect().top)
-    expect(top, 'the section landed under the fixed nav').toBeGreaterThanOrEqual(0)
+    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /home#bench.
+    await expect(page).toHaveURL(/\/tools$/)
+    await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Tools')
   })
 
   test('Pricing is the design\'s separate Pricing screen, /plans', async ({ page }) => {
