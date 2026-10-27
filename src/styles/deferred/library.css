@@ -294,7 +294,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    .icust-body owns the scroll — so the scrollbar lives INSIDE the panel, never
    in the scrim. Height caps to the padded overlay box so the overlay itself
    never needs a second scrollbar. */
-.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - 32px));max-height:min(880px,calc(100dvh - max(6vh,48px) - 32px));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:icust-rise var(--dur-2) var(--ease-entrance)}
+.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - max(16px,env(safe-area-inset-left,0px)) - max(16px,env(safe-area-inset-right,0px))));max-height:min(880px,calc(100dvh - max(6vh,48px,env(safe-area-inset-top,0px)) - max(32px,env(safe-area-inset-bottom,0px))));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:icust-rise var(--dur-2) var(--ease-entrance)}
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -536,8 +536,8 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .ig-attrib a:hover{text-decoration:underline}
 
 @media(max-width:560px){
-  .icust-overlay{padding:24px 12px 32px}
-  .icust-panel{max-height:min(880px,calc(100dvh - 56px))}
+  .icust-overlay{padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+  .icust-panel{max-height:min(880px,calc(100dvh - max(24px,env(safe-area-inset-top,0px)) - max(32px,env(safe-area-inset-bottom,0px))))}
   .icust-head{padding:20px 16px 12px}
   .icust-paste{padding:8px 16px 20px}}
 

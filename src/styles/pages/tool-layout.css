@@ -77,7 +77,7 @@
   gap: 10px;
   flex-wrap: nowrap;
   min-width: 0;
-  padding: 9px var(--tl-pad);
+  padding: 9px max(var(--tl-pad), env(safe-area-inset-right, 0px)) 9px max(var(--tl-pad), env(safe-area-inset-left, 0px));
   background: color-mix(in srgb, var(--bg-0) 82%, transparent);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
@@ -497,7 +497,7 @@
    included: with Switzer its widest row kept under 11px spare, too little for
    that platform difference. */
 @media (max-width: 400px) {
-  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: 8px; }
+  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px)); }
 }
 
 /* Coarse pointers: every control reaches the 44px floor the touch specs hold

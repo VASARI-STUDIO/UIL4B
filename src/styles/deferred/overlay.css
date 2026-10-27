@@ -138,8 +138,8 @@
   .exp-fmt:not(.is-active) .exp-fmt-desc{display:none}
   /* A bottom sheet on a phone: full width, anchored to the foot of the screen
      and the thumb, with the dock inside it. */
-  .exp-overlay{align-items:flex-end;padding:0}
-  .exp-panel{width:100%;height:auto;max-height:calc(100dvh - 24px);border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;scroll-padding:96px 0 88px}
+  .exp-overlay{align-items:flex-end;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+  .exp-panel{width:100%;height:auto;max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px));border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;scroll-padding:96px 0 88px}
   /* The title and close stay put while the list scrolls under them, as the dock
      does at the foot. An opaque ground, so rows never show through. */
   .exp-head{position:sticky;top:0;z-index:2;background:var(--bg-1)}

@@ -79,3 +79,65 @@ test('the fixed nav pads itself by the top inset', () => {
   assert.match(nav, /padding-top\s*:\s*var\(--nav-top\)/)
   assert.match(nav, /height\s*:\s*calc\(var\(--nav-top\)\s*\+\s*var\(--nav-h\)\)/)
 })
+
+// A later phone override that resets a rule's padding or height replaces the
+// inset-aware value set earlier in the cascade. So every rule body for these
+// selectors that sets the property has to carry the inset itself.
+function everyBodyWith(selector, prop) {
+  const re = new RegExp(`(^|[;\\s])${prop}\\s*:`)
+  const set = bodies(selector).filter((b) => re.test(b))
+  assert.ok(set.length > 0, `found a rule setting ${prop} on ${selector}`)
+  return set
+}
+
+const OVERLAY_PADDING = ['.icust-overlay', '.exp-overlay', '.fg-overlay', '.fnote-overlay', '.fb-overlay']
+
+for (const sel of OVERLAY_PADDING) {
+  test(`${sel} keeps its padding clear of the notch at every width`, () => {
+    for (const body of everyBodyWith(sel, 'padding')) {
+      assert.match(body, /safe-area-inset-top/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+      assert.match(body, /safe-area-inset-left/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+      assert.match(body, /safe-area-inset-right/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+    }
+  })
+}
+
+test('phone sheets size their height against the top inset', () => {
+  for (const sel of ['.exp-panel', '.fnote', '.fb-modal', '.icust-panel']) {
+    for (const body of everyBodyWith(sel, 'max-height')) {
+      assert.match(body, /safe-area-inset-top/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+    }
+  }
+})
+
+test('the feedback sheets pad their last block by the bottom inset on a phone', () => {
+  for (const sel of ['.fnote-foot', '.fb-body', '.fb-success']) {
+    const padded = everyBodyWith(sel, 'padding-bottom')
+    assert.ok(padded.some((b) => /safe-area-inset-bottom/.test(b)), `${sel} pads its bottom by the inset`)
+  }
+})
+
+// In landscape the notch sits at the side, and these draw to the edge. Each
+// pair is its own test, so a failure names the selector.
+const SIDE_GUTTERS = [
+  ['.app-page', 'padding'],
+  ['.tl-toolbar', 'padding'],
+  ['.tl-toolbar', 'padding-inline'],
+  ['.sp-shell', 'padding-inline'],
+  ['.sp-footer-inner', 'padding'],
+  ['.pop.cpk-pop[data-pop-fixed="true"]', 'padding'],
+  ['.bkit-card.is-lifted', 'inset-inline'],
+  ['html.bkit-on .plb .plb-adjust', 'padding-inline'],
+]
+
+for (const [sel, prop] of SIDE_GUTTERS) {
+  test(`${sel} ${prop} reads the left and right insets`, () => {
+    // The desktop tier of the lifted card pins it to the dock with inset-inline:auto.
+    const gutters = everyBodyWith(sel, prop).filter((b) => !/inset-inline\s*:\s*auto/.test(b))
+    assert.ok(gutters.length > 0, `found a gutter rule for ${sel}`)
+    for (const body of gutters) {
+      assert.match(body, /safe-area-inset-left/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+      assert.match(body, /safe-area-inset-right/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+    }
+  })
+}

@@ -242,7 +242,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 /* On phones the pill spans the viewport less a 16px gutter each side, the
    mark at its start and the controls at its end. */
 @media(max-width:767px){
-  .spnav{padding-left:16px;padding-right:16px}
+  .spnav{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .spnav-bar{width:100%;flex-wrap:nowrap;justify-content:flex-start}
   .spnav-bar > .spnav-mark{margin-right:auto}
 }
@@ -289,7 +289,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 @supports selector(:has(*)){
   .sp-footer[data-curtain][data-curtain-near]{position:sticky;bottom:0;z-index:1}
 }
-.sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) clamp(20px,4vw,52px)}
+.sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-right,0px)) clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-left,0px))}
 .sp-footer .sp-footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:36px;align-items:start}
 .sp-footer .sp-footer-links{display:contents}
 .sp-footer .sp-footer-say{margin:0;font-family:var(--display);font-weight:560;font-size:clamp(26px,3vw,38px);line-height:1.06;max-width:min(22ch,100%);text-wrap:balance}
