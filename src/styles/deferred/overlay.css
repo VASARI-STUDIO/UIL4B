@@ -52,17 +52,19 @@
 .exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84dvh,720px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
 .exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-/* --accent-mid on the panel's --bg-1: 5.55:1 light, 8.48:1 dark. */
-.exp-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
-.exp-sub{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
+.exp-sub{font-size:var(--fs-body-s);color:var(--t1);line-height:1.5}
+/* The title takes focus when the dialog opens so a screen reader starts there.
+   It is a heading, not a control and not a Tab stop, so it draws no ring. */
+.exp-title:focus{outline:none}
 .exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .exp-formats{display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--border)}
 .exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}
 .exp-fmt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-.exp-fmt-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
-.exp-fmt-soon{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
+/* One line on every row but the chosen one, which wraps in full. */
+.exp-fmt-desc{font-size:var(--fs-caption);color:var(--t1);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-fmt.is-active .exp-fmt-desc{white-space:normal;overflow:visible}
 .exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg-0)}
 /* The footer's two actions: the app's rectangle at the 44px the old
    .ui-pill-md held, so the target does not shrink. */
@@ -89,7 +91,7 @@
    view when the dialog opens. The format row after it takes the list's
    hairline back. */
 .exp-identity{display:flex;flex-direction:column;gap:14px;padding:18px 24px 6px;border-top:1px solid var(--border)}
-.exp-identity-title{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.exp-identity-title{font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
 .exp-field{display:flex;flex-direction:column;gap:6px}
 .exp-field-label{font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
 .exp-field-opt{margin-left:6px;font-weight:400;color:var(--t2)}
@@ -98,7 +100,6 @@
 /* 16px on touch screens: smaller field text makes iOS zoom the page on focus. */
 @media (pointer:coarse){.exp-field input{min-height:44px}.exp-field input,.exp-field textarea{font-size:16px}}
 .exp-identity + .exp-logo{border-top:0;padding-top:12px}
-.exp-formats > .exp-logo + .exp-fmt{border-top:1px solid var(--border)}
 /* The dock (the error, the notice, then the footer's actions) stays in reach
    while the format list scrolls: on a phone the list is taller than the sheet,
    and both the button and anything the export has to say were below the fold. */
@@ -125,7 +126,54 @@
   /* On a phone every description at once is a wall of text: the list reads as
      names, and the chosen format explains itself. */
   .exp-fmt:not(.is-active) .exp-fmt-desc{display:none}
+  /* A bottom sheet on a phone: full width, anchored to the foot of the screen
+     and the thumb, with the dock inside it. */
+  .exp-overlay{align-items:flex-end;padding:0}
+  .exp-panel{width:100%;max-height:calc(100dvh - 24px);border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0}
+  .exp-options{padding:16px 16px 20px}
+  .exp-coming{padding:12px 16px 16px}
 }
+
+/* ── Export panel · the chosen row's options ────────────────────────────────
+   One region under the list: the file-type switch, the preview of a Pro
+   document, the identity and logo fields. A hairline divides it from the list,
+   and nothing inside it is a card. */
+.exp-options{display:flex;flex-direction:column;gap:16px;padding:16px 24px 20px;border-top:1px solid var(--border);animation:exp-options-in 150ms var(--ease-out)}
+@keyframes exp-options-in{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.exp-options{animation:none}}
+/* The kit's identity and the logo row were sections of the list; here they are
+   fields of the region and take its padding and gap. */
+.exp-options .exp-identity{padding:0;border-top:0}
+.exp-options .exp-logo,.exp-options .exp-identity + .exp-logo{padding:0;border-top:0}
+
+/* The quiet line for formats that are not built. Not a row, not a button. */
+.exp-coming{margin:0;padding:12px 24px 16px;font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
+.exp-formats + .exp-coming{border-top:1px solid var(--border)}
+
+/* The file-type switch: pills, 44px, one line. If they outgrow the row (a 320px
+   screen) the row scrolls sideways rather than wrapping. The padding and
+   negative margin keep the focus ring inside the scroll box. */
+.exp-switch{display:flex;gap:8px;padding:4px;margin:-4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none}
+.exp-switch::-webkit-scrollbar{display:none}
+.exp-pill{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;scroll-snap-align:center;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font:inherit;font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+@media (hover:hover){.exp-pill:hover{background:var(--hvr);color:var(--t0)}}
+/* The chosen pill is told apart by a heavier edge and the ink, not by colour alone. */
+.exp-pill.is-active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent);color:var(--t0)}
+.exp-pill:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+
+/* The Pro preview strip. The box is reserved before any picture lands (flat
+   fill, fixed ratio), so the dock does not move when the images arrive. The lock
+   sits over the strip, not inside its scroll, so it stays in view on a phone. */
+.exp-preview{position:relative;isolation:isolate}
+.exp-preview-strip{display:flex;gap:12px;padding:2px;margin:-2px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain}
+.exp-thumb{flex:0 0 auto;display:block;width:120px;height:auto;aspect-ratio:1 / 1.414;object-fit:cover;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-0);scroll-snap-align:start;-webkit-user-drag:none}
+.exp-preview.is-guidelines .exp-thumb{width:160px;aspect-ratio:16 / 9}
+.exp-preview-lock{position:absolute;inset:0;z-index:1;display:grid;place-items:center;pointer-events:none}
+.exp-preview-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
+.exp-preview-note{margin:8px 0 0;font-size:var(--fs-caption);color:var(--t1)}
+
+/* Pro, as plain words with a lock. */
+.exp-pro-lock{flex:0 0 auto}
 .exp-error{margin:0;padding:14px 24px;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong);background:color-mix(in srgb,var(--err) 7%,transparent);border-top:1px solid color-mix(in srgb,var(--err) 30%,transparent)}
 @media(max-width:560px){.exp-error{padding:14px 16px}}
 

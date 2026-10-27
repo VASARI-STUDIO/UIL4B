@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { trackActivation } from '../utils/analytics'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
@@ -7,9 +7,12 @@ import useExportDesign from '../hooks/useExportDesign'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import useExportGate from '../hooks/useExportGate'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
-import { EXPORT_FORMATS } from '../config/exportFormats'
+import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } from '../config/exportFormats'
 import BrandLogoField from './BrandLogoField'
 import KitIdentityFields from './KitIdentityFields'
+import ExportFormatSwitch from './ExportFormatSwitch'
+import ExportProPreview from './ExportProPreview'
+import ExportProTag from './ExportProTag'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -26,12 +29,20 @@ import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 // restated here on purpose; read src/config/exportFormats.js, which is the one
 // place that knows, and which the pricing page now derives its claims from.
 //
-// What holds regardless: a format without `live` renders a disabled "Soon" so
-// we never advertise a capability that is not wired.
+// What holds regardless: a format without `live` gets no row and no button, only
+// a name in the one "on the way" line, so we never advertise a capability that
+// is not wired.
 //
-// Accessibility: role="dialog" + aria-modal, focus moves into the panel on open,
-// Tab is trapped, Escape and a backdrop click close it, and focus is restored to
-// the opener (the Export button) on unmount.
+// The panel offers FIVE things (UI kit, style guide, design tokens, the book,
+// the brand guidelines), not eleven formats: each row is a `group` in
+// src/config/exportFormats.js, and a row with more than one file type shows them
+// as a switch in its options. `format` below is still the single format id, so
+// every export path further down is unchanged by the layout above it.
+//
+// Accessibility: role="dialog" + aria-modal, focus moves to the title on open
+// (so a screen reader reads the title, then the intro), Tab is trapped, Escape
+// and a backdrop click close it, and focus is restored to the opener (the Export
+// button) on unmount. The rows are one radiogroup with a roving tab stop.
 
 // Lives in src/config/exportFormats.js so /plans reads the same array instead
 // of describing the export offer from memory. The file-top note here applies.
@@ -95,16 +106,22 @@ export default function ExportPanel({ onClose }) {
   // There is nothing left to cancel, so the secondary action reads Close.
   const [done, setDone] = useState(false)
   const design = useExportDesign()
-  const { isPro } = useSubscription()
+  const { isPro, planKnown } = useSubscription()
   // A file needs an account; a copy never does. See useExportGate.js.
   const requireExportAccount = useExportGate()
   const navigate = useNavigate()
   const activeFormat = FORMATS.find(f => f.id === format)
-  const EXPORT_LABEL = { kit: 'UI kit', md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', css: 'CSS', json: 'JSON', book: 'book', guidelines: 'guidelines' }
+  const activeGroup = EXPORT_GROUPS.find(g => g.id === activeFormat?.group)
+  // The file type last chosen in each row, so leaving the style guide on PNG and
+  // coming back finds PNG still chosen.
+  const lastInGroup = useRef({})
   // Every gate is explicit rather than silent. The free user is told what
   // they are about to hit BEFORE they click, by the button's own label, rather
   // than finding out from a modal after it.
   const locked = Boolean(activeFormat?.pro) && !isPro
+  // The plan is still being read. A paid row must not say "Unlock with Pro" to
+  // someone who is about to turn out to be Pro, nor run the gate on a guess.
+  const checking = Boolean(activeFormat?.pro) && planKnown === false
 
   // Build and download in the browser. No server round trip: the document is a
   // pure function of the saved design (see utils/styleGuideExport.js), so there
@@ -311,12 +328,35 @@ export default function ExportPanel({ onClose }) {
   // format starts clean, so "Your UI kit downloaded" never sits beside "Export CSS".
   const pickFormat = (id) => {
     if (id === format) return
+    const group = FORMATS.find(f => f.id === id)?.group
+    if (group) lastInGroup.current[group] = id
     setFormat(id)
     setNotice(null)
     setError('')
     // The secondary button reads Close only while a finished export's message is
     // on screen; with the message gone there is something to cancel again.
     setDone(false)
+  }
+  // Choosing a row opens it on the file type last chosen there, else its first.
+  const pickGroup = (groupId) => {
+    if (groupId === activeFormat?.group) return
+    pickFormat(lastInGroup.current[groupId] || groupFormats(groupId)[0].id)
+  }
+  // The rows are a radiogroup with one tab stop (the chosen row). Up and Down
+  // choose and move, Home and End jump, and the ends wrap.
+  const rowRefs = useRef([])
+  const onRowKeyDown = (e, i) => {
+    const key = e.key
+    let to = -1
+    if (key === 'ArrowDown') to = i + 1
+    else if (key === 'ArrowUp') to = i - 1
+    else if (key === 'Home') to = 0
+    else if (key === 'End') to = EXPORT_GROUPS.length - 1
+    else return
+    e.preventDefault()
+    to = (to + EXPORT_GROUPS.length) % EXPORT_GROUPS.length
+    pickGroup(EXPORT_GROUPS[to].id)
+    rowRefs.current[to]?.focus()
   }
   // Export disables while it builds, and a disabled button drops focus to the
   // page behind, so the next Tab would leave the dialog. Hold focus on the panel
@@ -373,9 +413,14 @@ export default function ExportPanel({ onClose }) {
   // without resizing any child that was already observed.
   useEffect(() => { measureRef.current?.() }, [format, notice, error])
 
-  // Move focus into the panel, trap Tab within it, and close on Escape.
+  // On open, focus goes to the title: a screen reader reads it, then the intro.
+  // Its own effect with no dependencies, so a parent re-render that hands down a
+  // new onClose can never pull focus back from the row someone is on.
+  const titleRef = useRef(null)
+  useEffect(() => { titleRef.current?.focus() }, [])
+
+  // Trap Tab within the panel, and close on Escape.
   useEffect(() => {
-    panelRef.current?.focus()
     const onKey = (e) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
@@ -385,7 +430,10 @@ export default function ExportPanel({ onClose }) {
       if (!focusables || focusables.length === 0) return
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
+      // The title and the panel hold focus without being Tab stops, so
+      // Shift+Tab from either one wraps to the last control as from the first.
+      const active = document.activeElement
+      if (e.shiftKey && (active === first || active === titleRef.current || active === panelRef.current)) {
         e.preventDefault()
         last.focus()
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -397,6 +445,44 @@ export default function ExportPanel({ onClose }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // The intro is for a free account, and waits for the plan so a Pro account
+  // never sees it flash.
+  const showIntro = !isPro && planKnown !== false
+  const coming = comingLine()
+  const choices = activeGroup ? groupFormats(activeGroup.id) : []
+  const pickedFile = activeFormat?.id
+  const needsOptions = choices.length > 1
+    || (activeGroup?.id === 'kit' && isPro)
+    || Boolean(activeGroup?.preview)
+    || Boolean(activeFormat?.logo)
+  const options = activeGroup && needsOptions ? (
+    <div className="exp-options" role="region" aria-label={`Options for ${activeGroup.name}`} key={activeGroup.id}>
+      {choices.length > 1 && (
+        <ExportFormatSwitch
+          label={`${activeGroup.name} file type`}
+          options={choices.map(f => ({ id: f.id, label: f.option }))}
+          value={pickedFile}
+          onChange={pickFormat}
+        />
+      )}
+      {/* A Pro UI kit is personalised; a free kit carries no identity. */}
+      {activeGroup.id === 'kit' && isPro && <KitIdentityFields />}
+      {activeGroup.preview && (
+        <ExportProPreview
+          kind={activeGroup.preview}
+          design={design}
+          projectName={design?.name || 'Design System'}
+          blurred={!isPro}
+        />
+      )}
+      {/* Its own block under the preview, not a control inside the guidelines
+          row. It appears only for a format whose document actually has logo
+          pages, so the ask is never made of someone exporting a token file, and
+          the flag that decides it is the same table that renders the rows. */}
+      {activeFormat?.logo && <BrandLogoField />}
+    </div>
+  ) : null
+
   return (
     <div className="exp-overlay" onMouseDown={onClose}>
       <div
@@ -404,18 +490,17 @@ export default function ExportPanel({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="exp-title"
+        aria-describedby={showIntro ? 'exp-intro' : undefined}
         ref={panelRef}
         tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="exp-head">
           <div className="exp-head-text">
-            <span className="exp-eyebrow">Export</span>
-            <h2 className="exp-title" id="exp-title">Export your design system</h2>
-            <p className="exp-sub">
-              The UI kit, the Pro documents, the style guide and the CSS and JSON tokens export for real. The
-              other formats are still on their way and say so.
-            </p>
+            {/* No eyebrow: it only said the title again. Focus lands here on
+                open, so a screen reader reads the title, then the intro. */}
+            <h2 className="exp-title" id="exp-title" tabIndex={-1} ref={titleRef}>Export your design system</h2>
+            {showIntro && <p className="exp-sub" id="exp-intro">Pick what you need. Free files carry a small UIL4B mark.</p>}
           </div>
           <button type="button" className="exp-close" onClick={onClose} aria-label="Close export">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
@@ -424,44 +509,49 @@ export default function ExportPanel({ onClose }) {
           </button>
         </div>
 
-        {/* A group rather than a radiogroup: the selected kit row carries its
-            identity fields directly beneath it, and a radiogroup may own only
-            radios. */}
-        <div className="exp-formats" role="group" aria-label="Export format">
-          {FORMATS.map((f) => {
-            const active = f.id === format
+        {/* The five things you can take, one radiogroup. The paid documents sit
+            below a gap and a hairline, so free and paid are told apart by space
+            rather than by a tinted box. Pro rows stay selectable for a free
+            account: choosing one is how the preview and the way to Pro are seen. */}
+        <div className="exp-formats" role="radiogroup" aria-labelledby="exp-title">
+          {EXPORT_GROUPS.map((g, i) => {
+            const active = g.id === activeFormat?.group
+            const paid = isGroupPro(g.id)
+            // Pro for a free account only: a Pro user sees neither lock nor word.
+            const showPro = paid && !isPro
+            const startsPaid = paid && i > 0 && !isGroupPro(EXPORT_GROUPS[i - 1].id)
             return (
-              <Fragment key={f.id}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  className={active ? 'exp-fmt is-active' : 'exp-fmt'}
-                  onClick={() => pickFormat(f.id)}
-                >
-                  <span className="exp-fmt-check" aria-hidden="true" />
-                  <span className="exp-fmt-text">
-                    <span className="exp-fmt-name">{f.name}</span>
-                    <span className="exp-fmt-desc">{f.desc}</span>
-                  </span>
-                  {f.pro && !isPro && <span className="exp-fmt-pro">Pro</span>}
-                  {!f.live && <span className="exp-fmt-soon">Soon</span>}
-                </button>
-                {/* A Pro UI kit is personalised; a free kit carries no identity.
-                    The fields follow the selected kit row, so they are in view
-                    when the panel opens rather than below every other format. */}
-                {active && f.kit && isPro && <KitIdentityFields />}
-              </Fragment>
+              <button
+                key={g.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={showPro ? `${g.name}, Pro` : g.name}
+                aria-describedby={`exp-desc-${g.id}`}
+                tabIndex={active ? 0 : -1}
+                ref={(el) => { rowRefs.current[i] = el }}
+                className={`exp-fmt${active ? ' is-active' : ''}${startsPaid ? ' is-paid-start' : ''}`}
+                onClick={() => pickGroup(g.id)}
+                onKeyDown={(e) => onRowKeyDown(e, i)}
+              >
+                <span className="exp-fmt-check" aria-hidden="true" />
+                <span className="exp-fmt-text">
+                  <span className="exp-fmt-name">{g.name}</span>
+                  <span className="exp-fmt-desc" id={`exp-desc-${g.id}`}>{g.desc}</span>
+                </span>
+                {showPro && <ExportProTag />}
+              </button>
             )
           })}
         </div>
 
-        {/* Its own block under the format list, not a control inside the
-            guidelines row — the Pitch "Export as" reading. It appears only for a
-            format whose document actually has logo pages, so the ask is never
-            made of someone exporting a token file, and the flag that decides it
-            is the same table that renders the rows. */}
-        {activeFormat?.logo && <BrandLogoField />}
+        {/* The chosen row's options, in one region under the list: the file-type
+            switch, the preview of a Pro document, the identity and logo fields.
+            Keyed by row, so a change of row swaps the region (a 150ms fade, none
+            under reduced motion). A row with nothing to choose has no region. */}
+        {options}
+
+        {coming && <p className="exp-coming">{coming}</p>}
 
         {/* The dock sticks to the bottom of the panel, so what an export has to
             say sits right above its buttons and is in view whatever the list's
@@ -483,21 +573,12 @@ export default function ExportPanel({ onClose }) {
             <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
               {done ? 'Close' : 'Cancel'}
             </button>
-            {activeFormat?.live ? (
-              <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={runExport} disabled={busy}>
-                {busy ? (BUSY_LABEL[stage] || 'Exporting…') : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-accent exp-act"
-                disabled
-                aria-disabled="true"
-                title="This format is coming soon"
-              >
-                Export &mdash; Soon
-              </button>
-            )}
+            {/* Every row is built, so there is always a real action. The label
+                says what the click will do: unlock, wait for the plan, or the
+                file about to be made. */}
+            <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={runExport} disabled={busy || checking}>
+              {busy ? (BUSY_LABEL[stage] || 'Exporting…') : checking ? 'Checking your plan…' : locked ? 'Unlock with Pro' : activeFormat.action}
+            </button>
           </div>
         </div>
       </div>
