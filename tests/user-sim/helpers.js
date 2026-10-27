@@ -788,6 +788,28 @@ function describeStall(s) {
   return 'the route never got past its lazy-loading fallback'
 }
 
+/**
+ * Waits until no overlay still owns a history entry.
+ *
+ * Every overlay (the Export panel, the phone menu sheet, the palette, the
+ * feedback and prompt dialogs) pushes one entry while it is open, and closing
+ * it any way but the Back gesture gives that entry back with `history.back()`.
+ * That call returns at once and the same-document traversal finishes later,
+ * with the entry's `__overlays` stack empty once it has. A `page.reload()` or
+ * `page.goto()` issued inside that gap is cancelled by the traversal and never
+ * settles: `page.reload: Test timeout exceeded`, or `net::ERR_ABORTED; maybe
+ * frame was detached?`. The closed panel being hidden does not say the
+ * traversal is over, because the panel unmounts first and calls `back()` from
+ * its cleanup. Call this after closing or handing over from an overlay, before
+ * navigating away from the page.
+ */
+export async function overlaysSettled(page, what = 'the overlay') {
+  await expect.poll(
+    () => page.evaluate(() => (window.history.state?.__overlays || []).length),
+    { message: `${what} has given back its history entry`, timeout: 10000 },
+  ).toBe(0)
+}
+
 export async function ready(page, what) {
   const where = what || page.url()
   await page.evaluate(() => {
