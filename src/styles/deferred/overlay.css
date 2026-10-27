@@ -168,6 +168,17 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 }
 .exp-options .exp-logo,.exp-options .exp-identity + .exp-logo{padding:0;border-top:0}
 
+/* The sticky dock covers the foot of the panel, so a scroll to a control stops above it. */
+.exp-panel{scroll-padding-bottom:88px}
+/* The Pro kit's template cue: the chosen template and a link to the picker, above the identity
+   fields, so the choice is in view when the picker sits below the fold. */
+.exp-tpl-cue{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;font-size:var(--fs-body-s);color:var(--t1)}
+.exp-tpl-cue b{font-weight:600;color:var(--t0)}
+.exp-tpl-cue-go{display:inline-flex;align-items:center;min-height:28px;padding:0 4px;border:0;background:none;color:var(--link);font:inherit;font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+@media (hover:hover){.exp-tpl-cue-go:hover{color:var(--link-hover)}}
+@media (pointer:coarse){.exp-tpl-cue-go{min-height:44px}}
+.exp-tpl-cue-go:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+
 /* The quiet line for formats that are not built. Not a row, not a button. It
    takes the free space of a tall panel and sits as a footnote by the dock; the
    dock gives up its own auto margin, or the two would split the space. */

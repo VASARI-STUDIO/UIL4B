@@ -226,14 +226,17 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
   .cover-title{font-size:calc(var(--cover-size) * .76px)}
   .rule{margin:6mm 0 4mm}
   .facts{font-size:7pt}
-  .section-head{margin-top:0;padding-top:3mm;break-after:avoid}
+  .section-head{margin-top:0;padding-top:3mm;break-after:avoid;break-inside:avoid}
   .section-head p,.bhead p{font-size:8.5pt}
   #tokens .section-head{margin-top:10mm}
   #pairs,#components,#identity,#licences{break-before:page;margin-top:0}
-  .bhead{margin:8mm 0 3mm;break-after:avoid}
+  .bhead{margin:8mm 0 3mm;break-after:avoid;break-inside:avoid}
   .t th,.t td{padding:2mm 3mm 2mm 0}
   .t thead th{font-size:7pt;padding-bottom:1.5mm}
   .t tr,.t tbody{break-inside:avoid}
+  /* The colour table is longer than a page can spare after its heading: it breaks between rows (the header row repeats), and the first rows stay with the heading. */
+  .colours tbody{break-inside:auto}
+  .colours tbody tr:nth-child(-n+2){break-after:avoid}
   .tbl-wrap{overflow:visible}
   .colours,.type,.pairs,.states,.roles,.comp,.tints{min-width:0}
   .colours,.tints{table-layout:fixed}
@@ -286,7 +289,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 <header class="cover"><h1 class="cover-title" style="--cover-size:@@COVER_SIZE@@"><span class="clip">@@COVER_TITLE@@</span></h1><div class="rule" aria-hidden="true"></div><p class="facts">@@FACTS@@</p></header>
 
 <section id="tokens" aria-labelledby="tokens-title">
-<div class="section-head"><h2 id="tokens-title">Tokens</h2><p>Every value below is a CSS variable in the CSS and JSON downloads. Select a value to copy it.</p></div>
+<div class="section-head"><h2 id="tokens-title">Tokens</h2><p>Each variable you can copy below is in the CSS and JSON downloads. Select a value to copy it.</p></div>
 
 <div class="block" id="colour"><div class="bhead"><h3>Colour</h3><p>@@COLOUR_NOTE@@</p></div>
 <div class="tbl-wrap" tabindex="0" role="region" aria-label="Colour table"><table class="t colours"><caption class="sr-only">Colours, with contrast, tints and where each lands</caption><colgroup><col style="width:14%"><col style="width:16%"><col style="width:8%"><col style="width:17%"><col style="width:7%"><col style="width:7%"><col style="width:18%"><col style="width:13%"></colgroup><thead><tr><th scope="col">Colour</th><th scope="col">Variable</th><th scope="col">Hex</th><th scope="col">OKLCH</th><th scope="col">On canvas</th><th scope="col">On text</th><th scope="col">Tints</th><th scope="col">Where it lands</th></tr></thead>@@COLOUR_TABLE@@</table></div>
@@ -301,7 +304,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
 <div class="block" id="states"><div class="bhead"><h3>State colours</h3><p>Pair each with a message and an icon, so colour is never the only cue.</p></div>
 <div class="tbl-wrap" tabindex="0" role="region" aria-label="State colours table"><table class="t states"><caption class="sr-only">Success, warning, error and information colours</caption><thead><tr><th scope="col">State</th><th scope="col">Text</th><th scope="col">Background</th><th scope="col">Contrast</th><th scope="col">Sample</th></tr></thead><tbody>@@SEMANTIC_ROWS@@</tbody></table></div></div>
 
-<div class="block" id="typography"><div class="bhead"><h3>Typography</h3><p>Headings use <code>--font-display</code>, set in @@FONT_DISPLAY@@ at @@WEIGHT_DISPLAY@@. Body text uses <code>--font-body</code>, set in @@FONT_BODY@@ at @@WEIGHT_BODY@@.</p></div>
+<div class="block" id="typography"><div class="bhead"><h3>Typography</h3><p>Headings use <code>--font-heading</code>, set in @@FONT_DISPLAY@@ at @@WEIGHT_DISPLAY@@. Body text uses <code>--font-body</code>, set in @@FONT_BODY@@ at @@WEIGHT_BODY@@.</p></div>
 <div class="tbl-wrap" tabindex="0" role="region" aria-label="Type scale table"><table class="t type"><caption class="sr-only">Type scale: size, line height and weight of each step</caption>@@TYPE_TABLE@@</table></div>
 <p class="tbl-note">@@FONT_EMBED_NOTE@@</p></div>
 

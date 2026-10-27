@@ -229,7 +229,7 @@ test('Showcase: the heading band sets the alphabet and figures at the Heading 2 
   const band = /<p class="sc-alpha" style="--size:([\d.]+)">([^<]*)<\/p>/.exec(html)
   assert.ok(band, 'the alphabet line is missing')
   assert.equal(band[2], 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789')
-  const h2 = /<code>([\d.]+) px \/ [\d.]+ \/ \d+<\/code><\/button><small class="var">--text-heading-2</.exec(html)[1]
+  const h2 = /<code>([\d.]+) px \/ [\d.]+ \/ \d+<\/code><\/button><small class="var">--font-size-heading-2</.exec(html)[1]
   assert.equal(band[1], h2, 'the line is not at the Heading 2 size the scale lists')
   assert.ok(html.indexOf('class="sc-alpha"') < html.indexOf('id="colour"'), 'the line left the heading band')
 })
@@ -245,4 +245,107 @@ test('Showcase: tokens are set in an explicit monospace stack, or in the mono fa
   assert.ok(own.includes(`style="--tk-mono:var(--font-body),${stack}"`), 'the person\'s mono face is not first in the stack')
   assert.ok(own.includes('Set in Work Sans, your body face, with tabular figures.'))
   assert.ok(!own.includes('Your system’s own face. Not included in this file.'))
+})
+
+// ── Names, values and labels the Manual and Showcase hand a reader ─────────────
+
+const downloadOf = (html) => {
+  const css = JSON.parse(/<script type="application\/json" id="brand-data">([\s\S]*?)<\/script>/.exec(html)[1]).css
+  return new Map([...css.matchAll(/^\s*--([\w-]+):\s*(.*?);\s*$/gm)].map((m) => [m[1], m[2]]))
+}
+const unesc = (s) => s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+
+test('Manual and Showcase: every variable a reader can copy is declared in the CSS download', () => {
+  for (const layout of ['manual', 'showcase']) {
+    for (const colors of [BASE, FIFTEEN]) {
+      const html = render(layout, design(colors, { identity: { name: 'Harbour' } }), 'pro')
+      const download = downloadOf(html)
+      const copied = [...html.matchAll(/data-copy="([^"]*)"/g)].map((m) => unesc(m[1]))
+      // var(--x) values (Manual and the Showcase scale) and "--x: value;" declarations (the Showcase token listing).
+      const vars = copied.flatMap((c) => [...c.matchAll(/var\(--([\w-]+)\)/g)].map((m) => m[1]))
+      const declared = copied.map((c) => /^--([\w-]+): ([\s\S]*);$/.exec(c)).filter(Boolean)
+      assert.ok(vars.length > 20 || declared.length > 20, `${layout}: nothing to check`)
+      for (const name of vars) assert.ok(download.has(name), `${layout}: copies var(--${name}), which the CSS download does not declare`)
+      for (const [, name, value] of declared) {
+        assert.ok(download.has(name), `${layout}: lists --${name}, which the CSS download does not declare`)
+        assert.equal(value, download.get(name), `${layout}: --${name} is listed with a value the download does not hold`)
+      }
+    }
+  }
+})
+
+test('Manual: a copied type variable is the download\'s own (size, line height and weight by role)', () => {
+  const html = render('manual', design(), 'pro')
+  const type = /<table class="t type">[\s\S]*?<\/table>/.exec(html)[0]
+  assert.ok(type.includes('data-copy="var(--font-size-heading-1)"') && type.includes('data-copy="var(--line-height-heading)"') && type.includes('data-copy="var(--font-weight-heading)"'))
+  assert.ok(type.includes('data-copy="var(--line-height-body)"') && type.includes('data-copy="var(--font-weight-body)"'))
+  assert.ok(!/--(text|leading|weight)-/.test(type), 'a name that only the page itself declares is still copied')
+  assert.match(html, /<h3>Typography<\/h3><p>Headings use <code>--font-heading<\/code>/)
+  assert.ok(!html.includes('Every value below is a CSS variable'), 'the intro still claims more than the download holds')
+})
+
+test('Manual and Showcase: the facts count every colour the design holds, as Studio does', () => {
+  for (const layout of ['manual', 'showcase', 'studio']) {
+    assert.match(render(layout, design(FIFTEEN)), /15 colours/, `${layout}: the facts name a count of the 13 shown`)
+  }
+})
+
+test('Manual and Showcase: "Issued" is the reader\'s own date, not the UTC date', () => {
+  // 23:30 on 2 January in the machine's own zone: its UTC date can be the 2nd or the 3rd.
+  const late = new Date(2026, 0, 2, 23, 30)
+  for (const layout of ['manual', 'showcase']) {
+    const { html } = renderUiKit(design(), { template: TEMPLATE[layout], tier: 'free', fonts: FONTS, date: late })
+    assert.match(html, /Issued 2026-01-02/, `${layout}: the facts`)
+    assert.match(html, /<th scope="row">Issued<\/th><td class="long">2026-01-02<\/td>/, `${layout}: the document row`)
+  }
+})
+
+test('Manual and Showcase: a colour the kit does not place says "Not assigned", and role labels are not capitals', () => {
+  for (const layout of ['manual', 'showcase']) {
+    const html = render(layout, design(FIFTEEN))
+    assert.ok(html.includes('Not assigned<'), `${layout}: the unplaced colours do not say so briefly`)
+    assert.ok(!html.includes('Not assigned to a part of the interface'), `${layout}: the long form is back`)
+    assert.ok(!/<small>[A-Z][A-Z ]{3,}[A-Z0-9]<\/small>/.test(html), `${layout}: a role label is still in capitals`)
+  }
+  assert.match(render('manual', design(FIFTEEN)), /<small>Alternative 1<\/small>/)
+})
+
+test('Manual: the colour table breaks between rows in print, and the first rows stay with the heading', () => {
+  const css = /@media print\{[\s\S]*$/.exec(TEMPLATE.manual.slice(0, TEMPLATE.manual.indexOf('</style>')))[0]
+  assert.match(css, /\.t tr,\.t tbody\{break-inside:avoid\}/, 'the other tables stay whole')
+  assert.match(css, /\.colours tbody\{break-inside:auto\}/)
+  assert.match(css, /\.colours tbody tr:nth-child\(-n\+2\)\{break-after:avoid\}/)
+  assert.ok(css.indexOf('.t tr,.t tbody{break-inside:avoid}') < css.indexOf('.colours tbody{break-inside:auto}'), 'the colour rule must come after, or it loses')
+})
+
+test('Studio: the print masthead keeps the document name on one line', () => {
+  assert.match(TEMPLATE.studio, /\.masthead \.wordmark\{font-size:24px\}\.document-name\{display:block;white-space:nowrap\}/)
+})
+
+test('the licence rows list a chrome family only with a face and a licence text to show', () => {
+  const pub = (family, faces) => ({ family, axis: '300 700', faces })
+  const latin = [{ subset: 'latin', base64: 'R0VJU1Q=' }]
+  const rowsOf = (publisherFonts, publisherLicense) => {
+    const out = {}
+    for (const layout of ['manual', 'showcase']) {
+      const { html } = renderUiKit(design(), { template: TEMPLATE[layout], tier: 'free', fonts: FONTS, date: DATE, publisherFonts, publisherLicense })
+      out[layout] = html
+    }
+    return out
+  }
+  const thisDocument = (html, family) => html.includes(`<th scope="row">${family}</th><td>This document</td>`)
+  // A family that loaded no face has nothing in the file to license.
+  for (const html of Object.values(rowsOf([pub('Geist', latin), pub('Geist Mono', [])], 'Geist licence'))) {
+    assert.ok(thisDocument(html, 'Geist'))
+    assert.ok(!thisDocument(html, 'Geist Mono'), 'a family with no faces is still listed')
+    assert.ok(!JSON.stringify(downloadOf(html)).includes('Geist Mono'))
+  }
+  // A face with an unknown subset or an empty payload does not count either.
+  for (const html of Object.values(rowsOf([pub('Geist', [{ subset: 'nope', base64: 'R0VJU1Q=' }, { subset: 'latin', base64: '' }])], 'Geist licence'))) {
+    assert.ok(!thisDocument(html, 'Geist'), 'a family whose faces are all unusable is still listed')
+  }
+  // No licence text, no rows: the file would show a face with nothing to say about it.
+  for (const html of Object.values(rowsOf([pub('Geist', latin)], ''))) {
+    assert.ok(!thisDocument(html, 'Geist'), 'a family without a licence text is still listed')
+  }
 })

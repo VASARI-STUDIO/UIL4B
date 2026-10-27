@@ -288,7 +288,8 @@ export function kitSemantic(design) {
   return ['success', 'warning', 'error', 'info'].map((role) => {
     const background = at(role, '50')
     const step = ['600', '700', '800', '900'].find((s) => contrast(at(role, s), background) >= 4.5) || '900'
-    return { ...SEMANTIC_COPY[role], hex: up(at(role, step)), background: up(background) }
+    // `token` and `backgroundToken` are the names the CSS and JSON downloads give these two values.
+    return { ...SEMANTIC_COPY[role], hex: up(at(role, step)), background: up(background), token: `color-${role}-${step}`, backgroundToken: `color-${role}-50` }
   })
 }
 
@@ -351,6 +352,7 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
       oklch: `oklch(${(ok.l * 100).toFixed(1)}% ${ok.c.toFixed(3)} ${Math.round(ok.h)})`,
       scale: kitScale(design, hex),
       lands: owner ? owner.lands : UNPLACED_LANDS,
+      placed: Boolean(owner),
       onCanvas: contrast(up(hex), canvas),
       onText: contrast(up(hex), text),
     }
@@ -578,6 +580,8 @@ export function renderUiKit(design, {
   // A free kit's JSON names its generator in the DTCG `$extensions` slot, under
   // a reverse-domain key; a Pro kit's JSON carries no metadata at all.
   const extensions = free ? { 'com.uil4b': { generator: 'UIL4B', edition: 'free', url: `${SITE_ORIGIN}/` } } : null
+  // Every custom property the CSS download declares, by name, so a layout can show the downloads' own names and values.
+  const download = new Map([...appCss.matchAll(/^\s*--([\w-]+):\s*(.*?);\s*$/gm)].map((m) => [m[1], m[2]]))
   const appJson = buildTokensJson(safeDesign, { projectName: tokenName, watermark: free, extra, extensions })
 
   // Selected faces first: the document's font download reads the first
@@ -588,15 +592,20 @@ export function renderUiKit(design, {
     for (const face of fonts[family].faces) fontCss += faceRule(family, face)
     licenses += `\n${family}\n${fonts[family].license.text}\n`
   }
+  // A face counts only with a known subset and a payload; a family with none is not in the file.
+  const usableFaces = (pub) => (pub.faces || []).flatMap((face) => {
+    const range = SUBSET_RANGES[face.subset]
+    const data = String(face.base64 || '').replace(/[^A-Za-z0-9+/=]/g, '')
+    return range && data ? [{ range, data }] : []
+  })
   for (const pub of publisherFonts) {
-    for (const face of pub.faces || []) {
-      const range = SUBSET_RANGES[face.subset]
-      const data = String(face.base64 || '').replace(/[^A-Za-z0-9+/=]/g, '')
-      if (!range || !data) continue
+    for (const { range, data } of usableFaces(pub)) {
       fontCss += `@font-face{font-family:"Publisher ${cssFamily(pub.family)}";src:url(data:font/woff2;base64,${data}) format("woff2");font-weight:${pub.axis};font-style:normal;font-display:swap;unicode-range:${range};}\n`
     }
   }
-  if (publisherLicense) licenses += `\n${publisherFonts.map((pub) => pub.family).join(' and ') || 'Geist and Geist Mono'} (publisher interface)\n${publisherLicense}\n`
+  // The document's own faces named in the licence rows: those embedded here, and only with a licence text to show.
+  const chrome = publisherLicense ? publisherFonts.filter((pub) => usableFaces(pub).length).map((pub) => pub.family) : []
+  if (publisherLicense) licenses += `\n${chrome.join(' and ') || 'Geist and Geist Mono'} (publisher interface)\n${publisherLicense}\n`
 
   // The lockup is drawn from the shared logo geometry, sized in em, so the
   // template's existing font-size rules size it wherever it appears.
@@ -771,7 +780,8 @@ export function renderUiKit(design, {
       tokens, esc, on, g, contrast, grade: gradeOf, roles: ROLES, date,
       tokenCount: designTokens(safeDesign).length + extra.length,
       embedded: Object.fromEntries(notes.embedded.map((f) => [f, fonts[f].license.name])),
-      chrome: publisherFonts.map((pub) => pub.family),
+      chrome,
+      download,
     }))
   }
 
@@ -780,7 +790,8 @@ export function renderUiKit(design, {
       tokens, esc, on, g, contrast, grade: gradeOf, roles: ROLES, date,
       tokenCount: designTokens(safeDesign).length + extra.length,
       embedded: Object.fromEntries(notes.embedded.map((f) => [f, fonts[f].license.name])),
-      chrome: publisherFonts.map((pub) => pub.family),
+      chrome,
+      download,
     }))
   }
 

@@ -7,7 +7,7 @@
 // The template (src/templates/kit/showcase.html) owns the structure, the copy and
 // the styling; this file only turns data into the pieces it places.
 
-import { fitTitle, clampTitle, specimenScale, safeHex } from './exportTemplates/shared.js'
+import { fitTitle, clampTitle, specimenScale, safeHex, sentenceCase, localIso } from './exportTemplates/shared.js'
 import { isNeutral } from './exportTemplates/roles.js'
 
 // The family name on the cover, in its own face: two lines at most, measured at a
@@ -69,12 +69,13 @@ const sampleSize = (text) => (text.length <= 90 ? 40 : text.length <= 180 ? 32 :
  *   tokenCount  tokens in the CSS and JSON downloads
  *   embedded    { family: licence name } for each selected family that is embedded
  *   chrome      the publisher faces this layout loads
+ *   download    Map of each custom property the CSS download declares to its value
  * @returns {Object<string,string>} the template's placeholders, without the @@
  */
 export function showcaseParts(sel, h) {
-  const { tokens, esc, on, g, contrast, grade, roles, date, tokenCount, embedded = {}, chrome = [] } = h
+  const { tokens, esc, on, g, contrast, grade, roles, date, tokenCount, embedded = {}, chrome = [], download = new Map() } = h
   const hex = (v) => safeHex(v, '#000000')
-  const iso = date.toISOString().slice(0, 10)
+  const iso = localIso(date)
   const title = sel.title
   const display = sel.fonts.display
   const body = sel.fonts.body
@@ -91,7 +92,7 @@ export function showcaseParts(sel, h) {
   const rule = contrast(hex(tokens['color-accent']), canvas) >= 3 ? 'var(--color-accent)' : 'var(--color-primary)'
   const facts = [
     plural(families.size, 'typeface'),
-    plural(sel.colours.length, 'colour'),
+    plural(sel.colourCount, 'colour'),
     plural(tokenCount, 'token'),
     `Issued ${iso}`,
   ].join(' · ')
@@ -102,7 +103,7 @@ export function showcaseParts(sel, h) {
   const monoFace = ownMono ? (ownMono === body ? 'var(--font-body)' : 'var(--font-display)') : null
   const tokenNote = ownMono
     ? `Set in ${ownMono.name}, your ${ownMono === body ? 'body' : 'heading'} face, with tabular figures.`
-    : 'Set in your system’s monospace face (ui-monospace, SF Mono, Menlo, Consolas), with tabular figures.'
+    : 'Set in your system’s monospace face, with tabular figures.'
 
   // ── Heading band: the project's name, then the face's alphabet and figures at the H2 step ──
   const nameFit = fitTitle(title, SAMPLE_FIT)
@@ -132,7 +133,7 @@ export function showcaseParts(sel, h) {
     const key = t.name.toLowerCase().replace(/ /g, '-')
     const family = sel.fonts[t.font].name
     const leading = g(Math.round(t.size * t.line * 10) / 10)
-    return `<tr><th scope="row"><span class="nm"><b>${esc(t.name)}</b><small>${esc(family)}</small></span></th><td class="vals">${copy(`var(--text-${key})`, `${t.name} size`, `${g(t.size)} px / ${g(t.line)} / ${t.weight}`)}<small class="var">--text-${key}</small><small>${leading} px line</small></td><td class="spec"><p style="--s:${g(t.size)};line-height:${t.line};font-family:var(--font-${t.font});font-weight:${t.weight}">${esc(stepSample(t))}</p></td></tr>`
+    return `<tr><th scope="row"><span class="nm"><b>${esc(t.name)}</b><small>${esc(family)}</small></span></th><td class="vals">${copy(`var(--font-size-${key})`, `${t.name} size`, `${g(t.size)} px / ${g(t.line)} / ${t.weight}`)}<small class="var">--font-size-${key}</small><small>${leading} px line</small></td><td class="spec"><p style="--s:${g(t.size)};line-height:${t.line};font-family:var(--font-${t.font});font-weight:${t.weight}">${esc(stepSample(t))}</p></td></tr>`
   }).join('')
   const scaleTable = `<thead><tr><th scope="col">Step</th><th scope="col">Size / line height / weight</th><th scope="col">${specimenHead.startsWith('Specimen, ') ? `Specimen<span class="pr-only">${esc(specimenHead.slice(8))}</span>` : esc(specimenHead)}</th></tr></thead><tbody>${scaleRows}</tbody>`
 
@@ -150,7 +151,7 @@ export function showcaseParts(sel, h) {
     const selfGrade = v.toLowerCase() === canvas.toLowerCase()
     const ink = on(v)
     const pale = contrast(v, canvas) < PALE_RATIO
-    return `<li><button class="stripe${pale ? ' pale' : ''}" style="--w:${weights[i]};background:${v};color:${ink}" data-copy="${v}"><span class="s-name"><span class="sr-only">Copy </span><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span><code>${v}</code><span class="s-lands"><small>Where it lands</small>${esc(capital(c.lands))}</span><span class="s-grade"><small>As text on the canvas</small>${selfGrade ? '<b>Canvas colour</b>' : `<b>${c.onCanvas.toFixed(2)}:1</b> ${grade(c.onCanvas)}`}</span></button></li>`
+    return `<li><button class="stripe${pale ? ' pale' : ''}" style="--w:${weights[i]};background:${v};color:${ink}" data-copy="${v}"><span class="s-name"><span class="sr-only">Copy </span><b>${esc(c.name)}</b><small>${esc(sentenceCase(c.role))}</small></span><code>${v}</code><span class="s-lands"><small>Where it lands</small>${esc(c.placed ? capital(c.lands) : 'Not assigned')}</span><span class="s-grade"><small>As text on the canvas</small>${selfGrade ? '<b>Canvas colour</b>' : `<b>${c.onCanvas.toFixed(2)}:1</b> ${grade(c.onCanvas)}`}</span></button></li>`
   }).join('')
   const colourNote = cut
     ? `The first ${sel.colours.length} of ${sel.colourCount} colours are shown. All ${sel.colourCount} are in the CSS and JSON downloads.`
@@ -164,9 +165,11 @@ export function showcaseParts(sel, h) {
 
   // ── Tokens: the declarations an engineer pastes, by group ─────────────────
   const seen = new Set()
-  const line = (name, value) => {
+  // A name the CSS download declares is listed with that file's own value, so the line is what the file holds.
+  const line = (name, own) => {
     if (seen.has(name)) return ''
     seen.add(name)
+    const value = download.get(name) ?? own
     const text = `--${name}: ${value};`
     return `<li><button class="tk" data-copy="${esc(text)}" aria-label="Copy ${esc(`--${name}`)}"><code><span class="k">--${esc(name)}</span>: ${esc(value)};</code></button></li>`
   }
@@ -174,14 +177,15 @@ export function showcaseParts(sel, h) {
   const colourLines = [
     ...sel.colours.map((c) => line(c.token.slice(2), hex(c.hex))),
     ...roles.map(([, key]) => line(key, hex(tokens[key]))),
-    ...sel.semantic.flatMap((s) => [line(`color-${s.id}`, hex(s.hex)), line(`color-${s.id}-subtle`, hex(s.background))]),
+    ...sel.semantic.flatMap((s) => [line(s.token, hex(s.hex)), line(s.backgroundToken, hex(s.background))]),
   ]
   const typeLines = [
-    line('font-display', tokens['font-display']),
+    line('font-heading', tokens['font-display']),
     line('font-body', tokens['font-body']),
     ...sel.typeScale.flatMap((t) => {
       const key = t.name.toLowerCase().replace(/ /g, '-')
-      return [line(`text-${key}`, tokens[`text-${key}`]), line(`leading-${key}`, tokens[`leading-${key}`]), line(`weight-${key}`, tokens[`weight-${key}`])]
+      const face = t.font === 'display' ? 'heading' : 'body'
+      return [line(`font-size-${key}`, `${g(t.size)}px`), line(`line-height-${face}`, String(t.line)), line(`font-weight-${face}`, String(t.weight))]
     }),
   ]
   const spaceLines = sel.spacing.map((s) => line(`space-${s}`, `${s}px`))
@@ -233,7 +237,7 @@ export function showcaseParts(sel, h) {
     COLOUR_NOTE: esc(colourNote),
     STATE_ROWS: stateRows,
     TOKEN_GROUPS: tokenGroups,
-    TOKEN_TOTAL: esc(`The CSS and JSON downloads carry all ${tokenCount} tokens, including each colour’s tints.`),
+    TOKEN_TOTAL: esc(`Every line is in the CSS and JSON downloads, which carry all ${tokenCount} tokens, including each colour’s tints.`),
     FONT_ROWS: fontRows,
     DOC_ROWS: docRows,
   }

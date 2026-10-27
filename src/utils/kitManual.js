@@ -6,7 +6,7 @@
 // The template (src/templates/kit/manual.html) owns the structure, the copy and the
 // styling; this file only turns data into the rows it places.
 
-import { fitTitle, clampTitle, specimenScale, safeHex } from './exportTemplates/shared.js'
+import { fitTitle, clampTitle, specimenScale, safeHex, sentenceCase, localIso } from './exportTemplates/shared.js'
 
 // The cover name: the user's heading face, at most two lines, measured at the
 // field's width on a 1440 px screen.
@@ -31,6 +31,8 @@ const PAIRS = Object.freeze([
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1)
+// How a colour's "where it lands" cell reads; a colour the kit does not place says so in two words.
+const landsText = (c) => (c.placed ? capital(c.lands) : 'Not assigned')
 
 /**
  * @param sel   kitSelections(...)
@@ -49,7 +51,7 @@ const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 export function manualParts(sel, h) {
   const { tokens, esc, g, contrast, grade, roles, date, tokenCount, embedded = {}, chrome = [] } = h
   const hex = (v) => safeHex(v, '#000000')
-  const iso = date.toISOString().slice(0, 10)
+  const iso = localIso(date)
   const copy = (value, label, text = value) => `<button class="cv" data-copy="${esc(value)}" aria-label="Copy ${esc(label)}"><code>${esc(text)}</code></button>`
   const variable = (key, label) => copy(`var(--${key})`, `${label} CSS variable`, `--${key}`)
   const chip = (value) => `<i class="chip" style="background:${hex(value)}"></i>`
@@ -66,7 +68,7 @@ export function manualParts(sel, h) {
   const fit = fitTitle(title, COVER_FIT)
   const coverTitle = fit.clamp ? clampTitle(title, fit.size, COVER_FIT) : title
   const facts = [
-    plural(sel.colours.length, 'colour'),
+    plural(sel.colourCount, 'colour'),
     plural(families.size, 'family', 'families'),
     plural(tokenCount, 'token'),
     `Issued ${iso}`,
@@ -81,7 +83,7 @@ export function manualParts(sel, h) {
     : ratioCell(ratio, label))
   const colourRows = sel.colours.map((c) => {
     const ramp = Object.entries(c.scale).map(([stop, value]) => `<i${stop === '500' ? ' class="base"' : ''} style="background:${hex(value)}" title="${stop}${stop === '500' ? ' (base)' : ''} ${hex(value)}"></i>`).join('')
-    return `<tr><th scope="row">${chip(c.hex)}<span class="nm"><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span></th><td><small class="lbl">Variable</small>${variable(c.token.slice(2), c.name)}</td><td><small class="lbl">Hex</small>${copy(c.hex, `${c.name} hex`)}</td><td><small class="lbl">OKLCH</small>${copy(c.oklch, `${c.name} OKLCH`)}</td>${gradeOrRole(c, c.onCanvas, 'On canvas', canvasHex, 'Canvas colour')}${gradeOrRole(c, c.onText, 'On text', textHex, 'Text colour')}<td class="c-ramp"><small class="lbl">Tints, 50 to 950</small><span class="ramp" role="img" aria-label="${esc(c.name)} tints, 50 to 950. The values are in the Tints table.">${ramp}</span></td><td class="lands"><small class="lbl">Where it lands</small>${esc(capital(c.lands))}</td></tr>`
+    return `<tr><th scope="row">${chip(c.hex)}<span class="nm"><b>${esc(c.name)}</b><small>${esc(sentenceCase(c.role))}</small></span></th><td><small class="lbl">Variable</small>${variable(c.token.slice(2), c.name)}</td><td><small class="lbl">Hex</small>${copy(c.hex, `${c.name} hex`)}</td><td><small class="lbl">OKLCH</small>${copy(c.oklch, `${c.name} OKLCH`)}</td>${gradeOrRole(c, c.onCanvas, 'On canvas', canvasHex, 'Canvas colour')}${gradeOrRole(c, c.onText, 'On text', textHex, 'Text colour')}<td class="c-ramp"><small class="lbl">Tints, 50 to 950</small><span class="ramp" role="img" aria-label="${esc(c.name)} tints, 50 to 950. The values are in the Tints table.">${ramp}</span></td><td class="lands"><small class="lbl">Where it lands</small>${esc(landsText(c))}</td></tr>`
   }).join('')
   const colourTable = `<tbody>${colourRows}</tbody>`
   // The tints' values, one row per colour, so a printed page and a keyboard reach them.
@@ -104,7 +106,7 @@ export function manualParts(sel, h) {
   const typeRows = sel.typeScale.map((t) => {
     const key = t.name.toLowerCase().replace(/ /g, '-')
     const family = sel.fonts[t.font].name
-    return `<tr><th scope="row"><span class="nm"><b>${esc(t.name)}</b><small>${esc(family)}</small></span></th><td>${copy(`var(--text-${key})`, `${t.name} size`, `${g(t.size / 16)}rem`)}<small>${g(t.size)} px</small></td><td>${copy(`var(--leading-${key})`, `${t.name} line height`, String(t.line))}<small>${g(Math.round(t.size * t.line * 10) / 10)} px</small></td><td>${copy(`var(--weight-${key})`, `${t.name} weight`, String(t.weight))}</td><td class="spec"><p style="font-size:${g(Math.round(t.size * k * 10) / 10)}px;line-height:${t.line};font-family:var(--font-${t.font});font-weight:${t.weight}">${esc(t.sample)}</p></td></tr>`
+    return `<tr><th scope="row"><span class="nm"><b>${esc(t.name)}</b><small>${esc(family)}</small></span></th><td>${copy(`var(--font-size-${key})`, `${t.name} size`, `${g(t.size / 16)}rem`)}<small>${g(t.size)} px</small></td><td>${copy(`var(--line-height-${t.font === 'display' ? 'heading' : 'body'})`, `${t.name} line height`, String(t.line))}<small>${g(Math.round(t.size * t.line * 10) / 10)} px</small></td><td>${copy(`var(--font-weight-${t.font === 'display' ? 'heading' : 'body'})`, `${t.name} weight`, String(t.weight))}</td><td class="spec"><p style="font-size:${g(Math.round(t.size * k * 10) / 10)}px;line-height:${t.line};font-family:var(--font-${t.font});font-weight:${t.weight}">${esc(t.sample)}</p></td></tr>`
   }).join('')
   const typeTable = `<thead><tr><th scope="col">Step</th><th scope="col">Size</th><th scope="col">Line height</th><th scope="col">Weight</th><th scope="col">${esc(specimenHead)}</th></tr></thead><tbody>${typeRows}</tbody>`
 
@@ -131,7 +133,7 @@ export function manualParts(sel, h) {
 
   const semanticRows = sel.semantic.map((s) => {
     const ratio = contrast(s.hex, s.background)
-    return `<tr><th scope="row"><span class="nm"><b>${esc(s.name)}</b><small>${esc(s.guidance)}</small></span></th><td>${chip(s.hex)}${variable(`color-${s.id}`, s.name)}<small>${hex(s.hex)}</small></td><td>${chip(s.background)}${variable(`color-${s.id}-subtle`, `${s.name} background`)}<small>${hex(s.background)}</small></td>${ratioCell(ratio)}<td class="samples"><span class="smp" style="color:${hex(s.hex)};background:${hex(s.background)}">${esc(s.message)}</span></td></tr>`
+    return `<tr><th scope="row"><span class="nm"><b>${esc(s.name)}</b><small>${esc(s.guidance)}</small></span></th><td>${chip(s.hex)}${variable(s.token, s.name)}<small>${hex(s.hex)}</small></td><td>${chip(s.background)}${variable(s.backgroundToken, `${s.name} background`)}<small>${hex(s.background)}</small></td>${ratioCell(ratio)}<td class="samples"><span class="smp" style="color:${hex(s.hex)};background:${hex(s.background)}">${esc(s.message)}</span></td></tr>`
   }).join('')
 
   const roleRows = roles.map(([name, key, use]) => `<tr><th scope="row">${chip(tokens[key])}<span class="nm"><b>${name}</b></span></th><td>${variable(key, name)}</td><td>${copy(tokens[key], `${name} value`)}</td><td>${use}</td></tr>`).join('')
