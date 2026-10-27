@@ -216,7 +216,7 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['gradient', 'gradients', 'linear', 'radial', 'conic', 'mesh', 'css', 'background', 'fade', 'blend'],
   },
   contrast: {
-    description: 'Free WCAG checker — test any two colours for AA and AAA.',
+    description: 'A WCAG checker: test any two colours for AA and AAA.',
     keywords: ['contrast', 'contrast checker', 'checker', 'wcag', 'aa', 'aaa', 'accessibility', 'a11y', 'ratio', 'legibility', 'readable'],
   },
   icons: {
@@ -248,7 +248,7 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['box', 'shadow', 'shadows', 'box shadow', 'css', 'elevation', 'layer', 'drop shadow', 'neumorphic'],
   },
   'file-converter': {
-    description: 'Convert and compress images and video — WebP, MP4, GIF, frames and more.',
+    description: 'Convert and compress images and video: WebP, MP4, GIF, frames and more.',
     keywords: ['convert', 'converter', 'file converter', 'file', 'image', 'imagery', 'media', 'compress', 'resize', 'webp', 'gif', 'mp4', 'video', 'frames', 'extract', 'png', 'jpeg', 'avif', 'ezgif'],
   },
   ratio: {

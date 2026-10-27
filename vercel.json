@@ -1,7 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "regions": ["syd1"],
+  "regions": [
+    "syd1"
+  ],
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
@@ -462,6 +464,10 @@
     {
       "source": "/terms",
       "destination": "/terms/index.html"
+    },
+    {
+      "source": "/tools",
+      "destination": "/tools/index.html"
     },
     {
       "source": "/admin",

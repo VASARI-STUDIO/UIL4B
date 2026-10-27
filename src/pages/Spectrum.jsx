@@ -178,7 +178,8 @@ export default function Spectrum() {
                 <p className="sp-bench-lede">
                   {numberWord(TOOL_COUNT, { capital: true })} tools that would otherwise be{' '}
                   {numberWord(TOOL_COUNT)} tabs and a folder you stopped opening. They are all
-                  running below.
+                  running below.{' '}
+                  <Link className="sp-bench-more" to="/tools">See all of them.</Link>
                 </p>
               </div>
             )}

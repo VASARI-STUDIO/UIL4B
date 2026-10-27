@@ -70,6 +70,8 @@ const Pricing = lazy(() => import('./pages/Pricing'))
 // marketing page reached from the nav, not the front door, and spectrum.css
 // (which it shares) is already in the entry graph via <Spectrum />.
 const SpectrumMobile = lazy(() => import('./pages/SpectrumMobile'))
+// /tools: the tool previews. Lazy, so its live demos load only on that page.
+const SpectrumTools = lazy(() => import('./pages/SpectrumTools'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
@@ -427,6 +429,18 @@ function AppInner({ toast }) {
       <>
         <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
           <SpectrumMobile />
+        </Suspense>
+        <GoogleOneTap />
+      </>
+    )
+  }
+  // /tools: the tool previews, built like /mobile (the Spectrum nav and footer
+  // sit above the app shell). Normalised so `/tools/` is the same page.
+  if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/tools') {
+    return (
+      <>
+        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <SpectrumTools />
         </Suspense>
         <GoogleOneTap />
       </>
