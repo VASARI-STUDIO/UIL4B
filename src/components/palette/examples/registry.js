@@ -6,6 +6,7 @@
 // Nothing here is imported until its scene is picked, so opening the preview
 // costs the dialog and one example, not all of them.
 import { lazy } from 'react'
+import Unavailable from './Unavailable.jsx'
 
 // scene id -> () => import('./<File>.jsx'). Each default-exports the example.
 const LOADERS = {
@@ -19,7 +20,7 @@ export const hasExample = (id) => Object.hasOwn(LOADERS, id)
 // One lazy component per example, made once at module level: a component made
 // in render would be a new type every render and remount the scene.
 export const EXAMPLES = Object.fromEntries(
-  Object.entries(LOADERS).map(([id, load]) => [id, lazy(load)]),
+  Object.entries(LOADERS).map(([id, load]) => [id, lazy(() => load().catch(() => ({ default: Unavailable })))]),
 )
 
 // Starts the download without rendering. Safe to call twice: the module system

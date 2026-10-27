@@ -12,9 +12,19 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { stripJs } from '../helpers/strip-comments.js'
 
+const EXAMPLES_DIR = 'src/components/palette/examples'
+// The examples are read by folder, so a new one is covered the day it is added.
+const exampleFiles = fs.readdirSync(path.join(process.cwd(), EXAMPLES_DIR))
+  .filter((f) => /\.jsx$|\.data\.js$/.test(f))
+  .map((f) => `${EXAMPLES_DIR}/${f}`)
+
+// [file, shortest stripped length it may read back as]. An example is smaller
+// than the Fernway scenes, so its floor is lower; it is still a guard against a
+// file that was emptied or moved, which would pass the banned-word check on nothing.
 const FILES = [
-  'src/data/palettePreviewScenes.js',
-  'src/components/palette/PalettePreview.jsx',
+  ['src/data/palettePreviewScenes.js', 1000],
+  ['src/components/palette/PalettePreview.jsx', 1000],
+  ...exampleFiles.map((f) => [f, 300]),
 ]
 
 const read = (rel) => stripJs(fs.readFileSync(path.join(process.cwd(), rel), 'utf8'))
@@ -29,10 +39,10 @@ const BANNED = [
   ['an em dash', /—|&mdash;|&#8212;/i],
 ]
 
-for (const file of FILES) {
+for (const [file, minLength] of FILES) {
   test(`${file} prints none of the banned words or an em dash`, () => {
     const code = read(file)
-    assert.ok(code.length > 1000, `${file} read back almost empty (${code.length} chars)`)
+    assert.ok(code.length > minLength, `${file} read back almost empty (${code.length} chars)`)
     const hits = []
     code.split('\n').forEach((line, i) => {
       for (const [label, re] of BANNED) {
@@ -60,8 +70,8 @@ test('the banned-word check can see a hit: each pattern matches a sample line', 
 
 test('the scene content still carries the Fernway sample data it is meant to protect', () => {
   // If the data file were emptied or moved, the two checks above would pass on
-  // nothing. Read it back and require the product name and the eight scenes.
+  // nothing. Read it back and require the product name and the eleven scenes.
   const data = read('src/data/palettePreviewScenes.js')
   assert.match(data, /Fernway/)
-  assert.equal((data.match(/\bfree: (?:true|false)\b/g) || []).length, 8, 'expected eight scene entries')
+  assert.equal((data.match(/\bfree: (?:true|false)\b/g) || []).length, 11, 'expected eleven scene entries')
 })
