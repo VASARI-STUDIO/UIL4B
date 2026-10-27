@@ -47,9 +47,11 @@ function cover(ctx) {
   const spec = d.logo ? COVER_FIT_LOGO : COVER_FIT
   const fit = fitTitle(projectName, spec)
   const mark = d.logo ? ctx.markImg({ cls: 'pn-cover-mark', alt: `${projectName} logo` }) : ''
+  // A name cut for the cover is printed whole in the foot, in solid ink.
+  const full = fit.clamp ? `<p class="cv-full">${esc(projectName)}</p>` : ''
   return `<section class="sl sl-poster sl-cover" style="background:${safeHex(field, 'Canvas')};color:${safeHex(fieldInk, 'CanvasText')}">
   <header class="pn-top"><span class="pn-sec">${mark || 'Brand guidelines'}</span><span class="pn-num">${esc(year)}</span></header>
-  ${titleBlock(projectName, fit, spec, 'cv-title')}
+  ${titleBlock(projectName, fit, spec, 'cv-title')}${full}
 </section>`
 }
 
@@ -203,6 +205,7 @@ function css(ctx) {
   .sl-cover .pn-sec{display:block}
   .sl-cover .cv-title{margin:auto 0 28mm;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;padding-bottom:.14em;letter-spacing:-.025em}
   .sl-cover .cv-title.is-clamped{padding-bottom:0;line-height:1.12}
+  .sl-cover .cv-full{position:absolute;left:var(--m);right:var(--m);bottom:var(--m);font-size:12pt;line-height:1.3;overflow-wrap:anywhere}
 
   /* colour slides: the slide is the colour; the name sits low at the largest size it fits */
   .pn-facts{display:grid;grid-template-columns:repeat(4,1fr);gap:6mm;margin-top:auto;font-size:12pt}
