@@ -278,7 +278,7 @@ test('ExportPanel actually asks the server for this format', () => {
   assert.match(code, /guidelines: \{[\s\S]*?activation: 'brand-guidelines'/,
     'the guidelines export reports under its own activation name, so the two paid documents can be told apart')
   assert.match(code, /file: 'brand-guidelines\.html'/, 'the file is not named after the document it is')
-  assert.match(code, /requestExportDocument\(\{ format, design, projectName \}/,
+  assert.match(code, /requestExportDocument\(\{ format, design, projectName, template: chosenTemplates\[format\] \}/,
     'the panel is not asking the server for the document')
   assert.ok(!/brandGuidelines/.test(code), 'ExportPanel imports the guidelines generator again')
 })

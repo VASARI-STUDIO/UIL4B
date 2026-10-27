@@ -376,7 +376,13 @@ test('a generator that throws is a 500 with no partial document', async () => {
 
 /* ── 3 · the browser has no generator ─────────────────────────────────────── */
 
-const GENERATORS = ['src/utils/designSystemBook.js', 'src/utils/brandGuidelines.js'].map((p) => path.resolve(p))
+// The generators and the template modules they pick from. A template is the layout of
+// the paid document, so one the app can reach would ship it just as the generator would.
+const GENERATORS = [
+  'src/utils/designSystemBook.js', 'src/utils/brandGuidelines.js',
+  'src/utils/exportTemplates/book/index.js', 'src/utils/exportTemplates/book/specification.js',
+  'src/utils/exportTemplates/guidelines/index.js', 'src/utils/exportTemplates/guidelines/presentation.js',
+].map((p) => path.resolve(p))
 
 // Every file the app's entry can reach, following static AND dynamic imports.
 function reachableFrom(entry) {
@@ -429,7 +435,8 @@ const noBuild = !fs.existsSync(builtAssets) && 'run a build first (see DIST_DIR)
 // Text that each generator writes into its document and that nothing else in the app has.
 const MARKERS = [
   { file: 'src/utils/designSystemBook.js', text: ' — Design System</title>' },
-  { file: 'src/utils/brandGuidelines.js', text: 'Brand <br>Guidelines' },
+  { file: 'src/utils/exportTemplates/guidelines/presentation.js', text: 'Brand <br>Guidelines' },
+  { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design System</span>' },
 ]
 
 test('CONTROL: each bundle marker is really in its generator', () => {
