@@ -14,6 +14,7 @@ import { sampleStopsOklch } from '../components/tool/oklch'
 import { GRAD_TYPE_WEIGHTS, pickGradientType, pickStopCount } from '../utils/gradientRandom'
 import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
+import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
@@ -63,7 +64,11 @@ const PRESETS = [
   { n: 'Ocean', type: 'Radial', angle: 90, stops: [{ color: '#38BDF8', position: 0 }, { color: '#1E3A8A', position: 100 }] },
 ]
 
-const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+// A taste of the library for its panel: the first few gradients a free account
+// can open in full. Rows without stops are name-only stubs and are skipped.
+const EXPLORE_TASTE = LIBRARY_GRADIENT_ROWS.filter((g) => Array.isArray(g.stops)).slice(0, 6)
+
+const slugify =(s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 // A palette colour counts only if it's a full 6-digit hex (3-digit shorthand
 // and blanks are rejected) — shared by every palette-sampling path below so the
@@ -1224,6 +1229,23 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </button>
             )
           })}
+        </div>
+      </section>
+
+      {/* The way into the full library: a full-width panel under the presets,
+          with a few of the library's own gradients as a taste. */}
+      <section className="grd-explore" aria-labelledby="grd-explore-title">
+        <div className="grd-explore-copy">
+          <h2 id="grd-explore-title">Explore the library</h2>
+          <p>Browse the gradient library, filter by mood, and open any gradient here to adjust it.</p>
+          <ToolButton as={Link} to="/discover/gradients" variant="accent" icon="caret-right" iconSize={13} className="grd-explore-cta">
+            Explore the library
+          </ToolButton>
+        </div>
+        <div className="grd-explore-taste" aria-hidden="true">
+          {EXPLORE_TASTE.map((g) => (
+            <span key={g.id} className="grd-explore-chip" style={{ background: gradientCss(g.type, g.angle, g.stops) }} />
+          ))}
         </div>
       </section>
 
