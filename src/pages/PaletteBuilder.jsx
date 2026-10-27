@@ -1076,7 +1076,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // DISPLAYED palette and NOT on the deferred one: a title that lags the hex
   // beside it by a frame is the same "this label describes the colour that was
   // here a moment ago" fault the fixed role labels had, just briefer. It costs
-  // one CAM16 solve per colour against the six the tonal ramp above spends, so
+  // one CAM16 solve per colour, against the strip's OKLCH ramp above, so
   // it is cheap enough to keep in step. Pure over the hex list
   // (utils/paletteNames.js), so a re-render that changes no colour produces the
   // identical array and nothing re-titles.
@@ -2615,8 +2615,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 <button
                   type="button"
                   className="plb-ramp"
-                  title="View tints"
-                  aria-label={`Tonal ramp of ${adjusted[i]} — view all tints`}
+                  title={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900`}
+                  aria-label={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900 — view all tints`}
                   onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
                 >
                   {ramp.map((rc, k) => (

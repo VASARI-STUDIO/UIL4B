@@ -4,12 +4,17 @@
 //
 // The ramp is an OKLCH lightness curve from 0.97 down, one hue, and a chroma
 // that peaks mid-scale and tapers to about 55% at the ends, so the light end is
-// a soft tint instead of an sRGB-clamped neon. It is NOT anchored to the source
-// colour: step 500 is the middle of the scale, not the source itself.
+// a soft tint instead of an sRGB-clamped neon. A step that still falls outside
+// sRGB has its chroma reduced (lightness and hue kept) until it fits, rather
+// than having channels clipped, which would drift its hue. A near-grey source
+// (chroma under NEUTRAL_CHROMA) gives a pure grey ramp: the hue of a grey is
+// numerical noise, and scaling its chroma up would tint the ramp yellow-green.
+// It is NOT anchored to the source colour: step 500 is the middle of the
+// scale, not the source itself.
 //
 // projectTints.js keeps its own HSL ramp for the tints a project saves. That is
 // a separate output (it feeds exports) and is left alone here.
-import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch.js'
+import { hexToOklchRaw, oklchInGamut, oklchToHex } from '../components/tool/oklch.js'
 
 export const TINT_LABELS = {
   9: ['50', '100', '200', '300', '400', '500', '600', '700', '800'],
@@ -17,16 +22,34 @@ export const TINT_LABELS = {
   13: ['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950', '975'],
 }
 
-// The design's ramp, exactly (App.dc.html D:1436-1442). `curve` is 0 Even,
-// 1 Soft ends, 2 High contrast.
+// Below this input chroma a colour is treated as neutral. White and the greys
+// read 0.005-0.009 here, at a meaningless hue.
+const NEUTRAL_CHROMA = 0.01
+
+// The largest chroma <= `chroma` that fits sRGB at this lightness and hue.
+function fitChroma(L, chroma, hue) {
+  if (oklchInGamut(L, chroma, hue)) return chroma
+  let lo = 0
+  let hi = chroma
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2
+    if (oklchInGamut(L, mid, hue)) lo = mid
+    else hi = mid
+  }
+  return lo
+}
+
+// The design's lightness and chroma curves (App.dc.html D:1436-1442), with the
+// gamut fit above. `curve` is 0 Even, 1 Soft ends, 2 High contrast.
 export function buildRamp(hue, chroma, steps, curve) {
   const labels = TINT_LABELS[steps]
+  if (chroma < NEUTRAL_CHROMA) chroma = 0
   return labels.map((label, i) => {
     const t = i / (steps - 1)
     let L = 0.97 - t * 0.78
     if (curve === 1) L = 0.97 - (0.5 - Math.cos(Math.PI * t) / 2) * 0.78
     if (curve === 2) L = 0.97 - Math.pow(t, 0.78) * 0.83
-    const c = chroma * (1 - Math.abs(t - 0.5) * 0.9)
+    const c = fitChroma(L, chroma * (1 - Math.abs(t - 0.5) * 0.9), hue)
     return { label, L, hex: oklchToHex(L, c, hue) }
   })
 }
