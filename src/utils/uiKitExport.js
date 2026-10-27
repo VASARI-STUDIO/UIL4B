@@ -131,6 +131,9 @@ const SPACING = Object.freeze([4, 8, 12, 16, 24, 32, 48, 64, 96])
 const RADIUS = Object.freeze({ control: 6, card: 16 })
 const MOTION = Object.freeze({ fast: 180, ease: [0.16, 1, 0.3, 1] })
 
+// A swatch at least this light gets a hairline, so it holds its edge on the page.
+const PALE_LUM = 0.75
+
 const PRINT_META_FONT = '"Publisher Geist Mono",Arial,sans-serif'
 const PRINT_META_INK = '#5A5D64'
 
@@ -607,7 +610,36 @@ export function renderUiKit(design, {
 
   const roleRows = ROLES.map(([name, key, description]) => `<tr><th scope="row"><i style="background:${tokens[key]}"></i>${name}</th><td><button class="copy-text" data-copy="var(--${key})" aria-label="Copy ${name} CSS variable"><code>--${key}</code>${icon('copy')}</button></td><td><code>${tokens[key]}</code></td><td>${description}</td></tr>`).join('')
 
-  const swatches = sel.palette.map((p) => `<article class="swatch"><button class="colour-chip" style="--swatch:${p.hex};--on-swatch:${on(p.hex)}" data-copy="${p.hex}" aria-label="Copy ${esc(p.name)} ${p.hex}"><span>${esc(p.name)}</span><span class="chip-bottom"><code>${p.hex}</code>${icon('copy')}</span></button><div class="swatch-details"><h3>${esc(p.role)}</h3><p>${esc(p.note)}${p.derivedNote ? ` ${esc(p.derivedNote)}` : ''}</p><code>RGB ${rgb(p.hex).join(' / ')}</code></div></article>`).join('')
+  // One swatch: the chip, the colour's role, and where it lands. The chip's big
+  // text is how the colour reads as text on the canvas (for the canvas itself,
+  // how ink reads on it), graded in words so colour is never the only cue.
+  const swatchCell = ({ hex, name, title, note, lands, ratio, basis }) => {
+    const grade = gradeOf(ratio)
+    const fails = grade === 'Fails AA'
+    const pale = lum(hex) >= PALE_LUM ? ' pale' : ''
+    return `<article class="swatch"><button class="colour-chip${pale}" style="--swatch:${hex};--on-swatch:${on(hex)}" data-copy="${hex}" aria-label="Copy ${esc(name)} ${hex}"><span>${esc(name)}</span><span class="chip-result"><b class="chip-grade${fails ? ' fails' : ''}">${grade}</b><small>${ratio.toFixed(2)}:1 ${basis}</small></span><span class="chip-bottom"><code>${hex}</code>${icon('copy')}</span></button><div class="swatch-details"><h3>${esc(title)}</h3>${note ? `<p>${esc(note)}</p>` : ''}<p class="lands"><small>Where it lands</small>${esc(lands.charAt(0).toUpperCase() + lands.slice(1))}</p><p class="sr-only">Contrast ${ratio.toFixed(2)} to 1 ${basis}: ${grade}.</p><code>RGB ${rgb(hex).join(' / ')}</code></div></article>`
+  }
+  const canvasHex = slot.chalk.hex
+  const swatches = sel.palette.map((p) => swatchCell({
+    hex: p.hex,
+    name: p.name,
+    title: p.role,
+    note: `${p.note}${p.derivedNote ? ` ${p.derivedNote}` : ''}`,
+    lands: p.lands,
+    ratio: p.id === 'chalk' ? contrast(slot.ink.hex, p.hex) : contrast(p.hex, canvasHex),
+    basis: p.id === 'chalk' ? 'for text on it' : 'as text on the canvas',
+  })).join('')
+
+  // The palette's other colours, which the kit paints nothing with, and a note
+  // when the design holds more colours than a kit lists.
+  const unplaced = sel.colours.filter((c) => c.lands === UNPLACED_LANDS)
+  const colourCut = sel.colourCount > sel.colours.length
+  const moreList = unplaced.map((c) => swatchCell({ hex: c.hex, name: c.name, title: `${c.role.charAt(0)}${c.role.slice(1).toLowerCase()}`, note: '', lands: c.lands, ratio: c.onCanvas, basis: 'as text on the canvas' })).join('')
+  const moreHead = '<div class="subhead"><h3>The rest of your palette.</h3><p>These colours are in the CSS and JSON downloads. This kit does not assign them to a part of the interface.</p></div>'
+  const cutNote = `<p class="contrast-note">The first ${sel.colours.length} of ${sel.colourCount} colours are shown. All ${sel.colourCount} are in the CSS and JSON downloads.</p>`
+  const moreSwatches = unplaced.length || colourCut
+    ? `<div class="more-colours">${unplaced.length ? `${moreHead}<div class="palette more">${moreList}</div>` : ''}${colourCut ? cutNote : ''}</div>`
+    : ''
 
   const semantics = sel.semantic.map((s) => {
     const ratio = contrast(s.hex, s.background)
@@ -651,6 +683,7 @@ export function renderUiKit(design, {
     FONT_CSS: fontCss,
     TOKEN_CSS: templateCss,
     SWATCHES: swatches,
+    MORE_SWATCHES: moreSwatches,
     SEMANTICS: semantics,
     TYPE_ROWS: typeRows,
     SPACING: spacing,
