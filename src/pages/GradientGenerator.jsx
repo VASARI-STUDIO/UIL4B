@@ -41,27 +41,24 @@ import '../styles/pages/gradient.css'
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 
-// Starter presets (the 4×4 grid). Explicit hex so the preview is vivid
-// regardless of the user's current palette. A spread of moods — vivid,
-// muted, warm, cool, mono — and all three gradient types (Linear / Radial /
-// Conic) so the grid doubles as a tour of what the tool can build.
+// Starter presets: ready-to-use gradients for real interfaces, mostly linear
+// with a few radial. Each carries what it is good for, so the list reads as a
+// set of answers rather than a spread of colours. They are drawn in OKLCH
+// (`space`), so a ramp between two hues keeps its lightness and chroma instead
+// of going grey in the middle; stops are placed where the hue changes. None
+// repeats a gradient from the library.
 const PRESETS = [
-  { n: 'Nebula', type: 'Conic', angle: 90, stops: [{ color: '#7C3AED', position: 0 }, { color: '#DB2777', position: 50 }, { color: '#F59E0B', position: 100 }] },
-  { n: 'Aqua', type: 'Linear', angle: 120, stops: [{ color: '#0EA5E9', position: 0 }, { color: '#22D3EE', position: 100 }] },
-  { n: 'Ember', type: 'Linear', angle: 45, stops: [{ color: '#DC2626', position: 0 }, { color: '#F59E0B', position: 100 }] },
-  { n: 'Meadow', type: 'Linear', angle: 135, stops: [{ color: '#16A34A', position: 0 }, { color: '#84CC16', position: 100 }] },
-  { n: 'Dusk', type: 'Linear', angle: 160, stops: [{ color: '#6366F1', position: 0 }, { color: '#A855F7', position: 100 }] },
-  { n: 'Graphite', type: 'Linear', angle: 135, stops: [{ color: '#1F2937', position: 0 }, { color: '#4B5563', position: 100 }] },
-  { n: 'Peach', type: 'Linear', angle: 90, stops: [{ color: '#FB7185', position: 0 }, { color: '#FDBA74', position: 100 }] },
-  { n: 'Mono', type: 'Linear', angle: 180, stops: [{ color: '#0F172A', position: 0 }, { color: '#64748B', position: 100 }] },
-  { n: 'Sunset', type: 'Linear', angle: 60, stops: [{ color: '#F97316', position: 0 }, { color: '#DB2777', position: 55 }, { color: '#7C3AED', position: 100 }] },
-  { n: 'Lagoon', type: 'Linear', angle: 135, stops: [{ color: '#0D9488', position: 0 }, { color: '#0EA5E9', position: 100 }] },
-  { n: 'Grape', type: 'Linear', angle: 150, stops: [{ color: '#7E22CE', position: 0 }, { color: '#DB2777', position: 100 }] },
-  { n: 'Citrus', type: 'Linear', angle: 90, stops: [{ color: '#FACC15', position: 0 }, { color: '#65A30D', position: 100 }] },
-  { n: 'Twilight', type: 'Linear', angle: 200, stops: [{ color: '#0F172A', position: 0 }, { color: '#4338CA', position: 55 }, { color: '#DB2777', position: 100 }] },
-  { n: 'Aurora', type: 'Conic', angle: 140, stops: [{ color: '#22D3EE', position: 0 }, { color: '#818CF8', position: 45 }, { color: '#4ADE80', position: 100 }] },
-  { n: 'Bloom', type: 'Radial', angle: 90, stops: [{ color: '#FDE68A', position: 0 }, { color: '#FB7185', position: 60 }, { color: '#BE185D', position: 100 }] },
-  { n: 'Ocean', type: 'Radial', angle: 90, stops: [{ color: '#38BDF8', position: 0 }, { color: '#1E3A8A', position: 100 }] },
+  { n: 'Indigo Night', use: 'App or hero background', type: 'Linear', angle: 160, space: 'oklch', stops: [{ color: '#0A0F2C', position: 0 }, { color: '#27348B', position: 55 }, { color: '#6E6BFF', position: 100 }] },
+  { n: 'Rose Quartz', use: 'Soft hero or card wash', type: 'Linear', angle: 135, space: 'oklch', stops: [{ color: '#FFE3EC', position: 0 }, { color: '#F7A8C4', position: 50 }, { color: '#B58CF0', position: 100 }] },
+  { n: 'Citrus Glow', use: 'Banner or call to action', type: 'Linear', angle: 120, space: 'oklch', stops: [{ color: '#FFD84D', position: 0 }, { color: '#FF8A3D', position: 55 }, { color: '#F0436A', position: 100 }] },
+  { n: 'Deep Water', use: 'Dashboard or header', type: 'Linear', angle: 180, space: 'oklch', stops: [{ color: '#04243A', position: 0 }, { color: '#0B6E8A', position: 55 }, { color: '#3CD6C0', position: 100 }] },
+  { n: 'Carbon', use: 'Dark surface or button', type: 'Linear', angle: 145, space: 'oklch', stops: [{ color: '#14161B', position: 0 }, { color: '#2C313B', position: 50 }, { color: '#565D6B', position: 100 }] },
+  { n: 'Forest Mist', use: 'Calm section background', type: 'Linear', angle: 150, space: 'oklch', stops: [{ color: '#0F2A1F', position: 0 }, { color: '#2F7A5B', position: 55 }, { color: '#B6E6C8', position: 100 }] },
+  { n: 'Afterglow', use: 'Landing page hero', type: 'Linear', angle: 125, space: 'oklch', stops: [{ color: '#2A0F5C', position: 0 }, { color: '#D63A9E', position: 60 }, { color: '#FF9A6B', position: 100 }] },
+  { n: 'Sage Paper', use: 'Quiet page background', type: 'Linear', angle: 160, space: 'oklch', stops: [{ color: '#F6F1E7', position: 0 }, { color: '#CFE0D3', position: 100 }] },
+  { n: 'Lilac Halo', use: 'Spotlight behind a card', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#F4F1FF', position: 0 }, { color: '#C9BEFF', position: 55 }, { color: '#8E7CF0', position: 100 }] },
+  { n: 'Rose Ember', use: 'Glow behind a product', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#FFD6C2', position: 0 }, { color: '#F2557D', position: 50 }, { color: '#3A0F3D', position: 100 }] },
+  { n: 'Tidepool', use: 'Cool focal background', type: 'Radial', angle: 90, space: 'oklch', stops: [{ color: '#7FE5F0', position: 0 }, { color: '#1E6FD9', position: 50 }, { color: '#071A4A', position: 100 }] },
 ]
 
 // A taste of the library for its panel: the first few gradients a free account
@@ -314,9 +311,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   // Seed from the saved gradient. Null stop colours (the untouched default,
   // "use my palette") resolve to the live palette; a fully-default gradient seeds
-  // the Nebula preset so a first-time visitor lands on a vivid look.
-  const [type, setType] = useState(() => design?.gradient?.type || 'Conic')
-  const [angle, setAngle] = useState(() => design?.gradient?.angle ?? 90)
+  // the first preset so a first-time visitor lands on a finished look.
+  const [type, setType] = useState(() => design?.gradient?.type || PRESETS[0].type)
+  const [angle, setAngle] = useState(() => design?.gradient?.angle ?? PRESETS[0].angle)
   const [stops, setStops] = useState(() => {
     if (carriedPalette) return stopsFromColors(carriedPalette.colors)
     const saved = design?.gradient?.stops
@@ -450,6 +447,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setStops(p.stops.map(s => ({ ...s })))
     setType(p.type)
     setAngle(p.angle)
+    if (p.space) setSpace(p.space)
     setActiveStop(0)
     setFromLibrary(false)
   }, [])
@@ -1198,12 +1196,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         </ToolPanel>
       </ToolGrid>
 
-      {/* START FROM A PRESET (D:703-713). The drawn strip is six across; the
-          build's set is the person's own palettes first (one-tap gradients of
-          their saved colours), then the curated sixteen, in the same grid. */}
+      {/* START FROM A PRESET. The person's own palettes come first (one-tap
+          gradients of their saved colours), then the curated set. */}
       <section className="grd-presets" aria-labelledby="grd-presets-title">
         <div className="grd-presets-head">
-          <h2 id="grd-presets-title">Start from a preset</h2>
+          <div className="grd-presets-title">
+            <h2 id="grd-presets-title">Start from a preset</h2>
+            <p>Ready-to-use gradients. Pick one, then make it yours.</p>
+          </div>
           <Link className="grd-lib" to="/discover/gradients">
             <span>Gradient Library</span>
             <ToolIcon name="caret-right" size={12} className="grd-lib-caret" />
@@ -1221,11 +1221,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 onClick={() => applyPreset(p)}
                 title={p.mine ? `Gradient from ${p.n}` : undefined}
               >
-                <span className="grd-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} aria-hidden="true" />
+                <span className="grd-preset-swatch" style={{ background: gradientCssIn(p.type, p.angle, p.stops, supportsOklchGradients ? p.space : 'srgb') }} aria-hidden="true" />
                 <span className="grd-preset-row">
                   <span className="grd-preset-name">{p.n}</span>
-                  <span className="grd-preset-meta">{p.stops.length} stops</span>
+                  <span className="grd-preset-meta">{p.mine ? `${p.stops.length} stops` : p.type}</span>
                 </span>
+                <span className="grd-preset-use">{p.mine ? 'From your palettes' : p.use}</span>
               </button>
             )
           })}
