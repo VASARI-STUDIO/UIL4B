@@ -32,30 +32,52 @@
   color: var(--tl-dim);
 }
 
-/* The From palette note: one row of text, a pill link to the Palette Builder
-   and a dismiss square, on a solid card that lays over the foot of the canvas.
-   It is out of flow, so the page is the same height with it as without it. The
-   wrapper is the always-mounted live region and takes no pointer events itself.
-   scroll-margin keeps the note clear of the sticky toolbar when it is scrolled
-   into view. */
+/* The From palette note: a small chip in the canvas's top-left corner, one line
+   of text, a text link to the Palette Builder and a dismiss square. It is out of
+   flow and sits clear of the ramp's far end, so the page is the same height with
+   it as without it. The wrapper is the always-mounted live region and takes no
+   pointer events itself. scroll-margin keeps the note clear of the sticky toolbar
+   when it is scrolled into view. */
 .grd .grd-live {
   position: absolute;
-  inset: auto 12px 12px;
+  inset: 12px auto auto 12px;
+  max-width: calc(100% - 24px);
   z-index: 1;
   pointer-events: none;
 }
 .grd .grd-note--palette {
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 8px 8px 8px 14px;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 2px 2px 12px;
   border: 1px solid var(--tl-line);
   background: var(--tl-card);
   color: var(--tl-ink);
+  white-space: nowrap;
   scroll-margin-top: calc(var(--chrome-h) + 72px);
-  border-radius: 14px;
+  border-radius: 12px;
   pointer-events: auto;
 }
 .grd .grd-note--palette:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-note-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.grd .grd-note-sep { color: var(--tl-dim); }
+.grd .grd-note-link {
+  display: inline-block;
+  flex: 0 0 auto;
+  line-height: 28px;
+  border-radius: 6px;
+  color: var(--tl-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.grd .grd-note-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
+.grd .tl-btn.grd-note-x { width: 28px; height: 28px; min-height: 28px; border: 0; }
+/* Narrow: the link drops its lead-in words ("Make one in") so the chip stays on one line. */
+@media (max-width: 520px) {
+  .grd .grd-note-pre { display: none; }
+}
 
 /* ── Canvas (D:627) ─────────────────────────────────────────────────────────
    The stage is the canvas's slot: a fixed minimum height the canvas fills, and
@@ -171,15 +193,19 @@
   white-space: pre;
 }
 .grd .grd-code-text code { font: inherit; color: inherit; background: none; padding: 0; }
+/* The CSS is one long line at twelve stops. It wraps inside the fixed box rather
+   than scrolling sideways, and the box keeps its height. */
+.grd .grd-code-text--wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ── Side card: STOPS (D:645-654) ───────────────────────────────────────── */
 .grd .grd-sec-tools { display: inline-flex; align-items: center; gap: 2px; }
 /* The stop list: a window three rows tall that scrolls inside itself, so adding
    or removing a stop never changes the panel's height. The 1px top and bottom
    borders are always there (transparent) and take a colour when rows sit past
-   that edge, which is a cue that does not move anything. The gutter is held
-   so the rows are the same width with two stops as with twelve. */
-.grd { --grd-row: 40px; --grd-row-gap: 2px; }
+   that edge, which is a cue that does not move anything. The edge with more
+   rows also fades its last 18px, which shows on overlay scrollbars too. The
+   gutter is held so the rows are the same width with two stops as with twelve. */
+.grd { --grd-row: 40px; --grd-row-gap: 2px; --grd-fade: 18px; --grd-edge: color-mix(in srgb, var(--t0) 50%, transparent); }
 .grd .grd-stops {
   position: relative;
   display: flex;
@@ -191,9 +217,16 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  --grd-fade-top: 0px;
+  --grd-fade-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .2), rgb(0 0 0) var(--grd-fade-top), rgb(0 0 0) calc(100% - var(--grd-fade-bottom)), rgb(0 0 0 / .2));
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / .2), rgb(0 0 0) var(--grd-fade-top), rgb(0 0 0) calc(100% - var(--grd-fade-bottom)), rgb(0 0 0 / .2));
 }
-.grd .grd-stops.is-above { border-top-color: var(--tl-hair); }
-.grd .grd-stops.is-below { border-bottom-color: var(--tl-hair); }
+.grd .grd-stops.is-above { border-top-color: var(--grd-edge); --grd-fade-top: var(--grd-fade); }
+.grd .grd-stops.is-below { border-bottom-color: var(--grd-edge); --grd-fade-bottom: var(--grd-fade); }
+/* "1–3 of 12": which rows the window shows. Held to the digits' width so the
+   header does not shift as it scrolls. */
+.grd .grd-stops-count { margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
 .grd .grd-stop {
   display: flex;
   align-items: center;
@@ -256,11 +289,18 @@
   transition: background .16s ease, color .16s ease;
 }
 .grd .grd-lock.is-on { color: var(--tl-ink); background: var(--tl-wash-on); }
-.grd .grd-iconbtn[disabled] { opacity: .4; cursor: not-allowed; }
+.grd .grd-iconbtn[disabled],
+.grd .grd-iconbtn[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
 @media (hover: hover) and (pointer: fine) {
-  .grd .grd-iconbtn:hover:not([disabled]) { background: var(--tl-wash-2); color: var(--tl-ink); }
+  .grd .grd-iconbtn:hover:not([disabled]):not([aria-disabled="true"]) { background: var(--tl-wash-2); color: var(--tl-ink); }
 }
 .grd .grd-add { width: 100%; height: 36px; min-height: 36px; font-size: 13px; }
+/* Out of stops: the label keeps full text contrast (it says why), and only the
+   dashed border and the plus step back. The button stays focusable, so a press
+   can still explain itself. */
+.grd .tl-btn.grd-add[aria-disabled="true"] { border-color: var(--tl-line); color: var(--tl-ink); cursor: not-allowed; }
+.grd .tl-btn.grd-add[aria-disabled="true"]:active { transform: none; }
+.grd .tl-btn.grd-add[aria-disabled="true"] .tl-btn-ico { opacity: .4; }
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 
@@ -643,6 +683,8 @@
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
   .grd .grd-stop-select { min-height: 44px; }
+  .grd .tl-btn.grd-note-x { width: 44px; height: 44px; min-height: 44px; }
+  .grd .grd-note-link { line-height: 44px; }
   .grd .grd-wheel { width: 76px; height: 76px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }

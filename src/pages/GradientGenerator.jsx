@@ -287,12 +287,16 @@ function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
 // the glyph flips its shackle to say so. Drawn at the size of the design's
 // row-end icon buttons (the stop row's remove ×, 26px) so it sits in a row
 // without adding a new control shape.
-const LockBtn = ({ on, onClick, label, className = '' }) => (
+// `unavailable` keeps the button focusable (aria-disabled, not disabled) and
+// inert, so its reason can be read through `describedBy` rather than lost.
+const LockBtn = ({ on, onClick, label, className = '', unavailable = false, describedBy }) => (
   <button
     type="button"
     className={`grd-iconbtn grd-lock${on ? ' is-on' : ''}${className ? ' ' + className : ''}`}
-    onClick={onClick}
+    onClick={unavailable ? undefined : onClick}
     aria-pressed={on}
+    aria-disabled={unavailable || undefined}
+    aria-describedby={describedBy}
     aria-label={label}
     title={label}
   >
@@ -551,11 +555,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     addStopAt(gapMid)
   }, [stops, addStopAt])
 
+  // The selection follows the rows: removing a row above the active one moves
+  // it up with them, and removing the active one hands it to the row that slides
+  // into its place (or the new last row), so the list does not jump back to row 1.
   const removeStop = useCallback((idx) => {
     if (!guardEdit()) return
-    setStops(prev => prev.length > 2 ? prev.filter((_, i) => i !== idx) : prev)
-    setActiveStop(0)
-  }, [guardEdit])
+    if (stops.length <= MIN_STOPS) {
+      toast?.('A gradient needs at least two stops')
+      return
+    }
+    setStops(prev => prev.length > MIN_STOPS ? prev.filter((_, i) => i !== idx) : prev)
+    setActiveStop(a => (a > idx ? a - 1 : a === idx ? Math.min(idx, stops.length - 2) : a))
+  }, [guardEdit, stops.length, toast])
 
   const flip = useCallback(() => {
     if (!guardEdit()) return
@@ -916,17 +927,36 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   // The stop list is a fixed window that scrolls inside itself, so the panel
   // (and the page) is the same height at 2 stops and at 12. `stopScroll` says
-  // which edges have more rows past them; the CSS draws a hairline there.
+  // which edges have more rows past them (the CSS fades and rules that edge) and
+  // `first`, the top visible row, for the "1–3 of 12" count in the header.
   const stopListRef = useRef(null)
-  const [stopScroll, setStopScroll] = useState({ above: false, below: false })
+  const [stopScroll, setStopScroll] = useState({ above: false, below: false, first: 1 })
   const syncStopScroll = useCallback(() => {
     const el = stopListRef.current
     if (!el) return
     const above = el.scrollTop > 0
     const below = el.scrollTop + el.clientHeight < el.scrollHeight - 1
-    setStopScroll((prev) => (prev.above === above && prev.below === below ? prev : { above, below }))
+    const rows = el.children
+    const pitch = rows.length > 1 ? rows[1].offsetTop - rows[0].offsetTop : 0
+    const first = pitch > 0 ? Math.max(1, Math.min(rows.length - 2, Math.round(el.scrollTop / pitch) + 1)) : 1
+    setStopScroll((prev) => (prev.above === above && prev.below === below && prev.first === first ? prev : { above, below, first }))
   }, [])
   useLayoutEffect(() => { syncStopScroll() }, [stops.length, syncStopScroll])
+  // The window changes height when the pointer type does (56px rows on touch),
+  // and on a resize that re-lays the panel: measure again rather than trust the
+  // last scroll event.
+  useEffect(() => {
+    const el = stopListRef.current
+    if (!el) return undefined
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => syncStopScroll()) : null
+    ro?.observe(el)
+    const mq = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
+    mq?.addEventListener?.('change', syncStopScroll)
+    return () => {
+      ro?.disconnect()
+      mq?.removeEventListener?.('change', syncStopScroll)
+    }
+  }, [syncStopScroll])
   // Bring the active stop's row into the window (a stop just added, or one picked
   // on the rail) by scrolling the window alone: scrollIntoView would also move
   // the page. Instant under reduced motion.
@@ -1060,10 +1090,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             <div className="grd-live" role="status">
               {showPaletteMissing && (
                 <div className="grd-note grd-note--palette" ref={paletteNoteRef} tabIndex={-1}>
-                  <span>{paletteHexes.length === 1 ? 'Needs a palette with two or more colours.' : 'No palette yet.'}</span>
-                  <ToolButton as={Link} to="/create/palette" icon="swatches" className="grd-note-link">
-                    {paletteHexes.length === 1 ? 'Add colours in Palette Builder' : 'Make one in Palette Builder'}
-                  </ToolButton>
+                  <span className="grd-note-text">{paletteHexes.length === 1 ? 'Needs two or more colours' : 'No palette yet'}</span>
+                  <span className="grd-note-sep" aria-hidden="true">·</span>
+                  <Link to="/create/palette" className="grd-note-link">
+                    <span className="grd-note-pre">{paletteHexes.length === 1 ? 'Add colours in ' : 'Make one in '}</span>Palette Builder
+                  </Link>
                   <ToolButton variant="square" icon="x" iconSize={14} onClick={dismissPaletteNote} aria-label="Dismiss" title="Dismiss" className="grd-note-x" />
                 </div>
               )}
@@ -1138,7 +1169,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 >{f.label}</button>
               ))}
             </div>
-            <pre className={`grd-code-text${effFmt === 'svg' ? ' grd-code-text--block' : ''}`} tabIndex={0} aria-label={`${fmtLabel} code`}><code>{exportCode}</code></pre>
+            <pre className={`grd-code-text${effFmt === 'svg' ? ' grd-code-text--block' : ''}${effFmt === 'css' ? ' grd-code-text--wrap' : ''}`} tabIndex={0} aria-label={`${fmtLabel} code`}><code>{exportCode}</code></pre>
           </div>
         </ToolMain>
 
@@ -1147,6 +1178,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             label="Stops"
             aside={(
               <span className="grd-sec-tools">
+                {stops.length > 3 && (
+                  <span className="grd-stops-count">{`${stopScroll.first}–${Math.min(stops.length, stopScroll.first + 2)} of ${stops.length}`}</span>
+                )}
                 <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked, unlock to randomise it' : 'Lock the number of stops when randomising'} />
                 <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
                   <ToolIcon name="arrows-left-right" size={13} />
@@ -1204,7 +1238,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   type="button"
                   className="grd-iconbtn grd-stop-x"
                   onClick={() => removeStop(i)}
-                  disabled={stops.length <= MIN_STOPS}
+                  aria-disabled={stops.length <= MIN_STOPS || undefined}
+                  aria-describedby={stops.length <= MIN_STOPS ? 'grd-stop-min-hint' : undefined}
                   aria-label={`Remove stop ${i + 1}`}
                   title={stops.length <= MIN_STOPS ? 'A gradient needs at least two stops' : 'Remove this stop'}
                 >
@@ -1213,7 +1248,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </div>
             ))}
             </div>
-            <ToolButton variant="dashed" icon="plus" iconSize={13} className="grd-add" onClick={addStop} disabled={stops.length >= MAX_STOPS}>
+            {/* The reason the × is inert at two stops. A press also says it in a
+                toast, which is how a finger or the keyboard sees it. */}
+            {stops.length <= MIN_STOPS && <span id="grd-stop-min-hint" className="sr-only">A gradient needs at least two stops</span>}
+            <ToolButton variant="dashed" icon="plus" iconSize={13} className="grd-add" onClick={addStop} aria-disabled={stops.length >= MAX_STOPS || undefined}>
               {stops.length >= MAX_STOPS ? `${MAX_STOPS} stops is the most` : 'Add a stop'}
             </ToolButton>
           </ToolSection>
@@ -1312,9 +1350,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   onLockedPress={guardEdit}
                 />
               ) : (
-                <p className="grd-angle-none">Radial gradients have no angle</p>
+                <p className="grd-angle-none" id="grd-angle-none">A radial gradient has no angle. The lock applies again if you switch type.</p>
               )}
-              <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked, unlock to randomise it' : 'Lock angle when randomising'} />
+              <LockBtn
+                on={locks.angle}
+                onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))}
+                unavailable={!angleActive}
+                describedBy={angleActive ? undefined : 'grd-angle-none'}
+                label={locks.angle ? 'Angle locked, unlock to randomise it' : 'Lock angle when randomising'}
+              />
             </div>
             <div className="grd-interp">
               <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
