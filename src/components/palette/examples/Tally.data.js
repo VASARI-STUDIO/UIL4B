@@ -12,7 +12,8 @@ import { fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral']
 
 export const TEXT_RECIPE = [
-  { el: 'figure, merchants, amounts', ink: 'text', large: true },
+  { el: 'figure', ink: 'text', large: true },
+  { el: 'merchants, amounts', ink: 'text', large: false },
   { el: 'labels, legend shares, dates, transaction notes', ink: 'muted', large: false },
   { el: 'card text', ink: 'inkOnField:primary', large: false },
   { el: 'frozen action', ink: 'inkOnField:warning-tint', large: false },
@@ -36,11 +37,25 @@ export const money = (n) => `$${(cents(n) / 100).toFixed(2).replace(/\B(?=(\d{3}
 
 const spent = CATS.reduce((t, c) => t + cents(c.amount), 0) / 100
 
+// Whole-percent shares that add up to 100: each category gets its floor, then
+// the largest remainders take the spare points (rounding each alone can print 99 or 101).
+function shares(cats) {
+  const exact = cats.map((c) => (c.amount / spent) * 100)
+  const out = exact.map(Math.floor)
+  let spare = 100 - out.reduce((t, n) => t + n, 0)
+  exact
+    .map((x, i) => [x - out[i], i])
+    .sort((a, b) => b[0] - a[0] || a[1] - b[1])
+    .forEach(([, i]) => { if (spare-- > 0) out[i] += 1 })
+  return out
+}
+const SHARES = shares(CATS)
+
 export const FIGURES = {
   spent: money(spent),
   line: `of ${money(BUDGET).replace('.00', '')} budget · ${DAYS_LEFT} days left`,
   left: BUDGET - spent,
-  cats: CATS.map((c) => ({ ...c, text: money(c.amount), share: Math.round((c.amount / spent) * 100) })),
+  cats: CATS.map((c, i) => ({ ...c, text: money(c.amount), share: SHARES[i] })),
 }
 
 // `tone` marks the transactions that carry a state: each has a word and a

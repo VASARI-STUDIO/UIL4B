@@ -123,6 +123,8 @@
    outline colour (--pv-hit, --pv-error) is set per pair in PairExample, because
    the pair's own colours can be the field. */
 .cc .cc-pv { border-radius: 18px; border-color: var(--tl-line); }
+/* A part brought into view by a pin clears the sticky chrome above it. */
+.cc .cc-pv [data-hit="on"] { scroll-margin-block: calc(var(--chrome-h) + 80px) 96px; }
 .cc .cc-pv-wait { min-height: 320px; border: 1px solid var(--tl-line); border-radius: 18px; }
 
 /* ── Where each test lands ──────────────────────────────────────────────── */
@@ -382,3 +384,4 @@
   .cc .cc-swatch.is-on { outline: 2px solid Highlight; }
   .cc .cc-pair[aria-pressed="true"] { outline: 2px solid Highlight; }
 }
+.cc .cc-pv-fail { display: grid; place-content: center; justify-items: center; gap: var(--s-3); padding: var(--s-6); text-align: center; }

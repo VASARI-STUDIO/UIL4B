@@ -35,7 +35,8 @@ export const PREVIEW_SCENES = [
 
 export const DEFAULT_SCENE = 'editorial'
 
-export const sceneById = (id) => PREVIEW_SCENES.find((s) => s.id === id) || PREVIEW_SCENES[0]
+const sceneIs = (id) => (s) => s.id === id
+export const sceneById = (id) => PREVIEW_SCENES.find(sceneIs(id)) || PREVIEW_SCENES.find(sceneIs(DEFAULT_SCENE))
 
 // ── Sample content ───────────────────────────────────────────────────────────
 

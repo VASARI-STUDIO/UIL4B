@@ -25,7 +25,13 @@ export default function PairLegend({ ratio, pinned, onPin, onHover }) {
               type="button"
               className={`cc-lg-chip${pass ? '' : ' is-fail'}`}
               aria-pressed={pinned === c.id}
-              onClick={() => onPin(pinned === c.id ? null : c.id)}
+              onClick={(e) => {
+                const unpin = pinned === c.id
+                onPin(unpin ? null : c.id)
+                // Focus (a key press, or a tap that focuses) holds the outline too; an
+                // explicit unpin clears it. A mouse still over the chip keeps its hover.
+                if (unpin && e.nativeEvent.pointerType !== 'mouse') onHover(null)
+              }}
               onPointerEnter={(e) => { if (e.pointerType === 'mouse') onHover(c.id) }}
               onPointerLeave={() => onHover(null)}
               onFocus={() => onHover(c.id)}

@@ -143,6 +143,8 @@
 .pvs [data-hit="on"]{outline:2px dashed var(--pv-hit,var(--pv-text))}
 .pvs [data-hit="on"][data-role~="neutral"],
 .pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
+/* Text of a Contrast Checker example is outlined outside its box even when its role is neutral; the inset used for a fill would sit on the glyphs. */
+.pvs [data-size]:not([data-size="ui"]):is([data-hit="on"],[data-fail="on"]){outline-offset:2px}
 .pvs [data-hit="off"]{opacity:.4}
 /* Chromium draws an outline on an SVG shape as its bounding box, which on a
  * stretched chart is a heavy bar across the whole drawing. So an SVG part drops
@@ -150,8 +152,12 @@
  * solid for a role under its floor. Hit comes last, as in the outline rules
  * above, so a hover on a failing role still shows the dashes. */
 .pvs svg :is([data-role],[data-size]){outline:none}
-.pvs svg [data-fail="on"]{stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
-.pvs svg [data-hit="on"]{stroke:var(--pv-hit,var(--pv-text));stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.pvs svg [data-fail="on"]:not([data-size]){stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
+.pvs svg [data-hit="on"]:not([data-size]){stroke:var(--pv-hit,var(--pv-text));stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+/* A Contrast Checker part is judged by its own colour, so its stroke and fill stay as drawn
+ * and the mark is a crisp sleeve round it, made of four zero-blur shadows. */
+.pvs svg [data-size][data-fail="on"]{filter:drop-shadow(1.5px 0 0 var(--pv-error)) drop-shadow(-1.5px 0 0 var(--pv-error)) drop-shadow(0 1.5px 0 var(--pv-error)) drop-shadow(0 -1.5px 0 var(--pv-error))}
+.pvs svg [data-size][data-hit="on"]{filter:drop-shadow(1.5px 0 0 var(--pv-hit,var(--pv-text))) drop-shadow(-1.5px 0 0 var(--pv-hit,var(--pv-text))) drop-shadow(0 1.5px 0 var(--pv-hit,var(--pv-text))) drop-shadow(0 -1.5px 0 var(--pv-hit,var(--pv-text)))}
 
 /* ── Medium scenes: container width under 800px ───────────────────────────── */
 @container pvs (max-width:799px){

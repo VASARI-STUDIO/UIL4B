@@ -124,7 +124,8 @@
 .ty-card{animation:ty-rise 300ms cubic-bezier(.23,1,.32,1) both}
 .ty-bar{animation:ty-grow 500ms cubic-bezier(.23,1,.32,1) 300ms both}
 @keyframes ty-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-@keyframes ty-grow{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+/* Ends on a clip box wider than the bar, so no clip survives to cut a segment's outline. */
+@keyframes ty-grow{from{clip-path:inset(-8px 100% -8px 0)}to{clip-path:inset(-8px)}}
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) :is(.ty-card,.ty-bar){animation:none}
 }

@@ -12,6 +12,7 @@ import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightn
 import { PAIR_VIEWS } from '../utils/palettePairSizes'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { preloadExample } from '../components/palette/examples/registry'
+import { trackExampleLoad } from '../components/palette/examples/loading'
 import PairLegend from '../components/palette/PairLegend'
 // The page's own sheet; every rule is scoped under `.cc`, the page root.
 import '../styles/pages/contrast.css'
@@ -19,7 +20,25 @@ import '../styles/pages/contrast.css'
 // The example views (Editorial, Product page, Card) load only when picked, and
 // so does the preview stylesheet they share.
 const loadPair = () => import('../components/palette/PairExample')
-const PairExample = lazy(loadPair)
+
+// Shown where the picture would be when its chunk fails to download. The page
+// around it, the colour fields and the numbers all keep working.
+function PairUnavailable({ onRetry }) {
+  return (
+    <div className="cc-pv cc-pv-wait cc-pv-fail" role="status">
+      <p className="cc-lede">{"This view didn't load. Try again."}</p>
+      <ToolButton onClick={onRetry}>Try again</ToolButton>
+    </div>
+  )
+}
+
+// A failed chunk resolves to the stub instead of throwing to the route's error
+// boundary, which would drop the pair being checked. It is counted as an
+// example load so main.jsx does not answer the failure with a page reload
+// (see components/palette/examples/loading.js). React keeps a lazy component's
+// first result, so a retry swaps in a fresh one.
+const makePairExample = () => lazy(() => trackExampleLoad(loadPair).catch(() => ({ default: PairUnavailable })))
+let PairExample = makePairExample()
 
 // Contrast Checker — /create/contrast.
 // A sticky tool toolbar with the Copy menu; a pair bar (the two colour fields
@@ -226,6 +245,8 @@ export default function ContrastChecker({ onCopy }) {
   const setBgHex = (hex) => { setBg(hex); setBgInput(hex) }
 
   const swap = () => { setFgHex(bg); setBgHex(fg) }
+  const [, setPairTry] = useState(0)
+  const retryPair = () => { PairExample = makePairExample(); setPairTry((n) => n + 1) }
   // Starts the downloads when the pointer or focus reaches the control. The
   // shared preview stylesheet goes first: an example's own sheet must load after
   // it, or the shared reset (`font:inherit`) overrides the example's type sizes.
@@ -373,7 +394,7 @@ export default function ContrastChecker({ onCopy }) {
                 </span>
               </section>
             ) : (
-              <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} pinned={pinned} />
+              <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} pinned={pinned} onRetry={retryPair} />
             )}
           </Suspense>
         </ToolMain>

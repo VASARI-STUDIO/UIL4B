@@ -20,61 +20,95 @@ import '../../styles/pages/palette-preview.css'
 // five brand slots.
 const SLOT_LABELS = ['Text', '70% text', '45% text', '20% text', 'Text']
 
-const ownText = (el) => {
-  for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return true
-  return false
-}
+const ownTextNodes = (el) => [...el.childNodes].filter((n) => n.nodeType === 3 && n.nodeValue.trim())
 const shown = (el) => el.getClientRects().length > 0
 
-// Tags every visible piece of the example with data-size, then sets data-hit
-// on the chosen class and data-fail on the part that shows a failing one.
-// Idempotent: it clears its own marks first, so it can run again after a resize
-// or a late render.
+// Area of the element's own text lines, not of its box: a full-width block with
+// one short line in it is a small piece of text.
+function textArea(el, nodes) {
+  const range = document.createRange()
+  let area = 0
+  for (const n of nodes) {
+    range.selectNodeContents(n)
+    for (const r of range.getClientRects()) area += r.width * r.height
+  }
+  return area
+}
+
+// Works out which pieces of the example are text of which size class, which
+// are UI parts, which are outlined by the chosen class and which carry the
+// at-rest failure mark; then applies only what differs from the marks already
+// on the page, so an outline whose state is unchanged does not restart its
+// fade when a resize or a late render runs this again.
 //
 // With a class chosen, data-hit outlines every part of it and the others dim, so
 // no failure marks are added. At rest each failing class marks only its largest
 // visible part: a pair that fails body text would otherwise outline every line
-// of the picture.
+// of the picture. "Largest" is by the part's own text, and a row as wide as the
+// example itself that is mostly empty (a breadcrumb) only counts when nothing
+// else of its class exists; a full-width paragraph is real text and still counts.
 function markSizes(root, uiSelector, highlight, failing) {
-  for (const el of root.querySelectorAll('[data-size]')) {
-    delete el.dataset.size
-    delete el.dataset.hit
-    delete el.dataset.fail
-  }
-  const tagged = []
+  const plan = new Map() // element -> { size, hit, fail }
+  const area = new Map() // element -> how big it reads
   for (const el of root.querySelectorAll('*')) {
-    if (!ownText(el) || !shown(el)) continue
+    const own = ownTextNodes(el)
+    if (!own.length || !shown(el)) continue
     const cs = getComputedStyle(el)
     const cls = textSizeClass(parseFloat(cs.fontSize), parseInt(cs.fontWeight, 10))
-    // An inline run inside a block of the same class (a tail set in the heading's
-    // own size) is covered by the block's outline; its own would wrap the line.
-    const up = el.parentElement
-    if (cs.display === 'inline' && up?.dataset.size === cls) continue
-    el.dataset.size = cls
-    tagged.push(el)
+    // A box nested in a box that already carries the same class (a price and its
+    // tax note, a label and its value) is covered by the outer outline; its own
+    // would draw a second box inside the first.
+    let covered = false
+    for (let up = el.parentElement; up && up !== root; up = up.parentElement) {
+      if (plan.get(up)?.size === cls) { covered = true; break }
+    }
+    if (covered) continue
+    plan.set(el, { size: cls, hit: null, fail: null })
+    area.set(el, textArea(el, own))
   }
   if (uiSelector) {
     for (const el of root.querySelectorAll(uiSelector)) {
-      if (el.dataset.size || !shown(el)) continue
-      el.dataset.size = 'ui'
-      tagged.push(el)
-    }
-  }
-  for (const el of tagged) {
-    const cls = el.dataset.size
-    if (highlight && cls === highlight) el.dataset.hit = 'on'
-    else if (highlight && !el.querySelector('[data-size]')) el.dataset.hit = 'off'
-  }
-  if (highlight) return
-  for (const cls of failing) {
-    let largest = null
-    let area = 0
-    for (const el of tagged) {
-      if (el.dataset.size !== cls) continue
+      if (plan.has(el) || !shown(el)) continue
+      plan.set(el, { size: 'ui', hit: null, fail: null })
       const r = el.getBoundingClientRect()
-      if (r.width * r.height > area) { largest = el; area = r.width * r.height }
+      area.set(el, r.width * r.height)
     }
-    if (largest) largest.dataset.fail = 'on'
+  }
+  // Containers never dim, only leaves.
+  const hasPart = new Set()
+  for (const el of plan.keys()) {
+    for (let up = el.parentElement; up && up !== root; up = up.parentElement) hasPart.add(up)
+  }
+  for (const [el, p] of plan) {
+    if (highlight && p.size === highlight) p.hit = 'on'
+    else if (highlight && !hasPart.has(el)) p.hit = 'off'
+  }
+  if (!highlight) {
+    const rootW = root.getBoundingClientRect().width
+    for (const cls of failing) {
+      let best = null
+      let bestArea = 0
+      let bestSolid = false
+      for (const [el, p] of plan) {
+        if (p.size !== cls) continue
+        const box = el.getBoundingClientRect()
+        const a = area.get(el)
+        const solid = !(box.width > rootW * 0.9 && a < box.width * box.height * 0.45)
+        if ((solid && !bestSolid) || (solid === bestSolid && a > bestArea)) { best = el; bestArea = a; bestSolid = solid }
+      }
+      if (best) plan.get(best).fail = 'on'
+    }
+  }
+  const set = (el, key, value) => {
+    if (value) { if (el.dataset[key] !== value) el.dataset[key] = value } else if (key in el.dataset) delete el.dataset[key]
+  }
+  for (const el of root.querySelectorAll('[data-size]')) {
+    if (!plan.has(el)) { delete el.dataset.size; delete el.dataset.hit; delete el.dataset.fail }
+  }
+  for (const [el, p] of plan) {
+    set(el, 'size', p.size)
+    set(el, 'hit', p.hit)
+    set(el, 'fail', p.fail)
   }
 }
 

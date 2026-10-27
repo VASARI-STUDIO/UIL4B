@@ -50,9 +50,6 @@ const PIN_MS = 3000
 // The one line under the list. Each example is its own made-up brand.
 const NOTE = 'Sample content. Every brand here is made up.'
 
-// Scenes with no surface to sit on: a ratio "on surface" means nothing there.
-const SURFACELESS = new Set(['poster'])
-
 const sentence = (s) => s.charAt(0) + s.slice(1).toLowerCase()
 
 function swatchOf(roles, role) {
@@ -391,20 +388,15 @@ export default function PalettePreviewDialog({
     () => (vision === 'normal' ? colors : colors.map((c) => simCvd(c, vision))),
     [colors, vision],
   )
-  // A scene with no surface has no "on surface" floor to fail, so it flags and
-  // lists nothing.
-  const surfaceless = SURFACELESS.has(scene.id)
-  const scoped = useCallback((r) => (surfaceless && r.fails.length ? { ...r, fails: [] } : r), [surfaceless])
-  const baseRoles = useMemo(() => derivePaletteRoles(shown, { mode, harmony }), [shown, mode, harmony])
-  const roles = useMemo(() => scoped(baseRoles), [scoped, baseRoles])
+  const roles = useMemo(() => derivePaletteRoles(shown, { mode, harmony }), [shown, mode, harmony])
   // The five slot names, which an example may print (a colourway's name).
   const labels = useMemo(() => BRAND_ROLES.map((_, i) => sentence(roleLabel(harmony, i))), [harmony])
   const compareColors = compare?.colors
   const compareRoles = useMemo(() => {
     if (!compareColors) return null
     const cols = vision === 'normal' ? compareColors : compareColors.map((c) => simCvd(c, vision))
-    return scoped(derivePaletteRoles(cols, { mode, harmony }))
-  }, [compareColors, vision, mode, harmony, scoped])
+    return derivePaletteRoles(cols, { mode, harmony })
+  }, [compareColors, vision, mode, harmony])
 
   // Legend state: hover and focus outline transiently; a click pins.
   const [hover, setHover] = useState(null)
