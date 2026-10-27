@@ -563,10 +563,15 @@ test('S4 · in the 641–980 band each Library filter collapses to a trigger tha
 
 const STC_WIDTHS = [320, 360, 390, 430, 480, 560, 768]
 
-// Each role is one family row on the rebuilt screen (D:928-942) —
-// name, token, its preset select and its ten steps. What S3 held (nothing of a
-// role spills out of that role's row, and no row becomes a sideways scroller)
-// is held for the new row.
+// Each role is one family row — name, meaning, token, its preset chips and its
+// ten steps (plus Blue / Purple on Information). What S3 held (nothing of a role
+// spills out of that role's row, and no row becomes a sideways scroller) is held
+// for the new row. The chips wrap onto further lines rather than scroll, so the
+// chip group is held to its row too, and to the seven it must list (six presets
+// and Custom).
+//
+// MUTATION: give `.stc-chips` `flex-wrap: nowrap; overflow-x: auto` in
+// semantic-color.css, or drop the `.stc-fam` wrapper from a row, and this goes red.
 test('S3 · every Semantic Colour role, preset and ramp is inside its own row', async ({ browser }) => {
   budget(STC_WIDTHS.length)
   const damage = []
@@ -578,18 +583,28 @@ test('S3 · every Semantic Colour role, preset and ramp is inside its own row', 
       for (const row of rows) {
         const rb = row.getBoundingClientRect()
         if (row.scrollWidth > row.clientWidth + 1) scrollers++
-        for (const el of row.querySelectorAll('.stc-fam-preset, .stc-cell')) {
+        for (const el of row.querySelectorAll('.stc-chips, .stc-chips .tl-pill, .stc-cell')) {
           total++
           const b = el.getBoundingClientRect()
           if (b.right > rb.right + 0.5 || b.left < rb.left - 0.5) outside++
         }
+        for (const group of row.querySelectorAll('.stc-chips')) {
+          if (group.scrollWidth > group.clientWidth + 1) scrollers++
+        }
       }
-      return { rows: rows.length, outside, total, scrollers, ramps: document.querySelectorAll('.stc-ramp').length, presets: document.querySelectorAll('.stc-fam-preset').length }
+      const groups = [...document.querySelectorAll('.stc-fam .stc-chips')]
+      return {
+        rows: rows.length, outside, total, scrollers,
+        ramps: document.querySelectorAll('.stc-ramp').length,
+        presets: groups.length,
+        chipCounts: groups.map((g) => g.querySelectorAll('.tl-pill').length),
+      }
     })
     await ctx.close()
     expect(r.rows, `${w}px: no role rows rendered at all`).toBeGreaterThan(0)
     expect(r.rows, `${w}px: expected one row per ramp`).toBe(r.ramps)
-    expect(r.presets, `${w}px: expected one preset control per role`).toBe(r.rows)
+    expect(r.presets, `${w}px: expected one preset chip group per role`).toBe(r.rows)
+    expect(r.chipCounts, `${w}px: each role lists its six presets and Custom`).toEqual(r.chipCounts.map(() => 7))
     if (r.outside) damage.push(`${w}px: ${r.outside} of ${r.total} controls outside their role's row`)
     if (r.scrollers) damage.push(`${w}px: ${r.scrollers} role row(s) are horizontal scrollers`)
   }

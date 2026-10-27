@@ -757,13 +757,13 @@ test('S9 · opening a panel gives its links back to the keyboard', async ({ brow
 // container's box.
 const STC_VIEWPORTS = [[320, 568], [360, 560], [390, 844], [430, 932], [560, 800], [640, 800], [700, 800], [768, 1024]]
 
-test('S1 · every tone in every ramp is on screen, with its hex', async ({ browser }) => {
+test('S1 · every tone in every ramp is on screen, labelled by its step, with its hex in the name', async ({ browser }) => {
   const damage = []
   for (const [w, h] of STC_VIEWPORTS) {
     const { ctx, page } = await openTouch(browser, w, h, '/color/semantic', w >= 700, '.stc-ramp')
     const r = await page.evaluate(() => {
       const ramps = [...document.querySelectorAll('.stc-ramp')]
-      let hiddenCells = 0, scrollers = 0, tiny = 0, clipped = 0, sample = ''
+      let hiddenCells = 0, scrollers = 0, tiny = 0, clipped = 0, faceHex = 0, sample = ''
       for (const ramp of ramps) {
         const rb = ramp.getBoundingClientRect()
         if (ramp.scrollWidth > ramp.clientWidth + 1) scrollers++
@@ -771,8 +771,11 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
           const cr = cell.getBoundingClientRect()
           if (cr.left < rb.left - 0.5 || cr.right > rb.right + 0.5) hiddenCells++
           if (cr.width < 24 || cr.height < 24) tiny++
-          // The tone number is the drawn label (D:934) and a clipped one is
-          // the S15 fault in a new place. The hex is in the cell's name.
+          // The step number is the drawn label and a clipped one is the S15
+          // fault in a new place. The face carries the step only; the hex is in
+          // the cell's name (and on the clipboard), so a hex printed on the
+          // face is counted as damage below.
+          if (/#[0-9a-f]{3,6}/i.test(cell.textContent || '')) faceHex++
           for (const t of cell.querySelectorAll('.stc-cell-tone')) {
             const range = document.createRange()
             range.selectNodeContents(t)
@@ -786,7 +789,8 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
         ramps: ramps.length,
         cells: document.querySelectorAll('.stc-cell').length,
         hexShown: [...document.querySelectorAll('.stc-cell')].filter((e) => /#[0-9A-F]{6}/.test(e.getAttribute('aria-label') || '')).length,
-        hiddenCells, scrollers, tiny, clipped, sample,
+        hiddenCells, scrollers, tiny, clipped, faceHex, sample,
+        faceSteps: [...document.querySelectorAll('.stc-cell')].map((e) => (e.textContent || '').trim()).slice(0, 10),
       }
     })
     await ctx.close()
@@ -803,6 +807,8 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
     if (r.hexShown !== expectedCells) damage.push(`${w}x${h}: only ${r.hexShown} of ${expectedCells} tone cells name their hex — the tool's output is unreadable here`)
     if (r.tiny) damage.push(`${w}x${h}: ${r.tiny} tone cell(s) under 24px`)
     if (r.clipped) damage.push(`${w}x${h}: ${r.clipped} clipped label(s), e.g. ${r.sample}`)
+    if (r.faceHex) damage.push(`${w}x${h}: ${r.faceHex} tone cell(s) print a hex on the face (the step number is all a cell shows)`)
+    expect(r.faceSteps, `${w}x${h}: a ramp's cells read 50 to 900`).toEqual(['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'])
   }
   expect(damage, damage.join('\n')).toEqual([])
 })

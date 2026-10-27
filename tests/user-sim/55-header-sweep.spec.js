@@ -10,7 +10,8 @@
 // the furniture cannot grow back.
 //
 // WHY IT IS NOT A GREP. Two of the four remaining eyebrows are not
-// `.sec-h-eyebrow` at all — Semantic Colours uses `.stc-hero-eyebrow`, the
+// `.sec-h-eyebrow` at all — Semantic Colours used `.stc-hero-eyebrow` (gone with
+// the rebuild; the string check below is what still measures that page), the
 // Gradient Generator uses `.ggn-eyebrow` — and the two worst findings here were
 // only visible by rendering and measuring:
 //
@@ -123,6 +124,9 @@ const STRIPS = [
     survives: '3 stops',
   },
   {
+    // `.stc-status` is retired with the rebuild, so the class fence is only a
+    // tripwire for its return; the band detector below is what measures the page
+    // (its bundle cards and ramp rows are not a strip of equal figures).
     route: '/create/semantic-color', cls: '.stc-status', h1: 'Semantic Colour',
     // 50 was "canonical variables" in the strip. On the button it is the size
     // of what is about to reach your clipboard.
