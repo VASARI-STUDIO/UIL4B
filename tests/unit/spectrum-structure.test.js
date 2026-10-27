@@ -273,14 +273,16 @@ test('every glyph the page asks for is one the page ships', () => {
 
 test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
   // The design's 4 bench tool windows, not the 5 category panels.
-  const names = [...BENCH_SRC.matchAll(/<Chrome\s+(?:key="[^"]*"\s+)?name="([^"]+)"/g)].map((m) => m[1])
+  // The windows carry no title bar now: their names live on the rail list and in each article's aria-label.
+  const names = [...(/const RAIL = \[([^\]]+)\]/.exec(BENCH_SRC)?.[1] || '').matchAll(/'([^']+)'/g)].map((m) => m[1])
+  assert.ok(!BENCH_SRC.includes('sp-panel-bar') && !BENCH_SRC.includes('sp-panel-name'), 'the bench draws a window title bar again')
   assert.deepEqual(names, ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'])
   // One `windows` list feeds both layouts, and each entry is wrapped once in a
   // [data-panel] article numbered by its place in the list.
   const list = /const windows = \[([\s\S]*?)\n {2}\]/.exec(BENCH_SRC)
   assert.ok(list, 'the bench no longer builds its four windows as one list')
-  const entries = [...list[1].matchAll(/<(PalettePanel|IconPanel|FontPanel|Chrome)\b/g)].map((m) => m[1])
-  assert.deepEqual(entries, ['PalettePanel', 'IconPanel', 'FontPanel', 'Chrome'], 'the bench windows are not the four tools, in order')
+  const entries = [...list[1].matchAll(/<(PalettePanel|IconPanel|FontPanel|BenchConverter)\b/g)].map((m) => m[1])
+  assert.deepEqual(entries, ['PalettePanel', 'IconPanel', 'FontPanel', 'BenchConverter'], 'the bench windows are not the four tools, in order')
   assert.equal([...BENCH_SRC.matchAll(/data-panel=\{i\}/g)].length, 1, 'the bench no longer numbers its [data-panel] windows from the list')
   assert.match(BENCH_SRC, /const RAIL = \['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'\]/,
     'the rail no longer lists the four tools by their own names, matching the window titles')
@@ -311,7 +313,7 @@ test('the Compress panel describes compressing, not converting', () => {
   const copy = CONVERTER_SRC
     .replace(/BenchConverter|CONVERTER_SOURCE/g, '')
     .replace(/file-converter|3d-converter/g, '')
-    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter</g, '')
+    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter<|label: 'File Converter'/g, '')
     .replace(/A machined bracket turning, converted from/g, '')
   const left = [...copy.matchAll(/[^\n]*convert[^\n]*/gi)].map((m) => m[0].trim())
   assert.deepEqual(left, [], 'the Compress panel still says "convert"')
