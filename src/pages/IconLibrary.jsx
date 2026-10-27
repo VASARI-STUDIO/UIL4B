@@ -25,7 +25,8 @@ import { openInNewTab } from '../utils/newTab'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
 import { loadPackHead } from '../data/iconHeads'
-import { isMulticolourSvg, monochromeSvg } from '../utils/iconPaint'
+import { monochromeSvg } from '../utils/iconPaint'
+import { colourRowState } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
@@ -1346,7 +1347,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
   const rawBaseSvgText = localBase || fetchedBase || cachedCdnBase
-  const isColoredPack = inColoredPack && (!rawBaseSvgText || isMulticolourSvg(rawBaseSvgText))
+  const { coloured: isColoredPack, row: colourRow } = colourRowState({ inColouredPack: inColoredPack, svg: rawBaseSvgText })
   const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
     ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
   [inColoredPack, isColoredPack, rawBaseSvgText])
@@ -1802,13 +1803,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
               <div className="icust-row">
                 <label>Colour</label>
-                {isColoredPack ? (
-                  <>
-                    <div className="icust-seg">
-                      <span className="icust-seg-static active">Default</span>
-                    </div>
-                    <span className="icust-note icust-original">Original colours</span>
-                  </>
+                {colourRow === 'original' ? (
+                  <span className="icust-value">Original colours</span>
                 ) : (
                   <>
                     <div className="icust-seg">

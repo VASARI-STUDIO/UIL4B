@@ -82,7 +82,6 @@
 }
 .iel-page .icust-seg button.active{background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}
 .iel-page .icust-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.iel-page .icust-seg-static{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0;background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}
 /* "Fixed" stroke is a toggle, so its on-state is the same wash — not an
    accent fill with accent text, which claimed it was the next action. */
 .iel-page .icust-abs{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
@@ -265,4 +264,5 @@
   .iel-page.lib-surface .lib-switch-btn>.lib-switch-emoji{display:none}
 }
 
-.iel-page .icust-original{white-space:nowrap}
+/* The same face as the control labels beside it. */
+.iel-page .icust-value{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
