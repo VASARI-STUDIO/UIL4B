@@ -360,10 +360,9 @@ for (const [template, name, n, logo] of CASES) {
     test('slide numbers are true', async () => {
       const nums = screen.numbers
       if (template === 'presentation') {
-        // The folio counts numbered spreads, not slides: openings and the cover carry none.
-        const folios = nums.filter(Boolean).map(Number)
-        expect(folios.length, 'most content slides print a folio').toBeGreaterThanOrEqual(4)
-        expect(folios, 'folios run 01, 02, 03 without a gap').toEqual(folios.map((_, i) => i + 1))
+        // The folio is the slide's place in the PDF (the cover is 1). The cover and the openings carry none.
+        expect(nums.filter(Boolean).length, 'most content slides print a folio').toBeGreaterThanOrEqual(4)
+        expect(nums.map((t, i) => (t ? `${i + 1}:${t}` : '')).filter(Boolean).filter((x) => x.split(':')[0].padStart(2, '0') !== x.split(':')[1]), 'a slide prints a folio that is not its own place in the PDF').toEqual([])
       } else {
         // The cover prints the year in the same place; every slide after it prints its own number.
         expect(nums[0], 'the cover prints the year').toBe('2026')
