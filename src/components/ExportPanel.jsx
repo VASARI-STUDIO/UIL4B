@@ -17,6 +17,7 @@ import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } f
 import { defaultTemplate, liveTemplates, readExportTemplates } from '../config/exportTemplates'
 import { useProject } from '../contexts/ProjectContext'
 import ExportTemplatePicker from './ExportTemplatePicker'
+import { templateThumb } from '../utils/exportTemplateThumb'
 import BrandLogoField from './BrandLogoField'
 import KitIdentityFields from './KitIdentityFields'
 import ExportFormatSwitch from './ExportFormatSwitch'
@@ -645,6 +646,7 @@ export default function ExportPanel({ onClose }) {
             format={activeFormat.id}
             value={chosenTemplates[activeFormat.id]}
             onChange={(id) => updateDesign({ exportTemplates: { [activeFormat.id]: id } })}
+            thumbs={templateThumb}
           />
         </div>
       )}
