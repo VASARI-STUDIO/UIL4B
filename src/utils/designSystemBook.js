@@ -350,7 +350,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   pages[contentsSlot] = tpl.contents ? tpl.contents(ctx, contentsData) : contentsPage(contentsData)
 
   return `<!doctype html>
-<html lang="en">
+<html lang="en-AU">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -428,7 +428,7 @@ function contentsPage({ d, projectName, contents, tokens, iso, folio = 2 }) {
   return `<section class="pg pg-contents">
   <div class="ct-grid">
     <div class="ct-main">
-      <p class="lbl">Contents</p>
+      <h2 class="ct-h">Contents</h2>
       <ol class="ct-list">${rows}</ol>
     </div>
     <aside class="ct-aside">
@@ -466,6 +466,7 @@ function colourBands(d, group, offset, first) {
       <div class="bd-id">
         <p class="bd-role">${esc(roleLabel(d.harmony, idx))}</p>
         <p class="bd-name">${esc(colorName(hex))}</p>
+        <p class="bd-lands">${esc(slotLands(idx))}</p>
       </div>
       <dl class="bd-spec">
         <div><dt>HEX</dt><dd>${esc(hex)}</dd></div>
@@ -481,7 +482,6 @@ function colourBands(d, group, offset, first) {
   }).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">01 — Colour</p>
       ${first
     ? `<h3>The palette</h3><p class="lede">Each colour with its role in the ${esc(systemName(d.harmony))} system, its values in three notations, and the ink that reads on it.</p>`
     : '<h3 class="cont">The palette <span>continued</span></h3>'}
@@ -506,14 +506,14 @@ function matrixPage(d) {
       // Weight, not colour, carries the pass/fail. The book must never use a
       // colour to mean "status" — the colours here are the SUBJECT, and a green
       // tick beside a swatch would read as the swatch being green.
-      return `<td class="${r >= 4.5 ? 'mx-pass' : r >= 3 ? 'mx-mid' : 'mx-fail'}">${r}</td>`
+      const [cls, word] = r >= 4.5 ? ['mx-pass', 'Pass'] : r >= 3 ? ['mx-mid', 'Large'] : ['mx-fail', 'Fail']
+      return `<td class="${cls}">${r}<span class="mx-w">${word}</span></td>`
     }).join('')
     return `<tr><th scope="row"><span class="dot" style="background:${row}"></span>${esc(row)}</th>${cells}</tr>`
   }).join('')
   const capped = d.palette.length > MATRIX_MAX
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">01 — Colour</p>
       <h3>Contrast matrix</h3>
       <p class="lede">Every pair in the palette, measured. Read a row as the background and a column as the text on it — the figure is the same either way.</p>
     </header>
@@ -522,9 +522,9 @@ function matrixPage(d) {
       <tbody>${rows}</tbody>
     </table>
     <div class="key">
-      <span><b>Bold</b> passes AA for normal text (4.5:1)</span>
-      <span><b>Medium</b> passes AA for large text only (3:1)</span>
-      <span><b>Light</b> is a fill, not a text pair</span>
+      <span><b>Pass</b> reads as normal text, 4.5:1 or more</span>
+      <span><b>Large</b> reads as large text only, 3:1 or more</span>
+      <span><b>Fail</b> is a fill, not a text pair</span>
     </div>
     ${capped ? `<p class="note">The matrix shows the first ${MATRIX_MAX} colours. Past eight the cells stop being legible at this size, so the remaining colours are specified on the palette pages and measured against paper and ink there.</p>` : ''}
   </div>`
@@ -540,7 +540,6 @@ function gradientPage(d) {
   </tr>`).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">01 — Colour</p>
       <h3>The gradient</h3>
       <p class="lede">A ${esc(g.type.toLowerCase())} blend at ${g.angle}°, specified by stop so it can be rebuilt exactly rather than eyeballed.</p>
     </header>
@@ -572,7 +571,6 @@ function familiesPage(d) {
   </div>`
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">02 — Typography</p>
       <h3>The families</h3>
       <p class="lede">Two faces carry the system. Every fallback is stated in the colophon, so the document degrades predictably rather than arbitrarily.</p>
     </header>
@@ -608,7 +606,6 @@ function scalePage(d, ladder) {
   }).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">02 — Typography</p>
       <h3>The scale</h3>
       <p class="lede">A ${d.ratio} ratio from a ${d.baseSize}px base. Each row is set in the face and size it specifies.</p>
     </header>
@@ -625,7 +622,6 @@ function tokensPage(group, first, total) {
   const rows = group.map(t => `<tr><td class="tk-n">${esc(t.name)}</td><td class="tk-v">${esc(t.value)}</td></tr>`).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">03 — Tokens</p>
       ${first ? `<h3>Custom properties</h3><p class="lede">All ${total} tokens, named for the role each colour plays rather than the colour it happens to be — so a palette change does not orphan the name.</p>` : '<h3 class="cont">Custom properties <span>continued</span></h3>'}
     </header>
     <table class="tk">${rows}</table>
@@ -635,7 +631,6 @@ function tokensPage(group, first, total) {
 function colophonPage(d, projectName, iso) {
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">Colophon</p>
       <h3>How this book was made</h3>
     </header>
     <div class="cl-grid">
@@ -653,7 +648,7 @@ function colophonPage(d, projectName, iso) {
       </div>
     </div>
     <div class="cl-foot">
-      <span>${esc(projectName)}</span>
+      <span class="cl-name">${esc(projectName)}</span>
       <span>Issued ${esc(iso)}</span>
       <span>Set from the system it describes</span>
     </div>

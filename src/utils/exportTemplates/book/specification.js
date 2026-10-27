@@ -4,24 +4,25 @@
 
 import { esc } from '../shared.js'
 
-function cover({ d, projectName, field, fieldInk, iso, year }) {
+function cover({ d, projectName, field, fieldInk, iso, year, slots, fit }) {
   // The palette runs full-bleed across the foot of the cover: the system
   // applied, not a legend of it.
   //
   // The BASE is excluded, and that is not a tidy-up — the cover field already
   // IS the base, so including it painted an invisible first segment and the
   // band read as starting a fifth of the way in, like a misaligned rule. The
-  // field is the primary; the band is the rest of the system.
-  const rest = d.palette.filter(c => c !== field)
+  // field is the primary; the band is the rest of the system, each colour
+  // weighted by what it does: accents 1, neutrals 0.5.
+  const rest = slots.filter(s => s.hex !== field)
   const band = rest.length
-    ? rest.map(c => `<i style="background:${c}"></i>`).join('')
+    ? rest.map(s => `<i style="background:${s.hex};flex:${s.kind === 'neutral' ? 0.5 : 1} 1 0"></i>`).join('')
     : ''
   return `<section class="pg pg-cover" style="background:${field};color:${fieldInk}">
   <div class="cv-top">
     <span class="cv-mark">Design System</span>
     <span class="cv-year">${esc(year)}</span>
   </div>
-  <h1 class="cv-title">${esc(projectName)}</h1>
+  <h1 class="cv-title${fit.clamp ? ' is-clamped' : ''}" style="font-size:${fit.size}pt">${esc(projectName)}</h1>
   <div class="cv-bottom">
     <dl class="cv-meta">
       <div><dt>Primary</dt><dd>${esc(d.base || '—')}</dd></div>
@@ -81,8 +82,8 @@ function css({ d }) {
 
   h1,h2,h3{font-family:var(--head);font-weight:${d.headingWeight};margin:0;line-height:1.08}
   p{margin:0 0 1em}
-  .lbl{font-family:var(--body);font-size:7pt;font-weight:600;letter-spacing:.18em;
-    text-transform:uppercase;color:var(--mut);margin:0 0 3mm}
+  .lbl{font-family:var(--body);font-size:8pt;font-weight:600;letter-spacing:.02em;
+    color:var(--mut);margin:0 0 3mm}
   .lede{font-size:9.5pt;color:var(--mut);max-width:78mm;margin:2mm 0 0}
   .num,code,.tk-n,.tk-v,.code{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
@@ -103,20 +104,25 @@ function css({ d }) {
   /* The title sits LOW, above the specification block, with the open field
      above it. Vertically centring it read as a slide; a cover is a composition
      and the mass belongs off-centre. */
-  .cv-title{font-size:52pt;letter-spacing:-.025em;max-width:15ch;
-    align-self:flex-start;margin:auto 0 14mm}
+  /* The size comes from the generator's fit. The name is always cut at three
+     lines with an ellipsis (the fit counts characters, so a run of wide capitals
+     can need a fourth); the colophon prints it in full. */
+  .cv-title{letter-spacing:-.025em;max-width:150mm;overflow-wrap:anywhere;hyphens:auto;
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;
+    padding-bottom:.12em;align-self:flex-start;margin:auto 0 calc(14mm - .12em)}
   .cv-bottom{display:flex;flex-direction:column;gap:6mm}
   .cv-meta{display:flex;gap:12mm;margin:0;font-size:8pt}
-  .cv-meta dt{letter-spacing:.14em;text-transform:uppercase;opacity:.7;font-size:7pt;margin-bottom:1mm}
+  .cv-meta dt{opacity:.7;font-size:8pt;margin-bottom:1mm}
   .cv-meta dd{margin:0;font-family:var(--mono)}
   /* Full bleed: the band cancels the page padding and runs edge to edge, so it
      reads as the system applied to the cover rather than a swatch strip laid
      on it. */
   .cv-band{display:flex;height:11mm;margin:0 calc(-1 * var(--m)) calc(-1 * var(--m))}
-  .cv-band i{flex:1}
+  .cv-band i{min-width:6mm}
 
   /* ── contents ───────────────────────────────────────────────────────── */
   .ct-grid{display:grid;grid-template-columns:1fr 62mm;gap:16mm;height:100%;align-content:start}
+  .ct-h{font-size:21pt;letter-spacing:-.01em;margin:0 0 7mm}
   .ct-list{list-style:none;margin:0;padding:0}
   .ct-list li{display:flex;align-items:baseline;gap:4mm;padding:4.5mm 0;
     border-bottom:.4pt solid var(--hair)}
@@ -144,7 +150,7 @@ function css({ d }) {
   /* ── section opening ────────────────────────────────────────────────── */
   .pg-open{display:flex;flex-direction:column;justify-content:space-between}
   .open-num{font-family:var(--head);font-weight:${d.headingWeight};
-    font-size:150pt;line-height:.82;letter-spacing:-.04em;opacity:.9}
+    font-size:120pt;line-height:.82;letter-spacing:-.04em;opacity:.9}
   .open-title{font-size:34pt;letter-spacing:-.02em}
   .open-abs{font-size:11pt;max-width:110mm;margin:4mm 0 0;opacity:.86;line-height:1.4}
 
@@ -163,6 +169,7 @@ function css({ d }) {
   .bd-id{display:flex;flex-direction:column;justify-content:center}
   .bd-role{font-size:7pt;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin:0 0 1.5mm}
   .bd-name{font-family:var(--head);font-size:13pt;font-weight:${d.headingWeight};margin:0;line-height:1.1}
+  .bd-lands{font-size:7.5pt;color:var(--mut);margin:1.5mm 0 0;line-height:1.35}
   .bd-spec{margin:0;display:flex;flex-direction:column;justify-content:center;gap:1.4mm}
   .bd-spec div{display:flex;justify-content:space-between;gap:2.5mm;font-size:7.5pt;
     border-bottom:.4pt solid var(--hair);padding-bottom:1mm}
@@ -173,8 +180,8 @@ function css({ d }) {
   .mx{width:100%;border-collapse:collapse;font-size:7.5pt;table-layout:fixed}
   .mx th,.mx td{padding:4.6mm 1mm;text-align:center;border-bottom:.4pt solid var(--hair)}
   .mx thead th{border-bottom:.8pt solid var(--ink);font-weight:600;color:var(--mut)}
-  .mx-h{font-family:var(--mono);font-size:6.5pt;display:block;margin-top:1mm}
-  .mx-corner{font-size:6.5pt;color:var(--mut)}
+  .mx-h{font-family:var(--mono);font-size:7pt;display:block;margin-top:1mm}
+  .mx-corner{font-size:7pt;color:var(--mut)}
   .mx tbody th{text-align:left;font-family:var(--mono);font-weight:400;white-space:nowrap}
   .mx td{font-family:var(--mono);font-variant-numeric:tabular-nums}
   /* Pass/fail is carried by WEIGHT, never by colour: the colours on this page
@@ -184,6 +191,7 @@ function css({ d }) {
   .mx-mid{font-weight:500;color:#4A4A55}
   .mx-fail{font-weight:400;color:#A6A6B0}
   .mx-self{color:var(--line)}
+  .mx-w{display:block;font-family:var(--body);font-size:7pt;font-weight:inherit;color:var(--mut);margin-top:.6mm}
   .dot{display:inline-block;width:2.6mm;height:2.6mm;margin-right:1.6mm;
     vertical-align:-.3mm;border:.4pt solid rgba(0,0,0,.16)}
   /* Pushed to the foot: a key floating directly under a short table, with a
@@ -233,6 +241,9 @@ function css({ d }) {
     background:#F7F7F9;font-size:8pt;color:var(--mut)}
   .cl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12mm;font-size:8.5pt;color:var(--mut)}
   .cl-grid .lbl{margin-top:5mm}
+  .cl-foot{gap:6mm}
+  .cl-foot span{flex:none}
+  .cl-foot .cl-name{flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
   .cl-grid div>.lbl:first-child{margin-top:0}
   /* No rule of its own: the running foot draws one 8mm below, and two
      horizontal rules that close together read as a mistake rather than a
