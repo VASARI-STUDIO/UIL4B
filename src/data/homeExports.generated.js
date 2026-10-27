@@ -7,6 +7,7 @@
 //     dir: '/home-exports/',                       public path prefix
 //     design: { seed, harmony, colors[5], heading: { family, weight }, body: { family, weight } },
 //     totalBytes,                                  all 36 files together
+//     counts: { bookPages, deckSlides },           read from the real book and deck (the card's row sublines)
 //     plates: [Item, Item, Item],                  tab order: Book, Brand deck, UI kit
 //     covers: [Item, Item, Item],                  Northbeam, Halcyon, Ferrule (one tab each)
 //   }
@@ -18,6 +19,7 @@
 //     alt,           the image's alt text
 //     sourceSha256,  sha256 of the export HTML the image was rendered from
 //     landscape,     Variant for screens 761px and wider; a cover's is the cover beside its contents page, facing
+//                    (not drawn now); the deck's is guide-overview: the palette slide over a strip of the next four
 //     portrait,      Variant for screens 760px and narrower; for a cover this is the A4 cover on its own
 //   }
 //   Variant = {
@@ -28,7 +30,7 @@
 //     files: [{ file, w, h, bytes, sha256 }],   smallest to largest; file is relative to public/home-exports/
 //   }
 //   Plates are drawn on a transparent ground (the page supplies it), each page with a thin outline baked in.
-//   File names: landscape <id>-<w>.webp, portrait <id>-p-<w>.webp, covers <id>-<w>.webp, cover spreads <id>-spread-<w>.webp.
+//   File names: landscape <id>-<w>.webp (the deck's: guide-overview-<w>.webp), portrait <id>-p-<w>.webp, covers <id>-<w>.webp, cover spreads <id>-spread-<w>.webp.
 
 export const HOME_EXPORTS = {
   "version": 1,
@@ -52,7 +54,11 @@ export const HOME_EXPORTS = {
       "weight": 400
     }
   },
-  "totalBytes": 1174750,
+  "totalBytes": 1225312,
+  "counts": {
+    "bookPages": 12,
+    "deckSlides": 9
+  },
   "plates": [
     {
       "id": "book-colour",
@@ -135,7 +141,7 @@ export const HOME_EXPORTS = {
       "kind": "plate",
       "tab": "Brand deck",
       "tabName": "Brand guidelines deck, Pro",
-      "alt": "Brand guidelines deck, palette page with five named colours.",
+      "alt": "Brand guidelines deck, the palette page with five named colours, and the pages that follow it.",
       "sourceSha256": "ab7bab1079dcb864ddbad62dc13bb7e8db1620bde59acbe2f3eab0c2123752b3",
       "landscape": {
         "master": {
@@ -143,31 +149,31 @@ export const HOME_EXPORTS = {
           "h": 2715
         },
         "aspect": 1.4142,
-        "src": "/home-exports/guide-palette-1600.webp",
+        "src": "/home-exports/guide-overview-1600.webp",
         "width": 1600,
         "height": 1131,
-        "srcset": "/home-exports/guide-palette-800.webp 800w, /home-exports/guide-palette-1600.webp 1600w, /home-exports/guide-palette-2400.webp 2400w",
+        "srcset": "/home-exports/guide-overview-800.webp 800w, /home-exports/guide-overview-1600.webp 1600w, /home-exports/guide-overview-2400.webp 2400w",
         "files": [
           {
-            "file": "guide-palette-800.webp",
+            "file": "guide-overview-800.webp",
             "w": 800,
             "h": 566,
-            "bytes": 13346,
-            "sha256": "92cff1cf4f07e0d957ee0bed1bc4b455c932f7302be622567c860d44b63f4ef3"
+            "bytes": 20510,
+            "sha256": "ccb12a82918e8f58e9439aca7e9d744584e5db868964f96fc73e63beb40e3abd"
           },
           {
-            "file": "guide-palette-1600.webp",
+            "file": "guide-overview-1600.webp",
             "w": 1600,
             "h": 1131,
-            "bytes": 37444,
-            "sha256": "a317256b441ec2067fff345161c2831c46c60e365a76ab458feb6cdce4035cbd"
+            "bytes": 52772,
+            "sha256": "8dc41b0f860f65436f4ef3563ad0427746deec6fa520548697c691486b13f231"
           },
           {
-            "file": "guide-palette-2400.webp",
+            "file": "guide-overview-2400.webp",
             "w": 2400,
             "h": 1697,
-            "bytes": 66464,
-            "sha256": "69ca9221b4255f816b1d1d95796abde0d0f38f94c0620fb2677a2e4e362f0218"
+            "bytes": 94534,
+            "sha256": "20e97e7f2b00601c3531a457acf146537eb05b9c51371b0dd494c037a57bb090"
           }
         ]
       },

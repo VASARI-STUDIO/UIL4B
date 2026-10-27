@@ -7,16 +7,20 @@
 // (renderUiKit, over src/templates/uiKit.html, the Free tier with its mark), the
 // Design system book (buildDesignSystemBook) and the Brand guidelines deck
 // (buildBrandGuidelines). The three project plates are the book's own cover page
-// for each example project: the A4 cover on its own (phones) and the cover beside
-// its contents page as a facing spread (wider screens). The only processing is
-// crop, compose onto a transparent ground with a thin page outline, downscale and
-// WebP encode. Run by hand; not part of CI. The outputs are committed.
+// for each example project: the A4 cover on its own, which the shelf in card 3
+// shows at every width, and the cover beside its contents page as a facing spread
+// (kept in the manifest; the page does not draw it now). The deck's wide plate is
+// "guide-overview": the palette slide over a strip of the four slides after it.
+// The only processing is crop, compose onto a transparent ground with a thin page
+// outline, downscale and WebP encode. Run by hand; not part of CI. The outputs are
+// committed.
 //
 // Writes
 //   public/home-exports/<id>-<w>.webp        landscape plates (>= 761px wide screens)
+//   public/home-exports/guide-overview-<w>.webp  the deck's landscape plate (palette slide and a four-slide strip)
 //   public/home-exports/<id>-p-<w>.webp      portrait plates (<= 760px)
-//   public/home-exports/cover-<name>-<w>.webp         the three book covers, A4 on its own (<= 760px)
-//   public/home-exports/cover-<name>-spread-<w>.webp  cover + contents page, facing (>= 761px)
+//   public/home-exports/cover-<name>-<w>.webp         the three book covers, A4 on its own (the shelf, every width)
+//   public/home-exports/cover-<name>-spread-<w>.webp  cover + contents page, facing (not drawn by the page now)
 //   src/data/homeExports.generated.js        the manifest (shape written at its top)
 //   .cache/home-exports/master/*.png         the 3840px masters (gitignored, never committed)
 //
@@ -84,7 +88,8 @@ const EDGE_COLOUR = 'rgba(17, 17, 20, 0.2)'
 // The most a page title may be small at: CSS px at the narrowest display. The
 // plate sits in a box with 4% padding either side (the spec's .sp-plate img), so
 // the picture itself is 92% of the stage width. Landscape shows from the 768
-// band (650 wide stage); portrait plates and covers from the 390 band (318 wide).
+// band (650 wide stage); portrait plates from the 390 band (318 wide). A cover is
+// the shelf's front book: 220 CSS px wide at 390, the narrowest it is ever drawn.
 const TITLE_FLOOR = 12
 // Measured and kept: a whole A4 page, or two stacked 16:9 slides, cannot show its
 // title at 12px in a 318px stage. Listed by name so any new miss still fails the run.
@@ -92,7 +97,7 @@ const TITLE_WAIVED = new Set(['book-colour portrait', 'guide-palette portrait'])
 const DISPLAY = {
   landscape: 650 * 0.92,
   portrait: 318 * 0.92,
-  cover: Math.min(318 * 0.92, (398 - 318 * 0.08) / SQRT2), // A4 portrait is height-limited in the 4:5 plate
+  cover: 220,
 }
 
 // Byte budgets, per file, and for the folder. Kilobytes are 1000 bytes.
@@ -114,7 +119,13 @@ const PROJECT = { northbeam: 'Northbeam', halcyon: 'Halcyon', ferrule: 'Ferrule'
 
 // Page positions in each document, checked against the page's own text.
 const BOOK_PAGES = { cover: 0, contents: 1, opening: 2, palette: 3 } // .pg
-const DECK_PAGES = { cover: 0, palette: 2, inUse: 3 } // .sl
+const DECK_PAGES = { cover: 0, palette: 2, inUse: 3, strip: [3, 4, 5, 6] } // .sl; the strip is the four slides after the palette
+// The deck's wide plate: the palette slide at full width, a 3% gap, then the strip
+// (each slide 23.5% wide, 2% apart, cropped at the foot so the whole is the plate's aspect).
+const STRIP_GAP = 0.03
+const STRIP_SLIDE = 0.235
+const STRIP_BETWEEN = 0.02
+const STRIP_KEEP_MIN = 0.8 // a strip slide keeps at least this share of its height
 
 // The kit crops. The kit is a scrolling web page, so a crop is a rectangle of it.
 const KIT_LAND = { viewport: { width: 1280, height: 900 }, crop: { w: 1280, h: 905 }, dsf: 3 } // 3840 x 2715
@@ -226,22 +237,25 @@ function pngSize(buf) {
 async function shootElement(page, { locator, title, label }) {
   if (await locator.count() < 1) fail(`${label}: the page selector found nothing`)
   const el = locator.first()
+  // A picture that is only a thumbnail (the deck's strip) passes no title.
   const info = await el.evaluate((node, sel) => {
     const r = node.getBoundingClientRect()
-    const t = node.querySelector(sel)
+    const t = sel ? node.querySelector(sel) : null
     return { w: r.width, h: r.height, title: t ? { text: t.textContent.trim(), px: parseFloat(getComputedStyle(t).fontSize) } : null }
-  }, title.selector)
-  if (!info.title) fail(`${label}: no title element ${title.selector}`)
-  if (title.text && !info.title.text.includes(title.text)) fail(`${label}: the title reads "${info.title.text}", expected "${title.text}"`)
+  }, title?.selector)
+  if (title && !info.title) fail(`${label}: no title element ${title.selector}`)
+  if (title?.text && !info.title.text.includes(title.text)) fail(`${label}: the title reads "${info.title.text}", expected "${title.text}"`)
   const png = await el.screenshot({ type: 'png', animations: 'disabled', caret: 'hide' })
-  return { png, cssW: info.w, cssH: info.h, titlePx: info.title.px, titleText: info.title.text }
+  return { png, cssW: info.w, cssH: info.h, titlePx: info.title?.px ?? 0, titleText: info.title?.text ?? '' }
 }
 
 // ── Compose, downscale, encode ──────────────────────────────────────────────
 
 // Draw layers onto a transparent canvas and return the PNG. A layer is
 // { png, x, y, w, h } in canvas pixels; each gets the thin page outline, inside its
-// own edge, scaled to the canvas width (EDGE_PX is for a 3840 master).
+// own edge, scaled to the canvas width (EDGE_PX is for a 3840 master). A layer may
+// carry keep (0 to 1): only that top share of its picture is drawn, into w x h
+// (so h is the cropped height).
 async function compose(W, H, layers) {
   const edge = Math.max(1, Math.round(EDGE_PX * W / MASTER_W))
   const b64 = await util.evaluate(async ({ W: cw, H: ch, list, edge: ew, colour }) => {
@@ -253,7 +267,7 @@ async function compose(W, H, layers) {
     g.imageSmoothingQuality = 'high'
     for (const l of list) {
       const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(l.b64), (ch2) => ch2.charCodeAt(0))], { type: 'image/png' }))
-      g.drawImage(bmp, l.x, l.y, l.w, l.h)
+      g.drawImage(bmp, 0, 0, bmp.width, Math.round(bmp.height * (l.keep ?? 1)), l.x, l.y, l.w, l.h)
       g.strokeStyle = colour
       g.lineWidth = ew
       g.strokeRect(l.x + ew / 2, l.y + ew / 2, l.w - ew, l.h - ew)
@@ -263,7 +277,7 @@ async function compose(W, H, layers) {
     let s = ''
     for (let i = 0; i < out.length; i += 0x8000) s += String.fromCharCode(...out.subarray(i, i + 0x8000))
     return btoa(s)
-  }, { W, H, edge, colour: EDGE_COLOUR, list: layers.map((l) => ({ b64: l.png.toString('base64'), x: l.x, y: l.y, w: l.w, h: l.h })) })
+  }, { W, H, edge, colour: EDGE_COLOUR, list: layers.map((l) => ({ b64: l.png.toString('base64'), x: l.x, y: l.y, w: l.w, h: l.h, keep: l.keep })) })
   const buf = Buffer.from(b64, 'base64')
   const got = pngSize(buf)
   if (got.w !== W || got.h !== H) fail(`composed ${got.w}x${got.h}, expected ${W}x${H}`)
@@ -321,6 +335,7 @@ async function derive(master, widths) {
 // ── What each id is ─────────────────────────────────────────────────────────
 
 const outputs = [] // { id, kind, tab, tabName, alt, sourceSha256, variants: { landscape?, portrait? } }
+const counts = { bookPages: 0, deckSlides: 0 } // read from the real documents, written to the manifest
 const titles = [] // for the floor check
 const sources = new Map()
 
@@ -343,7 +358,7 @@ async function finish({ id, kind, tab, tabName, alt, html, variants }) {
     await saveMaster(v.name, v.master)
     const spec = v.spec
     const files = await derive(v.master, spec.widths)
-    made[orient] = { spec, files, name: v.name, masterW: files[0].masterW, masterH: files[0].masterH }
+    made[orient] = { spec, files, name: v.name, stem: v.stem, masterW: files[0].masterW, masterH: files[0].masterH }
   }
   outputs.push({ id, kind, tab, tabName, alt, sourceSha256: sha256(html), made })
 }
@@ -370,6 +385,7 @@ async function bookPlates(name) {
       cls: p.className, text: (p.querySelector('.open-title, .pg-head h3, .cv-title')?.textContent || '').trim(), band: Boolean(p.querySelector('.bands')),
     })))
     const at = (i) => found[i] || fail(`the book has no page ${i}`)
+    counts.bookPages = found.length
     if (!at(BOOK_PAGES.cover).cls.includes('pg-cover')) fail(`book page ${BOOK_PAGES.cover} is not the cover`)
     if (!at(BOOK_PAGES.contents).cls.includes('pg-contents')) fail(`book page ${BOOK_PAGES.contents} is not the contents page`)
     if (!at(BOOK_PAGES.opening).cls.includes('pg-open') || at(BOOK_PAGES.opening).text !== 'Colour') fail(`book page ${BOOK_PAGES.opening} is not the Colour opening`)
@@ -466,6 +482,8 @@ async function guidePlates() {
     await fontsLoaded(page, FACES, SAMPLE)
     const found = await page.evaluate(() => [...document.querySelectorAll('.sl')].map((s) => ({ cls: s.className, text: (s.querySelector('.hd-title, .cv-title')?.textContent || '').trim() })))
     const at = (i) => found[i] || fail(`the deck has no slide ${i}`)
+    counts.deckSlides = found.length
+    for (const i of DECK_PAGES.strip) at(i)
     if (!at(DECK_PAGES.cover).cls.includes('sl-cover')) fail(`deck slide ${DECK_PAGES.cover} is not the cover`)
     if (at(DECK_PAGES.palette).text !== 'The palette') fail(`deck slide ${DECK_PAGES.palette} is not The palette (${at(DECK_PAGES.palette).text})`)
     if (at(DECK_PAGES.inUse).text !== 'In use') fail(`deck slide ${DECK_PAGES.inUse} is not In use (${at(DECK_PAGES.inUse).text})`)
@@ -476,8 +494,30 @@ async function guidePlates() {
   })
   const sh = Math.round(MASTER_W * shots.pal.cssH / shots.pal.cssW) // slide height at 3840 wide
 
-  // Landscape: the slide at full width, ground above and below.
-  const masterL = await compose(MASTER_W, LAND.masterH, [{ png: shots.pal.png, x: 0, y: Math.round((LAND.masterH - sh) / 2), w: MASTER_W, h: sh }])
+  // Landscape ("guide-overview"): the palette slide at full width, a 3% gap, then
+  // the next four slides side by side, each cropped at the foot so the whole is
+  // exactly the plate's aspect. The strip's slides are real renders, shot at
+  // twice their drawn width and scaled down once.
+  const stripW = Math.round(MASTER_W * STRIP_SLIDE)
+  const stripGap = Math.round(MASTER_W * STRIP_BETWEEN)
+  const stripFull = Math.round(stripW * shots.pal.cssH / shots.pal.cssW) // an uncropped strip slide
+  const stripTop = sh + Math.round(MASTER_W * STRIP_GAP)
+  const stripH = LAND.masterH - stripTop
+  const keep = stripH / stripFull
+  if (keep < STRIP_KEEP_MIN || keep > 1) fail(`the deck strip would keep ${(keep * 100).toFixed(1)}% of each slide's height (wants ${STRIP_KEEP_MIN * 100}% to 100%)`)
+  const used = stripW * 4 + stripGap * 3
+  if (Math.abs(used - MASTER_W) > 4) fail(`the deck strip is ${used}px wide, the plate is ${MASTER_W}`)
+  const thumbs = await withDocument(html, { viewport: { width: 1300, height: 800 }, dsf: (stripW * 2) / slideW }, async (page) => {
+    await fontsLoaded(page, FACES, SAMPLE)
+    const slides = page.locator('.sl')
+    const out = []
+    for (const i of DECK_PAGES.strip) out.push(await shootElement(page, { locator: slides.nth(i), label: `deck slide ${i}` }))
+    return out
+  })
+  const masterL = await compose(MASTER_W, LAND.masterH, [
+    { png: shots.pal.png, x: 0, y: 0, w: MASTER_W, h: sh },
+    ...thumbs.map((t, i) => ({ png: t.png, x: i * (stripW + stripGap), y: stripTop, w: stripW, h: stripH, keep })),
+  ])
   noteTitle(id, 'landscape', shots.pal, MASTER_W, MASTER_W)
 
   // Portrait: the palette slide over the "In use" slide, 3% of the height apart.
@@ -492,8 +532,8 @@ async function guidePlates() {
 
   await finish({
     id, kind: 'plate', tab: 'Brand deck', tabName: 'Brand guidelines deck, Pro',
-    alt: 'Brand guidelines deck, palette page with five named colours.', html,
-    variants: { landscape: { name: `${id}-master`, master: masterL, spec: LAND }, portrait: { name: `${id}-p-master`, master: masterP, spec: PORT } },
+    alt: 'Brand guidelines deck, the palette page with five named colours, and the pages that follow it.', html,
+    variants: { landscape: { name: 'guide-overview-master', stem: 'guide-overview', master: masterL, spec: LAND }, portrait: { name: `${id}-p-master`, master: masterP, spec: PORT } },
   })
 }
 
@@ -616,15 +656,16 @@ function checks() {
   return { errors, total }
 }
 
-function fileName(o, orient, w) {
+function fileName(o, orient, w, stem = o.id) {
   if (o.kind === 'cover') return orient === 'portrait' ? `${o.id}-${w}.webp` : `${o.id}-spread-${w}.webp`
-  return orient === 'portrait' ? `${o.id}-p-${w}.webp` : `${o.id}-${w}.webp`
+  return orient === 'portrait' ? `${o.id}-p-${w}.webp` : `${stem}-${w}.webp`
 }
 
 // Tab order of the export card: the two Pro pages first, the free kit last.
 const ORDER = ['book-colour', 'guide-palette', 'kit-colour', 'cover-northbeam', 'cover-halcyon', 'cover-ferrule']
 
 async function writeOutputs(total) {
+  if (!counts.bookPages || !counts.deckSlides) fail('the book page count or the deck slide count was not read')
   await fs.mkdir(OUT_DIR, { recursive: true })
   for (const f of await fs.readdir(OUT_DIR)) if (f.endsWith('.webp')) await fs.rm(path.join(OUT_DIR, f))
   const items = []
@@ -633,7 +674,7 @@ async function writeOutputs(total) {
     for (const [orient, m] of Object.entries(o.made)) {
       const files = []
       for (const f of m.files) {
-        const file = fileName(o, orient, f.w)
+        const file = fileName(o, orient, f.w, m.stem)
         await fs.writeFile(path.join(OUT_DIR, file), f.buf)
         files.push({ file, w: f.w, h: f.h, bytes: f.buf.length, sha256: sha256(f.buf) })
       }
@@ -656,6 +697,7 @@ async function writeOutputs(total) {
     dir: PUBLIC_DIR,
     design: { seed, harmony: HARMONY, colors, heading: { family: HEADING.family, weight: HEADING.weight }, body: { family: BODY.family, weight: BODY.weight } },
     totalBytes: total,
+    counts: { bookPages: counts.bookPages, deckSlides: counts.deckSlides },
     plates: items.filter((i) => i.kind === 'plate'),
     covers: items.filter((i) => i.kind === 'cover'),
   }
@@ -668,6 +710,7 @@ async function writeOutputs(total) {
 //     dir: '/home-exports/',                       public path prefix
 //     design: { seed, harmony, colors[5], heading: { family, weight }, body: { family, weight } },
 //     totalBytes,                                  all 36 files together
+//     counts: { bookPages, deckSlides },           read from the real book and deck (the card's row sublines)
 //     plates: [Item, Item, Item],                  tab order: Book, Brand deck, UI kit
 //     covers: [Item, Item, Item],                  Northbeam, Halcyon, Ferrule (one tab each)
 //   }
@@ -679,6 +722,7 @@ async function writeOutputs(total) {
 //     alt,           the image's alt text
 //     sourceSha256,  sha256 of the export HTML the image was rendered from
 //     landscape,     Variant for screens 761px and wider; a cover's is the cover beside its contents page, facing
+//                    (not drawn now); the deck's is guide-overview: the palette slide over a strip of the next four
 //     portrait,      Variant for screens 760px and narrower; for a cover this is the A4 cover on its own
 //   }
 //   Variant = {
@@ -689,7 +733,7 @@ async function writeOutputs(total) {
 //     files: [{ file, w, h, bytes, sha256 }],   smallest to largest; file is relative to public/home-exports/
 //   }
 //   Plates are drawn on a transparent ground (the page supplies it), each page with a thin outline baked in.
-//   File names: landscape <id>-<w>.webp, portrait <id>-p-<w>.webp, covers <id>-<w>.webp, cover spreads <id>-spread-<w>.webp.
+//   File names: landscape <id>-<w>.webp (the deck's: guide-overview-<w>.webp), portrait <id>-p-<w>.webp, covers <id>-<w>.webp, cover spreads <id>-spread-<w>.webp.
 
 `
   await fs.writeFile(OUT_DATA, `${header}export const HOME_EXPORTS = ${JSON.stringify(data, null, 2)}\n`)
@@ -708,7 +752,7 @@ async function main() {
     const { errors, total } = checks()
     for (const o of outputs) {
       for (const [orient, m] of Object.entries(o.made)) {
-        for (const f of m.files) console.log(`${fileName(o, orient, f.w).padEnd(34)} ${String(f.w).padStart(4)}x${String(f.h).padEnd(4)} ${kbOf(f.buf.length).padStart(9)}  ${sha256(f.buf).slice(0, 12)}`)
+        for (const f of m.files) console.log(`${fileName(o, orient, f.w, m.stem).padEnd(34)} ${String(f.w).padStart(4)}x${String(f.h).padEnd(4)} ${kbOf(f.buf.length).padStart(9)}  ${sha256(f.buf).slice(0, 12)}`)
       }
     }
     for (const t of titles) console.log(`title ${t.id} ${t.shape}: "${t.text}" ${t.px.toFixed(1)} CSS px at display`)

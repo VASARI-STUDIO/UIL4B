@@ -98,6 +98,25 @@ test('three plates and three covers, in tab order', () => {
   for (const i of [...HOME_EXPORTS.plates, ...HOME_EXPORTS.covers]) assert.ok(i.alt && i.tab && i.tabName && i.sourceSha256, `${i.id} needs alt, tab, tabName and a source hash`)
 })
 
+// The deck's wide picture is the palette slide over a strip of four more slides, a
+// plate of its own (guide-overview), in the same landscape budget; the card's row
+// sublines read the book's and the deck's real counts from the manifest.
+test('the deck tab shows guide-overview, and the counts are in the manifest', () => {
+  const deck = HOME_EXPORTS.plates.find((p) => p.id === 'guide-palette')
+  assert.deepEqual(deck.landscape.files.map((f) => f.file), ['guide-overview-800.webp', 'guide-overview-1600.webp', 'guide-overview-2400.webp'])
+  assert.equal(deck.landscape.aspect, 1.4142, 'the overview is one A4 landscape in shape')
+  assert.ok(deck.landscape.srcset.includes('/home-exports/guide-overview-2400.webp 2400w'))
+  assert.deepEqual(deck.portrait.files.map((f) => f.file), ['guide-palette-p-400.webp', 'guide-palette-p-800.webp', 'guide-palette-p-1200.webp'], 'the phone plate is unchanged')
+  // The palette slide plus the four after it need at least six slides in the deck.
+  assert.ok(Number.isInteger(HOME_EXPORTS.counts.deckSlides) && HOME_EXPORTS.counts.deckSlides >= 7)
+  assert.ok(Number.isInteger(HOME_EXPORTS.counts.bookPages) && HOME_EXPORTS.counts.bookPages > 0)
+  // The shelf draws the A4 cover at every width: each cover needs its three-step srcset.
+  for (const c of HOME_EXPORTS.covers) {
+    assert.deepEqual(c.portrait.files.map((f) => f.w), [360, 720, 1080], `${c.id}: the shelf's srcset`)
+    assert.ok(c.portrait.files.at(-1).w >= 300 * 3, `${c.id}: 300 CSS px at 3x needs a 900w or wider file`)
+  }
+})
+
 test('the checks can fail: a bad manifest is caught', () => {
   const copy = () => JSON.parse(JSON.stringify(HOME_EXPORTS))
   const missing = copy()
