@@ -54,7 +54,7 @@ import { SUBSET_RANGES } from './kitFonts.js'
 import { readIdentity } from './kitIdentity.js'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { hexToOklch } from './exportTemplates/roles.js'
-import { MAX_SLOTS } from './exportTemplates/shared.js'
+import { MAX_SLOTS, fitTitle, clampTitle } from './exportTemplates/shared.js'
 import { roleLabel } from './paletteRoles.js'
 import { manualParts } from './kitManual.js'
 import { showcaseParts } from './kitShowcase.js'
@@ -76,10 +76,15 @@ const FREE_IDENTITY = Object.freeze({
 })
 const GUIDE_COPY = Object.freeze({
   tagline: 'From selections to a system.',
-  guideTitle: 'Less guesswork. More consistency.',
+  guideTitle: 'Overview',
   description: 'Your selected colours, typefaces, and interface foundations, brought together in one reference. A practical starting point for the next thing you build.',
   principles: ['Colour & semantic roles', 'Typography & spacing', 'Components & states'],
 })
+// The cover names the project, in whole words. The sizes and measures are the
+// template's: 745 px is the cover block's text width at 1440, and 287 pt is its
+// text width on A4, so each title is fitted for the page it is drawn on.
+const COVER_SCREEN = Object.freeze({ maxLines: 2, steps: [80, 62, 46], measure: 745 })
+const COVER_PRINT = Object.freeze({ maxLines: 3, steps: [44, 34, 26], measure: 287 })
 const WEBSITE_COPY = Object.freeze({
   headline: 'A place for your next idea.',
   description: 'Keep the important things clear. Give each action a purpose. Make every detail part of the same system.',
@@ -597,7 +602,7 @@ export function renderUiKit(design, {
   let identity = ''
   const personal = free ? null : sel.personalisation
   if (personal?.name) {
-    identity = `<section class="chapter personal-identity" id="identity"><div class="section-head"><h2>Your identity.</h2><p>${esc(personal.description || 'Your supplied identity, paired with the selected interface system.')}</p></div><div class="identity-name">${esc(personal.name)}</div>`
+    identity = `<section class="chapter personal-identity" id="identity"><div class="section-head"><h2>Identity</h2><p>${esc(personal.description || 'Your supplied identity, paired with the selected interface system.')}</p></div><div class="identity-name">${esc(personal.name)}</div>`
     const src = personal.logo?.src
     if (typeof src === 'string' && /^data:image\/(?:svg\+xml|png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(src)) {
       identity += `<div class="identity-logo"><img src="${src}" alt="${esc(personal.name)} logo"></div><p class="component-note">Logo shown as supplied. No colours or proportions have been changed.</p>`
@@ -615,14 +620,21 @@ export function renderUiKit(design, {
   // One swatch: the chip, the colour's role, and where it lands. The chip's big
   // text is how the colour reads as text on the canvas (for the canvas itself,
   // how ink reads on it), graded in words so colour is never the only cue.
-  const swatchCell = ({ hex, name, title, note, lands, ratio, basis }) => {
+  const swatchCell = ({ hex, name, title, note, lands, ratio, basis, primary = false }) => {
     const grade = gradeOf(ratio)
     const fails = grade === 'Fails AA'
     const pale = lum(hex) >= PALE_LUM ? ' pale' : ''
-    return `<article class="swatch"><button class="colour-chip${pale}" style="--swatch:${hex};--on-swatch:${on(hex)}" data-copy="${hex}" aria-label="Copy ${esc(name)} ${hex}"><span>${esc(name)}</span><span class="chip-result"><b class="chip-grade${fails ? ' fails' : ''}">${grade}</b><small>${ratio.toFixed(2)}:1 ${basis}</small></span><span class="chip-bottom"><code>${hex}</code>${icon('copy')}</span></button><div class="swatch-details"><h3>${esc(title)}</h3>${note ? `<p>${esc(note)}</p>` : ''}<p class="lands"><small>Where it lands</small>${esc(lands.charAt(0).toUpperCase() + lands.slice(1))}</p><p class="sr-only">Contrast ${ratio.toFixed(2)} to 1 ${basis}: ${grade}.</p><code>RGB ${rgb(hex).join(' / ')}</code></div></article>`
+    // A colour with no job says so once, over its block, so its card carries only the colour.
+    const details = lands
+      ? `<h3>${esc(title)}</h3>${note ? `<p>${esc(note)}</p>` : ''}<p class="lands"><small>Where it lands</small>${esc(lands.charAt(0).toUpperCase() + lands.slice(1))}</p>`
+      : ''
+    return `<article class="swatch${primary ? ' is-primary' : ''}"><button class="colour-chip${pale}" style="--swatch:${hex};--on-swatch:${on(hex)}" data-copy="${hex}" aria-label="Copy ${esc(name)} ${hex}"><span>${esc(name)}</span><span class="chip-result"><b class="chip-grade${fails ? ' fails' : ''}">${grade}</b><small>${ratio.toFixed(2)}:1 ${basis}</small></span><span class="chip-bottom"><code>${hex}</code>${icon('copy')}</span></button><div class="swatch-details">${details}<p class="sr-only">Contrast ${ratio.toFixed(2)} to 1 ${basis}: ${grade}.</p><code>RGB ${rgb(hex).join(' / ')}</code></div></article>`
   }
   const canvasHex = slot.chalk.hex
-  const swatches = sel.palette.map((p) => swatchCell({
+  // The primary leads: it is the largest cell in every layout of the palette.
+  const railOrder = [...sel.palette].sort((a, b) => (b.id === 'pine') - (a.id === 'pine'))
+  const swatches = railOrder.map((p) => swatchCell({
+    primary: p.id === 'pine',
     hex: p.hex,
     name: p.name,
     title: p.role,
@@ -636,8 +648,8 @@ export function renderUiKit(design, {
   // when the design holds more colours than a kit lists.
   const unplaced = sel.colours.filter((c) => c.lands === UNPLACED_LANDS)
   const colourCut = sel.colourCount > sel.colours.length
-  const moreList = unplaced.map((c) => swatchCell({ hex: c.hex, name: c.name, title: `${c.role.charAt(0)}${c.role.slice(1).toLowerCase()}`, note: '', lands: c.lands, ratio: c.onCanvas, basis: 'as text on the canvas' })).join('')
-  const moreHead = '<div class="subhead"><h3>The rest of your palette.</h3><p>These colours are in the CSS and JSON downloads. This kit does not assign them to a part of the interface.</p></div>'
+  const moreList = unplaced.map((c) => swatchCell({ hex: c.hex, name: c.name, lands: '', ratio: c.onCanvas, basis: 'as text on the canvas' })).join('')
+  const moreHead = '<div class="subhead"><h3>The rest of your palette</h3><p>These colours are in the CSS and JSON downloads. This kit does not assign them to a part of the interface.</p></div>'
   const cutNote = `<p class="contrast-note">The first ${sel.colours.length} of ${sel.colourCount} colours are shown. All ${sel.colourCount} are in the CSS and JSON downloads.</p>`
   const moreSwatches = unplaced.length || colourCut
     ? `<div class="more-colours">${unplaced.length ? `${moreHead}<div class="palette more">${moreList}</div>` : ''}${colourCut ? cutNote : ''}</div>`
@@ -664,6 +676,22 @@ export function renderUiKit(design, {
     const ratio = contrast(slot[a].hex, slot[b].hex)
     return `<div class="contrast-pair"><span style="background:${slot[b].hex};color:${slot[a].hex}">Aa</span><div><strong>${esc(`${slot[a].name} on ${slot[b].name}`)}</strong><small>${ratio.toFixed(2)}:1 · ${ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'Below AA'} text</small></div></div>`
   }).join('')
+
+  const coverText = (opts) => {
+    const fit = fitTitle(sel.title, opts)
+    return { size: fit.size, text: fit.clamp ? clampTitle(sel.title, fit.size, opts) : sel.title }
+  }
+  const onScreen = coverText(COVER_SCREEN)
+  const onPaper = coverText(COVER_PRINT)
+  const coverTitle = onScreen.text === onPaper.text
+    ? `<span class="ct">${esc(onScreen.text)}</span>`
+    : `<span class="ct ct-screen">${esc(onScreen.text)}</span><span class="ct ct-print">${esc(onPaper.text)}</span>`
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
+  const faces = [...new Set([sel.fonts.display.name, sel.fonts.body.name])]
+  const coverFacts = `${plural(sel.colourCount, 'colour', 'colours')} · ${plural(faces.length, 'typeface', 'typefaces')}`
+  // The side note is the description when the person wrote one; otherwise the faces, as a fact.
+  const identityText = free ? '' : sel.personalisation?.description || ''
+  const coverNote = identityText || (faces.length === 1 ? `Set in ${faces[0]}.` : `Headings in ${sel.fonts.display.name}, body in ${sel.fonts.body.name}.`)
 
   const arrow = icon('arrow')
   const siteLinks = free ? `<aside class="site-links"><div><h3>Keep building with UIL4B.</h3><p>Explore more tools, refine your selections, and build your next kit.</p></div><nav aria-label="UIL4B website links"><a href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer">Visit uil4b.com${arrow}</a><a href="${SITE_ORIGIN}/create/palette" target="_blank" rel="noopener noreferrer">Build a colour palette${arrow}</a><a href="${SITE_ORIGIN}/create/font-pair" target="_blank" rel="noopener noreferrer">Explore font pairings${arrow}</a></nav><small>Website links open in a new tab and require an internet connection.</small></aside>` : ''
@@ -706,6 +734,12 @@ export function renderUiKit(design, {
     DATA: scriptJson(data),
     NAME: esc(sel.name),
     TAGLINE: esc(sel.tagline),
+    COVER_TITLE: coverTitle,
+    COVER_SIZE: String(onScreen.size),
+    COVER_PRINT: String(onPaper.size),
+    COVER_MEASURE: String(COVER_SCREEN.measure),
+    COVER_FACTS: esc(coverFacts),
+    COVER_NOTE: esc(coverNote),
     DESCRIPTION: esc(sel.description),
     GUIDETITLE: esc(sel.guideTitle),
     EDITION: esc(sel.edition),
