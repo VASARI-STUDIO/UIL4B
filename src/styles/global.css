@@ -4447,6 +4447,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-option[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
 .menu-select-mark{flex:none;color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:none}
 .menu-select-check{flex:none;visibility:hidden}
+.menu-select-option--desc{padding-block:var(--s-2)}
+.menu-select-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.menu-select-desc{max-width:34ch;font-size:12px;font-weight:400;line-height:1.4;color:var(--t2);white-space:normal;text-wrap:pretty}
 .menu-select-option[aria-selected="true"] .menu-select-check{visibility:visible}
 @media(pointer:coarse){.menu-select-option{min-height:44px}}
 @media(max-width:960px){

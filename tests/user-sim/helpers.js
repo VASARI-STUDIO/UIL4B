@@ -1123,19 +1123,20 @@ export async function keyToRest(page, key, what = 'the page') {
   return restAfterMove(page, before, what)
 }
 
-// Resolve value-based choices to the visible name, then operate by ARIA role.
+// Click a listbox option. A label choice is found by its accessible name; a value
+// choice by the option's data-value (not by name: an option with a one-line
+// description has a name that runs on into the description).
 export async function chooseMenuOption(page, trigger, choice) {
   await trigger.click()
   const list = page.locator('.menu-select-list[role="listbox"]')
   await list.waitFor({ state: 'visible' })
-  const name = typeof choice === 'object'
-    ? choice.label
-    : await list.getByRole('option').evaluateAll((rows, value) => {
-      const row = rows.find(row => row.dataset.value === String(value))
-      return row?.getAttribute('aria-label') || row?.textContent?.trim()
-    }, choice)
-  if (!name) throw new Error(`No listbox option for ${String(choice)}`)
-  await list.getByRole('option', { name, exact: true }).click()
+  if (typeof choice === 'object') {
+    await list.getByRole('option', { name: choice.label, exact: true }).click()
+    return
+  }
+  const row = list.locator('[role="option"]').and(list.locator(`[data-value=${JSON.stringify(String(choice))}]`))
+  if (!(await row.count())) throw new Error(`No listbox option for ${String(choice)}`)
+  await row.click()
 }
 
 /**
