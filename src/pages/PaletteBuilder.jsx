@@ -1,8 +1,11 @@
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
+// `lazy` in this file is lazyRoute, not React's: if the dialog's file failed to
+// download, it waits for the recovery reload instead of crashing the page.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
   ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode,

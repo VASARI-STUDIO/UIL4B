@@ -287,10 +287,12 @@
 .pvs [data-hit="on"][data-role~="neutral"],
 .pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
 .pvs [data-hit="off"]{opacity:.4}
-/* An SVG node takes no outline, so a drawing part is stroked instead: dashed
- * for "where this colour lands", solid for a role under its floor. Hit comes
- * last, as in the outline rules above, so a hover on a failing role still shows
- * the dashes. */
+/* Chromium draws an outline on an SVG shape as its bounding box, which on a
+ * stretched chart is a heavy bar across the whole drawing. So an SVG part drops
+ * the outline and is stroked instead: dashed for "where this colour lands",
+ * solid for a role under its floor. Hit comes last, as in the outline rules
+ * above, so a hover on a failing role still shows the dashes. */
+.pvs svg [data-role]{outline:none}
 .pvs svg [data-fail="on"]{stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
 .pvs svg [data-hit="on"]{stroke:var(--pv-text);stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 
