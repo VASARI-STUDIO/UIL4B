@@ -44,7 +44,8 @@ const SHOWN = '.sp-plate-art img.is-on, .sp-shelf img.is-on'
 // Each button is known by what its accessible name starts with, because the same
 // choice is offered as pills under the plate (below 1200px) and as rows in the copy
 // column (from 1200px), and only the one on show is in the page's accessibility tree.
-const TAB_FILE = { 'Design system book': 'book-colour', 'Brand deck': 'guide-palette', 'UI kit': 'kit-colour' }
+// The deck's wide picture is guide-overview (the palette slide over a strip of slides); its phone plate is still guide-palette-p.
+const TAB_FILE = { 'Design system book': 'book-colour', 'Brand deck': 'guide-overview', 'UI kit': 'kit-colour' }
 const PROJECT_FILE = { Northbeam: 'cover-northbeam', Halcyon: 'cover-halcyon', Ferrule: 'cover-ferrule' }
 const fileOf = (table, name) => Object.entries(table).find(([k]) => name.startsWith(k))?.[1]
 
@@ -77,7 +78,9 @@ const nameOf = async (locator) => (await locator.getAttribute('aria-label')) || 
 async function tabId(page, i) {
   const name = await nameOf(tabs(page).nth(i))
   expect(fileOf(TAB_FILE, name), `tab ${i + 1} ("${name}") is a known tab`).toBeTruthy()
-  return fileOf(TAB_FILE, name)
+  const id = fileOf(TAB_FILE, name)
+  // Up to 760px the <picture> serves the portrait plate, and the deck's portrait is still guide-palette-p (the overview strip is landscape only).
+  return id === 'guide-overview' && page.viewportSize().width <= 760 ? 'guide-palette' : id
 }
 async function projectId(page, i) {
   const name = await nameOf(radios(page).nth(i))
@@ -179,7 +182,7 @@ for (const [width, height, touch] of [[1440, 900, false], [390, 844, true]]) {
         name: el.getAttribute('aria-label') || '',
       })))
       expect(shown.length, 'three tabs').toBe(3)
-      expect(shown.map((t) => fileOf(TAB_FILE, t.name)).sort(), 'the tabs are Book, Brand deck and UI kit').toEqual(['book-colour', 'guide-palette', 'kit-colour'])
+      expect(shown.map((t) => fileOf(TAB_FILE, t.name)).sort(), 'the tabs are Book, Brand deck and UI kit').toEqual(['book-colour', 'guide-overview', 'kit-colour'])
       await expect(card(page, 1).getByRole('tabpanel')).toHaveCount(1)
       shown.forEach((t, i) => expect(t.name.toLowerCase(), `tab ${i + 1}'s accessible name holds its visible label`).toContain(t.label.toLowerCase()))
       const s = await tabState(page)
@@ -487,7 +490,12 @@ async function swapAndWatch(page) {
   })
 }
 
-const allZero = (rows, key) => rows.every((r) => r[key].split(',').every((d) => parseFloat(d) === 0))
+// A duration only matters when something is named to run: the shelf's covers have no animation at all
+// (animation-name none), and the site-wide reduced-motion clamp still reads 0.01ms on them. Running motion
+// is checked separately, frame by frame, by swapAndWatch.
+const allZero = (rows, key) => rows
+  .filter((r) => key !== 'animation' || r.name !== 'none')
+  .every((r) => r[key].split(',').every((d) => parseFloat(d) === 0))
 
 test.describe('plate swap motion', () => {
   test('is instant when the operating system asks for reduced motion', async ({ browser }) => {
