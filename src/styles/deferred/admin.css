@@ -995,13 +995,13 @@
   margin-bottom: 18px;
 }
 
-/* The app design's own page title, to the value: `font-size:clamp(24px,3vw,
-   34px);font-weight:600;letter-spacing:-.035em;line-height:1.04` on "Your
-   workspace". */
+/* The app design's own page title: `font-size:clamp(24px,3vw,
+   34px);font-weight:600;line-height:1.04` on "Your
+   workspace", with tracking from the Switzer scale in global.css. */
 .adm-header-left h1 {
   font-size: clamp(24px, 3vw, 34px);
   font-weight: 600;
-  letter-spacing: -.035em;
+  letter-spacing: -.015em;
   line-height: 1.04;
 }
 

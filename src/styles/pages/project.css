@@ -20,7 +20,7 @@
 /* ── Head: name, status, Save, next action ─────────────────────────────── */
 .pjd .pjd-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .pjd .pjd-head-text { flex: 1 1 auto; min-width: 0; }
-.pjd .pjd-h1 { margin: 0; padding: 0; font-family: var(--font); font-size: clamp(26px, 3.6vw, 40px); font-weight: 600; letter-spacing: -.035em; line-height: 1.02; overflow-wrap: anywhere; color: var(--t0); text-wrap: balance; }
+.pjd .pjd-h1 { margin: 0; padding: 0; font-family: var(--font); font-size: clamp(26px, 3.6vw, 40px); font-weight: 600; letter-spacing: -.015em; line-height: 1.02; overflow-wrap: anywhere; color: var(--t0); text-wrap: balance; }
 .pjd .pjd-status { margin: 10px 0 0; font-size: 14px; color: var(--ws-dim); }
 .pjd .pjd-head-actions { flex: 0 0 auto; display: flex; gap: 8px; flex-wrap: nowrap; }
 .pjd .pjd-save,

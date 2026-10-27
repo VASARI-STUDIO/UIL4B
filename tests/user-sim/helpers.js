@@ -298,6 +298,10 @@ function seedProject(i, design) {
  *   slowReads  [{ path, ms }] — every getDoc whose path contains `path` answers
  *              `ms` late, with the real data. For "what does the app decide
  *              before the account has answered".
+ *              { path, hold: true } instead keeps every onSnapshot on `path`
+ *              silent until window.__UIL4B_TEST_HOLD__.release() is called,
+ *              for as long as a spec needs to look at the plan-still-loading
+ *              state.
  *   projectTombstones  deletes this account already made, keyed by project id
  *              -> ISO timestamp, seeded into the same localStorage key
  *              ProjectContext writes them to.

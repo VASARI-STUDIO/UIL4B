@@ -233,7 +233,7 @@ test('the five sibling colour tools still name their regions by their own headin
   const expected = {
     '/create/tint': ['complementary:Tint controls'],
     '/create/gradient': ['region:Start from a preset', 'complementary:Gradient controls'],
-    '/create/semantic-color': ['region:The colours at work', 'region:Seed and base step'],
+    '/create/semantic-color': ['region:Ramps', 'region:See each role do its job', 'region:Token names you can predict'],
   }
   for (const [route, names] of Object.entries(expected)) {
     await go(page, route)

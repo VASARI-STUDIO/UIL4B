@@ -280,7 +280,10 @@ test('the book is a Pro format and the flag drives badge AND gate', () => {
 
   // The CONSUMPTION stays here: one flag for both, so a format can never be
   // badged-but-ungated.
-  assert.match(PANEL, /f\.pro && !isPro && <span className="exp-fmt-pro">Pro<\/span>/)
+  // A row is Pro (isGroupPro reads the same `pro` flag) and the viewer is not.
+  assert.match(PANEL, /const paid = isGroupPro\(g\.id\)/)
+  assert.match(PANEL, /const showPro = paid && !isPro/)
+  assert.match(PANEL, /\{showPro && <ExportProTag \/>\}/)
   assert.match(PANEL, /const locked = Boolean\(activeFormat\?\.pro\) && !isPro/)
   // …and the panel must still be rendering the table this test just inspected.
   assert.match(PANEL, /const FORMATS = EXPORT_FORMATS/,

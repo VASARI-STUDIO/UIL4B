@@ -14,6 +14,7 @@
 // MUTATION: point the logo back at '/projects' on the dashboard, or put the Back
 // to the site link back into PillNav.jsx, or drop aria-disabled from the empty
 // Export: the matching test below goes red.
+import { chooseFormat } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { readFile } from 'node:fs/promises'
@@ -26,9 +27,9 @@ test('a fresh palette exports the colours on screen without saving the random dr
   const savedBefore = await page.evaluate(() => localStorage.getItem('vs-current-design'))
   await expect(page.locator('.pnav-export')).not.toHaveAttribute('aria-disabled', 'true')
   await page.locator('.pnav-export').click()
-  await page.getByRole('radio', { name: /^JSON tokens/ }).click()
+  await chooseFormat(page, 'json')
   const downloaded = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export JSON', exact: true }).click()
+  await page.getByRole('button', { name: 'Export JSON tokens', exact: true }).click()
   const tokens = JSON.parse(await readFile(await (await downloaded).path(), 'utf8'))
   const exported = Object.values(tokens.color).filter((token) => token.$root)
     .map((token) => token.$root.$value.hex.toUpperCase())

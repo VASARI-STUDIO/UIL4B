@@ -51,6 +51,7 @@
 //
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
+import { chooseFormat } from './export-rows.js'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
@@ -510,7 +511,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
       await page.getByRole('button', { name: 'Export', exact: true }).first().click()
       const panel = page.getByRole('dialog', { name: /Export your design system/i })
       await expect(panel).toBeVisible()
-      await page.getByRole('radio', { name: new RegExp(fmt.name.replace(/[()]/g, '\\$&'), 'i') }).click()
+      await chooseFormat(page, fmt.id)
       const cta = panel.locator('.exp-foot button').last()
       // The label says what will happen, not what it costs.
       await expect(cta).toContainText(/^Export /)

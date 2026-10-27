@@ -225,7 +225,8 @@ test('the export panel and the pricing page read ONE table', () => {
   // The whole arrangement collapses if ExportPanel re-declares its own list —
   // the page would then be derived from an array nobody renders. This is the
   // wiring, and it is asserted at the call site rather than on the helper.
-  assert.match(PANEL, /import \{ EXPORT_FORMATS \} from '\.\.\/config\/exportFormats'/,
+  // (The panel also imports the row groups and helpers from the same module.)
+  assert.match(PANEL, /import \{[^}]*\bEXPORT_FORMATS\b[^}]*\} from '\.\.\/config\/exportFormats'/,
     'ExportPanel no longer imports the shared table')
   assert.match(PANEL, /const FORMATS = EXPORT_FORMATS/,
     'ExportPanel has re-declared its own format list; the pricing page is now derived from a dead array')

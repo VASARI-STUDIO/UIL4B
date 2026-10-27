@@ -53,11 +53,19 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     if (!open) return
     // A portalled list must sit above the modal or sheet containing its trigger.
     let layer = 130
+    let above = 0
     for (let node = triggerRef.current; node; node = node.parentElement) {
-      layer = Math.max(layer, (Number.parseInt(getComputedStyle(node).zIndex, 10) || 0) + 1)
+      const z = Number.parseInt(getComputedStyle(node).zIndex, 10) || 0
+      above = Math.max(above, z)
+      layer = Math.max(layer, z + 1)
     }
     popRef.current?.style.setProperty('--select-layer', String(layer))
     scrimRef.current?.style.setProperty('--select-layer', String(layer))
+    // A list opened from inside a sheet or dialog that already covers the phone
+    // tab bar must not leave room for it (see global.css).
+    const tabs = document.querySelector('.pnav-tabs')
+    const tabsZ = tabs ? Number.parseInt(getComputedStyle(tabs).zIndex, 10) || 0 : Infinity
+    popRef.current?.toggleAttribute('data-in-sheet', above > tabsZ)
     popRef.current?.focus({ preventScroll: true })
   }, [open, popRef, triggerRef])
   useLayoutEffect(() => {

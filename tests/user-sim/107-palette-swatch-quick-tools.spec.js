@@ -632,6 +632,65 @@ test.describe('the ordered column', () => {
     await ctx.close()
   })
 
+  // The Tints popover lists all eleven steps (50 to 950) of the shared ramp plus
+  // the "Open in Tint Generator" button, which is taller than the old
+  // six-row list. It must still fit the viewport, clear the header, and stay
+  // above the phone tab bar, with every row reachable.
+  //
+  // MUTATION (both watched red at 390x844 and 1440x900): in the placement effect
+  // of PaletteBuilder.jsx change `Math.min(trigger.bottom + margin, bottom - rect.height)`
+  // to `trigger.bottom + margin` and the panel runs past the tab bar / viewport
+  // bottom; add `.slice(0, 6)` to `tintRampForHex(adjusted[i])` in the popover
+  // and the row count goes red.
+  const ELEVEN = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']
+  for (const [width, height] of [[390, 844], [1440, 900]]) {
+    test(`${width}x${height}: the 11-row tints popover fits the viewport, clears the header and tab bar, and every row is reachable`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, width, { height })
+      const col = page.locator('.plb-col').nth(3)
+      if (width < 700) {
+        await col.getByRole('button', { name: MORE }).tap()
+        await page.getByRole('menu', { name: 'Colour actions', exact: true })
+          .getByRole('menuitem', { name: 'View tints', exact: true }).tap()
+      } else {
+        await col.locator('.plb-ramp').click()
+      }
+      const pop = col.locator('.plb-tintpop')
+      await expect(pop).toBeVisible()
+
+      // POSITIVE CONTROL: all eleven steps are drawn, in order, each with a hex.
+      await expect(pop.locator('.plb-tint-row')).toHaveCount(11)
+      expect(await pop.locator('.plb-tint-tone').allTextContents()).toEqual(ELEVEN)
+      expect((await pop.locator('.plb-tint-hex').allTextContents()).every((h) => /^#[0-9A-F]{6}$/i.test(h))).toBe(true)
+
+      const box = await settledBox(page, '.plb-tintpop')
+      const tabs = await page.locator('.pnav-tabs').evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return { top: r.top, shown: r.height > 0 && getComputedStyle(el).display !== 'none' }
+      })
+      // On a phone the tab bar is part of the lower limit; on a desktop it is hidden.
+      expect(tabs.shown, width < 700 ? 'POSITIVE CONTROL: the tab bar is on screen on the phone' : 'no tab bar on a desktop').toBe(width < 700)
+      const floor = tabs.shown ? tabs.top : box.vh
+      expect(box.left, 'inside the viewport on the left').toBeGreaterThanOrEqual(0)
+      expect(box.right, 'inside the viewport on the right').toBeLessThanOrEqual(box.vw)
+      expect(box.top, 'below the header').toBeGreaterThanOrEqual(box.navBottom)
+      expect(box.bottom, `ends at ${Math.round(box.bottom)}, above ${tabs.shown ? 'the tab bar' : 'the viewport bottom'} at ${Math.round(floor)}`).toBeLessThanOrEqual(floor)
+
+      // Every row and the button can be scrolled into the panel's own view.
+      for (const target of [pop.locator('.plb-tint-row').first(), pop.locator('.plb-tint-row').last(), pop.getByRole('button', { name: 'Open in Tint Generator' })]) {
+        await target.scrollIntoViewIfNeeded()
+        const inside = await target.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const p = el.closest('.plb-tintpop').getBoundingClientRect()
+          const tabsEl = document.querySelector('.pnav-tabs')
+          const t = tabsEl && tabsEl.getBoundingClientRect().height > 0 ? tabsEl.getBoundingClientRect().top : innerHeight
+          return r.height > 0 && r.top >= p.top - 1 && r.bottom <= p.bottom + 1 && r.bottom <= t + 1
+        })
+        expect(inside, 'the row or button scrolls fully into the panel, above the tab bar').toBe(true)
+      }
+      await ctx.close()
+    })
+  }
+
   // (f) MUTATION: delete the two phone rules `.plb .plb-col-quick { display: none; }`
   // and `.plb .plb-tool--quick { display: none; }` in the max-width:767 block and
   // the stack is back (first half, both heights); in placeContextMenu change
