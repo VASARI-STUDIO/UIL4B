@@ -230,14 +230,18 @@ test.describe('the export gate, driven', () => {
       context.waitForEvent('page'),
       page.getByRole('button', { name: /^Export book$/i }).click(),
     ])
+    await book.waitForLoadState('domcontentloaded')
+    // The window is reserved inside the click and is blank (then labelled "Preparing
+    // your design system book…") until the server answers, so its title alone proves
+    // nothing, and the request may not have been made yet when the window appears.
+    // The generated artefact is what shows the round trip finished.
+    await expect(book.locator('.cv-title')).toBeVisible()
+    // buildDesignSystemBook titles the document "<project> — Design System"; the
+    // loading label also contains those words, so pin the project name too.
+    await expect(book).toHaveTitle(/ — Design System$/)
     expect(asked, 'the panel must ask the server once, with the account token and the format').toHaveLength(1)
     expect(asked[0].auth).toMatch(/^Bearer .+/)
     expect(asked[0].body.format).toBe('book')
-    await book.waitForLoadState('domcontentloaded')
-    // The generated artefact, not a page about it. buildDesignSystemBook titles
-    // the document "<project> — Design System".
-    await expect(book).toHaveTitle(/Design System/i)
-    await expect(book.locator('.cv-title')).toBeVisible()
     await context.close()
   })
 })
