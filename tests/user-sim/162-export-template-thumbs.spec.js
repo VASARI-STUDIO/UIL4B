@@ -14,6 +14,11 @@
 //      is chosen. Pro gets the same pictures sharp.
 //   4. At 390 neither the tiles nor the strip push the page or the panel sideways; the
 //      strip may scroll inside its own box.
+//   5. The strip's heading sits above the pictures, and the strip's group starts at least
+//      24px under the template picker (book and guidelines, 1440 and 390).
+//   6. A draw that beat the fonts (document.fonts.load held back past the 800ms wait) is
+//      shown, is not kept in the cache, and is drawn again once the faces arrive.
+//   7. The picker has a visible "Template" label and the radiogroup is named by it.
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // Each was applied to the source, built, and turned the named tests red:
@@ -24,6 +29,15 @@
 //   - proPreviewKey: the caption's "in" becomes "on"                   -> the caption test
 //   - ExportPanel: blurred={false}                                     -> the Free-stays-blurred test
 //   - overlay.css: .exp-preview-strip overflow-x:visible               -> the 390 test
+//   - proPreviews.js: the `stale` flag is never set (the `!fonts.settled` line removed)
+//                                                                      -> the redraw test and the not-kept test
+//   - ExportProPreview: the stale draw never schedules its redraw      -> the redraw test
+//   - overlay.css: `.exp-preview{margin-top:16px}` deleted             -> the gap test at 1440 (book, guidelines)
+//   - overlay.css: `.exp-preview` laid out column-reverse              -> the heading-above test (all four)
+//   - ExportTemplatePicker: aria-labelledby swapped back to aria-label -> the label test (all rows)
+//   - ExportTemplatePicker: the visible "Template" paragraph removed   -> the label test (all rows)
+//   The gap test stays green at 390 with the margin rule deleted (the gap there is still over
+//   24px), so that rule is only guarded at 1440.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { chooseFormat, exportPanel } from './export-rows.js'
@@ -281,3 +295,132 @@ test('at 390 the tiles and the strip stay inside the panel; only the strip scrol
     if (fit.stripScrolls) expect(['auto', 'scroll'], `a strip wider than its box must scroll inside it, ${where}`).toContain(fit.stripOverflowX)
   }
 })
+
+/* ── 5. the strip reads as a result, under its own heading ─────────────────── */
+
+const MIN_GAP = 24
+
+for (const [row, noun] of [['book', 'book'], ['guidelines', 'guidelines']]) {
+  for (const width of [1440, 390]) {
+    test(`${row} at ${width}: the heading sits above the strip, and the strip starts at least ${MIN_GAP}px under the template picker`, async ({ page }) => {
+      watch(page, `a designer reading the ${row} strip at ${width}px`)
+      await page.setViewportSize({ width, height: 1100 })
+      await openProject(page, 'pro')
+      await chooseFormat(page, row)
+      await expect(strip(page)).toHaveAttribute('data-state', 'ready')
+      await expect(stripImgs(page)).toHaveCount(3)
+      await expect(caption(page)).toContainText(`Your ${noun} in `)
+
+      const box = async (locator) => (await locator.boundingBox())
+      const picker = await box(group(page))
+      const heading = await box(caption(page))
+      const pictures = await box(strip(page))
+      const where = `${row} at ${width}: ${JSON.stringify({ picker, heading, pictures })}`
+
+      expect(heading.y + heading.height, `the heading ends above the pictures, ${where}`).toBeLessThanOrEqual(pictures.y)
+      expect(pictures.y - (heading.y + heading.height), `the heading is close to what it heads, ${where}`).toBeLessThanOrEqual(16)
+      expect(heading.y, `the heading starts under the tiles, ${where}`).toBeGreaterThanOrEqual(picker.y + picker.height)
+      expect(heading.y - (picker.y + picker.height), `the strip's group is set apart from the tiles, ${where}`).toBeGreaterThanOrEqual(MIN_GAP)
+      expect(pictures.y - (picker.y + picker.height), `the pictures are further from the tiles than the 12px between tiles, ${where}`).toBeGreaterThanOrEqual(MIN_GAP)
+    })
+  }
+}
+
+/* ── 6. a draw that beat the fonts is shown, not kept, and drawn again ─────── */
+
+/**
+ * Make every document.fonts.load hang until the test lets go, and log each call. The strip waits
+ * 800ms for the system's faces and then draws in the fallback; this holds them back for as long
+ * as the test needs, whatever the machine's font cache holds.
+ */
+async function holdFonts(page) {
+  await page.addInitScript(() => {
+    if (!document.fonts?.load) return
+    const real = document.fonts.load.bind(document.fonts)
+    const held = []
+    window.__fontLoads = 0
+    window.__holdFonts = false
+    window.__releaseFonts = () => { window.__holdFonts = false; held.splice(0).forEach((go) => go()) }
+    document.fonts.load = (...args) => {
+      window.__fontLoads += 1
+      if (!window.__holdFonts) return real(...args)
+      return new Promise((resolve, reject) => { held.push(() => real(...args).then(resolve, reject)) })
+    }
+  })
+}
+const fontLoads = (page) => page.evaluate(() => window.__fontLoads)
+const stripSrcs = (page) => stripImgs(page).evaluateAll((imgs) => imgs.map((i) => i.src))
+
+test('a strip drawn before the fonts arrived is shown, then drawn again once they have', async ({ page }) => {
+  watch(page, 'a designer whose fonts are slow')
+  await holdFonts(page)
+  await openProject(page, 'pro')
+  await page.evaluate(() => { window.__holdFonts = true; window.__fontLoads = 0 })
+
+  await chooseFormat(page, 'guidelines')
+  await expect(strip(page), 'the strip is shown without waiting for the fonts forever').toHaveAttribute('data-state', 'ready', { timeout: 10_000 })
+  await expect(stripImgs(page)).toHaveCount(3)
+  const oneDraw = await fontLoads(page)
+  expect(oneDraw, 'the draw asked for the system\'s faces').toBeGreaterThan(0)
+  const shown = await stripSrcs(page)
+
+  await page.evaluate(() => window.__releaseFonts())
+  await expect.poll(() => fontLoads(page), 'the strip is drawn once more when the faces are in').toBe(oneDraw * 2)
+  await expect.poll(async () => (await stripSrcs(page)).every((src, i) => src !== shown[i]), 'the pictures are the new draw').toBe(true)
+  await expect(strip(page)).toHaveAttribute('data-state', 'ready')
+  await expect(stripImgs(page)).toHaveCount(3)
+})
+
+test('a strip drawn before the fonts arrived is not kept: coming back to its template draws it afresh', async ({ page }) => {
+  watch(page, 'a designer whose fonts are slow, trying templates')
+  await holdFonts(page)
+  await openProject(page, 'pro')
+  await page.evaluate(() => { window.__holdFonts = true; window.__fontLoads = 0 })
+
+  await chooseFormat(page, 'guidelines')
+  await expect(strip(page)).toHaveAttribute('data-state', 'ready', { timeout: 10_000 })
+  const oneDraw = await fontLoads(page)
+  expect(oneDraw).toBeGreaterThan(0)
+
+  await pick(page, 'guidelines', 'Poster')
+  expect(await fontLoads(page), 'a second template is a second draw').toBe(oneDraw * 2)
+  await pick(page, 'guidelines', 'Presentation')
+  expect(await fontLoads(page), 'the first template, drawn in the fallback, was not served from the cache').toBe(oneDraw * 3)
+})
+
+test('CONTROL: a strip drawn after the fonts arrived is kept: coming back to its template does not draw it again', async ({ page }) => {
+  watch(page, 'a designer with fonts ready, trying templates')
+  await holdFonts(page)
+  await openProject(page, 'pro')
+  // Counted, but not held back.
+  await page.evaluate(() => { window.__fontLoads = 0 })
+
+  await chooseFormat(page, 'guidelines')
+  await expect(strip(page)).toHaveAttribute('data-state', 'ready')
+  await pick(page, 'guidelines', 'Poster')
+  const afterTwo = await fontLoads(page)
+  expect(afterTwo).toBeGreaterThan(0)
+  await pick(page, 'guidelines', 'Presentation')
+  expect(await fontLoads(page), 'a settled draw is cached').toBe(afterTwo)
+})
+
+/* ── 7. the picker has a visible name ──────────────────────────────────────── */
+
+for (const row of ['kit', 'book', 'guidelines']) {
+  test(`${row}: the template picker has a visible "Template" label, and the radiogroup is named by it`, async ({ page }) => {
+    watch(page, `a designer looking at the ${row} template picker`)
+    await openProject(page, 'free')
+    await chooseFormat(page, row)
+    const tiles = group(page)
+    await expect(tiles).toBeVisible()
+
+    const labelId = await tiles.getAttribute('aria-labelledby')
+    expect(labelId, 'the group points at a label').toBeTruthy()
+    expect(await tiles.getAttribute('aria-label'), 'the name comes from the label, not a second hidden copy').toBeNull()
+    const label = exportPanel(page).locator(`[id="${labelId}"]`)
+    await expect(label, 'the label is on screen').toBeVisible()
+    await expect(label).toHaveText('Template')
+    const [l, g] = [await label.boundingBox(), await tiles.boundingBox()]
+    expect(l.y + l.height, 'the label sits above the tiles').toBeLessThanOrEqual(g.y)
+  })
+}
