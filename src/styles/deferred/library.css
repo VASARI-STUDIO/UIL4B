@@ -476,6 +476,8 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
    vanish with no box behind it. Dilate alpha by one CSS pixel, without blur,
    then paint the original artwork over the edge. This stays crisp at 1x. */
 .ig-edge-filters{position:absolute;width:0;height:0;pointer-events:none}
+/* The hidden <symbol> sprite the grid cells <use> (see utils/iconSprite.js). */
+.ig-sprite{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 .ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-light)}
 .ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-dark)}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
