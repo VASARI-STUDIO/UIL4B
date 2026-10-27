@@ -234,9 +234,13 @@ const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) =>
       if (p === 'padding') for (const q of ['top', 'right', 'bottom', 'left']) inline.add('padding-' + q)
       if (p === 'margin') for (const q of ['top', 'right', 'bottom', 'left']) inline.add('margin-' + q)
     }
+    // Inline custom properties that carry a time, an index or a digit count and feed no colour
+    // (the home hero's stagger origin, the bench rail's tab index, the proof figures' width).
+    // Counting them as tints would drop every colour value under the home hero from the comparison.
+    const NOT_A_TINT = new Set(['--sp-arrive-at', '--sp-i', '--sp-digits'])
     let tinted = false
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
-      for (const p of n.style) if (p.startsWith('--')) { tinted = true; break }
+      for (const p of n.style) if (p.startsWith('--') && !NOT_A_TINT.has(p)) { tinted = true; break }
       if (tinted) break
     }
     // `font-family` joins the colour list, and for exactly the reason the list

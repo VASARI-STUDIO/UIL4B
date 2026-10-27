@@ -49,6 +49,16 @@
   --sp-sec: clamp(80px, 11vw, 152px);
   --sp-ease: cubic-bezier(.23, 1, .32, 1);
   --sp-ease-out: cubic-bezier(.16, 1, .3, 1);
+  /* The page's motion values, each with one source. An enter rises --sp-rise
+     and fades over --sp-t-in; a leave is the shorter --sp-t-out; a small
+     switch is --sp-t-ui. --sp-t-sig is the one signature (a band bar being set)
+     and --sp-t-sig-s its phone length. */
+  --sp-t-in: 240ms;
+  --sp-t-out: 150ms;
+  --sp-t-ui: var(--dur-2);
+  --sp-t-sig: var(--dur-5);
+  --sp-t-sig-s: var(--dur-4);
+  --sp-rise: 8px;
 
   position: relative;
   background: var(--sp-page);
@@ -154,6 +164,16 @@
 .is-in .sp-w {
   animation: sp-word-up 1s var(--sp-ease-out) both;
   animation-delay: calc(var(--sp-wi, 0) * var(--fl-stagger));
+}
+/* A section heading is read as you arrive at it, so its rise is shorter than the
+   hero's and its stagger is capped (the longest heading ends in 840ms). It does
+   not run at 1000px and below, where a reveal only makes a reader wait. */
+.sp-section .is-in .sp-w, .sp-close .is-in .sp-w {
+  animation-duration: var(--sp-t-sig);
+  animation-delay: calc(min(var(--sp-wi, 0), 8) * 40ms);
+}
+@media (max-width: 1000px) {
+  .spectrum :is(.sp-section, .sp-close) .is-in .sp-w { animation: none; }
 }
 
 /* ── the pill buttons ─────────────────────────────────────────────────────────
@@ -291,12 +311,16 @@
 /* The design's nav spacer (clamp(14px,2vw,26px) + 50px) plus the section's own
    clamp(34px,5vw,72px). */
 .sp-hero { padding-top: calc(clamp(14px, 2vw, 26px) + 50px + clamp(34px, 5vw, 72px)); text-align: center; }
+/* The 40px floor gives way below about 350px. At 40px a 320px screen sets the
+   headline on four lines, and a four-line headline paints less area than the
+   three-line sub-line under it, so the sub-line became the largest paint. At 11.4vw
+   the headline keeps three lines down to 320px; from 351px up the floor is 40px, as before. */
 .sp-hero-h1 {
   margin: 0 auto;
   max-width: min(26ch, 100%);
   font-family: var(--display);
   font-weight: 600;
-  font-size: clamp(40px, 6.6vw, 98px);
+  font-size: clamp(min(40px, 11.4vw), 6.6vw, 98px);
   line-height: .96;
   letter-spacing: -.02em; /* display tier of the tracking scale, see --font in global.css */
 }
@@ -309,6 +333,48 @@
 }
 .sp-hero-bar { position: relative; margin: clamp(30px, 4vw, 44px) auto 0; max-width: 660px; text-align: left; }
 .sp-hero-cta { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin-top: 18px; }
+
+/* ── the hero's arrival ───────────────────────────────────────────────────────
+   The headline is already on screen (the served page paints it settled, and it
+   must not move or the largest paint would be recorded at a sliver). What React
+   adds under it arrives as one sequence: the sub-line, the search and the
+   buttons rise 8px and fade in, and the band is set, each bar growing from its
+   baseline in hue order.
+
+   RESTING STATE IS VISIBLE. Neither keyframe sets an end value and both fill
+   `backwards`, so the delay holds the first frame and the element keeps no
+   opacity or transform of its own once it ends: a cancelled or skipped run
+   costs the movement, never the content. Transform and opacity only.
+   `--sp-arrive-at` (0, or a lead for a headline that is rising) is set on the
+   header and on the band; `--sp-i` is a bar's place in the ramp. */
+@keyframes sp-arrive {
+  from { opacity: 0; transform: translateY(var(--sp-rise)); }
+}
+@keyframes sp-bar-set {
+  from { transform: scaleY(.12); }
+}
+.sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta) {
+  animation: sp-arrive var(--sp-t-in) var(--sp-ease) backwards;
+  animation-delay: calc(var(--sp-arrive-at, 0ms) + var(--sp-ad, 0ms));
+}
+.sp-hero.is-arriving .tim-anchor { --sp-ad: 60ms; }
+.sp-hero.is-arriving .sp-hero-cta { --sp-ad: 120ms; }
+.sp-ramp--arrive .sp-ramp-bar {
+  transform-origin: 50% 100%;
+  animation: sp-bar-set var(--sp-t-sig) var(--sp-ease-out) backwards;
+  animation-delay: calc(var(--sp-arrive-at, 0ms) + var(--sp-i, 0) * 14ms);
+}
+/* The reflection grows down from the same baseline, in step. */
+.sp-ramp--arrive .sp-ramp-bars--mirror .sp-ramp-bar { transform-origin: 50% 0%; }
+@media (max-width: 1000px) {
+  .sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta) { animation-duration: var(--sp-t-ui); }
+  .sp-hero.is-arriving .tim-anchor { --sp-ad: 40ms; }
+  .sp-hero.is-arriving .sp-hero-cta { --sp-ad: 80ms; }
+  .sp-ramp--arrive .sp-ramp-bar {
+    animation-duration: var(--sp-t-sig-s);
+    animation-delay: calc(var(--sp-arrive-at, 0ms) + var(--sp-i, 0) * 10ms);
+  }
+}
 
 /* THE SEARCH BAR — HomeCommandBar, wrapped. Its behaviour (the tool index,
    keyboard, results) is untouched; this restyles it into the design's pill:
@@ -799,8 +865,39 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   .sp-tool-foot .sp-pill { min-height: 48px; margin-left: 0; justify-content: space-between; }
 }
 
-/* Tool switch at 1000px and below: a short fade, no movement. */
-@media (max-width: 1000px) { .sp-step { transition: opacity 150ms ease-out; } }
+/* The windows' depth at 1001px and up: a window is a little smaller and fainter
+   the further its middle is from the viewport's, and sits at full size and ink
+   when centred. The panel's own position in the viewport drives it (a view
+   timeline), so nothing listens to scroll. Where view timelines are missing the
+   windows stay at full size, and the rail still lights the one in view. */
+@keyframes sp-depth {
+  0%, 100% { transform: scale(.98); opacity: .7; }
+  50% { transform: none; opacity: 1; }
+}
+@media (min-width: 1001px) {
+  @supports (animation-timeline: view()) {
+    .sp-panel {
+      animation: sp-depth linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+
+/* Tool switch at 1000px and below: the window you chose rises 8px and fades in
+   over --sp-t-in, the one you left fades out over the shorter --sp-t-out, and
+   the pill under the tabs slides to the new tab. Only after the first switch
+   (`data-swapped`), so the first paint never moves. The fade-out is on the
+   leaving step's own `data-on="false"` state, so the entering step is instant
+   and its panel carries the animation. */
+@keyframes sp-enter {
+  from { opacity: 0; transform: translateY(var(--sp-rise)); }
+}
+@media (max-width: 1000px) {
+  .sp-steps[data-swapped] .sp-step[data-on="true"] .sp-panel {
+    animation: sp-enter var(--sp-t-in) var(--sp-ease) backwards;
+  }
+}
 
 /* Two labels in one cell that cross-fade. */
 .sp-swap { display: inline-grid; min-width: 0; }
@@ -986,7 +1083,22 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .spectrum .sp-chip:active { transform: scale(.96); }
 .sp-chip[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
 
-.sp-disc-grid { margin-top: clamp(26px, 3.4vw, 44px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+/* The three libraries sit in one grid cell, so the box is as tall as the tallest and a
+   chip press moves nothing below it. `align-content: start` keeps a shorter library's
+   rows at their own height inside the taller box. The two not showing are drawn empty
+   (their words come back as a zero-width space so each row keeps its line height). */
+.sp-disc-stack { margin-top: clamp(26px, 3.4vw, 44px); display: grid; }
+.sp-disc-grid { grid-area: 1 / 1; align-content: start; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.sp-disc-grid--ghost { visibility: hidden; pointer-events: none; }
+.sp-disc-grid--ghost :is(.sp-disc-name, .sp-disc-meta, .sp-disc-cta-count)::before { content: "\200b"; }
+/* Choosing another library fades its cards in, with no movement and no stagger.
+   The grid stays mounted, so the two names alternate to restart the animation on
+   each press (`data-swapped` is set by the first press, so the first paint
+   never fades). */
+@keyframes sp-fade-a { from { opacity: 0; } }
+@keyframes sp-fade-b { from { opacity: 0; } }
+.sp-disc-grid[data-swapped][data-swap-key="a"] { animation: sp-fade-a var(--sp-t-ui) var(--sp-ease) backwards; }
+.sp-disc-grid[data-swapped][data-swap-key="b"] { animation: sp-fade-b var(--sp-t-ui) var(--sp-ease) backwards; }
 @media (max-width: 900px) { .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .sp-disc-card {
   display: block;
@@ -1450,7 +1562,10 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 @media (max-width: 860px) { .sp-proof-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 460px) { .sp-proof-row { grid-template-columns: minmax(0, 1fr); } }
 .sp-proof-row > div { min-width: 0; text-align: center; display: grid; gap: 10px; }
-.sp-proof-n { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: -.02em; color: var(--sp-ink); font-variant-numeric: tabular-nums; }
+/* The figure's box is as wide as its final digits, in tabular figures, so the
+   count rises inside a box that never changes size (`--sp-digits` is set from
+   the final figure). The box is centred in its column, as the text is. */
+.sp-proof-n { justify-self: center; min-width: calc(var(--sp-digits, 1) * 1ch); font-family: var(--display); font-weight: 400; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: -.02em; color: var(--sp-ink); font-variant-numeric: tabular-nums; }
 .sp-proof-l { font-size: 13.5px; line-height: 1.45; color: var(--sp-dim); max-width: min(22ch, 100%); margin: 0 auto; }
 
 @media (max-width: 560px) {
@@ -1515,11 +1630,27 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
     text-align: center;
   }
   .sp-rail--tabs .sp-rail-label { flex: 0 1 auto; white-space: nowrap; }
-  .sp-rail--tabs .sp-rail-row.is-on { background: var(--sp-ink); color: var(--sp-page); }
+  /* The label's colour travels with the pill; the pill alone paints the selected tab. */
+  .spectrum .sp-rail--tabs .sp-rail-row { transition: color var(--sp-t-ui) var(--sp-ease); }
+  .sp-rail--tabs .sp-rail-row.is-on { color: var(--sp-page); background: none; }
+  /* The selected tab's pill: one segment wide (the row, less its padding and its
+     three 4px gaps, over four), moved by whole segments. */
+  .sp-rail--tabs { position: relative; isolation: isolate; }
+  .sp-rail-ind {
+    position: absolute;
+    inset-block: 4px;
+    left: 4px;
+    z-index: -1;
+    width: calc((100% - 20px) / 4);
+    border-radius: 999px;
+    background: var(--sp-ink);
+    transform: translateX(calc(var(--sp-i, 0) * (100% + 4px)));
+    transition: transform var(--sp-t-ui) var(--sp-ease);
+  }
   .sp-steps { display: grid; }
   .sp-step { grid-area: 1 / 1; align-items: stretch; }
   /* opacity, not visibility: a child that sets its own visibility (the converter panes) would show through. */
-  .sp-step[data-on="false"] { opacity: 0; pointer-events: none; }
+  .sp-step[data-on="false"] { opacity: 0; pointer-events: none; transition: opacity var(--sp-t-out) ease-out; }
   /* On a tablet every window keeps its 700px design height: all four fit in it
      (the icon set without a scroll bar), and the shared cell stays 700px. */
   .sp-step > .sp-panel { height: 700px; }
@@ -1662,7 +1793,12 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 :where(html[data-reduced-motion="true"]) .spectrum .sp-plate-art img { animation: none !important; transition: none !important; transform: none !important; }
 /* The shelf's covers are placed by transform, so only animation is cut here (the transition guard above stops the move). */
 :where(html[data-reduced-motion="true"]) .spectrum .sp-shelf img { animation: none !important; }
+/* The hero's arrival, the windows' depth and switch, the tab pill and the library fade: the content is already in place, so these only lose their movement. */
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta), .sp-ramp--arrive .sp-ramp-bar, .sp-panel, .sp-disc-grid) { animation: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-rail-ind, .sp-rail-row) { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta), .sp-ramp--arrive .sp-ramp-bar, .sp-panel, .sp-disc-grid) { animation: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-rail-ind, .sp-rail-row) { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, .sp-shelf img, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }

@@ -1406,10 +1406,15 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // is about, and it cannot drift with the layout.
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
   await expect.poll(async () => (await read()).cells, { timeout: 20000 }).toBeGreaterThan(20)
+  // The grid on screen before the filter lands is also
+  // populated and can still carry the label, so wait for the label to go, not just for cells: it has to settle
+  // on none, and a label that stays fails here at the timeout.
+  await expect.poll(async () => (await read()).words, {
+    message: 'a single-pack grid must not repeat one pack name under every cell',
+    timeout: 10000,
+  }).toEqual([])
   const single = await read()
   expect(single.cells, 'the Lucide grid should be populated').toBeGreaterThan(20)
-  expect(single.words, 'a single-pack grid must not repeat one pack name under every cell')
-    .toEqual([])
 
   // Brand logos genuinely mixes packs - logo.dev marks alongside glyph packs.
   // It is a cross-pack collection, so the pack menu goes back to All first.

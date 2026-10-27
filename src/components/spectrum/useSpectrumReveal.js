@@ -63,8 +63,11 @@ export function useSpectrumReveal() {
 
     // Motion off: mark everything settled immediately. The class is still added
     // rather than left off, so `.is-in` means "arrived" everywhere on the page
-    // and no rule has to special-case the absence of it.
-    if (typeof IntersectionObserver === 'undefined' || prefersReducedMotion()) {
+    // and no rule has to special-case the absence of it. 1000px and below is
+    // motion-off for these headings too: a phone reader reads as they scroll, and
+    // a reveal only makes them wait (spectrum.css stops the rise at that width).
+    if (typeof IntersectionObserver === 'undefined' || prefersReducedMotion()
+      || (window.matchMedia && window.matchMedia('(max-width: 1000px)').matches)) {
       nodes.forEach((n) => n.classList.add('is-in'))
       return undefined
     }

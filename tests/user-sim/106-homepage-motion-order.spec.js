@@ -50,6 +50,12 @@ test.describe('hero ghost phrase', () => {
     const ghost = page.locator('.sp-search-ghost')
     await expect(ghost).toHaveAttribute('aria-hidden', 'true')
     const before = await fieldIdentity(page)
+    // The hero's arrival (a transform) can still be running at first paint, and a box read during it is
+    // a few thousandths of a pixel off its resting place. Wait for the time-driven animations to end
+    // (the infinite ones, such as a caret blink, never do, so they are left out).
+    await page.evaluate(() => Promise.all(document.getAnimations()
+      .filter((a) => a.timeline instanceof DocumentTimeline && a.effect?.getComputedTiming().endTime !== Infinity)
+      .map((a) => a.finished.catch(() => {}))))
     const barBefore = await page.locator('.sp-search .hcmd-bar').boundingBox()
     await recordGhost(page)
 

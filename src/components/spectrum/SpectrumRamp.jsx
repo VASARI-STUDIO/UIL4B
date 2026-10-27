@@ -43,7 +43,7 @@ const BARS = [
   [28, 6, 22, 26],
 ]
 
-function Bars({ mirror }) {
+function Bars({ mirror, indexed }) {
   return (
     <div className={mirror ? 'sp-ramp-bars sp-ramp-bars--mirror' : 'sp-ramp-bars'} aria-hidden="true">
       {BARS.map(([h, s, l, height], i) => (
@@ -55,6 +55,8 @@ function Bars({ mirror }) {
             '--sp-s': `${s}%`,
             '--sp-l': `${l}%`,
             '--sp-bar-h': `${height}%`,
+            // A bar's place in the ramp, which staggers its arrival (spectrum.css).
+            ...(indexed ? { '--sp-i': i } : null),
           }}
         />
       ))}
@@ -62,7 +64,10 @@ function Bars({ mirror }) {
   )
 }
 
-export default function SpectrumRamp({ mirror = false, className = '' }) {
+// `arrive` sets the band on arrival: each bar grows from its baseline in hue
+// order (spectrum.css, "the hero's arrival"), starting `arriveAt` in. Only the
+// hero's band asks for it, so the movement happens once per page.
+export default function SpectrumRamp({ mirror = false, arrive = false, arriveAt = '0ms', className = '' }) {
   const ref = useRef(null)
 
   // WHOLE-PIXEL BARS, AS THE DESIGN LAYS THEM OUT. Its tick() gives every bar
@@ -99,6 +104,7 @@ export default function SpectrumRamp({ mirror = false, className = '' }) {
     if (prefersReducedMotion()) return undefined
 
     let raf = 0
+    let listening = false
     const paint = () => {
       raf = 0
       // The same 0.24 coefficient the design uses. Left as a literal because it
@@ -107,11 +113,38 @@ export default function SpectrumRamp({ mirror = false, className = '' }) {
     }
     const request = () => { if (!raf) raf = requestAnimationFrame(paint) }
 
-    paint()
-    window.addEventListener('scroll', request, { passive: true })
-    return () => {
+    // THE LISTENER LIVES ONLY WHILE THE BAND IS ON SCREEN. The page has three
+    // bands and the hue is written per frame, so a listener that stayed attached
+    // wrote a colour for most of the scroll that nobody could see. Entering the
+    // viewport attaches it (and paints the current hue first); leaving removes it.
+    const attach = () => {
+      if (listening) return
+      listening = true
+      paint()
+      window.addEventListener('scroll', request, { passive: true })
+    }
+    const detach = () => {
+      if (!listening) return
+      listening = false
       window.removeEventListener('scroll', request)
-      if (raf) cancelAnimationFrame(raf)
+      if (raf) { cancelAnimationFrame(raf); raf = 0 }
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      attach()
+      return detach
+    }
+    // The margin arms the listener a little before the band shows, so its first
+    // visible hue is already the right one.
+    const io = new IntersectionObserver((entries) => {
+      const latest = entries[entries.length - 1]
+      if (latest.isIntersecting) attach()
+      else detach()
+    }, { threshold: 0, rootMargin: '200px 0px' })
+    io.observe(node)
+    return () => {
+      io.disconnect()
+      detach()
     }
   }, [])
 
@@ -127,11 +160,16 @@ export default function SpectrumRamp({ mirror = false, className = '' }) {
   // the bars' own reflection falling away from their baseline and fading into
   // the ground.
   return (
-    <div ref={ref} className={`sp-ramp ${className}`.trim()} aria-hidden="true">
-      <Bars />
+    <div
+      ref={ref}
+      className={`sp-ramp${arrive ? ' sp-ramp--arrive' : ''} ${className}`.trim()}
+      style={arrive ? { '--sp-arrive-at': arriveAt } : undefined}
+      aria-hidden="true"
+    >
+      <Bars indexed={arrive} />
       {mirror && (
         <div className="sp-ramp-mirror">
-          <Bars mirror />
+          <Bars mirror indexed={arrive} />
           <span className="sp-ramp-fade" />
         </div>
       )}
