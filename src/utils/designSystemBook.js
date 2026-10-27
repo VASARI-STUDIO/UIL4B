@@ -47,7 +47,8 @@ import { readBook } from './bookModel.js'
 import { roleLabel, slotLands } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { esc, orderSections, fitTitle, MAX_SLOTS } from './exportTemplates/shared.js'
-import { deriveRoles, isNeutral, mixHex } from './exportTemplates/roles.js'
+import { deriveRoles, hexToOklch, isNeutral, mixHex } from './exportTemplates/roles.js'
+import { readLogo } from './brandLogo.js'
 import { BOOK_TEMPLATES } from './exportTemplates/book/index.js'
 
 const DEFAULT_TEMPLATE = 'specification'
@@ -224,7 +225,8 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   const fit = fitTitle(projectName, tpl.titleFit)
   // What a template may read: the resolved book model and the facts computed above.
   // `fontData(file)` is the server's reader for a chrome font (null in the browser).
-  const ctx = { d, projectName, field, fieldInk, iso, year, slots, roles, fit, ladder, tokens, contrast, grade, fontData }
+  // `logo` is the uploaded mark, or null.
+  const ctx = { d, projectName, field, fieldInk, iso, year, slots, roles, fit, ladder, tokens, contrast, grade, fontData, logo: readLogo(design) }
 
   // ── contents ────────────────────────────────────────────────────────────
   // Built as data first so the folios in the contents list can never drift from
@@ -263,7 +265,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
     }
     folio += 1
     contents.push({ num: label, title, folio })
-    add(tpl.opening(ctx, { num: label, title, abstract, field: bg, ink }))
+    add(tpl.opening(ctx, { num: label, title, abstract, field: bg, ink, folio }))
   }
 
   // ── 1 · front matter: the cover, or whatever the template puts before the contents
@@ -328,7 +330,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
       `${tokens.length} custom properties — the whole system as code, ready to paste into a stylesheet.`,
       tokenField, inkFor(tokenField).ink,
     )
-    balancedChunk(tokens, TOKENS_PER_PAGE).forEach((group, gi) => {
+    balancedChunk(tokens, tpl.tokensPerPage || TOKENS_PER_PAGE).forEach((group, gi) => {
       addNumbered(tokensPage(group, gi === 0, tokens.length), 'Tokens', gi === 0 ? 'Custom properties' : null)
     })
   }
@@ -399,9 +401,13 @@ function systemName(harmony) {
 function buildSlots(d, roles) {
   return d.palette.slice(0, MAX_SLOTS).map((hex, i) => {
     const { ink, ratio } = inkFor(hex)
+    const ok = hexToOklch(hex)
     return {
       i,
       hex,
+      rgb: rgbOf(hex),
+      hsl: hslOf(hex),
+      oklch: `oklch(${(ok.l * 100).toFixed(1)}% ${ok.c.toFixed(3)} ${Math.round(ok.h)})`,
       name: colorName(hex),
       role: roleLabel(d.harmony, i),
       kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent',

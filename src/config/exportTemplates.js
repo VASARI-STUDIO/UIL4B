@@ -18,8 +18,8 @@ export const EXPORT_TEMPLATES = Object.freeze({
   ]),
   book: Object.freeze([
     t('specification', 'Specification', 'Numbered sections, full-colour dividers.', { isDefault: true, live: true }),
-    t('monograph', 'Monograph', 'A quiet book, one idea per page.'),
-    t('atlas', 'Atlas', 'Each colour on its own plate.'),
+    t('monograph', 'Monograph', 'A quiet book, one idea per page.', { live: true }),
+    t('atlas', 'Atlas', 'Each colour on its own plate.', { live: true }),
   ]),
   guidelines: Object.freeze([
     t('presentation', 'Presentation', 'A slide deck, one point per slide.', { isDefault: true, live: true }),

@@ -94,6 +94,17 @@ export function paletteLayout(n, template = 'specification') {
 }
 
 /**
+ * A template's chrome @font-face, read through the generator's `fontData(file)`
+ * (the server's reader; absent in the browser and in the golden tests). Any failure
+ * is '' and the page falls back to the system face rather than failing to render.
+ */
+export function chromeFor(chrome, fontData) {
+  let base64 = null
+  try { base64 = typeof fontData === 'function' ? fontData(chrome.file) : null } catch { base64 = null }
+  return chromeFace(chrome, base64)
+}
+
+/**
  * The @font-face for a template's chrome face from the base64 the server read, or
  * '' when there is none (the browser, the golden tests): the stack then falls back
  * to the system face. `chrome` is the template's own constant; the data is
