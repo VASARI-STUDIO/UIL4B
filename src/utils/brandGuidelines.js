@@ -109,6 +109,7 @@ import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
 import { esc, orderSections, paletteLayout, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, isNeutral, softInk } from './exportTemplates/roles.js'
 import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
+import { guidelineNotes } from './exportTemplates/guidelines/notes.js'
 
 const DEFAULT_TEMPLATE = 'presentation'
 
@@ -333,12 +334,7 @@ function markPage(ctx, folio) {
   return spread(ctx, {
     section: 'logo',
     title: 'The mark',
-    notes: [
-      'This is the artwork as supplied, reproduced without alteration. Nothing on this page has been redrawn, recoloured or retraced.',
-      logo.type === 'image/svg+xml'
-        ? 'It is vector artwork, so it holds at any size, from a favicon to a building.'
-        : 'It is a raster file, so there is a size past which it will soften. Supply vector artwork for anything printed large.',
-    ],
+    notes: ctx.notes.mark,
     body: `<div class="mk-stage">${markImg(logo, { cls: 'mk-hero', alt: `${ctx.projectName} logo` })}</div>
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`,
     folio,
@@ -372,10 +368,7 @@ function groundsPage(ctx, folio) {
   return spread(ctx, {
     section: 'logo',
     title: 'On grounds',
-    notes: [
-      'The same artwork on paper, on ink and on each brand colour. Read it as a test: the mark is approved on a ground only where it still reads.',
-      'No reversed or single-colour version has been generated. Where the mark fails a ground below, that variant needs drawing; this document has not invented one for you.',
-    ],
+    notes: ctx.notes.grounds,
     body: `<div class="grounds">${tiles}</div>`,
     folio,
   })
@@ -385,10 +378,7 @@ function clearSpacePage(ctx, folio, cs) {
   return spread(ctx, {
     section: 'logo',
     title: 'Clear space',
-    notes: [
-      `Keep a margin of X on every side of the mark, where X is half the height of the mark itself. At the size drawn here that is ${cs.x.toFixed(0)}mm.`,
-      'This is the default rule this document applies, not a decision already taken. Replace it if your mark asks for more room, but replace it deliberately.',
-    ],
+    notes: ctx.notes.clearSpace(cs.x),
     body: `<div class="cs-stage">
       <div class="cs-box" style="width:${cs.boxWidth.toFixed(1)}mm;height:${cs.boxHeight.toFixed(1)}mm;padding:${cs.x.toFixed(1)}mm">
         <span class="cs-x cs-x-top" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
@@ -431,10 +421,7 @@ function palettePage(ctx, folio) {
   return spread(ctx, {
     section: 'colour',
     title: 'The palette',
-    notes: [
-      `Every colour carries a name as well as a value. Say “${slots[0].name}” in a review and the decision survives; say the hex and it does not.`,
-      'The ink noted on each card is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.',
-    ],
+    notes: ctx.notes.palette,
     body: `<div class="swatches${rows.length > 1 ? ' swatches-two' : ''}">${rows.map((row) => `<div class="sw-row">${row.map(card).join('')}</div>`).join('')}</div>`,
     folio,
   })
@@ -462,10 +449,7 @@ function inUsePage(ctx, group, first, folio) {
   return spread(ctx, {
     section: 'colour',
     title: first ? 'In use' : 'In use, continued',
-    notes: [
-      `The name set in ${ctx.d.heading} on each colour, in the ink that reads on it. This is the palette doing its actual job rather than sitting in a row of chips.`,
-      'There is no photography in this document. A mock-up of a tote bag would be an illustration of a brand nobody has made yet; these tiles are the real system.',
-    ],
+    notes: ctx.notes.inUse,
     body: `<div class="uses">${tiles}</div>`,
     folio,
   })
@@ -547,10 +531,7 @@ function scalePage(ctx, ladder, folio) {
   return spread(ctx, {
     section: 'type',
     title: 'The scale',
-    notes: [
-      `Eight steps on a ${d.ratio} ratio from a ${d.baseSize}px base. Every row is set in the face and at the size it specifies.`,
-      `Body copy sets at ${d.lineHeight} leading; headings tighten to 1.15, which is what stops a two-line heading reading as two separate lines.`,
-    ],
+    notes: ctx.notes.scale,
     body: `<table class="scale">
       <thead><tr><th>Step</th><th>Size</th><th>Leading</th><th>Specimen</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -592,7 +573,7 @@ function scopePage(ctx, folio) {
   ${rail(ctx, null, folio)}
   <div class="hd">
     <h2 class="hd-title">Scope</h2>
-    <div class="hd-notes"><p>Everything below was generated from the system you built. Nothing in it is illustrative, and nothing in it is a placeholder.</p><p>The second column is as important as the first: a brand book that quietly omits what it cannot say is harder to trust than one that names it.</p></div>
+    <div class="hd-notes">${ctx.notes.scope.map(n => `<p>${esc(n)}</p>`).join('')}</div>
   </div>
   <div class="bd sc-grid">
     <div>
@@ -651,6 +632,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
     markImg: (opts) => markImg(d.logo, opts),
     clearSpaceAt: (mm) => clearSpace(d.logo, mm),
   })
+  ctx.notes = guidelineNotes(d, ctx.slots)
   ctx.scope = scopeFacts(ctx)
   const pages = [tpl.cover({ ...ctx })]
   let folio = 0
@@ -677,30 +659,14 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
     }
 
     if (section.id === 'type') {
-      const one = d.heading === d.body
-      numbered((f) => facePage(ctx, {
-        role: one ? 'The typeface' : 'Headline face',
-        family: d.heading,
-        weight: d.headingWeight,
-        spacing: d.headingSpacing,
+      ctx.notes.faces.forEach((face) => numbered((f) => facePage(ctx, {
+        role: face.role,
+        family: d[face.key],
+        weight: d[`${face.key}Weight`],
+        spacing: d[`${face.key}Spacing`],
         folio: f,
-        notes: one
-          ? [`${d.heading} carries the whole system, headings and reading alike: a single family held at different weights and sizes.`,
-            'The full character set is printed so a substitution is obvious the moment one happens.']
-          : [`${d.heading} sets the headings at ${d.headingWeight}. It is chosen to be recognised at a glance rather than read at length.`,
-            'The full character set is printed so a substitution is obvious the moment one happens.'],
-      }))
-      if (!one) {
-        numbered((f) => facePage(ctx, {
-          role: 'Body face',
-          family: d.body,
-          weight: d.bodyWeight,
-          spacing: d.bodySpacing,
-          folio: f,
-          notes: [`${d.body} sets everything meant to be read at length, at ${d.bodyWeight} and ${d.lineHeight} leading.`,
-            'Judge it by the lowercase: that is where reading actually happens, and it is the half a specimen of capitals hides.'],
-        }))
-      }
+        notes: face.notes,
+      })))
       numbered((f) => scalePage(ctx, typeLadder(d), f))
     }
   }
