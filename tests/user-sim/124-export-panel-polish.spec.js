@@ -47,7 +47,7 @@ async function openPanel(page) {
   await signIn(page, { plan: 'free', projects: [savedProject()] })
   await go(page, '/projects/export-project')
   await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
-  await page.getByRole('button', { name: 'Export project', exact: true }).click()
+  await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project', exact: true }).click()
   const panel = page.getByRole('dialog', { name: 'Export your design system' })
   await expect(panel).toBeVisible()
   return panel
