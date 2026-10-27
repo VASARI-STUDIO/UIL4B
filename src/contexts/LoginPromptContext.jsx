@@ -22,11 +22,20 @@ const RESUME_KEY = 'vs-resume-after-onboarding'
 // /login is where this starts, /onboarding is the flow itself, / redirects.
 const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding'])
 
+// A destination this app can navigate to without leaving it: a path on this
+// origin. A browser reads `//host` and `/\host` as another origin, so a `from`
+// taken from router state or storage is accepted only when it clears both.
+export function isLocalPath(value) {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
+}
+
 export function stashResumeTarget(explicitFrom) {
   let target = explicitFrom
   if (!target && typeof window !== 'undefined') {
     target = window.location.pathname + window.location.search
   }
+  // Anything that is not a local path is dropped, and clears the old stash too.
+  if (!isLocalPath(target)) target = ''
   const path = String(target || '').split('?')[0].replace(/\/+$/, '') || '/'
   try {
     // Clearing on a non-resumable open matters as much as setting: a dismissed

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { stashResumeTarget } from '../contexts/LoginPromptContext'
+import { isLocalPath, stashResumeTarget } from '../contexts/LoginPromptContext'
 import { openFirebaseGate } from '../utils/firebaseAccess'
 import { LOGIN_SIGNUP_TITLE, PAGE_TITLES } from '../data/routeMetaMap'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -20,7 +20,8 @@ export default function LoginPage() {
   const { t } = useI18n()
   const location = useLocation()
   const navigate = useNavigate()
-  const from = location.state?.from || '/home'
+  // A hand-built link can put anything in state, so only a path on this origin counts.
+  const from = isLocalPath(location.state?.from) ? location.state.from : '/home'
   // `/login?signup=1` (or `state.signup`) opens the sign-up form. The hero's
   // "Start building free" is a real link, so the intent has to survive a full
   // navigation.
@@ -37,24 +38,34 @@ export default function LoginPage() {
   useEffect(() => { stashResumeTarget(from) }, [from])
 
   // Leaving is skipped while onboarding is owed: AppInner sends a new account
-  // there, and a second navigation here would win the race and undo it.
-  const pendingRef = useRef(pendingOnboarding)
-  useEffect(() => { pendingRef.current = pendingOnboarding }, [pendingOnboarding])
-  const leave = useCallback(() => {
-    if (!pendingRef.current) navigate(from, { replace: true })
-  }, [navigate, from])
+  // there, and a second navigation here would win the race and undo it. Only
+  // this effect navigates, because it reads `pendingOnboarding` from the render
+  // it runs in. The form's own `onSuccess` fires before that render, so a
+  // navigation from there would still see the old value and show `from` first.
+  // `formBusy` holds the effect back while the form is still working: sign-up
+  // sets the user, then waits on the profile name before it raises
+  // `pendingOnboarding`. The form stays busy after a success (the page leaves),
+  // so `done` marks the attempt as finished; a sign-in that did not come from
+  // the form (One Tap) leaves as soon as the user appears.
+  const [formBusy, setFormBusy] = useState(false)
+  const [done, setDone] = useState(false)
+  const finished = useCallback(() => setDone(true), [])
   useEffect(() => {
-    if (!loading && user) leave()
-  }, [loading, user, leave])
+    if (loading || !user || pendingOnboarding) return
+    if (formBusy && !done) return
+    navigate(from, { replace: true })
+  }, [loading, user, pendingOnboarding, formBusy, done, navigate, from])
 
-  // Log in and sign up are two URLs for one page; reset and sent are not.
+  // Log in and sign up are two URLs for one page; reset and sent are not. The
+  // query carries the mode from here on, so a stale `state.signup` is cleared
+  // (App.jsx reads it for the tab title and would otherwise disagree).
   const changeMode = useCallback((next) => {
     setMode(next)
     if (next !== 'login' && next !== 'signup') return
     const params = new URLSearchParams(location.search)
     if (next === 'signup') params.set('signup', '1'); else params.delete('signup')
     const search = params.toString()
-    navigate({ search: search ? '?' + search : '' }, { replace: true, state: location.state })
+    navigate({ search: search ? '?' + search : '' }, { replace: true, state: { ...location.state, signup: undefined } })
     document.title = next === 'signup' ? LOGIN_SIGNUP_TITLE : PAGE_TITLES['/login']
   }, [navigate, location.search, location.state])
 
@@ -73,7 +84,7 @@ export default function LoginPage() {
         {loading ? (
           <p className="auth-checking" role="status">{t('auth.checking')}</p>
         ) : (
-          <AuthForm mode={mode} onModeChange={changeMode} onSuccess={leave} headingLevel={1} showLoginSub />
+          <AuthForm mode={mode} onModeChange={changeMode} onSuccess={finished} onBusyChange={setFormBusy} headingLevel={1} showLoginSub />
         )}
       </section>
       <AuthWall variant={wide ? 'page' : 'band'} still={stillBand} />
