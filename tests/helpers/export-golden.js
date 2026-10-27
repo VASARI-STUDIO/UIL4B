@@ -10,7 +10,10 @@ import { readLogo } from '../../src/utils/brandLogo.js'
 import { SAMPLES, FIXED_DATE } from './export-samples.js'
 
 export const KIT_TEMPLATE_PATH = 'src/templates/kit/studio.html'
-export const readKitTemplate = (file = KIT_TEMPLATE_PATH) => fs.readFileSync(path.resolve(file), 'utf8')
+// Line endings are normalised to LF: git stores LF, but a Windows checkout with
+// core.autocrlf turns the file into CRLF on disk, which would change every kit's
+// sha256 and make the fixture pass on one platform and fail on another.
+export const readKitTemplate = (file = KIT_TEMPLATE_PATH) => fs.readFileSync(path.resolve(file), 'utf8').replace(/\r\n?/g, '\n')
 
 // { 'book/northbeam': '<!doctype html>...', 'kit-pro/halcyon': ... }
 export function renderAll({ kitTemplate = readKitTemplate(), options = {} } = {}) {
