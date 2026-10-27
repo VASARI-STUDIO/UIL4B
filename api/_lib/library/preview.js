@@ -5,8 +5,9 @@
 // Hosted inside api/ai.js with the other GETs (the function count is pinned; see serve.js).
 //
 // WHAT IS SENT. Not the colours: a picture of them. The palette is drawn as hard stops across a
-// 320 x 74 strip and blurred sideways with a Gaussian wide enough that the stops run together, so
-// the hue and the mood of the palette read and the individual stops do not. Neither the response nor
+// 320 x 74 strip and blurred sideways with a wrap-around Gaussian wide enough that the stops run
+// together, then every column is pulled part of the way to the palette's mean. The hue and the mood of
+// the palette read; no pixel lands within about 24 levels of any stop, so no stop can be read back. Neither the response nor
 // the page that shows it ever holds a hex code. The image is a plain PNG built here with node:zlib,
 // because the function carries no image library. Every row of the picture is the same, so the PNG
 // filters all but the first row to zeros and the whole strip is a few hundred bytes.
@@ -20,9 +21,19 @@ import { deflateSync } from 'node:zlib'
 export const PREVIEW_WIDTH = 320
 export const PREVIEW_HEIGHT = 74
 // Standard deviation of the sideways blur, in pixels of the 320-wide strip. A stop is 64 to 80
-// pixels wide, so at 22 each neighbour bleeds well into the middle of a stop: the transitions read as
-// one wash of the palette's hues and no single stop keeps its own colour.
-export const PREVIEW_SIGMA = 22
+// pixels wide, so at 30 each neighbour bleeds into the middle of a stop and the transitions read as
+// one wash of the palette's hues. The blur wraps round the strip (the last stop blends into the first),
+// so the two ends are not left holding their own colour.
+export const PREVIEW_SIGMA = 30
+// How far every column is pulled toward the palette's mean colour after the blur. The blur alone
+// leaves the middle of a wide stop within a few levels of the stop; the pull moves every pixel away
+// from the stops' exact colours, so no hex can be read back with a colour picker, while the hues
+// stay in the order the palette has them.
+export const PREVIEW_MEAN_MIX = 0.35
+// The least distance, in levels of one channel, any pixel may sit from any stop's exact colour.
+export const PREVIEW_CLEARANCE = 25
+// Flat offsets tried, smallest first, when a low-contrast palette leaves a pixel closer than that.
+const PREVIEW_SHIFTS = [26, 40, 56]
 
 const hexToRgb = (hex) => {
   const h = String(hex).replace('#', '')
@@ -30,8 +41,8 @@ const hexToRgb = (hex) => {
   return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) || 0)
 }
 
-/** One row of the strip: the hard stops, then the Gaussian, as PREVIEW_WIDTH RGB triples. */
-export function previewRow(colors, width = PREVIEW_WIDTH, sigma = PREVIEW_SIGMA) {
+/** One row of the strip: the hard stops, a wrap-around Gaussian, then a pull toward the mean, as PREVIEW_WIDTH RGB triples. */
+export function previewRow(colors, width = PREVIEW_WIDTH, sigma = PREVIEW_SIGMA, meanMix = PREVIEW_MEAN_MIX) {
   const rgb = (colors || []).map(hexToRgb)
   if (!rgb.length) rgb.push([128, 128, 128])
   const hard = new Float64Array(width * 3)
@@ -43,17 +54,47 @@ export function previewRow(colors, width = PREVIEW_WIDTH, sigma = PREVIEW_SIGMA)
   const kernel = new Float64Array(radius * 2 + 1)
   let sum = 0
   for (let k = -radius; k <= radius; k++) { kernel[k + radius] = Math.exp(-(k * k) / (2 * sigma * sigma)); sum += kernel[k + radius] }
-  const row = new Uint8Array(width * 3)
+  // The mean of the hard strip (each stop weighted by the columns it covers).
+  const mean = [0, 0, 0]
+  for (let x = 0; x < width; x++) for (let c = 0; c < 3; c++) mean[c] += hard[x * 3 + c] / width
+  const soft = new Float64Array(width * 3)
   for (let x = 0; x < width; x++) {
     let r = 0; let g = 0; let b = 0
     for (let k = -radius; k <= radius; k++) {
-      // The edges repeat the end stop, so the strip does not fade towards black at its sides.
-      const at = Math.min(width - 1, Math.max(0, x + k)) * 3
+      // Wrap round: the strip's two ends blend into each other instead of repeating the end stop.
+      const at = ((((x + k) % width) + width) % width) * 3
       const w = kernel[k + radius]
       r += hard[at] * w; g += hard[at + 1] * w; b += hard[at + 2] * w
     }
-    row[x * 3] = Math.round(r / sum); row[x * 3 + 1] = Math.round(g / sum); row[x * 3 + 2] = Math.round(b / sum)
+    const blur = [r / sum, g / sum, b / sum]
+    for (let c = 0; c < 3; c++) soft[x * 3 + c] = blur[c] * (1 - meanMix) + mean[c] * meanMix
   }
+  // A palette whose stops sit close together (greys, creams) still has pixels near a stop, because
+  // the mean is near every stop. Shift the whole strip by one flat offset, the smallest that clears
+  // them, so the picture stays smooth and still reads as a lighter or darker take on the palette.
+  const to8 = (v) => Math.max(0, Math.min(255, Math.round(v)))
+  const closest = (off) => {
+    let best = Infinity
+    for (let x = 0; x < width; x++) {
+      for (const s of rgb) {
+        let d = 0
+        for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(to8(soft[x * 3 + c] + off[c]) - s[c]))
+        if (d < best) best = d
+      }
+    }
+    return best
+  }
+  const offsets = [[0, 0, 0]]
+  for (const m of PREVIEW_SHIFTS) for (const r of [-m, 0, m]) for (const g of [-m, 0, m]) for (const b of [-m, 0, m]) if (r || g || b) offsets.push([r, g, b])
+  let chosen = offsets[0]
+  let chosenGap = -1
+  for (const off of offsets) {
+    const gap = closest(off)
+    if (gap > chosenGap) { chosen = off; chosenGap = gap }
+    if (gap >= PREVIEW_CLEARANCE) { chosen = off; break }
+  }
+  const row = new Uint8Array(width * 3)
+  for (let i = 0; i < row.length; i++) row[i] = to8(soft[i] + chosen[i % 3])
   return row
 }
 

@@ -10,11 +10,14 @@
 // MUTATION (made, the named tests went red, then restored):
 //   preview.js  PREVIEW_SIGMA = 0   -> "neighbouring columns differ by less than a hard stop",
 //                                      "no stop keeps its own colour at its centre"
+//   preview.js  PREVIEW_MEAN_MIX = 0 and clamped edges (the old renderer)
+//                                   -> "no pixel of the picture is within 24 per channel of any of the palette's stops"
 //   preview.js  the PNG body writes the palette's hex text (a tEXt chunk of the colours)
 //                                   -> "no hex string of the palette is in the bytes"
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { previewPng, servePalettePreview, PREVIEW_WIDTH, PREVIEW_HEIGHT, PREVIEW_SIGMA } from '../../api/_lib/library/preview.js'
+import { previewPng, previewRow, servePalettePreview, PREVIEW_WIDTH, PREVIEW_HEIGHT, PREVIEW_SIGMA } from '../../api/_lib/library/preview.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { decodePng, pixel, hexRgb, hexNeedles } from '../helpers/png.js'
 
 // Four stops with big steps between them, so "blurred" and "hard" are far apart. Hand-checked, the
@@ -82,15 +85,38 @@ test('between the two outer stops no pixel is exactly one of the palette\'s stop
   assert.deepEqual(exactStopColumns(20, 299), [])
 })
 
-// KNOWN GAP in the product, not in this test: the blur clamps at the strip's edges (the end stop is
-// repeated, so the strip does not fade to black), which leaves the first 20 and last 21 columns exactly
-// the first and last stop's colour. Measured on the fixture: columns 0-19 are rgb(11,42,69) = #0B2A45 and
-// columns 299-319 are rgb(75,31,158) = #4B1F9E. A picture reader gets those two hexes whole. The
-// middle stops come out within about 10 of their own colour at their centres (measured: 9 and 10), so
-// they are legible to a colour picker too. Marked todo so the gap is on record without turning the run
-// red; remove `todo` when the renderer stops handing over the outer stops.
-test('no pixel of the picture is exactly one of the palette\'s stops, outer stops included', { todo: 'the outer stops are pixel-exact in the first and last 20 columns' }, () => {
+// The blur used to clamp at the strip's edges, which left the first 20 and last 21 columns exactly the
+// first and last stop's colour, and the middle stops within 9 to 10 of theirs. The blur now wraps round
+// and every column is pulled toward the mean, so a colour picker finds none of the stops anywhere.
+const closestToAStop = () => {
+  const stops = STOPS.map(hexRgb)
+  let best = Infinity
+  for (let x = 0; x < PREVIEW_WIDTH; x++) {
+    const p = pixel(row, x)
+    for (const s of stops) best = Math.min(best, Math.max(...s.map((v, i) => Math.abs(v - p[i]))))
+  }
+  return best
+}
+
+test('no pixel of the picture is within 24 per channel of any of the palette\'s stops, outer stops included', () => {
   assert.deepEqual(exactStopColumns(0, PREVIEW_WIDTH), [])
+  const closest = closestToAStop()
+  assert.ok(closest > 24, `a pixel is within ${closest} per channel of a stop`)
+})
+
+test('every palette in the library comes out at least 25 per channel from each of its own stops', () => {
+  assert.ok(LIBRARY_PALETTES.length > 50, 'the library is loaded')
+  for (const p of LIBRARY_PALETTES) {
+    const r = previewRow(p.colors)
+    const stops = p.colors.map(hexRgb)
+    for (let x = 0; x < PREVIEW_WIDTH; x++) {
+      const px = pixel(r, x)
+      for (const s of stops) {
+        const d = Math.max(...s.map((v, i) => Math.abs(v - px[i])))
+        assert.ok(d >= 25, `${p.id}: column ${x} is within ${d} of a stop`)
+      }
+    }
+  }
 })
 
 test('neighbouring columns differ by less than a hard stop', () => {
@@ -100,15 +126,23 @@ test('neighbouring columns differ by less than a hard stop', () => {
     const b = pixel(row, x)
     widest = Math.max(widest, ...a.map((v, i) => Math.abs(v - b[i])))
   }
-  // A Gaussian of sigma 22 across a step of 231 climbs at most 231 / (22 * sqrt(2 * pi)) = 4.2 a column.
+  // A Gaussian of sigma 30 across a step of 231 climbs at most 231 / (30 * sqrt(2 * pi)) = 3.1 a column.
   // The hard stops are 78, 211 and 231, so anything under 10 is a blur and anything near 200 is not.
   assert.ok(widest < 10, `adjacent columns differ by ${widest}; sigma is ${PREVIEW_SIGMA}`)
-  // ...and it is a picture of the palette, not a flat one: the first stop and the last are far apart,
-  // and the colour does climb from column to column (a blank or black strip would pass "< 10" on its own).
-  const first = pixel(row, 0)
-  const last = pixel(row, PREVIEW_WIDTH - 1)
-  assert.ok(Math.max(...first.map((v, i) => Math.abs(v - last[i]))) >= 60, 'the strip is flat from end to end')
-  assert.ok(widest >= 2, `the strip never changes by more than ${widest} between columns`)
+  // ...and it is a picture of the palette, not a flat one: the strip wraps, so its two ends now meet
+  // (they used to be the first and last stop, 60 or more apart); instead the colour must travel by 60 or
+  // more somewhere along it, and climb from column to column (a blank or black strip would pass "< 10").
+  let spread = 0
+  for (let k = 0; k < 3; k++) {
+    const ch = [...Array(PREVIEW_WIDTH).keys()].map((x) => pixel(row, x)[k])
+    spread = Math.max(spread, Math.max(...ch) - Math.min(...ch))
+  }
+  assert.ok(spread >= 60, `the strip only travels ${spread} in any channel`)
+  assert.ok(widest >= 1, `the strip never changes by more than ${widest} between columns`)
+  // The seam where the strip wraps is no step either.
+  const a = pixel(row, PREVIEW_WIDTH - 1)
+  const b = pixel(row, 0)
+  assert.ok(Math.max(...a.map((v, i) => Math.abs(v - b[i]))) < 10, 'the strip has a hard seam at its ends')
 })
 
 test('the picture still carries the palette\'s mood: its average colour is the stops\' average', () => {
