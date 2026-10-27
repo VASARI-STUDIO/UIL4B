@@ -143,7 +143,8 @@ test('mixed-case tags and attributes are not on the list, so they do not survive
 
 test('animation elements are dropped, so nothing can rewrite an href after the check', () => {
   const out = run(wrap('<a href="#x"><set attributeName="href" to="javascript:alert(1)"/></a><path id="x" d="M0 0"><animate attributeName="d" to="M1 1"/><set attributeName="onclick" to="alert(1)"/></path>'))
-  assert.equal(out.svg, wrap('<path id="x" d="M0 0"/>'))
+  // The <a> that pointed at #x is gone, so nothing references the id and it goes too.
+  assert.equal(out.svg, wrap('<path d="M0 0"/>'))
   assert.deepEqual(out.removed.sort(), ['<a>', '<animate>', '<set>'])
 })
 
@@ -378,7 +379,8 @@ test('ordinary values of every kind pass through untouched', () => {
     + '<linearGradient id="g" gradientUnits="userSpaceOnUse" gradientTransform="rotate(10)" x1="0" x2="1"><stop offset="0%" stop-color="hsl(10 20% 30%)" stop-opacity=".5"/></linearGradient></g>'
   const out = run(wrap(body, ' width="24" height="24" preserveAspectRatio="xMidYMid slice"'))
   assert.equal(out.ok, true)
-  assert.equal(out.svg, wrap(body, ' width="24" height="24" preserveAspectRatio="xMidYMid slice"'))
+  // The gradient's id is unreferenced, so it is the one thing that does not survive.
+  assert.equal(out.svg, wrap(body.replace(' id="g"', ''), ' width="24" height="24" preserveAspectRatio="xMidYMid slice"'))
 })
 
 test('tab, CR and LF still separate values, as in a pretty-printed or wrapped path', () => {
