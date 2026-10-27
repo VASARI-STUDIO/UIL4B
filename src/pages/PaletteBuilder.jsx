@@ -160,14 +160,14 @@ const IMG_MAX_MB = 4 // uploaded-image size cap for the free image picker
 // Harmony options for the Colour System dropdown. `free` mirrors the studio's
 // CSYS_HARMS split, plus the tonal Auto system which is always free.
 const HARMONIES = [
-  { id: 'auto', label: 'Auto', free: true },
-  { id: 'monochromatic', label: 'Monochromatic', free: true },
-  { id: 'analogous', label: 'Analogous', free: false },
-  { id: 'complement', label: 'Complementary', free: false },
-  { id: 'triadic', label: 'Triadic', free: false },
-  { id: 'split', label: 'Split', free: false },
-  { id: 'tetradic', label: 'Tetradic', free: false },
-  { id: 'custom', label: 'Custom', free: false },
+  { id: 'auto', label: 'Auto', free: true, desc: 'Your colour, a close second hue, then light to dark.' },
+  { id: 'monochromatic', label: 'Monochromatic', free: true, desc: 'One hue in lighter and darker shades.' },
+  { id: 'analogous', label: 'Analogous', free: false, desc: 'Neighbouring hues, calm and cohesive.' },
+  { id: 'complement', label: 'Complementary', free: false, desc: 'Opposite hues, for maximum contrast.' },
+  { id: 'triadic', label: 'Triadic', free: false, desc: 'Three evenly spaced hues, vibrant but balanced.' },
+  { id: 'split', label: 'Split', free: false, desc: 'Your hue plus the two beside its opposite.' },
+  { id: 'tetradic', label: 'Tetradic', free: false, desc: 'Four hues at 90°, rich variety.' },
+  { id: 'custom', label: 'Custom', free: false, desc: 'Your hue, one 60° on, and its opposite.' },
 ]
 
 // The colour systems a free user is allowed to run through the generator. Any
@@ -2405,7 +2405,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const openGallery = (tab, anchor = null) => { closeAllMenus(); setGalleryTab(tab); setGalleryAnchor(anchor); setGalleryOpen(true) }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
-  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, mark: h.free || isPro ? '' : 'Pro' }))
+  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, desc: h.desc, mark: h.free || isPro ? '' : 'Pro' }))
   const visionOptions = VISION_MODES.map(([id, label]) => ({ value: id, label }))
   // From the Extra tools overflow a choice also closes the panel, so that a Pro
   // wall raised by the choice is not opened underneath it.
