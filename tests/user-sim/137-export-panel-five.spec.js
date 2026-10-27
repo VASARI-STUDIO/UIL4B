@@ -548,7 +548,7 @@ test.describe('the divider between free and paid rows', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, WORKED_BOARD)
     const panel = await open(page)
-    await expect(panel.getByRole('radio')).toHaveCount(5)
+    await expect(panel.getByRole('radiogroup', { name: 'Export your design system' }).getByRole('radio'), 'five rows; the template tiles are a second group').toHaveCount(5)
     await expect(panel.locator('.exp-fmt-gap')).toHaveCount(0)
   })
 })
