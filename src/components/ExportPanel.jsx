@@ -120,8 +120,9 @@ export default function ExportPanel({ onClose }) {
   // than finding out from a modal after it.
   const locked = Boolean(activeFormat?.pro) && !isPro
   // The plan is still being read. A paid row must not say "Unlock with Pro" to
-  // someone who is about to turn out to be Pro, nor run the gate on a guess.
-  const checking = Boolean(activeFormat?.pro) && planKnown === false
+  // someone who is about to turn out to be Pro, nor run the gate on a guess, and
+  // a free row must not build a watermarked file for someone who is Pro.
+  const checking = planKnown === false
 
   // Build and download in the browser. No server round trip: the document is a
   // pure function of the saved design (see utils/styleGuideExport.js), so there
