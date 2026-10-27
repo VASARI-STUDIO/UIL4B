@@ -1,67 +1,127 @@
-/* contrast.css — /create/contrast, rebuilt to the design.
+/* contrast.css — /create/contrast.
  *
- * Source: "UIL4B App.dc.html", `isContrast` (D:718-791), view model
- * (D:1899-1934). The toolbar, the grid, the side card and its section labels
- * come from the shared tool layout (pages/tool-layout.css); this sheet is the
- * specimen, the pairs grid, the ratio, the tests, the swatches, the two hex
- * fields and the fixes. Scoped `.cc …` throughout.
+ * The toolbar, the grid, the side card and its section labels come from the
+ * shared tool layout (pages/tool-layout.css); this sheet is the pair bar, the
+ * specimen, the pairs grid, the ratio, the tests, the fixes and the swatches.
+ * Scoped `.cc …` throughout.
  *
- * The verdict colours are the design's own status pair (D:1428-1430): a status
- * hue in dark, the same hue mixed 50% toward #0B0C0E in light — so the words
- * clear AA on the card in both themes. They NEVER paint with the pair under
- * test (--cc-fg / --cc-bg): a verdict drawn in the failing pair is unreadable
- * exactly when it is needed.
+ * Verdict colours are the app's own state tokens (global.css): `-strong` for
+ * words (AA text on the card in both themes), the base token for icons and
+ * marks. They NEVER paint with the pair under test (--cc-fg / --cc-bg): a
+ * verdict drawn in the failing pair is unreadable exactly when it is needed.
  *
- * Ours, not the design's (kept functions): the editable hex fields in the pair footer,
- * the picker chips beside them, and the "Make it pass" section. */
+ * Layout: the pair bar is the first thing in the main column at every width.
+ * From 901px the result panel takes the right column for two rows and follows
+ * the page (sticky), with the kit pairs under the specimen; below that the
+ * order is pair bar, specimen, result panel, kit pairs. */
 
-.cc {
-  --cc-ok: #8FCB9B;
-  --cc-warn: #D9B93C;
-  --cc-bad: #F0A58C;
-}
-[data-theme="light"] .cc {
-  --cc-ok: color-mix(in srgb, #8FCB9B 50%, #0B0C0E);
-  --cc-warn: color-mix(in srgb, #D9B93C 50%, #0B0C0E);
-  --cc-bad: color-mix(in srgb, #F0A58C 50%, #0B0C0E);
-}
-.cc .cc-tone--ok { color: var(--cc-ok); }
-.cc .cc-tone--warn { color: var(--cc-warn); }
-.cc .cc-tone--bad { color: var(--cc-bad); }
+.cc .cc-tone--ok { color: var(--ok-strong); }
+.cc .cc-tone--warn { color: var(--warn-strong); }
+.cc .cc-tone--err { color: var(--err-strong); }
+.cc .cc-ico--ok { color: var(--ok); }
+.cc .cc-ico--warn { color: var(--warn); }
+.cc .cc-ico--err { color: var(--err); }
 
-/* ── Specimen (D:728-735) ───────────────────────────────────────────────── */
+/* ── Pair bar: Text colour · Swap · Background colour ──────────────────── */
+.cc .cc-pairbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: start;
+}
+.cc .cc-field { display: grid; min-width: 0; }
+.cc .cc-field-k {
+  margin-bottom: 6px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--tl-dim);
+}
+.cc .cc-field-short { display: none; }
+.cc .cc-field-row { display: flex; gap: var(--s-2); min-width: 0; }
+.cc .cc-field .cpk-wrap { flex: 0 0 auto; }
+.cc .cc-picker {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--tl-line);
+  scroll-margin-top: calc(var(--chrome-h) + 72px);
+}
+.cc .cc-hex-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: var(--tl-card);
+  color: var(--tl-ink);
+  font: 500 14px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  scroll-margin-top: calc(var(--chrome-h) + 72px);
+}
+/* One ring: the tool ring (tool-layout.css) draws on :focus-visible, so the
+   global input halo is switched off here. */
+.cc .cc-hex-input:focus { border-color: var(--tl-line-on); box-shadow: none; }
+.cc .cc-hex-input--bad,
+.cc .cc-hex-input--bad:focus { border-color: var(--err); }
+.cc .tl-btn.cc-swap {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  /* Lines the button up with the control row: label (18) + gap (6). */
+  margin-top: 24px;
+}
+
+.cc .cc-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+/* A field's hint is a live region that is empty until it has something to say,
+   so it takes no room (and no margin) until then. */
+.cc .cc-hint--bad:not(:empty) {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--err-strong);
+}
+.cc .cc-hint-ico { flex: 0 0 auto; margin-top: 2px; color: var(--err); }
+.cc .cc-lede { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
+
+/* ── Specimen: every line is the size its test measures ────────────────── */
 .cc .cc-preview {
   display: grid;
-  gap: 16px;
-  align-content: center;
-  min-height: clamp(240px, 38vh, 400px);
-  padding: clamp(20px, 3vw, 34px);
+  gap: var(--s-4);
+  padding: var(--s-6);
   border-radius: 18px;
   border: 1px solid var(--tl-line);
   background: var(--cc-bg, #FFFFFF);
   color: var(--cc-fg, #000000);
 }
 .cc .cc-preview p { margin: 0; }
-.cc .cc-spec-h { font-size: clamp(28px, 4.6vw, 52px); font-weight: 600; letter-spacing: -.035em; line-height: 1.02; }
-.cc .cc-spec-large { font-size: clamp(15px, 1.8vw, 19px); line-height: 1.5; max-width: min(42ch, 100%); }
-.cc .cc-spec-body { font-size: 14px; line-height: 1.6; max-width: min(56ch, 100%); }
+.cc .cc-spec-h { font-size: 40px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; }
+.cc .cc-spec-large { font-size: 24px; font-weight: 400; line-height: 1.35; }
+.cc .cc-spec-bold { font-size: 19px; font-weight: 700; line-height: 1.4; }
+.cc .cc-spec-body { max-width: min(60ch, 100%); font-size: 16px; font-weight: 400; line-height: 1.6; }
 .cc .cc-spec-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   justify-self: start;
-  padding: 9px 15px;
+  padding: 9px 16px;
   border-radius: 999px;
-  border: 1px solid var(--cc-fg, currentColor);
-  font-size: 13px;
+  border: 2px solid var(--cc-fg, currentColor);
+  font-size: 14px;
+  line-height: 1.3;
 }
 
-/* ── Common pairs in this kit (D:737-752) ───────────────────────────────── */
-.cc .cc-pairs { display: grid; gap: 9px; }
+/* ── Common pairs in this kit ───────────────────────────────────────────── */
+.cc .cc-pairs { display: grid; gap: var(--s-2); min-width: 0; }
 .cc .cc-pair-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(168px, 100%), 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+  gap: var(--s-2);
 }
 .cc .cc-pair {
   display: flex;
@@ -79,6 +139,8 @@
   transition: transform .14s var(--tl-ease), border-color .16s ease;
 }
 .cc .cc-pair:active { transform: scale(.97); }
+/* The pair being checked right now. */
+.cc .cc-pair[aria-pressed="true"] { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
 .cc .cc-pair-chip {
   flex: 0 0 auto;
   display: grid;
@@ -93,37 +155,88 @@
   font-weight: 600;
 }
 .cc .cc-pair-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.cc .cc-pair-label { font-size: 12.5px; color: var(--tl-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cc .cc-pair-ratio { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
-.cc .cc-pair-mark { font-family: var(--mono); font-size: 10px; white-space: nowrap; }
+.cc .cc-pair-label {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--tl-ink);
+}
+.cc .cc-pair-meta { display: flex; align-items: baseline; gap: var(--s-2); min-width: 0; }
+.cc .cc-pair-ratio { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.cc .cc-pair-mark { font-family: var(--font); font-size: 11px; font-weight: 500; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
   .cc .cc-pair:hover { border-color: var(--tl-line-on); }
 }
 
-/* ── Ratio + verdict (D:757-760) ────────────────────────────────────────── */
+/* ── Ratio + verdict ────────────────────────────────────────────────────── */
 .cc .cc-ratio { gap: 6px; padding: 18px 16px; }
 .cc .cc-ratio-num {
   font-size: clamp(34px, 5vw, 46px);
   font-weight: 600;
   letter-spacing: -.04em;
   line-height: 1;
-  color: var(--tl-ink);
   font-variant-numeric: tabular-nums;
 }
 .cc .cc-ratio-unit { font-size: .42em; font-weight: 500; color: var(--tl-dim); }
-.cc .cc-ratio-verdict { font-size: 13.5px; }
+.cc .cc-ratio-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--tl-ink);
+}
+.cc .cc-ratio-verdict .tl-ico { flex: 0 0 auto; margin-top: 3px; }
+.cc .cc-ratio-note { margin: 0; padding-left: 24px; font-size: 13px; line-height: 1.4; color: var(--tl-dim); }
 
-/* ── The five tests (D:761-770) ─────────────────────────────────────────── */
-.cc .cc-tests { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
-.cc .cc-check { display: flex; align-items: center; gap: 10px; }
-.cc .cc-check-ico { flex: 0 0 auto; }
-.cc .cc-check-name { flex: 1; min-width: 0; font-size: 13px; color: var(--tl-soft); }
-.cc .cc-check-level { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--tl-faint); }
-.cc .cc-check-mark { font-family: var(--mono); font-size: 10.5px; white-space: nowrap; }
+/* ── The five tests ─────────────────────────────────────────────────────── */
+.cc .cc-tests { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.cc .cc-check {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+.cc .cc-check-name { font-size: 13px; line-height: 1.35; color: var(--tl-soft); }
+.cc .cc-check-need { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.cc .cc-check-mark { min-width: 3ch; font-size: 12px; font-weight: 500; text-align: right; }
+.cc .cc-note { display: grid; gap: 4px; margin-top: 2px; }
+.cc .cc-note p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+.cc .cc-note-link { justify-self: start; font-size: 12px; line-height: 1.5; color: var(--tl-link); }
 
-/* ── Target, swatches, the pair (D:771-786) ─────────────────────────────── */
+/* ── Nearest passing colours ────────────────────────────────────────────── */
+.cc .cc-fixes { display: grid; gap: var(--s-3); }
+.cc .cc-fix {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  gap: var(--s-2) var(--s-3);
+  align-items: center;
+}
+.cc .cc-fix-chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--tl-line);
+  background: var(--cc-bg, #FFFFFF);
+  color: var(--cc-fg, #000000);
+  font-size: 14px;
+  font-weight: 600;
+}
+.cc .cc-fix-desc { display: grid; gap: 2px; min-width: 0; }
+.cc .cc-fix-line { font-size: 13px; line-height: 1.35; color: var(--tl-ink); }
+.cc .cc-fix-line strong { font-weight: 600; font-variant-numeric: tabular-nums; }
+.cc .cc-fix-ratio { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* ── Palette swatches ───────────────────────────────────────────────────── */
 .cc .cc-colours { gap: 11px; }
-.cc .cc-swatches { display: flex; flex-wrap: wrap; gap: 7px; }
+.cc .cc-swatches { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .cc .cc-swatch {
   width: 32px;
   height: 32px;
@@ -134,72 +247,78 @@
   cursor: pointer;
 }
 .cc .cc-swatch.is-on { border-color: var(--t0); }
-.cc .cc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.cc .cc-field { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.cc .cc-field-k { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); flex: 0 0 auto; }
-.cc .cc-field .cpk-wrap { flex: 0 0 auto; }
-.cc .cc-picker { width: 24px; height: 24px; min-height: 24px; border-radius: 8px; }
-.cc .cc-hex-input {
-  flex: 1;
-  min-width: 0;
-  width: 100%;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--tl-hair);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
-  color: var(--tl-ink);
-  font-family: var(--mono);
-  font-size: 11px;
-  text-transform: uppercase;
-}
-.cc .cc-hex-input--bad { border-color: var(--err); }
-.cc .cc-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 
-/* ── Make it pass ───────────────────────────────────────────────────────── */
-.cc .cc-fixes { display: grid; gap: 8px; }
-.cc .cc-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cc .cc-fix-chip {
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 5px 8px;
-  border-radius: 8px;
-  background: var(--cc-sw, transparent);
-  color: var(--cc-sw-ink, var(--t0));
-  border: 1px solid var(--tl-line);
-}
-.cc .cc-fix-desc { flex: 1 1 120px; min-width: 0; font-size: 12px; color: var(--tl-dim); }
-.cc .cc-fix-btn {
-  height: 30px;
-  min-height: 24px;
-  padding: 0 11px;
-  border: 1px solid var(--tl-line);
-  border-radius: var(--btn-radius);
-  background: transparent;
-  color: var(--tl-ink);
-  font-family: var(--font);
-  font-size: 12.5px;
-  cursor: pointer;
-}
-@media (hover: hover) and (pointer: fine) {
-  .cc .cc-fix-btn:hover { background: var(--tl-wash-2); }
+/* ── Desktop: result panel on the right, following the page ─────────────── */
+@media (min-width: 901px) {
+  .cc .tl-panel {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: calc(var(--chrome-h) + 64px);
+    max-height: calc(100vh - var(--chrome-h) - 80px);
+    max-height: calc(100dvh - var(--chrome-h) - 80px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .cc .cc-pairs { grid-column: 1; grid-row: 2; }
 }
 
+/* ── Touch: every control reaches 44px ──────────────────────────────────── */
 @media (pointer: coarse) {
   .cc .cc-swatch { width: 44px; height: 44px; }
-  .cc .cc-picker { width: 44px; height: 44px; }
+  .cc .cc-picker { width: 44px; height: 44px; min-height: 44px; }
   .cc .cc-hex-input { height: 44px; font-size: 16px; }
-  .cc .cc-fix-btn { height: 44px; }
+  .cc .tl-btn.cc-swap { width: 44px; height: 44px; min-height: 44px; margin-top: 24px; }
   .cc .cc-pair { min-height: 44px; }
-  .cc .cc-fields { grid-template-columns: 1fr; }
+}
+
+/* ── Phone: fields stacked label-left, Swap down the right edge ─────────── */
+@media (max-width: 559px) {
+  .cc .cc-pairbar {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-rows: auto auto;
+    gap: var(--s-2);
+  }
+  .cc .cc-pairbar > .cc-field:first-child { grid-column: 1; grid-row: 1; }
+  .cc .cc-pairbar > .cc-field:last-child { grid-column: 1; grid-row: 2; }
+  .cc .tl-btn.cc-swap {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    margin-top: 0;
+  }
+  .cc .cc-field { grid-template-columns: 88px minmax(0, 1fr); column-gap: var(--s-1); align-items: center; }
+  .cc .cc-field-k { margin: 0; font-size: 13px; }
+  .cc .cc-field-short { display: inline; }
+  /* The full label stays the input's name for a screen reader. */
+  .cc .cc-field-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .cc .cc-field-row { grid-column: 2; }
+  .cc .cc-hint--bad:not(:empty) { grid-column: 1 / -1; }
+  .cc .cc-picker { width: 44px; height: 44px; min-height: 44px; }
+  /* iOS zooms the page when a focused field is under 16px. */
+  .cc .cc-hex-input { height: 44px; font-size: 16px; }
+
+  .cc .cc-preview { padding: var(--s-5); }
+  .cc .cc-spec-h { font-size: 32px; }
+  .cc .cc-pair-grid { grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); }
 }
 @media (max-width: 380px) {
-  .cc .cc-fields { grid-template-columns: 1fr; }
+  .cc .cc-field { grid-template-columns: 72px minmax(0, 1fr); }
+  .cc .cc-field-k { font-size: 12.5px; }
 }
-/* iOS zooms the page when a focused field is under 16px. The global ≤640
-   floor loses to this sheet's (0,2,0) size, so the floor is restated here. */
-@media (max-width: 640px) {
-  .cc .cc-hex-input { font-size: 16px; }
+@media (max-width: 359px) {
+  .cc .cc-pair-grid { grid-template-columns: 1fr; }
 }
 
 :where(html[data-reduced-motion="true"]) .cc .cc-pair { transition: none !important; }
@@ -211,7 +330,8 @@
 @media (forced-colors: active) {
   .cc .cc-preview,
   .cc .cc-pair-chip,
-  .cc .cc-swatch,
-  .cc .cc-fix-chip { forced-color-adjust: none; }
+  .cc .cc-fix-chip,
+  .cc .cc-swatch { forced-color-adjust: none; }
   .cc .cc-swatch.is-on { outline: 2px solid Highlight; }
+  .cc .cc-pair[aria-pressed="true"] { outline: 2px solid Highlight; }
 }
