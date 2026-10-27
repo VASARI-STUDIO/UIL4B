@@ -258,6 +258,37 @@ test('CONTROL: the walk does find a lazily imported module', () => {
   assert.ok(reach.has(path.resolve('src/utils/styleGuideRaster.js')), 'dynamic imports are not being followed')
 })
 
+// The import walk above reads source text, so it cannot see an import written
+// another way (import.meta.glob, a computed specifier) or one a build plugin adds.
+// The built files are the truth: no shipped script may contain a line only a
+// generator's output has. Skips when there is no build, like the other dist tests.
+const DIST = path.join(process.cwd(), process.env.DIST_DIR || 'dist')
+const builtAssets = path.join(DIST, 'assets')
+const noBuild = !fs.existsSync(builtAssets) && 'run a build first (see DIST_DIR)'
+
+// Text that each generator writes into its document and that nothing else in the app has.
+const MARKERS = [
+  { file: 'src/utils/designSystemBook.js', text: ' — Design System</title>' },
+  { file: 'src/utils/brandGuidelines.js', text: 'Brand <br>Guidelines' },
+]
+
+test('CONTROL: each bundle marker is really in its generator', () => {
+  for (const m of MARKERS) {
+    assert.ok(fs.readFileSync(m.file, 'utf8').includes(m.text), `${m.file} no longer contains ${JSON.stringify(m.text)}; pick a new marker`)
+  }
+})
+
+test('the built bundle carries neither generator, whichever way it was imported', { skip: noBuild }, () => {
+  const scripts = fs.readdirSync(builtAssets).filter((f) => /\.(m?js|html)$/.test(f))
+  assert.ok(scripts.length > 5, `only ${scripts.length} built scripts found in ${builtAssets}; the scan has gone blind`)
+  for (const f of scripts) {
+    const code = fs.readFileSync(path.join(builtAssets, f), 'utf8')
+    for (const m of MARKERS) {
+      assert.ok(!code.includes(m.text), `${f} contains the text of ${m.file}: that generator is in the browser bundle`)
+    }
+  }
+})
+
 /* ── the browser half ─────────────────────────────────────────────────────── */
 
 const sdkFor = (getIdToken) => async () => ({ auth: { currentUser: getIdToken ? { getIdToken } : null } })
