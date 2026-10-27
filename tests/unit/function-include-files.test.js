@@ -126,8 +126,8 @@ const NO_GIT = IGNORED === null
 
 test('the api functions import exactly the two internal boards and the Pro export documents', () => {
   // Still the anchor: if a function starts importing something else out of src/,
-  // it has to be classified below as bundled or as deliberately absent. The three
-  // export files are the format list and the two Pro document generators that
+  // it has to be classified below as bundled or as deliberately absent. The export files
+  // are the format list, the two Pro document generators and the font coercion that
   // api/_lib/exportDocument.js builds on the server (they are not in the browser
   // bundle at all), and vercel.json bundles them.
   assert.deepEqual(IMPORTED, [
@@ -136,6 +136,7 @@ test('the api functions import exactly the two internal boards and the Pro expor
     'data/pipeline.js',
     'utils/brandGuidelines.js',
     'utils/designSystemBook.js',
+    'utils/styleGuideExport.js',
   ],
   'api/ imports changed — every src/ file a function imports must be either named by '
     + 'vercel.json includeFiles or gitignored on purpose, and a new one is neither')
