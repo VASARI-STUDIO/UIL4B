@@ -9,6 +9,9 @@ import { mixHex, hexToOklch } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Martian Mono', weights: '100 800', file: 'martian-mono-latin.woff2' })
 
+// A role label arrives in capitals ("ALTERNATIVE 1"); set it as a sentence ("Alternative 1").
+const sentenceCase = (text) => { const t = String(text).toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1) }
+
 // Band weights on the cover: the primary 3, accents 2, neutrals 1.
 const WEIGHT = { primary: 3, accent: 2, neutral: 1 }
 const MM_TO_PT = 72 / 25.4
@@ -85,7 +88,7 @@ function plate(ctx, s, slots) {
     fg: s.ink,
     cls: 'pl',
     inner: `<div class="pl-in">
-    <header><p class="pl-role">${esc(String(s.role).toLowerCase())}</p><h2 class="pl-name">${esc(s.name)}</h2></header>
+    <header><p class="pl-role">${esc(sentenceCase(s.role))}</p><h2 class="pl-name">${esc(s.name)}</h2></header>
     <div class="pl-data">
       <p class="pl-lands${s.placed ? '' : ' is-unplaced'}"><span>Where it lands</span>${esc(s.lands)}</p>
       <dl class="pl-vals">

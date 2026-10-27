@@ -22,7 +22,7 @@ function cover({ d, projectName, field, fieldInk, iso, year, slots, fit }) {
     : ''
   return `<section class="pg pg-cover" style="background:${field};color:${fieldInk}">
   <div class="cv-top">
-    <span class="cv-mark">Design System</span>
+    <span class="cv-mark">Design system</span>
     <span class="cv-year">${esc(year)}</span>
   </div>
   <h1 class="cv-title${fit.clamp ? ' is-clamped' : ''}" style="font-size:${fit.size}pt">${esc(projectName)}</h1>

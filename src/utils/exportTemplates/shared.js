@@ -72,6 +72,36 @@ export function fitTitle(name, { maxLines = 3, steps = [], measure = 100, advanc
   return { size, lines: maxLines, clamp: true, broken: last.broken }
 }
 
+/**
+ * `name` cut to whole words with a closing ellipsis when it needs more than `maxLines`
+ * lines at `size` (same units and advance as fitTitle). The CSS line clamp alone cuts a
+ * long title wherever the third line runs out, which can be mid-word ("Subur…"); this
+ * drops the words that do not fit first, so the clamp is only a backstop. A name that
+ * fits, or whose first word alone is longer than a line, comes back unchanged;
+ * a longer word later on is dropped like any other that does not fit.
+ */
+export function clampTitle(name, size, { maxLines = 3, measure = 100, advance = 0.52 } = {}) {
+  const text = String(name ?? '').trim().replace(/\s+/g, ' ')
+  const cap = Math.max(1, Math.floor(measure / (size * advance)))
+  const words = text.split(' ').filter(Boolean)
+  let lines = words.length ? 1 : 0
+  let used = 0
+  let kept = 0
+  for (const word of words) {
+    const need = used ? used + 1 + word.length : word.length
+    if (need <= cap) { used = need; kept += 1; continue }
+    if (word.length > cap) { if (!kept) return text; break }
+    if (lines >= maxLines) break
+    lines += 1
+    used = word.length
+    kept += 1
+  }
+  if (kept === words.length || kept === 0) return text
+  // The ellipsis needs a column on the last line; if the line is full, drop its last word.
+  if (used + 1 > cap && kept > 1) kept -= 1
+  return `${words.slice(0, kept).join(' ').replace(/[\s,;:.\-–—]+$/, '')}…`
+}
+
 // The most colours a template lays out. The tool never produces more; a longer
 // list is cut to its first 13 rather than shrunk until it is unreadable.
 export const MAX_SLOTS = 13

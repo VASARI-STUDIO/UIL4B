@@ -8,7 +8,7 @@
 // column with a 6 mm gap. Recto pages (odd folios) put the margin column on the
 // outer right edge; verso pages mirror it, so a printed spread reads as a book.
 
-import { esc, safeHex, inkName, paletteLayout, chromeFor } from '../shared.js'
+import { esc, safeHex, inkName, paletteLayout, chromeFor, clampTitle } from '../shared.js'
 import { mixHex } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Literata', weights: '200 900', file: 'literata-latin.woff2' })
@@ -36,8 +36,12 @@ function frame(ctx, inner, { section = '', folio = null, cls = '' } = {}) {
 </section>`
 }
 
-/** The project name set in the user's heading face. `clamp` cuts a very long name at three lines. */
-const title = (ctx, size, cls) => `<h1 class="${cls}" style="font-size:${size}pt">${esc(ctx.projectName)}</h1>`
+// Cover title: sizes in pt, largest first, in the 110 mm text column (312 pt).
+const TITLE_FIT = Object.freeze({ steps: Object.freeze([40, 32, 26]), maxLines: 3, measure: 312 })
+
+/** The project name set in the user's heading face; a name too long for three lines is cut at a whole word. */
+const title = (ctx, size, cls) =>
+  `<h1 class="${cls}" style="font-size:${size}pt">${esc(clampTitle(ctx.projectName, size, TITLE_FIT))}</h1>`
 
 function front(ctx) {
   const { fit, field, logo, projectName } = ctx
@@ -383,8 +387,7 @@ export default Object.freeze({
   openOnRecto: true,
   // The cover and the half-title come before the contents.
   front,
-  // Cover title: sizes in pt, largest first, in the 110 mm text column (312 pt).
-  titleFit: Object.freeze({ steps: Object.freeze([40, 32, 26]), maxLines: 3, measure: 312 }),
+  titleFit: TITLE_FIT,
   // 28 rows of 8 pt leave the token pages room under the header.
   tokensPerPage: 30,
   sectionOrder: Object.freeze(['colour', 'typography', 'tokens']),
