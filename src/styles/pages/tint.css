@@ -187,12 +187,15 @@
    (it stays in the page, outside the described body); the head and both rows
    remain. */
 .tt .tt-tip--compact .tt-tip-help { display: none; }
-/* Not enough room above or below even for that: the card sits beside the note,
-   on the side the script found room, with the bridge on the note's side. The
-   script sets its vertical offset so it stays inside the window and under the
-   sticky bars. */
+/* Not enough room above or below even for that: the card sits beside the notes.
+   The script sets its offsets (and, past the notes card, its left, width and
+   bridge) so it stays inside the window and under the sticky bars. Past the
+   notes card's right edge it lies over no note; where there is no room there it
+   sits right beside its note (the defaults here) over the next ones, and is
+   click-through (--ghost) so the pointer walking on still reaches them. */
 .tt .tt-tip--right { top: 0; left: 100%; padding: 0 0 0 6px; }
 .tt .tt-tip--left { top: 0; left: auto; right: 100%; padding: 0 6px 0 0; }
+.tt .tt-tip--ghost { pointer-events: none; }
 /* The last resort (no room beside either): the script gives the card a
    max-height that fits the room it has, and it scrolls inside. */
 .tt .tt-tip-card { overflow-y: auto; overscroll-behavior: contain; }

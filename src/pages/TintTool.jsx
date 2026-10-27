@@ -75,6 +75,8 @@ const TIP_MIN_WIDTH = 224
 // the window's bottom edge.
 const TIP_BRIDGE = 6
 const TIP_EDGE = 12
+// The space between the notes card and a card parked past its right edge.
+const TIP_GAP = 8
 
 let seq = 0
 const mkSource = (hex) => ({ id: ++seq, hex, input: hex })
@@ -99,9 +101,9 @@ function barRef(color, pct) {
 // note's description is the tooltip body (the head and the rows); the long help
 // paragraph sits in the card but outside it, so a screen reader is not read it
 // again on every note.
-function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, side, sideStyle }) {
+function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, side, sideStyle, ghost }) {
   const notes = contrastNotes(step.hex)
-  const cls = ['tt-tip', end && 'tt-tip--end', above && 'tt-tip--above', inline && 'tt-tip--inline', compact && 'tt-tip--compact', side && `tt-tip--${side}`].filter(Boolean).join(' ')
+  const cls = ['tt-tip', end && 'tt-tip--end', above && 'tt-tip--above', inline && 'tt-tip--inline', compact && 'tt-tip--compact', side && `tt-tip--${side}`, ghost && 'tt-tip--ghost'].filter(Boolean).join(' ')
   return (
     <span className={cls} data-open={open ? 'true' : undefined} style={sideStyle}>
       {/* tabIndex -1: a card that scrolls would otherwise be a Tab stop of its own. */}
@@ -123,6 +125,15 @@ function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, s
       </span>
     </span>
   )
+}
+
+// The click-through card beside its note stays while the pointer is on the note
+// or anywhere in the card's box; the pointer on another note under the card
+// opens that note's card instead.
+function pointerHolds(e, label) {
+  const card = document.getElementById(`tt-tip-${label}`)?.closest('.tt-tip-card')
+  const rects = [card, card?.closest('.tt-note-wrap')].filter(Boolean).map((n) => n.getBoundingClientRect())
+  return rects.some((r) => e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom)
 }
 
 // onCopy only: Tint has no row in src/config/activationExports.js, so it must
@@ -238,7 +249,7 @@ export default function TintTool({ onCopy, toast }) {
       document.removeEventListener('pointerdown', onDown)
     }
   }, [tipOpen])
-  const openTip = (label, el, pinned = false) => {
+  const openTip = (label, el, pinned = false, byPointer = false) => {
     const rect = el.getBoundingClientRect()
     const end = rect.left + TIP_WIDTH > window.innerWidth - 12
     // The card opens below the note, where the page has room. It flips above
@@ -247,8 +258,11 @@ export default function TintTool({ onCopy, toast }) {
     // When neither side holds the whole card (a short window, the notes near its
     // foot), it drops the help paragraph (the head and both rows stay) and takes
     // the side that holds that. When not even that fits above or below, it sits
-    // beside the note, kept inside the window and under the sticky bars and the
-    // header. With no room beside either (a very narrow window), it takes the
+    // beside the notes: past the right edge of the notes card where that is clear
+    // of the controls panel (no note is under it, so the pointer can walk along
+    // the notes), else right beside its note, click-through so the next note
+    // still gets the hover. Kept inside the window and under the sticky bars and
+    // the header. With no room beside either (a very narrow window), it takes the
     // side with more room, cut to fit and scrolling. It never reaches past the
     // window, so the page does not grow.
     const bar = document.querySelector('.tt .tl-toolbar')
@@ -260,7 +274,7 @@ export default function TintTool({ onCopy, toast }) {
     const roomBelow = window.innerHeight - TIP_EDGE - rect.bottom - TIP_BRIDGE
     const roomAbove = rect.top - TIP_BRIDGE - clearTop
     const full = TIP_HEIGHT - TIP_BRIDGE
-    const place = { above: false, compact: false, side: undefined, sideStyle: undefined, maxHeight: undefined }
+    const place = { above: false, compact: false, side: undefined, sideStyle: undefined, maxHeight: undefined, ghost: false }
     if (roomBelow >= full) {
       // Below, whole.
     } else if (roomAbove >= full) {
@@ -275,16 +289,47 @@ export default function TintTool({ onCopy, toast }) {
       const roomRight = window.innerWidth - TIP_EDGE - rect.right
       const roomLeft = rect.left - TIP_EDGE
       const roomTall = window.innerHeight - TIP_EDGE - clearTop
-      // The wide card where either side holds it; else the side with more room if
-      // the card can narrow to it (it never goes under TIP_MIN_WIDTH).
+      // Past the notes card's right edge, if the controls panel is not in the way.
+      // For the last note of a row the tip's box runs from the note to the card (a
+      // bridge the pointer crosses); for the rest it starts at the card, so it
+      // never lies over a note.
+      const notesCard = el.closest('.tt-notes')?.getBoundingClientRect()
+      const panel = document.querySelector('.tt .tt-panel')?.getBoundingClientRect()
+      const roomPast = notesCard ? window.innerWidth - TIP_EDGE - notesCard.right - TIP_GAP : 0
+      let clear = null
+      if (notesCard && roomPast >= TIP_MIN_WIDTH) {
+        const cw = Math.min(TIP_WIDTH, Math.floor(roomPast))
+        const compact = roomTall < full || cw < TIP_WIDTH
+        const h = compact ? TIP_COMPACT_HEIGHT : full
+        const top = Math.max(clearTop, Math.min(rect.top, window.innerHeight - TIP_EDGE - h))
+        const left = notesCard.right + TIP_GAP
+        const hitsPanel = !!panel && left < panel.right && left + cw > panel.left && top < panel.bottom && top + h > panel.top
+        if (!hitsPanel) clear = { cw, compact, h, top, left }
+      }
+      // Else right beside the note: the wide card where either side holds it; else
+      // the side with more room if the card can narrow to it (it never goes under
+      // TIP_MIN_WIDTH).
       const sideRoom = roomRight >= wide ? roomRight : roomLeft >= wide ? roomLeft : Math.max(roomRight, roomLeft)
-      if (sideRoom >= TIP_MIN_WIDTH + TIP_BRIDGE) {
+      if (clear) {
+        const lastInRow = ![...el.parentElement.children].some((n) => {
+          const r = n.getBoundingClientRect()
+          return n !== el && Math.abs(r.top - rect.top) < 2 && r.left > rect.left
+        })
+        const bridge = lastInRow ? clear.left - rect.right : 0
+        place.side = 'right'
+        place.compact = clear.compact
+        place.sideStyle = { top: Math.round(clear.top - rect.top), left: Math.round(clear.left - bridge - rect.left), width: clear.cw + bridge, paddingLeft: bridge }
+        if (roomTall < clear.h) place.maxHeight = Math.max(0, Math.floor(roomTall))
+      } else if (sideRoom >= TIP_MIN_WIDTH + TIP_BRIDGE) {
         place.side = roomRight >= wide || (roomLeft < wide && roomRight >= roomLeft) ? 'right' : 'left'
         const width = Math.min(wide, Math.floor(sideRoom))
         place.compact = roomTall < full || width < wide
         const h = place.compact ? TIP_COMPACT_HEIGHT : full
         const top = Math.max(clearTop, Math.min(rect.top, window.innerHeight - TIP_EDGE - h))
         place.sideStyle = { top: Math.round(top - rect.top), width }
+        // Right beside its note the card lies over the next ones, so it takes no
+        // pointer: the pointer walking on still reaches them.
+        place.ghost = true
         if (roomTall < h) place.maxHeight = Math.max(0, Math.floor(roomTall))
       } else {
         place.above = roomAbove > roomBelow
@@ -293,8 +338,17 @@ export default function TintTool({ onCopy, toast }) {
         if (room < TIP_COMPACT_HEIGHT) place.maxHeight = Math.max(0, Math.floor(room))
       }
     }
-    setTip({ label, pinned, end, ...place })
+    setTip({ label, pinned, end, pointer: byPointer, ...place })
   }
+  const ghostHeld = tip?.ghost && tip.pointer && !tip.pinned
+  useEffect(() => {
+    if (!ghostHeld) return undefined
+    // The card it was opened for, not whichever is open by the time the move lands.
+    const label = tip.label
+    const onMove = (e) => { if (!pointerHolds(e, label)) setTip((cur) => (cur?.label === label && !cur.pinned ? null : cur)) }
+    document.addEventListener('pointermove', onMove)
+    return () => document.removeEventListener('pointermove', onMove)
+  }, [ghostHeld, tip?.label])
   const closeTip = (label) => setTip((cur) => (cur && cur.label === label && !cur.pinned ? null : cur))
   // A mouse click or a key press copies. A tap has no hover, so it pins the
   // detail inline under the note instead (a second tap on the same note closes
@@ -577,8 +631,13 @@ export default function TintTool({ onCopy, toast }) {
                 <div
                   key={t.label}
                   className={pinned ? 'tt-note-wrap tt-note-wrap--pinned' : 'tt-note-wrap'}
-                  onPointerEnter={(e) => { if (e.pointerType !== 'touch' && !tip?.pinned) openTip(t.label, e.currentTarget) }}
-                  onPointerLeave={(e) => { if (e.pointerType !== 'touch') closeTip(t.label) }}
+                  onPointerEnter={(e) => { if (e.pointerType !== 'touch' && !tip?.pinned) openTip(t.label, e.currentTarget, false, true) }}
+                  onPointerLeave={(e) => {
+                    if (e.pointerType === 'touch') return
+                    // Onto the click-through card's box: the pointer is still on it.
+                    if (open && tip.ghost && tip.pointer && pointerHolds(e, t.label)) return
+                    closeTip(t.label)
+                  }}
                   onFocus={(e) => {
                     // A tap focuses the button too, but opens the detail on its click; only a keyboard focus opens it here.
                     if (refocusRef.current || !e.target.matches(':focus-visible')) return
@@ -600,7 +659,7 @@ export default function TintTool({ onCopy, toast }) {
                     <span className="tt-note-hex">{copiedHex === t.hex ? 'Copied' : t.hex}</span>
                     <span className="tt-note-best" data-grade={best.grade} aria-hidden="true">{best.word}</span>
                   </button>
-                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} above={open && tip.above} maxHeight={open && !pinned ? tip.maxHeight : undefined} compact={open && !pinned && tip.compact} side={open && !pinned ? tip.side : undefined} sideStyle={open && !pinned ? tip.sideStyle : undefined} inline={pinned} />
+                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} above={open && tip.above} maxHeight={open && !pinned ? tip.maxHeight : undefined} compact={open && !pinned && tip.compact} side={open && !pinned ? tip.side : undefined} sideStyle={open && !pinned ? tip.sideStyle : undefined} ghost={open && !pinned ? tip.ghost : undefined} inline={pinned} />
                   {pinned && (
                     <div className="tt-tip-actions">
                       <button type="button" className="tt-tip-copy" onClick={() => copyHex(t.hex)}>
