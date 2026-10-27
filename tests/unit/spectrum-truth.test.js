@@ -372,11 +372,6 @@ test('the stylesheet hardcodes no accent colour', () => {
     // The converter's dimension badge: light text on a fixed dark scrim over
     // a photograph, the same in both themes because the photo is.
     '#F4F6FA',
-    // The exported UI kit drawn in the second exports card: its paper, inks and
-    // swatch fills are the FILE's own colours, fixed in both themes because the
-    // card is a picture of a document (as the window dots are a picture of a
-    // window). None of them is an accent.
-    '#F7F6F1', '#18221E', '#5C6B63', '#3A4A42', '#203C35', '#DBD0EB', '#3A3050', '#221B33', '#E4E8DE',
   ])
   const hexes = [...CSS.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0])
   const unexpected = hexes.filter((h) => !ALLOWED.has(h) && !ALLOWED.has(h.toUpperCase()))
