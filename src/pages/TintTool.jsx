@@ -66,6 +66,10 @@ const TIP_WIDTH = 280
 // The tallest the floating tooltip gets (its card and the 6px bridge), so a
 // note knows whether it fits below itself.
 const TIP_HEIGHT = 230
+// The 6px bridge between a note and its card, and the gap the card keeps from
+// the window's bottom edge.
+const TIP_BRIDGE = 6
+const TIP_EDGE = 12
 
 let seq = 0
 const mkSource = (hex) => ({ id: ++seq, hex, input: hex })
@@ -90,12 +94,12 @@ function barRef(color, pct) {
 // note's description is the tooltip body (the head and the rows); the long help
 // paragraph sits in the card but outside it, so a screen reader is not read it
 // again on every note.
-function ContrastTip({ id, step, open, end, above, inline }) {
+function ContrastTip({ id, step, open, end, above, inline, maxHeight }) {
   const notes = contrastNotes(step.hex)
   const cls = ['tt-tip', end && 'tt-tip--end', above && 'tt-tip--above', inline && 'tt-tip--inline'].filter(Boolean).join(' ')
   return (
     <span className={cls} data-open={open ? 'true' : undefined}>
-      <span className="tt-tip-card">
+      <span className="tt-tip-card" style={maxHeight ? { maxHeight } : undefined}>
         <span id={id} role="tooltip" className="tt-tip-body">
           <span className="tt-tip-head">{step.label} · {step.hex}</span>
           {notes.map((n) => (
@@ -234,15 +238,26 @@ export default function TintTool({ onCopy, toast }) {
     // The card opens below the note, where the page has room. It flips above
     // only when the window leaves no room below AND there is room above that
     // clears both the sticky bars and the notes header, so it never meets it.
+    // When neither side holds the whole card (a short window, the notes near its
+    // foot), it takes the side with more room and is cut to fit, scrolling
+    // inside: it may cover the notes beside it, never the header or the sticky
+    // bars, and never reaches past the window, so the page does not grow.
     const bar = document.querySelector('.tt .tl-toolbar')
     const barBottom = bar
       ? Math.max(bar.getBoundingClientRect().bottom, (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight)
       : 0
     const head = el.closest('.tt-notes')?.querySelector('.tt-notes-head')
     const clearTop = Math.max(barBottom, head ? head.getBoundingClientRect().bottom : 0)
-    const roomBelow = window.innerHeight - rect.bottom >= TIP_HEIGHT
-    const roomAbove = rect.top - clearTop >= TIP_HEIGHT
-    setTip({ label, pinned, end, above: !roomBelow && roomAbove })
+    const roomBelow = window.innerHeight - TIP_EDGE - rect.bottom - TIP_BRIDGE
+    const roomAbove = rect.top - TIP_BRIDGE - clearTop
+    const full = TIP_HEIGHT - TIP_BRIDGE
+    let above = false
+    let maxHeight
+    if (roomBelow < full) {
+      above = roomAbove > roomBelow
+      if ((above ? roomAbove : roomBelow) < full) maxHeight = Math.max(0, Math.floor(above ? roomAbove : roomBelow))
+    }
+    setTip({ label, pinned, end, above, maxHeight })
   }
   const closeTip = (label) => setTip((cur) => (cur && cur.label === label && !cur.pinned ? null : cur))
   // A mouse click or a key press copies. A tap has no hover, so it pins the
@@ -549,7 +564,7 @@ export default function TintTool({ onCopy, toast }) {
                     <span className="tt-note-hex">{copiedHex === t.hex ? 'Copied' : t.hex}</span>
                     <span className="tt-note-best" data-grade={best.grade} aria-hidden="true">{best.word}</span>
                   </button>
-                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} above={open && tip.above} inline={pinned} />
+                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} above={open && tip.above} maxHeight={open && !pinned ? tip.maxHeight : undefined} inline={pinned} />
                   {pinned && (
                     <div className="tt-tip-actions">
                       <button type="button" className="tt-tip-copy" onClick={() => copyHex(t.hex)}>

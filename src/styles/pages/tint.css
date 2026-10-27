@@ -180,9 +180,12 @@
   text-align: left;
 }
 .tt .tt-tip--end { left: auto; right: 0; }
-/* No room below the note in the window, and room above it that clears the sticky
-   bars and the notes header: open above it, with the bridge underneath. */
+/* Less room below the note than above it (above clearing the sticky bars and the
+   notes header): open above it, with the bridge underneath. */
 .tt .tt-tip--above { top: auto; bottom: 100%; padding-top: 0; padding-bottom: 6px; }
+/* Neither side of the note holds the whole card: the script gives it a
+   max-height that fits the room it has, and it scrolls inside. */
+.tt .tt-tip-card { overflow-y: auto; overscroll-behavior: contain; }
 /* A tap pins the detail inline under the note, in the flow, so it covers
    nothing and the page can scroll past it. */
 .tt .tt-tip--inline { position: static; width: auto; max-width: none; padding: 4px 0 0; }
