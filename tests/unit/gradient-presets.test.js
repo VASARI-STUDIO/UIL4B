@@ -49,16 +49,31 @@ test('every preset is drawn in OKLCH', () => {
 })
 
 test('no ramp goes muddy: the midpoint between two coloured stops keeps its chroma', () => {
+  // OKLCH interpolation moves chroma in a straight line, so the midpoint should
+  // sit at the average of its two ends. Falling well short of that means the
+  // mixed colour left the sRGB gamut and was clipped towards grey. (A floor of
+  // "half the smaller end" cannot fail: the average is never below the smaller
+  // end.) Measured on the shipped presets the midpoint is 0.97-1.06 of the
+  // average; 0.9 leaves room for rounding to a hex.
   for (const p of PRESETS) {
     for (let i = 0; i < p.stops.length - 1; i++) {
       const [, ca] = hexToOklchRaw(p.stops[i].color)
       const [, cb] = hexToOklchRaw(p.stops[i + 1].color)
-      const floor = Math.min(ca, cb)
-      if (floor < 0.04) continue // a neutral end has no hue to lose
+      if (Math.min(ca, cb) < 0.04) continue // a neutral end has no hue to lose
+      const mean = (ca + cb) / 2
       const [, cm] = hexToOklchRaw(mixOklch(p.stops[i].color, p.stops[i + 1].color, 0.5))
-      assert.ok(cm >= floor * 0.5, `${p.n}: midpoint chroma ${cm.toFixed(3)} fell below half of ${floor.toFixed(3)}`)
+      assert.ok(cm >= mean * 0.9, `${p.n}: midpoint chroma ${cm.toFixed(3)} fell below 90% of the ends' average ${mean.toFixed(3)}`)
     }
   }
+})
+
+test('the muddy-midpoint check does fire on a clipped ramp', () => {
+  // Pure green to pure magenta: both ends are fully chromatic, but their OKLCH
+  // midpoint is out of gamut and clips well short of the average chroma.
+  const [, ca] = hexToOklchRaw('#00FF00')
+  const [, cb] = hexToOklchRaw('#FF00FF')
+  const [, cm] = hexToOklchRaw(mixOklch('#00FF00', '#FF00FF', 0.5))
+  assert.ok(cm < ((ca + cb) / 2) * 0.9, `expected a clipped midpoint, got ${cm.toFixed(3)} of ${((ca + cb) / 2).toFixed(3)}`)
 })
 
 test('no preset repeats a library gradient\'s colours', () => {
