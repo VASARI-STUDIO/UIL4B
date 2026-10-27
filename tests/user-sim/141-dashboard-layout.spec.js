@@ -835,10 +835,19 @@ test.describe('on a phone, the page is composed for a thumb', () => {
         noticeBottom: document.querySelector('[data-testid="project-create-refusal"]').getBoundingClientRect().bottom,
         tabTop: document.querySelector('nav.pnav-tabs').getBoundingClientRect().top,
         tabPosition: getComputedStyle(document.querySelector('nav.pnav-tabs')).position,
+        pill: (() => {
+          const el = document.querySelector('.global-feedback-btn')
+          if (!el || getComputedStyle(el).display === 'none') return null
+          const r = el.getBoundingClientRect()
+          return r.height ? { top: r.top, bottom: r.bottom } : null
+        })(),
       }))
       expect(edges.tabPosition, 'the tab bar is the fixed one').toBe('fixed')
-      const gap = edges.tabTop - edges.noticeBottom
-      expect(Math.abs(gap - 12), `the notice (bottom ${edges.noticeBottom}) ends ${gap}px above the tab bar (top ${edges.tabTop}); it should be 12`).toBeLessThanOrEqual(1)
+      // The notice lands 12px above whatever floats lowest over it: the Feedback
+      // pill where it shows, otherwise the tab bar.
+      const ceiling = edges.pill ? edges.pill.top : edges.tabTop
+      const gap = ceiling - edges.noticeBottom
+      expect(Math.abs(gap - 12), `the notice (bottom ${edges.noticeBottom}) ends ${gap}px above ${edges.pill ? 'the Feedback pill' : 'the tab bar'} (top ${ceiling}); it should be 12`).toBeLessThanOrEqual(1)
       const scrolls = await page.evaluate(() => window.__capScrolls)
       expect(scrolls, 'the notice asked to be scrolled into view once, as it mounted').toHaveLength(1)
       if (motion === 'on') expect(scrolls[0].behavior, 'with motion on the scroll glides').toBe('smooth')
