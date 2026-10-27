@@ -158,6 +158,30 @@
   cursor: pointer;
 }
 .grd .grd-stop.is-on .grd-stop-swatch { border-color: var(--t0); }
+/* The swatch is the stop's colour-picker trigger; the chip fills it. */
+.grd .grd-stop-pick,
+.grd .grd-stop-pick .cpk-wrap { display: flex; flex: 0 0 auto; }
+.grd .grd-stop-swatch { overflow: hidden; background: transparent; }
+.grd .grd-stop-swatch[aria-disabled="true"] { opacity: 1; cursor: pointer; }
+.grd .grd-stop-chip { display: block; width: 100%; height: 100%; }
+/* Selecting the stop: its colour and position, one button. */
+.grd .grd-stop-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.grd .grd-stop-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
 .grd .grd-stop-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
 .grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); }
 .grd .grd-iconbtn {
@@ -412,6 +436,56 @@
   .grd .grd-angle-input { font-size: 16px; }
 }
 
+/* ── The tints menu a stop opens (portalled to the body, so these selectors are
+   not under `.grd`). Global tokens only: the `.tl` aliases are not in scope. ── */
+.grd-tintmenu {
+  position: fixed;
+  z-index: 140;
+  min-width: 200px;
+  max-width: calc(100vw - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s-2);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-cmd);
+  color: var(--t0);
+  animation: pop-in var(--dur-2) var(--ease-entrance);
+}
+.grd-tintmenu:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grd-tintmenu-head { padding: var(--s-2); font-size: 12px; color: var(--t2); }
+.grd-tintmenu-pro { display: inline-flex; align-items: center; gap: var(--s-2); }
+.grd-tintmenu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 32px;
+  padding: 0 var(--s-2);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.grd-tintmenu-item[aria-disabled="true"] { color: var(--t2); }
+.grd-tintmenu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd-tintmenu-item:hover { background: color-mix(in srgb, var(--t0) 6%, transparent); }
+}
+.grd-tintmenu-chip { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 6px; box-shadow: inset 0 0 0 1px oklch(0 0 0 / .12); }
+.grd-tintmenu-label { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.grd-tintmenu-hex { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--t2); }
+@media (pointer: coarse) { .grd-tintmenu-item { min-height: 44px; } }
+@media (forced-colors: active) {
+  .grd-tintmenu-chip { forced-color-adjust: none; }
+  .grd-tintmenu-item:focus-visible { outline-color: Highlight; }
+}
+
 /* ── The submit modal's preview strip ───────────────────────────────────── */
 .grd-submit-preview { height: 88px; margin-bottom: var(--s-4); border-radius: 12px; border: 1px solid var(--border); }
 
@@ -427,6 +501,7 @@
   .grd .grd-fmt-btn { min-height: 44px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
+  .grd .grd-stop-select { min-height: 44px; }
   .grd .grd-wheel { width: 76px; height: 76px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }

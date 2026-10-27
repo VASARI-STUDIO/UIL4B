@@ -5,6 +5,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import ColorPickerPop from '../components/ColorPickerPop'
 import AngleWheel from '../components/tool/AngleWheel'
+import StopTintMenu from '../components/tool/StopTintMenu'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
@@ -511,6 +512,46 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setStops(prev => prev.map(s => ({ ...s, position: 100 - s.position })))
   }, [guardEdit])
 
+  // The tints menu for a stop: opened by right-click on a stop (its row or its
+  // handle), the menu key, or the Tints button. Applying a tint is a Pro tool; a
+  // free account sees the ramp locked and the Pro modal on a press.
+  const [tintMenu, setTintMenu] = useState(null)
+  const closeTintMenu = useCallback(() => setTintMenu(null), [])
+  const openTintMenu = useCallback((e, idx, returnTo, fromButton = false) => {
+    e.preventDefault()
+    const box = e.currentTarget.getBoundingClientRect()
+    // The Tints button, the menu key and Shift+F10 have no pointer position:
+    // hang the menu off the control and land focus on its first row.
+    const fromKeys = fromButton || (!e.clientX && !e.clientY)
+    setActiveStop(idx)
+    setTintMenu({
+      idx,
+      x: fromKeys ? box.left : e.clientX,
+      y: fromKeys ? box.bottom + 4 : e.clientY,
+      focusFirst: fromKeys,
+      returnTo: returnTo || e.currentTarget,
+    })
+  }, [])
+  const applyTint = useCallback((hex, label) => {
+    if (!tintMenu) return
+    updateStop(tintMenu.idx, { color: hex })
+    toast?.(`Tint ${label} applied to stop ${tintMenu.idx + 1}`)
+  }, [tintMenu, updateStop, toast])
+  const gateTints = useCallback(() => {
+    openProModal({
+      gate: 'gradient-stop-tints',
+      eyebrow: 'Pro gradient tools',
+      title: 'Tint any stop',
+      subtitle: 'Open the tints of a stop and put one on it in a single press. Free accounts can see the ramp; applying a tint is a Pro tool.',
+      features: [
+        'Eleven tints of any stop colour, light to dark',
+        'Apply one from the stop’s right-click menu',
+        'Edit gallery gradients stop by stop',
+        'Unlimited saved projects across every colour tool',
+      ],
+    })
+  }, [openProModal])
+
   const randomHex = () => '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0').toUpperCase()
 
   // Build a fresh set of stops that honours the current locks: a locked count
@@ -783,6 +824,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [updateStop])
 
   const dragStop = useCallback((e, idx) => {
+    if (e.button != null && e.button > 0) return // a right-click opens the tints menu, not a drag
     e.preventDefault()
     e.stopPropagation()
     if (!guardEdit()) return
@@ -946,6 +988,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   className={`grd-handle${activeStop === s.i ? ' is-active' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.locked ? ' is-locked' : ''}`}
                   style={{ left: `${s.position}%`, '--grd-stop': s.color }}
                   onPointerDown={(e) => dragStop(e, s.i)}
+                  onContextMenu={(e) => openTintMenu(e, s.i)}
                   onFocus={() => setActiveStop(s.i)}
                   onKeyDown={(e) => {
                     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
@@ -1006,17 +1049,35 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             )}
           >
             {stops.map((s, i) => (
-              <div key={i} className={`grd-stop${activeStop === i ? ' is-on' : ''}`}>
+              <div
+                key={i}
+                className={`grd-stop${activeStop === i ? ' is-on' : ''}`}
+                onContextMenu={(e) => openTintMenu(e, i, e.currentTarget.querySelector('.grd-stop-select'))}
+              >
+                {/* The swatch opens this stop's colour picker. Selecting the
+                    stop is the colour/position label beside it. */}
+                <span className="grd-stop-pick" onClick={() => setActiveStop(i)}>
+                  <ColorPickerPop
+                    value={s.color}
+                    onChange={(hex) => updateStop(i, { color: hex.toUpperCase() })}
+                    ariaLabel={`Pick stop ${i + 1} colour`}
+                    triggerClassName="grd-stop-swatch"
+                    triggerChildren={<span className="grd-stop-chip" style={{ background: s.color }} aria-hidden="true" />}
+                    disabled={editLocked}
+                    onDisabledClick={guardEdit}
+                    portal
+                  />
+                </span>
                 <button
                   type="button"
-                  className="grd-stop-swatch"
-                  style={{ background: s.color }}
+                  className="grd-stop-select"
                   onClick={() => setActiveStop(i)}
                   aria-pressed={activeStop === i}
                   aria-label={`Select stop ${i + 1}, ${s.color.toUpperCase()}`}
-                />
-                <span className="grd-stop-hex">{s.color.toUpperCase()}</span>
-                <span className="grd-stop-pos">{Math.round(s.position)}%</span>
+                >
+                  <span className="grd-stop-hex">{s.color.toUpperCase()}</span>
+                  <span className="grd-stop-pos">{Math.round(s.position)}%</span>
+                </button>
                 <LockBtn
                   on={!!s.locked}
                   onClick={() => toggleStopLock(i)}
@@ -1071,6 +1132,17 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   label={`Stop ${activeStop + 1} hex`}
                   onCommit={(v) => updateStop(activeStop, { color: v })}
                 />
+                <button
+                  type="button"
+                  className="grd-iconbtn grd-tints-btn"
+                  onClick={(e) => openTintMenu(e, activeStop, e.currentTarget, true)}
+                  aria-haspopup="menu"
+                  aria-expanded={tintMenu?.idx === activeStop}
+                  aria-label={isPro ? `Tints of stop ${activeStop + 1}` : `Tints of stop ${activeStop + 1} (Pro)`}
+                  title={isPro ? 'Tints of this stop' : 'Tints of this stop — Pro'}
+                >
+                  <ToolIcon name={isPro ? 'swatches' : 'lock-simple'} size={14} />
+                </button>
               </div>
             )}
             <ToolSlider
@@ -1154,6 +1226,21 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           })}
         </div>
       </section>
+
+      {tintMenu && stops[tintMenu.idx] && (
+        <StopTintMenu
+          color={stops[tintMenu.idx].color}
+          stopNumber={tintMenu.idx + 1}
+          x={tintMenu.x}
+          y={tintMenu.y}
+          isPro={isPro}
+          focusFirst={tintMenu.focusFirst}
+          returnTo={tintMenu.returnTo}
+          onApply={applyTint}
+          onGate={gateTints}
+          onClose={closeTintMenu}
+        />
+      )}
 
       {/* Only ever mounted for a signed-in user — see openSubmit above. */}
       {submitOpen && uid && (
