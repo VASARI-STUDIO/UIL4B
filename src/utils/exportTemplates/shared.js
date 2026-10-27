@@ -32,7 +32,8 @@ export const safeHex = (value, fallback) => (/^#[0-9a-fA-F]{6}$/.test(String(val
  * and `steps` share one unit. Breaks fall at spaces; a word longer than a line
  * breaks anywhere, which the title CSS allows with overflow-wrap:anywhere.
  *
- * Returns { size, lines, clamp, broken }. `clamp` is true when even the last step
+ * The first step that fits `maxLines` with every word whole wins; a word is split
+ * only at the last step. Returns { size, lines, clamp, broken }. `clamp` is true when even the last step
  * needs more than `maxLines`; the title is then clamped with an ellipsis on the
  * cover and printed in full elsewhere. `lines` never exceeds `maxLines`.
  */
@@ -59,12 +60,16 @@ export function fitTitle(name, { maxLines = 3, steps = [], measure = 100, advanc
     }
     return { lines, broken }
   }
-  for (const size of sizes) {
+  // A smaller step that keeps every word whole beats a larger one that splits a word;
+  // a word is split only at the last step.
+  for (const size of sizes.slice(0, -1)) {
     const { lines, broken } = wrap(size)
-    if (lines <= maxLines) return { size, lines, clamp: false, broken }
+    if (lines <= maxLines && !broken) return { size, lines, clamp: false, broken }
   }
   const size = sizes[sizes.length - 1]
-  return { size, lines: maxLines, clamp: true, broken: wrap(size).broken }
+  const last = wrap(size)
+  if (last.lines <= maxLines) return { size, lines: last.lines, clamp: false, broken: last.broken }
+  return { size, lines: maxLines, clamp: true, broken: last.broken }
 }
 
 // The most colours a template lays out. The tool never produces more; a longer

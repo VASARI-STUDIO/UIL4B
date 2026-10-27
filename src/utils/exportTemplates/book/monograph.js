@@ -26,9 +26,12 @@ const roleName = (role) => String(role).toLowerCase()
 function frame(ctx, inner, { section = '', folio = null, cls = '' } = {}) {
   const s = side(folio ?? 1)
   const head = cls.includes('pg-blank') ? '' : `<header class="rh"><span>${esc(s === 'vs' ? ctx.projectName : section)}</span></header>`
+  // The shared gradient and token pages bring their own .pg-body; wrapping it again
+  // would seat the inner grid in the first column, the 40 mm margin on a verso.
+  const body = !inner ? '' : inner.startsWith('<div class="pg-body">') ? inner : `<div class="pg-body">${inner}</div>`
   return `<section class="pg ${s} ${cls}">
   ${head}
-  ${inner ? `<div class="pg-body">${inner}</div>` : ''}
+  ${body}
   ${folio === null ? '' : `<footer class="foot"><span class="folio">${folio}</span></footer>`}
 </section>`
 }
@@ -46,11 +49,13 @@ function front(ctx) {
   </div>
   ${mark}
 </section>`
-  // The half-title: the name alone, smaller than the cover, on the facing left-hand page.
-  const half = `<section class="pg vs pg-half">
+  // The half-title: the name alone, smaller than the cover, on the next right-hand page
+  // (page 3), with the back of the cover left blank.
+  const blank = '<section class="pg vs pg-blank"></section>'
+  const half = `<section class="pg rt pg-half">
   <div class="cv">${title(ctx, Math.max(18, Math.round(fit.size * 0.6)), 'cv-title')}</div>
 </section>`
-  return [cover, half]
+  return [cover, blank, half]
 }
 
 /** A section opening: its title alone, on a right-hand page (the generator leaves the page before it blank). */
@@ -255,7 +260,7 @@ function css(ctx) {
   .foot{position:absolute;bottom:12mm;width:20mm;font-family:var(--chrome);font-size:8pt;line-height:1.2;color:var(--muted)}
   .rt .foot{right:var(--edge);text-align:right}
   .vs .foot{left:var(--edge)}
-  .folio{font-variant-numeric:tabular-nums}
+  .folio{font-variant-numeric:lining-nums tabular-nums}
   .pg-blank .foot{bottom:12mm}
 
   h1,h2,h3{font-family:var(--head);font-weight:${d.headingWeight};margin:0;line-height:1.1}
@@ -288,18 +293,18 @@ function css(ctx) {
   .ct-list li.is-sub{border-top:none;padding:.8mm 0 .8mm 5mm;font-size:8pt;color:var(--muted)}
   .ct-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ct-dot{flex:1;border-bottom:.25mm dotted var(--rule);transform:translateY(-.8mm)}
-  .ct-folio{font-variant-numeric:tabular-nums}
+  .ct-folio{font-variant-numeric:lining-nums tabular-nums}
   .ct-aside{margin-top:1.4mm}
 
   /* ── margin notes: one size, 8 pt ──────────────────────────────────── */
   .mg{font-family:var(--chrome);font-size:8pt;line-height:1.45}
   .role{font-family:var(--chrome);font-size:8pt;font-variant-caps:all-small-caps;letter-spacing:.04em;color:var(--muted);margin:0 0 .6mm}
   .nm{font-family:var(--head);font-weight:${d.headingWeight};font-size:13pt;line-height:1.15;margin:0 0 3mm;overflow-wrap:anywhere}
-  .hx{font-family:var(--chrome);font-size:8pt;font-variant-numeric:tabular-nums;margin:0 0 .6mm}
+  .hx{font-family:var(--chrome);font-size:8pt;font-variant-numeric:lining-nums tabular-nums;margin:0 0 .6mm}
   .kv{margin:0 0 4mm}
   .kv div{display:flex;flex-direction:column;border-top:.25mm solid var(--rule);padding:1mm 0 1.2mm}
   .kv dt{font-family:var(--chrome);font-size:7pt;font-variant-caps:all-small-caps;letter-spacing:.04em;color:var(--muted)}
-  .kv dd{margin:0;font-family:var(--chrome);font-size:8pt;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .kv dd{margin:0;font-family:var(--chrome);font-size:8pt;font-variant-numeric:lining-nums tabular-nums;overflow-wrap:anywhere}
   .lands{font-family:var(--chrome);font-size:8pt;line-height:1.4;color:var(--muted);margin:0}
   .lands b{display:block;font-weight:600;color:var(--ink)}
 
@@ -314,7 +319,7 @@ function css(ctx) {
   .ov-cell .lands{font-size:7pt}
   .plate{display:block;height:150mm;width:100%}
   .tint{display:flex;gap:2mm;margin-top:6mm}
-  .tint span{flex:1;font-family:var(--chrome);font-size:7pt;color:var(--muted);font-variant-numeric:tabular-nums}
+  .tint span{flex:1;font-family:var(--chrome);font-size:7pt;color:var(--muted);font-variant-numeric:lining-nums tabular-nums}
   .tint i{display:block;height:20mm;margin-bottom:1.2mm}
   .chips{display:grid;grid-template-columns:1fr 1fr;gap:5mm 8mm}
   .chip{display:flex;gap:4mm;min-width:0}
@@ -329,7 +334,7 @@ function css(ctx) {
   .mx thead th{border-bottom:.35mm solid var(--ink);color:var(--muted);font-size:7pt}
   .mx thead th span,.mx td span{display:block;font-size:7pt;color:var(--muted)}
   .mx tbody th{text-align:left;white-space:nowrap}
-  .mx td{font-variant-numeric:tabular-nums}
+  .mx td{font-variant-numeric:lining-nums tabular-nums}
   .mx col:first-child{width:28mm}
   .mx-pass{font-weight:700!important}
   .mx-mid{font-weight:500!important}
@@ -344,6 +349,13 @@ function css(ctx) {
   .st{padding:3mm 0;border-top:.25mm solid var(--rule);align-items:baseline}
   .sp{margin:0;line-height:1.15;white-space:nowrap;overflow:hidden}
   .st .mg{padding-top:1mm}
+
+  /* ── gradient (the shared page) ────────────────────────────────────── */
+  .gr-spec{grid-column:1/-1;height:62mm;margin-bottom:7mm;outline:.25mm solid var(--rule);outline-offset:-.25mm}
+  .tb{grid-column:1/-1;width:100%;border-collapse:collapse;font-family:var(--chrome);font-size:8pt}
+  .tb th,.tb td{text-align:left;padding:2.2mm 1mm;border-bottom:.25mm solid var(--rule);font-weight:400;vertical-align:middle}
+  .tb thead th{border-bottom:.35mm solid var(--ink);color:var(--muted);font-size:7pt}
+  .num{font-family:var(--mono);font-size:8pt;font-variant-numeric:lining-nums tabular-nums}
 
   /* ── tokens ────────────────────────────────────────────────────────── */
   .tk{grid-column:1/-1;width:100%;border-collapse:collapse}

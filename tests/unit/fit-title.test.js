@@ -63,3 +63,14 @@ test('chromeFace embeds plain base64 only, and nothing for anything else', () =>
   }
   assert.equal(chromeFace(null, 'AAAA'), '')
 })
+
+test('a smaller step that keeps every word whole beats a larger one that splits a word', () => {
+  // "Northbeam" is 9 characters: at 44 pt in 130 pt it breaks, at 26 pt it fits whole.
+  const opts = { steps: [44, 34, 26], maxLines: 3, measure: 130 }
+  assert.deepEqual(fitTitle('Northbeam', opts), { size: 26, lines: 1, clamp: false, broken: false })
+  // A word that is too long at every step is split only at the last one.
+  const long = fitTitle('A'.repeat(14), opts)
+  assert.equal(long.size, 26)
+  assert.equal(long.broken, true)
+  assert.equal(long.clamp, false)
+})

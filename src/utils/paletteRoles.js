@@ -90,6 +90,14 @@ export function slotLands(index) {
     : 'Not given a place in the preview'
 }
 
+/** True when slot `index` has a place in SLOT_LANDS (the first five slots). */
+export const slotPlaced = (index) => Number.isInteger(index) && index >= 0 && index < SLOT_LANDS.length
+
+/** The same line for a printed document, whose reader never saw the Palette Builder's preview. */
+export function slotLandsBook(index) {
+  return slotPlaced(index) ? SLOT_LANDS[index] : 'Not assigned to a part of the interface'
+}
+
 /** Every label for a system — used by the tests and by any summary view. */
 export function roleLabels(harmony) {
   return HARMONY_ROLE_LABELS[harmony] || AUTO

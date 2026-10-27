@@ -44,7 +44,7 @@
 
 import { contrast, grade, inkFor, typeLadder } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
-import { roleLabel, slotLands } from './paletteRoles.js'
+import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { esc, orderSections, fitTitle, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, hexToOklch, isNeutral, mixHex } from './exportTemplates/roles.js'
@@ -328,7 +328,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
     const tokenField = d.palette[1] || d.palette[0] || '#111114'
     addOpening(
       '03', 'Tokens',
-      `${tokens.length} custom properties — the whole system as code, ready to paste into a stylesheet.`,
+      `${tokens.length} custom properties: the whole system as code, ready to paste into a stylesheet.`,
       tokenField, inkFor(tokenField).ink,
     )
     balancedChunk(tokens, tpl.tokensPerPage || TOKENS_PER_PAGE).forEach((group, gi) => {
@@ -415,7 +415,8 @@ function buildSlots(d, roles) {
       ink,
       ratio,
       grade: grade(ratio),
-      lands: slotLands(i),
+      lands: slotLandsBook(i),
+      placed: slotPlaced(i),
       tints: [80, 60, 40, 20].map((pct) => ({ pct, hex: mixHex(hex, roles.paper, pct / 100) })),
     }
   })
@@ -440,7 +441,7 @@ function contentsPage({ d, projectName, contents, tokens, iso, folio = 2 }) {
     </div>
     <aside class="ct-aside">
       <p class="lbl">About this book</p>
-      <p>This is the specification for <b>${esc(projectName)}</b> — the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.</p>
+      <p>This is the specification for <b>${esc(projectName)}</b>: the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.</p>
       <p>Every contrast figure in it was measured, not estimated. Nothing here is illustrative: each value is the value the system actually holds.</p>
       <dl class="ct-facts">
         <div><dt>Colours</dt><dd>${d.palette.length}</dd></div>
@@ -473,7 +474,7 @@ function colourBands(d, group, offset, first) {
       <div class="bd-id">
         <p class="bd-role">${esc(roleLabel(d.harmony, idx))}</p>
         <p class="bd-name">${esc(colorName(hex))}</p>
-        <p class="bd-lands">${esc(slotLands(idx))}</p>
+        <p class="bd-lands">${esc(slotLandsBook(idx))}</p>
       </div>
       <dl class="bd-spec">
         <div><dt>HEX</dt><dd>${esc(hex)}</dd></div>
@@ -522,7 +523,7 @@ function matrixPage(d) {
   return `<div class="pg-body">
     <header class="pg-head">
       <h3>Contrast matrix</h3>
-      <p class="lede">Every pair in the palette, measured. Read a row as the background and a column as the text on it — the figure is the same either way.</p>
+      <p class="lede">Every pair in the palette, measured. Read a row as the background and a column as the text on it. The figure is the same either way.</p>
     </header>
     <table class="mx">
       <thead><tr><th scope="col"><span class="mx-corner">bg ╲ fg</span></th>${head}</tr></thead>
@@ -621,7 +622,7 @@ function scalePage(d, ladder) {
       <thead><tr><th>Step</th><th>Size</th><th>rem</th><th>Leading</th><th>Specimen</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="note">Specimens above 44px are shown reduced so the row fits the page; the size column is always the true value. Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15 — which is what stops a two-line heading reading as two separate lines.</p>
+    <p class="note">Specimens above 44px are shown reduced so the row fits the page; the size column is always the true value. Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15, which is what stops a two-line heading reading as two separate lines.</p>
   </div>`
 }
 
@@ -629,7 +630,7 @@ function tokensPage(group, first, total) {
   const rows = group.map(t => `<tr><td class="tk-n">${esc(t.name)}</td><td class="tk-v">${esc(t.value)}</td></tr>`).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      ${first ? `<h3>Custom properties</h3><p class="lede">All ${total} tokens, named for the role each colour plays rather than the colour it happens to be — so a palette change does not orphan the name.</p>` : '<h3 class="cont">Custom properties <span>continued</span></h3>'}
+      ${first ? `<h3>Custom properties</h3><p class="lede">All ${total} tokens, named for the role each colour plays rather than the colour it happens to be, so a palette change does not orphan the name.</p>` : '<h3 class="cont">Custom properties <span>continued</span></h3>'}
     </header>
     <table class="tk">${rows}</table>
   </div>`
@@ -643,13 +644,13 @@ function colophonPage(d, projectName, iso) {
     <div class="cl-grid">
       <div>
         <p class="lbl">Method</p>
-        <p>Contrast is the WCAG 2.2 relative-luminance ratio (§1.4.3). AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. Every figure is reproducible — the same two hex values always give the same ratio.</p>
+        <p>Contrast is the WCAG 2.2 relative-luminance ratio (§1.4.3). AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. Every figure is reproducible: the same two hex values always give the same ratio.</p>
         <p class="lbl">Typefaces</p>
         <p>Headings set in ${esc(d.heading)} at ${d.headingWeight}, body in ${esc(d.body)} at ${d.bodyWeight}. Both fall back to <code>system-ui</code>, then the platform sans, so this document reads correctly offline or behind a blocked font host.</p>
       </div>
       <div>
         <p class="lbl">What this book covers</p>
-        <p>Colour, typography and tokens — the decisions this system actually holds.</p>
+        <p>Colour, typography and tokens: the decisions this system actually holds.</p>
         <p class="lbl">What it does not</p>
         <p>A full identity manual would also carry logo construction, imagery direction, tone of voice and applied examples. Those are not in this book because they are not in the system: this document specifies only what was really designed, and states the boundary rather than filling it with placeholders.</p>
       </div>

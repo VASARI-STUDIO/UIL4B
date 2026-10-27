@@ -5,16 +5,30 @@
 // the sections.
 
 import { esc, safeHex, inkName, fitTitle, chromeFor } from '../shared.js'
-import { mixHex } from '../roles.js'
+import { mixHex, hexToOklch } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Martian Mono', weights: '100 800', file: 'martian-mono-latin.woff2' })
 
 // Band weights on the cover: the primary 3, accents 2, neutrals 1.
 const WEIGHT = { primary: 3, accent: 2, neutral: 1 }
 const MM_TO_PT = 72 / 25.4
+const BAND_STEPS = Object.freeze([44, 34, 26, 22])
 // How many other colours a plate names as reading on it.
 const READS_MAX = 6
 const PAIRS_WIDTH_MM = 172
+// A tint closer than this (distance in OKLab) to the paper is left out: it would print as blank paper.
+const TINT_MIN_DISTANCE = 0.02
+
+/** Distance between two hex colours in OKLab. */
+function distance(a, b) {
+  const x = hexToOklch(a)
+  const y = hexToOklch(b)
+  const ax = x.c * Math.cos(x.h * Math.PI / 180)
+  const ay = x.c * Math.sin(x.h * Math.PI / 180)
+  const bx = y.c * Math.cos(y.h * Math.PI / 180)
+  const by = y.c * Math.sin(y.h * Math.PI / 180)
+  return Math.hypot(x.l - y.l, ax - bx, ay - by)
+}
 
 /** The plates' order: the primary, then the accents, then the neutrals. */
 const plateOrder = (slots) => [
@@ -31,7 +45,9 @@ function cover(ctx) {
   const primaryMm = total ? 210 * WEIGHT.primary / total : 210
   // The title sits on the primary band when it fits there whole, at 44, 34 or 26 pt;
   // otherwise it sits in a paper box over the bands, the one case that needs one.
-  const onBand = fitTitle(projectName, { ...atlas.titleFit, measure: (primaryMm - 24) * MM_TO_PT })
+  // The band is narrow, so it tries a fourth, smaller step and a wide average advance (a
+  // bold grotesque sets nearer 0.58 em than 0.52) before giving up on it.
+  const onBand = fitTitle(projectName, { ...atlas.titleFit, steps: BAND_STEPS, advance: 0.58, measure: (primaryMm - 20) * MM_TO_PT })
   const useBand = slots.length > 0 && !onBand.clamp && !onBand.broken
   const fit = useBand ? onBand : ctx.fit
   const facts = `<p class="at-facts">${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'}<br>Issued ${esc(iso)}</p>`
@@ -61,7 +77,7 @@ function reads(ctx, s, slots) {
 
 function plate(ctx, s, slots) {
   const ok = reads(ctx, s, slots)
-  const tints = [{ pct: 100, hex: s.hex }, ...s.tints]
+  const tints = [{ pct: 100, hex: s.hex }, ...s.tints.filter((t) => distance(t.hex, ctx.roles.paper) >= TINT_MIN_DISTANCE)]
   const ink = inkName(s.ink)
   return {
     leaf: `${s.name} · ${s.hex}`,
@@ -71,7 +87,7 @@ function plate(ctx, s, slots) {
     inner: `<div class="pl-in">
     <header><p class="pl-role">${esc(String(s.role).toLowerCase())}</p><h2 class="pl-name">${esc(s.name)}</h2></header>
     <div class="pl-data">
-      <p class="pl-lands"><span>Where it lands</span>${esc(s.lands)}</p>
+      <p class="pl-lands${s.placed ? '' : ' is-unplaced'}"><span>Where it lands</span>${esc(s.lands)}</p>
       <dl class="pl-vals">
         <div><dt>Hex</dt><dd>${esc(s.hex)}</dd></div>
         <div><dt>RGB</dt><dd>${esc(s.rgb)}</dd></div>
@@ -204,6 +220,8 @@ function css(ctx) {
   .pl-data{display:grid;grid-template-columns:repeat(6,1fr);gap:7mm 4mm;height:92mm;align-content:end}
   .pl-lands{grid-column:1/-1;margin:0;font-family:var(--head);font-weight:${d.headingWeight};font-size:17pt;line-height:1.2;max-width:150mm}
   .pl-lands span{display:block;font-family:var(--chrome);font-weight:400;font-size:7pt;margin-bottom:1.5mm}
+  /* A colour with no place in the interface says so at the values size, not as the plate's lead line. */
+  .pl-lands.is-unplaced{font-family:var(--chrome);font-weight:400;font-size:7.5pt;line-height:1.5}
   .pl-vals{grid-column:span 3;margin:0;font-family:var(--chrome);font-size:7.5pt}
   .pl-vals div{display:flex;justify-content:space-between;gap:3mm;padding:1.1mm 0;border-top:.25mm solid color-mix(in srgb,currentColor 45%,transparent)}
   .pl-vals dt{flex:none}
@@ -236,6 +254,13 @@ function css(ctx) {
   .tb-scale th:nth-child(1){width:26mm}
   .tb-scale th:nth-child(2),.tb-scale th:nth-child(3),.tb-scale th:nth-child(4){width:19mm}
   .tb-scale td.sp{white-space:nowrap;overflow:hidden;line-height:1.1}
+
+  /* ── gradient (the shared page) ────────────────────────────────────── */
+  .gr-spec{height:62mm;width:100%;margin-bottom:7mm;outline:.25mm solid var(--rule);outline-offset:-.25mm}
+  .tb{width:100%;border-collapse:collapse;font-family:var(--chrome);font-size:7.5pt}
+  .tb th,.tb td{text-align:left;padding:2.6mm 1.5mm;border-bottom:.25mm solid var(--rule);font-weight:400;vertical-align:middle}
+  .tb thead th{color:var(--muted);border-bottom:.35mm solid var(--ink);font-size:7pt}
+  .dot{display:inline-block;width:2.6mm;height:2.6mm;margin-right:1.6mm;vertical-align:-.3mm;border:.25mm solid var(--rule)}
 
   /* ── contents, tokens, notes ───────────────────────────────────────── */
   .ct-grid{display:grid;grid-template-columns:1fr 56mm;gap:14mm;height:100%;align-content:start}
