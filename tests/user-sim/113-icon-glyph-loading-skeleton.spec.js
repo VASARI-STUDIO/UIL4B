@@ -1,7 +1,7 @@
 // Hold glyph batches to verify the transparent waiting state before artwork arrives.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, answerIconify, isLiveIconify } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, answerIconify, holdIconHeads, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer opening the icon library on a slow connection'
 
@@ -235,6 +235,9 @@ test.describe('the icon grid for a name the service does not have', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+    // The default page's own glyph batches are still in flight at first paint; let
+    // them finish so the held batch below is the one for the chosen pack.
+    await expect(page.locator('.ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0, { timeout: 20_000 })
 
     const missing = await answerWithMissing(page, 'logos', (names) => names.find((n) => n === 'arrow-kit'))
     await choosePack(page, 'logos')
@@ -260,6 +263,9 @@ test.describe('the icon grid for a name the service does not have', () => {
     watch(page, PERSONA)
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+    // The default page's own glyph batches are still in flight at first paint; let
+    // them finish so the held batch below is the one for the chosen pack.
+    await expect(page.locator('.ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0, { timeout: 20_000 })
 
     const missing = await answerWithMissing(page, 'lucide', (names) => names[0])
     await choosePack(page, 'lucide')
@@ -490,7 +496,8 @@ test.describe('the customiser while its artwork is loading', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await choosePack(page, 'logos')
-    const cell = page.locator('.ig .ic').first()
+    // Logos is a coloured pack, so its cells carry a chip; the default grid's do not.
+    const cell = page.locator('.ig .ic:has(.ig-chip)').first()
     await expect.poll(() => cell.locator('img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
     await page.evaluate(() => {
       window.__stagePaints = []
@@ -544,7 +551,11 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
     })
     try {
       await choosePack(page, 'lucide')
-      await page.locator('.ig .ic[aria-label="Customise arrow-right"]').click()
+      // Open the icon once its own glyph has drawn, so the stage uses that cached
+      // markup and the only images held are the Similar tiles'.
+      const opened = page.locator('.ig .ic[aria-label="Customise arrow-right"]')
+      await expect(opened.locator('img')).toBeVisible({ timeout: 20_000 })
+      await opened.click()
       const row = page.locator('.icust-similar-row')
       const tiles = row.locator('.icust-similar-btn')
       await expect(tiles).toHaveCount(6)
@@ -617,22 +628,18 @@ test('slow catalogues keep the skeleton and loading message until icons arrive',
       }
     }).observe(document, { childList: true, subtree: true })
   })
-  let release
-  const held = new Promise(resolve => { release = resolve })
-  let arrivals = 0
-  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection', async route => {
-    await held
-    await new Promise(resolve => setTimeout(resolve, 4000))
-    arrivals += 1
-    await route.fallback()
-  })
+  // The default listing names its icons from each pack's head file, so those are
+  // the "catalogue" the page waits on; every one is answered 4 s after release.
+  const heads = await holdIconHeads(page, { delay: () => 4000 })
   try {
     await go(page, '/create/icons')
     await expect(page.locator('.ig-skel')).toHaveCount(60)
-    release()
-    // Cross the first-page timeout while every catalogue response is held.
+    // POSITIVE CONTROL: the hold caught the heads, so the skeleton is waiting on them.
+    await expect.poll(() => heads.requested.length, { timeout: 20_000 }).toBe(5)
+    heads.release()
+    // Cross the first-page timeout while every head response is held.
     await page.waitForTimeout(3000)
-    expect(arrivals).toBe(0)
+    expect(heads.answered).toEqual([])
     await expect(page.locator('.pl-empty')).toHaveCount(0)
     await expect(page.getByText('No icons to show', { exact: true })).toHaveCount(0)
     await expect(page.locator('.ig-skel')).toHaveCount(60)
@@ -641,25 +648,23 @@ test('slow catalogues keep the skeleton and loading message until icons arrive',
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
     await expect(page.locator('.ig .ic').first()).toBeVisible()
     expect(await page.evaluate(() => window.__sawEmptyIcons)).toBe(false)
-  } finally { release() }
+  } finally { heads.release() }
 })
 
 test('staggered catalogues keep the signed-out first page intact at 768', async ({ page }) => {
   test.skip(isLiveIconify(), 'this test controls catalogue arrival times')
   await page.setViewportSize({ width: 768, height: 900 })
-  let release
-  const held = new Promise(resolve => { release = resolve })
   const packs = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
-  const arrivals = []
-  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection', async route => {
-    await held
-    const pack = new URL(route.request().url()).searchParams.get('prefix')
-    const index = packs.indexOf(pack)
-    expect(index, 'only signed-out packs are requested').toBeGreaterThanOrEqual(0)
-    await new Promise(resolve => setTimeout(resolve, 150 + index * 200))
-    arrivals.push(pack)
-    await route.fallback()
+  // Each pack's head file arrives at its own time once released.
+  const heads = await holdIconHeads(page, {
+    delay: (pack) => {
+      const index = packs.indexOf(pack)
+      expect(index, 'only signed-out packs are requested').toBeGreaterThanOrEqual(0)
+      return 150 + index * 200
+    },
   })
+  const arrivals = heads.answered
+  const release = heads.release
   try {
     await go(page, '/create/icons')
     await expect(page.locator('.ig-skel')).toHaveCount(60)
@@ -711,10 +716,7 @@ for (const scheme of ['light', 'dark']) {
               }
             })
           }
-          let release
-          const held = new Promise(resolve => { release = resolve })
-          await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection',
-            async route => { await held; await route.fallback() })
+          const { release } = await holdIconHeads(page)
           try {
             await go(page, '/create/icons')
             await expect(page.locator('.ig-skel').first()).toBeVisible()
@@ -873,10 +875,7 @@ for (const width of [390, 1440]) {
         await signIn(page, { plan: 'pro' })
         let releaseSearch
         const heldSearch = new Promise(resolve => { releaseSearch = resolve })
-        let releaseCatalogue
-        const heldCatalogue = new Promise(resolve => { releaseCatalogue = resolve })
-        await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection',
-          async route => { await heldCatalogue; await route.fallback() })
+        const { release: releaseCatalogue } = await holdIconHeads(page)
         await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/search',
           async route => { await heldSearch; await route.fallback() })
         const cellHeight = () => page.locator('.ig').evaluate(grid => {
@@ -955,8 +954,9 @@ test.describe('the search skeleton in a multi-pack scope at 1440', () => {
     await signIn(page, { plan: 'pro' })
     let release
     const held = new Promise((resolve) => { release = resolve })
-    // Hold the catalogue too, so the skeleton is what answers the typed search.
-    await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/search' || u.pathname === '/collection'),
+    // Hold the pack heads too, so the skeleton is what answers the typed search.
+    const heads = await holdIconHeads(page)
+    await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/search',
       async (route) => { await held; await route.fallback() })
     try {
       await go(page, '/create/icons')
@@ -983,6 +983,6 @@ test.describe('the search skeleton in a multi-pack scope at 1440', () => {
       for (let i = 0; i < Math.min(waiting.length, loaded.length); i += 1) {
         expect(Math.abs(loaded[i].top - waiting[i].top), `glyph ${i} moved when the results arrived`).toBeLessThanOrEqual(1)
       }
-    } finally { release() }
+    } finally { release(); heads.release() }
   })
 })
