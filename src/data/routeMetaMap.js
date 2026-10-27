@@ -67,7 +67,7 @@ export const PAGE_TITLES = {
   '/create/component-designer': 'UI L4B | Component Designer',
   '/projects': 'UI L4B | Projects',
   '/settings': 'UI L4B | Settings',
-  '/login': 'UI L4B | Sign In',
+  '/login': 'UI L4B | Log in',
   '/plans': 'UI L4B | Pricing & Plans',
   '/mobile': 'UI L4B | On mobile',
   '/checkout': 'UI L4B | Checkout',
@@ -149,7 +149,7 @@ export const PAGE_DESCRIPTIONS = {
   '/create/auto-builder': 'Describe what you are making and get a palette, a font pairing and a type scale to start from — each opens in the tool that owns it.',
   '/projects': 'Manage and organise your saved design projects. Access colour palettes, font selections, and exported assets.',
   '/settings': 'Customise your UI L4B experience. Manage theme, appearance, subscription, and account preferences.',
-  '/login': 'Sign in to UI L4B to save projects, sync settings, and unlock AI-powered design tools.',
+  '/login': 'Log in to UI L4B to keep your palettes, type scales and icon sets as projects.',
   // 192 chars was ~35 over what Google renders, so the sentence that names what
   // Pro actually buys was the part being cut. Front-loaded and trimmed to 154.
   // The Spectrum design's own sentence for its "On mobile" screen, verbatim —
