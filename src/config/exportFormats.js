@@ -21,8 +21,9 @@
 // breaks fast refresh. Plain data belongs in a plain module.
 //
 // TWO FLAGS, AND THEY MEAN DIFFERENT THINGS:
-//   live — the format is BUILT. Without it the panel shows "Soon" and disables
-//          the button, for everyone, on every plan. Nobody can buy it.
+//   live — the format is BUILT. Without it the panel offers no row for it and
+//          names it only in the one "on the way" line, for everyone, on every
+//          plan. Nobody can buy it.
 //   pro  — the format is BUILT but GATED. It drives BOTH the badge and the
 //          entitlement check in runExport(), so a format can never be badged
 //          and ungated, or gated and unbadged.
@@ -43,7 +44,7 @@ export const EXPORT_FORMATS = Object.freeze([
   // mark; Pro gets the same kit without it, plus the named identity section.
   // `kit` marks it for the plan lines, which list it apart from the style
   // guide formats. Built by utils/uiKitExport.js from src/templates/uiKit.html.
-  Object.freeze({ id: 'kit', name: 'UI kit', desc: 'One HTML file with your palette and tints, semantic colours, type, foundations and component states. Opens offline, prints to A4, and carries its CSS, JSON and font files.', live: true, kit: true }),
+  Object.freeze({ id: 'kit', name: 'UI kit', desc: 'One HTML file with your palette and tints, semantic colours, type, foundations and component states. Opens offline, prints to A4, and carries its CSS, JSON and font files.', live: true, kit: true, group: 'kit', action: 'Export UI kit' }),
   // The two Pro deliverables, listed first because they are the best things the
   // panel makes — and listed as a PAIR because that is the offer. They are not
   // the same document at two paper sizes: the book is an A4 portrait
@@ -51,17 +52,53 @@ export const EXPORT_FORMATS = Object.freeze([
   // landscape PRESENTATION a brand is argued from. See the long note at the top
   // of utils/brandGuidelines.js for why the founder's reference material
   // (UI Examples/Brand kit examples) could not be served by extending the book.
-  Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'A 12-page A4 manual — cover, contents, numbered sections, full-bleed colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true }),
-  Object.freeze({ id: 'guidelines', name: 'Brand guidelines (presentation)', desc: 'A 16:9 landscape deck — cover, numbered sections, named swatches, alphabet grids, and your own logo on every brand ground with its clear-space rule. Opens ready to save as PDF.', live: true, pro: true, logo: true }),
-  Object.freeze({ id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true }),
-  Object.freeze({ id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true }),
-  Object.freeze({ id: 'png', name: 'Style guide (PNG)', desc: 'A single A4 sheet at 2× — palette, contrast grades and the type ladder. For pasting into a deck or a handoff ticket.', live: true }),
-  Object.freeze({ id: 'jpeg', name: 'Style guide (JPEG)', desc: 'The same sheet, smaller file — for anywhere that will not take a PNG.', live: true }),
-  Object.freeze({ id: 'css', name: 'CSS tokens', desc: 'Custom properties for the palette and its tints, semantic colours and type — drop into any stylesheet.', live: true }),
-  Object.freeze({ id: 'json', name: 'JSON tokens', desc: 'The same tokens in the W3C Design Tokens (DTCG) format, for token pipelines and tools that read it.', live: true }),
-  Object.freeze({ id: 'tailwind', name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.' }),
-  Object.freeze({ id: 'assets', name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.' }),
+  Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'A 12-page A4 manual — cover, contents, numbered sections, full-bleed colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true, group: 'book', action: 'Export book' }),
+  Object.freeze({ id: 'guidelines', name: 'Brand guidelines (presentation)', desc: 'A 16:9 landscape deck — cover, numbered sections, named swatches, alphabet grids, and your own logo on every brand ground with its clear-space rule. Opens ready to save as PDF.', live: true, pro: true, logo: true, group: 'guidelines', action: 'Export guidelines' }),
+  Object.freeze({ id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true, group: 'guide', option: 'HTML', action: 'Export style guide (HTML)' }),
+  Object.freeze({ id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true, group: 'guide', option: 'Markdown', action: 'Export style guide (Markdown)' }),
+  Object.freeze({ id: 'png', name: 'Style guide (PNG)', desc: 'A single A4 sheet at 2× — palette, contrast grades and the type ladder. For pasting into a deck or a handoff ticket.', live: true, group: 'guide', option: 'PNG', action: 'Export style guide (PNG)' }),
+  Object.freeze({ id: 'jpeg', name: 'Style guide (JPEG)', desc: 'The same sheet, smaller file — for anywhere that will not take a PNG.', live: true, group: 'guide', option: 'JPEG', action: 'Export style guide (JPEG)' }),
+  Object.freeze({ id: 'css', name: 'CSS tokens', desc: 'Custom properties for the palette and its tints, semantic colours and type — drop into any stylesheet.', live: true, group: 'tokens', option: 'CSS', action: 'Export CSS tokens' }),
+  Object.freeze({ id: 'json', name: 'JSON tokens', desc: 'The same tokens in the W3C Design Tokens (DTCG) format, for token pipelines and tools that read it.', live: true, group: 'tokens', option: 'JSON', action: 'Export JSON tokens' }),
+  Object.freeze({ id: 'tailwind', name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.', coming: 'a Tailwind theme' }),
+  Object.freeze({ id: 'assets', name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.', coming: 'an asset bundle' }),
 ])
+
+// THE FIVE THINGS THE PANEL OFFERS, in the order it lists them. Each is one
+// deliverable; where it comes in more than one file type, its formats above
+// share its `group` and the panel shows them as a switch (`option` is the
+// switch label, `action` the primary button's words). The ids never change, so
+// every format stays reachable and /plans keeps reading the same array.
+//
+// Free rows come first and the Pro documents follow, so the panel can set the
+// paid ones apart with space rather than a tinted box. `pro` is not stored
+// here: a row is Pro when its formats are, so there is one flag to keep true.
+export const EXPORT_GROUPS = Object.freeze([
+  Object.freeze({ id: 'kit', name: 'UI kit', desc: 'One HTML file with your palette, type and components. Opens offline.' }),
+  Object.freeze({ id: 'guide', name: 'Style guide', desc: 'A printable A4 guide to your palette and type.' }),
+  Object.freeze({ id: 'tokens', name: 'Design tokens', desc: 'Your palette, tints and type as code.' }),
+  Object.freeze({ id: 'book', name: 'Design system book', desc: 'A 12-page A4 manual of your system, ready to save as PDF.', preview: 'book' }),
+  Object.freeze({ id: 'guidelines', name: 'Brand guidelines', desc: 'A 16:9 brand deck with your logo on every ground.', preview: 'guidelines' }),
+])
+
+// The built formats of one row, in the order the switch shows them.
+export const groupFormats = (groupId) => EXPORT_FORMATS.filter((f) => f.live && f.group === groupId)
+
+// A row is Pro when every file in it is.
+export const isGroupPro = (groupId) => {
+  const formats = groupFormats(groupId)
+  return formats.length > 0 && formats.every((f) => f.pro)
+}
+
+// The one quiet line for formats that are not built: "A Tailwind theme and an
+// asset bundle are on the way." Empty when nothing is unbuilt, so the line
+// disappears instead of lying.
+export const comingLine = () => {
+  const names = unbuiltFormats().map((f) => f.coming).filter(Boolean)
+  if (!names.length) return ''
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
+  return `${list.charAt(0).toUpperCase()}${list.slice(1)} ${names.length > 1 ? 'are' : 'is'} on the way.`
+}
 
 // Built, and available without paying.
 export const freeFormats = () => EXPORT_FORMATS.filter((f) => f.live && !f.pro)
@@ -92,5 +129,21 @@ export function assertFormatsCoherent(formats = EXPORT_FORMATS) {
   }
   const ids = formats.map((f) => f.id)
   if (new Set(ids).size !== ids.length) throw new Error('duplicate export format id')
+  return true
+}
+
+// The panel lists rows, not formats, so a built format with no row is a file
+// nobody can reach, and a row with no built format is an empty radio. Kept
+// apart from assertFormatsCoherent so that function still accepts any array.
+export function assertGroupsCoherent(formats = EXPORT_FORMATS, groups = EXPORT_GROUPS) {
+  const known = new Set(groups.map((g) => g.id))
+  const orphans = formats.filter((f) => f.live && !known.has(f.group))
+  if (orphans.length) {
+    throw new Error(`export formats ${orphans.map((f) => f.id).join(', ')} are built but belong to no panel row`)
+  }
+  const empty = groups.filter((g) => !formats.some((f) => f.live && f.group === g.id))
+  if (empty.length) throw new Error(`panel rows ${empty.map((g) => g.id).join(', ')} have no built format`)
+  const unnamed = formats.filter((f) => f.live && formats.filter((x) => x.live && x.group === f.group).length > 1 && !f.option)
+  if (unnamed.length) throw new Error(`export formats ${unnamed.map((f) => f.id).join(', ')} share a row but have no switch label`)
   return true
 }
