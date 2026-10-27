@@ -26,6 +26,7 @@ export default function Greeting({ resolving, signedOut }) {
   const [hidden, setHidden] = useState(askHidden)
   const [value, setValue] = useState('')
   const [now] = useState(() => Date.now())
+  const [settled, setSettled] = useState(false)
   const wrapRef = useRef(null)
   const btnRef = useRef(null)
   const inputRef = useRef(null)
@@ -43,6 +44,14 @@ export default function Greeting({ resolving, signedOut }) {
     }
   }, [open])
 
+  // After Save or Not now the button that opened the form is gone (the name is set, or the ask is
+  // hidden), so focus goes to the greeting line itself rather than back to the page's start.
+  useEffect(() => {
+    if (!settled) return
+    wrapRef.current?.focus()
+    setSettled(false)
+  }, [settled, profileName, hidden])
+
   if (resolving) return <div className="uh-greet" aria-hidden="true" />
 
   if (signedOut) {
@@ -58,7 +67,7 @@ export default function Greeting({ resolving, signedOut }) {
   const fresh = accountCreatedAt != null && now - accountCreatedAt < FIRST_VISIT_MS && now - accountCreatedAt >= -60_000
   const hello = fresh ? 'Welcome' : 'Welcome back'
 
-  if (first) return <p className="uh-greet" data-testid="greeting">{hello}, {first}.</p>
+  if (first) return <p className="uh-greet" data-testid="greeting" ref={wrapRef} tabIndex={-1}>{hello}, {first}.</p>
 
   const save = (e) => {
     e.preventDefault()
@@ -66,15 +75,17 @@ export default function Greeting({ resolving, signedOut }) {
     if (!name) { inputRef.current?.focus(); return }
     updateProfile({ displayName: name })
     setOpen(false)
+    setSettled(true)
   }
   const notNow = () => {
     try { localStorage.setItem(ASKED_KEY, String(Date.now() + THIRTY_DAYS)) } catch { /* private mode */ }
     setHidden(true)
     setOpen(false)
+    setSettled(true)
   }
 
   return (
-    <div className="uh-greet" data-testid="greeting" ref={wrapRef}>
+    <div className="uh-greet" data-testid="greeting" ref={wrapRef} tabIndex={-1}>
       <span>{hello}.</span>
       {profileLoaded && !hidden && (
         <span className="uh-ask">

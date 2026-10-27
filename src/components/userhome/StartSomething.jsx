@@ -99,6 +99,12 @@ export default function StartSomething({ inLead = false }) {
             </span>
           </Link>
         ))}
+        {/* The phone shows four tools; this row stands in for the rest and for the heading's button. */}
+        <button type="button" className="uh-tool uh-tool--all" aria-haspopup="menu" onClick={openCreateMenu}>
+          <span className="uh-tool-ico" aria-hidden="true"><Glyph name="squares-four" size={16} /></span>
+          <span className="uh-tool-text"><span className="uh-tool-name">All {numberWord(count)} tools</span></span>
+          <Glyph name="caret-right" size={12} className="uh-alltools-caret" />
+        </button>
       </div>
     </section>
   )

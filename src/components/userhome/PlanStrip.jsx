@@ -18,52 +18,54 @@ export default function PlanStrip({ planLabel, isPro, ai, slots, asOf }) {
   const atCap = !!slots && slots.used >= slots.limit
   return (
     <div className="uh-plan">
-      {ai && (
-        <div className="uh-meter">
-          <div className="uh-meter-row">
-            <span>AI generations today</span>
-            <span className="uh-meter-val">{ai.used} of {ai.limit}</span>
+      <div className="uh-meters">
+        {ai && (
+          <div className="uh-meter">
+            <div className="uh-meter-row">
+              <span>AI generations today</span>
+              <span className="uh-meter-val">{ai.used} of {ai.limit}</span>
+            </div>
+            <span
+              className="uh-meter-track"
+              role="meter"
+              aria-label="AI generations today"
+              aria-valuemin={0}
+              aria-valuemax={ai.limit}
+              aria-valuenow={ai.used}
+              aria-valuetext={`${ai.used} of ${ai.limit} today, ${onAccount ? 'on your account' : 'counted on this browser'}`}
+            >
+              <span className="uh-meter-fill is-accent" style={{ width: `${ai.pct}%` }} />
+            </span>
+            {/* Whose count this is, and when it rolls over. "Resets daily" is all that is
+                promised: the server's day is UTC, the browser's is local (see aiQuota.js). */}
+            <p className="uh-meter-note" data-testid="ai-meter-note">
+              {onAccount
+                ? `${ai.month ? `${ai.month.used} of ${ai.month.limit} this month` : 'On your account'}. Resets daily.`
+                : 'Counted on this browser. Resets daily.'}
+              {asOf ? ` As of ${asOf}.` : ''}
+            </p>
           </div>
-          <span
-            className="uh-meter-track"
-            role="meter"
-            aria-label="AI generations today"
-            aria-valuemin={0}
-            aria-valuemax={ai.limit}
-            aria-valuenow={ai.used}
-            aria-valuetext={`${ai.used} of ${ai.limit} today, ${onAccount ? 'on your account' : 'counted on this browser'}`}
-          >
-            <span className="uh-meter-fill is-accent" style={{ width: `${ai.pct}%` }} />
-          </span>
-          {/* Whose count this is, and when it rolls over. "Resets daily" is all that is
-              promised: the server's day is UTC, the browser's is local (see aiQuota.js). */}
-          <p className="uh-meter-note" data-testid="ai-meter-note">
-            {onAccount
-              ? `${ai.month ? `${ai.month.used} of ${ai.month.limit} this month` : 'On your account'}. Resets daily.`
-              : 'Counted on this browser. Resets daily.'}
-            {asOf ? ` As of ${asOf}.` : ''}
-          </p>
-        </div>
-      )}
-      {slots && (
-        <div className="uh-meter" data-testid="project-quota-note">
-          <div className="uh-meter-row">
-            <span>Projects</span>
-            <span className="uh-meter-val">{atCap ? `${slots.used} of ${slots.limit}, the Free limit` : `${slots.used} of ${slots.limit}`}</span>
+        )}
+        {slots && (
+          <div className="uh-meter" data-testid="project-quota-note">
+            <div className="uh-meter-row">
+              <span>Projects</span>
+              <span className="uh-meter-val">{atCap ? `${slots.used} of ${slots.limit}, the Free limit` : `${slots.used} of ${slots.limit}`}</span>
+            </div>
+            <span
+              className="uh-meter-track"
+              role="meter"
+              aria-label="Projects"
+              aria-valuemin={0}
+              aria-valuemax={slots.limit}
+              aria-valuenow={Math.min(slots.used, slots.limit)}
+              aria-valuetext={atCap ? `${slots.used} of ${slots.limit}, the Free limit` : `${slots.used} of ${slots.limit}`}
+            >
+              <span className="uh-meter-fill" style={{ width: `${slots.pct}%` }} />
+            </span>
           </div>
-          <span
-            className="uh-meter-track"
-            role="meter"
-            aria-label="Projects"
-            aria-valuemin={0}
-            aria-valuemax={slots.limit}
-            aria-valuenow={Math.min(slots.used, slots.limit)}
-            aria-valuetext={atCap ? `${slots.used} of ${slots.limit}, the Free limit` : `${slots.used} of ${slots.limit}`}
-          >
-            <span className="uh-meter-fill" style={{ width: `${slots.pct}%` }} />
-          </span>
-        </div>
-      )}
+        )}
+      </div>
       <p className="uh-plan-line">
         <span>{planLabel} plan</span>
         {!isPro && <Link to="/plans" className="uh-link uh-plans-link">See plans</Link>}

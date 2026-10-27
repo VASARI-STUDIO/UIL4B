@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,6 +9,7 @@ import { NEW_PROJECT_STATE, guideEntry, startGuide } from '../utils/brandKitGuid
 import { getUsageCount } from '../utils/usageTracker'
 import { getSyncState, subscribeSync } from '../utils/syncStatus'
 import { mostRecentProject, partsPresent } from '../utils/userHome'
+import LocalClock from '../components/LocalClock'
 import Glyph from '../components/userhome/Glyph'
 import Greeting from '../components/userhome/Greeting'
 import TodayPanel from '../components/userhome/TodayPanel'
@@ -115,13 +116,15 @@ export default function Projects() {
   const signedOut = !canSaveProjects && !resolving
 
   const [capRefusal, setCapRefusal] = useState('')
-  const capRef = useRef(null)
+  // New project is in the title row, and on a phone also under the work (see NewProject below).
+  // The refusal opens under the one that was pressed, so only that one draws it.
+  const [capAt, setCapAt] = useState('head')
 
   // The cap refusal is a popover under New project: it closes on Escape and on a press elsewhere.
   useEffect(() => {
     if (!capRefusal) return undefined
     const onKey = (e) => { if (e.key === 'Escape') setCapRefusal('') }
-    const onDown = (e) => { if (capRef.current && !capRef.current.contains(e.target)) setCapRefusal('') }
+    const onDown = (e) => { if (!e.target.closest?.('.uh-new-wrap')) setCapRefusal('') }
     document.addEventListener('keydown', onKey)
     document.addEventListener('pointerdown', onDown)
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown) }
@@ -131,6 +134,7 @@ export default function Projects() {
   // walkthrough's first step, with its orientation card open.
   const startNew = () => {
     if (canSaveProjects && atProjectLimit) {
+      setCapAt([...document.querySelectorAll('.uh-new-wrap')].find((w) => w.offsetParent !== null)?.dataset.where || 'head')
       setCapRefusal(`The Free plan saves up to ${projectLimit} projects. Pro saves as many as you like.`)
       return
     }
@@ -152,7 +156,7 @@ export default function Projects() {
   const slots = projectSlots(projects.length, projectLimit)
 
   // When the last answer came from, so the allowances can say "as of 07:41" while offline.
-  const asOf = online || !wentOfflineAt ? '' : new Date(wentOfflineAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const asOf = online || !wentOfflineAt ? '' : new Date(wentOfflineAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 
   const hasProjects = projects.length > 0
   const loadingList = !signedOut && !resolving && projectsLoading && !hasProjects
@@ -194,16 +198,38 @@ export default function Projects() {
       </div>
     )
   } else if (!hasProjects) {
-    body = <StarterCard design={design} onStart={startNew} />
+    body = <StarterCard design={design} onStart={() => startNew()} />
   } else {
     body = (
       <>
         {!online && <p className="uh-offline-note">You're offline. Showing the copy saved in this browser.</p>}
-        {lead && <ContinueCard project={lead} />}
-        <ProjectRows projects={lead ? rows : recent} total={projects.length} />
+        {lead
+          ? <ContinueCard project={lead} />
+          /* Every project is archived, so there is nothing to continue: the starter leads, with its one
+             filled button, and the archived projects follow as rows. */
+          : <StarterCard design={design} onStart={() => startNew()} archived />}
+        <ProjectRows projects={lead ? rows : recent} total={projects.length} label={lead ? 'Other projects' : 'Archived projects'} />
       </>
     )
   }
+
+  // New project: top right of the title row. On a phone, with work on the page, it moves under that
+  // work, so the first screen holds one filled button (Continue). Both are in the DOM; CSS shows one,
+  // and the hidden one is out of the tab order and the accessibility tree.
+  const newProject = (where) => (
+    <div className={`uh-new-wrap uh-new-wrap--${where}${where === 'head' && !signedOut ? ' is-after-work' : ''}`} data-where={where}>
+      <button type="button" className={`uh-new${signedOut ? ' is-filled' : ''}`} onClick={startNew}>
+        <Glyph name="plus" size={14} />
+        <span>New project</span>
+      </button>
+      {capRefusal && capAt === where && (
+        <div className="uh-cap" role="alert" data-testid="project-create-refusal">
+          <span>{capRefusal}</span>{' '}
+          <Link to="/plans" className="uh-quota-link">See plans</Link>
+        </div>
+      )}
+    </div>
+  )
 
   const rail = (
     <aside className="uh-rail" aria-label="Today and recent exports">
@@ -211,7 +237,12 @@ export default function Projects() {
       {!signedOut && !resolving && <RecentExports />}
     </aside>
   )
-  const main = <div className="uh-dash-main">{body}</div>
+  const main = (
+    <div className="uh-dash-main">
+      {body}
+      {!signedOut && newProject('foot')}
+    </div>
+  )
 
   return (
     <div className="uh">
@@ -221,18 +252,9 @@ export default function Projects() {
             <Greeting resolving={resolving} signedOut={signedOut} />
             <div className="uh-title">
               <h1 className="uh-h1">Your workspace</h1>
-              <div className="uh-new-wrap" ref={capRef}>
-                <button type="button" className={`uh-new${signedOut ? ' is-filled' : ''}`} onClick={startNew}>
-                  <Glyph name="plus" size={14} />
-                  <span>New project</span>
-                </button>
-                {capRefusal && (
-                  <div className="uh-cap" role="alert" data-testid="project-create-refusal">
-                    <span>{capRefusal}</span>{' '}
-                    <Link to="/plans" className="uh-quota-link">See plans</Link>
-                  </div>
-                )}
-              </div>
+              {/* The phone's date and time: one line under the title (the big clock is hidden in Today there). */}
+              <div className="uh-clock-slot"><LocalClock className="uh-clock-line" inline /></div>
+              {newProject('head')}
             </div>
           </div>
           {signedOut ? <>{rail}{main}</> : <>{main}{rail}</>}
