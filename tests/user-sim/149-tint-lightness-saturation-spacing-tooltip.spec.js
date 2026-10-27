@@ -765,7 +765,12 @@ for (const width of [390, 768]) {
 
       // Nothing above moved by a pixel, and the note itself did not move.
       expect(await look(), 'the card moved something it should not touch').toEqual(before)
-      expect(await docBox(note(page, 6))).toEqual(noteBefore)
+      // The note keeps its place and height. On a wide touch screen its wrap spans the
+      // row while pinned, so the note may grow wider (never narrower); on a phone it does not.
+      const noteNow = await docBox(note(page, 6))
+      expect({ x: noteNow.x, y: noteNow.y, h: noteNow.h }, 'the pinned note moved').toEqual({ x: noteBefore.x, y: noteBefore.y, h: noteBefore.h })
+      if (width >= 768) expect(noteNow.w, 'the pinned note got narrower').toBeGreaterThanOrEqual(noteBefore.w)
+      else expect(noteNow.w, 'the pinned note changed width on a phone').toBe(noteBefore.w)
 
       // The card is in the flow: it takes room (the note's cell grew by about its height),
       // starts at the note's bottom edge, and overlaps none of the things above.
