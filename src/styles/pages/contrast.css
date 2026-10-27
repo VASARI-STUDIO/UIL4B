@@ -207,7 +207,8 @@
 .cc .cc-check-mark { min-width: 3ch; font-size: 12px; font-weight: 500; text-align: right; }
 .cc .cc-note { display: grid; gap: 4px; margin-top: 2px; }
 .cc .cc-note p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
-.cc .cc-note-link { justify-self: start; font-size: 12px; line-height: 1.5; color: var(--tl-link); }
+.cc .cc-note-link { justify-self: start; display: inline-flex; align-items: center; min-height: 24px; font-size: 13px; line-height: 1.5; color: var(--tl-link); }
+@media (pointer: coarse) { .cc .cc-note-link { min-height: 44px; } }
 
 /* ── Nearest passing colours ────────────────────────────────────────────── */
 .cc .cc-fixes { display: grid; gap: var(--s-3); }
