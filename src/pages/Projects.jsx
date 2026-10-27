@@ -22,6 +22,7 @@ import ProPanel from '../components/userhome/ProPanel'
 import RecentExports from '../components/userhome/RecentExports'
 import { useServerAiUsage } from '../hooks/useServerAiUsage'
 import useProjectIcons from '../hooks/useProjectIcons'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -95,6 +96,9 @@ const readOnline = () => (typeof navigator === 'undefined' ? true : navigator.on
 
 export default function Projects() {
   const navigate = useNavigate()
+  // On a phone (the spec's 390 order) Recent exports follows Discover instead of sitting in the rail
+  // under Today. One list, mounted in one place, so Tab and a screen reader meet it where it is drawn.
+  const phone = useMediaQuery('(max-width: 640px)')
   const { user, loading: authLoading } = useAuth()
   const { plan, isPro, loading: planLoading } = useSubscription()
   const { openLogin } = useLoginPrompt()
@@ -231,10 +235,11 @@ export default function Projects() {
     </div>
   )
 
+  const showExports = !signedOut && !resolving
   const rail = (
-    <aside className="uh-rail" aria-label="Today and recent exports">
+    <aside className="uh-rail" aria-label={showExports && !phone ? 'Today and recent exports' : 'Today'}>
       <TodayPanel meters={todayMeters} signedOut={signedOut} onSignIn={() => openLogin()} />
-      {!signedOut && !resolving && <RecentExports />}
+      {showExports && !phone && <RecentExports />}
     </aside>
   )
   const main = (
@@ -264,6 +269,8 @@ export default function Projects() {
         {!(signedOut && !workingChanged) && <StartSomething />}
 
         <DiscoverPicks />
+
+        {showExports && phone && <RecentExports />}
 
         {/* Nothing to sell a Pro account — and nothing drawn until the plan is
             known, so a Pro account never sees it flash in and out. */}

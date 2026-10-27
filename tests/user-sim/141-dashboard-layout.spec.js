@@ -9,7 +9,9 @@
 //         the greeting. Start something, Discover and the Pro panel run the full
 //         width underneath, so the rail never leaves a hole beside them.
 //   768   One column, in reading order: the lead and the rows, then Today and
-//   390   Recent exports, then Start something, Discover, Pro.
+//         Recent exports, then Start something, Discover, Pro.
+//   390   The same, except Recent exports follows Discover: Today, Start something,
+//         Discover, Recent exports, Pro.
 //
 // Everything is asserted on MEASURED boxes and on the text a person reads, from a
 // fixed set of three projects with known parts and known ages, so "1 of 4 parts ·
@@ -125,9 +127,11 @@ for (const size of SIZES) {
       await withExports(page)
       await open(page, size)
 
-      const ORDER = ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-exports', '.uh-start', '.uh-disc-head', '.uh-pro']
-      // Reading order is the same at every width: the rail follows the work in the DOM and is
-      // placed beside it by the grid at 1001px and up.
+      // The rail follows the work in the DOM and is placed beside it by the grid at 1001px and up. On a
+      // phone (640 and under) Recent exports is mounted after Discover instead, as the spec orders it.
+      const ORDER = size.width <= 640
+        ? ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-start', '.uh-disc-head', '.uh-exports', '.uh-pro']
+        : ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-exports', '.uh-start', '.uh-disc-head', '.uh-pro']
       const dom = await page.evaluate((sels) => {
         const els = sels.map((s) => document.querySelector(s))
         return {

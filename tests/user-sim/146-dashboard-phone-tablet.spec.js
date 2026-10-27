@@ -14,6 +14,7 @@
 //
 // MUTATION (all made in one build, each named test went red, then projects.css was restored):
 //   projects.css  `.uh .uh-rail { order: -1 }` at 640 and under          -> "the sections run in the spec's order"
+//   Projects.jsx  `useMediaQuery('(max-width: 640px)')` -> `false`       -> "the sections run in the spec's order" and "Recent exports follows Discover" (to make)
 //   projects.css  the weekday rule at `max-width: 359px` -> `330px`       -> "the weekday is dropped below 360px"
 //   projects.css  `.uh-row-link .uh-mini` `grid-row: 1 / span 2` -> `1`   -> "each project row is two lines"
 //   projects.css  `.uh .uh-new { width: 100% }` -> `auto` at 640            -> "New project is full width under the work"
@@ -91,31 +92,25 @@ test.describe('on a 390px phone, in a real touch context', () => {
   test('the sections run in the spec\'s order', async ({ browser }) => {
     await onPhone(browser, PHONE, async (page) => {
       // Greeting, title, the date and time line, the lead card, the rows, New project under the work, Today, Start something, Discover, Pro.
-      const ORDER = ['.uh-greet', '.uh-h1', '.uh-clock-line', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-new-wrap--foot', '.uh-today', '.uh-start', '.uh-disc-head', '.uh-pro']
+      const ORDER = ['.uh-greet', '.uh-h1', '.uh-clock-line', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-new-wrap--foot', '.uh-today', '.uh-start', '.uh-disc', '.uh-exports', '.uh-pro']
       const b = {}
-      for (const sel of [...ORDER, '.uh-exports']) b[sel] = await box(page, sel)
+      for (const sel of ORDER) b[sel] = await box(page, sel)
       expect(Object.entries(b).filter(([, v]) => !v).map(([k]) => k), 'sections that are not drawn').toEqual([])
       for (let i = 1; i < ORDER.length; i++) {
         expect(b[ORDER[i]].top, `${ORDER[i]} (y=${b[ORDER[i]].top}) is not below ${ORDER[i - 1]} (ends y=${b[ORDER[i - 1]].bottom})`).toBeGreaterThanOrEqual(b[ORDER[i - 1]].bottom - 1)
       }
-      // Recent exports is somewhere between Today and the Pro panel.
-      expect(b['.uh-exports'].top, 'Recent exports is above Today').toBeGreaterThanOrEqual(b['.uh-today'].bottom - 1)
-      expect(b['.uh-exports'].bottom, 'Recent exports is below the Pro panel').toBeLessThanOrEqual(b['.uh-pro'].top + 1)
       // The DOM says the same, so a screen reader and the Tab key meet them in this order.
       const dom = await page.evaluate((sels) => {
         const els = sels.map((s) => document.querySelector(s))
         return els.slice(1).every((el, i) => !!(els[i].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))
-      }, ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-start', '.uh-disc-head', '.uh-pro'])
+      }, ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-start', '.uh-disc-head', '.uh-exports', '.uh-pro'])
       expect(dom, 'the DOM order is not the page order').toBe(true)
     })
   })
 
   test('Recent exports follows Discover, as the spec orders the phone', async ({ browser }) => {
-    // KNOWN GAP in the build, not in this test: the spec's 390 order ends "Start something > Discover > Recent
-    // exports > Pro", but the build keeps Recent exports in the rail, so on a phone it sits between Today and Start
-    // something (as at 768). This test states the spec; it is expected to fail until the build follows it, and
-    // Playwright reports it as a failure the day it starts to pass, so the annotation cannot be left behind.
-    test.fail(true, 'at 390 the build puts Recent exports above Start something; the spec puts it after Discover')
+    // The spec's 390 order ends "Start something > Discover > Recent exports > Pro". Projects.jsx mounts the
+    // list after Discover below 641px, rather than in the rail under Today as at 768.
     await onPhone(browser, PHONE, async (page) => {
       const disc = await box(page, '.uh-disc')
       const exp = await box(page, '.uh-exports')
