@@ -1049,8 +1049,11 @@
 @media (max-width: 900px) {
   .sp-stack-card { position: static; top: auto; transform: none !important; filter: none !important; }
   .sp-stack-grid { min-height: 0; padding: clamp(20px, 4vw, 28px); }
-  .sp-stack-pad { height: 48px; }
-  .sp-stack-pad--tail { height: clamp(16px, 3vw, 28px); }
+  /* 40px between the three forms so they read as one group; the tail is 24px, so
+     with the next section's own top padding the gap after the last form is never
+     under the --sp-sec floor (80px) and is twice the gap inside the group. */
+  .sp-stack-pad { height: 40px; }
+  .sp-stack-pad--tail { height: 24px; }
   /* DEVIATION, and a deliberate one (mobile first). The design's two
      panels size their bodies `flex: 1 1 0` against the card's min-height; with
      that min-height released below 900px the bodies collapse to nothing — the
@@ -1061,7 +1064,6 @@
   /* The body is a fixed frame with its own scroll, so changing the piece never
      moves what is below the card. */
   .sp-ex-body { flex: 0 0 auto; height: 320px; }
-  .sp-kit { min-height: 380px; }
   /* The kit's colour page wraps to three rows on a phone; the paper grows to hold
      them instead of clipping the last swatch. */
   .sp-kit-paper, .sp-kit-body { flex: 1 1 auto; }
@@ -1081,9 +1083,33 @@
   .sp-projects li { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--sp-hair); padding: 14px 0; }
   .sp-projects li:last-child { border-bottom: 1px solid var(--sp-hair); }
 }
+/* From 561 to 900px card 1 is one column, copy over a full-width panel: the
+   panel's chips and its format row each fit one line, and no column is left
+   with empty ground under a short block of text. */
+@media (min-width: 561px) and (max-width: 900px) {
+  .sp-stack-card[data-stack-card="0"] .sp-stack-grid { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 760px) {
   .sp-spec-head { margin: 0; text-align: left; }
   .sp-spec-head p { margin-left: 0; }
+}
+/* On a phone the exports are a little tighter inside each form (the rows of
+   the palette, the kit's swatches, the project rows), with every figure and
+   line of copy kept. */
+@media (max-width: 560px) {
+  .sp-stack { margin-top: 24px; }
+  .sp-stack-grid { gap: 16px; }
+  .sp-stack-say { padding-top: 0; }
+  .sp-stack-say > p { margin-top: 12px; }
+  .sp-stack-say > p.sp-stack-note { margin-top: 12px; }
+  .sp-ex-pieces { gap: 6px; padding-block: 8px; }
+  .sp-ex-rows { gap: 4px; }
+  /* The format switch and Copy share one line at 390px (the switch is 165px, Copy 105px). */
+  .sp-ex-actions { gap: 8px; padding-inline: 12px; }
+  .sp-ex-fmt { padding-inline: 8px; }
+  .sp-ex-body { height: 296px; }
+  .sp-kit-sw > span { height: 72px; }
+  .sp-projects li { padding-block: 12px; }
 }
 
 /* ── "Don't just take it from us" (#index) ────────────────────────────────────
