@@ -224,14 +224,15 @@ async function assertClean(page, id) {
   await page.evaluate(() => document.fonts.ready)
   const seen = await page.evaluate(({ top, h }) => {
     const inShot = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > top && r.top < top + h }
-    const shown = (sel) => [...document.querySelectorAll(sel)].filter((el) => inShot(el) && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[aria-hidden="true"]'))
+    // .quota-track is a usage meter (role=progressbar), not a spinner.
+    const shown = (sel) => [...document.querySelectorAll(sel)].filter((el) => inShot(el) && !el.matches('.quota-track') && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[aria-hidden="true"]'))
     return {
-      loading: shown('.page-loading, .fg-loader, [aria-busy="true"], progress, [role="progressbar"]').length,
+      loading: shown('.page-loading, .fg-loader, [aria-busy="true"], progress, [role="progressbar"]').map((el) => el.tagName.toLowerCase() + '.' + String(el.className).slice(0, 40)),
       alerts: shown('[role="alert"], .toast.show').map((el) => (el.textContent || '').trim().slice(0, 80)),
       cookie: shown('[class*="cookie" i], [id*="cookie" i], [aria-label*="cookie" i]').length,
     }
   }, { top: NAV_H, h: SHOT.h })
-  if (seen.loading) fail(`${id}: ${seen.loading} loading element(s) in the shot`)
+  if (seen.loading.length) fail(`${id}: loading element(s) in the shot: ${seen.loading.join(' | ')}`)
   if (seen.alerts.length) fail(`${id}: alert in the shot: ${seen.alerts.join(' | ')}`)
   if (seen.cookie) fail(`${id}: a cookie notice is in the shot`)
 }
@@ -245,11 +246,16 @@ const TOOLS = [
       await open(page, '/create/icons')
       // One pack, Lucide, so every cell is that pack's own drawing.
       await page.getByRole('button', { name: /All packs/ }).click()
-      await page.locator('[data-pop-scrim], [role=listbox], [role=menu]').getByText('Lucide', { exact: true }).last().click()
+      // The pack menu is a listbox; each pack is a role=option named by its label.
+      await page.getByRole('option', { name: 'Lucide', exact: true }).click()
+      // Not searched: the fixture's search answers four matches and then shows the
+      // signed-out wall, while the pack's own first page is a full, clean grid.
+      // Each cell is an <img> carrying its own SVG data URI: wait until every cell
+      // in the shot has drawn, and there are forty of them.
       await page.waitForFunction(({ top, h }) => {
-        const mode = document.body.innerText
-        const cells = [...document.querySelectorAll('svg')].filter((el) => { const r = el.getBoundingClientRect(); return r.top > top + 200 && r.top < top + h && r.width >= 20 && r.width <= 40 })
-        return /Lucide/.test(mode) && cells.length >= 40
+        const cells = [...document.querySelectorAll('.ic')].filter((el) => { const r = el.getBoundingClientRect(); return r.bottom > top && r.top < top + h })
+        const drawn = cells.filter((el) => { const img = el.querySelector('img'); return img && img.complete && img.naturalWidth > 0 })
+        return /Lucide/.test(document.body.innerText) && cells.length >= 40 && drawn.length === cells.length
       }, { top: NAV_H, h: SHOT.h }, { timeout: 30000 })
     },
   },
@@ -258,6 +264,14 @@ const TOOLS = [
     async prepare(page) {
       await open(page, '/create/file-converter')
       await page.locator('input[type=file]').first().setInputFiles(SAMPLE_IMAGE)
+      // The sample is already a WebP, so the default 90% re-encodes it larger. At 70% it is a real saving.
+      await page.locator('input[type=range]').first().fill('70')
+      await page.getByRole('button', { name: /^Convert 1 image/ }).click()
+      // The result line on the card: before and after, with the saving.
+      await page.locator('.fc-card .fc-meta', { hasText: '→' }).waitFor({ timeout: 30000 })
+      await page.locator('.fc-dl').waitFor()
+      // "Converted 1 image" toasts, then goes: photograph the page after it has.
+      await page.locator('[role="alert"], .toast.show').first().waitFor({ state: 'hidden', timeout: 20000 }).catch(() => {})
     },
   },
   { id: 'semantic', async prepare(page) { await open(page, '/create/semantic-color') } },
@@ -267,6 +281,18 @@ const TOOLS = [
     async prepare(page) {
       await open(page, '/create/font-pair')
       await page.waitForSelector('#fpr-export')
+      // Schibsted Grotesk over Literata, picked the way a person would: the heading
+      // family and then the body family, each through the font dialog's search.
+      // (Literata is not among the tool's suggested body faces for it, so the body
+      // is searched for, not taken from the suggestions.)
+      for (const [slot, family] of [['Heading family', 'Schibsted Grotesk'], ['Body family', 'Literata']]) {
+        await page.getByRole('button', { name: new RegExp(slot) }).click()
+        await page.getByLabel('Search font families').fill(family)
+        await page.locator(`button.fbd-tile[aria-label^="Use ${family} "]`).click()
+      }
+      await page.getByRole('button', { name: 'Copy CSS' }).first().waitFor()
+      const css = await page.locator('#fpr-export').innerText()
+      if (!/--font-heading:\s*'Schibsted Grotesk'/.test(css) || !/--font-body:\s*'Literata'/.test(css)) fail(`font-pair: the export names other families:\n${css}`)
     },
   },
   {
@@ -281,12 +307,25 @@ const TOOLS = [
     },
   },
   { id: 'ratio', async prepare(page) { await open(page, '/create/aspect-ratio') } },
-  { id: 'alt-text', async prepare(page) { await open(page, '/create/alt-text') } },
+  {
+    id: 'alt-text',
+    async prepare(page) {
+      // The empty state: no image, no generated reply, the good and avoid examples showing.
+      await open(page, '/create/alt-text')
+      await page.getByRole('heading', { name: 'What good alt text looks like' }).waitFor()
+    },
+  },
 ]
 
 async function shoot(tool, theme) {
   const png = await withPage(theme, async (page) => {
-    await tool.prepare(page, theme)
+    try {
+      await tool.prepare(page, theme)
+    } catch (err) {
+      // --debug=<dir> keeps what the page looked like when the tool would not get ready.
+      if (typeof args.debug === 'string') await page.screenshot({ path: path.join(args.debug, `${tool.id}-${theme}-stuck.png`) }).catch(() => {})
+      throw err
+    }
     await page.waitForTimeout(600)
     await assertClean(page, tool.id)
     const attr = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
@@ -329,17 +368,26 @@ async function main() {
   try {
     browser = await chromium.launch()
     util = await browser.newPage()
+    const failed = []
     for (const tool of tools) {
-      for (const theme of THEMES) {
-        for (const f of await shoot(tool, theme)) {
-          await fs.writeFile(path.join(OUT_DIR, f.name), f.buf)
-          total += f.buf.length
-          count += 1
-          console.log(`${f.name} ${(f.buf.length / 1024).toFixed(1)} KB`)
-        }
+      // Both themes or neither: a tool that fails is reported and skipped, and the rest carry on.
+      let files
+      try {
+        files = []
+        for (const theme of THEMES) files.push(...await shoot(tool, theme))
+      } catch (err) {
+        failed.push(`${tool.id}: ${err.message}`)
+        continue
+      }
+      for (const f of files) {
+        await fs.writeFile(path.join(OUT_DIR, f.name), f.buf)
+        total += f.buf.length
+        count += 1
+        console.log(`${f.name} ${(f.buf.length / 1024).toFixed(1)} KB`)
       }
     }
     console.log(`wrote ${count} WebPs, ${(total / 1024).toFixed(1)} KB in all`)
+    if (failed.length) fail(`${failed.length} tool(s) not captured:\n  ${failed.join('\n  ')}`)
   } finally {
     await browser?.close()
     server.child.kill()
