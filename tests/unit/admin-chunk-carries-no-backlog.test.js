@@ -236,6 +236,7 @@ const NO_BOARDS = ABSENT_BOARDS.length > 0
 // fails to import is a hole in the coverage and fails below by name.
 const UNREADABLE_EXCEPTIONS = {
   'emojiIndexLoader.js': 'imports emojiIndex.txt, which only Vite can resolve — it is an emoji search index, product content',
+  'nearest/urls.js': 'imports five ?url JSON assets, which only Vite can resolve - they are the nearest-colour-system data (Tailwind, CSS, Material, Munsell, ISCC-NBS), product content',
   'iconHeads.js': 'uses import.meta.glob, which only Vite provides — it loads the per-pack icon name lists in iconHeads/*.json, product content',
 }
 

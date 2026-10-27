@@ -31,7 +31,7 @@
 
 import { generateTintScale } from './colors.js'
 import { tintLabelsFor } from './tintLabels.js'
-import { readBook } from './designSystemBook.js'
+import { readBook } from './bookModel.js'
 import { typeLadder } from './styleGuideExport.js'
 import { roleLabels } from './paletteRoles.js'
 import { SITE_ORIGIN } from './routeMeta.js'

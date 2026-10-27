@@ -138,7 +138,7 @@ const FONTS = {
   'Space Grotesk': { faces: [{ base64: 'U1BBQ0U=', format: 'woff2', weight: '300 700', unicodeRange: 'U+0000-00FF' }], license: OFL },
   'Work Sans': { faces: [{ base64: 'V09SSw==', format: 'woff2', weight: '100 900', unicodeRange: 'U+0000-00FF' }], license: OFL },
 }
-const TEMPLATE = fs.readFileSync(path.join(process.cwd(), 'src/templates/uiKit.html'), 'utf8')
+const TEMPLATE = fs.readFileSync(path.join(process.cwd(), 'src/templates/kit/studio.html'), 'utf8')
 const kit = (design) => renderUiKit(design, {
   template: TEMPLATE, fonts: FONTS, tier: 'free', date: new Date('2026-01-02T00:00:00Z'),
   publisherFonts: [{ family: 'Geist', axis: '300 700', faces: [{ subset: 'latin', base64: 'R0VJU1Q=' }] }],

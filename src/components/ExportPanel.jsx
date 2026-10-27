@@ -7,8 +7,16 @@ import useExportDesign from '../hooks/useExportDesign'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useAuth } from '../contexts/AuthContext'
 import useExportGate from '../hooks/useExportGate'
+import { loadAuthSdk } from '../utils/firebaseAccess'
+import {
+  labelPrintWindow, releasePrintWindow, requestExportDocument, reservePrintWindow,
+  showInPrintWindow, withPrintBootstrap,
+} from '../utils/exportDocument'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } from '../config/exportFormats'
+import { liveTemplates, readExportTemplates } from '../config/exportTemplates'
+import { useProject } from '../contexts/ProjectContext'
+import ExportTemplatePicker from './ExportTemplatePicker'
 import BrandLogoField from './BrandLogoField'
 import KitIdentityFields from './KitIdentityFields'
 import ExportFormatSwitch from './ExportFormatSwitch'
@@ -86,8 +94,35 @@ const PRO_GATE = {
   },
 }
 
-// What the action button says while a kit is being made.
-const BUSY_LABEL = { fonts: 'Embedding fonts…', building: 'Building the kit…' }
+// THE PAID DOCUMENTS ARE BUILT ON THE SERVER, NOT HERE. Their generators are not
+// in this bundle at all (api/_lib/exportDocument.js holds them), so there is
+// nothing in the page to call: the panel asks, the server checks the account's
+// plan, and only a Pro account gets the HTML back. What is looked up here is just
+// how each one is named and reported.
+//
+// Keyed by format id, like PRO_GATE. `file` ends the downloaded name, `activation`
+// is the analytics name (the paid deliverables are not averaged into the free
+// style guide), `fallback` is what the notice says when the browser blocks the
+// print window and the file is saved instead, `noun` is how the errors name it.
+const PRO_DOCUMENT = {
+  book: {
+    file: 'design-system-book.html',
+    activation: 'design-system-book',
+    fallback: 'The book downloaded instead.',
+    noun: 'book',
+    waiting: 'Preparing your design system book…',
+  },
+  guidelines: {
+    file: 'brand-guidelines.html',
+    activation: 'brand-guidelines',
+    fallback: 'The guidelines downloaded instead.',
+    noun: 'guidelines',
+    waiting: 'Preparing your brand guidelines…',
+  },
+}
+
+// What the action button says while a kit or a document is being made.
+const BUSY_LABEL = { fonts: 'Embedding fonts…', building: 'Building the kit…', document: 'Preparing your document…' }
 
 // How long an export waits for the plan of an account that signed in at its own
 // gate. The entitlement is one document read, so this is generous; past it the
@@ -112,6 +147,10 @@ export default function ExportPanel({ onClose }) {
   // There is nothing left to cancel, so the secondary action reads Close.
   const [done, setDone] = useState(false)
   const design = useExportDesign()
+  // The template picked for each format lives on the working design, beside the
+  // identity, so it follows the project.
+  const { design: working, updateDesign } = useProject()
+  const chosenTemplates = readExportTemplates(working)
   const { isPro, planKnown } = useSubscription()
   const { user } = useAuth()
   // A file needs an account; a copy never does. See useExportGate.js.
@@ -178,29 +217,21 @@ export default function ExportPanel({ onClose }) {
     return filename
   }
 
-  // Open the book in its own window and raise the print dialog, so "Save as
-  // PDF" is one click away. The BROWSER's print engine is what makes this a
-  // real deliverable: it embeds the user's actual webfont, keeps the type
-  // vector and selectable, and costs nothing in bundle — none of which a
-  // client-side PDF library or an html2canvas raster can do.
+  // Show a finished paid document in the window reserved for it and raise the
+  // print dialog, so "Save as PDF" is one click away. The BROWSER's print engine
+  // is what makes this a real deliverable: it embeds the user's actual webfont,
+  // keeps the type vector and selectable, and costs nothing in bundle.
   //
-  // The print bootstrap is appended HERE, never inside the generator, so the
-  // downloaded artefact keeps its no-script guarantee.
-  const printBook = (html, filename) => {
-    const doc = html.replace(
-      '</body>',
-      '<script>(function(){function go(){try{window.focus();window.print()}catch(e){}}'
-      + 'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(go,200)})}'
-      // The closing tag is split rather than escaped: a literal </scr+ipt> in a
-      // bundled string can terminate an inline script tag early if this bundle
-      // is ever inlined, and `<\/` is a useless escape the linter rejects.
-      + `else{window.addEventListener("load",function(){setTimeout(go,400)})}})()<${'/'}script></body>`,
-    )
-    const url = URL.createObjectURL(new Blob([doc], { type: 'text/html;charset=utf-8' }))
-    const win = window.open(url, '_blank')
-    if (!win) {
+  // The print bootstrap is appended HERE, to the copy the window gets, never to
+  // what the server returned: the file that is downloaded keeps its no-script
+  // guarantee. Returns false when the browser blocked the window, and the file
+  // was saved instead.
+  const showDocument = (html, filename, win) => {
+    const url = URL.createObjectURL(new Blob([withPrintBootstrap(html)], { type: 'text/html;charset=utf-8' }))
+    const shown = showInPrintWindow(win, url)
+    if (!shown) {
       // Popup blocked. Fall back to the file rather than failing: the user
-      // still gets the book, and is told what happened instead of watching
+      // still gets the document, and is told what happened instead of watching
       // the button do nothing.
       URL.revokeObjectURL(url)
       download(new Blob([html], { type: 'text/html;charset=utf-8' }), filename)
@@ -226,12 +257,24 @@ export default function ExportPanel({ onClose }) {
     // asking them to sign in first would put a login popup in front of a Pro
     // CTA. The gate id is still reported, so the funnel can say WHICH wall
     // converted.
+    //
+    // This check is a hint and a courtesy: it spares a free account a round
+    // trip. It is not what protects the document. The server decides, from the
+    // account's own record, and the generators are not in this page (see
+    // PRO_DOCUMENT above), so a forged `isPro` here reaches a 403 and no file.
     if (FORMATS.find(f => f.id === format)?.pro && !isPro) {
       reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
       onClose()
       navigate('/plans')
       return
     }
+    const proDocument = Boolean(FORMATS.find(f => f.id === format)?.pro)
+
+    // The window the document will print in, opened NOW, inside the click. The
+    // server round trip below is a network wait, and a window opened after it is
+    // blocked by Safari. Every way out of this function closes it again.
+    let printWin = proDocument ? reservePrintWindow() : null
+    const closePrintWin = () => { releasePrintWindow(printWin); printWin = null }
 
     // ── ACCOUNT GATE ──────────────────────────────────────────────────────
     // Producing a FILE needs a free account; copying a value never does
@@ -240,7 +283,7 @@ export default function ExportPanel({ onClose }) {
     const tokenFile = format === 'css' || format === 'json'
     const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : 'export this style guide'
     const signedOut = !user
-    if (!(await requireExportAccount(reason))) return
+    if (!(await requireExportAccount(reason))) { closePrintWin(); return }
 
     // ── THE PLAN OF AN ACCOUNT THAT JUST SIGNED IN. ───────────────────────
     // `isPro` above is the signed-out visitor's: free. Someone who is Pro and
@@ -252,12 +295,14 @@ export default function ExportPanel({ onClose }) {
     let proNow = isPro
     if (signedOut) {
       if (!(await waitForPlan())) {
+        closePrintWin()
         if (mounted.current) setError('You are signed in, but your plan has not loaded yet. Try again in a moment.')
         return
       }
       proNow = live.current.isPro
       // The same Pro gate as above, read against the plan that just arrived.
-      if (FORMATS.find(f => f.id === format)?.pro && !proNow) {
+      if (proDocument && !proNow) {
+        closePrintWin()
         reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
         onClose()
         navigate('/plans')
@@ -284,6 +329,7 @@ export default function ExportPanel({ onClose }) {
         activation = 'ui-kit'
         const { blob, filename, missing } = await buildUiKit(design, {
           tier: proNow ? 'pro' : 'free',
+          template: chosenTemplates.kit,
           onStage: setStage,
         })
         savedFile = download(blob, filename)
@@ -298,30 +344,47 @@ export default function ExportPanel({ onClose }) {
           setStage('')
           keepOpen = true
         }
-      } else if (format === 'book') {
-        // Loaded on demand: the book generator costs nothing to anyone who
-        // never exports one, which keeps it off the homepage's JS budget.
-        const { buildDesignSystemBook } = await import('../utils/designSystemBook')
-        const html = buildDesignSystemBook(design, { projectName })
-        activation = 'design-system-book'
-        if (!printBook(html, `${slug}-design-system-book.html`)) {
-          // The book WAS produced, so this is a notice and not an error — the
-          // panel stays open to carry it rather than closing over it.
-          setNotice({ lead: 'The book downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
-          setBusy(false)
-          keepOpen = true
+      } else if (proDocument) {
+        // The book and the brand guidelines. The server checks the plan and builds
+        // the document; a refusal means there is no file to hand over.
+        const doc = PRO_DOCUMENT[format]
+        activation = doc.activation
+        setStage('document')
+        labelPrintWindow(printWin, doc.waiting)
+        const answer = await requestExportDocument({ format, design, projectName, template: chosenTemplates[format] }, { loadAuth: loadAuthSdk })
+        // The panel can unmount while the server works (the route changed under
+        // it). Nobody is left to read a result, so close the blank window that was
+        // reserved and touch nothing else.
+        if (!mounted.current) { closePrintWin(); return }
+        // A refusal stays in the panel and says so. It is not sent to /plans: this
+        // account passed the Pro check on this page a moment ago, so the likely
+        // cause is a plan that just ended or a stale read, and a pricing page
+        // that may say "you are on Pro" is the wrong answer to that person.
+        if (answer.status === 'pro-required') {
+          throw new Error(`We couldn’t find a Pro plan on this account, so the ${doc.noun} wasn’t made.`)
         }
-      } else if (format === 'guidelines') {
-        // The second Pro document. Loaded on demand for the same reason as the
-        // book, and separately from it: the two generators share no code path,
-        // so someone exporting guidelines never downloads the book's.
-        const { buildBrandGuidelines } = await import('../utils/brandGuidelines')
-        const html = buildBrandGuidelines(design, { projectName })
-        activation = 'brand-guidelines'
-        if (!printBook(html, `${slug}-brand-guidelines.html`)) {
-          // Also a produced file, so a notice and not an error.
-          setNotice({ lead: 'The guidelines downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
+        if (answer.status === 'signed-out') {
+          throw new Error(`You’re signed out. Sign in again, then export the ${doc.noun}.`)
+        }
+        // These two are the design's fault, not the connection's, and trying again
+        // changes nothing, so they get their own words.
+        if (answer.status === 'too-large') {
+          throw new Error('This design is too large to export. Try a smaller logo.')
+        }
+        if (answer.status === 'too-many-colours') {
+          throw new Error('This palette has more colours than the document can hold (200 max).')
+        }
+        if (answer.status !== 'ok') {
+          throw new Error(`The ${doc.noun} couldn’t be made. Check your connection and try again.`)
+        }
+        const shownInWindow = showDocument(answer.html, `${slug}-${doc.file}`, printWin)
+        printWin = null
+        if (!shownInWindow) {
+          // The document WAS produced, so this is a notice and not an error: the
+          // panel stays open to carry it rather than closing over it.
+          setNotice({ lead: doc.fallback, detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           setBusy(false)
+          setStage('')
           keepOpen = true
         }
       } else if (tokenFile) {
@@ -361,6 +424,9 @@ export default function ExportPanel({ onClose }) {
       // whether the product was useful. The book reports under its own name so
       // the paid deliverable is not averaged into the free one.
       try { trackActivation(activation, 'export') } catch { /* never break an export */ }
+      // A kit or file export that finished after the panel went away has already
+      // handed over its file; there is no dialog left to close or update.
+      if (!mounted.current) return
       if (!keepOpen) {
         onClose()
         // The panel closing says nothing about the file, so name it. Raised
@@ -373,11 +439,27 @@ export default function ExportPanel({ onClose }) {
     } catch (err) {
       // The panel stays open on failure: closing it would leave the user with
       // no file and no explanation, which reads as the button doing nothing.
+      closePrintWin()
+      if (!mounted.current) return
       setBusy(false)
       setStage('')
       setError(err?.message || 'The export could not be created. Please try again.')
     }
   }
+  // The click handler. A second click that lands before the first has set `busy`
+  // (the account gate and the plan wait both await before it) would reserve a
+  // second window and send a second request. The ref is set synchronously, so
+  // the second call sees it at once; state would not be updated yet.
+  const exporting = useRef(false)
+  const startExport = async () => {
+    if (exporting.current) return
+    exporting.current = true
+    try { await runExport() } finally { exporting.current = false }
+  }
+  // Escape, a click on the backdrop and the close button leave the panel, and
+  // while an export is in flight there is no way to take it back: the same rule
+  // the disabled Cancel button already states.
+  const requestClose = () => { if (!busy) onClose() }
   const panelRef = useRef(null)
   const exportBtnRef = useRef(null)
   // What a finished export said (the notice, the error line) belongs to the
@@ -487,7 +569,8 @@ export default function ExportPanel({ onClose }) {
   // Trap Tab within the panel, and close on Escape.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') { onClose(); return }
+      // Not while an export is in flight (see requestClose).
+      if (e.key === 'Escape') { if (!busy) onClose(); return }
       if (e.key !== 'Tab') return
       const focusables = panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -508,7 +591,7 @@ export default function ExportPanel({ onClose }) {
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, busy])
 
   // The intro is for a free account, and waits for the plan so a Pro account
   // never sees it flash.
@@ -520,6 +603,7 @@ export default function ExportPanel({ onClose }) {
     || (activeGroup?.id === 'kit' && isPro)
     || Boolean(activeGroup?.preview)
     || Boolean(activeFormat?.logo)
+    || liveTemplates(activeFormat?.id).length > 1
   const options = activeGroup && needsOptions ? (
     <div className="exp-options" role="region" aria-label={`Options for ${activeGroup.name}`} key={activeGroup.id}>
       {choices.length > 1 && (
@@ -528,6 +612,14 @@ export default function ExportPanel({ onClose }) {
           options={choices.map(f => ({ id: f.id, label: f.option }))}
           value={pickedFile}
           onChange={pickFormat}
+        />
+      )}
+      {/* Shown only while the row has a choice: one live template needs no picker. */}
+      {liveTemplates(activeFormat?.id).length > 1 && (
+        <ExportTemplatePicker
+          format={activeFormat.id}
+          value={chosenTemplates[activeFormat.id]}
+          onChange={(id) => updateDesign({ exportTemplates: { [activeFormat.id]: id } })}
         />
       )}
       {/* A Pro UI kit is personalised; a free kit carries no identity. */}
@@ -550,7 +642,7 @@ export default function ExportPanel({ onClose }) {
   ) : null
 
   return (
-    <div className="exp-overlay" onMouseDown={onClose}>
+    <div className="exp-overlay" onMouseDown={requestClose}>
       <div
         className={`exp-panel${moreBelow ? ' has-more' : ''}${scrolled ? ' is-scrolled' : ''}`}
         role="dialog"
@@ -568,7 +660,7 @@ export default function ExportPanel({ onClose }) {
             <h2 className="exp-title" id="exp-title" tabIndex={-1} ref={titleRef}>Export your design system</h2>
             {showIntro && <p className="exp-sub" id="exp-intro">Pick what you need. Free files carry a small UIL4B mark.</p>}
           </div>
-          <button type="button" className="exp-close" onClick={onClose} aria-label="Close export">
+          <button type="button" className="exp-close" onClick={requestClose} disabled={busy} aria-label="Close export">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
@@ -648,7 +740,7 @@ export default function ExportPanel({ onClose }) {
             {/* Every row is built, so there is always a real action. The label
                 says what the click will do: unlock, wait for the plan, or the
                 file about to be made. */}
-            <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={runExport} disabled={busy || checking}>
+            <button type="button" className="btn btn-accent exp-act" ref={exportBtnRef} onClick={startExport} disabled={busy || checking}>
               {busy ? (BUSY_LABEL[stage] || 'Exporting…') : checking ? 'Checking your plan…' : locked ? 'Unlock with Pro' : activeFormat.action}
             </button>
           </div>

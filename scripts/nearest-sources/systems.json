@@ -1,0 +1,74 @@
+{
+  "_about": "Per-system header fields for src/data/nearest/*.json, read by build-nearest-data.mjs and munsell_to_lab.py. Source URLs are pinned (tag or commit) so a rebuild reads the same bytes. sha256 is of the fetched file; a mismatch stops the build.",
+  "rowShape": "[name, code|null, copy|null, L, a, b]  (Lab under D50, 2 decimals; a null copy means the name)",
+  "systems": [
+    {
+      "id": "tailwind",
+      "label": "Tailwind v4",
+      "group": "screen",
+      "version": "4.3.3",
+      "source": "Tailwind CSS v4 default theme colours (packages/tailwindcss/theme.css)",
+      "sourceUrl": "https://raw.githubusercontent.com/tailwindlabs/tailwindcss/v4.3.3/packages/tailwindcss/theme.css",
+      "sha256": "443d7af364200f8ec8352dc78e39485a118a1840d498c97967bf0ae402b39167",
+      "licence": "MIT, (c) Tailwind Labs, Inc.",
+      "licenceUrl": "https://github.com/tailwindlabs/tailwindcss/blob/main/LICENSE",
+      "credit": "Tailwind CSS v4 colours, © Tailwind Labs, MIT licence.",
+      "budgetGzip": 7168,
+      "note": "The source defines each colour in OKLCH. Each is converted to hex with the app's own oklchToHex (channels clamped to sRGB), then to Lab, so a colour outside sRGB is stored as its clipped stand-in."
+    },
+    {
+      "id": "css",
+      "label": "CSS",
+      "group": "screen",
+      "version": "CSS Color Module Level 4",
+      "source": "CSS Color Module Level 4, section 6.1 Named Colors",
+      "sourceUrl": "https://www.w3.org/TR/2024/CRD-css-color-4-20240213/",
+      "sha256": "116f7770f6b77d907243432307264f66a3bb7b2217c97fcd68bad32436b3f408",
+      "licence": "W3C Software and Document License",
+      "licenceUrl": "https://www.w3.org/copyright/software-license-2023/",
+      "credit": "CSS named colours from the W3C CSS Color Module Level 4.",
+      "budgetGzip": 4096,
+      "note": "All 148 keywords, grey and gray spellings both."
+    },
+    {
+      "id": "material",
+      "label": "Material",
+      "group": "screen",
+      "version": "Material Design 2014 palette",
+      "source": "material-design-lite src/_color-definitions.scss (mdl-1.x)",
+      "sourceUrl": "https://raw.githubusercontent.com/google/material-design-lite/85f29d30e64827d7a22d193eefe896fa952488f7/src/_color-definitions.scss",
+      "sha256": "819240e8770d4d9129f85dcf80b36cc04e42128e09f412bfe86a29565c2c72dd",
+      "licence": "Apache License 2.0, Copyright 2015 Google Inc.",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "credit": "Material Design 2014 colour palette by Google.",
+      "budgetGzip": 6144,
+      "note": "19 hues, 50 to 900, plus A100 to A700 for the 16 hues that have accents."
+    },
+    {
+      "id": "munsell",
+      "label": "Munsell",
+      "group": "physical",
+      "version": "1943 renotation, real colours",
+      "source": "Munsell renotation data (the 'real' set) as bundled with the colour-science library",
+      "sourceUrl": "https://raw.githubusercontent.com/colour-science/colour/v0.4.7/colour/notation/datasets/munsell/real.py",
+      "licence": "BSD-3-Clause, Colour Developers (the library bundling the data)",
+      "licenceUrl": "https://github.com/colour-science/colour/blob/develop/LICENSE.txt",
+      "credit": "Munsell notation from the 1943 renotation data. Munsell® is a trademark of X-Rite, Incorporated. This isn't the Munsell Book of Color, and UIL4B isn't affiliated with X-Rite.",
+      "budgetGzip": 35840,
+      "note": "CIE xyY under illuminant C (Y scaled by 0.975), converted to Lab D50 by Bradford. Only samples inside sRGB are kept. The nine neutral steps N1 to N9 are added from the ASTM D1535 value function, because the renotation list has no chroma-0 samples."
+    },
+    {
+      "id": "iscc-nbs",
+      "label": "ISCC-NBS",
+      "group": "physical",
+      "version": "ISCC-NBS 267 colour-name blocks",
+      "source": "Central notations of the 267 ISCC-NBS colour-name blocks (J. Res. NBS 61(5), 1958), transcribed in scripts/nearest-sources/iscc-nbs-centroids.tsv",
+      "sourceUrl": "https://nvlpubs.nist.gov/nistpubs/jres/61/jresv61n5p427_A1b.pdf",
+      "licence": "US Government publication (NIST), public domain in the US",
+      "licenceUrl": "https://www.nist.gov/director/copyright-fair-use-and-licensing-statements-srd-data-and-software",
+      "credit": "ISCC-NBS colour names from NBS Special Publication 440 (1976); block centroids from the NBS central notations (J. Res. NBS 61(5), 1958).",
+      "budgetGzip": 6144,
+      "note": "Each centroid's Munsell notation is converted to xyY (illuminant C) with colour-science, then to Lab D50. A centroid outside sRGB has its chroma reduced at constant lightness and hue until it fits, so the swatch and the difference describe the same on-screen colour."
+    }
+  ]
+}

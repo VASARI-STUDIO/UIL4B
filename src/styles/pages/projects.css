@@ -224,8 +224,11 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-disc-all:hover { text-decoration: underline; text-underline-offset: 3px; }
 .uh .uh-disc-grid { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: 12px; }
 .uh .uh-disc-card { display: block; min-width: 0; border: 1px solid var(--ws-hair); border-radius: 18px; background: var(--card); overflow: hidden; text-align: left; text-decoration: none; color: inherit; transition: background .18s ease, border-color .18s ease; }
-.uh .uh-disc-strip { display: flex; height: 74px; }
+.uh .uh-disc-strip { position: relative; display: flex; height: 74px; }
 .uh .uh-disc-strip > span { flex: 1; }
+/* The edge is drawn once, over the whole strip, so neighbouring swatches do not draw a 2px seam. */
+.uh .uh-disc-strip::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .1); pointer-events: none; }
+[data-theme="light"] .uh .uh-disc-strip::after { box-shadow: inset 0 0 0 1px oklch(0 0 0 / .1); }
 .uh .uh-disc-body { display: block; padding: 11px 13px 13px; }
 .uh .uh-disc-name { display: block; font-size: 13.5px; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uh .uh-disc-meta { display: block; margin-top: 5px; font-size: 11.5px; color: var(--ws-faint); }
@@ -333,7 +336,7 @@ html[data-reduced-motion="true"] .uh *:active { transform: none; }
 
 /* Greeting and title */
 .uh .uh-greet { min-height: 24px; margin: 0 0 var(--s-2); display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); font-size: 17px; font-weight: 500; line-height: 1.4; color: var(--t1); }
-.uh .uh-textbtn { min-height: 44px; margin-block: -10px; padding: 0 var(--s-1); border: 0; background: none; font-family: var(--font); font-size: 15px; color: var(--ws-acc-text); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.uh .uh-textbtn { min-height: 44px; margin-block: -10px; padding: 0; border: 0; background: none; font-family: var(--font); font-size: 15px; color: var(--ws-acc-text); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .uh .uh-ask { position: relative; isolation: isolate; }
 .uh .uh-scrim { display: none; }
 .uh .uh-pop { position: absolute; top: calc(100% + var(--s-2)); left: 0; z-index: 2; width: min(300px, 80vw); padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-1); box-shadow: 0 8px 24px -12px rgba(0, 0, 0, .35); font-size: 15px; font-weight: 400; }
@@ -374,6 +377,8 @@ html[data-reduced-motion="true"] .uh *:active { transform: none; }
 .uh .uh-continue-name { margin: 0; min-width: 0; font-size: 24px; font-weight: 600; line-height: 1.15; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 h2.uh-continue-name { white-space: normal; }
 .uh .uh-badge { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius); background: var(--bg-2); color: var(--t1); }
+/* In dark --card and --bg-2 are the same #111215, so the chip needs the next step up to show. */
+[data-theme="dark"] .uh .uh-badge { background: var(--bg-3); }
 .uh .uh-badge-img { width: 20px; height: 20px; object-fit: contain; }
 .uh .uh-meta { margin: 0; font-size: 13px; color: var(--t2); }
 .uh .uh-parts, .uh .uh-steps { list-style: none; margin: 0; padding: var(--s-3) 0 0; border-top: 1px solid var(--ws-hair); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2) var(--s-4); }
@@ -381,9 +386,10 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-parts li.is-done { color: var(--t0); }
 .uh .uh-part-mark { flex: none; color: var(--t2); }
 .uh .uh-part-mark.is-done { color: var(--ok-strong); }
+/* The starter's steps are plain text, not links: 15px --t1 in 32px rows, the numbers in --t2. */
 .uh .uh-steps { list-style: decimal inside; grid-template-columns: minmax(0, 1fr); gap: 0; font-size: 15px; color: var(--t1); }
-.uh .uh-steps a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; color: var(--ws-acc-text); text-decoration: underline; text-underline-offset: 3px; }
-@media (hover: hover) and (pointer: fine) { .uh .uh-steps a:hover { color: var(--ws-acc-hover); } }
+.uh .uh-steps li { min-height: 32px; line-height: 32px; }
+.uh .uh-steps li::marker { color: var(--t2); }
 .uh .uh-starter-text { margin: 0; font-size: 15px; line-height: 1.5; color: var(--t1); max-width: 60ch; }
 .uh .uh-continue-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); }
 .uh .uh-fail-text, .uh .uh-resolving p, .uh .uh-offline-note { margin: 0; font-size: 15px; color: var(--t1); }
@@ -412,11 +418,11 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-today-clock { min-height: 56px; }
 .uh .uh-clock { display: grid; gap: 0; margin: 0; font-family: var(--font); font-size: inherit; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; color: inherit; }
 .uh .uh-today-date { min-height: 21px; font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--t1); }
-.uh .uh-today-time { min-height: 35px; font-family: var(--mono); font-size: 32px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--t0); }
+.uh .uh-today-time { min-height: 35px; font-family: var(--font); font-size: 32px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--t0); }
 .uh .uh-rule { margin: var(--s-4) 0; border: 0; border-top: 1px solid var(--ws-hair); }
 .uh .uh-plan { display: grid; gap: var(--s-4); margin: 0; padding: 0; border: 0; background: none; }
 .uh .uh-meter-row { font-size: 13px; color: var(--t2); }
-.uh .uh-meter-val { font-family: var(--mono); font-size: 13px; color: var(--t0); }
+.uh .uh-meter-val { font-family: var(--font); font-size: 13px; font-variant-numeric: tabular-nums; color: var(--t0); }
 .uh .uh-meter-track { height: 6px; background: var(--bg-3); }
 .uh .uh-meter-note { margin: 0; font-size: 13px; line-height: 1.4; color: var(--t2); }
 .uh .uh-plan-line { margin: 0; display: flex; align-items: center; gap: var(--s-3); font-size: 13px; color: var(--t2); }
@@ -439,7 +445,7 @@ h2.uh-continue-name { white-space: normal; }
 
 /* Start something: Palette Builder a third, six tools in one ink as 3 x 2 */
 .uh .uh-start { margin-top: var(--s-7); border: 0; background: none; border-radius: 0; overflow: visible; }
-.uh .uh-start-head { padding: 0 0 var(--s-3); border: 0; }
+.uh .uh-start-head { padding: 0 0 var(--s-3); border: 0; border-bottom: 1px solid var(--ws-hair); margin-bottom: 14px; }
 .uh .uh-start-h, .uh .uh-sec-h { font-size: 17px; font-weight: 560; letter-spacing: 0; }
 .uh .uh-alltools { height: 44px; font-size: 15px; border-color: var(--bh); }
 .uh .uh-quick { border: 1px solid var(--border); border-radius: var(--radius-2xl); overflow: hidden; background: var(--ws-hair); grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr)); }
@@ -450,7 +456,8 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-lead-ramp { height: 40px; margin-top: auto; border-radius: var(--radius-xs); }
 .uh .uh-tool { min-height: 76px; }
 .uh .uh-tool-ico { color: var(--t1); background: var(--bg-2); border-radius: var(--radius-s); }
-[data-theme="light"] .uh .uh-tool-ico { color: var(--t1); background: var(--bg-2); }
+/* Dark: --bg-2 is the card's own colour, so the chips sit one step up, as .uh-badge does. */
+[data-theme="dark"] .uh .uh-lead-ico, [data-theme="dark"] .uh .uh-tool-ico { background: var(--bg-3); }
 .uh .uh-tool-name { font-size: 15px; }
 .uh .uh-tool-note { font-size: 13px; color: var(--t2); }
 .uh .uh-start--lead { margin-top: 0; }
@@ -506,7 +513,7 @@ h2.uh-continue-name { white-space: normal; }
    second place under the work, shown on a phone only. */
 .uh .uh-clock-slot, .uh .uh-new-wrap--foot { display: none; }
 .uh .uh-clock-line { font-size: 15px; color: var(--t1); }
-.uh .uh-clk-time { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--t0); }
+.uh .uh-clk-time { font-family: var(--font); font-variant-numeric: tabular-nums; color: var(--t0); }
 .uh .uh-clk-short { display: none; }
 @media (max-width: 359px) {
   .uh .uh-clk-long { display: none; }
@@ -538,7 +545,18 @@ h2.uh-continue-name { white-space: normal; }
   .uh .uh-new { width: 100%; justify-content: center; }
   .uh .uh-new-wrap--head.is-after-work { display: none; }
   .uh .uh-new-wrap--foot { display: block; margin-top: var(--s-4); }
-  .uh .uh-cap { left: 0; right: 0; width: auto; }
+  /* The limit notice is in the flow on a phone, under the button that was pressed, so it pushes the page
+     down. As a popover it covered the AI meter and slid under the sticky header. */
+  .uh .uh-cap { position: static; width: auto; margin-top: var(--s-2); box-shadow: none; }
+  /* Scrolled into view when it opens: stop above the fixed tab bar, not under it. global.css already gives
+     html.has-tabbar a scroll-padding-bottom of the bar's height, which lands the notice flush on the bar;
+     this adds only 12px of air, so the notice ends 12px above the bar (not bar + 12 twice over). */
+  html.has-tabbar .uh .uh-cap { scroll-margin-bottom: var(--s-3); }
+  /* The Feedback pill floats s-4 above the bar, 36px tall, and covers the notice's right edge. Where it is
+     shown (it is display:none on a coarse pointer), stop the notice s-3 above the pill too. */
+  @media not all and (pointer: coarse) {
+    html.has-tabbar .uh .uh-cap { scroll-margin-bottom: calc(var(--s-4) + 36px + var(--s-3)); }
+  }
   /* Start something: four tools and an "All thirteen tools" row, 56px each. */
   .uh .uh-start-head .uh-alltools { display: none; }
   .uh .uh-tool[data-tool="semantic"], .uh .uh-tool[data-tool="palettes"] { display: none; }

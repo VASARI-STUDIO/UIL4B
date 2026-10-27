@@ -38,7 +38,8 @@
 //   DiscoverPicks  drop ' · Pro' from the locked meta               -> "a locked Discover card says what it is"
 //   LocalClock     hour: '2-digit'                                  -> "the hour has no leading zero"
 //   projects.css   remove `.uh-new-wrap--head.is-after-work { display: none }` -> "New project is one outlined button under the work"
-//   projects.css   `.uh-steps a` text-decoration: none             -> "the starter's steps ... underlined links"
+//   StarterCard    wrap each step's label in <Link to=...>          -> "the starter's steps are one column ... not links" (3 sizes) and "an account with no projects"
+//   projects.css   `.uh .uh-steps li` min-height/line-height 44px    -> "the starter's steps are one column ... not links" (32px rows)
 //   projects.css   `.uh-clock-line` font-size 12px                  -> "no text is smaller than 13px" (390 cases)
 //   projects.css   `.uh-today { display: block }` at 641-1000      -> "on a tablet, Today is one row"
 //   projects.css   drop the phone's hide rule for Semantic and Palette Library -> "Start something is four tools"
@@ -119,6 +120,17 @@ const box = (page, selector) => page.evaluate((sel) => {
   if (!r.width && !r.height) return null
   return { top: Math.round(r.top + scrollY), bottom: Math.round(r.bottom + scrollY), left: Math.round(r.left), right: Math.round(r.right) }
 }, selector)
+
+/** The face and number style a figure is drawn in: the Today card has one sans, tabular, and nothing mono. */
+const figureStyle = (locator) => locator.evaluate((el) => {
+  const cs = getComputedStyle(el)
+  return { family: cs.fontFamily, numeric: cs.fontVariantNumeric }
+})
+function expectSansTabular(style, what) {
+  expect(style.family, `${what} is not the mono face (${style.family})`).not.toMatch(/Geist Mono|monospace/i)
+  expect(style.family, `${what} is the page's sans face (${style.family})`).toMatch(/Switzer/)
+  expect(style.numeric, `${what} has tabular figures (${style.numeric})`).toContain('tabular-nums')
+}
 
 for (const size of SIZES) {
   test.describe(`the workspace at ${size.width}px (${size.name})`, () => {
@@ -232,8 +244,8 @@ for (const size of SIZES) {
       const starter = page.getByTestId('starter-card')
       await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
       await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colour', 'Type', 'Type scale', 'Tints'])
-      expect(await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href'))))
-        .toEqual(['/create/palette', '/create/font-pair', '/create/type-scale', '/create/tint'])
+      // The steps are text: Start the walkthrough is the way in, so the list holds no link.
+      await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link'), 'a step is a link again').toHaveCount(0)
       // No lead, no rows, and it is the first block under the title.
       await expect(page.locator('.uh-rows')).toHaveCount(0)
       await expect(page.locator('.uh-dash-main > .uh-continue')).toHaveCount(1)
@@ -242,9 +254,9 @@ for (const size of SIZES) {
       const start = await box(page, '.uh-start')
       expect(s.top, 'the starter is not under the title').toBeGreaterThanOrEqual(h.bottom - 1)
       expect(start.top, 'Start something is above the starter').toBeGreaterThanOrEqual(s.bottom - 1)
-      // Every step is a 44px target, and the list ends inside the card.
-      const steps = await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link').evaluateAll((a) => a.map((x) => Math.round(x.getBoundingClientRect().height)))
-      expect(Math.min(...steps), `a starter step is under 44px tall: ${steps}`).toBeGreaterThanOrEqual(44)
+      // Every step is a 32px text row (nothing to tap).
+      const steps = await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem').evaluateAll((a) => a.map((x) => Math.round(x.getBoundingClientRect().height)))
+      expect(steps, `the starter's steps are not 32px rows: ${steps}`).toEqual([32, 32, 32, 32])
     })
 
     for (const theme of ['light', 'dark']) {
@@ -628,8 +640,221 @@ test.describe('Discover for a Pro account', () => {
   })
 })
 
+// The meta line has one form across the row: "<mood>, N colours" on every card, or "N colours" on every card.
+// Never a mix. A locked card has no colours to classify, so a row with one is "N colours" throughout.
+const discoverMetas = (page) => page.locator('.uh-disc-card .uh-disc-meta').evaluateAll((els) => els.map((el) => el.textContent.trim()))
+const hasMood = (meta) => /^[A-Za-z][\w -]*, \d+ colours?$/.test(meta)
+
+test.describe('Discover shows a mood on every card or on none', () => {
+  for (const size of SIZES) {
+    test(`at ${size.width}px a free account's row is N colours throughout`, async ({ page }) => {
+      watch(page, 'a free designer looking at what is new in Discover')
+      await open(page, size)
+      await page.locator('.uh-disc').scrollIntoViewIfNeeded()
+      await expect(page.locator('.uh-disc-card')).toHaveCount(4)
+      expect(await page.locator('.uh-disc-card.is-locked').count(), 'no locked card on a free account: the row cannot mix').toBeGreaterThan(0)
+      const metas = await discoverMetas(page)
+      expect(metas.filter(hasMood), `a card shows a mood next to a card that cannot: ${JSON.stringify(metas)}`).toEqual([])
+      // Pins the free fixture's form. It cannot tell a mixed row from a uniform one while all four cards are locked
+      // (tried: the per-card mood code stays green here); the Pro tests below, with a library we supply, are the guard.
+      // Locked cards say what they are after the count; a card that is held (if the fixture has one) is the bare count.
+      for (const m of metas) expect(m, 'the meta is not "N colours"').toMatch(/^\d+ colours?( · Pro)?$/)
+    })
+  }
+
+  // A Pro account is answered with a library of our choosing, so the moods are hand-checked strings:
+  // classifyPalette gives these four Warm, Cool, Neutral and Warm (the first of its moods in the page's order),
+  // and gives PRUSSIAN none at all (the library's own Prussian & Peach, which is among its four newest).
+  const NEW = (id, name, colors, added) => ({ id, name, colors, added, kind: 'curated' })
+  const WARM = ['#7A2E12', '#C4521E', '#F2A488', '#FDEDE4']
+  const COOL = ['#0B2A45', '#1F4E79', '#5B9BD5', '#DCEBF7']
+  const NEUTRAL = ['#2B2B2B', '#6B6B6B', '#B5B5B5', '#F2F2F2']
+  const PRUSSIAN = ['#0B2A45', '#1F4E79', '#F2A488', '#FDEDE4']
+  async function openProRow(page, rows) {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await signIn(page, { plan: 'pro', projects: THREE })
+    // Registered after signIn's own route for the library, so it answers first.
+    await page.route(/\/api\/ai\?library=palettes/, (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ kind: 'palettes', total: rows.length, items: rows }),
+    }))
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-disc-card')).toHaveCount(4)
+    return discoverMetas(page)
+  }
+
+  test('when every card has a mood, every card shows it — the control', async ({ page }) => {
+    watch(page, 'a Pro designer whose newest palettes can all be classified')
+    const metas = await openProRow(page, [
+      NEW('a', 'Ember', WARM, '2026-09-04'), NEW('b', 'Tide', COOL, '2026-09-03'), NEW('c', 'Slate', NEUTRAL, '2026-09-02'), NEW('d', 'Clay', WARM, '2026-09-01'),
+    ])
+    expect(metas).toEqual(['Warm, 4 colours', 'Cool, 4 colours', 'Neutral, 4 colours', 'Warm, 4 colours'])
+  })
+
+  test('when one card has no mood, no card shows one', async ({ page }) => {
+    watch(page, 'a Pro designer with one palette that has no mood among the newest')
+    const metas = await openProRow(page, [
+      NEW('a', 'Ember', WARM, '2026-09-04'), NEW('b', 'Tide', COOL, '2026-09-03'), NEW('c', 'Slate', NEUTRAL, '2026-09-02'), NEW('d', 'Prussian', PRUSSIAN, '2026-09-01'),
+    ])
+    expect(metas, 'the row mixes "Warm, 4 colours" with "4 colours"').toEqual(['4 colours', '4 colours', '4 colours', '4 colours'])
+  })
+
+  test('the library\'s own newest four are one form, whichever it is', async ({ page }) => {
+    watch(page, 'a Pro designer looking at what is new in Discover')
+    await open(page, SIZES[2], { plan: 'pro' })
+    await expect(page.locator('.uh-disc-card')).toHaveCount(4)
+    const metas = await discoverMetas(page)
+    expect(new Set(metas.map(hasMood)).size, `the row mixes two forms: ${JSON.stringify(metas)}`).toBe(1)
+  })
+})
+
+test.describe('the Today card and the chips share one style', () => {
+  // MUTATION (made, named test red, restored): projects.css `.uh-today-time` and `.uh-meter-val` back to
+  // `font-family: var(--mono)` -> the figures test; the dark `.uh-lead-ico, .uh-tool-ico` rule removed -> the chips test.
+  test('the clock and both meter values are the sans face with tabular figures', async ({ page }) => {
+    watch(page, 'a designer reading the Today card on a laptop')
+    await open(page, SIZES[2])
+    const today = page.locator('.uh-today')
+    expectSansTabular(await figureStyle(today.locator('.uh-today-time')), 'the big clock')
+    await expect(today.locator('.uh-today-time')).toHaveText(/\d{1,2}[:.]\d{2}/)
+    const ai = today.locator('.uh-meter', { hasText: 'AI generations today' }).locator('.uh-meter-val')
+    await expect(ai).toHaveText(/^\d+ of \d+$/)
+    expectSansTabular(await figureStyle(ai), 'the AI value')
+    const projects = today.getByTestId('project-quota-note').locator('.uh-meter-val')
+    await expect(projects).toHaveText('3 of 3')
+    expectSansTabular(await figureStyle(projects), '"3 of 3"')
+  })
+
+  test('in dark the tool and lead chips sit one step up from the card, level with the project badge', async ({ page }) => {
+    watch(page, 'a designer on a laptop in dark')
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await open(page, SIZES[2])
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    const bg = (sel) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundColor)
+    const badge = await bg('.uh-badge')
+    // The surface each chip sits on: its own card (the tool row, the lead tile).
+    const toolCard = await bg('.uh-tool')
+    const leadCard = await bg('.uh-lead')
+    expect(badge, 'the badge is a drawn colour').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+    expect(badge, 'the badge is not the tool card colour, or this test compares nothing').not.toBe(toolCard)
+    expect(await bg('.uh-tool-ico'), 'a tool chip is the badge colour').toBe(badge)
+    expect(await bg('.uh-lead-ico'), 'the lead chip is the badge colour').toBe(badge)
+    expect(await bg('.uh-tool-ico'), 'a tool chip is not its card colour').not.toBe(toolCard)
+    expect(await bg('.uh-lead-ico'), 'the lead chip is not its card colour').not.toBe(leadCard)
+  })
+})
+
 test.describe('on a phone, the page is composed for a thumb', () => {
   const phone = SIZES[0]
+
+  test('the project-limit notice sits in the flow under New project, clear of the meters', async ({ page }) => {
+    watch(page, 'a free designer at the project limit pressing New project on a phone')
+    await open(page, phone)
+    await expect(page.getByTestId('project-quota-note')).toContainText('3 of 3')
+    // At 640 and under the head copy of New project is hidden and the one under the work is the button.
+    const button = page.locator('.uh-new-wrap--foot .uh-new')
+    await button.scrollIntoViewIfNeeded()
+    await button.click()
+    const refusal = page.getByTestId('project-create-refusal')
+    await expect(refusal).toBeVisible()
+    await expect(refusal.getByRole('link', { name: 'See plans' })).toBeVisible()
+    const where = await page.evaluate(() => {
+      const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { top: b.top + scrollY, bottom: b.bottom + scrollY, left: b.left, right: b.right } }
+      return { button: r('.uh-new-wrap--foot .uh-new'), cap: r('[data-testid="project-create-refusal"]'), meters: r('.uh-meters'), position: getComputedStyle(document.querySelector('[data-testid="project-create-refusal"]')).position }
+    })
+    expect(where.cap.top, 'the notice starts above the bottom of the button').toBeGreaterThanOrEqual(where.button.bottom - 1)
+    // No overlap with the meters: the notice ends before they start, or starts after they end.
+    const overlaps = where.cap.top < where.meters.bottom - 1 && where.cap.bottom > where.meters.top + 1
+      && where.cap.left < where.meters.right && where.cap.right > where.meters.left
+    expect(overlaps, `the notice (${where.cap.top}-${where.cap.bottom}) covers the meters (${where.meters.top}-${where.meters.bottom})`).toBe(false)
+    expect(where.cap.right, 'the notice runs off the right edge').toBeLessThanOrEqual(phone.width)
+    expect(where.cap.left, 'the notice runs off the left edge').toBeGreaterThanOrEqual(0)
+    expect(where.position, 'the notice floats over the page instead of sitting in it').toBe('static')
+  })
+
+  // The notice opens in the flow under the foot New project button. With the page scrolled to its foot that
+  // button sits just above the fixed tab bar, so the notice would open under the bar unless the page moves.
+  // The page's own scroll-padding-bottom (the tab bar's height, global.css) lands the notice flush on the bar;
+  // projects.css adds 12px (`scroll-margin-bottom: var(--s-3)`) once. So the gap is 12px, not 0 and not bar + 12.
+  // The scrollIntoView call is spied on from page start so the motion setting is read from the call itself
+  // (`behavior`), not inferred from where the page ends up: both settings land on the same pixel.
+  // MUTATION (made, named test red, restored):
+  //   Projects.jsx   the `prefersReducedMotion() ? 'auto' : 'smooth'` ternary flipped    -> "motion on" and "reduced" (behavior)
+  //   projects.css   scroll-margin-bottom back to calc(var(--tabbar-h) + env(...) + var(--s-3))  -> both (gap is 12 + bar, not 12)
+  //   Projects.jsx   drop `ref={showCap}`                                                 -> both (no call; the notice is under the bar)
+  for (const motion of ['on', 'reduced']) {
+    test(`the limit notice ends above the tab bar when it opens from the page foot, motion ${motion}`, async ({ page }) => {
+      watch(page, `a free designer at the foot of the page pressing New project, motion ${motion}`)
+      // The Settings choice, as AppearanceContext stores it. The OS says "no preference" either way, so the
+      // page's own setting is the only thing that differs between the two runs.
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await page.addInitScript((reduced) => {
+        try { localStorage.setItem('vs-appearance', JSON.stringify({ reducedMotion: reduced })) } catch { /* private mode */ }
+      }, motion === 'reduced')
+      // Record every scrollIntoView aimed at the notice, then let the real one run.
+      await page.addInitScript(() => {
+        window.__capScrolls = []
+        const real = Element.prototype.scrollIntoView
+        Element.prototype.scrollIntoView = function (arg) {
+          if (this.getAttribute && this.getAttribute('data-testid') === 'project-create-refusal') {
+            window.__capScrolls.push({ behavior: arg && typeof arg === 'object' ? arg.behavior : undefined, block: arg && typeof arg === 'object' ? arg.block : undefined })
+          }
+          return real.apply(this, arguments)
+        }
+      })
+      await open(page, phone)
+      await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', motion === 'reduced' ? 'true' : 'false')
+      await expect(page.locator('html')).toHaveClass(/has-tabbar/)
+      const button = page.locator('.uh-new-wrap--foot .uh-new')
+      await expect(button).toBeVisible()
+      // Scroll until the foot button's bottom edge is 8px above the tab bar: the thumb's position when it
+      // reaches the end of the work. (The button is not at the end of the document; Discover and exports follow.)
+      await page.evaluate(() => {
+        const b = document.querySelector('.uh-new-wrap--foot .uh-new').getBoundingClientRect()
+        const bar = document.querySelector('nav.pnav-tabs').getBoundingClientRect()
+        window.scrollBy({ top: b.bottom - (bar.top - 8), behavior: 'instant' })
+      })
+      const place = () => page.evaluate(() => {
+        const b = document.querySelector('.uh-new-wrap--foot .uh-new').getBoundingClientRect()
+        return { gap: Math.round(document.querySelector('nav.pnav-tabs').getBoundingClientRect().top - b.bottom), top: Math.round(b.top) }
+      })
+      // The setup is the case the fix is for: the button is whole on the screen with the bar right under it.
+      await expect.poll(async () => (await place()).gap).toBe(8)
+      expect((await place()).top, 'the button is on the screen').toBeGreaterThan(0)
+      await button.click()
+      const notice = page.getByTestId('project-create-refusal')
+      await expect(notice).toBeVisible()
+      // Wait for any smooth scroll to finish: the scroll position holds still for several frames.
+      await page.evaluate(() => new Promise((resolve) => {
+        let last = -1, still = 0
+        const tick = () => { still = scrollY === last ? still + 1 : 0; last = scrollY; still >= 8 ? resolve() : requestAnimationFrame(tick) }
+        requestAnimationFrame(tick)
+      }))
+      const edges = await page.evaluate(() => ({
+        noticeTop: document.querySelector('[data-testid="project-create-refusal"]').getBoundingClientRect().top,
+        noticeBottom: document.querySelector('[data-testid="project-create-refusal"]').getBoundingClientRect().bottom,
+        tabTop: document.querySelector('nav.pnav-tabs').getBoundingClientRect().top,
+        tabPosition: getComputedStyle(document.querySelector('nav.pnav-tabs')).position,
+        pill: (() => {
+          const el = document.querySelector('.global-feedback-btn')
+          if (!el || getComputedStyle(el).display === 'none') return null
+          const r = el.getBoundingClientRect()
+          return r.height ? { top: r.top, bottom: r.bottom } : null
+        })(),
+      }))
+      expect(edges.tabPosition, 'the tab bar is the fixed one').toBe('fixed')
+      // The notice lands 12px above whatever floats lowest over it: the Feedback
+      // pill where it shows, otherwise the tab bar.
+      const ceiling = edges.pill ? edges.pill.top : edges.tabTop
+      const gap = ceiling - edges.noticeBottom
+      expect(Math.abs(gap - 12), `the notice (bottom ${edges.noticeBottom}) ends ${gap}px above ${edges.pill ? 'the Feedback pill' : 'the tab bar'} (top ${ceiling}); it should be 12`).toBeLessThanOrEqual(1)
+      const scrolls = await page.evaluate(() => window.__capScrolls)
+      expect(scrolls, 'the notice asked to be scrolled into view once, as it mounted').toHaveLength(1)
+      if (motion === 'on') expect(scrolls[0].behavior, 'with motion on the scroll glides').toBe('smooth')
+      else expect(['auto', undefined], `with reduced motion the scroll jumps (behavior ${scrolls[0].behavior})`).toContain(scrolls[0].behavior)
+      expect(edges.noticeTop, 'the notice is on the screen, not scrolled past the top').toBeGreaterThanOrEqual(0)
+    })
+  }
 
   test('the date and time are one line under the title, and the big clock is not drawn', async ({ page }) => {
     watch(page, 'a designer glancing at the top of their workspace on a phone')
@@ -643,7 +868,7 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     expect(where.line.top, 'the date line is above the title').toBeGreaterThanOrEqual(where.h1Bottom - 1)
     expect(where.line.bottom, 'the date line is not above the work').toBeLessThanOrEqual(where.firstBlock + 1)
     expect(where.line.height, 'it is one line, not a block').toBeLessThan(30)
-    // The weekday and month are the browser's own; the time is a clock reading in the mono face.
+    // The weekday and month are the browser's own; the time is a clock reading in the page's sans, tabular.
     const expected = await page.evaluate(() => {
       const d = new Date()
       return { weekday: d.toLocaleDateString([], { weekday: 'long' }), month: d.toLocaleDateString([], { month: 'long' }) }
@@ -651,7 +876,7 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     await expect(line).toContainText(expected.weekday)
     await expect(line).toContainText(expected.month)
     await expect(line.locator('.uh-clk-time')).toHaveText(/^\d{1,2}[:.]\d{2}/)
-    expect(await line.locator('.uh-clk-time').evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Geist Mono|monospace/)
+    expectSansTabular(await figureStyle(line.locator('.uh-clk-time')), 'the phone clock')
     await expect(page.locator('.uh-today-clock'), 'the big clock is hidden on a phone').toBeHidden()
   })
 
@@ -779,35 +1004,30 @@ test.describe('on a tablet, Today is one row', () => {
 
 test.describe('the starter\'s steps', () => {
   for (const size of SIZES) {
-    test(`at ${size.width}px are one column of numbered, underlined links in the accent`, async ({ page }) => {
+    test(`at ${size.width}px are one column of numbered plain text in 32px rows, not links`, async ({ page }) => {
       watch(page, 'a new account reading the walkthrough')
       await open(page, size, { projects: [] })
-      const steps = await page.getByTestId('starter-card').getByRole('list', { name: 'The walkthrough' }).evaluate((ol) => {
-        const probe = document.createElement('i')
-        probe.style.color = 'var(--ws-acc-text)'
-        ol.append(probe)
-        const accent = getComputedStyle(probe).color
-        probe.remove()
-        return {
-          tag: ol.tagName,
-          marker: getComputedStyle(ol).listStyleType,
-          rows: [...ol.querySelectorAll('li')].map((li) => {
-            const r = li.getBoundingClientRect()
-            const a = li.querySelector('a')
-            const cs = getComputedStyle(a)
-            return { top: Math.round(r.top), left: Math.round(r.left), underline: cs.textDecorationLine, accent: cs.color === accent }
-          }),
-        }
-      })
+      const steps = await page.getByTestId('starter-card').getByRole('list', { name: 'The walkthrough' }).evaluate((ol) => ({
+        tag: ol.tagName,
+        marker: getComputedStyle(ol).listStyleType,
+        interactive: ol.querySelectorAll('a, button, [tabindex]').length,
+        rows: [...ol.querySelectorAll('li')].map((li) => {
+          const r = li.getBoundingClientRect()
+          const cs = getComputedStyle(li)
+          return { top: Math.round(r.top), left: Math.round(r.left), height: Math.round(r.height), underline: cs.textDecorationLine, size: cs.fontSize }
+        }),
+      }))
       expect(steps.tag).toBe('OL')
       expect(steps.marker, 'the steps are a numbered sequence').toBe('decimal')
+      expect(steps.interactive, 'a step is something to click or focus').toBe(0)
       expect(steps.rows).toHaveLength(4)
       for (let i = 1; i < steps.rows.length; i++) {
-        expect(steps.rows[i].top, `step ${i + 1} is not under step ${i}`).toBeGreaterThan(steps.rows[i - 1].top)
         expect(steps.rows[i].left, `step ${i + 1} is not in the same column`).toBe(steps.rows[0].left)
+        expect(steps.rows[i].top - steps.rows[i - 1].top, `step ${i + 1} is not 32px under step ${i}`).toBe(32)
       }
-      expect(steps.rows.map((r) => r.underline), 'a link is not underlined').toEqual(Array(4).fill('underline'))
-      expect(steps.rows.map((r) => r.accent), 'a link is not the accent colour').toEqual(Array(4).fill(true))
+      expect(steps.rows.map((r) => r.height), 'a step row is not 32px').toEqual([32, 32, 32, 32])
+      expect(steps.rows.map((r) => r.underline), 'a step looks like a link').toEqual(Array(4).fill('none'))
+      expect(steps.rows.map((r) => r.size), 'a step is not 15px').toEqual(Array(4).fill('15px'))
     })
   }
 })
