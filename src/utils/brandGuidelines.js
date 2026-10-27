@@ -102,11 +102,12 @@
 // reimplemented, so this document and the book can never state different ratios
 // for the same pair.
 
-import { grade, inkFor, readDesign, typeLadder } from './styleGuideExport.js'
-import { roleLabel } from './paletteRoles.js'
+import { contrast, grade, inkFor, readDesign, typeLadder } from './styleGuideExport.js'
+import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
-import { esc, orderSections } from './exportTemplates/shared.js'
+import { esc, orderSections, MAX_SLOTS } from './exportTemplates/shared.js'
+import { deriveRoles, isNeutral } from './exportTemplates/roles.js'
 import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
 
 const DEFAULT_TEMPLATE = 'presentation'
@@ -307,13 +308,18 @@ function opening(section, field, ink, palette) {
 
 /* ── logo pages ───────────────────────────────────────────────────────────── */
 
-function markPage(ctx, folio) {
-  const { logo } = ctx.d
-  const facts = [
+/** What is known about the supplied file: [label, value] pairs. */
+function logoFactsOf(logo) {
+  return [
     ['Format', logo.type === 'image/svg+xml' ? 'SVG vector' : logo.type.replace('image/', '').toUpperCase()],
     logo.width && logo.height ? ['Supplied at', `${Math.round(logo.width)} × ${Math.round(logo.height)}`] : null,
     logo.aspect ? ['Proportion', `${logo.aspect.toFixed(2)} : 1`] : null,
   ].filter(Boolean)
+}
+
+function markPage(ctx, folio) {
+  const { logo } = ctx.d
+  const facts = logoFactsOf(logo)
   return spread(ctx, {
     section: 'logo',
     title: 'The mark',
@@ -337,13 +343,18 @@ function markPage(ctx, folio) {
  * ground, because inventing a reversed lockup is inventing brand artwork. So the
  * page reads as a test rather than a specification, and says so.
  */
-function groundsPage(ctx, folio) {
-  const { logo, palette } = ctx.d
-  const grounds = [
+/** The grounds the mark is checked on: paper, ink, then the first four brand colours. */
+function groundList(d) {
+  return [
     { bg: '#FFFFFF', label: 'Paper', border: true },
     { bg: '#111114', label: 'Ink' },
-    ...palette.slice(0, 4).map((hex, i) => ({ bg: hex, label: roleLabel(ctx.d.harmony, i) })),
-  ]
+    ...d.palette.slice(0, 4).map((hex, i) => ({ bg: hex, label: roleLabel(d.harmony, i) })),
+  ].map((g) => ({ ...g, ink: inkFor(g.bg).ink }))
+}
+
+function groundsPage(ctx, folio) {
+  const { logo } = ctx.d
+  const grounds = groundList(ctx.d)
   const tiles = grounds.map((g, i) => `<div class="gr${g.border ? ' gr-edge' : ''}${fillRow(i, grounds.length)}" style="background:${g.bg}">
       ${markImg(logo, { cls: 'mk-tile' })}
       <span class="gr-label" style="color:${inkFor(g.bg).ink}">${esc(g.label)}</span>
@@ -526,9 +537,9 @@ function scalePage(ctx, ladder, folio) {
  * what it is. The absent list is generated from the same facts that decided the
  * sections, so it cannot describe a document other than the one printed.
  */
-function scopePage(ctx, folio) {
+function scopeFacts(ctx) {
   const d = ctx.d
-  const covers = ctx.sections.map(s => `<li>${esc(s.title)}: ${esc(s.leaves.join(', ').toLowerCase())}</li>`).join('')
+  const covers = ctx.sections.map(s => `${s.title}: ${s.leaves.join(', ').toLowerCase()}`)
   const absent = []
   if (!d.logo) {
     absent.push(`A logo section: ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel and these pages are generated from it.`)
@@ -538,6 +549,12 @@ function scopePage(ctx, folio) {
   absent.push('Reversed and single-colour versions of the mark. Recolouring supplied artwork invents a lockup nobody approved, so this document checks the mark on each ground instead of redrawing it.')
   absent.push('Photographic applications: signage, packaging, merchandise, a card in a hand. There is no imagery in this system to build them from, and inventing some would misrepresent a brand rather than document it.')
   absent.push('Tone of voice, motion and iconography rules. Those are brand decisions taken outside these tools, so this document does not speak for them.')
+  return { covers, absent }
+}
+
+function scopePage(ctx, folio) {
+  const { covers: coverList, absent } = scopeFacts(ctx)
+  const covers = coverList.map(c => `<li>${esc(c)}</li>`).join('')
   return `<section class="sl sl-scope">
   ${rail(ctx, null, folio)}
   <div class="hd">
@@ -557,6 +574,14 @@ function scopePage(ctx, folio) {
 </section>`
 }
 
+/** The colours as slot objects for a template: name, role, kind, ink and where each lands. */
+function buildSlots(d) {
+  return d.palette.slice(0, MAX_SLOTS).map((hex, i) => {
+    const { ink, ratio } = inkFor(hex)
+    return { i, hex, name: colorName(hex), role: roleLabel(d.harmony, i), kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent', ink, ratio, grade: grade(ratio), lands: slotLandsBook(i), placed: slotPlaced(i) }
+  })
+}
+
 /* ── the document ─────────────────────────────────────────────────────────── */
 
 /**
@@ -566,7 +591,7 @@ function scopePage(ctx, folio) {
  * a Pro export, so there is no free variant to mark. A gate that hands over a
  * degraded paid artefact teaches the buyer that the paid thing is worse.
  */
-export function buildBrandGuidelines(design, { projectName = 'Design System', date = new Date(), template = DEFAULT_TEMPLATE } = {}) {
+export function buildBrandGuidelines(design, { projectName = 'Design System', date = new Date(), template = DEFAULT_TEMPLATE, fontData = null } = {}) {
   // The id is only a lookup key; the layout is the module in GUIDELINES_TEMPLATES.
   const tpl = Object.hasOwn(GUIDELINES_TEMPLATES, template) ? GUIDELINES_TEMPLATES[template] : GUIDELINES_TEMPLATES[DEFAULT_TEMPLATE]
   const d = readGuidelines(design)
@@ -581,12 +606,25 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
   const field = d.base || '#111114'
   const fieldInk = inkFor(field).ink
   const mark = d.logo ? markImg(d.logo, { cls: 'mk-cover', alt: `${projectName} logo` }) : esc(projectName)
-  const pages = [tpl.cover({ ...ctx, field, fieldInk, year, mark })]
+  // What a template that composes its own deck (`slides`) may read, beside the sections:
+  // the page roles, the colour slots, the logo's helpers and the scope facts.
+  Object.assign(ctx, {
+    field, fieldInk, year, iso, mark, fontData, contrast, ladder: typeLadder(d),
+    roles: deriveRoles(d.palette, { contrast, primary: d.base || d.palette[0] }),
+    slots: buildSlots(d),
+    grounds: d.logo ? groundList(d) : [],
+    logoFacts: d.logo ? logoFactsOf(d.logo) : [],
+    markImg: (opts) => markImg(d.logo, opts),
+    clearSpaceAt: (mm) => clearSpace(d.logo, mm),
+  })
+  ctx.scope = scopeFacts(ctx)
+  const pages = [tpl.cover({ ...ctx })]
   let folio = 0
   const push = (html) => pages.push(html)
   const numbered = (make) => { folio += 1; push(make(folio)) }
 
-  for (const section of sections) {
+  if (tpl.slides) tpl.slides(ctx).filter(Boolean).forEach(push)
+  for (const section of tpl.slides ? [] : sections) {
     const openField = section.id === 'colour' ? field : '#111114'
     push(opening(section, openField, inkFor(openField).ink, d.palette))
 
@@ -638,7 +676,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
     }
   }
 
-  numbered((f) => scopePage(ctx, f))
+  if (!tpl.slides) numbered((f) => scopePage(ctx, f))
 
   return `<!doctype html>
 <html lang="en">

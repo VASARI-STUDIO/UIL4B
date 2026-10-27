@@ -395,10 +395,12 @@ test('includeFiles covers every file under src/utils/exportTemplates/', () => {
 // left out of includeFiles is a book that quietly loses its face (the reader falls
 // back to the system face), and a font nothing uses is shipped for nothing.
 test('includeFiles carries exactly the chrome fonts the book templates embed', () => {
-  const dir = path.join(root, 'src', 'utils', 'exportTemplates', 'book')
   const used = new Set()
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.js'))) {
-    for (const m of fs.readFileSync(path.join(dir, file), 'utf8').matchAll(/file:\s*'([a-z0-9-]+\.woff2)'/g)) used.add(`fonts/${m[1]}`)
+  for (const sub of ['book', 'guidelines']) {
+    const dir = path.join(root, 'src', 'utils', 'exportTemplates', sub)
+    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.js'))) {
+      for (const m of fs.readFileSync(path.join(dir, file), 'utf8').matchAll(/file:\s*'([a-z0-9-]+\.woff2)'/g)) used.add(`fonts/${m[1]}`)
+    }
   }
   assert.ok(used.size >= 3, 'the book templates name fewer than three chrome fonts, so this check proves nothing')
   const bundled = bundledFonts()
