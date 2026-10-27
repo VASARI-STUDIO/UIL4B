@@ -26,7 +26,7 @@ const loadPair = () => import('../components/palette/PairExample')
 function PairUnavailable({ onRetry }) {
   return (
     <div className="cc-pv cc-pv-wait cc-pv-fail" role="status">
-      <p className="cc-lede">{"This view didn't load. Try again."}</p>
+      <p className="cc-lede">{"This view didn't load."}</p>
       <ToolButton onClick={onRetry}>Try again</ToolButton>
     </div>
   )
