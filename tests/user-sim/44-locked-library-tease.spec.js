@@ -277,17 +277,17 @@ test.describe('the same gate in the Palette Builder brands panel', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor looking for a brand palette')
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Explore palettes')
+    await clickPaletteAction(page, 'Suggest variations and brands', 'Suggest')
     await page.locator('button[role="tab"]', { hasText: 'Brands' }).click()
-    await expect(page.locator('.plb-galpopup-body .plb-varrow').first()).toBeVisible()
+    await expect(page.locator('.plb-galpopup-body .plb-sg-card--brand').first()).toBeVisible()
   })
 
   test('the panel lists the free brands, three placeholders and one wall', async ({ page }) => {
     const body = page.locator('.plb-galpopup-body')
     // Free brands are real, loadable rows; the locked tail is placeholders.
-    await expect(body.locator('.lockt-row')).toHaveCount(3)
+    await expect(body.locator('.plb-sg-card--locked')).toHaveCount(3)
     await expect(body.locator('.lockt-cta-btn')).toHaveCount(1)
-    expect(await body.locator('.plb-varrow:not(.lockt-row)').count(),
+    expect(await body.locator('.plb-sg-card--brand:not(.plb-sg-card--locked)').count(),
       'the free brand rows are missing — the panel did not render').toBe(FREE.length)
   })
 
@@ -302,7 +302,9 @@ test.describe('the same gate in the Palette Builder brands panel', () => {
   })
 
   test('a locked placeholder row cannot be activated', async ({ page }) => {
-    const rows = page.locator('.lockt-row')
+    const rows = page.locator('.plb-galpopup-body .plb-sg-card--locked')
+    // Positive control: the locked rows are really there, so "no controls" means something.
+    await expect(rows).toHaveCount(3)
     expect(await rows.locator('button, a, [tabindex]').count(),
       'a locked row carries a control that would load a brand').toBe(0)
   })

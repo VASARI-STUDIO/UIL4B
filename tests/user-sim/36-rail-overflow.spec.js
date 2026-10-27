@@ -198,12 +198,14 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
   // the primary and never leaves the row, undo/redo are the last actions to
   // go, then Randomise. Reset palette is an Extra tools row, one named tap away with
   // no swipe. What is asserted is exactly that, at the audit's widths.
+  // Redo (priority 4) leaves the row before Undo and Randomise (5) do: on the
+  // row from 640, in Extra tools on a phone.
   const ON_ROW = [
     ['Randomise', '.plb-random'],
     ['Undo', '.plb-undo'],
-    ['Redo', '.plb-redo'],
     ['Save or share', '.plb-save'],
   ]
+  const REDO_ON_ROW_FROM = 640
 
   for (const width of [390, 640, 641, 834]) {
     test(`Save, Undo and Randomise need no swipe, and Reset is one named tap, at ${width}px`, async ({ page }) => {
@@ -224,10 +226,10 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
           out[name] = { inside: b.left >= -1 && b.right <= vw + 1 && b.width > 0, box: [Math.round(b.left), Math.round(b.right)] }
         }
         return { vw, controls: out, scrolls: el.scrollWidth > el.clientWidth + 1 }
-      }, ON_ROW)
+      }, width >= REDO_ON_ROW_FROM ? [...ON_ROW, ['Redo', '.plb-redo']] : ON_ROW)
 
       expect(report.scrolls, 'the toolbar is a row, never a scroller').toBe(false)
-      for (const [name] of ON_ROW) {
+      for (const name of Object.keys(report.controls)) {
         const c = report.controls[name]
         expect(c.missing, `${name} should be on the toolbar row at ${width}px`).toBeFalsy()
         expect(c.inside, `${name} must be whole on screen at ${width}px: ${JSON.stringify(c.box)} of ${report.vw}`).toBe(true)
@@ -236,7 +238,10 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
       // Reset: the overflow names it, and pressing it resets.
       const before = await page.locator('.plb-col .plb-hex').allTextContents()
       await bar.getByRole('button', { name: 'Extra tools' }).click()
-      await page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Reset palette' }).click()
+      const tools = page.getByRole('dialog', { name: 'Extra tools' })
+      // Redo is never lost: where it is off the row, it is a named row here.
+      if (width < REDO_ON_ROW_FROM) await expect(tools.getByRole('button', { name: 'Redo', exact: true }), `Redo is off the row at ${width}px, so Extra tools must list it`).toBeVisible()
+      await tools.getByRole('button', { name: 'Reset palette' }).click()
       await expect.poll(async () => (await page.locator('.plb-col .plb-hex').allTextContents()).join()).not.toBe(before.join())
     })
   }
@@ -252,9 +257,13 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
     const bar = page.locator('.plb [data-tool-toolbar]')
     await expect(bar).not.toHaveClass(/is-measuring/)
 
-    for (const name of ['Undo', 'Redo', 'Randomise', 'Extra tools', 'Save or share']) {
+    for (const name of ['Undo', 'Randomise', 'Suggest variations and brands', 'Extra tools', 'Save or share']) {
       await expect(bar.getByRole('button', { name, exact: true })).toHaveCount(1)
     }
+    // Redo is in Extra tools on a phone, under the same name.
+    await bar.getByRole('button', { name: 'Extra tools', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Redo', exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
     const labelHidden = await bar.evaluate((el) => ({
       randomise: getComputedStyle(el.querySelector('.plb-random .tl-btn-label')).display,
       tools: getComputedStyle(el.querySelector('.tl-more-btn .tl-btn-label')).display,
