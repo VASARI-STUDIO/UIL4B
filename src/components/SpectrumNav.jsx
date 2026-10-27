@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
-import { crossRouteHashClick, normPath, onSalesPage, salesHref } from './spectrum/salesLinks'
+import { crossRouteHashClick, normPath, salesHref } from './spectrum/salesLinks'
 import { useCloseOnBack } from './spectrum/useCloseOnBack'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { SEARCH_KEY } from '../config/shortcuts'
@@ -36,12 +36,12 @@ const CommandPalette = lazy(() => import('./CommandPalette'))
 // the app, which "Open the toolkit" enters directly, with no sign-up gate.
 // The "/" search shortcut still opens the command palette — it draws nothing.
 //
-// DESTINATIONS. Tools is the sales page's bench (`#bench`). Pricing is the
+// DESTINATIONS. Tools is the `/tools` page. Pricing is the
 // separate Pricing screen, which is the route `/plans`. On mobile is the
 // "mobile" screen, `/mobile`. Off the sales page, Tools goes to `/home#bench`
 // and lands there (salesLinks.js).
 const QUIET = [
-  { id: 'tools', label: 'Tools', hash: '#bench' },
+  { id: 'tools', label: 'Tools', to: '/tools' },
   { id: 'pricing', label: 'Pricing', to: '/plans' },
   { id: 'mobile', label: 'On mobile', to: '/mobile' },
 ]
@@ -50,7 +50,7 @@ const QUIET = [
 // is Tools — the design's `goLanding`.
 function activeQuiet(pathname) {
   const p = normPath(pathname)
-  if (onSalesPage(p)) return 'tools'
+  if (p === '/tools') return 'tools'
   if (p === '/plans') return 'pricing'
   if (p === '/mobile') return 'mobile'
   return null

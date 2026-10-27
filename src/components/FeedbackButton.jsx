@@ -48,7 +48,7 @@ const NO_BUTTON = new Set([
   // with the footer attribution.
   // '/plans' and '/mobile' are Spectrum screens now, with the marketing nav and
   // footer like '/', so they take no fixed button either.
-  '/', '/home', '/plans', '/mobile', '/welcome', '/onboarding', '/feedback',
+  '/', '/home', '/plans', '/mobile', '/tools', '/welcome', '/onboarding', '/feedback',
 ])
 
 export default function FeedbackButton() {

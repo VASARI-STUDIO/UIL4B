@@ -113,19 +113,12 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     await ctx.close()
   })
 
-  test('Tools from /mobile lands ON the bench of the sales page', async ({ page }) => {
+  test('Tools from /mobile opens the /tools page', async ({ page }) => {
     await go(page, '/mobile')
     await page.locator('.spnav-quiet-link', { hasText: 'Tools' }).click()
-    await expect(page).toHaveURL(/\/home#bench$/)
-    // Mutation: skip lenis.resize() in landOnHash → Lenis clamps to the /mobile
-    // page's own scroll limit (measured stopping at 1186px) and the section
-    // stays far below the fold.
-    await expect.poll(async () => page.evaluate(() => {
-      const r = document.getElementById('bench')?.getBoundingClientRect()
-      return r ? Math.round(r.top) : null
-    }), { message: 'the bench never came to the top of the viewport' }).toBeLessThan(200)
-    const top = await page.evaluate(() => document.getElementById('bench').getBoundingClientRect().top)
-    expect(top, 'the section landed under the fixed nav').toBeGreaterThanOrEqual(0)
+    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /home#bench.
+    await expect(page).toHaveURL(/\/tools$/)
+    await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Tools')
   })
 
   test('Pricing is the design\'s separate Pricing screen, /plans', async ({ page }) => {
@@ -174,15 +167,14 @@ test.describe('the back gesture and the menu', () => {
     await expect(page).toHaveURL(/127\.0\.0\.1:\d+\/$/)
   })
 
-  test('a section link in the menu scrolls there without pushing over the menu\'s entry', async ({ page }) => {
+  test('Tools in the menu closes it and opens the /tools page', async ({ page }) => {
     await go(page, '/')
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     await page.locator('.spnav-menu .spnav-mi', { hasText: 'Tools' }).click()
+    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /#bench and the page stays the sales page.
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
-    await expect(page).toHaveURL(/#bench$/)
-    await expect.poll(async () => page.evaluate(() => Math.round(document.getElementById('bench').getBoundingClientRect().top)),
-      { message: 'the bench never came up' }).toBeLessThan(200)
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 
@@ -193,7 +185,7 @@ test.describe('the marketing footer is the design\'s', () => {
     // TOOLS / PROJECT / LEGAL are the design's (1606-1629); EXPLORE carries the
     // destinations AppFooter reaches that the design's three do not.
     await expect(footer.locator('.sp-footer-col-h')).toHaveText(['TOOLS', 'PROJECT', 'EXPLORE', 'LEGAL'])
-    await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['Colour', 'Type', 'Assets', 'Imagery'])
+    await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['All tools', 'Colour', 'Type', 'Assets', 'Imagery'])
     await expect(footer.getByRole('link', { name: 'Cookies' }), 'there is no cookies page to link').toHaveCount(0)
     await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
     // The founder note and credit link sit beside it.

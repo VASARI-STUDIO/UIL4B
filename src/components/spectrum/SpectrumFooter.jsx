@@ -179,6 +179,7 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
               while still sitting inside a Footer navigation landmark. */}
           <nav className="sp-footer-links" aria-label="Footer">
             <Column heading="TOOLS">
+              <li><NavLink to="/tools">All tools</NavLink></li>
               {TOOLS.map(([groupId, label]) => (
                 <li key={groupId}><NavLink to={categoryDestination(groupId)}>{label}</NavLink></li>
               ))}

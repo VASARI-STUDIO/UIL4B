@@ -48,7 +48,7 @@ const TOOLS = [
     menuOnly: ['Open in Gradient', 'History', 'Reset palette'],
   },
   { route: '/create/gradient', actions: ['Random', 'From palette', 'Reset', 'Submit for review'], primary: /^Copy /, title: 'Gradient' },
-  { route: '/create/contrast', actions: [], primary: /^Swap/, title: 'Contrast Checker' },
+  { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker' },
   { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint' },
   // Signed out, so "Add to project" (canSaveProjects) is not offered here.
   { route: '/create/semantic-color', actions: [], primary: /^Copy /, title: 'Semantic Colour' },
