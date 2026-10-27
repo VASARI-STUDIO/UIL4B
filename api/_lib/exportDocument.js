@@ -131,12 +131,17 @@ function pickDesign(design) {
   const d = design && typeof design === 'object' ? design : {}
   const fonts = d.fonts && typeof d.fonts === 'object' ? d.fonts : {}
   const ts = d.typeScale && typeof d.typeScale === 'object' ? d.typeScale : undefined
+  // Only the description of the identity: a string, whitespace folded, trimmed, at most 280
+  // characters (the same rule as utils/kitIdentity.js, kept local so the function bundle stays small).
+  const raw = d.identity && typeof d.identity === 'object' ? d.identity.description : ''
+  const description = typeof raw === 'string' ? raw.replace(/\s+/g, ' ').trim().slice(0, 280) : ''
   return {
     palette: d.palette,
     gradient: d.gradient,
     fonts: { heading: pickFont(fonts.heading), body: pickFont(fonts.body) },
     typeScale: ts && { ...ts, headingWeight: safeWeight(ts.headingWeight) ?? undefined },
     logo: d.logo,
+    identity: description ? { description } : undefined,
   }
 }
 

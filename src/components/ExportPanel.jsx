@@ -14,7 +14,7 @@ import {
 } from '../utils/exportDocument'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } from '../config/exportFormats'
-import { liveTemplates, readExportTemplates } from '../config/exportTemplates'
+import { defaultTemplate, liveTemplates, readExportTemplates } from '../config/exportTemplates'
 import { useProject } from '../contexts/ProjectContext'
 import ExportTemplatePicker from './ExportTemplatePicker'
 import BrandLogoField from './BrandLogoField'
@@ -626,7 +626,7 @@ export default function ExportPanel({ onClose }) {
       {/* A Pro UI kit is personalised; a free kit carries no identity. */}
       {activeGroup.id === 'kit' && isPro && <KitIdentityFields />}
       {/* The pictures are drawn in the Specification layout, so the book shows them only for it. */}
-      {activeGroup.preview && !(activeGroup.preview === 'book' && chosenTemplates.book !== 'specification') && (
+      {activeGroup.preview && chosenTemplates[activeFormat?.id] === defaultTemplate(activeFormat?.id) && (
         <ExportProPreview
           kind={activeGroup.preview}
           design={design}

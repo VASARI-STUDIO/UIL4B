@@ -362,7 +362,8 @@ test('CONTROL: nested brace groups expand to every path', () => {
 })
 
 test('CONTROL: a `*` expands to the real files one directory level at a time', () => {
-  const templates = ['book/atlas.js', 'book/index.js', 'book/monograph.js', 'book/specification.js', 'guidelines/index.js', 'guidelines/presentation.js']
+  const templates = ['book/atlas.js', 'book/index.js', 'book/monograph.js', 'book/specification.js',
+    'guidelines/grid.js', 'guidelines/index.js', 'guidelines/notes.js', 'guidelines/poster.js', 'guidelines/presentation.js']
     .map((rel) => `utils/exportTemplates/${rel}`)
   assert.deepEqual(expandStars('utils/exportTemplates/*/*.js').sort(), templates,
     '`*/*.js` should reach the files one directory down and not the ones beside it')
@@ -395,13 +396,36 @@ test('includeFiles covers every file under src/utils/exportTemplates/', () => {
 // left out of includeFiles is a book that quietly loses its face (the reader falls
 // back to the system face), and a font nothing uses is shipped for nothing.
 test('includeFiles carries exactly the chrome fonts the book templates embed', () => {
-  const dir = path.join(root, 'src', 'utils', 'exportTemplates', 'book')
   const used = new Set()
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.js'))) {
-    for (const m of fs.readFileSync(path.join(dir, file), 'utf8').matchAll(/file:\s*'([a-z0-9-]+\.woff2)'/g)) used.add(`fonts/${m[1]}`)
+  for (const sub of ['book', 'guidelines']) {
+    const dir = path.join(root, 'src', 'utils', 'exportTemplates', sub)
+    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.js'))) {
+      for (const m of fs.readFileSync(path.join(dir, file), 'utf8').matchAll(/file:\s*'([a-z0-9-]+\.woff2)'/g)) used.add(`fonts/${m[1]}`)
+    }
   }
   assert.ok(used.size >= 3, 'the book templates name fewer than three chrome fonts, so this check proves nothing')
   const bundled = bundledFonts()
   for (const rel of bundled) assert.ok(fs.existsSync(path.join(root, 'public', rel)), `includeFiles names public/${rel}, which does not exist`)
   assert.deepEqual([...used].sort(), bundled.sort(), 'includeFiles and the templates disagree about which chrome fonts the function carries')
+})
+
+// The glob is a letter class (`{b,h,i,l,mar,s}*`) so it fits the 256-character limit, which means it
+// matches by first letter and not by name. Pin the six files it reaches, and that each template's face is one.
+test('the chrome-font glob reaches exactly the six chrome faces, and every template face is among them', () => {
+  const glob = includeFilesGlob()
+  assert.ok(glob.includes('public/fonts/{b,h,i,l,mar,s}*-latin.woff2'),'the font alternative of includeFiles changed shape; update this check')
+  assert.deepEqual(bundledFonts().sort(), [
+    'fonts/big-shoulders-display-latin.woff2', 'fonts/hanken-grotesk-latin.woff2', 'fonts/instrument-sans-latin.woff2',
+    'fonts/literata-latin.woff2', 'fonts/martian-mono-latin.woff2', 'fonts/schibsted-grotesk-latin.woff2',
+  ], 'the glob matches a different set of files than the six faces the templates embed')
+  const byTemplate = {
+    'book/specification.js': 'hanken-grotesk', 'book/monograph.js': 'literata', 'book/atlas.js': 'martian-mono',
+    'guidelines/presentation.js': 'instrument-sans', 'guidelines/poster.js': 'big-shoulders-display', 'guidelines/grid.js': 'schibsted-grotesk',
+  }
+  const bundled = new Set(bundledFonts())
+  for (const [rel, face] of Object.entries(byTemplate)) {
+    const text = fs.readFileSync(path.join(root, 'src', 'utils', 'exportTemplates', rel), 'utf8')
+    assert.ok(text.includes(`file: '${face}-latin.woff2'`), `${rel} no longer embeds ${face}; update this table`)
+    assert.ok(bundled.has(`fonts/${face}-latin.woff2`), `${rel}'s chrome face ${face} is not carried by includeFiles`)
+  }
 })

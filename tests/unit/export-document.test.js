@@ -240,6 +240,8 @@ function templateSpy() {
 }
 
 const DEFAULT_TEMPLATES = { book: 'specification', guidelines: 'presentation' }
+// Every live id per Pro format (src/config/exportTemplates.js, listed by hand here so a stray live flag is caught).
+const LIVE_TEMPLATES = { book: ['specification', 'monograph', 'atlas'], guidelines: ['presentation', 'poster', 'grid'] }
 
 test('a missing, null or empty template is the format\'s default, and the reply says which', async () => {
   assert.deepEqual(Object.keys(DEFAULT_TEMPLATES).sort(), Object.keys(BUILDERS).sort(), 'a Pro format has no default named here')
@@ -266,6 +268,24 @@ test('a live template id is served and echoed back', async () => {
   }
 })
 
+test('every live template id is served and echoed back, and an id live for the other format is not', async () => {
+  for (const [format, ids] of Object.entries(LIVE_TEMPLATES)) {
+    for (const id of ids) {
+      const { built, table } = templateSpy()
+      const { deps } = fakeDeps({ builders: table })
+      const res = await ask('tok-pro', { format, design: DESIGN, template: id }, deps)
+      assert.equal(res.code, 200, `${format} ${id}`)
+      assert.equal(res.body.template, id, `${format} ${id}`)
+      assert.deepEqual(built, [{ format, template: id }], `${format} ${id}`)
+    }
+  }
+  const other = { book: 'poster', guidelines: 'atlas' }
+  for (const [format, template] of Object.entries(other)) {
+    const { deps } = fakeDeps({ builders: templateSpy().table })
+    assert.equal((await ask('tok-pro', { format, design: DESIGN, template }, deps)).code, 400, `${format} ${template}`)
+  }
+})
+
 test('the real generators serve their default template and say so', async () => {
   const { deps } = fakeDeps()
   for (const [format, expected] of Object.entries(DEFAULT_TEMPLATES)) {
@@ -279,13 +299,14 @@ test('the real generators serve their default template and say so', async () => 
 test('a template that is not live for the format is a 400 unknown_template and no generator loads', async () => {
   const bad = [
     'nope', 'Specification', ' specification', 'specification ', 'poster', 'presentation', 'studio',
+    'grid', 'monograph', 'atlas', 'Poster', 'grid ', ' poster',
     'constructor', '__proto__', 'toString', 'hasOwnProperty',
     { id: 'specification' }, { toString: () => 'specification' }, 7, 0, true, false, ['specification'], [],
   ]
   for (const format of Object.keys(DEFAULT_TEMPLATES)) {
     for (const template of bad) {
       // Each id above is live for the format that owns it, and only that one.
-      if (template === DEFAULT_TEMPLATES[format]) continue
+      if (LIVE_TEMPLATES[format].includes(template)) continue
       const { loaded, table } = templateSpy()
       const { deps } = fakeDeps({ builders: table })
       const res = await ask('tok-pro', { format, design: DESIGN, template }, deps)
@@ -382,6 +403,7 @@ const GENERATORS = [
   'src/utils/designSystemBook.js', 'src/utils/brandGuidelines.js',
   'src/utils/exportTemplates/book/index.js', 'src/utils/exportTemplates/book/specification.js',
   'src/utils/exportTemplates/guidelines/index.js', 'src/utils/exportTemplates/guidelines/presentation.js',
+  'src/utils/exportTemplates/guidelines/poster.js', 'src/utils/exportTemplates/guidelines/grid.js', 'src/utils/exportTemplates/guidelines/notes.js',
 ].map((p) => path.resolve(p))
 
 // Every file the app's entry can reach, following static AND dynamic imports.
@@ -435,7 +457,9 @@ const noBuild = !fs.existsSync(builtAssets) && 'run a build first (see DIST_DIR)
 // Text that each generator writes into its document and that nothing else in the app has.
 const MARKERS = [
   { file: 'src/utils/designSystemBook.js', text: ' | Design System</title>' },
-  { file: 'src/utils/exportTemplates/guidelines/presentation.js', text: 'Brand <br>Guidelines' },
+  { file: 'src/utils/exportTemplates/guidelines/presentation.js', text: '<span class="cv-name">' },
+  { file: 'src/utils/exportTemplates/guidelines/poster.js', text: '<header class="pn-top">' },
+  { file: 'src/utils/exportTemplates/guidelines/grid.js', text: '<span class="mh-name">' },
   { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design system</span>' },
 ]
 
@@ -473,7 +497,33 @@ test('the client sends only the design fields the documents read, with the accou
   assert.equal(body.format, 'book')
   assert.equal(body.design.states, undefined)
   assert.equal(body.design.name, undefined)
-  assert.deepEqual(Object.keys(documentDesign(null)).sort(), ['fonts', 'gradient', 'logo', 'palette', 'typeScale'])
+  assert.deepEqual(Object.keys(documentDesign(null)).sort(), ['fonts', 'gradient', 'identity', 'logo', 'palette', 'typeScale'])
+})
+
+test('of the identity only the description is sent: trimmed, folded, capped at 280, and absent when blank', () => {
+  const long = 'x'.repeat(400)
+  assert.deepEqual(documentDesign({ identity: { name: 'Harbour', description: '  A calm\n  harbour.  ', extra: 1 } }).identity, { description: 'A calm harbour.' })
+  assert.equal(documentDesign({ identity: { description: long } }).identity.description.length, 280)
+  for (const identity of [undefined, null, 'text', { description: '   ' }, { description: 7 }, { name: 'Only a name' }]) {
+    assert.equal(documentDesign({ identity }).identity, undefined, JSON.stringify(identity))
+  }
+})
+
+test('a description sent to the server reaches the Grid cover, escaped, and nothing else of the identity does', async () => {
+  const { deps } = fakeDeps()
+  const description = 'Calm <b>water</b> & "light"'
+  const res = await ask('tok-pro', {
+    format: 'guidelines', template: 'grid', projectName: 'Harbour',
+    design: { ...DESIGN, identity: { name: 'SECRET-NAME', description, extra: 'SECRET-EXTRA' } },
+  }, deps)
+  assert.equal(res.code, 200)
+  assert.ok(res.body.html.includes('<p class="cv-stand">Calm &lt;b&gt;water&lt;/b&gt; &amp; &quot;light&quot;</p>'), 'the escaped description is the cover standfirst')
+  assert.ok(!res.body.html.includes('<b>water</b>'), 'the description is never raw markup')
+  assert.ok(!res.body.html.includes('SECRET-'), 'only the description is read from the identity')
+  const capped = await ask('tok-pro', { format: 'guidelines', template: 'grid', design: { ...DESIGN, identity: { description: `${'a'.repeat(280)}OVER` } } }, deps)
+  assert.ok(capped.body.html.includes(`<p class="cv-stand">${'a'.repeat(280)}</p>`) && !capped.body.html.includes('OVER'), 'capped at 280 on the server too')
+  const none = await ask('tok-pro', { format: 'guidelines', template: 'grid', design: DESIGN }, deps)
+  assert.ok(!none.body.html.includes('cv-stand">'), 'no description, no standfirst')
 })
 
 test('signed out never reaches the network', async () => {

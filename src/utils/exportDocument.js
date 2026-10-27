@@ -20,14 +20,21 @@
 // `loadAuth` and `fetchImpl` are injected so a test can run this without Firebase
 // or a network; the panel passes loadAuthSdk and uses the real fetch.
 
+import { readIdentity } from './kitIdentity.js'
+
 export const EXPORT_DOCUMENT_URL = '/api/ai?export=document'
 
 // What the browser sends: only the fields the documents are drawn from, and only
 // the ones that exist. The server picks the same fields again; this just keeps a
-// project's other state out of the request.
+// project's other state out of the request. Of the identity only the description
+// goes (the brand guidelines print it on the cover); the name is the projectName.
 export function documentDesign(design) {
   const d = design && typeof design === 'object' ? design : {}
-  return { palette: d.palette, gradient: d.gradient, fonts: d.fonts, typeScale: d.typeScale, logo: d.logo }
+  const { description } = readIdentity(d)
+  return {
+    palette: d.palette, gradient: d.gradient, fonts: d.fonts, typeScale: d.typeScale, logo: d.logo,
+    identity: description ? { description } : undefined,
+  }
 }
 
 // `template` is the id the user picked for this format; the server checks it and

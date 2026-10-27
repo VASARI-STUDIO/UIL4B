@@ -100,25 +100,28 @@ test('it is not the design system book at another paper size', () => {
   }
 })
 
-test('the sections are numbered from 01 with no gaps, whatever is present', () => {
+test('the section openings follow what is present, with no numeral to leave a hole', () => {
   // A "02" under a chapter that does not exist is the clearest possible tell
-  // that a fixed template had a piece removed. The numbering is therefore
-  // decided AFTER the sections, and this proves it in both shapes.
-  const nums = (html) => [...html.matchAll(/class="op-num">(\d+)</g)].map(m => Number(m[1]))
-  const withLogo = nums(DOC)
-  const bare = nums(BARE)
-  assert.deepEqual(withLogo, [1, 2, 3], 'a design with a logo should open three numbered sections')
-  assert.deepEqual(bare, [1, 2], 'without a logo the remaining sections must renumber from 01')
-  assert.ok(DOC.includes('>01</span> Logo') || /op-num">01<\/span> Logo/.test(DOC))
-  assert.match(BARE, /op-num">01<\/span> Colour/,
-    'Colour is not 01 in a document with no logo section — the numbering has a hole in it')
+  // that a fixed template had a piece removed. The openings now carry no numeral at all,
+  // and the sections are decided AFTER what is present: this proves both shapes.
+  const heads = (html) => [...html.matchAll(/class="op-head">([^<]*)</g)].map(m => m[1].trim())
+  assert.deepEqual(heads(DOC), ['Logo', 'Colour', 'Typography'], 'a design with a logo should open three sections')
+  assert.deepEqual(heads(BARE), ['Colour', 'Typography'], 'without a logo there is no Logo opening and nothing in its place')
+  for (const [label, html] of [['with logo', DOC], ['bare', BARE]]) {
+    assert.ok(!html.includes('op-num'), `${label}: an opening still prints a section numeral`)
+  }
 })
 
-test('the folios run 01..n with none missing and none repeated', () => {
+test('the folio is the slide place in the PDF, the cover is 1, and openings carry none', () => {
   for (const [label, html] of [['with logo', DOC], ['bare', BARE]]) {
-    const folios = [...html.matchAll(/class="rail-folio">(\d+)</g)].map(m => Number(m[1]))
-    assert.ok(folios.length >= 5, `${label}: too few numbered pages to be a document`)
-    assert.deepEqual(folios, folios.map((_, i) => i + 1), `${label}: the folio sequence is broken`)
+    const slides = html.split('<section class="sl').slice(1)
+    assert.equal(slides.length, pageCount(html), `${label}: the split lost a slide`)
+    const folios = slides.map((slide) => (/class="rail-folio">(\d+)</.exec(slide) || [])[1])
+    const numbered = folios.map((f, i) => (f === undefined ? null : [i + 1, Number(f)])).filter(Boolean)
+    assert.ok(numbered.length >= 5, `${label}: too few numbered pages to be a document`)
+    assert.deepEqual(numbered.filter(([place, folio]) => place !== folio), [], `${label}: a folio is not its slide place in the PDF`)
+    assert.equal(folios[0], undefined, `${label}: the cover carries a folio`)
+    slides.forEach((slide, i) => { if (slide.startsWith(' sl-open')) assert.equal(folios[i], undefined, `${label}: opening ${i + 1} carries a folio`) })
   }
 })
 

@@ -14,8 +14,8 @@ test('the real list is coherent: one default per format, unique ids, keys are li
   assert.deepEqual(Object.keys(EXPORT_TEMPLATES).sort(), ['book', 'guidelines', 'kit'])
 })
 
-test('the live templates are the three defaults and the book Monograph and Atlas', () => {
-  assert.deepEqual(['kit', 'book', 'guidelines'].map((f) => liveTemplates(f).map((x) => x.id)), [['studio'], ['specification', 'monograph', 'atlas'], ['presentation']])
+test('the live templates are the kit default, the three book layouts and the three guidelines layouts', () => {
+  assert.deepEqual(['kit', 'book', 'guidelines'].map((f) => liveTemplates(f).map((x) => x.id)), [['studio'], ['specification', 'monograph', 'atlas'], ['presentation', 'poster', 'grid']])
   assert.deepEqual(['kit', 'book', 'guidelines'].map(defaultTemplate), ['studio', 'specification', 'presentation'])
 })
 
@@ -33,7 +33,8 @@ test('the coherence check refuses what it should', () => {
 
 test('isTemplate accepts only a live id of that format, and only strings', () => {
   for (const live of ['specification', 'monograph', 'atlas']) assert.equal(isTemplate('book', live), true, live)
-  for (const bad of ['poster', 'manual', 'studio', '', null, undefined, 7, {}, [], ['specification'], '__proto__', 'constructor']) {
+  // 'poster' and 'grid' are live, but for guidelines, not book.
+  for (const bad of ['poster', 'grid', 'presentation', 'manual', 'studio', '', null, undefined, 7, {}, [], ['specification'], '__proto__', 'constructor']) {
     assert.equal(isTemplate('book', bad), false, String(bad))
   }
   for (const format of ['nope', '__proto__', 'constructor', undefined, 7]) assert.equal(isTemplate(format, 'specification'), false)
@@ -53,7 +54,10 @@ test('readExportTemplates fills defaults and drops any id that is not live', () 
   assert.deepEqual(readExportTemplates(undefined), defaults)
   assert.deepEqual(readExportTemplates({}), defaults)
   assert.deepEqual(readExportTemplates({ exportTemplates: 'atlas' }), defaults)
-  assert.deepEqual(readExportTemplates({ exportTemplates: { kit: 'manual', book: 7, guidelines: 'poster', extra: 'x' } }), defaults)
+  assert.deepEqual(readExportTemplates({ exportTemplates: { kit: 'manual', book: 7, guidelines: 'manual', extra: 'x' } }), defaults)
+  assert.deepEqual(readExportTemplates({ exportTemplates: { kit: 'studio', book: 'atlas', guidelines: 'grid' } }), { ...defaults, book: 'atlas', guidelines: 'grid' }, 'a live non-default id is kept')
+  assert.deepEqual(readExportTemplates({ exportTemplates: { guidelines: 'poster' } }), { ...defaults, guidelines: 'poster' })
+  assert.deepEqual(readExportTemplates({ exportTemplates: { guidelines: 'atlas', book: 'grid' } }), defaults, 'an id live for another format is dropped')
   const saved = { exportTemplates: { kit: 'studio', book: 'specification', guidelines: 'presentation' } }
   assert.deepEqual(readExportTemplates(JSON.parse(JSON.stringify(saved))), defaults, 'a saved project round-trips its choices')
 })

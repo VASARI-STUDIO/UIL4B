@@ -4,7 +4,7 @@
 // headings are the user's own face. There are no section openings: the plates are
 // the sections.
 
-import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale } from '../shared.js'
 import { mixHex, hexToOklch } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Martian Mono', weights: '100 800', file: 'martian-mono-latin.woff2' })
@@ -21,6 +21,8 @@ const READS_MAX = 6
 const PAIRS_WIDTH_MM = 172
 // A tint closer than this (distance in OKLab) to the paper is left out: it would print as blank paper.
 const TINT_MIN_DISTANCE = 0.02
+// What the type scale table has to fit, in mm: the height under its head, the specimen column's width, a row's padding and its row text.
+const SCALE_FIT = Object.freeze({ roomMm: 175, widthMm: 96, padMm: 5.45, textMm: 3.97, lineHeight: 1.1 })
 
 /** Distance between two hex colours in OKLab. */
 function distance(a, b) {
@@ -157,18 +159,20 @@ function typography(ctx) {
       <p class="fm-name" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight};letter-spacing:${spacing || 0}em">${esc(name)}</p>
       <p class="fm-set" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ., : ; ! ? ( ) @ # % $</p>
     </div>`
+  // One share of true size for every specimen: 100% when the ladder fits, else the largest that does.
+  const { k, label } = specimenScale(ladder, SCALE_FIT)
   const rows = ladder.map((s) => {
     const heading = s.exp >= 1
     return `<tr><th scope="row">${esc(s.name)}</th><td>${s.px}px</td><td>${(s.px / 16).toFixed(3).replace(/\.?0+$/, '')}rem</td><td>${heading ? 1.15 : d.lineHeight}</td>
-      <td class="sp" style="font-size:${Math.min(s.px, 34)}px;font-family:'${esc(heading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${heading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td></tr>`
+      <td class="sp" style="font-size:${(s.px * k).toFixed(1)}px;font-family:'${esc(heading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${heading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td></tr>`
   }).join('')
   return [{
     leaf: null,
     inner: `<div class="pg-body">
     <header class="pg-head"><h3>Typography</h3>
-      <p class="lede">${esc(d.heading)} for headings, ${esc(d.body)} for reading, on a ${d.ratio} scale from ${d.baseSize}px. Steps above 34px are shown reduced; the size beside each step is the true value.</p></header>
+      <p class="lede">${esc(d.heading)} for headings, ${esc(d.body)} for reading, on a ${d.ratio} scale from ${d.baseSize}px.${k < 1 ? ' Specimens are shown reduced so the scale fits the page; the size beside each step is the true value.' : ''}</p></header>
     <div class="fms">${fam('Headings', d.heading, d.headingWeight, d.headingSpacing)}${fam('Body', d.body, d.bodyWeight, d.bodySpacing)}</div>
-    <table class="tb-scale"><thead><tr><th>Step</th><th>Size</th><th>rem</th><th>Leading</th><th>Specimen</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="tb-scale"><thead><tr><th>Step</th><th>Size</th><th>rem</th><th>Leading</th><th>${esc(label)}</th></tr></thead><tbody>${rows}</tbody></table>
   </div>`,
   }]
 }
