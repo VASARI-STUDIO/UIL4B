@@ -332,3 +332,32 @@ test('the tint sheet has no transition: all and the tooltip honours reduced moti
   assert.match(css, /prefers-reduced-motion: reduce\)\s*\{[^}]*\.tt-tip\[data-open="true"\]\s*\{\s*animation: none/)
   assert.match(css, /html\[data-reduced-motion="true"\] \.tt \.tt-tip\[data-open="true"\]\s*\{\s*animation: none/)
 })
+
+test('a tap pins the tooltip inline and does not copy; Copy and Close are buttons on the pinned card', () => {
+  const src = stripComments(read('src/pages/TintTool.jsx'))
+  // pressNote: the touch branch returns before copyHex, so a tap never copies.
+  const press = src.slice(src.indexOf('const pressNote'), src.indexOf('const closePinned'))
+  assert.equal(press.split('copyHex(').length - 1, 1, 'pressNote copies in one place only')
+  assert.ok(press.indexOf('copyHex(') > press.indexOf('openTip(t.label, el, true)'), 'that copy sits after the touch branch, which pins and returns')
+  assert.match(src, /className="tt-tip-copy"/)
+  assert.match(src, /className="tt-tip-close"/)
+  assert.match(src, /tt-tip--inline/)
+  assert.match(src, /tt-tip--below/)
+  assert.match(src, /className="tt-note-best"/, 'each row carries the best-grade word')
+  const css = stripComments(read('src/styles/pages/tint.css'))
+  assert.match(css, /\.tt-tip--inline\s*\{\s*position: static/, 'the pinned card is in the flow')
+  assert.match(css, /\.tt-tip--below\s*\{\s*top: 100%/, 'the hover card can flip below')
+  for (const g of ['ok-strong', 'warn-strong', 'err-strong']) assert.match(css, new RegExp(`\.tt-note-best[^{]*\{[^}]*var\(--${g}\)`), `the best-grade mark uses --${g}`)
+})
+
+test('the tooltip text is 12px or more, and the long help paragraph is outside the described body', () => {
+  const css = stripComments(read('src/styles/pages/tint.css'))
+  for (const sel of ['tt-notes-hint', 'tt-tip-head', 'tt-tip-ratio', 'tt-tip-grade', 'tt-tip-help', 'tt-note-step', 'tt-note-hex', 'tt-note-best']) {
+    const m = css.match(new RegExp(`\.tt \.${sel}\s*\{[^}]*font-size:\s*([\d.]+)px`))
+    assert.ok(m && Number(m[1]) >= 12, `${sel} is at least 12px`)
+  }
+  assert.match(css, /\.tt-tip-help\s*\{[^}]*line-height: 1\.5/)
+  const src = stripComments(read('src/pages/TintTool.jsx'))
+  assert.match(src, /<\/span>\s*<span className="tt-tip-help">/, 'the help paragraph follows the described body, not inside it')
+  assert.match(src, /Perceived looks even\. Linear spaces by light\./)
+})

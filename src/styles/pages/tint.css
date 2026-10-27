@@ -99,6 +99,7 @@
 .tt .tt-dot { width: 10px; height: 10px; border-radius: 999px; border: 1.5px solid currentColor; }
 .tt .tt-src-pick[aria-checked="true"] .tt-dot { background: var(--tl-ink); border-color: var(--tl-ink); }
 .tt .tt-add, .tt .tt-import { width: 100%; font-size: 13px; }
+.tt .tt-spacing-note { font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 @media (hover: hover) and (pointer: fine) {
   .tt .tt-iconbtn:hover { background: var(--tl-wash-2); color: var(--tl-ink); }
 }
@@ -121,7 +122,14 @@
   isolation: isolate;
 }
 .tt .tt-notes-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
-.tt .tt-notes-hint { font-size: 11px; color: var(--tl-dim); }
+.tt .tt-notes-hint { font-size: 12px; color: var(--tl-dim); }
+/* The hint says "Hover" for a mouse and "Tap" for a touch screen; the other
+   copy is not in the page (display:none), so a screen reader hears one. */
+.tt .tt-hint-coarse { display: none; }
+@media (pointer: coarse) {
+  .tt .tt-hint-fine { display: none; }
+  .tt .tt-hint-coarse { display: inline; }
+}
 .tt .tt-notes-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
@@ -142,8 +150,15 @@
   font-family: var(--font);
 }
 .tt .tt-note-sw { width: 20px; height: 20px; border-radius: 6px; flex: 0 0 auto; background: var(--tt-c, transparent); }
-.tt .tt-note-step { width: 30px; flex: 0 0 auto; font-family: var(--mono); font-size: 10.5px; color: var(--tl-faint); }
-.tt .tt-note-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); }
+.tt .tt-note-step { width: 34px; flex: 0 0 auto; font-family: var(--mono); font-size: 12px; color: var(--tl-faint); }
+.tt .tt-note-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+/* The best a tint does against white or black, so the row says it at a glance:
+   the word is the signal, the colour backs it. */
+.tt .tt-note-best { flex: 0 0 auto; font-size: 12px; font-weight: 600; color: var(--tl-dim); }
+.tt .tt-note-best[data-grade="AAA"],
+.tt .tt-note-best[data-grade="AA"] { color: var(--ok-strong); }
+.tt .tt-note-best[data-grade="large"] { color: var(--warn-strong); }
+.tt .tt-note-best[data-grade="fail"] { color: var(--err-strong); }
 @media (hover: hover) and (pointer: fine) {
   .tt .tt-note:hover { background: var(--tl-wash-2); }
 }
@@ -167,6 +182,33 @@
   text-align: left;
 }
 .tt .tt-tip--end { left: auto; right: 0; }
+/* No room above the note (the sticky bars are in the way): open below it, with
+   the bridge on top instead. */
+.tt .tt-tip--below { top: 100%; bottom: auto; padding-top: 6px; padding-bottom: 0; }
+/* A tap pins the detail inline under the note, in the flow, so it covers
+   nothing and the page can scroll past it. */
+.tt .tt-tip--inline { position: static; width: auto; max-width: none; padding: 4px 0 0; }
+.tt .tt-tip-actions { display: flex; gap: 8px; margin-top: 6px; }
+.tt .tt-tip-copy,
+.tt .tt-tip-close {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--tl-hair);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  color: var(--tl-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tt .tt-tip-copy { flex: 1; min-width: 0; }
+.tt .tt-tip-close { flex: 0 0 auto; color: var(--tl-dim); }
+.tt .tt-tip-copy:focus-visible,
+.tt .tt-tip-close:focus-visible { outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tt .tt-tip-copy:hover,
+  .tt .tt-tip-close:hover { background: var(--tl-wash-2); }
+}
 .tt .tt-tip[data-open="true"] { display: block; animation: tt-tip-in var(--dur-1) var(--ease-entrance); }
 @keyframes tt-tip-in { from { opacity: 0; } to { opacity: 1; } }
 .tt .tt-tip-card {
@@ -179,7 +221,8 @@
   color: var(--tl-ink);
   box-shadow: var(--shadow-s);
 }
-.tt .tt-tip-head { font-family: var(--mono); font-size: 11px; color: var(--tl-ink); }
+.tt .tt-tip-body { display: grid; gap: 6px; }
+.tt .tt-tip-head { font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
 .tt .tt-tip-row {
   display: grid;
   grid-template-columns: 14px auto 1fr;
@@ -190,12 +233,12 @@
 }
 .tt .tt-tip-mark { grid-area: mark; align-self: center; display: grid; place-items: center; color: var(--tl-dim); }
 .tt .tt-tip-who { grid-area: who; color: var(--tl-ink); }
-.tt .tt-tip-ratio { grid-area: ratio; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
-.tt .tt-tip-grade { grid-area: grade; font-size: 11px; color: var(--tl-dim); }
-.tt .tt-tip-row[data-pass="true"] .tt-tip-mark { color: var(--ok); }
+.tt .tt-tip-ratio { grid-area: ratio; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
+.tt .tt-tip-grade { grid-area: grade; font-size: 12px; color: var(--tl-dim); }
+.tt .tt-tip-row[data-pass="true"] .tt-tip-mark { color: var(--ok-strong); }
 .tt .tt-tip-row[data-grade="large"] .tt-tip-mark { color: var(--warn-strong); }
-.tt .tt-tip-row[data-grade="fail"] .tt-tip-mark { color: var(--err); }
-.tt .tt-tip-help { padding-top: 6px; border-top: 1px solid var(--tl-line); font-size: 11px; line-height: 1.45; color: var(--tl-dim); }
+.tt .tt-tip-row[data-grade="fail"] .tt-tip-mark { color: var(--err-strong); }
+.tt .tt-tip-help { padding-top: 6px; border-top: 1px solid var(--tl-line); font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 html[data-reduced-motion="true"] .tt .tt-tip[data-open="true"] { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .tt .tt-tip[data-open="true"] { animation: none; }
