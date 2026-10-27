@@ -325,22 +325,24 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const options = rail.getByRole('option')
-    // Eight previews of one product, four open to a free account and four
-    // marked Pro in the list.
-    await expect(options).toHaveCount(8)
-    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(4)
-    await expect(rail.getByRole('option', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true')
-    await expect(page.locator('[data-preview-scene="Dashboard"]')).toContainText('Paid this month')
+    // Eleven previews: three made-up products (Slack Water, Sundial, Orra
+    // Workroom) and eight views of Fernway. Six are open to a free account and
+    // five are marked Pro in the list.
+    await expect(options).toHaveCount(11)
+    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(5)
+    // The preview opens on the editorial example, which is its own lazy chunk.
+    await expect(rail.getByRole('option', { name: /^Editorial hero/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('[data-preview-scene="Editorial hero"]')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
 
     const FREE = [
-      ['Invoices', 'Harbour Physio'],
+      ['Dashboard', 'Paid this month'],
       ['Phone app', 'Brand refresh'],
       ['Landing page', 'Send the invoice before you close the laptop.'],
     ]
     for (const [name, text] of FREE) {
-      await rail.getByRole('option', { name }).click()
-      await expect(rail.getByRole('option', { name })).toHaveAttribute('aria-selected', 'true')
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(rail.getByRole('option', { name: new RegExp(`^${name}`) })).toHaveAttribute('aria-selected', 'true')
       await expect(page.locator(`[data-preview-scene="${name}"]`)).toContainText(text)
       await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
     }
@@ -348,6 +350,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     // A locked preview still shows its real scene, blurred and not reachable,
     // behind a plain Unlock preview button.
     const LOCKED = [
+      ['Invoices', 'Harbour Physio'],
       ['Settings', 'Business name'],
       ['Email receipt', "You've been paid"],
       ['Poster', 'Open studio night'],

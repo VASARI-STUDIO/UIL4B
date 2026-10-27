@@ -1,11 +1,13 @@
-// The eight previews the Palette Builder paints a palette onto, and the sample
-// content they share.
+// The previews the Palette Builder paints a palette onto, and the sample
+// content the older ones share.
 //
-// Every preview belongs to one made-up product, Fernway (invoicing and time
-// tracking for freelancers, in AUD), so the set reads as one small product
-// seen from eight sides rather than eight unrelated mock-ups. Nothing here
-// names a real person, a real place's Country or this site, and nothing claims
-// proof; tests/unit/palette-preview-copy.test.js holds that line.
+// Two kinds of scene live here. The examples (editorial, energy, product) are
+// each their own made-up product, built around one drawn artefact that is
+// painted with the palette; they are lazy chunks under
+// src/components/palette/examples/. The older scenes are one invoicing app,
+// Fernway, seen from several sides. Nothing here names a real person, a real
+// place's Country or this site, and nothing claims proof;
+// tests/unit/palette-preview-copy.test.js holds that line.
 //
 // This is content, not behaviour: no React, no hooks. The components that read
 // it live in src/components/palette/PalettePreview.jsx.
@@ -14,22 +16,28 @@ export const PREVIEW_GROUPS = [
   { id: 'product', label: 'Product' },
   { id: 'marketing', label: 'Marketing' },
   { id: 'graphic', label: 'Graphic' },
+  { id: 'states', label: 'States' },
 ]
 
 // `free` is the whole Pro gate: a preview without it is blurred behind
-// "Unlock preview" for an account that is not Pro.
+// "Unlock preview" for an account that is not Pro. `example` marks the lazy
+// chunks. The list is in group order, because the arrow keys walk it.
 export const PREVIEW_SCENES = [
+  { id: 'energy', name: 'Energy dashboard', group: 'product', free: true, example: true },
   { id: 'dashboard', name: 'Dashboard', group: 'product', free: true },
-  { id: 'invoices', name: 'Invoices', group: 'product', free: true },
-  { id: 'settings', name: 'Settings', group: 'product', free: false },
   { id: 'phone', name: 'Phone app', group: 'product', free: true },
+  { id: 'editorial', name: 'Editorial hero', group: 'marketing', free: true, example: true },
+  { id: 'product', name: 'Product page', group: 'marketing', free: true, example: true },
   { id: 'landing', name: 'Landing page', group: 'marketing', free: true },
   { id: 'receipt', name: 'Email receipt', group: 'marketing', free: false },
   { id: 'poster', name: 'Poster', group: 'graphic', free: false },
   { id: 'social', name: 'Social tile', group: 'graphic', free: false },
+  // The only scenes with form focus, error and disabled states.
+  { id: 'invoices', name: 'Invoices', group: 'states', free: false },
+  { id: 'settings', name: 'Settings', group: 'states', free: false },
 ]
 
-export const DEFAULT_SCENE = 'dashboard'
+export const DEFAULT_SCENE = 'editorial'
 
 export const sceneById = (id) => PREVIEW_SCENES.find((s) => s.id === id) || PREVIEW_SCENES[0]
 

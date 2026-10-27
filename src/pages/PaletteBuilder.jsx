@@ -1,8 +1,11 @@
-import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
+// `lazy` in this file is lazyRoute, not React's: if the dialog's file failed to
+// download, it waits for the recovery reload instead of crashing the page.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
   ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode,
@@ -29,8 +32,10 @@ import { LIBRARY_RULES } from '../utils/libraryRules'
 import { useProLibrary } from '../hooks/useProLibrary'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
-// The preview dialog: eight scenes, a scene list and the role legend.
-import PalettePreviewDialog from '../components/palette/PalettePreviewDialog'
+// The preview dialog: the scene list and the role legend. Its own chunk, loaded
+// when Preview is first pointed at or opened (previewLoader.js).
+import { DEFAULT_SCENE } from '../data/palettePreviewScenes'
+import { loadPreviewDialog } from '../components/palette/previewLoader'
 import NearestMatchPanel from '../components/palette/NearestMatchPanel'
 import { LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
@@ -58,6 +63,12 @@ import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '.
 // random precedence — kept pure so the free-settings default and “a shared link
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
+
+// The preview dialog, as its own chunk. The Preview button warms it on hover and
+// focus, so a click usually finds it already loaded.
+const PalettePreviewDialog = lazy(() => loadPreviewDialog())
+const warm = () => { loadPreviewDialog().catch(() => {}) }
+const warmPreview = { onPointerEnter: warm, onFocus: warm }
 
 // Pointer-opened menus must not leave a keyboard reveal latched on Escape.
 function returnMenuFocus(el, pointer) {
@@ -2109,7 +2120,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
   const compareVariation = (v) => {
     setGalleryOpen(false)
-    setPreview({ mode: 'light', scene: 'dashboard', compare: v })
+    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: v })
   }
   // Generic "line it up against the current palette" — used by the brand and
   // community rows, which carry no precomputed score, so we compute one here.
@@ -2117,7 +2128,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
     if (cols.length < 2) return
     setGalleryOpen(false)
-    setPreview({ mode: 'light', scene: 'dashboard', compare: { label, colors: cols, score: scorePalette(cols) } })
+    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: { label, colors: cols, score: scorePalette(cols) } })
   }
   // Import a community-gallery palette as a toggle. The FIRST import snapshots
   // the user's own pre-gallery system; applying it ticks the card. Clicking the
@@ -2631,9 +2642,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     {
       id: 'preview', priority: 3, align: 'end',
       render: () => (
-        <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
+        <ToolButton icon="eye" collapse {...warmPreview} onClick={() => { closeAllMenus(); setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
       ),
-      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) } },
+      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null }) } },
     },
     // Overflow only — never on the row.
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
@@ -3504,21 +3515,23 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
       {/* ── Preview dialog ── */}
       {preview && (
-        <PalettePreviewDialog
-          preview={preview}
-          onChange={(patch) => setPreview((p) => (p ? { ...p, ...patch } : p))}
-          onClose={closePreview}
-          colors={adjusted}
-          paletteScore={paletteScore}
-          harmony={harmony}
-          vision={vision}
-          visionLabel={VISION_MODES.find(([id]) => id === vision)?.[1] || ''}
-          onResetVision={() => setVision('normal')}
-          isPro={isPro}
-          planKnown={planKnown}
-          onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
-          onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
-        />
+        <Suspense fallback={null}>
+          <PalettePreviewDialog
+            preview={preview}
+            onChange={(patch) => setPreview((p) => (p ? { ...p, ...patch } : p))}
+            onClose={closePreview}
+            colors={adjusted}
+            paletteScore={paletteScore}
+            harmony={harmony}
+            vision={vision}
+            visionLabel={VISION_MODES.find(([id]) => id === vision)?.[1] || ''}
+            onResetVision={() => setVision('normal')}
+            isPro={isPro}
+            planKnown={planKnown}
+            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
+            onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
+          />
+        </Suspense>
       )}
 
       {/* ── Submit-to-community popup (Wave 5 items 20–22) ──

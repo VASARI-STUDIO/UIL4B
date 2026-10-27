@@ -1,5 +1,5 @@
 // The Palette Builder preview's text, measured as RENDERED text, on the ground
-// each node is actually painted on, in all eight preview scenes and both
+// each node is actually painted on, in all eleven preview scenes and both
 // preview themes.
 //
 // WHY THIS SPEC EXISTS
@@ -43,7 +43,16 @@ import { clickPaletteAction } from './palette-helpers.js'
 // 4.075:1 in light.
 const PALETTE = ['#20838d', '#2994c7', '#5b89d7', '#8a9fea', '#c5c1f6']
 
-const SCENES = ['Dashboard', 'Invoices', 'Settings', 'Phone app', 'Landing page', 'Email receipt', 'Poster', 'Social tile']
+const SCENES = ['Energy dashboard', 'Dashboard', 'Phone app', 'Editorial hero', 'Product page', 'Landing page', 'Email receipt', 'Poster', 'Social tile', 'Invoices', 'Settings']
+
+// The ONLY elements allowed to print in a raw brand colour. brandAsText() keeps the
+// user's own hex when it clears the floor on every ground it sits on (and walks it a
+// step darker or lighter when it does not), so on a palette whose hex reads, these
+// two print in exactly the brand fill. They are named by scene and class so the rule
+// above still catches any other text node that does the same; the contrast floor is
+// still measured on them like every other node. Source: 'now label' in
+// Sundial.data.js TEXT_RECIPE and 'page-active' in SlackWater.data.js TEXT_RECIPE.
+const BRAND_AS_TEXT = { 'Energy dashboard': ['sd-now-t'], 'Editorial hero': ['sw-page'] }
 
 const HELPERS = `
   const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }
@@ -116,7 +125,7 @@ const SWEEP = `((inkVars, fillVars) => {
     const role = inkRole ? inkRole.slice(5) : fillRole ? 'fill:' + fillRole.slice(5) : 'other'
     const size = parseFloat(cs.fontSize)
     out.push({
-      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled'),
+      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'),
       ink: hex, ground: hexOf(g), ratio: ratio(ink, g),
       floor: (size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700)) ? 3 : 4.5,
     })
@@ -125,7 +134,7 @@ const SWEEP = `((inkVars, fillVars) => {
 })`
 
 test.describe('Palette Builder preview ink', () => {
-  test('every text node clears its floor on its real ground, in all eight scenes and both preview themes', async ({ page }) => {
+  test('every text node clears its floor on its real ground, in all eleven scenes and both preview themes', async ({ page }) => {
     watch(page, 'designer checking a palette on a UI mockup')
     await page.addInitScript((colors) => {
       const raw = localStorage.getItem('vs-current-design')
@@ -158,6 +167,8 @@ test.describe('Palette Builder preview ink', () => {
     const failures = []
     const canvases = new Set()
     const roleCounts = {}
+    const rawFillWhere = []
+    const rawFillRoles = new Set()
     let measured = 0
     let onSurface = 0
     let disabledSeen = 0
@@ -193,6 +204,9 @@ test.describe('Palette Builder preview ink', () => {
         for (const s of samples) {
           measured++
           roleCounts[s.role] = (roleCounts[s.role] || 0) + 1
+          const brandText = (BRAND_AS_TEXT[name] || []).some((c) => s.cls.split(' ').includes(c))
+          if (s.role.startsWith('fill:') && s.role !== 'fill:primary' && !brandText) rawFillRoles.add(s.role)
+          if (s.role.startsWith('fill:') && s.role !== 'fill:primary' && !brandText) rawFillWhere.push(`${name}/${theme} [${s.cls}] ${s.role} ${s.ink} on ${s.ground} = ${s.ratio}:1`)
           if (s.ground === roles.surface) onSurface++
           const where = `${name}/${theme} [${s.cls}] ${s.role} ${s.ink} on ${s.ground}`
             + ` = ${s.ratio}:1 at ${s.size}px/${s.weight} (floor ${s.floor})`
@@ -201,7 +215,13 @@ test.describe('Palette Builder preview ink', () => {
           // the disabled state on purpose. Anything else in the disabled
           // colour, or the same colour on a control that is not disabled, is
           // still held to the floor.
-          const inactive = name === 'Settings' && s.inactive
+          // The second is the sold-out size in the Product page (Orra Workroom): a
+          // struck-through size chip in the disabled ink, shown on purpose beside
+          // the sizes that can be picked. It is named by scene, class and ink role, and
+          // it must be marked aria-disabled, so any other node in the Product page is
+          // still held to the floor, and so is a sold-out look that is not announced.
+          const inactive = (name === 'Settings' && s.inactive)
+            || (name === 'Product page' && s.inactive && s.cls.split(' ').includes('is-off') && s.role === 'disabled')
           if (inactive) disabledSeen++
           else if (s.ratio < s.floor) failures.push('  ' + where)
           // The type floor for every scene.
@@ -216,7 +236,7 @@ test.describe('Palette Builder preview ink', () => {
     // The pair the contrast backlog named: a muted note ON the surface step.
     expect(onSurface, 'no ink was measured on --pv-surface, which is the ground this spec exists for').toBeGreaterThan(20)
 
-    expect(disabledSeen, 'the disabled Upload button was not found in Settings, in both themes').toBe(2)
+    expect(disabledSeen, 'the disabled Upload button (Settings) and the sold-out size (Product page) were not both found, in both themes').toBe(4)
 
     // Anti-vacuity for the roles the rules must be reading. If any reaches
     // zero the stylesheet has stopped painting that role as text, and every
@@ -228,8 +248,8 @@ test.describe('Palette Builder preview ink', () => {
     // AND THE FILLS ARE STILL FILLS. A text node painted in a raw brand fill
     // other than as an inverted ground is the old defect coming back, named
     // separately from a contrast miss so the message says which happened.
-    const rawFill = Object.keys(roleCounts).filter((r) => r.startsWith('fill:') && r !== 'fill:primary')
-    expect(rawFill, 'a text node is painted in a raw brand fill rather than an ink role').toEqual([])
+    const rawFill = [...rawFillRoles]
+    expect(rawFill, ['a text node is painted in a raw brand fill rather than an ink role:', ...rawFillWhere].join('\n')).toEqual([])
 
     expect(failures, `preview text below its floor over ${measured} rendered samples:\n` + failures.join('\n')).toEqual([])
   })

@@ -14,8 +14,17 @@
 // Escape in the capture phase, before any handler in the tree, so an open
 // popover or sheet registers itself as an Escape layer and requestClose closes
 // that first.
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+//
+// An example (src/components/palette/examples/) is its own chunk. Picking one
+// is a transition, so the picture on screen stays until the next has loaded,
+// and the Suspense that holds the scene lives in Stage and is never remounted:
+// a boundary mounted fresh would show its fallback instead of keeping the old
+// picture. Only the chosen option shows a small spinner, and only if the load
+// is slow. The neighbours of the open example are fetched when the browser is
+// idle, so the next click is usually instant.
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react'
 import PreviewScene from './PalettePreview'
+import { preloadExample } from './examples/registry'
 import ToolIcon from '../tool/ToolIcon'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
@@ -37,6 +46,9 @@ const SUGGESTED = [
 
 // How long a colour tapped in the phone sheet stays outlined in the scene.
 const PIN_MS = 3000
+
+// The one line under the list. Each example is its own made-up brand.
+const NOTE = 'Sample content. Every brand here is made up.'
 
 // Scenes with no surface to sit on: a ratio "on surface" means nothing there.
 const SURFACELESS = new Set(['poster'])
@@ -68,7 +80,7 @@ function useEscapeLayer(layerRef, open, close) {
 
 // `onChoose` fires on a click or Enter/Space on an option, not on the arrow keys
 // that also select, so a popover can close on a choice and stay open to browse.
-function SceneListbox({ grouped, orientation, sceneId, onPick, onChoose, isLocked, label, className, listRef, onScroll }) {
+function SceneListbox({ grouped, orientation, sceneId, pendingId, onPick, onChoose, isLocked, label, className, listRef, onScroll }) {
   const uid = useId()
   const innerRef = useRef(null)
   const ref = listRef || innerRef
@@ -104,6 +116,12 @@ function SceneListbox({ grouped, orientation, sceneId, onPick, onChoose, isLocke
         onClick={() => { onPick(s.id); if (onChoose) onChoose() }}
       >
         <span className="pvd-opt-name">{s.name}</span>
+        {s.id === pendingId && (
+          <>
+            <i className="pvd-spin" aria-hidden="true" />
+            <span className="sr-only">Loading</span>
+          </>
+        )}
         {isLocked(s) && (
           <>
             <ToolIcon name="lock-simple" size={13} />
@@ -129,7 +147,7 @@ function SceneListbox({ grouped, orientation, sceneId, onPick, onChoose, isLocke
 }
 
 // 768 to 1023: the list behind one button.
-function SceneMenu({ scene, sceneId, onPick, isLocked, layerRef }) {
+function SceneMenu({ scene, sceneId, pendingId, onPick, isLocked, layerRef }) {
   const [open, setOpen] = useState(false)
   const trigRef = useRef(null)
   const popRef = useRef(null)
@@ -173,6 +191,7 @@ function SceneMenu({ scene, sceneId, onPick, isLocked, layerRef }) {
             orientation="vertical"
             label="Previews"
             sceneId={sceneId}
+            pendingId={pendingId}
             isLocked={isLocked}
             onPick={onPick}
             onChoose={close}
@@ -185,7 +204,7 @@ function SceneMenu({ scene, sceneId, onPick, isLocked, layerRef }) {
 }
 
 // Under 768: chips docked at the bottom. A right-edge fade says there are more.
-function SceneStrip({ sceneId, onPick, isLocked }) {
+function SceneStrip({ sceneId, pendingId, onPick, isLocked }) {
   const ref = useRef(null)
 
   const measure = useCallback(() => {
@@ -205,6 +224,7 @@ function SceneStrip({ sceneId, onPick, isLocked }) {
       orientation="horizontal"
       label="Previews"
       sceneId={sceneId}
+      pendingId={pendingId}
       isLocked={isLocked}
       onPick={onPick}
       className="pvd-strip"
@@ -215,9 +235,10 @@ function SceneStrip({ sceneId, onPick, isLocked }) {
 
 // ── The legend ──────────────────────────────────────────────────────────────
 
-function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) {
+function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet }) {
   const failFor = (role) => roles.fails.find((f) => f.role === role)
   const unset = new Set(roles.unset)
+  const adjId = useId()
 
   const chip = (role, label, i) => {
     const off = Boolean(used) && !used.includes(role)
@@ -237,6 +258,7 @@ function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) 
         onFocus={off ? undefined : () => onHover(role)}
         onBlur={() => onHover(null)}
         onClick={off ? undefined : () => onPin(role)}
+        aria-describedby={adjusted.includes(role) ? adjId : undefined}
       >
         <i className="pvd-sw" style={{ background: swatchOf(roles, role) }} aria-hidden="true" />
         <span className="pvd-chip-t">
@@ -256,6 +278,11 @@ function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) 
     )
   }
 
+  // A role's name as its chip prints it.
+  const adjustedName = (role) => (BRAND_ROLES.includes(role)
+    ? sentence(roleLabel(harmony, BRAND_ROLES.indexOf(role)))
+    : SUGGESTED.find(([r]) => r === role)?.[1] ?? role)
+
   let note = null
   if (roles.empty) note = 'Add colours to see your own roles'
   else if (roles.lowChroma) note = 'Your palette has no strong colour, so buttons use a neutral'
@@ -266,6 +293,11 @@ function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) 
       <div className="pvd-chips" role="group" aria-label="Your colours">
         {BRAND_ROLES.map((role, i) => chip(role, sentence(roleLabel(harmony, i)), i))}
       </div>
+      {adjusted.length > 0 && (
+        <p className="pvd-legend-adj" id={adjId}>
+          {adjusted.map(adjustedName).join(', ')}: {roles.mode === 'dark' ? 'lighter' : 'darker'} as text, so it reads
+        </p>
+      )}
       <p className="pvd-legend-sub">Suggested, not in your export</p>
       <div className="pvd-chips" role="group" aria-label="Suggested colours">
         {SUGGESTED.map(([role, label]) => chip(role, label, null))}
@@ -278,12 +310,14 @@ function Legend({ roles, harmony, used, hover, pinned, onHover, onPin, sheet }) 
 
 // ── One scene, gated ────────────────────────────────────────────────────────
 
-function Stage({ scene, roles, highlight, onRoles, gate, onUnlock }) {
+function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock }) {
   const locked = gate !== 'open'
   return (
     <div className={locked ? 'pvd-scene is-locked' : 'pvd-scene'}>
       <div className="pvd-scene-in" inert={locked}>
-        <PreviewScene key={scene.id} roles={roles} sceneId={scene.id} highlight={highlight} onRoles={onRoles} />
+        <Suspense fallback={<div className="pvd-scene-wait" style={{ background: roles.canvas }} aria-hidden="true" />}>
+          <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} />
+        </Suspense>
       </div>
       {locked && (
         <div className="pvd-lock">
@@ -340,6 +374,14 @@ export default function PalettePreviewDialog({
 
   const { mode, compare } = preview
   const scene = sceneById(preview.scene)
+
+  // Picking is a transition: `preview.scene` (and with it the picture) changes
+  // when the chosen example has loaded. `target` is what was picked, so the list
+  // moves its selection at once and shows a spinner on the option while it loads.
+  const [isPending, startTransition] = useTransition()
+  const [target, setTarget] = useState(null)
+  const shownId = isPending && target ? target : scene.id
+  const pendingId = isPending && target && target !== scene.id ? target : null
   const gate = scene.free || (isPro && planKnown) ? 'open' : planKnown ? 'locked' : 'pending'
   const isLocked = useCallback((s) => !s.free && !(isPro && planKnown), [isPro, planKnown])
 
@@ -355,6 +397,8 @@ export default function PalettePreviewDialog({
   const scoped = useCallback((r) => (surfaceless && r.fails.length ? { ...r, fails: [] } : r), [surfaceless])
   const baseRoles = useMemo(() => derivePaletteRoles(shown, { mode, harmony }), [shown, mode, harmony])
   const roles = useMemo(() => scoped(baseRoles), [scoped, baseRoles])
+  // The five slot names, which an example may print (a colourway's name).
+  const labels = useMemo(() => BRAND_ROLES.map((_, i) => sentence(roleLabel(harmony, i))), [harmony])
   const compareColors = compare?.colors
   const compareRoles = useMemo(() => {
     if (!compareColors) return null
@@ -366,8 +410,11 @@ export default function PalettePreviewDialog({
   const [hover, setHover] = useState(null)
   const [pinned, setPinned] = useState(null)
   const [used, setUsed] = useState(null)
-  const onRoles = useCallback((list) => {
-    setUsed((prev) => (prev && prev.length === list.length && list.every((r) => prev.includes(r)) ? prev : list))
+  const [adjusted, setAdjusted] = useState([])
+  const onRoles = useCallback((list, shifted = []) => {
+    const same = (prev, next) => prev.length === next.length && next.every((r) => prev.includes(r))
+    setUsed((prev) => (prev && same(prev, list) ? prev : list))
+    setAdjusted((prev) => (same(prev, shifted) ? prev : shifted))
   }, [])
   const live = (r) => (r && (!used || used.includes(r)) ? r : null)
   const highlight = live(hover) || live(pinned)
@@ -423,8 +470,24 @@ export default function PalettePreviewDialog({
   }
 
   const pick = useCallback((id) => {
-    onChange({ scene: id })
-  }, [onChange])
+    setTarget(id)
+    startTransition(() => onChange({ scene: id }))
+  }, [onChange, startTransition, setTarget])
+
+  // Fetch the neighbours of the open example when the browser has nothing else
+  // to do, in list order, so stepping with the arrows or a swipe is instant.
+  useEffect(() => {
+    const i = PREVIEW_SCENES.findIndex((s) => s.id === scene.id)
+    const near = [PREVIEW_SCENES[i - 1], PREVIEW_SCENES[i + 1]].filter((s) => s && s.example)
+    if (!near.length) return undefined
+    const run = () => near.forEach((s) => preloadExample(s.id))
+    if (typeof window.requestIdleCallback === 'function') {
+      const h = window.requestIdleCallback(run, { timeout: 2000 })
+      return () => window.cancelIdleCallback(h)
+    }
+    const t = window.setTimeout(run, 400)
+    return () => window.clearTimeout(t)
+  }, [scene.id])
 
   // Swipe the stage to step through the previews on a phone.
   const touch = useRef(null)
@@ -436,9 +499,11 @@ export default function PalettePreviewDialog({
     const dx = e.changedTouches[0].clientX - start[0]
     const dy = e.changedTouches[0].clientY - start[1]
     if (Math.abs(dx) < 64 || Math.abs(dy) > 40) return
-    const i = PREVIEW_SCENES.findIndex((s) => s.id === scene.id)
+    // Step from what the list shows (the pick in flight, if any), so a second
+    // swipe before the first example has loaded goes one further, not to the same place.
+    const i = PREVIEW_SCENES.findIndex((s) => s.id === shownId)
     const next = PREVIEW_SCENES[Math.min(Math.max(i + (dx < 0 ? 1 : -1), 0), PREVIEW_SCENES.length - 1)]
-    if (next.id !== scene.id) pick(next.id)
+    if (next.id !== shownId) pick(next.id)
   }
 
   const pinnedLabel = pinned
@@ -451,7 +516,8 @@ export default function PalettePreviewDialog({
     <SceneListbox
       orientation="vertical"
       label="Previews"
-      sceneId={scene.id}
+      sceneId={shownId}
+      pendingId={pendingId}
       isLocked={isLocked}
       onPick={pick}
       {...props}
@@ -463,6 +529,7 @@ export default function PalettePreviewDialog({
       roles={roles}
       harmony={harmony}
       used={used}
+      adjusted={adjusted}
       hover={hover}
       pinned={pinned}
       onHover={setHover}
@@ -512,15 +579,15 @@ export default function PalettePreviewDialog({
           {layout === 'rail' && (
             <aside className="pvd-rail">
               {list({ grouped: true, className: 'pvd-list' })}
-              <p className="pvd-note">Sample content for a made-up product, Fernway.</p>
+              <p className="pvd-note">{NOTE}</p>
             </aside>
           )}
 
           <div className="pvd-main">
             {layout === 'menu' && (
               <div className="pvd-pickbar">
-                <SceneMenu scene={scene} sceneId={scene.id} onPick={pick} isLocked={isLocked} layerRef={layerRef} />
-                <span className="pvd-note">Sample content for a made-up product, Fernway.</span>
+                <SceneMenu scene={sceneById(shownId)} sceneId={shownId} pendingId={pendingId} onPick={pick} isLocked={isLocked} layerRef={layerRef} />
+                <span className="pvd-note">{NOTE}</span>
               </div>
             )}
 
@@ -547,15 +614,15 @@ export default function PalettePreviewDialog({
                 <>
                   <section className="pvd-pane" aria-label="Current palette">
                     <p className="pvd-pane-l">Current <span>score {paletteScore}</span></p>
-                    <Stage scene={scene} roles={roles} highlight={null} gate={gate} onUnlock={onUnlock} />
+                    <Stage scene={scene} roles={roles} labels={labels} highlight={null} gate={gate} onUnlock={onUnlock} />
                   </section>
                   <section className="pvd-pane" aria-label={compare.label}>
                     <p className="pvd-pane-l">{compare.label}{compare.score != null && <span>score {compare.score}</span>}</p>
-                    <Stage scene={scene} roles={compareRoles} highlight={null} gate={gate} onUnlock={onUnlock} />
+                    <Stage scene={scene} roles={compareRoles} labels={labels} highlight={null} gate={gate} onUnlock={onUnlock} />
                   </section>
                 </>
               ) : (
-                <Stage scene={scene} roles={roles} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} />
+                <Stage scene={scene} roles={roles} labels={labels} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} />
               )}
             </div>
 
@@ -571,7 +638,7 @@ export default function PalettePreviewDialog({
 
         {layout === 'strip' && (
           <div className="pvd-dock">
-            <SceneStrip sceneId={scene.id} onPick={pick} isLocked={isLocked} />
+            <SceneStrip sceneId={shownId} pendingId={pendingId} onPick={pick} isLocked={isLocked} />
             {!compare && (
               <button
                 ref={coloursRef}
@@ -591,7 +658,7 @@ export default function PalettePreviewDialog({
           <div ref={sheetRef} className="pvd-sheet" role="dialog" aria-label="Where each colour lands">
             <button type="button" className="plb-pop-x pvd-close pvd-sheet-x" aria-label="Close colours" onClick={closeSheet}><IcoX /></button>
             {legend}
-            <p className="pvd-note">Sample content for a made-up product, Fernway.</p>
+            <p className="pvd-note">{NOTE}</p>
           </div>
         )}
       </div>

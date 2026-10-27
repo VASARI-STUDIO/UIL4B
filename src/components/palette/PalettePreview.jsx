@@ -1,5 +1,7 @@
-// The Palette Builder's eight previews: one small product (Fernway) painted
-// with the palette the user is about to export.
+// The Palette Builder's previews, painted with the palette the user is about to
+// export. Six older scenes show one small product (Fernway) from several sides;
+// the examples (src/components/palette/examples/) are each their own product
+// built around one drawn artefact, and load as their own chunks.
 //
 // Every component below is pure. It takes nothing but what it draws, holds no
 // state and reads no context. The colours arrive as --pv-* custom properties on
@@ -13,6 +15,7 @@
 // data-role="primary success" is both.
 import { useEffect, useRef } from 'react'
 import { pvVars } from '../../utils/palettePreviewRoles'
+import { EXAMPLES } from './examples/registry'
 import { FERNWAY, sceneById } from '../../data/palettePreviewScenes'
 import '../../styles/pages/palette-preview.css'
 
@@ -366,13 +369,15 @@ const SCENES = {
 /**
  * @param {object} props
  * @param {object} props.roles derivePaletteRoles() output for the palette
+ * @param {string[]} props.labels the five slot names, in BRAND_ROLES order
  * @param {string} props.sceneId one of PREVIEW_SCENES
  * @param {string|null} props.highlight a role to outline, or null
- * @param {(roles: string[]) => void} props.onRoles the roles this scene paints
+ * @param {(roles: string[], adjusted: string[]) => void} props.onRoles the roles
+ *   this scene paints, and those it painted as text in an adjusted colour
  */
-export default function PreviewScene({ roles, sceneId, highlight = null, onRoles }) {
+export default function PreviewScene({ roles, labels, sceneId, highlight = null, onRoles }) {
   const scene = sceneById(sceneId)
-  const Body = SCENES[scene.id]
+  const Body = scene.example ? EXAMPLES[scene.id] : SCENES[scene.id]
   const rootRef = useRef(null)
   const failKey = roles.fails.map((f) => f.role).join(',')
 
@@ -382,7 +387,10 @@ export default function PreviewScene({ roles, sceneId, highlight = null, onRoles
   // with them. A failing role is flagged on one element, the largest it paints
   // at this width, so a chart of twelve bars shows one outline rather than
   // twelve. The marks are redone when the scene is resized, because a layout
-  // change can hide the element that was flagged.
+  // change can hide the element that was flagged, and when the roles change,
+  // because an example may paint a brand colour as text a step darker (or
+  // lighter) to keep it readable: it marks that element data-adjusted, and the
+  // legend says so on the chip.
   useEffect(() => {
     const root = rootRef.current
     if (!root) return undefined
@@ -390,6 +398,7 @@ export default function PreviewScene({ roles, sceneId, highlight = null, onRoles
     const mark = () => {
       const els = [...root.querySelectorAll('[data-role]')]
       const used = new Set()
+      const adjusted = new Set()
       const flagged = new Set()
       for (const role of failing) {
         let best = null
@@ -404,6 +413,7 @@ export default function PreviewScene({ roles, sceneId, highlight = null, onRoles
       for (const el of els) {
         const rs = el.dataset.role.split(' ')
         rs.forEach((r) => used.add(r))
+        if (el.dataset.adjusted === 'true') rs.forEach((r) => adjusted.add(r))
         const isLeaf = !el.querySelector('[data-role]')
         if (highlight && rs.includes(highlight)) el.dataset.hit = 'on'
         else if (highlight && isLeaf) el.dataset.hit = 'off'
@@ -411,14 +421,14 @@ export default function PreviewScene({ roles, sceneId, highlight = null, onRoles
         if (flagged.has(el)) el.dataset.fail = 'on'
         else delete el.dataset.fail
       }
-      if (onRoles) onRoles([...used])
+      if (onRoles) onRoles([...used], [...adjusted])
     }
     mark()
     if (typeof ResizeObserver === 'undefined' || !failKey) return undefined
     const ro = new ResizeObserver(mark)
     ro.observe(root)
     return () => ro.disconnect()
-  }, [highlight, scene.id, failKey, onRoles, roles.mode])
+  }, [highlight, scene.id, failKey, onRoles, roles])
 
   return (
     <div
@@ -431,7 +441,7 @@ export default function PreviewScene({ roles, sceneId, highlight = null, onRoles
       role="img"
       aria-label={`${scene.name} preview using your palette, ${roles.mode} theme`}
     >
-      <Body />
+      <Body roles={roles} labels={labels} />
     </div>
   )
 }

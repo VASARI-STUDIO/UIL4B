@@ -1,0 +1,184 @@
+/* Orra Workroom (OrraWorkroom.jsx): a product page painted with the palette.
+ *
+ * Colour comes only from --pv-* (set by the dialog) and the --or-* inks and
+ * edges the scene works out per palette. Layout is a container query on .or (named orra):
+ * wide 960+, mid 600 to 959, narrow under 600.
+ * Type: 12 / 13 / 15 / 17 / 20px, plus one display title in clamp(). Hanken
+ * Grotesk is loaded here only; figures use the global Geist Mono. */
+
+@font-face{font-family:'PV Hanken';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/hanken-grotesk-latin.woff2') format('woff2')}
+
+.or{
+  container:orra / inline-size;
+  isolation:isolate;
+  min-height:100%;
+  background:var(--pv-canvas);
+  color:var(--pv-text);
+  font-family:'PV Hanken','Switzer Fallback',system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  font-variant-numeric:tabular-nums;
+}
+.or :where(h3,p,ul){margin:0;padding:0;font:inherit}
+.or :where(ul){list-style:none}
+.or :where(*,*::before,*::after){box-sizing:border-box}
+
+/* ── Top bar and breadcrumb ── */
+.or-top{
+  display:flex;align-items:center;gap:var(--s-6);
+  min-height:56px;padding:var(--s-2) var(--s-6);border-bottom:1px solid var(--pv-border);
+}
+.or-mark{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.or-nav{display:flex;gap:var(--s-5);font-size:15px;color:var(--pv-muted)}
+.or-nav .is-on{color:var(--pv-text)}
+.or-bag{margin-left:auto;font-size:15px}
+/* Shown only where the links are hidden (narrow). Decorative, like the links. */
+.or-menu{display:none;align-items:center;justify-content:center;width:32px;height:32px;margin-right:calc(var(--s-1) * -1);color:var(--pv-text)}
+.or-bag b{font-family:'Geist Mono',ui-monospace,monospace;font-weight:500}
+.or-crumb{padding:var(--s-4) var(--s-6) 0;font-size:13px;color:var(--pv-muted)}
+.or-crumb b{font-weight:400;color:var(--pv-text)}
+.or-crumb span{padding:0 var(--s-1)}
+
+/* ── Main: the stage beside the buying column ── */
+.or-main{
+  display:grid;grid-template-columns:repeat(12,minmax(0,1fr));
+  gap:var(--s-7) var(--s-6);padding:var(--s-4) var(--s-6) var(--s-7);
+}
+.or-stage{
+  grid-column:1 / span 7;position:relative;
+  display:grid;grid-template-columns:72px minmax(0,1fr);gap:var(--s-4);
+  aspect-ratio:4 / 5;max-height:820px;padding:var(--s-4);
+  background:var(--pv-raised);border-radius:4px;
+}
+.or-buy{grid-column:8 / span 5;display:flex;flex-direction:column;gap:var(--s-5);min-width:0;padding-top:var(--s-2)}
+
+/* The shirt is placed inside the figure's box (insets as percentages of it), not
+ * sized by it, so its height can never push past the stage whatever the row
+ * gives the figure. */
+.or-figure{grid-column:2;grid-row:1;position:relative;min-height:0}
+.or-figure .or-garment{position:absolute;left:4%;top:6%;width:92%;height:84%;animation:or-rise 300ms cubic-bezier(.23,1,.32,1) both}
+
+.or-thumbs{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:var(--s-2)}
+.or-thumb{
+  display:flex;flex-direction:column;align-items:center;gap:var(--s-1);
+  padding:var(--s-1) 0 var(--s-1);border-radius:6px;
+  background:var(--pv-surface);box-shadow:inset 0 0 0 1px var(--pv-border);
+  animation:or-rise 300ms cubic-bezier(.23,1,.32,1) both;animation-delay:calc(120ms + var(--i) * 60ms);
+}
+.or-thumb.is-on{box-shadow:inset 0 0 0 2px var(--pv-text)}
+/* Clipped to its own box: the pocket view is a crop, and its shirt would otherwise
+   spill over the label and the thumbnails beside it. */
+.or-thumb .or-garment{width:56px;height:64px;overflow:hidden}
+.or-thumb-t{font-size:12px;color:var(--pv-muted)}
+.or-thumb.is-on .or-thumb-t{color:var(--pv-text);font-weight:600}
+.or-shown{position:absolute;right:var(--s-4);bottom:var(--s-3);font-size:12px;color:var(--pv-muted)}
+
+/* ── The garment ── */
+.or-garment{display:block;overflow:visible}
+.or-body{fill:var(--pv-primary)}
+.or-body--outline{stroke:var(--or-body-edge);stroke-width:1.5;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.or-seam{fill:none;stroke:var(--or-seam);stroke-width:1.25;stroke-dasharray:3 2.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.or-lining{fill:var(--pv-secondary)}
+.or-btn{fill:var(--pv-subtle);stroke:var(--or-seam);stroke-width:1;vector-effect:non-scaling-stroke}
+.or-tabfill{fill:var(--pv-accent)}
+.or-tab{fill:none;stroke:var(--pv-accent);stroke-width:3;stroke-linecap:round}
+
+/* ── Buying column ── */
+.or-maker{font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;letter-spacing:.02em;color:var(--pv-muted)}
+.or-title{
+  margin-top:calc(var(--s-3) * -1);
+  font-size:clamp(32px,3.6cqi,44px);font-weight:300;line-height:1.02;letter-spacing:-.03em;text-wrap:balance;
+}
+.or-price{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s-1) var(--s-3);font-family:'Geist Mono',ui-monospace,monospace;font-size:20px;font-weight:500}
+.or-price span{font-family:'PV Hanken','Switzer Fallback',system-ui,sans-serif;font-size:13px;font-weight:400;color:var(--pv-muted)}
+.or-body-t{max-width:52ch;font-size:15px;color:var(--pv-text)}
+
+.or-opt{display:flex;flex-direction:column;gap:var(--s-3);padding-top:var(--s-4);border-top:1px solid var(--pv-border)}
+.or-opt-l{display:flex;gap:var(--s-2);align-items:baseline;font-size:13px;color:var(--pv-muted)}
+.or-opt-l b{font-weight:600;color:var(--pv-text)}
+.or-guide{margin-left:auto;color:var(--pv-text);text-decoration:underline;text-underline-offset:3px}
+
+/* Five equal columns across the buying column: one row at every width. */
+.or-swatches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s-3) var(--s-1)}
+.or-sw{position:relative;display:flex;flex-direction:column;align-items:center;gap:var(--s-1);min-width:0}
+.or-sw>i{
+  width:36px;height:36px;border-radius:50%;border:1px solid transparent;
+}
+.or-sw.is-on>i{outline:2px solid var(--pv-text);outline-offset:2px}
+/* A name the column cannot hold (a long custom label) wraps instead of being cut. */
+.or-sw-t{max-width:100%;text-align:center;overflow-wrap:anywhere;font-size:12px;line-height:1.25;color:var(--pv-muted)}
+.or-sw.is-on .or-sw-t{color:var(--pv-text);font-weight:600}
+
+.or-sizes{display:grid;grid-template-columns:repeat(6,minmax(44px,1fr));gap:var(--s-2)}
+.or-size{
+  display:grid;place-items:center;height:44px;border:1px solid var(--pv-border-strong);border-radius:6px;
+  font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;
+}
+.or-size.is-on{background:var(--pv-text);border-color:var(--pv-text);color:var(--pv-canvas);font-weight:600}
+.or-size.is-off{border-color:var(--pv-border);color:var(--pv-disabled);text-decoration:line-through}
+.or-help{font-size:13px;color:var(--pv-muted)}
+
+.or-stock{display:flex;align-items:center;gap:var(--s-2);font-size:13px;font-weight:600;color:var(--pv-success-ink)}
+.or-stock>i{width:8px;height:8px;border-radius:50%;background:var(--pv-success)}
+
+.or-ctas{display:flex;gap:var(--s-2)}
+.or-cta{
+  flex:1;display:grid;place-items:center;height:48px;padding:0 var(--s-4);border-radius:6px;
+  background:var(--pv-primary);color:var(--or-cta-ink);border:1px solid var(--or-cta-edge);
+  font-size:15px;font-weight:600;white-space:nowrap;
+}
+.or-save{
+  display:inline-flex;align-items:center;gap:var(--s-2);height:48px;padding:0 var(--s-4);
+  border:1px solid var(--pv-border-strong);border-radius:6px;font-size:15px;
+}
+
+.or-details{border-top:1px solid var(--pv-border)}
+.or-details li{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:var(--s-3) 0;border-bottom:1px solid var(--pv-border);font-size:15px;
+}
+
+/* ── Mid: half and half; thumbnails become a row under the stage ── */
+@container orra (max-width:959px){
+  .or-top{padding:var(--s-2) var(--s-5);gap:var(--s-5)}
+  .or-crumb{padding:var(--s-4) var(--s-5) 0}
+  .or-main{padding:var(--s-4) var(--s-5) var(--s-6);gap:var(--s-6) var(--s-5)}
+  /* minmax(0,...) and min-width:0: a bare 1fr takes its minimum from the figure's
+   * 4:5 ratio, which would let the stage grow wider than its half of the page. */
+  .or-stage{grid-column:1 / span 6;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;align-self:start;aspect-ratio:auto;max-height:none;padding:var(--s-3)}
+  .or-figure{grid-column:1;grid-row:1;aspect-ratio:4 / 5;width:100%;min-width:0}
+  .or-thumbs{grid-column:1;grid-row:2;flex-direction:row}
+  .or-thumb{flex:1}
+  .or-shown{display:none}
+  .or-buy{grid-column:7 / span 6}
+  .or-sizes{grid-template-columns:repeat(3,minmax(44px,1fr))}
+  /* The buying column is under 330px here, too narrow for five names. The "Colourway"
+   * line above names the selected one; the others stay in the text, hidden visually. */
+  .or-sw>i{width:40px;height:40px}
+  .or-sw-t{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+
+/* ── Narrow: one column, stage first ── */
+@container orra (max-width:599px){
+  .or-top{padding:var(--s-2) var(--s-4)}
+  .or-nav{display:none}
+  .or-menu{display:inline-flex}
+  .or-crumb{padding:var(--s-3) var(--s-4) 0}
+  .or-main{padding:var(--s-3) var(--s-4) var(--s-6);gap:var(--s-5)}
+  .or-stage,.or-buy{grid-column:1 / -1}
+  .or-title{font-size:28px;margin-top:calc(var(--s-4) * -1)}
+  .or-ctas{flex-wrap:wrap}
+  .or-cta{flex-basis:100%}
+  .or-save{flex:1;justify-content:center}
+}
+
+/* ── Signature moment: the garment rises in, the thumbnails follow ── */
+@keyframes or-rise{from{opacity:0;transform:translateY(12px)}}
+@keyframes or-fade{from{opacity:0}}
+
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .or-figure .or-garment,
+  html:not([data-reduced-motion="false"]) .or-thumb{animation:or-fade 150ms ease-out both}
+}
+html[data-reduced-motion="true"] .or-figure .or-garment,
+html[data-reduced-motion="true"] .or-thumb{animation:or-fade 150ms ease-out both}
