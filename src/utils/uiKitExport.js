@@ -53,6 +53,9 @@ import { SITE_ORIGIN } from './routeMeta.js'
 import { SUBSET_RANGES } from './kitFonts.js'
 import { readIdentity } from './kitIdentity.js'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
+import { hexToOklch } from './exportTemplates/roles.js'
+import { MAX_SLOTS } from './exportTemplates/shared.js'
+import { roleLabel } from './paletteRoles.js'
 
 export const KIT_TIERS = Object.freeze(['free', 'pro'])
 
@@ -84,11 +87,20 @@ const WEBSITE_COPY = Object.freeze({
   caption: 'A layout specimen using the selected colours, fonts, and component tokens.',
 })
 export const SLOT_COPY = Object.freeze({
-  citron: { role: 'Signature accent', note: 'The spark. Use for moments that deserve attention.', share: 20 },
-  pine: { role: 'Primary brand', note: 'The anchor. Ground expressive layouts and key actions.', share: 25 },
-  lilac: { role: 'Supporting colour', note: 'The softer side. Give stories and quiet moments a home.', share: 10 },
-  chalk: { role: 'Canvas', note: 'The breathing room. Let the content come forward.', share: 40 },
-  ink: { role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', share: 5 },
+  citron: { role: 'Signature accent', note: 'The spark. Use for moments that deserve attention.', lands: 'highlights and moments that deserve attention', share: 20 },
+  pine: { role: 'Primary brand', note: 'The anchor. Ground expressive layouts and key actions.', lands: 'buttons, links and the focus ring', share: 25 },
+  lilac: { role: 'Supporting colour', note: 'The softer side. Give stories and quiet moments a home.', lands: 'soft panels, notes and quiet highlights', share: 10 },
+  chalk: { role: 'Canvas', note: 'The breathing room. Let the content come forward.', lands: 'the page behind the content', share: 40 },
+  ink: { role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', lands: 'headings, labels and reading copy', share: 5 },
+})
+// A palette colour that is not one of the five slots paints nothing in the kit.
+export const UNPLACED_LANDS = 'not assigned to a part of the interface'
+
+// The publisher's own faces for each layout, loaded by uiKitAssets and embedded
+// as "Publisher <family>". Each must be a key of SELF_HOSTED in kitFonts.js.
+export const KIT_CHROME = Object.freeze({
+  studio: Object.freeze(['Geist', 'Geist Mono']),
+  manual: Object.freeze(['Hanken Grotesk', 'Martian Mono']),
 })
 // Said on any slot the palette could not fill, so the kit's five colours are
 // never mistaken for the same five the book and the deck show.
@@ -132,6 +144,8 @@ export const esc = (value) => String(value ?? '')
 export const cssFamily = (name) => String(name ?? '').replace(/[^A-Za-z0-9 ._-]/g, '').trim() || 'sans-serif'
 
 const up = (hex) => String(hex).toUpperCase()
+/** The WCAG text grade of a contrast ratio, as a word so colour is never the only cue. */
+export const gradeOf = (ratio) => (ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA large' : 'Fails AA')
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
 const lum = (hex) => {
   const c = rgb(hex).map((v) => v / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
@@ -307,11 +321,31 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     disabledText: quietInk(text, disabledBackground, [disabledBackground]),
   }
 
+  // Every palette colour (up to MAX_SLOTS), for the layouts that tabulate them. A
+  // colour that is one of the five slots says where it lands; any other says so.
+  const colours = book.palette.slice(0, MAX_SLOTS).map((hex, i) => {
+    const owner = palette.find((p) => p.token === `--color-${paletteRole(i)}`)
+    const ok = hexToOklch(hex)
+    return {
+      i,
+      hex: up(hex),
+      name: colorName(hex),
+      role: roleLabel(book.harmony, i),
+      token: `--color-${paletteRole(i)}`,
+      oklch: `oklch(${(ok.l * 100).toFixed(1)}% ${ok.c.toFixed(3)} ${Math.round(ok.h)})`,
+      scale: kitScale(design, hex),
+      lands: owner ? owner.lands : UNPLACED_LANDS,
+      onCanvas: contrast(up(hex), canvas),
+      onText: contrast(up(hex), text),
+    }
+  })
+
   const record = {
     tier,
     isExample: false,
     ...GUIDE_COPY,
     palette,
+    colours,
     semantic,
     fonts: { display, body },
     typeScale,
@@ -321,7 +355,7 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     website: { ...WEBSITE_COPY },
     tintToken: slot.pine.token || '--color-primary',
   }
-  if (free) return { ...record, ...FREE_IDENTITY }
+  if (free) return { ...record, ...FREE_IDENTITY, title: 'UI kit' }
 
   // Pro: the identity section appears only when the person has named the work.
   const { name, description } = readIdentity(design)
@@ -329,7 +363,7 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     ? { name, ...(description ? { description } : {}), ...(logo?.src ? { logo: { src: logo.src } } : {}) }
     : null
   const slug = slugify(name) ? `${slugify(name)}-ui-kit` : 'ui-kit'
-  return { ...record, name: name || 'UI kit', slug, edition: 'UI kit / Personal edition', personalisation }
+  return { ...record, name: name || 'UI kit', title: name || 'UI kit', slug, edition: 'UI kit / Personal edition', personalisation }
 }
 
 // ── Tokens ──────────────────────────────────────────────────────────────────
