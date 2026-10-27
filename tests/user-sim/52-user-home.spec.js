@@ -415,7 +415,7 @@ test.describe('a project’s own page', () => {
 
     // THE EXPORT BAR TELLS THE TRUTH: CSS, JSON and Tailwind export are not built.
     await expect(page.locator('.pjd-export-line')).not.toContainText(/CSS|JSON|Tailwind/)
-    await page.getByRole('button', { name: 'Export project' }).click()
+    await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project' }).click()
     await expect(page.getByRole('dialog').filter({ has: page.locator('#exp-title') })).toBeVisible()
   })
 

@@ -1210,7 +1210,7 @@ export function derivePreviewRoles(allColors, opts = {}) {
 // The worst contrast an ink achieves over a set of grounds. Every guarantee
 // below is stated in these terms, because a role that clears one ground and
 // fails another is exactly the defect [preview-muted-on-surface] recorded.
-function pvWorstOn(ink, grounds) {
+export function pvWorstOn(ink, grounds) {
   let worst = Infinity
   for (const g of grounds) {
     const r = contrastRatio(ink, g)
@@ -1274,7 +1274,7 @@ function pvSurface(bg, opposite, step, target = 4.5) {
  * whole ink budget is spent on clearing bg — and the answer converges on `text`
  * itself, which is the honest result rather than an illegible one.
  */
-function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
+export function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
   const clears = (t) => pvWorstOn(mixHex(text, bg, t), grounds) >= target
   if (clears(maxMix)) return mixHex(text, bg, maxMix)
   let lo = 0            // t = 0 is `text`, already guaranteed by the caller
@@ -1321,7 +1321,7 @@ function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
  * previews already use, and the movement where it happens is at most ten
  * levels per channel.
  */
-function inkOnSolid(bg, target = 4.5) {
+export function inkOnSolid(bg, target = 4.5) {
   return inkOnGrounds([bg], target)
 }
 
@@ -1366,7 +1366,7 @@ const PV_INK_STEPS = 256
  * the KPI number is 16px/700, which is NOT large text (AA-large starts at
  * 18.66px bold) — so the default is 4.5.
  */
-function pvInkFromFill(seed, grounds, target = 4.5) {
+export function pvInkFromFill(seed, grounds, target = 4.5) {
   // Already legible on every ground: the palette's own colour is the answer
   // and nothing moves. This is the common case on a well-separated palette.
   if (pvWorstOn(seed, grounds) >= target) return seed
@@ -1391,7 +1391,7 @@ function pvInkFromFill(seed, grounds, target = 4.5) {
 // The same walk over a SET of grounds. With one ground this is byte-identical
 // to what inkOnSolid did before [preview-muted-on-surface] widened it, which
 // is why onPrimary's measured guarantee is unchanged by that widening.
-function inkOnGrounds(grounds, target = 4.5) {
+export function inkOnGrounds(grounds, target = 4.5) {
   const poles = [[PV_NEAR_BLACK, '#000000'], [PV_NEAR_WHITE, '#FFFFFF']]
   let near = poles[0][0]
   for (const [p] of poles) if (pvWorstOn(p, grounds) > pvWorstOn(near, grounds)) near = p

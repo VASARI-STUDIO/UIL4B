@@ -489,12 +489,14 @@
 @media (max-width: 767px) {
   .tl .tl-toolbar .tl-btn-label--collapse { display: none; }
 }
-/* Below the 390 phone the row tightens its gaps and gutters, so a whole tool
-   name and a labelled primary still share one line. At 360, with every action
-   already in the overflow, back + name + More + primary are all that is left;
-   a 6px gap left them under 3px from the screen edge, which text that measures
-   slightly wider on another platform used up. 4px buys back 6px. */
-@media (max-width: 380px) {
+/* On a phone the row tightens its gaps and gutters, so a whole tool name and a
+   labelled primary still share one line. At 360, with every action already in
+   the overflow, back + name + More + primary are all that is left; a 6px gap
+   left them under 3px from the screen edge, which text that measures slightly
+   wider on another platform used up. 4px buys back 6px. The 390 phone is
+   included: with Switzer its widest row kept under 11px spare, too little for
+   that platform difference. */
+@media (max-width: 400px) {
   :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: 8px; }
 }
 

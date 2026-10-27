@@ -67,6 +67,7 @@ import vm from 'node:vm'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 
 import { cleanKey } from '../../api/_lib/env.js'
+import { usageDayKey, usageMonthKey } from '../../api/_lib/aiUsage.js'
 import {
   altTextGenerationConfig,
   altTextOutcome,
@@ -181,6 +182,10 @@ function loadAi({
     credentialProblem: () => credential,
     FieldValueIncrement: async () => INC,
     requireAdmin: async () => admin,
+    // api/_lib/aiUsage.js — the real day and month keys, so the provider-health
+    // window reads the same documents the handler writes.
+    usageDayKey, usageMonthKey,
+    serveUsage: () => { throw new Error('not modelled here') },
     planForUser: () => { throw new Error('not modelled here') },
     dailyLimitFor: () => { throw new Error('not modelled here') },
     monthlyLimitFor: () => { throw new Error('not modelled here') },

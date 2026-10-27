@@ -20,7 +20,7 @@
 // Plain module, no JSX, so the unit tests can import it under `node --test`.
 
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../config/plans.js'
-import { BILLING_OPTIONS, resolveOffers } from '../../config/planFacts.js'
+import { resolveOffers } from '../../config/planFacts.js'
 import { BILLED_EVERY } from '../../utils/billingCadence.js'
 import { createTools } from '../../data/toolTree.js'
 import { projectDigest, relativeTime } from '../../utils/userHome.js'
@@ -50,7 +50,7 @@ export function liveToolCount() {
 /** The tools whose allowance is DAILY. api/_lib/plans.js meters each of them on
  *  its own bucket (field = toolId), and the Brand Starter is metered per month
  *  or per account instead (config/aiGeneration.js), so it is not a daily meter. */
-export const DAILY_AI_TOOLS = Object.freeze(['alt-text', 'prompts-ai'])
+export const DAILY_AI_TOOLS = Object.freeze(['alt-text', 'scan-photo', 'prompts-ai'])
 
 /**
  * "AI generations today", as the person will meet the cap.
@@ -61,11 +61,53 @@ export const DAILY_AI_TOOLS = Object.freeze(['alt-text', 'prompts-ai'])
  * so that is the one printed. `countFor` is injected (usageTracker's
  * getUsageCount in the page) so this stays testable without a DOM.
  */
-export function aiUsageToday(countFor, plan) {
-  const limit = plan?.limits?.['ai-default'] ?? AI_LIMITS.free.daily
-  const used = Math.max(0, ...DAILY_AI_TOOLS.map((id) => Number(countFor(id)) || 0))
+export function aiUsageToday(countFor, plan, server = null) {
+  const planLimit = plan?.limits?.['ai-default'] ?? AI_LIMITS.free.daily
+  // Once the account's own figures (GET /api/ai?usage=1) have arrived they are the
+  // only ones shown: the server counts UTC days against the whole account, while
+  // this browser's count resets at local midnight and is shared by every account
+  // that signs in here, so taking the larger of the two would overstate usage.
+  // This browser's count is the first paint before the answer, and the fallback
+  // when the request fails. `limit` is optional on the answer (the hook drops it
+  // when the plan changed after it was fetched); the plan's own limit stands in.
+  const known = Number.isFinite(server?.used)
+  const limit = known && Number.isFinite(server.limit) && server.limit > 0 ? server.limit : planLimit
+  const local = Math.max(0, ...DAILY_AI_TOOLS.map((id) => Number(countFor(id)) || 0))
+  const used = known ? Math.max(0, server.used) : local
   const shown = Math.min(used, limit)
-  return { used: shown, limit, pct: limit > 0 ? Math.round((shown / limit) * 100) : 0 }
+  const monthKnown = known && Number.isFinite(server.monthUsed) && Number.isFinite(server.monthLimit)
+  return {
+    used: shown,
+    limit,
+    pct: limit > 0 ? Math.round((shown / limit) * 100) : 0,
+    // 'account' when the figure shown is the server's; 'browser' when it is this browser's.
+    source: known ? 'account' : 'browser',
+    month: monthKnown ? { used: server.monthUsed, limit: server.monthLimit } : null,
+  }
+}
+
+/** The UTC day the server buckets on: YYYY-MM-DD. */
+export const utcDay = (now = new Date()) => now.toISOString().slice(0, 10)
+
+/** Milliseconds from `now` to the next UTC midnight, plus a second so the server has rolled. */
+export const msToUtcMidnight = (now = new Date()) =>
+  Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime() + 1000
+
+/**
+ * What useServerAiUsage may show from the last answer it holds. `state` is
+ * { uid, planId, day, usage }: who it was fetched for, the page's plan id and the
+ * UTC day (on this clock) when it was asked. Returns the answer, or null.
+ *   - another account's answer, or none yet -> null
+ *   - an earlier UTC day's answer            -> null (yesterday's count is not today's)
+ *   - the plan changed since it was asked    -> the count only: the answer's limit and
+ *     monthly limit belong to the old plan, so a Pro account is not capped at the free
+ *     limit while the refetch is on its way
+ */
+export function settleServerUsage(state, { uid, planId, today }) {
+  if (!state || state.uid !== uid || !state.usage) return null
+  if (state.day !== today) return null
+  if (state.planId !== planId) return { ...state.usage, limit: undefined, monthLimit: undefined }
+  return state.usage
 }
 
 /** Project slots, or null when the plan has no project limit (Pro). */
@@ -78,24 +120,6 @@ export function projectSlots(count, limit) {
 /* ── The Pro panel ────────────────────────────────────────────────────────── */
 
 const NO_OFFER = Object.freeze({ label: 'See Pro', billed: '' })
-
-// /api/get-prices fills every cadence from its fallback table when Stripe has none,
-// so an amount counts only if Stripe priced it in this currency: a finite number,
-// `source` not 'fallback', and `currencyAvailability[cadence][currency] === true`
-// (missing availability fails closed).
-function livePricesOnly(prices, currency) {
-  if (!prices || typeof prices !== 'object') return prices
-  const out = { source: prices.source, currencyAvailability: prices.currencyAvailability }
-  for (const { liveKey } of BILLING_OPTIONS) {
-    const amount = prices[liveKey]?.[currency]
-    const source = prices.source?.[liveKey]
-    const live = Number.isFinite(amount)
-      && (source === undefined || source === 'live')
-      && prices.currencyAvailability?.[liveKey]?.[currency] === true
-    if (live) out[liveKey] = { [currency]: amount }
-  }
-  return out
-}
 
 /**
  * The Pro button's label and billed line, from the LIVE price in the visitor's
@@ -110,7 +134,7 @@ function livePricesOnly(prices, currency) {
  * `prices` is usePrices().prices; `currency` and `loaded` are useProPrice()'s.
  */
 export function upgradeOffer({ prices, currency, loaded } = {}) {
-  const { offers } = resolveOffers({ prices: livePricesOnly(prices, currency), currency, loaded })
+  const { offers } = resolveOffers({ prices, currency, loaded })
   let best = null
   for (const o of offers) {
     if (!o.amountLabel || !(o.total > 0)) continue

@@ -1,0 +1,157 @@
+/* The preview dialog chrome (src/components/palette/PalettePreviewDialog.jsx).
+ * The scenes themselves live in palette-preview.css. data-layout on the dialog
+ * is set from the same widths the component switches its list on:
+ * rail from 1024px, menu from 768px, strip below, and strip at any width when
+ * the window is under 500px tall. The double class beats the base .plb-modal
+ * rules in colour.css.
+ */
+
+.plb-modal.plb-modal--preview{padding:var(--s-6)}
+.plb-modal.plb-modal--preview[data-layout="menu"]{padding:var(--s-5)}
+.plb-modal.plb-modal--preview[data-layout="strip"]{padding:0}
+
+.plb-modal.plb-modal--preview .plb-modal-card--preview{
+  gap:0;padding:0;overflow:hidden;
+  width:min(1280px,100%);height:min(820px,calc(100dvh - 2 * var(--s-6)));max-height:none;
+  border-radius:var(--radius-xl);
+}
+.plb-modal--preview[data-layout="menu"] .plb-modal-card--preview{height:min(820px,calc(100dvh - 2 * var(--s-5)))}
+.plb-modal--preview[data-layout="strip"] .plb-modal-card--preview{
+  width:100%;height:100dvh;border:0;border-radius:0;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Header: one row, never wraps. */
+.pvd-head{flex:none;gap:var(--s-3);min-height:56px;padding:var(--s-2) var(--s-4);border-bottom:1px solid var(--border)}
+.plb-modal--preview .pvd-head .plb-pop-title{margin-right:auto;font-size:15px;font-weight:600}
+.plb-modal--preview .plb-modal-modes{height:36px;padding:2px;border-radius:var(--radius-pill)}
+.plb-modal--preview .plb-mode{position:relative;min-width:64px;padding:0 var(--s-3);font-size:13px;
+  transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.plb-modal--preview .plb-mode::after{content:"";position:absolute;inset:-7px 0}
+.plb-modal--preview .pvd-close{position:relative;width:36px;height:36px}
+.plb-modal--preview .pvd-close::after{content:"";position:absolute;inset:-4px}
+.plb-modal--preview[data-layout="strip"] .pvd-close{width:44px;height:44px}
+/* Strip: the theme buttons are real 44px boxes (46px group, 1px border). */
+.plb-modal--preview[data-layout="strip"] .pvd-head{padding-block:var(--s-1)}
+.plb-modal--preview[data-layout="strip"] .plb-modal-modes{height:46px;padding:0;gap:0}
+.plb-modal--preview[data-layout="strip"] .plb-mode{height:44px}
+.plb-modal--preview[data-layout="strip"] .plb-mode::after{content:none}
+
+.pvd-vision,.pvd-showing{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);flex:none;padding:var(--s-2) var(--s-4);background:var(--bg-2);border-bottom:1px solid var(--border);font-size:13px;color:var(--t1)}
+.pvd-vision b,.pvd-showing b{font-weight:600;color:var(--t0)}
+/* The "Showing" row is always there in the strip layout, so pinning a colour
+ * never moves the scene. Nothing pinned, it holds a hint. */
+.pvd-showing{min-height:44px;padding-block:0}
+.pvd-showing-hint{color:var(--t2)}
+.pvd-showing .pvd-link{display:inline-flex;align-items:center;min-height:44px;padding:0 var(--s-3)}
+.pvd-link{padding:var(--s-1) var(--s-2);font-size:13px;font-weight:600;color:var(--accent-text);background:none;border:0;border-radius:var(--btn-radius);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.pvd-link:hover{color:var(--t0)}
+
+/* Body: rail and main. */
+.pvd-body{display:grid;grid-template-columns:minmax(0,1fr);flex:1;min-height:0}
+.plb-modal--preview[data-layout="rail"] .pvd-body{grid-template-columns:220px minmax(0,1fr)}
+.pvd-rail{display:flex;flex-direction:column;gap:var(--s-4);min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4);border-right:1px solid var(--border)}
+.pvd-main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.pvd-note{font-size:12px;line-height:1.5;color:var(--t2)}
+.pvd-rail .pvd-note{margin-top:auto}
+
+/* The scene list: rail, popover and strip share the option. */
+.pvd-list{display:flex;flex-direction:column;gap:var(--s-4)}
+.pvd-group{display:flex;flex-direction:column;gap:2px}
+.pvd-group-l{padding:0 var(--s-3) var(--s-1);font-size:13px;font-weight:600;color:var(--t2)}
+.pvd-opt{position:relative;display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;height:36px;padding:0 var(--s-3);
+  font-size:var(--fs-body-s);color:var(--t1);text-align:left;background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;
+  transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pvd-opt.is-on{background:var(--bg-2);color:var(--t0);font-weight:600}
+.pvd-opt svg{flex:none;color:var(--t2)}
+@media (hover:hover){.pvd-opt:hover{background:var(--hvr);color:var(--t0)}.pvd-opt.is-on:hover{background:var(--bg-2)}}
+.pvd-opt:focus-visible,.pvd-chip:focus-visible,.pvd-menu-btn:focus-visible,.pvd-colours:focus-visible,.pvd-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 768 to 1023: the list behind one button. */
+.pvd-pickbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);flex:none;padding:var(--s-3) var(--s-5) 0}
+.pvd-menu{position:relative}
+.pvd-menu-btn{display:inline-flex;align-items:center;gap:var(--s-2);height:36px;padding:0 var(--s-3);font-size:var(--fs-body-s);font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer}
+.pvd-pop{position:absolute;top:calc(100% + var(--s-1));left:0;z-index:5;width:240px;max-height:min(60dvh,420px);overflow-y:auto;overscroll-behavior:contain;padding:var(--s-2);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+
+/* Stage. */
+/* The stage is a size container so a fixed-aspect scene (poster, social tile,
+ * phone) can fit the height it is given: cqh in palette-preview.css. */
+.pvd-stage{container:pvstage / size;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:var(--s-5);touch-action:pan-y pinch-zoom}
+.plb-modal--preview[data-layout="strip"] .pvd-stage{padding:var(--s-4)}
+.pvd-stage.is-compare{--stage-room:calc(100cqh - 32px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--s-5)}
+.plb-modal--preview[data-layout="strip"] .pvd-stage.is-compare{grid-template-columns:1fr}
+.pvd-pane{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
+.pvd-pane+.pvd-pane{padding-left:var(--s-5);border-left:1px solid var(--border)}
+.plb-modal--preview[data-layout="strip"] .pvd-pane+.pvd-pane{padding:var(--s-4) 0 0;border-left:0;border-top:1px solid var(--border)}
+.pvd-pane-l{font-size:13px;font-weight:600;color:var(--t0)}
+.pvd-pane-l span{margin-left:var(--s-2);font-weight:400;color:var(--t2);font-variant-numeric:tabular-nums}
+
+/* A locked scene is the real scene, blurred, with the unlock over it. */
+.pvd-scene{position:relative;isolation:isolate;min-width:0}
+.pvd-scene.is-locked .pvd-scene-in{filter:blur(6px);pointer-events:none;user-select:none}
+/* The card has its own solid ground and ink: the scene behind it follows its own
+ * Light/Dark, so nothing here may read off it. It sticks near the top of the
+ * stage, so on a tall scene it is in view at any scroll. */
+.pvd-lock{position:absolute;inset:0;z-index:1;pointer-events:none}
+.pvd-lock-card{position:sticky;top:var(--s-4);display:flex;flex-direction:column;align-items:center;gap:var(--s-3);width:min(320px,calc(100% - 2 * var(--s-4)));margin:var(--s-4) auto 0;padding:var(--s-5);
+  text-align:center;font-size:15px;font-weight:600;line-height:1.4;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);pointer-events:auto}
+.pvd-lock-card svg{color:var(--t1)}
+.pvd-lock .pvd-lock-btn{min-height:44px;padding:0 var(--s-5);font-size:14px;font-weight:600}
+
+/* Legend. */
+.pvd-legend{display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:start;gap:var(--s-2) var(--s-4);flex:none;max-height:min(40dvh,260px);overflow-y:auto;overscroll-behavior:contain;padding:var(--s-3) var(--s-5);border-top:1px solid var(--border)}
+.pvd-legend-t,.pvd-legend-sub{display:flex;align-items:center;min-height:32px;font-size:13px;font-weight:600}
+.pvd-legend-t{color:var(--t1)}
+.pvd-legend-sub{color:var(--t2)}
+.pvd-legend-note{grid-column:1 / -1;font-size:13px;color:var(--t1)}
+.pvd-legend.is-sheet{display:flex;flex-direction:column;gap:var(--s-2);max-height:none;overflow:visible}
+.pvd-legend.is-sheet .pvd-legend-t,.pvd-legend.is-sheet .pvd-legend-sub{min-height:0}
+.pvd-legend.is-sheet .pvd-legend-sub{margin-top:var(--s-1)}
+.pvd-chips{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+.pvd-chip{display:inline-flex;flex-wrap:wrap;align-items:center;column-gap:var(--s-2);max-width:100%;min-height:32px;padding:var(--s-1) var(--s-3) var(--s-1) var(--s-2);
+  font-size:13px;color:var(--t0);text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;
+  transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+@media (hover:hover){.pvd-chip:hover{background:var(--hvr)}}
+.pvd-chip.is-on{background:var(--bg-2);border-color:var(--t2)}
+.pvd-chip.is-off{color:var(--t2);cursor:default}
+.pvd-sw{flex:none;width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px oklch(0 0 0 / .14)}
+[data-theme="dark"] .pvd-sw{box-shadow:inset 0 0 0 1px oklch(1 0 0 / .18)}
+.pvd-chip-t{display:inline-flex;align-items:baseline;gap:var(--s-2);min-width:0}
+.pvd-chip-l{font-weight:600}
+.pvd-chip-hex{font-family:var(--mono);font-size:12px;color:var(--t2)}
+.pvd-chip-fail{display:inline-flex;align-items:center;gap:var(--s-1);min-width:0;font-size:12px;font-variant-numeric:tabular-nums;color:var(--t1)}
+.pvd-chip-fail svg{color:var(--warn-strong,var(--t1))}
+.pvd-chip-note{min-width:0;font-size:12px;color:var(--t2);overflow-wrap:anywhere}
+
+/* Compare actions. */
+.pvd-actions{flex:none;padding:var(--s-3) var(--s-5);border-top:1px solid var(--border)}
+.pvd-actions .btn{min-height:40px;font-size:13px}
+.plb-modal--preview[data-layout="strip"] .pvd-actions .btn{width:100%;min-height:44px}
+
+/* 390: chip strip docked at the bottom, with a Colours button. */
+.pvd-dock{display:flex;align-items:center;gap:var(--s-2);flex:none;min-height:56px;padding:0 var(--s-3);border-top:1px solid var(--border)}
+/* The chips are real 44px boxes: a pseudo-element hit area would be clipped by
+ * the strip's own overflow. The block padding leaves room for the focus ring. */
+.pvd-strip{display:flex;flex:1;gap:var(--s-2);min-width:0;padding:var(--s-1);overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
+.pvd-strip::-webkit-scrollbar{display:none}
+.pvd-strip[data-more="true"]{mask-image:linear-gradient(to right,#000 calc(100% - 32px),transparent);-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 32px),transparent)}
+.pvd-strip .pvd-opt{flex:none;width:auto;height:44px;padding:0 var(--s-4);gap:var(--s-1);border-radius:var(--radius-pill)}
+.pvd-strip .pvd-opt.is-on{box-shadow:inset 0 0 0 1px var(--border)}
+.pvd-colours{order:-1;flex:none;height:44px;padding:0 var(--s-4);font-size:var(--fs-body-s);font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer}
+.pvd-sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;max-height:80dvh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4) 0 calc(var(--s-4) + env(safe-area-inset-bottom));
+  background:var(--card);border-top:1px solid var(--border);border-radius:var(--radius-xl) var(--radius-xl) 0 0;box-shadow:var(--warm-shadow-lg)}
+.plb-modal--preview .pvd-sheet-x{position:absolute;top:var(--s-2);right:var(--s-2)}
+.pvd-sheet .pvd-legend{border-top:0;padding-top:0;padding-right:var(--s-4);padding-left:var(--s-4)}
+.pvd-sheet .pvd-chip{min-height:44px}
+.pvd-sheet .pvd-note{padding:0 var(--s-4)}
+.plb-modal--preview[data-layout="strip"] .plb-modal-card--preview{position:relative}
+
+/* A phone on its side: less height for the same chrome. */
+@media (max-height:499.98px){
+  .pvd-showing,.pvd-showing .pvd-link{min-height:36px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.pvd-opt,.pvd-chip,.plb-modal--preview .plb-mode){transition:none}
+}
+html[data-reduced-motion="true"] :is(.pvd-opt,.pvd-chip,.plb-modal--preview .plb-mode){transition:none}

@@ -183,10 +183,27 @@ const NOT_A_PLAN_PRICE = [
     // allowlist naming a file that no longer renders fake money is an excuse
     // with nothing behind it.
     file: 'src/components/palette/PalettePreview.jsx',
-    context: /plb-pv-checkout|plb-pv-finance|Order summary|Canvas field bag|Studio notebook|Available balance|Recent transactions/,
-    why: 'The palette preview scenes — "Commerce checkout" and "Finance overview" — '
-      + 'are mock-ups a palette is judged against. Same fake order as UiSystemLab, '
-      + 'plus an invented account balance.',
+    context: /Paid this month|Outstanding|from Kiri Walker/,
+    why: 'The palette preview scenes (Dashboard lead figures and the email receipt) '
+      + 'are mock-ups of Fernway, an invented invoicing product for freelancers, that '
+      + 'a palette is judged against. The amounts are invoice totals in its sample '
+      + 'data, not tiers of UIL4B.',
+  },
+  {
+    // Listed before the invoice-row entry: the first matching entry takes a
+    // hit, and the plan lines sit within the invoice rows' window.
+    file: 'src/data/palettePreviewScenes.js',
+    context: /Unlimited clients|Fernway branding/,
+    why: 'The three plans of the invented Fernway product, shown on the landing '
+      + 'preview so a palette can be judged on a pricing band. The scene footnote '
+      + 'calls them sample pricing; they are not UIL4B tiers.',
+  },
+  {
+    file: 'src/data/palettePreviewScenes.js',
+    context: /FW-01\d\d/,
+    why: 'Sample invoice rows and receipt lines for Fernway, the invented product the '
+      + 'palette previews are drawn from. They are client invoice amounts and a card '
+      + 'fee, not something UIL4B charges.',
   },
   {
     file: 'src/data/communityPrompts.js',
