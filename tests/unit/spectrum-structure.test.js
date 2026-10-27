@@ -313,7 +313,7 @@ test('the Compress panel describes compressing, not converting', () => {
   const copy = CONVERTER_SRC
     .replace(/BenchConverter|CONVERTER_SOURCE/g, '')
     .replace(/file-converter|3d-converter/g, '')
-    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter</g, '')
+    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter<|label: 'File Converter'/g, '')
     .replace(/A machined bracket turning, converted from/g, '')
   const left = [...copy.matchAll(/[^\n]*convert[^\n]*/gi)].map((m) => m[0].trim())
   assert.deepEqual(left, [], 'the Compress panel still says "convert"')
