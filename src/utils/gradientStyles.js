@@ -574,26 +574,35 @@ export function toSvg(rec, { w = 1600, h = 900 } = {}) {
 
 export const GRAIN_URL = '/textures/grain-256.webp'
 export const GRAIN_SIZE = 256
-export const GRAIN_TILE_SIGMA = 0.2
+// The tile's spread, as a share of the full range. It has to be big enough
+// that the largest View amount (10%) is reachable at an opacity of 1 or less
+// (soft-light turns a tile spread of s into about 0.41 s on mid grey, and the
+// 8-bit clip trims the tails), and small enough that the WebP fits 12 KB.
+// 0.25 gives a mid-grey swing of 0.108, so 10% asks for an opacity of 0.93.
+export const GRAIN_TILE_SIGMA = 0.25
+export const GRAIN_TILE_PASSES = 2
 
-// The shared noise tile, made from a seed: grey noise, lightly smoothed (a
-// 3x3 blur that wraps, so the tile repeats without a seam), centred on mid
-// grey. scripts/make-grain-tile.mjs encodes exactly this to the WebP, and the
-// image painter reads these pixels directly.
+// The shared noise tile, made from a seed: grey noise, smoothed by two 3x3
+// blurs that wrap (so the tile repeats without a seam), centred on mid grey.
+// Smoother noise also encodes smaller, which is what pays for the larger
+// spread. scripts/make-grain-tile.mjs encodes exactly this to the WebP, and
+// the image painter reads these pixels directly.
 export function makeGrainTile(size = GRAIN_SIZE, seed = 0x6d2b79f5) {
   const rng = mulberry32(seed)
-  const raw = new Float32Array(size * size)
-  for (let i = 0; i < raw.length; i++) raw[i] = rng() + rng() + rng() + rng() - 2
-  const sm = new Float32Array(raw.length)
-  const at = (x, y) => raw[((y + size) % size) * size + ((x + size) % size)]
-  let sum = 0
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const v = (4 * at(x, y) + 2 * (at(x - 1, y) + at(x + 1, y) + at(x, y - 1) + at(x, y + 1)) + at(x - 1, y - 1) + at(x + 1, y - 1) + at(x - 1, y + 1) + at(x + 1, y + 1)) / 16
-      sm[y * size + x] = v
-      sum += v
+  let sm = new Float32Array(size * size)
+  for (let i = 0; i < sm.length; i++) sm[i] = rng() + rng() + rng() + rng() - 2
+  for (let pass = 0; pass < GRAIN_TILE_PASSES; pass++) {
+    const raw = sm
+    sm = new Float32Array(raw.length)
+    const at = (x, y) => raw[((y + size) % size) * size + ((x + size) % size)]
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        sm[y * size + x] = (4 * at(x, y) + 2 * (at(x - 1, y) + at(x + 1, y) + at(x, y - 1) + at(x, y + 1)) + at(x - 1, y - 1) + at(x + 1, y - 1) + at(x - 1, y + 1) + at(x + 1, y + 1)) / 16
+      }
     }
   }
+  let sum = 0
+  for (let i = 0; i < sm.length; i++) sum += sm[i]
   const mean = sum / sm.length
   let sq = 0
   for (let i = 0; i < sm.length; i++) sq += (sm[i] - mean) ** 2
