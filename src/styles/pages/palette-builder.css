@@ -530,3 +530,53 @@
   :is(.plb, .tl-sheet-layer) .plb-seedchip-sw { forced-color-adjust: none; }
   .plb .plb-tool--on { outline: 2px solid Highlight; }
 }
+
+/* ── Colour values: the six notations of one swatch, from its "..." menu. It is
+   a .plb-tintpop too, so it takes that panel's anchoring and dismissal. ───── */
+.plb .plb-valpop { width: 312px; padding: 10px 12px 12px; }
+.plb .plb-val-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.plb .plb-val-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+.plb .plb-val-k {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: color-mix(in srgb, var(--t0) 68%, var(--card));
+}
+.plb .plb-val-v {
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--t0);
+  background: none;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+.plb .plb-val-copy {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t1);
+  cursor: pointer;
+}
+.plb .plb-val-copy:focus-visible { outline: 2px solid var(--tl-link, var(--accent)); outline-offset: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .plb .plb-val-copy:hover { background: var(--bg-2); color: var(--t0); }
+}
+@media (pointer: coarse) {
+  .plb .plb-val-row { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .plb .plb-val-copy { width: 44px; height: 44px; }
+}
+@media (max-width: 767px) {
+  .plb .plb-valpop { width: calc(100% - 24px); }
+}

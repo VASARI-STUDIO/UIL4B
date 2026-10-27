@@ -14,6 +14,7 @@ import {
 // The Tint Generator's own ramp (one function, so the swatch tints and the
 // generator cannot drift): the strip is five of its steps, the popover all 11.
 import { swatchStripHexes, tintRampForHex } from '../utils/tintRamp'
+import { colourFormats } from '../utils/colourFormats'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
 // Column titles + the community-submit dice name share one vocabulary — see
 // utils/paletteNames.js for why `colorName` is deterministic and
@@ -857,7 +858,17 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [varBase, setVarBase] = useState(null)
   const [activeVar, setActiveVar] = useState(null)
   const skipVarInvalidate = useRef(false)
-  const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
+  // One info panel per board: a column's tints or its colour values. They share
+  // one slot, so opening either closes the other and every existing
+  // `setTintsIdx(null)` close also closes the values panel.
+  const [colPanel, setColPanel] = useState(null)    // { kind: 'tints' | 'values', i }
+  const tintsIdx = colPanel?.kind === 'tints' ? colPanel.i : null
+  const valuesIdx = colPanel?.kind === 'values' ? colPanel.i : null
+  const setTintsIdx = useCallback((next) => setColPanel((cur) => {
+    const v = typeof next === 'function' ? next(cur?.kind === 'tints' ? cur.i : null) : next
+    return v == null ? null : { kind: 'tints', i: v }
+  }), [])
+  const setValuesIdx = useCallback((i) => setColPanel(i == null ? null : { kind: 'values', i }), [])
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const columnRefs = useRef([])
   const removeFocusRef = useRef(null)
@@ -881,7 +892,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Absolute coordinates remain relative to the size-contained column. Measure
   // in viewport space first so even the edge columns keep the whole panel visible.
   useLayoutEffect(() => {
-    const column = columnRefs.current[pickerIdx ?? tintsIdx]
+    const column = columnRefs.current[pickerIdx ?? tintsIdx ?? valuesIdx]
     const panel = column?.querySelector(pickerIdx != null ? '.plb-picker' : '.plb-tintpop')
     if (!panel) return
     const place = (event) => {
@@ -922,7 +933,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
     }
-  }, [pickerIdx, tintsIdx, colors.length])
+  }, [pickerIdx, tintsIdx, valuesIdx, colors.length])
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const ctxMenuRef = useRef(null)
   const ctxTriggerRef = useRef(null)
@@ -1249,7 +1260,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // useModalDialog owns its Escape and the scrim owns its outside press.
   const anyPopover = saveOpen || imgOpen
     || galleryOpen || histOpen
-    || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
+    || tintsIdx != null || valuesIdx != null || pickerIdx != null || ctxMenu != null || preview != null
 
   // Both of this page's dialogs declared aria-modal="true" and trapped nothing:
   // Tab walked out into the builder behind them, the canvas scrolled, and
@@ -2479,7 +2490,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 aria-label={`${role} ${adjusted[i]}`}
                 // Whole-swatch drag reorders; off while a tints or HCT popover
                 // is open on this column so slider drags aren't hijacked.
-                draggable={pickerIdx !== i && tintsIdx !== i}
+                draggable={pickerIdx !== i && tintsIdx !== i && valuesIdx !== i}
                 onDragStart={(e) => {
                   dragFrom.current = i
                   e.dataTransfer.effectAllowed = 'move'
@@ -2671,6 +2682,27 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   </div>
                 )}
 
+                {valuesIdx === i && (
+                  // Shares the tints panel's anchoring (.plb-tintpop) and its
+                  // dismissal; reached from the swatch's "..." menu, which is on
+                  // screen on a phone.
+                  <div className="plb-pop plb-tintpop plb-valpop" role="dialog" aria-label={`Colour values for ${adjusted[i]}`}>
+                    <div className="plb-pop-head">
+                      <span className="plb-pop-title">Colour values</span>
+                      <button type="button" className="plb-pop-x" aria-label="Close colour values" onClick={() => setValuesIdx(null)}><IcoX /></button>
+                    </div>
+                    <ul className="plb-val-list">
+                      {colourFormats(adjusted[i]).map(({ key, label, value }) => (
+                        <li key={key} className="plb-val-row">
+                          <span className="plb-val-k">{label}</span>
+                          <code className="plb-val-v">{value}</code>
+                          <button type="button" className="plb-val-copy" aria-label={`Copy ${label} ${value}`} title={`Copy ${label}`} onClick={() => onCopy?.(value)}><IcoCopy /></button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {pickerIdx === i && (
                   <HctPicker key={i} hex={colors[i]} label={role} onChange={(hex) => setColorAt(i, hex)} onClose={() => setPickerIdx(null)} />
                 )}
@@ -2771,6 +2803,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoEye /> View tints</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setValuesIdx(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Colour values</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>
