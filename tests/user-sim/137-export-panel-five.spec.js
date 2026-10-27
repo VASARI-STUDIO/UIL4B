@@ -510,9 +510,13 @@ test.describe('the preview strip', () => {
     await expect(strip).toHaveCount(1)
     await expect(strip).toHaveAttribute('data-state', 'ready')
 
+    // The book row now has a template picker between it and the pictures: one Tab stop,
+    // on the chosen tile (spec 156 pins that), so the strip is the second stop.
     await rowFor(panel, 'Design system book').focus()
     await page.keyboard.press('Tab')
-    await expect(strip, 'the next Tab stop after the row is the strip').toBeFocused()
+    await expect(panel.getByRole('radiogroup', { name: 'Template' }).getByRole('radio', { checked: true }), 'the first stop after the row is the chosen template').toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(strip, 'the next Tab stop after the template is the strip').toBeFocused()
     const ring = await strip.evaluate((el) => {
       const s = getComputedStyle(el)
       return { style: s.outlineStyle, width: parseFloat(s.outlineWidth), colour: s.outlineColor }

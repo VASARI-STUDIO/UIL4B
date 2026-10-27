@@ -112,7 +112,7 @@ function expandBraces(text) {
  * import walk still reports it by name. A `*` that matches nothing expands to
  * nothing, which the reached/bundled comparison then reports as missing.
  */
-function expandStars(rel) {
+function expandStars(rel, area = 'src') {
   if (!rel.includes('*')) return [rel]
   const segments = rel.split('/')
   let paths = ['']
@@ -125,7 +125,7 @@ function expandStars(rel) {
         continue
       }
       const pattern = new RegExp(`^${segment.replace(/[.+^$()|\\]/g, '\\$&').replace(/\*/g, '[^/]*')}$`)
-      const dir = path.join(root, 'src', base)
+      const dir = path.join(root, area, base)
       if (!fs.existsSync(dir)) continue
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         if (!pattern.test(entry.name) || (last ? !entry.isFile() : !entry.isDirectory())) continue
@@ -144,11 +144,26 @@ function expandStars(rel) {
  * files" and pass. A `*` is expanded against the real src/ tree by expandStars().
  */
 function bundledFiles() {
+  return bundledByArea('src')
+}
+
+/** The chrome font files includeFiles carries, as paths under public/ ('fonts/literata-latin.woff2'). */
+function bundledFonts() {
+  return bundledByArea('public')
+}
+
+/**
+ * The glob may be one pattern under src/, or top-level alternatives (`{src/{...}.js,public/fonts/...}`).
+ * Expanded in full, then each alternative is read against the tree it starts in.
+ */
+function bundledByArea(area) {
   const glob = includeFilesGlob()
   if (!glob) return []
-  const under = /^src\/(.+)$/.exec(glob)
-  assert.ok(under, `includeFiles is "${glob}", which does not start at src/ — this file cannot read it`)
-  const files = expandBraces(under[1]).flatMap(expandStars)
+  const all = expandBraces(glob)
+  for (const a of all) {
+    assert.match(a, /^(src|public)\//, `includeFiles is "${glob}", which has an alternative outside src/ and public/ — this file cannot read it`)
+  }
+  const files = all.filter((a) => a.startsWith(`${area}/`)).map((a) => a.slice(area.length + 1)).flatMap((rel) => expandStars(rel, area))
   for (const f of files) {
     assert.doesNotMatch(f, /[{}*?[\]]/,
       `includeFiles is "${glob}", a glob shape this file has never seen. Teach bundledFiles() to `
@@ -347,7 +362,7 @@ test('CONTROL: nested brace groups expand to every path', () => {
 })
 
 test('CONTROL: a `*` expands to the real files one directory level at a time', () => {
-  const templates = ['book/index.js', 'book/specification.js', 'guidelines/index.js', 'guidelines/presentation.js']
+  const templates = ['book/atlas.js', 'book/index.js', 'book/monograph.js', 'book/specification.js', 'guidelines/index.js', 'guidelines/presentation.js']
     .map((rel) => `utils/exportTemplates/${rel}`)
   assert.deepEqual(expandStars('utils/exportTemplates/*/*.js').sort(), templates,
     '`*/*.js` should reach the files one directory down and not the ones beside it')
@@ -374,4 +389,19 @@ test('includeFiles covers every file under src/utils/exportTemplates/', () => {
   const bundled = new Set(bundledFiles())
   assert.deepEqual(onDisk.filter((rel) => !bundled.has(rel)).sort(), [],
     'a file under src/utils/exportTemplates/ is not matched by includeFiles, so the deploy will not carry it')
+})
+
+// The documents embed their chrome faces from public/fonts at run time, so a font
+// left out of includeFiles is a book that quietly loses its face (the reader falls
+// back to the system face), and a font nothing uses is shipped for nothing.
+test('includeFiles carries exactly the chrome fonts the book templates embed', () => {
+  const dir = path.join(root, 'src', 'utils', 'exportTemplates', 'book')
+  const used = new Set()
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.js'))) {
+    for (const m of fs.readFileSync(path.join(dir, file), 'utf8').matchAll(/file:\s*'([a-z0-9-]+\.woff2)'/g)) used.add(`fonts/${m[1]}`)
+  }
+  assert.ok(used.size >= 3, 'the book templates name fewer than three chrome fonts, so this check proves nothing')
+  const bundled = bundledFonts()
+  for (const rel of bundled) assert.ok(fs.existsSync(path.join(root, 'public', rel)), `includeFiles names public/${rel}, which does not exist`)
+  assert.deepEqual([...used].sort(), bundled.sort(), 'includeFiles and the templates disagree about which chrome fonts the function carries')
 })

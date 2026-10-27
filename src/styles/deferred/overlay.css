@@ -256,13 +256,20 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
   .exp-logo-acts .btn-s{min-height:44px}
   .exp-logo-drop{min-height:44px;padding:0 4px}
 }
-/* ── Template picker: three tiles in one row, one fixed frame per width ── */
+/* ── Template picker: three tiles in one row ── */
 .exp-tpl-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .exp-tpl-tile{display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-width:0}
+/* With no picture the tile is a card: name and description, the chosen one outlined like an active pill. */
+.exp-tpl-tile:not(.has-pic){gap:4px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
+.exp-tpl-tile:not(.has-pic).is-active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
 /* The selection border is reserved when not selected, so nothing shifts. */
-.exp-tpl-frame{display:block;width:100%;overflow:hidden;border:2px solid transparent;border-radius:var(--radius-s);background:var(--bg-1);box-shadow:inset 0 0 0 1px var(--border)}
+.exp-tpl-frame{display:block;width:100%;overflow:hidden;border:2px solid transparent;border-radius:var(--radius-s);background:var(--bg-1);box-shadow:inset 0 0 0 1px var(--border);transition:border-color var(--dur-2) var(--ease-out)}
 .exp-tpl-frame img{display:block;width:100%;height:100%;object-fit:cover}
 .exp-tpl-tile.is-active .exp-tpl-frame{border-color:var(--accent)}
+@media (hover:hover){
+  .exp-tpl-tile:not(.has-pic):not(.is-active):hover{background:var(--hvr)}
+  .exp-tpl-tile.has-pic:not(.is-active):hover .exp-tpl-frame{border-color:var(--t3)}
+}
 .exp-tpl-name{font-size:var(--fs-body-s);font-weight:500;color:var(--t0)}
 .exp-tpl-tile.is-active .exp-tpl-name{font-weight:600}
 .exp-tpl-desc{font-size:var(--fs-caption);line-height:1.45;color:var(--t1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -270,6 +277,7 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 .exp-tpl-picked{display:none;margin:8px 0 0;font-size:var(--fs-caption);color:var(--t1)}
 @media(max-width:560px){
   .exp-tpl-row{gap:8px}
+  .exp-tpl-tile:not(.has-pic){padding:10px 8px}
   .exp-tpl-desc{display:none}
   .exp-tpl-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .exp-tpl-picked{display:block}

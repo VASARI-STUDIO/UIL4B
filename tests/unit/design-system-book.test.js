@@ -120,13 +120,13 @@ test('every section opening is numbered and titled', () => {
 test('every colour states a role, a name and three notations', () => {
   // designsystems.com: a chip with a hex under it is not documentation. This is
   // the difference between a swatch grid and a specification.
-  assert.match(BOOK, /PRIMARY/, 'the harmony-aware role label')
-  assert.match(BOOK, /ANALOGOUS −30°/, 'roles follow the colour SYSTEM, not a fixed list')
-  assert.match(BOOK, /<dt>HEX<\/dt><dd>#1F4B8E<\/dd>/)
+  assert.match(BOOK, /<p class="sw-role">Primary<\/p>/, 'the harmony-aware role label')
+  assert.match(BOOK, /<p class="sw-role">Analogous −30°<\/p>/, 'roles follow the colour SYSTEM, not a fixed list')
+  assert.match(BOOK, /<dt>Hex<\/dt><dd>#1F4B8E<\/dd>/)
   assert.match(BOOK, /<dt>RGB<\/dt><dd>31, 75, 142<\/dd>/)
   assert.match(BOOK, /<dt>HSL<\/dt><dd>216, 64%, 34%<\/dd>/)
   // The deterministic editorial name, not a hex repeated as a title.
-  assert.match(BOOK, /class="bd-name">[A-Z][a-z]+ [A-Z][a-z]+</)
+  assert.match(BOOK, /class="sw-name">[A-Z][a-z]+ [A-Z][a-z]+</)
 })
 
 test('the contrast figures agree with the free style guide exactly', () => {
@@ -209,15 +209,21 @@ test('a half-written design produces a shorter book, never a broken one', () => 
   }
 })
 
-test('a single colour does not produce a page carrying one stretched band', () => {
-  // A plain chunk of six at five-per-page gives a page of five and a page of
-  // ONE — a full page holding a single band, which is the most obviously
-  // unfinished thing a book can do.
-  const six = { ...DESIGN, palette: { ...DESIGN.palette, colors: ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666'] } }
-  const html = buildDesignSystemBook(six, { projectName: 'Six', date: AT })
-  const perPage = html.split('<div class="bands">').slice(1)
-    .map(chunk => (chunk.match(/class="bd"/g) || []).length)
-  assert.deepEqual(perPage, [3, 3], 'six colours split evenly, not 5 + 1')
+test('a single colour does not produce a page carrying one stretched swatch', () => {
+  // The palette pages hold the primary across a full row and the rest in rows of three.
+  // Six colours must not leave a last page with ONE swatch on it, the most obviously
+  // unfinished thing a book can do. Counted per palette page, not per row.
+  const hexes = ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777', '#888888', '#999999', '#AAAAAA', '#BBBBBB', '#CCCCCC', '#DDDDDD']
+  for (const n of [3, 5, 6, 8, 10, 13]) {
+    const palette = { ...DESIGN, palette: { ...DESIGN.palette, colors: hexes.slice(0, n) } }
+    const html = buildDesignSystemBook(palette, { projectName: 'Pages', date: AT })
+    const perPage = html.split('<section class="pg').slice(1)
+      .filter((page) => page.includes('class="sws"'))
+      .map((page) => (page.match(/class="sw[ "]/g) || []).length)
+    assert.ok(perPage.length >= 1, `${n} colours: the swatches are on palette pages`)
+    assert.equal(perPage.reduce((a, c) => a + c, 0), n, `${n} colours: every colour is on a page once`)
+    for (const count of perPage) assert.ok(count >= 2, `${n} colours: a palette page carries ${count} swatch, not a stretched one`)
+  }
 })
 
 test('the book is self-contained: no script, no image, no stylesheet but fonts', () => {

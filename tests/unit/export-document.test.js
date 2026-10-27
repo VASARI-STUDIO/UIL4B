@@ -278,7 +278,7 @@ test('the real generators serve their default template and say so', async () => 
 
 test('a template that is not live for the format is a 400 unknown_template and no generator loads', async () => {
   const bad = [
-    'nope', 'Specification', ' specification', 'specification ', 'monograph', 'presentation', 'studio',
+    'nope', 'Specification', ' specification', 'specification ', 'poster', 'presentation', 'studio',
     'constructor', '__proto__', 'toString', 'hasOwnProperty',
     { id: 'specification' }, { toString: () => 'specification' }, 7, 0, true, false, ['specification'], [],
   ]
@@ -436,7 +436,7 @@ const noBuild = !fs.existsSync(builtAssets) && 'run a build first (see DIST_DIR)
 const MARKERS = [
   { file: 'src/utils/designSystemBook.js', text: ' | Design System</title>' },
   { file: 'src/utils/exportTemplates/guidelines/presentation.js', text: 'Brand <br>Guidelines' },
-  { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design System</span>' },
+  { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design system</span>' },
 ]
 
 test('CONTROL: each bundle marker is really in its generator', () => {

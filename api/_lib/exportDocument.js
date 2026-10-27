@@ -40,10 +40,27 @@
 // `deps` is injected so the unit test can fake the token, the user document and
 // the generators.
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { planForUser } from './plans.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { defaultTemplate, isTemplate } from '../../src/config/exportTemplates.js'
 import { safeFamily, safeWeight } from '../../src/utils/styleGuideExport.js'
+
+// The chrome faces the documents embed, read from public/fonts (vercel.json's includeFiles
+// carries them). Only a plain woff2 file name is read, each file once. A missing or
+// unreadable file is null, and the document then uses the system face instead of failing.
+const FONT_FILE = /^[a-z0-9-]+\.woff2$/
+const fontCache = new Map()
+export function chromeFont(file) {
+  if (typeof file !== 'string' || !FONT_FILE.test(file)) return null
+  if (!fontCache.has(file)) {
+    let data = null
+    try { data = readFileSync(join(process.cwd(), 'public', 'fonts', file)).toString('base64') } catch { data = null }
+    fontCache.set(file, data)
+  }
+  return fontCache.get(file)
+}
 
 // The generators, loaded on demand and only after the plan check has passed, so a
 // refused request never runs (or even parses) a Pro document builder. The paths
@@ -215,7 +232,7 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
 
   try {
     const build = await builders[format.id]()
-    const html = build(design, { projectName, template })
+    const html = build(design, { projectName, template, fontData: chromeFont })
     if (typeof html !== 'string' || !html) throw new Error('empty document')
     return res.status(200).json({ ok: true, format: format.id, template, html })
   } catch {

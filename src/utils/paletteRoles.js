@@ -71,6 +71,33 @@ export function roleLabel(harmony, index) {
   return `ALTERNATIVE ${index - set.length + 1}`
 }
 
+// Where each of the five slots paints in the Palette Builder's preview (the
+// elements that carry its data-role in components/palette/PalettePreview.jsx),
+// by slot position, the same identity the CSS export uses. A template prints this
+// as the `lands` line under a swatch; it never works the places out itself.
+export const SLOT_LANDS = Object.freeze([
+  'Buttons, links, selected tabs and toggles',
+  'Progress bars and logged-time dots',
+  'Today markers and the accent circle',
+  'Hero panels and soft backgrounds',
+  'The deepest band and its dots',
+])
+
+/** The places slot `index` paints. A colour added past the five has no place yet. */
+export function slotLands(index) {
+  return Number.isInteger(index) && index >= 0 && index < SLOT_LANDS.length
+    ? SLOT_LANDS[index]
+    : 'Not given a place in the preview'
+}
+
+/** True when slot `index` has a place in SLOT_LANDS (the first five slots). */
+export const slotPlaced = (index) => Number.isInteger(index) && index >= 0 && index < SLOT_LANDS.length
+
+/** The same line for a printed document, whose reader never saw the Palette Builder's preview. */
+export function slotLandsBook(index) {
+  return slotPlaced(index) ? SLOT_LANDS[index] : 'Not assigned to a part of the interface'
+}
+
 /** Every label for a system — used by the tests and by any summary view. */
 export function roleLabels(harmony) {
   return HARMONY_ROLE_LABELS[harmony] || AUTO

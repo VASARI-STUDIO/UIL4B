@@ -72,9 +72,10 @@ const PRO_GATE = {
     gate: 'design-system-book-export',
     eyebrow: 'UIL4B Pro',
     title: 'Export the design system book',
-    subtitle: 'A 12-page A4 manual of your system — cover, contents, numbered sections, full-bleed colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
+    subtitle: 'An A4 book of your system: cover, contents, colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
     features: [
-      'Cover, contents and numbered section openings',
+      'Cover, contents and section openings',
+      'Three layouts to choose from: Specification, Monograph and Atlas',
       'Every colour with its role, three notations and its reading ink',
       'A contrast matrix measuring every pair in the palette',
       'Type specimens set in your own families, and all your tokens',
@@ -624,7 +625,8 @@ export default function ExportPanel({ onClose }) {
       )}
       {/* A Pro UI kit is personalised; a free kit carries no identity. */}
       {activeGroup.id === 'kit' && isPro && <KitIdentityFields />}
-      {activeGroup.preview && (
+      {/* The pictures are drawn in the Specification layout, so the book shows them only for it. */}
+      {activeGroup.preview && !(activeGroup.preview === 'book' && chosenTemplates.book !== 'specification') && (
         <ExportProPreview
           kind={activeGroup.preview}
           design={design}

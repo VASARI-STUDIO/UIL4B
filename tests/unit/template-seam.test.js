@@ -29,11 +29,12 @@ test('no template reads `design`', () => {
   for (const f of files) assert.doesNotMatch(code(f), /\bdesign\b/, f)
 })
 
-// Specification and Presentation carry the colours the documents have always
-// had, and the golden test pins them byte for byte. Every other template starts
-// with no raw hex: its colours are roles the generator hands it.
+// Presentation carries the colours the deck has always had, and the golden test
+// pins them byte for byte. Every other template, Specification included since its
+// colours moved to roles, carries no raw hex: its colours are roles the generator
+// hands it.
 test('new templates carry no raw hex colour', () => {
-  const pinned = new Set(['specification.js', 'presentation.js'])
+  const pinned = new Set(['presentation.js'])
   for (const f of files.filter((x) => !pinned.has(path.basename(x)))) {
     assert.doesNotMatch(code(f), /#[0-9a-fA-F]{3,8}\b/, f)
   }
