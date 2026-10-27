@@ -25,6 +25,18 @@ export function orderSections(items, order = [], key = (x) => x) {
  */
 export const safeHex = (value, fallback) => (/^#[0-9a-fA-F]{6}$/.test(String(value)) ? String(value) : fallback)
 
+/** "PRIMARY SOFT" as "Primary soft": role labels arrive in capitals. */
+export const sentenceCase = (text) => {
+  const t = String(text ?? '').toLowerCase()
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
+/** The date as YYYY-MM-DD in the reader's own time zone, so the day matches their clock, not UTC's. */
+export const localIso = (date) => {
+  const two = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`
+}
+
 // A character's width in average advances. A capital in a bold geometric face sets
 // near 0.7 em against the 0.52 average (a ratio of about 1.35), so a name in capitals
 // would otherwise be measured too narrow and cut; lowercase sits a little under the

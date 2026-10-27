@@ -565,6 +565,7 @@ export default function ExportPanel({ onClose }) {
   // Its own effect with no dependencies, so a parent re-render that hands down a
   // new onClose can never pull focus back from the row someone is on.
   const titleRef = useRef(null)
+  const pickerRef = useRef(null)
   useEffect(() => { titleRef.current?.focus() }, [])
 
   // Trap Tab within the panel, and close on Escape.
@@ -605,6 +606,18 @@ export default function ExportPanel({ onClose }) {
     || Boolean(activeGroup?.preview)
     || Boolean(activeFormat?.logo)
     || liveTemplates(activeFormat?.id).length > 1
+  // A Pro kit puts its identity fields above the template picker, so the picker can sit below
+  // the fold. This line keeps the chosen template in view and takes the reader to the choice.
+  const kitTemplates = liveTemplates(activeFormat?.id)
+  const showTemplateCue = activeGroup?.id === 'kit' && isPro && kitTemplates.length > 1
+  const chosenTemplate = kitTemplates.find((x) => x.id === chosenTemplates[activeFormat?.id]) || kitTemplates[0]
+  const goToPicker = () => {
+    const picker = pickerRef.current
+    if (!picker) return
+    const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    picker.scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' })
+    picker.querySelector('[role="radio"][tabindex="0"]')?.focus({ preventScroll: true })
+  }
   const options = activeGroup && needsOptions ? (
     <div className="exp-options" role="region" aria-label={`Options for ${activeGroup.name}`} key={activeGroup.id}>
       {choices.length > 1 && (
@@ -615,16 +628,26 @@ export default function ExportPanel({ onClose }) {
           onChange={pickFormat}
         />
       )}
+      {/* A Pro UI kit is personalised; a free kit carries no identity. Above the
+          template choice: the name, description and logo are what the kit needs
+          in view when the panel opens, and the picker may sit below the fold. */}
+      {showTemplateCue && (
+        <p className="exp-tpl-cue">
+          <span>Template: <b>{chosenTemplate.name}</b></span>
+          <button type="button" className="exp-tpl-cue-go" onClick={goToPicker}>Change template</button>
+        </p>
+      )}
+      {activeGroup.id === 'kit' && isPro && <KitIdentityFields />}
       {/* Shown only while the row has a choice: one live template needs no picker. */}
       {liveTemplates(activeFormat?.id).length > 1 && (
-        <ExportTemplatePicker
-          format={activeFormat.id}
-          value={chosenTemplates[activeFormat.id]}
-          onChange={(id) => updateDesign({ exportTemplates: { [activeFormat.id]: id } })}
-        />
+        <div ref={pickerRef}>
+          <ExportTemplatePicker
+            format={activeFormat.id}
+            value={chosenTemplates[activeFormat.id]}
+            onChange={(id) => updateDesign({ exportTemplates: { [activeFormat.id]: id } })}
+          />
+        </div>
       )}
-      {/* A Pro UI kit is personalised; a free kit carries no identity. */}
-      {activeGroup.id === 'kit' && isPro && <KitIdentityFields />}
       {/* The pictures are drawn in the Specification layout, so the book shows them only for it. */}
       {activeGroup.preview && chosenTemplates[activeFormat?.id] === defaultTemplate(activeFormat?.id) && (
         <ExportProPreview

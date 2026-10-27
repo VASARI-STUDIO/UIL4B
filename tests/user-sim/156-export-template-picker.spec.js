@@ -1,32 +1,27 @@
-// THE EXPORT TEMPLATE PICKER (export templates, slice 1).
+// THE EXPORT TEMPLATE PICKER.
 //
-// The picker renders only when a row has two or more LIVE templates. The design system
-// book now has three (Specification, Monograph, Atlas); the kit and the guidelines
-// (and the guidelines, since slice 3: Presentation, Poster, Grid) and the kit has one. So this spec does three jobs.
+// The picker renders only when a row has two or more LIVE templates. Every row has three
+// now: the kit (Studio, Manual, Showcase), the design system book (Specification,
+// Monograph, Atlas) and the brand guidelines (Presentation, Poster, Grid). So this spec:
 //
-//   1. As shipped, the book row shows a three-tile picker for a Free and a Pro account,
-//      choosing Monograph sends `template: 'monograph'`, a Free account sees the tiles
-//      but is held at the Pro button, and the kit and guidelines rows show no picker.
-//   2. With a second kit or guidelines template made live, the picker works for a person: arrow keys move
-//      and choose (and wrap), Home and End jump, Tab enters on the chosen tile, the
-//      choice is kept on the project and survives a reload, it fits at 390, and a
-//      Free account choosing a Pro template still never reaches the document route.
+//   1. As shipped, every row shows a three-tile picker for a Free and a Pro account. The
+//      book and the guidelines are Pro: choosing one sends its template to the server for
+//      Pro, and a Free account is held at the Pro button and never reaches the document
+//      route. The kit is free: choosing Manual or Showcase changes the file that downloads,
+//      for a Free account (with the attribution) and for Pro (without it).
+//   2. The picker works for a person: arrow keys move and choose (and wrap), Home and End
+//      jump, Tab enters on the chosen tile, the choice is kept on the project and survives a
+//      reload, and it fits at 390 and 768.
 //
-// THE FIXTURE. For the kit and the guidelines, a second template is made live by rewriting
-// the built panel chunk as it is served (the `live` flag of the named templates, in
-// src/config/exportTemplates.js). The book row is NOT patched: it is live for real users.
-// Nothing in src/ knows about the test. If the build ever stops matching, the
-// rewrite finds nothing, `fixture.patched` stays short and the test says so by name,
-// rather than passing against a picker that is not there.
+// Nothing here rewrites the build: every template is live for real users.
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
-// The guidelines tests were checked by the mutations listed in the lane report. The earlier ones:
 // Each of these was applied to the source, built, and turned the named tests red:
 //   - ExportPanel: the picker `onChange` no longer calls updateDesign -> the keys
 //     (stored choice), click-and-reload, and both Free/Pro template tests;
 //   - useRovingRadio: the wrap `(to + count) % count` becomes a clamp  -> the keys test;
 //   - ExportTemplatePicker: tabIndex is 0 on every tile                -> the Tab test;
-//   - the panel AND the picker show with one live template (`> 0`)     -> "no picker" x2;
+//   - the panel AND the picker show with one live template (`> 0`)     -> the tile-count tests;
 //   - readExportTemplates trusts a stored id instead of isTemplate     -> the stored-id test.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
@@ -37,36 +32,6 @@ import { buildBrandGuidelines } from '../../src/utils/brandGuidelines.js'
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 const ROUTE = '**/api/ai?export=document'
 const DESIGN = { palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }
-
-const NAMES = {
-  studio: 'Studio', manual: 'Manual', showcase: 'Showcase',
-  specification: 'Specification', monograph: 'Monograph', atlas: 'Atlas',
-  presentation: 'Presentation', poster: 'Poster', grid: 'Grid',
-}
-
-/**
- * Make the named templates live in the panel the browser is given.
- * Returns `patched`, the ids actually changed, so a test can assert on the
- * fixture itself.
- */
-async function makeLive(context, ids) {
-  const patched = []
-  await context.route(/\/assets\/ExportPanel-[^/]+\.js$/, async (route) => {
-    const response = await route.fetch()
-    let body = await response.text()
-    for (const id of ids) {
-      // A(`manual`,`Manual`,`Every token in a ruled table.`)  ->  ...,{live:!0})
-      const call = new RegExp(`([\\w$]+\\(\`${id}\`,\`${NAMES[id]}\`,\`[^\`]*\`)\\)`)
-      if (!call.test(body)) continue
-      body = body.replace(call, '$1,{live:!0})')
-      patched.push(id)
-    }
-    await route.fulfill({ response, body })
-  })
-  return { patched }
-}
-
-const KIT = ['manual', 'showcase']
 
 async function openProject(page, plan = 'free', url = BOARD) {
   const account = await signIn(page, { plan })
@@ -95,13 +60,14 @@ const storedDesign = (page) => page.evaluate(() => JSON.parse(localStorage.getIt
 /* ── as shipped ───────────────────────────────────────────────────────────── */
 
 for (const plan of ['free', 'pro']) {
-  test(`as shipped, the book row shows Specification, Monograph and Atlas, the guidelines row Presentation, Poster and Grid, and the kit row no picker (${plan})`, async ({ page }) => {
+  test(`as shipped, the kit row shows Studio, Manual and Showcase, the book row Specification, Monograph and Atlas, and the guidelines row Presentation, Poster and Grid (${plan})`, async ({ page }) => {
     watch(page, `a ${plan} account looking for a template choice`)
     await openProject(page, plan)
     await chooseFormat(page, 'kit')
     await expect(rowFor(exportPanel(page), groupOfFormat('kit').name), 'the kit row is chosen').toHaveAttribute('aria-checked', 'true')
-    await expect(group(page), 'the kit row has one template, so there is nothing to choose').toHaveCount(0)
-    await expect(exportPanel(page).locator('.exp-tpl')).toHaveCount(0)
+    await expect(group(page), 'the kit row has three templates, so there is a choice').toHaveCount(1)
+    await expect(group(page).getByRole('radio')).toHaveText([/Studio/, /Manual/, /Showcase/])
+    expect(await state(page), 'the default is chosen and is the only tab stop').toEqual({ checked: ['Studio'], focused: [], tabbable: ['Studio'] })
     await chooseFormat(page, 'book')
     await expect(rowFor(exportPanel(page), groupOfFormat('book').name)).toHaveAttribute('aria-checked', 'true')
     await expect(group(page)).toHaveCount(1)
@@ -137,34 +103,29 @@ test('Pro sees no lock on the book row, and the button names the export', async 
 
 /* ── with a second template live ──────────────────────────────────────────── */
 
-test('the picker appears when a row has a second live template, and only on that row', async ({ page, context }) => {
-  watch(page, 'a designer on a row with three templates')
-  const fixture = await makeLive(context, KIT)
+test('the picker follows the row: one group at a time, with that row\'s own tiles', async ({ page }) => {
+  watch(page, 'a designer moving between rows that each have three templates')
   await openProject(page)
-  await chooseFormat(page, 'kit')
-
-  await expect(group(page)).toHaveCount(1)
-  expect(fixture.patched.sort(), 'the fixture could not make the templates live: the built panel has changed shape').toEqual([...KIT].sort())
-  await expect(group(page).getByRole('radio')).toHaveText([/Studio/, /Manual/, /Showcase/])
-  expect(await state(page)).toEqual({ checked: ['Studio'], focused: [], tabbable: ['Studio'] })
-
-  // The guidelines row has its own, live for everyone and not patched.
-  await chooseFormat(page, 'guidelines')
-  await expect(group(page).getByRole('radio')).toHaveText([/Presentation/, /Poster/, /Grid/])
+  for (const [format, names] of [['kit', ['Studio', 'Manual', 'Showcase']], ['guidelines', ['Presentation', 'Poster', 'Grid']], ['book', ['Specification', 'Monograph', 'Atlas']], ['kit', ['Studio', 'Manual', 'Showcase']]]) {
+    await chooseFormat(page, format)
+    await expect(group(page), `one picker on the ${format} row`).toHaveCount(1)
+    await expect(group(page).getByRole('radio')).toHaveText(names.map((n) => new RegExp(n)))
+  }
+  // A row with no template choice shows no picker: the CSS tokens have none.
+  await chooseFormat(page, 'css')
+  await expect(group(page)).toHaveCount(0)
 })
 
-test('each tile is named by its template name alone and described by its description', async ({ page, context }) => {
+test('each tile is named by its template name alone and described by its description', async ({ page }) => {
   watch(page, 'a screen reader user on the template choice')
-  await makeLive(context, KIT)
   await openProject(page)
   await chooseFormat(page, 'kit')
   await expect(tile(page, 'Studio')).toHaveAccessibleName('Studio', { timeout: 2000 })
   await expect(tile(page, 'Studio')).toHaveAccessibleDescription('A working page, components first.', { timeout: 2000 })
 })
 
-test('arrow keys move and choose, Home and End jump, and the ends wrap', async ({ page, context }) => {
+test('arrow keys move and choose, Home and End jump, and the ends wrap', async ({ page }) => {
   watch(page, 'a keyboard user choosing a kit template')
-  await makeLive(context, KIT)
   await openProject(page)
   await chooseFormat(page, 'kit')
   await tile(page, 'Studio').focus()
@@ -187,9 +148,8 @@ test('arrow keys move and choose, Home and End jump, and the ends wrap', async (
   await expect.poll(async () => (await storedDesign(page)).exportTemplates?.kit).toBe('showcase')
 })
 
-test('Tab enters on the chosen tile, not the first, and leaves the group in one press', async ({ page, context }) => {
+test('Tab enters on the chosen tile, not the first, and leaves the group in one press', async ({ page }) => {
   watch(page, 'a keyboard user tabbing into the template choice')
-  await makeLive(context, KIT)
   await openProject(page)
   await chooseFormat(page, 'kit')
 
@@ -205,9 +165,8 @@ test('Tab enters on the chosen tile, not the first, and leaves the group in one 
   expect((await state(page)).focused, 'and Shift+Tab comes back to the chosen tile').toEqual(['Manual'])
 })
 
-test('a click chooses a tile, and the choice is kept on the project and survives a reload', async ({ page, context }) => {
+test('a click chooses a tile, and the choice is kept on the project and survives a reload', async ({ page }) => {
   watch(page, 'a designer choosing a kit template on a saved project')
-  await makeLive(context, KIT)
   const account = await signIn(page, { plan: 'free', projects: 1 })
   await go(page, '/projects/seed-1')
   await page.locator('.pnav-export').click()
@@ -240,7 +199,6 @@ test('a click chooses a tile, and the choice is kept on the project and survives
 test('a stored id that is not a live template is ignored: the default tile, and the default is what is sent', async ({ page, context }) => {
   watch(page, 'a Pro account opening a project saved by a newer copy of the app')
   await context.addInitScript(() => { window.print = () => {} })
-  await makeLive(context, KIT)
   const asked = await watchDocumentRequests(page, () => ({ ok: true, format: 'book', template: 'specification', html: buildDesignSystemBook(DESIGN, { projectName: 'Stub' }) }))
   await signIn(page, { plan: 'pro' })
   // Written before the app starts, once. Neither `kit` nor `book` names a template that exists.
@@ -264,10 +222,9 @@ test('a stored id that is not a live template is ignored: the default tile, and 
 })
 
 for (const width of [390, 768]) {
-  test(`at ${width} the tiles fit the panel: no sideways scroll and no name cut off`, async ({ page, context }) => {
+  test(`at ${width} the tiles fit the panel: no sideways scroll and no name cut off`, async ({ page }) => {
     watch(page, `a designer choosing a template at ${width}`)
     await page.setViewportSize({ width, height: 844 })
-    const fixture = await makeLive(context, KIT)
     await openProject(page)
 
     for (const id of ['kit', 'book', 'guidelines']) {
@@ -311,7 +268,6 @@ for (const width of [390, 768]) {
         expect(fit.picked, where).toBe('none')
       }
     }
-    expect(fixture.patched.sort(), 'the fixture could not make the kit templates live').toEqual([...KIT].sort())
   })
 }
 
@@ -326,6 +282,55 @@ test('the longest names are measured, not assumed: Specification and Presentatio
   const widths = await page.evaluate(() => [...document.querySelectorAll('.exp-tpl-name')].map((n) => ({ text: n.textContent, need: n.scrollWidth, have: n.clientWidth })))
   for (const w of widths) expect(w.need, `${w.text} needs ${w.need}px of ${w.have}px`).toBeLessThanOrEqual(w.have)
 })
+
+/* ── the kit is built in the browser: the tile changes the file ───────────── */
+
+// What each layout says about itself in the file, and what only the other two say.
+const KIT_LAYOUTS = [
+  { tile: 'Studio', has: ['>Skip to UI kit<', 'class="monogram-panel"'] },
+  { tile: 'Manual', has: ['>Skip to the manual<', '<table class="t colours">'] },
+  { tile: 'Showcase', has: ['>Skip to the specimen<', 'class="cover-family"'] },
+]
+
+/** Answer the font requests from nothing, so the kit falls back and no live service is called. */
+async function noFontService(page) {
+  await page.route(/fonts\.googleapis\.com\/css2/, (route) => route.fulfill({ status: 404, body: '' }))
+  await page.route(/cdn\.jsdelivr\.net\/gh\/google\/fonts/, (route) => route.fulfill({ status: 404, body: '' }))
+}
+
+for (const plan of ['free', 'pro']) {
+  for (const { tile: chosen, has } of KIT_LAYOUTS) {
+    test(`the kit export follows the tile: ${chosen} gives the ${chosen} document (${plan})`, async ({ page }) => {
+      watch(page, `a ${plan} account exporting the ${chosen} kit`)
+      await noFontService(page)
+      await openProject(page, plan)
+      await chooseFormat(page, 'kit')
+      await tile(page, chosen).click()
+      expect((await state(page)).checked).toEqual([chosen])
+
+      const cta = exportPanel(page).getByRole('button', { name: actionLabel('kit'), exact: true })
+      await expect(cta).toBeEnabled()
+      const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
+      const chunks = []
+      for await (const chunk of await download.createReadStream()) chunks.push(chunk)
+      const body = Buffer.concat(chunks).toString('utf8')
+
+      expect(body.length, 'a real, self-contained document').toBeGreaterThan(60000)
+      for (const marker of has) expect(body, `the ${chosen} document carries ${marker}`).toContain(marker)
+      for (const other of KIT_LAYOUTS.filter((l) => l.tile !== chosen)) {
+        for (const marker of other.has) expect(body, `the ${chosen} document carries the ${other.tile} marker ${marker}`).not.toContain(marker)
+      }
+      // The tier still decides the attribution, whichever layout is chosen.
+      if (plan === 'free') {
+        expect(body).toContain('class="section-watermark"')
+        expect(body).toContain('content:"Made with UIL4B / Free UI kit"')
+      } else {
+        expect(body).not.toContain('class="section-watermark"')
+        expect(body).not.toContain('Made with UIL4B')
+      }
+    })
+  }
+}
 
 /* ── Free and a Pro template ──────────────────────────────────────────────── */
 

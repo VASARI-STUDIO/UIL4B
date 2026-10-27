@@ -46,13 +46,18 @@ import { contrast, typeLadder } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
 import { generateTintScale, mixHex, T_LABELS } from './colors.js'
 import { colorName } from './paletteNames.js'
-import { buildTokensCss, buildTokensJson, HEADING_LINE_HEIGHT, paletteRole } from './designTokens.js'
+import { buildTokensCss, buildTokensJson, designTokens, HEADING_LINE_HEIGHT, paletteRole } from './designTokens.js'
 import { tintConfigFor, DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { semanticShades, SEMANTIC_STEPS } from '../data/semanticPresets.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 import { SUBSET_RANGES } from './kitFonts.js'
 import { readIdentity } from './kitIdentity.js'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
+import { hexToOklch } from './exportTemplates/roles.js'
+import { MAX_SLOTS, fitTitle, clampTitle } from './exportTemplates/shared.js'
+import { roleLabel } from './paletteRoles.js'
+import { manualParts } from './kitManual.js'
+import { showcaseParts } from './kitShowcase.js'
 
 export const KIT_TIERS = Object.freeze(['free', 'pro'])
 
@@ -71,10 +76,20 @@ const FREE_IDENTITY = Object.freeze({
 })
 const GUIDE_COPY = Object.freeze({
   tagline: 'From selections to a system.',
-  guideTitle: 'Less guesswork. More consistency.',
+  guideTitle: 'Overview',
   description: 'Your selected colours, typefaces, and interface foundations, brought together in one reference. A practical starting point for the next thing you build.',
   principles: ['Colour & semantic roles', 'Typography & spacing', 'Components & states'],
 })
+// The cover names the project, in whole words. The sizes and measures are the
+// template's: 745 px is the cover block's text width at 1440, and 287 pt is its
+// text width on A4, so each title is fitted for the page it is drawn on.
+const COVER_SCREEN = Object.freeze({ maxLines: 2, steps: [80, 62, 46], measure: 745 })
+// On a phone the title scales with its box. It stops at half its fitted size when the
+// words still make two whole lines at COVER_PHONE (a 390 px screen's text width), and
+// otherwise follows the box down to COVER_FLOOR, so a long name never grows a third line.
+const COVER_PHONE = 300
+const COVER_FLOOR = 16
+const COVER_PRINT = Object.freeze({ maxLines: 3, steps: [44, 34, 26], measure: 287 })
 const WEBSITE_COPY = Object.freeze({
   headline: 'A place for your next idea.',
   description: 'Keep the important things clear. Give each action a purpose. Make every detail part of the same system.',
@@ -84,11 +99,21 @@ const WEBSITE_COPY = Object.freeze({
   caption: 'A layout specimen using the selected colours, fonts, and component tokens.',
 })
 export const SLOT_COPY = Object.freeze({
-  citron: { role: 'Signature accent', note: 'The spark. Use for moments that deserve attention.', share: 20 },
-  pine: { role: 'Primary brand', note: 'The anchor. Ground expressive layouts and key actions.', share: 25 },
-  lilac: { role: 'Supporting colour', note: 'The softer side. Give stories and quiet moments a home.', share: 10 },
-  chalk: { role: 'Canvas', note: 'The breathing room. Let the content come forward.', share: 40 },
-  ink: { role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', share: 5 },
+  citron: { role: 'Signature accent', note: 'The spark. Use for moments that deserve attention.', lands: 'highlights and moments that deserve attention', share: 20 },
+  pine: { role: 'Primary brand', note: 'The anchor. Ground expressive layouts and key actions.', lands: 'buttons, links and the focus ring', share: 25 },
+  lilac: { role: 'Supporting colour', note: 'The softer side. Give stories and quiet moments a home.', lands: 'soft panels, notes and quiet highlights', share: 10 },
+  chalk: { role: 'Canvas', note: 'The breathing room. Let the content come forward.', lands: 'the page behind the content', share: 40 },
+  ink: { role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', lands: 'headings, labels and reading copy', share: 5 },
+})
+// A palette colour that is not one of the five slots paints nothing in the kit.
+export const UNPLACED_LANDS = 'not assigned to a part of the interface'
+
+// The publisher's own faces for each layout, loaded by uiKitAssets and embedded
+// as "Publisher <family>". Each must be a key of SELF_HOSTED in kitFonts.js.
+export const KIT_CHROME = Object.freeze({
+  studio: Object.freeze(['Geist', 'Geist Mono']),
+  manual: Object.freeze(['Hanken Grotesk', 'Martian Mono']),
+  showcase: Object.freeze(['Instrument Sans']),
 })
 // Said on any slot the palette could not fill, so the kit's five colours are
 // never mistaken for the same five the book and the deck show.
@@ -118,6 +143,9 @@ const SPACING = Object.freeze([4, 8, 12, 16, 24, 32, 48, 64, 96])
 const RADIUS = Object.freeze({ control: 6, card: 16 })
 const MOTION = Object.freeze({ fast: 180, ease: [0.16, 1, 0.3, 1] })
 
+// A swatch at least this light gets a hairline, so it holds its edge on the page.
+const PALE_LUM = 0.75
+
 const PRINT_META_FONT = '"Publisher Geist Mono",Arial,sans-serif'
 const PRINT_META_INK = '#5A5D64'
 
@@ -132,6 +160,8 @@ export const esc = (value) => String(value ?? '')
 export const cssFamily = (name) => String(name ?? '').replace(/[^A-Za-z0-9 ._-]/g, '').trim() || 'sans-serif'
 
 const up = (hex) => String(hex).toUpperCase()
+/** The WCAG text grade of a contrast ratio, as a word so colour is never the only cue. */
+export const gradeOf = (ratio) => (ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA large' : 'Fails AA')
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
 const lum = (hex) => {
   const c = rgb(hex).map((v) => v / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
@@ -258,7 +288,8 @@ export function kitSemantic(design) {
   return ['success', 'warning', 'error', 'info'].map((role) => {
     const background = at(role, '50')
     const step = ['600', '700', '800', '900'].find((s) => contrast(at(role, s), background) >= 4.5) || '900'
-    return { ...SEMANTIC_COPY[role], hex: up(at(role, step)), background: up(background) }
+    // `token` and `backgroundToken` are the names the CSS and JSON downloads give these two values.
+    return { ...SEMANTIC_COPY[role], hex: up(at(role, step)), background: up(background), token: `color-${role}-${step}`, backgroundToken: `color-${role}-50` }
   })
 }
 
@@ -307,11 +338,34 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     disabledText: quietInk(text, disabledBackground, [disabledBackground]),
   }
 
+  // Every palette colour (up to MAX_SLOTS), for the layouts that tabulate them. A
+  // colour that is one of the five slots says where it lands; any other says so.
+  const colours = book.palette.slice(0, MAX_SLOTS).map((hex, i) => {
+    const owner = palette.find((p) => p.token === `--color-${paletteRole(i)}`)
+    const ok = hexToOklch(hex)
+    return {
+      i,
+      hex: up(hex),
+      name: colorName(hex),
+      role: roleLabel(book.harmony, i),
+      token: `--color-${paletteRole(i)}`,
+      oklch: `oklch(${(ok.l * 100).toFixed(1)}% ${ok.c.toFixed(3)} ${Math.round(ok.h)})`,
+      scale: kitScale(design, hex),
+      lands: owner ? owner.lands : UNPLACED_LANDS,
+      placed: Boolean(owner),
+      onCanvas: contrast(up(hex), canvas),
+      onText: contrast(up(hex), text),
+    }
+  })
+
   const record = {
     tier,
     isExample: false,
     ...GUIDE_COPY,
     palette,
+    colours,
+    // How many colours the design holds, so a layout that shows only 13 can say so.
+    colourCount: book.palette.length,
     semantic,
     fonts: { display, body },
     typeScale,
@@ -321,7 +375,7 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     website: { ...WEBSITE_COPY },
     tintToken: slot.pine.token || '--color-primary',
   }
-  if (free) return { ...record, ...FREE_IDENTITY }
+  if (free) return { ...record, ...FREE_IDENTITY, title: 'UI kit' }
 
   // Pro: the identity section appears only when the person has named the work.
   const { name, description } = readIdentity(design)
@@ -329,7 +383,7 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     ? { name, ...(description ? { description } : {}), ...(logo?.src ? { logo: { src: logo.src } } : {}) }
     : null
   const slug = slugify(name) ? `${slugify(name)}-ui-kit` : 'ui-kit'
-  return { ...record, name: name || 'UI kit', slug, edition: 'UI kit / Personal edition', personalisation }
+  return { ...record, name: name || 'UI kit', title: name || 'UI kit', slug, edition: 'UI kit / Personal edition', personalisation }
 }
 
 // ── Tokens ──────────────────────────────────────────────────────────────────
@@ -526,6 +580,8 @@ export function renderUiKit(design, {
   // A free kit's JSON names its generator in the DTCG `$extensions` slot, under
   // a reverse-domain key; a Pro kit's JSON carries no metadata at all.
   const extensions = free ? { 'com.uil4b': { generator: 'UIL4B', edition: 'free', url: `${SITE_ORIGIN}/` } } : null
+  // Every custom property the CSS download declares, by name, so a layout can show the downloads' own names and values.
+  const download = new Map([...appCss.matchAll(/^\s*--([\w-]+):\s*(.*?);\s*$/gm)].map((m) => [m[1], m[2]]))
   const appJson = buildTokensJson(safeDesign, { projectName: tokenName, watermark: free, extra, extensions })
 
   // Selected faces first: the document's font download reads the first
@@ -536,15 +592,20 @@ export function renderUiKit(design, {
     for (const face of fonts[family].faces) fontCss += faceRule(family, face)
     licenses += `\n${family}\n${fonts[family].license.text}\n`
   }
+  // A face counts only with a known subset and a payload; a family with none is not in the file.
+  const usableFaces = (pub) => (pub.faces || []).flatMap((face) => {
+    const range = SUBSET_RANGES[face.subset]
+    const data = String(face.base64 || '').replace(/[^A-Za-z0-9+/=]/g, '')
+    return range && data ? [{ range, data }] : []
+  })
   for (const pub of publisherFonts) {
-    for (const face of pub.faces || []) {
-      const range = SUBSET_RANGES[face.subset]
-      const data = String(face.base64 || '').replace(/[^A-Za-z0-9+/=]/g, '')
-      if (!range || !data) continue
+    for (const { range, data } of usableFaces(pub)) {
       fontCss += `@font-face{font-family:"Publisher ${cssFamily(pub.family)}";src:url(data:font/woff2;base64,${data}) format("woff2");font-weight:${pub.axis};font-style:normal;font-display:swap;unicode-range:${range};}\n`
     }
   }
-  if (publisherLicense) licenses += `\nGeist and Geist Mono (publisher interface)\n${publisherLicense}\n`
+  // The document's own faces named in the licence rows: those embedded here, and only with a licence text to show.
+  const chrome = publisherLicense ? publisherFonts.filter((pub) => usableFaces(pub).length).map((pub) => pub.family) : []
+  if (publisherLicense) licenses += `\n${chrome.join(' and ') || 'Geist and Geist Mono'} (publisher interface)\n${publisherLicense}\n`
 
   // The lockup is drawn from the shared logo geometry, sized in em, so the
   // template's existing font-size rules size it wherever it appears.
@@ -555,7 +616,7 @@ export function renderUiKit(design, {
   let identity = ''
   const personal = free ? null : sel.personalisation
   if (personal?.name) {
-    identity = `<section class="chapter personal-identity" id="identity"><div class="section-head"><h2>Your identity.</h2><p>${esc(personal.description || 'Your supplied identity, paired with the selected interface system.')}</p></div><div class="identity-name">${esc(personal.name)}</div>`
+    identity = `<section class="chapter personal-identity" id="identity"><div class="section-head"><h2>Identity</h2><p>${esc(personal.description || 'Your supplied identity, paired with the selected interface system.')}</p></div><div class="identity-name">${esc(personal.name)}</div>`
     const src = personal.logo?.src
     if (typeof src === 'string' && /^data:image\/(?:svg\+xml|png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(src)) {
       identity += `<div class="identity-logo"><img src="${src}" alt="${esc(personal.name)} logo"></div><p class="component-note">Logo shown as supplied. No colours or proportions have been changed.</p>`
@@ -564,13 +625,49 @@ export function renderUiKit(design, {
   }
 
   const tintRows = sel.palette.map((p) => {
-    const chips = Object.entries(p.scale).map(([stop, value]) => `<button class="tint-chip" style="background:${value};color:${on(value)}" data-copy="${value}" aria-label="Copy ${esc(p.name)} ${stop}, ${value}"><span>${stop}${stop === '500' ? ' · Base' : ''}</span><code>${value}</code></button>`).join('')
+    const chips = Object.entries(p.scale).map(([stop, value]) => `<button class="tint-chip" style="background:${value};color:${on(value)}" data-copy="${value}" aria-label="Copy ${esc(p.name)} ${stop}, ${value}"><span>${stop}${stop === '500' ? '<span class="tint-base"><span class="tint-sep"> · </span>Base</span>' : ''}</span><code>${value}</code></button>`).join('')
     return `<article class="tint-row"><div class="tint-heading"><h4>${esc(p.name)}</h4><small>${esc(p.source)}</small></div><div class="tint-scale">${chips}</div></article>`
   }).join('')
 
   const roleRows = ROLES.map(([name, key, description]) => `<tr><th scope="row"><i style="background:${tokens[key]}"></i>${name}</th><td><button class="copy-text" data-copy="var(--${key})" aria-label="Copy ${name} CSS variable"><code>--${key}</code>${icon('copy')}</button></td><td><code>${tokens[key]}</code></td><td>${description}</td></tr>`).join('')
 
-  const swatches = sel.palette.map((p) => `<article class="swatch"><button class="colour-chip" style="--swatch:${p.hex};--on-swatch:${on(p.hex)}" data-copy="${p.hex}" aria-label="Copy ${esc(p.name)} ${p.hex}"><span>${esc(p.name)}</span><span class="chip-bottom"><code>${p.hex}</code>${icon('copy')}</span></button><div class="swatch-details"><h3>${esc(p.role)}</h3><p>${esc(p.note)}${p.derivedNote ? ` ${esc(p.derivedNote)}` : ''}</p><code>RGB ${rgb(p.hex).join(' / ')}</code></div></article>`).join('')
+  // One swatch: the chip, the colour's role, and where it lands. The chip's big
+  // text is how the colour reads as text on the canvas (for the canvas itself,
+  // how ink reads on it), graded in words so colour is never the only cue.
+  const swatchCell = ({ hex, name, title, note, lands, ratio, basis, primary = false }) => {
+    const grade = gradeOf(ratio)
+    const fails = grade === 'Fails AA'
+    const pale = lum(hex) >= PALE_LUM ? ' pale' : ''
+    // A colour with no job says so once, over its block, so its card carries only the colour.
+    const details = lands
+      ? `<h3>${esc(title)}</h3>${note ? `<p>${esc(note)}</p>` : ''}<p class="lands"><small>Where it lands</small>${esc(lands.charAt(0).toUpperCase() + lands.slice(1))}</p>`
+      : ''
+    return `<article class="swatch${primary ? ' is-primary' : ''}"><button class="colour-chip${pale}" style="--swatch:${hex};--on-swatch:${on(hex)}" data-copy="${hex}" aria-label="Copy ${esc(name)} ${hex}"><span>${esc(name)}</span><span class="chip-result"><b class="chip-grade${fails ? ' fails' : ''}">${grade}</b><small>${ratio.toFixed(2)}:1 ${basis}</small></span><span class="chip-bottom"><code>${hex}</code>${icon('copy')}</span></button><div class="swatch-details">${details}<p class="sr-only">Contrast ${ratio.toFixed(2)} to 1 ${basis}: ${grade}.</p><code>RGB ${rgb(hex).join(' / ')}</code></div></article>`
+  }
+  const canvasHex = slot.chalk.hex
+  // The primary leads: it is the largest cell in every layout of the palette.
+  const railOrder = [...sel.palette].sort((a, b) => (b.id === 'pine') - (a.id === 'pine'))
+  const swatches = railOrder.map((p) => swatchCell({
+    primary: p.id === 'pine',
+    hex: p.hex,
+    name: p.name,
+    title: p.role,
+    note: `${p.note}${p.derivedNote ? ` ${p.derivedNote}` : ''}`,
+    lands: p.lands,
+    ratio: p.id === 'chalk' ? contrast(slot.ink.hex, p.hex) : contrast(p.hex, canvasHex),
+    basis: p.id === 'chalk' ? 'for text on it' : 'as text on the canvas',
+  })).join('')
+
+  // The palette's other colours, which the kit paints nothing with, and a note
+  // when the design holds more colours than a kit lists.
+  const unplaced = sel.colours.filter((c) => c.lands === UNPLACED_LANDS)
+  const colourCut = sel.colourCount > sel.colours.length
+  const moreList = unplaced.map((c) => swatchCell({ hex: c.hex, name: c.name, lands: '', ratio: c.onCanvas, basis: 'as text on the canvas' })).join('')
+  const moreHead = '<div class="subhead"><h3>The rest of your palette</h3><p>These colours are in the CSS and JSON downloads. This kit does not assign them to a part of the interface.</p></div>'
+  const cutNote = `<p class="contrast-note">The first ${sel.colours.length} of ${sel.colourCount} colours are shown. All ${sel.colourCount} are in the CSS and JSON downloads.</p>`
+  const moreSwatches = unplaced.length || colourCut
+    ? `<div class="more-colours">${unplaced.length ? `${moreHead}<div class="palette more">${moreList}</div>` : ''}${colourCut ? cutNote : ''}</div>`
+    : ''
 
   const semantics = sel.semantic.map((s) => {
     const ratio = contrast(s.hex, s.background)
@@ -594,6 +691,24 @@ export function renderUiKit(design, {
     return `<div class="contrast-pair"><span style="background:${slot[b].hex};color:${slot[a].hex}">Aa</span><div><strong>${esc(`${slot[a].name} on ${slot[b].name}`)}</strong><small>${ratio.toFixed(2)}:1 · ${ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'Below AA'} text</small></div></div>`
   }).join('')
 
+  const coverText = (opts) => {
+    const fit = fitTitle(sel.title, opts)
+    return { size: fit.size, text: fit.clamp ? clampTitle(sel.title, fit.size, opts) : sel.title }
+  }
+  const onScreen = coverText(COVER_SCREEN)
+  const halfFit = fitTitle(onScreen.text, { ...COVER_SCREEN, steps: [onScreen.size / 2], measure: COVER_PHONE })
+  const coverFloor = halfFit.clamp || halfFit.broken ? COVER_FLOOR : onScreen.size / 2
+  const onPaper = coverText(COVER_PRINT)
+  const coverTitle = onScreen.text === onPaper.text
+    ? `<span class="ct">${esc(onScreen.text)}</span>`
+    : `<span class="ct ct-screen">${esc(onScreen.text)}</span><span class="ct ct-print">${esc(onPaper.text)}</span>`
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
+  const faces = [...new Set([sel.fonts.display.name, sel.fonts.body.name])]
+  const coverFacts = `${plural(sel.colourCount, 'colour', 'colours')} · ${plural(faces.length, 'typeface', 'typefaces')}`
+  // The side note is the description when the person wrote one; otherwise the faces, as a fact.
+  const identityText = free ? '' : sel.personalisation?.description || ''
+  const coverNote = identityText || (faces.length === 1 ? `Set in ${faces[0]}.` : `Headings in ${sel.fonts.display.name}, body in ${sel.fonts.body.name}.`)
+
   const arrow = icon('arrow')
   const siteLinks = free ? `<aside class="site-links"><div><h3>Keep building with UIL4B.</h3><p>Explore more tools, refine your selections, and build your next kit.</p></div><nav aria-label="UIL4B website links"><a href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer">Visit uil4b.com${arrow}</a><a href="${SITE_ORIGIN}/create/palette" target="_blank" rel="noopener noreferrer">Build a colour palette${arrow}</a><a href="${SITE_ORIGIN}/create/font-pair" target="_blank" rel="noopener noreferrer">Explore font pairings${arrow}</a></nav><small>Website links open in a new tab and require an internet connection.</small></aside>` : ''
 
@@ -614,6 +729,7 @@ export function renderUiKit(design, {
     FONT_CSS: fontCss,
     TOKEN_CSS: templateCss,
     SWATCHES: swatches,
+    MORE_SWATCHES: moreSwatches,
     SEMANTICS: semantics,
     TYPE_ROWS: typeRows,
     SPACING: spacing,
@@ -634,6 +750,13 @@ export function renderUiKit(design, {
     DATA: scriptJson(data),
     NAME: esc(sel.name),
     TAGLINE: esc(sel.tagline),
+    COVER_TITLE: coverTitle,
+    COVER_SIZE: String(onScreen.size),
+    COVER_FLOOR: String(coverFloor),
+    COVER_PRINT: String(onPaper.size),
+    COVER_MEASURE: String(COVER_SCREEN.measure),
+    COVER_FACTS: esc(coverFacts),
+    COVER_NOTE: esc(coverNote),
     DESCRIPTION: esc(sel.description),
     GUIDETITLE: esc(sel.guideTitle),
     EDITION: esc(sel.edition),
@@ -651,13 +774,34 @@ export function renderUiKit(design, {
     RADIUS_CARD: String(sel.radius.card),
   }
   for (const [k, v] of Object.entries(sel.website)) replacements[`WEBSITE_${k.toUpperCase()}`] = esc(v)
+  // Only a layout that tabulates every value asks for these.
+  if (template.includes('@@COLOUR_TABLE@@')) {
+    Object.assign(replacements, manualParts(sel, {
+      tokens, esc, on, g, contrast, grade: gradeOf, roles: ROLES, date,
+      tokenCount: designTokens(safeDesign).length + extra.length,
+      embedded: Object.fromEntries(notes.embedded.map((f) => [f, fonts[f].license.name])),
+      chrome,
+      download,
+    }))
+  }
 
-  // split/join rather than String.replace: a replacement string is never
-  // interpreted, so a `$&` in someone's project name stays literal.
-  let html = template
-  for (const [key, value] of Object.entries(replacements)) html = html.split(`@@${key}@@`).join(value)
-  const unresolved = /@@[A-Z_]+@@/.exec(html)
-  if (unresolved) throw new Error(`Unresolved UI kit placeholder ${unresolved[0]}`)
+  if (template.includes('@@STRIPES@@')) {
+    Object.assign(replacements, showcaseParts(sel, {
+      tokens, esc, on, g, contrast, grade: gradeOf, roles: ROLES, date,
+      tokenCount: designTokens(safeDesign).length + extra.length,
+      embedded: Object.fromEntries(notes.embedded.map((f) => [f, fonts[f].license.name])),
+      chrome,
+      download,
+    }))
+  }
+
+  // One pass over the template: each placeholder is looked up in the map. The
+  // function form means a replacement is never interpreted (a `$&` in a project
+  // name stays literal) and never re-scanned (a name holding a placeholder stays text).
+  const html = template.replace(/@@([A-Z][A-Z0-9_]*)@@/g, (whole, key) => {
+    if (!Object.prototype.hasOwnProperty.call(replacements, key)) throw new Error(`Unresolved UI kit placeholder ${whole}`)
+    return replacements[key]
+  })
 
   return {
     html,

@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="A fixed UI kit export laid out as a type specimen: the selected typefaces at full size, the type scale, colour and components.">
+<link rel="icon" href="data:,">
+<title>@@NAME@@ | UI kit</title>
+<style>
+@@FONT_CSS@@
+@@TOKEN_CSS@@
+:root{--ui:"Publisher Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;--hair:1px;--pad:56px;--avail:calc(100vw - 2 * var(--pad))}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:var(--color-background);color:var(--color-text);font:400 14px/1.55 var(--ui);font-variant-numeric:lining-nums tabular-nums;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ul{margin:0}
+ul{padding:0;list-style:none}
+h2{font:var(--weight-display) 40px/1.1 var(--font-display);letter-spacing:-.01em;overflow-wrap:anywhere}
+h3{font:600 14px/1.3 var(--ui)}
+p{max-width:68ch}
+small{font-size:12px;color:var(--color-text-muted)}
+code{font:400 12px/1.5 var(--ui);font-variant-numeric:lining-nums tabular-nums;overflow-wrap:anywhere}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-underline-offset:3px}
+svg{width:16px;height:16px;flex-shrink:0}
+button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visible{outline:2px solid var(--color-text);outline-offset:2px}
+.sc-band button:focus-visible{outline-color:currentColor}
+::selection{background:var(--color-primary);color:var(--color-on-primary)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.skip{position:fixed;top:-100px;left:12px;z-index:20;background:var(--color-text);color:var(--color-background);padding:10px 14px}
+.skip:focus{top:12px}
+.js-only{display:none}
+.js .js-only{display:flex}
+.no-js{margin:0 0 24px;padding:12px 14px;border:var(--hair) solid var(--color-border)}
+.wrap{max-width:1392px;margin:0 auto;padding:0 var(--pad)}
+
+/* Navigation: the name and the sections, on the canvas. */
+.nav{position:sticky;top:0;z-index:10;background:var(--color-background);border-bottom:var(--hair) solid var(--color-border)}
+.nav .wrap{display:flex;align-items:center;gap:32px;min-height:56px}
+.index-name{flex:0 1 240px;min-width:0;font-weight:600;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-links{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{padding:18px 0 16px;border-bottom:2px solid transparent;text-decoration:none;color:var(--color-text-muted);white-space:nowrap}
+.nav-links a:hover,.nav-links a[aria-current]{color:var(--color-text)}
+.nav-links a[aria-current]{border-bottom-color:var(--color-primary);font-weight:600}
+
+/* Cover: the heading face's name, in that face, and the one accent rule. */
+.cover{padding:96px 0 48px;min-height:min(640px,80vh);display:flex;flex-direction:column;justify-content:flex-end}
+.cover-family{font-family:var(--font-display);font-weight:var(--weight-display);font-size:min(calc(var(--size) * 1px),calc(var(--size) * var(--avail) / 1200));line-height:1.04;letter-spacing:-.025em;overflow-wrap:anywhere;hyphens:auto}
+.clip{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;padding-bottom:.12em}
+.rule{height:8px;margin:24px 0 20px}
+.cover-name{font-size:16px;font-weight:600;overflow-wrap:anywhere;max-width:none}
+.facts{margin-top:4px;color:var(--color-text-muted);font-size:12px;max-width:none}
+.files{flex-wrap:wrap;gap:8px;margin-top:32px}
+.file{min-height:44px;padding:8px 16px;border:var(--hair) solid var(--color-text);background:none;font-size:13px;font-weight:600;border-radius:var(--radius-control)}
+.file:hover{background:var(--color-text);color:var(--color-background)}
+.file code{margin-left:6px}
+
+/* Bands: one typeface role each, on the primary, the canvas and the text colour. */
+.sc-band{padding:96px 0 40px}
+.sc-band.field{background:var(--color-primary);color:var(--color-on-primary)}
+.sc-band.ink{background:var(--color-text);color:var(--color-background)}
+.sc-band.field small,.sc-band.ink small{color:inherit}
+.sc-label,.section-head,.bhead{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));column-gap:16px;align-items:baseline}
+.sc-label{margin-bottom:48px}
+.sc-label h2,.section-head h2,.bhead h3{grid-column:1/4}
+.sc-label p,.section-head p,.bhead p{grid-column:4/-1}
+.sc-sample{font-family:var(--font-display);font-weight:var(--weight-display);font-size:min(calc(var(--size) * 1px),calc(var(--size) * var(--avail) / 1200));line-height:1.08;letter-spacing:-.02em;overflow-wrap:anywhere;hyphens:auto;max-width:none}
+.sc-alpha{margin-top:40px;font-family:var(--font-display);font-weight:var(--weight-display);font-size:min(calc(var(--size) * 1px),calc(var(--size) * var(--avail) / 700));line-height:1.3;letter-spacing:.01em;overflow-wrap:anywhere;max-width:none}
+.sc-body-name{font-family:var(--font-body);font-weight:var(--weight-body);font-size:min(calc(var(--size) * 1px),calc(var(--size) * var(--avail) / 1200));line-height:1.06;letter-spacing:-.02em;overflow-wrap:anywhere;margin-bottom:40px;max-width:none}
+.sc-body{font-family:var(--font-body);font-weight:var(--weight-body);font-size:calc(var(--size) * 1px);line-height:1.4;overflow-wrap:anywhere;max-width:36em}
+.sc-line,.sc-note{margin-top:24px;font-size:13px}
+.sc-line code{font-size:13px}
+.sc-end,.section-end{display:flex;justify-content:flex-end;margin-top:48px}
+
+/* Sections on the canvas: a head over its content. */
+.section{padding:96px 0 40px}
+.section-head{padding-top:24px;border-top:var(--hair) solid var(--color-text);margin-bottom:40px}
+.section-head p{color:var(--color-text-muted)}
+.bhead{margin:48px 0 14px}
+.bhead p{color:var(--color-text-muted)}
+.tbl-wrap{overflow-x:auto;max-width:100%;scrollbar-width:thin;scrollbar-color:var(--color-text-muted) var(--color-border)}
+.scroll-hint{display:none;margin-top:8px;max-width:none;font-size:12px;color:var(--color-text-muted)}
+.tbl-wrap[data-scroll]+.scroll-hint{display:block}
+.component-note{margin-top:12px;font-size:12px;color:var(--color-text-muted)}
+
+/* Tables: hairline rows; values in the chrome face. */
+.t{width:100%;border-collapse:collapse;text-align:left}
+.t th,.t td{padding:12px 16px 12px 0;vertical-align:top;font-weight:400;border-top:var(--hair) solid var(--color-border)}
+.t thead th{padding:0 16px 8px 0;border-top:0;border-bottom:var(--hair) solid var(--color-text);font-size:12px;font-weight:600;color:var(--color-text-muted);white-space:nowrap}
+.t td>small,.t th small{display:block}
+.nm{display:inline-block;vertical-align:top}
+.nm b{display:block;font-weight:600}
+.cv{display:inline;padding:0;border:0;background:none;text-align:left}
+.cv code{white-space:nowrap}
+.cv:hover code{text-decoration:underline dotted;text-underline-offset:3px}
+.ct b{display:block;font-size:13px}
+.ct.weak small{font-weight:600;color:var(--color-text)}
+.long{overflow-wrap:anywhere}
+.scale{min-width:640px}
+.pr-only{display:none}
+.scale .vals{white-space:nowrap}
+.scale .vals .cv code{font-size:13px;font-weight:600}
+.scale .var{color:var(--color-text-muted)}
+.spec p{max-width:none;overflow-wrap:anywhere;font-size:calc(var(--s) * 1px * var(--k,1))}
+.states,.comp{min-width:640px}
+.comp.sel{min-width:0}
+.samples{white-space:nowrap}
+.smp{display:inline-block;padding:6px 12px;font:13px/1.4 var(--font-body);border:var(--hair) solid var(--color-border)}
+
+/* Colour: stripes whose height says how much room the colour gets. */
+.stripes{--u:56px}
+.stripe{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr) minmax(0,2fr) minmax(0,1.3fr);gap:8px 24px;align-items:center;width:100%;min-height:calc(var(--w) * var(--u));padding:12px 24px;border:0;text-align:left;font:13px/1.35 var(--font-body)}
+.stripe small,.stripe code{color:inherit}
+.stripe .s-name b{display:block;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.stripe small{display:block;font-size:12px;overflow-wrap:anywhere}
+.stripe code{font-size:13px}
+.stripe b{font-weight:600}
+.stripe.pale{box-shadow:inset 0 0 0 var(--hair) var(--color-border)}
+.stripe:hover,.stripe:focus-visible{outline:2px solid currentColor;outline-offset:-4px}
+
+/* Components: static specimens drawn with the kit's own tokens. */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:var(--radius-control);background:var(--color-primary);color:var(--color-on-primary);font:600 13px/1 var(--font-body);white-space:nowrap}
+.btn.hover{background:var(--color-primary-hover)}
+.btn.focus,.field-box.focus{outline:2px solid var(--color-focus);outline-offset:3px}
+.btn.off{background:var(--color-disabled-background);color:var(--color-disabled-text)}
+.btn.line{background:transparent;color:var(--color-text);border-color:var(--color-primary)}
+.btn.line.hover{background:var(--color-disabled-background)}
+.comp td{vertical-align:middle}
+.comp th small{margin-top:2px}
+.field-box{display:flex;align-items:center;min-height:44px;padding:10px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-control);font:400 14px/1.3 var(--font-body)}
+.field-box.error{border-color:var(--color-danger)}
+.caret{width:1px;height:17px;margin-left:2px;background:var(--color-text)}
+.field-msg{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--color-danger)}
+.field-msg svg{width:14px;height:14px}
+.box{display:grid;place-items:center;width:20px;height:20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:4px}
+.box.on{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
+.box svg{width:14px;height:14px}
+.dot{display:block;position:relative;width:20px;height:20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:50%}
+.dot.on{border-color:var(--color-primary)}
+.dot.on::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--color-primary)}
+.sw{display:block;position:relative;width:34px;height:20px;border-radius:20px;background:var(--color-disabled-background)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--color-surface)}
+.sw.on{background:var(--color-primary)}
+.sw.on::after{left:17px}
+
+/* Tokens: declarations in the system's monospace face, on the text colour. */
+.tk-cols{columns:3;column-gap:48px}
+.tk-group{break-inside:avoid;margin-bottom:32px}
+.tk-group h3{padding-bottom:8px;border-bottom:var(--hair) solid currentColor;margin-bottom:8px}
+.tk{display:block;width:100%;padding:3px 0;border:0;background:none;text-align:left}
+.tk code{font-family:var(--tk-mono,var(--mono));font-variant-numeric:tabular-nums;font-size:12px}
+.tk .k{font-weight:600}
+.tk:hover code{text-decoration:underline dotted;text-underline-offset:3px}
+
+/* Identity (Pro), licences and the free credit. The identity section's markup is shared with the other layouts and has no .wrap, so it carries the wrap's own bounds. */
+.personal-identity{max-width:1392px;margin:0 auto;padding:96px var(--pad) 0}
+.personal-identity .component-note{max-width:68ch}
+.identity-name{margin-top:20px;font:var(--weight-display) 56px/1.1 var(--font-display);overflow-wrap:anywhere}
+.identity-logo{margin-top:20px;padding:24px;border:var(--hair) solid var(--color-border)}
+.identity-logo img{display:block;max-width:100%;max-height:160px;object-fit:contain}
+.license-details{margin-top:24px;border-top:var(--hair) solid var(--color-border);padding-top:12px;font-size:12px;color:var(--color-text-muted)}
+.license-details summary{cursor:pointer;min-height:28px}
+.license-details pre{white-space:pre-wrap;max-height:320px;overflow:auto;font:400 11px/1.6 var(--mono)}
+.publisher-link{display:inline-flex;color:inherit;text-decoration:none}
+.publisher-link:hover{opacity:.7}
+.publisher-lockup{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font:700 13px/1 var(--ui);letter-spacing:-.02em}
+.section-watermark{display:inline-flex;align-items:center;gap:6px;color:var(--color-text-muted);font-size:12px}
+.sc-band .section-watermark{color:inherit}
+.free-notice{display:flex;align-items:center;gap:10px;width:max-content;max-width:100%;margin-top:32px;color:var(--color-text-muted);font-size:12px}
+.free-notice>span:last-child{border-left:var(--hair) solid var(--color-border);padding-left:10px}
+.site-links{margin-top:48px;padding:24px 0;border-top:var(--hair) solid var(--color-border);border-bottom:var(--hair) solid var(--color-border);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 40px}
+.site-links p{margin-top:6px;color:var(--color-text-muted)}
+.site-links nav{display:flex;flex-direction:column}
+.site-links nav a{display:flex;align-items:center;justify-content:space-between;min-height:40px;padding:6px 0;border-top:var(--hair) solid var(--color-border);text-decoration:none}
+.site-links nav a:first-child{border-top:0}
+.site-links nav a:hover{text-decoration:underline}
+.site-links>small{grid-column:1/-1}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,12px);max-width:calc(100% - 32px);padding:10px 18px;background:var(--color-text);color:var(--color-background);font-size:13px;text-align:center;opacity:0;pointer-events:none;transition:opacity 180ms,transform 180ms;z-index:30}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:1000px){
+  :root{--pad:32px}
+  .tk-cols{columns:2}
+  .sc-label h2,.section-head h2,.bhead h3,.sc-label p,.section-head p,.bhead p{grid-column:1/-1}
+  .sc-label p,.section-head p,.bhead p{margin-top:8px}
+  .site-links{grid-template-columns:1fr}
+  .stripe{grid-template-columns:minmax(0,1fr) auto;padding:12px 16px}
+  .stripe .s-lands{grid-column:1}
+  .stripe .s-grade{grid-column:2;text-align:right}
+}
+@media(max-width:560px){
+  :root{--pad:20px}
+  .tk-cols{columns:1}
+  .sc-band,.section{padding-top:56px}
+  .cover{padding-top:48px}
+  h2{font-size:32px}
+  .nav .wrap{gap:16px}
+  .index-name{flex-basis:96px}
+  .stripes{--u:44px}
+  .sc-body{font-size:min(calc(var(--size) * 1px),max(18px,calc(var(--size) * var(--avail) / 600)))}
+  .personal-identity{padding-top:56px}
+  .identity-name{font-size:28px}
+  .scale{display:block;min-width:0}
+  .scale thead,.scale thead tr{display:block}
+  .scale thead tr{padding:0;border-top:0}
+  .scale thead th{display:none}
+  .scale thead th:nth-child(2){display:block;padding:0 0 8px;border:0}
+  .scale tbody{display:block}
+  .scale tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);column-gap:16px;padding:12px 0;border-top:var(--hair) solid var(--color-border)}
+  .scale tbody tr:first-child{border-top:var(--hair) solid var(--color-text)}
+  .scale th,.scale td{padding:0;border-top:0}
+  .scale .spec{grid-column:1/-1;margin-top:8px}
+  .spec p{font-size:min(calc(var(--s) * 1px),9vw)}
+}
+@media(hover:none){.stripe:hover{outline:0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.toast{transition:none}}
+
+/* Print: A4 with 18 mm margins, one band to a page. */
+@page{size:A4;margin:18mm}
+@media print{
+  :root{--hair:.25mm;--pad:0px;--avail:174mm}
+  html{scroll-behavior:auto}
+  body{font-size:8.5pt;line-height:1.45;background:none}
+  small,code,.tk code{font-size:7pt}
+  h2{font-size:24pt}
+  .skip,.toast,.js-only,.no-js,.license-details,.section-end,.nav-links{display:none!important}
+  .wrap,.personal-identity{max-width:none}
+  .personal-identity{padding:10mm 0 0;margin:0;break-before:page}
+  .personal-identity+.section{break-before:auto}
+  .pr-only{display:inline}
+  .nav{position:static;border:0;background:none}
+  .nav .wrap{min-height:0;padding-bottom:4mm;border-bottom:var(--hair) solid var(--color-text)}
+  .cover{min-height:225mm;padding:0 0 10mm}
+  .rule{height:2mm}
+  .cover-name{font-size:11pt}
+  .sc-band,.section{padding:10mm 0 0;break-before:page}
+  .sc-band.field,.sc-band.ink{min-height:240mm;padding:10mm 0}
+  .sc-band.field .wrap,.sc-band.ink .wrap{padding:0 10mm}
+  .sc-band.field,.sc-band.ink{display:flex;flex-direction:column}
+  .sc-band.field .wrap,.sc-band.ink .wrap{flex:1;width:100%;display:flex;flex-direction:column}
+  .sc-band .sc-end{margin-top:auto;padding-top:6mm}
+  .sc-label,.section-head{margin-bottom:8mm}
+  .sc-body-name{margin-bottom:8mm}
+  .sc-line,.sc-note{font-size:8.5pt;margin-top:6mm}
+  .bhead{margin:8mm 0 3mm;break-after:avoid}
+  .t th,.t td{padding:2mm 3mm 2mm 0}
+  .t thead th{font-size:7pt}
+  .t tr,.stripe,.tk-group{break-inside:avoid}
+  .tbl-wrap{overflow:visible;break-inside:avoid}
+  .scale,.states,.comp{min-width:0}
+  .scale{--k:var(--print-k,1)}
+  .scale .vals .cv code{font-size:7.5pt}
+  .scroll-hint{display:none!important}
+  .stripes{--u:var(--print-u)}
+  .stripe{padding:1mm 3mm;gap:0 4mm;font-size:7.5pt;print-color-adjust:exact}
+  .stripe .s-name b{font-size:8pt}
+  .stripe small,.stripe code{font-size:7pt}
+  .stripe:hover{outline:0}
+  .tk-cols{columns:2;column-gap:10mm}
+  .tk-group{margin-bottom:6mm}
+  .tk{padding:.3mm 0;font-size:7pt;line-height:1.35}
+  #components .section-head{margin-bottom:5mm}
+  #components .bhead{margin:5mm 0 2mm}
+  #components .t th,#components .t td{padding:1.5mm 3mm 1.5mm 0}
+  .btn{min-height:9mm;padding:2mm 3mm;font-size:8pt}
+  .field-box{min-height:9mm;font-size:9pt}
+  .smp{padding:1.5mm 3mm;font-size:8pt}
+  .identity-name{font-size:26pt;margin-top:4mm}
+  .identity-logo{margin-top:4mm;padding:4mm}
+  .identity-logo img{max-height:28mm}
+  .site-links{break-inside:avoid;margin-top:8mm;padding:5mm 0}
+  .site-links nav a{min-height:0;padding:1mm 0}
+  .site-links nav a::after{content:attr(href);font:400 7pt var(--mono);margin-left:3mm}
+  .site-links nav a svg{display:none}
+  .free-notice{margin-top:6mm}
+}
+</style>
+<style>
+@@PRINT_WATERMARK@@
+</style>
+</head>
+<body>
+<a class="skip" href="#heading">Skip to the specimen</a>
+<nav class="nav" aria-label="Specimen contents"><div class="wrap"><a class="index-name" href="#top" title="@@INDEX_NAME@@">@@INDEX_NAME@@</a><div class="nav-links"><a href="#heading" aria-current="location">Heading face</a><a href="#body">Body face</a><a href="#scale">Type scale</a><a href="#colour">Colour</a><a href="#components">Components</a><a href="#tokens">Tokens</a><a href="#licences">Licences</a></div></div></nav>
+<main id="top">
+<div class="wrap">
+<noscript><p class="no-js">This specimen is fully readable offline. Enable JavaScript to copy values and download tokens, or use your browser’s Print menu to save a PDF.</p></noscript>
+<header class="cover"><h1 class="cover-family" style="--size:@@COVER_SIZE@@"><span class="clip">@@COVER_FAMILY@@</span></h1><div class="rule" aria-hidden="true" style="background:@@COVER_RULE@@"></div><p class="cover-name">@@COVER_NAME@@</p><p class="facts">@@EDITION@@ · @@FACTS@@</p>
+<div class="files js-only"><button class="file" data-action="print">Print / PDF</button><button class="file" data-action="css">CSS variables <code>.css</code></button><button class="file" data-action="json">Design tokens <code>.json</code></button><button class="file" data-action="fonts">Font styles <code>.css</code></button><button class="file" data-action="html">This specimen <code>.html</code></button></div></header>
+</div>
+
+<section class="sc-band field" id="heading" aria-labelledby="heading-title"><div class="wrap">
+<div class="sc-label"><h2 id="heading-title">Heading face</h2><p>@@FONT_DISPLAY@@ at weight @@WEIGHT_DISPLAY@@. @@HEAD_LICENCE@@</p></div>
+<p class="sc-sample" style="--size:@@HEAD_SIZE@@">@@HEAD_SAMPLE@@</p>
+<p class="sc-alpha" style="--size:@@ALPHA_SIZE@@">@@HEAD_ALPHABET@@</p>
+<p class="sc-line">Your project name, then the alphabet and figures, set in the heading face.</p>
+<div class="sc-end">@@WATERMARK@@</div>
+</div></section>
+
+<section class="sc-band" id="body" aria-labelledby="body-title"><div class="wrap">
+<div class="sc-label"><h2 id="body-title">Body face</h2><p>@@FONT_BODY@@ at weight @@WEIGHT_BODY@@. @@BODY_LICENCE@@</p></div>
+<p class="sc-body-name" style="--size:@@BODY_NAME_SIZE@@"><span class="clip">@@BODY_NAME@@</span></p>
+<p class="sc-body" style="--size:@@BODY_SIZE@@">@@BODY_SAMPLE@@</p>
+<p class="sc-note">@@SAMPLE_NOTE@@</p>
+<p class="sc-line">Your description, or the names of your colours, set in the body face.</p>
+<div class="sc-end">@@WATERMARK@@</div>
+</div></section>
+
+<section class="section" id="scale" aria-labelledby="scale-title"><div class="wrap">
+<div class="section-head"><h2 id="scale-title">Type scale</h2><p>The six largest steps, largest first. Each is set in its own face at the size in its CSS variable. Select the values to copy the variable.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Type scale table"><table class="t scale" style="--print-k:@@SCALE_K@@"><caption class="sr-only">Type scale: size, line height and weight of each step</caption>@@SCALE_TABLE@@</table></div>
+<p class="component-note">@@FONT_EMBED_NOTE@@</p>
+<div class="section-end">@@WATERMARK@@</div>
+</div></section>
+
+<section class="section" id="colour" aria-labelledby="colour-title"><div class="wrap">
+<div class="section-head"><h2 id="colour-title">Colour</h2><p>@@COLOUR_NOTE@@</p></div>
+<ul class="stripes" style="--print-u:@@STRIPE_UNIT@@">@@STRIPES@@</ul>
+<div class="section-end">@@WATERMARK@@</div>
+</div></section>
+
+<section class="section" id="components" aria-labelledby="components-title"><div class="wrap">
+<div class="section-head"><h2 id="components-title">Components</h2><p>The states people rely on, drawn from the tokens. These are fixed specimens, not form controls.</p></div>
+<div class="bhead"><h3>Buttons</h3><p>One primary action per context. Keep touch targets at least 44 px high.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Button states table"><table class="t comp"><caption class="sr-only">Button states</caption><thead><tr><th scope="col">Component</th><th scope="col">Default</th><th scope="col">Hover</th><th scope="col">Focus</th><th scope="col">Disabled</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Primary action</b><small>@@RADIUS_CONTROL@@ px radius · 44 px height</small></span></th><td><span class="btn">Continue @@ARROW_ICON@@</span></td><td><span class="btn hover">Continue @@ARROW_ICON@@</span></td><td><span class="btn focus">Continue @@ARROW_ICON@@</span></td><td><span class="btn off">Continue @@ARROW_ICON@@</span></td></tr><tr><th scope="row"><span class="nm"><b>Secondary action</b><small>1 px border · 44 px height</small></span></th><td><span class="btn line">Go back</span></td><td><span class="btn line hover">Go back</span></td><td><span class="btn line focus">Go back</span></td><td><span class="btn off">Go back</span></td></tr></tbody></table></div>
+<div class="bhead"><h3>Fields</h3><p>Explain an error beside the field that caused it.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Field states table"><table class="t comp"><caption class="sr-only">Text field states</caption><thead><tr><th scope="col">Component</th><th scope="col">Default</th><th scope="col">Focus</th><th scope="col">Error</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Text field</b><small>Email address</small></span></th><td><div class="field-box">alex@example.com</div></td><td><div class="field-box focus">alex@example.com<span class="caret" aria-hidden="true"></span></div></td><td><div class="field-box error">alex@</div><p class="field-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg>Enter a complete email address.</p></td></tr></tbody></table></div>
+<div class="bhead"><h3>Selection</h3><p>Selected states use the primary colour.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Selection states table"><table class="t comp sel"><caption class="sr-only">Selection control states</caption><thead><tr><th scope="col">Component</th><th scope="col">Selected</th><th scope="col">Unselected</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Checkbox</b></span></th><td><span class="box on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span></td><td><span class="box"></span></td></tr><tr><th scope="row"><span class="nm"><b>Radio</b></span></th><td><span class="dot on"></span></td><td><span class="dot"></span></td></tr><tr><th scope="row"><span class="nm"><b>Switch</b></span></th><td><span class="sw on"></span></td><td><span class="sw"></span></td></tr></tbody></table></div>
+<div class="bhead"><h3>State colours</h3><p>Pair each with a message and an icon, so colour is never the only cue.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="State colours table"><table class="t states"><caption class="sr-only">Success, warning, error and information colours</caption><thead><tr><th scope="col">State</th><th scope="col">Text</th><th scope="col">Background</th><th scope="col">Contrast</th><th scope="col">Sample</th></tr></thead><tbody>@@STATE_ROWS@@</tbody></table></div>
+<div class="section-end">@@WATERMARK@@</div>
+</div></section>
+
+<section class="sc-band ink" id="tokens" aria-labelledby="tokens-title"><div class="wrap">
+<div class="sc-label"><h2 id="tokens-title">Tokens</h2><p>@@TOKEN_NOTE@@ Select a line to copy it. @@TOKEN_TOTAL@@</p></div>
+<div class="tk-cols" style="--tk-mono:@@TOKEN_MONO@@">@@TOKEN_GROUPS@@</div>
+<div class="sc-end">@@WATERMARK@@</div>
+</div></section>
+@@IDENTITY@@
+<section class="section" id="licences" aria-labelledby="licences-title"><div class="wrap">
+<div class="section-head"><h2 id="licences-title">Licences</h2><p>@@LICENSE_NOTE@@</p></div>
+<div class="bhead"><h3>Document</h3><p>The name is printed in full here, even where a page shortens it.</p></div>
+<div class="tbl-wrap"><table class="t"><caption class="sr-only">Document details</caption><tbody>@@DOC_ROWS@@</tbody></table></div>
+<div class="bhead"><h3>Typefaces</h3><p>@@FONT_EMBED_NOTE@@</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Typefaces table"><table class="t"><caption class="sr-only">Typefaces and their licences</caption><thead><tr><th scope="col">Family</th><th scope="col">Used for</th><th scope="col">Licence</th></tr></thead><tbody>@@FONT_ROWS@@</tbody></table></div>
+<details class="license-details"><summary>Licence texts</summary><pre id="license-text">Font licence text is included in this document’s embedded data and in the accompanying source assets.</pre></details>
+@@SITE_LINKS@@
+<div class="section-end">@@WATERMARK@@</div>
+@@FREE_NOTICE@@
+</div></section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<script type="application/json" id="brand-data">@@DATA@@</script>
+<script>
+(() => {
+  'use strict';
+  const data = JSON.parse(document.getElementById('brand-data').textContent);
+  document.documentElement.classList.add('js');
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  const tell = message => { clearTimeout(toastTimer); toast.textContent = message; toast.classList.add('show'); toastTimer = setTimeout(() => toast.classList.remove('show'), 2800); };
+  document.getElementById('license-text').textContent = data.licenses;
+  async function copy(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(text); return; } catch (_) { /* file browsers may deny clipboard permissions */ }
+    }
+    const previous = document.activeElement;
+    const field = document.createElement('textarea'); field.value = text; field.style.cssText = 'position:fixed;left:-10000px;top:0'; field.setAttribute('aria-label', 'Copy value'); document.body.appendChild(field); field.select();
+    const success = document.execCommand('copy'); field.remove(); if (previous) previous.focus({preventScroll:true});
+    if (!success) throw new Error('Copy unavailable');
+  }
+  function download(content, suffix, mime) {
+    const blob = new Blob([content], {type:mime}); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = data.brand.slug + suffix; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 15000);
+    tell('Download ready: ' + data.brand.slug + suffix);
+  }
+  function exportHTML() {
+    const clone = document.documentElement.cloneNode(true); clone.classList.remove('js');
+    clone.querySelectorAll('.scroll-hint').forEach(el => el.remove());
+    clone.querySelectorAll('[data-scroll]').forEach(el => el.removeAttribute('data-scroll'));
+    const t = clone.querySelector('#toast'); t.textContent = ''; t.classList.remove('show');
+    clone.querySelectorAll('[aria-current]').forEach(el => el.removeAttribute('aria-current'));
+    clone.querySelector('.nav-links a').setAttribute('aria-current', 'location');
+    download('<!doctype html>\n' + clone.outerHTML, '-export.html', 'text/html;charset=utf-8');
+  }
+  document.addEventListener('click', async event => {
+    const value = event.target.closest('[data-copy]');
+    if (value) { try { await copy(value.dataset.copy); tell(value.dataset.copy + ' copied'); } catch (_) { tell('Copy unavailable. Select the printed value and copy it manually.'); } return; }
+    const button = event.target.closest('[data-action]'); if (!button) return;
+    try {
+      switch (button.dataset.action) {
+        case 'print': window.print(); break;
+        case 'html': exportHTML(); break;
+        case 'css': download(data.cssCredit+'/* Download selected font styles separately. */\n'+data.css, '-tokens.css', 'text/css;charset=utf-8'); break;
+        case 'json': download(data.json, '-tokens.json', 'application/json;charset=utf-8'); break;
+        case 'fonts': {
+          const rules = [...document.styleSheets[0].cssRules].filter(rule => rule.type === CSSRule.FONT_FACE_RULE && !rule.style.fontFamily.includes('Publisher ')).map(rule => rule.cssText).join('\n');
+          download('/*\n'+data.licenses.replace(/\*\//g,'* /')+'\n*/\n'+rules, '-fonts.css', 'text/css;charset=utf-8'); break;
+        }
+      }
+    } catch (_) { tell('The export could not be created. Try your browser’s Save page option.'); }
+  });
+  // A table wider than its field says so, in words as well as by its cut edge.
+  const wraps = [...document.querySelectorAll('.tbl-wrap')];
+  wraps.forEach(wrap => { const hint = document.createElement('p'); hint.className = 'scroll-hint'; hint.textContent = 'Scroll sideways to see every column.'; wrap.after(hint); });
+  const measure = () => wraps.forEach(wrap => wrap.toggleAttribute('data-scroll', wrap.scrollWidth > wrap.clientWidth + 1));
+  measure(); window.addEventListener('resize', measure); if (document.fonts) document.fonts.ready.then(measure);
+  if ('IntersectionObserver' in window) {
+    const links = [...document.querySelectorAll('.nav-links a')];
+    const sections = links.map(link => document.querySelector(link.getAttribute('href')));
+    function updateSection() {
+      let active = sections[0]; for (const section of sections) { if(section.getBoundingClientRect().top <= 170) active = section; }
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 30) active = sections[sections.length-1];
+      links.forEach(link => { if(link.hash === '#'+active.id) link.setAttribute('aria-current','location'); else link.removeAttribute('aria-current'); });
+    }
+    let queued = false; window.addEventListener('scroll', () => { if(!queued) { queued = true; requestAnimationFrame(() => {updateSection(); queued=false;}); } }, {passive:true}); updateSection();
+  }
+})();
+</script>
+</body>
+</html>
