@@ -274,8 +274,8 @@ export const ICON_GATE_COPY = {
   end: {
     anon: {
       heading: 'Log in to keep browsing.',
-      // `cap` is ANON_ICON_CAP; `n` is how many solid packs an account adds.
-      body: (cap, n) => `Signed out, you see the first ${cap} icons. A free account lifts that cap and adds ${n.toLocaleString()} solid ${n === 1 ? 'pack' : 'packs'}.`,
+      // `cap` is ANON_ICON_CAP; `n` is how many packs an account adds.
+      body: (cap, n) => `Signed out, you see the first ${cap} icons. A free account lifts that cap and adds ${n.toLocaleString()} more ${n === 1 ? 'pack' : 'packs'}.`,
       action: 'Log in',
       secondary: 'See the plans',
       // The hover chip on a blurred icon.
@@ -293,7 +293,7 @@ export const ICON_GATE_COPY = {
   // both: "Solar needs a free account", "Solid needs a free account".
   lockedFree: {
     heading: (label) => `${label} needs a free account`,
-    body: 'The solid sets open once you are signed in.',
+    body: 'A free account opens this pack and lifts the signed-out cap.',
     action: 'Log in',
   },
   // When any viewer picks a pack or group that is Pro.

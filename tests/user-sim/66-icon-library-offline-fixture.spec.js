@@ -449,7 +449,7 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
   await ctx.close()
 })
 
-test('signed in free: the solid packs open, the brand, flag and emoji packs are not fetched', async ({ browser }) => {
+test('signed in free: the account packs open, the brand, flag and emoji packs are not fetched', async ({ browser }) => {
   test.skip(isLiveIconify(), LIVE)
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
   const page = await ctx.newPage()
