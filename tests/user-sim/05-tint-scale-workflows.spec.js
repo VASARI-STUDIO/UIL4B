@@ -1,17 +1,17 @@
 // /create/tint, rebuilt to the design's drawn screen:
 // step columns over a lightness chart, and one side card of SOURCES (ours: the
-// multi-scale fold), HUE AND CHROMA, STEPS / CURVE and CONTRAST NOTES. The
-// generator is the design's OKLCH curve (D:1436-1442).
+// multi-scale fold), LIGHTNESS AND SATURATION, STEPS / CURVE / SPACING and
+// CONTRAST NOTES. The generator is the design's OKLCH curve (D:1436-1442).
 //
-// The previous build's designer/developer tabs, role preview, step modes
-// (every 50/25/10/5, endpoints) and Perceived/Linear switch are gone with the
-// old screen; what these tests hold is the drawn tool, plus the multi-scale
-// capability this build keeps.
+// The previous build's designer/developer tabs, role preview and step modes
+// (every 50/25/10/5, endpoints) are gone with the old screen; what these tests
+// hold is the drawn tool, plus the multi-scale capability this build keeps.
+// Spacing and the contrast tooltip have their own spec (149).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 test.describe('Tint workflows', () => {
-  test('a designer tunes a scale: steps, curve, hue and chroma all move it', async ({ page }) => {
+  test('a designer tunes a scale: steps, curve, lightness and saturation all move it', async ({ page }) => {
     watch(page, 'designer')
     await go(page, '/create/tint')
 
@@ -35,23 +35,33 @@ test.describe('Tint workflows', () => {
     await expect(page.getByRole('button', { name: 'High contrast' })).toHaveAttribute('aria-pressed', 'true')
     expect(await ramp()).not.toEqual(even)
 
-    // HUE edits the source colour itself — the hex field and slider agree.
+    // LIGHTNESS shapes the ramp and leaves the source colour alone. The ends of
+    // the scale stay put; the steps between move.
     const hex = page.getByRole('textbox', { name: 'Base colour 1 hex' })
     const before = await hex.inputValue()
-    const hue = page.getByRole('slider', { name: 'Hue' })
-    await hue.focus()
+    const afterCurve = await ramp()
+    const lightness = page.getByRole('slider', { name: 'Lightness' })
+    await lightness.focus()
     for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight')
-    await expect(hex).not.toHaveValue(before)
+    await expect(page.locator('.tl-slider').filter({ has: lightness }).locator('.tl-slider-v')).toHaveText('+20')
+    const lighter = await ramp()
+    expect(lighter).not.toEqual(afterCurve)
+    expect(lighter[0], 'the first step does not move').toBe(afterCurve[0])
+    expect(lighter.at(-1), 'the last step does not move').toBe(afterCurve.at(-1))
+    await expect(hex, 'lightness does not edit the source colour').toHaveValue(before)
 
-    // CHROMA at zero makes a neutral ramp.
-    const chroma = page.getByRole('slider', { name: 'Chroma' })
-    await chroma.focus()
+    // SATURATION at zero makes a neutral ramp.
+    const saturation = page.getByRole('slider', { name: 'Saturation' })
+    await saturation.focus()
     await page.keyboard.press('Home')
+    await expect(page.locator('.tl-slider').filter({ has: saturation }).locator('.tl-slider-v')).toHaveText('0%')
     const grey = await ramp()
+    expect(grey).not.toEqual(lighter)
     for (const h of grey) {
       const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
-      expect(Math.max(r, g, b) - Math.min(r, g, b), `${h} is not neutral at chroma 0`).toBeLessThanOrEqual(3)
+      expect(Math.max(r, g, b) - Math.min(r, g, b), `${h} is not neutral at saturation 0`).toBeLessThanOrEqual(3)
     }
+    await expect(hex, 'saturation does not edit the source colour').toHaveValue(before)
 
     await page.screenshot({ path: test.info().outputPath('tint-desktop.png'), fullPage: true })
   })
