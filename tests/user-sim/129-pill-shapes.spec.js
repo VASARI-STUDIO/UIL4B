@@ -57,6 +57,8 @@ const CIRCLE = 36
 // The toolbar that may step down when it wraps.
 const WRAPS = '.lbry-toolbar'
 const WRAPPED_RADIUS = 26
+// The home bench's harmony segment once it is a 2 x 2 grid (see spectrum.css, .sp-harm at 480).
+const WRAPPED_SEG_RADIUS = 24
 // How long a surface may take to mount after its route has arrived.
 const APPEAR_MS = 15000
 
@@ -106,7 +108,13 @@ for (const width of [1440, 390]) {
         const found = await page.locator(selector).evaluateAll(measure, selector)
         if (!found.length) { missing.push(`${route} ${selector}`); continue }
         for (const f of found) {
-          const need = selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS : f.height / 2
+          // Two carve-outs, each a segment that has wrapped into rows: a library toolbar
+          // (26px) and the home bench's harmony segment, which is a 2 x 2 grid at 480
+          // and below (24px, 96px tall: two 44px rows). A one-row .sp-seg is still a
+          // full pill, so it is only excused when it is tall enough to be two rows.
+          const need = selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS
+            : selector === '.sp-seg' && f.height > 80 ? WRAPPED_SEG_RADIUS
+              : f.height / 2
           if (f.radius + 0.5 < need) off.push(`${route} ${selector}: radius ${f.radius}px on a ${f.height}px box (needs ${need}px)`)
           if (SEARCH.has(selector)) searchBorders.add(f.border)
           if (FAMILY.has(selector)) {
