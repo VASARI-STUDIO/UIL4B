@@ -1,8 +1,11 @@
-import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Component, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import useModalDialog from '../hooks/useModalDialog'
 import useMediaQuery from '../hooks/useMediaQuery'
 import AuthForm from './auth/AuthForm'
+// `lazy` in this file is lazyRoute, not React's: if the strip's file fails to
+// download (a redeploy, a dropped connection) it recovers the way the pages do.
+import { lazyRoute as lazy } from '../utils/lazyRoute'
 
 // The wall (and its 22 KB table of generated exports) is a separate chunk: this
 // file is reached from the entry chunk, and most visitors never open the strip.
@@ -10,8 +13,9 @@ import AuthForm from './auth/AuthForm'
 // space is held while the chunk loads and nothing shifts when the wall arrives.
 const AuthWall = lazy(() => import('./auth/AuthWall'))
 
-// The strip is decoration. If its chunk fails to load, the dialog keeps its
-// form and the strip stays an empty panel.
+// The strip is decoration. lazyRoute answers a stale chunk with a reload; if the
+// load still fails, this keeps the dialog and its form, and the strip stays an
+// empty panel instead of the failure reaching the page's error boundary.
 class StripBoundary extends Component {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
