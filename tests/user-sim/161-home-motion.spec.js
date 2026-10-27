@@ -348,7 +348,9 @@ for (const view of [1440, 768, 390]) {
     if (s.navOnly) info.annotations.push({ type: 'cls-nav', description: `${s.navOnly.toFixed(4)} from the nav's 44x44 icon hit areas (pre-existing, not this slice)` })
     expect(s.other, 'a layout shift from the page itself').toEqual([])
     if (view === 1440) expect(s.total, 'CLS at 1440 is 0 in total').toBe(0)
-    else expect(s.navOnly, 'the nav hit-area shift grew').toBeLessThan(0.006)
+    // At 390 the nav's two icon boxes move out at load and back at the first scroll: two shifts of
+    // 0.0046 each (0.0092), the same on origin/main. A third such shift would take it past 0.010.
+    else expect(s.navOnly, 'the nav hit-area shift grew').toBeLessThan(0.010)
     await ctx.close()
   })
 }
