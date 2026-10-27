@@ -135,7 +135,7 @@ function clearSpaceDrawn(ctx) {
 }
 
 function logoSlide(ctx, n) {
-  const { grounds, roles } = ctx
+  const { grounds } = ctx
   const facts = ctx.logoFacts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')
   const tiles = grounds.map((g) => `<div class="tile${g.border ? ' tile-edge' : ''}" style="background:${safeHex(g.bg, 'Canvas')}">
       ${ctx.markImg({ cls: 'gd-mark-tile' })}<span style="color:${safeHex(g.soft, 'CanvasText')}">${esc(g.label)}</span>
@@ -149,7 +149,7 @@ function logoSlide(ctx, n) {
     parts.push(['Clear space', `<div class="stage"><div class="zone" style="width:${cs.boxWidth.toFixed(1)}mm;height:${cs.boxHeight.toFixed(1)}mm;padding:${cs.x.toFixed(1)}mm">
       <span class="xs xs-a" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
       <span class="xs xs-b" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
-      <span class="mbox" style="background:${safeHex(roles.paper, 'Canvas')}">${ctx.markImg({ cls: 'gd-mark-cs', height: `${cs.markHeight.toFixed(1)}mm` })}</span>
+      <span class="mbox" style="width:${cs.markWidth.toFixed(1)}mm;height:${cs.markHeight.toFixed(1)}mm">${ctx.markImg({ cls: 'gd-mark-cs', height: `${cs.markHeight.toFixed(1)}mm` })}</span>
     </div></div><p class="cap">X is half the height of the mark. At this size X is ${cs.x.toFixed(0)}mm.</p>`])
   }
   return slide(ctx, n, 'Logo', 'gd-logo', parts.map(([title, body]) => topic(title, spans(parts.length), body)))
@@ -239,7 +239,8 @@ function css(ctx) {
   .sl{position:relative;width:297mm;height:167mm;padding:var(--m);margin:6mm auto;overflow:hidden;display:flex;flex-direction:column;
     background:var(--paper);box-shadow:0 1px 12px var(--shade);break-after:page;break-inside:avoid;--a:8pt;font-size:var(--a)}
   .gd-cover{--a:9pt}
-  .gd-notes,.gd-scope{--a:10pt}
+  .gd-notes{--a:9pt}
+  .gd-scope{--a:10pt}
 
   /* the masthead: project name, section and slide number over a rule in the brand's field colour */
   .mh{flex:none;height:18mm;display:flex;align-items:flex-end;gap:8mm;padding-bottom:3mm;margin-bottom:5mm;border-bottom:.8mm solid var(--field,var(--ink));font-size:13pt;line-height:1.1}
@@ -302,8 +303,8 @@ function css(ctx) {
   .tile-edge{border:.25mm solid var(--rule)}
   .gd-mark-tile{display:block;max-width:20mm;max-height:11mm;width:auto;height:auto;object-fit:contain}
   .zone{position:relative;display:flex;background:var(--wash);border:.25mm solid var(--ink)}
-  .mbox{display:flex;align-items:center;justify-content:center;flex:1 1 auto}
-  .gd-mark-cs{display:block;width:auto;max-width:100%;object-fit:contain}
+  .mbox{display:flex;align-items:center;justify-content:center;flex:none}
+  .gd-mark-cs{display:block;width:100%;height:100%;object-fit:contain}
   .xs{position:absolute;display:flex;align-items:center;justify-content:center;border:.25mm solid var(--ink);background:var(--paper)}
   .xs-a{top:0;left:0}
   .xs-b{bottom:0;right:0}
