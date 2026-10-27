@@ -333,6 +333,24 @@ test.describe('Semantic Colour, rebuilt', () => {
   // variables and the count assertion goes red. (c) Give `.stc-code` a fixed
   // `max-height: 168px` always: the box does not grow and the height assertion
   // goes red.
+  // ── The Base step pills hold one line ───────────────────────────────────────
+  //
+  // MUTATION: drop `.stc .stc-base .tl-pills { flex-wrap: nowrap; }` and at 390
+  // "Step 600" wraps under the other two.
+  for (const width of [320, 390, 768, 1440]) {
+    test(`the Base step label and its three pills sit on one line at ${width}`, async ({ browser }) => {
+      const { ctx, page } = await openPage(browser, { width, height: 900, phone: width < 768 })
+      const tops = await page.locator('.stc-base .tl-pill').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)))
+      expect(tops).toHaveLength(3)
+      expect(new Set(tops).size, `pill tops ${tops.join(', ')}`).toBe(1)
+      const label = await page.locator('#stc-base-label').boundingBox()
+      const pill = await page.locator('.stc-base .tl-pill').first().boundingBox()
+      expect(Math.abs((label.y + label.height / 2) - (pill.y + pill.height / 2))).toBeLessThanOrEqual(2)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await ctx.close()
+    })
+  }
+
   test('the code box expands behind "Show all N variables", and N is the copied variable count', async ({ browser }) => {
     const { ctx, page } = await openPage(browser)
     const toggle = page.locator('.stc-code-toggle')

@@ -60,7 +60,8 @@
 
 /* ── Ramps ───────────────────────────────────────────────────────────────── */
 .stc .stc-ramps-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
-.stc .stc-base { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.stc .stc-base { display: flex; flex: none; align-items: center; gap: 10px; white-space: nowrap; }
+.stc .stc-base .tl-pills { flex-wrap: nowrap; }
 .stc .stc-fam { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--tl-hair); }
 .stc .stc-fam-head { display: grid; gap: 8px; }
 .stc .stc-fam-id { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-width: 0; }
