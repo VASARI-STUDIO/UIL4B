@@ -21,7 +21,7 @@
 
 
 /* ─── Command Palette ─── */
-.cp-overlay{position:fixed;inset:0;background:var(--scrim);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding-top:max(10vh,80px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.cp-overlay{position:fixed;inset:0;background:var(--scrim);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(10vh,80px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 .cp-input-wrap{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border)}
 .cp-input-wrap svg{color:var(--t2);flex-shrink:0}
 .cp-input{flex:1;background:none;border:none;outline:none;color:var(--t0);font-family:var(--font);font-size:17px;font-weight:400;letter-spacing:-.01em;padding:0}
@@ -48,7 +48,7 @@
 /* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
    nav search cluster. No real export yet: every format previews and the primary
    action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
-.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 /* On a desktop the panel has one height whatever it holds: the window less the
    overlay's top and bottom gutters, capped at 760px. The rows, the options and
    the dock then stay where they are when a row is chosen or a notice arrives;
@@ -138,8 +138,8 @@
   .exp-fmt:not(.is-active) .exp-fmt-desc{display:none}
   /* A bottom sheet on a phone: full width, anchored to the foot of the screen
      and the thumb, with the dock inside it. */
-  .exp-overlay{align-items:flex-end;padding:0}
-  .exp-panel{width:100%;height:auto;max-height:calc(100dvh - 24px);border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;scroll-padding:96px 0 88px}
+  .exp-overlay{align-items:flex-end;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+  .exp-panel{width:100%;height:auto;max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px));border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;scroll-padding:96px 0 88px}
   /* The title and close stay put while the list scrolls under them, as the dock
      does at the foot. An opaque ground, so rows never show through. */
   .exp-head{position:sticky;top:0;z-index:2;background:var(--bg-1)}

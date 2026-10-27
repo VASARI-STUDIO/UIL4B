@@ -59,7 +59,7 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-col a{transition:none}
    which is the right call: a bar that vanishes with no transition reads as a
    rendering fault, and someone who asked for less motion has not asked for
    less navigation. Both companions below say so. */
-.spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:clamp(14px,2vw,26px) clamp(14px,3vw,40px) 0;pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
+.spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:max(clamp(14px,2vw,26px),env(safe-area-inset-top,0px)) max(clamp(14px,3vw,40px),env(safe-area-inset-right,0px)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left,0px));pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
 .spnav[data-nav-hidden="1"]{transform:translateY(calc(-100% - 14px));opacity:0}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .spnav{transition:none}
@@ -145,14 +145,14 @@ html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none
    mono note, centred vertically, at padding clamp(28px,7vw,96px) inside a
    1200px column; the Close pill at top 26px / right clamp(20px,5vw,52px); a
    .28s fade in and a .24s fade out. Nothing else is in it (SpectrumNav.jsx says
-   why). The safe-area terms are 0 on every current page (no viewport-fit=cover)
-   and only keep the pill clear of a notch if that ever changes.
+   why). The safe-area terms keep the pill, and the menu's own padding, clear of
+   the notch and home indicator; they are 0 on screens without them.
 
    THE GROUND IS 97%, NOT THE DESIGN'S 90% — the one departure in this block.
    Rendered in WebKit at 390x844 the page behind showed through at 90% as
    crisp second copy under the menu items (the blur was not painted). At 97%
    the items read cleanly whether or not the engine paints the blur. */
-.spnav-menu{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,7vw,96px);background:color-mix(in srgb,var(--bg-0) 97%,transparent);-webkit-backdrop-filter:blur(34px);backdrop-filter:blur(34px);overflow-y:auto;overscroll-behavior:contain}
+.spnav-menu{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;justify-content:center;padding:max(clamp(28px,7vw,96px),env(safe-area-inset-top,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-right,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-bottom,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--bg-0) 97%,transparent);-webkit-backdrop-filter:blur(34px);backdrop-filter:blur(34px);overflow-y:auto;overscroll-behavior:contain}
 .spnav-menu[data-menu="in"]{animation:spnav-menu-in .28s cubic-bezier(.23,1,.32,1) both}
 .spnav-menu[data-menu="out"]{animation:spnav-menu-out .24s ease both;pointer-events:none}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
@@ -252,7 +252,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 /* On phones the pill spans the viewport less a 16px gutter each side, the
    mark at its start and the controls at its end. */
 @media(max-width:767px){
-  .spnav{padding-left:16px;padding-right:16px}
+  .spnav{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .spnav-bar{width:100%;flex-wrap:nowrap;justify-content:flex-start}
   .spnav-bar > .spnav-mark{margin-right:auto}
 }
@@ -299,7 +299,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 @supports selector(:has(*)){
   .sp-footer[data-curtain][data-curtain-near]{position:sticky;bottom:0;z-index:1}
 }
-.sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) clamp(20px,4vw,52px)}
+.sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-right,0px)) clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-left,0px))}
 .sp-footer .sp-footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:36px;align-items:start}
 .sp-footer .sp-footer-links{display:contents}
 .sp-footer .sp-footer-say{margin:0;font-family:var(--display);font-weight:560;font-size:clamp(26px,3vw,38px);line-height:1.06;max-width:min(22ch,100%);text-wrap:balance}

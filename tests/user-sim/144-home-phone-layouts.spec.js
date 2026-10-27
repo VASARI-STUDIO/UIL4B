@@ -167,7 +167,8 @@ for (const width of [390, 768, 1440]) {
     const page = await ctx.newPage()
     watch(page, 'a visitor looking at the icon demo')
     await go(page, '/')
-    if (width <= 1000) await page.getByRole('tab', { name: 'Icons', exact: true }).click()
+    // Scoped to the bench: card 1 of the exports section has an Icons tab of its own.
+    if (width <= 1000) await page.getByRole('tablist', { name: 'Tools' }).getByRole('tab', { name: 'Icons', exact: true }).click()
     const grid = page.locator('.sp-icogrid')
     await grid.scrollIntoViewIfNeeded()
     await expect.poll(() => grid.locator('.sp-ico').count(), { message: 'the icon demo is empty' }).toBeGreaterThan(8)

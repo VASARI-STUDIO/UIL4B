@@ -785,7 +785,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:calc(24px + var(--toast-lift));right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
+.toast{position:fixed;bottom:calc(24px + var(--toast-lift) + env(safe-area-inset-bottom,0px));right:max(24px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 /* The Feedback button (.global-feedback-btn) floats in the same bottom-right
    corner and is hidden only on a coarse pointer, so everywhere else the toast
@@ -1034,7 +1034,7 @@ img,svg,video{max-width:100%;height:auto}
 @media(max-width:640px){
 
   /* Toast */
-  .toast{left:12px;right:12px;bottom:calc(12px + var(--toast-lift));max-width:none}}
+  .toast{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + var(--toast-lift) + env(safe-area-inset-bottom,0px));max-width:none}}
 /* The phone tab bar is fixed over the foot of the screen; a toast sits above it. */
 @media(max-width:767px){
   html.has-tabbar .toast{bottom:calc(var(--tabbar-h) + 12px + var(--toast-lift) + env(safe-area-inset-bottom))}
@@ -1235,7 +1235,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    The shadow belongs to the FOCUSED state only. At rest the box sits 8px above
    the viewport, and a 24px blur is longer than 8px: it bled a grey smudge
    across x 16-160, y 0-5 of every page. */
-.skip-link{position:fixed;top:8px;left:8px;z-index:200;transform:translateY(calc(-100% - 16px));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-fill);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard)}
+.skip-link{position:fixed;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:200;transform:translateY(calc(-100% - 16px - env(safe-area-inset-top,0px)));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-fill);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard)}
 .skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--accent-fg);outline-offset:2px}
 html[data-reduced-motion="true"] .skip-link{transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .skip-link{transition:none}}
@@ -1541,7 +1541,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    resolves the same collision the same way, at `bottom:74px`.
    The value is derived from the FAB's own box (38px tall, 20px inset) plus a
    gap, so the two cannot drift apart silently. */
-.app-footer{--fab-clearance:66px;padding:var(--s-8) var(--page-inline) max(var(--s-5),var(--fab-clearance));border-top:1px solid var(--border);background:var(--bg-1)}
+.app-footer{--fab-clearance:max(66px,calc(46px + env(safe-area-inset-bottom,0px)));padding:var(--s-8) var(--page-inline) max(var(--s-5),var(--fab-clearance));border-top:1px solid var(--border);background:var(--bg-1)}
 .app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
@@ -1629,8 +1629,8 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    modal (480 vs 520) because this is one column of prose and nothing else, and
    .fnote-para caps at 56ch so the measure stays readable however long the note
    turns out to be. */
-.fnote-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-.fnote{display:flex;flex-direction:column;width:100%;max-width:480px;max-height:calc(100dvh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.fnote-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+.fnote{display:flex;flex-direction:column;width:100%;max-width:480px;max-height:calc(100dvh - 40px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .fnote-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px;flex-shrink:0}
 .fnote-title{margin:0;font-size:var(--fs-body);font-weight:650;letter-spacing:-.01em;color:var(--t0)}
 .fnote-close{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;padding:0;border:1px solid transparent;border-radius:var(--btn-radius);background:none;color:var(--t2);cursor:pointer;transition:color var(--t-fast),background var(--t-fast),border-color var(--t-fast)}
@@ -1661,9 +1661,9 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    centred card on a 390px screen puts the close button in the middle of the
    viewport and leaves a strip of scrim above and below that reads as a mistake. */
 @media(max-width:640px){
-  .fnote-overlay{padding:0;align-items:flex-end}
-  .fnote{max-width:100%;max-height:92dvh;border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:none}
-  .fnote-foot{gap:12px}
+  .fnote-overlay{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);align-items:flex-end}
+  .fnote{max-width:100%;max-height:min(92dvh,calc(100dvh - env(safe-area-inset-top,0px)));border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:none}
+  .fnote-foot{gap:12px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
   .fnote-actions{width:100%}
   .fnote-action{flex:1 1 0;min-width:max-content;min-height:44px;padding-inline:8px;white-space:nowrap;justify-content:center;text-align:center}
 }
@@ -1684,7 +1684,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    keeps the header's own material (a frosted ink hairline, App line 100) and
    no accent and no shadow. The label is ink-dim, 13px/500: #121418 at .8 on the
    #F5F5F2 frost measures 9.37:1, #EFEEEA at .62 on #060607 6.84:1. */
-.global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border:1px solid rgba(var(--ink-rgb),.09);border-radius:var(--btn-radius);background:rgba(var(--page-rgb),.88);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.global-feedback-btn{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:max(20px,env(safe-area-inset-bottom,0px));z-index:80;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border:1px solid rgba(var(--ink-rgb),.09);border-radius:var(--btn-radius);background:rgba(var(--page-rgb),.88);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .global-feedback-btn:hover{background:color-mix(in srgb,rgb(var(--ink-rgb)) 7%,rgb(var(--page-rgb)));color:rgb(var(--ink-rgb))}
 /* On a touch screen the floating button would sit over
    real controls (gallery Like/Open/Copy, Settings Edit, /plans, Projects Load).
@@ -1714,11 +1714,11 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    three covered controls become two, and each drops from 2 of 3 sampled points
    blocked to 1 of 3. Nothing is ever permanently covered — measured 0 occluded
    at the scroll extremity at every viewport tested. */
-@media(max-width:640px),(max-height:500px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:14px;bottom:14px}}
+@media(max-width:640px),(max-height:500px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:max(14px,env(safe-area-inset-right,0px));bottom:max(14px,env(safe-area-inset-bottom,0px))}}
 
 /* ─── Feedback modal (global floating feedback button popup) ─── */
-.fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-.fb-modal{display:flex;flex-direction:column;width:100%;max-width:520px;max-height:calc(100dvh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+.fb-modal{display:flex;flex-direction:column;width:100%;max-width:520px;max-height:calc(100dvh - 40px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .fb-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
 .fb-title{font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--t0);margin:0}
 .fb-close{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;background:none;border:none;border-radius:var(--btn-radius);color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
@@ -1784,8 +1784,10 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-success-actions.fb-again{margin-top:16px}
 .fb-textarea[readonly]{resize:none}
 @media(max-width:480px){
-  .fb-overlay{padding:0;align-items:flex-end}
-  .fb-modal{max-width:100%;max-height:92dvh;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-bottom:none}
+  .fb-overlay{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);align-items:flex-end}
+  .fb-modal{max-width:100%;max-height:min(92dvh,calc(100dvh - env(safe-area-inset-top,0px)));border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-bottom:none}
+  .fb-body{padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}
+  .fb-success{padding-bottom:calc(30px + env(safe-area-inset-bottom,0px))}
   .fb-types{grid-template-columns:repeat(2,1fr)}
   .fb-actions{flex-direction:column-reverse}
   .fb-actions .btn{width:100%;justify-content:center}
@@ -2288,7 +2290,9 @@ main[tabindex="-1"]:focus-visible{outline:none}
   --fs-h3:1.5rem;--fs-h4:1.25rem;--fs-h5:1.0625rem;
   --fs-lede:clamp(1.0625rem,calc(0.96rem + 0.45vw),1.3125rem);
   --fs-body:1rem;--fs-body-s:0.875rem;--fs-caption:0.8125rem;--fs-micro:0.6875rem;
-  --nav-h:64px;--tabbar-h:61px;--nav-top:0px;--notice-h:0px;--chrome-h:calc(var(--nav-top) + var(--nav-h) + var(--notice-h));--nav-clear:calc(var(--chrome-h) + 8px);
+  --nav-h:64px;--tabbar-h:61px;
+  /* --nav-top is the status-bar / notch inset once the viewport covers the screen (viewport-fit=cover), 0 everywhere else. The fixed nav pads itself by it, and every offset below the nav reads it through --chrome-h. */
+  --nav-top:env(safe-area-inset-top,0px);--notice-h:0px;--chrome-h:calc(var(--nav-top) + var(--nav-h) + var(--notice-h));--nav-clear:calc(var(--chrome-h) + 8px);
   /* Wide shared chrome: navigation, toolbars, and footers can use up to 1680px
      instead of collapsing to the old ~1400px desktop span. `--page-inline`
      is the actual viewport inset, so the content-max token means what it says.
@@ -2302,9 +2306,12 @@ main[tabindex="-1"]:focus-visible{outline:none}
      *smaller* inset than its parent and bled the wrong distance. `100vw` is
      viewport-relative wherever it is read, so parent and child always agree.
      (100vw includes the classic scrollbar; that widens the inset by a few px
-     above --page-content-max, symmetrically, for every consumer at once.) */
+     above --page-content-max, symmetrically, for every consumer at once.)
+
+     The two safe-area terms keep content out from under a landscape notch
+     (viewport-fit=cover lets the page draw there); both are 0 elsewhere. */
   --page-gutter:clamp(20px,1.5vw,32px);--page-content-max:1680px;
-  --page-inline:max(var(--page-gutter),calc((100vw - var(--page-content-max))/2))
+  --page-inline:max(var(--page-gutter),env(safe-area-inset-left,0px),env(safe-area-inset-right,0px),calc((100vw - var(--page-content-max))/2))
 }
 
 /* Large-desktop gutter step — founder direction, 2026-08-08. Below
@@ -2713,11 +2720,11 @@ html.lenis{scroll-behavior:auto!important}
 
    The row is 64px because the file's is: 11px + the 41px search field + 11px
    + the 1px rule. --nav-h says so, and every offset below the bar reads it. */
-.pnav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:120;background:rgba(var(--page-rgb),.88);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-bottom:1px solid rgba(var(--ink-rgb),.09)}
+.pnav{position:fixed;top:0;left:0;right:0;height:calc(var(--nav-top) + var(--nav-h));padding-top:var(--nav-top);z-index:120;background:rgba(var(--page-rgb),.88);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-bottom:1px solid rgba(var(--ink-rgb),.09)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .pnav{background:rgb(var(--page-rgb))}
 }
-.pnav-inner{display:flex;align-items:center;flex-wrap:nowrap;gap:clamp(10px,1.6vw,20px);height:100%;padding:0 clamp(14px,2vw,22px)}
+.pnav-inner{display:flex;align-items:center;flex-wrap:nowrap;gap:clamp(10px,1.6vw,20px);height:100%;padding:0 max(clamp(14px,2vw,22px),env(safe-area-inset-right,0px)) 0 max(clamp(14px,2vw,22px),env(safe-area-inset-left,0px))}
 .pnav-logo{flex:0 0 auto;display:flex;align-items:center;padding:4px 2px;border-radius:8px;color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
 /* The logo lockup is an SVG drawn in currentColor, so it follows the ink colour
@@ -2879,7 +2886,7 @@ html.lenis{scroll-behavior:auto!important}
    7px under the header to the header's own gutters, 26px radius, the page at
    .98 under a 30px blur, an ink .13 rim and the file's long soft shadow. It
    never outgrows the screen: the body scrolls, the foot stays. */
-.pnav-menu{position:fixed;top:calc(var(--chrome-h) + 7px);left:clamp(14px,2vw,22px);right:clamp(14px,2vw,22px);z-index:119;display:flex;flex-direction:column;max-height:calc(100dvh - var(--chrome-h) - 28px);overflow:hidden;border-radius:var(--radius-3xl);border:1px solid rgba(var(--ink-rgb),.13);background:rgba(var(--page-rgb),.98);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:0 50px 100px -46px rgba(var(--shade-rgb),var(--shade-a)),inset 0 1px 0 rgba(var(--ink-rgb),.07);animation:pnav-menu-in var(--dur-3) var(--ease-entrance)}
+.pnav-menu{position:fixed;top:calc(var(--chrome-h) + 7px);left:max(clamp(14px,2vw,22px),env(safe-area-inset-left,0px));right:max(clamp(14px,2vw,22px),env(safe-area-inset-right,0px));z-index:119;display:flex;flex-direction:column;max-height:calc(100dvh - var(--chrome-h) - 28px - env(safe-area-inset-bottom,0px));overflow:hidden;border-radius:var(--radius-3xl);border:1px solid rgba(var(--ink-rgb),.13);background:rgba(var(--page-rgb),.98);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:0 50px 100px -46px rgba(var(--shade-rgb),var(--shade-a)),inset 0 1px 0 rgba(var(--ink-rgb),.07);animation:pnav-menu-in var(--dur-3) var(--ease-entrance)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .pnav-menu{background:rgb(var(--page-rgb))}
 }
@@ -3009,7 +3016,7 @@ html.lenis{scroll-behavior:auto!important}
    A page between the header and the tab bar, on the opaque page ground, so
    nothing scrolls under the translucent header (audit A9). Live rows only,
    one line each, at a 48px touch height. */
-.pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px 16px 28px;overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
+.pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
 @keyframes pnav-sheet-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(min-width:768px){.pnav-sheet{bottom:0}}
 .pnav-acc{border-bottom:1px solid rgba(var(--ink-rgb),.08)}
@@ -3041,7 +3048,7 @@ html.lenis{scroll-behavior:auto!important}
    6.84:1; #121418 at .8 on #F5F5F2 is 9.37:1). Phones only. */
 .pnav-tabs{display:none}
 @media(max-width:767px){
-  .pnav-tabs{position:fixed;left:0;right:0;bottom:0;z-index:118;display:flex;justify-content:space-around;padding:6px 12px calc(6px + env(safe-area-inset-bottom));background:rgba(var(--page-rgb),.94);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-top:1px solid rgba(var(--ink-rgb),.08)}
+  .pnav-tabs{position:fixed;left:0;right:0;bottom:0;z-index:118;display:flex;justify-content:space-around;padding:6px max(12px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left,0px));background:rgba(var(--page-rgb),.94);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-top:1px solid rgba(var(--ink-rgb),.08)}
   .pnav-tab{flex:1 1 0;display:grid;justify-items:center;align-content:center;gap:3px;min-height:48px;padding:0;border:0;border-radius:var(--radius);background:none;color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:12px;font-weight:400;line-height:1.2;text-decoration:none;cursor:pointer}
   .pnav-tab:hover{text-decoration:none;color:rgb(var(--ink-rgb))}
   .pnav-tab.is-current,.pnav-tab[aria-expanded="true"]{color:rgb(var(--ink-rgb));font-weight:560}
@@ -3225,7 +3232,7 @@ html.lenis{scroll-behavior:auto!important}
    trigger stays clear above it. Only the portalled form (`data-pop-fixed`) —
    an inline picker is positioned against its own wrapper and stays a popover. */
 @media(max-width:767px){
-  .pop.cpk-pop[data-pop-fixed="true"],.pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"]{left:0;right:0;top:auto;bottom:0;translate:none;width:auto;min-width:0;max-width:none;max-height:min(76dvh,640px,calc(100dvh - var(--chrome-h) - var(--tabbar-h) - 16px - env(safe-area-inset-bottom)));padding:var(--s-3) var(--s-3) calc(var(--s-3) + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;animation:menu-select-sheet-in var(--dur-2) var(--ease-entrance)}
+  .pop.cpk-pop[data-pop-fixed="true"],.pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"]{left:0;right:0;top:auto;bottom:0;translate:none;width:auto;min-width:0;max-width:none;max-height:min(76dvh,640px,calc(100dvh - var(--chrome-h) - var(--tabbar-h) - 16px - env(safe-area-inset-bottom)));padding:var(--s-3) max(var(--s-3),env(safe-area-inset-right,0px)) calc(var(--s-3) + env(safe-area-inset-bottom)) max(var(--s-3),env(safe-area-inset-left,0px));border-radius:16px 16px 0 0;animation:menu-select-sheet-in var(--dur-2) var(--ease-entrance)}
   html.has-tabbar .pop.cpk-pop[data-pop-fixed="true"]{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:var(--s-3)}
   .cpk-pop[data-pop-fixed="true"]::before{content:"";flex:0 0 auto;display:block;width:36px;height:4px;margin:0 auto;border-radius:var(--radius-pill);background:var(--border)}
   .cpk-pop[data-pop-fixed="true"] .cpk-swatches{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
@@ -3320,7 +3327,7 @@ html.lenis{scroll-behavior:auto!important}
    clamp(14px,2.6vw,32px) clamp(12px,3vw,36px) clamp(44px,6vw,80px). The top
    padding also clears the fixed header, which the design's sticky one did not
    need to. */
-.app-page{flex:1 0 auto;display:flex;flex-direction:column;width:100%;max-width:1240px;margin:0 auto;padding:calc(var(--chrome-h) + clamp(14px,2.6vw,32px)) clamp(12px,3vw,36px) clamp(44px,6vw,80px)}
+.app-page{flex:1 0 auto;display:flex;flex-direction:column;width:100%;max-width:1240px;margin:0 auto;padding:calc(var(--chrome-h) + clamp(14px,2.6vw,32px)) max(clamp(12px,3vw,36px),env(safe-area-inset-right,0px)) clamp(44px,6vw,80px) max(clamp(12px,3vw,36px),env(safe-area-inset-left,0px))}
 .app-page>*{min-width:0}
 
 /* ══ Tool-page shell (rail-) ══ */
@@ -3635,7 +3642,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 /* Topmost interactive layer — canonical modals (incl. the login prompt) must sit
    above every tool overlay (.icust-overlay/.cp-overlay are 9998), or e.g. the
    "log in to continue" popup opened from the icon customizer stacks underneath. */
-.ui-modal-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.ui-modal-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:max(clamp(16px,4vw,40px),env(safe-area-inset-top,0px)) max(clamp(16px,4vw,40px),env(safe-area-inset-right,0px)) max(clamp(16px,4vw,40px),env(safe-area-inset-bottom,0px)) max(clamp(16px,4vw,40px),env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 /* The max-height cap is correct and stays. What was missing is any sign that
    the dialog scrolls when its content exceeds it (S7, mobile-audit-2026-08).
    At 844x390 the login dialog holds 489px of content in 356px: the submit
@@ -3653,7 +3660,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    and any fixed height threshold would be wrong for some of them.
    Applied to .ui-modal, not to the login dialog, so all four modals that use
    this shell get it. */
-.ui-modal{position:relative;width:100%;max-width:440px;background:linear-gradient(var(--card) 30%,rgba(0,0,0,0)) top/100% 26px no-repeat local,linear-gradient(rgba(0,0,0,0),var(--card) 70%) bottom/100% 26px no-repeat local,radial-gradient(farthest-side at 50% 0,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) top/100% 12px no-repeat scroll,radial-gradient(farthest-side at 50% 100%,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) bottom/100% 12px no-repeat scroll,var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance);max-height:calc(100dvh - 32px);overflow:hidden auto}
+.ui-modal{position:relative;width:100%;max-width:440px;background:linear-gradient(var(--card) 30%,rgba(0,0,0,0)) top/100% 26px no-repeat local,linear-gradient(rgba(0,0,0,0),var(--card) 70%) bottom/100% 26px no-repeat local,radial-gradient(farthest-side at 50% 0,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) top/100% 12px no-repeat scroll,radial-gradient(farthest-side at 50% 100%,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) bottom/100% 12px no-repeat scroll,var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance);max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:hidden auto}
 .ui-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 0}
 .ui-modal-x{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--btn-radius);border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .ui-modal-x:hover{background:var(--hvr);color:var(--t0)}
@@ -3672,7 +3679,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    not a layout one. 460px covers both landscape phones in the matrix (390 and
    430) and leaves every portrait viewport untouched. */
 @media(max-height:460px){
-  .ui-modal{max-height:calc(100dvh - 16px)}
+  .ui-modal{max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
   .ui-modal-head{padding:12px 18px 0}
   .ui-modal-body{padding:10px 18px 16px}
 }
@@ -4219,7 +4226,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    z-index stays BELOW the nav's 120, for the reason the old card gave and
    33-offline-state.spec.js still checks: the nav is how someone leaves a page
    that is not working. */
-.notice-stack{position:fixed;top:calc(var(--nav-top) + var(--nav-h));left:0;right:0;z-index:119;background:var(--card);border-bottom:1px solid var(--bh)}
+.notice-stack{position:fixed;top:calc(var(--nav-top) + var(--nav-h));left:0;right:0;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);z-index:119;background:var(--card);border-bottom:1px solid var(--bh)}
 .notice-stack:empty{display:none}
 /* The app-level offline notice — a row in the strip above, which is where its
    placement and z-index are now argued. */
@@ -4227,7 +4234,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 .offline-banner svg{color:var(--warn);flex-shrink:0;margin-top:1px}
 .offline-banner-text{margin:0;font-size:12.5px;line-height:1.55;color:var(--t1)}
 .offline-banner-text strong{color:var(--t0);font-weight:700}
-.bill-banner{position:fixed;left:20px;bottom:20px;z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius);box-shadow:var(--shadow-m);animation:bill-rise var(--dur-3) var(--ease-entrance)}
+.bill-banner{position:fixed;left:max(20px,env(safe-area-inset-left,0px));bottom:max(20px,env(safe-area-inset-bottom,0px));z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius);box-shadow:var(--shadow-m);animation:bill-rise var(--dur-3) var(--ease-entrance)}
 .bill-banner--urgent{border-left-color:var(--err)}
 .bill-banner-body{flex:1;min-width:0}
 .bill-banner-title{margin:0;font-size:13px;font-weight:650;line-height:1.4;color:var(--t0)}
@@ -4257,7 +4264,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
      FAB (.global-feedback-btn, bottom:20px right:20px). The banner wins on
      z-index, so measured at 320px the FAB was covered and unclickable. Sitting
      above it keeps both reachable rather than trading one for the other. */
-  .bill-banner{left:12px;right:12px;bottom:74px;width:auto}
+  .bill-banner{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(74px + env(safe-area-inset-bottom,0px));width:auto}
 }
 /* Where the phone tab bar is fixed along the bottom, the FAB and the banner
    stack above it instead of under it. */
@@ -4440,6 +4447,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-option[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
 .menu-select-mark{flex:none;color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:none}
 .menu-select-check{flex:none;visibility:hidden}
+.menu-select-option--desc{padding-block:var(--s-2)}
+.menu-select-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.menu-select-desc{max-width:34ch;font-size:12px;font-weight:400;line-height:1.4;color:var(--t2);white-space:normal;text-wrap:pretty}
 .menu-select-option[aria-selected="true"] .menu-select-check{visibility:visible}
 @media(pointer:coarse){.menu-select-option{min-height:44px}}
 @media(max-width:960px){
@@ -4447,7 +4457,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 }
 @media(max-width:767px){
   .menu-select-scrim{background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-  .pop.menu-select-list,.pop.menu-select-list[data-pop-side="top"],.pop.menu-select-list[data-pop-align]{left:0;right:0;top:auto;bottom:0;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px,calc(100dvh - var(--chrome-h) - var(--tabbar-h) - 16px),var(--select-scroll-max-h,100dvh));padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:var(--shadow-cmd);animation:menu-select-sheet-in var(--dur-2) var(--ease-entrance)}
+  .pop.menu-select-list,.pop.menu-select-list[data-pop-side="top"],.pop.menu-select-list[data-pop-align]{left:0;right:0;top:auto;bottom:0;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px,calc(100dvh - var(--chrome-h) - var(--tabbar-h) - 16px),var(--select-scroll-max-h,100dvh));padding:14px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left,0px));border-radius:16px 16px 0 0;box-shadow:var(--shadow-cmd);animation:menu-select-sheet-in var(--dur-2) var(--ease-entrance)}
   .menu-select-list::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:var(--radius-pill);background:var(--border)}
   html.has-tabbar .pop.menu-select-list{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
   /* A list opened from a sheet or dialog that already covers the tab bar (MenuSelect
@@ -4760,7 +4770,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
      24px above the viewport, the first thing it says cut off.
      Same bottom-sheet idiom .plb-menu already uses below 961px. Still a child
      of .svt-wrap, so the outside-press dismissal is unchanged. */
-  .svt-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-height:min(76dvh,560px);padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70}
+  .svt-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-height:min(76dvh,560px);padding:14px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left,0px));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70}
   .svt-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   /* Above the phone tab bar, as .menu-select-list does, so the last row stays tappable. */
   html.has-tabbar .svt-menu{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));max-height:min(calc(76dvh - var(--tabbar-h)),560px);padding-bottom:16px}

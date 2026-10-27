@@ -48,7 +48,9 @@ const KEEP = {
     'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
-    'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle'],
+    'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle',
+    // the Suggest card's main hit area is a button that fills a rounded card, so it takes the card's own radius
+    'plb-sg-main'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
   // underline and folder tabs, and the phone tab bar's items

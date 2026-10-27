@@ -427,11 +427,11 @@
 /* Undo and redo: two of the toolbar's round icon buttons, held close together. */
 .plb .plb-history { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
 
-/* ── Floating panels: Suggest / Explore, History, Save current ──────────── */
+/* ── Floating panels: Suggest / Explore, History, Save or share ──────────── */
 .plb .plb-float {
   position: fixed;
   top: calc(var(--chrome-h) + 62px);
-  right: 16px;
+  right: max(16px, env(safe-area-inset-right,0px));
   z-index: 125;
   display: block;
 }
@@ -493,6 +493,11 @@
   /* Stacked, the sliders sit above it: nothing under the pointer moves. */
   .plb .plb-adjust-reset.is-idle { display: none; }
   .plb .plb-copycss { justify-content: center; }
+}
+/* The SPACE keycap is hidden below 1024. It is 62px wide, and at 768 it is what
+   pushes Redo off the row; without it undo, redo, Randomise, Suggest, Extra tools
+   and Save or share all fit. */
+@media (max-width: 1023px) {
   .plb .tl-toolbar .tl-kbd { display: none; }
 }
 @media (max-width: 640px) {
@@ -598,3 +603,239 @@
    its parts are scoped to the layer and not to .plb. ───────────────────────── */
 .tl-sheet-layer .tl-code { max-height: 40dvh; overflow: auto; }
 .tl-sheet-layer .plb-sheet-copy { width: 100%; justify-content: center; margin-top: 12px; }
+
+/* ── Header: undo and redo sit close, like the one tray they used to be; at 320
+   the primary keeps only its icon so the row never wraps. ───────────────── */
+@media (min-width: 401px) {
+  .plb .tl-toolbar .tl-item[data-tl-item="redo"] { margin-left: -6px; }
+}
+@media (max-width: 340px) {
+  .plb .plb-save { width: 44px; padding-inline: 0; justify-content: center; }
+  .plb .plb-save .tl-btn-label { display: none; }
+}
+
+/* ── Suggest panel: Variations and Brands. A pick paints the board and the panel
+   stays open; the user's own palette is pinned at the top. ──────────────── */
+.plb .plb-galpopup--suggest { width: min(640px, calc(100vw - 32px)); }
+.plb .plb-galpopup-head .tl-pills { flex-wrap: nowrap; }
+/* Back to my palette sits in the head, between the tabs and Close, so the tab
+   order is the visual order. The text shows wherever it fits (see the 430px
+   rule below, where it becomes an icon with the same accessible name). */
+.plb .plb-sg-back { margin-left: auto; }
+.plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x { margin-left: 0; }
+.plb .plb-sg-back-icon { display: none; }
+.plb .plb-sg-tabs .tl-pill { flex: 0 0 auto; white-space: nowrap; }
+.plb .plb-sg-pin { flex: 0 0 auto; display: grid; gap: var(--s-2); padding: var(--s-2) var(--s-4); border-bottom: 1px solid var(--tl-hair); }
+.plb .plb-sg-pin-label { font-size: 12px; font-weight: 560; line-height: 20px; color: var(--tl-dim); }
+.plb .plb-sg-pin-strip { display: flex; height: 40px; border-radius: var(--radius-xs); overflow: hidden; }
+.plb .plb-sg-pin-strip .plb-sg-cell { background: var(--plb-rc); }
+.plb .plb-sg-intro { margin: 0 0 var(--s-4); font-size: 12px; color: var(--tl-dim); }
+.plb .plb-sg-group + .plb-sg-group { margin-top: var(--s-5); }
+.plb .plb-sg-group-label { margin: 0 0 var(--s-2); font-size: 12px; font-weight: 560; color: var(--tl-dim); }
+.plb .plb-sg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.plb .plb-sg-grid--brands { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.plb .plb-sg-card { position: relative; border: 1px solid var(--tl-hair); border-radius: var(--radius-xl); }
+.plb .plb-sg-main {
+  display: grid;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2);
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--tl-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--tl-ease), transform var(--dur-1) var(--tl-ease);
+}
+.plb .plb-sg-card--static .plb-sg-main { cursor: default; }
+.plb .plb-sg-strip { position: relative; display: block; height: 64px; border-radius: var(--radius-xs); overflow: hidden; }
+.plb .plb-sg-card--brand .plb-sg-strip { height: 48px; }
+.plb .plb-sg-cells { position: absolute; inset: 0; display: flex; }
+.plb .plb-sg-cell { flex: 1 1 0; min-width: 0; }
+.plb .plb-sg-cell:not(.lockt-rowcell) { background: var(--plb-rc); }
+.plb .plb-sg-name { min-height: 32px; padding-right: 40px; font-size: 13px; font-weight: 560; line-height: 32px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plb .plb-sg-name + .plb-sg-desc { margin-top: calc(var(--s-2) * -1); }
+.plb .plb-sg-desc { font-size: 12px; line-height: 1.4; color: var(--tl-dim); }
+.plb .plb-sg-cmp {
+  position: absolute;
+  right: var(--s-2);
+  top: calc(var(--s-2) + 64px + var(--s-2));
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--btn-radius);
+  background: none;
+  color: var(--tl-dim);
+  cursor: pointer;
+}
+.plb .plb-sg-card--brand .plb-sg-cmp { top: calc(var(--s-2) + 48px + var(--s-2)); }
+.plb .plb-sg-card--on { box-shadow: inset 0 0 0 2px var(--tl-ink); }
+.plb .plb-sg-tick {
+  position: absolute;
+  top: var(--s-1);
+  right: var(--s-1);
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--tl-card);
+  color: var(--tl-ink);
+}
+.plb .plb-sg-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px var(--s-2);
+  border-radius: 999px;
+  background: var(--tl-card);
+  color: var(--tl-ink);
+  font-size: 12px;
+  font-weight: 560;
+  transform: translate(-50%, -50%);
+}
+/* The blur is on the cells only, so the lock label stays sharp. Scaled up so
+   the blurred edges do not fade to the card. */
+.plb .plb-sg-card--locked .plb-sg-cells { filter: blur(6px); transform: scale(1.2); }
+.plb .plb-sg-card--brand.plb-sg-card--locked .plb-sg-cells { filter: blur(4px); }
+.plb .plb-sg-card--ph .plb-sg-strip,
+.plb .plb-sg-card--ph .plb-sg-name { background: var(--tl-wash); border-radius: var(--radius-xs); }
+.plb .plb-sg-card--ph .plb-sg-name { display: block; min-height: 16px; margin: 8px 0; }
+.plb .plb-sg-pro { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-top: var(--s-5); font-size: 12px; color: var(--tl-dim); }
+.plb .plb-sg-foot {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  border-top: 1px solid var(--tl-hair);
+  font-size: 12px;
+  color: var(--tl-dim);
+  font-variant-numeric: tabular-nums;
+}
+.plb .plb-sg-foot b { color: var(--tl-ink); font-weight: 560; }
+.plb .plb-sg-info { width: 20px; height: 20px; padding: 0; border: 1px solid var(--tl-line-2); border-radius: 999px; background: none; color: var(--tl-dim); font: inherit; font-size: 11px; cursor: pointer; }
+.plb .plb-sg-info[aria-expanded="true"] { background: var(--tl-wash); color: var(--tl-ink); }
+/* The one-line explanation opens on its own line under the score. */
+.plb .plb-sg-foot-help { flex: 1 0 100%; margin: 0; line-height: 1.4; }
+.plb .plb-sg-foot-help[hidden] { display: none; }
+.plb .plb-sg-main:focus-visible,
+.plb .plb-sg-cmp:focus-visible,
+.plb .plb-sg-info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A locked brand (static) and a loading placeholder cannot be pressed, so they
+   get no hover wash that would say they can. */
+@media (hover: hover) and (pointer: fine) {
+  .plb .plb-sg-card:not(.plb-sg-card--static, .plb-sg-card--ph) .plb-sg-main:hover { background: var(--tl-wash); }
+  .plb .plb-sg-cmp:hover, .plb .plb-sg-info:hover { background: var(--tl-wash); color: var(--tl-ink); }
+}
+.plb .plb-sg-card:not(.plb-sg-card--locked) .plb-sg-main:active { transform: scale(.97); }
+@media (pointer: coarse) {
+  /* Compare stays level with the name row: the top is the same as on a fine
+     pointer (card padding + strip + the gap under it); only the size grows. */
+  .plb .plb-sg-cmp { width: 44px; height: 44px; }
+  .plb .plb-sg-name { min-height: 44px; line-height: 44px; padding-right: 48px; }
+  .plb .plb-sg-info { width: 44px; height: 44px; }
+}
+@media (forced-colors: active) {
+  .plb .plb-sg-card--on { outline: 2px solid Highlight; }
+  .plb .plb-sg-cell, .plb .plb-sg-pin-strip .plb-sg-cell { forced-color-adjust: none; }
+}
+:where(html[data-reduced-motion="true"]) .plb .plb-sg-main { transition: none !important; transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-sg-main { transition: none !important; transform: none !important; }
+}
+
+/* Phone: a short sheet with one row of cards, so the board stays in view above
+   it. Groups, intro, pinned strip, Compare and the score line stay on wider
+   screens. */
+@media (max-width: 640px) {
+  .plb .plb-galpopup--suggest { width: 100%; }
+  .plb .plb-galpopup--suggest .plb-sg-pin,
+  .plb .plb-galpopup--suggest .plb-sg-group-label,
+  .plb .plb-galpopup--suggest .plb-sg-intro,
+  .plb .plb-galpopup--suggest .plb-sg-cmp,
+  .plb .plb-galpopup--suggest .plb-sg-foot,
+  .plb .plb-galpopup--suggest .plb-sg-desc { display: none; }
+  /* One head row: tabs left, Back to my palette and Close right. The title stays in
+     the DOM for the dialog (which also has an aria-label) but is not drawn, so
+     the row never wraps at 390, 360 or 320. */
+  .plb .plb-galpopup--suggest .plb-galpopup-head { flex-wrap: nowrap; gap: var(--s-2); }
+  .plb .plb-galpopup--suggest .plb-galpopup-head .plb-menu-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .plb .plb-galpopup--suggest .plb-galpopup-body {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-2);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    /* A snapped card stops at the 16px gutter, not flush with the edge. */
+    scroll-padding-inline: var(--s-4);
+    padding: var(--s-3) var(--s-4);
+  }
+  .plb .plb-sg-groups { display: flex; gap: var(--s-2); }
+  .plb .plb-sg-group, .plb .plb-sg-grid { display: contents; }
+  /* 28vw is 109px at 390, so the first card keeps the 16px gutter and the next
+     one shows about 23px: the row reads as scrollable. */
+  .plb .plb-sg-card { flex: 0 0 clamp(104px, 28vw, 120px); scroll-snap-align: start; }
+  .plb .plb-sg-card--brand .plb-sg-strip, .plb .plb-sg-strip { height: 56px; }
+  /* The card is the target, not its name, so the name row is one text line (the
+     Compare button it made room for is hidden here). */
+  .plb .plb-sg-name { min-height: 20px; line-height: 20px; padding-right: 0; }
+  .plb .plb-galpopup--suggest .lockt-cta, .plb .plb-sg-pro { flex: 0 0 auto; margin-top: 0; }
+}
+
+/* "Back to my palette" does not fit beside the tabs and Close on a phone, so it
+   reads "Back", which is still inside the button's name (the label-in-name
+   rule). Only at 360px and below, where even that crowds Close, is it the icon
+   alone; title then names it for a mouse or stylus. */
+.plb .plb-sg-back-short { display: none; }
+@media (max-width: 430px) {
+  .plb .plb-sg-back-text { display: none; }
+  .plb .plb-sg-back-short { display: inline; }
+}
+@media (max-width: 360px) {
+  .plb .plb-sg-back { width: 44px; min-width: 44px; padding-inline: 0; justify-content: center; }
+  .plb .plb-sg-back-short { display: none; }
+  .plb .plb-sg-back-icon { display: inline-flex; }
+}
+@media (max-width: 640px) and (pointer: coarse) {
+  .plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x { width: 44px; height: 44px; }
+}
+
+/* The grab handle belongs to the bottom sheet. Above 640px this panel floats
+   under its button, so it has no handle to drag. */
+@media (min-width: 641px) {
+  .plb .plb-galpopup::before { display: none; }
+}
+
+/* A scrolling body that has more below it fades out at its bottom edge, so a
+   cut-off row reads as "scroll for more" rather than as the end. The fade comes
+   off once the end is reached (scrollCue sets data-more). It is a scroll-edge
+   mask, not a decoration; the phone sheet scrolls sideways and has no cue. */
+.plb .plb-galpopup-body[data-more="true"] {
+  -webkit-mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
+}
+/* A card reached by Tab stops above the fade, so it and its focus ring stay clear. */
+.plb .plb-galpopup-body { scroll-padding-block-end: 40px; }
+@media (max-width: 640px) {
+  .plb .plb-galpopup--suggest .plb-galpopup-body[data-more="true"] { -webkit-mask-image: none; mask-image: none; }
+}

@@ -101,7 +101,7 @@
 
 
 @media(max-width:960px){
-  .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up var(--dur-2) var(--ease-entrance)}
+  .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left,0px));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up var(--dur-2) var(--ease-entrance)}
   .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .plb-scrolllist{max-height:min(52dvh,420px)}
   .plb-galpopup{padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:min(82dvh,640px)}
@@ -192,7 +192,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 /* ─── State preset responsive show/hide ─── */
 
 /* Undo toast */
-.cs-undo-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.25);animation:ci-fade var(--dur-1) var(--ease-entrance)}
+.cs-undo-toast{position:fixed;bottom:max(24px,env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.25);animation:ci-fade var(--dur-1) var(--ease-entrance)}
 .cs-undo-toast span{font-size:13px;font-weight:500;color:var(--t0)}
 .cs-undo-toast button{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:700;color:var(--accent-text);cursor:pointer;padding:4px 10px;border-radius:6px;transition:background var(--dur-1) var(--ease-standard)}
 .cs-undo-toast button:hover{background:var(--bg-2)}
@@ -253,7 +253,6 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
    (tests/unit/state-token-contrast): 6.1:1 on the light tint, 7.7:1 on dark. */
 .plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
 button.plb-varrow:hover{background:var(--bg-2)}
-.plb-varrow--locked{opacity:.55}
 .plb-varrow--active{background:var(--bg-2)}
 .plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
 .plb-varrow-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:7px 8px;background:none;border:none;border-radius:var(--radius-s);text-align:left;cursor:pointer;transition:background var(--t)}
@@ -261,7 +260,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-varrow-cmp{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:8px;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .plb-varrow-cmp:hover{color:var(--t0);background:var(--bg-2)}
 .plb-strip{display:inline-flex;gap:2px;flex-shrink:0}
-.plb-score{flex-shrink:0;padding:2px 8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--t1);background:var(--bg-2);border-radius:999px}
 
 /* Image picker (Wave 4) — drag-drop dropzone, nested preview with draggable
    picker points, a picked-palette strip and a +/- colour count. Free to use. */
@@ -354,7 +352,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--accent-text);border:1px solid var(--accent);border-radius:var(--radius-pill)}
 
 /* Preview modal + mini UI scene painted from --pv-* role props */
-.plb-modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.plb-modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:max(clamp(12px,3vw,32px),env(safe-area-inset-top,0px)) max(clamp(12px,3vw,32px),env(safe-area-inset-right,0px)) max(clamp(12px,3vw,32px),env(safe-area-inset-bottom,0px)) max(clamp(12px,3vw,32px),env(safe-area-inset-left,0px));background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .plb-modal-card{width:min(960px,100%);max-height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:clamp(14px,2.5vw,22px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
 .plb-modal-head{display:flex;align-items:center;gap:12px}
 .plb-modal-head .plb-pop-title{font-size:14px;margin-right:auto}
@@ -386,12 +384,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
 .plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
 .plb-galpopup-head .plb-menu-title{margin:0;margin-right:auto}
-.plb-galtabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
-.plb-galtab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:var(--btn-radius);cursor:pointer;transition:all var(--t);white-space:nowrap}
-.plb-galtab>svg{flex-shrink:0;opacity:.75}
-.plb-galtab:hover{color:var(--t0)}
-.plb-galtab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
-.plb-galtab--on>svg{opacity:1;color:var(--accent)}
 .plb-galpopup-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:12px;font-weight:600;color:var(--t2)}
 .plb-galpopup-body .plb-menu-sub a{color:var(--accent-text);text-decoration:none}
 .plb-galpopup-body .plb-menu-sub a:hover{text-decoration:underline}

@@ -52,8 +52,8 @@
 .typ-picker-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Browse dialog */
-.fbd-overlay{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:clamp(12px,4vw,40px);background:rgba(8,8,12,.58);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
-.fbd-dialog{display:flex;flex-direction:column;width:min(1080px,100%);max-height:min(880px,92vh);padding:clamp(18px,3vw,28px);background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:0 40px 120px rgba(6,6,12,.42)}
+.fbd-overlay{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:max(clamp(12px,4vw,40px),env(safe-area-inset-top,0px)) max(clamp(12px,4vw,40px),env(safe-area-inset-right,0px)) max(clamp(12px,4vw,40px),env(safe-area-inset-bottom,0px)) max(clamp(12px,4vw,40px),env(safe-area-inset-left,0px));background:rgba(8,8,12,.58);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.fbd-dialog{display:flex;flex-direction:column;width:min(1080px,100%);max-height:min(880px,calc(92vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));padding:clamp(18px,3vw,28px);background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:0 40px 120px rgba(6,6,12,.42)}
 .fbd-dialog:focus{outline:none}
 .fbd-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
 .fbd-head h2{margin:0;font-size:clamp(19px,2.4vw,24px);font-weight:650;letter-spacing:-.02em;color:var(--t0)}
@@ -378,7 +378,7 @@
 .fdx-use-licence{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t2)}
 .fdx-use-src{align-self:flex-start;margin-top:3px;font-size:11.5px}
 @media(max-width:560px){
-  .fbd-dialog{max-height:96vh;padding:16px}
+  .fbd-dialog{max-height:calc(96vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));padding:16px}
   /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
      box cannot hold ten characters of a display face at a judgeable size — the
      specimen either ellipsised (what shipped) or shrank under 17px (what the

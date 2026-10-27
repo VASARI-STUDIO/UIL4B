@@ -131,10 +131,17 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   let index = 0
   const renderRow = (option, groupMark = '') => {
     const rowIndex = index++
-    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={option.mark || groupMark ? `${option.label}, ${option.mark || groupMark}` : undefined} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
-      className={`pop-item menu-select-option${active === rowIndex ? ' is-active' : ''}`} data-option-index={rowIndex} data-value={String(option.value)}
+    // An option may carry a one-line `desc`: visible text under the label, which
+    // the option points at with aria-describedby so a screen reader reads it as
+    // the option's description after its name. The name is set to the label
+    // alone, so the description is not also read as part of the name.
+    const descId = option.desc ? `${listId}-${rowIndex}-desc` : undefined
+    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={option.mark || groupMark ? `${option.label}, ${option.mark || groupMark}` : option.desc ? option.label : undefined} aria-describedby={descId} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
+      className={`pop-item menu-select-option${option.desc ? ' menu-select-option--desc' : ''}${active === rowIndex ? ' is-active' : ''}`} data-option-index={rowIndex} data-value={String(option.value)}
       onPointerMove={() => { if (!option.disabled) setActive(rowIndex) }} onClick={() => choose(rowIndex)}>
-      <span className="menu-select-text">{option.label}</span>
+      {option.desc
+        ? <span className="menu-select-body"><span className="menu-select-text">{option.label}</span><span id={descId} className="menu-select-desc">{option.desc}</span></span>
+        : <span className="menu-select-text">{option.label}</span>}
       {option.mark && <span className="menu-select-mark">{option.mark}</span>}
       <svg className="menu-select-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m5 12 4 4L19 6" /></svg>
     </div>

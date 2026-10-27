@@ -43,7 +43,8 @@
   --sp-wash-2: rgba(var(--sp-ink-rgb), .06);
   --sp-link: var(--link, var(--accent-text));
 
-  --sp-gutter: clamp(20px, 4vw, 52px);
+  /* Every section's side gutter clears a landscape notch, like --page-inline. */
+  --sp-gutter: max(clamp(20px, 4vw, 52px), env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   --sp-shell: 1400px;
   --sp-sec: clamp(80px, 11vw, 152px);
   --sp-ease: cubic-bezier(.23, 1, .32, 1);
@@ -113,7 +114,7 @@
   .spectrum:has(> .sp-footer[data-curtain]) > main { background: var(--sp-page); }
 }
 
-.sp-shell { max-width: var(--sp-shell); margin-inline: auto; padding-inline: var(--sp-gutter); }
+.sp-shell { max-width: var(--sp-shell); margin-inline: auto; padding-inline: max(var(--sp-gutter), env(safe-area-inset-left, 0px)) max(var(--sp-gutter), env(safe-area-inset-right, 0px)); }
 .sp-section { max-width: var(--sp-shell); margin: 0 auto; padding: var(--sp-sec) var(--sp-gutter) 0; }
 
 /* The design's shared section heading (bench, discover). */
@@ -892,40 +893,44 @@
 .sp-stack-card {
   position: sticky;
   top: var(--sp-stack-top, 84px);
+  /* One fixed frame, never a minimum (see "one card system" below). The edge is a
+     ring in the shadow, not a border, so the inner box is exactly the height less
+     the padding. */
+  height: 640px;
+  overflow: hidden;
   border-radius: 24px;
   background: var(--sp-card);
-  border: 1px solid rgba(var(--sp-ink-rgb), .11);
   box-shadow:
+    0 0 0 1px rgba(var(--sp-ink-rgb), .11),
     0 2px 4px -2px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .5)),
     0 14px 28px -14px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .7)),
     0 54px 100px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
   transform-origin: 50% 0%;
   transition: transform 240ms var(--sp-ease), filter 240ms ease;
 }
+/* 1440: a copy column and a stage, 44px in, 48px between. */
 .sp-stack-grid {
-  padding: clamp(22px, 3vw, 44px);
+  height: 100%;
+  padding: 44px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: clamp(22px, 3vw, 48px);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 48px;
   align-items: stretch;
-  min-height: clamp(548px, 66dvh, 720px);
 }
 .sp-stack-pad { height: clamp(48px, 8dvh, 96px); }
 .sp-stack-pad--tail { height: clamp(64px, 12dvh, 120px); }
-/* Card 3 holds three short rows, so it is sized to them, not to the viewport. */
-.sp-stack-card[data-stack-card="2"] .sp-stack-grid { min-height: 0; align-items: center; }
-/* The copy reads from the top, beside the panel's tabs. */
-.sp-stack-say { align-self: start; min-width: 0; padding-top: clamp(0px, 2vw, 24px); }
+/* The copy reads from the top, beside the stage. */
+.sp-stack-say { align-self: start; min-width: 0; min-height: 0; padding-top: clamp(0px, 2vw, 24px); }
 .sp-stack-say h3 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(26px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -.03em; }
 .sp-stack-say > p { margin: 16px 0 0; max-width: min(46ch, 100%); font-size: 15.5px; line-height: 1.62; color: var(--sp-dim); }
-.sp-stack-say > p.sp-stack-wide { max-width: min(48ch, 100%); }
 .sp-stack-say > p.sp-stack-note { margin-top: 20px; font-size: 13.5px; line-height: normal; }
 
 /* card 1: one piece */
-.sp-ex { container: sp-ex / inline-size; min-width: 0; border-radius: 18px; background: var(--sp-page); border: 1px solid rgba(var(--sp-ink-rgb), .12); overflow: hidden; display: flex; flex-direction: column; }
+.sp-ex { container: sp-ex / inline-size; min-width: 0; min-height: 0; border-radius: 18px; background: var(--sp-page); border: 1px solid rgba(var(--sp-ink-rgb), .12); overflow: hidden; display: flex; flex-direction: column; }
 .sp-ex-pieces { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 11px clamp(12px, 1.4vw, 16px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); }
 .sp-ex-piece { padding: 7px 13px; border: 1px solid rgba(var(--sp-ink-rgb), .13); border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
-.sp-ex-piece[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
+.sp-ex-piece[aria-selected="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
 .spectrum .sp-ex-piece:active, .spectrum .sp-ex-fmt:active { transform: scale(.96); }
 .sp-ex-body { flex: 1 1 0; min-height: 0; padding: clamp(14px, 1.6vw, 20px); overflow: auto; }
 .sp-ex-rows { display: grid; gap: 6px; }
@@ -979,141 +984,136 @@
 .sp-ex-copy--link .sp-pill-icon .sp-ph { font-size: 12px; }
 .sp-ex-fmtnote { font-size: 13px; color: var(--sp-dim); }
 
-/* card 2: the UI kit document. The paper and its inks are the exported
-   kit's own colours, fixed in both themes because it is a picture of a file. */
-/* ONE SURFACE, never a panel inside a panel, so the design's tray is not
-   drawn here: the document sits directly on the card. The tray's 6px
-   frame and wash are gone; a hairline and a soft drop keep the paper's weight. */
-.sp-kit { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.sp-kit-paper { flex: 1 1 0; min-height: 0; border-radius: 18px; box-shadow: 0 0 0 1px rgba(var(--sp-ink-rgb), .09), 0 18px 40px -28px rgba(var(--sp-shade-rgb), var(--sp-shade-a)); background: #F7F6F1; overflow: hidden; display: flex; flex-direction: column; color: #18221E; }
-.sp-kit-tabs { flex: none; display: flex; align-items: center; gap: clamp(12px, 1.6vw, 20px); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0 clamp(12px, 1.4vw, 16px); border-bottom: 1px solid rgba(20, 24, 20, .12); }
-.sp-kit-tab { padding: 12px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #5C6B63; font-family: var(--font); font-size: 12px; cursor: pointer; white-space: nowrap; }
-.spectrum .sp-kit-tab { transition: color .18s ease; }
-.sp-kit-tab[aria-pressed="true"] { border-bottom-color: #18221E; color: #18221E; }
-.sp-kit-body { flex: 1 1 0; min-height: 0; padding: clamp(14px, 1.6vw, 20px); overflow: auto; }
-.sp-kit-h { font-weight: 600; font-size: clamp(17px, 1.9vw, 23px); line-height: 1.1; letter-spacing: -.02em; }
-.sp-kit-colour { container: sp-kitc / inline-size;  display: grid; gap: 11px; }
-.sp-kit-sws { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(96px, 100%), 1fr)); gap: 7px; }
-/* Five swatches in a narrow card: three over two on a six-column grid, so none sits alone. */
-@container sp-kitc (max-width: 520px) {
-  .sp-kit-sws { grid-template-columns: repeat(6, 1fr); }
-  .sp-kit-sws > .sp-kit-sw { grid-column: span 2; }
-  .sp-kit-sws > .sp-kit-sw:nth-child(n+4) { grid-column: span 3; }
+/* cards 2 and 3: the stage and its plate.
+   The stage is the same box in all three cards (card 1 puts its live panel in
+   it). Below the picture sits a row of buttons, 44px tall, that picks which export
+   or project the plate shows. The picture is a real render of an export, drawn on
+   a transparent ground, so the ground here is the page's own wash and one set of
+   files serves both themes. The picture is object-fit: contain in a box of its
+   own aspect: never cropped, never scaled by CSS beyond the srcset step. */
+.sp-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; border-radius: 18px; background: var(--sp-page); overflow: hidden; isolation: isolate; }
+/* An inset ring on the stage, the same edge as card 1's panel (.sp-ex), so the
+   three stages read as one set. It is over the picture, which is inset 4%. */
+.sp-stage::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(var(--sp-ink-rgb), .12); pointer-events: none; }
+.sp-plate { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+.sp-plate-art { position: relative; min-height: 0; }
+/* Transitions, not a keyframe animation: an interrupted swap then fades each
+   picture from wherever it is, so a quick second click never drops the plate
+   to empty. The arriving picture rises 8px over 240ms; the leaving one fades
+   over 150ms. The first picture is on from its first paint, so it never moves. */
+.sp-plate-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transform: translateY(8px); transition: opacity 150ms ease, transform 150ms ease; }
+.sp-plate-art img.is-on { opacity: 1; transform: none; transition: opacity 240ms var(--sp-ease), transform 240ms var(--sp-ease); }
+.sp-plate-fail { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
+.sp-plate-cap { display: grid; justify-items: center; gap: 2px; padding: 0 16px 12px; text-align: center; font-size: 12px; line-height: 1.4; color: var(--sp-dim); }
+.sp-plate-cap b { font-weight: 540; color: var(--sp-ink); }
+.sp-cap-short, .sp-lab-short { display: none; }
+
+.sp-pick { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
+.sp-pick::-webkit-scrollbar { display: none; }
+.sp-pick-label { flex: none; margin-right: 4px; font-size: 12px; color: var(--sp-dim); white-space: nowrap; }
+.sp-pick-btn { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid rgba(var(--sp-ink-rgb), .13); border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 13px; white-space: nowrap; cursor: pointer; scroll-snap-align: center; }
+.sp-pick-btn[aria-selected="true"], .sp-pick-btn[aria-checked="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
+.spectrum .sp-pick-btn:active { transform: scale(.96); }
+.spectrum .sp-pick-btn:focus-visible { outline-offset: 0; }
+/* The stage clips, so the panel's own ring sits inside it. */
+.spectrum .sp-plate:focus-visible { outline-offset: -3px; }
+.sp-pick-ico { font-size: 15px; }
+@media (hover: hover) {
+  .sp-pick-btn:not([aria-selected="true"], [aria-checked="true"]):hover { border-color: rgba(var(--sp-ink-rgb), .3); color: var(--sp-ink); }
 }
-.sp-kit-sw { display: grid; gap: 6px; min-width: 0; }
-.sp-kit-sw > span { display: flex; flex-direction: column; justify-content: space-between; height: 88px; padding: 8px; border: 1px solid rgba(20, 24, 20, .08); }
-.sp-kit-sw b { font-size: 12px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
-.sp-kit-sw code { font-family: var(--mono); font-size: 12px; }
-.sp-kit-sw small { font-size: 12px; line-height: 1.3; color: #3A4A42; }
-.sp-kit-type { display: grid; gap: 12px; }
-.sp-kit-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.sp-kit-pair > span { display: grid; gap: 10px; padding: 14px; min-width: 0; }
-.sp-kit-pair > span:first-child { background: #203C35; }
-.sp-kit-pair > span:last-child { background: #DBD0EB; }
-.sp-kit-pair small { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px; font-size: 12px; }
-.sp-kit-pair > span:first-child small { color: rgba(247, 246, 241, .78); }
-.sp-kit-pair > span:last-child small { color: #3A3050; }
-.sp-kit-aa { font-weight: 600; font-size: 40px; line-height: 1; color: #F7F6F1; }
-.sp-kit-body-face { font-size: 14px; line-height: 1.35; color: #221B33; }
-.sp-kit-step { display: flex; align-items: baseline; gap: 12px; min-width: 0; padding-bottom: 7px; border-bottom: 1px solid rgba(20, 24, 20, .09); }
-.sp-kit-step small { width: 54px; flex: 0 0 auto; font-size: 12px; color: #3A4A42; }
-.sp-kit-step b { flex: 1; min-width: 0; font-weight: 600; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-kit-step code { flex: 0 0 auto; font-family: var(--mono); font-size: 12px; color: #3A4A42; }
-.sp-kit-found { display: grid; gap: 13px; }
-.sp-kit-found > span { display: grid; gap: 6px; }
-.sp-kit-found small { font-size: 12px; color: #3A4A42; }
-.sp-kit-space { display: flex; align-items: flex-end; gap: 8px; height: 56px; }
-.sp-kit-space > span { display: grid; gap: 4px; justify-items: center; }
-.sp-kit-space i { width: 22px; background: #203C35; }
-.sp-kit-space code { font-family: var(--mono); font-size: 12px; color: #3A4A42; }
-.sp-kit-cols { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
-.sp-kit-cols i { height: 38px; background: #E4E8DE; }
-.sp-kit-files { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 0; background: #203C35; padding: 16px; color: #F7F6F1; }
-.sp-kit-files > span:first-child { display: grid; gap: 9px; align-content: start; min-width: 0; padding-right: 14px; }
-.sp-kit-files > span:first-child .sp-kit-h { line-height: 1.08; }
-.sp-kit-files > span:first-child small { font-size: 12px; line-height: 1.5; color: rgba(247, 246, 241, .8); }
-.sp-kit-files ul { display: grid; gap: 0; min-width: 0; list-style: none; margin: 0; padding: 0; }
-.sp-kit-files li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid rgba(247, 246, 241, .22); }
-.sp-kit-files li > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.sp-kit-files li b { font-size: 12px; font-weight: 540; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-kit-files li small { font-size: 12px; color: rgba(247, 246, 241, .7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-kit-files .sp-ph { font-size: 13px; }
-.sp-kit-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(20, 24, 20, .12); font-size: 12px; color: #3A4A42; }
 
-/* card 3: the projects */
-.sp-projects-wrap { display: grid; gap: 10px; align-self: center; align-content: center; min-width: 0; }
-.sp-projects-cap { margin: 0; font-size: 12px; line-height: 1.4; color: var(--sp-dim); }
-.sp-projects { display: grid; gap: 9px; align-content: center; list-style: none; margin: 0; padding: 0; }
-.sp-projects li { display: flex; align-items: center; gap: 13px; padding: 14px; border-radius: 12px; background: rgba(var(--sp-ink-rgb), .035); border: 1px solid rgba(var(--sp-ink-rgb), .09); }
-.sp-projects-ico { width: 34px; height: 34px; border-radius: 12px; background: rgba(var(--sp-ink-rgb), .06); display: grid; place-items: center; color: var(--accent-mid); flex: 0 0 auto; font-size: 16px; }
-.sp-projects li > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 4px; }
-.sp-projects b { font-size: 14px; font-weight: 400; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-projects small { font-size: 12px; line-height: 1.35; color: var(--sp-dim); }
+/* The same switch as rows, at the foot of the copy column (1200px and up; below
+   that the pills above are shown and this is display: none). A marker, the name,
+   and what is in it, between hairlines. */
+.sp-rows { display: none; margin-top: auto; border-top: 1px solid rgba(var(--sp-ink-rgb), .12); }
+.sp-rows-btn { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 16px; row-gap: 2px; min-height: 52px; padding: 12px 4px 12px 24px; border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); border-radius: 0; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 15px; line-height: 1.3; text-align: left; cursor: pointer; transition: color 150ms ease, background-color 150ms ease; }
+.sp-rows-btn::before { content: ""; position: absolute; left: 4px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; border: 1.5px solid rgba(var(--sp-ink-rgb), .3); box-sizing: border-box; transition: background-color 150ms ease, border-color 150ms ease; }
+.sp-rows-lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-rows-hint { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-rows-sub { grid-column: 1 / -1; font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-rows-btn[aria-selected="true"], .sp-rows-btn[aria-checked="true"] { color: var(--sp-ink); }
+.sp-rows-btn[aria-selected="true"]::before, .sp-rows-btn[aria-checked="true"]::before { background: var(--sp-ink); border-color: var(--sp-ink); }
+.sp-rows-btn:active { background: rgba(var(--sp-ink-rgb), .06); }
+.spectrum .sp-rows-btn:focus-visible { outline-offset: -2px; }
+@media (hover: hover) {
+  .sp-rows-btn:not([aria-selected="true"], [aria-checked="true"]):hover { color: var(--sp-ink); background: rgba(var(--sp-ink-rgb), .04); }
+}
 
-@media (max-width: 900px) {
-  .sp-stack-card { position: static; top: auto; transform: none !important; filter: none !important; }
-  .sp-stack-grid { min-height: 0; padding: clamp(20px, 4vw, 28px); }
-  /* 40px between the three forms so they read as one group; the tail is 24px, so
-     with the next section's own top padding the gap after the last form is never
+/* ── ONE CARD SYSTEM ──────────────────────────────────────────────────────────
+   All three cards are the same size at a width: a fixed height, never a minimum, so
+   what is inside can never make one card taller than another. A copy column and a
+   stage: 1440 is 640 tall with the stage on the right; 768 is a single column,
+   the copy over the stage; 390 is 710 tall. Below 1200 the copy row is as tall as
+   its copy (auto) and the stage takes the rest, so the card's height never moves.
+   From 761 to 1199 the stage is a full-width picture, so the height follows the
+   card's own width (the stack is a size container for the cqw): padding 28 x 2,
+   a 184px allowance for the copy, a gap of 24, the picture at the card's inner width
+   over the landscape export's aspect (1.4142), and the 56px button row.
+   Below 1200 the stack is three ordinary cards: at 1000px one card is about 930px
+   tall, which a screen cannot pin. */
+@media (max-width: 1199px) {
+  .sp-stack { container: sp-stack / inline-size; }
+  .sp-stack-card {
+    position: static;
+    top: auto;
+    transform: none !important;
+    filter: none !important;
+    height: calc(56px + 184px + 24px + (100cqw - 56px) / 1.4142 + 56px);
+  }
+  .sp-stack-grid { padding: 28px; gap: 24px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  /* 40px between the three cards so they read as one group; the tail is 24px, so
+     with the next section's own top padding the gap after the last card is never
      under the --sp-sec floor (80px) and is twice the gap inside the group. */
   .sp-stack-pad { height: 40px; }
   .sp-stack-pad--tail { height: 24px; }
-  /* DEVIATION, and a deliberate one (mobile first). The design's two
-     panels size their bodies `flex: 1 1 0` against the card's min-height; with
-     that min-height released below 900px the bodies collapse to nothing — the
-     design's own render at 390 shows card 1 as one clipped row and card 2 as a bare
-     strip. These floors give the panels back their contents at phone width;
-     nothing changes above 900px. */
-  .sp-ex { min-height: 0; }
-  /* The body is a fixed frame with its own scroll, so changing the piece never
-     moves what is below the card. */
-  .sp-ex-body { flex: 0 0 auto; height: 320px; }
-  /* The kit's colour page wraps to three rows on a phone; the paper grows to hold
-     them instead of clipping the last swatch. */
-  .sp-kit-paper, .sp-kit-body { flex: 1 1 auto; }
-  .sp-kit-body { overflow: visible; }
-
-  /* THREE FORMS, one per kind of content. Card 1 is a working panel and stays a
-     card. Card 2 is a document: its card is gone, the copy sits on the page
-     ground and the paper runs out toward the screen edges, in one column.
-     Card 3 is a list: its card is gone and the rows are separated by hairlines. */
-  .sp-stack-card[data-stack-card="1"],
-  .sp-stack-card[data-stack-card="2"] { background: none; border: 0; box-shadow: none; }
-  .sp-stack-card[data-stack-card="1"] .sp-stack-grid,
-  .sp-stack-card[data-stack-card="2"] .sp-stack-grid { padding: 0; }
-  .sp-stack-card[data-stack-card="1"] .sp-stack-grid { grid-template-columns: minmax(0, 1fr); }
-  .sp-stack-card[data-stack-card="1"] .sp-kit { margin-inline: calc(var(--sp-gutter) * -1 + 8px); }
-  .sp-projects { gap: 0; }
-  .sp-projects li { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--sp-hair); padding: 14px 0; }
-  .sp-projects li:last-child { border-bottom: 1px solid var(--sp-hair); }
-}
-/* From 561 to 900px card 1 is one column, copy over a full-width panel: the
-   panel's chips and its format row each fit one line, and no column is left
-   with empty ground under a short block of text. */
-@media (min-width: 561px) and (max-width: 900px) {
-  .sp-stack-card[data-stack-card="0"] .sp-stack-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {
   .sp-spec-head { margin: 0; text-align: left; }
   .sp-spec-head p { margin-left: 0; }
-}
-/* On a phone the exports are a little tighter inside each form (the rows of
-   the palette, the kit's swatches, the project rows), with every figure and
-   line of copy kept. */
-@media (max-width: 560px) {
-  .sp-stack { margin-top: 24px; }
-  .sp-stack-grid { gap: 16px; }
+  .sp-stack-card { height: 710px; }
+  .sp-stack-grid { padding: 16px; gap: 24px; }
   .sp-stack-say { padding-top: 0; }
   .sp-stack-say > p { margin-top: 12px; }
   .sp-stack-say > p.sp-stack-note { margin-top: 12px; }
+  .sp-pick { padding: 8px 12px 12px; }
+  .sp-pick-label, .sp-pick-ico { display: none; }
+  /* One line under the picture: the short caption in card 2; in card 3 only the
+     time and parts (the project's name is on the selected pill). */
+  .sp-cap-long { display: none; }
+  .sp-cap-short { display: inline; }
+  .sp-plate-cap { grid-template-columns: minmax(0, 1fr); padding: 0 12px 8px; }
+  .sp-plate-cap > span { justify-self: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sp-plate-cap--proj b { display: none; }
+}
+/* Fine pointers from 761px: a 36px pill. The row keeps its height (36 + 2 x 10 + the
+   hairline = 57, as 44 + 2 x 6 + 1 was), so the picture does not change size. */
+@media (min-width: 761px) and (pointer: fine) {
+  .sp-pick-btn { min-height: 36px; }
+  .sp-pick { padding-block: 10px; }
+}
+/* On a phone card 1's panel is a little tighter inside (the rows of the palette,
+   the format row), with every figure and line of copy kept. */
+@media (max-width: 560px) {
+  .sp-stack { margin-top: 24px; }
   .sp-ex-pieces { gap: 6px; padding-block: 8px; }
   .sp-ex-rows { gap: 4px; }
   /* The format switch and Copy share one line at 390px (the switch is 165px, Copy 105px). */
   .sp-ex-actions { gap: 8px; padding-inline: 12px; }
   .sp-ex-fmt { padding-inline: 8px; }
-  .sp-ex-body { height: 296px; }
-  .sp-kit-sw > span { height: 72px; }
-  .sp-projects li { padding-block: 12px; }
+  /* Card 1's four pieces on one line: the short names. */
+  .sp-ex-piece .sp-lab-full { display: none; }
+  .sp-ex-piece .sp-lab-short { display: inline; }
+}
+
+/* 1200px and up: the switch moves from under the stage to rows at the foot of the
+   copy column, in all three cards. The pills are display: none (out of the
+   accessibility tree, not merely hidden); the rows are shown. The copy reads from
+   the top of the column, level with the stage (no top padding). */
+@media (min-width: 1200px) {
+  .sp-stack-say { align-self: stretch; display: flex; flex-direction: column; padding-top: 0; }
+  .sp-stack-say > p.sp-stack-note { margin-bottom: 24px; }
+  .sp-rows { display: flex; flex-direction: column; }
+  .sp-pick, .sp-ex-pieces, .sp-plate-cap--proj { display: none; }
 }
 
 /* ── "Don't just take it from us" (#index) ────────────────────────────────────
@@ -1291,9 +1291,9 @@
    drawn size is the design's and the target is WCAG's. Nothing moves visually. */
 @media (pointer: coarse) {
   .sp-seed, .sp-utab, .sp-ghost, .sp-ex-fmt, .sp-ex-piece, .sp-shuffle,
-  .sp-kit-tab, .sp-seg button, .sp-chip, .sp-pill, .sp-rail-row { position: relative; }
+  .sp-seg button, .sp-chip, .sp-pill, .sp-rail-row { position: relative; }
   .sp-seed::after, .sp-utab::after, .sp-ghost::after, .sp-shuffle::after,
-  .sp-ex-fmt::after, .sp-ex-piece::after, .sp-kit-tab::after, .sp-seg button::after,
+  .sp-ex-fmt::after, .sp-ex-piece::after, .sp-seg button::after,
   .sp-chip::after, .sp-pill::after {
     content: "";
     position: absolute;
@@ -1343,11 +1343,13 @@
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html[data-reduced-motion="true"]) .spectrum .sp-disc-cta::after { transition: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
+:where(html[data-reduced-motion="true"]) .spectrum .sp-plate-art img { animation: none !important; transition: none !important; transform: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-plate-art img { animation: none !important; transition: none !important; transform: none !important; }
 }
 
 /* ── FORCED COLOURS ──────────────────────────────────────────────────────────
@@ -1356,10 +1358,18 @@
 @media (forced-colors: active) {
   .spectrum .sp-chip[aria-pressed="true"],
   .spectrum .sp-seg button[aria-pressed="true"],
-  .spectrum .sp-ex-piece[aria-pressed="true"],
+  .spectrum .sp-ex-piece[aria-selected="true"],
   .spectrum .sp-ex-fmt[aria-pressed="true"],
+  .spectrum .sp-pick-btn[aria-selected="true"],
+  .spectrum .sp-pick-btn[aria-checked="true"],
   .spectrum .sp-ico[aria-pressed="true"],
   .spectrum .sp-rail-row.is-on { border: 2px solid Highlight; }
   .spectrum .sp-seed[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: 2px; }
-  .spectrum .sp-ramp, .spectrum .sp-roles, .spectrum .sp-kit-paper { forced-color-adjust: none; }
+  .spectrum .sp-ramp, .spectrum .sp-roles { forced-color-adjust: none; }
+  /* The card edge is a shadow ring, which this mode removes. */
+  .spectrum .sp-stack-card { border: 1px solid CanvasText; }
+  /* The stage's ring is a shadow too, and the rows' marker is a fill. */
+  .spectrum .sp-stage::after { box-shadow: none; border: 1px solid CanvasText; }
+  .spectrum .sp-rows-btn[aria-selected="true"]::before,
+  .spectrum .sp-rows-btn[aria-checked="true"]::before { background: Highlight; border-color: Highlight; forced-color-adjust: none; }
 }

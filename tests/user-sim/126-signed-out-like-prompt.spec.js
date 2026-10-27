@@ -48,7 +48,7 @@ test.describe('signed-out likes and saves ask to sign in', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/palette')
     await page.getByRole('button', { name: 'Explore palettes' }).click()
-    const gallery = page.getByRole('dialog', { name: 'Colour gallery' })
+    const gallery = page.getByRole('dialog', { name: 'Explore palettes' })
     await expect(gallery).toBeVisible()
     await gallery.locator('.pgal-like').first().click()
     const login = loginDialog(page)

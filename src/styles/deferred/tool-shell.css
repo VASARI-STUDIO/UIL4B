@@ -224,7 +224,7 @@
   box-sizing:border-box;height:var(--bkit-h);margin:0;
   /* 1px rule + 7px + 44px + 8px + 44px + 8px = 112px */
   display:grid;grid-template-rows:44px 44px;row-gap:var(--s-2);
-  padding:7px var(--s-4) calc(8px + env(safe-area-inset-bottom));
+  padding:7px max(var(--s-4),env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom)) max(var(--s-4),env(safe-area-inset-left,0px));
   background:var(--bg-0);border:0;border-top:1px solid var(--bkit-hair);
   font-family:var(--font);
 }
@@ -318,7 +318,7 @@
   .bkit-rail{
     display:flex;align-items:center;gap:var(--s-5);
     /* 1px rule + 9px + 36px + 10px = 56px */
-    padding:9px var(--page-inline) calc(10px + env(safe-area-inset-bottom));
+    padding:9px max(var(--page-inline),env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom)) max(var(--page-inline),env(safe-area-inset-left,0px));
   }
   .bkit-steps{display:flex;flex:0 1 auto;gap:var(--s-1)}
   .bkit-steps li{display:flex}
@@ -334,7 +334,7 @@
   /* A tool's own bottom toolbar keeps the screen's bottom edge and the bar sits
      directly on it as one stack: the bar's bottom and the spacer read the
      toolbar's measured height. Colours' Adjust row is that toolbar. */
-  html.bkit-on .plb .plb-adjust{position:fixed;inset-inline:0;bottom:0;z-index:40}
+  html.bkit-on .plb .plb-adjust{position:fixed;inset-inline:0;bottom:0;z-index:40;padding-inline:max(clamp(12px,2vw,20px),env(safe-area-inset-left,0px)) max(clamp(12px,2vw,20px),env(safe-area-inset-right,0px));padding-bottom:calc(13px + env(safe-area-inset-bottom,0px))}
 }
 @media(min-width:768px) and (hover:hover){
   .bkit-step:hover{background:var(--hvr);color:var(--t0)}
@@ -371,7 +371,7 @@
 .bkit-card{
   --bkit-pad:var(--s-4);--bkit-rise:12px;
   position:fixed;inset-inline:0;bottom:var(--bkit-dock-bottom,calc(var(--bkit-h) + var(--bkit-toolbar-h,0px)));z-index:61;
-  box-sizing:border-box;margin:0;padding:var(--s-5) var(--bkit-pad) var(--bkit-pad);
+  box-sizing:border-box;margin:0;padding:var(--s-5) max(var(--bkit-pad),env(safe-area-inset-right,0px)) var(--bkit-pad) max(var(--bkit-pad),env(safe-area-inset-left,0px));
   max-height:calc(var(--bkit-vvh,100dvh) - var(--nav-clear) - var(--bkit-h) - var(--bkit-toolbar-h,0px));
   overflow-y:auto;overscroll-behavior:contain;
   background:var(--card);border:1px solid var(--border);border-bottom:0;
@@ -385,7 +385,7 @@
 .bkit-card[data-overlay-hidden]{animation:none;opacity:1;transition:opacity 150ms var(--ease-exit),transform 150ms var(--ease-exit),visibility 0s}
 .bkit-card[data-overlay-hidden="true"]{opacity:0;transform:translateY(-8px);visibility:hidden;pointer-events:none;transition:opacity 150ms var(--ease-exit),transform 150ms var(--ease-exit),visibility 0s 150ms}
 /* Over the on-screen keyboard it floats 12px above it and fits the visible area. */
-.bkit-card.is-lifted{inset-inline:12px;border-bottom:1px solid var(--border);border-radius:var(--radius-2xl);max-height:calc(var(--bkit-vvh,100dvh) - 12px - max(12px,var(--nav-clear) - var(--bkit-vv-top,0px)))}
+.bkit-card.is-lifted{inset-inline:max(12px,env(safe-area-inset-left,0px)) max(12px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--border);border-radius:var(--radius-2xl);max-height:calc(var(--bkit-vvh,100dvh) - 12px - max(12px,var(--nav-clear) - var(--bkit-vv-top,0px)))}
 @keyframes bkit-panel-in{from{opacity:0;transform:translateY(var(--bkit-rise))}to{opacity:1;transform:none}}
 
 .bkit-card-grab{position:absolute;top:8px;left:50%;width:36px;height:4px;margin-inline-start:-18px;border-radius:2px;background:var(--bg-4)}
@@ -843,7 +843,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uis-export .uis-section-head{flex:1;margin:0}
 .uis-export-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--s-2)}
 
-.uis-editor-layer{position:fixed;inset:0;z-index:220;display:grid;place-items:center;padding:var(--s-4);background:rgba(0,0,0,.42)}
+.uis-editor-layer{position:fixed;inset:0;z-index:220;display:grid;place-items:center;padding:max(var(--s-4),env(safe-area-inset-top,0px)) max(var(--s-4),env(safe-area-inset-right,0px)) max(var(--s-4),env(safe-area-inset-bottom,0px)) max(var(--s-4),env(safe-area-inset-left,0px));background:rgba(0,0,0,.42)}
 .uis-editor{width:min(620px,100%);max-height:min(760px,92dvh);overflow:auto;padding:var(--s-5);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg)}
 .uis-editor-head{display:flex;align-items:flex-start;gap:var(--s-3)}
 .uis-editor-head>div:first-child{flex:1}

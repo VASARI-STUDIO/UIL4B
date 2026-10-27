@@ -16,7 +16,7 @@ import {
 // generator cannot drift): the strip is five of its steps, the popover all 11.
 import { swatchStripHexes, tintRampForHex } from '../utils/tintRamp'
 import { colourFormats } from '../utils/colourFormats'
-import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
+import { freeVariationIds, paletteVariations, scorePalette } from '../utils/paletteVariations'
 // Column titles + the community-submit dice name share one vocabulary — see
 // utils/paletteNames.js for why `colorName` is deterministic and
 // `randomPaletteName` deliberately is not.
@@ -31,7 +31,7 @@ import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 // The preview dialog: eight scenes, a scene list and the role legend.
 import PalettePreviewDialog from '../components/palette/PalettePreviewDialog'
-import { LockedPaletteRow, LockedTeaseCta } from '../components/library/LockedTease'
+import { LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -80,6 +80,51 @@ function usePhone() {
     return () => mq.removeEventListener?.('change', on)
   }, [])
   return phone
+}
+
+// The Suggest footer: the score before and after, and a "?" that shows a one-line
+// explanation instead of leaving it to a tooltip (a tooltip never shows on touch
+// or to a keyboard). The line is always in the DOM so the button's
+// aria-describedby always has something to point at; `hidden` keeps it out of
+// sight until the button is pressed. Its own state, so it closes when the footer
+// goes away.
+function BalanceScoreFoot({ before, after }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="plb-sg-foot">
+      <span>Balance score <b>{before}</b> &rarr; <b>{after}</b></span>
+      <button
+        type="button"
+        className="plb-sg-info"
+        aria-label="What the balance score measures"
+        aria-expanded={open}
+        aria-describedby="plb-sg-score-help"
+        onClick={() => setOpen(o => !o)}
+      >
+        <span aria-hidden="true">?</span>
+      </button>
+      <p id="plb-sg-score-help" className="plb-sg-foot-help" hidden={!open}>It scores tone range, evenness, chroma profile and distinctness.</p>
+    </div>
+  )
+}
+
+// Marks a scrolling body that has more below it, so the CSS can fade its bottom
+// edge. A ref callback with a cleanup: it measures on mount, on scroll and when
+// the body resizes, and writes one data attribute straight to the element
+// rather than through React state.
+function scrollCue(el) {
+  if (!el) return undefined
+  const check = () => {
+    el.dataset.more = el.scrollHeight - el.scrollTop - el.clientHeight > 4 ? 'true' : 'false'
+  }
+  check()
+  el.addEventListener('scroll', check, { passive: true })
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null
+  ro?.observe(el)
+  return () => {
+    el.removeEventListener('scroll', check)
+    ro?.disconnect()
+  }
 }
 
 // Palette CSS on a phone: the toolbar overflow's bottom sheet (the .tl-sheet
@@ -137,14 +182,14 @@ const IMG_MAX_MB = 4 // uploaded-image size cap for the free image picker
 // Harmony options for the Colour System dropdown. `free` mirrors the studio's
 // CSYS_HARMS split, plus the tonal Auto system which is always free.
 const HARMONIES = [
-  { id: 'auto', label: 'Auto', free: true },
-  { id: 'monochromatic', label: 'Monochromatic', free: true },
-  { id: 'analogous', label: 'Analogous', free: false },
-  { id: 'complement', label: 'Complementary', free: false },
-  { id: 'triadic', label: 'Triadic', free: false },
-  { id: 'split', label: 'Split', free: false },
-  { id: 'tetradic', label: 'Tetradic', free: false },
-  { id: 'custom', label: 'Custom', free: false },
+  { id: 'auto', label: 'Auto', free: true, desc: 'Your colour, a close second hue, then light to dark.' },
+  { id: 'monochromatic', label: 'Monochromatic', free: true, desc: 'One hue in lighter and darker shades.' },
+  { id: 'analogous', label: 'Analogous', free: false, desc: 'Neighbouring hues, calm and cohesive.' },
+  { id: 'complement', label: 'Complementary', free: false, desc: 'Opposite hues, for maximum contrast.' },
+  { id: 'triadic', label: 'Triadic', free: false, desc: 'Three evenly spaced hues, vibrant but balanced.' },
+  { id: 'split', label: 'Split', free: false, desc: 'Your hue plus the two beside its opposite.' },
+  { id: 'tetradic', label: 'Tetradic', free: false, desc: 'Four hues at 90°, rich variety.' },
+  { id: 'custom', label: 'Custom', free: false, desc: 'Your hue, one 60° on, and its opposite.' },
 ]
 
 // The colour systems a free user is allowed to run through the generator. Any
@@ -504,14 +549,8 @@ const IcoSliders = () => (
 const IcoContrast = () => (
   <Ico size={13}><circle cx="12" cy="12" r="9" /><path d="M12 3v18" /><path d="M12 7a5 5 0 0 1 0 10" /></Ico>
 )
-const IcoSpark = () => (
-  <Ico size={13}><path d="m12 3 2.1 6.4L21 12l-6.9 2.6L12 21l-2.1-6.4L3 12l6.9-2.6L12 3Z" /></Ico>
-)
 const IcoCheck = ({ size = 13 }) => (
   <Ico size={size}><path d="m20 6-11 11-5-5" /></Ico>
-)
-const IcoBookmark = () => (
-  <Ico size={13}><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" /></Ico>
 )
 const IcoDownload = () => (
   <Ico size={13}><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></Ico>
@@ -539,9 +578,6 @@ const IcoReset = () => (
 // stroke weight and 13px optical size of the other toolbar glyphs.
 const IcoGradient = () => (
   <Ico size={13}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 15 15 3" /><path d="M9 21 21 9" /></Ico>
-)
-const IcoGallery = () => (
-  <Ico size={13}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></Ico>
 )
 // Sparkle-and-wand glyph for the "Explore" gallery button. Fill-based (not the
 // stroke-based <Ico>), so it's a standalone inline SVG at the same 13px size.
@@ -870,12 +906,15 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // two. Null means no marker is being worked on and the loupe stays away.
   const [imgActive, setImgActive] = useState(null)
   // Variation persistence: `varBase` is the frozen palette snapshot the current
-  // variation list is derived from, `activeVar` the id of the one the user picked.
+  // variation list is derived from, `panelApplied` what the user last applied from the Suggest panel.
   // Picking a variation preserves the base (via the skip guard) so reopening the
   // menu shows the same list with the active row ticked; any real edit to the
   // palette clears both so the list regenerates off the new colours.
   const [varBase, setVarBase] = useState(null)
-  const [activeVar, setActiveVar] = useState(null)
+  // { kind: 'variation' | 'brand', id, name, before, after, mine } while the board shows something applied
+  // from the Suggest panel; `suggestSnapRef` holds the board as it was before the first apply.
+  const [panelApplied, setPanelApplied] = useState(null)
+  const suggestSnapRef = useRef(null)
   const skipVarInvalidate = useRef(false)
   // One info panel per board: a column's tints or its colour values. They share
   // one slot, so opening either closes the other and every existing
@@ -1049,8 +1088,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the Extra tools menu, which has no button on screen to sit under.
   const [galleryAnchor, setGalleryAnchor] = useState(null)
   const galleryRef = useRef(null)
-  // Above phone width the gallery opens under the button that opened it, kept
-  // 16px inside the viewport; without one on screen it keeps its docked place.
+  // Above phone width the gallery opens under the button that opened it, its
+  // right edge on the button's, kept 16px inside the viewport; without one on screen it keeps its docked place.
   useLayoutEffect(() => {
     const wrap = galleryRef.current
     if (!galleryOpen || !wrap) return undefined
@@ -1064,12 +1103,32 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       const max = window.innerWidth - wrap.offsetWidth - 16
       wrap.style.top = `${Math.round(r.bottom + 8)}px`
       wrap.style.right = 'auto'
-      wrap.style.left = `${Math.round(Math.max(16, Math.min(r.left, max)))}px`
+      wrap.style.left = `${Math.round(Math.max(16, Math.min(r.right - wrap.offsetWidth, max)))}px`
     }
     place()
     window.addEventListener('resize', place)
     return () => window.removeEventListener('resize', place)
   }, [galleryOpen, galleryAnchor])
+  // Focus goes to the selected tab (or Close) when a panel opens, and back to the
+  // button that opened it, or Extra tools, when it closes with focus nowhere.
+  const galleryOpenerRef = useRef({ el: null, pointer: false })
+  const wasGalleryOpen = useRef(false)
+  const exploring = galleryTab === 'community'
+  useEffect(() => {
+    if (!galleryOpen) return
+    const wrap = galleryRef.current
+    const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('.plb-pop-x')
+    target?.focus({ preventScroll: true })
+  }, [galleryOpen, exploring])
+  useEffect(() => {
+    if (galleryOpen) { wasGalleryOpen.current = true; return }
+    if (!wasGalleryOpen.current) return
+    wasGalleryOpen.current = false
+    if (document.activeElement && document.activeElement !== document.body) return
+    if (document.querySelector('[aria-modal="true"]')) return
+    const { el, pointer } = galleryOpenerRef.current
+    returnMenuFocus(el?.isConnected ? el : document.querySelector('.tl-toolbar .tl-more-btn'), pointer)
+  }, [galleryOpen])
   // Which community palette is currently "imported" (ticked). Clicking that same
   // card again reverts to the pre-import system; any edit clears the tick because
   // the palette is now an edited derivative, not the untouched import.
@@ -1159,6 +1218,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // CURRENT position, sampled from those very stops. It follows the drag, which
   // is the whole point — the dot is a window onto the bar, not a lid over it.
   const variations = useMemo(() => (varBase ? paletteVariations(varBase) : []), [varBase])
+  // Free is the three best-scoring variations, wherever they sit in their groups.
+  const freeVarIds = useMemo(() => freeVariationIds(variations), [variations])
+  const variationGroups = useMemo(() => variations.reduce((out, v) => {
+    const last = out[out.length - 1]
+    if (last && last.label === v.group) last.items.push(v)
+    else out.push({ label: v.group, items: [v] })
+    return out
+  }, []), [variations])
 
   // Any genuine change to the palette (manual edit, randomise, harmony change,
   // brand pick) invalidates the frozen variation snapshot so the list rebuilds.
@@ -1167,14 +1234,20 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   useEffect(() => {
     if (skipVarInvalidate.current) { skipVarInvalidate.current = false; return }
     setVarBase(null)
-    setActiveVar(null)
+    setPanelApplied(null)
+    suggestSnapRef.current = null
   }, [colors, adjust])
 
   // Freeze a snapshot the first time the variations tab is viewed (or after
   // invalidation). The variations grid now lives inside the combined Gallery
   // popup, so the snapshot freezes when that popup is open on the variations tab.
+  // While a brand or variation is applied, the board is not the user's own: the
+  // list is derived from the Suggest snapshot ("mine"), so opening Variations
+  // after a brand shows variations of the user's palette, not of the brand.
   useEffect(() => {
-    if (galleryOpen && galleryTab === 'variations' && !varBase) setVarBase(applyAdjust(colors, adjust))
+    if (galleryOpen && galleryTab === 'variations' && !varBase) {
+      setVarBase(suggestSnapRef.current?.mine || applyAdjust(colors, adjust))
+    }
   }, [galleryOpen, galleryTab, varBase, colors, adjust])
 
   // Keep ProjectContext in sync so Save/overwrite capture the live palette and
@@ -1791,17 +1864,24 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Apply a whole ready-made palette (variation or brand). Resets the adjust
   // lens — the incoming colours ARE the new baseline. Locked slots survive.
-  const applyPalette = (hexes, msg) => {
+  // Returns true once the apply has gone through, false when fewer than two valid
+  // colours remain and nothing changed, so a caller can skip its own bookkeeping
+  // for an apply that never happened.
+  // `quiet` keeps the screen-reader announcement but skips the toast: inside
+  // the Suggest panel the applied card's tick already shows it, and on a phone
+  // the toast would sit over the sheet's cards.
+  const applyPalette = (hexes, msg, { quiet = false } = {}) => {
     setColPanel(null)
     const next = hexes.map(c => normaliseHex(c)).filter(Boolean).slice(0, HARD_MAX)
-    if (next.length < 2) return
+    if (next.length < 2) return false
     setColors(prev => {
       const out = next.length >= prev.length ? next : [...next, ...prev.slice(next.length)]
       return out.map((c, i) => (locked.has(i) && prev[i] ? prev[i] : c))
     })
     setAdjust(ZERO_ADJUST)
     if (!locked.has(0)) { setSeed(next[0]); setSeedInput(next[0]) }
-    if (msg) { setLiveMsg(msg); toast?.(msg) }
+    if (msg) { setLiveMsg(msg); if (!quiet) toast?.(msg) }
+    return true
   }
 
   const resetPalette = () => {
@@ -1876,7 +1956,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setCtxMenu(null)
     setPreview(null)
     setVarBase(null)
-    setActiveVar(null)
+    setPanelApplied(null)
+    suggestSnapRef.current = null
     closeAllMenus()
     setLiveMsg('Settings reset to the default system, with a new random palette')
     toast?.('Palette reset · Undo is available')
@@ -1979,24 +2060,52 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     toast?.('Last palette restored')
   }
 
-  const pickVariation = (v, idx) => {
-    if (!isPro && idx >= FREE_VARIATIONS) {
-      openProModal({ gate: 'palette-variation-apply', eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
-      return
-    }
-    // Preserve the frozen list across this apply so reopening the menu shows the
-    // same variations with this one ticked, instead of rotating to a fresh set.
+  const openVariationGate = () => openProModal({ gate: 'palette-variation-apply', eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
+  // The board as it was before the first apply from the Suggest panel. Moving
+  // from one card to another never replaces it, so Back always lands on the
+  // user's own palette. This only reads the stored one (or builds the candidate);
+  // `keepPanelSnap` stores it once an apply has gone through, so an apply that
+  // is refused never leaves a snapshot behind.
+  const panelSnap = () => suggestSnapRef.current
+    || { colors: [...colors], adjust: { ...adjust }, seed, seedInput, harmony, before: paletteScore, mine: adjusted }
+  const keepPanelSnap = (snap) => { suggestSnapRef.current = snap }
+  // True when applying `hexes` would leave the board exactly as it is.
+  const isNoopApply = (hexes) => hexes.map(c => normaliseHex(c)).filter(Boolean).join(',') === colors.join(',') && !ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
+  const pickVariation = (v, gated) => {
+    if (gated) { openVariationGate(); return }
+    if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) return
+    if (isNoopApply(v.colors)) return
+    const snap = panelSnap()
+    if (!applyPalette(v.colors, `Applied variation: ${v.label}`, { quiet: true })) return
+    keepPanelSnap(snap)
+    // Keep the frozen list across this apply, so the panel shows the same
+    // variations with this one ticked instead of rotating to a fresh set. The
+    // flag swallows the next invalidation, so it is set only once the apply is
+    // certain; after a refused apply it would sit armed and swallow the user's
+    // next real edit.
     skipVarInvalidate.current = true
-    setActiveVar(v.id)
-    applyPalette(v.colors, `Applied variation: ${v.label}`)
-    setGalleryOpen(false)
+    setPanelApplied({ kind: 'variation', id: v.id, name: v.label, before: snap.before, after: v.score, mine: snap.mine })
+    setLiveMsg(`${v.label} applied. Back to my palette undoes it.`)
   }
-  const compareVariation = (v, idx) => {
-    // Free users can compare the free variations; the Pro-only rows stay gated.
-    if (!isPro && idx >= FREE_VARIATIONS) {
-      openProModal({ gate: 'palette-variation-compare', eyebrow: 'Pro colour tools', title: 'Compare every variation', subtitle: 'Line palettes up side by side to compare them. Free covers the first set of variations; Pro unlocks the full range.' })
-      return
-    }
+  // Put the board back as the first apply found it: colours, lens, seed and system.
+  const backToMine = () => {
+    const snap = suggestSnapRef.current
+    if (!snap) return
+    setColPanel(null)
+    skipVarInvalidate.current = true
+    setColors(snap.colors)
+    setAdjust({ ...snap.adjust })
+    setSeed(snap.seed)
+    setSeedInput(snap.seedInput)
+    setHarmony(snap.harmony)
+    suggestSnapRef.current = null
+    setPanelApplied(null)
+    setLiveMsg('Your palette is back.')
+    // The button disables itself now it has nothing left to undo, which would
+    // drop focus to the page. The selected tab is the next stop in the dialog.
+    document.getElementById(`plb-sg-tab-${galleryTab}`)?.focus({ preventScroll: true })
+  }
+  const compareVariation = (v) => {
     setGalleryOpen(false)
     setPreview({ mode: 'light', scene: 'dashboard', compare: v })
   }
@@ -2023,6 +2132,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       setAdjust(snap.adjust)
       setSeed(snap.seed)
       setSeedInput(snap.seedInput)
+      // Present when "mine" was taken from the Suggest snapshot, where a brand
+      // may have changed the system as well.
+      if (snap.harmony) setHarmony(snap.harmony)
       preImportRef.current = null
       importedSigRef.current = null
       setImportedGalleryId(null)
@@ -2033,9 +2145,25 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // Snapshot only the user's own palette — the one in place before any gallery
     // import. Switching gallery A → B must NOT overwrite it, so revert always
     // lands on the user's work, not the previously-selected gallery item.
-    if (!preImportRef.current) preImportRef.current = { colors, adjust, seed, seedInput }
+    //
+    // After a variation or brand was applied from Suggest, the board is not the
+    // user's own any more. The Suggest snapshot is, so "mine" is taken from it:
+    // unticking an Explore card then lands on the user's palette, not on
+    // Variation X. An Explore import is a real change to the board, so it ends
+    // the Suggest session (the snapshot, the tick and Back all clear below).
+    // Explore has its own undo, and that one returns to the original palette.
+    const mine = suggestSnapRef.current
+    const original = preImportRef.current || (mine
+      ? { colors: mine.colors, adjust: mine.adjust, seed: mine.seed, seedInput: mine.seedInput, harmony: mine.harmony }
+      : { colors, adjust, seed, seedInput })
+    // A refused apply (fewer than two valid colours) changes nothing, and must
+    // not leave a snapshot or a cleared Suggest session behind.
+    if (!applyPalette(cols, `Loaded ${name}`)) return
+    preImportRef.current = original
     importedSigRef.current = null // let the effect record the imported baseline
-    applyPalette(cols, `Loaded ${name}`)
+    suggestSnapRef.current = null
+    setPanelApplied(null)
+    setVarBase(null)
     setImportedGalleryId(id)
     // Keep the gallery popup open so selecting swatches reads as a live toggle —
     // the user can compare picks (and untick to revert) without reopening it.
@@ -2060,13 +2188,21 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       openProModal({ gate: 'palette-brand-system', eyebrow: 'Pro colour tools', title: 'Load any brand system', subtitle: 'Free covers a handful of starter brands; Pro unlocks the full set — each one applies the brand’s whole colour system, not just its swatches.' })
       return
     }
+    if (panelApplied?.kind === 'brand' && panelApplied.id === b.id) return
     // Selecting a brand applies its WHOLE system. Pro users keep the brand's
     // system; free users get the exact colours on the free default so the brand
     // can't smuggle in the paid harmony engine when they start editing.
     const sys = resolveSystem(b.system || 'custom')
+    if (sys === harmony && isNoopApply(b.colors)) return
+    const snap = panelSnap()
+    // The system is set only if the colours go through, so a brand with fewer
+    // than two valid colours changes nothing at all.
+    if (!applyPalette(b.colors, `Loaded the ${b.name} palette`, { quiet: true })) return
     setHarmony(sys)
-    applyPalette(b.colors, `Loaded the ${b.name} palette`)
-    setGalleryOpen(false)
+    keepPanelSnap(snap)
+    skipVarInvalidate.current = true
+    setPanelApplied({ kind: 'brand', id: b.id, name: b.name, before: snap.before, after: null, mine: snap.mine })
+    setLiveMsg(`${b.name} applied. Back to my palette undoes it.`)
   }
 
   const cssExport = useMemo(() => {
@@ -2379,10 +2515,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     }))
 
-  const openGallery = (tab, anchor = null) => { closeAllMenus(); setGalleryTab(tab); setGalleryAnchor(anchor); setGalleryOpen(true) }
+  const openGallery = (tab, anchor = null, pointer = false) => {
+    galleryOpenerRef.current = { el: anchor, pointer }
+    closeAllMenus(); setGalleryTab(tab); setGalleryAnchor(anchor); setGalleryOpen(true)
+  }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
-  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, mark: h.free || isPro ? '' : 'Pro' }))
+  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, desc: h.desc, mark: h.free || isPro ? '' : 'Pro' }))
   const visionOptions = VISION_MODES.map(([id, label]) => ({ value: id, label }))
   // From the Extra tools overflow a choice also closes the panel, so that a Pro
   // wall raised by the choice is not opened underneath it.
@@ -2422,23 +2561,36 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       />
     </span>
   )
-  const undoRedo = (
-    <span className="plb-history" role="group" aria-label="History">
-      <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
-      <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />
-    </span>
-  )
-
   // Secondary actions move into Extra tools when the toolbar runs out of room.
+  // Left of the divider is what builds the board; right of it is what you do
+  // with it next. Departure order is lowest priority first, then the item
+  // furthest along the row, so on a phone only Undo, Randomise and Suggest stay.
+  // Arrow keys, Home and End move between the two Suggest tabs (focus follows).
+  const onSuggestTabKey = (e) => {
+    const tabs = ['variations', 'brands']
+    const at = tabs.indexOf(galleryTab)
+    let to = -1
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (at + 1) % tabs.length
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (at + tabs.length - 1) % tabs.length
+    else if (e.key === 'Home') to = 0
+    else if (e.key === 'End') to = tabs.length - 1
+    if (to < 0) return
+    e.preventDefault()
+    setGalleryTab(tabs[to])
+    document.getElementById(`plb-sg-tab-${tabs[to]}`)?.focus({ preventScroll: true })
+  }
+  const historyButton = (kind) => (kind === 'undo'
+    ? <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
+    : <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />)
   const toolbarItems = [
     {
       id: 'back', priority: 2,
       render: () => <ToolBack to="/projects" label="Back to projects" history={false} />,
       menu: { label: 'Back to projects', icon: 'arrow-left', onSelect: () => navigate('/projects') },
     },
-    { id: 'seed', priority: 3, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
+    { id: 'seed', priority: 4, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
     {
-      id: 'image', priority: 1,
+      id: 'image', priority: 3,
       render: () => (
         <span className="plb-menuwrap">
           <ToolButton icon="image" collapse onClick={() => toggleMenu(imgOpen, setImgOpen)} aria-label="Pull colours from an image" title="Pull colours from an image" aria-haspopup="dialog" aria-expanded={imgOpen}>From image</ToolButton>
@@ -2446,39 +2598,40 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'From image', icon: 'image', onSelect: () => { closeAllMenus(); setImgOpen(true) } },
     },
+    { id: 'system', priority: 1, render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
+    { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
+    { id: 'div', priority: 2, divider: true },
+    { id: 'undo', priority: 5, render: () => historyButton('undo'), menu: { label: 'Undo', icon: 'arrow-counter-clockwise', disabled: !canUndo, onSelect: undoPalette } },
+    { id: 'redo', priority: 4, render: () => historyButton('redo'), menu: { label: 'Redo', icon: 'arrow-clockwise', disabled: !canRedo, onSelect: redoPalette } },
     {
-      id: 'suggest', priority: 1,
+      id: 'random', priority: 5,
+      render: () => <ToolButton icon="shuffle" iconSize={14} kbd="SPACE" onClick={randomize} className="plb-random" aria-label="Randomise" collapse>Randomise</ToolButton>,
+      menu: { label: 'Randomise', icon: 'shuffle', hint: 'SPACE', onSelect: randomize },
+    },
+    {
+      id: 'suggest', priority: 5, align: 'end',
       render: () => (
         <span className="plb-menuwrap">
-          <ToolButton icon="magic-wand" collapse onClick={(e) => (galleryOpen && galleryTab === 'variations' ? closeAllMenus() : openGallery('variations', e.currentTarget))} aria-label="Suggest a palette" title="Suggest a palette" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'variations'}>Suggest</ToolButton>
+          <ToolButton icon="magic-wand" collapse onClick={(e) => (galleryOpen && !exploring ? closeAllMenus() : openGallery('variations', e.currentTarget, e.detail > 0))} aria-label="Suggest variations and brands" title="Suggest variations and brands" aria-haspopup="dialog" aria-expanded={galleryOpen && !exploring}>Suggest</ToolButton>
         </span>
       ),
       menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
     },
     {
-      id: 'explore', priority: 2,
+      id: 'explore', priority: 2, align: 'end',
       render: () => (
         <span className="plb-menuwrap">
-          <ToolButton icon="swatches" collapse onClick={(e) => (galleryOpen && galleryTab === 'community' ? closeAllMenus() : openGallery('community', e.currentTarget))} aria-label="Explore palettes" title="Explore palettes" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'community'}>Explore</ToolButton>
+          <ToolButton icon="swatches" collapse onClick={(e) => (galleryOpen && exploring ? closeAllMenus() : openGallery('community', e.currentTarget, e.detail > 0))} aria-label="Explore palettes" title="Explore palettes" aria-haspopup="dialog" aria-expanded={galleryOpen && exploring}>Explore</ToolButton>
         </span>
       ),
       menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') },
     },
-    { id: 'system', priority: 0, align: 'end', render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
-    { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
     {
-      id: 'preview', priority: 2,
+      id: 'preview', priority: 3, align: 'end',
       render: () => (
         <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
       ),
       menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) } },
-    },
-    { id: 'div', priority: 0, divider: true },
-    { id: 'undo', priority: 5, render: () => undoRedo, menu: () => <div className="plb-menu-tray">{undoRedo}</div> },
-    {
-      id: 'random', priority: 4,
-      render: () => <ToolButton icon="shuffle" iconSize={14} kbd="SPACE" onClick={randomize} className="plb-random" aria-label="Randomise" collapse>Randomise</ToolButton>,
-      menu: { label: 'Randomise', icon: 'shuffle', hint: 'SPACE', onSelect: randomize },
     },
     // Overflow only — never on the row.
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
@@ -2508,6 +2661,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             variant="accent"
             icon="bookmark-simple"
             className="plb-save"
+            aria-label="Save or share"
             aria-haspopup="dialog"
             aria-expanded={saveOpen}
             // No gate here: this menu holds Copy rows, and copying is free
@@ -2924,19 +3078,44 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           inside it. */}
       {galleryOpen && (
         <div className="plb-menuwrap plb-float" ref={galleryRef}>
-          <div className="plb-menu plb-galpopup" role="dialog" aria-label="Colour gallery" data-lenis-prevent>
+          <div className={exploring ? 'plb-menu plb-galpopup' : 'plb-menu plb-galpopup plb-galpopup--suggest'} role="dialog" aria-label={exploring ? 'Explore palettes' : 'Suggest'} data-lenis-prevent>
             <div className="plb-galpopup-head">
-              <div className="plb-menu-title">{galleryTab === 'community' ? 'Community gallery' : galleryTab === 'variations' ? 'Suggestions' : 'Brand systems'}</div>
-              <div className="plb-galtabs" role="tablist" aria-label="Gallery sections">
-                <button type="button" role="tab" aria-selected={galleryTab === 'variations'} className={galleryTab === 'variations' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('variations')}><IcoSpark /> Variations</button>
-                <button type="button" role="tab" aria-selected={galleryTab === 'community'} className={galleryTab === 'community' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('community')}><IcoGallery /> Community</button>
-                <button type="button" role="tab" aria-selected={galleryTab === 'brands'} className={galleryTab === 'brands' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('brands')}><IcoBookmark /> Brands</button>
-              </div>
+              <div className="plb-menu-title">{exploring ? 'Explore palettes' : 'Suggest'}</div>
+              {!exploring && (
+                <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Suggest sections" onKeyDown={onSuggestTabKey}>
+                  {['variations', 'brands'].map(tab => (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      id={`plb-sg-tab-${tab}`}
+                      aria-selected={galleryTab === tab}
+                      aria-controls={galleryTab === tab ? `plb-sg-panel-${tab}` : undefined}
+                      tabIndex={galleryTab === tab ? 0 : -1}
+                      className={galleryTab === tab ? 'tl-pill is-on' : 'tl-pill'}
+                      onClick={() => setGalleryTab(tab)}
+                    >
+                      {tab === 'variations' ? 'Variations' : 'Brands'}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* One Back button, between the tabs and Close in the DOM, so the tab
+                  order is the visual order at every width. Its text shortens to
+                  "Back" (still inside its name) on phones, and only the narrowest
+                  screens get the icon alone. */}
+              {!exploring && (
+                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={backToMine}>
+                  <span className="plb-sg-back-text">Back to my palette</span>
+                  <span className="plb-sg-back-short" aria-hidden="true">Back</span>
+                  <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
+                </button>
+              )}
               <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
             </div>
 
-            {galleryTab === 'community' && (
-              <div className="plb-galpopup-body">
+            {exploring && (
+              <div className="plb-galpopup-body" ref={scrollCue}>
                 <PaletteGalleryGrid
                   toast={toast}
                   palettes={communityRows}
@@ -2956,57 +3135,115 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               </div>
             )}
 
-            {galleryTab === 'variations' && (
-              <div className="plb-galpopup-body">
-                <div className="plb-galpopup-note">
-                  <span>Generated from your current palette</span>
-                  <span className="plb-score" title="Palette quality score — tone range, evenness, chroma profile and distinctness">Current {paletteScore}</span>
+            {!exploring && (
+              <div className="plb-sg-pin">
+                <span className="plb-sg-pin-label">Your palette</span>
+                <div className="plb-sg-pin-strip" aria-hidden="true">
+                  {(panelApplied?.mine || adjusted).map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}
                 </div>
-                {variations.map((v, idx) => {
-                  const gated = !isPro && idx >= FREE_VARIATIONS
-                  const active = activeVar === v.id
-                  return (
-                    <div key={v.id} className={`plb-varrow${gated ? ' plb-varrow--locked' : ''}${active ? ' plb-varrow--active' : ''}`}>
-                      <button type="button" className="plb-varrow-main" onClick={() => pickVariation(v, idx)} aria-pressed={active}>
-                        <span className="plb-strip" aria-hidden="true">
-                          {v.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
-                        </span>
-                        <span className="plb-varrow-name">{v.label}<small>{v.desc}</small></span>
-                        {active && <span className="plb-varrow-tick" aria-label="Active variation"><IcoCheck size={13} /></span>}
-                        <span className="plb-score">{v.score}</span>
-                        {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
-                      </button>
-                      {!gated && (
-                        <button type="button" className="plb-varrow-cmp" title="Compare with the current palette" aria-label={`Compare ${v.label} with the current palette`} onClick={() => compareVariation(v, idx)}>
-                          <IcoEye />
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-                {variations.length === 0 && <div className="plb-menu-sub">No distinct variations for this palette</div>}
               </div>
             )}
 
-            {galleryTab === 'brands' && (
-              <div className="plb-galpopup-body">
+            {!exploring && galleryTab === 'variations' && (
+              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-sg-panel-variations" aria-labelledby="plb-sg-tab-variations">
+                {variations.length === 0 ? (
+                  <p className="plb-sg-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
+                ) : (
+                  <>
+                    <p className="plb-sg-intro">Each one changes the colours you have. Pick one to try it.</p>
+                    <div className="plb-sg-groups">
+                      {variationGroups.map(group => (
+                        <section key={group.label} className="plb-sg-group" aria-label={group.label}>
+                          <h3 className="plb-sg-group-label">{group.label}</h3>
+                          <div className="plb-sg-grid">
+                            {group.items.map(v => {
+                              const gated = !isPro && !freeVarIds.has(v.id)
+                              const active = panelApplied?.kind === 'variation' && panelApplied.id === v.id
+                              return (
+                                <div key={v.id} className={`plb-sg-card${gated ? ' plb-sg-card--locked' : ''}${active ? ' plb-sg-card--on' : ''}`}>
+                                  <button
+                                    type="button"
+                                    className="plb-sg-main"
+                                    aria-pressed={gated ? undefined : active}
+                                    aria-label={gated ? `${v.label}, Pro only. Opens Pro plans.` : `${v.label}: ${v.desc}`}
+                                    onClick={() => pickVariation(v, gated)}
+                                  >
+                                    <span className="plb-sg-strip" aria-hidden="true">
+                                      <span className="plb-sg-cells">{v.colors.map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}</span>
+                                      {gated && <span className="plb-sg-lock"><IcoLock size={11} /> Pro</span>}
+                                      {active && <span className="plb-sg-tick"><IcoCheck size={12} /></span>}
+                                    </span>
+                                    <span className="plb-sg-name">{v.label}</span>
+                                    <span className="plb-sg-desc">{v.desc}</span>
+                                  </button>
+                                  {!gated && (
+                                    <button type="button" className="plb-sg-cmp" title="Compare" aria-label={`Compare ${v.label} with your palette`} onClick={() => compareVariation(v)}>
+                                      <IcoEye />
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                    {!isPro && variations.length > freeVarIds.size && (
+                      <div className="plb-sg-pro">
+                        <span>{variations.length - freeVarIds.size} more {variations.length - freeVarIds.size === 1 ? 'variation' : 'variations'} with Pro</span>
+                        <button type="button" className="tl-btn" onClick={openVariationGate}>See what Pro includes</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {!exploring && galleryTab === 'brands' && (
+              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-sg-panel-brands" aria-labelledby="plb-sg-tab-brands">
+                <p className="plb-sg-intro">Loads the brand&rsquo;s colours and its colour system.</p>
                 {/* openBrands holds only the rows this viewer may load; a
                     Pro-gated brand's colours never enter the DOM. */}
-                {openBrands.map(b => (
-                  <div key={b.id} className="plb-varrow">
-                    <button type="button" className="plb-varrow-main" onClick={() => pickBrand(b)}>
-                      <span className="plb-strip" aria-hidden="true">
-                        {b.colors.map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
-                      </span>
-                      <span className="plb-varrow-name">{b.name}</span>
-                    </button>
-                    <button type="button" className="plb-varrow-cmp" title="Compare with the current palette" aria-label={`Compare ${b.name} with the current palette`} onClick={() => comparePalette(b.name, b.colors)}>
-                      <IcoEye />
-                    </button>
+                <div className="plb-sg-groups">
+                  <div className="plb-sg-grid plb-sg-grid--brands">
+                    {openBrands.map(b => {
+                      const active = panelApplied?.kind === 'brand' && panelApplied.id === b.id
+                      return (
+                        <div key={b.id} className={`plb-sg-card plb-sg-card--brand${active ? ' plb-sg-card--on' : ''}`}>
+                          <button type="button" className="plb-sg-main" aria-pressed={active} aria-label={b.name} onClick={() => pickBrand(b)}>
+                            <span className="plb-sg-strip" aria-hidden="true">
+                              <span className="plb-sg-cells">{b.colors.map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}</span>
+                              {active && <span className="plb-sg-tick"><IcoCheck size={12} /></span>}
+                            </span>
+                            <span className="plb-sg-name">{b.name}</span>
+                          </button>
+                          <button type="button" className="plb-sg-cmp" title="Compare" aria-label={`Compare ${b.name} with your palette`} onClick={() => comparePalette(b.name, b.colors)}>
+                            <IcoEye />
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {proPending && [0, 1, 2, 3].map(k => (
+                      <div key={`ph-${k}`} className="plb-sg-card plb-sg-card--brand plb-sg-card--ph" aria-hidden="true">
+                        <div className="plb-sg-main"><span className="plb-sg-strip" /><span className="plb-sg-name" /></div>
+                      </div>
+                    ))}
+                    {!proPending && lockedBrands.map(p => (
+                      <div key={p.id} className="plb-sg-card plb-sg-card--brand plb-sg-card--locked plb-sg-card--static">
+                        <div className="plb-sg-main">
+                          <span className="plb-sg-strip" aria-hidden="true">
+                            <span className="plb-sg-cells">
+                              {Array.from({ length: Math.max(1, Number(p.slots) || 1) }, (_, k) => <span key={k} className="plb-sg-cell lockt-rowcell" data-step={k % 4} />)}
+                            </span>
+                            <span className="plb-sg-lock"><IcoLock size={11} /> Pro</span>
+                          </span>
+                          <span className="plb-sg-name">{p.label}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
                 {proPending && <ProLibraryStatus library={proLib} noun="brand library" />}
-                {!proPending && lockedBrands.map(p => <LockedPaletteRow key={p.id} preview={p} />)}
                 {!proPending && lockedBrandCount > 0 && (
                   <LockedTeaseCta
                     gate="palette-builder-brand-lock"
@@ -3021,6 +3258,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   />
                 )}
               </div>
+            )}
+
+            {!exploring && galleryTab === 'variations' && panelApplied?.kind === 'variation' && (
+              <BalanceScoreFoot before={panelApplied.before} after={panelApplied.after} />
             )}
           </div>
         </div>
