@@ -110,7 +110,7 @@ export default function Projects() {
   const recent = [...projects].sort(byRecent)
   // The account's own count from the server, once it answers; until then (and if
   // it never does) this browser's count, which the strip labels as such.
-  const serverAi = useServerAiUsage(canSaveProjects ? user?.uid : null)
+  const serverAi = useServerAiUsage(canSaveProjects ? user?.uid : null, plan?.id)
   const ai = aiUsageToday(getUsageCount, plan, serverAi)
   const slots = projectSlots(projects.length, projectLimit)
 

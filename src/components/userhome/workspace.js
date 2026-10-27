@@ -50,7 +50,7 @@ export function liveToolCount() {
 /** The tools whose allowance is DAILY. api/_lib/plans.js meters each of them on
  *  its own bucket (field = toolId), and the Brand Starter is metered per month
  *  or per account instead (config/aiGeneration.js), so it is not a daily meter. */
-export const DAILY_AI_TOOLS = Object.freeze(['alt-text', 'prompts-ai'])
+export const DAILY_AI_TOOLS = Object.freeze(['alt-text', 'scan-photo', 'prompts-ai'])
 
 /**
  * "AI generations today", as the person will meet the cap.
@@ -63,23 +63,51 @@ export const DAILY_AI_TOOLS = Object.freeze(['alt-text', 'prompts-ai'])
  */
 export function aiUsageToday(countFor, plan, server = null) {
   const planLimit = plan?.limits?.['ai-default'] ?? AI_LIMITS.free.daily
-  // The account's own figures (GET /api/ai?usage=1), when they have arrived. The
-  // server's limit is the one enforced; its count and this browser's are both
-  // lower bounds on what the account has used, so the larger one is shown.
+  // Once the account's own figures (GET /api/ai?usage=1) have arrived they are the
+  // only ones shown: the server counts UTC days against the whole account, while
+  // this browser's count resets at local midnight and is shared by every account
+  // that signs in here, so taking the larger of the two would overstate usage.
+  // This browser's count is the first paint before the answer, and the fallback
+  // when the request fails. `limit` is optional on the answer (the hook drops it
+  // when the plan changed after it was fetched); the plan's own limit stands in.
   const known = Number.isFinite(server?.used)
-  const limit = Number.isFinite(server?.limit) && server.limit > 0 ? server.limit : planLimit
+  const limit = known && Number.isFinite(server.limit) && server.limit > 0 ? server.limit : planLimit
   const local = Math.max(0, ...DAILY_AI_TOOLS.map((id) => Number(countFor(id)) || 0))
-  const used = Math.max(local, known ? server.used : 0)
+  const used = known ? Math.max(0, server.used) : local
   const shown = Math.min(used, limit)
   const monthKnown = known && Number.isFinite(server.monthUsed) && Number.isFinite(server.monthLimit)
   return {
     used: shown,
     limit,
     pct: limit > 0 ? Math.round((shown / limit) * 100) : 0,
-    // 'account' once the server has answered; until then it is one browser's count.
+    // 'account' when the figure shown is the server's; 'browser' when it is this browser's.
     source: known ? 'account' : 'browser',
     month: monthKnown ? { used: server.monthUsed, limit: server.monthLimit } : null,
   }
+}
+
+/** The UTC day the server buckets on: YYYY-MM-DD. */
+export const utcDay = (now = new Date()) => now.toISOString().slice(0, 10)
+
+/** Milliseconds from `now` to the next UTC midnight, plus a second so the server has rolled. */
+export const msToUtcMidnight = (now = new Date()) =>
+  Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime() + 1000
+
+/**
+ * What useServerAiUsage may show from the last answer it holds. `state` is
+ * { uid, planId, day, usage }: who it was fetched for, the page's plan id and the
+ * UTC day (on this clock) when it was asked. Returns the answer, or null.
+ *   - another account's answer, or none yet -> null
+ *   - an earlier UTC day's answer            -> null (yesterday's count is not today's)
+ *   - the plan changed since it was asked    -> the count only: the answer's limit and
+ *     monthly limit belong to the old plan, so a Pro account is not capped at the free
+ *     limit while the refetch is on its way
+ */
+export function settleServerUsage(state, { uid, planId, today }) {
+  if (!state || state.uid !== uid || !state.usage) return null
+  if (state.day !== today) return null
+  if (state.planId !== planId) return { ...state.usage, limit: undefined, monthLimit: undefined }
+  return state.usage
 }
 
 /** Project slots, or null when the plan has no project limit (Pro). */
