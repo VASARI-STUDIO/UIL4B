@@ -1073,15 +1073,43 @@
 .sp-shelf img:not([data-pos="front"]) { transition: transform 240ms var(--sp-ease), opacity 120ms var(--sp-ease) 120ms, z-index 0s linear 120ms; }
 /* A back cover picks its project on a click; the rows and pills are the keyboard path. */
 .sp-shelf img:not([data-pos="front"]) { cursor: pointer; }
+/* With a pointer that hovers, a back cover comes up from .72 to .85 under it. It keeps the
+   120ms hold above, which a cover just leaving the front needs (the pointer is over it after
+   the click), so the fade-in starts a beat after the pointer arrives. */
+@media (hover: hover) {
+  .sp-shelf img[data-pos="left"]:hover, .sp-shelf img[data-pos="right"]:hover { --sh-o: .85; }
+}
 @media (max-width: 760px) {
-  /* 318px wide plate, 220px cover: a back cover at .58 of a cover from the middle shows
-     more of its own title than at .236, and the plate's edge crops the rest. */
+  /* From 451px the strip beside the front cover is 100px or more, too wide for plain colour:
+     a back cover .58 of a cover from the middle shows its whole title on the left, and on
+     the right the end of its details and "2026". Under 451px, see below. */
   .sp-shelf { --sh-w: min(69cqw, 62.9cqh); --sh-off: calc(var(--sh-w) * .58); }
+}
+@media (max-width: 450px) {
+  /* On a phone the plate is 318px and the front cover 220, so each back cover shows a strip
+     about 49px wide beside it (.255 of a cover at most), cropped by the plate's edge. A cover
+     is plain colour from 57% to 86% of its width (its title and details end at 56%, "2026"
+     starts at 87%), so each offset puts the middle of that 29% band in the middle of its
+     strip: no half word shows, only the cover's colour and the foot of its colour bar. The
+     left strip is the cover's left end and the right strip its right end, so the two offsets
+     differ:
+       left  = .215c + P/4 + w/4,  right = w/4 + P/4 - .215c
+     with P the plate's width, w the front cover's and c = .88w the back covers'. */
+  .sp-shelf {
+    --sh-off: calc(var(--sh-w) * .4392 + 25cqw);
+    --sh-off-r: calc(var(--sh-w) * .0608 + 25cqw);
+  }
+  .sp-shelf img[data-pos="right"] { --sh-x: var(--sh-off-r); }
 }
 /* A content image gets a hairline in pure black (white in the dark) at 10%, drawn inside
    its own edge. A cover's box is the cover. */
 .sp-shelf img { outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
 [data-theme="dark"] .spectrum .sp-shelf img { outline-color: oklch(1 0 0 / .1); }
+/* The shelf says its projects are examples: here, in the plate's top corner, where the pills'
+   own label (761 to 1199px) and the radiogroup's name are not on screen (a phone and the
+   1200px rows). */
+.sp-shelf-tag { position: absolute; top: 8px; left: 16px; z-index: 4; font-size: 12px; line-height: 16px; color: var(--sp-dim); pointer-events: none; }
+@media (min-width: 761px) and (max-width: 1199px) { .sp-shelf-tag { display: none; } }
 .sp-cap-short, .sp-lab-short { display: none; }
 
 .sp-pick { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
@@ -1105,7 +1133,9 @@
 .sp-rows-btn { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 16px; row-gap: 2px; align-content: center; min-height: 72px; padding: 12px 4px 12px 24px; border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); border-radius: 0; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 15px; line-height: 1.3; text-align: left; cursor: pointer; transition: color 150ms ease, background-color 150ms ease; }
 .sp-rows-btn::before { content: ""; position: absolute; left: 4px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; border: 1.5px solid rgba(var(--sp-ink-rgb), .3); box-sizing: border-box; transition: background-color 150ms ease, border-color 150ms ease; }
 .sp-rows-lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-rows-hint { font-size: 13px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-rows-hint { font-size: 13px; color: var(--sp-dim); white-space: nowrap; }
+/* The dark keeps the fainter value it was drawn with. */
+[data-theme="dark"] .spectrum .sp-rows-hint { color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-rows-sub { grid-column: 1 / -1; font-size: 13px; color: var(--sp-dim); }
 .sp-rows-btn[aria-selected="true"], .sp-rows-btn[aria-checked="true"] { color: var(--sp-ink); }
 .sp-rows-btn[aria-selected="true"]::before, .sp-rows-btn[aria-checked="true"]::before { background: var(--sp-ink); border-color: var(--sp-ink); }

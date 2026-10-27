@@ -491,6 +491,20 @@ function ShelfCover({ item, pos, failed, onError, onPick }) {
   )
 }
 
+// After a click on a back cover, focus goes to its project's radio in whichever switch is on
+// screen (the rows from 1200px, the pills below; the other is display: none), so a keyboard or
+// screen-reader user carries on from the project that was chosen. PickList's ids are
+// `${uid}-${variant}-${i}`. A pointer click does not draw a focus ring on it.
+function focusPick(uid, i) {
+  const el = ['rows', 'pills']
+    .map((variant) => document.getElementById(`${uid}-${variant}-${i}`))
+    .find((b) => b && b.offsetParent !== null)
+  if (!el) return
+  el.focus({ preventScroll: true })
+  // The pills scroll sideways on a phone, as PickList's own click does for them.
+  if (el.className.includes('sp-pick-btn')) el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
+
 // The shelf's state: the chosen project and any cover that failed to load.
 function useShelf() {
   const [active, setActive] = useState(0)
@@ -555,8 +569,9 @@ function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead, s
       >
         {shelf ? (
           <div className="sp-shelf">
+            <span className="sp-shelf-tag" aria-hidden="true">Example projects</span>
             {items.map((item, i) => (
-              <ShelfCover key={item.id} item={item} pos={shelfPos(i, active, items.length)} failed={failed.has(i)} onError={onError(i)} onPick={() => select(i)} />
+              <ShelfCover key={item.id} item={item} pos={shelfPos(i, active, items.length)} failed={failed.has(i)} onError={onError(i)} onPick={() => { select(i); focusPick(uid, i) }} />
             ))}
             {failed.has(active) && <p className="sp-plate-fail">{items[active].alt}</p>}
           </div>
