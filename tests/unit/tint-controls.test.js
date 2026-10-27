@@ -347,13 +347,13 @@ test('a tap pins the tooltip inline and does not copy; Copy and Close are button
   const css = stripComments(read('src/styles/pages/tint.css'))
   assert.match(css, /\.tt-tip--inline\s*\{\s*position: static/, 'the pinned card is in the flow')
   assert.match(css, /\.tt-tip--below\s*\{\s*top: 100%/, 'the hover card can flip below')
-  for (const g of ['ok-strong', 'warn-strong', 'err-strong']) assert.match(css, new RegExp(`\.tt-note-best[^{]*\{[^}]*var\(--${g}\)`), `the best-grade mark uses --${g}`)
+  for (const g of ['ok-strong', 'warn-strong', 'err-strong']) assert.match(css, new RegExp(String.raw`\.tt-note-best[^{]*\{[^}]*var\(--${g}\)`), `the best-grade mark uses --${g}`)
 })
 
 test('the tooltip text is 12px or more, and the long help paragraph is outside the described body', () => {
   const css = stripComments(read('src/styles/pages/tint.css'))
   for (const sel of ['tt-notes-hint', 'tt-tip-head', 'tt-tip-ratio', 'tt-tip-grade', 'tt-tip-help', 'tt-note-step', 'tt-note-hex', 'tt-note-best']) {
-    const m = css.match(new RegExp(`\.tt \.${sel}\s*\{[^}]*font-size:\s*([\d.]+)px`))
+    const m = css.match(new RegExp(String.raw`\.tt \.${sel}\s*\{[^}]*font-size:\s*([\d.]+)px`))
     assert.ok(m && Number(m[1]) >= 12, `${sel} is at least 12px`)
   }
   assert.match(css, /\.tt-tip-help\s*\{[^}]*line-height: 1\.5/)
