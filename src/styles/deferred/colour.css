@@ -253,7 +253,6 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
    (tests/unit/state-token-contrast): 6.1:1 on the light tint, 7.7:1 on dark. */
 .plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
 button.plb-varrow:hover{background:var(--bg-2)}
-.plb-varrow--locked{opacity:.55}
 .plb-varrow--active{background:var(--bg-2)}
 .plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
 .plb-varrow-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:7px 8px;background:none;border:none;border-radius:var(--radius-s);text-align:left;cursor:pointer;transition:background var(--t)}
@@ -261,7 +260,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-varrow-cmp{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:8px;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .plb-varrow-cmp:hover{color:var(--t0);background:var(--bg-2)}
 .plb-strip{display:inline-flex;gap:2px;flex-shrink:0}
-.plb-score{flex-shrink:0;padding:2px 8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--t1);background:var(--bg-2);border-radius:999px}
 
 /* Image picker (Wave 4) — drag-drop dropzone, nested preview with draggable
    picker points, a picked-palette strip and a +/- colour count. Free to use. */

@@ -527,14 +527,8 @@ const IcoSliders = () => (
 const IcoContrast = () => (
   <Ico size={13}><circle cx="12" cy="12" r="9" /><path d="M12 3v18" /><path d="M12 7a5 5 0 0 1 0 10" /></Ico>
 )
-const IcoSpark = () => (
-  <Ico size={13}><path d="m12 3 2.1 6.4L21 12l-6.9 2.6L12 21l-2.1-6.4L3 12l6.9-2.6L12 3Z" /></Ico>
-)
 const IcoCheck = ({ size = 13 }) => (
   <Ico size={size}><path d="m20 6-11 11-5-5" /></Ico>
-)
-const IcoBookmark = () => (
-  <Ico size={13}><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" /></Ico>
 )
 const IcoDownload = () => (
   <Ico size={13}><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></Ico>
@@ -562,9 +556,6 @@ const IcoReset = () => (
 // stroke weight and 13px optical size of the other toolbar glyphs.
 const IcoGradient = () => (
   <Ico size={13}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 15 15 3" /><path d="M9 21 21 9" /></Ico>
-)
-const IcoGallery = () => (
-  <Ico size={13}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></Ico>
 )
 // Sparkle-and-wand glyph for the "Explore" gallery button. Fill-based (not the
 // stroke-based <Ico>), so it's a standalone inline SVG at the same 13px size.
@@ -2532,6 +2523,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     <button type="button" className={`tl-btn ${className}`} disabled={!panelApplied} aria-label="Back to my palette" onClick={backToMine}>
       <span className="plb-sg-back-long">Back to my palette</span>
       <span className="plb-sg-back-short">Back to mine</span>
+      <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
     </button>
   )
   const historyButton = (kind) => (kind === 'undo'

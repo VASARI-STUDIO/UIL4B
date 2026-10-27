@@ -615,6 +615,8 @@
 .plb .plb-galpopup-head .tl-pills { flex-wrap: nowrap; }
 .plb .plb-sg-back--head { display: none; }
 .plb .plb-sg-back-short { display: none; }
+.plb .plb-sg-back-icon { display: none; }
+.plb .plb-sg-tabs .tl-pill { flex: 0 0 auto; white-space: nowrap; }
 .plb .plb-sg-pin { flex: 0 0 auto; display: grid; gap: var(--s-2); padding: var(--s-2) var(--s-4); border-bottom: 1px solid var(--tl-hair); }
 .plb .plb-sg-pin-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); min-height: 32px; }
 .plb .plb-sg-pin-label { font-size: 12px; font-weight: 560; color: var(--tl-dim); }
@@ -659,7 +661,7 @@
   height: 32px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-xs);
+  border-radius: var(--btn-radius);
   background: none;
   color: var(--tl-dim);
   cursor: pointer;
@@ -751,6 +753,20 @@
   .plb .plb-sg-back-long { display: none; }
   .plb .plb-sg-back-short { display: inline; }
   .plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x { margin-left: 0; }
+  /* One head row: tabs left, Back to mine and Close right. The title stays in
+     the DOM for the dialog (which also has an aria-label) but is not drawn, so
+     the row never wraps at 390, 360 or 320. */
+  .plb .plb-galpopup--suggest .plb-galpopup-head { flex-wrap: nowrap; gap: var(--s-2); }
+  .plb .plb-galpopup--suggest .plb-galpopup-head .plb-menu-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .plb .plb-galpopup--suggest .plb-galpopup-body {
     display: flex;
     align-items: flex-start;
@@ -764,6 +780,19 @@
   .plb .plb-sg-group, .plb .plb-sg-grid { display: contents; }
   .plb .plb-sg-card { flex: 0 0 120px; scroll-snap-align: start; }
   .plb .plb-sg-card--brand .plb-sg-strip, .plb .plb-sg-strip { height: 56px; }
-  .plb .plb-sg-name { padding-right: 0; }
+  /* The card is the target, not its name, so the name row is one text line (the
+     Compare button it made room for is hidden here). */
+  .plb .plb-sg-name { min-height: 20px; line-height: 20px; padding-right: 0; }
   .plb .plb-galpopup--suggest .lockt-cta, .plb .plb-sg-pro { flex: 0 0 auto; margin-top: 0; }
+}
+
+/* Under 381px "Back to mine" shrinks to its icon (the button keeps its
+   aria-label), which lets the head stay one row at 360 and 320. */
+@media (max-width: 380px) {
+  .plb .plb-sg-back--head { width: 44px; min-width: 44px; padding-inline: 0; justify-content: center; }
+  .plb .plb-sg-back-short { display: none; }
+  .plb .plb-sg-back-icon { display: inline-flex; }
+}
+@media (max-width: 640px) and (pointer: coarse) {
+  .plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x { width: 44px; height: 44px; }
 }
