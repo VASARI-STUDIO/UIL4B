@@ -378,9 +378,11 @@ test.describe('a new account', () => {
     await expectRendered(page, '/projects')
     const starter = page.getByTestId('starter-card')
     await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
-    await expect(starter).toContainText('New project walks you through colours, fonts, type scale and icons, and saves as you go.')
-    // The walkthrough's real steps, in order: a true sequence, so numbered.
-    await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colours', 'Fonts', 'Type scale', 'Icons'])
+    await expect(starter).toContainText('New project walks you through colour, type, type scale and tints, and saves as you go.')
+    // The four parts, in order: a true sequence, so numbered. Each opens the tool that builds it.
+    await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colour', 'Type', 'Type scale', 'Tints'])
+    expect(await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href'))))
+      .toEqual(['/create/palette', '/create/font-pair', '/create/type-scale', '/create/tint'])
     await expect(page.getByText('No projects yet'), 'an account with no projects is not told it has none').toHaveCount(0)
     // Projects sync to a signed-in account, so "Nothing leaves the browser
     // until you export it" was false and is gone.
@@ -644,13 +646,9 @@ test.describe('a project icon lives on the project', () => {
     await expect(page.getByRole('button', { name: 'Use the compass icon' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  // KNOWN SOURCE BUG, marked as an expected failure so it flips red the day it is fixed.
-  // src/pages/Projects.jsx no longer calls useProjectIcons (the rebuild moved the picker to the
-  // project's page), so the old-key migration only runs when ProjectDetail mounts IconPicker. Someone
-  // whose icon is still under `vs-project-icons` sees the default glyph on the workspace's card until
-  // they open that project. The workspace itself should move the icon onto the project, as it did before.
+  // The workspace runs the same migration (useProjectIcons), so the card's badge is right without a
+  // visit to the project's page.
   test('an icon kept under the old key shows on the workspace card straight away', async ({ page }) => {
-    test.fail(true, 'src/pages/Projects.jsx dropped useProjectIcons: the legacy icon is not migrated on /projects')
     watch(page, 'a returning designer whose icon was stored the old way')
     await legacyIcon(page)
     await go(page, '/projects')
@@ -679,7 +677,7 @@ test.describe('the workspace lists recent exports', () => {
     await expect(row).toHaveCount(1)
     await expect(row).toContainText('CSS')
     await expect(row).toContainText('violet-lime-tokens.css')
-    await expect(row).toContainText('5M AGO')
+    await expect(row).toContainText('5m ago')
   })
 
   test('with nothing exported, no empty section is drawn', async ({ page }) => {

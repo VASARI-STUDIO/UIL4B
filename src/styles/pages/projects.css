@@ -77,12 +77,6 @@ div.uh.uh { padding-top: 0; }
 
 .uh :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ── The clock ───────────────────────
-   In the design's mono voice — the register of the design's "UIL4B PRO" eyebrow: Geist Mono,
-   tracked, small — in the ink's faint alpha rather than the accent, because
-   it is context for the page, not a label for a section. */
-.uh .uh-clock { display: block; margin: 0 0 10px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; color: var(--ws-faint); }
-
 /* ── Title row ──────────────────────────────────────────────────────────── */
 .uh .uh-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .uh .uh-h1 { margin: 0; padding: 0; font-family: var(--font); font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: -.035em; line-height: 1.04; color: var(--t0); text-wrap: balance; }
@@ -302,14 +296,13 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-menu-danger:hover { background: color-mix(in srgb, var(--err) 9%, transparent); color: var(--err-strong); }
 
 /* ── Recent exports ─────────────────────────────────────────────────────────
-   A hairline, a mono label, then one row per file: type chip, name, size, when. */
-.uh .uh-exports { margin-top: clamp(24px, 3vw, 40px); padding-top: 22px; border-top: 1px solid color-mix(in srgb, var(--t0) 6%, transparent); }
-.uh .uh-exports-h { margin: 0; font-family: var(--mono); font-size: 9.5px; font-weight: 400; letter-spacing: .18em; text-transform: uppercase; color: var(--ws-faint); }
-.uh .uh-exports-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 1px; }
-.uh .uh-export { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 12px; border-radius: 12px; color: color-mix(in srgb, var(--t0) 86%, transparent); transition: background .18s ease, color .18s ease; }
-.uh .uh-export-type { flex: none; padding: 4px 9px; border-radius: 8px; background: color-mix(in srgb, var(--t0) 7%, transparent); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--ws-dim); }
-.uh .uh-export-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; }
-.uh .uh-export-meta { flex: none; font-family: var(--mono); font-size: 10.5px; white-space: nowrap; color: var(--ws-faint); }
+   One row per file: type chip, name, size, when. The rail section further down sets the sizes,
+   spacing and the heading; what is here is the row's structure and its hover. */
+.uh .uh-exports-list { list-style: none; padding: 0; display: grid; gap: 1px; }
+.uh .uh-export { display: flex; align-items: center; gap: 14px; min-width: 0; border-radius: 12px; color: color-mix(in srgb, var(--t0) 86%, transparent); transition: background .18s ease, color .18s ease; }
+.uh .uh-export-type { flex: none; font-family: var(--mono); color: var(--ws-dim); }
+.uh .uh-export-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uh .uh-export-meta { flex: none; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
   .uh .uh-export:hover { background: color-mix(in srgb, var(--t0) 5%, transparent); color: var(--t0); }
 }
@@ -395,6 +388,8 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-part-mark { flex: none; color: var(--t2); }
 .uh .uh-part-mark.is-done { color: var(--ok-strong); }
 .uh .uh-steps { list-style: decimal inside; font-size: 15px; color: var(--t1); }
+.uh .uh-steps a { display: inline-flex; align-items: center; min-height: 44px; color: var(--t1); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .uh .uh-steps a:hover { color: var(--t0); text-decoration: underline; text-underline-offset: 3px; } }
 .uh .uh-starter-text { margin: 0; font-size: 15px; line-height: 1.5; color: var(--t1); max-width: 60ch; }
 .uh .uh-continue-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); }
 .uh .uh-fail-text, .uh .uh-resolving p, .uh .uh-offline-note { margin: 0; font-size: 15px; color: var(--t1); }
@@ -420,7 +415,7 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-rail { display: grid; gap: var(--s-5); }
 .uh .uh-today { padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--card); }
 .uh .uh-today-clock { min-height: 56px; }
-.uh .uh-clock { display: grid; gap: 0; margin: 0; font-family: var(--font); font-size: inherit; letter-spacing: 0; text-transform: none; color: inherit; }
+.uh .uh-clock { display: grid; gap: 0; margin: 0; font-family: var(--font); font-size: inherit; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; color: inherit; }
 .uh .uh-today-date { min-height: 21px; font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--t1); }
 .uh .uh-today-time { min-height: 35px; font-family: var(--mono); font-size: 32px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--t0); }
 .uh .uh-rule { margin: var(--s-4) 0; border: 0; border-top: 1px solid var(--ws-hair); }
@@ -498,5 +493,5 @@ h2.uh-continue-name { white-space: normal; }
 /* The icon picker on the project's page */
 .uh .uh-iconpick { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-4) 0; }
 .uh .uh-iconpick-label { font-size: 13px; color: var(--t2); margin-right: var(--s-2); }
-.uh .uh-iconpick-btn { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--t1); cursor: pointer; }
+.uh .uh-iconpick-btn { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: var(--btn-radius); background: transparent; color: var(--t1); cursor: pointer; }
 .uh .uh-iconpick-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--bg-2); color: var(--t0); }

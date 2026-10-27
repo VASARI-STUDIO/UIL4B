@@ -20,6 +20,7 @@ import DiscoverPicks from '../components/userhome/DiscoverPicks'
 import ProPanel from '../components/userhome/ProPanel'
 import RecentExports from '../components/userhome/RecentExports'
 import { useServerAiUsage } from '../hooks/useServerAiUsage'
+import useProjectIcons from '../hooks/useProjectIcons'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -75,9 +76,10 @@ import '../styles/pages/projects.css'
 // Nothing replaces it. /community is a real route with real curated links
 // credited to the platform they open; this page is for the projects you made.
 
-// A project's icon lives ON the project (`project.icon`) and syncs with it.
-// useProjectIcons moves any icon an older version kept in this browser onto
-// its project the first time both are known.
+// A project's icon lives ON the project (`project.icon`) and syncs with it. The cards read it from
+// there and the picker is on the project's page. useProjectIcons is still called here, for its
+// migration alone: it moves any icon an older version kept in this browser onto its project the
+// first time both are known, so a card's badge is right before that project's page is opened.
 
 
 // When the connection last dropped, for the "as of 07:41" on the allowances.
@@ -96,6 +98,7 @@ export default function Projects() {
   const { plan, isPro, loading: planLoading } = useSubscription()
   const { openLogin } = useLoginPrompt()
   const { design, projects, projectsLoading, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
+  useProjectIcons()
   const online = useSyncExternalStore(subscribeOnline, readOnline, () => true)
   const sync = useSyncExternalStore(subscribeSync, getSyncState, getSyncState)
 
