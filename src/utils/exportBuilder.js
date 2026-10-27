@@ -65,8 +65,11 @@ export function buildCSSVars({ palette, tints, fonts, typeScale, stateShades, ap
   })
 
   // Tints
-  ;(tints?.scale || []).forEach((c, i) => {
-    lines.push(`  --tint-${i + 1}: ${c};`)
+  // Named by the ramp's own step names (--tint-50 ... --tint-950), not by position.
+  const tintScale = tints?.scale || []
+  const tintNames = tintLabelsFor(tintScale.length)
+  tintScale.forEach((c, i) => {
+    lines.push(`  --tint-${tintNames[i]}: ${c};`)
   })
 
   // State colours
@@ -176,14 +179,17 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <h2>State Colours</h2>
         <p>Semantic colour scales for feedback and status messaging.</p>
       </div>
-      ${Object.entries(stateShades).map(([state, shades]) => `
+      ${Object.entries(stateShades).map(([state, shades]) => {
+        const stateLabels = tintLabelsFor(shades.length)
+        return `
         <div class="sg-state">
           <div class="sg-state-label">${state}</div>
           <div class="sg-state-row">
-            ${shades.map((c, i) => `<div class="sg-state-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${tintLabelsFor(shades.length)[i]}</span></div>`).join('')}
+            ${shades.map((c, i) => `<div class="sg-state-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${stateLabels[i]}</span></div>`).join('')}
           </div>
         </div>
-      `).join('')}
+      `
+      }).join('')}
     </section>
   ` : ''
 

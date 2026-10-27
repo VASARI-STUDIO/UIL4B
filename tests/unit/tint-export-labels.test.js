@@ -10,6 +10,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buildStyleGuideHTML, buildCSSVars } from '../../src/utils/exportBuilder.js'
+import { buildTokensCss, buildTokensJson } from '../../src/utils/designTokens.js'
 import { tintLabelsFor, TINT_LABELS } from '../../src/utils/tintLabels.js'
 import { TINT_LABELS as RAMP_LABELS } from '../../src/utils/tintRamp.js'
 
@@ -69,4 +70,40 @@ test('the label tables agree with the Tint Generator and with the written-out ex
     assert.deepEqual(TINT_LABELS[n], EXPECTED[n])
     assert.equal(tintLabelsFor(n).length, n)
   }
+})
+
+// ── the live exports: the project's CSS variables and the token files ──────
+// buildStyleGuideHTML is not called from the app; buildCSSVars is (the project
+// page's "Copy CSS"), and it wrote --tint-1 ... --tint-11 by position.
+
+const tintVars = (css) => [...css.matchAll(/--tint-([^:]+):/g)].map((m) => m[1])
+
+for (const n of [9, 11, 13]) {
+  test(`the project's CSS variables name a ${n}-step tint ramp by its own steps`, () => {
+    const css = buildCSSVars({ tints: { scale: ramp(n) } })
+    assert.deepEqual(tintVars(css), EXPECTED[n])
+    assert.match(css, /--tint-50: #/)
+  })
+}
+
+test('the project CSS has no positional tint names left, and a length with no table gets positions', () => {
+  const css = buildCSSVars({ tints: { scale: ramp(11) } })
+  assert.ok(!/--tint-(1|2|3|4|5|6|7|8|9|10|11):/.test(css), 'a tint was named by position')
+  assert.deepEqual(tintVars(buildCSSVars({ tints: { scale: ramp(7) } })), ['1', '2', '3', '4', '5', '6', '7'])
+  assert.deepEqual(tintVars(buildCSSVars({ tints: { scale: [] } })), [])
+})
+
+test('the token files name each colour\'s 11-step ramp 50 to 950', () => {
+  const design = { palette: { base: '#2F6B5A', colors: ['#2F6B5A'] } }
+  const css = buildTokensCss(design, { watermark: false })
+  for (const step of EXPECTED[11]) assert.match(css, new RegExp(`--color-primary-${step}:`))
+  assert.ok(!/--color-primary-1000:/.test(css))
+  const json = JSON.parse(buildTokensJson(design, { watermark: false }))
+  assert.deepEqual(Object.keys(json.color.primary).filter((k) => !k.startsWith('$')), EXPECTED[11])
+})
+
+test('the exported label tables cannot be changed by a caller', () => {
+  assert.ok(Object.isFrozen(TINT_LABELS))
+  for (const n of Object.keys(TINT_LABELS)) assert.ok(Object.isFrozen(TINT_LABELS[n]), `${n}-step names are not frozen`)
+  assert.throws(() => { 'use strict'; TINT_LABELS[11].push('1000') }, TypeError)
 })
