@@ -307,6 +307,7 @@ function css(ctx) {
   /* ── palette overview and colour pages ─────────────────────────────── */
   .ov-row{display:grid;grid-template-columns:repeat(3,1fr);gap:0 5mm;margin-bottom:4.5mm}
   .ov-cell{min-width:0}
+  .ov-chip,.plate,.tint i,.chip>i{outline:.25mm solid var(--rule);outline-offset:-.25mm}
   .ov-chip{display:block;height:11mm;margin-bottom:1.6mm}
   .ov-cell.is-primary .ov-chip{height:30mm}
   .ov-cell .nm{font-size:10.5pt;margin:0}
