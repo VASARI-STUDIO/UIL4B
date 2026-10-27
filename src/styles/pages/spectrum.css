@@ -1251,6 +1251,8 @@
 /* At 320px "Converter" at 13px needs the 2px side padding to fit its segment. */
 @media (max-width: 340px) {
   .sp-rail--tabs .sp-rail-row { font-size: 13px; padding: 0 2px; }
+  /* Three Discover chips fit one row at 320. */
+  .sp-chip { padding: 10px 12px; }
 }
 
 /* ── the Font Gallery panel's six families ────────────────────────────────
