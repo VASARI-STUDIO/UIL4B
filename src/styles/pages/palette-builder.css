@@ -21,6 +21,8 @@
   max-height: var(--plb-menu-max-height);
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* keep a scrolled-to item clear of the fade below */
+  scroll-padding-block-end: var(--s-4);
 }
 .plb .plb-ctx[data-scroll-more="true"] {
   -webkit-mask-image: linear-gradient(to bottom, var(--t0) calc(100% - var(--s-4)), transparent);

@@ -871,6 +871,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     columnRefs.current[removeFocusRef.current]?.querySelector('.plb-tool--key')?.focus({ preventScroll: true })
     removeFocusRef.current = null
   }, [colors.length])
+  // A choice in a swatch's "…" menu unmounts the focused item with the menu, so
+  // focus goes back to a swatch's "…" once the change has rendered: the swatch
+  // the action was for, wherever it ended up (Swap and Insert left move it), or
+  // for Remove the swatch that took its place. `ctxReturnRef` holds that
+  // swatch's index until the next commit.
+  const ctxReturnRef = useRef(null)
+  useLayoutEffect(() => {
+    const at = ctxReturnRef.current
+    if (at == null) return
+    ctxReturnRef.current = null
+    columnRefs.current[at]?.querySelector('.plb-tool--more')?.focus({ preventScroll: true })
+  })
   // Absolute coordinates remain relative to the size-contained column. Measure
   // in viewport space first so even the edge columns keep the whole panel visible.
   useLayoutEffect(() => {
@@ -1342,6 +1354,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     return () => clearTimeout(t)
   }, [colors, seed, seedInput, harmony, locked, adjust, vision, showContrast, importedGalleryId])
 
+  // Close the "…" menu after a choice and hand focus to the "…" of swatch `at`.
+  const closeCtxMenu = (at) => { ctxReturnRef.current = at; setCtxMenu(null) }
+
   const toggleLock = (i) => {
     setLocked(prev => {
       const next = new Set(prev)
@@ -1392,10 +1407,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (colors.length <= 2) { toast?.('A palette needs at least two colours'); return }
     if (outIdx != null) return // let the current close animation finish first
     const keyboard = event?.detail === 0
-    if (!keyboard) document.activeElement?.blur()
+    const fromMenu = event?.currentTarget?.closest?.('.plb-ctx') != null
+    if (!keyboard && !fromMenu) document.activeElement?.blur()
     setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setSwapIdx(null); setToolsIdx(null)
     const drop = () => {
-      if (keyboard) removeFocusRef.current = Math.min(i, colors.length - 2)
+      // The next swatch slides into this slot; the last one hands back to the one before.
+      if (fromMenu) ctxReturnRef.current = Math.min(i, colors.length - 2)
+      else if (keyboard) removeFocusRef.current = Math.min(i, colors.length - 2)
       setColors(prev => prev.filter((_, k) => k !== i))
       setLocked(prev => {
         const next = new Set()
@@ -1416,10 +1434,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Single insert path for the Add block AND the click-between gaps — gates
   // the caps, shifts locks right, and flags the slot for the grow-in animation.
   const insertAt = (idx, hex) => {
-    if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return }
+    if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return false }
     if (!isPro && colors.length >= PRO_MAX) {
       openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
-      return
+      return false
     }
     setColors(prev => { const n = [...prev]; n.splice(idx, 0, hex); return n })
     setLocked(prev => {
@@ -1429,6 +1447,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     })
     flashIn(idx)
     setLiveMsg('Colour added')
+    return true
   }
 
   const addCol = () => {
@@ -1479,7 +1498,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Per-colour HCT editing is a Pro tool — free users get the upgrade modal
   // instead of the picker; Pro users toggle the picker open on that column.
   const openHctPicker = (i) => {
-    setCtxMenu(null)
+    closeCtxMenu(i)
     if (!isPro) {
       openProModal({ gate: 'palette-hct-picker', eyebrow: 'Pro colour tools', title: 'Fine-tune any colour in HCT', subtitle: 'Edit hue, chroma and tone on each colour individually with the HCT picker — perceptual control the free tier keeps read-only.' })
       return
@@ -2754,22 +2773,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             items[next]?.focus({ preventScroll: true })
             items[next]?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
           }}>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoCopy /> Copy hex</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoShuffle /> Use as seed</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Copy hex</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); setCtxMenu(null) }}><IcoEye /> View tints</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); setCtxMenu(null) }}>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoEye /> View tints</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>
           <div className="plb-ctx-sep" aria-hidden="true" />
           {ctxMenu.i > 0 && (
-            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'left'); setCtxMenu(null) }}><IcoArrowLeft /> Swap left</button>
+            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'left'); closeCtxMenu(ctxMenu.i - 1) }}><IcoArrowLeft /> Swap left</button>
           )}
           {ctxMenu.i < colors.length - 1 && (
-            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'right'); setCtxMenu(null) }}><IcoArrowRight /> Swap right</button>
+            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'right'); closeCtxMenu(ctxMenu.i + 1) }}><IcoArrowRight /> Swap right</button>
           )}
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertAt(ctxMenu.i, midColor(colors[Math.max(0, ctxMenu.i - 1)], colors[ctxMenu.i])); setCtxMenu(null) }}><IcoPlus size={15} /> Insert left</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertBetween(ctxMenu.i); setCtxMenu(null) }}><IcoPlus size={15} /> Insert right</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { closeCtxMenu(ctxMenu.i + (insertAt(ctxMenu.i, midColor(colors[Math.max(0, ctxMenu.i - 1)], colors[ctxMenu.i])) ? 1 : 0)) }}><IcoPlus size={15} /> Insert left</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertBetween(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoPlus size={15} /> Insert right</button>
           {colors.length > 2 && (
             <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={(e) => { removeCol(ctxMenu.i, e); setCtxMenu(null) }}><IcoX /> Remove</button>
           )}
