@@ -180,9 +180,11 @@ export default function AuthForm({
   const errKey = error?.key
   const emailBad = errKey === 'invalidEmail' || errKey === 'emailInUse' || errKey === 'invalidCredential'
   const pwBad = errKey === 'weakPassword' || errKey === 'invalidCredential'
-  const submitLabel = busy === 'submit'
-    ? t({ login: 'auth.loadingLogin', signup: 'auth.loadingSignup', reset: 'auth.loadingReset', switch: 'auth.loadingSwitch' }[mode])
-    : t({ login: 'auth.submitLogin', signup: 'auth.submitSignup', reset: 'auth.sendResetLink', switch: 'auth.submitSwitch' }[mode])
+  // The sent screen has no submit button, so it has no label to look up.
+  const submitKey = (busy === 'submit'
+    ? { login: 'auth.loadingLogin', signup: 'auth.loadingSignup', reset: 'auth.loadingReset', switch: 'auth.loadingSwitch' }
+    : { login: 'auth.submitLogin', signup: 'auth.submitSignup', reset: 'auth.sendResetLink', switch: 'auth.submitSwitch' })[mode]
+  const submitLabel = submitKey ? t(submitKey) : ''
 
   const emailField = (
     <div className="auth-field">
