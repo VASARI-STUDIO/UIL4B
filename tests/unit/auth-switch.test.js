@@ -153,6 +153,6 @@ test('forced password switching and prompt re-entrancy are guarded', async () =>
   // The switch lives in nav/AccountSwitcher.jsx; returning focus to the avatar
   // after a switch is the header's job, so that half is read from PillNav.
   const header = await readFile(new URL('../../src/components/PillNav.jsx', import.meta.url), 'utf8')
-  assert.ok(header.includes('requestAnimationFrame(() => accountBtnRef.current?.focus())'))
+  assert.ok(header.includes('accountBtnRef.current?.focus()'))
   assert.ok(header.includes('<AccountSwitcher onDone={closeAccountMenuAndRestoreFocus} />'))
 })

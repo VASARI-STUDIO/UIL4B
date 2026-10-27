@@ -457,7 +457,7 @@
     "interruptSignUp": "You were about to {reason}. Once your account is set up, you'll come back to this page.",
     "resetSub": "Enter the email you log in with and we'll send a link to set a new password.",
     "sentSub": "If there's an account for {email}, a reset link is on its way. It can take a few minutes, so check spam too.",
-    "switchSub": "Log in as {email}. You'll stay logged in as you are unless this works.",
+    "switchSub": "Log in as {email}. You stay logged in to your current account unless this works.",
     "whyWeAsk": "Why we ask first",
     "continueWithGoogle": "Continue with Google",
     "googleLoading": "Opening Google…",

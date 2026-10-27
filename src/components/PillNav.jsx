@@ -640,10 +640,13 @@ function AppHeader() {
   }
 
   // After a switch the popover closes and focus returns to the avatar, so a
-  // keyboard user is not dropped on <body>.
+  // keyboard user is not dropped on <body>. The switch dialog closes this menu
+  // as it opens, so when a dialog is already up it keeps the focus it took.
   const closeAccountMenuAndRestoreFocus = () => {
     setMenu(null)
-    requestAnimationFrame(() => accountBtnRef.current?.focus())
+    requestAnimationFrame(() => {
+      if (!document.querySelector('[role="dialog"]')) accountBtnRef.current?.focus()
+    })
   }
 
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
