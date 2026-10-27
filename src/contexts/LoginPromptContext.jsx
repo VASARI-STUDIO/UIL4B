@@ -14,14 +14,15 @@ const LoginPromptContext = createContext(null)
 // A brand-new sign-up is intercepted into /onboarding by AppInner the moment
 // auth resolves, which would otherwise discard wherever the user actually was.
 // Onboarding reads this key on finish (see Onboarding.jsx takeResumeTarget), so
-// the stash has to happen wherever the popup is OPENED — not on the /login
-// route, which nav-initiated sign-in no longer visits at all.
+// the stash has to happen wherever the popup is OPENED. The /login page is
+// the other opener: it calls this itself, with the page the visitor was sent
+// from.
 const RESUME_KEY = 'vs-resume-after-onboarding'
 // Paths that are not destinations: /home is already the post-onboarding default,
-// /login is a launcher, /onboarding is the flow itself, / redirects.
+// /login is where this starts, /onboarding is the flow itself, / redirects.
 const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding'])
 
-function stashResumeTarget(explicitFrom) {
+export function stashResumeTarget(explicitFrom) {
   let target = explicitFrom
   if (!target && typeof window !== 'undefined') {
     target = window.location.pathname + window.location.search
@@ -130,18 +131,14 @@ export function LoginPromptProvider({ children }) {
         // underneath — on the four highest-traffic paths into the product.
         // Callers that pass nothing still get sign-in, so nothing else moves.
         signup: !!opts.signup,
-        // True only from the /login ROUTE, where this dialog is the whole page
-        // and its title is therefore the document title. See the note at the
-        // heading in LoginPopup.jsx.
-        isPageTitle: !!opts.isPageTitle,
       })
     })
     pendingPromiseRef.current = promise
     return promise
   }, [])
 
-  // Imperative, reason-less variant for plain "Log in" / "Sign in" affordances
-  // (nav links, the /login route). Same promise contract as requireLogin.
+  // Imperative, reason-less variant for plain "Log in" affordances
+  // (nav links). Same promise contract as requireLogin.
   const openLogin = useCallback((opts = {}) => requireLogin(opts.reason || '', opts), [requireLogin])
 
   return (
@@ -158,7 +155,6 @@ export function LoginPromptProvider({ children }) {
           lockEmail={prompt.lockEmail}
           passwordOnly={prompt.passwordOnly}
           signup={prompt.signup}
-          isPageTitle={prompt.isPageTitle}
           onSuccess={(u) => finish(u || userRef.current || null)}
           onDismiss={() => finish(null)}
         />

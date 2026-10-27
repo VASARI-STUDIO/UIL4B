@@ -30,6 +30,10 @@ export function pageName(title) {
   return title.replace(/^UI L4B \| /, '').replace(/ \| UI L4B$/, '').trim() || null
 }
 
+// /login in its sign-up form (`?signup=1`). Set at runtime only: the served
+// shell is the log-in page.
+export const LOGIN_SIGNUP_TITLE = 'UI L4B | Create your free account'
+
 // Titles/descriptions for real destinations only. Legacy redirect-only paths
 // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
 // <Navigate> and inherit their target's metadata, so an entry here would only

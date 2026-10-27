@@ -1,24 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import useModalDialog from '../hooks/useModalDialog'
+import useMediaQuery from '../hooks/useMediaQuery'
 import AuthForm from './auth/AuthForm'
+import AuthWall from './auth/AuthWall'
 
 // Single-click log-in. Opened over the current page (never navigates to
 // /login) so the user resumes exactly where they were on success. This file is
 // the shell: overlay, Close, the pane and "Not now". The form itself (copy,
 // fields, errors, the AuthContext calls) lives in ./auth/AuthForm.
 //
+// When the visitor chose to log in or sign up (no reason given, not a switch)
+// and the screen is 768 or wider, a still strip of the wall sits beside the
+// form. An interruption stays plain: the thing they were doing is the reason.
+//
 // `reasons` is an optional short list of plain answers to "why do I need an
 // account for this?" (the community submission gate uses it). `unlocks` is the
 // caller's own list of what an account gives, shown only on an interruption.
 // `signup` decides which form this OPENS on, so a "Start for free" control
 // never presents a log-in form. Defaults to false.
-export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, isPageTitle = false, onSuccess, onDismiss }) {
+export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, onSuccess, onDismiss }) {
   const { t } = useI18n()
   const [mode, setMode] = useState(passwordOnly ? 'switch' : openAsSignup ? 'signup' : 'login')
   const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   const dismissRef = useRef(onDismiss)
+  // Decided once, when the dialog opens: moving on to reset or sent keeps the
+  // width it opened at, and an interruption that flips to sign-up never gains one.
+  const [chosen] = useState(() => !reason && !passwordOnly)
+  const wide = useMediaQuery('(min-width:768px)')
+  const strip = chosen && wide
 
   useEffect(() => { loadingRef.current = loading }, [loading])
   useEffect(() => { dismissRef.current = onDismiss }, [onDismiss])
@@ -50,7 +61,7 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
       <div
         ref={dialogRef}
-        className={'ui-modal ui-login' + (interrupt ? ' ui-login--interrupt' : '')}
+        className={'ui-modal ui-login' + (interrupt ? ' ui-login--interrupt' : '') + (strip ? ' ui-login--strip' : '')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-login-title"
@@ -63,6 +74,8 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
 
+        {strip && <div className="ui-login-strip" aria-hidden="true"><AuthWall variant="strip" /></div>}
+
         <div className="ui-login-pane">
           <AuthForm
             mode={mode}
@@ -70,9 +83,8 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
             initialEmail={initialEmail}
             lockEmail={lockEmail}
             onSuccess={onSuccess}
-            // h1 only when this dialog IS the page (the /login route renders
-            // nothing else); over any other page the title is an h2.
-            headingLevel={isPageTitle ? 1 : 2}
+            // The dialog always sits over a page that has its own h1.
+            headingLevel={2}
             reason={reason}
             reasons={reasons}
             unlocks={unlocks}
