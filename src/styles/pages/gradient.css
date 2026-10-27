@@ -56,6 +56,16 @@
   border: 1px solid var(--tl-line);
 }
 
+/* Side by side, the 336px panel is taller than the preview column, which left a
+   blank block under the code box before the presets. The preview grows into that
+   height instead (capped, so a twelve-stop panel does not make a tower). Stacked
+   at 900px and under, the column is its own height and nothing changes. */
+@media (min-width: 901px) {
+  .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
+  .grd .tl-main > * { flex-shrink: 0; }
+  .grd .tl-main > .grd-canvas { flex: 1 0 auto; max-height: 640px; }
+}
+
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
 .grd .grd-rail-wrap { position: relative; padding: 0 12px; }
 .grd .grd-rail {
@@ -207,7 +217,10 @@
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 
 /* ── SELECTED STOP (D:657-668) ──────────────────────────────────────────── */
-.grd .grd-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Ten quick colours as 5x2, spread across the panel's width. A wrapping flex row
+   left two orphans on the second line at every width the panel is 336px or a
+   phone column wide. */
+.grd .grd-swatches { display: grid; grid-template-columns: repeat(5, 30px); justify-content: space-between; gap: 8px; max-width: 320px; }
 .grd .grd-swatch {
   width: 30px;
   height: 30px;
@@ -459,6 +472,8 @@
 .grd .grd-explore h2 { margin: 0; font-size: 18px; font-weight: 560; letter-spacing: -.015em; line-height: 1.2; color: var(--tl-ink); }
 .grd .grd-explore p { margin: 0; max-width: 46ch; font-size: 14px; line-height: 1.55; color: var(--tl-dim); text-wrap: pretty; }
 .grd .grd-explore-cta { margin-top: 4px; }
+/* The caret points onward, so it follows the label rather than leading it. */
+.grd .grd-explore-cta .tl-btn-ico { order: 1; }
 .grd .grd-explore-taste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; min-width: 0; margin: 0; padding: 0; list-style: none; }
 .grd .grd-explore-taste > li { min-width: 0; }
 /* Each chip is a link to the library filtered to its mood: the gradient, then
@@ -548,6 +563,7 @@
   .grd .grd-iconbtn { width: 44px; height: 44px; }
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
+  .grd .grd-swatches { grid-template-columns: repeat(5, 44px); }
   .grd .grd-swatch { width: 44px; height: 44px; }
   .grd .grd-hex { height: 44px; font-size: 16px; }
   .grd .grd-pick-swatch .cpk-trigger { width: 44px; height: 44px; }

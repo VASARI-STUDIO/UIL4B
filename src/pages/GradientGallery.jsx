@@ -14,6 +14,7 @@ import { useProLibrary } from '../hooks/useProLibrary'
 import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
+import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 import { mergeSubmissions } from '../utils/communityQueue'
 import { listMySubmissions } from '../utils/communityQueueApi'
@@ -158,8 +159,7 @@ export default function GradientGallery({ toast }) {
   const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
 
   const visible = useMemo(() => browsable.filter(g => {
-    if (tag !== 'all' && !g.tags.includes(tag)) return false
-    if (!types.includes('all') && !types.includes(g.type)) return false
+    if (!matchesGradientFacets(g, tag, types)) return false
     if (query) {
       const hay = `${g.name} ${g.type} ${g.tags.join(' ')} ${g.stops.map(s => s.color).join(' ')}`.toLowerCase()
       if (!hay.includes(query)) return false
@@ -168,6 +168,18 @@ export default function GradientGallery({ toast }) {
   }), [browsable, query, tag, types])
 
   const clearAll = () => { setRawQuery(''); setTag('all'); setTypes(['all']) }
+
+  // When a signed-out visitor's mood or type filter comes up empty, say so if
+  // the cap is the reason: a free account opens more rows, and some of them fit.
+  // Counted over the free tier's open rows by mood and type ONLY. A typed search
+  // is deliberately left out — it indexes hex values, so reporting whether
+  // withheld rows match it would be the oracle the gate above exists to close.
+  // Mood and type are public facets, so the count discloses nothing new.
+  const accountMatches = useMemo(() => {
+    if (tier !== 'anonymous' || query) return 0
+    if (tag === 'all' && types.includes('all')) return 0
+    return openGradientRows(rows, 'free').filter(g => matchesGradientFacets(g, tag, types)).length
+  }, [tier, query, tag, types, rows])
 
   // The teased tail. Shown only while the view is unnarrowed: under a search or
   // a filter the visitor has asked a narrower question, and answering it with a
@@ -354,9 +366,22 @@ export default function GradientGallery({ toast }) {
           // where working out what to undo by hand was hardest.
           <LibraryEmpty
             className="grg-empty"
-            title={`No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
-            detail="Try a broader search, or reset the mood and type filters to see all of them again."
+            title={accountMatches > 0
+              ? 'None of the gradients you can open match those filters.'
+              : `No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
+            detail={accountMatches > 0
+              ? `Signed out, you can browse ${browsable.length} of the ${rows.length} gradients. A free account opens ${accountMatches} that fit these filters.`
+              : 'Try a broader search, or reset the mood and type filters to see all of them again.'}
             onClear={clearAll}
+            action={accountMatches > 0 ? (
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
+              >
+                {`Sign in to see ${accountMatches === 1 ? 'it' : accountMatches}`}
+              </button>
+            ) : null}
           />
         )}
       </section>

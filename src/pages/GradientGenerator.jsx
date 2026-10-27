@@ -15,6 +15,8 @@ import { GRAD_TYPE_WEIGHTS, pickGradientType, pickStopCount } from '../utils/gra
 import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
+import { galleryTier } from '../utils/lockedPreview'
+import { openMoods } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
@@ -69,7 +71,9 @@ const PRESETS = [
 // full for each of six moods, so the strip shows range instead of six warm rows.
 // Each chip links to the library filtered to that mood (`?mood=`, read by
 // GradientGallery). An id that is not in the bundle, or is a name-only stub, is
-// skipped rather than painted blank.
+// skipped rather than painted blank. A signed-out visitor can only search the
+// first few library rows, so the chips shown are narrowed again to the moods
+// those rows carry (exploreTaste in the component).
 const EXPLORE_MOODS = [
   ['warm', 'sunset-blaze'],
   ['cool', 'rosewater'],
@@ -323,6 +327,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   const [searchParams, setSearchParams] = useSearchParams()
+  // The Explore chips this viewer can open: a mood only shows if the library
+  // would list at least one gradient for it at their tier. Auth still resolving
+  // reads as signed out, as it does in the gallery.
+  const exploreTier = galleryTier({ isPro, signedIn: user != null })
+  const exploreTaste = useMemo(() => {
+    const open = openMoods(LIBRARY_GRADIENT_ROWS, exploreTier, EXPLORE_TASTE.map((g) => g.mood))
+    return EXPLORE_TASTE.filter((g) => open.includes(g.mood))
+  }, [exploreTier])
 
   // A palette handed over from the Palette Builder's Gradient button. Read (not
   // consumed) during render, so a render React discards can't lose it; the mount
@@ -1284,7 +1296,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </ToolButton>
         </div>
         <ul className="grd-explore-taste" aria-label="Browse the library by mood">
-          {EXPLORE_TASTE.map((g) => (
+          {exploreTaste.map((g) => (
             <li key={g.id}>
               <Link className="grd-explore-chip" to={`/discover/gradients?mood=${g.mood}`} aria-label={`${g.mood[0].toUpperCase()}${g.mood.slice(1)} gradients in the library`}>
                 <span className="grd-explore-swatch" style={{ background: gradientCss(g.type, g.angle, g.stops) }} aria-hidden="true" />

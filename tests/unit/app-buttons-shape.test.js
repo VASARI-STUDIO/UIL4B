@@ -45,12 +45,16 @@ const KEEP = {
   // rows in a menu, list or popover
   row: ['plb-menu-item', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
-    'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt'],
+    'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
+    // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
+    'grd-stop-select', 'grd-tintmenu-item'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle',
     // the Suggest card's main hit area is a button that fills a rounded card, so it takes the card's own radius
-    'plb-sg-main'],
+    'plb-sg-main',
+    // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
+    'grd-preset'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
   // underline and folder tabs, and the phone tab bar's items
