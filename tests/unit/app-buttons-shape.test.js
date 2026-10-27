@@ -45,7 +45,9 @@ const KEEP = {
   // rows in a menu, list or popover
   row: ['plb-menu-item', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
-    'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt'],
+    'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
+    // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
+    'plb-match-btn'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle',
