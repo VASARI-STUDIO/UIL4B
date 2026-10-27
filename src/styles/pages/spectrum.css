@@ -1045,19 +1045,41 @@
 @media (max-width: 900px) {
   .sp-stack-card { position: static; top: auto; transform: none !important; filter: none !important; }
   .sp-stack-grid { min-height: 0; padding: clamp(20px, 4vw, 28px); }
-  .sp-stack-pad, .sp-stack-pad--tail { height: clamp(16px, 3vw, 28px); }
+  .sp-stack-pad { height: 48px; }
+  .sp-stack-pad--tail { height: clamp(16px, 3vw, 28px); }
   /* DEVIATION, and a deliberate one (mobile first). The design's two
      panels size their bodies `flex: 1 1 0` against the card's min-height; with
      that min-height released below 900px the bodies collapse to nothing — the
      design's own render at 390 shows card 1 as one clipped row and card 2 as a bare
      strip. These floors give the panels back their contents at phone width;
      nothing changes above 900px. */
-  .sp-ex { min-height: 545px; }
+  .sp-ex { min-height: 0; }
+  /* The body is a fixed frame with its own scroll, so changing the piece never
+     moves what is below the card. */
+  .sp-ex-body { flex: 0 0 auto; height: 360px; }
   .sp-kit { min-height: 380px; }
   /* The kit's colour page wraps to three rows on a phone; the paper grows to hold
      them instead of clipping the last swatch. */
   .sp-kit-paper, .sp-kit-body { flex: 1 1 auto; }
   .sp-kit-body { overflow: visible; }
+
+  /* THREE FORMS, one per kind of content. Card 1 is a working panel and stays a
+     card. Card 2 is a document: its card is gone, the copy sits on the page
+     ground and the paper runs out toward the screen edges, in one column.
+     Card 3 is a list: its card is gone and the rows are separated by hairlines. */
+  .sp-stack-card[data-stack-card="1"],
+  .sp-stack-card[data-stack-card="2"] { background: none; border: 0; box-shadow: none; }
+  .sp-stack-card[data-stack-card="1"] .sp-stack-grid,
+  .sp-stack-card[data-stack-card="2"] .sp-stack-grid { padding: 0; }
+  .sp-stack-card[data-stack-card="1"] .sp-stack-grid { grid-template-columns: minmax(0, 1fr); }
+  .sp-stack-card[data-stack-card="1"] .sp-kit { margin-inline: calc(var(--sp-gutter) * -1 + 8px); }
+  .sp-projects { gap: 0; }
+  .sp-projects li { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--sp-hair); padding: 14px 0; }
+  .sp-projects li:last-child { border-bottom: 1px solid var(--sp-hair); }
+}
+@media (max-width: 760px) {
+  .sp-spec-head { margin: 0; text-align: left; }
+  .sp-spec-head p { margin-left: 0; }
 }
 
 /* ── "Don't just take it from us" (#index) ────────────────────────────────────
