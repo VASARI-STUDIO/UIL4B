@@ -9,7 +9,8 @@ import { createTools } from '../../src/data/toolTree.js'
 import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
 
 const LISTED = createTools().filter((t) => !t.soon)
-const ORDER = ['Palette Builder', 'Contrast Checker', 'Font Gallery', 'Type Scale', 'Icon Library', 'File Converter']
+// Card titles are the tool tree's own labels, the names the nav uses.
+const ORDER = ['Palette', 'Contrast Checker', 'Font Gallery', 'Type Scale', 'Icon Library', 'File Converter']
 
 test.describe('/tools shell', () => {
   test('renders the Spectrum nav, footer and closing ramp; /tools/ is the same page', async ({ page }) => {

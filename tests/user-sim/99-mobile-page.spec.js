@@ -185,7 +185,7 @@ test.describe('the marketing footer is the design\'s', () => {
     // TOOLS / PROJECT / LEGAL are the design's (1606-1629); EXPLORE carries the
     // destinations AppFooter reaches that the design's three do not.
     await expect(footer.locator('.sp-footer-col-h')).toHaveText(['TOOLS', 'PROJECT', 'EXPLORE', 'LEGAL'])
-    await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['Colour', 'Type', 'Assets', 'Imagery'])
+    await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['All tools', 'Colour', 'Type', 'Assets', 'Imagery'])
     await expect(footer.getByRole('link', { name: 'Cookies' }), 'there is no cookies page to link').toHaveCount(0)
     await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
     // The founder note and credit link sit beside it.

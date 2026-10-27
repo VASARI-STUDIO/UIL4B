@@ -139,21 +139,18 @@ test.describe('the full-screen menu carries what the pill drops', () => {
     await expect(burger, 'Escape closed the menu and dropped focus on the floor').toBeFocused()
   })
 
-  // The menu holds the scroll lock, which stops Lenis. A section link inside it
-  // must still close the menu and land the page on that section.
-  test('a section link in the menu closes it and scrolls the page to the section', async ({ page }) => {
+  // The menu holds the scroll lock. Its Tools link leaves the sales page for
+  // /tools: the menu must close and release the lock on the way.
+  test('Tools in the menu closes it and opens /tools', async ({ page }) => {
     await salesPage(page)
     await page.locator('.spnav-burger').click()
     const menu = page.locator('.spnav-menu')
     await expect(menu).toBeVisible()
-    const before = await page.evaluate(() => window.scrollY)
-    await menu.locator('a.spnav-mi[href$="#bench"]').click()
+    await menu.locator('a.spnav-mi', { hasText: 'Tools' }).click()
     await expect(menu).toHaveCount(0)
-    await expect.poll(() => page.evaluate(() => {
-      const el = document.getElementById('bench')
-      return el ? Math.round(el.getBoundingClientRect().top) : null
-    }), { message: 'the page never scrolled to the section', timeout: 6000 }).toBeLessThan(200)
-    expect(await page.evaluate(() => window.scrollY), 'the page did not move').toBeGreaterThan(before)
+    await expect(page).toHaveURL(/\/tools\/?$/)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'the scroll lock outlived the menu').not.toBe('hidden')
   })
 
   test('Tab is trapped inside the menu', async ({ page }) => {
