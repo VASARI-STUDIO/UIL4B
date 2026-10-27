@@ -380,11 +380,16 @@ test('after a format switch the rail never shows the old percentage under the ne
   // between two settled states is seen as well as the settled ones.
   await rail.evaluate((el) => {
     window.__railSeen = [el.textContent]
-    new MutationObserver(() => window.__railSeen.push(el.textContent))
+    window.__railAt = performance.now()
+    new MutationObserver(() => { window.__railSeen.push(el.textContent); window.__railAt = performance.now() })
       .observe(el, { subtree: true, childList: true, characterData: true })
   })
+  // The measured figure is the one the rail holds after it has been still for
+  // 800ms (the encode debounces for 150ms), so the figure read is never a stale one.
+  const quiet = () => page.waitForFunction(() => performance.now() - window.__railAt > 800)
   await panel.getByRole('button', { name: 'JPEG', exact: true }).click()
   await expect(rail).toHaveText(/\d+% (smaller|larger) as JPEG/, { timeout: 15000 })
+  await quiet()
   const jpeg = (await rail.innerText()).match(/(\d+)% (smaller|larger)/)[1]
   expect(jpeg, 'WebP and JPEG measured the same, so this test could not tell them apart').not.toBe(webp)
 
