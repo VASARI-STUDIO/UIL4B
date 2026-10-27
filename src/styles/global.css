@@ -3017,7 +3017,7 @@ html.lenis{scroll-behavior:auto!important}
 
 /* Export formats: rows of the one dialog surface, divided by hairlines — never
    a card per format. */
-.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;padding:12px 24px;text-align:left;background:none;border:0;border-radius:0;color:inherit;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out)}
+.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;padding:10px 24px;text-align:left;background:none;border:0;border-radius:0;color:inherit;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out)}
 .exp-fmt + .exp-fmt{border-top:1px solid var(--border)}
 @media (hover:hover){.exp-fmt:hover{background:var(--hvr)}}
 .exp-fmt.is-active{background:color-mix(in srgb,var(--accent) 6%,transparent)}

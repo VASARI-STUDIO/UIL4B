@@ -49,8 +49,14 @@
    nav search cluster. No real export yet: every format previews and the primary
    action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
 .exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84dvh,720px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
+/* On a desktop the panel has one height whatever it holds: the window less the
+   overlay's top and bottom gutters, capped at 760px. The rows, the options and
+   the dock then stay where they are when a row is chosen or a notice arrives;
+   a taller state scrolls inside the panel and a shorter one leaves quiet panel
+   ground above the dock. The phone sheet below is bottom-anchored and sizes to
+   its content instead. */
+.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));height:min(calc(100dvh - max(8vh,64px) - 32px),760px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
 .exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .exp-sub{font-size:var(--fs-body-s);color:var(--t1);line-height:1.5}
@@ -102,8 +108,10 @@
 .exp-identity + .exp-logo{border-top:0;padding-top:12px}
 /* The dock (the error, the notice, then the footer's actions) stays in reach
    while the format list scrolls: on a phone the list is taller than the sheet,
-   and both the button and anything the export has to say were below the fold. */
-.exp-dock{position:sticky;bottom:0;z-index:1;background:var(--bg-0)}
+   and both the button and anything the export has to say were below the fold.
+   margin-top:auto holds it to the foot of a panel taller than its content, so
+   the buttons keep one place across states. */
+.exp-dock{position:sticky;bottom:0;z-index:1;margin-top:auto;background:var(--bg-0)}
 /* Scroll cue: while the list has more below the dock, its last visible row fades
    into the panel ground. A mask on the content that is cut off, not decoration;
    ExportPanel.jsx toggles .has-more from the panel's scroll position. */
@@ -129,7 +137,7 @@
   /* A bottom sheet on a phone: full width, anchored to the foot of the screen
      and the thumb, with the dock inside it. */
   .exp-overlay{align-items:flex-end;padding:0}
-  .exp-panel{width:100%;max-height:calc(100dvh - 24px);border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0}
+  .exp-panel{width:100%;height:auto;max-height:calc(100dvh - 24px);border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0}
   .exp-options{padding:16px 16px 20px}
   .exp-coming{padding:12px 16px 16px}
 }
@@ -138,12 +146,13 @@
    One region under the list: the file-type switch, the preview of a Pro
    document, the identity and logo fields. A hairline divides it from the list,
    and nothing inside it is a card. */
-.exp-options{display:flex;flex-direction:column;gap:16px;padding:16px 24px 20px;border-top:1px solid var(--border);animation:exp-options-in 150ms var(--ease-out)}
+.exp-options{display:flex;flex-direction:column;gap:12px;padding:12px 24px 16px;border-top:1px solid var(--border);animation:exp-options-in 150ms var(--ease-out)}
 @keyframes exp-options-in{from{opacity:0}}
-@media (prefers-reduced-motion:reduce){.exp-options{animation:none}}
+html[data-reduced-motion="true"] .exp-options{animation:none}
+@media (prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .exp-options{animation:none}}
 /* The kit's identity and the logo row were sections of the list; here they are
    fields of the region and take its padding and gap. */
-.exp-options .exp-identity{padding:0;border-top:0}
+.exp-options .exp-identity{gap:12px;padding:0;border-top:0}
 .exp-options .exp-logo,.exp-options .exp-identity + .exp-logo{padding:0;border-top:0}
 
 /* The quiet line for formats that are not built. Not a row, not a button. */
