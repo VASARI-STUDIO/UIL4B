@@ -9,7 +9,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { LockGlyph, LockedTeaseCta } from '../library/LockedTease'
 import { NEAREST_SYSTEMS } from '../../data/nearest/index.js'
-import { loadSystem } from '../../utils/nearestLoader'
+import { loadSystem } from '../../utils/nearestSystems'
 import { BANDS, bandLabel, formatDE, matchSystem } from '../../utils/nearestMatch'
 
 const GROUPS = [

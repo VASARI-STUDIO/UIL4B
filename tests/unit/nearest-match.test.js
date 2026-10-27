@@ -209,27 +209,63 @@ test('nearest against the biggest system is fast (under 5 ms median)', () => {
   assert.ok(times[12] < 5, `median ${times[12].toFixed(2)} ms`)
 })
 
-test('loader: caches one promise per system, drops a failure so a retry asks again', async () => {
-  let calls = 0
-  let fail = true
-  const loader = createSystemLoader([
-    { id: 'a', load: async () => { calls++; return { default: { rows: [1] } } } },
-    { id: 'b', load: async () => { if (fail) throw new Error('offline'); return { default: { rows: [2] } } } },
-  ])
+const okJson = (data) => ({ ok: true, status: 200, json: async () => data })
+
+test('loader: fetches each system once, drops a failure so a retry makes a real request', async () => {
+  const requests = []
+  let offline = true
+  const fetchImpl = async (url) => {
+    requests.push(url)
+    if (url === '/assets/b-1.json' && offline) throw new TypeError('Failed to fetch')
+    if (url === '/assets/c-1.json') return { ok: false, status: 404, json: async () => ({}) }
+    return okJson({ rows: [url] })
+  }
+  const loader = createSystemLoader({ a: '/assets/a-1.json', b: '/assets/b-1.json', c: '/assets/c-1.json' }, fetchImpl)
   const [x, y] = [loader.loadSystem('a'), loader.loadSystem('a')]
   assert.equal(x, y)
-  assert.deepEqual(await x, { rows: [1] })
-  assert.equal(calls, 1)
-  await assert.rejects(loader.loadSystem('b'), /offline/)
+  assert.deepEqual(await x, { rows: ['/assets/a-1.json'] })
+  assert.deepEqual(requests, ['/assets/a-1.json'])
+  await assert.rejects(loader.loadSystem('b'), /Failed to fetch/)
   assert.equal(loader.cache.has('b'), false)
-  fail = false
-  assert.deepEqual(await loader.loadSystem('b'), { rows: [2] })
+  offline = false
+  // The retry is a second request for the same URL, not a re-await of the failure.
+  assert.deepEqual(await loader.loadSystem('b'), { rows: ['/assets/b-1.json'] })
+  assert.equal(requests.filter((u) => u === '/assets/b-1.json').length, 2)
+  await assert.rejects(loader.loadSystem('c'), /HTTP 404/)
+  assert.equal(loader.cache.has('c'), false)
   await assert.rejects(loader.loadSystem('zzz'), /Unknown colour system/)
+  assert.equal(requests.length, 4)
+})
+
+test('loader: a response with no rows is a failure, not an empty system', async () => {
+  const loader = createSystemLoader({ a: '/a.json' }, async () => okJson({ rows: [] }))
+  await assert.rejects(loader.loadSystem('a'), /no colour rows/)
+  assert.equal(loader.cache.has('a'), false)
+})
+
+test('loading uses fetch(), never import(): a failed import() is cached by the browser', () => {
+  // A rejected dynamic import stays in the module map, so a retry never reaches
+  // the network and the page ends up reloaded by vite:preloadError.
+  for (const f of ['src/utils/nearestLoader.js', 'src/utils/nearestSystems.js', 'src/data/nearest/index.js', 'src/data/nearest/urls.js']) {
+    const src = readFileSync(path.resolve(DATA, '../../..', f), 'utf8').replace(/\/\/.*$/gm, '')
+    assert.ok(!/\bimport\s*\(/.test(src), `${f} calls import()`)
+  }
+})
+
+test('the data index and URL list agree, and every JSON file is over the inline limit', () => {
+  const urls = readFileSync(path.join(DATA, 'urls.js'), 'utf8')
+  for (const s of NEAREST_SYSTEMS) {
+    assert.ok(urls.includes(`"./${s.id}.json?url"`), `${s.id} has no ?url import`)
+    assert.ok(urls.includes(`${JSON.stringify(s.id)}:`), `${s.id} is not in NEAREST_URLS`)
+    // Under Vite's 4096-byte assetsInlineLimit a ?url import becomes a data: URI.
+    assert.ok(readFileSync(path.join(DATA, `${s.id}.json`)).length > 4096, `${s.id}.json would be inlined`)
+  }
 })
 
 test('the index a Free user loads carries no colour data', () => {
   const src = readFileSync(path.join(DATA, 'index.js'), 'utf8')
   assert.ok(src.length < 4000)
   assert.ok(!/\[\s*"[^"]+"\s*,\s*(null|"#)/.test(src))
-  for (const s of NEAREST_SYSTEMS) assert.ok(s.credit && s.label && s.group && typeof s.load === 'function')
+  assert.ok(!/\.json|import/.test(src.replace(/\/\/.*$/gm, '')))
+  for (const s of NEAREST_SYSTEMS) assert.ok(s.credit && s.label && s.group)
 })
