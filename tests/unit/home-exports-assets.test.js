@@ -21,7 +21,7 @@ const BUDGET = {
   cover: { 360: 25 * KB, 720: 70 * KB, 1080: 130 * KB },
   total: 2400 * KB,
 }
-const FILES_EXPECTED = 27
+const FILES_EXPECTED = 36
 
 /** Width and height read from a WebP file's own header (VP8, VP8L or VP8X). */
 function webpSize(buf) {
@@ -37,7 +37,7 @@ function variantsOf(manifest) {
   const out = []
   for (const item of [...manifest.plates, ...manifest.covers]) {
     for (const orient of ['landscape', 'portrait']) {
-      if (item[orient]) out.push({ item, orient, v: item[orient], shape: item.kind === 'cover' ? 'cover' : orient })
+      if (item[orient]) out.push({ item, orient, v: item[orient], shape: item.kind === 'cover' && orient === 'portrait' ? 'cover' : orient })
     }
   }
   return out
@@ -83,10 +83,17 @@ test('every file the manifest names exists, in budget, no wider than its master'
 })
 
 test('three plates and three covers, in tab order', () => {
-  assert.deepEqual(HOME_EXPORTS.plates.map((p) => p.id), ['kit-colour', 'book-colour', 'guide-palette'])
+  assert.deepEqual(HOME_EXPORTS.plates.map((p) => p.id), ['book-colour', 'guide-palette', 'kit-colour'])
   assert.deepEqual(HOME_EXPORTS.covers.map((p) => p.id), ['cover-northbeam', 'cover-halcyon', 'cover-ferrule'])
   for (const p of HOME_EXPORTS.plates) assert.ok(p.landscape && p.portrait, `${p.id} needs both shapes`)
-  for (const c of HOME_EXPORTS.covers) assert.ok(!c.landscape && c.portrait, `${c.id} is one A4 cover`)
+  // A cover has the A4 cover (portrait, every width up to 760) and a cover-and-contents
+  // spread (landscape, from 761), each with its own aspect.
+  for (const c of HOME_EXPORTS.covers) {
+    assert.ok(c.landscape && c.portrait, `${c.id} needs the spread and the A4 cover`)
+    assert.equal(c.landscape.aspect, 1.4142, `${c.id}'s spread is two A4 pages side by side`)
+    assert.equal(c.portrait.aspect, 0.7071, `${c.id}'s cover is one A4 page`)
+    assert.ok(c.landscape.files.every((f) => f.file.includes('-spread-')), `${c.id}'s spread files are named -spread-`)
+  }
   for (const i of [...HOME_EXPORTS.plates, ...HOME_EXPORTS.covers]) assert.ok(i.alt && i.tab && i.tabName && i.sourceSha256, `${i.id} needs alt, tab, tabName and a source hash`)
 })
 
@@ -101,6 +108,9 @@ test('the checks can fail: a bad manifest is caught', () => {
   const heavy = copy()
   heavy.covers[0].portrait.files[0].bytes = 26 * KB
   assert.match(problems(heavy).join('\n'), /bytes on disk|over its/)
+  const spread = copy()
+  spread.covers[0].landscape.files[0].bytes = 71 * KB
+  assert.match(problems(spread).join('\n'), /bytes on disk|over its/)
   const empty = fs.mkdtempSync(path.join(root, '.cache', 'home-exports-empty-'))
   try {
     const errs = problems(copy(), empty).join('\n')

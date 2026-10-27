@@ -39,8 +39,12 @@ const SHOWN = '.sp-plate-art img.is-on'
 // Card 2 has the tabs UI kit, Book and Brand deck, card 3 the projects Northbeam, Halcyon
 // and Ferrule. Their ORDER is the design's to change, so nothing here counts on it: a
 // button is known by its label, and the picture it should show by this table.
-const TAB_FILE = { 'UI kit': 'kit-colour', Book: 'book-colour', 'Brand deck': 'guide-palette' }
+// Each button is known by what its accessible name starts with, because the same
+// choice is offered as pills under the plate (below 1200px) and as rows in the copy
+// column (from 1200px), and only the one on show is in the page's accessibility tree.
+const TAB_FILE = { 'Design system book': 'book-colour', 'Brand deck': 'guide-palette', 'UI kit': 'kit-colour' }
 const PROJECT_FILE = { Northbeam: 'cover-northbeam', Halcyon: 'cover-halcyon', Ferrule: 'cover-ferrule' }
+const fileOf = (table, name) => Object.entries(table).find(([k]) => name.startsWith(k))?.[1]
 
 async function open(browser, { width, height = 900, touch = false, theme = 'dark', dpr = 1, reducedMotion = 'no-preference', appearance } = {}) {
   const ctx = await browser.newContext({
@@ -66,17 +70,17 @@ const tablist = (page) => card(page, 1).getByRole('tablist', { name: 'Export typ
 const tabs = (page) => tablist(page).getByRole('tab')
 const radios = (page) => card(page, 2).getByRole('radiogroup', { name: 'Example projects' }).getByRole('radio')
 
-const labelOf = async (locator) => (await locator.textContent()).trim()
+const nameOf = async (locator) => (await locator.getAttribute('aria-label')) || ''
 /** The picture id that the tab / project at this position in the row should show. */
 async function tabId(page, i) {
-  const label = await labelOf(tabs(page).nth(i))
-  expect(Object.keys(TAB_FILE), `tab ${i + 1} is a known tab`).toContain(label)
-  return TAB_FILE[label]
+  const name = await nameOf(tabs(page).nth(i))
+  expect(fileOf(TAB_FILE, name), `tab ${i + 1} ("${name}") is a known tab`).toBeTruthy()
+  return fileOf(TAB_FILE, name)
 }
 async function projectId(page, i) {
-  const label = await labelOf(radios(page).nth(i))
-  expect(Object.keys(PROJECT_FILE), `project ${i + 1} is a known project`).toContain(label)
-  return PROJECT_FILE[label]
+  const name = await nameOf(radios(page).nth(i))
+  expect(fileOf(PROJECT_FILE, name), `project ${i + 1} ("${name}") is a known project`).toBeTruthy()
+  return fileOf(PROJECT_FILE, name)
 }
 
 /** Bring card i on screen (the pictures are lazy: they load only once in view). */
@@ -130,17 +134,21 @@ for (const { width, height, touch, tall } of FRAMES) {
 // ── 2. the tabs ────────────────────────────────────────────────────────────────
 
 /** Which tab is selected, which is in the tab order, who has focus, and what the panel says. */
-const tabState = (page) => card(page, 1).evaluate((c) => {
-  const list = [...c.querySelectorAll('[role="tab"]')]
-  const panel = c.querySelector('[role="tabpanel"]')
+const tabState = (page) => tablist(page).evaluate((list) => {
+  const tabsOn = [...list.querySelectorAll('[role="tab"]')]
+  const panel = list.closest('.sp-stack-card').querySelector('[role="tabpanel"]')
+  const namer = panel?.getAttribute('aria-labelledby')
   return {
-    selected: list.map((t, i) => (t.getAttribute('aria-selected') === 'true' ? i : -1)).filter((i) => i > -1),
-    tabbable: list.map((t, i) => (t.tabIndex === 0 ? i : -1)).filter((i) => i > -1),
-    focused: list.findIndex((t) => t === document.activeElement),
-    controls: list.map((t) => t.getAttribute('aria-controls')),
+    selected: tabsOn.map((t, i) => (t.getAttribute('aria-selected') === 'true' ? i : -1)).filter((i) => i > -1),
+    tabbable: tabsOn.map((t, i) => (t.tabIndex === 0 ? i : -1)).filter((i) => i > -1),
+    focused: tabsOn.findIndex((t) => t === document.activeElement),
+    controls: tabsOn.map((t) => t.getAttribute('aria-controls')),
     panelId: panel?.id,
-    panelNamedBy: panel?.getAttribute('aria-labelledby'),
-    tabIds: list.map((t) => t.id),
+    // The panel is named by the tab at the same position: the pill and the row with the same
+    // index share a suffix, and the named one is the selected one.
+    namedIndex: namer ? Number(/-(\d+)$/.exec(namer)?.[1]) : -1,
+    namerSelected: document.getElementById(namer)?.getAttribute('aria-selected'),
+    count: tabsOn.length,
   }
 })
 
@@ -150,8 +158,9 @@ async function expectTab(page, i, where) {
   expect(s.selected, `${where}: the selected tab`).toEqual([i])
   expect(s.tabbable, `${where}: only the selected tab is in the tab order`).toEqual([i])
   expect(s.focused, `${where}: focus is on the selected tab`).toBe(i)
-  expect(s.panelNamedBy, `${where}: the panel is named by the selected tab`).toBe(s.tabIds[i])
-  expect(s.controls, `${where}: every tab controls the panel`).toEqual(s.tabIds.map(() => s.panelId))
+  expect(s.namedIndex, `${where}: the panel is named by the selected tab`).toBe(i)
+  expect(s.namerSelected, `${where}: the tab that names the panel is selected`).toBe('true')
+  expect(s.controls, `${where}: every tab controls the panel`).toEqual(Array(s.count).fill(s.panelId))
   await waitShown(page, 1, (await tabId(page, i)))
 }
 
@@ -162,11 +171,15 @@ for (const [width, height, touch] of [[1440, 900, false], [390, 844, true]]) {
       await go(page, '/')
       await show(page, 1)
       await expect(tablist(page)).toBeVisible()
-      const names = await tabs(page).evaluateAll((els) => els.map((el) => el.textContent.trim()))
-      expect([...names].sort(), 'the tab labels').toEqual(['Book', 'Brand deck', 'UI kit'])
+      const shown = await tabs(page).evaluateAll((els) => els.map((el) => ({
+        // The visible label: the row's title, or the pill's own text.
+        label: (el.querySelector('.sp-rows-lab, .sp-lab-full, span') || el).textContent.trim(),
+        name: el.getAttribute('aria-label') || '',
+      })))
+      expect(shown.length, 'three tabs').toBe(3)
+      expect(shown.map((t) => fileOf(TAB_FILE, t.name)).sort(), 'the tabs are Book, Brand deck and UI kit').toEqual(['book-colour', 'guide-palette', 'kit-colour'])
       await expect(card(page, 1).getByRole('tabpanel')).toHaveCount(1)
-      const accessible = await tabs(page).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
-      accessible.forEach((name, i) => expect((name || '').toLowerCase(), `tab ${i + 1}'s accessible name holds its visible label`).toContain(names[i].toLowerCase()))
+      shown.forEach((t, i) => expect(t.name.toLowerCase(), `tab ${i + 1}'s accessible name holds its visible label`).toContain(t.label.toLowerCase()))
       const s = await tabState(page)
       expect(s.selected, 'the first tab starts selected').toEqual([0])
       await waitShown(page, 1, (await tabId(page, 0)))
@@ -536,7 +549,7 @@ function trackExports(page) {
     const p = new URL(req.url()).pathname
     if (p.startsWith('/home-exports/')) files.push(p.slice('/home-exports/'.length))
   })
-  const ids = () => [...new Set(files.map((f) => f.replace(/(?:-p)?-\d+\.webp$/, '')))].sort()
+  const ids = () => [...new Set(files.map((f) => f.replace(/(?:-p|-spread)?-\d+\.webp$/, '')))].sort()
   return { files, ids }
 }
 
@@ -606,6 +619,81 @@ test.describe('plate requests', () => {
     const shown = seen.files.filter((f) => f.startsWith(opening[0]))
     expect(shown.length, 'the opening tab was fetched').toBeGreaterThan(0)
     expect(shown.every((f) => f.replace(opening[0], '').match(/^-p-[0-9]+\.webp$/)), `a phone gets the portrait render: ${shown.join(', ')}`).toBe(true)
+    await ctx.close()
+  })
+})
+
+// ── 6. nothing is clipped ──────────────────────────────────────────────────────
+
+test.describe('fit', () => {
+  test("at 390px card 1's panel foot is inside the card for every piece", async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width: 390, height: 844, touch: true })
+    await go(page, '/')
+    await show(page, 0)
+    const pieces = card(page, 0).getByRole('tablist', { name: 'What to export' }).getByRole('tab')
+    await expect(pieces).toHaveCount(4)
+    for (let i = 0; i < 4; i += 1) {
+      await pieces.nth(i).click()
+      await expect(pieces.nth(i)).toHaveAttribute('aria-selected', 'true')
+      await twoFrames(page)
+      const m = await card(page, 0).evaluate((c) => {
+        const box = c.getBoundingClientRect()
+        const foot = c.querySelector('.sp-ex-actions').getBoundingClientRect()
+        const body = c.querySelector('.sp-ex-body').getBoundingClientRect()
+        const bar = c.querySelector('.sp-ex-filebar').getBoundingClientRect()
+        return { cardBottom: box.bottom, footTop: foot.top, footBottom: foot.bottom, barTop: bar.top, bodyBottom: body.bottom, footRight: foot.right, cardRight: box.right }
+      })
+      const where = `piece ${i + 1}`
+      expect(m.footBottom, `${where}: the foot's bottom edge is inside the card (card ends at ${m.cardBottom})`).toBeLessThanOrEqual(m.cardBottom + 0.5)
+      expect(m.footRight, `${where}: the foot is inside the card's right edge`).toBeLessThanOrEqual(m.cardRight + 0.5)
+      expect(m.barTop, `${where}: the file bar starts below the body`).toBeGreaterThanOrEqual(m.bodyBottom - 0.5)
+      expect(m.footTop, `${where}: the foot starts below the file bar`).toBeGreaterThanOrEqual(m.barTop)
+    }
+    await ctx.close()
+  })
+
+  for (const width of [1200, 1280, 1440]) {
+    test(`at ${width}px each card's copy and rows fit inside the copy column, and the pills give way to the rows`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height: 900 })
+      await go(page, '/')
+      await show(page, 2)
+      for (let i = 0; i < 3; i += 1) {
+        const m = await card(page, i).evaluate((c) => {
+          const say = c.querySelector('.sp-stack-say')
+          const rows = c.querySelector('.sp-rows')
+          const pills = c.querySelector('.sp-pick, .sp-ex-pieces')
+          const s = say.getBoundingClientRect()
+          const r = rows.getBoundingClientRect()
+          const kids = [...say.children].map((k) => k.getBoundingClientRect())
+          return {
+            sayH: say.clientHeight, sayScroll: say.scrollHeight, sayBottom: s.bottom,
+            rowsBottom: r.bottom, rowsVisible: r.height > 0, pillsHidden: pills.offsetParent === null,
+            lowest: Math.max(...kids.map((k) => k.bottom)), rowsRight: r.right, sayRight: s.right,
+          }
+        })
+        const where = `card ${i + 1} at ${width}px`
+        expect(m.rowsVisible, `${where}: the rows are showing`).toBe(true)
+        expect(m.pillsHidden, `${where}: the pills are hidden`).toBe(true)
+        expect(m.sayScroll, `${where}: the copy column's content (${m.sayScroll}px) is taller than the column (${m.sayH}px)`).toBeLessThanOrEqual(m.sayH + 1)
+        expect(m.lowest, `${where}: something in the copy column hangs below it`).toBeLessThanOrEqual(m.sayBottom + 0.5)
+        expect(m.rowsBottom, `${where}: the rows end inside the column`).toBeLessThanOrEqual(m.sayBottom + 0.5)
+        expect(m.rowsRight, `${where}: the rows end inside the column's right edge`).toBeLessThanOrEqual(m.sayRight + 0.5)
+      }
+      await ctx.close()
+    })
+  }
+
+  test('at 1199px the pills are showing and the rows are not', async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width: 1199, height: 900 })
+    await go(page, '/')
+    await show(page, 2)
+    for (let i = 0; i < 3; i += 1) {
+      const m = await card(page, i).evaluate((c) => ({
+        rowsHidden: c.querySelector('.sp-rows').offsetParent === null,
+        pillsShown: c.querySelector('.sp-pick, .sp-ex-pieces').offsetParent !== null,
+      }))
+      expect(m, `card ${i + 1} at 1199px`).toEqual({ rowsHidden: true, pillsShown: true })
+    }
     await ctx.close()
   })
 })
