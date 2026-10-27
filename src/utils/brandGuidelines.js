@@ -106,10 +106,10 @@ import { grade, inkFor, readDesign, typeLadder } from './styleGuideExport.js'
 import { roleLabel } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
+import { esc, orderSections } from './exportTemplates/shared.js'
+import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
 
-const esc = (s) => String(s ?? '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
+const DEFAULT_TEMPLATE = 'presentation'
 
 /** Swatch cards per spread. Five is what the harmony engine generates, so the
  *  ordinary palette fills exactly one row of the grid. */
@@ -310,7 +310,7 @@ function opening(section, field, ink, palette) {
 function markPage(ctx, folio) {
   const { logo } = ctx.d
   const facts = [
-    ['Format', logo.type === 'image/svg+xml' ? 'SVG — vector' : logo.type.replace('image/', '').toUpperCase()],
+    ['Format', logo.type === 'image/svg+xml' ? 'SVG vector' : logo.type.replace('image/', '').toUpperCase()],
     logo.width && logo.height ? ['Supplied at', `${Math.round(logo.width)} × ${Math.round(logo.height)}`] : null,
     logo.aspect ? ['Proportion', `${logo.aspect.toFixed(2)} : 1`] : null,
   ].filter(Boolean)
@@ -320,7 +320,7 @@ function markPage(ctx, folio) {
     notes: [
       'This is the artwork as supplied, reproduced without alteration. Nothing on this page has been redrawn, recoloured or retraced.',
       logo.type === 'image/svg+xml'
-        ? 'It is vector artwork, so it holds at any size — from a favicon to a building.'
+        ? 'It is vector artwork, so it holds at any size, from a favicon to a building.'
         : 'It is a raster file, so there is a size past which it will soften. Supply vector artwork for anything printed large.',
     ],
     body: `<div class="mk-stage">${markImg(logo, { cls: 'mk-hero', alt: `${ctx.projectName} logo` })}</div>
@@ -353,7 +353,7 @@ function groundsPage(ctx, folio) {
     title: 'On grounds',
     notes: [
       'The same artwork on paper, on ink and on each brand colour. Read it as a test: the mark is approved on a ground only where it still reads.',
-      'No reversed or single-colour version has been generated. Where the mark fails a ground below, that variant needs drawing — this document has not invented one for you.',
+      'No reversed or single-colour version has been generated. Where the mark fails a ground below, that variant needs drawing; this document has not invented one for you.',
     ],
     body: `<div class="grounds">${tiles}</div>`,
     folio,
@@ -366,7 +366,7 @@ function clearSpacePage(ctx, folio, cs) {
     title: 'Clear space',
     notes: [
       `Keep a margin of X on every side of the mark, where X is half the height of the mark itself. At the size drawn here that is ${cs.x.toFixed(0)}mm.`,
-      'This is the default rule this document applies, not a decision already taken. Replace it if your mark asks for more room — but replace it deliberately.',
+      'This is the default rule this document applies, not a decision already taken. Replace it if your mark asks for more room, but replace it deliberately.',
     ],
     body: `<div class="cs-stage">
       <div class="cs-box" style="width:${cs.boxWidth.toFixed(1)}mm;height:${cs.boxHeight.toFixed(1)}mm;padding:${cs.x.toFixed(1)}mm">
@@ -517,24 +517,6 @@ function scalePage(ctx, ladder, folio) {
 
 /* ── cover and closing ────────────────────────────────────────────────────── */
 
-function coverPage(ctx, field, ink, year) {
-  const d = ctx.d
-  const rest = d.palette.filter(c => c !== field)
-  const band = rest.length ? `<div class="cv-band">${rest.map(c => `<i style="background:${c}"></i>`).join('')}</div>` : ''
-  return `<section class="sl sl-cover" style="background:${field};color:${ink}">
-  <div class="cv-top">
-    <span class="cv-mark">${d.logo ? markImg(d.logo, { cls: 'mk-cover', alt: `${ctx.projectName} logo` }) : esc(ctx.projectName)}</span>
-    <span class="cv-year">${esc(year)}</span>
-  </div>
-  <h1 class="cv-title">Brand <br>Guidelines</h1>
-  <div class="cv-foot">
-    <span>${esc(ctx.projectName)}</span>
-    <span>${ctx.sections.map(s => esc(s.title)).join(' · ')}</span>
-  </div>
-  ${band}
-</section>`
-}
-
 /**
  * What this document covers and what it does not — always the last page.
  *
@@ -546,15 +528,15 @@ function coverPage(ctx, field, ink, year) {
  */
 function scopePage(ctx, folio) {
   const d = ctx.d
-  const covers = ctx.sections.map(s => `<li>${esc(s.title)} — ${esc(s.leaves.join(', ').toLowerCase())}</li>`).join('')
+  const covers = ctx.sections.map(s => `<li>${esc(s.title)}: ${esc(s.leaves.join(', ').toLowerCase())}</li>`).join('')
   const absent = []
   if (!d.logo) {
-    absent.push(`A logo section — ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel and these pages are generated from it.`)
+    absent.push(`A logo section: ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel and these pages are generated from it.`)
   } else if (!d.logo.aspect) {
     absent.push('The clear-space rule. Your logo file states no dimensions, so the keep-out box could only have been drawn to a guessed proportion.')
   }
   absent.push('Reversed and single-colour versions of the mark. Recolouring supplied artwork invents a lockup nobody approved, so this document checks the mark on each ground instead of redrawing it.')
-  absent.push('Photographic applications — signage, packaging, merchandise, a card in a hand. There is no imagery in this system to build them from, and inventing some would misrepresent a brand rather than document it.')
+  absent.push('Photographic applications: signage, packaging, merchandise, a card in a hand. There is no imagery in this system to build them from, and inventing some would misrepresent a brand rather than document it.')
   absent.push('Tone of voice, motion and iconography rules. Those are brand decisions taken outside these tools, so this document does not speak for them.')
   return `<section class="sl sl-scope">
   ${rail(ctx, null, folio)}
@@ -584,16 +566,22 @@ function scopePage(ctx, folio) {
  * a Pro export, so there is no free variant to mark. A gate that hands over a
  * degraded paid artefact teaches the buyer that the paid thing is worse.
  */
-export function buildBrandGuidelines(design, { projectName = 'Design System', date = new Date() } = {}) {
+export function buildBrandGuidelines(design, { projectName = 'Design System', date = new Date(), template = DEFAULT_TEMPLATE } = {}) {
+  // The id is only a lookup key; the layout is the module in GUIDELINES_TEMPLATES.
+  const tpl = Object.hasOwn(GUIDELINES_TEMPLATES, template) ? GUIDELINES_TEMPLATES[template] : GUIDELINES_TEMPLATES[DEFAULT_TEMPLATE]
   const d = readGuidelines(design)
-  const sections = guidelineSections(d)
+  // The generator decides which sections exist; the template orders them, and the
+  // numerals follow the order they are laid out in.
+  const sections = orderSections(guidelineSections(d), tpl.sectionOrder, (s) => s.id)
+    .map((s, i) => ({ ...s, num: String(i + 1).padStart(2, '0') }))
   const ctx = { d, projectName, sections }
   const iso = date.toISOString().slice(0, 10)
   const year = iso.slice(0, 4)
 
   const field = d.base || '#111114'
   const fieldInk = inkFor(field).ink
-  const pages = [coverPage(ctx, field, fieldInk, year)]
+  const mark = d.logo ? markImg(d.logo, { cls: 'mk-cover', alt: `${projectName} logo` }) : esc(projectName)
+  const pages = [tpl.cover({ ...ctx, field, fieldInk, year, mark })]
   let folio = 0
   const push = (html) => pages.push(html)
   const numbered = (make) => { folio += 1; push(make(folio)) }
@@ -630,7 +618,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
         spacing: d.headingSpacing,
         folio: f,
         notes: one
-          ? [`${d.heading} carries the whole system, headings and reading alike — a single family held at different weights and sizes.`,
+          ? [`${d.heading} carries the whole system, headings and reading alike: a single family held at different weights and sizes.`,
             'The full character set is printed so a substitution is obvious the moment one happens.']
           : [`${d.heading} sets the headings at ${d.headingWeight}. It is chosen to be recognised at a glance rather than read at length.`,
             'The full character set is printed so a substitution is obvious the moment one happens.'],
@@ -657,11 +645,11 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(projectName)} — Brand Guidelines</title>
-<meta name="description" content="Brand guidelines for ${esc(projectName)} — logo, colour and typography, generated from the system itself.">
+<title>${esc(projectName)} | Brand Guidelines</title>
+<meta name="description" content="Brand guidelines for ${esc(projectName)}: logo, colour and typography, generated from the system itself.">
 ${fontLink(d)}
 <style>
-${guidelinesCss(d)}
+${tpl.css(ctx)}
 </style>
 </head>
 <body>
@@ -695,191 +683,3 @@ function fontLink(d) {
   return `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?${param}&display=swap" rel="stylesheet">`
 }
 
-/**
- * One grid, held on every spread. 297 × 167mm is 16:9 to a tenth of a
- * millimetre, and it is declared as an exact @page size so the printed PDF is a
- * deck rather than a landscape A4 with bands down the sides.
- */
-function guidelinesCss(d) {
-  return `  :root{
-    --ink:#121216; --mut:#6C6C77; --line:#DEDEE4; --hair:#EEEEF2; --paper:#fff;
-    --m:15mm;
-    --head:'${esc(d.heading)}',system-ui,-apple-system,'Segoe UI',sans-serif;
-    --body:'${esc(d.body)}',system-ui,-apple-system,'Segoe UI',sans-serif;
-    --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;
-  }
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
-  body{margin:0;background:#E9E9ED;color:var(--ink);font-family:var(--body);
-    font-size:9pt;line-height:1.5;-webkit-font-smoothing:antialiased}
-
-  /* Exact height, never min-height: a page break landing mid-grid would
-     repaginate differently on every printer. */
-  .sl{position:relative;width:297mm;height:167mm;padding:var(--m);
-    background:var(--paper);margin:6mm auto;overflow:hidden;
-    display:flex;flex-direction:column;box-shadow:0 1px 14px rgba(18,18,22,.13)}
-  h1,h2{font-family:var(--head);font-weight:${d.headingWeight};margin:0;line-height:1.05}
-  p{margin:0}
-  .num,.sw-spec dd,.facts dd{font-family:var(--mono);font-variant-numeric:tabular-nums}
-
-  /* ── rail ───────────────────────────────────────────────────────────── */
-  .rail{display:flex;align-items:center;gap:10mm;flex:0 0 auto;
-    padding-bottom:3mm;font-size:6.5pt;letter-spacing:.16em;text-transform:uppercase}
-  .rail-mark{display:flex;align-items:center;min-width:0}
-  .rail-name{font-family:var(--head);font-weight:${d.headingWeight};letter-spacing:.04em;font-size:7.5pt}
-  .mk-rail{height:5mm;width:auto;max-width:40mm;object-fit:contain;object-position:left center}
-  .rail-secs{display:flex;gap:6mm;margin-left:auto;color:#B6B6C0}
-  .rail-secs .is-on{color:var(--ink)}
-  .rail-folio{font-family:var(--mono);letter-spacing:0;color:var(--mut);font-size:7.5pt}
-
-  /* ── head ───────────────────────────────────────────────────────────── */
-  .hd{display:grid;grid-template-columns:76mm 1fr;gap:10mm;flex:0 0 auto;
-    border-top:.5pt solid var(--ink);padding-top:5mm;margin-bottom:7mm}
-  .hd-title{font-size:19pt;letter-spacing:-.015em}
-  /* Two columns, because the reference sets two short thoughts rather than one
-     paragraph that ran long. */
-  .hd-notes{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:7.5pt;
-    line-height:1.5;color:var(--mut);max-width:150mm;margin-left:auto}
-  .bd{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
-
-  /* ── cover ──────────────────────────────────────────────────────────── */
-  .sl-cover{justify-content:space-between}
-  .cv-top{display:flex;justify-content:space-between;align-items:flex-start;
-    font-size:7.5pt;letter-spacing:.2em;text-transform:uppercase;opacity:.9}
-  .mk-cover{height:7mm;width:auto;max-width:60mm;object-fit:contain;object-position:left center}
-  /* Set LOW and large. A centred title reads as a slide; a cover is a
-     composition and the mass belongs off the middle. */
-  .cv-title{font-size:64pt;letter-spacing:-.03em;margin:auto 0 6mm;line-height:.94}
-  .cv-foot{display:flex;justify-content:space-between;font-size:7.5pt;
-    letter-spacing:.14em;text-transform:uppercase;opacity:.85;padding-bottom:6mm}
-  .cv-band{display:flex;height:8mm;position:absolute;left:0;right:0;bottom:0}
-  .cv-band i{flex:1}
-
-  /* ── section opening ────────────────────────────────────────────────── */
-  /* The opening is one column of text against a full-bleed field. .sl is
-     already a flex column, so the left block only has to push its two masses
-     apart: the numbered title at the head, the abstract at the foot. */
-  .sl-open{padding-right:0}
-  .op-left{display:flex;flex-direction:column;justify-content:space-between;
-    height:100%;width:58%;padding-right:10mm}
-  .op-head{font-family:var(--head);font-weight:${d.headingWeight};font-size:46pt;
-    letter-spacing:-.025em;line-height:1}
-  .op-num{font-family:var(--mono);font-size:22pt;letter-spacing:0;opacity:.55;
-    vertical-align:.85em;margin-right:3mm}
-  .op-leaves{list-style:none;margin:7mm 0 auto;padding:4mm 0 0;max-width:70mm;
-    border-top:.5pt solid currentColor;font-size:7.5pt;letter-spacing:.16em;
-    text-transform:uppercase;opacity:.8}
-  .op-leaves li{padding:1.2mm 0}
-  .op-abs{font-size:13.5pt;line-height:1.28;opacity:.92;
-    font-family:var(--head);font-weight:${d.headingWeight};letter-spacing:-.015em}
-  /* Full-bleed: it cancels the page padding rather than sitting inside it, so
-     the palette reads as the ground of the page and not as a swatch strip laid
-     on top of one. */
-  .op-field{position:absolute;top:0;right:0;bottom:0;width:34%;display:flex;flex-direction:column}
-  .op-field i{flex:1}
-
-  /* ── logo pages ─────────────────────────────────────────────────────── */
-  .mk{display:block;max-width:100%}
-  .mk-stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
-    border:.5pt solid var(--hair);background:#FAFAFC;min-height:0}
-  .mk-hero{max-height:56mm;max-width:150mm;width:auto;height:auto;object-fit:contain}
-  .facts{display:flex;gap:14mm;margin:5mm 0 0;flex:0 0 auto}
-  .facts dt{font-size:6.5pt;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-bottom:1mm}
-  .facts dd{margin:0;font-size:8.5pt}
-  .grounds{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;flex:1 1 auto;min-height:0}
-  /* See fillRow(): the last tile takes the cells its row would have left blank,
-     rather than the grid ending on a hole. */
-  .is-span2{grid-column:span 2}
-  .is-span3{grid-column:span 3}
-  .gr{position:relative;display:flex;align-items:center;justify-content:center;padding:6mm}
-  .gr-edge{box-shadow:inset 0 0 0 .5pt var(--line)}
-  .mk-tile{max-height:16mm;max-width:70%;width:auto;object-fit:contain}
-  .gr-label{position:absolute;left:3mm;bottom:2.5mm;font-size:6pt;
-    letter-spacing:.16em;text-transform:uppercase;opacity:.8}
-  .cs-stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0}
-  .cs-box{position:relative;display:flex;align-items:center;justify-content:center;
-    outline:.5pt dashed var(--ink);outline-offset:0}
-  .mk-cs{width:auto;max-width:100%;object-fit:contain}
-  /* The X markers sit ON the keep-out band they measure, which is the only
-     placement that makes the measurement self-evident. */
-  .cs-x{position:absolute;display:flex;align-items:center;justify-content:center;
-    background:#EFEFF3;font-family:var(--mono);font-size:6.5pt;color:var(--mut)}
-  .cs-x-top{top:0;left:0}
-  .cs-x-left{left:0;top:50%;transform:translateY(-50%)}
-  .cs-rule{flex:0 0 auto;margin-top:4mm;font-size:7pt;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--mut);text-align:center}
-
-  /* ── swatches ───────────────────────────────────────────────────────── */
-  .swatches{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4mm;flex:1 1 auto;min-height:0}
-  .sw{display:flex;flex-direction:column;justify-content:space-between;margin:0;padding:5mm}
-  .sw-top{display:flex;flex-direction:column;gap:2mm}
-  .sw-role{font-size:6pt;letter-spacing:.18em;text-transform:uppercase;opacity:.75}
-  .sw-name{font-family:var(--head);font-weight:${d.headingWeight};font-size:12pt;line-height:1.1}
-  .sw-spec{margin:0;display:flex;flex-direction:column;gap:1.6mm}
-  .sw-spec div{display:flex;justify-content:space-between;gap:3mm;font-size:6.5pt;
-    border-top:.5pt solid currentColor;padding-top:1.4mm;opacity:.85}
-  .sw-spec dt{letter-spacing:.1em;text-transform:uppercase}
-  .sw-spec dd{margin:0}
-
-  /* ── in use ─────────────────────────────────────────────────────────── */
-  .uses{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;flex:1 1 auto;min-height:0}
-  .use{display:flex;flex-direction:column;justify-content:space-between;padding:5mm}
-  .use-set{font-family:var(--head);font-weight:${d.headingWeight};font-size:17pt;
-    line-height:1.05;letter-spacing:-.01em;word-break:break-word}
-  .use-meta{font-family:var(--mono);font-size:6pt;letter-spacing:.06em;opacity:.85}
-
-  /* ── typography ─────────────────────────────────────────────────────── */
-  .tf{display:grid;grid-template-columns:82mm 1fr;gap:12mm;flex:1 1 auto;min-height:0}
-  /* min-height:0 on both columns: a grid item defaults to min-height:auto, so
-     without it a tall column pushes THROUGH the fixed page instead of being
-     held by it, and a page that silently grows is a page that repaginates
-     differently on every printer. */
-  .tf-left{display:flex;flex-direction:column;min-width:0;min-height:0}
-  .tf-eyebrow{font-size:6.5pt;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
-  .tf-name{font-size:22pt;line-height:1.1;margin:2mm 0 0;word-break:break-word}
-  /* The specimen fills what the name leaves and is CENTRED in it rather than
-     pinned to the foot — pinned, it sat under a band of empty paper that read
-     as the column having failed to fill. */
-  .tf-ag{flex:1 1 auto;min-height:0;display:flex;align-items:center;
-    font-size:92pt;line-height:.86;letter-spacing:-.035em;overflow:hidden}
-  .tf-right{display:flex;flex-direction:column;min-width:0;min-height:0}
-  .tf-lbl{font-size:6.5pt;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);margin:0 0 1.5mm}
-  .tf-lbl:not(:first-child){margin-top:3.5mm}
-  /* The boxed grid — OpenPay's signature. Fixed ten columns with hairline cells;
-     the last row runs short and is LEFT short, because a character set padded
-     out to a rectangle has stopped being a character set.
-     THE CELL IS A FIXED HEIGHT, NOT A SQUARE. Square cells at ten columns across
-     the 160mm right-hand column came out 16mm tall, so three grids stood 100mm
-     over the page and both type spreads overflowed — measured in a browser, not
-     guessed. A character grid is a reading object, so it is set at a reading
-     size and the cell follows it. */
-  .alpha{display:grid;grid-template-columns:repeat(10,1fr);
-    border-top:.5pt solid var(--line);border-left:.5pt solid var(--line)}
-  .alpha span{display:flex;align-items:center;justify-content:center;
-    height:8mm;font-size:11pt;line-height:1;
-    border-right:.5pt solid var(--line);border-bottom:.5pt solid var(--line)}
-  .scale{width:100%;border-collapse:collapse;font-size:8pt;table-layout:fixed}
-  .scale th,.scale td{text-align:left;padding:2.6mm 2mm;
-    border-bottom:.5pt solid var(--hair);vertical-align:middle}
-  .scale thead th{font-size:6.5pt;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--mut);border-bottom:.5pt solid var(--ink)}
-  .scale th[scope=row]{font-weight:600;white-space:nowrap;width:34mm}
-  .scale td.num{width:22mm}
-  .scale td.sp{white-space:nowrap;overflow:hidden;line-height:1.1}
-
-  /* ── scope ──────────────────────────────────────────────────────────── */
-  .sc-grid{display:grid;grid-template-columns:1fr 1.35fr;gap:14mm}
-  .sc-lbl{font-size:6.5pt;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--mut);margin-bottom:3mm}
-  .sc-list{list-style:none;margin:0;padding:0;font-size:8pt;line-height:1.45}
-  .sc-list li{padding:2.6mm 0;border-top:.5pt solid var(--hair)}
-  .sc-list li:first-child{border-top:.5pt solid var(--ink)}
-  .sc-absent li{color:var(--mut)}
-
-  @media print{
-    body{background:#fff}
-    .sl{margin:0;box-shadow:none;break-after:page;page-break-after:always}
-    .sl:last-child{break-after:auto;page-break-after:auto}
-    @page{size:297mm 167mm;margin:0}
-  }`
-}

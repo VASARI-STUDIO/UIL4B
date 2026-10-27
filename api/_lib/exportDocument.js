@@ -1,4 +1,4 @@
-// POST /api/ai?export=document { format, projectName, design } — the Pro
+// POST /api/ai?export=document { format, projectName, design, template } — the Pro
 // documents (the design system book and the brand guidelines), built here.
 //
 // WHY THE SERVER BUILDS THEM. The Pro check used to sit in the browser, beside
@@ -20,26 +20,29 @@
 // a new Pro format cannot be badged in the panel and left unbuilt (or built in the
 // browser) here.
 //
-// Contract (POST, JSON body { format, projectName, design }):
+// Contract (POST, JSON body { format, projectName, design, template }):
 //   no/invalid token                     401  { code: 'auth_required' }
 //   token check failed for a server      500 (credential) or 503 (anything else)
 //     reason, not a verdict on the token      { code: 'auth_unavailable' }
 //   not a Pro document format            400  { code: 'unknown_format' }
 //   Pro format, account is not Pro       403  { code: 'pro_required' }
+//   template not live for the format    400  { code: 'unknown_template' }
+//     (any non-string; absent, null or '' means the format's default)
 //   design too large                     413  { code: 'design_too_large' }
 //   over 200 colours (palette colours    400  { code: 'too_many_colours' }
 //   or gradient stops)
-//   Pro format, Pro or admin             200  { ok: true, format, html }
+//   Pro format, Pro or admin             200  { ok: true, format, template, html }
 //   always                               Cache-Control: private, no-store
 //
 // Auth is checked before the format, so a stranger cannot use the 400 to learn
-// which formats exist, and the plan is checked before the generator is even
-// loaded. Pro is decided by planForUser from users/{uid}, never from the request.
+// which formats exist, and the plan is checked before the template is looked at
+// and before the generator is even loaded. Pro is decided by planForUser from users/{uid}, never from the request.
 // `deps` is injected so the unit test can fake the token, the user document and
 // the generators.
 
 import { planForUser } from './plans.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { defaultTemplate, isTemplate } from '../../src/config/exportTemplates.js'
 import { safeFamily, safeWeight } from '../../src/utils/styleGuideExport.js'
 
 // The generators, loaded on demand and only after the plan check has passed, so a
@@ -181,7 +184,15 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
     return res.status(403).json({ error: 'Pro plan required', code: 'pro_required', format: format.id })
   }
 
-  // The plan has passed; only now is the request body read for its content.
+  // The plan has passed; only now is the request body read for its content,
+  // starting with the template. Absent, null or '' is the format's default; any
+  // other value must be a live template of this format. The value is a lookup key
+  // only: the layout comes from the generator's own template table.
+  const wanted = body.template
+  const template = wanted === undefined || wanted === null || wanted === '' ? defaultTemplate(format.id) : wanted
+  if (!isTemplate(format.id, template)) {
+    return res.status(400).json({ error: 'Unknown export template', code: 'unknown_template' })
+  }
   const design = pickDesign(body.design)
   let size = 0
   try { size = JSON.stringify(design).length } catch { size = Infinity }
@@ -204,9 +215,9 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
 
   try {
     const build = await builders[format.id]()
-    const html = build(design, { projectName })
+    const html = build(design, { projectName, template })
     if (typeof html !== 'string' || !html) throw new Error('empty document')
-    return res.status(200).json({ ok: true, format: format.id, html })
+    return res.status(200).json({ ok: true, format: format.id, template, html })
   } catch {
     return res.status(500).json({ error: 'The document could not be created', code: 'build_failed' })
   }

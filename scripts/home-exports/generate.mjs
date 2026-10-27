@@ -4,7 +4,7 @@
 //   node scripts/home-exports/generate.mjs --only=kit-colour,cover-ferrule   render some ids (check mode: writes nothing)
 //
 // Every plate is a page the product's own export code produced: the UI kit
-// (renderUiKit, over src/templates/uiKit.html, the Free tier with its mark), the
+// (renderUiKit, over src/templates/kit/studio.html, the Free tier with its mark), the
 // Design system book (buildDesignSystemBook) and the Brand guidelines deck
 // (buildBrandGuidelines). The three project plates are the book's own cover page
 // for each example project: the A4 cover on its own, which the shelf in card 3
@@ -62,7 +62,7 @@ const FONT_CACHE = path.join(CACHE, 'fonts')
 const MASTER_DIR = path.join(CACHE, 'master')
 const OUT_DIR = path.join(root, 'public', 'home-exports')
 const OUT_DATA = path.join(root, 'src', 'data', 'homeExports.generated.js')
-const TEMPLATE = path.join(root, 'src', 'templates', 'uiKit.html')
+const TEMPLATE = path.join(root, 'src', 'templates', 'kit', 'studio.html')
 const PUBLIC = path.join(root, 'public')
 const PUBLIC_DIR = '/home-exports/'
 

@@ -137,3 +137,47 @@ test('/create/palette: the tools sheet dividers run straight', async ({ browser 
   }
   await ctx.close()
 })
+
+// The bench's Shuffle is a 36px icon button (drawn size, by design) whose 44px
+// hit area is an invisible ::after ring. The generic probe above only samples
+// the four points on the centre's axes; this one measures the ring as a SQUARE:
+// all four corners of a 44px box land on the button, a point well outside it
+// does not (so a stray full-width overlay cannot pass), and a real touch tap at
+// a corner of the ring shuffles the seed.
+test('/: Shuffle is drawn 36px, its ring is 44px, and a tap on the ring corner shuffles', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  const page = await ctx.newPage()
+  watch(page, 'someone on a phone tapping the shuffle button')
+  await go(page, '/')
+  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+  const shuffle = page.locator('.sp-panel .sp-shuffle').first()
+  await expect(shuffle).toBeVisible({ timeout: 15000 })
+  await shuffle.scrollIntoViewIfNeeded()
+
+  const m = await shuffle.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const ring = getComputedStyle(el, '::after')
+    const cx = r.left + r.width / 2
+    const cy = r.top + r.height / 2
+    const lands = (x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && (hit === el || el.contains(hit)) }
+    return {
+      drawn: [Math.round(r.width), Math.round(r.height)],
+      ring: [parseFloat(ring.width), parseFloat(ring.height)],
+      ringPosition: ring.position,
+      corners: [[-21, -21], [21, -21], [-21, 21], [21, 21]].map(([dx, dy]) => lands(cx + dx, cy + dy)),
+      outside: [[-26, 0], [26, 0], [0, -26], [0, 26]].map(([dx, dy]) => lands(cx + dx, cy + dy)),
+      cx, cy,
+    }
+  })
+  expect(m.drawn, 'the Shuffle button is no longer drawn at 36 x 36').toEqual([36, 36])
+  expect(m.ringPosition, 'the hit ring is not an absolutely positioned ::after').toBe('absolute')
+  expect(m.ring, 'the ::after hit ring is not 44 x 44').toEqual([44, 44])
+  expect(m.corners, 'a corner of the 44px square misses the button').toEqual([true, true, true, true])
+  expect(m.outside, 'the hit area reaches well past 44px').toEqual([false, false, false, false])
+
+  const name = page.locator('.sp-panel .sp-seed-name b').first()
+  const before = await name.innerText()
+  await page.touchscreen.tap(m.cx + 20, m.cy + 20)
+  await expect(name, 'a tap on the ring corner did not shuffle the seed').not.toHaveText(before)
+  await ctx.close()
+})

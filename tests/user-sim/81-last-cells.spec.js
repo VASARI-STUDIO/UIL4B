@@ -327,7 +327,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   // src/data/palettePreviewScenes.js. This goes red on the count of options.
   // Deleting the import of the preview component instead takes the whole route
   // down, which this also catches, on the dialog never opening.
-  test('all eight scenes render, each with the full --pv-* role set', async ({ page }) => {
+  test('all eleven scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     await go(page, '/create/palette')
     await clickPaletteAction(page, 'Preview on a UI')
@@ -338,10 +338,10 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       '--pv-subtle', '--pv-deep', '--pv-on-primary', '--pv-primary-ink', '--pv-accent-ink',
       '--pv-pborder', '--pv-success', '--pv-success-ink', '--pv-success-tint', '--pv-warning',
       '--pv-warning-ink', '--pv-error', '--pv-error-ink', '--pv-info', '--pv-info-ink']
-    const NAMES = ['Dashboard', 'Invoices', 'Settings', 'Phone app', 'Landing page', 'Email receipt', 'Poster', 'Social tile']
+    const NAMES = ['Energy dashboard', 'Dashboard', 'Phone app', 'Editorial hero', 'Product page', 'Landing page', 'Email receipt', 'Poster', 'Social tile', 'Invoices', 'Settings']
 
     const rail = page.getByRole('listbox', { name: 'Previews' })
-    await expect(rail.getByRole('option')).toHaveCount(8)
+    await expect(rail.getByRole('option')).toHaveCount(11)
 
     const seen = new Set()
     for (const name of NAMES) {
@@ -370,7 +370,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       expect(s.missing, `${name}: pvVars did not write ${s.missing.join(', ')}`).toEqual([])
       seen.add(s.name)
     }
-    expect(seen.size, 'eight distinct scenes did not render').toBe(8)
+    expect(seen.size, 'eleven distinct scenes did not render').toBe(11)
   })
 })
 

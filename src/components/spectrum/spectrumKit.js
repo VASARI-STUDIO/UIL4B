@@ -128,12 +128,12 @@ export const ICONS = [
   ['download-simple', 'Download'], ['copy', 'Copy'], ['check-square', 'Contrast pass'],
 ]
 export const GLYPHS = ICONS.slice(0, 12)
-export const ICON_FORMATS = ['SVG', 'JSX', 'SPRITE']
+export const ICON_FORMATS = ['SVG', 'JSX', 'Sprite']
 export const ICON_WEIGHTS = [['Thin', 'thin'], ['Light', 'light'], ['Regular', 'regular'], ['Bold', 'bold'], ['Fill', 'fill']]
 export const ICON_SIZES = [16, 20, 24, 32]
 
 /** What "Copy SVG" puts on the clipboard. SVG is a complete, standalone file;
- *  JSX is the Phosphor React call the design shows; SPRITE is a real <symbol>
+ *  JSX is the Phosphor React call the design shows; Sprite is a real <symbol>
  *  plus the <use> that draws it. */
 export const pascalOf = (slug) => slug.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join('')
 

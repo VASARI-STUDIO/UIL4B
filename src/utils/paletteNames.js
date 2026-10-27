@@ -262,20 +262,59 @@ function nounsForHue(bank, hue) {
   return kept.length ? kept : bank
 }
 
-/** HCT hue for a hex, or null when it cannot be read. */
-function hctHue(hex) {
+/* ── A word for light may not name a dark, and the reverse ────────────────
+
+   The same filter again, on tone (HCT tone is CIE L*, 0 black to 100 white).
+   The mono bank holds "Alabaster", "Bone" and "Chalk", all near-whites, and a
+   near-black drew from the same pool: the UI kit named the text colour #05070A
+   "Warm Alabaster". Hue cannot catch this, because a neutral has no hue to
+   compare. Each entry is the tone range over which the word is a fair name;
+   a word with no entry names no particular lightness and is always available.
+   A noun outside its range is withheld, and the pool is never emptied. */
+const NOUN_TONE = {
+  // light neutrals
+  Alabaster: [75, 100], Bone: [70, 100], Chalk: [75, 100], Plaster: [70, 100],
+  Oatmeal: [65, 96], Limestone: [65, 96], Vellum: [75, 100], Parchment: [75, 100],
+  Gesso: [75, 100], Travertine: [55, 92],
+  // mid and dark neutrals
+  Concrete: [35, 82], Greige: [45, 88], Pewter: [30, 78], Titanium: [35, 82],
+  Steel: [30, 80], Alloy: [30, 80], Chrome: [50, 100],
+  Basalt: [0, 45], Graphite: [0, 50], Gunmetal: [0, 50], Carbon: [0, 40],
+}
+
+/** Modifiers that claim a light or a dark colour, with the tone they need. */
+const ADJ_TONE = {
+  Pale: [60, 100], 'Sun-Bleached': [60, 100], Powdered: [60, 100],
+  'Sun-Washed': [55, 100], Washed: [55, 100],
+  Deep: [0, 70], Smoked: [0, 70], Dusky: [0, 70],
+}
+
+/** The words in `bank` whose tone range holds `tone`; the whole bank when
+    none do, or when the colour has no readable tone. */
+function wordsForTone(bank, ranges, tone) {
+  if (!Number.isFinite(tone)) return bank
+  const kept = bank.filter((word) => {
+    const r = ranges[word]
+    return r === undefined || (tone >= r[0] && tone <= r[1])
+  })
+  return kept.length ? kept : bank
+}
+
+/** HCT hue and tone for a hex; null where it cannot be read. */
+function hctParts(hex) {
   try {
-    const [h] = hexToHct(hex)
-    return Number.isFinite(h) ? h : null
+    const [h, , t] = hexToHct(hex)
+    return { hue: Number.isFinite(h) ? h : null, tone: Number.isFinite(t) ? t : null }
   } catch {
-    return null
+    return { hue: null, tone: null }
   }
 }
 
 export function colorName(hex) {
   const key = normaliseHex(hex) || String(hex ?? '').toUpperCase()
   const theme = NAME_THEMES[colorTheme(key)] || NAME_THEMES.mono
-  const adjectives = [...theme.adj, ...NAME_MOVEMENTS]
+  const { hue, tone } = hctParts(key)
+  const adjectives = wordsForTone([...theme.adj, ...NAME_MOVEMENTS], ADJ_TONE, tone)
   const nouns = [...theme.noun, ...theme.solo]
   const h = hashHex(key)
   // Two independent digits out of one hash: the low one picks the adjective,
@@ -284,7 +323,7 @@ export function colorName(hex) {
   const adj = adjectives[h % adjectives.length]
   // The pool is narrowed BEFORE the index is taken, not after, so the choice
   // stays a pure function of the hex and one colour keeps one name forever.
-  const pool = nounsForHue(nouns, hctHue(key))
+  const pool = wordsForTone(nounsForHue(nouns, hue), NOUN_TONE, tone)
   const noun = pool[Math.floor(h / adjectives.length) % pool.length]
   return `${adj} ${noun}`
 }

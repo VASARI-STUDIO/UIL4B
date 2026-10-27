@@ -1402,6 +1402,10 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
    something, so it is the ink primary. */
 .lib-surface .lbry-empty-clear{background:var(--t0);color:var(--bg-1)}
 .lib-surface .lbry-empty-clear:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1))}
+/* With an action beside it (the capped state's sign-in button) the reset is the
+   quiet secondary: no fill, ink text, a 1px ring. The action keeps the primary. */
+.lib-surface .lbry-empty-clear--quiet{background:transparent;color:var(--t0);border:1px solid var(--border)}
+.lib-surface .lbry-empty-clear--quiet:hover{background:color-mix(in srgb,var(--t0) 6%,transparent)}
 
 /* A bare link on these pages inherited global `a{color:--accent-strong}`.
    `:where()` keeps this at the element's own specificity, so every classed

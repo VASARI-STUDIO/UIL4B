@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect } from 'react'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, describeColor, autoTonalPalette, applyAdjust, roleHueArcs } from '../utils/colors'
+import { tintLabelsFor } from '../utils/tintLabels'
 import {
   SEMANTIC_ROLES as ROLE_IDS, SEMANTIC_STEPS as STATE_LABELS, STATE_PRESETS, INFO_PURPLE,
   resolveStateShades, readSemanticStates,
@@ -435,7 +436,8 @@ export default function ColorStudio({ onCopy, toast }) {
 
     const buildVars = () => {
       const colorVars = allColors.map((c, i) => `  --color-${labels[i].toLowerCase().replace(/\s+/g, '-')}: ${c};`).join('\n')
-      const tintVars = tintScale.map((c, i) => `  --tint-${i + 1}: ${c};`).join('\n')
+      const tintNames = tintLabelsFor(tintScale.length)
+      const tintVars = tintScale.map((c, i) => `  --tint-${tintNames[i]}: ${c};`).join('\n')
       const stateVars = ROLE_IDS.map((state) => {
         const shades = resolveStateShades(state, stateColors[state], infoHue)
         return shades.map((c, i) => `  --${state}-${stateLabels[i]}: ${c};`).join('\n')

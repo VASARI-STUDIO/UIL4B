@@ -14,6 +14,7 @@ import { I18nProvider } from './contexts/I18nContext'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { installGlobalErrorCapture } from './utils/errorReport'
 import { handlePreloadError } from './utils/lazyRoute'
+import { exampleLoading } from './components/palette/examples/loading'
 import './styles/global.css'
 import { installDownloadObserver } from './utils/downloadObserver'
 
@@ -28,6 +29,9 @@ window.addEventListener('vite:preloadError', (event) => {
   // Offline is not a stale deploy, and a reload cannot fetch anything: the
   // error goes through and the page's boundary says the connection is down.
   if (navigator.onLine === false) return
+  // A palette preview example that fails to download is answered by its own
+  // "This example didn't load" state, and a reload would close the dialog.
+  if (exampleLoading()) return
   let storage = null
   try { storage = window.sessionStorage } catch { storage = null }
   handlePreloadError(event, {

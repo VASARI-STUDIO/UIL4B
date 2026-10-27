@@ -169,6 +169,13 @@
 .iel-page .emoji-cell.has-bitmap .emoji-char{display:none}
 .iel-page .emoji-cell.has-bitmap:hover .emoji-char{display:block}
 .iel-page .emoji-cell.has-bitmap:hover .emoji-bitmap{display:none}
+/* While its bitmap is still being drawn a cell shows a faint rounded square,
+   not the live text: laying out colour emoji text is the cost (about 7ms a cell
+   at 4x CPU), and a search result or a fast scroll mounts dozens at once. No
+   fade or shimmer, the bitmap simply replaces it. A glyph the atlas leaves as
+   text (a flag on Windows) has no `.pending` and keeps its text. */
+.iel-page .emoji-cell.pending .emoji-char{display:none}
+.iel-page .emoji-cell.pending::before{content:'';flex:none;width:20px;height:20px;border-radius:var(--radius-xs);background:var(--hvr)}
 /* The count stays a filled chip — 71-media-tools-breakpoints measures it as
    ink on its OWN ground — but as a 6px rectangle, not a pill. */
 .iel-page .emoji-section-count{border-radius:var(--radius-xs)}

@@ -6,6 +6,7 @@
 // unit suite; Vite resolves it identically.
 import { hexToRgb, contrastRatio } from './colors.js'
 import { logoSvg, SYMBOL_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
+import { tintLabelsFor } from './tintLabels.js'
 
 export const EXPORT_DARK_INK = '#0F172A'
 export const EXPORT_LIGHT_INK = '#F8FAFC'
@@ -46,7 +47,6 @@ function googleFontUrl(families) {
 }
 
 const PALETTE_LABELS = ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight']
-const TINT_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
 const ROUNDING_MAP = {
   none: { radius: '0px', radiusS: '0px', radiusL: '0px', radiusXl: '0px' },
@@ -65,15 +65,19 @@ export function buildCSSVars({ palette, tints, fonts, typeScale, stateShades, ap
   })
 
   // Tints
-  ;(tints?.scale || []).forEach((c, i) => {
-    lines.push(`  --tint-${i + 1}: ${c};`)
+  // Named by the ramp's own step names (--tint-50 ... --tint-950), not by position.
+  const tintScale = tints?.scale || []
+  const tintNames = tintLabelsFor(tintScale.length)
+  tintScale.forEach((c, i) => {
+    lines.push(`  --tint-${tintNames[i]}: ${c};`)
   })
 
   // State colours
   if (stateShades) {
     Object.entries(stateShades).forEach(([state, shades]) => {
+      const labels = tintLabelsFor(shades.length)
       shades.forEach((c, i) => {
-        lines.push(`  --${state}-${TINT_LABELS[i] || i * 100}: ${c};`)
+        lines.push(`  --${state}-${labels[i]}: ${c};`)
       })
     })
   }
@@ -153,6 +157,8 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
       </div>`
   }).join('\n')
 
+  // Labels follow the saved ramp's own length: 9, 11 or 13 steps, not a fixed 50-900.
+  const tintLabels = tintLabelsFor((design?.tints?.scale || []).length)
   const tintsSection = (design?.tints?.scale || []).length ? `
     <section id="tints" class="sg-section">
       <div class="sg-section-head">
@@ -161,7 +167,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <p>Derived from your active colour for backgrounds, borders, and surfaces.</p>
       </div>
       <div class="sg-tint-row">
-        ${design.tints.scale.map((c, i) => `<div class="sg-tint-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${TINT_LABELS[i] || i * 100}</span></div>`).join('')}
+        ${design.tints.scale.map((c, i) => `<div class="sg-tint-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${tintLabels[i]}</span></div>`).join('')}
       </div>
     </section>
   ` : ''
@@ -173,14 +179,17 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <h2>State Colours</h2>
         <p>Semantic colour scales for feedback and status messaging.</p>
       </div>
-      ${Object.entries(stateShades).map(([state, shades]) => `
+      ${Object.entries(stateShades).map(([state, shades]) => {
+        const stateLabels = tintLabelsFor(shades.length)
+        return `
         <div class="sg-state">
           <div class="sg-state-label">${state}</div>
           <div class="sg-state-row">
-            ${shades.map((c, i) => `<div class="sg-state-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${TINT_LABELS[i] || i * 100}</span></div>`).join('')}
+            ${shades.map((c, i) => `<div class="sg-state-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${stateLabels[i]}</span></div>`).join('')}
           </div>
         </div>
-      `).join('')}
+      `
+      }).join('')}
     </section>
   ` : ''
 
@@ -235,7 +244,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${projectName} — Style Guide</title>
+  <title>${projectName} | Style Guide</title>
   ${fontsUrl ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${fontsUrl}" rel="stylesheet">` : ''}
   <style>
 ${cssVars}
@@ -423,7 +432,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
     <header class="sg-hero">
       <span class="sg-hero-tag">Brand Reference</span>
       <h1>${projectName} Style Guide</h1>
-      <p>The complete colour, typography, and token system for this brand — generated from your design choices and ready for production.</p>
+      <p>The complete colour, typography, and token system for this brand, generated from your design choices and ready for production.</p>
       <div class="sg-meta">
         <span>${(design?.palette?.colors || []).length} colours</span>
         <span>·</span>
@@ -470,7 +479,7 @@ ${watermark ? `    <div class="sg-watermark">
       <div class="sg-watermark-inner">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         <div>
-          <strong>Free Export — Made with UIL4B</strong>
+          <strong>Free Export: Made with UIL4B</strong>
           <div style="font-size:11px;margin-top:2px">Upgrade to Pro to remove this credit line and unlock the design system book</div>
         </div>
         <a href="https://uil4b.com/checkout?plan=yearly" target="_blank" rel="noopener" style="padding:6px 14px;border-radius:6px;background:${primary};color:${contrastText(primary)};font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">Upgrade</a>

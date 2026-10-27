@@ -1,8 +1,15 @@
-// THE HOMEPAGE CONVERTER SHOWS ONE PERCENTAGE: HOW MUCH SMALLER THE FILE GOT.
+// THE HOMEPAGE CONVERTER SHOWS ONE RESULT PERCENTAGE: HOW MUCH SMALLER THE FILE GOT.
 //
-// The AFTER bar's label is plain, the Quality row prints no figure, and the one
-// % on screen is the saving line above the bars. A quality figure on the label
-// would contradict a bar drawn at the size of the file that is left.
+// The AFTER bar's label is plain, and the one RESULT figure on screen is the
+// saving line above the bars. A quality figure on the label would contradict a
+// bar drawn at the size of the file that is left.
+//
+// The Quality row now prints its own setting, an <output> reading "75%" (spec
+// B6: label at left, value at right). That is an input, not a result, so the
+// panel holds at most two % tokens: the saving (exactly one, in .sp-saving) and
+// the quality setting (one while the format is lossy, none under PNG). The
+// saving is never doubled, and the quality value is never printed as a <b> or
+// on a bar label.
 //
 // Both bars share one scale, the larger of the two files. A result that is not
 // smaller is drawn in a plain fill (`is-plain`). PNG output is lossless, so it
@@ -16,6 +23,12 @@
 // The oracle is the rendered text of the panel (every `\d+%` token in its
 // innerText, which leaves out hidden panes) and the drawn width of the AFTER
 // bar against the saving it states.
+//
+// The saving figure sits on a hidden "00%" pad (`.sp-saving-pad`, visibility
+// hidden, aria-hidden) so the line never changes width as the figure changes.
+// The pad is in textContent but not in innerText, so every text read of the
+// saving line below uses innerText (`useInnerText`); a read of textContent would
+// see "00%92%smaller", a second figure that nobody can see.
 // Run at 390 / 768 / 1440 in both themes, in the settled state and across a
 // quality change, a format change and a switch to the lossless format.
 import zlib from 'node:zlib'
@@ -28,6 +41,9 @@ const PERCENT = /\d+\s*%/g
 
 const panelOf = (page) => page.locator('.sp-panel-body:has(.sp-modes)')
 
+/** Every % token in the saving line alone. */
+const savingTokens = (page) => compressPane(page).locator('.sp-saving').evaluate((el) => el.innerText.match(/\d+\s*%/g) || [])
+
 /** Every % token in the converter panel's visible text. */
 const percentTokens = (page) => panelOf(page).evaluate((el) => el.innerText.match(/\d+\s*%/g) || [])
 
@@ -39,7 +55,7 @@ const compressPane = (page) => panelOf(page).locator('.sp-cv-pane.is-on')
 const settled = (page) => expect(
   compressPane(page).locator('.sp-saving'),
   'the converter never finished measuring the photograph',
-).toHaveText(/^(\d+%\s*(smaller|larger)|No loss)/, { timeout: 15000 })
+).toHaveText(/^(\d+%\s*(smaller|larger)|No loss)/, { timeout: 15000, useInnerText: true })
 
 /** Drawn width of each bar's fill as a percentage of its track. */
 const barWidths = (page) => compressPane(page).locator('.sp-bar').evaluateAll((bars) => bars.map((bar) => {
@@ -70,7 +86,12 @@ for (const theme of THEMES) {
       // transient second figure between settled states is caught too.
       await panel.evaluate((el) => {
         window.__pctCounts = []
-        const read = () => window.__pctCounts.push((el.innerText.match(/\d+\s*%/g) || []).length)
+        window.__savingCounts = []
+        const read = () => {
+          window.__pctCounts.push((el.innerText.match(/\d+\s*%/g) || []).length)
+          const saving = el.querySelector('.sp-cv-pane.is-on .sp-saving')
+          window.__savingCounts.push(saving ? (saving.innerText.match(/\d+\s*%/g) || []).length : 0)
+        }
         new MutationObserver(read).observe(el, { subtree: true, childList: true, characterData: true, attributes: true })
         read()
       })
@@ -79,6 +100,14 @@ for (const theme of THEMES) {
       const tabs = await panel.getByRole('tab').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
       expect.soft(tabs, 'the mode tabs are not Compress / 3D model / Video frames / Aspect ratio').toEqual(['Compress', '3D model', 'Video frames', 'Aspect ratio'])
       await expect(panel.getByRole('tab', { name: 'Compress', exact: true })).toHaveAttribute('aria-selected', 'true')
+      // The mode tabs are words only: no icon in any of them.
+      expect.soft(await panel.locator('.sp-modes :is(svg, img, i)').count(), 'a mode tab carries an icon again').toBe(0)
+
+      // The shared footer: the window's own sibling, one text link and one pill.
+      const foot = panel.locator('xpath=..').locator('.sp-tool-foot')
+      await expect(foot, 'the converter has no shared .sp-tool-foot').toHaveCount(1)
+      await expect.soft(foot.locator('.sp-tool-link'), 'the footer text link is not the aspect tool').toHaveText('Aspect & Resolution')
+      await expect.soft(foot, 'the footer pill does not offer the file converter').toContainText('Open File Converter')
 
       await settled(page)
 
@@ -86,12 +115,19 @@ for (const theme of THEMES) {
       const afterLabel = (await compressPane(page).locator('.sp-bar').nth(1).locator('small').innerText()).trim()
       expect.soft(afterLabel, 'the After label carries something besides the word After').toBe('After')
 
-      // ONE TOKEN, and it is the saving line; the Quality row prints no figure.
+      // TWO TOKENS: the saving line, and the Quality row's own setting.
       const row = (await compressPane(page).locator('.sp-saving').innerText()).replace(/\s+/g, ' ').trim()
       const tokens = await percentTokens(page)
-      expect.soft(tokens, `panel % tokens: ${JSON.stringify(tokens)}`).toHaveLength(1)
+      expect.soft(tokens, `panel % tokens: ${JSON.stringify(tokens)}`).toHaveLength(2)
+      expect.soft(await savingTokens(page), 'the saving line does not hold exactly one %').toHaveLength(1)
+      await expect.soft(compressPane(page).locator('.sp-quality output'), 'the Quality row does not print its setting').toHaveText('75%')
       expect.soft(row, 'the saving line is not a figure and its words').toMatch(/^\d+% (smaller|larger)/)
-      expect.soft(await compressPane(page).locator('.sp-quality b').count(), 'the Quality row prints a figure').toBe(0)
+      expect.soft(await compressPane(page).locator('.sp-quality b').count(), 'the Quality row prints its value as a result figure').toBe(0)
+      // The "00%" pad that holds the figure's width is there, and is invisible to eyes and readers.
+      const pad = compressPane(page).locator('.sp-saving-pad')
+      await expect.soft(pad, 'the saving figure lost its width pad').toHaveText('00%')
+      await expect.soft(pad, 'the width pad is exposed to assistive tech').toHaveAttribute('aria-hidden', 'true')
+      expect.soft(await pad.evaluate((el) => getComputedStyle(el).visibility), 'the width pad is drawn').toBe('hidden')
 
       // BAR vs LABEL: both bars use the larger file as 100%, so with a saving the
       // BEFORE bar is full and the AFTER bar is as wide as the file that is left.
@@ -109,33 +145,38 @@ for (const theme of THEMES) {
       await expect(compressPane(page).locator('.sp-saving-num'), 'a saving is not drawn as a win').not.toHaveClass(/is-(plain|noloss)/)
       await expect(compressPane(page).locator('.sp-quality input[type="range"]'), 'the slider is disabled for a lossy format').toBeEnabled()
 
-      // A QUALITY CHANGE: the old figure stays until the new one lands, so the
-      // panel still shows exactly one % straight after the change and once settled.
+      // A QUALITY CHANGE: the old saving stays until the new one lands, so the
+      // saving line still shows exactly one % straight after the change and once
+      // settled, and the Quality row follows the slider at once.
       const slider = compressPane(page).locator('.sp-quality input[type="range"]')
       await slider.focus()
       await page.keyboard.press('ArrowLeft')
-      expect.soft(await percentTokens(page), 'a second % appeared straight after a quality change').toHaveLength(1)
+      expect.soft(await savingTokens(page), 'a second saving % appeared straight after a quality change').toHaveLength(1)
+      expect.soft(await percentTokens(page), 'the panel holds other than saving + quality straight after a quality change').toHaveLength(2)
+      await expect.soft(compressPane(page).locator('.sp-quality output'), 'the Quality row did not follow the slider').toHaveText('70%')
       await page.waitForTimeout(700)
       await settled(page)
-      expect.soft(await percentTokens(page), 'a second % after a quality change settled').toHaveLength(1)
+      expect.soft(await savingTokens(page), 'a second saving % after a quality change settled').toHaveLength(1)
+      expect.soft(await percentTokens(page), 'the panel holds other than saving + quality once settled').toHaveLength(2)
 
       // A FORMAT CHANGE.
       await panel.getByRole('button', { name: 'JPEG', exact: true }).click()
       await page.waitForTimeout(700)
       await settled(page)
-      expect.soft(await percentTokens(page), 'a second % under JPEG').toHaveLength(1)
+      expect.soft(await savingTokens(page), 'a second saving % under JPEG').toHaveLength(1)
+      expect.soft(await percentTokens(page), 'the panel holds other than saving + quality under JPEG').toHaveLength(2)
 
       // Lossless: PNG comes out the size of the original, so the line says
       // "No loss" in plain ink, the panel shows no % at all, the quality slider is
       // disabled, and both bars are drawn full with the AFTER bar plain.
       await panel.getByRole('button', { name: 'PNG', exact: true }).click()
       const saving = compressPane(page).locator('.sp-saving')
-      await expect(saving.locator('.sp-saving-num'), 'PNG output does not read "No loss"').toHaveText('No loss', { timeout: 15000 })
+      await expect(saving.locator('.sp-saving-num'), 'PNG output does not read "No loss"').toHaveText('No loss', { timeout: 15000, useInnerText: true })
       await expect(saving.locator('.sp-saving-num'), 'the "No loss" figure is not in plain ink').toHaveClass(/is-noloss/)
-      await expect(saving.locator('.sp-saving-word'), 'the lossless line does not say PNG keeps every pixel').toHaveText('PNG keeps every pixel')
+      await expect(saving.locator('.sp-saving-word'), 'the lossless line does not say PNG keeps every pixel').toHaveText('PNG keeps every pixel', { useInnerText: true })
       expect.soft(await percentTokens(page), 'a % is shown under PNG').toHaveLength(0)
       await expect(compressPane(page).locator('.sp-quality input[type="range"]'), 'the quality slider is enabled for PNG').toBeDisabled()
-      await expect(compressPane(page).locator('.sp-quality > span'), 'the lossless row does not say quality is ignored').toHaveText('Lossless, quality ignored')
+      await expect(compressPane(page).locator('.sp-quality > span'), 'the lossless row does not say quality is not used').toHaveText('Lossless, quality not used')
       await expect(compressPane(page).locator('.sp-bar').nth(1).locator('.sp-bar-fill'), 'a result that is not smaller is not drawn in the plain fill').toHaveClass(/is-plain/)
       await expect(compressPane(page).locator('.sp-bar').nth(0).locator('.sp-bar-fill'), 'the BEFORE bar took the plain fill').not.toHaveClass(/is-plain/)
       await expect.poll(async () => {
@@ -145,19 +186,24 @@ for (const theme of THEMES) {
 
       // Back to a lossy format: the slider and the win colour come back.
       await panel.getByRole('button', { name: 'JPEG', exact: true }).click()
-      await expect(compressPane(page).locator('.sp-saving-num'), 'the saving did not return after leaving PNG').toHaveText(/^\d+%$/, { timeout: 15000 })
+      await expect(compressPane(page).locator('.sp-saving-num'), 'the saving did not return after leaving PNG').toHaveText(/^\d+%$/, { timeout: 15000, useInnerText: true })
       await expect(compressPane(page).locator('.sp-quality input[type="range"]'), 'the slider stayed disabled after leaving PNG').toBeEnabled()
 
       // The whole run never showed more than one.
       const counts = await page.evaluate(() => window.__pctCounts)
-      expect.soft(Math.max(...counts), `% tokens seen across the run: ${JSON.stringify([...new Set(counts)])}`).toBeLessThanOrEqual(1)
-      expect.soft(counts, 'the run never reached a state showing the saving').toContain(1)
+      expect.soft(Math.max(...counts), `% tokens seen across the run: ${JSON.stringify([...new Set(counts)])}`).toBeLessThanOrEqual(2)
+      expect.soft(counts, 'the run never reached a state showing the saving and the setting').toContain(2)
+      const savings = await page.evaluate(() => window.__savingCounts)
+      expect.soft(Math.max(...savings), `saving % tokens seen across the run: ${JSON.stringify([...new Set(savings)])}`).toBeLessThanOrEqual(1)
+      expect.soft(savings, 'the run never reached a state showing the saving').toContain(1)
 
       // The other tabs still open their own panes; the rest stay hidden.
       const tab = (name) => panel.getByRole('tab', { name, exact: true })
       const pane = (cls) => panel.locator(`.sp-cv-pane.${cls}`)
       await tab('3D model').click()
       await expect(pane('sp-model'), '3D model no longer opens its stage').toBeVisible()
+      await expect.soft(foot.locator('.sp-tool-link'), 'the 3D footer text link is not the file converter').toHaveText('File Converter')
+      await expect.soft(foot, 'the 3D footer pill does not offer the 3D converter').toContainText('Open 3D Model Converter')
       await expect(pane('sp-conv')).toBeHidden()
       await tab('Video frames').click()
       await expect(pane('sp-frames'), 'Video frames no longer opens its strip').toBeVisible()
@@ -291,6 +337,7 @@ for (const width of [390, 1440]) {
           rowOverflow: row.scrollWidth - row.clientWidth,
           rowPastPane: Math.round(box.right - edge),
           nameClipped: name.scrollWidth > name.clientWidth,
+          nameInside: name.getBoundingClientRect().right <= box.right + 1,
           nameStyle: getComputedStyle(name).textOverflow,
         }
       })
@@ -299,7 +346,10 @@ for (const width of [390, 1440]) {
     for (const [i, g] of geometry.entries()) {
       expect(g.rowOverflow, `row ${i} content is wider than the row`).toBeLessThanOrEqual(0)
       expect(g.rowPastPane, `row ${i} runs past the converter pane`).toBeLessThanOrEqual(1)
-      expect(g.nameClipped, `row ${i}: a 100-character name was not cut short`).toBe(true)
+      // A narrow window must cut the name short; a wide one (1440 is 7fr of the grid)
+      // may hold all 100 characters, in which case it must still sit inside its row.
+      expect(g.nameInside, `row ${i}: the 100-character name runs past its row`).toBe(true)
+      if (width <= 768) expect(g.nameClipped, `row ${i}: a 100-character name was not cut short`).toBe(true)
       expect(g.nameStyle, `row ${i}: the cut name has no ellipsis`).toBe('ellipsis')
     }
     expect(

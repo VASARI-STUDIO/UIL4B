@@ -29,7 +29,8 @@
 //
 // Pure functions over a plain design object — no React, no DOM.
 
-import { generateTintScale, T_LABELS } from './colors.js'
+import { generateTintScale } from './colors.js'
+import { tintLabelsFor } from './tintLabels.js'
 import { readBook } from './bookModel.js'
 import { typeLadder } from './styleGuideExport.js'
 import { roleLabels } from './paletteRoles.js'
@@ -38,7 +39,7 @@ import { tintConfigFor, DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { semanticShades, SEMANTIC_ROLES, SEMANTIC_STEPS, SEMANTIC_LABELS } from '../data/semanticPresets.js'
 import { gradientCss } from '../data/gradientGallery.js'
 
-const CREDIT = `Made with UIL4B — ${SITE_ORIGIN}`
+const CREDIT = `Made with UIL4B: ${SITE_ORIGIN}`
 export const HEADING_LINE_HEIGHT = 1.1
 
 // The fixed slot names, lower-cased: primary, secondary, accent, subtle, deep.
@@ -95,7 +96,8 @@ export function designTokens(design) {
     const role = paletteRole(i)
     add(['color', role, '$root'], 'color', hex)
     const ramp = generateTintScale({ ...tintBase, hex })
-    ramp.forEach((stop, k) => add(['color', role, T_LABELS[k]], 'color', stop.toUpperCase()))
+    const steps = tintLabelsFor(ramp.length)
+    ramp.forEach((stop, k) => add(['color', role, steps[k]], 'color', stop.toUpperCase()))
   })
 
   // Semantic colours.
@@ -175,7 +177,7 @@ export function buildTokensCss(design, { projectName = 'Design System', watermar
   const semantic = SEMANTIC_ROLES.map((r) => (r === 'info' ? `info (${SEMANTIC_LABELS[r]})` : r)).join(', ')
   const header = [
     '/*',
-    ` * ${commentSafe(projectName)} — design tokens`,
+    ` * ${commentSafe(projectName)}: design tokens`,
     ` * Generated ${date.toISOString().slice(0, 10)}.`,
     ' *',
     ' * Naming',
@@ -252,7 +254,7 @@ function dtcgToken(token) {
  */
 export function buildTokensJson(design, { projectName = 'Design System', watermark = true, extra = [], extensions = null } = {}) {
   const doc = {
-    $description: `${String(projectName ?? '')} — design tokens.${watermark ? ` ${CREDIT}` : ''}`,
+    $description: `${String(projectName ?? '')}: design tokens.${watermark ? ` ${CREDIT}` : ''}`,
   }
   if (extensions && typeof extensions === 'object') doc.$extensions = extensions
   for (const t of [...designTokens(design), ...extra]) {

@@ -169,6 +169,12 @@ const WINDOW = 400
 // what we charge."
 const NOT_A_PLAN_PRICE = [
   {
+    file: 'src/components/spectrum/benchSummary.js',
+    context: /\.replace\(\/ \(id\|width\|viewBox\|fill\)=\/g/,
+    why: 'The "$1" is the capture-group reference in a String.replace template that '
+      + 'breaks the icon code peek at its attributes. It is regex syntax, not an amount.',
+  },
+  {
     file: 'src/components/UiSystemLab.jsx',
     context: /uis-checkout-grid|Order summary|Canvas field bag|Studio notebook|Standard delivery/,
     why: 'CommerceScene renders a fake checkout so the generated UI system can be '

@@ -1217,6 +1217,8 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 .lbry-empty>svg{margin-bottom:4px;color:var(--t3)}
 .lbry-empty strong{font-size:16px;color:var(--t0)}
 .lbry-empty span{max-width:56ch;font-size:13px;line-height:1.55;color:var(--t2)}
+.lbry-empty-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.lbry-empty-actions .lbry-empty-clear{margin-top:0}
 .lbry-empty-clear:hover{background:var(--brand-soft)}
 .lbry-empty-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 

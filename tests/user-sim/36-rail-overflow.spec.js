@@ -106,7 +106,7 @@ test.describe('the primary action is reachable on a tablet (A4)', () => {
   })
 })
 
-//   A6  /create/gradient at 1440px. The preset strip is sixteen named gradients
+//   A6  /create/gradient at 1440px. The preset strip (sixteen gradients then, twelve now) sat
 //       in one `grid-auto-flow:column` row: 2422px of tiles inside a 1142px box,
 //       so SEVEN showed and 1280px of library sat behind the 34px fade with no
 //       scrollbar - on a page that had ~300px of empty ground under the card.
@@ -115,7 +115,7 @@ test.describe('the primary action is reachable on a tablet (A4)', () => {
 test.describe('the whole preset library is on screen on a desktop (A6)', () => {
   test.use({ viewport: DESKTOP })
 
-  test('all sixteen gradient presets are visible at 1440px, with no gesture', async ({ page }) => {
+  test('every gradient preset is visible at 1440px, with no gesture', async ({ page }) => {
     watch(page, 'a designer picking a gradient on a laptop')
     await go(page, '/create/gradient')
     await expectRendered(page)
@@ -138,11 +138,11 @@ test.describe('the whole preset library is on screen on a desktop (A6)', () => {
       }
     })
 
-    expect(report.total, 'the curated set should still be sixteen presets').toBeGreaterThanOrEqual(16)
+    expect(report.total, 'the starter grid holds exactly the twelve presets').toBe(12)
     expect(report.needsScroll, 'the preset library should not need a horizontal gesture at 1440px').toBe(false)
     expect(report.masked, 'a set that fits must not claim there is more behind a fade').toBe(false)
     expect(report.offscreen, 'presets sitting past the right edge').toEqual([])
-    expect(report.rows, 'sixteen presets should wrap into rows, not run off in one').toBeGreaterThan(1)
+    expect(report.rows, 'twelve presets at 1440px are 6x2: two rows, no short one').toBe(2)
   })
 })
 

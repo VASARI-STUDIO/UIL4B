@@ -175,7 +175,7 @@ test('the scope page is always present and names what the document cannot contai
   // The absent list must actually DIFFER between the two shapes, or it is a
   // fixed paragraph rather than a description of the document in hand.
   assert.match(BARE, /A logo section/, 'a document with no logo does not say its logo section is missing')
-  assert.ok(!DOC.includes('A logo section —'),
+  assert.ok(!DOC.includes('A logo section:'),
     'a document WITH a logo still lists the logo section as missing — the disclosure is boilerplate')
   assert.ok(BARE.includes('Add your logo in the export panel'),
     'the missing-logo line does not say how to fix it')
@@ -278,7 +278,7 @@ test('ExportPanel actually asks the server for this format', () => {
   assert.match(code, /guidelines: \{[\s\S]*?activation: 'brand-guidelines'/,
     'the guidelines export reports under its own activation name, so the two paid documents can be told apart')
   assert.match(code, /file: 'brand-guidelines\.html'/, 'the file is not named after the document it is')
-  assert.match(code, /requestExportDocument\(\{ format, design, projectName \}/,
+  assert.match(code, /requestExportDocument\(\{ format, design, projectName, template: chosenTemplates\[format\] \}/,
     'the panel is not asking the server for the document')
   assert.ok(!/brandGuidelines/.test(code), 'ExportPanel imports the guidelines generator again')
 })

@@ -225,6 +225,102 @@ test('an oversized design is refused with 413, after the plan check', async () =
   assert.equal((await ask('tok-free', { format: 'book', design: huge }, deps)).code, 403, 'a Free caller learns nothing about size limits')
 })
 
+// A builder table that records the template each build was asked for.
+function templateSpy() {
+  const loaded = []
+  const built = []
+  const table = {}
+  for (const f of proOnlyFormats()) {
+    table[f.id] = async () => {
+      loaded.push(f.id)
+      return (d, o) => { built.push({ format: f.id, template: o.template }); return `<html>${f.id}</html>` }
+    }
+  }
+  return { loaded, built, table }
+}
+
+const DEFAULT_TEMPLATES = { book: 'specification', guidelines: 'presentation' }
+
+test('a missing, null or empty template is the format\'s default, and the reply says which', async () => {
+  assert.deepEqual(Object.keys(DEFAULT_TEMPLATES).sort(), Object.keys(BUILDERS).sort(), 'a Pro format has no default named here')
+  for (const [format, expected] of Object.entries(DEFAULT_TEMPLATES)) {
+    for (const body of [{}, { template: undefined }, { template: null }, { template: '' }]) {
+      const { built, table } = templateSpy()
+      const { deps } = fakeDeps({ builders: table })
+      const res = await ask('tok-pro', { format, design: DESIGN, ...body }, deps)
+      assert.equal(res.code, 200, `${format} ${JSON.stringify(body)}`)
+      assert.equal(res.body.template, expected, `${format}: the reply names the template that was used`)
+      assert.deepEqual(built, [{ format, template: expected }], `${format}: the generator is handed the resolved id`)
+    }
+  }
+})
+
+test('a live template id is served and echoed back', async () => {
+  for (const [format, id] of Object.entries(DEFAULT_TEMPLATES)) {
+    const { built, table } = templateSpy()
+    const { deps } = fakeDeps({ builders: table })
+    const res = await ask('tok-pro', { format, design: DESIGN, template: id }, deps)
+    assert.equal(res.code, 200)
+    assert.equal(res.body.template, id)
+    assert.equal(built[0].template, id)
+  }
+})
+
+test('the real generators serve their default template and say so', async () => {
+  const { deps } = fakeDeps()
+  for (const [format, expected] of Object.entries(DEFAULT_TEMPLATES)) {
+    const res = await ask('tok-pro', { format, projectName: 'Harbour', design: DESIGN, template: expected }, deps)
+    assert.equal(res.code, 200)
+    assert.equal(res.body.template, expected)
+    assert.match(res.body.html, /^<!doctype html>/i)
+  }
+})
+
+test('a template that is not live for the format is a 400 unknown_template and no generator loads', async () => {
+  const bad = [
+    'nope', 'Specification', ' specification', 'specification ', 'monograph', 'presentation', 'studio',
+    'constructor', '__proto__', 'toString', 'hasOwnProperty',
+    { id: 'specification' }, { toString: () => 'specification' }, 7, 0, true, false, ['specification'], [],
+  ]
+  for (const format of Object.keys(DEFAULT_TEMPLATES)) {
+    for (const template of bad) {
+      // Each id above is live for the format that owns it, and only that one.
+      if (template === DEFAULT_TEMPLATES[format]) continue
+      const { loaded, table } = templateSpy()
+      const { deps } = fakeDeps({ builders: table })
+      const res = await ask('tok-pro', { format, design: DESIGN, template }, deps)
+      const label = `${format} ${JSON.stringify(template)}`
+      assert.equal(res.code, 400, label)
+      assert.equal(res.body.code, 'unknown_template', label)
+      assert.equal(res.body.html, undefined, label)
+      assert.deepEqual(loaded, [], `${label}: a generator ran for a template it should have refused`)
+    }
+  }
+})
+
+test('the template is checked after the plan: Free gets 403 and learns nothing, signed-out gets 401', async () => {
+  for (const template of ['nope', { a: 1 }, 7, ['book']]) {
+    const { loaded, table } = templateSpy()
+    const { deps } = fakeDeps({ builders: table })
+    const free = await ask('tok-free', { format: 'book', design: DESIGN, template }, deps)
+    assert.equal(free.code, 403, JSON.stringify(template))
+    assert.equal(free.body.code, 'pro_required')
+    assert.equal(free.body.html, undefined)
+    const ended = await ask('tok-ended', { format: 'guidelines', design: DESIGN, template }, deps)
+    assert.equal(ended.code, 403)
+    const out = await ask(null, { format: 'book', design: DESIGN, template }, deps)
+    assert.equal(out.code, 401)
+    assert.deepEqual(loaded, [], 'no generator is loaded for a caller who is not Pro')
+  }
+})
+
+test('CONTROL: the same request with a good template is served, so the 400s above are about the template', async () => {
+  const { table } = templateSpy()
+  const { deps } = fakeDeps({ builders: table })
+  assert.equal((await ask('tok-pro', { format: 'book', design: DESIGN, template: 'nope' }, deps)).code, 400)
+  assert.equal((await ask('tok-pro', { format: 'book', design: DESIGN, template: 'specification' }, deps)).code, 200)
+})
+
 test('more than MAX_COLOURS colours is a 400 too_many_colours, before any generator loads and after the plan check', async () => {
   // MAX_DESIGN_CHARS bounds the request, not the document: 5,000 colours make a 17 MB book.
   assert.equal(MAX_COLOURS, 200)
@@ -280,7 +376,13 @@ test('a generator that throws is a 500 with no partial document', async () => {
 
 /* ── 3 · the browser has no generator ─────────────────────────────────────── */
 
-const GENERATORS = ['src/utils/designSystemBook.js', 'src/utils/brandGuidelines.js'].map((p) => path.resolve(p))
+// The generators and the template modules they pick from. A template is the layout of
+// the paid document, so one the app can reach would ship it just as the generator would.
+const GENERATORS = [
+  'src/utils/designSystemBook.js', 'src/utils/brandGuidelines.js',
+  'src/utils/exportTemplates/book/index.js', 'src/utils/exportTemplates/book/specification.js',
+  'src/utils/exportTemplates/guidelines/index.js', 'src/utils/exportTemplates/guidelines/presentation.js',
+].map((p) => path.resolve(p))
 
 // Every file the app's entry can reach, following static AND dynamic imports.
 function reachableFrom(entry) {
@@ -332,8 +434,9 @@ const noBuild = !fs.existsSync(builtAssets) && 'run a build first (see DIST_DIR)
 
 // Text that each generator writes into its document and that nothing else in the app has.
 const MARKERS = [
-  { file: 'src/utils/designSystemBook.js', text: ' — Design System</title>' },
-  { file: 'src/utils/brandGuidelines.js', text: 'Brand <br>Guidelines' },
+  { file: 'src/utils/designSystemBook.js', text: ' | Design System</title>' },
+  { file: 'src/utils/exportTemplates/guidelines/presentation.js', text: 'Brand <br>Guidelines' },
+  { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design System</span>' },
 ]
 
 test('CONTROL: each bundle marker is really in its generator', () => {

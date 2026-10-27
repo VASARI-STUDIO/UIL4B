@@ -29,7 +29,7 @@
   --sp-shade-rgb: 0, 0, 0;
   --sp-shade-a: 1;
   --sp-dim-a: .62;
-  --sp-faint-a: .55;
+  --sp-faint-a: .62;
   --sp-ink-hover: #D5D4CE;
 
   /* Derived, and the names the footer (SpectrumFooter.jsx) reads. */
@@ -396,14 +396,12 @@
   background: transparent;
   color: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
   font-family: var(--font);
-  font-size: 15.5px;
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
 }
 .spectrum .sp-rail-row { transition: none; }
 .sp-rail-row.is-on { background: rgba(var(--sp-ink-rgb), .07); color: var(--sp-ink); }
-.sp-rail-no { font-size: 12px; letter-spacing: .02em; font-variant-numeric: tabular-nums; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-rail-row.is-on .sp-rail-no { color: var(--accent-text); }
 .sp-rail-label { flex: 1; min-width: 0; }
 
 .sp-steps { display: grid; gap: 0; min-width: 0; }
@@ -431,25 +429,10 @@
   transform-origin: 50% 50%;
 }
 .sp-panel-in { height: 100%; display: flex; flex-direction: column; }
-.sp-panel-bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 46px;
-  padding: 0 clamp(12px, 1.6vw, 16px);
-  background: rgba(var(--sp-ink-rgb), .035);
-  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
-}
 .sp-panel-title { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.sp-panel-rule { width: 1px; height: 15px; background: rgba(var(--sp-ink-rgb), .14); flex: 0 0 auto; }
-.sp-panel-name { font-size: 14px; font-weight: 540; color: var(--sp-ink); white-space: nowrap; }
 .sp-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sp-panel-body--pad { gap: 12px; padding: clamp(15px, 2vw, 22px); overflow: auto; }
 .sp-panel .sp-panel-body * { scrollbar-width: thin; scrollbar-color: rgba(var(--sp-ink-rgb), .18) transparent; }
-.sp-panel-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.sp-panel-foot > span { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* The underline tab: every text tab in the four windows. */
 .sp-utab {
@@ -473,7 +456,7 @@
 .sp-label { font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 
 /* 01 · Palette builder */
-.sp-shuffle { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); background: var(--sp-card); color: rgba(var(--sp-ink-rgb), .84); font-family: var(--font); font-size: 12.5px; cursor: pointer; }
+.sp-shuffle { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); background: var(--sp-card); color: rgba(var(--sp-ink-rgb), .84); font-family: var(--font); font-size: 13px; cursor: pointer; }
 .sp-shuffle .sp-ph { font-size: 14px; }
 @media (hover: hover) and (pointer: fine) { .sp-shuffle:hover { background: rgba(var(--sp-ink-rgb), .06); } }
 .sp-pal-strip {
@@ -487,14 +470,13 @@
   padding: 10px clamp(14px, 1.8vw, 20px);
   border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
 }
-.sp-pal-seedwrap { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
 .sp-seeds { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); }
-.sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 999px; display: grid; place-items: center; cursor: pointer; font-size: 11px; }
+.sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 999px; display: grid; place-items: center; cursor: pointer; font-size: 12px; }
 .sp-seed-name { display: grid; gap: 1px; min-width: 0; }
 .sp-seed-name b { font-size: 13px; font-weight: 560; color: var(--sp-ink); white-space: nowrap; }
 .sp-seed-name small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-seg { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); overflow-x: auto; scrollbar-width: none; min-width: 0; max-width: 100%; }
-.sp-seg button { padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; font-weight: 440; cursor: pointer; white-space: nowrap; }
+.sp-seg button { padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 13px; font-weight: 440; cursor: pointer; white-space: nowrap; }
 .sp-seg button[aria-pressed="true"] { background: var(--sp-card); color: var(--sp-ink); font-weight: 560; }
 .sp-roles { flex: 1; min-height: 232px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border-radius: 12px; overflow: hidden; background: rgba(var(--sp-ink-rgb), .1); }
 .sp-role {
@@ -516,7 +498,6 @@
 .sp-role-name { font-size: 12px; letter-spacing: .02em; opacity: .85; }
 .sp-role-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; }
 .sp-role-val { font-size: 13px; letter-spacing: .02em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* .sp-roles prefix: the coarse-pointer rule near the end sets .sp-role-aa to 11px. */
 .sp-roles .sp-role-aa { font-size: 12px; letter-spacing: .02em; font-variant-numeric: tabular-nums; opacity: .85; }
 .sp-prev { flex: none; border-radius: 12px; padding: 15px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .sp-prev-say { display: grid; gap: 3px; min-width: 0; }
@@ -530,13 +511,13 @@
 .sp-ico-strip { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); flex-wrap: wrap; padding: 0 clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); }
 .sp-find { flex: 1 1 180px; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px 0; }
 .sp-find .sp-ph { font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-find input { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 14px; box-shadow: none; }
+.sp-find input { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13px; box-shadow: none; }
 .sp-find input::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
 .sp-find:focus-within { box-shadow: inset 0 -2px 0 var(--sp-link); }
 .sp-find input:focus { box-shadow: none; }
 .sp-find input:focus-visible { outline-color: transparent; }
 .sp-tabs-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.sp-tabs-row .sp-utab { padding: 13px 0; font-size: 12.5px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-tabs-row .sp-utab { padding: 13px 0; font-size: 13px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-tabs-row .sp-utab[aria-pressed="true"] { color: var(--sp-ink); font-weight: 560; }
 /* 24 small tiles on fixed 44px rows, centred in the space the window gives them: the whole
    set always fits in one frame at any width, so the grid never scrolls. */
@@ -545,16 +526,9 @@
 .spectrum .sp-ico { transition: background .16s ease; }
 @media (hover: hover) and (pointer: fine) { .sp-ico:not([aria-pressed="true"]):hover { background: rgba(var(--sp-ink-rgb), .06); } }
 .sp-ico[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.sp-ico-detail { flex: 0 0 auto; display: flex; align-items: center; gap: clamp(14px, 2vw, 22px); padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
 .sp-ico-big { flex: 0 0 auto; width: 96px; height: 96px; display: grid; place-items: center; border-radius: 16px; background: rgba(var(--sp-ink-rgb), .05); border: 1px solid rgba(var(--sp-ink-rgb), .09); font-size: 52px; color: var(--sp-ink); }
 .sp-ico-meta { flex: 1; min-width: 0; display: grid; gap: 12px; }
 .sp-ico-meta b { font-size: 15px; font-weight: 540; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ico-opts { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
-.sp-ico-opts .sp-utab { padding: 4px 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-ico-opts .sp-utab[aria-pressed="true"] { color: var(--sp-ink); }
-.sp-ico-opts .sp-panel-rule { height: 14px; }
-.sp-ico-foot { flex: none; display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); flex-wrap: wrap; padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
-.sp-ico-foot > i { flex: 1 1 40px; min-width: 0; }
 .sp-copybtn { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; height: 41px; padding: 0 10px 0 16px; color: rgba(var(--sp-ink-rgb), .88); }
 .sp-copybtn .sp-pill-icon { background: rgba(var(--sp-ink-rgb), .08); }
 
@@ -568,7 +542,7 @@
 .sp-font-ctl label { display: flex; align-items: center; gap: 11px; }
 .sp-font-ctl label:first-child { flex: 1 1 200px; min-width: 0; }
 .sp-font-ctl label:last-child { flex: 0 1 200px; min-width: 150px; }
-.sp-font-ctl input[type="text"] { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13.5px; box-shadow: none; }
+.sp-font-ctl input[type="text"] { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13px; box-shadow: none; }
 .sp-font-ctl input[type="text"]::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
 .sp-font-ctl output { font-size: 12px; color: var(--sp-ink); white-space: nowrap; min-width: 38px; text-align: right; }
 .sp-fontlist { flex: 1; min-height: 0; overflow: auto; }
@@ -577,7 +551,6 @@
 .spectrum .sp-fontrow:active { transform: none; }
 @media (hover: hover) and (pointer: fine) { .sp-fontrow:hover { background: rgba(var(--sp-ink-rgb), .04); } }
 .sp-fontrow-top { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
-.sp-fontrow-main { flex: 1; min-width: 0; display: grid; gap: 10px; }
 .sp-fontrow-name { line-height: 1.24; padding-bottom: .06em; letter-spacing: -.02em; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-fontrow-sample { font-size: 15px; line-height: 1.45; color: rgba(var(--sp-ink-rgb), .82); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-fontrow-w { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; font-size: 18px; }
@@ -586,11 +559,9 @@
 .sp-fontrow-add { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .14); display: grid; place-items: center; font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-fontrow[aria-pressed="true"] .sp-fontrow-add { border-color: var(--sp-ink); background: var(--sp-ink); color: var(--sp-page); }
 .sp-fontrow-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-font-foot { flex: none; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
 .sp-font-pair { display: flex; align-items: baseline; gap: 9px; min-width: 0; flex: 1 1 180px; }
-.sp-font-pair small { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-font-pair small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-font-pair b { font-weight: 400; font-size: 18px; line-height: 1.2; color: var(--sp-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-font-foot > span:last-child { display: flex; gap: 8px; flex: 0 0 auto; }
 
 /* The range slider, as the design draws it inside a panel. */
 .sp-panel input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; width: 100%; height: 16px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; accent-color: var(--accent); }
@@ -621,10 +592,12 @@
    drawn inside the tab rather than outside it. */
 .spectrum .sp-modes .sp-utab:focus-visible { outline-offset: -2px; }
 .sp-mode-short { display: none; }
-/* Too narrow for four full labels: four equal columns, short text labels. */
+/* Too narrow for four full labels: short text labels, each tab as wide as its own
+   text with at least an 8px gap between neighbours (equal columns left "Compress" and
+   "3D model" touching at 320px). A row that still cannot fit scrolls sideways. */
 @container sp-cv (max-width: 479px) {
-  .sp-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
-  .sp-modes .sp-utab { min-width: 0; min-height: 48px; margin-right: 0; padding: 0 2px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+  .sp-modes { justify-content: space-between; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .sp-modes .sp-utab { min-height: 48px; margin-right: 0; padding: 0; font-weight: 500; }
   .sp-modes .sp-utab[aria-selected="true"] { font-weight: 600; }
   .sp-modes .sp-utab > .sp-ph, .sp-modes .sp-utab > span[aria-hidden="true"]:empty, .sp-mode-long { display: none; }
   .sp-mode-short { display: inline; }
@@ -679,7 +652,7 @@
 .sp-saving-num { min-width: 2.05em; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--accent-text); }
 .sp-saving-num.is-plain, .sp-saving-num.is-noloss { color: var(--sp-ink); }
 .sp-saving-num.is-wait { color: var(--sp-faint); }
-.sp-saving-word { font-size: .9375rem; font-weight: 500; letter-spacing: 0; color: var(--sp-ink); }
+.sp-saving-word { font-size: var(--bt-l); font-weight: 500; letter-spacing: 0; color: var(--sp-ink); }
 /* The figure and its words stay on one line, so the line's height never depends on
    the format; the words are what gives way (ellipsis) in a narrow panel. */
 .sp-saving-num { flex: none; white-space: nowrap; }
@@ -708,7 +681,7 @@
 .sp-fmtrow { display: flex; flex-wrap: nowrap; gap: 18px; padding-top: 2px; }
 .sp-fmtrow .sp-utab { padding: 5px 0; }
 .sp-quality { display: grid; gap: 8px; }
-.sp-quality > span { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-quality > span { font-size: 13px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 
 /* The 3D tab: the same skeleton as Compress, so the footer never moves. */
 .sp-model-stage { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--sp-hair); background: var(--sp-page); }
@@ -719,14 +692,14 @@
 .sp-model-wire { flex: 1; max-width: 120px; min-width: 24px; display: flex; align-items: center; justify-content: flex-end; height: 1px; background: var(--sp-line-strong); color: var(--sp-dim); }
 .sp-model-wire .sp-ph { font-size: 13px; margin-right: -2px; }
 .sp-model-unit { font-size: 12px; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.sp-model-say { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--sp-dim); }
+.sp-model-say { margin: 0; font-size: 13px; line-height: 1.5; color: var(--sp-dim); }
 /* Wide enough to hold a mouse: the from → to row is the tab's answer, so it is
    drawn larger than a caption. */
 @media (min-width: 761px) {
-  .sp-model-chip { padding: 8px 16px; font-size: .9375rem; font-weight: 600; letter-spacing: .06em; line-height: 1.2; }
+  .sp-model-chip { padding: 8px 16px; font-size: var(--bt-l); font-weight: 600; letter-spacing: .06em; line-height: 1.2; }
   .sp-model-wire { max-width: 160px; }
   .sp-model-wire .sp-ph { font-size: 16px; }
-  .sp-model-unit { font-size: .9375rem; font-weight: 500; color: var(--sp-ink); }
+  .sp-model-unit { font-size: var(--bt-l); font-weight: 500; color: var(--sp-ink); }
 }
 
 .sp-ratio { display: grid; align-content: start; gap: 12px; }
@@ -743,7 +716,6 @@
 .sp-frames-row > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .sp-frames-row .sp-utab { padding: 5px 0; margin-right: 18px; }
 .sp-frames-row > small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-conv-foot { margin-top: auto; flex: none; display: flex; gap: 8px; flex-wrap: wrap; }
 
 .sp-quality input[type="range"]:disabled { opacity: .4; }
 
@@ -766,9 +738,6 @@
   .sp-saving-num.is-noloss { font-size: 28px; }
   .sp-cv .sp-fmtrow { gap: 20px; }
   .sp-model-chip, .sp-model-unit { font-size: 12px; }
-  .sp-conv-foot { flex-direction: column; }
-  .sp-conv-foot .sp-pill { justify-content: space-between; }
-  .sp-conv-foot .sp-ghost { justify-content: center; }
 }
 
 /* A step down on the narrowest phones, so "934% larger than the original" and
@@ -796,8 +765,207 @@
   .sp-font-ctl label { min-height: 44px; }
   .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small, .sp-strip small { font-size: 12px; }
   .sp-strip small { bottom: auto; top: 7px; }
-  .sp-conv-foot .sp-pill { min-height: 48px; }
-  .sp-conv-foot .sp-ghost { min-height: 44px; }
+}
+
+/* ═══ THE BENCH, POLISHED ═════════════════════════════════════════════════════
+   Windows with no title bar, three text sizes, one footer, a live rail. These
+   rules sit after the older bench rules and win on the .sp-panel prefix. */
+.sp-panel { --bt-s: 12px; --bt-m: 13px; --bt-l: 15px; --bt-pad: 20px; }
+@media (max-width: 760px) { .sp-panel { --bt-pad: 16px; } }
+.sp-panel .sp-panel-body--pad { padding: var(--bt-pad); gap: 12px; }
+.sp-panel .sp-utab { font-size: var(--bt-m); }
+.sp-panel .sp-label { font-size: var(--bt-s); }
+
+/* The 1440 grid: 5fr 7fr gives the window the width the 768 layout is drawn for. */
+@media (min-width: 1200px) {
+  .sp-bench-grid { grid-template-columns: 5fr 7fr; }
+  .sp-bench-col .sp-h2 { font-size: clamp(34px, 4.2vw, 60px); }
+}
+
+/* The rail at 1001px and up: the tool's name, then what you have made in it. */
+ol.sp-rail .sp-rail-row { display: grid; gap: 2px; align-items: center; min-height: 64px; padding: 12px 16px; }
+ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
+.sp-rail-sum { min-width: 0; font-size: 13px; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-rail-row.is-on .sp-rail-sum { color: rgba(var(--sp-ink-rgb), .8); }
+
+/* One footer for all four windows. */
+.sp-tool-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 12px var(--bt-pad); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
+.sp-tool-foot .sp-pill { min-height: 44px; margin-left: auto; padding: 0 10px 0 18px; }
+.sp-tool-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; color: var(--sp-dim); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .sp-tool-link:hover { color: var(--sp-ink); text-decoration: underline; } }
+@media (max-width: 760px) {
+  .sp-tool-foot { flex-direction: column; align-items: stretch; gap: 0; padding-top: 8px; }
+  .sp-tool-link { justify-content: center; }
+  .sp-tool-foot .sp-pill { min-height: 48px; margin-left: 0; justify-content: space-between; }
+}
+
+/* Tool switch at 1000px and below: a short fade, no movement. */
+@media (max-width: 1000px) { .sp-step { transition: opacity 150ms ease-out; } }
+
+/* Two labels in one cell that cross-fade. */
+.sp-swap { display: inline-grid; min-width: 0; }
+.sp-swap > span { grid-area: 1 / 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity 200ms ease-out; }
+.sp-swap > span:last-child, .sp-swap[data-on="true"] > span:first-child { opacity: 0; }
+.sp-swap[data-on="true"] > span:last-child { opacity: 1; }
+
+/* A segment of equal cells. */
+.sp-panel .sp-seg { display: grid; align-items: stretch; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; width: 100%; max-width: none; height: 36px; padding: 2px; overflow: visible; }
+.sp-panel .sp-seg button { min-width: 0; padding: 0 8px; font-size: var(--bt-m); }
+@media (pointer: coarse) { .sp-panel .sp-seg { height: 44px; } }
+@media (max-width: 480px) {
+  .sp-panel .sp-harm { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); height: auto; border-radius: 24px; }
+  .sp-panel .sp-harm button { min-height: 44px; }
+}
+
+/* 01 · Palette */
+.sp-panel .sp-pal-strip { flex-wrap: nowrap; justify-content: flex-start; gap: 12px; min-height: 48px; margin: 0; padding: 6px var(--bt-pad); }
+.sp-panel .sp-seed-name { flex: 1 1 0; min-width: 0; }
+.sp-panel .sp-seed-name b { font-size: var(--bt-m); overflow: hidden; text-overflow: ellipsis; }
+.sp-panel .sp-seed-name small { font-size: var(--bt-s); overflow: hidden; text-overflow: ellipsis; }
+.sp-panel .sp-shuffle { flex: none; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; font-size: 16px; }
+@media (max-width: 360px) {
+  .sp-panel .sp-seed { width: 24px; height: 24px; }
+  .sp-panel .sp-seeds { gap: 2px; }
+}
+/* At 340px and below the six seeds leave the name about 38px: the strip wraps instead,
+   the seeds and Shuffle on the first line and "Cobalt  #4985DE" on its own line below. */
+@media (max-width: 340px) {
+  .sp-panel .sp-pal-strip { flex-wrap: wrap; row-gap: 2px; padding-block: 8px; }
+  .sp-panel .sp-shuffle { order: 1; margin-left: auto; }
+  .sp-panel .sp-seed-name { order: 2; flex: 1 1 100%; display: flex; align-items: baseline; gap: 8px; }
+}
+.sp-panel .sp-role { position: relative; }
+/* The hex is never clipped: when the figure and the contrast ratio do not share the
+   line, the ratio drops to a line of its own (right-aligned) rather than the hex losing its end. */
+.sp-panel .sp-role-row { flex-wrap: wrap; column-gap: 10px; row-gap: 0; }
+.sp-panel .sp-role-val { flex: none; min-width: 0; overflow: visible; text-overflow: clip; font-size: var(--bt-m); }
+.sp-roles .sp-role-aa { margin-left: auto; white-space: nowrap; }
+.sp-role-copy { position: absolute; top: 10px; right: 12px; font-size: 14px; opacity: 0; transition: opacity 150ms ease-out; }
+.sp-role:focus-visible .sp-role-copy { opacity: .85; }
+@media (hover: hover) and (pointer: fine) { .sp-role:hover .sp-role-copy { opacity: .85; } }
+.sp-panel .sp-prev-btn { font-size: var(--bt-m); }
+.sp-panel .sp-copyas { min-height: 44px; padding-top: 0; }
+
+/* 02 · Icons: a grid beside a preview, no void */
+.sp-panel .sp-ico-strip { flex-wrap: nowrap; gap: 24px; min-height: 56px; padding: 0 var(--bt-pad); }
+.sp-panel .sp-find { padding: 0; }
+.sp-panel .sp-tabs-row { gap: 16px; }
+.sp-panel .sp-tabs-row .sp-utab { padding: 8px 0; font-size: var(--bt-m); }
+.sp-ico-main { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr) 240px; align-items: start; gap: 24px; padding: var(--bt-pad); }
+.sp-panel .sp-icogrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: auto; align-content: start; gap: 8px; padding: 0; overflow: visible; }
+.sp-panel .sp-ico { width: 100%; max-width: 72px; aspect-ratio: 1; padding: 0; justify-self: center; }
+.sp-ico-prev { display: grid; gap: 12px; min-width: 0; }
+.sp-panel .sp-ico-big { width: 100%; height: 200px; font-size: 128px; border-radius: 16px; }
+.sp-ico-meta { display: grid; gap: 2px; min-width: 0; }
+.sp-ico-meta b { font-size: 15px; font-weight: 560; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-ico-meta small { font-size: 13px; color: var(--sp-dim); }
+.sp-ico-peek { display: block; min-height: 54px; font: 12px/18px var(--mono, ui-monospace, monospace); color: var(--sp-dim); overflow: hidden; }
+.sp-ico-peek > span { display: block; min-height: 18px; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.sp-panel .sp-copybtn { width: 100%; height: 44px; justify-content: space-between; padding: 0 10px 0 16px; font-size: var(--bt-m); }
+/* Above a phone the set is 4 columns of 72px tiles, 6 rows, so the grid's top and
+   bottom meet the preview's top and its Copy button instead of floating mid-window.
+   The preview stretches to the grid's height, its code peek taking any slack, so
+   Copy ends level with the last row of tiles. */
+@media (min-width: 681px) {
+  .sp-ico-main { align-content: safe center; }
+  .sp-panel .sp-icogrid { grid-template-columns: repeat(4, 72px); justify-content: center; }
+  .sp-ico-prev { align-self: stretch; grid-template-rows: auto auto auto auto 1fr auto; }
+}
+@media (max-width: 680px) {
+  .sp-panel .sp-ico-strip { flex-wrap: wrap; gap: 0; padding: 0; }
+  .sp-panel .sp-ico-strip .sp-find { flex: 1 1 100%; min-height: 48px; padding: 0 var(--bt-pad); }
+  .sp-panel .sp-ico-strip .sp-tabs-row { flex: 1 1 100%; justify-content: space-between; min-height: 44px; padding: 0 var(--bt-pad); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
+  .sp-ico-main { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; }
+  .sp-ico-prev { grid-template-columns: 96px minmax(0, 1fr); column-gap: 16px; align-items: center; }
+  .sp-ico-prev > * { grid-column: 1 / -1; }
+  .sp-panel .sp-ico-big { grid-column: 1; width: 96px; height: 96px; font-size: 56px; }
+  .sp-ico-prev > .sp-ico-meta { grid-column: 2; }
+  .sp-ico-peek { display: none; }
+}
+/* 4 columns, 4 rows at 480px and below: sixteen 65px tiles keep the window short on a
+   phone. The rest of the set is one tap away on the footer's Open Icon Library pill. */
+@media (max-width: 480px) {
+  .sp-panel .sp-icogrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sp-panel .sp-ico { max-width: none; }
+  .sp-panel .sp-icogrid > .sp-ico:nth-child(n + 17) { display: none; }
+}
+
+.sp-empty { display: grid; justify-items: start; align-content: center; gap: 4px; min-height: 160px; padding: var(--bt-pad); font-size: 13px; color: var(--sp-dim); }
+.sp-empty p { margin: 0; }
+.sp-empty-btn { min-height: 44px; padding: 0; border: 0; background: none; color: var(--sp-ink); font: inherit; text-decoration: underline; cursor: pointer; }
+
+/* 03 · Fonts: the name is the row; the rest opens on the chosen one */
+.sp-panel .sp-font-strip { flex-wrap: nowrap; gap: 24px; min-height: 56px; padding: 0 var(--bt-pad); }
+.sp-panel .sp-font-strip .sp-find { border-bottom: 0; }
+.sp-panel .sp-font-cats .sp-utab { padding: 8px 0; }
+.sp-panel .sp-font-ctl { min-height: 44px; padding: 0 var(--bt-pad); }
+.sp-panel .sp-font-ctl output { font-size: var(--bt-m); }
+/* On a phone the search takes its own 48px row and the categories a 44px row
+   beneath it, as the icon strip does. */
+@media (max-width: 680px) {
+  .sp-panel .sp-font-strip { flex-wrap: wrap; gap: 0; padding: 0; }
+  .sp-panel .sp-font-strip .sp-find { flex: 1 1 100%; min-height: 48px; padding: 0 var(--bt-pad); }
+  .sp-panel .sp-font-strip .sp-font-cats { flex: 1 1 100%; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 var(--bt-pad); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
+}
+.sp-panel .sp-fontlist { flex: 1 1 0; min-height: 0; }
+.sp-panel .sp-fontrow { display: block; padding: 16px var(--bt-pad); }
+.sp-fontrow-top { display: flex; align-items: center; gap: 16px; }
+.sp-panel .sp-fontrow-name { flex: 1; min-width: 0; }
+.sp-fontrow-meta { flex: none; max-width: 40%; font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); text-align: right; }
+/* On a narrow phone the name takes the row's full width, so a family name wraps at its
+   spaces, never inside a word ("Schibsted / Grotesk"); the category and the add
+   button sit on the line beneath it. */
+@media (max-width: 400px) {
+  .sp-fontrow-top { flex-wrap: wrap; gap: 4px 12px; }
+  .sp-panel .sp-fontrow-name { flex: 1 1 100%; }
+  .sp-fontrow-meta { flex: 1 1 0; min-width: 0; max-width: none; text-align: left; }
+}
+.sp-fontrow-more { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows 200ms ease-out, visibility 0s linear 200ms; }
+.sp-fontrow[aria-pressed="true"] .sp-fontrow-more { grid-template-rows: 1fr; visibility: visible; transition-delay: 0s; }
+.sp-fontrow-more-in { min-height: 0; overflow: hidden; display: grid; gap: 12px; }
+.sp-fontrow-more-in > :first-child { margin-top: 12px; }
+.sp-fontrow-axes { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-panel .sp-font-pair { flex: none; }
+.sp-panel .sp-font-pair small { font-size: 12px; }
+@media (max-width: 760px) {
+  .sp-panel:has(.sp-fontlist) { max-height: none; }
+  .sp-panel .sp-fontlist { flex: none; height: 440px; overflow: auto; scroll-snap-type: y proximity; scroll-padding-bottom: 0; }
+  .sp-panel .sp-fontrow { scroll-snap-align: start; }
+}
+/* The list is a scroll box above the footer's hairline. Its last row drops its own
+   hairline so the two never stack, and the rows are 12px (not 16px) above and
+   below, which lets the next row's name show at the box's edge as a cue to scroll
+   rather than a band of its padding between two hairlines. */
+@media (min-width: 761px) {
+  .sp-panel .sp-fontrow { padding-block: 12px; }
+  .sp-panel .sp-fontrow:last-child { border-bottom: 0; }
+}
+@media (pointer: fine) and (min-width: 761px) {
+  .sp-panel .sp-find input, .sp-panel .sp-font-ctl input[type="text"] { font-size: var(--bt-m); }
+}
+
+/* 04 · Converter */
+.sp-panel .sp-modes { margin: calc(var(--bt-pad) * -1) calc(var(--bt-pad) * -1) 0; padding: 0 var(--bt-pad); }
+/* The pad is "00%": the width of any two-digit saving (tabular digits), so "92%" sits
+   against its word at the line's own gap. A three-digit "934%" is wider and simply grows the box. */
+.sp-saving-num { display: inline-grid; justify-items: start; min-width: 0; }
+.sp-saving-pad { grid-area: 1 / 1; visibility: hidden; }
+.sp-saving-fig { grid-area: 1 / 1; }
+.sp-panel .sp-quality > .sp-quality-row { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--bt-m); color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
+.sp-quality-row output { color: var(--sp-ink); font-variant-numeric: tabular-nums; }
+.sp-panel .sp-model-say { font-size: var(--bt-m); }
+@media (max-width: 760px) {
+  .sp-cv-panes { flex: 1 1 auto; }
+  .sp-conv-art { flex: 1 1 auto; }
+}
+
+/* Reduced motion for the bench's own movement, under both spellings. */
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-step, .sp-swap > span, .sp-role-copy, .sp-fontrow-more) { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-step, .sp-swap > span, .sp-role-copy, .sp-fontrow-more) { transition: none !important; }
+}
+@media (forced-colors: active) {
+  .spectrum .sp-seg button[aria-pressed="true"], .spectrum .sp-fontrow[aria-pressed="true"] { border: 1px solid CanvasText; }
 }
 
 /* ── discover ─────────────────────────────────────────────────────────────── */
@@ -1341,7 +1509,7 @@
     min-height: 44px;
     padding: 0 4px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 540;
     color: var(--sp-dim);
     text-align: center;
@@ -1360,9 +1528,9 @@
   /* On a phone the windows grow to their content and the cell takes the tallest. */
   .sp-step > .sp-panel { height: auto; }
   .sp-panel { border-radius: 16px; }
-  .sp-panel:has(.sp-fontlist) { max-height: 620px; }
-  /* A family name wraps instead of ending in an ellipsis. */
-  .sp-fontrow-name { white-space: normal; overflow-wrap: anywhere; text-wrap: balance; line-height: 1.02; }
+  /* A family name wraps instead of ending in an ellipsis, at spaces; a word breaks
+     only if it is wider than the whole row. */
+  .sp-fontrow-name { white-space: normal; overflow-wrap: break-word; text-wrap: balance; line-height: 1.02; }
 }
 /* At 761 to 1000px the segments are 48px tall, as the tablet switch is drawn. */
 @media (min-width: 761px) and (max-width: 1000px) {
@@ -1461,7 +1629,7 @@
 /* Data-bearing marks stay at 11px or larger on a phone: the AA verdicts are
    facts a reader acts on. The design's decorative mono labels keep their size. */
 @media (max-width: 760px) {
-  .sp-role-aa, .sp-ex-aa { font-size: 11px; }
+  .sp-ex-aa { font-size: 11px; }
 }
 
 /* ── focus ────────────────────────────────────────────────────────────────────
