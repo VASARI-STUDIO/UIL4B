@@ -191,7 +191,7 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-card-pick[aria-pressed="true"] { background: var(--bg-0); color: var(--t0); }
 .uh .uh-card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: color-mix(in srgb, var(--t0) 14%, transparent); }
 .uh .uh-card-bar > span { display: block; height: 100%; background: var(--accent); }
-.uh .uh-card-name:not(.uh-open) { display: block; width: 100%; padding: 13px 15px 15px; text-align: left; text-decoration: none; color: inherit; box-sizing: border-box; }
+.uh .uh-card-name:where(:not(.uh-open)) { display: block; width: 100%; padding: 13px 15px 15px; text-align: left; text-decoration: none; color: inherit; box-sizing: border-box; }
 .uh .uh-card-name:hover { text-decoration: none; }
 .uh .uh-card-name:focus-visible { outline-offset: -2px; }
 .uh .uh-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
