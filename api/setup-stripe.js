@@ -112,6 +112,8 @@ export default async function handler(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  // Admin-only responses; never kept by a shared cache.
+  res.setHeader('Cache-Control', 'private, no-store')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'GET' && req.method !== 'POST') {

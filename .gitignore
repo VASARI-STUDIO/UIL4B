@@ -44,6 +44,14 @@ public/fonts/switzer/
 # Env
 .env
 .env.local
+.env.*
+!.env.example
+
+# Deploy and credential files that must never be committed
+.vercel/
+*.pem
+*service-account*.json
+serviceAccount*.json
 
 # Regenerable screenshots
 docs/qa/screenshots/
