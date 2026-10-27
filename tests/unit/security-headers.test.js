@@ -52,6 +52,19 @@ test('every response carries the baseline security headers', () => {
   }
 })
 
+// COOP isolates the page from windows it did not open, but the Google sign-in
+// (Firebase signInWithPopup) and Stripe flows rely on a popup that keeps a
+// handle back to the opener. `same-origin-allow-popups` keeps that handle for
+// popups this page opens; plain `same-origin` severs it and breaks sign-in.
+test('Cross-Origin-Opener-Policy is same-origin-allow-popups on every response, never plain same-origin', () => {
+  for (const p of PAGES) {
+    const coop = headersFor(p)['cross-origin-opener-policy']
+    assert.equal(coop, 'same-origin-allow-popups', p)
+    assert.notEqual(coop, 'same-origin', `${p}: plain same-origin breaks the Google sign-in popup`)
+  }
+  assert.equal(headersFor('/previews/prompts/c-1.html')['cross-origin-opener-policy'], 'same-origin-allow-popups')
+})
+
 test('pages cannot be framed by another site, and the prompt previews can still be framed by ours', () => {
   for (const p of PAGES) assert.equal(headersFor(p)['x-frame-options'], 'DENY', p)
   assert.equal(headersFor('/previews/prompts/c-1.html')['x-frame-options'], 'SAMEORIGIN')
