@@ -121,6 +121,17 @@ const box = (page, selector) => page.evaluate((sel) => {
   return { top: Math.round(r.top + scrollY), bottom: Math.round(r.bottom + scrollY), left: Math.round(r.left), right: Math.round(r.right) }
 }, selector)
 
+/** The face and number style a figure is drawn in: the Today card has one sans, tabular, and nothing mono. */
+const figureStyle = (locator) => locator.evaluate((el) => {
+  const cs = getComputedStyle(el)
+  return { family: cs.fontFamily, numeric: cs.fontVariantNumeric }
+})
+function expectSansTabular(style, what) {
+  expect(style.family, `${what} is not the mono face (${style.family})`).not.toMatch(/Geist Mono|monospace/i)
+  expect(style.family, `${what} is the page's sans face (${style.family})`).toMatch(/Switzer/)
+  expect(style.numeric, `${what} has tabular figures (${style.numeric})`).toContain('tabular-nums')
+}
+
 for (const size of SIZES) {
   test.describe(`the workspace at ${size.width}px (${size.name})`, () => {
     test('sections run in this order, in the DOM and on the page', async ({ page }) => {
@@ -697,6 +708,42 @@ test.describe('Discover shows a mood on every card or on none', () => {
   })
 })
 
+test.describe('the Today card and the chips share one style', () => {
+  // MUTATION (made, named test red, restored): projects.css `.uh-today-time` and `.uh-meter-val` back to
+  // `font-family: var(--mono)` -> the figures test; the dark `.uh-lead-ico, .uh-tool-ico` rule removed -> the chips test.
+  test('the clock and both meter values are the sans face with tabular figures', async ({ page }) => {
+    watch(page, 'a designer reading the Today card on a laptop')
+    await open(page, SIZES[2])
+    const today = page.locator('.uh-today')
+    expectSansTabular(await figureStyle(today.locator('.uh-today-time')), 'the big clock')
+    await expect(today.locator('.uh-today-time')).toHaveText(/\d{1,2}[:.]\d{2}/)
+    const ai = today.locator('.uh-meter', { hasText: 'AI generations today' }).locator('.uh-meter-val')
+    await expect(ai).toHaveText(/^\d+ of \d+$/)
+    expectSansTabular(await figureStyle(ai), 'the AI value')
+    const projects = today.getByTestId('project-quota-note').locator('.uh-meter-val')
+    await expect(projects).toHaveText('3 of 3')
+    expectSansTabular(await figureStyle(projects), '"3 of 3"')
+  })
+
+  test('in dark the tool and lead chips sit one step up from the card, level with the project badge', async ({ page }) => {
+    watch(page, 'a designer on a laptop in dark')
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await open(page, SIZES[2])
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    const bg = (sel) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundColor)
+    const badge = await bg('.uh-badge')
+    // The surface each chip sits on: its own card (the tool row, the lead tile).
+    const toolCard = await bg('.uh-tool')
+    const leadCard = await bg('.uh-lead')
+    expect(badge, 'the badge is a drawn colour').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+    expect(badge, 'the badge is not the tool card colour, or this test compares nothing').not.toBe(toolCard)
+    expect(await bg('.uh-tool-ico'), 'a tool chip is the badge colour').toBe(badge)
+    expect(await bg('.uh-lead-ico'), 'the lead chip is the badge colour').toBe(badge)
+    expect(await bg('.uh-tool-ico'), 'a tool chip is not its card colour').not.toBe(toolCard)
+    expect(await bg('.uh-lead-ico'), 'the lead chip is not its card colour').not.toBe(leadCard)
+  })
+})
+
 test.describe('on a phone, the page is composed for a thumb', () => {
   const phone = SIZES[0]
 
@@ -727,7 +774,14 @@ test.describe('on a phone, the page is composed for a thumb', () => {
 
   // The notice opens in the flow under the foot New project button. With the page scrolled to its foot that
   // button sits just above the fixed tab bar, so the notice would open under the bar unless the page moves.
-  // MUTATION: revert the `ref={showCap}` in Projects.jsx, or the scroll-margin in projects.css: this goes red.
+  // The page's own scroll-padding-bottom (the tab bar's height, global.css) lands the notice flush on the bar;
+  // projects.css adds 12px (`scroll-margin-bottom: var(--s-3)`) once. So the gap is 12px, not 0 and not bar + 12.
+  // The scrollIntoView call is spied on from page start so the motion setting is read from the call itself
+  // (`behavior`), not inferred from where the page ends up: both settings land on the same pixel.
+  // MUTATION (made, named test red, restored):
+  //   Projects.jsx   the `prefersReducedMotion() ? 'auto' : 'smooth'` ternary flipped    -> "motion on" and "reduced" (behavior)
+  //   projects.css   scroll-margin-bottom back to calc(var(--tabbar-h) + env(...) + var(--s-3))  -> both (gap is 12 + bar, not 12)
+  //   Projects.jsx   drop `ref={showCap}`                                                 -> both (no call; the notice is under the bar)
   for (const motion of ['on', 'reduced']) {
     test(`the limit notice ends above the tab bar when it opens from the page foot, motion ${motion}`, async ({ page }) => {
       watch(page, `a free designer at the foot of the page pressing New project, motion ${motion}`)
@@ -737,6 +791,17 @@ test.describe('on a phone, the page is composed for a thumb', () => {
       await page.addInitScript((reduced) => {
         try { localStorage.setItem('vs-appearance', JSON.stringify({ reducedMotion: reduced })) } catch { /* private mode */ }
       }, motion === 'reduced')
+      // Record every scrollIntoView aimed at the notice, then let the real one run.
+      await page.addInitScript(() => {
+        window.__capScrolls = []
+        const real = Element.prototype.scrollIntoView
+        Element.prototype.scrollIntoView = function (arg) {
+          if (this.getAttribute && this.getAttribute('data-testid') === 'project-create-refusal') {
+            window.__capScrolls.push({ behavior: arg && typeof arg === 'object' ? arg.behavior : undefined, block: arg && typeof arg === 'object' ? arg.block : undefined })
+          }
+          return real.apply(this, arguments)
+        }
+      })
       await open(page, phone)
       await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', motion === 'reduced' ? 'true' : 'false')
       await expect(page.locator('html')).toHaveClass(/has-tabbar/)
@@ -772,7 +837,12 @@ test.describe('on a phone, the page is composed for a thumb', () => {
         tabPosition: getComputedStyle(document.querySelector('nav.pnav-tabs')).position,
       }))
       expect(edges.tabPosition, 'the tab bar is the fixed one').toBe('fixed')
-      expect(edges.noticeBottom, `the notice (bottom ${edges.noticeBottom}) ends at or above the tab bar (top ${edges.tabTop})`).toBeLessThanOrEqual(edges.tabTop)
+      const gap = edges.tabTop - edges.noticeBottom
+      expect(Math.abs(gap - 12), `the notice (bottom ${edges.noticeBottom}) ends ${gap}px above the tab bar (top ${edges.tabTop}); it should be 12`).toBeLessThanOrEqual(1)
+      const scrolls = await page.evaluate(() => window.__capScrolls)
+      expect(scrolls, 'the notice asked to be scrolled into view once, as it mounted').toHaveLength(1)
+      if (motion === 'on') expect(scrolls[0].behavior, 'with motion on the scroll glides').toBe('smooth')
+      else expect(['auto', undefined], `with reduced motion the scroll jumps (behavior ${scrolls[0].behavior})`).toContain(scrolls[0].behavior)
       expect(edges.noticeTop, 'the notice is on the screen, not scrolled past the top').toBeGreaterThanOrEqual(0)
     })
   }
@@ -789,7 +859,7 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     expect(where.line.top, 'the date line is above the title').toBeGreaterThanOrEqual(where.h1Bottom - 1)
     expect(where.line.bottom, 'the date line is not above the work').toBeLessThanOrEqual(where.firstBlock + 1)
     expect(where.line.height, 'it is one line, not a block').toBeLessThan(30)
-    // The weekday and month are the browser's own; the time is a clock reading in the mono face.
+    // The weekday and month are the browser's own; the time is a clock reading in the page's sans, tabular.
     const expected = await page.evaluate(() => {
       const d = new Date()
       return { weekday: d.toLocaleDateString([], { weekday: 'long' }), month: d.toLocaleDateString([], { month: 'long' }) }
@@ -797,7 +867,7 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     await expect(line).toContainText(expected.weekday)
     await expect(line).toContainText(expected.month)
     await expect(line.locator('.uh-clk-time')).toHaveText(/^\d{1,2}[:.]\d{2}/)
-    expect(await line.locator('.uh-clk-time').evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Geist Mono|monospace/)
+    expectSansTabular(await figureStyle(line.locator('.uh-clk-time')), 'the phone clock')
     await expect(page.locator('.uh-today-clock'), 'the big clock is hidden on a phone').toBeHidden()
   })
 
