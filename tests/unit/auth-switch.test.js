@@ -155,4 +155,8 @@ test('forced password switching and prompt re-entrancy are guarded', async () =>
   const header = await readFile(new URL('../../src/components/PillNav.jsx', import.meta.url), 'utf8')
   assert.ok(header.includes('accountBtnRef.current?.focus()'))
   assert.ok(header.includes('<AccountSwitcher onDone={closeAccountMenuAndRestoreFocus} />'))
+  // The phone sheet's copy hands focus to the menu button the same way.
+  assert.ok(header.includes('mobileBtnRef.current?.focus()'))
+  assert.ok(header.includes('<AccountSwitcher onDone={closeSheetAndRestoreFocus} />'))
+  assert.ok(!header.includes('<AccountSwitcher onDone={closeAll} />'), 'a switcher closes without restoring focus')
 })

@@ -649,6 +649,14 @@ function AppHeader() {
     })
   }
 
+  // The phone sheet's switcher hands focus back to the menu button instead.
+  const closeSheetAndRestoreFocus = () => {
+    closeAll()
+    requestAnimationFrame(() => {
+      if (!document.querySelector('[role="dialog"]')) mobileBtnRef.current?.focus()
+    })
+  }
+
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
   const showUpgrade = !isPro && path !== '/plans'
 
@@ -990,7 +998,7 @@ function AppHeader() {
           <div className="pnav-sheet-group">
             {user ? (
               <div id="pnav-sheet-account">
-                <AccountSwitcher onDone={closeAll} />
+                <AccountSwitcher onDone={closeSheetAndRestoreFocus} />
                 <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
                   <GearIcon /><span>Account &amp; settings</span>
                 </Link>
