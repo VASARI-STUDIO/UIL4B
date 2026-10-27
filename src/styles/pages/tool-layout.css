@@ -190,6 +190,12 @@
   display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
   border: 0; border-radius: var(--btn-radius); background: transparent; color: var(--tl-ink); cursor: pointer;
 }
+/* A select list opened from inside a sheet (System, Vision) is a sheet on a
+   sheet. The tab bar is under the scrim there, so the list sits on the screen
+   edge instead of the tab bar's top edge (global.css lifts every list by it). */
+@media (max-width: 767px) {
+  html.has-tabbar .pop.menu-select-list[data-in-sheet] { bottom: 0; }
+}
 @keyframes tl-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
 :where(html[data-reduced-motion="true"]) .tl-sheet-layer .tl-sheet { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {

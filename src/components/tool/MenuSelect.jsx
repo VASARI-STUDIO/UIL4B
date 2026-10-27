@@ -58,6 +58,9 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     }
     popRef.current?.style.setProperty('--select-layer', String(layer))
     scrimRef.current?.style.setProperty('--select-layer', String(layer))
+    // A list opened from inside a bottom sheet sits over the phone tab bar, so it
+    // must not leave room for it (see tool-layout.css).
+    popRef.current?.toggleAttribute('data-in-sheet', triggerRef.current?.closest('.tl-sheet-layer') != null)
     popRef.current?.focus({ preventScroll: true })
   }, [open, popRef, triggerRef])
   useLayoutEffect(() => {
