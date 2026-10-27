@@ -25,6 +25,9 @@
    and is restated for the new class, or the four buttons would lose their
    share of the line. */
 .iel-page .icust-foot .lib-btn{flex:1 1 auto;min-width:max-content}
+/* One row at every width: the footer is a size container, so its labels choose
+   a tier from its own width (see the split Download block in deferred/library.css). */
+.iel-page .icust-foot{container-type:inline-size;flex-wrap:nowrap}
 .iel-page .icust-paste .icust-foot .lib-btn{flex:0 1 auto}
 /* Try again sits on the notice's warn-tinted band, so it carries a card
    ground of its own — a transparent button there would read as part of the
