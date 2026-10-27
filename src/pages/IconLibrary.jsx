@@ -3468,7 +3468,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // localStorage, which survives signing out — so a viewer who was Pro
         // yesterday has simple-icons names in there today, and without this
         // line the rail would fetch them.
-        if (!canSee(icon.pack)) continue
+        if (!canSee(icon.pack) || !canSeeIcon(icon.pack, icon.name, tier)) continue
         const key = svgKey(icon.pack, icon.name)
         // A name the server would refuse is never sent: one such name fails its whole batch.
         if (isAnimatedPack(icon.pack) && !isAnimatedName(icon.name)) { GLYPH_MISSING.add(key); continue }
@@ -3556,7 +3556,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       })
     }, 120)
     return () => clearTimeout(t)
-  }, [icons, visible, recents, renderLocal, canSee, retryTick])
+  }, [icons, visible, recents, renderLocal, canSee, tier, retryTick])
 
   // The one read of `glyphTick`. The caches above are module-level Maps, so a
   // tranche landing changes nothing React can see; tying this callback's
