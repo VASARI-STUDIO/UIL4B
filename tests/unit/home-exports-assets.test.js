@@ -5,6 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
@@ -44,7 +45,7 @@ function variantsOf(manifest) {
 }
 
 /** Every way the manifest and the folder can disagree with the spec; empty when sound. */
-export function problems(manifest, dir = DIR) {
+export function problems(manifest, dir = DIR, budget = BUDGET) {
   const errs = []
   let total = 0
   let count = 0
@@ -65,13 +66,13 @@ export function problems(manifest, dir = DIR) {
       else if (size.w !== f.w || size.h !== f.h) errs.push(`${at}: header says ${size.w}x${size.h}, manifest says ${f.w}x${f.h}`)
       if (f.w > v.master.w) errs.push(`${at}: ${f.w}w is wider than its ${v.master.w}w master`)
       if (Math.abs(f.w / f.h - v.aspect) / v.aspect > 0.005) errs.push(`${at}: aspect ${(f.w / f.h).toFixed(4)} is off the plate's ${v.aspect}`)
-      const cap = BUDGET[shape][f.w]
+      const cap = budget[shape][f.w]
       if (cap === undefined) errs.push(`${at}: ${f.w}w is not one of the allowed widths`)
       else if (f.bytes > cap || buf.length > cap) errs.push(`${at}: ${buf.length} bytes is over its ${cap} budget`)
     }
   }
   if (count !== FILES_EXPECTED) errs.push(`${count} files named, expected ${FILES_EXPECTED}`)
-  if (total > BUDGET.total) errs.push(`folder is ${total} bytes, over its ${BUDGET.total} budget`)
+  if (total > budget.total) errs.push(`folder is ${total} bytes, over its ${budget.total} budget`)
   if (fs.existsSync(dir)) {
     for (const f of fs.readdirSync(dir)) if (f.endsWith('.webp') && !named.has(f)) errs.push(`${f}: in the folder but not in the manifest`)
   }
@@ -105,13 +106,20 @@ test('the checks can fail: a bad manifest is caught', () => {
   const wide = copy()
   wide.plates[0].landscape.master.w = 1000
   assert.match(problems(wide).join('\n'), /wider than its 1000w master/)
-  const heavy = copy()
-  heavy.covers[0].portrait.files[0].bytes = 26 * KB
-  assert.match(problems(heavy).join('\n'), /bytes on disk|over its/)
-  const spread = copy()
-  spread.covers[0].landscape.files[0].bytes = 71 * KB
-  assert.match(problems(spread).join('\n'), /bytes on disk|over its/)
-  const empty = fs.mkdtempSync(path.join(root, '.cache', 'home-exports-empty-'))
+  // The byte budget, on the real files: a budget one byte under a real file's
+  // size must flag that file, so a dropped budget check fails here.
+  const one = HOME_EXPORTS.covers[0].portrait.files[0]
+  const tight = JSON.parse(JSON.stringify(BUDGET))
+  tight.cover[one.w] = one.bytes - 1
+  assert.ok(problems(copy(), DIR, tight).some((e) => e.endsWith(`${one.file}: ${one.bytes} bytes is over its ${one.bytes - 1} budget`)), 'a cover over its budget is caught')
+  const sp = HOME_EXPORTS.covers[0].landscape.files[0]
+  const tightSpread = JSON.parse(JSON.stringify(BUDGET))
+  tightSpread.landscape[sp.w] = sp.bytes - 1
+  assert.ok(problems(copy(), DIR, tightSpread).some((e) => e.endsWith(`${sp.file}: ${sp.bytes} bytes is over its ${sp.bytes - 1} budget`)), 'a spread is held to the landscape budget')
+  const folder = JSON.parse(JSON.stringify(BUDGET))
+  folder.total = 1
+  assert.match(problems(copy(), DIR, folder).join('\n'), /folder is \d+ bytes, over its 1 budget/)
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'home-exports-empty-'))
   try {
     const errs = problems(copy(), empty).join('\n')
     assert.match(errs, /file is missing/)

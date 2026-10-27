@@ -699,3 +699,22 @@ test.describe('fit', () => {
     await ctx.close()
   })
 })
+
+test.describe('a picture that fails to load', () => {
+  test('shows its fallback when picked, even after hover already tried and failed to load it', async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width: 1440, height: 900 })
+    await go(page, '/')
+    await show(page, 1)
+    // The second tab's files never arrive. Only the shown tab has loaded so far.
+    const second = await tabId(page, 1)
+    await page.route(new RegExp(`/home-exports/${second}-`), (route) => route.abort())
+    const target = tabs(page).nth(1)
+    // Hover warms the picture; its load fails while another tab is shown.
+    await target.hover()
+    await expect.poll(() => card(page, 1).evaluate((c, id) => [...c.querySelectorAll('.sp-plate-art img')].some((im) => im.currentSrc.includes(id) && im.complete && im.naturalWidth === 0), second), { message: 'the warmed picture failed' }).toBe(true)
+    await target.click()
+    await expect(target).toHaveAttribute('aria-selected', 'true')
+    await expect(card(page, 1).locator('.sp-plate-fail'), 'the plate says the picture did not load').toBeVisible()
+    await ctx.close()
+  })
+})

@@ -447,6 +447,7 @@ function usePlate() {
   const [mounted, setMounted] = useState(() => new Set([0]))
   const [failed, setFailed] = useState(() => new Set())
   const activeRef = useRef(0)
+  const failedRef = useRef(new Set())
   const imgs = useRef([])
 
   const mount = (i) => setMounted((prev) => (prev.has(i) ? prev : new Set(prev).add(i)))
@@ -464,12 +465,16 @@ function usePlate() {
     activeRef.current = i
     setActive(i)
     mount(i)
+    // A picture warmed by hover or focus may already have failed: it fires no
+    // second error, so show its fallback now rather than keep the old picture.
+    if (failedRef.current.has(i)) { setShown(i); return }
     const el = imgs.current[i]
     if (el && el.complete && el.naturalWidth > 0) reveal(i)
   }
 
   const onLoad = (i) => () => { if (activeRef.current === i) reveal(i) }
   const onError = (i) => () => {
+    failedRef.current.add(i)
     setFailed((prev) => new Set(prev).add(i))
     if (activeRef.current === i) setShown(i)
   }

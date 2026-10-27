@@ -607,7 +607,8 @@ function checks() {
         const got = f.w / f.h
         if (Math.abs(got - want) / want > ASPECT_TOLERANCE) errors.push(`${o.id} ${orient} ${f.w}w: aspect ${got.toFixed(4)}, plate wants ${want.toFixed(4)}`)
         const cap = budget[f.w]
-        if (f.buf.length > cap) errors.push(`${o.id} ${orient} ${f.w}w is ${kbOf(f.buf.length)}, over its ${kbOf(cap)} budget`)
+        if (cap === undefined) errors.push(`${o.id} ${orient} ${f.w}w is not one of the budgeted widths`)
+        else if (f.buf.length > cap) errors.push(`${o.id} ${orient} ${f.w}w is ${kbOf(f.buf.length)}, over its ${kbOf(cap)} budget`)
       }
     }
   }
