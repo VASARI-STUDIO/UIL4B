@@ -29,7 +29,7 @@
   --sp-shade-rgb: 0, 0, 0;
   --sp-shade-a: 1;
   --sp-dim-a: .62;
-  --sp-faint-a: .55;
+  --sp-faint-a: .62;
   --sp-ink-hover: #D5D4CE;
 
   /* Derived, and the names the footer (SpectrumFooter.jsx) reads. */
@@ -838,7 +838,7 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-panel .sp-find { padding: 0; }
 .sp-panel .sp-tabs-row { gap: 16px; }
 .sp-panel .sp-tabs-row .sp-utab { padding: 8px 0; font-size: var(--bt-m); }
-.sp-ico-main { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr) 240px; align-items: center; gap: 24px; padding: var(--bt-pad); }
+.sp-ico-main { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr) 240px; align-items: start; gap: 24px; padding: var(--bt-pad); }
 .sp-panel .sp-icogrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: auto; align-content: start; gap: 8px; padding: 0; overflow: visible; }
 .sp-panel .sp-ico { width: 100%; max-width: 72px; aspect-ratio: 1; padding: 0; justify-self: center; }
 .sp-ico-prev { display: grid; gap: 12px; min-width: 0; }
@@ -849,6 +849,15 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-ico-peek { display: block; min-height: 54px; font: 12px/18px var(--mono, ui-monospace, monospace); color: var(--sp-dim); overflow: hidden; }
 .sp-ico-peek > span { display: block; min-height: 18px; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
 .sp-panel .sp-copybtn { width: 100%; height: 44px; justify-content: space-between; padding: 0 10px 0 16px; font-size: var(--bt-m); }
+/* Above a phone the set is 4 columns of 72px tiles, 6 rows, so the grid's top and
+   bottom meet the preview's top and its Copy button instead of floating mid-window.
+   The preview stretches to the grid's height, its code peek taking any slack, so
+   Copy ends level with the last row of tiles. */
+@media (min-width: 681px) {
+  .sp-ico-main { align-content: safe center; }
+  .sp-panel .sp-icogrid { grid-template-columns: repeat(4, 72px); justify-content: center; }
+  .sp-ico-prev { align-self: stretch; grid-template-rows: auto auto auto auto 1fr auto; }
+}
 @media (max-width: 680px) {
   .sp-panel .sp-ico-strip { flex-wrap: wrap; gap: 0; padding: 0; }
   .sp-panel .sp-ico-strip .sp-find { flex: 1 1 100%; min-height: 48px; padding: 0 var(--bt-pad); }
@@ -878,6 +887,13 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-panel .sp-font-cats .sp-utab { padding: 8px 0; }
 .sp-panel .sp-font-ctl { min-height: 44px; padding: 0 var(--bt-pad); }
 .sp-panel .sp-font-ctl output { font-size: var(--bt-m); }
+/* On a phone the search takes its own 48px row and the categories a 44px row
+   beneath it, as the icon strip does. */
+@media (max-width: 680px) {
+  .sp-panel .sp-font-strip { flex-wrap: wrap; gap: 0; padding: 0; }
+  .sp-panel .sp-font-strip .sp-find { flex: 1 1 100%; min-height: 48px; padding: 0 var(--bt-pad); }
+  .sp-panel .sp-font-strip .sp-font-cats { flex: 1 1 100%; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 var(--bt-pad); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
+}
 .sp-panel .sp-fontlist { flex: 1 1 0; min-height: 0; }
 .sp-panel .sp-fontrow { display: block; padding: 16px var(--bt-pad); }
 .sp-fontrow-top { display: flex; align-items: center; gap: 16px; }
@@ -895,13 +911,21 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   .sp-panel .sp-fontlist { flex: none; height: 440px; overflow: auto; scroll-snap-type: y proximity; scroll-padding-bottom: 0; }
   .sp-panel .sp-fontrow { scroll-snap-align: start; }
 }
+/* The list is a scroll box above the footer's hairline. Its last row drops its own
+   hairline so the two never stack, and the rows are 12px (not 16px) above and
+   below, which lets the next row's name show at the box's edge as a cue to scroll
+   rather than a band of its padding between two hairlines. */
+@media (min-width: 761px) {
+  .sp-panel .sp-fontrow { padding-block: 12px; }
+  .sp-panel .sp-fontrow:last-child { border-bottom: 0; }
+}
 @media (pointer: fine) and (min-width: 761px) {
   .sp-panel .sp-find input, .sp-panel .sp-font-ctl input[type="text"] { font-size: var(--bt-m); }
 }
 
 /* 04 · Converter */
 .sp-panel .sp-modes { margin: calc(var(--bt-pad) * -1) calc(var(--bt-pad) * -1) 0; padding: 0 var(--bt-pad); }
-.sp-saving-num { display: inline-grid; justify-items: end; min-width: 0; }
+.sp-saving-num { display: inline-grid; justify-items: start; min-width: 0; }
 .sp-saving-pad { grid-area: 1 / 1; visibility: hidden; }
 .sp-saving-fig { grid-area: 1 / 1; }
 .sp-panel .sp-quality > .sp-quality-row { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--bt-m); color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }

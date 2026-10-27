@@ -28,8 +28,10 @@ test('a picked seed, icon, weight, size and family each change their own line', 
 })
 
 test('the converter line waits for the first encode, then names the format', () => {
-  assert.equal(converterSummary(null), 'Measuring…')
-  assert.equal(converterSummary({ pct: null, format: 'WEBP' }), 'Measuring…')
+  assert.equal(converterSummary(null), 'Not measured yet')
+  assert.equal(converterSummary({ pct: null, format: 'WEBP' }), 'Not measured yet')
+  assert.equal(converterSummary({ pct: null, format: 'WEBP', measuring: true }), 'Measuring…')
+  assert.equal(converterSummary({ pct: null, format: 'WEBP', failed: true }), 'File not supported')
   assert.equal(converterSummary({ pct: 61, format: 'JPEG' }), '61% smaller as JPEG')
   assert.equal(converterSummary({ pct: -8, format: 'WEBP' }), '8% larger as WebP')
   assert.equal(converterSummary({ pct: 0, format: 'PNG' }), 'Lossless PNG')

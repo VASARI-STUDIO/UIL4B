@@ -222,6 +222,7 @@ const COPY_WORDS = ['Copy SVG', 'Copy JSX', 'Copy sprite']
 function IconPanel({ icon, onIcon, weight, onWeight, size, onSize }) {
   const [query, setQuery] = useState('')
   const [fmt, setFmt] = useState(0)
+  const searchRef = useRef(null)
   const [copied, flash] = useFlash(1100)
   // Regular ships with the page; the other four weights are a separate chunk,
   // fetched the first time a visitor asks for one.
@@ -244,6 +245,11 @@ function IconPanel({ icon, onIcon, weight, onWeight, size, onSize }) {
     copyText(snippet)
     flash('icon')
   }
+  // The empty state's button unmounts itself, so focus goes back to the field.
+  const clearSearch = () => {
+    setQuery('')
+    searchRef.current?.focus()
+  }
 
   return (
     <>
@@ -251,6 +257,7 @@ function IconPanel({ icon, onIcon, weight, onWeight, size, onSize }) {
         <label className="sp-find">
           <PhIcon name="magnifying-glass" />
           <input
+            ref={searchRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search the set"
@@ -287,7 +294,7 @@ function IconPanel({ icon, onIcon, weight, onWeight, size, onSize }) {
         ) : (
           <div className="sp-empty" role="status">
             <p>{`No icons match "${query.trim()}". Try a shorter word.`}</p>
-            <button type="button" className="sp-empty-btn" onClick={() => setQuery('')}>Clear search</button>
+            <button type="button" className="sp-empty-btn" onClick={clearSearch}>Clear search</button>
           </div>
         )}
 
@@ -322,7 +329,12 @@ function FontPanel({ font, onFont }) {
   // 32px on a phone, where a 46px family name is wider than its column.
   const [size, setSize] = useState(() => (typeof window !== 'undefined' && window.matchMedia?.(PHONE).matches ? 32 : 46))
   const [preview, setPreview] = useState('')
+  const searchRef = useRef(null)
   const q = query.trim().toLowerCase()
+  const clearSearch = () => {
+    setQuery('')
+    searchRef.current?.focus()
+  }
   const typed = preview.trim()
   const rows = FONTS
     .map((f, i) => ({ f, i }))
@@ -336,6 +348,7 @@ function FontPanel({ font, onFont }) {
           <PhIcon name="magnifying-glass" />
           <input
             value={query}
+            ref={searchRef}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search families"
             autoComplete="off"
@@ -409,7 +422,7 @@ function FontPanel({ font, onFont }) {
           <div className="sp-empty" role="status">
             <p>{`No families match "${query.trim()}" in ${FONT_CATS[cat]}.`}</p>
             {cat !== 0 ? <button type="button" className="sp-empty-btn" onClick={() => setCat(0)}>Show all categories</button> : null}
-            {q ? <button type="button" className="sp-empty-btn" onClick={() => setQuery('')}>Clear search</button> : null}
+            {q ? <button type="button" className="sp-empty-btn" onClick={clearSearch}>Clear search</button> : null}
           </div>
         )}
       </div>

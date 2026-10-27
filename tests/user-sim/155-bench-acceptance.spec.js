@@ -17,7 +17,7 @@
 //   FONT ROWS EXPAND. Picking a family opens its row (sample, weights, axes, the
 //   pairing); picking another closes the first.
 //
-//   THE ICON GRID has no empty cell: 16 tiles in 4 columns at 480 and below.
+//   THE ICON GRID has no empty cell: 16 tiles in 4 columns at 480 and below, 24 in 4 columns above 680.
 //
 //   THE RAIL SUMMARIES follow the picks: a seed, an icon, a family and a format.
 import { test, expect } from './base.js'
@@ -255,7 +255,7 @@ for (const width of [390, 1440]) {
 
 // ── the icon grid has no empty cell ────────────────────────────────────────────
 
-for (const [width, columns, tiles] of [[320, 4, 16], [390, 4, 16], [480, 4, 16], [768, 6, 24], [1440, 6, 24]]) {
+for (const [width, columns, tiles] of [[320, 4, 16], [390, 4, 16], [480, 4, 16], [768, 4, 24], [1440, 4, 24]]) {
   test(`the icon grid is ${columns} columns of ${tiles} tiles with no empty cell at ${width}`, async ({ page }) => {
     watch(page, 'someone browsing the bench icons')
     await page.setViewportSize({ width, height: 900 })

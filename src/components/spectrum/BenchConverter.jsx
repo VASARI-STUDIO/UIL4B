@@ -132,7 +132,9 @@ export default function BenchConverter({ onResult }) {
     const timer = setTimeout(async () => {
       const [, type] = IMG_FORMATS[fmt]
       const size = await encode(canvasRef.current, type, type === 'image/png' ? undefined : quality / 100)
-      if (!cancelled) setOut(size)
+      // The size is stored with the format it was encoded as, so a reading
+      // from the previous format is never shown under the new one's name.
+      if (!cancelled) setOut({ size, format: IMG_FORMATS[fmt][0] })
     }, 150)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [src, fmt, quality])
@@ -181,13 +183,20 @@ export default function BenchConverter({ onResult }) {
   const fileButton = (kind, chosen) => (dragging === kind ? 'Drop to replace' : chosen ? 'Replace' : 'Choose a file')
 
   const lossless = IMG_FORMATS[fmt][0] === 'PNG'
-  const before = src?.before ?? null
-  const pct = before && out != null ? Math.round(100 - (out / before) * 100) : null
-  const [numText, wordText, tone] = savingOf(pct, lossless)
   const formatLabel = IMG_FORMATS[fmt][0]
-  // The rail's summary reads the latest measurement; a dropped file that failed
-  // to decode reports nothing.
-  useEffect(() => { onResult?.({ pct, format: formatLabel }) }, [onResult, pct, formatLabel])
+  const before = src?.before ?? null
+  // The AFTER size counts only once it was encoded as the format on screen; in
+  // the gap after a format switch the old reading is stale, so it reads as pending.
+  const outSize = out && out.format === formatLabel ? out.size : null
+  const pct = before && outSize != null ? Math.round(100 - (outSize / before) * 100) : null
+  const [numText, wordText, tone] = savingOf(pct, lossless)
+  // The rail's summary reads the latest measurement. `measuring` is true only
+  // once the converter is near the screen and a figure is still on its way; a
+  // file that failed to decode reports `failed` rather than waiting.
+  const measuring = near && !failed && pct == null
+  useEffect(() => {
+    onResult?.({ pct, format: formatLabel, failed, measuring })
+  }, [onResult, pct, formatLabel, failed, measuring])
   const [, rw, rh] = RATIO_PRESETS[ratioPreset]
   const stem = pick ? pick.name.replace(/\.[^.]+$/, '') : 'plateau-sunset'
   const imageName = pick ? pick.name : 'plateau-sunset.png'
@@ -215,7 +224,7 @@ export default function BenchConverter({ onResult }) {
   }
   // Both bars share one scale, so a file that grew draws longer than the one it
   // came from; a result that is not smaller is drawn in a neutral fill.
-  const top = Math.max(before || 0, out || 0) || 1
+  const top = Math.max(before || 0, outSize || 0) || 1
   const notSmaller = pct != null && pct <= 0
   // "name, size". The size sits in a box as wide as a full-width figure (the
   // hidden pad), so the name never moves. The figure itself is remounted per
@@ -299,12 +308,12 @@ export default function BenchConverter({ onResult }) {
             <div className="sp-bar">
               <div className="sp-bar-row">
                 <small>After</small>
-                {barValue(`${stem}.${IMG_FORMATS[fmt][0].toLowerCase()}`, out)}
+                {barValue(`${stem}.${formatLabel.toLowerCase()}`, outSize)}
               </div>
               <span className="sp-bar-track">
                 <span
                   className={notSmaller ? 'sp-bar-fill sp-bar-fill--out is-plain' : 'sp-bar-fill sp-bar-fill--out'}
-                  style={{ width: before && out != null ? `${Math.max(4, Math.round((out / top) * 100))}%` : '4%' }}
+                  style={{ width: before && outSize != null ? `${Math.max(4, Math.round((outSize / top) * 100))}%` : '4%' }}
                 />
               </span>
             </div>

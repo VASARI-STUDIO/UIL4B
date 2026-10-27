@@ -6,9 +6,12 @@ import { BASES, FONTS, HARMONIES, ICONS, ICON_WEIGHTS } from './spectrumKit.js'
 
 const FORMAT_WORDS = { WEBP: 'WebP', JPEG: 'JPEG', PNG: 'PNG' }
 
-/** "92% smaller as WebP", or "Measuring…" until the first encode lands. */
+/** "92% smaller as WebP". Before the converter has been near the screen it reads
+ *  "Not measured yet"; "Measuring…" is only while a figure is on its way; a file
+ *  that would not decode reads "File not supported". */
 export function converterSummary(result) {
-  if (!result || result.pct == null) return 'Measuring…'
+  if (result?.failed) return 'File not supported'
+  if (!result || result.pct == null) return result?.measuring ? 'Measuring…' : 'Not measured yet'
   const { pct, format } = result
   const word = FORMAT_WORDS[format] || format
   if (pct < 0) return `${-pct}% larger as ${word}`
