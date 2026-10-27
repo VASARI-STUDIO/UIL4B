@@ -62,7 +62,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     popRef.current?.style.setProperty('--select-layer', String(layer))
     scrimRef.current?.style.setProperty('--select-layer', String(layer))
     // A list opened from inside a sheet or dialog that already covers the phone
-    // tab bar must not leave room for it (see tool-layout.css).
+    // tab bar must not leave room for it (see global.css).
     const tabs = document.querySelector('.pnav-tabs')
     const tabsZ = tabs ? Number.parseInt(getComputedStyle(tabs).zIndex, 10) || 0 : Infinity
     popRef.current?.toggleAttribute('data-in-sheet', above > tabsZ)
