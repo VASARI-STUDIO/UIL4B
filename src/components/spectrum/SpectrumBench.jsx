@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getLenis } from '../../hooks/useSmoothScroll'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import PhIcon from './PhIcon'
 import OpenPill from './OpenPill'
 import BenchConverter from './BenchConverter'
@@ -41,10 +42,26 @@ import {
 // 1 − t × 0.34 with its distance t from that middle (`stepDepth`). Reduced
 // motion keeps the lit row and drops the depth.
 //
+// AT 1000px AND BELOW the bench is a tool switcher, not a column of windows. The
+// rail becomes a four-segment tablist, the windows share one grid cell and only
+// the selected one is visible (the rest are `inert`, so they leave the tab order
+// and the accessibility tree but stay mounted: the seed and family picked in
+// Palette and Fonts still drive the exports cards below). The cell is as tall as
+// the tallest window, so switching never moves the page. Nothing there follows
+// the scroll and nothing is written to a window's `style`, so the text in the
+// window is always at full ink.
+//
 // Destinations come off the tool tree through `route()`, so a renamed tool
 // fails the build rather than shipping a dead link.
 
 const RAIL = ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter']
+// The switcher's labels: each window's title bar still carries the full name.
+const TABS = ['Palette', 'Icons', 'Fonts', 'Converter']
+// The width at and below which the bench is the switcher. spectrum.css switches
+// layout at the same 1000px, so the markup and the styling change together.
+const SWITCHER = '(max-width: 1000px)'
+// At and below this the Font Gallery starts at a smaller preview size.
+const PHONE = '(max-width: 760px)'
 
 function copyText(value) {
   // Clipboard access is permission-gated and throws on an insecure origin. The
@@ -299,7 +316,8 @@ function IconPanel() {
 function FontPanel({ font, onFont }) {
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState(0)
-  const [size, setSize] = useState(46)
+  // 32px on a phone, where a 46px family name is wider than its column.
+  const [size, setSize] = useState(() => (typeof window !== 'undefined' && window.matchMedia?.(PHONE).matches ? 32 : 46))
   const [preview, setPreview] = useState('')
   const q = query.trim().toLowerCase()
   const rows = FONTS
@@ -391,12 +409,20 @@ function FontPanel({ font, onFont }) {
 /* ── the bench ────────────────────────────────────────────────────────────── */
 
 export default function SpectrumBench({ head, base, onBase, font, onFont }) {
+  const switcher = useMediaQuery(SWITCHER)
   const [step, setStep] = useState(0)
   const panels = useRef([])
+  const tabs = useRef([])
 
   // ONE rAF-throttled scroll pass, as the design's tick(): light the rail row
-  // for the panel nearest the middle, and write each panel's depth.
+  // for the panel nearest the middle, and write each panel's depth. Off while
+  // the bench is the switcher: the selected tab is the user's, and a window
+  // never gets an inline transform or opacity.
   useEffect(() => {
+    if (switcher) {
+      panels.current.forEach((el) => { if (el) { el.style.transform = ''; el.style.opacity = '' } })
+      return undefined
+    }
     let raf = 0
     const run = () => {
       raf = 0
@@ -426,7 +452,18 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
       window.removeEventListener('resize', request)
       if (raf) cancelAnimationFrame(raf)
     }
-  }, [])
+  }, [switcher])
+
+  // The tablist's keys (APG): arrows wrap, Home and End jump, and the tab
+  // that takes focus is the one selected.
+  const onTabKey = (e) => {
+    const last = RAIL.length - 1
+    const next = { ArrowRight: step === last ? 0 : step + 1, ArrowLeft: step === 0 ? last : step - 1, Home: 0, End: last }[e.key]
+    if (next === undefined) return
+    e.preventDefault()
+    setStep(next)
+    tabs.current[next]?.focus()
+  }
 
   // The design scrolls the panel's top to 110px under the viewport top. Lenis
   // owns the scroll on this route and would undo a native scrollTo, so ask it
@@ -442,44 +479,74 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
 
   const setRef = (i) => (el) => { panels.current[i] = el }
 
+  // The four windows, in one place for both layouts. As the switcher each step
+  // is a tabpanel and the unselected ones are inert.
+  const windows = [
+    <PalettePanel key="p" base={base} onBase={onBase} />,
+    <IconPanel key="i" />,
+    <FontPanel key="f" font={font} onFont={onFont} />,
+    <Chrome key="c" name="File Converter"><BenchConverter /></Chrome>,
+  ]
+
   return (
     <div className="sp-bench-grid">
       <div className="sp-bench-col">
         {head}
-        <ol className="sp-rail" aria-label="Jump to a tool">
-          {RAIL.map((label, i) => (
-            <li key={label}>
+        {switcher ? (
+          <div className="sp-rail sp-rail--tabs" role="tablist" aria-label="Tools" onKeyDown={onTabKey}>
+            {TABS.map((label, i) => (
               <button
+                key={label}
                 type="button"
+                role="tab"
+                id={`sp-tab-${i}`}
+                ref={(el) => { tabs.current[i] = el }}
                 className={step === i ? 'sp-rail-row is-on' : 'sp-rail-row'}
-                aria-current={step === i ? 'true' : undefined}
-                onClick={() => jump(i)}
+                aria-selected={step === i}
+                aria-controls={`sp-tabpanel-${i}`}
+                tabIndex={step === i ? 0 : -1}
+                onClick={() => setStep(i)}
               >
-                <span className="sp-rail-no">{`0${i + 1}`}</span>
                 <span className="sp-rail-label">{label}</span>
               </button>
-            </li>
-          ))}
-        </ol>
+            ))}
+          </div>
+        ) : (
+          <ol className="sp-rail" aria-label="Jump to a tool">
+            {RAIL.map((label, i) => (
+              <li key={label}>
+                <button
+                  type="button"
+                  className={step === i ? 'sp-rail-row is-on' : 'sp-rail-row'}
+                  aria-current={step === i ? 'true' : undefined}
+                  onClick={() => jump(i)}
+                >
+                  <span className="sp-rail-no">{`0${i + 1}`}</span>
+                  <span className="sp-rail-label">{label}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       <div className="sp-steps">
-        <div className="sp-step">
-          <article className="sp-panel" data-panel="0" ref={setRef(0)}><PalettePanel base={base} onBase={onBase} /></article>
-        </div>
-        <div className="sp-step">
-          <article className="sp-panel" data-panel="1" ref={setRef(1)}><IconPanel /></article>
-        </div>
-        <div className="sp-step">
-          <article className="sp-panel" data-panel="2" ref={setRef(2)}><FontPanel font={font} onFont={onFont} /></article>
-        </div>
-        <div className="sp-step">
-          <article className="sp-panel" data-panel="3" ref={setRef(3)}>
-            <Chrome name="File Converter"><BenchConverter /></Chrome>
-          </article>
-        </div>
+        {windows.map((win, i) => (
+          <div
+            key={RAIL[i]}
+            className="sp-step"
+            {...(switcher ? {
+              role: 'tabpanel',
+              id: `sp-tabpanel-${i}`,
+              'aria-labelledby': `sp-tab-${i}`,
+              'data-on': step === i ? 'true' : 'false',
+              inert: step !== i,
+            } : {})}
+          >
+            <article className="sp-panel" data-panel={i} ref={setRef(i)}>{win}</article>
+          </div>
+        ))}
       </div>
     </div>
   )
 }
-

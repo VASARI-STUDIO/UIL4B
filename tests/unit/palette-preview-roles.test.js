@@ -168,3 +168,21 @@ test('5 . every value pvVars sets is a colour, for a full, a short and an empty 
     }
   }
 })
+
+// A grey has no hue: the display conversion prints chroma 0 and hue 0 for every
+// pure grey, and a grey primary gives grey neutrals rather than a tinted cast.
+test('greys read as hue-less in OKLCH, and a grey primary keeps its neutrals grey', () => {
+  for (let v = 0; v <= 255; v += 15) {
+    const h = v.toString(16).padStart(2, '0')
+    const [, c, hue] = hexToOklch(`#${h}${h}${h}`)
+    assert.equal(c, 0, `#${h}${h}${h} chroma`)
+    assert.equal(hue, 0, `#${h}${h}${h} hue`)
+  }
+  for (const mode of MODES) {
+    const r = derivePaletteRoles(['#808080', '#2563EB', '#F2C14E'], { mode })
+    for (const g of [r.canvas, r.surface]) {
+      const [, gc] = hexToOklch(g)
+      assert.ok(gc <= 0.002, `${mode} ground ${g} should be grey, chroma ${gc}`)
+    }
+  }
+})

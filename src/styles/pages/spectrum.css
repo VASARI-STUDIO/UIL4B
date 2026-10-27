@@ -367,6 +367,10 @@
   .sp-search .hcmd-bar { grid-template-columns: auto minmax(0, 1fr) auto; padding-right: 24px; }
   .sp-search .hcmd-kbd { display: inline-flex; }
 }
+/* A touch screen has no ⌘K. */
+@media (hover: none) and (pointer: coarse) {
+  .sp-search .hcmd-kbd { display: none; }
+}
 
 /* ── the bench ────────────────────────────────────────────────────────────── */
 
@@ -533,8 +537,10 @@
 .sp-tabs-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .sp-tabs-row .sp-utab { padding: 13px 0; font-size: 12.5px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-tabs-row .sp-utab[aria-pressed="true"] { color: var(--sp-ink); font-weight: 560; }
-.sp-icogrid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); grid-auto-rows: minmax(76px, 1fr); align-content: stretch; gap: 8px; padding: 14px clamp(14px, 1.8vw, 20px); }
-.sp-ico { display: grid; place-items: center; min-height: 0; padding: 8px; border: 1px solid rgba(var(--sp-ink-rgb), .1); border-radius: 12px; background: transparent; color: rgba(var(--sp-ink-rgb), .74); cursor: pointer; }
+/* 24 small tiles on fixed 44px rows, centred in the space the window gives them: the whole
+   set always fits in one frame at any width, so the grid never scrolls. */
+.sp-icogrid { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); grid-auto-rows: 44px; align-content: center; gap: 8px; padding: 14px clamp(14px, 1.8vw, 20px); }
+.sp-ico { display: grid; place-items: center; min-height: 0; padding: 4px; border: 1px solid rgba(var(--sp-ink-rgb), .1); border-radius: 12px; background: transparent; color: rgba(var(--sp-ink-rgb), .74); cursor: pointer; }
 .spectrum .sp-ico { transition: background .16s ease; }
 @media (hover: hover) and (pointer: fine) { .sp-ico:not([aria-pressed="true"]):hover { background: rgba(var(--sp-ink-rgb), .06); } }
 .sp-ico[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
@@ -780,9 +786,13 @@
   .sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 13px; }
   .sp-cv .sp-fmtrow .sp-utab, .sp-frames-row .sp-utab { padding: 12px 0; min-height: 44px; font-size: 13px; }
   .sp-quality > span, .sp-model-say { font-size: 13px; }
-  .sp-quality input[type="range"] { height: 44px; touch-action: manipulation; }
-  .sp-quality input[type="range"]::-webkit-slider-thumb { margin-top: -10px; width: 24px; height: 24px; }
-  .sp-quality input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; }
+  .sp-quality input[type="range"], .sp-font-ctl input[type="range"] { height: 44px; touch-action: manipulation; }
+  .sp-quality input[type="range"]::-webkit-slider-thumb, .sp-font-ctl input[type="range"]::-webkit-slider-thumb { margin-top: -10px; width: 24px; height: 24px; }
+  .sp-quality input[type="range"]::-moz-range-thumb, .sp-font-ctl input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; }
+  /* Text fields are 16px, so iOS does not zoom the page when one is focused; the
+     Preview row is a 44px target. */
+  .sp-find input, .sp-font-ctl input[type="text"] { font-size: 16px; }
+  .sp-font-ctl label { min-height: 44px; }
   .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small, .sp-strip small { font-size: 12px; }
   .sp-strip small { bottom: auto; top: 7px; }
   .sp-conv-foot .sp-pill { min-height: 48px; }
@@ -809,7 +819,6 @@
 
 .sp-disc-grid { margin-top: clamp(26px, 3.4vw, 44px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 @media (max-width: 900px) { .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .sp-disc-grid { grid-template-columns: minmax(0, 1fr); } }
 .sp-disc-card {
   display: block;
   padding: 0;
@@ -1044,24 +1053,72 @@
 @media (max-width: 900px) {
   .sp-stack-card { position: static; top: auto; transform: none !important; filter: none !important; }
   .sp-stack-grid { min-height: 0; padding: clamp(20px, 4vw, 28px); }
-  .sp-stack-pad, .sp-stack-pad--tail { height: clamp(16px, 3vw, 28px); }
+  /* 40px between the three forms so they read as one group; the tail is 24px, so
+     with the next section's own top padding the gap after the last form is never
+     under the --sp-sec floor (80px) and is twice the gap inside the group. */
+  .sp-stack-pad { height: 40px; }
+  .sp-stack-pad--tail { height: 24px; }
   /* DEVIATION, and a deliberate one (mobile first). The design's two
      panels size their bodies `flex: 1 1 0` against the card's min-height; with
      that min-height released below 900px the bodies collapse to nothing — the
      design's own render at 390 shows card 1 as one clipped row and card 2 as a bare
      strip. These floors give the panels back their contents at phone width;
      nothing changes above 900px. */
-  .sp-ex { min-height: 545px; }
-  .sp-kit { min-height: 380px; }
+  .sp-ex { min-height: 0; }
+  /* The body is a fixed frame with its own scroll, so changing the piece never
+     moves what is below the card. */
+  .sp-ex-body { flex: 0 0 auto; height: 320px; }
   /* The kit's colour page wraps to three rows on a phone; the paper grows to hold
      them instead of clipping the last swatch. */
   .sp-kit-paper, .sp-kit-body { flex: 1 1 auto; }
   .sp-kit-body { overflow: visible; }
+
+  /* THREE FORMS, one per kind of content. Card 1 is a working panel and stays a
+     card. Card 2 is a document: its card is gone, the copy sits on the page
+     ground and the paper runs out toward the screen edges, in one column.
+     Card 3 is a list: its card is gone and the rows are separated by hairlines. */
+  .sp-stack-card[data-stack-card="1"],
+  .sp-stack-card[data-stack-card="2"] { background: none; border: 0; box-shadow: none; }
+  .sp-stack-card[data-stack-card="1"] .sp-stack-grid,
+  .sp-stack-card[data-stack-card="2"] .sp-stack-grid { padding: 0; }
+  .sp-stack-card[data-stack-card="1"] .sp-stack-grid { grid-template-columns: minmax(0, 1fr); }
+  .sp-stack-card[data-stack-card="1"] .sp-kit { margin-inline: calc(var(--sp-gutter) * -1 + 8px); }
+  .sp-projects { gap: 0; }
+  .sp-projects li { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--sp-hair); padding: 14px 0; }
+  .sp-projects li:last-child { border-bottom: 1px solid var(--sp-hair); }
+}
+/* From 561 to 900px card 1 is one column, copy over a full-width panel: the
+   panel's chips and its format row each fit one line, and no column is left
+   with empty ground under a short block of text. */
+@media (min-width: 561px) and (max-width: 900px) {
+  .sp-stack-card[data-stack-card="0"] .sp-stack-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .sp-spec-head { margin: 0; text-align: left; }
+  .sp-spec-head p { margin-left: 0; }
+}
+/* On a phone the exports are a little tighter inside each form (the rows of
+   the palette, the kit's swatches, the project rows), with every figure and
+   line of copy kept. */
+@media (max-width: 560px) {
+  .sp-stack { margin-top: 24px; }
+  .sp-stack-grid { gap: 16px; }
+  .sp-stack-say { padding-top: 0; }
+  .sp-stack-say > p { margin-top: 12px; }
+  .sp-stack-say > p.sp-stack-note { margin-top: 12px; }
+  .sp-ex-pieces { gap: 6px; padding-block: 8px; }
+  .sp-ex-rows { gap: 4px; }
+  /* The format switch and Copy share one line at 390px (the switch is 165px, Copy 105px). */
+  .sp-ex-actions { gap: 8px; padding-inline: 12px; }
+  .sp-ex-fmt { padding-inline: 8px; }
+  .sp-ex-body { height: 296px; }
+  .sp-kit-sw > span { height: 72px; }
+  .sp-projects li { padding-block: 12px; }
 }
 
 /* ── "Don't just take it from us" (#index) ────────────────────────────────────
    The design's proof band as drawn: heading, four figures between two ink rules, 4 → 2
-   columns at 860px → 1 at 460px. */
+   columns at 860px → 1 at 760px, as left-aligned rows (below). */
 .sp-proof { padding-top: clamp(140px, 17vw, 248px); }
 .sp-proof-head { max-width: min(40ch, 100%); margin: 0 auto; text-align: center; }
 .sp-proof-head h2 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(32px, 4.8vw, 64px); line-height: 1.02; letter-spacing: -.02em; }
@@ -1080,12 +1137,36 @@
 .sp-proof-n { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: -.02em; color: var(--sp-ink); font-variant-numeric: tabular-nums; }
 .sp-proof-l { font-size: 13.5px; line-height: 1.45; color: var(--sp-dim); max-width: min(22ch, 100%); margin: 0 auto; }
 
+@media (max-width: 560px) {
+  .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .sp-disc-art { height: 96px; }
+  .sp-disc-row { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; }
+  .sp-disc-name { font-size: 14px; max-width: 100%; }
+  .sp-disc-cta { min-height: 0; }
+  .sp-disc-cta-say { font-size: 20px; }
+  /* An odd count leaves no empty cell: the last card spans both columns. */
+  .sp-disc-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@media (min-width: 761px) and (max-width: 900px) {
+  .sp-disc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* The meta line is 12px up to 900px, the size floor on a tablet as on a phone. */
+@media (max-width: 900px) {
+  .sp-disc-meta { font-size: 12px; }
+}
+
 /* ── the handoff ──────────────────────────────────────────────────────────── */
 
 .sp-close { max-width: var(--sp-shell); margin: 0 auto; padding: clamp(120px, 15vw, 220px) var(--sp-gutter) clamp(48px, 6vw, 88px); text-align: center; }
 .sp-close h2 { margin: 0 auto; max-width: min(26ch, 100%); font-family: var(--display); font-weight: 560; font-size: clamp(32px, 5vw, 68px); line-height: 1; letter-spacing: -.02em; }
 .sp-close p { margin: 22px auto 0; max-width: min(46ch, 100%); font-size: clamp(16px, 1.5vw, 18px); line-height: 1.6; color: var(--sp-dim); }
 .sp-close-cta { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 32px; }
+/* On a phone the gaps between sections step down a notch (8px scale), so the
+   page is a few screens shorter without touching any content. */
+@media (max-width: 560px) {
+  .sp-section:not(.sp-proof) { padding-top: 64px; }
+  .sp-close { padding-top: 72px; }
+}
 
 /* ── responsive ───────────────────────────────────────────────────────────── */
 
@@ -1093,10 +1174,57 @@
   .sp-bench-grid { grid-template-columns: minmax(0, 1fr); gap: clamp(22px, 4vw, 34px); }
   .sp-bench-col { position: static; top: auto; }
   .sp-step { min-height: 0; padding: 0; }
-  .sp-step + .sp-step { margin-top: clamp(18px, 3vw, 28px); }
+
+  /* THE TOOL SWITCHER. The rail is one row of four segments (SpectrumBench.jsx renders it
+     as a tablist at this width); the four windows share one grid cell, so the
+     cell is as tall as the tallest and switching moves nothing. The unselected
+     windows are hidden and inert but stay mounted. */
+  .sp-rail--tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 24px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(var(--sp-ink-rgb), .06);
+  }
+  .sp-rail--tabs .sp-rail-row {
+    justify-content: center;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 540;
+    color: var(--sp-dim);
+    text-align: center;
+  }
+  .sp-rail--tabs .sp-rail-label { flex: 0 1 auto; white-space: nowrap; }
+  .sp-rail--tabs .sp-rail-row.is-on { background: var(--sp-ink); color: var(--sp-page); }
+  .sp-steps { display: grid; }
+  .sp-step { grid-area: 1 / 1; align-items: stretch; }
+  /* opacity, not visibility: a child that sets its own visibility (the converter panes) would show through. */
+  .sp-step[data-on="false"] { opacity: 0; pointer-events: none; }
+  /* On a tablet every window keeps its 700px design height: all four fit in it
+     (the icon set without a scroll bar), and the shared cell stays 700px. */
+  .sp-step > .sp-panel { height: 700px; }
 }
 @media (max-width: 760px) {
-  .sp-panel { height: min(78dvh, 620px); border-radius: 16px; }
+  /* On a phone the windows grow to their content and the cell takes the tallest. */
+  .sp-step > .sp-panel { height: auto; }
+  .sp-panel { border-radius: 16px; }
+  .sp-panel:has(.sp-fontlist) { max-height: 620px; }
+  /* A family name wraps instead of ending in an ellipsis. */
+  .sp-fontrow-name { white-space: normal; overflow-wrap: anywhere; text-wrap: balance; line-height: 1.02; }
+}
+/* At 761 to 1000px the segments are 48px tall, as the tablet switch is drawn. */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .sp-rail--tabs .sp-rail-row { min-height: 48px; }
+}
+/* At 320px "Converter" at 13px needs the 2px side padding to fit its segment. */
+@media (max-width: 340px) {
+  .sp-rail--tabs .sp-rail-row { font-size: 13px; padding: 0 2px; }
+  /* Three Discover chips fit one row at 320. */
+  .sp-chip { padding: 10px 12px; }
 }
 
 /* ── the Font Gallery panel's six families ────────────────────────────────

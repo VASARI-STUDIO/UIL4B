@@ -273,10 +273,15 @@ test('every glyph the page asks for is one the page ships', () => {
 
 test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
   // The design's 4 bench tool windows, not the 5 category panels.
-  const names = [...BENCH_SRC.matchAll(/<Chrome\s+name="([^"]+)"/g)].map((m) => m[1])
+  const names = [...BENCH_SRC.matchAll(/<Chrome\s+(?:key="[^"]*"\s+)?name="([^"]+)"/g)].map((m) => m[1])
   assert.deepEqual(names, ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'])
-  const panels = [...BENCH_SRC.matchAll(/data-panel="(\d)"/g)].map((m) => m[1])
-  assert.deepEqual(panels, ['0', '1', '2', '3'], 'the bench no longer renders four [data-panel] windows')
+  // One `windows` list feeds both layouts, and each entry is wrapped once in a
+  // [data-panel] article numbered by its place in the list.
+  const list = /const windows = \[([\s\S]*?)\n {2}\]/.exec(BENCH_SRC)
+  assert.ok(list, 'the bench no longer builds its four windows as one list')
+  const entries = [...list[1].matchAll(/<(PalettePanel|IconPanel|FontPanel|Chrome)\b/g)].map((m) => m[1])
+  assert.deepEqual(entries, ['PalettePanel', 'IconPanel', 'FontPanel', 'Chrome'], 'the bench windows are not the four tools, in order')
+  assert.equal([...BENCH_SRC.matchAll(/data-panel=\{i\}/g)].length, 1, 'the bench no longer numbers its [data-panel] windows from the list')
   assert.match(BENCH_SRC, /const RAIL = \['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'\]/,
     'the rail no longer lists the four tools by their own names, matching the window titles')
   // No fake window chrome, no duplicate numbering, no glyph-as-icon marks.

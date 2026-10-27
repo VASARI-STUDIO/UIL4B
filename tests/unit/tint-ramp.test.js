@@ -11,6 +11,12 @@
 // channels clipped, and a near-grey source gives a pure grey ramp. Steps that
 // were already in gamut are unchanged.
 //
+// The hexes come from the published OKLab matrices (Ottosson), so the
+// sRGB-to-LMS third row is 0.0883024619, 0.2817188376, 0.6299787005. Each pinned
+// step was also checked against a separate OKLab computation (sRGB to XYZ to
+// LMS): lightness lands on the ramp curve within 8-bit rounding and the hue stays
+// within about a degree of the source.
+//
 // The builder is a .jsx page Node cannot import, so "the strip uses that same
 // function" is asserted two ways: by output (swatchStripHexes is the named steps
 // of tintRampForHex) and by source (PaletteBuilder.jsx and TintTool.jsx import
@@ -25,16 +31,16 @@ import { read, stripComments } from './helpers/source-text.js'
 
 // The 11-step Even ramp (labels 50..950) for each hex.
 const OLD_11 = {
-  '#249EAF': ['#E0FBFF', '#A8E8F1', '#86D0DB', '#63B9C4', '#3CA2AE', '#008A98', '#00717D', '#005962', '#004249', '#002C31', '#00181C'],
-  '#14224A': ['#F1F5FF', '#CDDBFE', '#B2C2E9', '#98A9D4', '#7E90BF', '#6679AA', '#52628E', '#3F4D72', '#2C3858', '#1B253F', '#0B1227'],
-  '#F2C14E': ['#FFF5D8', '#F6D98A', '#E0BF62', '#CAA534', '#B18D00', '#957600', '#7A6000', '#614B00', '#483700', '#312400', '#1B1300'],
-  '#2563EB': ['#F0F5FF', '#CADCFF', '#A4C2FF', '#7EA7FF', '#588BFF', '#346BFB', '#2556D5', '#1840B0', '#0B2C8C', '#02186A', '#000349'],
+  '#249EAF': ['#E1FBFF', '#A8E8F3', '#86D0DD', '#64B8C6', '#3DA1B1', '#008A9A', '#00717F', '#005964', '#00424A', '#002C32', '#00181C'],
+  '#14224A': ['#F1F5FF', '#CDDBFD', '#B2C2E7', '#97A9D2', '#7E91BD', '#6579A8', '#52638C', '#3E4D71', '#2C3857', '#1B253E', '#0B1327'],
+  '#F2C14E': ['#FFF4DD', '#F7D896', '#E0BD72', '#CAA44C', '#B58A19', '#9A7400', '#7E5E00', '#644A00', '#4A3600', '#322300', '#1C1200'],
+  '#2563EB': ['#F0F5FF', '#C9DCFF', '#A2C2FF', '#7BA8FF', '#538CFF', '#2F6EF7', '#2158D1', '#1343AC', '#062E89', '#001A67', '#000647'],
 }
 // Other step counts and curves, to pin buildRamp's three curves too.
 const OLD_OTHER = [
-  ['#249EAF', 9, 0, ['#E0FBFF', '#9FE2EC', '#75C5D0', '#46A7B4', '#008A98', '#006B76', '#004D56', '#003137', '#00181C']],
-  ['#14224A', 13, 1, ['#F1F5FF', '#EBF1FF', '#D8E4FF', '#BECFF9', '#A3B5E2', '#8597C7', '#6679AA', '#4B5C87', '#344268', '#212D4E', '#141E3A', '#0D152D', '#0B1227']],
-  ['#2563EB', 11, 2, ['#F0F5FF', '#ADC8FF', '#7DA6FF', '#5486FC', '#366AEA', '#1A4CDB', '#0E38B6', '#042595', '#011275', '#000057', '#000033']],
+  ['#249EAF', 9, 0, ['#E1FBFF', '#A0E2ED', '#75C4D1', '#47A7B6', '#008A9A', '#006B78', '#004D57', '#003138', '#00181C']],
+  ['#14224A', 13, 1, ['#F1F5FF', '#EAF1FF', '#D8E4FF', '#BECFF8', '#A3B5E0', '#8598C5', '#6579A8', '#4B5C86', '#344267', '#212D4D', '#141E39', '#0D152C', '#0B1327']],
+  ['#2563EB', 11, 2, ['#F0F5FF', '#ACC9FF', '#7AA7FF', '#5288F8', '#336CE6', '#124FD6', '#053BB3', '#002891', '#001A6C', '#00094E', '#000033']],
 ]
 
 for (const [hex, want] of Object.entries(OLD_11)) {
@@ -77,14 +83,14 @@ test('a strip runs light to dark, with the middle step in the middle', () => {
 test('the light end is a tint, not the full-chroma neon the HCT ramp clamped to', () => {
   // #249EAF's old builder strip ended on #9CF0FF and its popover on #D2F7FF.
   assert.notEqual(swatchStripHexes('#249EAF')[0], '#9CF0FF')
-  assert.equal(tintRampForHex('#249EAF')[0].hex, '#E0FBFF')
+  assert.equal(tintRampForHex('#249EAF')[0].hex, '#E1FBFF')
 })
 
 const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
 
 test('white and mid grey give a neutral ramp, not a yellow-green one', () => {
-  // hexToOklchRaw reads 0.005-0.009 chroma at hue ~119 for these; the ramp
-  // used to scale that up into a cast.
+  // These read zero chroma in OKLCH (the old matrix read 0.005-0.009 at hue ~119,
+  // which the ramp used to scale up into a cast); the neutral guard stays as a floor.
   for (const hex of ['#FFFFFF', '#808080', '#F5F5F5', '#2B2B2B']) {
     for (const { label, hex: step } of tintRampForHex(hex)) {
       const [r, g, b] = rgbOf(step)
@@ -126,7 +132,7 @@ test('no step of #249EAF sits on the sRGB edge with a channel clipped to FF at t
 test('a dark swatch gets darker tints than its strip alone shows', () => {
   // The popover's 950 is darker than the swatch; the old builder ramp had none.
   const popover = tintRampForHex('#14224A').map((r) => r.hex)
-  assert.equal(popover.at(-1), '#0B1227')
+  assert.equal(popover.at(-1), '#0B1327')
 })
 
 test('not-a-hex input does not produce NaN colours', () => {

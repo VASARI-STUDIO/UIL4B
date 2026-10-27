@@ -239,6 +239,16 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 @media(max-width:389px){
   .spnav-cta{display:none}
 }
+/* While the page's own "Open the toolkit" is on screen the pill's copy of it
+   steps aside. Hidden, not removed: the pill keeps its width, so the mark never
+   moves, and `visibility` takes it out of the tab order. */
+@media(max-width:1000px){
+  .spnav[data-hero-cta="1"] .spnav-cta{opacity:0;visibility:hidden;pointer-events:none}
+  /* The hidden CTA keeps its width, so with the controls after it the pill would
+     show an empty stretch at its end. While it is hidden the controls take the
+     slot after it instead, so they end the pill and the gap sits inside it. */
+  .spnav[data-hero-cta="1"] .spnav-icon{order:1}
+}
 /* On phones the pill spans the viewport less a 16px gutter each side, the
    mark at its start and the controls at its end. */
 @media(max-width:767px){
@@ -323,6 +333,24 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
   .sp-footer .sp-footer-col ul{gap:0}
   .sp-footer .sp-footer-col a{display:flex;min-height:44px}
 }
+/* Phones and tablets: the brand cell takes the full width and the four link
+   columns sit under it, four across on a tablet and two by two on a phone, so
+   no column is left alone on its row. */
+@media(max-width:1000px){
+  .sp-footer .sp-footer-inner{padding-bottom:max(48px,env(safe-area-inset-bottom))}
+  .sp-footer .sp-footer-brand{grid-column:1 / -1}
+}
+@media(min-width:761px) and (max-width:1000px){
+  .sp-footer .sp-footer-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  /* Two stacks side by side, each holding whole columns in reading order, so the
+     short columns do not leave a hole beside the long one. */
+  .sp-footer .sp-footer-grid{grid-template-columns:minmax(0,1fr);row-gap:32px}
+  .sp-footer .sp-footer-links{display:block;columns:2;column-gap:16px}
+  .sp-footer .sp-footer-col{break-inside:avoid;padding-bottom:24px}
+  .sp-footer .sp-footer-col:last-child{padding-bottom:0}
+}
 /* The baseline (1631). */
 .sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t2)}
 .sp-footer .sp-footer-legal a{color:var(--t1)}
@@ -336,3 +364,15 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
    element, label, aria-haspopup and press-only opening are FounderNote's. */
 .sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sp-footer .app-footer-note:hover{color:var(--t0)}
+/* The baseline holds links on a phone, so it keeps to the 12px text floor. */
+@media(max-width:760px){.sp-footer .sp-footer-legal,.sp-footer .app-footer-note{font-size:12px}.sp-footer .sp-footer-legal{margin-top:32px}}
+/* On a phone the legal links (Privacy, Terms, Credits) sit in the baseline row
+   with the copyright and the about note, in the same mono, each underlined like
+   the note so it reads as a link without a hover. The three share a row of their
+   own, so at 320px none is left alone on a wrapped line. On a touch screen each
+   is a box at least 44px tall and wide, so a thumb never meets two. */
+.sp-footer .sp-footer-legal-links{display:flex;flex-wrap:wrap;flex:1 0 100%;align-items:center;gap:0 clamp(14px,2vw,28px)}
+.sp-footer .sp-footer-legal-links a{display:inline-flex;align-items:center;justify-content:center;min-height:24px;text-decoration:underline;text-underline-offset:3px}
+@media(pointer:coarse){
+  .sp-footer .sp-footer-legal-links a{min-height:44px;min-width:44px}
+}

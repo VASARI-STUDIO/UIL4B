@@ -16,8 +16,10 @@ import { go, watch } from './helpers.js'
 const RESTING = 'a contrast ratio'
 const NEXT = 'a tint and shade ramp'
 
-async function open(browser, { width, height, theme = 'dark', reducedMotion = 'no-preference' }) {
-  const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion })
+async function open(browser, { width, height, theme = 'dark', reducedMotion = 'no-preference', touch = false }) {
+  // `touch` is a real phone: a coarse primary pointer (hasTouch + isMobile), which
+  // is what turns the footer's curtain off. A narrow window with a mouse is not one.
+  const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion, ...(touch ? { hasTouch: true, isMobile: true } : {}) })
   await ctx.addInitScript((t) => {
     try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
   }, theme)
@@ -222,7 +224,7 @@ test('a click on a footer link from the top of the page scrolls to it and lands'
 })
 
 for (const [label, opts] of [
-  ['a phone, where the footer is taller than the window', { width: 390, height: 844 }],
+  ['a phone, where the pointer is coarse', { width: 390, height: 844, touch: true }],
   ['a short laptop window, where the footer is taller than it', { width: 1280, height: 720 }],
   ['reduced motion', { width: 1440, height: 900, reducedMotion: 'reduce' }],
 ]) {
