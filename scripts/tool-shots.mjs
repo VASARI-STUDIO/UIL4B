@@ -8,8 +8,12 @@
 // alt text names, and photographed in light and dark. The only processing is a
 // crop, a resize and a WebP encode. Nothing is retouched or composited.
 //
-// Writes public/tools/<id>-<light|dark>-<640|1280>.webp, each 16:10, which is the
-// box the page gives it (a card preview or a row thumbnail).
+// Writes public/tools/<id>-<light|dark>-<width>.webp, each 16:10, which is the
+// box the page gives it. A tool shown on a card keeps the whole window (1280 and
+// 640 wide). A tool shown as a row thumbnail is cropped to the part of its window
+// that tells it apart (`crop` on its entry in TOOLS, in the window's own CSS px)
+// and written at the thumbnail's two sizes (352 and 224 wide): a 176px thumbnail
+// of the whole window shows nothing but its layout.
 //
 // Nothing reaches the network. The Iconify catalogue comes from
 // tests/user-sim/fixtures/iconify, answered the way tests/user-sim/iconify-stub.js
@@ -48,7 +52,8 @@ const NAV_H = 64 // the app's own header, left out of every shot
 const SHOT = { w: 1280, h: 800 } // the region kept, in CSS px: 16:10
 const VIEWPORT = { width: SHOT.w, height: NAV_H + SHOT.h }
 const DPR = 2
-const WIDTHS = [1280, 640]
+const WIDTHS = [1280, 640] // a card's preview
+const ROW_WIDTHS = [352, 224] // a row's thumbnail at 176 and 112 CSS px, 2x
 const QUALITIES = [0.82, 0.76, 0.7, 0.64, 0.58] // tried in order, the first that fits wins
 const CEILING = 60 * 1024
 const THEMES = ['light', 'dark']
@@ -285,10 +290,12 @@ const TOOLS = [
       await page.locator('[role="alert"], .toast.show').first().waitFor({ state: 'hidden', timeout: 20000 }).catch(() => {})
     },
   },
-  { id: 'semantic', async prepare(page) { await open(page, '/create/semantic-color') } },
-  { id: 'tint', async prepare(page) { await open(page, '/create/tint') } },
+  // The rows below are cropped (see the header): each `crop` is the part that tells the tool apart.
+  { id: 'semantic', crop: { x: 30, y: 115, w: 590, h: 369 }, async prepare(page) { await open(page, '/create/semantic-color') } }, // status messages, a field and its error
+  { id: 'tint', crop: { x: 20, y: 75, w: 885, h: 553 }, async prepare(page) { await open(page, '/create/tint') } }, // the ramp and its lightness chart
   {
     id: 'font-pair',
+    crop: { x: 56, y: 150, w: 640, h: 400 }, // the headline and body text in the chosen pair
     async prepare(page) {
       await open(page, '/create/font-pair')
       await page.waitForSelector('#fpr-export')
@@ -308,6 +315,7 @@ const TOOLS = [
   },
   {
     id: 'emoji',
+    crop: { x: 20, y: 340, w: 352, h: 220 }, // the first rows of the grid
     async prepare(page) {
       await open(page, '/create/emoji')
       // The grid paints its cells a few at a time; wait until every cell in the shot has its picture.
@@ -317,9 +325,10 @@ const TOOLS = [
       }, { top: NAV_H, h: SHOT.h }, { timeout: 30000 })
     },
   },
-  { id: 'ratio', async prepare(page) { await open(page, '/create/aspect-ratio') } },
+  { id: 'ratio', crop: { x: 20, y: 152, w: 576, h: 360 }, async prepare(page) { await open(page, '/create/aspect-ratio') } }, // the shape and the size read-out
   {
     id: 'alt-text',
+    crop: { x: 20, y: 170, w: 640, h: 400 }, // the drop zone and the good and avoid examples
     async prepare(page) {
       // The empty state: no image, no generated reply, the good and avoid examples showing.
       await open(page, '/create/alt-text')
@@ -341,11 +350,13 @@ async function shoot(tool, theme) {
     await assertClean(page, tool.id)
     const attr = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
     if (attr !== theme) fail(`${tool.id}: page is ${attr}, wanted ${theme}`)
-    return page.screenshot({ clip: { x: 0, y: NAV_H, width: SHOT.w, height: SHOT.h }, type: 'png', animations: 'disabled', caret: 'hide' })
+    const c = tool.crop || { x: 0, y: 0, w: SHOT.w, h: SHOT.h }
+    return page.screenshot({ clip: { x: c.x, y: NAV_H + c.y, width: c.w, height: c.h }, type: 'png', animations: 'disabled', caret: 'hide' })
   })
   const files = []
-  for (const w of WIDTHS) {
-    const h = (w * SHOT.h) / SHOT.w
+  const kept = tool.crop || { w: SHOT.w, h: SHOT.h }
+  for (const w of tool.crop ? ROW_WIDTHS : WIDTHS) {
+    const h = (w * kept.h) / kept.w
     let buf
     for (const q of QUALITIES) {
       buf = await toWebp(png, w, h, q)
