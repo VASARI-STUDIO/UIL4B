@@ -104,7 +104,15 @@ test('three plates and three covers, in tab order', () => {
 test('the deck tab shows guide-overview, and the counts are in the manifest', () => {
   const deck = HOME_EXPORTS.plates.find((p) => p.id === 'guide-palette')
   assert.deepEqual(deck.landscape.files.map((f) => f.file), ['guide-overview-800.webp', 'guide-overview-1600.webp', 'guide-overview-2400.webp'])
-  assert.equal(deck.landscape.aspect, 1.4142, 'the overview is one A4 landscape in shape')
+  // Hand-checked: the palette slide at 80% of the width is 0.8 x 9/16 = 0.45 of it tall,
+  // a 2.5% gap, then three whole 16:9 slides 31% wide (0.31 x 9/16 = 0.174): 0.6494 of the
+  // width tall, so 1 / 0.6494 = 1.540. The old A4 crop was 1.4142.
+  assert.ok(Math.abs(deck.landscape.aspect - 1.5409) / 1.5409 < 0.01, `the overview plate is about 1.5409:1, not ${deck.landscape.aspect}`)
+  // Uncropped: the slides alone need 0.624 of the width in height (1.60:1 at the widest),
+  // so a plate squarer than 1.5:1 would have cut into a slide or padded it.
+  for (const f of [{ file: 'master', w: deck.landscape.master.w, h: deck.landscape.master.h }, ...deck.landscape.files]) {
+    assert.ok(f.w / f.h > 1.5 && f.w / f.h < 1.6, `${f.file}: ${(f.w / f.h).toFixed(4)}:1 is outside the whole-slides range (1.5, 1.6)`)
+  }
   assert.ok(deck.landscape.srcset.includes('/home-exports/guide-overview-2400.webp 2400w'))
   assert.deepEqual(deck.portrait.files.map((f) => f.file), ['guide-palette-p-400.webp', 'guide-palette-p-800.webp', 'guide-palette-p-1200.webp'], 'the phone plate is unchanged')
   // The palette slide plus the four after it need at least six slides in the deck.
