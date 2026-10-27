@@ -301,6 +301,11 @@ function seedProject(i, design) {
  *   projectTombstones  deletes this account already made, keyed by project id
  *              -> ISO timestamp, seeded into the same localStorage key
  *              ProjectContext writes them to.
+ *   creationTime  when the account was made, as a millisecond timestamp or
+ *              anything `new Date()` takes. Default: a day ago, so the account
+ *              is not new. Pass `Date.now() - 2 * 60_000` for an account made two
+ *              minutes ago, which the workspace greets as "Welcome, <name>."
+ *              rather than "Welcome back, <name>.".
  *   subscription / docs / claims / email / uid / displayName — direct overrides
  *              for anything the four above do not cover. `docs` is merged over
  *              the seeded Firestore documents, keyed by path.
@@ -325,6 +330,7 @@ export async function signIn(page, opts = {}) {
     displayName,
     emailVerified = true,
     lateSignIn = false,
+    creationTime,
   } = opts
 
   const email = (opts.email || (admin ? TEST_ADMIN_EMAIL : `${plan}.user@uil4b.test`)).toLowerCase()
@@ -353,6 +359,8 @@ export async function signIn(page, opts = {}) {
     provider: 'password',
     emailVerified,
     lateSignIn,
+    // Firebase reports creationTime as a UTC string; undefined leaves the double's own default.
+    creationTime: creationTime === undefined ? undefined : new Date(creationTime).toUTCString(),
     claims,
     deny,
     slowReads,
