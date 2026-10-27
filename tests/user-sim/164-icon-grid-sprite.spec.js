@@ -13,6 +13,11 @@
 //   - the sprite takes no space and is invisible to a screen reader, while each cell keeps its name
 //     and still opens from the keyboard;
 //   - the icons are light on the dark page and dark on the light one, by the pixels drawn;
+//   - a sprite already in the page (an older copy of the module left one) is reused, not doubled, and
+//     is emptied so nothing in it can be mistaken for a symbol of this page;
+//   - a page still being revealed when the listing is replaced reaches its next page without a scroll;
+//   - in Windows High Contrast (forced colors) the icon is painted in the system text colour and is
+//     distinct from its tile, in both themes;
 //   - a brand pack still renders <img>;
 //   - Copy SVG and Download SVG hand over the same markup they always did.
 //
@@ -20,10 +25,18 @@
 //   symbolMarkup skips `!clean.ok`        -> "an icon the sanitiser would change stays an image"
 //   symbolMarkup drops `idPrefix: id`     -> "ids inside two icons never collide"
 //   spriteRoot drops aria-hidden          -> "the sprite takes no space and is hidden from assistive tech"
+//   acquireDom stops reusing #ig-sprite   -> "a sprite already in the page is reused"
+//   current() drops host.clear()          -> "a sprite already in the page is reused"
+//   current() drops the host.maxId() step -> "a sprite already in the page is reused"
+//   IconLibrary observer deps [icons, visible] -> [icons.length, visible]
+//                                         -> "an answer that leaves the listing the same length mid-reveal"
+//                                            (the plain pack switch changes `visible` too, so it stays green)
+//   global.css drops `filter:none` from the forced-colors rule (dark), or paints it Canvas (both)
+//                                         -> "in forced colors"
 //   src restored byte for byte            -> all of them pass again.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, isLiveIconify } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, headPackOfUrl, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer scrolling the icon library and copying an icon out of it'
 const LIVE = 'the live API decides which icons exist; this spec controls the answers'
@@ -49,18 +62,70 @@ const HOSTILE = {
 const NAME = (i) => `sprite-${String(i).padStart(3, '0')}`
 const TOTAL = 800
 
-/** Serve `TOTAL` lucide names, and a batch answer built from `bodyOf(name)`, over the fixture. */
-async function serveLucide(page, bodyOf) {
-  const names = Array.from({ length: TOTAL }, (_, i) => NAME(i))
+/** Serve `TOTAL` names of `prefix`, and a batch answer built from `bodyOf(name)`, over the fixture. */
+async function servePack(page, prefix, bodyOf, nameOf = NAME) {
+  const names = Array.from({ length: TOTAL }, (_, i) => nameOf(i))
   const headers = { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }
-  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'lucide',
-    (route) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix: 'lucide', total: TOTAL, title: 'Lucide', uncategorized: names }) }))
-  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/lucide.json' && u.search.includes('icons='),
+  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === prefix,
+    (route) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix, total: TOTAL, title: prefix, uncategorized: names }) }))
+  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === `/${prefix}.json` && u.search.includes('icons='),
     (route) => {
       const asked = (new URL(route.request().url()).searchParams.get('icons') || '').split(',').filter(Boolean)
       const icons = Object.fromEntries(asked.map((n) => [n, { body: bodyOf(n) }]))
-      return route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix: 'lucide', width: 24, height: 24, icons, aliases: {} }) })
+      return route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {} }) })
     })
+}
+const serveLucide = (page, bodyOf) => servePack(page, 'lucide', bodyOf)
+
+/**
+ * The darkest and brightest the element draws, from a screenshot of it. An icon painted in the
+ * tile's own colour, or not painted at all, has no spread between them.
+ */
+async function inkTone(page, locator) {
+  const png = (await locator.screenshot()).toString('base64')
+  return page.evaluate(async (b64) => {
+    const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob())
+    const c = new OffscreenCanvas(bmp.width, bmp.height)
+    const g = c.getContext('2d')
+    g.drawImage(bmp, 0, 0)
+    const d = g.getImageData(0, 0, bmp.width, bmp.height).data
+    let lo = 255
+    let hi = 0
+    let n = 0
+    let opaque = 0
+    for (let i = 0; i < d.length; i += 4) {
+      const l = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]
+      lo = Math.min(lo, l)
+      hi = Math.max(hi, l)
+      n += 1
+      if (d[i + 3] > 0) opaque += 1
+    }
+    return { lo: Math.round(lo), hi: Math.round(hi), n, opaque }
+  }, png)
+}
+
+/**
+ * Hold each frame of the grid's reveal chain back by `window.__rafDelay` ms (0 = no hold), so a
+ * spec has time to act while a page is half revealed. Cancelling a held frame works as usual.
+ */
+async function holdRevealFrames(page) {
+  await page.addInitScript(() => {
+    const raf = window.requestAnimationFrame.bind(window)
+    const caf = window.cancelAnimationFrame.bind(window)
+    const held = new Map()
+    let next = 1e9
+    window.__rafDelay = 0
+    window.requestAnimationFrame = (cb) => {
+      if (!window.__rafDelay) return raf(cb)
+      next += 1
+      const id = next
+      held.set(id, setTimeout(() => { held.delete(id); raf(cb) }, window.__rafDelay))
+      return id
+    }
+    window.cancelAnimationFrame = (id) => {
+      if (held.has(id)) { clearTimeout(held.get(id)); held.delete(id) } else caf(id)
+    }
+  })
 }
 
 async function choosePack(page, pack) {
@@ -240,24 +305,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
 
       // And by the pixels: the brightest and darkest the tile's icon draws, away from any hover state.
       await page.mouse.move(0, 0)
-      const png = (await svg.screenshot()).toString('base64')
-      const tone = await page.evaluate(async (b64) => {
-        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob())
-        const c = new OffscreenCanvas(bmp.width, bmp.height)
-        const g = c.getContext('2d')
-        g.drawImage(bmp, 0, 0)
-        const d = g.getImageData(0, 0, bmp.width, bmp.height).data
-        let lo = 255
-        let hi = 0
-        let n = 0
-        for (let i = 0; i < d.length; i += 4) {
-          const l = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]
-          lo = Math.min(lo, l)
-          hi = Math.max(hi, l)
-          n += 1
-        }
-        return { lo: Math.round(lo), hi: Math.round(hi), n }
-      }, png)
+      const tone = await inkTone(page, svg)
       expect(tone.n, 'the screenshot is empty').toBeGreaterThan(100)
       // The tile is the page ground (light in light, near black in dark); the stroke is the opposite.
       if (scheme === 'dark') expect(tone.hi, `no light ink in the dark theme (${JSON.stringify(tone)})`).toBeGreaterThan(200)
@@ -286,6 +334,140 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     expect(m.inlined, 'a brand icon was drawn from the sprite').toBe(0)
     expect(m.symbols, 'the brand pack added symbols nobody draws').toBe(symbolsBefore)
   })
+
+  test('a sprite already in the page is reused: one #ig-sprite remains and the icons draw', async ({ page }) => {
+    watch(page, PERSONA)
+    // What an older copy of the module (a hot reload) leaves behind: a sprite with a symbol the
+    // new one knows nothing about, there before the app's first icon batch.
+    await page.addInitScript(() => {
+      const put = () => {
+        if (document.getElementById('ig-sprite')) return
+        document.body.insertAdjacentHTML('afterbegin',
+          '<svg id="ig-sprite" width="0" height="0" aria-hidden="true"><symbol id="ics5000" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></symbol></svg>')
+      }
+      if (document.body) put()
+      else new MutationObserver((_, o) => { if (document.body) { o.disconnect(); put() } }).observe(document, { childList: true, subtree: true })
+    })
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic svg.ig-sym').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ig .ic .ig-glyph-wait')).toHaveCount(0, { timeout: 20_000 })
+
+    const m = await page.evaluate(() => {
+      const uses = [...document.querySelectorAll('.ig .ic svg.ig-sym use')]
+      const ids = [...document.querySelectorAll('#ig-sprite symbol')].map((s) => s.id)
+      return {
+        sprites: document.querySelectorAll('#ig-sprite').length,
+        uses: uses.length,
+        missing: uses.filter((u) => !document.querySelector(`#ig-sprite ${u.getAttribute('href')}`)).map((u) => u.getAttribute('href')),
+        decoyLeft: !!document.getElementById('ics5000'),
+        lowest: Math.min(...ids.map((id) => Number(id.slice(3)))),
+        duplicated: ids.length - new Set(ids).size,
+        symbols: ids.length,
+      }
+    })
+    expect(m.uses, 'positive control: the grid has sprite cells to check').toBeGreaterThan(8)
+    expect(m.sprites, 'a second sprite was added beside the one already there').toBe(1)
+    expect(m.missing, 'cells whose symbol is not in the sprite').toEqual([])
+    expect(m.decoyLeft, 'a symbol nothing here wrote was left in the sprite').toBe(false)
+    expect(m.lowest, 'new ids start above the highest one already in the page').toBeGreaterThan(5000)
+    expect(m.duplicated, 'symbols sharing an id').toBe(0)
+    expect(m.symbols).toBeGreaterThanOrEqual(m.uses)
+  })
+
+  test('a listing replaced while a page is still being revealed still reaches its next page', async ({ page }) => {
+    watch(page, PERSONA)
+    await holdRevealFrames(page)
+    await servePack(page, 'lucide', () => STROKE)
+    // The same number of icons, under different names, so the swap is seen and has the same length.
+    await servePack(page, 'tabler', () => STROKE, (i) => `tab-${String(i).padStart(3, '0')}`)
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await choosePack(page, 'lucide')
+    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"] svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
+
+    // The grid reveals pages by itself until the sentinel is more than 600px away; let that settle.
+    const cells = () => page.locator('.ig .ic').count()
+    let settled = -1
+    await expect.poll(async () => { const was = settled; settled = await cells(); return was === settled }, { intervals: [400], timeout: 20_000 }).toBe(true)
+    const base = settled
+
+    // Start the next page's reveal and stop it part-way: some of its cells are in, not all.
+    await page.evaluate(() => { window.__rafDelay = 2500 })
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await expect.poll(cells, { timeout: 10_000 }).toBeGreaterThan(base)
+    expect(await cells(), 'positive control: the reveal is part-way, not done').toBeLessThan(base + 120)
+
+    await choosePack(page, 'tabler')
+    await expect(page.locator('.ig .ic[aria-label="Customise tab-000"]')).toBeVisible({ timeout: 20_000 })
+    await page.evaluate(() => { window.__rafDelay = 0 })
+
+    // No scrolling from here: the person is already at the foot of the page.
+    await expect.poll(() => page.locator('.ig .ic').count(), {
+      timeout: 15_000,
+      message: 'the new listing never revealed its next page (the observer did not restart)',
+    }).toBeGreaterThanOrEqual(240)
+    await expect(page.locator('.ig .ic[aria-label="Customise tab-000"]')).toBeVisible()
+    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`), 'the old listing is still in the grid').toHaveCount(0)
+  })
+
+  test('an answer that leaves the listing the same length mid-reveal does not strand the page', async ({ page }) => {
+    watch(page, PERSONA)
+    await holdRevealFrames(page)
+    // "All packs" is built from one answer per pack, and the listing is replaced each time one
+    // lands. One pack answers late and with nothing to add: the listing is a new array of the
+    // same length, which cancels the page being revealed.
+    let answerLate
+    const late = new Promise((resolve) => { answerLate = resolve })
+    await page.route((u) => headPackOfUrl(u.href) === 'ph', async (route) => {
+      await late
+      await route.fulfill({ status: 200, contentType: 'text/javascript', body: 'export default { title: "Phosphor", names: [] }' })
+        .catch(() => { /* page closed while held */ })
+    })
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    const cells = () => page.locator('.ig .ic').count()
+    await expect(page.locator('.ig .ic svg.ig-sym').first()).toBeVisible({ timeout: 20_000 })
+
+    // Start the second page at the foot of the grid; part-way through it, its first cells are in and the rest are held back.
+    await page.evaluate(() => { window.__rafDelay = 2500; window.scrollTo(0, document.documentElement.scrollHeight) })
+    await expect.poll(cells, { timeout: 15_000 }).toBeGreaterThan(120)
+    const mid = await cells()
+    expect(mid, 'positive control: the second page is part-way, not done').toBeLessThan(240)
+
+    await page.evaluate(() => { window.__rafDelay = 0 })
+    answerLate()
+    // No scrolling: the foot of the page is where the person already is.
+    await expect.poll(cells, {
+      timeout: 15_000,
+      message: `the page stopped at ${mid} cells after the listing was replaced (the observer did not restart)`,
+    }).toBeGreaterThanOrEqual(240)
+  })
+
+  for (const scheme of ['dark', 'light']) {
+    test(`in forced colors (${scheme} theme) a sprite icon is painted in the system text colour, not lost`, async ({ browser }) => {
+      const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
+      const page = await ctx.newPage()
+      watch(page, PERSONA)
+      await go(page, '/create/icons')
+      const svg = page.locator('.ig .ic svg.ig-sym').first()
+      await expect(svg).toBeVisible({ timeout: 20_000 })
+      await expect(page.locator('.ig .ic .ig-glyph-wait')).toHaveCount(0, { timeout: 20_000 })
+      await page.emulateMedia({ forcedColors: 'active' })
+      await expect.poll(() => page.evaluate(() => matchMedia('(forced-colors: active)').matches)).toBe(true)
+      await page.mouse.move(0, 0)
+
+      const style = await svg.evaluate((el) => { const s = getComputedStyle(el); return { filter: s.filter, fill: s.fill } })
+      expect(style.filter, 'the theme filter is still on the icon').toBe('none')
+
+      // By the pixels: ink and tile differ. An icon drawn in the tile's colour (black on the
+      // system's black Canvas) or not drawn has no spread between its darkest and brightest.
+      const tone = await inkTone(page, svg)
+      expect(tone.n, 'the screenshot is empty').toBeGreaterThan(100)
+      expect(tone.opaque, 'the icon painted nothing').toBeGreaterThan(100)
+      expect(tone.hi - tone.lo, `the icon is not distinct from its tile (${JSON.stringify(tone)})`).toBeGreaterThan(150)
+      await ctx.close()
+    })
+  }
 
   test('Copy SVG and Download SVG hand over the same markup a sprite icon always gave', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
