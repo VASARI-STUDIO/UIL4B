@@ -148,8 +148,8 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
 
       // A new account starts empty, with no seeded "Default Project";
       // 73-hero-headline-new-account holds the whole of it.
-      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Start a project' })).toHaveCount(1)
+      await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Start the walkthrough' })).toHaveCount(1)
 
       // New project goes straight into the Palette Builder on a new, unsaved
       // project, named when it is saved.
@@ -164,7 +164,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       await expect(page.locator('.toast.show')).toContainText('Project saved')
 
       await go(page, '/projects')
-      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
+      await expect(page.locator('.proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
       await context.close()
     })
   }
@@ -189,7 +189,7 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
       const refusal = page.getByTestId('project-create-refusal')
       await expect(refusal).toBeVisible()
       await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
-      await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+      await expect(refusal.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
       // Not a success. The tick must not be drawn over a refusal.
       await expect(page.locator('.toast-success.show')).toHaveCount(0)
       // And it STAYS. The toast this replaced was gone in 1.8 seconds.

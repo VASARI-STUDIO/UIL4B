@@ -35,7 +35,7 @@ for (const width of [390, 1440]) {
             route.fulfill({ status: 404, body: '' }))
           await signIn(page, { plan: 'free', projects: [savedProject()] })
           await go(page, '/projects')
-          await page.locator('.uh-card-name', { hasText: 'Harbour' }).click()
+          await page.locator('.uh-card-name[data-project="Harbour"]').click()
           await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
 
           const opener = page.locator(area).getByRole('button', { name: 'Export project', exact: true })
