@@ -370,7 +370,10 @@ function ProjectDetail({ id, toast }) {
           {!isPro && !planLoading && (
             <div className="pjd-upgrade">
               <span className="pjd-upgrade-line">{UPGRADE_LINE}</span>
-              <Link to="/plans" className="pjd-upgrade-link">{upgrade.label}</Link>
+              <span className="pjd-upgrade-offer">
+                <Link to="/plans" className="pjd-upgrade-link">{upgrade.label}</Link>
+                {upgrade.billed && <span className="pjd-upgrade-billed">{upgrade.billed}</span>}
+              </span>
             </div>
           )}
         </div>
