@@ -1004,9 +1004,13 @@
    once the plate read empty when the arriving fade started late on a slow
    device. Transitions use the destination's properties, so the hold is the delay
    on the picture without .is-on. The arriving picture is stacked above the
-   leaving one. The first picture is on from its first paint, so it never moves. */
+   leaving one. Each picture carries the stage's own ground (opaque), so the arriving
+   one covers the leaving one as it fades in: its transparent surround does not show
+   the old picture through it, and the two read as a crossfade of whole pictures. The
+   ground is the stage's colour, so at rest it is not seen. The first picture is on
+   from its first paint, so it never moves. */
 .sp-plate-art { isolation: isolate; }
-.sp-plate-art img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transform: translateY(8px); transition: opacity 150ms ease 240ms, transform 150ms ease 240ms; }
+.sp-plate-art img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: contain; padding: 4%; background: var(--sp-page); opacity: 0; transform: translateY(8px); transition: opacity 150ms ease 240ms, transform 150ms ease 240ms; }
 .sp-plate-art img.is-on { z-index: 2; opacity: 1; transform: none; transition: opacity 240ms var(--sp-ease), transform 240ms var(--sp-ease); }
 .sp-plate-fail { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
 /* One line under the picture, left-aligned with it (4% in, the picture's own inset). */
@@ -1015,8 +1019,10 @@
 /* In the dark the plate keeps its white paper: one hairline under the plate so the
    paper sits on the well instead of floating. */
 [data-theme="dark"] .spectrum .sp-plate { box-shadow: 0 1px 0 oklch(1 0 0 / .06); }
-/* From 761px the picture is sized to its own aspect (--ar), not left to object-fit inside a
-   padded box, so its box is the picture and the caption can start at its left edge. (No CSS
+/* From 761px the picture's box is the whole space left for it (the plate less the caption row
+   and 4% of the width on every side), not a padded box, so its ground covers the leaving
+   picture wherever that sits; object-fit: contain draws the picture at the size its own
+   aspect (--ar) gives, and the caption starts at that picture's left edge. (No CSS
    outline on a plate: its pages carry their own hairline, baked in by the generator, and the
    deck's picture has bare ground beside the palette slide that a box outline would ring.) The plate is a size container; the caption row is a fixed 28px (one line,
    cut with an ellipsis), so the box left for the picture is known: the plate less that row,
@@ -1024,7 +1030,7 @@
    height and centred, and its caption moves in with it. */
 @media (min-width: 761px) {
   .sp-plate { container-type: size; --cap-h: 28px; --pic-w: calc(100cqw - 8cqw); --pic-h: calc(100cqh - var(--cap-h) - 8cqw); }
-  .sp-plate-art img { inset: 0; margin: auto; padding: 0; width: min(var(--pic-w), calc(var(--pic-h) * var(--ar, 1.4142))); height: auto; aspect-ratio: var(--ar, 1.4142); }
+  .sp-plate-art img { inset: 4cqw; margin: 0; padding: 0; width: var(--pic-w); height: var(--pic-h); }
   .sp-plate-cap { box-sizing: border-box; height: var(--cap-h); padding-bottom: 10px; }
   .sp-plate-cap > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sp-plate-cap--pic { padding-left: calc((100cqw - min(var(--pic-w), var(--pic-h) * var(--ar, 1.4142))) / 2); }
