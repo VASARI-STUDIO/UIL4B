@@ -83,6 +83,23 @@
 @media(hover:hover){.ui-login .ui-login-x:hover{color:var(--t0)}}
 @media(pointer:coarse){.ui-login-x::after{content:"";position:absolute;inset:-4px}}
 .ui-login .ui-login-x{position:absolute;z-index:2}
+/* ---- The modal strip (chosen variant, 768 and up) ---------------------- */
+/* The dialog stops scrolling as a whole: the strip is clipped by its height and
+   only the form pane scrolls. The strip adds nothing to the row's height. */
+.ui-modal.ui-login.ui-login--strip{width:min(760px,100%);max-width:760px;display:grid;grid-template-columns:300px minmax(0,1fr);overflow:hidden;background:var(--card)}
+/* The pane is what scrolls here, so it carries the scroll-shadow cue the dialog
+   would otherwise have (the same four-layer stack as .ui-modal in global.css;
+   the dialog's own background is flattened above). 34px is the dialog's 32px
+   margin plus its 1px borders. */
+.ui-login--strip .ui-login-pane{max-height:calc(100dvh - 34px);overflow-y:auto;overscroll-behavior:contain;background:linear-gradient(var(--card) 30%,rgba(0,0,0,0)) top/100% 26px no-repeat local,linear-gradient(rgba(0,0,0,0),var(--card) 70%) bottom/100% 26px no-repeat local,radial-gradient(farthest-side at 50% 0,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) top/100% 12px no-repeat scroll,radial-gradient(farthest-side at 50% 100%,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) bottom/100% 12px no-repeat scroll,var(--card)}
+/* Phones on their side: the dialog's own margin drops to 16px (global.css), and
+   the pane follows it, so the sign-up link keeps peeking above the fold. */
+@media(max-height:460px){
+  .ui-login--strip .ui-login-pane{max-height:calc(100dvh - 18px)}
+}
+/* The strip's box. Its wall (the .aw inside) arrives with the AuthWall chunk,
+   so the box is sized and painted here and holds the space while that loads. */
+.ui-login-strip{position:relative;min-height:0;background:var(--bg-0);border-right:1px solid var(--border)}
 
 /* Phone: a bottom sheet. */
 @media(max-width:767px){

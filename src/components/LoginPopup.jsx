@@ -1,9 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import useModalDialog from '../hooks/useModalDialog'
 import useMediaQuery from '../hooks/useMediaQuery'
 import AuthForm from './auth/AuthForm'
-import AuthWall from './auth/AuthWall'
+
+// The wall (and its 22 KB table of generated exports) is a separate chunk: this
+// file is reached from the entry chunk, and most visitors never open the strip.
+// Its box (.ui-login-strip, in auth.css) is painted by the dialog itself, so the
+// space is held while the chunk loads and nothing shifts when the wall arrives.
+const AuthWall = lazy(() => import('./auth/AuthWall'))
+
+// The strip is decoration. If its chunk fails to load, the dialog keeps its
+// form and the strip stays an empty panel.
+class StripBoundary extends Component {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  render() { return this.state.failed ? null : this.props.children }
+}
 
 // Single-click log-in. Opened over the current page (never navigates to
 // /login) so the user resumes exactly where they were on success. This file is
@@ -74,7 +87,7 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
 
-        {strip && <div className="ui-login-strip" aria-hidden="true"><AuthWall variant="strip" /></div>}
+        {strip && <div className="ui-login-strip" aria-hidden="true"><StripBoundary><Suspense fallback={null}><AuthWall variant="strip" /></Suspense></StripBoundary></div>}
 
         <div className="ui-login-pane">
           <AuthForm
