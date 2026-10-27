@@ -117,6 +117,8 @@
    ExportPanel.jsx toggles .has-more from the panel's scroll position. */
 .exp-dock::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:44px;pointer-events:none;opacity:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bg-1) 0%,transparent),var(--bg-1));transition:opacity var(--dur-2) var(--ease-out)}
 .exp-panel.has-more .exp-dock::before{opacity:1}
+/* On the phone sheet the last control sits close to the dock, so the cue is shorter. */
+@media(max-width:560px){.exp-dock::before{height:24px}}
 /* The Soon action is plainly off: a muted surface with a readable label, not the
    primary fill dimmed (a dimmed blue still reads as live in the moment before
    the fade settles). Scoped to this footer, so no other primary button moves. */
@@ -176,7 +178,8 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
    screen) the row scrolls sideways rather than wrapping. The padding and
    negative margin keep the focus ring inside the scroll box. */
 .exp-switch-label{display:none;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
-@media(max-width:560px){.exp-switch-label{display:block}}
+/* Up to tablet the switch sits under the Pro rows, so it needs its own label. */
+@media(max-width:900px){.exp-switch-label{display:block}}
 .exp-switch{display:flex;gap:8px;padding:4px;margin:-4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none}
 .exp-switch::-webkit-scrollbar{display:none}
 .exp-pill{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;scroll-snap-align:center;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font:inherit;font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}

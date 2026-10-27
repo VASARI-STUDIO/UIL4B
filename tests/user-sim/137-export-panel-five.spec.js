@@ -657,7 +657,7 @@ test.describe('an account that signs in at the export gate', () => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 600 } })
 
-  // MUTATION: overlay.css, drop `.exp-switch-label{display:block}` from the phone
+  // MUTATION: overlay.css, drop `.exp-switch-label{display:block}` from the phone-and-tablet
   // block (the caption then never shows), or `.exp-panel.is-scrolled .exp-head`
   // (the head gets no edge once rows scroll under it).
   test('the file-type switch is captioned, and the head gets an edge once rows scroll under it', async ({ page }) => {
