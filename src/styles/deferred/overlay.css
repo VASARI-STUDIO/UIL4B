@@ -184,13 +184,13 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
    fill, fixed ratio), so the dock does not move when the images arrive. The lock
    sits over the strip, not inside its scroll, so it stays in view on a phone. */
 .exp-preview{position:relative;isolation:isolate}
-.exp-preview-strip{display:flex;gap:12px;padding:2px;margin:-2px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain}
+.exp-preview-strip{display:flex;gap:12px;padding:2px;margin:-2px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;border-radius:var(--radius-s)}
 .exp-thumb{flex:0 0 auto;display:block;width:120px;height:auto;aspect-ratio:1 / 1.414;object-fit:cover;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-0);scroll-snap-align:start;-webkit-user-drag:none}
 .exp-preview.is-guidelines .exp-thumb{width:160px;aspect-ratio:16 / 9}
 .exp-preview-stage{position:relative;width:fit-content;max-width:100%}
 /* A strip that scrolls sideways is a Tab stop, so it gets the site's ring, held
    in the 2px of padding the negative margin gives back. */
-.exp-preview-strip:focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:var(--radius-s)}
+.exp-preview-strip:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .exp-preview-lock{position:absolute;inset:0;z-index:1;display:grid;place-items:center;pointer-events:none}
 .exp-preview-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
 .exp-preview-note,.exp-preview-caption{margin:8px 0 0;font-size:var(--fs-caption);color:var(--t1)}
