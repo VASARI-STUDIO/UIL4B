@@ -545,6 +545,8 @@ h2.uh-continue-name { white-space: normal; }
   /* The limit notice is in the flow on a phone, under the button that was pressed, so it pushes the page
      down. As a popover it covered the AI meter and slid under the sticky header. */
   .uh .uh-cap { position: static; width: auto; margin-top: var(--s-2); box-shadow: none; }
+  /* Scrolled into view when it opens: stop above the fixed tab bar, not under it. */
+  html.has-tabbar .uh .uh-cap { scroll-margin-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--s-3)); }
   /* Start something: four tools and an "All thirteen tools" row, 56px each. */
   .uh .uh-start-head .uh-alltools { display: none; }
   .uh .uh-tool[data-tool="semantic"], .uh .uh-tool[data-tool="palettes"] { display: none; }
