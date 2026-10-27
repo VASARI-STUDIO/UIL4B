@@ -4,8 +4,9 @@
 //   - a role in ROLES with no tag would show a lit chip that highlights nothing;
 //   - a tag outside ROLES would light a chip the example claims not to use.
 // Source scan, not a render: a tag is found as a data-role="..." literal in the
-// .jsx, or as a role: '...' (or the SWATCH_ROLES list) in the .data.js that the
-// .jsx reads its tags from. Comments are stripped first.
+// .jsx, or as a role: '...' / tone: '...' (or the SWATCH_ROLES list) in the
+// .data.js that the .jsx reads its tags from, or as a roof="..." prop. Comments
+// are stripped first.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -27,6 +28,9 @@ function taggedRoles(name) {
   const add = (s) => s.split(/\s+/).filter(Boolean).forEach((r) => found.add(r))
   for (const m of jsx.matchAll(/data-role="([^"]+)"/g)) add(m[1])
   for (const m of `${jsx}\n${data}`.matchAll(/\brole: '([a-z ]+)'/g)) add(m[1])
+  // Tally's transactions carry their state as tone: 'warning' and the like, and
+  // Hale & Okoro hands each roof its role as roof="secondary"; both end up in data-role.
+  for (const m of `${jsx}\n${data}`.matchAll(/\b(?:tone: '|roof=")([a-z ]+)['"]/g)) add(m[1])
   for (const m of data.matchAll(/SWATCH_ROLES = \[([^\]]*)\]/g)) for (const r of m[1].matchAll(/'([a-z]+)'/g)) add(r[1])
   return found
 }

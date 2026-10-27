@@ -70,8 +70,11 @@ test('the banned-word check can see a hit: each pattern matches a sample line', 
 
 test('the scene content still carries the Fernway sample data it is meant to protect', () => {
   // If the data file were emptied or moved, the two checks above would pass on
-  // nothing. Read it back and require the product name and the eight scenes.
+  // nothing. Read it back and require the sample data, the product name (printed
+  // by the Settings scene, not by the data file) and the eight scenes.
   const data = read('src/data/palettePreviewScenes.js')
-  assert.match(data, /Fernway/)
+  assert.match(data, /const FERNWAY = \{/)
+  assert.match(data, /Harbour Physio/)
+  assert.match(read('src/components/palette/PalettePreview.jsx'), /Fernway Studio/)
   assert.equal((data.match(/\bfree: (?:true|false)\b/g) || []).length, 8, 'expected eight scene entries')
 })
