@@ -236,7 +236,11 @@ test.describe('the icon grid for a name the service does not have', () => {
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
     // The default page's own glyph batches are still in flight at first paint; let
-    // them finish so the held batch below is the one for the chosen pack.
+    // them finish so the held batch below is the one for the chosen pack. The
+    // skeleton's cells are .ic too and carry no wait box, so wait for it to go and
+    // for real artwork first: otherwise the next line passes before any batch left.
+    await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
+    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('.ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0, { timeout: 20_000 })
 
     const missing = await answerWithMissing(page, 'logos', (names) => names.find((n) => n === 'arrow-kit'))
@@ -264,10 +268,16 @@ test.describe('the icon grid for a name the service does not have', () => {
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
     // The default page's own glyph batches are still in flight at first paint; let
-    // them finish so the held batch below is the one for the chosen pack.
+    // them finish so the held batch below is the one for the chosen pack. The
+    // skeleton's cells are .ic too and carry no wait box, so wait for it to go and
+    // for real artwork first: otherwise the next line passes before any batch left.
+    await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
+    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('.ig .ig-glyph-wait, .ig .ig-chip--wait')).toHaveCount(0, { timeout: 20_000 })
 
-    const missing = await answerWithMissing(page, 'lucide', (names) => names[0])
+    // By identity, not position: a stray batch from another listing must not
+    // supply a name the pack page never shows.
+    const missing = await answerWithMissing(page, 'lucide', (names) => names.find((n) => n === 'arrow-right'))
     await choosePack(page, 'lucide')
     await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible({ timeout: 20_000 })
     await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
