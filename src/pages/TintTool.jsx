@@ -10,7 +10,7 @@ import {
 import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch'
 import { useProject } from '../contexts/ProjectContext'
 import { textColorForBg } from '../utils/colors'
-import { contrastNotes, GRADE_WORDS, GRADE_MARKS } from '../utils/tintContrast'
+import { bestPole, contrastNotes, GRADE_WORDS, GRADE_MARKS } from '../utils/tintContrast'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { refreshScrollLimit } from '../utils/hashLanding'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
@@ -64,15 +64,8 @@ const SPACINGS = [
 // The widest a contrast tooltip gets; tint.css reads the same number.
 const TIP_WIDTH = 280
 // The tallest the floating tooltip gets (its card and the 6px bridge), so a
-// note knows whether it fits above itself.
+// note knows whether it fits below itself.
 const TIP_HEIGHT = 230
-
-// The best a tint does against white or black, as the short mark on its row.
-const BEST_RANK = { fail: 0, large: 1, AA: 2, AAA: 3 }
-const BEST_WORDS = { AAA: 'AAA', AA: 'AA', large: 'Large', fail: 'Low' }
-function bestGrade(hex) {
-  return contrastNotes(hex).reduce((best, n) => (BEST_RANK[n.grade] > BEST_RANK[best] ? n.grade : best), 'fail')
-}
 
 let seq = 0
 const mkSource = (hex) => ({ id: ++seq, hex, input: hex })
@@ -97,9 +90,9 @@ function barRef(color, pct) {
 // note's description is the tooltip body (the head and the rows); the long help
 // paragraph sits in the card but outside it, so a screen reader is not read it
 // again on every note.
-function ContrastTip({ id, step, open, end, below, inline }) {
+function ContrastTip({ id, step, open, end, above, inline }) {
   const notes = contrastNotes(step.hex)
-  const cls = ['tt-tip', end && 'tt-tip--end', below && 'tt-tip--below', inline && 'tt-tip--inline'].filter(Boolean).join(' ')
+  const cls = ['tt-tip', end && 'tt-tip--end', above && 'tt-tip--above', inline && 'tt-tip--inline'].filter(Boolean).join(' ')
   return (
     <span className={cls} data-open={open ? 'true' : undefined}>
       <span className="tt-tip-card">
@@ -107,7 +100,7 @@ function ContrastTip({ id, step, open, end, below, inline }) {
           <span className="tt-tip-head">{step.label} · {step.hex}</span>
           {notes.map((n) => (
             <span key={n.key} className="tt-tip-row" data-pass={n.pass ? 'true' : 'false'} data-grade={n.grade}>
-              <span className="tt-tip-mark" aria-hidden="true"><ToolIcon name={GRADE_MARKS[n.grade]} size={12} /></span>
+              <span className="tt-tip-mark" aria-hidden="true"><ToolIcon name={GRADE_MARKS[n.grade]} size={n.grade === 'large' ? 14 : 12} /></span>
               <span className="tt-tip-who">{n.label}</span>
               <span className="tt-tip-ratio">{n.text}</span>
               <span className="tt-tip-grade">{GRADE_WORDS[n.grade]}</span>
@@ -145,7 +138,7 @@ export default function TintTool({ onCopy, toast }) {
   const [saturation, setSaturation] = useState(100)
   // The contrast tooltip: which tint is open, whether a tap pinned it (shown
   // inline under the note), whether it opens leftward (a note near the right
-  // edge) and whether it opens below the note (no room above it).
+  // edge) and whether it opens above the note (it opens below by default).
   const [tip, setTip] = useState(null)
   const pointerTypeRef = useRef('mouse')
   const refocusRef = useRef(false)
@@ -238,14 +231,18 @@ export default function TintTool({ onCopy, toast }) {
   const openTip = (label, el, pinned = false) => {
     const rect = el.getBoundingClientRect()
     const end = rect.left + TIP_WIDTH > window.innerWidth - 12
-    // The sticky tool bar (and the site bar above it) covers the top of the
-    // window, so the tooltip opens below the note when it would run under them.
+    // The card opens below the note, where the page has room. It flips above
+    // only when the window leaves no room below AND there is room above that
+    // clears both the sticky bars and the notes header, so it never meets it.
     const bar = document.querySelector('.tt .tl-toolbar')
     const barBottom = bar
       ? Math.max(bar.getBoundingClientRect().bottom, (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight)
       : 0
-    const below = rect.top - barBottom < TIP_HEIGHT
-    setTip({ label, pinned, end, below })
+    const head = el.closest('.tt-notes')?.querySelector('.tt-notes-head')
+    const clearTop = Math.max(barBottom, head ? head.getBoundingClientRect().bottom : 0)
+    const roomBelow = window.innerHeight - rect.bottom >= TIP_HEIGHT
+    const roomAbove = rect.top - clearTop >= TIP_HEIGHT
+    setTip({ label, pinned, end, above: !roomBelow && roomAbove })
   }
   const closeTip = (label) => setTip((cur) => (cur && cur.label === label && !cur.pinned ? null : cur))
   // A mouse click or a key press copies. A tap has no hover, so it pins the
@@ -515,7 +512,7 @@ export default function TintTool({ onCopy, toast }) {
           <div className="tt-notes-head">
             <span className="tl-sec-label" id="tt-notes-label">Contrast notes</span>
             <span className="tt-notes-hint">
-              <span className="tt-hint-fine">Hover over a tint to see its contrast</span>
+              <span className="tt-hint-fine">Hover a tint for its contrast. Click to copy.</span>
               <span className="tt-hint-coarse">Tap a tint to see its contrast</span>
             </span>
           </div>
@@ -524,11 +521,11 @@ export default function TintTool({ onCopy, toast }) {
               const open = tip?.label === t.label
               const pinned = open && tip.pinned
               const tipId = `tt-tip-${t.label}`
-              const best = bestGrade(t.hex)
+              const best = bestPole(t.hex)
               return (
                 <div
                   key={t.label}
-                  className="tt-note-wrap"
+                  className={pinned ? 'tt-note-wrap tt-note-wrap--pinned' : 'tt-note-wrap'}
                   onPointerEnter={(e) => { if (e.pointerType !== 'touch' && !tip?.pinned) openTip(t.label, e.currentTarget) }}
                   onPointerLeave={(e) => { if (e.pointerType !== 'touch') closeTip(t.label) }}
                   onFocus={(e) => {
@@ -550,9 +547,9 @@ export default function TintTool({ onCopy, toast }) {
                     <span className="tt-note-sw" ref={cellRef(t.hex)} aria-hidden="true" />
                     <span className="tt-note-step">{t.label}</span>
                     <span className="tt-note-hex">{copiedHex === t.hex ? 'Copied' : t.hex}</span>
-                    <span className="tt-note-best" data-grade={best} aria-hidden="true">{BEST_WORDS[best]}</span>
+                    <span className="tt-note-best" data-grade={best.grade} aria-hidden="true">{best.word}</span>
                   </button>
-                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} below={open && tip.below} inline={pinned} />
+                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} above={open && tip.above} inline={pinned} />
                   {pinned && (
                     <div className="tt-tip-actions">
                       <button type="button" className="tt-tip-copy" onClick={() => copyHex(t.hex)}>

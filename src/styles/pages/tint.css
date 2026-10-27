@@ -135,7 +135,7 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
   gap: 4px 8px;
 }
-.tt .tt-note-wrap { position: relative; min-width: 0; }
+.tt .tt-note-wrap { position: relative; min-width: 0; scroll-margin-bottom: 16px; }
 .tt .tt-note {
   display: flex;
   align-items: center;
@@ -152,13 +152,10 @@
 .tt .tt-note-sw { width: 20px; height: 20px; border-radius: 6px; flex: 0 0 auto; background: var(--tt-c, transparent); }
 .tt .tt-note-step { width: 34px; flex: 0 0 auto; font-family: var(--mono); font-size: 12px; color: var(--tl-faint); }
 .tt .tt-note-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
-/* The best a tint does against white or black, so the row says it at a glance:
-   the word is the signal, the colour backs it. */
-.tt .tt-note-best { flex: 0 0 auto; font-size: 12px; font-weight: 600; color: var(--tl-dim); }
-.tt .tt-note-best[data-grade="AAA"],
-.tt .tt-note-best[data-grade="AA"] { color: var(--ok-strong); }
-.tt .tt-note-best[data-grade="large"] { color: var(--warn-strong); }
-.tt .tt-note-best[data-grade="fail"] { color: var(--err-strong); }
+/* The text colour that reads best on a tint and its grade ("White AAA"). The
+   better of white and black always passes AA, so the word is always green; the
+   word is the signal, the colour backs it. */
+.tt .tt-note-best { flex: 0 0 auto; font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--ok-strong); }
 @media (hover: hover) and (pointer: fine) {
   .tt .tt-note:hover { background: var(--tl-wash-2); }
 }
@@ -166,25 +163,26 @@
 
 /* ── The contrast tooltip on a tint value. Closed it is display:none, which
    still leaves it as the button's description for a screen reader and keeps it
-   out of the page's scrollable size; open it sits above the note (so it never
-   runs past the page's end), left-aligned with the note or, near the right
-   edge, right-aligned with it. The 6px padding is the bridge that lets the
-   pointer cross from the note to the tooltip without closing it. ───────────── */
+   out of the page's scrollable size; open it sits below the note (the page has
+   room under the notes card, and a card above would reach the notes header),
+   left-aligned with the note or, near the right edge, right-aligned with it.
+   The 6px padding is the bridge that lets the pointer cross from the note to
+   the tooltip without closing it. ───────────────────────────────────────── */
 .tt .tt-tip {
   display: none;
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   left: 0;
   z-index: 3;
   width: 280px;
   max-width: calc(100vw - 24px);
-  padding-bottom: 6px;
+  padding-top: 6px;
   text-align: left;
 }
 .tt .tt-tip--end { left: auto; right: 0; }
-/* No room above the note (the sticky bars are in the way): open below it, with
-   the bridge on top instead. */
-.tt .tt-tip--below { top: 100%; bottom: auto; padding-top: 6px; padding-bottom: 0; }
+/* No room below the note in the window, and room above it that clears the sticky
+   bars and the notes header: open above it, with the bridge underneath. */
+.tt .tt-tip--above { top: auto; bottom: 100%; padding-top: 0; padding-bottom: 6px; }
 /* A tap pins the detail inline under the note, in the flow, so it covers
    nothing and the page can scroll past it. */
 .tt .tt-tip--inline { position: static; width: auto; max-width: none; padding: 4px 0 0; }
@@ -237,6 +235,8 @@
 .tt .tt-tip-grade { grid-area: grade; font-size: 12px; color: var(--tl-dim); }
 .tt .tt-tip-row[data-pass="true"] .tt-tip-mark { color: var(--ok-strong); }
 .tt .tt-tip-row[data-grade="large"] .tt-tip-mark { color: var(--warn-strong); }
+/* A dash is one thin line; at 14px, a 2px stroke so it reads on the light card. */
+.tt .tt-tip-row[data-grade="large"] .tt-tip-mark svg { stroke-width: 3.5; }
 .tt .tt-tip-row[data-grade="fail"] .tt-tip-mark { color: var(--err-strong); }
 .tt .tt-tip-help { padding-top: 6px; border-top: 1px solid var(--tl-line); font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 html[data-reduced-motion="true"] .tt .tt-tip[data-open="true"] { animation: none; }
@@ -267,6 +267,11 @@ html[data-reduced-motion="true"] .tt .tt-tip[data-open="true"] { animation: none
 }
 @media (max-width: 640px) {
   .tt .tt-hex-input { font-size: 16px; }
+}
+/* On a touch screen wide enough for several columns, a pinned card takes the
+   whole row, so the help text is not squeezed into one narrow, tall column. */
+@media (pointer: coarse) and (min-width: 768px) {
+  .tt .tt-note-wrap--pinned { grid-column: 1 / -1; }
 }
 @media (pointer: coarse) {
   .tt .tt-iconbtn,

@@ -55,7 +55,13 @@ export const GRADE_MARKS = {
   fail: 'x',
 }
 
-/** The whole note as one sentence, for a screen reader and the copy tooltip. */
-export function contrastSummary(hex) {
-  return contrastNotes(hex).map((n) => `${n.label} ${n.text}, ${GRADE_WORDS[n.grade]}`).join('. ')
+/**
+ * The text colour that reads best on a tint, and how well: `{ key, color, grade,
+ * word }`, e.g. "White AAA" or "Black AA". The better of white and black is always
+ * at least 4.58:1, so the grade here is only ever AAA or AA; a tie goes to white.
+ */
+export function bestPole(hex) {
+  const best = contrastNotes(hex).reduce((a, n) => (n.ratio > a.ratio ? n : a))
+  const color = best.label.replace(' text', '')
+  return { key: best.key, color, grade: best.grade, word: `${color} ${best.grade}` }
 }

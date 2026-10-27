@@ -22,7 +22,7 @@ import {
   buildRamp, lightnessGamma, saturationScale, stepLightness, tintRampForHex,
   LIGHTNESS_RANGE, SATURATION_MAX, SPACINGS, TINT_LABELS,
 } from '../../src/utils/tintRamp.js'
-import { contrastGrade, contrastNotes, contrastSummary, GRADE_MARKS, POLES } from '../../src/utils/tintContrast.js'
+import { bestPole, contrastGrade, contrastNotes, GRADE_MARKS, POLES } from '../../src/utils/tintContrast.js'
 import { hexToOklchRaw } from '../../src/components/tool/oklch.js'
 import { read, stripComments } from './helpers/source-text.js'
 
@@ -279,8 +279,26 @@ test('light steps carry black text and dark steps carry white text', () => {
   assert.deepEqual(last.map((n) => n.pass), [true, false])
 })
 
-test('the sentence a screen reader gets names both poles and a grade for each', () => {
-  assert.equal(contrastSummary('#FFFFFF'), 'White text 1.0:1, Fails. Black text 21.0:1, Passes AAA')
+test('the best word on a row names the winning text colour and its grade', () => {
+  assert.deepEqual(bestPole('#FFFFFF'), { key: 'black', color: 'Black', grade: 'AAA', word: 'Black AAA' })
+  assert.deepEqual(bestPole('#000000'), { key: 'white', color: 'White', grade: 'AAA', word: 'White AAA' })
+  // A mid colour: white on #2563EB is 5.1:1 and black 4.0:1, so white wins at AA.
+  assert.equal(bestPole('#2563EB').word, 'White AA')
+  // Black 7.8:1 on a light mid tone; white would be 2.6:1.
+  assert.equal(bestPole('#7A9CF0').word.split(' ')[0], 'Black')
+  // Every step of every ramp gets AAA or AA, never a Large or Low word.
+  for (const steps of [9, 11, 13]) {
+    for (const { hex } of buildRamp(BLUE_H, BLUE_C, steps, 0)) {
+      const best = bestPole(hex)
+      assert.match(best.word, /^(White|Black) (AAA|AA)$/, `${hex}`)
+      const ratios = contrastNotes(hex).map((n) => n.ratio)
+      assert.equal(contrastNotes(hex).find((n) => n.key === best.key).ratio, Math.max(...ratios), `${hex}: the word names the better pole`)
+    }
+  }
+})
+
+test('contrastSummary is gone; nothing asks for the whole note as one sentence', () => {
+  assert.ok(!/contrastSummary/.test(read('src/utils/tintContrast.js')))
 })
 
 // ── The page uses them ──────────────────────────────────────────────────────
@@ -342,12 +360,17 @@ test('a tap pins the tooltip inline and does not copy; Copy and Close are button
   assert.match(src, /className="tt-tip-copy"/)
   assert.match(src, /className="tt-tip-close"/)
   assert.match(src, /tt-tip--inline/)
-  assert.match(src, /tt-tip--below/)
+  assert.match(src, /tt-tip--above/)
   assert.match(src, /className="tt-note-best"/, 'each row carries the best-grade word')
+  assert.ok(!/BEST_WORDS|BEST_RANK|bestGrade/.test(src), 'the unreachable Large and Low words are gone')
   const css = stripComments(read('src/styles/pages/tint.css'))
   assert.match(css, /\.tt-tip--inline\s*\{\s*position: static/, 'the pinned card is in the flow')
-  assert.match(css, /\.tt-tip--below\s*\{\s*top: 100%/, 'the hover card can flip below')
-  for (const g of ['ok-strong', 'warn-strong', 'err-strong']) assert.match(css, new RegExp(String.raw`\.tt-note-best[^{]*\{[^}]*var\(--${g}\)`), `the best-grade mark uses --${g}`)
+  assert.match(css, /\.tt \.tt-tip\s*\{[^}]*top: 100%/, 'the hover card opens below its note by default')
+  assert.match(css, /\.tt-tip--above\s*\{\s*top: auto;\s*bottom: 100%/, 'the hover card can flip above')
+  assert.match(css, /\.tt-note-best[^{]*\{[^}]*var\(--ok-strong\)/, 'the best word is in the pass colour')
+  assert.ok(!/\.tt-note-best\[data-grade="(large|fail)"\]/.test(css), 'no Large or Low rule for the best word')
+  assert.match(css, /\.tt-note-wrap\s*\{[^}]*scroll-margin-bottom: 16px/, 'a pinned card scrolls into view 16px above the tab bar')
+  assert.match(css, /pointer: coarse\) and \(min-width: 768px\)\s*\{\s*\.tt \.tt-note-wrap--pinned\s*\{\s*grid-column: 1 \/ -1/, 'a pinned wrap spans the row on a wide touch screen')
 })
 
 test('the tooltip text is 12px or more, and the long help paragraph is outside the described body', () => {

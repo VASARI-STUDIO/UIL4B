@@ -6,10 +6,12 @@
 // between the two ends. Each tint value in the Contrast notes is a copy button
 // whose tooltip shows white and black text against that tint. A mouse or a key
 // press on the note copies it. Hover or keyboard focus opens the card over the
-// note (above it, or below when the sticky bars leave no room); a tap pins the
+// note (below it by default, above only when the window leaves no room below
+// and the notes header and sticky bars leave room above); a tap pins the
 // card inline, in the flow under the note, and does NOT copy: the card has its
 // own "Copy #hex" and Close buttons, and Close hands focus back to the note.
-// Each note also carries its best-grade word (AAA, AA, Large or Low).
+// Each note also carries its best-grade word: the winning text colour and its
+// grade ("White AAA", "Black AA").
 //
 // What this holds, from a person's side of the screen:
 //   1. Left alone, the tool makes the ramp it always made (fixed hexes, written
@@ -62,8 +64,12 @@ const shown = (ratio) => `${(Math.floor(ratio * 10 + 1e-9) / 10).toFixed(1)}:1`
 // The word on each note is the BETTER of the white and black ratios. (Because
 // the two ratios multiply to 21, the better one is never under 4.58, so only
 // AAA and AA can show for black and white text; Large and Low are not reachable.)
-const bestRatio = (hex) => Math.max(ratioOn(hex, 'white'), ratioOn(hex, 'black'))
-const bestWord = (ratio) => (ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'Large' : 'Low')
+// The word leads with the colour that wins: "White AAA" or "Black AA".
+const bestWord = (hex) => {
+  const [w, b] = [ratioOn(hex, 'white'), ratioOn(hex, 'black')]
+  const ratio = Math.max(w, b)
+  return `${w >= b ? 'White' : 'Black'} ${ratio >= 7 ? 'AAA' : 'AA'}`
+}
 // sRGB triple from any CSS colour string the page reports (rgb, oklch, color-mix).
 const rgbOfCss = (page, css) => page.evaluate((c) => {
   const g = document.createElement('canvas').getContext('2d')
@@ -301,6 +307,21 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     }
   })
 
+  test('a hover card opens below its note by default and never meets the notes header', async ({ page }) => {
+    await openTint(page, 'someone pointing along the notes with room below')
+    const head = page.locator('.tt-notes-head')
+    for (let i = 0; i < 11; i++) {
+      await note(page, i).hover()
+      const card = openTip(page).locator('.tt-tip-card')
+      await expect(card, `note ${i}`).toBeVisible()
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+      const [c, n, h] = [await docBox(card), await docBox(note(page, i)), await docBox(head)]
+      expect(c.y, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(n.y + n.h - 2)
+      expect(overlap(c, h), `note ${i}: the card meets the notes header`).toBe(false)
+      expect(openTip(page), `note ${i}: no flip above when there is room below`).not.toHaveClass(/tt-tip--above/)
+    }
+  })
+
   test('Escape closes a tooltip that hover opened', async ({ page }) => {
     await openTint(page, 'someone who wants the tooltip out of the way')
     await note(page, 3).hover()
@@ -424,12 +445,13 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
   test('each note carries its best-grade word, the better of its white and black ratios', async ({ page }) => {
     await openTint(page, 'someone scanning the notes for the safe tints')
     const words = async () => page.locator('.tt-note-best').allTextContents()
-    const want = (list) => list.map((h) => bestWord(bestRatio(h)))
+    const want = (list) => list.map((h) => bestWord(h))
 
     expect(await words()).toEqual(want(BLUE_EVEN_11))
-    // POSITIVE CONTROL: the default ramp shows both words, so a word stuck on
+    // POSITIVE CONTROL: the default ramp shows all four words, so a word stuck on
     // one value could not pass.
-    expect(new Set(want(BLUE_EVEN_11)).size, 'the default ramp holds both AAA and AA').toBe(2)
+    expect(new Set(want(BLUE_EVEN_11)), 'the default ramp holds White and Black, AAA and AA').toEqual(new Set(['White AAA', 'White AA', 'Black AAA', 'Black AA']))
+    for (const w of await words()) expect(w).toMatch(/^(White|Black) (AAA|AA)$/)
 
     // Other ramps, read back from the swatches on screen and graded here.
     await page.getByRole('slider', { name: 'Lightness', exact: true }).focus()
@@ -563,6 +585,21 @@ test.describe('the contrast tooltip on a phone', () => {
     await expect(page.locator('.tt-tip--inline')).toHaveCount(0)
     await expect(note(page, 8)).toBeFocused()
     await expect(openTip(page)).toHaveCount(0)
+  })
+
+  test('the pinned card scrolls into view with its buttons 16px above the tab bar', async ({ page }) => {
+    await open390(page)
+    const tabs = page.locator('.pnav-tabs')
+    await expect(tabs, 'the phone tab bar is on screen').toBeVisible()
+    for (const i of [6, 8, 10]) {
+      await note(page, i).tap()
+      await expect(page.locator('.tt-tip-copy')).toBeVisible()
+      await expect.poll(async () => {
+        const [b, t] = [await page.locator('.tt-tip-actions').boundingBox(), await tabs.boundingBox()]
+        return Math.round(t.y - (b.y + b.height))
+      }, { message: `note ${i}: the buttons end at least 16px above the tab bar` }).toBeGreaterThanOrEqual(16)
+      await page.keyboard.press('Escape')
+    }
   })
 
   test('the Copy and Close buttons are 44px targets', async ({ page }) => {
@@ -734,6 +771,10 @@ for (const width of [390, 768]) {
       // starts at the note's bottom edge, and overlaps none of the things above.
       const cardBox = await docBox(card)
       const wrapAfter = await docBox(page.locator('.tt-note-wrap').nth(6))
+      if (width >= 768) {
+        const list = await docBox(page.locator('.tt-notes-list'))
+        expect(wrapAfter.w, 'a pinned wrap spans the whole row on a wide touch screen').toBeGreaterThanOrEqual(list.w - 1)
+      }
       expect(wrapAfter.h, 'the cell grew to hold the card').toBeGreaterThanOrEqual(wrapBefore.h + cardBox.h - 1)
       expect(cardBox.y, 'the card starts at or below the note').toBeGreaterThanOrEqual(noteBefore.y + noteBefore.h - 1)
       for (const [what, box] of Object.entries(before)) {
@@ -762,7 +803,7 @@ test.describe('the hint above the notes, for a mouse', () => {
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'POSITIVE CONTROL: a fine pointer').toBe(false)
     await expect(page.locator('.tt-hint-fine')).toBeVisible()
     await expect(page.locator('.tt-hint-coarse')).toBeHidden()
-    await expect(page.locator('.tt-notes-hint')).toHaveText('Hover over a tint to see its contrast', { useInnerText: true })
+    await expect(page.locator('.tt-notes-hint')).toHaveText('Hover a tint for its contrast. Click to copy.', { useInnerText: true })
   })
 })
 
@@ -845,6 +886,7 @@ for (const theme of ['light', 'dark']) {
       expect(read.words.length).toBe(11)
       for (const w of read.words) {
         const colour = await rgb(w.color)
+        expect(colour, `the "${w.text}" word is in --ok-strong`).toEqual(tokens.ok)
         expect(ratioRgb(colour, panelBg), `the "${w.text}" word on the notes panel (${theme})`).toBeGreaterThanOrEqual(4.5)
       }
     } finally {
