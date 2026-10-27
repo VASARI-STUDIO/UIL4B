@@ -325,10 +325,17 @@ test.describe('colour picker', () => {
   // gradient opens one of these per stop, and before this they were identical.
   test('the panel names the colour it is editing', async ({ page }) => {
     await go(page, ROUTE)
-    // The rebuilt gradient edits the SELECTED stop with one
-    // picker, so choose stop 2 first; the panel must then say so.
+    // Every stop row has its own swatch, and the swatch opens that stop's picker.
+    await page.getByRole('button', { name: 'Pick stop 2 colour', exact: true }).click()
+    await expect(page.locator(PANEL)).toBeVisible()
+    await expect(page.locator('.cpk-head-name')).toHaveText('Pick stop 2 colour')
+    await page.keyboard.press('Escape')
+    await expect(page.locator(PANEL)).toBeHidden()
+
+    // The Selected stop section edits the SELECTED stop with one picker, so
+    // choose stop 2 first; that panel must then say so too.
     await page.getByRole('button', { name: /^Select stop 2,/ }).click()
-    await page.locator(TRIGGER).first().click()
+    await page.locator('.grd-pick-swatch .cpk-trigger').click()
     await expect(page.locator(PANEL)).toBeVisible()
     await expect(page.locator('.cpk-head-name')).toHaveText('Stop 2 colour')
   })

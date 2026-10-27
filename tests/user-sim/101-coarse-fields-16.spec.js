@@ -15,8 +15,9 @@ import { go, signIn } from './helpers.js'
 // can mount a moment later (the icon library's search arrives with its toolbar),
 // and a walk that measures at that instant sees one field fewer and fails the
 // blind-walk floor below while the page is fine. A route with 0 has no field on
-// a touch screen, so there is nothing to wait for.
-const ROUTES = [['/projects', 0], ['/create/palette', 0], ['/create/gradient', 1], ['/create/type-scale', 1],
+// a touch screen, so there is nothing to wait for. /create/gradient has two: the
+// selected stop's hex field and the angle wheel's number field.
+const ROUTES = [['/projects', 0], ['/create/palette', 0], ['/create/gradient', 2], ['/create/type-scale', 1],
   ['/create/tint', 1], ['/create/icons', 1], ['/create/font-gallery', 2], ['/discover/palettes', 1],
   ['/discover/prompts', 1], ['/feedback', 2], ['/create/alt-text', 1], ['/settings', 0]]
 const TEXTLIKE = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])'

@@ -507,6 +507,28 @@ test.describe('the gradient stop row under a thumb', () => {
     expect(read.boxes.filter((b) => b.w < 44 || b.h < 44), 'stop controls under 44px').toEqual([])
     await ctx.close()
   })
+
+  // The angle wheel, its number field, the Tints button and the Explore button
+  // are new targets on the same page: each takes a real 44px under a coarse
+  // pointer, and the field is 16px so iOS does not zoom when it is focused.
+  test('the angle wheel, angle field, Tints button and Explore button are 44px on a phone', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 390)
+    await go(page, '/create/gradient')
+    await expect(page.locator('.grd-stop')).toHaveCount(3)
+    const read = await page.evaluate(() => ({
+      coarse: matchMedia('(pointer: coarse)').matches,
+      boxes: ['.grd-wheel', '.grd-angle-input', '.grd-tints-btn', '.grd-explore-cta'].map((sel) => {
+        const el = document.querySelector(sel)
+        const b = el?.getBoundingClientRect()
+        return { sel, found: !!el, w: Math.round(b?.width ?? 0), h: Math.round(b?.height ?? 0), font: el ? parseFloat(getComputedStyle(el).fontSize) : 0 }
+      }),
+    }))
+    expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
+    expect(read.boxes.filter((b) => !b.found), 'every target must exist on the page').toEqual([])
+    expect(read.boxes.filter((b) => b.w < 44 || b.h < 44), 'targets under 44px').toEqual([])
+    expect(read.boxes.find((b) => b.sel === '.grd-angle-input').font, 'the angle field must be 16px or more').toBeGreaterThanOrEqual(16)
+    await ctx.close()
+  })
 })
 
 // Each palette column's name, hex and role sit centred on the column, so the

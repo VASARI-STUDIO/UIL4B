@@ -532,3 +532,44 @@ test('/create/gradient · the inspector’s Copy link does not fade to 3.6:1 on 
   expect(m.text).toMatch(/copy/i)
   expect(m.ratio, `hovered Copy: rgb(${m.ink}) on rgb(${m.bg})`).toBeGreaterThanOrEqual(4.5)
 })
+
+test('/create/gradient · the preset grid, Explore panel and angle wheel stay inside the page at every width', async ({ browser }) => {
+  // The preset section is a wrapping grid and the Explore panel two columns that
+  // stack under 768px; the wheel row (dial, number field, lock) must share a
+  // 320px column. None may push the page sideways or sit past its own box.
+  //
+  // MUTATION: give .grd-explore-taste `grid-template-columns: repeat(3, 200px)`
+  // or .grd-preset-grid `grid-template-columns: repeat(6, 200px)` — the narrow
+  // widths report the section wider than the page.
+  test.setTimeout(90_000)
+  const failures = []
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    const { ctx, page } = await at(browser, width)
+    watch(page, `a designer on /create/gradient at ${width}px`)
+    await go(page, '/create/gradient')
+    await expect(page.locator('.grd-preset-grid')).toBeVisible()
+    await settle(page)
+    const m = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth
+      const past = (sel) => [...document.querySelectorAll(sel)]
+        .map((el) => ({ sel, right: Math.round(el.getBoundingClientRect().right), left: Math.round(el.getBoundingClientRect().left) }))
+        .filter((b) => b.right > vw + 1 || b.left < -1)
+      return {
+        vw,
+        scroll: document.documentElement.scrollWidth,
+        tiles: document.querySelectorAll('.grd-preset').length,
+        explore: document.querySelectorAll('.grd-explore').length,
+        wheel: document.querySelectorAll('.grd-wheel').length,
+        gridScrolls: (() => { const g = document.querySelector('.grd-preset-grid'); return g.scrollWidth - g.clientWidth })(),
+        outside: [...past('.grd-preset'), ...past('.grd-explore'), ...past('.grd-explore-chip'), ...past('.grd-wheel'), ...past('.grd-angle-input')],
+      }
+    })
+    await ctx.close()
+    // POSITIVE CONTROL: the pieces were really measured.
+    if (m.tiles < 8 || m.explore !== 1 || m.wheel !== 1) failures.push(`${width}px: measured ${m.tiles} presets, ${m.explore} explore panel(s), ${m.wheel} wheel(s)`)
+    if (m.scroll > m.vw) failures.push(`${width}px: the page scrolls sideways (${m.scroll} > ${m.vw})`)
+    if (m.gridScrolls > 0) failures.push(`${width}px: the preset grid scrolls by ${m.gridScrolls}px`)
+    for (const o of m.outside) failures.push(`${width}px: ${o.sel} spans ${o.left}-${o.right} of ${m.vw}`)
+  }
+  expect(failures, `gradient page overflow:\n  ${failures.join('\n  ')}`).toEqual([])
+})

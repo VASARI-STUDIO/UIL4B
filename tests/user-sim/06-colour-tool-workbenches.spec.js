@@ -19,13 +19,15 @@ test.describe('Gradient Generator workbench resilience', () => {
       await expect(panel.getByRole('group', { name, exact: true })).toBeVisible()
     }
 
+    // The first-visit gradient is the first curated preset, Indigo Night.
+    const FIRST_STOP = '#0A0F2C'
     const firstHex = page.getByRole('textbox', { name: 'Stop 1 hex' })
-    await expect(firstHex).toHaveValue('#7C3AED')
+    await expect(firstHex).toHaveValue(FIRST_STOP)
     await firstHex.fill('#NOTHEX')
     await expect(firstHex).toHaveAttribute('aria-invalid', 'true')
     await expect(page.getByText('Use a 6-digit hex')).toBeVisible()
     await firstHex.press('Enter')
-    await expect(firstHex).toHaveValue('#7C3AED')
+    await expect(firstHex).toHaveValue(FIRST_STOP)
 
     const position = page.getByRole('slider', { name: 'Stop position' })
     await expect(position).toHaveValue('0')
@@ -120,7 +122,10 @@ test.describe('Gradient Generator workbench resilience', () => {
     const start = page.getByRole('region', { name: 'Start from a preset' })
     await expect(start).toBeVisible()
     await expect(start.locator('.grd-preset').first()).toBeVisible()
-    expect(await start.locator('.grd-preset').count()).toBeGreaterThanOrEqual(16)
+    // Eleven curated presets (the unit test holds the set to 8-12), plus a tile per saved palette.
+    const presetCount = await start.locator('.grd-preset').count()
+    expect(presetCount).toBeGreaterThanOrEqual(8)
+    expect(presetCount).toBeLessThanOrEqual(12)
     await expect(start.getByRole('link', { name: /Gradient Library/ })).toBeVisible()
 
     const numbered = await page.locator('.grd').evaluate((root) =>

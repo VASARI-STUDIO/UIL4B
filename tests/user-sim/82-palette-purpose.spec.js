@@ -232,7 +232,7 @@ test('the five sibling colour tools still name their regions by their own headin
   // the drawn screen has a titled section. Entries are `role:name`.
   const expected = {
     '/create/tint': ['complementary:Tint controls'],
-    '/create/gradient': ['region:Start from a preset', 'complementary:Gradient controls'],
+    '/create/gradient': ['region:Start from a preset', 'region:Explore the library', 'complementary:Gradient controls'],
     '/create/semantic-color': ['region:Ramps', 'region:See each role do its job', 'region:Token names you can predict'],
   }
   for (const [route, names] of Object.entries(expected)) {

@@ -287,3 +287,47 @@ test.describe('Gradient Generator · submit for review', () => {
     await expect.poll(() => page.evaluate(() => localStorage.getItem('vs-gradient-submissions'))).toBeNull()
   })
 })
+
+/* ── 6 · Stop swatches pick, rail handles open the tints menu ─────────────────
+ * The swatch in each stop row is a colour-picker trigger for THAT stop (it used
+ * to need the stop selected first), and a right-click on a stop, in the list or
+ * on the rail, is a menu gesture, not the start of a drag and not an "add a
+ * stop" press. The "Select stop N, #HEX" buttons keep their names. */
+
+test.describe('Gradient Generator · stop swatches and right-click', () => {
+  const selectBtn = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #[0-9A-F]{6}$`) })
+
+  test('a stop row swatch opens that stop\u2019s picker and changes only that stop', async ({ page }) => {
+    watch(page, 'designer recolouring the middle stop')
+    await go(page, '/create/gradient')
+    const before = []
+    for (let i = 0; i < 3; i++) before.push(await selectBtn(page, i + 1).getAttribute('aria-label'))
+
+    await page.getByRole('button', { name: 'Pick stop 2 colour', exact: true }).click()
+    await expect(page.locator('.cpk-pop')).toBeVisible()
+    await page.locator('.cpk-hex').fill('#FF0000')
+    await page.locator('.cpk-hex').press('Enter')
+
+    await expect(selectBtn(page, 2)).toHaveAccessibleName('Select stop 2, #FF0000')
+    expect(await selectBtn(page, 1).getAttribute('aria-label'), 'stop 1 untouched').toBe(before[0])
+    expect(await selectBtn(page, 3).getAttribute('aria-label'), 'stop 3 untouched').toBe(before[2])
+    // Opening a stop's own picker also selects it.
+    await expect(selectBtn(page, 2)).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('a right-click on a rail handle opens the tints menu, adds no stop and moves none', async ({ page }) => {
+    watch(page, 'designer right-clicking a stop on the rail')
+    await go(page, '/create/gradient')
+    const handles = page.locator('.grd-handle')
+    await expect(handles).toHaveCount(3)
+    const handle = page.getByRole('button', { name: /^Gradient stop 2 at \d+%/ })
+    const labelBefore = await handle.getAttribute('aria-label')
+    await handle.scrollIntoViewIfNeeded()
+
+    await handle.click({ button: 'right' })
+    await expect(page.getByRole('menu', { name: /^Tints of stop 2,/ })).toBeVisible()
+    await expect(handles, 'a right-click is not an add-a-stop press').toHaveCount(3)
+    await expect(handle, 'a right-click is not a drag').toHaveAttribute('aria-label', labelBefore)
+    await expect(page.locator('.grd-count')).toHaveText('3 stops')
+  })
+})
