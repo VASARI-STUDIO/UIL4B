@@ -21,6 +21,8 @@
   max-height: var(--plb-menu-max-height);
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* keep a scrolled-to item clear of the fade below */
+  scroll-padding-block-end: var(--s-4);
 }
 .plb .plb-ctx[data-scroll-more="true"] {
   -webkit-mask-image: linear-gradient(to bottom, var(--t0) calc(100% - var(--s-4)), transparent);
@@ -405,6 +407,11 @@
   .plb .plb-swappop { top: calc(100% + 4px); }
   .plb .plb-ramp { display: none; }
   .plb .plb-col-body { flex: 1; min-width: 0; gap: 4px; order: 1; }
+  /* Room for two lines of name, always. A two-word name that does not fit the
+     narrow body wraps, and which colours are on the board is random per load, so
+     without the reserve a row was 19px taller on some loads. The name sits on the
+     hex, as a one-line name always did. */
+  .plb .plb-name { display: grid; align-content: end; min-height: 2.4em; }
   .plb .plb-aa { margin-top: 0; order: 2; align-self: center; }
   .plb .plb-tool--more { opacity: 1; }
   .plb .plb-gap { display: none; }
