@@ -199,7 +199,7 @@
 .cc .cc-check {
   display: grid;
   /* Fixed tracks, so the needs and the Pass/Fail words line up row to row. */
-  grid-template-columns: 16px minmax(0, 1fr) 40px 30px;
+  grid-template-columns: 16px minmax(0, 1fr) 3.4em 2.5em;
   align-items: center;
   gap: var(--s-2);
 }
