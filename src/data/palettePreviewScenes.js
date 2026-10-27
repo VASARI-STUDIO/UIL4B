@@ -24,6 +24,7 @@ export const PREVIEW_GROUPS = [
 // chunks. The list is in group order, because the arrow keys walk it.
 export const PREVIEW_SCENES = [
   { id: 'energy', name: 'Energy dashboard', group: 'product', free: true, example: true },
+  { id: 'trail', name: 'Trail run app', group: 'product', free: true, example: true },
   { id: 'dashboard', name: 'Dashboard', group: 'product', free: true },
   { id: 'phone', name: 'Phone app', group: 'product', free: true },
   { id: 'editorial', name: 'Editorial hero', group: 'marketing', free: true, example: true },

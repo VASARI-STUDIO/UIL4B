@@ -18,6 +18,7 @@ const LOADERS = {
   editorial: () => import('./SlackWater.jsx'),
   energy: () => import('./Sundial.jsx'),
   product: () => import('./OrraWorkroom.jsx'),
+  trail: () => import('./Ridgeline.jsx'),
 }
 
 export const hasExample = (id) => Object.hasOwn(LOADERS, id)
