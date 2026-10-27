@@ -113,13 +113,16 @@
   .aw--page[data-motion="false"] .aw-cols{position:relative;inset:auto;padding-block:32px 96px}
   .aw--page[data-motion="false"] .aw-col{height:auto;overflow:visible}
   .aw--page[data-motion="false"] .aw-col .aw-track{margin-top:0}
+  /* With the wall taller than the screen, the form stays in view beside it. */
+  .auth-page:has(.aw--page[data-motion="false"]) .auth-page-form{position:sticky;top:0;align-self:start;height:calc(100dvh - 64px)}
   .aw--page[data-run="true"] .aw-set--copy{display:flex}
   .aw--page[data-run="true"] .aw-track{animation:auth-drift-up var(--drift-dur,60s) linear infinite;will-change:transform}
   .aw--page[data-run="true"] .aw-col[data-up="false"] .aw-track{animation-name:auth-drift-down}
   .aw--page[data-motion="true"] .aw-col{animation:auth-settle 600ms var(--ease-entrance) both;animation-delay:calc(var(--i) * 100ms)}
 
   .aw-line-note{display:block;position:absolute;z-index:2;left:24px;bottom:24px;max-width:calc(100% - 200px);margin:0;padding:8px 14px;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-0);font-size:13px;line-height:1.4;color:var(--t1)}
-  .aw-pause{right:24px;bottom:24px;width:auto;height:36px;min-height:36px;padding:0 14px;border-radius:var(--btn-radius)}
+  /* Top right: the feedback button sits over the bottom-right corner. */
+  .aw-pause{top:24px;right:24px;bottom:auto;width:auto;height:36px;min-height:36px;padding:0 14px;border-radius:var(--btn-radius)}
   .aw-pause-text{position:static;width:auto;height:auto;overflow:visible;clip:auto}
 }
 @media(min-width:1680px){

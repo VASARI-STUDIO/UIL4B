@@ -58,7 +58,7 @@ const Spinner = () => <span className="auth-spin" aria-hidden="true" />
 
 export default function AuthForm({
   mode, onModeChange, initialEmail = '', lockEmail = false, onSuccess,
-  headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange,
+  headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange, showLoginSub = false,
 }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
@@ -168,7 +168,7 @@ export default function AuthForm({
     : mode === 'sent' ? fill(t('auth.sentSub'), { email: strong(email) })
       : mode === 'switch' ? fill(t('auth.switchSub'), { email: strong(email) })
         : interrupt ? fill(t(mode === 'signup' ? 'auth.interruptSignUp' : 'auth.interruptLogIn'), { reason: strong(reason) })
-          : mode === 'signup' ? t('auth.signUpSub') : null
+          : mode === 'signup' ? t('auth.signUpSub') : showLoginSub ? t('auth.logInSub') : null
 
   const whyList = isEntry && Array.isArray(reasons) ? reasons.filter((r) => typeof r === 'string' && r.trim()) : []
   const unlockList = interrupt && free && !whyList.length && Array.isArray(unlocks)

@@ -447,6 +447,7 @@
   "auth": {
     "logInTitle": "Log in to UIL4B",
     "logInContinue": "Log in to continue",
+    "logInSub": "Your projects, palettes and kits are where you left them.",
     "createAccount": "Create your free account",
     "resetTitle": "Reset your password",
     "sentTitle": "Check your email",
