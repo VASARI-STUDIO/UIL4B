@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -94,6 +94,7 @@ function mixHex(a, b, t = 0.5) {
 const DEFAULT_ANGLE = PRESETS[0].angle
 const DEFAULT_STOPS = () => PRESETS[0].stops.map(s => ({ ...s }))
 const MAX_STOPS = 12
+const MIN_STOPS = 2
 
 // Palette colours → evenly spread stops. Same shape the "Import colours" path
 // builds, so a palette carried in from the Palette Builder lands identically to
@@ -913,6 +914,34 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     handleEls.current.get(idx)?.focus({ preventScroll: true })
   }, [stops.length])
 
+  // The stop list is a fixed window that scrolls inside itself, so the panel
+  // (and the page) is the same height at 2 stops and at 12. `stopScroll` says
+  // which edges have more rows past them; the CSS draws a hairline there.
+  const stopListRef = useRef(null)
+  const [stopScroll, setStopScroll] = useState({ above: false, below: false })
+  const syncStopScroll = useCallback(() => {
+    const el = stopListRef.current
+    if (!el) return
+    const above = el.scrollTop > 0
+    const below = el.scrollTop + el.clientHeight < el.scrollHeight - 1
+    setStopScroll((prev) => (prev.above === above && prev.below === below ? prev : { above, below }))
+  }, [])
+  useLayoutEffect(() => { syncStopScroll() }, [stops.length, syncStopScroll])
+  // Bring the active stop's row into the window (a stop just added, or one picked
+  // on the rail) by scrolling the window alone: scrollIntoView would also move
+  // the page. Instant under reduced motion.
+  useEffect(() => {
+    const win = stopListRef.current
+    const row = win?.children[activeStop]
+    if (!row) return
+    const top = row.offsetTop
+    const bottom = top + row.offsetHeight
+    let next = win.scrollTop
+    if (top < next) next = top
+    else if (bottom > next + win.clientHeight) next = bottom - win.clientHeight
+    if (next !== win.scrollTop) win.scrollTo({ top: next, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [activeStop, stops.length])
+
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
   const selected = stops[activeStop] || stops[0]
   // The rail reads the stops left to right, so it is always a 90deg ramp in the
@@ -1021,20 +1050,25 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               <span>Gallery gradient — free to preview &amp; copy. Editing it is a Pro tool; Reset or Random to start a free, editable one.</span>
             </p>
           )}
-          {/* A live region that is always mounted: one inserted already full
-              is often not announced. */}
-          <div className="grd-live" role="status">
-            {showPaletteMissing && (
-              <div className="grd-note grd-note--palette" ref={paletteNoteRef} tabIndex={-1}>
-                <span>{paletteHexes.length === 1 ? 'Needs a palette with two or more colours.' : 'No palette yet.'}</span>
-                <ToolButton as={Link} to="/create/palette" icon="swatches" className="grd-note-link">
-                  {paletteHexes.length === 1 ? 'Add colours in Palette Builder' : 'Make one in Palette Builder'}
-                </ToolButton>
-                <ToolButton variant="square" icon="x" iconSize={14} onClick={dismissPaletteNote} aria-label="Dismiss" title="Dismiss" className="grd-note-x" />
-              </div>
-            )}
+          {/* The stage is the canvas's fixed slot. The palette note lays over
+              the canvas's foot instead of pushing it down, so showing or
+              hiding it never changes the page's height. */}
+          <div className="grd-stage">
+            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
+            {/* A live region that is always mounted: one inserted already full
+                is often not announced. */}
+            <div className="grd-live" role="status">
+              {showPaletteMissing && (
+                <div className="grd-note grd-note--palette" ref={paletteNoteRef} tabIndex={-1}>
+                  <span>{paletteHexes.length === 1 ? 'Needs a palette with two or more colours.' : 'No palette yet.'}</span>
+                  <ToolButton as={Link} to="/create/palette" icon="swatches" className="grd-note-link">
+                    {paletteHexes.length === 1 ? 'Add colours in Palette Builder' : 'Make one in Palette Builder'}
+                  </ToolButton>
+                  <ToolButton variant="square" icon="x" iconSize={14} onClick={dismissPaletteNote} aria-label="Dismiss" title="Dismiss" className="grd-note-x" />
+                </div>
+              )}
+            </div>
           </div>
-          <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
               keep dragging to place it; drag or arrow a handle to move it
@@ -1120,6 +1154,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </span>
             )}
           >
+            <div
+              ref={stopListRef}
+              className={`grd-stops${stopScroll.above ? ' is-above' : ''}${stopScroll.below ? ' is-below' : ''}`}
+              role="group"
+              aria-label="Stop list"
+              onScroll={syncStopScroll}
+            >
             {stops.map((s, i) => (
               <div
                 key={i}
@@ -1135,6 +1176,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     ariaLabel={`Pick stop ${i + 1} colour`}
                     triggerClassName="grd-stop-swatch"
                     triggerChildren={<span className="grd-stop-chip" style={{ background: s.color }} aria-hidden="true" />}
+                    popClassName="grd-cpk-pop"
                     disabled={editLocked}
                     onDisabledClick={guardEdit}
                     portal
@@ -1156,18 +1198,24 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   className="grd-stop-lock"
                   label={s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
                 />
-                {stops.length > 2 && (
-                  <button type="button" className="grd-iconbtn grd-stop-x" onClick={() => removeStop(i)} aria-label={`Remove stop ${i + 1}`} title="Remove this stop">
-                    <ToolIcon name="x" size={12} />
-                  </button>
-                )}
+                {/* Always drawn, so the row keeps its columns; it only works
+                    while there are more than two stops. */}
+                <button
+                  type="button"
+                  className="grd-iconbtn grd-stop-x"
+                  onClick={() => removeStop(i)}
+                  disabled={stops.length <= MIN_STOPS}
+                  aria-label={`Remove stop ${i + 1}`}
+                  title={stops.length <= MIN_STOPS ? 'A gradient needs at least two stops' : 'Remove this stop'}
+                >
+                  <ToolIcon name="x" size={12} />
+                </button>
               </div>
             ))}
-            {stops.length < MAX_STOPS && (
-              <ToolButton variant="dashed" icon="plus" iconSize={13} className="grd-add" onClick={addStop}>
-                Add a stop
-              </ToolButton>
-            )}
+            </div>
+            <ToolButton variant="dashed" icon="plus" iconSize={13} className="grd-add" onClick={addStop} disabled={stops.length >= MAX_STOPS}>
+              {stops.length >= MAX_STOPS ? `${MAX_STOPS} stops is the most` : 'Add a stop'}
+            </ToolButton>
           </ToolSection>
 
           <ToolSection label="Selected stop">
@@ -1195,6 +1243,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     value={selected.color}
                     onChange={(hex) => updateStop(activeStop, { color: hex.toUpperCase() })}
                     ariaLabel={`Stop ${activeStop + 1} colour`}
+                    popClassName="grd-cpk-pop"
                     disabled={editLocked}
                     onDisabledClick={guardEdit}
                   />
@@ -1249,8 +1298,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               />
               <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked, unlock to randomise it' : 'Lock type when randomising'} />
             </div>
-            {angleActive && (
-              <div className="grd-row">
+            {/* The row is always drawn, at the wheel's height; a radial gradient
+                says it has no angle in the same space instead of removing it. */}
+            <div className="grd-row grd-row--angle">
+              {angleActive ? (
                 <AngleWheel
                   label="Angle"
                   ariaLabel="Gradient angle"
@@ -1260,13 +1311,23 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   locked={editLocked}
                   onLockedPress={guardEdit}
                 />
-                <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked, unlock to randomise it' : 'Lock angle when randomising'} />
-              </div>
-            )}
+              ) : (
+                <p className="grd-angle-none">Radial gradients have no angle</p>
+              )}
+              <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked, unlock to randomise it' : 'Lock angle when randomising'} />
+            </div>
             <div className="grd-interp">
               <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
               <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={setSpace} />
-              <p className="grd-interp-hint" id="grd-interp-hint">{SPACES.find((o) => o.value === space)?.hint}</p>
+              {/* Both hints sit in one grid cell, the idle one hidden, so the
+                  cell is as tall as the longer hint whichever is showing. */}
+              <div className="grd-interp-hints">
+                {SPACES.map((o) => (
+                  o.value === space
+                    ? <p key={o.value} className="grd-interp-hint" id="grd-interp-hint">{o.hint}</p>
+                    : <p key={o.value} className="grd-interp-hint is-idle" aria-hidden="true">{o.hint}</p>
+                ))}
+              </div>
             </div>
           </ToolSection>
         </ToolPanel>
