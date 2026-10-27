@@ -23,6 +23,7 @@
 //      drawn under a label's plate)
 //   7c. tracing a colour leaves no outline on a drawn (SVG) part
 //   7d. Orra's colourway names fit under their swatches at 1440, 768 and 390
+//   7e. Orra's shirt stays inside its stage and off the buy column at 1440, 768, 390
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //
 // HOW GROUND IS FOUND (7). Not by walking ancestors: a label that sits on a
@@ -617,6 +618,40 @@ test.describe('the Orra colourway names', () => {
           expect(l.inside, `${theme}: "${l.text}" sticks out of its swatch column`).toBe(true)
         }
       }
+    })
+  }
+})
+
+// ── 7e. Orra's shirt stays inside its stage ──────────────────────────────────
+// The contrast walk measures text on what is painted over it, so a shirt drawn over
+// the price and description at 768 could still pass. Compare the boxes instead:
+// the front view's drawing must sit inside the stage's box, and the buy column
+// must not start above the stage's bottom edge when the two are stacked.
+
+test.describe('the Orra product stage', () => {
+  for (const width of [1440, 768, 390]) {
+    test(`the shirt stays inside its stage and off the buy column at ${width}px`, async ({ page }) => {
+      watch(page, `designer reading the Orra product page at ${width}px`)
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
+      await seed(page, PALETTES.mid)
+      const dialog = await openDialog(page)
+      await pickScene(dialog, 'Product page')
+      await settle(page)
+      const b = await page.evaluate(() => {
+        const r = (el) => { const x = el.getBoundingClientRect(); return { l: x.left, r: x.right, t: x.top, b: x.bottom } }
+        const stage = document.querySelector('.or-stage')
+        const shirt = document.querySelector('.or-figure .or-garment')
+        const buy = document.querySelector('.or-buy')
+        return stage && shirt && buy ? { stage: r(stage), shirt: r(shirt), buy: r(buy) } : null
+      })
+      expect(b, 'the stage, its shirt and the buy column were found').toBeTruthy()
+      const slack = 1
+      expect(b.shirt.l, 'shirt past the stage\'s left edge').toBeGreaterThanOrEqual(b.stage.l - slack)
+      expect(b.shirt.r, 'shirt past the stage\'s right edge').toBeLessThanOrEqual(b.stage.r + slack)
+      expect(b.shirt.t, 'shirt above the stage').toBeGreaterThanOrEqual(b.stage.t - slack)
+      expect(b.shirt.b, 'shirt below the stage').toBeLessThanOrEqual(b.stage.b + slack)
+      const side = b.shirt.l < b.buy.r && b.shirt.r > b.buy.l && b.shirt.t < b.buy.b && b.shirt.b > b.buy.t
+      expect(side, 'the shirt overlaps the buy column').toBe(false)
     })
   }
 })
