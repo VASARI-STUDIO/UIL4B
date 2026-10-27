@@ -165,13 +165,31 @@ export function buildGuidelinesPreviewPages(design, { projectName = 'Design Syst
 
 // ── Drawing ─────────────────────────────────────────────────────────────────
 
-const withTimeout = (promise, ms) => Promise.race([promise, new Promise((resolve) => setTimeout(resolve, ms))])
+// How long a draw waits for the system's faces before it draws in the fallback.
+const FONT_WAIT_MS = 800
 
-/** Wait briefly for the system's own faces, so a preview is set in them. */
+/**
+ * Wait briefly for the system's own faces, so a preview is set in them. Resolves
+ * `{ settled, ready }`: `settled` is false when the wait ran out with a face still
+ * downloading, and `ready` resolves when every face has finished (loaded or failed).
+ * Besides the heading and body weights it asks for the ones the templates draw with:
+ * regular for the chrome labels, and 600 (Poster) and 700 (Grid) in the body face.
+ */
 async function settleFonts(d) {
-  if (typeof document === 'undefined' || !document.fonts?.load) return
-  const faces = [...new Set([font(d.headingWeight, 24, d.heading), font(d.bodyWeight, 16, d.body)])]
-  try { await withTimeout(Promise.all(faces.map((f) => document.fonts.load(f))), 800) } catch { /* the fallback face still draws */ }
+  if (typeof document === 'undefined' || !document.fonts?.load) return { settled: true, ready: Promise.resolve() }
+  const faces = [...new Set([
+    font(d.headingWeight, 24, d.heading), font(400, 24, d.heading),
+    font(d.bodyWeight, 16, d.body), font(400, 16, d.body), font(600, 16, d.body), font(700, 16, d.body),
+  ])]
+  // A face that fails to load will never arrive, so a failure counts as finished.
+  const ready = Promise.all(faces.map((f) => Promise.resolve(document.fonts.load(f)).catch(() => null))).then(() => {})
+  let timer
+  const settled = await Promise.race([
+    ready.then(() => true),
+    new Promise((resolve) => { timer = setTimeout(() => resolve(false), FONT_WAIT_MS) }),
+  ])
+  clearTimeout(timer)
+  return { settled, ready }
 }
 
 function loadImage(src) {
@@ -270,11 +288,13 @@ const encode = (canvas) => new Promise((resolve, reject) => {
  * cover and the next two pages are drawn in that layout from the same design, and an
  * id that is not a live template of the row draws the default. With `blurred` the
  * blur is baked into the pixels. Resolves `[{ id, title, blob, width, height }]` in
- * page order.
+ * page order. When the faces had not all arrived in time the array also carries
+ * `stale: true` and `fontsReady` (a promise): those pages are drawn in a fallback face
+ * and should not be cached.
  */
 export async function renderProPreviews(design, kind, { projectName = 'Design System', blurred = true, template } = {}) {
   const d = readDesign(design)
-  await settleFonts(d)
+  const fonts = await settleFonts(d)
 
   const chosen = previewTemplate(kind, template)
   const size = kind === 'guidelines' ? GUIDELINES_PAGE : BOOK_PAGE
@@ -304,5 +324,7 @@ export async function renderProPreviews(design, kind, { projectName = 'Design Sy
     const final = blurred ? bakeBlur(canvas) : canvas
     out.push({ id: page.id, title: page.title, blob: await encode(final), width: final.width, height: final.height })
   }
+  // Drawn before every face arrived: the caller must not keep these, and can draw again on `fontsReady`.
+  if (!fonts.settled) Object.assign(out, { stale: true, fontsReady: fonts.ready })
   return out
 }

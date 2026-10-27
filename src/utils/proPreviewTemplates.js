@@ -18,8 +18,8 @@ import { colorName } from './paletteNames.js'
 export const NEUTRALS = ['#D9DBE1', '#B4B8C2', '#8B90A0', '#5F5F69', '#111318']
 
 export const font = (weight, size, family) => `${weight} ${size}px ${JSON.stringify(family)}`
-// Generic stacks go in unquoted, so the canvas reads them as keywords.
-const serif = (weight, size) => `${weight} ${size}px Georgia, serif`
+// The heading face, with Georgia only as the fallback if it never arrives. The generic names go in unquoted, so the canvas reads them as keywords.
+const chrome = (weight, size, family) => `${weight} ${size}px ${JSON.stringify(family)}, Georgia, serif`
 const mono = (weight, size) => `${weight} ${size}px ui-monospace, Menlo, Consolas, monospace`
 
 export const colours = (d) => (d.palette.length ? d.palette : NEUTRALS)
@@ -73,6 +73,8 @@ function groundFor(design, size, mmAcross) {
     roles: deriveRoles(palette, { contrast, primary }),
     head: (s) => font(d.headingWeight, s, d.heading),
     body: (w, s) => font(w, s, d.body),
+    // Small labels and folios: the heading face (loaded for the canvas), Georgia only if it never arrives.
+    chrome: (w, s) => chrome(w, s, d.heading),
   }
 }
 
@@ -88,8 +90,8 @@ function monograph(g, { projectName }) {
   const gap = 6 * k
   const wide = text + gap + note
   const paper = { op: 'rect', x: 0, y: 0, w: W, h: H, fill: roles.paper }
-  const runningHead = (label) => ({ op: 'text', text: label, x: inner, y: 12 * k + 6 * pt, font: serif(400, 8 * pt), fill: roles.muted, letterSpacing: 0.4 })
-  const folio = (n) => ({ op: 'text', text: String(n), x: inner + text, y: H - 12 * k, font: serif(400, 8 * pt), fill: roles.muted, align: 'right' })
+  const runningHead = (label) => ({ op: 'text', text: label, x: inner, y: 12 * k + 6 * pt, font: g.chrome(400, 8 * pt), fill: roles.muted, letterSpacing: 0.4 })
+  const folio = (n) => ({ op: 'text', text: String(n), x: inner + text, y: H - 12 * k, font: g.chrome(400, 8 * pt), fill: roles.muted, align: 'right' })
 
   // Cover: the name in the heading face on the paper, a square of the seed colour under it.
   const title = setTitle(projectName, { steps: [40, 32, 26], maxLines: 3, measure: 312 })
@@ -114,9 +116,9 @@ function monograph(g, { projectName }) {
       palette.push({ op: 'rect', x, y, w, h: chipH, fill: s.hex })
       palette.push({ op: 'strokeRect', x, y, w, h: chipH, stroke: roles.rule })
       const ty = y + chipH + 1.6 * k
-      palette.push({ op: 'text', text: KIND_WORD[s.kind].toLowerCase(), x, y: ty + 7, font: serif(400, 7 * pt), fill: roles.muted, letterSpacing: 0.3 })
+      palette.push({ op: 'text', text: KIND_WORD[s.kind].toLowerCase(), x, y: ty + 7, font: g.chrome(400, 7 * pt), fill: roles.muted, letterSpacing: 0.3 })
       palette.push({ op: 'text', text: s.name, x, y: ty + 7 + 12, font: g.head(10.5 * pt), fill: roles.ink, maxWidth: w })
-      palette.push({ op: 'text', text: s.hex, x, y: ty + 7 + 12 + 10, font: serif(400, 8 * pt), fill: roles.ink })
+      palette.push({ op: 'text', text: s.hex, x, y: ty + 7 + 12 + 10, font: g.chrome(400, 8 * pt), fill: roles.ink })
       rowH = Math.max(rowH, chipH + 1.6 * k + 33)
     })
     y += rowH + 4.5 * k
@@ -134,16 +136,16 @@ function monograph(g, { projectName }) {
     ;[100, 80, 60, 40, 20].forEach((pct, t) => {
       const x = inner + t * (tw + gapT)
       ops.push({ op: 'rect', x, y: tintY, w: tw, h: 20 * k, fill: pct === 100 ? s.hex : mixHex(s.hex, roles.paper, pct / 100) })
-      ops.push({ op: 'text', text: `${pct}%`, x, y: tintY + 20 * k + 9, font: serif(400, 7 * pt), fill: roles.muted })
+      ops.push({ op: 'text', text: `${pct}%`, x, y: tintY + 20 * k + 9, font: g.chrome(400, 7 * pt), fill: roles.muted })
     })
     const mx = inner + text + gap
-    ops.push({ op: 'text', text: KIND_WORD[s.kind].toLowerCase(), x: mx, y: top + 8, font: serif(400, 7 * pt), fill: roles.muted, letterSpacing: 0.3 })
+    ops.push({ op: 'text', text: KIND_WORD[s.kind].toLowerCase(), x: mx, y: top + 8, font: g.chrome(400, 7 * pt), fill: roles.muted, letterSpacing: 0.3 })
     ops.push({ op: 'text', text: s.name, x: mx, y: top + 8 + 16, font: g.head(13 * pt), fill: roles.ink, maxWidth: note })
     ;[['Hex', s.hex], ['RGB', rgbOf(s.hex)], ['Ink', `${inkWord(s.ink)}, ${s.ratio}:1`]].forEach(([label, value], r) => {
       const ry = top + 54 + r * 24
       ops.push({ op: 'line', x1: mx, y1: ry, x2: mx + note, y2: ry, stroke: roles.rule })
-      ops.push({ op: 'text', text: label, x: mx, y: ry + 9, font: serif(400, 7 * pt), fill: roles.muted })
-      ops.push({ op: 'text', text: value, x: mx, y: ry + 19, font: serif(400, 8 * pt), fill: roles.ink, maxWidth: note })
+      ops.push({ op: 'text', text: label, x: mx, y: ry + 9, font: g.chrome(400, 7 * pt), fill: roles.muted })
+      ops.push({ op: 'text', text: value, x: mx, y: ry + 19, font: g.chrome(400, 8 * pt), fill: roles.ink, maxWidth: note })
     })
     return ops
   }

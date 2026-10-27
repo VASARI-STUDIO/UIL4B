@@ -44,18 +44,24 @@ export default function ExportProPreview({ kind, template, design, projectName, 
       })
       setResult({ key, pages: withUrls, failed: false })
     }
+    const draw = (again) => import('../utils/proPreviews')
+      .then(({ renderProPreviews }) => renderProPreviews(design, kind, { projectName, blurred, template }))
+      .then((pages) => {
+        if (pages.stale) {
+          // Drawn in a fallback face while the system's faces were still arriving: show it, keep it
+          // out of the cache, and draw once more when the faces are in.
+          if (!again) pages.fontsReady.then(() => { if (live) draw(true).catch(() => {}) })
+        } else {
+          cache.set(key, pages)
+          if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value)
+        }
+        finish(pages)
+      })
     const hit = cache.get(key)
     if (hit) {
       finish(hit)
     } else {
-      import('../utils/proPreviews')
-        .then(({ renderProPreviews }) => renderProPreviews(design, kind, { projectName, blurred, template }))
-        .then((pages) => {
-          cache.set(key, pages)
-          if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value)
-          finish(pages)
-        })
-        .catch(() => { if (live) setResult({ key, pages: [], failed: true }) })
+      draw(false).catch(() => { if (live) setResult({ key, pages: [], failed: true }) })
     }
     return () => {
       live = false
@@ -72,6 +78,12 @@ export default function ExportProPreview({ kind, template, design, projectName, 
 
   return (
     <div className={`exp-preview is-${kind}`}>
+      {/* The strip's heading, above it, so the pictures read as the result of the choice
+          above and not as a second row of tiles. The strip carries the same words as its
+          accessible name, so a screen reader hears them once. */}
+      {ready.failed
+        ? <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>
+        : <p className="exp-preview-caption" aria-hidden="true">{previewCaption(kind, template)}</p>}
       {/* The stage is as wide as the pictures (up to the box), so the Pro chip
           centres over them and not over the empty room beside them. */}
       <div className="exp-preview-stage">
@@ -101,9 +113,6 @@ export default function ExportProPreview({ kind, template, design, projectName, 
         </div>
         {showLock && <span className="exp-preview-lock"><ExportProTag className="exp-preview-tag" /></span>}
       </div>
-      {ready.failed
-        ? <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>
-        : <p className="exp-preview-caption" aria-hidden="true">{previewCaption(kind, template)}</p>}
     </div>
   )
 }
