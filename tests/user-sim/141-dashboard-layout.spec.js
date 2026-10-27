@@ -32,6 +32,7 @@
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
+import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
 
 const SIZES = [
   { name: 'phone', width: 390, height: 844 },
@@ -154,8 +155,8 @@ for (const size of SIZES) {
       expect(await lead.locator('.uh-strip > span').evaluateAll((s) => s.map((x) => getComputedStyle(x).backgroundColor)))
         .toEqual(['rgb(26, 11, 46)', 'rgb(75, 31, 158)', 'rgb(139, 92, 246)', 'rgb(201, 242, 77)', 'rgb(245, 243, 255)'])
       // All four parts done: the next step is the contrast check, and Open goes to the project's page.
-      await expect(lead.getByRole('link', { name: 'Check the contrast for Violet Lime' })).toHaveAttribute('href', '/create/contrast')
-      await expect(lead.getByRole('link', { name: 'Open Violet Lime' })).toHaveAttribute('href', '/projects/p-done')
+      await expect(lead.getByRole('link', { name: 'Check the contrast, Violet Lime' })).toHaveAttribute('href', '/create/contrast')
+      await expect(lead.getByRole('link', { name: 'Open project, Violet Lime' })).toHaveAttribute('href', '/projects/p-done')
     })
 
     test('the lead card names the next step for a project that is part done', async ({ page }) => {
@@ -163,7 +164,7 @@ for (const size of SIZES) {
       await open(page, size, { projects: [half('p-half', 'Harbour Rebrand', ago(3 * 60 * MINUTE))] })
 
       const lead = page.locator('.uh-dash-main > .uh-continue')
-      await expect(lead.getByRole('link', { name: 'Continue Harbour Rebrand: set the type scale' })).toHaveAttribute('href', '/create/type-scale')
+      await expect(lead.getByRole('link', { name: 'Continue: set the type scale, Harbour Rebrand' })).toHaveAttribute('href', '/create/type-scale')
       await expect(lead.locator('.uh-parts > li')).toHaveText(['Colour, done, 4 colours', 'Type, not set', 'Type scale, not set', 'Tints, not set'])
       // One project: the lead alone, no rows.
       await expect(page.locator('.uh-rows')).toHaveCount(0)
@@ -263,7 +264,7 @@ test.describe('the first screen', () => {
   test('at 1440x900 Continue and New project are both above y=600, with one filled button', async ({ page }) => {
     watch(page, 'a designer on a laptop opening their workspace')
     await open(page, SIZES[2])
-    const cont = await page.getByRole('link', { name: 'Check the contrast for Violet Lime' }).evaluate((el) => { const r = el.getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom) } })
+    const cont = await page.getByRole('link', { name: 'Check the contrast, Violet Lime' }).evaluate((el) => { const r = el.getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom) } })
     const newBtn = await page.getByRole('button', { name: 'New project' }).evaluate((el) => Math.round(el.getBoundingClientRect().top))
     expect(cont.top, `Continue starts at y=${cont.top}`).toBeLessThan(600)
     expect(cont.bottom, 'Continue is cut by the fold').toBeLessThanOrEqual(900)
@@ -280,13 +281,13 @@ test.describe('the first screen', () => {
         .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top < innerHeight && getComputedStyle(el).backgroundColor === accent })
         .map((el) => (el.getAttribute('aria-label') || el.innerText).trim())
     })
-    expect(filled, 'more than one filled button on the first screen').toEqual(['Check the contrast for Violet Lime'])
+    expect(filled, 'more than one filled button on the first screen').toEqual(['Check the contrast, Violet Lime'])
   })
 
   test('at 390x844 the Continue button is on the first screen', async ({ page }) => {
     watch(page, 'a designer on a phone reopening a project')
     await open(page, SIZES[0])
-    const bottom = await page.getByRole('link', { name: 'Check the contrast for Violet Lime' }).evaluate((el) => Math.round(el.getBoundingClientRect().bottom))
+    const bottom = await page.getByRole('link', { name: 'Check the contrast, Violet Lime' }).evaluate((el) => Math.round(el.getBoundingClientRect().bottom))
     expect(bottom, 'the first screen does not hold the Continue button').toBeLessThanOrEqual(844)
   })
 })
@@ -324,4 +325,432 @@ test.describe('on a phone', () => {
       await context.close()
     })
   }
+})
+
+// ── The states and compositions the first layout did not have ───────────────────────────────────
+//
+// Archived-only accounts, rows without a Colour part, the row collapse, the locked Discover cards,
+// the phone's date line / New project / four tools, the tablet's one-row Today, and the type floor.
+
+/** Every accent-filled control that starts on the first screen, by the name a person would give it. */
+const filledOnFirstScreen = (page) => page.evaluate(() => {
+  const probe = document.createElement('i')
+  probe.style.background = 'var(--accent)'
+  document.body.append(probe)
+  const accent = getComputedStyle(probe).backgroundColor
+  probe.remove()
+  return [...document.querySelectorAll('.uh a[href], .uh button')]
+    .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top < innerHeight && getComputedStyle(el).backgroundColor === accent })
+    .map((el) => (el.getAttribute('aria-label') || el.innerText).trim())
+})
+
+/** `n` projects, newest first: the first leads, the rest are rows. Parts: Colour only. */
+const many = (n) => Array.from({ length: n }, (_, i) => half(`p-${i + 1}`, `Project ${i + 1}`, ago((i + 1) * 60 * MINUTE)))
+
+const ALL_ARCHIVED = [
+  { ...complete(), archived: true },
+  { ...half('p-old', 'Old Harbour', ago(30 * MINUTE)), archived: true },
+]
+
+/** A project whose Colour part was never set: the default design, nothing else. */
+const bare = () => ({ id: 'p-bare', name: 'Bare Project', design: clone(), createdAt: ago(9 * 864e5), updatedAt: ago(3 * 864e5) })
+
+for (const size of SIZES) {
+  test.describe(`the workspace states at ${size.width}px (${size.name})`, () => {
+    test('when every project is archived the starter leads and says why, and the archived projects follow as rows', async ({ page }) => {
+      watch(page, 'a designer whose projects are all archived')
+      await open(page, size, { projects: ALL_ARCHIVED })
+
+      const starter = page.getByTestId('starter-card')
+      await expect(starter.getByRole('heading', { level: 2, name: 'Start a new project' })).toBeVisible()
+      await expect(starter).toContainText('All your projects are archived. New project sets up colour, type, type scale and tints, and saves as you go.')
+      await expect(page.getByText('Start your first project'), 'this is not a first project').toHaveCount(0)
+      // There is nothing to continue: no project card, no Continue, no Open project.
+      await expect(page.locator('.proj-card.uh-continue')).toHaveCount(0)
+      await expect(page.getByRole('link', { name: /^(Continue: |Check the contrast|Open project, )/ })).toHaveCount(0)
+      // The rows are the archived projects, newest first, and the list says what it holds.
+      const rows = page.getByRole('list', { name: 'Archived projects' })
+      await expect(page.getByRole('list', { name: 'Other projects' })).toHaveCount(0)
+      await expect(rows.locator('.uh-row-name')).toHaveText(['Old Harbour', 'Violet Lime'])
+      await expect(rows.locator('.uh-row-meta')).toHaveText(['Archived · 1 of 4 parts · Edited 30 minutes ago', 'Archived · 4 of 4 parts · Edited 2 hours ago'])
+      await expect(rows.getByRole('link').first()).toHaveAttribute('href', '/projects/p-old')
+
+      // Order: title, then the starter, then the rows.
+      const h = await box(page, '.uh-h1')
+      const s = await box(page, '[data-testid="starter-card"]')
+      const r = await box(page, '.uh-rows')
+      expect(s.top, 'the starter is not under the title').toBeGreaterThanOrEqual(h.bottom - 1)
+      expect(r.top, 'the rows are not under the starter').toBeGreaterThanOrEqual(s.bottom - 1)
+      // The one filled button on the first screen is the starter's; New project is outlined.
+      expect(await filledOnFirstScreen(page)).toEqual(['Start the walkthrough'])
+    })
+
+    test('the starter\'s button from an all-archived account starts the walkthrough', async ({ page }) => {
+      watch(page, 'a designer starting fresh after archiving everything')
+      await open(page, size, { projects: ALL_ARCHIVED })
+      await page.getByTestId('starter-card').getByRole('button', { name: 'Start the walkthrough' }).click()
+      await expect(page).toHaveURL(/\/create\/palette$/)
+    })
+
+    test('a row whose Colour is not set draws a dashed empty box and says so', async ({ page }) => {
+      watch(page, 'a designer with a project that has no palette yet')
+      await open(page, size, { projects: [complete(), half('p-half', 'Harbour Rebrand', ago(26 * 60 * MINUTE)), bare()] })
+
+      const rows = page.locator('.uh-rows .uh-row')
+      await expect(rows.locator('.uh-row-name')).toHaveText(['Harbour Rebrand', 'Bare Project'])
+      await expect(rows.locator('.uh-row-meta')).toHaveText(['1 of 4 parts · Edited 1 day ago', 'Colour not set · 0 of 4 parts · Edited 3 days ago'])
+      // A row with a Colour part draws its colours; the other draws none (the default palette would read as its own).
+      const swatches = await rows.locator('.uh-mini').evaluateAll((els) => els.map((el) => ({
+        empty: el.classList.contains('is-empty'),
+        stops: el.querySelectorAll('span').length,
+        border: getComputedStyle(el).borderTopStyle,
+      })))
+      expect(swatches).toEqual([{ empty: false, stops: 4, border: 'none' }, { empty: true, stops: 0, border: 'dashed' }])
+      // Both boxes are the same size, so the rows still line up.
+      const sizes = await rows.locator('.uh-mini').evaluateAll((els) => els.map((el) => { const b = el.getBoundingClientRect(); return `${Math.round(b.width)}x${Math.round(b.height)}` }))
+      expect(sizes[0]).toBe(sizes[1])
+    })
+
+    test('a lead whose Colour is not set says so and offers to build the palette', async ({ page }) => {
+      watch(page, 'a designer whose only project has no palette')
+      await open(page, size, { projects: [bare()] })
+      const lead = page.locator('.uh-dash-main > .uh-continue')
+      await expect(lead.locator('.uh-strip'), 'the default palette is drawn as the project\'s own').toHaveCount(0)
+      const empty = lead.locator('.uh-strip-empty')
+      await expect(empty).toContainText('Colour not set.')
+      await expect(empty.getByRole('link', { name: 'Build the palette' })).toHaveAttribute('href', '/create/palette')
+      expect(await empty.evaluate((el) => getComputedStyle(el).borderBottomStyle)).toBe('dashed')
+    })
+
+    test('past six projects five rows show and Show all opens the rest in place', async ({ page }) => {
+      watch(page, 'a Pro designer with seven projects')
+      await open(page, size, { plan: 'pro', projects: many(7) })
+
+      const rows = page.locator('.uh-rows .uh-row-name')
+      await expect(rows).toHaveText(['Project 2', 'Project 3', 'Project 4', 'Project 5', 'Project 6'])
+      const more = page.getByRole('button', { name: 'Show all 7 projects' })
+      await expect(more).toHaveAttribute('aria-expanded', 'false')
+      expect(await more.evaluate((el) => Math.round(el.getBoundingClientRect().height)), 'Show all is under 44px').toBeGreaterThanOrEqual(44)
+      const below = await page.evaluate(() => document.querySelector('.uh-more').getBoundingClientRect().top >= document.querySelector('.uh-rows').getBoundingClientRect().bottom - 1)
+      expect(below, 'Show all is not under the rows').toBe(true)
+
+      await more.click()
+      await expect(rows).toHaveText(['Project 2', 'Project 3', 'Project 4', 'Project 5', 'Project 6', 'Project 7'])
+      const fewer = page.getByRole('button', { name: 'Show fewer' })
+      await expect(fewer).toHaveAttribute('aria-expanded', 'true')
+      await expect(fewer, 'focus stays on the button that was pressed').toBeFocused()
+      await fewer.click()
+      await expect(rows).toHaveCount(5)
+      await expect(page.getByRole('button', { name: 'Show all 7 projects' })).toHaveAttribute('aria-expanded', 'false')
+    })
+
+    test('up to six projects show every row and no Show all', async ({ page }) => {
+      watch(page, 'a Pro designer with six projects')
+      await open(page, size, { plan: 'pro', projects: many(6) })
+      await expect(page.locator('.uh-rows .uh-row-name')).toHaveCount(5)
+      await expect(page.locator('.uh-more'), 'six projects fit without a toggle').toHaveCount(0)
+    })
+
+    test('a locked Discover card says what it is and carries no colour', async ({ page }) => {
+      watch(page, 'a free designer looking at what is new in Discover')
+      await open(page, size)
+      const locked = page.locator('.uh-disc-card.is-locked')
+      expect(await locked.count(), 'no locked card on a free account: the sweep measured nothing').toBeGreaterThan(0)
+      const cards = await locked.evaluateAll((els) => els.map((el) => ({
+        label: el.querySelector('.uh-disc-lock-label')?.textContent?.trim(),
+        name: el.querySelector('.uh-disc-name')?.textContent?.trim(),
+        meta: el.querySelector('.uh-disc-meta')?.textContent?.trim(),
+        accessible: el.getAttribute('aria-label'),
+        strips: el.querySelectorAll('.uh-disc-strip, .uh-disc-strip--locked').length,
+        painted: [...el.querySelectorAll('[style]')].length,
+      })))
+      for (const c of cards) {
+        expect(c.label).toBe('Pro palette. Opens with Pro')
+        expect(c.meta, `${c.name}: the meta line`).toMatch(/^\d+ colours? · Pro$/)
+        expect(c.accessible, 'the link name contains what is shown, plus what it is').toBe(`${c.name}, Pro palette, opens with Pro`)
+        expect(c.strips, `${c.name} draws a stand-in strip`).toBe(0)
+        expect(c.painted, `${c.name} paints something inline`).toBe(0)
+      }
+      await expect(page.getByRole('link', { name: `${cards[0].name}, Pro palette, opens with Pro` })).toHaveAttribute('href', '/discover/palettes')
+    })
+
+    test('no colour of a locked palette is anywhere in the Discover section', async ({ page }) => {
+      watch(page, 'a free designer whose page must not hold a paid palette')
+      await open(page, size)
+      const names = await page.locator('.uh-disc-card.is-locked .uh-disc-name').allInnerTexts()
+      expect(names.length, 'no locked card to look for').toBeGreaterThan(0)
+      // Greys and white are half the stylesheet, so only the chromatic colours can tell a leak from the page's own ink.
+      const chromatic = (h) => Math.max(...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))) - Math.min(...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))) >= 24
+      const hexes = [...new Set(GALLERY_PALETTES.filter((p) => names.includes(p.name)).flatMap((p) => p.colors.map((c) => c.toUpperCase())).filter(chromatic))]
+      expect(hexes.length, 'the locked palettes were not found in the library').toBeGreaterThan(0)
+      const inPage = await page.evaluate((list) => {
+        const section = document.querySelector('.uh-disc')
+        const html = section.outerHTML.toUpperCase()
+        const rgb = (h) => `RGB(${parseInt(h.slice(1, 3), 16)}, ${parseInt(h.slice(3, 5), 16)}, ${parseInt(h.slice(5, 7), 16)})`
+        const painted = new Set()
+        for (const el of section.querySelectorAll('*')) {
+          const cs = getComputedStyle(el)
+          for (const v of [cs.backgroundColor, cs.color, cs.borderTopColor, cs.borderBottomColor]) painted.add(v.toUpperCase())
+        }
+        return list.filter((h) => html.includes(h) || html.includes(rgb(h)) || painted.has(rgb(h)))
+      }, hexes)
+      expect(inPage, 'a locked palette\'s colours are on the page').toEqual([])
+    })
+  })
+}
+
+test.describe('Discover for a Pro account', () => {
+  // POSITIVE CONTROL for the locked-card tests: the same section does carry colours when the account may open them.
+  test('draws real colours and no lock label', async ({ page }) => {
+    watch(page, 'a Pro designer looking at what is new in Discover')
+    await open(page, SIZES[2], { plan: 'pro' })
+    await expect(page.locator('.uh-disc-card')).toHaveCount(4)
+    await expect(page.locator('.uh-disc-card.is-locked')).toHaveCount(0)
+    const first = await page.locator('.uh-disc-card').first().locator('.uh-disc-strip > span').evaluateAll((s) => s.map((x) => getComputedStyle(x).backgroundColor))
+    expect(first.length).toBeGreaterThan(1)
+    expect(first.every((c) => c !== 'rgba(0, 0, 0, 0)')).toBe(true)
+  })
+})
+
+test.describe('on a phone, the page is composed for a thumb', () => {
+  const phone = SIZES[0]
+
+  test('the date and time are one line under the title, and the big clock is not drawn', async ({ page }) => {
+    watch(page, 'a designer glancing at the top of their workspace on a phone')
+    await open(page, phone)
+    const line = page.locator('.uh-clock-line')
+    await expect(line).toBeVisible()
+    const where = await page.evaluate(() => {
+      const top = (s) => document.querySelector(s).getBoundingClientRect()
+      return { h1Bottom: top('.uh-h1').bottom, line: top('.uh-clock-line'), firstBlock: top('.uh-dash-main').top }
+    })
+    expect(where.line.top, 'the date line is above the title').toBeGreaterThanOrEqual(where.h1Bottom - 1)
+    expect(where.line.bottom, 'the date line is not above the work').toBeLessThanOrEqual(where.firstBlock + 1)
+    expect(where.line.height, 'it is one line, not a block').toBeLessThan(30)
+    // The weekday and month are the browser's own; the time is a clock reading in the mono face.
+    const expected = await page.evaluate(() => {
+      const d = new Date()
+      return { weekday: d.toLocaleDateString([], { weekday: 'long' }), month: d.toLocaleDateString([], { month: 'long' }) }
+    })
+    await expect(line).toContainText(expected.weekday)
+    await expect(line).toContainText(expected.month)
+    await expect(line.locator('.uh-clk-time')).toHaveText(/^\d{1,2}[:.]\d{2}/)
+    expect(await line.locator('.uh-clk-time').evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Geist Mono|monospace/)
+    await expect(page.locator('.uh-today-clock'), 'the big clock is hidden on a phone').toBeHidden()
+  })
+
+  test('below 360px the line drops the weekday', async ({ page }) => {
+    watch(page, 'a designer on a small phone')
+    await open(page, { width: 340, height: 700 })
+    const line = page.locator('.uh-clock-line')
+    await expect(line.locator('.uh-clk-long')).toBeHidden()
+    await expect(line.locator('.uh-clk-short')).toBeVisible()
+    const weekday = await page.evaluate(() => new Date().toLocaleDateString([], { weekday: 'long' }))
+    expect(await line.evaluate((el) => el.innerText)).not.toContain(weekday)
+  })
+
+  for (const size of [SIZES[1], SIZES[2]]) {
+    test(`at ${size.width}px the big clock stays in Today and the phone's date line is not drawn`, async ({ page }) => {
+      watch(page, 'a designer on a wider screen')
+      await open(page, size)
+      await expect(page.locator('.uh-today-clock')).toBeVisible()
+      await expect(page.locator('.uh-clock-slot')).toBeHidden()
+    })
+  }
+
+  test('the hour has no leading zero', async ({ page }) => {
+    watch(page, 'a visitor opening the workspace at five past seven')
+    await page.setViewportSize({ width: phone.width, height: phone.height })
+    await page.clock.setFixedTime(new Date(2026, 9, 27, 7, 5))
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-clk-time')).toHaveText(/^7[:.]05/)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(page.locator('.uh-today-time')).toHaveText(/^7[:.]05/)
+  })
+
+  test('with projects New project is one outlined button under the work; the title row\'s copy is not drawn', async ({ page }) => {
+    watch(page, 'a designer on a phone with work on the page')
+    await open(page, phone)
+    // Both are in the page; one is drawn, and it is the only one a screen reader or the Tab key meets.
+    expect(await page.locator('.uh-new').count()).toBe(2)
+    await expect(page.getByRole('button', { name: 'New project' })).toHaveCount(1)
+    const where = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('.uh-new')].find((b) => b.getBoundingClientRect().width > 0)
+      const r = el.getBoundingClientRect()
+      const q = (s) => document.querySelector(s).getBoundingClientRect()
+      return { top: r.top, bottom: r.bottom, width: Math.round(r.width), rows: q('.uh-rows').bottom, today: q('.uh-today').top, filled: el.classList.contains('is-filled'), inFoot: !!el.closest('.uh-new-wrap--foot') }
+    })
+    expect(where.inFoot, 'the drawn New project is the one under the work').toBe(true)
+    expect(where.top, 'it is above the last row').toBeGreaterThanOrEqual(where.rows - 1)
+    expect(where.bottom, 'it is below Today').toBeLessThanOrEqual(where.today + 1)
+    expect(where.width, 'it is full width').toBe(phone.width - 24)
+    expect(where.filled, 'it is the outlined one').toBe(false)
+    expect(await filledOnFirstScreen(page)).toEqual(['Check the contrast, Violet Lime'])
+  })
+
+  test('signed out New project is one filled button under the date', async ({ page }) => {
+    watch(page, 'a visitor on a phone')
+    await page.setViewportSize({ width: phone.width, height: phone.height })
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    expect(await page.locator('.uh-new').count(), 'a visitor has no work to put it under').toBe(1)
+    const b = await page.evaluate(() => {
+      const el = document.querySelector('.uh-new')
+      const r = el.getBoundingClientRect()
+      return { top: r.top, filled: el.classList.contains('is-filled'), width: Math.round(r.width), line: document.querySelector('.uh-clock-line').getBoundingClientRect().bottom }
+    })
+    expect(b.filled).toBe(true)
+    expect(b.top, 'it is not under the date line').toBeGreaterThanOrEqual(b.line - 1)
+    expect(b.width).toBe(phone.width - 24)
+  })
+
+  test('Start something is four tools and an "All thirteen tools" row', async ({ page }) => {
+    watch(page, 'a designer reaching for a tool on a phone')
+    await open(page, phone)
+    const start = page.locator('.uh-start')
+    await expect(start.locator('a.uh-tool:visible')).toHaveText([/^Gradient/, /^Tint/, /^Contrast/, /^Icon set/])
+    const all = start.locator('.uh-tool--all')
+    await expect(all).toBeVisible()
+    await expect(all).toHaveText('All thirteen tools')
+    await expect(all).toHaveAttribute('aria-haspopup', 'menu')
+    await expect(start.locator('.uh-alltools'), 'the heading\'s button gives way to the row').toBeHidden()
+    const heights = await start.locator('.uh-tool:visible').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
+    expect(heights.length).toBe(5)
+    expect(Math.min(...heights), `a tool row is under 56px: ${heights}`).toBeGreaterThanOrEqual(56)
+  })
+
+  for (const size of [SIZES[1], SIZES[2]]) {
+    test(`at ${size.width}px Start something shows all six tools and no phone row`, async ({ page }) => {
+      watch(page, 'a designer on a wider screen')
+      await open(page, size)
+      await expect(page.locator('.uh-start a.uh-tool:visible')).toHaveCount(6)
+      await expect(page.locator('.uh-tool--all')).toBeHidden()
+      await expect(page.locator('.uh-alltools')).toBeVisible()
+    })
+  }
+})
+
+test.describe('on a tablet, Today is one row', () => {
+  for (const width of [641, 768, 1000]) {
+    test(`at ${width}px the date and time sit beside the meters, and the plan line runs under both`, async ({ page }) => {
+      watch(page, `a designer on a ${width}px screen`)
+      await open(page, { width, height: 1024 })
+      const b = {}
+      for (const sel of ['.uh-today-clock', '.uh-meters', '.uh-plan-line', '.uh-today']) b[sel] = await box(page, sel)
+      expect(b['.uh-meters'].left, 'the meters are not to the right of the clock').toBeGreaterThanOrEqual(b['.uh-today-clock'].right)
+      expect(Math.abs(b['.uh-meters'].top - b['.uh-today-clock'].top), 'the two do not start on one line').toBeLessThanOrEqual(8)
+      expect(b['.uh-plan-line'].top, 'the plan line is not under both').toBeGreaterThanOrEqual(Math.max(b['.uh-today-clock'].bottom, b['.uh-meters'].bottom) - 1)
+    })
+  }
+
+  test('at 640px it stacks again, with the phone\'s date line in place of the clock', async ({ page }) => {
+    watch(page, 'a designer on the widest phone')
+    await open(page, { width: 640, height: 900 })
+    await expect(page.locator('.uh-today-clock')).toBeHidden()
+    await expect(page.locator('.uh-clock-line')).toBeVisible()
+  })
+
+  test('at 1001px the rail is back and Today stacks inside it', async ({ page }) => {
+    watch(page, 'a designer on the narrowest laptop')
+    await open(page, { width: 1001, height: 900 })
+    const b = {}
+    for (const sel of ['.uh-today-clock', '.uh-meters', '.uh-dash-main > .uh-continue', '.uh-today']) b[sel] = await box(page, sel)
+    expect(b['.uh-today'].left, 'Today is not in the rail beside the work').toBeGreaterThanOrEqual(b['.uh-dash-main > .uh-continue'].right)
+    expect(b['.uh-meters'].top, 'the meters are not under the clock').toBeGreaterThanOrEqual(b['.uh-today-clock'].bottom - 1)
+  })
+})
+
+test.describe('the starter\'s steps', () => {
+  for (const size of SIZES) {
+    test(`at ${size.width}px are one column of numbered, underlined links in the accent`, async ({ page }) => {
+      watch(page, 'a new account reading the walkthrough')
+      await open(page, size, { projects: [] })
+      const steps = await page.getByTestId('starter-card').getByRole('list', { name: 'The walkthrough' }).evaluate((ol) => {
+        const probe = document.createElement('i')
+        probe.style.color = 'var(--ws-acc-text)'
+        ol.append(probe)
+        const accent = getComputedStyle(probe).color
+        probe.remove()
+        return {
+          tag: ol.tagName,
+          marker: getComputedStyle(ol).listStyleType,
+          rows: [...ol.querySelectorAll('li')].map((li) => {
+            const r = li.getBoundingClientRect()
+            const a = li.querySelector('a')
+            const cs = getComputedStyle(a)
+            return { top: Math.round(r.top), left: Math.round(r.left), underline: cs.textDecorationLine, accent: cs.color === accent }
+          }),
+        }
+      })
+      expect(steps.tag).toBe('OL')
+      expect(steps.marker, 'the steps are a numbered sequence').toBe('decimal')
+      expect(steps.rows).toHaveLength(4)
+      for (let i = 1; i < steps.rows.length; i++) {
+        expect(steps.rows[i].top, `step ${i + 1} is not under step ${i}`).toBeGreaterThan(steps.rows[i - 1].top)
+        expect(steps.rows[i].left, `step ${i + 1} is not in the same column`).toBe(steps.rows[0].left)
+      }
+      expect(steps.rows.map((r) => r.underline), 'a link is not underlined').toEqual(Array(4).fill('underline'))
+      expect(steps.rows.map((r) => r.accent), 'a link is not the accent colour').toEqual(Array(4).fill(true))
+    })
+  }
+})
+
+test.describe('no text is smaller than 13px', () => {
+  const sweep = (page) => page.evaluate(() => {
+    const small = []
+    let seen = 0
+    const walker = document.createTreeWalker(document.querySelector('.uh'), NodeFilter.SHOW_TEXT)
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!n.textContent.trim()) continue
+      const el = n.parentElement
+      const r = el.getBoundingClientRect()
+      if (!r.width || !r.height || el.closest('.uh-sr')) continue
+      seen += 1
+      const px = parseFloat(getComputedStyle(el).fontSize)
+      if (px < 13) small.push(`${px}px "${n.textContent.trim().slice(0, 30)}"`)
+    }
+    return { seen, small }
+  })
+  for (const size of SIZES) {
+    for (const [label, opts] of [['with projects', {}], ['with none', { projects: [] }], ['all archived', { projects: ALL_ARCHIVED }]]) {
+      test(`${label}, at ${size.width}px`, async ({ page }) => {
+        watch(page, `a designer reading the page ${label}`)
+        await withExports(page)
+        await open(page, size, opts)
+        const r = await sweep(page)
+        expect(r.seen, 'the sweep found no text').toBeGreaterThan(40)
+        expect(r.small, 'text under 13px').toEqual([])
+      })
+    }
+  }
+  test('signed out, at 390px', async ({ page }) => {
+    watch(page, 'a visitor reading the page')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    const r = await sweep(page)
+    expect(r.seen, 'the sweep found no text').toBeGreaterThan(30)
+    expect(r.small, 'text under 13px').toEqual([])
+  })
+})
+
+test.describe('the greeting holds its place', () => {
+  test('the title does not move while the greeting settles', async ({ page }) => {
+    watch(page, 'a designer whose page is still loading its profile')
+    await page.addInitScript(() => {
+      window.__h1Tops = new Set()
+      const sample = () => {
+        const h1 = document.querySelector('.uh-h1')
+        if (h1) window.__h1Tops.add(Math.round(h1.getBoundingClientRect().top + scrollY))
+        requestAnimationFrame(sample)
+      }
+      requestAnimationFrame(sample)
+    })
+    await open(page, SIZES[0], { creationTime: Date.now() - 11 * MINUTE })
+    await expect(page.getByTestId('greeting')).toHaveText('Welcome back, Freya.')
+    const tops = await page.evaluate(() => [...window.__h1Tops])
+    expect(tops.length, 'the title was never sampled').toBeGreaterThan(0)
+    expect(tops, `the title was at ${tops.join(', ')}`).toHaveLength(1)
+  })
 })

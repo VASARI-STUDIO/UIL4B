@@ -525,7 +525,8 @@ test('the probe can see what it is looking for', async ({ page }) => {
 // bug once had the DOM the other way round. The workspace has no pencil now (the
 // icon is chosen on the project's page), so what is held is the order the page is
 // read in: New project, then the lead card's Continue and Open project, then each
-// row, then Today's See plans, then Start something, Discover and the Pro panel.
+// row, then Today's See plans, then Start something, Discover and the Pro panel. On a phone the
+// title row's New project is not drawn and the one under the work is met after the last row.
 // Driven with the real Tab key from New project, not read off the markup, and
 // checked against where each stop is PAINTED.
 test.describe('/projects tabs in the order it is read', () => {
@@ -539,15 +540,21 @@ test.describe('/projects tabs in the order it is read', () => {
     return { id: `seed-${i + 1}`, name: `Seeded Project ${i + 1}`, design, createdAt: at, updatedAt: at }
   })
 
+  // At 640px and under New project sits under the work (the title row's copy is not drawn), so the
+  // walk meets it after the last row; wider, it is the first stop.
   const FIRST_STOPS = [
     /^New project$/,
-    /^Continue Seeded Project 3: /,
-    /^Open Seeded Project 3$/,
+    /^Continue: set the type scale, Seeded Project 3$/,
+    /^Open project, Seeded Project 3$/,
     /^Seeded Project 2/,
     /^Seeded Project 1/,
     /^See plans$/,
   ]
+  const PHONE_STOPS = [FIRST_STOPS[1], FIRST_STOPS[2], FIRST_STOPS[3], FIRST_STOPS[4], FIRST_STOPS[0], FIRST_STOPS[5]]
   const THEN = [/^All \w+ tools$/, /^Palette Builder/, /^Gradient/, /^Palette Library/, /^Browse all/, /^(Upgrade for |See Pro$)/]
+  // On a phone the heading's button is not drawn: the "All thirteen tools" row closes the four tools
+  // instead, and Palette Library is reached in the Create sheet.
+  const THEN_PHONE = [/^Palette Builder/, /^Gradient/, /^Icon set/, /^All \w+ tools$/, /^Browse all/, /^(Upgrade for |See Pro$)/]
 
   for (const width of [1440, 768, 390]) {
     test(`Continue, Open project and the rows are met in order, and painted in order, at ${width}px`, async ({ browser }) => {
@@ -558,7 +565,10 @@ test.describe('/projects tabs in the order it is read', () => {
       await go(page, '/projects')
       await expectRendered(page, '/projects')
 
-      await page.getByRole('button', { name: 'New project' }).focus()
+      const phone = width <= 640
+      // Exactly one New project is on the page to a keyboard or a screen reader: the other is not drawn.
+      await expect(page.getByRole('button', { name: 'New project' })).toHaveCount(1)
+      await (phone ? page.getByRole('link', { name: /^Continue: / }) : page.getByRole('button', { name: 'New project' })).focus()
       const stops = []
       for (let i = 0; i < 40; i++) {
         const stop = await page.evaluate(() => {
@@ -581,10 +591,10 @@ test.describe('/projects tabs in the order it is read', () => {
       expect(stops.every((s) => s.inPage), `the Tab walk left the page: ${names.join(' | ')}`).toBe(true)
 
       // The first six stops are exactly these, in this order, with nothing between.
-      FIRST_STOPS.forEach((re, i) => expect(names[i], `stop ${i + 1} of ${names.join(' | ')}`).toMatch(re))
+      ;(phone ? PHONE_STOPS : FIRST_STOPS).forEach((re, i) => expect(names[i], `stop ${i + 1} of ${names.join(' | ')}`).toMatch(re))
       // Then the rest of the page, in order, though other stops (the other tools) sit between.
       let at = FIRST_STOPS.length
-      for (const re of THEN) {
+      for (const re of phone ? THEN_PHONE : THEN) {
         const found = names.findIndex((n, i) => i >= at && re.test(n))
         expect(found, `${re} is missing or out of order after stop ${at}: ${names.join(' | ')}`).toBeGreaterThanOrEqual(at)
         at = found + 1
@@ -592,8 +602,13 @@ test.describe('/projects tabs in the order it is read', () => {
 
       // Painted order. Continue is above or beside Open project; the rows run down the page;
       // the page's own stops (from New project to the Pro panel) never go back up.
-      const [newBtn, cont, open, row1, row2, plans] = stops
-      expect(cont.top, 'Continue is painted above New project').toBeGreaterThanOrEqual(newBtn.bottom - 1)
+      const [newBtn, cont, open, row1, row2, plans] = phone ? [stops[4], stops[0], stops[1], stops[2], stops[3], stops[5]] : stops
+      if (phone) {
+        expect(newBtn.top, 'New project is painted above the last row').toBeGreaterThanOrEqual(row2.bottom - 1)
+        expect(plans.top, 'Today is painted above New project').toBeGreaterThanOrEqual(newBtn.bottom - 1)
+      } else {
+        expect(cont.top, 'Continue is painted above New project').toBeGreaterThanOrEqual(newBtn.bottom - 1)
+      }
       expect(cont.bottom <= open.top + 1 || cont.right <= open.left + 1, 'Open project is painted before Continue').toBe(true)
       expect(row1.top, 'the first row is painted above the lead card\'s actions').toBeGreaterThanOrEqual(Math.max(cont.bottom, open.bottom) - 1)
       expect(row2.top, 'the second row is painted above the first').toBeGreaterThanOrEqual(row1.bottom - 1)

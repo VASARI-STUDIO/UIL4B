@@ -158,8 +158,10 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
     // Start something: every tile a real tool route, none gated.
     const start = page.locator('.uh-start')
     await expect(start.getByRole('link', { name: /Palette Builder/ })).toHaveAttribute('href', '/create/palette')
-    const hrefs = await start.locator('.uh-tool').evaluateAll((n) => n.map((a) => a.getAttribute('href')))
+    // The links only: the "All thirteen tools" row beside them is a button the phone shows (see 141).
+    const hrefs = await start.locator('a.uh-tool').evaluateAll((n) => n.map((a) => a.getAttribute('href')))
     expect(hrefs).toEqual(['/create/gradient', '/create/tint', '/create/semantic-color', '/create/contrast', '/create/icons', '/discover/palettes'])
+    await expect(start.locator('.uh-tool--all'), 'the phone-only row is not drawn at a laptop width').toBeHidden()
 
     // The sign-in sits in Today (the rail), under the date and time. It is a line of text, not a
     // heading: the section's own heading is "Today".
@@ -234,7 +236,9 @@ test.describe('"All … tools" opens the Create menu', () => {
     watch(page, 'a phone visitor opening every tool')
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await page.locator('.uh-alltools').click()
+    // On a phone the heading's button gives way to a row at the foot of the four tools.
+    await expect(page.locator('.uh-alltools')).toBeHidden()
+    await page.getByRole('button', { name: /^All \w+ tools$/ }).click()
     await expect(page.locator('.pnav-sheet')).toBeVisible()
     await context.close()
   })
@@ -354,6 +358,56 @@ test.describe('a recent project card is read off the project', () => {
     await expect(page.locator('.proj-card', { hasText: 'Violet Lime' }).locator('.uh-badge path')).toHaveAttribute('d', GLYPHS.flask)
   })
 
+  // An icon is not an edit of the design: "Edited 1 day ago" and the lead both read updatedAt, so
+  // choosing an icon for an older project must leave both alone. The choice stamps iconAt instead,
+  // which is what the account sync compares (held in tests/unit/project-sync.test.js).
+  test('choosing an icon for an older project does not make it the lead or change when it was edited', async ({ page }) => {
+    watch(page, 'a designer giving their older project an icon')
+    const lead = complete()
+    const older = half()
+    await signIn(page, { plan: 'free', projects: [lead, older] })
+    await go(page, '/projects/p-half')
+    await expectRendered(page, '/projects/p-half')
+    const before = Date.now()
+    await page.getByRole('group', { name: 'Icon for Harbour Rebrand' }).getByRole('button', { name: 'Use the flask icon' }).click()
+
+    const stored = () => page.evaluate(() => (JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test'] || []).find((p) => p.id === 'p-half'))
+    await expect.poll(async () => (await stored())?.icon).toBe('flask')
+    const kept = await stored()
+    expect(kept.updatedAt, 'the icon moved "last edited"').toBe(older.updatedAt)
+    expect(Date.parse(kept.iconAt), 'the icon carries its own stamp, set now').toBeGreaterThanOrEqual(before - 1000)
+    // The account's copy carries both: the old edit time, and the stamp that lets the icon win a merge.
+    await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_STORE__?.get('users/test-uid-free/projects/p-half')?.project?.icon),
+      { message: 'the icon must reach the account', timeout: 10_000 }).toBe('flask')
+    const account = await page.evaluate(() => window.__UIL4B_TEST_STORE__?.get('users/test-uid-free/projects/p-half'))
+    expect(account.project.updatedAt).toBe(older.updatedAt)
+    expect(account.project.iconAt).toBe(kept.iconAt)
+
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-dash-main > .uh-continue .uh-continue-name'), 'the icon made it the lead').toHaveText('Violet Lime')
+    await expect(page.locator('.uh-row-meta')).toHaveText('1 of 4 parts · Edited 1 day ago')
+  })
+
+  test('an edit that is not an icon still moves "last edited": renaming a project takes the lead', async ({ page }) => {
+    watch(page, 'a designer renaming their older project')
+    const older = half()
+    await signIn(page, { plan: 'free', projects: [complete(), older] })
+    await go(page, '/projects/p-half')
+    await expectRendered(page, '/projects/p-half')
+    await page.getByRole('button', { name: 'Actions for Harbour Rebrand' }).click()
+    await page.getByRole('button', { name: 'Rename', exact: true }).click()
+    await page.getByRole('textbox', { name: /Rename Harbour Rebrand/i }).fill('Harbour Two')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-dash-main > .uh-continue .uh-continue-name'), 'a rename is an edit, so it leads').toHaveText('Harbour Two')
+    await expect(page.locator('.uh-dash-main > .uh-continue .uh-meta')).toHaveText('In progress · Edited just now')
+    const stored = await page.evaluate(() => (JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test'] || []).find((p) => p.id === 'p-half'))
+    expect(stored.iconAt, 'a rename does not stamp the icon').toBeUndefined()
+  })
+
   test('the fixture’s four states read the way the page reads them', async ({ page }) => {
     watch(page, 'the card in every state it can be in')
     await go(page, FIXTURE)
@@ -361,7 +415,7 @@ test.describe('a recent project card is read off the project', () => {
     await expect(page.locator('.proj-card .uh-card-line')).toHaveText([
       'Ready · Edited 25 minutes ago',
       '1 of 4 parts · Edited 3 hours ago',
-      '0 of 4 parts · Edited 6 days ago',
+      'Colour not set · 0 of 4 parts · Edited 6 days ago',
       'Archived · 1 of 4 parts · Edited 3 hours ago',
     ])
     await expect(page.locator('.proj-card .uh-card-title')).toHaveText(['Violet Lime', 'Harbour Rebrand', 'Default Project', 'Old Harbour'])
@@ -391,26 +445,29 @@ test.describe('a new account', () => {
     await expect(page, 'the starter goes straight into the Palette Builder').toHaveURL(/\/create\/palette$/)
   })
 
-  test('the first control, New project, is on the first screen of a 320px phone', async ({ browser }) => {
-    // The design's layout puts "Start something" above the recent projects, so on a
-    // phone the empty card is below the fold. What must not be is the way to
-    // make a project: the title row's New project opens the same dialog.
-    const context = await browser.newContext({ viewport: { width: 320, height: 568 } })
-    const page = await context.newPage()
-    watch(page, 'a new account on a small phone')
-    await signIn(page, { plan: 'free', projects: 0 })
-    await go(page, '/projects')
-    await expectRendered(page, '/projects')
-    const m = await page.getByRole('button', { name: 'New project' }).evaluate((el) => {
-      const r = el.getBoundingClientRect()
-      const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
-      return { bottom: r.bottom, vh: window.innerHeight, scrolled: window.scrollY, hit: at === el || el.contains(at) }
+  // With no project there is no work to put New project under, so the starter's own button is the
+  // way to make one: it runs the same startNew() as New project. The title row's New project is
+  // hidden on a phone (the page shows the one under the work, which is below the starter).
+  for (const [width, height] of [[390, 844], [360, 740]]) {
+    test(`the first control, Start the walkthrough, is on the first screen of a ${width}px phone`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width, height } })
+      const page = await context.newPage()
+      watch(page, 'a new account on a phone')
+      await signIn(page, { plan: 'free', projects: 0 })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+      const m = await page.getByRole('button', { name: 'Start the walkthrough' }).evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+        return { top: r.top, bottom: r.bottom, vh: window.innerHeight, scrolled: window.scrollY, hit: at === el || el.contains(at) }
+      })
+      expect(m.scrolled).toBe(0)
+      // The whole button is on the first screen, with nothing (the tab bar, Feedback) painted over it.
+      expect(m.bottom, `the button ends at y=${Math.round(m.bottom)}`).toBeLessThanOrEqual(m.vh)
+      expect(m.hit, 'something paints over the button').toBe(true)
+      await context.close()
     })
-    expect(m.scrolled).toBe(0)
-    expect(m.bottom).toBeLessThanOrEqual(m.vh)
-    expect(m.hit, 'something paints over New project').toBe(true)
-    await context.close()
-  })
+  }
 })
 
 /* ── The project page ─────────────────────────────────────────────────────── */
