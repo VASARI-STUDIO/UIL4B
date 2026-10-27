@@ -1867,7 +1867,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Returns true once the apply has gone through, false when fewer than two valid
   // colours remain and nothing changed, so a caller can skip its own bookkeeping
   // for an apply that never happened.
-  const applyPalette = (hexes, msg) => {
+  // `quiet` keeps the screen-reader announcement but skips the toast: inside
+  // the Suggest panel the applied card's tick already shows it, and on a phone
+  // the toast would sit over the sheet's cards.
+  const applyPalette = (hexes, msg, { quiet = false } = {}) => {
     setColPanel(null)
     const next = hexes.map(c => normaliseHex(c)).filter(Boolean).slice(0, HARD_MAX)
     if (next.length < 2) return false
@@ -1877,7 +1880,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     })
     setAdjust(ZERO_ADJUST)
     if (!locked.has(0)) { setSeed(next[0]); setSeedInput(next[0]) }
-    if (msg) { setLiveMsg(msg); toast?.(msg) }
+    if (msg) { setLiveMsg(msg); if (!quiet) toast?.(msg) }
     return true
   }
 
@@ -2073,7 +2076,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) return
     if (isNoopApply(v.colors)) return
     const snap = panelSnap()
-    if (!applyPalette(v.colors, `Applied variation: ${v.label}`)) return
+    if (!applyPalette(v.colors, `Applied variation: ${v.label}`, { quiet: true })) return
     keepPanelSnap(snap)
     // Keep the frozen list across this apply, so the panel shows the same
     // variations with this one ticked instead of rotating to a fresh set. The
@@ -2194,7 +2197,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const snap = panelSnap()
     // The system is set only if the colours go through, so a brand with fewer
     // than two valid colours changes nothing at all.
-    if (!applyPalette(b.colors, `Loaded the ${b.name} palette`)) return
+    if (!applyPalette(b.colors, `Loaded the ${b.name} palette`, { quiet: true })) return
     setHarmony(sys)
     keepPanelSnap(snap)
     skipVarInvalidate.current = true
@@ -3098,11 +3101,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 </div>
               )}
               {/* One Back button, between the tabs and Close in the DOM, so the tab
-                  order is the visual order at every width. Its text shows where it
-                  fits; below that it is an icon and the label carries the name. */}
+                  order is the visual order at every width. Its text shortens to
+                  "Back" (still inside its name) on phones, and only the narrowest
+                  screens get the icon alone. */}
               {!exploring && (
-                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" onClick={backToMine}>
+                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={backToMine}>
                   <span className="plb-sg-back-text">Back to my palette</span>
+                  <span className="plb-sg-back-short" aria-hidden="true">Back</span>
                   <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
                 </button>
               )}

@@ -802,13 +802,18 @@
   .plb .plb-galpopup--suggest .lockt-cta, .plb .plb-sg-pro { flex: 0 0 auto; margin-top: 0; }
 }
 
-/* Where "Back to my palette" is not expected to fit beside the tabs and Close
-   (an estimate: about 369px of content against 358px at 390, not measured), the
-   text gives way to an icon. The button keeps its aria-label, so the name is
-   the same and no visible text is contradicted. */
+/* "Back to my palette" does not fit beside the tabs and Close on a phone, so it
+   reads "Back", which is still inside the button's name (the label-in-name
+   rule). Only at 360px and below, where even that crowds Close, is it the icon
+   alone; title then names it for a mouse or stylus. */
+.plb .plb-sg-back-short { display: none; }
 @media (max-width: 430px) {
-  .plb .plb-sg-back { width: 44px; min-width: 44px; padding-inline: 0; justify-content: center; }
   .plb .plb-sg-back-text { display: none; }
+  .plb .plb-sg-back-short { display: inline; }
+}
+@media (max-width: 360px) {
+  .plb .plb-sg-back { width: 44px; min-width: 44px; padding-inline: 0; justify-content: center; }
+  .plb .plb-sg-back-short { display: none; }
   .plb .plb-sg-back-icon { display: inline-flex; }
 }
 @media (max-width: 640px) and (pointer: coarse) {
@@ -829,6 +834,8 @@
   -webkit-mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
   mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
 }
+/* A card reached by Tab stops above the fade, so it and its focus ring stay clear. */
+.plb .plb-galpopup-body { scroll-padding-block-end: 40px; }
 @media (max-width: 640px) {
   .plb .plb-galpopup--suggest .plb-galpopup-body[data-more="true"] { -webkit-mask-image: none; mask-image: none; }
 }
