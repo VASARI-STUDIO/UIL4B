@@ -14,9 +14,10 @@ import {
 } from '../utils/exportDocument'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } from '../config/exportFormats'
-import { defaultTemplate, liveTemplates, readExportTemplates } from '../config/exportTemplates'
+import { liveTemplates, readExportTemplates } from '../config/exportTemplates'
 import { useProject } from '../contexts/ProjectContext'
 import ExportTemplatePicker from './ExportTemplatePicker'
+import { templateThumb } from '../utils/exportTemplateThumb'
 import BrandLogoField from './BrandLogoField'
 import KitIdentityFields from './KitIdentityFields'
 import ExportFormatSwitch from './ExportFormatSwitch'
@@ -500,16 +501,17 @@ export default function ExportPanel({ onClose }) {
   }
   // Export disables while it builds, and a disabled button drops focus to the
   // page behind, so the next Tab would leave the dialog. Hold focus on the panel
-  // while it builds, then hand it back to the Export button once it is enabled.
+  // while it builds, then hand it back to the Export button once it is enabled,
+  // without scrolling a tall panel away from the notice it just showed.
   const wasBusy = useRef(false)
   useEffect(() => {
     if (busy) {
       wasBusy.current = true
-      panelRef.current?.focus()
+      panelRef.current?.focus({ preventScroll: true })
     } else if (wasBusy.current) {
       wasBusy.current = false
       const btn = exportBtnRef.current
-      if (btn && !btn.disabled) btn.focus()
+      if (btn && !btn.disabled) btn.focus({ preventScroll: true })
     }
   }, [busy])
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
@@ -645,13 +647,15 @@ export default function ExportPanel({ onClose }) {
             format={activeFormat.id}
             value={chosenTemplates[activeFormat.id]}
             onChange={(id) => updateDesign({ exportTemplates: { [activeFormat.id]: id } })}
+            thumbs={templateThumb}
           />
         </div>
       )}
-      {/* The pictures are drawn in the Specification layout, so the book shows them only for it. */}
-      {activeGroup.preview && chosenTemplates[activeFormat?.id] === defaultTemplate(activeFormat?.id) && (
+      {/* The pictures are drawn in the chosen template, from the person's own design. */}
+      {activeGroup.preview && (
         <ExportProPreview
           kind={activeGroup.preview}
+          template={chosenTemplates[activeFormat?.id]}
           design={design}
           projectName={design?.name || 'Design System'}
           blurred={!isPro}

@@ -381,24 +381,27 @@ test('CONTROL: a Pro account that chooses the same template does send it to the 
 
 const strip = (page) => exportPanel(page).locator('.exp-preview-strip')
 
-test('Free sees the guidelines tiles clear, the strip and button locked for Presentation, and no strip once Poster or Grid is chosen', async ({ page }) => {
+test('Free sees the guidelines tiles clear, and the strip and button stay locked as Poster or Grid is chosen, with the caption naming the template', async ({ page }) => {
   watch(page, 'a free account looking at the guidelines templates')
   await openProject(page, 'free')
   await chooseFormat(page, 'guidelines')
   await expect(group(page).getByRole('radio')).toHaveText([/Presentation/, /Poster/, /Grid/])
   await expect(strip(page), 'the default template shows the page strip').toBeVisible()
   await expect(exportPanel(page).locator('.exp-preview-lock'), 'and it is locked for Free').toBeVisible()
+  await expect(exportPanel(page).locator('.exp-preview-caption')).toHaveText('Your guidelines in Presentation, slides 1 to 3')
   await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i })).toBeVisible()
 
   for (const name of ['Poster', 'Grid']) {
     await tile(page, name).click()
     expect((await state(page)).checked).toEqual([name])
-    await expect(strip(page), `the strip is drawn in the Presentation layout, so ${name} hides it`).toHaveCount(0)
-    await expect(exportPanel(page).locator('.exp-preview-lock')).toHaveCount(0)
+    await expect(exportPanel(page).locator('.exp-preview-caption'), `the strip follows the template: ${name}`).toHaveText(`Your guidelines in ${name}, slides 1 to 3`)
+    await expect(strip(page)).toHaveAttribute('data-state', 'ready')
+    await expect(exportPanel(page).locator('.exp-preview-strip img[data-blurred="true"]'), 'still blurred for Free').toHaveCount(3)
+    await expect(exportPanel(page).locator('.exp-preview-lock'), 'and still locked').toBeVisible()
     await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i }), 'the button is still locked').toBeVisible()
   }
   await tile(page, 'Presentation').click()
-  await expect(strip(page), 'choosing the default brings the strip back').toBeVisible()
+  await expect(exportPanel(page).locator('.exp-preview-caption')).toHaveText('Your guidelines in Presentation, slides 1 to 3')
   await expect(exportPanel(page).locator('.exp-preview-lock')).toBeVisible()
 })
 

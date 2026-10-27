@@ -21,7 +21,9 @@ export default function ExportTemplatePicker({ format, value, onChange, thumbs }
 
   return (
     <div className="exp-tpl">
-      <div className="exp-tpl-row" role="radiogroup" aria-label="Template">
+      {/* A visible name for the group, the same small label the panel's fields carry. */}
+      <p className="exp-field-label exp-tpl-label" id={`${id}-label`}>Template</p>
+      <div className="exp-tpl-row" role="radiogroup" aria-labelledby={`${id}-label`}>
         {list.map((x, i) => {
           const checked = x.id === picked.id
           const pic = thumbs?.({ format, id: x.id })

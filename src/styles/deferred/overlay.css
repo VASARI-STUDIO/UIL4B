@@ -170,6 +170,8 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 
 /* The sticky dock covers the foot of the panel, so a scroll to a control stops above it. */
 .exp-panel{scroll-padding-bottom:88px}
+/* The dock's own buttons are always in view: cancel the padding for them so focusing one never scrolls the panel. */
+.exp-foot .exp-act{scroll-margin-bottom:-88px}
 /* The Pro kit's template cue: the chosen template and a link to the picker, above the identity
    fields, so the choice is in view when the picker sits below the fold. */
 .exp-tpl-cue{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;font-size:var(--fs-body-s);color:var(--t1)}
@@ -219,7 +221,11 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 .exp-preview-strip:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .exp-preview-lock{position:absolute;inset:0;z-index:1;display:grid;place-items:center;pointer-events:none}
 .exp-preview-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
-.exp-preview-note,.exp-preview-caption{margin:8px 0 0;font-size:var(--fs-caption);color:var(--t1)}
+/* The strip is its own group under the template picker: 16px on top of the options' 12px gap makes 28px
+   between the two, more than the 12px between tiles or the 8px between a heading and what it heads. */
+.exp-preview{margin-top:16px}
+.exp-preview-note,.exp-preview-caption{margin:0 0 8px;font-size:var(--fs-caption);color:var(--t1)}
+.exp-preview-caption{font-weight:600;color:var(--t0)}
 
 /* Pro, as plain words with a lock. */
 .exp-pro-lock{flex:0 0 auto}
@@ -275,6 +281,7 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
   .exp-logo-drop{min-height:44px;padding:0 4px}
 }
 /* ── Template picker: three tiles in one row ── */
+.exp-tpl-label{margin:0 0 8px}
 .exp-tpl-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .exp-tpl-tile{display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-width:0}
 /* With no picture the tile is a card: name and description, the chosen one outlined like an active pill. */
