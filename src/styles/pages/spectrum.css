@@ -402,8 +402,6 @@
 }
 .spectrum .sp-rail-row { transition: none; }
 .sp-rail-row.is-on { background: rgba(var(--sp-ink-rgb), .07); color: var(--sp-ink); }
-.sp-rail-no { font-size: 12px; letter-spacing: .02em; font-variant-numeric: tabular-nums; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-rail-row.is-on .sp-rail-no { color: var(--accent-text); }
 .sp-rail-label { flex: 1; min-width: 0; }
 
 .sp-steps { display: grid; gap: 0; min-width: 0; }
@@ -431,25 +429,10 @@
   transform-origin: 50% 50%;
 }
 .sp-panel-in { height: 100%; display: flex; flex-direction: column; }
-.sp-panel-bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 46px;
-  padding: 0 clamp(12px, 1.6vw, 16px);
-  background: rgba(var(--sp-ink-rgb), .035);
-  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
-}
 .sp-panel-title { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.sp-panel-rule { width: 1px; height: 15px; background: rgba(var(--sp-ink-rgb), .14); flex: 0 0 auto; }
-.sp-panel-name { font-size: 14px; font-weight: 540; color: var(--sp-ink); white-space: nowrap; }
 .sp-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sp-panel-body--pad { gap: 12px; padding: clamp(15px, 2vw, 22px); overflow: auto; }
 .sp-panel .sp-panel-body * { scrollbar-width: thin; scrollbar-color: rgba(var(--sp-ink-rgb), .18) transparent; }
-.sp-panel-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.sp-panel-foot > span { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* The underline tab: every text tab in the four windows. */
 .sp-utab {
@@ -487,7 +470,6 @@
   padding: 10px clamp(14px, 1.8vw, 20px);
   border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
 }
-.sp-pal-seedwrap { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
 .sp-seeds { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); }
 .sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 999px; display: grid; place-items: center; cursor: pointer; font-size: 11px; }
 .sp-seed-name { display: grid; gap: 1px; min-width: 0; }
@@ -545,16 +527,9 @@
 .spectrum .sp-ico { transition: background .16s ease; }
 @media (hover: hover) and (pointer: fine) { .sp-ico:not([aria-pressed="true"]):hover { background: rgba(var(--sp-ink-rgb), .06); } }
 .sp-ico[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.sp-ico-detail { flex: 0 0 auto; display: flex; align-items: center; gap: clamp(14px, 2vw, 22px); padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
 .sp-ico-big { flex: 0 0 auto; width: 96px; height: 96px; display: grid; place-items: center; border-radius: 16px; background: rgba(var(--sp-ink-rgb), .05); border: 1px solid rgba(var(--sp-ink-rgb), .09); font-size: 52px; color: var(--sp-ink); }
 .sp-ico-meta { flex: 1; min-width: 0; display: grid; gap: 12px; }
 .sp-ico-meta b { font-size: 15px; font-weight: 540; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ico-opts { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
-.sp-ico-opts .sp-utab { padding: 4px 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-ico-opts .sp-utab[aria-pressed="true"] { color: var(--sp-ink); }
-.sp-ico-opts .sp-panel-rule { height: 14px; }
-.sp-ico-foot { flex: none; display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); flex-wrap: wrap; padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
-.sp-ico-foot > i { flex: 1 1 40px; min-width: 0; }
 .sp-copybtn { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; height: 41px; padding: 0 10px 0 16px; color: rgba(var(--sp-ink-rgb), .88); }
 .sp-copybtn .sp-pill-icon { background: rgba(var(--sp-ink-rgb), .08); }
 
@@ -577,7 +552,6 @@
 .spectrum .sp-fontrow:active { transform: none; }
 @media (hover: hover) and (pointer: fine) { .sp-fontrow:hover { background: rgba(var(--sp-ink-rgb), .04); } }
 .sp-fontrow-top { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
-.sp-fontrow-main { flex: 1; min-width: 0; display: grid; gap: 10px; }
 .sp-fontrow-name { line-height: 1.24; padding-bottom: .06em; letter-spacing: -.02em; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-fontrow-sample { font-size: 15px; line-height: 1.45; color: rgba(var(--sp-ink-rgb), .82); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-fontrow-w { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; font-size: 18px; }
@@ -586,11 +560,9 @@
 .sp-fontrow-add { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .14); display: grid; place-items: center; font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-fontrow[aria-pressed="true"] .sp-fontrow-add { border-color: var(--sp-ink); background: var(--sp-ink); color: var(--sp-page); }
 .sp-fontrow-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-font-foot { flex: none; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
 .sp-font-pair { display: flex; align-items: baseline; gap: 9px; min-width: 0; flex: 1 1 180px; }
 .sp-font-pair small { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-font-pair b { font-weight: 400; font-size: 18px; line-height: 1.2; color: var(--sp-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-font-foot > span:last-child { display: flex; gap: 8px; flex: 0 0 auto; }
 
 /* The range slider, as the design draws it inside a panel. */
 .sp-panel input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; width: 100%; height: 16px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; accent-color: var(--accent); }
@@ -743,7 +715,6 @@
 .sp-frames-row > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .sp-frames-row .sp-utab { padding: 5px 0; margin-right: 18px; }
 .sp-frames-row > small { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-conv-foot { margin-top: auto; flex: none; display: flex; gap: 8px; flex-wrap: wrap; }
 
 .sp-quality input[type="range"]:disabled { opacity: .4; }
 
@@ -766,9 +737,6 @@
   .sp-saving-num.is-noloss { font-size: 28px; }
   .sp-cv .sp-fmtrow { gap: 20px; }
   .sp-model-chip, .sp-model-unit { font-size: 12px; }
-  .sp-conv-foot { flex-direction: column; }
-  .sp-conv-foot .sp-pill { justify-content: space-between; }
-  .sp-conv-foot .sp-ghost { justify-content: center; }
 }
 
 /* A step down on the narrowest phones, so "934% larger than the original" and
@@ -796,8 +764,6 @@
   .sp-font-ctl label { min-height: 44px; }
   .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small, .sp-strip small { font-size: 12px; }
   .sp-strip small { bottom: auto; top: 7px; }
-  .sp-conv-foot .sp-pill { min-height: 48px; }
-  .sp-conv-foot .sp-ghost { min-height: 44px; }
 }
 
 /* ═══ THE BENCH, POLISHED ═════════════════════════════════════════════════════
@@ -921,8 +887,11 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-panel .sp-font-pair small { font-size: 12px; }
 @media (max-width: 760px) {
   .sp-panel:has(.sp-fontlist) { max-height: none; }
-  .sp-panel .sp-fontlist { min-height: 440px; scroll-snap-type: y proximity; scroll-padding-bottom: 0; }
+  .sp-panel .sp-fontlist { flex: none; height: 440px; overflow: auto; scroll-snap-type: y proximity; scroll-padding-bottom: 0; }
   .sp-panel .sp-fontrow { scroll-snap-align: start; }
+}
+@media (pointer: fine) and (min-width: 761px) {
+  .sp-panel .sp-find input, .sp-panel .sp-font-ctl input[type="text"] { font-size: var(--bt-m); }
 }
 
 /* 04 · Converter */
