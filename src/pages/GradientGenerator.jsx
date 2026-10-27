@@ -4,6 +4,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import ColorPickerPop from '../components/ColorPickerPop'
+import AngleWheel from '../components/tool/AngleWheel'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
@@ -1099,18 +1100,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
             {angleActive && (
               <div className="grd-row">
-                <ToolSlider
+                <AngleWheel
                   label="Angle"
-                  className="grd-angle"
-                  value={Math.round(angle)}
-                  min={0}
-                  max={360}
-                  step={1}
-                  onChange={(v) => { if (guardEdit()) setAngle(v % 360) }}
-                  display={`${Math.round(angle)}°`}
                   ariaLabel="Gradient angle"
-                  ariaValueText={`${Math.round(angle)} degrees`}
-                  disabled={editLocked}
+                  numberLabel="Gradient angle in degrees"
+                  value={angle}
+                  onChange={(v) => { if (guardEdit()) setAngle(v) }}
+                  locked={editLocked}
+                  onLockedPress={guardEdit}
                 />
                 <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked — unlock to randomise it' : 'Lock angle when randomising'} />
               </div>

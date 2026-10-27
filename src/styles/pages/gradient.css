@@ -232,6 +232,105 @@
 .grd .grd-geo { gap: 12px; }
 .grd .grd-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .grd .grd-row > .tl-slider { flex: 1; min-width: 0; }
+.grd .grd-row > .grd-angle { flex: 1; min-width: 0; }
+
+/* ── Angle wheel ─────────────────────────────────────────────────────────────
+   A dial you drag, step with the arrow keys, or type into. 0deg is straight up
+   and the hand turns clockwise, matching the CSS angle. The hand follows the
+   pointer with no transition: it is a continuous drag, not a state change. */
+.grd .grd-angle { display: flex; align-items: center; gap: 12px; }
+.grd .grd-angle-k { flex: 0 0 auto; font-size: 12.5px; color: var(--tl-dim); }
+.grd .grd-wheel {
+  position: relative;
+  isolation: isolate;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--tl-line-2);
+  background: var(--tl-wash-2);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.grd .grd-wheel:active { cursor: grabbing; }
+.grd .grd-wheel:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
+.grd .grd-wheel-ticks,
+.grd .grd-wheel-tick { position: absolute; inset: 0; pointer-events: none; }
+.grd .grd-wheel-tick { transform: rotate(var(--grd-tick)); }
+.grd .grd-wheel-tick::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 1px;
+  height: 4px;
+  margin-left: -0.5px;
+  background: var(--tl-faint);
+}
+.grd .grd-wheel-tick.is-major::before { height: 7px; background: var(--tl-dim); }
+.grd .grd-wheel-hand {
+  position: absolute;
+  inset: 0;
+  transform: rotate(var(--grd-wheel-angle));
+  pointer-events: none;
+}
+/* The line from the centre to the knob, and the pivot it turns on. */
+.grd .grd-wheel-hand::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: 50%;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--t0);
+}
+.grd .grd-wheel-hand::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--t0);
+}
+.grd .grd-wheel-knob {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--t0);
+  border: 2px solid var(--tl-card);
+}
+.grd .grd-angle.is-locked .grd-wheel { opacity: .55; cursor: not-allowed; }
+.grd .grd-angle-num { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--tl-dim); }
+.grd .grd-angle-input {
+  width: 64px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--tl-hair);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  color: var(--tl-ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.grd .grd-angle-input::-webkit-outer-spin-button,
+.grd .grd-angle-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.grd .grd-angle-input:focus { border-color: color-mix(in srgb, var(--t0) 30%, transparent); }
+.grd .grd-angle.is-locked .grd-angle-input { opacity: .55; cursor: not-allowed; }
+.grd .grd-angle-unit { font-size: 12px; }
 .grd .grd-interp { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .grd .grd-interp-k { font-size: 12.5px; color: var(--tl-dim); }
 .grd .grd-interp-hint { flex: 1 0 100%; margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); text-wrap: pretty; }
@@ -309,7 +408,8 @@
 /* iOS zooms the page when a focused field is under 16px; the global ≤640
    floor loses to this sheet's (0,2,0) size, so it is restated here (C7). */
 @media (max-width: 640px) {
-  .grd .grd-hex { font-size: 16px; }
+  .grd .grd-hex,
+  .grd .grd-angle-input { font-size: 16px; }
 }
 
 /* ── The submit modal's preview strip ───────────────────────────────────── */
@@ -327,6 +427,8 @@
   .grd .grd-fmt-btn { min-height: 44px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
+  .grd .grd-wheel { width: 76px; height: 76px; }
+  .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
 
 :where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
@@ -338,6 +440,10 @@
 @media (forced-colors: active) {
   .grd .grd-stop.is-on,
   .grd .grd-preset.is-on { outline: 2px solid Highlight; }
+  .grd .grd-wheel { border-color: CanvasText; forced-color-adjust: none; }
+  .grd .grd-wheel-knob,
+  .grd .grd-wheel-hand::before,
+  .grd .grd-wheel-hand::after { background: CanvasText; forced-color-adjust: none; }
   .grd .grd-canvas,
   .grd .grd-rail,
   .grd .grd-preset-swatch,
