@@ -13,6 +13,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import zlib from 'node:zlib'
 import { logoMarkup } from '../../src/config/brandLogo.js'
 
 const ICO_SIZES = [16, 32, 48, 64]
@@ -39,6 +40,84 @@ function pngHeader(file) {
     bitDepth: buf.readUInt8(24),
     colourType: buf.readUInt8(25),
   }
+}
+
+/** Alpha at the four corners of a PNG payload, decoded for real (8-bit, not interlaced). */
+function pngCornerAlpha(png) {
+  assert.equal(png.subarray(1, 4).toString('ascii'), 'PNG', 'not a PNG payload')
+  const width = png.readUInt32BE(16)
+  const height = png.readUInt32BE(20)
+  const depth = png.readUInt8(24)
+  const colourType = png.readUInt8(25)
+  assert.equal(depth, 8, `PNG bit depth ${depth} is not covered by this decoder`)
+  assert.equal(png.readUInt8(28), 0, 'interlaced PNG is not covered by this decoder')
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colourType]
+  assert.ok(channels, `PNG colour type ${colourType} is not covered by this decoder`)
+
+  const idat = []
+  let trns = null
+  for (let o = 8; o < png.length;) {
+    const len = png.readUInt32BE(o)
+    const type = png.subarray(o + 4, o + 8).toString('ascii')
+    const data = png.subarray(o + 8, o + 8 + len)
+    if (type === 'IDAT') idat.push(data)
+    if (type === 'tRNS') trns = data
+    o += 12 + len
+  }
+  const raw = zlib.inflateSync(Buffer.concat(idat))
+  const stride = width * channels
+  const rows = []
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[y * (stride + 1)]
+    const line = Buffer.from(raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)))
+    const prev = y ? rows[y - 1] : Buffer.alloc(stride)
+    for (let i = 0; i < stride; i += 1) {
+      const a = i >= channels ? line[i - channels] : 0
+      const b = prev[i]
+      const c = i >= channels ? prev[i - channels] : 0
+      let add = 0
+      if (filter === 1) add = a
+      else if (filter === 2) add = b
+      else if (filter === 3) add = (a + b) >> 1
+      else if (filter === 4) {
+        const p = a + b - c
+        const pa = Math.abs(p - a)
+        const pb = Math.abs(p - b)
+        const pc = Math.abs(p - c)
+        add = pa <= pb && pa <= pc ? a : pb <= pc ? b : c
+      } else assert.equal(filter, 0, `unknown PNG filter ${filter}`)
+      line[i] = (line[i] + add) & 255
+    }
+    rows.push(line)
+  }
+  const alphaAt = (x, y) => {
+    const row = rows[y]
+    if (colourType === 6) return row[x * 4 + 3]
+    if (colourType === 4) return row[x * 2 + 1]
+    if (colourType === 3) return trns && row[x] < trns.length ? trns[row[x]] : 255
+    return 255 // grey or RGB with no alpha channel: every pixel is opaque
+  }
+  return [alphaAt(0, 0), alphaAt(width - 1, 0), alphaAt(0, height - 1), alphaAt(width - 1, height - 1)]
+}
+
+/** Alpha at the four corners of a BMP payload (the DIB form an ICO entry uses). */
+function bmpCornerAlpha(dib) {
+  const headerSize = dib.readUInt32LE(0)
+  const width = dib.readInt32LE(4)
+  const height = dib.readInt32LE(8) / 2 // an ICO's DIB height covers the image and its AND mask
+  const bpp = dib.readUInt16LE(14)
+  assert.ok(bpp === 32 || bpp === 24, `BMP icon at ${bpp} bits per pixel is not covered by this decoder`)
+  const xorStride = Math.ceil((width * bpp) / 32) * 4
+  const andStride = Math.ceil(width / 32) * 4
+  const xorStart = headerSize
+  const andStart = xorStart + xorStride * height
+  const at = (x, y) => {
+    const fromBottom = height - 1 - y // rows are stored bottom-up
+    if (bpp === 32) return dib[xorStart + fromBottom * xorStride + x * 4 + 3]
+    const masked = (dib[andStart + fromBottom * andStride + (x >> 3)] >> (7 - (x & 7))) & 1
+    return masked ? 0 : 255
+  }
+  return [at(0, 0), at(width - 1, 0), at(0, height - 1), at(width - 1, height - 1)]
 }
 
 // ── The mark ────────────────────────────────────────────────────────────────
@@ -96,6 +175,32 @@ test('favicon.ico is a real multi-size ICO, not a renamed PNG', () => {
   }
 })
 
+test('every image inside favicon.ico is transparent at its four corners', () => {
+  // The mark is the bare symbol. A background tile would show as an opaque
+  // corner, and a tab strip would then draw a coloured square around the mark.
+  // Each directory entry is decoded, whichever container it uses (PNG or BMP).
+  const b = bin('public/favicon.ico')
+  const count = b.readUInt16LE(4)
+  assert.ok(count > 0, 'favicon.ico holds no images')
+  for (let i = 0; i < count; i += 1) {
+    const o = 6 + i * 16
+    const size = b.readUInt32LE(o + 8)
+    const offset = b.readUInt32LE(o + 12)
+    const payload = b.subarray(offset, offset + size)
+    const isPng = payload.subarray(1, 4).toString('ascii') === 'PNG'
+    const corners = isPng ? pngCornerAlpha(payload) : bmpCornerAlpha(payload)
+    assert.deepEqual(corners, [0, 0, 0, 0],
+      `favicon.ico image ${i} (${b.readUInt8(o) || 256}px) has an opaque corner; the mark must not sit on a tile`)
+  }
+})
+
+test('the SVG favicon recolours for a dark browser chrome and draws no background tile', () => {
+  const svg = read('public/favicon.svg')
+  assert.match(svg, /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)\s*\{[^}]*\{[^}]*fill\s*:/i,
+    'favicon.svg has no dark prefers-color-scheme rule; a dark-ink mark vanishes on a dark tab strip')
+  assert.ok(!/<rect[\s>/]/i.test(svg), 'favicon.svg draws a <rect>; the mark must not sit on a background tile')
+})
+
 test('apple-touch-icon is 180px, square and opaque', () => {
   const h = pngHeader(pub('apple-touch-icon.png'))
   assert.equal(h.width, APPLE_SIZE)
@@ -140,7 +245,7 @@ test('the manifest does not promise an app the product is not', () => {
 test('index.html links every icon, with absolute hrefs', () => {
   const html = read('index.html')
   const links = {
-    'icon (svg)': /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg">/,
+    'icon (svg)': /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg" sizes="any">/,
     'icon (ico)': /<link rel="icon" href="\/favicon\.ico"/,
     'apple-touch-icon': /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png">/,
     manifest: /<link rel="manifest" href="\/site\.webmanifest">/,
