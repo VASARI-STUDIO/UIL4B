@@ -517,7 +517,8 @@ test('T7 a band\'s hue listener is attached only while a band is near the screen
   await go(page, '/')
   await page.waitForTimeout(800)
   const atTop = await liveScroll(page)
-  await page.locator('.sp-disc-grid').evaluate((el) => el.scrollIntoView({ block: 'center' }))
+  // The chip grid has hidden ghost copies stacked in its cell; the shown one is the band to scroll to.
+  await page.locator('.sp-disc-grid:not(.sp-disc-grid--ghost)').evaluate((el) => el.scrollIntoView({ block: 'center' }))
   await page.waitForTimeout(600)
   const mid = await liveScroll(page)
   expect(mid, 'a band far off screen still holds a scroll listener').toBe(atTop - 1)
@@ -543,8 +544,11 @@ test('the windows\' depth is a view timeline, and the lit rail follows the windo
     })
     await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('.sp-rail-row')].map((r, k) => (r.classList.contains('is-on') ? k : -1)).filter((k) => k > -1)),
       { message: `window ${i} is centred but the rail does not light it` }).toEqual([i])
-    const o = await page.evaluate(() => [...document.querySelectorAll('.sp-panel[data-panel]')].map((p) => +getComputedStyle(p).opacity))
-    expect(o[i], `the centred window ${i} is not at full ink`).toBeGreaterThan(0.97)
+    const ink = () => page.evaluate(() => [...document.querySelectorAll('.sp-panel[data-panel]')].map((p) => +getComputedStyle(p).opacity))
+    // A view timeline takes its new position on the next frame; window 0 is already lit
+    // at load, so the rail poll above can pass before that frame. Wait for the ink, not a pause.
+    await expect.poll(async () => (await ink())[i], { message: `the centred window ${i} is not at full ink` }).toBeGreaterThan(0.97)
+    const o = await ink()
     const others = o.filter((_, k) => k !== i)
     expect(Math.min(...others), 'a window away from the middle is not dimmer than the centred one').toBeLessThan(o[i] - 0.02)
   }
