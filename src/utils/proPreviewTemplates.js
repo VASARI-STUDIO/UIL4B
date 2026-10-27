@@ -379,7 +379,8 @@ const BUILDERS = {
  * box in authoring pixels; `logo` is the uploaded mark, drawn where the template does.
  */
 export function buildTemplatePreviewPages(kind, template, design, { projectName = 'Design System', logo = null, size } = {}) {
-  const entry = BUILDERS[kind]?.[template]
+  const row = Object.hasOwn(BUILDERS, kind) ? BUILDERS[kind] : null
+  const entry = row && Object.hasOwn(row, template) ? row[template] : null
   if (!entry || !size) return null
   const [mmAcross, build] = entry
   return build(groundFor(design, size, mmAcross), { projectName, logo })

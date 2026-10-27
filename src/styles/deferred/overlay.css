@@ -170,6 +170,8 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 
 /* The sticky dock covers the foot of the panel, so a scroll to a control stops above it. */
 .exp-panel{scroll-padding-bottom:88px}
+/* The dock's own buttons are always in view: cancel the padding for them so focusing one never scrolls the panel. */
+.exp-foot .exp-act{scroll-margin-bottom:-88px}
 /* The Pro kit's template cue: the chosen template and a link to the picker, above the identity
    fields, so the choice is in view when the picker sits below the fold. */
 .exp-tpl-cue{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;font-size:var(--fs-body-s);color:var(--t1)}

@@ -501,16 +501,17 @@ export default function ExportPanel({ onClose }) {
   }
   // Export disables while it builds, and a disabled button drops focus to the
   // page behind, so the next Tab would leave the dialog. Hold focus on the panel
-  // while it builds, then hand it back to the Export button once it is enabled.
+  // while it builds, then hand it back to the Export button once it is enabled,
+  // without scrolling a tall panel away from the notice it just showed.
   const wasBusy = useRef(false)
   useEffect(() => {
     if (busy) {
       wasBusy.current = true
-      panelRef.current?.focus()
+      panelRef.current?.focus({ preventScroll: true })
     } else if (wasBusy.current) {
       wasBusy.current = false
       const btn = exportBtnRef.current
-      if (btn && !btn.disabled) btn.focus()
+      if (btn && !btn.disabled) btn.focus({ preventScroll: true })
     }
   }, [busy])
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
