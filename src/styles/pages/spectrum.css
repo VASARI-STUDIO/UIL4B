@@ -1080,10 +1080,29 @@
   .sp-shelf img[data-pos="left"]:hover, .sp-shelf img[data-pos="right"]:hover { --sh-o: .85; }
 }
 @media (max-width: 760px) {
-  /* From 451px the strip beside the front cover is 100px or more, too wide for plain colour:
-     a back cover .58 of a cover from the middle shows its whole title on the left, and on
-     the right the end of its details and "2026". Under 451px, see below. */
-  .sp-shelf { --sh-w: min(69cqw, 62.9cqh); --sh-off: calc(var(--sh-w) * .58); }
+  .sp-shelf { --sh-w: min(69cqw, 62.9cqh); }
+}
+@media (min-width: 451px) and (max-width: 760px) {
+  /* The strip beside the front cover grows with the plate (59px at 451, 193px at 760), but a
+     cover's plain band (57% to 86% of its width: after the title and details on the left,
+     before "2026" on the right) stays about 70px, so only a clip keeps text out of the strip.
+     Each back cover is shown through a window of its own plain band, 60% to 84% of its width
+     (.24 of a cover, 55 to 59px): the front cover's edge is one end of the window and the clip
+     the other, so a strip is plain colour at any plate width. The offsets put the front
+     cover's edge at 84% of the left cover and at 60% of the right one, with c = .88w:
+       left = w/2 + c x (.84 - .5),  right = w/2 + c x (.5 - .6)
+     The window is never wider than the strip (the plate is over 1.4224 front covers wide), so
+     the clipped edge is inside the plate, 3px to 134px in from its edge. */
+  .sp-shelf {
+    --sh-off: calc(var(--sh-w) * .7992);
+    --sh-off-r: calc(var(--sh-w) * .412);
+  }
+  .sp-shelf img { clip-path: inset(0); }
+  .sp-shelf img[data-pos="right"] { --sh-x: var(--sh-off-r); clip-path: inset(0 16% 0 0); }
+  .sp-shelf img[data-pos="left"] { clip-path: inset(0 0 0 60%); }
+  /* The window opens and closes with the move, on the transform's clock. */
+  .sp-shelf img { transition: transform 240ms var(--sp-ease), opacity 240ms var(--sp-ease), clip-path 240ms var(--sp-ease), z-index 0s linear 120ms; }
+  .sp-shelf img:not([data-pos="front"]) { transition: transform 240ms var(--sp-ease), opacity 120ms var(--sp-ease) 120ms, clip-path 240ms var(--sp-ease), z-index 0s linear 120ms; }
 }
 @media (max-width: 450px) {
   /* On a phone the plate is 318px and the front cover 220, so each back cover shows a strip
