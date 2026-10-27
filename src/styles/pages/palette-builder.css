@@ -431,7 +431,7 @@
 .plb .plb-float {
   position: fixed;
   top: calc(var(--chrome-h) + 62px);
-  right: 16px;
+  right: max(16px, env(safe-area-inset-right,0px));
   z-index: 125;
   display: block;
 }

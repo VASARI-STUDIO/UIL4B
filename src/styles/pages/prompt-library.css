@@ -179,10 +179,10 @@
    height left over, so a page gets a phone-shaped viewport rather than a
    thumbnail of its desktop layout. */
 @media(max-width:640px){
-  .plib-page .pl-modal-backdrop{padding:0}
+  .plib-page .pl-modal-backdrop{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
   .plib-page .pl-modal,
-  .plib-page .pl-modal.has-live{max-width:none;min-height:100vh;min-height:100dvh;max-height:100vh;max-height:100dvh;border:0;border-radius:0}
-  .plib-page .pl-modal.has-live{height:100vh;height:100dvh}
+  .plib-page .pl-modal.has-live{max-width:none;min-height:100vh;min-height:calc(100dvh - env(safe-area-inset-top,0px));max-height:100vh;max-height:calc(100dvh - env(safe-area-inset-top,0px));border:0;border-radius:0}
+  .plib-page .pl-modal.has-live{height:100vh;height:calc(100dvh - env(safe-area-inset-top,0px))}
   .plib-page .pl-modal-close{top:12px;right:12px}
   .plib-page .pl-modal-header{padding:20px 16px 0}
   .plib-page .pl-modal-views{margin:10px 16px 0;max-width:calc(100% - 32px)}

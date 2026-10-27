@@ -177,7 +177,7 @@
   max-height: min(82dvh, 640px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  padding: 8px max(12px, env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left,0px));
   border-radius: 22px 22px 0 0;
   border-top: 1px solid var(--tl-line-2);
   background: var(--card);
