@@ -1019,7 +1019,11 @@
    behind on either side at .88 and .72, on the same baseline. A pick changes only
    data-pos, and the move is a transition on transform and opacity (240ms), so an
    interrupted pick carries on from where each cover is and the shelf is never
-   empty. */
+   empty. z-index does not tween, so it gets a step: it holds for 120ms (the
+   midpoint) and then flips on both covers in the same frame. The leaving front
+   cover stays on top for the first half, instead of the arriving one (still at
+   .88 and .72) jumping over it on frame 1, and the two never tie. A second pick
+   mid-move retargets the step from each cover's current z-index. */
 .sp-shelf {
   position: relative;
   min-height: 0;
@@ -1039,7 +1043,7 @@
   transform-origin: 50% 100%;
   transform: translateX(var(--sh-x, 0px)) scale(var(--sh-s, 1));
   opacity: var(--sh-o, 1);
-  transition: transform 240ms var(--sp-ease), opacity 240ms var(--sp-ease);
+  transition: transform 240ms var(--sp-ease), opacity 240ms var(--sp-ease), z-index 0s linear 120ms;
 }
 .sp-shelf img[data-pos="front"] { --sh-x: 0px; --sh-s: 1; --sh-o: 1; z-index: 3; }
 .sp-shelf img[data-pos="left"] { --sh-x: calc(var(--sh-off) * -1); --sh-s: .88; --sh-o: .72; z-index: 1; }
@@ -1390,12 +1394,15 @@
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
 :where(html[data-reduced-motion="true"]) .spectrum .sp-plate-art img { animation: none !important; transition: none !important; transform: none !important; }
+/* The shelf's covers are placed by transform, so only animation is cut here (the transition guard above stops the move). */
+:where(html[data-reduced-motion="true"]) .spectrum .sp-shelf img { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, .sp-shelf img, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum .sp-plate-art img { animation: none !important; transition: none !important; transform: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-shelf img { animation: none !important; }
 }
 
 /* ── FORCED COLOURS ──────────────────────────────────────────────────────────
