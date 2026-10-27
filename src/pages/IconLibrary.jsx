@@ -1349,14 +1349,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         setSimilar({
           id,
           list: names
-            .filter(n => n !== name && n.split(/[-_]/)[0] === root)
+            .filter(n => n !== name && n.split(/[-_]/)[0] === root && canSeeIcon(pack, n, isPro ? 'paid' : 'free'))
             .slice(0, 6)
             .map(n => ({ id: `${pack}:${n}`, pack, name: n, cdn: true })),
         })
       })
       .catch(() => { /* non-fatal — just hide the row */ })
     return () => { cancelled = true }
-  }, [activeIcon])
+  }, [activeIcon, isPro])
 
   const currentId = activeIcon ? (activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`) : null
   const similarList = similar.id === currentId ? similar.list : []
@@ -3154,6 +3154,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     lastTier.current = tier
     // Leaving Pro (sign-out, a lapsed plan) drops the animated sets' listing and glyphs.
     if (tier !== 'paid') forgetAnimatedSets()
+    // An icon opened under the old tier closes if the new one cannot see it.
+    if (selected?.cdn && !canSeeIcon(selected.pack, selected.name, tier)) setSelected(null)
     if (source === 'custom') browseCustom()
     else if (query.trim().length >= 2) doSearch(query, { pack, group })
     else if (pack) browsePack(pack, group)

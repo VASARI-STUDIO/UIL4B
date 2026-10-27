@@ -256,8 +256,8 @@ test.describe('a stored recent from a blocked set or a Pro-only icon', () => {
     expect(urls.filter((u) => /\/(ri|streamline[a-z-]*)(\.json|\/)/.test(new URL(u).pathname))).toEqual([])
   })
 
-  // RED ON PURPOSE: the rail hides the logo but the glyph loader still asks for it
-  // (src/pages/IconLibrary.jsx:3471 gates on the pack only, and reads the unfiltered `recents`).
+  // The rail hides the logo, and the glyph loader, which reads the unfiltered
+  // `recents`, must not ask for it either.
   test('a free account never fetches the glyph of a Carbon logo kept in its Recent list', async ({ page }) => {
     const urls = iconifyUrls(page)
     await seed(page)
