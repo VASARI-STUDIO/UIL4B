@@ -284,9 +284,11 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     await expect(openTip(page)).toHaveCount(0)
   })
 
-  test('a hover card sits above or below its note, never over it, and nothing sits on top of it', async ({ page }) => {
+  test('a hover card sits above, below or beside its note, never over it, and nothing sits on top of it', async ({ page }) => {
     await openTint(page, 'someone pointing along the notes')
     for (const i of [0, 5, 10]) {
+      // Out of the last card first: each note is read on its own here (the walk from one note to the next is the first test above).
+      await page.mouse.move(5, 5)
       await note(page, i).hover()
       const card = openTip(page).locator('.tt-tip-card')
       await expect(card, `note ${i}`).toBeVisible()
@@ -298,89 +300,136 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
         return {
           above: c.bottom <= n.top + 2,
           below: c.top >= n.bottom - 2,
+          beside: c.left >= n.right - 2 || c.right <= n.left + 2,
           covered: [[0.5, 0.5], [0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85]]
             .filter(([fx, fy]) => !probe(c.left + c.width * fx, c.top + c.height * fy)).length,
         }
       }, i)
-      expect(m.above || m.below, `note ${i}: the card is neither wholly above nor wholly below its note`).toBe(true)
+      expect(m.above || m.below || m.beside, `note ${i}: the card sits over its note`).toBe(true)
       expect(m.covered, `note ${i}: something else sits on top of the card`).toBe(0)
     }
   })
 
-  // What the open card and its note look like against the window, read in one go
-  // (viewport coordinates: the page does not scroll at these sizes).
-  const cardFit = (page, i) => openTip(page).locator('.tt-tip-card').evaluate((el, idx) => {
-    const c = el.getBoundingClientRect()
-    const n = document.querySelectorAll('.tt-note')[idx].getBoundingClientRect()
-    const h = document.querySelector('.tt-notes-head').getBoundingClientRect()
+  // What the open card, its note, the notes header and the sticky toolbar look like
+  // against the window, read in one go (viewport coordinates: the page does not
+  // scroll at these sizes).
+  const cardFit = (page, i) => openTip(page).evaluate((tip, idx) => {
+    const el = tip.querySelector('.tt-tip-card')
+    const R = (e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, w: r.width, h: r.height } }
+    const bar = document.querySelector('.tt .tl-toolbar')
+    const help = el.querySelector('.tt-tip-help')
     return {
-      cardTop: c.top, cardBottom: c.bottom, cardH: c.height, noteTop: n.top, noteBottom: n.bottom,
-      headBottom: h.bottom, winH: innerHeight, scrollH: el.scrollHeight, clientH: el.clientHeight,
-      capped: !!el.style.maxHeight,
-      overflowY: getComputedStyle(el).overflowY,
-      above: !!el.closest('.tt-tip').classList.contains('tt-tip--above'),
-      // Room under the note once the card keeps 6px from it and 12px from the window's foot.
-      roomBelow: innerHeight - 12 - n.bottom - 6,
+      card: R(el), note: R(document.querySelectorAll('.tt-note')[idx]), head: R(document.querySelector('.tt-notes-head')),
+      bar: bar ? R(bar) : null, rows: [...el.querySelectorAll('.tt-tip-row')].map(R),
+      winW: innerWidth, winH: innerHeight,
+      scrollH: el.scrollHeight, clientH: el.clientHeight, capped: !!el.style.maxHeight, overflowY: getComputedStyle(el).overflowY,
+      tabindex: el.getAttribute('tabindex'),
+      above: tip.classList.contains('tt-tip--above'), compact: tip.classList.contains('tt-tip--compact'),
+      side: tip.classList.contains('tt-tip--right') ? 'right' : tip.classList.contains('tt-tip--left') ? 'left' : '',
+      helpShown: getComputedStyle(help).display !== 'none' && help.getBoundingClientRect().height > 0,
+      // Room under the note, as the page counts it: a 6px bridge and 12px off the window's foot.
+      roomBelow: innerHeight - 12 - document.querySelectorAll('.tt-note')[idx].getBoundingClientRect().bottom - 6,
     }
   }, i)
+  const meets = (a, b) => !!b && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
   const settle = async (page, i) => {
+    // Out of the last card first: placement is read note by note here; walking from one note to the next is the hover test above.
+    await page.mouse.move(5, 5)
     await note(page, i).hover()
     await expect(openTip(page).locator('.tt-tip-card'), `note ${i}`).toBeVisible()
     await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
   }
+  // The card's whole height, help paragraph and all, with its 6px bridge off (about 224px).
+  const FULL = 224
 
-  test('a hover card opens below its note when the room allows and never meets the notes header', async ({ page }) => {
+  test('a hover card opens below its note, whole, when the room allows; whatever the room, it never meets the header or the toolbar', async ({ page }) => {
     await openTint(page, 'someone pointing along the notes')
     for (let i = 0; i < 11; i++) {
       await settle(page, i)
       const m = await cardFit(page, i)
-      const [c, n, h] = [await docBox(openTip(page).locator('.tt-tip-card')), await docBox(note(page, i)), await docBox(page.locator('.tt-notes-head'))]
-      // "Below, no flip, not cut short" binds only a note with room under it for the whole card (about 224px).
-      if (m.roomBelow >= m.scrollH) {
-        expect(c.y, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(n.y + n.h - 2)
-        expect(m.above, `note ${i}: no flip above when there is room below`).toBe(false)
-        expect(m.capped, `note ${i}: a card with room below is not cut short`).toBe(false)
+      if (m.roomBelow >= FULL) {
+        expect(m.card.top, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(m.note.bottom - 2)
+        expect(m.above || m.compact || m.side, `note ${i}: room below, so no flip, no squeeze, no side`).toBeFalsy()
+        expect(m.helpShown, `note ${i}: a whole card shows its help`).toBe(true)
       }
-      // The header is never covered, roomy note or squeezed.
-      expect(overlap(c, h), `note ${i}: the card meets the notes header`).toBe(false)
+      expect(meets(m.card, m.head), `note ${i}: the card meets the notes header`).toBe(false)
+      expect(meets(m.card, m.bar), `note ${i}: the card meets the sticky toolbar`).toBe(false)
     }
   })
 
-  test('a squeezed hover card is no taller than its room, scrolls inside, and the page does not grow', async ({ page }) => {
+  test('a squeezed hover card drops its help, keeps both rows whole, and stays inside the window, clear of the header and toolbar', async ({ page }) => {
     await openTint(page, 'someone pointing along the notes in a short window')
     const docH0 = await page.evaluate(() => document.documentElement.scrollHeight)
-    let squeezed = 0
+    const kinds = new Set()
     for (let i = 0; i < 11; i++) {
       await settle(page, i)
       const m = await cardFit(page, i)
-      if (m.roomBelow >= m.scrollH) continue // roomy: the test above holds it
-      squeezed++
-      // The room on the side the card took: under the note to 12px short of the foot, or over it down from the header.
-      const room = m.above ? m.noteTop - 6 - m.headBottom : m.roomBelow
-      expect(m.cardH, `note ${i}: the squeezed card is taller than the room it took`).toBeLessThanOrEqual(room + 1)
-      if (m.above) expect(m.cardTop, `note ${i}: the card rises over the notes header`).toBeGreaterThanOrEqual(m.headBottom - 1)
-      else expect(m.cardBottom, `note ${i}: the card reaches past 12px from the window's foot`).toBeLessThanOrEqual(m.winH - 12 + 1)
-      expect(m.capped, `note ${i}: a squeezed card carries a max-height`).toBe(true)
-      expect(m.overflowY, `note ${i}: a capped card scrolls, not clips or spills`).toBe('auto')
-      expect(m.scrollH, `note ${i}: a capped card scrolls inside`).toBeGreaterThan(m.clientH)
+      const wholeAbove = m.above && !m.compact && !m.side
+      if (m.roomBelow >= FULL || wholeAbove) continue // roomy: the test above holds it
+      kinds.add(m.side ? `beside ${m.side}` : `${m.above ? 'above' : 'below'} compact`)
+      // The help paragraph went, and the head and both rows remain, each wholly inside the card.
+      expect(m.compact, `note ${i}: a squeezed card is the compact one`).toBe(true)
+      expect(m.helpShown, `note ${i}: the compact card still shows its help`).toBe(false)
+      expect(m.rows, `note ${i}: both rows`).toHaveLength(2)
+      for (const r of m.rows) {
+        expect(r.top, `note ${i}: a row is cut off at the card's top`).toBeGreaterThanOrEqual(m.card.top - 1)
+        expect(r.bottom, `note ${i}: a row is cut off at the card's foot`).toBeLessThanOrEqual(m.card.bottom + 1)
+      }
+      // Inside the window, 12px short of its foot, clear of the header and the sticky toolbar.
+      expect(m.card.left, `note ${i}: past the window's left edge`).toBeGreaterThanOrEqual(-1)
+      expect(m.card.right, `note ${i}: past the window's right edge`).toBeLessThanOrEqual(m.winW - 12 + 1)
+      expect(m.card.bottom, `note ${i}: past 12px from the window's foot`).toBeLessThanOrEqual(m.winH - 12 + 1)
+      expect(meets(m.card, m.head), `note ${i}: the card meets the notes header`).toBe(false)
+      expect(meets(m.card, m.bar), `note ${i}: the card meets the sticky toolbar`).toBe(false)
+      expect(m.card.top, `note ${i}: the card rises into the toolbar`).toBeGreaterThanOrEqual((m.bar?.bottom ?? 0) - 1)
+      // Placed where its class says, and no narrower than 224px.
+      if (m.side === 'right') expect(m.card.left, `note ${i}: a right card starts at the note's right`).toBeGreaterThanOrEqual(m.note.right - 2)
+      if (m.side === 'left') expect(m.card.right, `note ${i}: a left card ends at the note's left`).toBeLessThanOrEqual(m.note.left + 2)
+      if (m.side) expect(m.card.w, `note ${i}: a side card keeps its 224px`).toBeGreaterThanOrEqual(224 - 1)
+      else if (m.above) expect(m.card.bottom, `note ${i}: an above card ends at the note`).toBeLessThanOrEqual(m.note.top + 2)
+      else expect(m.card.top, `note ${i}: a below card starts at the note`).toBeGreaterThanOrEqual(m.note.bottom - 2)
+      // A squeezed card that is not the last resort needs no scrolling.
+      if (!m.capped) expect(m.scrollH, `note ${i}: a card that fits does not scroll`).toBeLessThanOrEqual(m.clientH + 1)
       expect(await page.evaluate(() => document.documentElement.scrollHeight), `note ${i}: the page grew`).toBeLessThanOrEqual(docH0)
     }
-    expect(squeezed, 'at 1440x900 the notes leave under 224px below, so some card is squeezed').toBeGreaterThan(0)
+    // 1440x900 leaves 70px under the lowest row of notes: a compact card below for the upper notes, a side card for the rest.
+    expect([...kinds].sort(), 'the squeezed placements seen at 1440x900').toEqual(['below compact', 'beside right'])
   })
 
   test.describe('in a tall window', () => {
     test.use({ viewport: { width: 1440, height: 1300 } })
-    test('every hover card has room, opens below its note and is not cut short', async ({ page }) => {
+    test('every hover card has room, opens below its note, whole, with its help', async ({ page }) => {
       await openTint(page, 'someone pointing along the notes in a tall window')
       for (let i = 0; i < 11; i++) {
         await settle(page, i)
         const m = await cardFit(page, i)
-        expect(m.roomBelow, `note ${i}: a 1300px window leaves room for the whole card`).toBeGreaterThanOrEqual(m.scrollH)
-        expect(m.cardTop, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(m.noteBottom - 2)
-        expect(m.above, `note ${i}: no flip above`).toBe(false)
-        expect(m.capped, `note ${i}: not cut short`).toBe(false)
+        expect(m.roomBelow, `note ${i}: a 1300px window leaves room for the whole card`).toBeGreaterThanOrEqual(FULL)
+        expect(m.card.top, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(m.note.bottom - 2)
+        expect(m.above || m.compact || m.side || m.capped, `note ${i}: no flip, squeeze, side or cap`).toBeFalsy()
+        expect(m.helpShown, `note ${i}: the help paragraph is shown`).toBe(true)
         expect(m.scrollH, `note ${i}: nothing to scroll`).toBeLessThanOrEqual(m.clientH)
       }
+    })
+  })
+
+  // The card scrolls only as a last resort (a window too short even for the compact
+  // card beside the note). A scroller is a Tab stop in Chromium unless it opts out.
+  test.describe('in a window too short for even the compact card', () => {
+    test.use({ viewport: { width: 1440, height: 260 } })
+    test('the card is cut to fit and scrolls inside, but is not a Tab stop: Tab goes from note 2 to note 3', async ({ page }) => {
+      await openTint(page, 'a keyboard user in a very short window')
+      await note(page, 2).scrollIntoViewIfNeeded()
+      await note(page, 2).focus()
+      await expect(openTip(page).locator('.tt-tip-card')).toBeVisible()
+      const m = await cardFit(page, 2)
+      // Positive control: this card really does scroll, so a Tab stop would be possible.
+      expect(m.capped, 'the card carries a max-height').toBe(true)
+      expect(m.overflowY).toBe('auto')
+      expect(m.scrollH, 'the card scrolls inside').toBeGreaterThan(m.clientH)
+      await page.keyboard.press('Tab')
+      await expect(note(page, 3), 'Tab skips the card and reaches the next note').toBeFocused()
+      expect(await page.evaluate(() => document.activeElement.className)).not.toMatch(/tt-tip-card/)
+      expect(m.tabindex, 'the scrolling card opts out of the Tab order').toBe('-1')
     })
   })
 
@@ -451,6 +500,8 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
   test('both the white and the black row show, each with a ratio, a tick or cross, and a word', async ({ page }) => {
     await openTint(page, 'someone checking text on a tint')
     for (const i of [0, 5, 10]) {
+      // Out of the last card first: each note is read on its own here (the walk from one note to the next is the first test above).
+      await page.mouse.move(5, 5)
       await note(page, i).hover()
       const tip = openTip(page)
       await expect(tip).toBeVisible()
