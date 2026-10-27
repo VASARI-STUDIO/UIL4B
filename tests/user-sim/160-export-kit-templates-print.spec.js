@@ -112,12 +112,17 @@ for (const [layout, tier, design] of CASES) {
       seen = {}
       pdfs = {}
       loaded = []
+      // Screen first: the page measures its tables when the window resizes, and printing in between would leave that stale.
+      await page.emulateMedia({ media: 'screen' })
       for (const [width, height] of VIEWPORTS) {
         await page.setViewportSize({ width, height })
-        await page.emulateMedia({ media: 'screen' })
         loaded = await settle()
         seen[width] = await page.evaluate(measureKit, { floor: SCREEN_FLOOR_PX, name: whole })
-        await page.emulateMedia({ media: 'print' })
+      }
+      // Then the PDF from each window width, which is how the page count is shown to be the same at all of them.
+      await page.emulateMedia({ media: 'print' })
+      for (const [width, height] of [...VIEWPORTS].reverse()) {
+        await page.setViewportSize({ width, height })
         pdfs[width] = pdfPages(await page.pdf({ preferCSSPageSize: true, printBackground: true }))
       }
       await page.setViewportSize({ width: PRINT_WIDTH[layout], height: 900 })
