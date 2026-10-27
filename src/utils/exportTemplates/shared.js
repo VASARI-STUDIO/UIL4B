@@ -25,10 +25,29 @@ export function orderSections(items, order = [], key = (x) => x) {
  */
 export const safeHex = (value, fallback) => (/^#[0-9a-fA-F]{6}$/.test(String(value)) ? String(value) : fallback)
 
+// A character's width in average advances. A capital in a bold geometric face sets
+// near 0.7 em against the 0.52 average (a ratio of about 1.35), so a name in capitals
+// would otherwise be measured too narrow and cut; lowercase sits a little under the
+// average to keep a mixed-case name where it was. Digits, spaces and marks count one.
+const CAP_WIDTH = 1.35
+const LOWER_WIDTH = 0.95
+
+/** `text` measured in average advances, with capitals weighted wider than lowercase. */
+export function titleWidth(text) {
+  let width = 0
+  for (const ch of String(text ?? '')) {
+    if (ch !== ch.toLowerCase()) width += CAP_WIDTH
+    else if (ch !== ch.toUpperCase()) width += LOWER_WIDTH
+    else width += 1
+  }
+  return width
+}
+
 /**
  * The size a cover title is set at. Picks the first of `steps` (largest first)
  * at which `name` fits `maxLines` lines in `measure`, counting characters against
- * an average advance of `advance` em (0.52; 0.46 for a condensed face). `measure`
+ * an average advance of `advance` em (0.52; 0.46 for a condensed face), capitals
+ * counted wider than lowercase (titleWidth). `measure`
  * and `steps` share one unit. Breaks fall at spaces; a word longer than a line
  * breaks anywhere, which the title CSS allows with overflow-wrap:anywhere.
  *
@@ -47,15 +66,16 @@ export function fitTitle(name, { maxLines = 3, steps = [], measure = 100, advanc
     let broken = false
     for (const word of text.split(' ')) {
       if (!word) continue
-      const need = used ? used + 1 + word.length : word.length
+      const width = titleWidth(word)
+      const need = used ? used + 1 + width : width
       if (need <= cap) { used = need; continue }
       if (used) { lines += 1; used = 0 }
-      if (word.length > cap) {
+      if (width > cap) {
         broken = true
-        lines += Math.ceil(word.length / cap) - 1
-        used = word.length % cap || cap
+        lines += Math.ceil(width / cap) - 1
+        used = width % cap || cap
       } else {
-        used = word.length
+        used = width
       }
     }
     return { lines, broken }
@@ -88,12 +108,13 @@ export function clampTitle(name, size, { maxLines = 3, measure = 100, advance = 
   let used = 0
   let kept = 0
   for (const word of words) {
-    const need = used ? used + 1 + word.length : word.length
+    const width = titleWidth(word)
+    const need = used ? used + 1 + width : width
     if (need <= cap) { used = need; kept += 1; continue }
-    if (word.length > cap) { if (!kept) return text; break }
+    if (width > cap) { if (!kept) return text; break }
     if (lines >= maxLines) break
     lines += 1
-    used = word.length
+    used = width
     kept += 1
   }
   if (kept === words.length || kept === 0) return text

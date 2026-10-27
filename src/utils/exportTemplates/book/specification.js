@@ -3,11 +3,14 @@
 // A template returns strings; the generator owns every fact on the page.
 
 import { esc, safeHex, inkName, paletteLayout, chromeFor } from '../shared.js'
-import { mixHex } from '../roles.js'
+import { mixHex, softInk } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Hanken Grotesk', weights: '100 900', file: 'hanken-grotesk-latin.woff2' })
 
-function cover({ d, projectName, field, fieldInk, iso, year, slots, fit }) {
+function cover({ d, projectName, field, fieldInk, iso, year, slots, fit, contrast }) {
+  // Secondary cover text is a solid tone of the ink, not the ink at a lower opacity,
+  // so its ratio on the field is the one measured.
+  const soft = softInk(fieldInk, field, contrast, { amount: 0.75 })
   // The palette runs full-bleed across the foot of the cover: the system
   // applied, not a legend of it.
   //
@@ -20,7 +23,7 @@ function cover({ d, projectName, field, fieldInk, iso, year, slots, fit }) {
   const band = rest.length
     ? rest.map(s => `<i style="background:${s.hex};flex:${s.kind === 'neutral' ? 0.5 : 1} 1 0"></i>`).join('')
     : ''
-  return `<section class="pg pg-cover" style="background:${field};color:${fieldInk}">
+  return `<section class="pg pg-cover" style="background:${field};color:${fieldInk};--cv-soft:${soft}">
   <div class="cv-top">
     <span class="cv-mark">Design system</span>
     <span class="cv-year">${esc(year)}</span>
@@ -69,9 +72,12 @@ const sentence = (text) => {
 }
 
 /** One swatch: the chip, the role and name, where it lands, and its values. */
-function swatch(s, span) {
+function swatch(s, span, contrast) {
+  const chipInk = safeHex(s.ink, 'CanvasText')
+  // The index is a solid tone of the ink that still reads on this colour.
+  const chipSoft = safeHex(s.hex, '') ? softInk(chipInk, s.hex, contrast, { amount: 0.75 }) : chipInk
   return `<div class="sw${span > 1 ? ' is-primary' : ''}" style="grid-column:span ${span}">
-      <div class="sw-chip" style="background:${safeHex(s.hex, 'GrayText')};color:${safeHex(s.ink, 'CanvasText')}"><span>${String(s.i + 1).padStart(2, '0')}</span></div>
+      <div class="sw-chip" style="background:${safeHex(s.hex, 'GrayText')};color:${chipInk}"><span style="color:${chipSoft}">${String(s.i + 1).padStart(2, '0')}</span></div>
       <div class="sw-id">
         <p class="sw-role">${esc(sentence(s.role))}</p>
         <p class="sw-name">${esc(s.name)}</p>
@@ -102,6 +108,7 @@ function swatches(ctx, slots) {
     const per = Math.ceil(left.length / Math.ceil(left.length / ROWS_NEXT))
     for (let at = 0; at < left.length; at += per) groups.push(left.slice(at, at + per))
   }
+  const cut = ctx.d.palette.length > slots.length
   return groups.map((rows, gi) => {
     const cells = [...(gi === 0 ? [lead] : []), ...rows].flat()
     return {
@@ -112,7 +119,8 @@ function swatches(ctx, slots) {
     ? '<h3>The palette</h3><p class="lede">Each colour with its role, its values in three notations, and the ink that reads on it.</p>'
     : '<h3 class="cont">The palette <span>continued</span></h3>'}
     </header>
-    <div class="sws">${cells.map(({ i, span }) => swatch(slots[i], span)).join('')}</div>
+    <div class="sws">${cells.map(({ i, span }) => swatch(slots[i], span, ctx.contrast)).join('')}</div>
+    ${cut && gi === groups.length - 1 ? `<p class="note">The first ${slots.length} of ${ctx.d.palette.length} colours are shown. All ${ctx.d.palette.length} are listed in Tokens.</p>` : ''}
   </div>`,
     }
   })
@@ -172,7 +180,7 @@ function css({ d, fontData, roles }) {
   /* ── cover ──────────────────────────────────────────────────────────── */
   .pg-cover{display:flex;flex-direction:column;justify-content:space-between;padding:var(--m)}
   .cv-top{display:flex;justify-content:space-between;font-size:8pt;
-    letter-spacing:.02em;opacity:.82}
+    letter-spacing:.02em;color:var(--cv-soft)}
   /* The title sits LOW, above the specification block, with the open field
      above it. Vertically centring it read as a slide; a cover is a composition
      and the mass belongs off-centre. */
@@ -184,7 +192,7 @@ function css({ d, fontData, roles }) {
     padding-bottom:.12em;align-self:flex-start;margin:auto 0 calc(14mm - .12em)}
   .cv-bottom{display:flex;flex-direction:column;gap:6mm}
   .cv-meta{display:flex;gap:12mm;margin:0;font-size:8pt}
-  .cv-meta dt{opacity:.7;font-size:8pt;margin-bottom:1mm}
+  .cv-meta dt{color:var(--cv-soft);font-size:8pt;margin-bottom:1mm}
   .cv-meta dd{margin:0;font-family:var(--mono)}
   /* Full bleed: the band cancels the page padding and runs edge to edge, so it
      reads as the system applied to the cover rather than a swatch strip laid
@@ -211,7 +219,7 @@ function css({ d, fontData, roles }) {
   .is-sub .ct-folio{font-size:8pt;color:var(--mut)}
   .ct-dot{flex:1;border-bottom:.4pt dotted var(--line);transform:translateY(-1mm)}
   .ct-folio{font-family:var(--mono);font-size:9pt}
-  .ct-aside{font-size:8.5pt;color:var(--mut)}
+  .ct-aside{font-size:8.5pt;color:var(--mut);overflow-wrap:anywhere}
   .ct-aside b{color:var(--ink)}
   .ct-facts{margin:6mm 0 0;border-top:.8pt solid var(--ink);padding-top:3mm}
   .ct-facts div{display:flex;justify-content:space-between;padding:1.6mm 0;
@@ -237,7 +245,7 @@ function css({ d, fontData, roles }) {
     border-top:.4pt solid var(--line);padding:3mm 0}
   .bd:first-child{border-top:.8pt solid var(--ink)}
   .bd-chip{display:flex;align-items:flex-end;padding:2.5mm;height:100%}
-  .bd-idx{font-family:var(--mono);font-size:8pt;opacity:.75}
+  .bd-idx{font-family:var(--mono);font-size:8pt}
   .bd-id{display:flex;flex-direction:column;justify-content:center}
   .bd-role{font-size:7.5pt;letter-spacing:.02em;color:var(--mut);margin:0 0 1.5mm}
   .bd-name{font-family:var(--head);font-size:13pt;font-weight:${d.headingWeight};margin:0;line-height:1.1}
@@ -254,7 +262,6 @@ function css({ d, fontData, roles }) {
   .sw{min-width:0;display:flex;flex-direction:column;gap:2.4mm}
   .sw-chip{height:24mm;padding:2mm 2.5mm;display:flex;align-items:flex-end;
     outline:.4pt solid var(--line);outline-offset:-.4pt;font-family:var(--mono);font-size:7.5pt}
-  .sw-chip span{opacity:.75}
   .sw-id p{margin:0}
   .sw-role{font-size:7.5pt;letter-spacing:.02em;color:var(--mut);margin-bottom:.8mm!important}
   .sw-name{font-family:var(--head);font-size:12pt;font-weight:${d.headingWeight};line-height:1.1}

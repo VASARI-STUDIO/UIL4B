@@ -60,7 +60,22 @@ export function mixHex(from, to, amount) {
   return `#${out.join('')}`.toUpperCase()
 }
 
-export const isNeutral = (hex) => hexToOklch(hex).c < NEUTRAL_CHROMA
+/**
+ * `ink` toned down toward `ground` for secondary text, as a solid colour: it starts at
+ * `amount` of the ink over the ground and takes more ink until it reads `min`:1. An ink
+ * that cannot reach `min` on this ground comes back unchanged. Replaces an opacity, which
+ * would let the ratio fall below what was checked. `contrast(a, b)` is the WCAG ratio.
+ */
+export function softInk(ink, ground, contrast, { amount = 0.8, min = 4.5 } = {}) {
+  if (!HEX.test(ink) || !HEX.test(ground) || contrast(ink, ground) < min) return ink
+  for (let share = amount; share < 1; share += 0.05) {
+    const mixed = mixHex(ink, ground, share)
+    if (contrast(mixed, ground) >= min) return mixed
+  }
+  return ink
+}
+
+export const isNeutral =(hex) => hexToOklch(hex).c < NEUTRAL_CHROMA
 
 /**
  * { paper, ink, muted, rule } for a palette.

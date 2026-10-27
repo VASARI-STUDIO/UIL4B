@@ -4,7 +4,7 @@
 // headings are the user's own face. There are no section openings: the plates are
 // the sections.
 
-import { esc, safeHex, inkName, fitTitle, chromeFor } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor } from '../shared.js'
 import { mixHex, hexToOklch } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Martian Mono', weights: '100 800', file: 'martian-mono-latin.woff2' })
@@ -41,7 +41,7 @@ const plateOrder = (slots) => [
 ]
 
 function cover(ctx) {
-  const { slots, fieldInk, projectName, roles, d, iso } = ctx
+  const { slots, projectName, roles, d, iso } = ctx
   const order = plateOrder(slots)
   const bands = order.map((s) => `<i style="background:${safeHex(s.hex, 'GrayText')};flex:${WEIGHT[s.kind]} 1 0"></i>`).join('')
   const total = order.reduce((n, s) => n + WEIGHT[s.kind], 0)
@@ -50,16 +50,22 @@ function cover(ctx) {
   // otherwise it sits in a paper box over the bands, the one case that needs one.
   // The band is narrow, so it tries a fourth, smaller step and a wide average advance (a
   // bold grotesque sets nearer 0.58 em than 0.52) before giving up on it.
-  const onBand = fitTitle(projectName, { ...atlas.titleFit, steps: BAND_STEPS, advance: 0.58, measure: (primaryMm - 20) * MM_TO_PT })
+  const bandOpts = { ...atlas.titleFit, steps: BAND_STEPS, advance: 0.58, measure: (primaryMm - 20) * MM_TO_PT }
+  const onBand = fitTitle(projectName, bandOpts)
   const useBand = slots.length > 0 && !onBand.clamp && !onBand.broken
   const fit = useBand ? onBand : ctx.fit
+  // The name is cut at a whole word with an ellipsis when it needs more than three lines.
+  const shown = clampTitle(projectName, fit.size, useBand ? bandOpts : atlas.titleFit)
   const facts = `<p class="at-facts">${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'}<br>Issued ${esc(iso)}</p>`
-  const text = `<h1 class="at-title${fit.clamp ? ' is-clamped' : ''}" style="font-size:${fit.size}pt">${esc(projectName)}</h1>${facts}`
+  const text = `<h1 class="at-title${fit.clamp ? ' is-clamped' : ''}" style="font-size:${fit.size}pt">${esc(shown)}</h1>${facts}`
   const boxStyle = `background:${roles.paper};color:${roles.ink}`
+  // On the band the ink is the one chosen for that band's own colour, which is not
+  // always the cover field's (the base can sit away from the first plate).
+  const bandInk = safeHex(order[0]?.ink, 'CanvasText')
   return `<section class="pg pg-cover">
   <div class="at-bands">${bands}</div>
   ${useBand
-    ? `<div class="at-on" style="width:${primaryMm.toFixed(1)}mm;color:${safeHex(fieldInk, 'CanvasText')}">${text}</div>`
+    ? `<div class="at-on" style="width:${primaryMm.toFixed(1)}mm;color:${bandInk}">${text}</div>`
     : `<div class="at-box" style="${boxStyle}">${text}</div>`}
 </section>`
 }
@@ -213,6 +219,8 @@ function css(ctx) {
   .at-box{top:var(--m);bottom:auto;left:var(--m);width:120mm;padding:10mm;gap:14mm}
   .at-title{letter-spacing:-.02em;overflow-wrap:anywhere;hyphens:auto;display:-webkit-box;-webkit-box-orient:vertical;
     -webkit-line-clamp:3;overflow:hidden;padding-bottom:.12em}
+  /* Padding under a clamped box shows the top of the line that was cut and hides the ellipsis; the cut line gets none. */
+  .at-title.is-clamped{padding-bottom:0;line-height:1.16}
   .at-facts{font-family:var(--chrome);font-size:7pt;line-height:1.5;margin:0}
 
   /* ── plates ────────────────────────────────────────────────────────── */
@@ -277,7 +285,7 @@ function css(ctx) {
   .is-sub .ct-title{font-family:var(--chrome);font-size:7.5pt;font-weight:400;color:var(--muted);padding-left:3mm}
   .ct-dot{flex:1;border-bottom:.25mm dotted var(--muted);transform:translateY(-1mm)}
   .ct-folio{font-family:var(--chrome);font-size:8pt;font-variant-numeric:tabular-nums}
-  .ct-aside{font-size:8.5pt;color:var(--muted)}
+  .ct-aside{font-size:8.5pt;color:var(--muted);overflow-wrap:anywhere}
   .ct-aside b{color:var(--ink)}
   .ct-facts{margin:6mm 0 0;border-top:.35mm solid var(--ink)}
   .ct-facts div{display:flex;justify-content:space-between;padding:1.6mm 0;border-bottom:.25mm solid var(--rule)}

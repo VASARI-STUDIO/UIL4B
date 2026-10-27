@@ -80,7 +80,7 @@ function contents(ctx, { contents: list, tokens, iso, folio }) {
   <div class="pg-body">
     <div class="pg-head"><h2 class="ct-h">Contents</h2></div>
     <ol class="ct-list tx">${rows}</ol>
-    <aside class="mg ct-aside">${dl([['Colours', d.palette.length], ['Type steps', 8], ['Tokens', tokens.length], ['Issued', iso]])}</aside>
+    <aside class="mg ct-aside">${dl([['Colours', d.palette.length], ['Type steps', ctx.ladder.length], ['Tokens', tokens.length], ['Issued', iso]])}</aside>
   </div>
   <footer class="foot"><span class="folio">${folio}</span></footer>
 </section>`
@@ -170,7 +170,7 @@ function matrix(ctx, slots) {
     leaf: 'Contrast matrix',
     inner: `<header class="pg-head"><h3>Contrast matrix</h3>
       <p class="lede">Every pair measured. Read a row as the background and a column as the text on it.</p></header>
-    <table class="wide mx"><thead><tr><th scope="col"><span>bg / text</span></th>${head}</tr></thead><tbody>${rows}</tbody></table>
+    <table class="wide mx"><colgroup><col class="mx-lead"></colgroup><thead><tr><th scope="col"><span>bg / text</span></th>${head}</tr></thead><tbody>${rows}</tbody></table>
     <p class="mg key"><b>Pass</b> reads as normal text, 4.5:1 or more. <b>Large</b> reads as large text only, 3:1 or more. <b>Fail</b> is a fill, not a text pair.</p>
     ${capped ? `<p class="note">The matrix shows the first ${MATRIX_MAX} colours. Each colour page gives its own reading ink and ratio.</p>` : ''}`,
   }]
@@ -339,7 +339,8 @@ function css(ctx) {
   .mx thead th span,.mx td span{display:block;font-size:7pt;color:var(--muted)}
   .mx tbody th{text-align:left;white-space:nowrap}
   .mx td{font-variant-numeric:lining-nums tabular-nums}
-  .mx col:first-child{width:28mm}
+  /* The row heads are hex values with a dot; the other columns share what is left, 13.6 mm each at eight colours. */
+  .mx col.mx-lead{width:20mm}
   .mx-pass{font-weight:700!important}
   .mx-mid{font-weight:500!important}
   .mx-self{color:var(--rule)}
@@ -351,7 +352,8 @@ function css(ctx) {
   .fm-name{font-family:var(--head);font-size:28pt;line-height:1.1;margin:0 0 5mm;overflow-wrap:anywhere}
   .fm-set{font-family:var(--body);font-size:12pt;line-height:1.6;margin:0;overflow-wrap:anywhere}
   .st{padding:3mm 0;border-top:.25mm solid var(--rule);align-items:baseline}
-  .sp{margin:0;line-height:1.15;white-space:nowrap;overflow:hidden}
+  /* Cut sideways only: clipping the box vertically took the descenders off the specimen. */
+  .sp{margin:0;line-height:1.15;white-space:nowrap;overflow-x:clip;overflow-y:visible}
   .st .mg{padding-top:1mm}
 
   /* ── gradient (the shared page) ────────────────────────────────────── */

@@ -1,9 +1,10 @@
 // fitTitle picks a cover-title size from a template's steps. To see these fail,
 // change the 0.52 default advance in src/utils/exportTemplates/shared.js to 0.2:
-// the long names then "fit" at the largest step and the clamp case goes quiet.
+// the long names then "fit" at the largest step and the clamp case goes quiet. The
+// capitals test fails if CAP_WIDTH there is set back to 1.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { fitTitle, safeHex, chromeFace } from '../../src/utils/exportTemplates/shared.js'
+import { fitTitle, titleWidth, safeHex, chromeFace } from '../../src/utils/exportTemplates/shared.js'
 
 const NAMES = [
   'Ink',
@@ -62,6 +63,17 @@ test('chromeFace embeds plain base64 only, and nothing for anything else', () =>
     assert.equal(chromeFace(chrome, bad), '')
   }
   assert.equal(chromeFace(null, 'AAAA'), '')
+})
+
+test('capitals are measured wider than lowercase, so a name in capitals steps down a size', () => {
+  const opts = TEMPLATES.specification
+  // 13 characters: at 52 pt a flat 0.52 em average says it fits one line (15 characters),
+  // but 13 capitals set near 0.7 em each need about 480 pt of the 425 available.
+  assert.equal(fitTitle('INTERNATIONAL', opts).size, 40)
+  // The same letters in lowercase still take the largest step.
+  assert.equal(fitTitle('Internationa', opts).size, 52)
+  assert.ok(titleWidth('ABC') > titleWidth('abc'))
+  assert.equal(titleWidth('123 .'), 5)
 })
 
 test('a smaller step that keeps every word whole beats a larger one that splits a word', () => {
