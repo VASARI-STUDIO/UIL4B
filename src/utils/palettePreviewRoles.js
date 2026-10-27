@@ -265,13 +265,16 @@ const isHex = (h) => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h)
  * @param {string} fill the field, #rrggbb
  * @param {{on?: string, text?: string, canvas?: string}} inks candidates: the
  *   field's on-* ink, then the neutral text and canvas
- * @param {{large?: boolean}} opts large: the 3:1 floor instead of 4.5:1
+ * @param {{large?: boolean, keep?: boolean}} opts large: the 3:1 floor instead of
+ *   4.5:1; keep: return `inks.on` whatever its ratio (a pair under test)
  * @returns {{hex: string, ratio: number, step: 'on'|'neutral'|'pole'}}
  */
 export function inkOnField(fill, inks = {}, opts = {}) {
   const floor = opts.large ? LARGE_TEXT_FLOOR : TEXT_FLOOR
   // No field to read against: the neutral text, or black, rather than a throw.
   if (!isHex(fill)) return { hex: isHex(inks.text) ? inks.text : '#000000', ratio: 1, step: 'pole' }
+  // keep: the Contrast Checker's pair is under test, so its ink is never corrected.
+  if (opts.keep && isHex(inks.on)) return { hex: inks.on, ratio: contrastRatio(inks.on, fill), step: 'on' }
   if (isHex(inks.on) && contrastRatio(inks.on, fill) >= floor) {
     return { hex: inks.on, ratio: contrastRatio(inks.on, fill), step: 'on' }
   }
@@ -311,4 +314,61 @@ export function brandAsText(fill, grounds, opts = {}) {
   if (own >= floor) return { hex: fill, adjusted: false, ratio: own }
   const hex = pvInkFromFill(fill, grounds, floor)
   return { hex, adjusted: true, ratio: pvWorstOn(hex, grounds) }
+}
+
+// ── The Contrast Checker's pair ──────────────────────────────────────────────
+// The checker has two colours, not a palette, and its preview exists to prove
+// the verdict. So the pair is never corrected: every text is the text colour on
+// the background, and type on a field is the background on the text colour (the
+// swapped pair, which has the same ratio). The brand slots become tints of the
+// text colour so an example keeps its form in two colours.
+
+// The outline a failing size class gets. Fixed, not derived from the pair.
+export const PAIR_ERROR = '#c8260e'
+
+/**
+ * A roles object (the shape derivePaletteRoles returns, enough of it for
+ * pvVars) built from a text and background pair. `pair: true` tells an example
+ * to skip every correction and every semantic state.
+ * @param {string} fg #rrggbb text colour
+ * @param {string} bg #rrggbb background colour
+ */
+export function pairRoles(fg, bg) {
+  const tint = (t) => mixHex(bg, fg, t)
+  const sem = { fill: fg, ink: fg, tint: bg }
+  return {
+    pair: true,
+    mode: contrastRatio(bg, '#ffffff') < contrastRatio(bg, '#000000') ? 'light' : 'dark',
+    empty: false,
+    lowChroma: false,
+    canvas: bg,
+    surface: bg,
+    raised: tint(0.06),
+    border: tint(0.18),
+    borderStrong: tint(0.18),
+    text: fg,
+    muted: fg,
+    disabled: fg,
+    primary: fg,
+    secondary: tint(0.7),
+    accent: tint(0.45),
+    subtle: tint(0.2),
+    deep: fg,
+    onPrimary: bg,
+    onSecondary: bg,
+    onAccent: bg,
+    onSubtle: fg,
+    onDeep: bg,
+    primaryInk: fg,
+    accentInk: fg,
+    primaryBorder: 'transparent',
+    success: sem,
+    warning: sem,
+    error: { ...sem, fill: PAIR_ERROR, ink: PAIR_ERROR },
+    info: sem,
+    errorShifted: false,
+    unset: [],
+    fails: [],
+    inkGrounds: [bg],
+  }
 }

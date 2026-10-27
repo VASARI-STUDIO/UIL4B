@@ -1,6 +1,8 @@
-// The three preview examples in the Palette Builder's "Preview on a UI" dialog:
-// Slack Water (Editorial hero), Sundial (Energy dashboard) and Orra Workroom
-// (Product page), each its own lazy chunk behind src/components/palette/examples/registry.js.
+// The six preview examples in the Palette Builder's "Preview on a UI" dialog:
+// Slack Water (Editorial hero), Sundial (Energy dashboard), Orra Workroom (Product page),
+// Ridgeline (Trail run app), Hale & Okoro (Architect portfolio, Pro) and Tally (Spending
+// card, Pro), each its own lazy chunk behind src/components/palette/examples/registry.js.
+// Only Invoices and Settings remain of the older Fernway scenes.
 //
 // WHAT IS HELD HERE, AND WHY IN A BROWSER
 // The unit tests (preview-field-helpers, preview-role-tags, slack-water-chart,
@@ -12,7 +14,7 @@
 //   1. each example renders (and is the scene that was picked)
 //   2. legend hover AND focus mark at least one element per role, in each
 //      example, and a role the example does not use says so on its chip
-//   3. the older "where each colour lands" hover still works on a Fernway scene
+//   3. the older "where each colour lands" hover still works on a Fernway scene (Invoices)
 //   4. on a phone a tapped colour stays traced for 3 seconds, then clears
 //   5. a slow download never shows an empty stage: the old scene stays up
 //   6. no text under 12px in any example at 390, 768 and 1440
@@ -27,6 +29,11 @@
 //   7f. the legend: at most two chip rows, the adjusted-as-text caption is one line and its chips point at it
 //   7g. the Slack Water headline runs to at most three lines at 1440 and 768
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
+//   10. the free/Pro gate: a free account sees Architect portfolio and Spending card blurred
+//       and out of reach (the real scene behind Unlock preview) and Trail run app open, and
+//       the arrow keys walk all eight options in order
+//   11. Trail run app, Architect portfolio and Spending card do not overflow sideways at
+//       320, 390 and 768
 //
 // HOW GROUND IS FOUND (7). Not by walking ancestors: a label that sits on a
 // plate over a drawn shape, or on a neighbouring element, has a ground its
@@ -50,7 +57,7 @@
 // the headline clamp back to 6.4cqi (7g), Orra swatches back to flex-wrap and a 60px width (7d); put previewLoader back to Promise.all, or
 // React lazy back in PaletteBuilder (9).
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
 
 // name: the option in the dialog's list. text: a string only that example prints.
@@ -68,6 +75,18 @@ const EXAMPLES = [
   {
     name: 'Product page', id: 'product', text: 'The Field Overshirt',
     roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral'],
+  },
+  {
+    name: 'Trail run app', id: 'trail', text: 'Saturday run', pro: false,
+    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral'],
+  },
+  {
+    name: 'Architect portfolio', id: 'studio', text: 'Gully House', pro: true,
+    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'neutral'],
+  },
+  {
+    name: 'Spending card', id: 'card', text: 'Corner Grocer, Newtown', pro: true,
+    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral'],
   },
 ]
 
@@ -99,7 +118,13 @@ async function seed(page, colors) {
   }, colors)
 }
 
-async function openDialog(page) {
+/**
+ * Open the preview dialog. Signed in as Pro unless `plan` says otherwise: two of the
+ * examples are Pro, and a free account sees them blurred and inert, which would hide
+ * them from every check that reads the scene.
+ */
+async function openDialog(page, { plan = 'pro' } = {}) {
+  if (plan) await signIn(page, { plan })
   await go(page, '/create/palette')
   await clickPaletteAction(page, 'Preview on a UI')
   const dialog = page.getByRole('dialog', { name: 'Palette preview' })
@@ -137,9 +162,9 @@ const hits = (page) => page.locator('.pvd-stage [data-hit="on"]')
 
 // ── 1. each example renders ──────────────────────────────────────────────────
 
-test.describe('the three preview examples', () => {
+test.describe('the six preview examples', () => {
   test('the preview opens on the editorial example and each example renders as the scene that was picked', async ({ page }) => {
-    watch(page, 'designer opening the three preview examples')
+    watch(page, 'designer opening the six preview examples')
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)
 
@@ -210,11 +235,11 @@ test.describe('"where each colour lands"', () => {
     })
   }
 
-  test('the older Fernway scenes still trace a colour on hover, dimming everything else, and clear on leave', async ({ page }) => {
+  test('the older Fernway scenes (Invoices here) still trace a colour on hover, dimming everything else, and clear on leave', async ({ page }) => {
     watch(page, 'designer tracing colours in a Fernway scene')
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)
-    await pickScene(dialog, 'Dashboard')
+    await pickScene(dialog, 'Invoices')
     await expect(dialog.getByText('Where each colour lands')).toBeVisible()
     await expect(hits(page)).toHaveCount(0)
 
@@ -578,7 +603,8 @@ test.describe('the Energy dashboard chart labels', () => {
 // data. So no SVG part may carry an outline while a colour is traced.
 
 test.describe('the legend highlight on a drawing', () => {
-  for (const ex of EXAMPLES) {
+  // Tally is built from boxes, with no drawn part that carries a role, so there is no SVG to check there.
+  for (const ex of EXAMPLES.filter((e) => e.id !== 'card')) {
     test(`${ex.name}: tracing a colour puts no outline on any drawn part`, async ({ page }) => {
       watch(page, `designer tracing colours on the drawings in ${ex.name}`)
       await seed(page, PALETTES.mid)
@@ -845,7 +871,7 @@ test.describe('an example that fails to download', () => {
     // The dialog around it is alive: another example and an older scene both load.
     await pickScene(dialog, 'Product page')
     await expect(message).toHaveCount(0)
-    await pickScene(dialog, 'Dashboard')
+    await pickScene(dialog, 'Invoices')
     await expect(dialog).toBeVisible()
     expect(navigations, 'the page reloaded when the chunk failed').toBe(0)
   })
@@ -931,4 +957,127 @@ test.describe('the preview dialog fails to download', () => {
     await held[0].continue()
     await reloaded
   })
+})
+
+// ── 10. the free/Pro gate, and walking the list ──────────────────────────────
+
+const SCENE_ORDER = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio', 'Invoices', 'Settings']
+
+test.describe('the free and Pro examples', () => {
+  test('a free account has Trail run app open and sees Architect portfolio and Spending card blurred and out of reach', async ({ page }) => {
+    watch(page, 'free designer opening the new preview examples')
+    await seed(page, PALETTES.mid)
+    const dialog = await openDialog(page, { plan: null })
+    const rail = dialog.getByRole('listbox', { name: 'Previews' })
+    await expect(rail.getByRole('option'), 'eight previews in the list').toHaveCount(SCENE_ORDER.length)
+
+    for (const ex of EXAMPLES) {
+      await pickScene(dialog, ex.name)
+      const option = rail.getByRole('option', { name: rx(ex.name) })
+      const unlock = dialog.getByRole('button', { name: 'Unlock preview' })
+      // The real scene is behind the gate either way: a free account can see what it is missing.
+      await expect(dialog.locator('.pvs'), `${ex.name}: its real scene is on the stage`).toContainText(ex.text)
+      if (ex.pro) {
+        await expect(option, `${ex.name} is marked Pro in the list`).toContainText(/Pro$/)
+        await expect(dialog.getByText(`${ex.name} is a Pro preview`)).toBeVisible()
+        await expect(unlock, `${ex.name}: one Unlock preview button`).toHaveCount(1)
+        await expect(dialog.locator('.pvd-scene-in')).toHaveCSS('filter', 'blur(6px)')
+        await expect(dialog.locator('.pvd-scene-in'), `${ex.name}: out of reach of the keyboard and pointer`).toHaveAttribute('inert', '')
+      } else {
+        await expect(option, `${ex.name} is not marked Pro`).not.toContainText(/Pro$/)
+        await expect(dialog.getByText('is a Pro preview')).toHaveCount(0)
+        await expect(unlock, `${ex.name}: open to a free account`).toHaveCount(0)
+        await expect(dialog.locator('.pvd-scene-in')).not.toHaveAttribute('inert', /.*/)
+        await expect(dialog.locator('.pvd-scene-in')).not.toHaveCSS('filter', 'blur(6px)')
+      }
+    }
+  })
+
+  test('a Pro account sees all three with nothing blurred or locked', async ({ page }) => {
+    watch(page, 'Pro designer opening the new preview examples')
+    await seed(page, PALETTES.mid)
+    const dialog = await openDialog(page)
+    for (const ex of EXAMPLES.filter((e) => e.id === 'trail' || e.id === 'studio' || e.id === 'card')) {
+      await pickScene(dialog, ex.name)
+      await expect(dialog.getByRole('button', { name: 'Unlock preview' }), `${ex.name}: Pro has nothing to unlock`).toHaveCount(0)
+      await expect(dialog.locator('.pvd-scene-in')).not.toHaveAttribute('inert', /.*/)
+      await expect(dialog.locator('.pvd-scene-in')).not.toHaveCSS('filter', 'blur(6px)')
+    }
+  })
+
+  test('the arrow keys walk the rail through all eight previews in order, and Home and End reach the ends', async ({ page }) => {
+    watch(page, 'keyboard designer walking the preview list')
+    await seed(page, PALETTES.mid)
+    const dialog = await openDialog(page)
+    const rail = dialog.getByRole('listbox', { name: 'Previews' })
+    const selected = async () => (await rail.getByRole('option', { selected: true }).first().textContent() || '').replace(/Pro$/, '').trim()
+
+    await rail.getByRole('option', { name: rx(SCENE_ORDER[0]) }).click()
+    const walked = [await selected()]
+    for (let i = 1; i < SCENE_ORDER.length; i++) {
+      await page.keyboard.press('ArrowDown')
+      await expect(rail.getByRole('option', { name: rx(SCENE_ORDER[i]) })).toHaveAttribute('aria-selected', 'true')
+      walked.push(await selected())
+    }
+    expect(walked.map((w) => SCENE_ORDER.find((n) => w.startsWith(n))), 'the arrow keys visited every preview in list order').toEqual(SCENE_ORDER)
+    await page.keyboard.press('Home')
+    await expect(rail.getByRole('option', { name: rx(SCENE_ORDER[0]) })).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('End')
+    await expect(rail.getByRole('option', { name: rx(SCENE_ORDER.at(-1)) })).toHaveAttribute('aria-selected', 'true')
+  })
+})
+
+// ── 11. no sideways overflow ─────────────────────────────────────────────────
+// The scene is a container-query layout. A part wider than its column would
+// scroll the dialog sideways on a phone, so: the page and the scene do not
+// scroll sideways, and no text element sticks out of the scene's box.
+
+test.describe('the new examples at phone and tablet widths', () => {
+  for (const width of [320, 390, 768]) {
+    for (const ex of EXAMPLES.filter((e) => ['trail', 'studio', 'card'].includes(e.id))) {
+      test(`${ex.name} does not overflow sideways at ${width}px, in both themes`, async ({ page }) => {
+        watch(page, `designer reading ${ex.name} at ${width}px`)
+        await page.setViewportSize({ width, height: width < 768 ? 700 : 900 })
+        await seed(page, PALETTES.mid)
+        const dialog = await openDialog(page)
+        for (const theme of ['Light', 'Dark']) {
+          await setTheme(dialog, theme)
+          await pickScene(dialog, ex.name)
+          await settle(page)
+          const m = await page.evaluate(() => {
+            const root = document.querySelector('.pvs')
+            const box = root.getBoundingClientRect()
+            const out = []
+            let texts = 0
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+            for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+              if (!n.nodeValue.trim()) continue
+              const range = document.createRange()
+              range.selectNodeContents(n)
+              for (const r of range.getClientRects()) {
+                if (r.width <= 1 || r.height <= 1) continue
+                texts++
+                if (r.left < box.left - 1 || r.right > box.right + 1) {
+                  out.push(`"${n.nodeValue.trim().slice(0, 24)}" spans ${Math.round(r.left)}-${Math.round(r.right)} in a scene at ${Math.round(box.left)}-${Math.round(box.right)}`)
+                  break
+                }
+              }
+            }
+            return {
+              docOver: document.documentElement.scrollWidth - innerWidth,
+              sceneOver: root.scrollWidth - root.clientWidth,
+              sceneWidth: box.width,
+              texts,
+              out,
+            }
+          })
+          expect(m.texts, `${ex.name}/${theme}: text boxes were measured`).toBeGreaterThan(20)
+          expect(m.sceneWidth, `${ex.name}/${theme}: the scene has a width`).toBeGreaterThan(200)
+          expect(m.docOver, `${ex.name}/${theme}: the page scrolls sideways at ${width}px`).toBeLessThanOrEqual(0)
+          expect(m.sceneOver, `${ex.name}/${theme}: the scene scrolls sideways at ${width}px`).toBeLessThanOrEqual(0)
+          expect(m.out, `${ex.name}/${theme}: text outside the scene at ${width}px`).toEqual([])
+        }
+      })
+    }
+  }
 })
