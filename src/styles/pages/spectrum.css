@@ -1118,7 +1118,7 @@
 
 /* ── "Don't just take it from us" (#index) ────────────────────────────────────
    The design's proof band as drawn: heading, four figures between two ink rules, 4 → 2
-   columns at 860px → 1 at 460px. */
+   columns at 860px → 1 at 760px, as left-aligned rows (below). */
 .sp-proof { padding-top: clamp(140px, 17vw, 248px); }
 .sp-proof-head { max-width: min(40ch, 100%); margin: 0 auto; text-align: center; }
 .sp-proof-head h2 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(32px, 4.8vw, 64px); line-height: 1.02; letter-spacing: -.02em; }
