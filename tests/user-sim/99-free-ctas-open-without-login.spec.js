@@ -27,7 +27,7 @@ async function assertOpened(page, label) {
 }
 
 const SALES = [
-  ['/', 390], ['/', 1440], ['/plans', 390], ['/plans', 1440], ['/mobile', 390], ['/mobile', 1440],
+  ['/', 390], ['/', 1440], ['/plans', 390], ['/plans', 1440], ['/mobile', 390], ['/mobile', 1440], ['/tools', 390], ['/tools', 1440],
 ]
 
 for (const [route, width] of SALES) {

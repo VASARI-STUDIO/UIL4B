@@ -1,31 +1,40 @@
 import { useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import ColorPickerPop from '../components/ColorPickerPop'
+import ExportMenu from '../components/tool/ExportMenu'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolIcon,
 } from '../components/tool/ToolLayout'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { useProject } from '../contexts/ProjectContext'
 import { roleLabel } from '../utils/paletteRoles'
-import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness, textColorForBg } from '../utils/colors'
+import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness } from '../utils/colors'
 // The page's own sheet; every rule is scoped under `.cc`, the page root.
 import '../styles/pages/contrast.css'
 
-// Contrast Checker — /create/contrast, rebuilt to the design
-// (UIL4B App.dc.html, `isContrast`, D:718-791, view model D:1899-1934).
-// A sticky tool toolbar with Swap; the pair painted on a specimen
-// card; "Common pairs in this kit"; and one side card holding the ratio, the
-// five WCAG tests, the Text/Background target, the swatches and the pair.
+// Contrast Checker — /create/contrast.
+// A sticky tool toolbar with the Copy menu; a pair bar (the two colour fields
+// and Swap) above the pair painted on a specimen card; "Common pairs in this
+// kit"; and one side card holding the ratio, the five WCAG tests, the nearest
+// passing colours and the palette swatches.
 //
 // TRUTH OVER THE MOCK, and where: the design's eight "common pairs" and nine
 // swatches are invented brand values. Here both are read from the person's OWN
 // palette (design.palette — what the Palette Builder last wrote, or the colours
 // its base and system generate), so "in this kit" is literally true.
 //
-// Kept from the previous build because people use them: the hex fields and the
-// shared picker for both sides (the drawn footer "Text #… / On #…" is made
-// editable in place), and "Make it pass" — one-click fixes that move one side
+// Kept because people use them: the hex fields and the shared picker for both
+// sides, and "Nearest passing colours" — one-click fixes that move one side
 // just far enough, verified before they are offered. Murphy's law on input:
 // garbage in a field never blanks the result; the checker recomputes from the
 // LAST VALID hex per side.
+//
+// DISPLAYED RATIOS ARE FLOORED, never rounded. WCAG thresholds are exact, so a
+// pair at 4.497:1 must not read "4.50:1" beside a Fail for 4.5. Pass/fail
+// always compares the unrounded ratio.
+//
+// The copy link (?fg=…&bg=…) is read ONCE on load and validated; the address
+// bar is never written while typing — the link is built only when copied.
 
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
 
@@ -37,19 +46,36 @@ function normaliseHex(raw) {
   return `#${hex.toUpperCase()}`
 }
 
-// The five tests, as drawn (D:1903-1906). Non-text contrast (1.4.11) is AA
-// only; there is no AAA row for it, which the design gets right.
+// Round DOWN to `dp` places, with no epsilon: binary noise can only ever show a
+// value a hundredth low, never lift one across a pass/fail step.
+const floorTo = (r, dp) => Math.floor(r * 10 ** dp) / 10 ** dp
+const ratioStr = (r) => floorTo(r, 2).toFixed(2)
+
+// The five tests, named as WCAG names them. Non-text contrast (1.4.11) is AA
+// only; there is no AAA row for it.
 const TESTS = [
-  { label: 'Body text, 16px', min: 4.5, level: 'AA' },
-  { label: 'Body text, enhanced', min: 7, level: 'AAA' },
-  { label: 'Large text, 24px', min: 3, level: 'AA' },
-  { label: 'Large text, enhanced', min: 4.5, level: 'AAA' },
-  { label: 'UI borders and icons', min: 3, level: 'AA' },
+  { label: 'Normal text, AA', min: 4.5 },
+  { label: 'Normal text, AAA', min: 7 },
+  { label: 'Large text, AA', min: 3 },
+  { label: 'Large text, AAA', min: 4.5 },
+  { label: 'UI components and graphics, AA', min: 3 },
 ]
 
-const verdictOf = (r) => (r >= 7 ? 'Passes AAA' : r >= 4.5 ? 'Passes AA' : r >= 3 ? 'Large text only' : 'Fails')
-const toneOf = (r) => (r >= 4.5 ? 'ok' : r >= 3 ? 'warn' : 'bad')
+const VERDICTS = {
+  aaa: { tone: 'ok', icon: 'check-circle', head: 'Passes AAA for all text.', note: '' },
+  aa: { tone: 'ok', icon: 'check-circle', head: 'Passes AA for all text.', note: 'AAA needs 7:1.' },
+  large: { tone: 'warn', icon: 'warning', head: 'Large text and UI parts only.', note: 'Body text needs 4.5:1.' },
+  fail: { tone: 'err', icon: 'x-circle', head: 'Fails every WCAG check.', note: 'Text needs at least 3:1 when large.' },
+}
+const verdictOf = (r) => VERDICTS[r >= 7 ? 'aaa' : r >= 4.5 ? 'aa' : r >= 3 ? 'large' : 'fail']
+// The pair cards' one-word mark; its tone follows the same thresholds.
+const markOf = (r) => (r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? 'Large only' : 'Fails')
+const toneOf = (r) => (r >= 4.5 ? 'ok' : r >= 3 ? 'warn' : 'err')
 const title = (s) => s.charAt(0) + s.slice(1).toLowerCase()
+
+// A field shows its hint only once the raw value is invalid AND long enough to
+// be a finished attempt, so "#6B" mid-typing stays quiet.
+const showsHint = (raw, valid) => !valid && (raw || '').trim().length >= 4
 
 // The kit: the person's palette, named by its role. Falls back to the colours
 // the saved base + system generate, which is what the Palette Builder would
@@ -103,39 +129,73 @@ function swatchRef(hex, ink) {
   }
 }
 
-function HexField({ id, label, short, raw, valid, committed, onRaw, onBlur }) {
+// One side of the pair: a visible label, then the picker chip and the hex
+// input on one row, then a hint that only appears for a finished-looking but
+// invalid value. `short` is the phone label ("Text"); the full label stays the
+// input's accessible name at every width, so it never reads as just "Text".
+// Focusing anything in the field (picker or hex) tells the page which side the
+// palette swatches should now fill.
+function HexField({ id, label, short, raw, valid, committed, onRaw, onBlur, onTouch }) {
+  const hintId = `${id}-hint`
+  const bad = showsHint(raw, valid)
   return (
-    <div className="cc-field">
-      <label className="cc-field-k" htmlFor={id}>{short}</label>
-      <ColorPickerPop
-        value={committed}
-        onChange={(hex) => onRaw(hex.toUpperCase())}
-        ariaLabel={`Pick ${label.toLowerCase()}`}
-        triggerClassName="cc-picker"
-      />
-      <input
-        id={id}
-        type="text"
-        className={valid ? 'cc-hex-input' : 'cc-hex-input cc-hex-input--bad'}
-        value={raw}
-        onChange={(e) => onRaw(e.target.value)}
-        onBlur={onBlur}
-        spellCheck="false"
-        autoComplete="off"
-        aria-label={label}
-        aria-invalid={!valid}
-      />
+    <div className="cc-field" onFocus={onTouch}>
+      <label className="cc-field-k" htmlFor={id}>
+        <span className="cc-field-short" aria-hidden="true">{short}</span>
+        <span className="cc-field-full">{label}</span>
+      </label>
+      <div className="cc-field-row">
+        <ColorPickerPop
+          value={committed}
+          onChange={(hex) => { onTouch(); onRaw(hex.toUpperCase()) }}
+          ariaLabel={`Pick ${label.toLowerCase()}`}
+          triggerClassName="cc-picker"
+        />
+        <input
+          id={id}
+          type="text"
+          className={bad ? 'cc-hex-input cc-hex-input--bad' : 'cc-hex-input'}
+          value={raw}
+          onChange={(e) => onRaw(e.target.value)}
+          onBlur={onBlur}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+          inputMode="text"
+          autoCapitalize="characters"
+          enterKeyHint="done"
+          spellCheck="false"
+          autoComplete="off"
+          aria-invalid={bad}
+          aria-describedby={hintId}
+        />
+      </div>
+      <p id={hintId} className="cc-hint cc-hint--bad" aria-live="polite">
+        {bad && (
+          <>
+            <ToolIcon name="warning" size={14} className="cc-hint-ico" />
+            <span>Use a hex code like #1F2937. Still checking {committed}.</span>
+          </>
+        )}
+      </p>
     </div>
   )
 }
 
 export default function ContrastChecker({ onCopy }) {
   const { design } = useProject()
-  const [fgInput, setFgInput] = useState('#6B7280')
-  const [fg, setFg] = useState('#6B7280')
-  const [bgInput, setBgInput] = useState('#FFFFFF')
-  const [bg, setBg] = useState('#FFFFFF')
+  // A shared link (?fg=6B7280&bg=FFFFFF) seeds the pair once on load. Each side
+  // is validated on its own; an invalid or missing value falls back to the
+  // default. The address bar is never written afterwards.
+  const [searchParams] = useSearchParams()
+  const [seed] = useState(() => ({
+    fg: normaliseHex(searchParams.get('fg')) || '#6B7280',
+    bg: normaliseHex(searchParams.get('bg')) || '#FFFFFF',
+  }))
+  const [fgInput, setFgInput] = useState(seed.fg)
+  const [fg, setFg] = useState(seed.fg)
+  const [bgInput, setBgInput] = useState(seed.bg)
+  const [bg, setBg] = useState(seed.bg)
   const [target, setTarget] = useState('text') // which side the swatches set
+  const stacked = useMediaQuery('(max-width: 559px)')
 
   const fgValid = normaliseHex(fgInput) != null
   const bgValid = normaliseHex(bgInput) != null
@@ -151,7 +211,9 @@ export default function ContrastChecker({ onCopy }) {
   const swap = () => { setFgHex(bg); setBgHex(fg) }
 
   const ratio = useMemo(() => contrastRatio(fg, bg), [fg, bg])
-  const ratioText = (Math.round(ratio * 100) / 100).toFixed(2)
+  const ratioText = ratioStr(ratio)
+  const verdict = verdictOf(ratio)
+  const passes = (min) => ratio >= min
 
   const kit = useMemo(() => kitFrom(design?.palette), [design?.palette])
   const pairs = useMemo(() => pairsFrom(kit), [kit])
@@ -165,108 +227,181 @@ export default function ContrastChecker({ onCopy }) {
     return out.slice(0, 9)
   }, [kit])
 
-  // MAKE IT PASS. The next level this pair misses: AA body (4.5:1) first, then
-  // AAA body (7:1). nearestPassingLightness scans both directions and returns
-  // the smaller move; each candidate is re-verified before it is offered.
+  // NEAREST PASSING COLOURS. The next level this pair misses: AA body (4.5:1)
+  // first, then AAA body (7:1). nearestPassingLightness scans both directions
+  // and returns the smaller move; each candidate is re-verified before it is
+  // offered, and carries the pair it produces so the row can show it.
   const goal = ratio < 4.5 ? { min: 4.5, level: 'AA' } : ratio < 7 ? { min: 7, level: 'AAA' } : null
   const goalMin = goal ? goal.min : 0
   const fixes = useMemo(() => {
     if (!goalMin) return []
     const out = []
+    const lightness = (hex) => contrastRatio(hex, '#000000')
     const newFg = nearestPassingLightness(fg, bg, goalMin)
-    if (newFg && contrastRatio(newFg, bg) >= goalMin) out.push({ key: 'fg', side: 'text', hex: newFg.toUpperCase() })
+    if (newFg && contrastRatio(newFg, bg) >= goalMin) {
+      const hex = newFg.toUpperCase()
+      out.push({
+        key: 'fg', side: 'text', hex, fg: hex, bg,
+        ratio: contrastRatio(hex, bg), verb: lightness(hex) > lightness(fg) ? 'Lighten' : 'Darken',
+      })
+    }
     const newBg = nearestPassingLightness(bg, fg, goalMin)
-    if (newBg && contrastRatio(fg, newBg) >= goalMin) out.push({ key: 'bg', side: 'background', hex: newBg.toUpperCase() })
+    if (newBg && contrastRatio(fg, newBg) >= goalMin) {
+      const hex = newBg.toUpperCase()
+      out.push({
+        key: 'bg', side: 'background', hex, fg, bg: hex,
+        ratio: contrastRatio(fg, hex), verb: lightness(hex) > lightness(bg) ? 'Lighten' : 'Darken',
+      })
+    }
     return out
   }, [fg, bg, goalMin])
   const applyFix = (fix) => (fix.side === 'text' ? setFgHex(fix.hex) : setBgHex(fix.hex))
 
   const current = target === 'text' ? fg : bg
 
+  // ── Taking the result away ──
+  const resultText = () => [
+    `Text ${fg} on background ${bg}`,
+    `Contrast ${ratioText}:1 (WCAG 2.2)`,
+    ...TESTS.map((t) => `${t.label} ${t.min}:1: ${passes(t.min) ? 'Pass' : 'Fail'}`),
+  ].join('\n')
+  const cssText = () => {
+    const best = ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : null
+    const note = best ? `${ratioText}:1, WCAG 2.2 ${best} for normal text` : `${ratioText}:1, below WCAG 2.2 AA for normal text`
+    return `--color-text: ${fg};\n--color-background: ${bg}; /* ${note} */`
+  }
+  const linkText = () => `${window.location.origin}/create/contrast?fg=${fg.slice(1)}&bg=${bg.slice(1)}`
+  const copyItems = [
+    { id: 'result', label: 'Copy result', icon: 'copy', onSelect: () => onCopy?.(resultText()) },
+    { id: 'css', label: 'Copy CSS', icon: 'code', onSelect: () => onCopy?.(cssText()) },
+    { id: 'link', label: 'Copy link', icon: 'link', onSelect: () => onCopy?.(linkText()) },
+  ]
+
   return (
     <ToolLayout
       className="cc"
       title="Contrast Checker"
       titleId="cc-title"
-      primary={(
-        <ToolButton icon="arrows-down-up" iconSize={14} onClick={swap} aria-label="Swap text and background colours" title="Swap text and background">
-          Swap
-        </ToolButton>
-      )}
+      primary={<ExportMenu label="Copy" icon="copy" items={copyItems} />}
     >
       <ToolGrid>
         <ToolMain>
-          {/* The pair, on a specimen. The design's copy (D:731-734). It is a picture of
+          {/* First thing on the page at every width: the two colours being checked. */}
+          <div className="cc-pairbar" role="group" aria-label="Colours to check">
+            <HexField
+              id="cc-fg" label="Text colour" short="Text"
+              raw={fgInput} valid={fgValid} committed={fg}
+              onRaw={setSide(setFgInput, setFg)} onBlur={() => setFgInput(fg)}
+              onTouch={() => setTarget('text')}
+            />
+            <ToolButton
+              variant="square"
+              icon={stacked ? 'arrows-down-up' : 'arrows-left-right'}
+              iconSize={16}
+              className="cc-swap"
+              onClick={swap}
+              aria-label="Swap text and background"
+              title="Swap text and background"
+            />
+            <HexField
+              id="cc-bg" label="Background colour" short="Background"
+              raw={bgInput} valid={bgValid} committed={bg}
+              onRaw={setSide(setBgInput, setBg)} onBlur={() => setBgInput(bg)}
+              onTouch={() => setTarget('background')}
+            />
+          </div>
+
+          {/* The pair, on a specimen. Each line is the size its test measures, at
+              a fixed px, so the preview proves the verdict. It is a picture of
               text, so it is a depiction rather than a heading outline. */}
           <section className="cc-preview" ref={pairRef(fg, bg)} aria-label="Preview of the pair">
-            <p className="cc-spec-h">Sample heading</p>
-            <p className="cc-spec-large">Large text at 19px, the size WCAG treats as large once it is bold.</p>
-            <p className="cc-spec-body">Body copy at 14px. This is the size most interfaces actually use for paragraphs, table cells and helper text, and the size that decides whether the pair is usable.</p>
-            <span className="cc-spec-btn">Button label</span>
-          </section>
-
-          <section className="cc-pairs" aria-labelledby="cc-pairs-title">
-            <h2 id="cc-pairs-title" className="tl-sec-label">Common pairs in this kit</h2>
-            <div className="cc-pair-grid">
-              {pairs.map((p) => {
-                const tone = toneOf(p.ratio)
-                return (
-                  <button
-                    key={`${p.fg}-${p.bg}`}
-                    type="button"
-                    className="cc-pair"
-                    onClick={() => { setFgHex(p.fg); setBgHex(p.bg) }}
-                    aria-label={`Check ${p.label}, ${p.ratio.toFixed(1)} to 1`}
-                  >
-                    <span className="cc-pair-chip" ref={pairRef(p.fg, p.bg)} aria-hidden="true">Aa</span>
-                    <span className="cc-pair-body">
-                      <span className="cc-pair-label">{p.label}</span>
-                      <span className="cc-pair-ratio">{p.ratio.toFixed(1)}:1</span>
-                    </span>
-                    <span className={`cc-pair-mark cc-tone--${tone}`}>{p.ratio >= 4.5 ? 'AA' : p.ratio >= 3 ? '3:1' : 'Fail'}</span>
-                  </button>
-                )
-              })}
-            </div>
+            <p className="cc-spec-h">Headings read first</p>
+            <p className="cc-spec-large">Large text at 24px needs 3:1.</p>
+            <p className="cc-spec-bold">Bold text at 19px counts as large too.</p>
+            <p className="cc-spec-body">Body text at 16px needs 4.5:1. Paragraphs, form labels and table cells sit at this size, so this line decides whether the pair works for reading.</p>
+            <span className="cc-spec-btn">
+              <ToolIcon name="check" size={16} />
+              <span>Button border and icon, 3:1</span>
+            </span>
           </section>
         </ToolMain>
 
         <ToolPanel label="Contrast result" className="cc-panel">
-          <div className="tl-sec cc-ratio" aria-live="polite">
+          <div className="tl-sec cc-ratio">
+            {/* One sentence per change for a screen reader; the visible numeral,
+                verdict and note are hidden from it so nothing is read twice. */}
+            <span className="sr-only" aria-live="polite">{`${ratioText} to 1. ${verdict.head}`}</span>
             {/* The unit is a quieter span INSIDE the numeral, so the element's
-                text is one token for a reader ("4.83:1"). */}
-            <span className="cc-ratio-num">{ratioText}<span className="cc-ratio-unit">:1</span></span>
-            <span className={`cc-ratio-verdict cc-tone--${toneOf(ratio)}`}>{verdictOf(ratio)}</span>
+                text is one token ("4.83:1"). */}
+            <span className={`cc-ratio-num cc-tone--${verdict.tone}`} aria-hidden="true">{ratioText}<span className="cc-ratio-unit">:1</span></span>
+            <p className="cc-ratio-verdict" aria-hidden="true">
+              <ToolIcon name={verdict.icon} size={16} className={`cc-ico--${verdict.tone}`} />
+              <span>{verdict.head}</span>
+            </p>
+            {verdict.note && <p className="cc-ratio-note" aria-hidden="true">{verdict.note}</p>}
           </div>
 
           <ToolSection label="WCAG 2.2" className="cc-tests-sec">
             <ul className="cc-tests">
               {TESTS.map((t) => {
-                const pass = ratio >= t.min
+                const pass = passes(t.min)
                 return (
                   <li key={t.label} className={pass ? 'cc-check cc-check--pass' : 'cc-check cc-check--fail'}>
-                    <ToolIcon name={pass ? 'check-circle' : 'x-circle'} size={15} className={`cc-check-ico cc-tone--${pass ? 'ok' : 'bad'}`} />
+                    <ToolIcon name={pass ? 'check-circle' : 'x-circle'} size={16} className={`cc-check-ico cc-ico--${pass ? 'ok' : 'err'}`} />
                     <span className="cc-check-name">{t.label}</span>
-                    <span className="cc-check-level">{t.level}</span>
-                    <span className={`cc-check-mark cc-tone--${pass ? 'ok' : 'bad'}`}>
-                      {pass ? 'Pass' : 'Fail'}
-                      <span className="sr-only"> — needs {t.min} to 1</span>
-                    </span>
+                    <span className="cc-check-need">{t.min}:1</span>
+                    <span className={`cc-check-mark cc-tone--${pass ? 'ok' : 'err'}`}>{pass ? 'Pass' : 'Fail'}</span>
                   </li>
                 )
               })}
             </ul>
+            <div className="cc-note">
+              <p>Large means 24px, or 19px bold. Checks follow WCAG 2.2 (1.4.3, 1.4.6 and 1.4.11).</p>
+              <Link className="cc-note-link" to="/learn/colour-contrast">How contrast is measured</Link>
+            </div>
           </ToolSection>
 
-          <ToolSection label="Colours" className="cc-colours">
+          <ToolSection label="Nearest passing colours" className="cc-fixes-sec">
+            {goal ? (
+              fixes.length > 0 ? (
+                <>
+                  <p className="cc-lede">
+                    {goal.level === 'AA' ? 'To reach AA (4.5:1) for body text, change one colour:' : 'To reach AAA (7:1), change one colour:'}
+                  </p>
+                  <div className="cc-fixes">
+                    {fixes.map((fix) => (
+                      <div key={fix.key} className="cc-fix">
+                        <span className="cc-fix-chip" ref={pairRef(fix.fg, fix.bg)} aria-hidden="true">Aa</span>
+                        <span className="cc-fix-desc">
+                          <span className="cc-fix-line">{fix.verb} {fix.side} to <strong>{fix.hex}</strong></span>
+                          <span className="cc-fix-ratio cc-tone--ok">{ratioStr(fix.ratio)}:1</span>
+                        </span>
+                        <ToolButton variant="quiet" className="cc-fix-use" aria-label={`Use ${fix.hex} for the ${fix.side}`} onClick={() => applyFix(fix)}>Use</ToolButton>
+                        <ToolButton variant="square" icon="copy" className="cc-fix-copy" aria-label={`Copy ${fix.hex}`} title={`Copy ${fix.hex}`} onClick={() => onCopy?.(fix.hex)} />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="cc-hint cc-unfixable">
+                  Neither colour can reach {goal.min}:1 on its own here: they sit
+                  too close in lightness. Change both, or start from a kit pair.
+                </p>
+              )
+            ) : (
+              <p className="cc-hint cc-nothing">Passes every WCAG 2.2 check. Nothing to change.</p>
+            )}
+          </ToolSection>
+
+          <ToolSection label="From your palette" className="cc-colours">
             <ToolPills
-              label="Swatches set the"
+              label="Swatches change the"
               shape="block"
               options={[{ value: 'text', label: 'Text' }, { value: 'background', label: 'Background' }]}
               value={target}
               onChange={setTarget}
             />
-            <div className="cc-swatches" role="group" aria-label={`Kit colours for the ${target}`}>
+            <div className="cc-swatches" role="group" aria-label={`Palette colours for the ${target}`}>
               {swatches.map((s) => {
                 const on = s.hex === current
                 return (
@@ -283,45 +418,40 @@ export default function ContrastChecker({ onCopy }) {
                 )
               })}
             </div>
-            <div className="cc-fields">
-              <HexField
-                id="cc-fg" label="Text colour" short="Text"
-                raw={fgInput} valid={fgValid} committed={fg}
-                onRaw={setSide(setFgInput, setFg)} onBlur={() => setFgInput(fg)}
-              />
-              <HexField
-                id="cc-bg" label="Background colour" short="On"
-                raw={bgInput} valid={bgValid} committed={bg}
-                onRaw={setSide(setBgInput, setBg)} onBlur={() => setBgInput(bg)}
-              />
-            </div>
-            {(!fgValid || !bgValid) && (
-              <p className="cc-hint" role="alert">Not a hex colour — still checking {fg} on {bg}.</p>
-            )}
           </ToolSection>
-
-          {goal && (
-            <ToolSection label="Make it pass" className="cc-fixes-sec">
-              {fixes.length > 0 ? (
-                <div className="cc-fixes">
-                  {fixes.map((fix) => (
-                    <div key={fix.key} className="cc-fix">
-                      <span className="cc-fix-chip" ref={swatchRef(fix.hex, textColorForBg(fix.hex))}>{fix.hex}</span>
-                      <span className="cc-fix-desc">{goal.level} ({goal.min}:1) — move the {fix.side}</span>
-                      <button type="button" className="cc-fix-btn" onClick={() => applyFix(fix)}>Apply</button>
-                      <button type="button" className="cc-fix-btn" onClick={() => onCopy?.(fix.hex)}>Copy</button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="cc-hint cc-unfixable">
-                  Neither colour can reach {goal.min}:1 on its own here — they sit
-                  too close in lightness. Move both, or pick a different pair.
-                </p>
-              )}
-            </ToolSection>
-          )}
         </ToolPanel>
+
+        {/* A third grid child so the result panel comes before the kit pairs on
+            tablet and phone, and sits beside them on desktop. */}
+        <section className="cc-pairs" aria-labelledby="cc-pairs-title">
+          <h2 id="cc-pairs-title" className="tl-sec-label">Common pairs in this kit</h2>
+          <p className="cc-lede">Read from your palette. Pick one to check it.</p>
+          <div className="cc-pair-grid">
+            {pairs.map((p) => {
+              const r = ratioStr(p.ratio)
+              const isCurrent = p.fg === fg && p.bg === bg
+              return (
+                <button
+                  key={`${p.fg}-${p.bg}`}
+                  type="button"
+                  className="cc-pair"
+                  aria-pressed={isCurrent}
+                  onClick={() => { setFgHex(p.fg); setBgHex(p.bg) }}
+                  aria-label={`Check ${p.label}, ${r} to 1, ${markOf(p.ratio)}`}
+                >
+                  <span className="cc-pair-chip" ref={pairRef(p.fg, p.bg)} aria-hidden="true">Aa</span>
+                  <span className="cc-pair-body">
+                    <span className="cc-pair-label">{p.label}</span>
+                    <span className="cc-pair-meta">
+                      <span className="cc-pair-ratio">{r}:1</span>
+                      <span className={`cc-pair-mark cc-tone--${toneOf(p.ratio)}`}>{markOf(p.ratio)}</span>
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
       </ToolGrid>
     </ToolLayout>
   )

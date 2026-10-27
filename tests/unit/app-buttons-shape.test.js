@@ -69,7 +69,7 @@ const KEEP_SET = new Set(Object.values(KEEP).flat())
 // Menu rows that reuse the filter-chip class inside a filter menu.
 const KEEP_CONTEXT = ['.lbry-filtermenu']
 // The sales pages are built to their own drawn radii.
-const SALES_SHEETS = new Set(['spectrum.css', 'spectrum-mobile.css', 'spectrum-chrome.css', 'pricing.css'])
+const SALES_SHEETS = new Set(['spectrum.css', 'spectrum-mobile.css', 'spectrum-tools.css', 'spectrum-chrome.css', 'pricing.css'])
 
 const PILL = /^(999px|9999px|var\(--radius-pill\)|var\(--btn-radius\)|50%)(\s*!important)?$/
 

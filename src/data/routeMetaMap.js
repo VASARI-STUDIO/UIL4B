@@ -70,6 +70,7 @@ export const PAGE_TITLES = {
   '/login': 'UI L4B | Log in',
   '/plans': 'UI L4B | Pricing & Plans',
   '/mobile': 'UI L4B | On mobile',
+  '/tools': 'UI L4B | Tools',
   '/checkout': 'UI L4B | Checkout',
   '/community': 'UI L4B | Community',
   '/feedback': 'UI L4B | Feedback',
@@ -156,6 +157,7 @@ export const PAGE_DESCRIPTIONS = {
   // see src/pages/SpectrumMobile.jsx for what was checked against the product.
   '/mobile': 'Every tool runs the same on a phone. Pick colours on the train, check contrast in a meeting, then copy the tokens when you get back to your desk.',
   '/plans': 'Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.',
+  '/tools': 'Every UI L4B tool in one place: palettes, contrast, fonts, type scales, icons, file conversion and more. Try them live, no account needed.',
   '/checkout': 'Upgrade to UI L4B Pro for higher AI capacity, advanced colour controls, unlimited saved projects and watermark-free export.',
   // A CLAUSE DELETED, NOT A SENTENCE REWRITTEN. This ended "and connect with
   // other designers and developers", and there is no connecting to do: no

@@ -274,46 +274,34 @@ test.describe('Semantic Colour system workflow', () => {
 })
 
 // ── The Contrast Checker has to pass its own test ────────────────────────────
-// Found during the 2026-09-03 five-surface review, and it is the worst place in
-// the product for this defect to live. Measured on the white card in light
-// theme, against the 4.5:1 that this page exists to enforce:
-//
-//     .cc-ratio-verdict.cc-mixed  "Passes some checks"  2.94:1   <- the verdict
-//     .cc-check-mark  (pass glyph)                      2.70:1
-//     .cc-check-mark  (fail glyph)                      3.43:1
-//
-// All three were hard-coded hexes rather than the project's --ok/--warn/--err,
-// so they never responded to the theme either - and the fail red measured
-// 3.97:1 on the dark card, failing there too. BOTH THEMES are asserted here for
-// that reason: fixing only the one you happened to screenshot is how this
-// returns.
+// It is the worst place in the product for a contrast defect to live. The
+// verdict and test marks once painted hard-coded hexes that measured 2.7:1 to
+// 3.4:1 on the white card in light theme, and the fail red failed on the dark
+// card too. BOTH THEMES are asserted for that reason: fixing only the one you
+// happened to screenshot is how this returns.
 //
 // The check is computed the way the page itself computes it (WCAG relative
 // luminance), against the nearest opaque ancestor background, so it measures
 // what is painted rather than what the stylesheet says.
 //
-// `.cc-field-badge`, `.cc-check-foot` and `.cc-level-opt` joined with the LEFT
-// panel overhaul, and `.cc-check-name` finally started matching something. That
-// selector has been in this list since the sweep was written and no element has
-// ever carried it — the class was `.cc-check-label` — so the check text on the
-// page that enforces contrast was the one thing this sweep never measured. The
-// OR-list is what hid it: five other selectors kept the positive control above
-// its floor, so the count could never fall to zero and give it away. The lesson
-// is on the count itself — a floor over a UNION cannot prove each member
-// contributed.
+// REST_TEXT is every piece of the checker's own text that sits on the page's
+// card. The specimen and the swatches are left out on purpose: they are
+// painted in the user's pair, and legibility there is the thing being tested,
+// not a property of the page. Each selector must match on its own (the check
+// below counts them one by one), because a floor over a UNION cannot prove each
+// member contributed: a selector left over from a rename kept the count above
+// its floor for months while measuring nothing.
 //
-// `.cc-verdict` and `.cc-lede` joined the set with the preview overhaul
-// [contrast-checker-overhaul]. The chips are the interesting addition: they are
-// the only text on the page that SITS on the user's chosen background, and a
-// chip that painted with the pair would go unreadable at exactly the ratios
-// this page exists to warn about.
-//
-// THIS TEST ALONE DOES NOT HOLD THEM TO THAT, and the distinction was found by
-// mutation rather than by reasoning. Repointing .cc-verdict at var(--cc-bg)
-// still PASSES here, because the page loads at #6B7280 on #FFFFFF — 4.83:1,
-// which clears AA. Measuring the default pair can only ever prove the chip is
-// legible when the pair is already fine. The failing-pair test below is the one
-// that catches it; this one covers the page's resting state.
+// THIS TEST ALONE DOES NOT HOLD THE VERDICTS TO THE RULE. The page loads at
+// #6B7280 on #FFFFFF, 4.83:1, which clears AA, so a verdict painted in the pair
+// would still pass here. The failing-pair test below is the one that catches it.
+const REST_TEXT = [
+  '.cc-ratio-num', '.cc-ratio-unit', '.cc-ratio-verdict', '.cc-ratio-note',
+  '.cc-check-name', '.cc-check-need', '.cc-check-mark', '.cc-note p', '.cc-note-link',
+  '.cc-lede', '.cc-field-k', '.cc-fix-line', '.cc-fix-ratio',
+  '.cc-pair-label', '.cc-pair-ratio', '.cc-pair-mark',
+]
+
 test.describe('The Contrast Checker meets the standard it enforces', () => {
   for (const theme of ['light', 'dark']) {
     test(`its own verdict and check text passes AA in ${theme} theme`, async ({ browser }) => {
@@ -346,7 +334,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       await go(page, '/create/contrast')
       await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
 
-      const failures = await page.evaluate(() => {
+      const failures = await page.evaluate((sel) => {
         const lum = ([r, g, b]) => {
           const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
           return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
@@ -378,7 +366,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           return [255, 255, 255]
         }
         const out = []
-        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-check-foot, .cc-fix-desc, .cc-verdict, .cc-lede, .cc-field-badge, .cc-level-opt')) {
+        for (const el of document.querySelectorAll(sel)) {
           const cs = getComputedStyle(el)
           const bg = bgOf(el)
           const raw = parse(cs.color)
@@ -394,16 +382,17 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           }
         }
         return out
-      })
+      }, REST_TEXT.join(', '))
 
       // The sample must not be able to collapse to nothing: an empty `failures`
       // means either that everything passed or that the walk matched no
-      // elements at all, and those are not the same result.
-      const measured = await page.locator(
-        '.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-check-foot, .cc-fix-desc, .cc-verdict, .cc-lede, .cc-field-badge, .cc-level-opt').count()
+      // elements at all, and those are not the same result. A floor over the
+      // UNION cannot prove each member contributed, so every selector is
+      // counted on its own.
+      const unmatched = []
+      for (const sel of REST_TEXT) if ((await page.locator(sel).count()) === 0) unmatched.push(sel)
       await ctx.close()
-      expect(measured, `no contrast-checker text was found to measure in ${theme}`)
-        .toBeGreaterThan(8)
+      expect(unmatched, `these selectors matched nothing in ${theme}, so they were never measured`).toEqual([])
       expect(failures, `the contrast checker's own UI must meet AA in ${theme}:\n${failures.join('\n')}`).toEqual([])
     })
   }
@@ -416,9 +405,9 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
   // would pass anyway, so only a broken pair separates "uses page tokens" from
   // "got lucky".
   //
-  // MUTATION: in contrast.css drop the light-theme 50% mix on --cc-bad (paint
-  // the raw #F0A58C on the white card) — the light run goes red on every
-  // "Fail" mark at ~2:1.
+  // MUTATION: in contrast.css paint .cc-tone--err with var(--err) instead of
+  // var(--err-strong). The base token is the 3:1 icon floor, so the light run
+  // goes red on the ratio numeral and every "Fail" mark.
   for (const theme of ['light', 'dark']) {
     test(`its verdicts stay legible when the pair itself fails (${theme})`, async ({ browser }) => {
       const ctx = await browser.newContext({ colorScheme: theme })
@@ -431,7 +420,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
       await page.fill('#cc-fg', '#F2F4F6')
       await page.fill('#cc-bg', '#FFFFFF')
-      await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails')
+      await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails every WCAG check.')
 
       const report = await page.evaluate(() => {
         const lum = ([r, g, b]) => {
@@ -449,7 +438,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           }
           return [255, 255, 255]
         }
-        const els = [...document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-pair-mark')]
+        const els = [...document.querySelectorAll('.cc-ratio-num, .cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-pair-mark, .cc-fix-line, .cc-fix-ratio')]
         const bad = []
         for (const el of els) {
           const raw = parse(getComputedStyle(el).color)
@@ -483,12 +472,14 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await page.fill('#cc-fg', '#000099')
     await page.fill('#cc-bg', '#009900')
 
-    await expect(page.locator('.cc-ratio-num')).toHaveText('3.81:1')
+    // 3.8059:1 shown floored, never rounded up to 3.81.
+    await expect(page.locator('.cc-ratio-num')).toHaveText('3.80:1')
 
     const fixes = page.locator('.cc-fix')
     await expect(fixes).toHaveCount(2)
 
-    const offered = await page.locator('.cc-fix-chip').allTextContents()
+    // The hex each row names (the chip itself only reads "Aa", painted in the fixed pair).
+    const offered = await page.locator('.cc-fix-line strong').allTextContents()
     const check = await page.evaluate((hexes) => {
       const lum = ([r, g, b]) => {
         const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
@@ -506,6 +497,17 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     expect(check.blueOnBgFix, `the offered background fix ${offered[1]} does not reach 4.5:1 under #000099`).toBeGreaterThanOrEqual(4.5)
     const [r, g, b] = [1, 3, 5].map(i => parseInt(offered[0].slice(i, i + 2), 16))
     expect(b, `the text fix ${offered[0]} stopped being blue`).toBeGreaterThan(Math.max(r, g))
+
+    // Each row's "Aa" chip is painted in the pair the row promises: the new
+    // text on the current background, or the current text on the new background.
+    const painted = await page.locator('.cc-fix-chip').evaluateAll((els) => {
+      const hex = (c) => '#' + (c.match(/\d+/g) || []).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase()
+      return els.map((el) => { const cs = getComputedStyle(el); return { fg: hex(cs.color), bg: hex(cs.backgroundColor) } })
+    })
+    expect(painted).toEqual([
+      { fg: offered[0].toUpperCase(), bg: '#009900' },
+      { fg: '#000099', bg: offered[1].toUpperCase() },
+    ])
   })
 
   // Applying a fix must actually resolve the failure it was offered for. The
@@ -517,13 +519,15 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await page.fill('#cc-fg', '#000099')
     await page.fill('#cc-bg', '#009900')
     await expect(page.locator('.cc-fix')).toHaveCount(2)
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AA (4.5:1)')
+    const fixes = page.locator('.cc-fixes-sec')
+    await expect(fixes).toContainText('To reach AA (4.5:1)')
 
-    await page.locator('.cc-fix').first().getByRole('button', { name: 'Apply' }).click()
+    await page.locator('.cc-fix').first().getByRole('button', { name: /^Use / }).click()
 
     await expect(page.locator('.cc-check').first()).toHaveClass(/cc-check--pass/)
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Passes AA/)
-    await expect(page.getByRole('group', { name: 'Make it pass' })).not.toContainText('AA (4.5:1)')
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Passes AA for all text\./)
+    await expect(fixes).not.toContainText('To reach AA (4.5:1)')
+    await expect(fixes).toContainText('To reach AAA (7:1)')
   })
 
   // The fixes aim at the NEXT level the pair misses (AA, then AAA), not at a
@@ -540,15 +544,18 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await page.fill('#cc-bg', '#7F7F7F')
     await expect(page.locator('.cc-fix')).toHaveCount(2)
     await expect(page.locator('.cc-unfixable')).toHaveCount(0)
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AA (4.5:1)')
+    const section = page.locator('.cc-fixes-sec')
+    await expect(section).toContainText('To reach AA (4.5:1)')
 
-    // Past AA, the section aims at AAA; past AAA, it is gone.
+    // Past AA, the section aims at AAA; past AAA, it says there is nothing to
+    // change (the section stays, with no fix rows in it).
     await page.fill('#cc-fg', '#000000')
     await page.fill('#cc-bg', '#767676')
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AAA (7:1)')
+    await expect(section).toContainText('To reach AAA (7:1)')
     await expect(page.locator('.cc-fix').first()).toBeVisible()
     await page.fill('#cc-bg', '#FFFFFF')
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toHaveCount(0)
+    await expect(section).toContainText('Passes every WCAG 2.2 check. Nothing to change.')
+    await expect(page.locator('.cc-fix')).toHaveCount(0)
   })
 
   // The five tests as drawn (D:1903-1906): both levels at once, each row naming
@@ -559,21 +566,22 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
     const rows = page.locator('.cc-check')
     await expect(rows).toHaveCount(5)
+    // The level is part of the name, and the ratio each test needs is on the row.
     await expect(page.locator('.cc-check-name')).toHaveText([
-      'Body text, 16px', 'Body text, enhanced', 'Large text, 24px', 'Large text, enhanced', 'UI borders and icons',
+      'Normal text, AA', 'Normal text, AAA', 'Large text, AA', 'Large text, AAA', 'UI components and graphics, AA',
     ])
-    await expect(page.locator('.cc-check-level')).toHaveText(['AA', 'AAA', 'AA', 'AAA', 'AA'])
+    await expect(page.locator('.cc-check-need')).toHaveText(['4.5:1', '7:1', '3:1', '4.5:1', '3:1'])
 
     // #6B7280 on #FFFFFF is 4.83:1 — AA passes, AAA body fails.
-    const marks = () => page.locator('.cc-check-mark').evaluateAll((els) => els.map((e) => e.childNodes[0].textContent))
-    expect(await marks()).toEqual(['Pass', 'Fail', 'Pass', 'Pass', 'Pass'])
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AA')
+    const marks = page.locator('.cc-check-mark')
+    await expect(marks).toHaveText(['Pass', 'Fail', 'Pass', 'Pass', 'Pass'])
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AA for all text.')
 
     await page.fill('#cc-fg', '#BBBBBB')
-    expect(await marks()).toEqual(['Fail', 'Fail', 'Fail', 'Fail', 'Fail'])
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails')
+    await expect(marks).toHaveText(['Fail', 'Fail', 'Fail', 'Fail', 'Fail'])
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails every WCAG check.')
     await page.fill('#cc-fg', '#000000')
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AAA')
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AAA for all text.')
   })
 
   // TRUTH: "Common pairs in this kit" and the swatches are the person's own
