@@ -33,8 +33,16 @@ export default function PlanStrip({ planLabel, ai, slots }) {
             aria-valuemin={0}
             aria-valuemax={ai.limit}
             aria-valuenow={ai.used}
+            aria-valuetext={`${ai.used} of ${ai.limit} today, ${ai.source === 'account' ? 'on your account' : 'counted on this browser'}`}
           >
             <span className="uh-meter-fill is-accent" style={{ width: `${ai.pct}%` }} />
+          </span>
+          {/* Whose count this is, and when it rolls over. "Resets daily" is all that is
+              promised: the server's day is UTC, the browser's is local (see aiQuota.js). */}
+          <span className="uh-meter-note" data-testid="ai-meter-note">
+            {ai.source === 'account' && ai.month
+              ? `${ai.month.used} of ${ai.month.limit} this month. Resets daily.`
+              : 'Counted on this browser. Resets daily.'}
           </span>
         </span>
       )}

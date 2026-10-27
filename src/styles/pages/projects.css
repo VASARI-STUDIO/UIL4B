@@ -123,6 +123,7 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-meter-track { display: block; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--t0) 10%, transparent); overflow: hidden; }
 .uh .uh-meter-fill { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--t0) 34%, transparent); }
 .uh .uh-meter-fill.is-accent { background: var(--accent); }
+.uh .uh-meter-note { font-size: 13px; line-height: 1.4; color: var(--ws-dim); }
 
 /* ── Start something ────────────────────────────────────────────────────── */
 .uh .uh-start { margin-top: clamp(20px, 2.6vw, 30px); border-radius: 18px; background: var(--card); border: 1px solid var(--ws-hair); overflow: hidden; }

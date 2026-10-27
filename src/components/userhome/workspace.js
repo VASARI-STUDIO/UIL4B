@@ -61,11 +61,25 @@ export const DAILY_AI_TOOLS = Object.freeze(['alt-text', 'prompts-ai'])
  * so that is the one printed. `countFor` is injected (usageTracker's
  * getUsageCount in the page) so this stays testable without a DOM.
  */
-export function aiUsageToday(countFor, plan) {
-  const limit = plan?.limits?.['ai-default'] ?? AI_LIMITS.free.daily
-  const used = Math.max(0, ...DAILY_AI_TOOLS.map((id) => Number(countFor(id)) || 0))
+export function aiUsageToday(countFor, plan, server = null) {
+  const planLimit = plan?.limits?.['ai-default'] ?? AI_LIMITS.free.daily
+  // The account's own figures (GET /api/ai?usage=1), when they have arrived. The
+  // server's limit is the one enforced; its count and this browser's are both
+  // lower bounds on what the account has used, so the larger one is shown.
+  const known = Number.isFinite(server?.used)
+  const limit = Number.isFinite(server?.limit) && server.limit > 0 ? server.limit : planLimit
+  const local = Math.max(0, ...DAILY_AI_TOOLS.map((id) => Number(countFor(id)) || 0))
+  const used = Math.max(local, known ? server.used : 0)
   const shown = Math.min(used, limit)
-  return { used: shown, limit, pct: limit > 0 ? Math.round((shown / limit) * 100) : 0 }
+  const monthKnown = known && Number.isFinite(server.monthUsed) && Number.isFinite(server.monthLimit)
+  return {
+    used: shown,
+    limit,
+    pct: limit > 0 ? Math.round((shown / limit) * 100) : 0,
+    // 'account' once the server has answered; until then it is one browser's count.
+    source: known ? 'account' : 'browser',
+    month: monthKnown ? { used: server.monthUsed, limit: server.monthLimit } : null,
+  }
 }
 
 /** Project slots, or null when the plan has no project limit (Pro). */
