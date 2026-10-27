@@ -14,8 +14,8 @@ test('the real list is coherent: one default per format, unique ids, keys are li
   assert.deepEqual(Object.keys(EXPORT_TEMPLATES).sort(), ['book', 'guidelines', 'kit'])
 })
 
-test('only the three defaults are live in this release', () => {
-  assert.deepEqual(['kit', 'book', 'guidelines'].map((f) => liveTemplates(f).map((x) => x.id)), [['studio'], ['specification'], ['presentation']])
+test('the live templates are the three defaults and the book Monograph and Atlas', () => {
+  assert.deepEqual(['kit', 'book', 'guidelines'].map((f) => liveTemplates(f).map((x) => x.id)), [['studio'], ['specification', 'monograph', 'atlas'], ['presentation']])
   assert.deepEqual(['kit', 'book', 'guidelines'].map(defaultTemplate), ['studio', 'specification', 'presentation'])
 })
 

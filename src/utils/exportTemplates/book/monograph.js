@@ -371,8 +371,8 @@ export default Object.freeze({
   openOnRecto: true,
   // The cover and the half-title come before the contents.
   front,
-  // Cover title: sizes in pt, largest first, in the 110 mm text column (311 pt).
-  titleFit: Object.freeze({ steps: Object.freeze([40, 32, 26]), maxLines: 3, measure: 311 }),
+  // Cover title: sizes in pt, largest first, in the 110 mm text column (312 pt).
+  titleFit: Object.freeze({ steps: Object.freeze([40, 32, 26]), maxLines: 3, measure: 312 }),
   // 28 rows of 8 pt leave the token pages room under the header.
   tokensPerPage: 30,
   sectionOrder: Object.freeze(['colour', 'typography', 'tokens']),

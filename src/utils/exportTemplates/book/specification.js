@@ -2,7 +2,9 @@
 // section dividers, then numbered specification pages on one 12-column A4 grid.
 // A template returns strings; the generator owns every fact on the page.
 
-import { esc } from '../shared.js'
+import { esc, chromeFor } from '../shared.js'
+
+const CHROME = Object.freeze({ family: 'Hanken Grotesk', weights: '100 900', file: 'hanken-grotesk-latin.woff2' })
 
 function cover({ d, projectName, field, fieldInk, iso, year, slots, fit }) {
   // The palette runs full-bleed across the foot of the cover: the system
@@ -59,8 +61,10 @@ function opening(ctx, { num, title, abstract, field, ink }) {
  * One grid, held on every page. Sizes are in pt because this is a print
  * document and pt is the unit the page is actually measured in.
  */
-function css({ d }) {
-  return `  :root{
+function css({ d, fontData }) {
+  return `${chromeFor(CHROME, fontData)}
+  :root{
+    --chrome:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
     --ink:#111114; --mut:#6A6A74; --line:#DCDCE2; --hair:#EDEDF1; --paper:#fff;
     --m:19mm;
     --head:'${esc(d.heading)}',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -251,6 +255,10 @@ function css({ d }) {
   .cl-foot{margin-top:auto;display:flex;justify-content:space-between;
     padding-bottom:6mm;font-size:7.5pt;
     letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+
+  /* The chrome face: folios, labels, captions and notes, in Hanken Grotesk rather than
+     whatever the user's body face is (which can be a display face). */
+  .foot,.folio,.cv-top,.cv-meta dt,.lbl,.ct-aside,.ct-num,.bd-role,.bd-lands,.mx-w,.key,.note,.ct-facts dt{font-family:var(--chrome)}
 
   @media print{
     body{background:#fff}

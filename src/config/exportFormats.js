@@ -52,7 +52,7 @@ export const EXPORT_FORMATS = Object.freeze([
   // landscape PRESENTATION a brand is argued from. See the long note at the top
   // of utils/brandGuidelines.js for why the founder's reference material
   // (UI Examples/Brand kit examples) could not be served by extending the book.
-  Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'A 12-page A4 manual — cover, contents, numbered sections, full-bleed colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true, group: 'book', action: 'Export book' }),
+  Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'An A4 book — cover, contents, numbered sections, full-bleed colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true, group: 'book', action: 'Export book' }),
   Object.freeze({ id: 'guidelines', name: 'Brand guidelines (presentation)', desc: 'A 16:9 landscape deck — cover, numbered sections, named swatches, alphabet grids, and your own logo on every brand ground with its clear-space rule. Opens ready to save as PDF.', live: true, pro: true, logo: true, group: 'guidelines', action: 'Export guidelines' }),
   Object.freeze({ id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true, group: 'guide', option: 'HTML', action: 'Export style guide (HTML)' }),
   Object.freeze({ id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true, group: 'guide', option: 'Markdown', action: 'Export style guide (Markdown)' }),
@@ -77,7 +77,7 @@ export const EXPORT_GROUPS = Object.freeze([
   Object.freeze({ id: 'kit', name: 'UI kit', desc: 'One HTML file with your palette, type and components. Opens offline.' }),
   Object.freeze({ id: 'guide', name: 'Style guide', desc: 'A printable A4 guide to your palette and type.' }),
   Object.freeze({ id: 'tokens', name: 'Design tokens', desc: 'Your palette, tints and type as code.' }),
-  Object.freeze({ id: 'book', name: 'Design system book', desc: 'A 12-page A4 manual of your system, ready to save as PDF.', preview: 'book' }),
+  Object.freeze({ id: 'book', name: 'Design system book', desc: 'An A4 book of your system, ready to save as PDF.', preview: 'book' }),
   Object.freeze({ id: 'guidelines', name: 'Brand guidelines', desc: 'A 16:9 brand deck with your logo on every ground.', preview: 'guidelines' }),
 ])
 

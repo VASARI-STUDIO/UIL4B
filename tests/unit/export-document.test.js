@@ -278,7 +278,7 @@ test('the real generators serve their default template and say so', async () => 
 
 test('a template that is not live for the format is a 400 unknown_template and no generator loads', async () => {
   const bad = [
-    'nope', 'Specification', ' specification', 'specification ', 'monograph', 'presentation', 'studio',
+    'nope', 'Specification', ' specification', 'specification ', 'poster', 'presentation', 'studio',
     'constructor', '__proto__', 'toString', 'hasOwnProperty',
     { id: 'specification' }, { toString: () => 'specification' }, 7, 0, true, false, ['specification'], [],
   ]

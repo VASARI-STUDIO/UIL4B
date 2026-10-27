@@ -72,7 +72,7 @@ const PRO_GATE = {
     gate: 'design-system-book-export',
     eyebrow: 'UIL4B Pro',
     title: 'Export the design system book',
-    subtitle: 'A 12-page A4 manual of your system — cover, contents, numbered sections, full-bleed colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
+    subtitle: 'An A4 book of your system — cover, contents, numbered sections, full-bleed colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
     features: [
       'Cover, contents and numbered section openings',
       'Every colour with its role, three notations and its reading ink',
