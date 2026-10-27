@@ -28,11 +28,14 @@ function SlackWater({ roles }) {
           {MAST.nav.map((n, i) => (
             <span key={n} className="sw-navi">
               {n}
-              {i === MAST.nav.length - 1 && <i className="sw-ul" data-role="secondary" />}
+              {i === 0 && <i className="sw-ul" data-role="secondary" />}
             </span>
           ))}
         </nav>
         <span className="sw-cta" data-role="primary">{MAST.cta}</span>
+        <span className="sw-menu" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 6h14M3 10h14M3 14h14" /></svg>
+        </span>
       </header>
 
       <section className="sw-hero">

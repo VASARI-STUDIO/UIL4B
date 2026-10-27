@@ -32,6 +32,8 @@
 .or-nav{display:flex;gap:var(--s-5);font-size:15px;color:var(--pv-muted)}
 .or-nav .is-on{color:var(--pv-text)}
 .or-bag{margin-left:auto;font-size:15px}
+/* Shown only where the links are hidden (narrow). Decorative, like the links. */
+.or-menu{display:none;align-items:center;justify-content:center;width:32px;height:32px;margin-right:calc(var(--s-1) * -1);color:var(--pv-text)}
 .or-bag b{font-family:'Geist Mono',ui-monospace,monospace;font-weight:500}
 .or-crumb{padding:var(--s-4) var(--s-6) 0;font-size:13px;color:var(--pv-muted)}
 .or-crumb b{font-weight:400;color:var(--pv-text)}
@@ -50,8 +52,11 @@
 }
 .or-buy{grid-column:8 / span 5;display:flex;flex-direction:column;gap:var(--s-5);min-width:0;padding-top:var(--s-2)}
 
-.or-figure{grid-column:2;grid-row:1;display:grid;place-items:center;min-height:0;padding:6% 4% 10%}
-.or-figure .or-garment{width:100%;height:100%;max-height:100%;animation:or-rise 300ms cubic-bezier(.23,1,.32,1) both}
+/* The shirt is placed inside the figure's box (insets as percentages of it), not
+ * sized by it, so its height can never push past the stage whatever the row
+ * gives the figure. */
+.or-figure{grid-column:2;grid-row:1;position:relative;min-height:0}
+.or-figure .or-garment{position:absolute;left:4%;top:6%;width:92%;height:84%;animation:or-rise 300ms cubic-bezier(.23,1,.32,1) both}
 
 .or-thumbs{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:var(--s-2)}
 .or-thumb{
@@ -137,8 +142,10 @@
   .or-top{padding:var(--s-2) var(--s-5);gap:var(--s-5)}
   .or-crumb{padding:var(--s-4) var(--s-5) 0}
   .or-main{padding:var(--s-4) var(--s-5) var(--s-6);gap:var(--s-6) var(--s-5)}
-  .or-stage{grid-column:1 / span 6;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;aspect-ratio:auto;padding:var(--s-3)}
-  .or-figure{grid-column:1;grid-row:1;aspect-ratio:4 / 5;width:100%}
+  /* minmax(0,...) and min-width:0: a bare 1fr takes its minimum from the figure's
+   * 4:5 ratio, which would let the stage grow wider than its half of the page. */
+  .or-stage{grid-column:1 / span 6;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;align-self:start;aspect-ratio:auto;max-height:none;padding:var(--s-3)}
+  .or-figure{grid-column:1;grid-row:1;aspect-ratio:4 / 5;width:100%;min-width:0}
   .or-thumbs{grid-column:1;grid-row:2;flex-direction:row}
   .or-thumb{flex:1}
   .or-shown{display:none}
@@ -150,10 +157,14 @@
 @container orra (max-width:599px){
   .or-top{padding:var(--s-2) var(--s-4)}
   .or-nav{display:none}
+  .or-menu{display:inline-flex}
   .or-crumb{padding:var(--s-3) var(--s-4) 0}
   .or-main{padding:var(--s-3) var(--s-4) var(--s-6);gap:var(--s-5)}
   .or-stage,.or-buy{grid-column:1 / -1}
   .or-title{font-size:28px;margin-top:calc(var(--s-4) * -1)}
+  /* Five colourways in one row: they shrink from 60px rather than wrap. */
+  .or-swatches{flex-wrap:nowrap;gap:var(--s-3) var(--s-2)}
+  .or-sw{flex:0 1 60px;min-width:0}
   .or-ctas{flex-wrap:wrap}
   .or-cta{flex-basis:100%}
   .or-save{flex:1;justify-content:center}

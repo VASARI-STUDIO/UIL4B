@@ -95,6 +95,9 @@
 /* A locked scene is the real scene, blurred, with the unlock over it. */
 .pvd-scene{position:relative;isolation:isolate;min-width:0}
 .pvd-scene.is-locked .pvd-scene-in{filter:blur(6px);pointer-events:none;user-select:none}
+/* While a scene's file loads: the scene's own canvas colour at the stage's size,
+ * so the first frame is the right ground and not a hole. */
+.pvd-scene-wait{min-height:calc(100cqh - 32px)}
 /* The card has its own solid ground and ink: the scene behind it follows its own
  * Light/Dark, so nothing here may read off it. It sticks near the top of the
  * stage, so on a tall scene it is in view at any scroll. */
@@ -128,7 +131,9 @@
 .pvd-chip-fail{display:inline-flex;align-items:center;gap:var(--s-1);min-width:0;font-size:12px;font-variant-numeric:tabular-nums;color:var(--t1)}
 .pvd-chip-fail svg{color:var(--warn-strong,var(--t1))}
 .pvd-chip-note{min-width:0;font-size:12px;color:var(--t2);overflow-wrap:anywhere}
-.pvd-chip-adj{min-width:0;font-size:13px;color:var(--t2);overflow-wrap:anywhere}
+/* Under the chips, one line, in the column the chips are in. */
+.pvd-legend-adj{grid-column:2;margin:0;font-size:12px;line-height:1.5;color:var(--t1)}
+.pvd-legend.is-sheet .pvd-legend-adj{grid-column:auto}
 
 /* Compare actions. */
 .pvd-actions{flex:none;padding:var(--s-3) var(--s-5);border-top:1px solid var(--border)}

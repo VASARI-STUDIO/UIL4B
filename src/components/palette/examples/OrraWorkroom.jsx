@@ -68,6 +68,9 @@ function Garment({ view }) {
 const Plus = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
 )
+const MenuIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14" /></svg>
+)
 const Heart = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z" /></svg>
 )
@@ -86,6 +89,7 @@ export default function OrraWorkroom({ roles, labels = [] }) {
         <span className="or-mark">Orra Workroom</span>
         <nav className="or-nav"><span className="is-on">Shirts</span><span>Trousers</span><span>Workroom</span></nav>
         <span className="or-bag">Bag <b>0</b></span>
+        <span className="or-menu" aria-hidden="true"><MenuIcon /></span>
       </header>
 
       <p className="or-crumb">Shirts <span aria-hidden="true">/</span> Overshirts <span aria-hidden="true">/</span> <b>{PRODUCT.name}</b></p>

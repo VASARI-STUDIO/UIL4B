@@ -270,6 +270,8 @@ const isHex = (h) => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h)
  */
 export function inkOnField(fill, inks = {}, opts = {}) {
   const floor = opts.large ? LARGE_TEXT_FLOOR : TEXT_FLOOR
+  // No field to read against: the neutral text, or black, rather than a throw.
+  if (!isHex(fill)) return { hex: isHex(inks.text) ? inks.text : '#000000', ratio: 1, step: 'pole' }
   if (isHex(inks.on) && contrastRatio(inks.on, fill) >= floor) {
     return { hex: inks.on, ratio: contrastRatio(inks.on, fill), step: 'on' }
   }

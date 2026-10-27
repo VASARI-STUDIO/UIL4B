@@ -37,7 +37,7 @@ export const TEXT_RECIPE = [
 export const MAST = {
   name: 'Slack Water',
   issue: 'Issue 09 · Out today',
-  nav: ['Issues', 'Ferries', 'Tides', 'Subscribe'],
+  nav: ['Issues', 'Ferries', 'Tides'],
   cta: 'Subscribe $48/yr',
 }
 

@@ -238,6 +238,7 @@ function SceneStrip({ sceneId, pendingId, onPick, isLocked }) {
 function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet }) {
   const failFor = (role) => roles.fails.find((f) => f.role === role)
   const unset = new Set(roles.unset)
+  const adjId = useId()
 
   const chip = (role, label, i) => {
     const off = Boolean(used) && !used.includes(role)
@@ -257,6 +258,7 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
         onFocus={off ? undefined : () => onHover(role)}
         onBlur={() => onHover(null)}
         onClick={off ? undefined : () => onPin(role)}
+        aria-describedby={adjusted.includes(role) ? adjId : undefined}
       >
         <i className="pvd-sw" style={{ background: swatchOf(roles, role) }} aria-hidden="true" />
         <span className="pvd-chip-t">
@@ -270,14 +272,16 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
           </span>
         )}
         {i != null && unset.has(role) && <span className="pvd-chip-note">Not set, using Primary</span>}
-        {adjusted.includes(role) && (
-          <span className="pvd-chip-adj">{roles.mode === 'dark' ? 'Lighter' : 'Darker'} as text, so it reads</span>
-        )}
         {off && <span className="sr-only">Not in this preview</span>}
         {hover === role && <span className="sr-only">Outlined in the preview</span>}
       </button>
     )
   }
+
+  // A role's name as its chip prints it.
+  const adjustedName = (role) => (BRAND_ROLES.includes(role)
+    ? sentence(roleLabel(harmony, BRAND_ROLES.indexOf(role)))
+    : SUGGESTED.find(([r]) => r === role)?.[1] ?? role)
 
   let note = null
   if (roles.empty) note = 'Add colours to see your own roles'
@@ -289,6 +293,11 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
       <div className="pvd-chips" role="group" aria-label="Your colours">
         {BRAND_ROLES.map((role, i) => chip(role, sentence(roleLabel(harmony, i)), i))}
       </div>
+      {adjusted.length > 0 && (
+        <p className="pvd-legend-adj" id={adjId}>
+          {adjusted.map(adjustedName).join(', ')}: {roles.mode === 'dark' ? 'lighter' : 'darker'} as text, so it reads
+        </p>
+      )}
       <p className="pvd-legend-sub">Suggested, not in your export</p>
       <div className="pvd-chips" role="group" aria-label="Suggested colours">
         {SUGGESTED.map(([role, label]) => chip(role, label, null))}
@@ -306,7 +315,7 @@ function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock }) {
   return (
     <div className={locked ? 'pvd-scene is-locked' : 'pvd-scene'}>
       <div className="pvd-scene-in" inert={locked}>
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="pvd-scene-wait" style={{ background: roles.canvas }} aria-hidden="true" />}>
           <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} />
         </Suspense>
       </div>
@@ -490,9 +499,11 @@ export default function PalettePreviewDialog({
     const dx = e.changedTouches[0].clientX - start[0]
     const dy = e.changedTouches[0].clientY - start[1]
     if (Math.abs(dx) < 64 || Math.abs(dy) > 40) return
-    const i = PREVIEW_SCENES.findIndex((s) => s.id === scene.id)
+    // Step from what the list shows (the pick in flight, if any), so a second
+    // swipe before the first example has loaded goes one further, not to the same place.
+    const i = PREVIEW_SCENES.findIndex((s) => s.id === shownId)
     const next = PREVIEW_SCENES[Math.min(Math.max(i + (dx < 0 ? 1 : -1), 0), PREVIEW_SCENES.length - 1)]
-    if (next.id !== scene.id) pick(next.id)
+    if (next.id !== shownId) pick(next.id)
   }
 
   const pinnedLabel = pinned

@@ -26,6 +26,8 @@
 .sw-name{font-family:var(--sw-serif);font-size:20px;font-weight:600;line-height:1.25;letter-spacing:-.01em}
 .sw-issue{font-family:var(--mono);font-size:13px;color:var(--pv-muted)}
 .sw-nav{display:flex;gap:var(--s-5);margin-left:auto;font-size:15px}
+/* Shown only where the links are hidden (narrow). Decorative, like the links. */
+.sw-menu{display:none;align-items:center;justify-content:center;width:32px;height:32px;margin-right:calc(var(--s-1) * -1);color:var(--pv-text)}
 .sw-navi{position:relative}
 .sw-ul{position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--pv-secondary)}
 .sw-cta{display:inline-flex;align-items:center;height:40px;padding:0 var(--s-4);font-size:13px;font-weight:600;white-space:nowrap;
@@ -36,7 +38,7 @@
  * bottom edges of the hero, and its chart is placed inside it by the window. */
 .sw-hero{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:24px;flex:1;min-height:480px}
 .sw-copy{grid-column:1 / 6;display:flex;flex-direction:column;gap:var(--s-4);padding:var(--s-7) 0 var(--s-6) var(--s-6)}
-.sw-head{font-family:var(--sw-serif);font-size:clamp(36px,6.4cqi,76px);font-weight:300;line-height:1;letter-spacing:-.03em;text-wrap:balance}
+.sw-head{font-family:var(--sw-serif);font-size:clamp(36px,5.4cqi,64px);font-weight:300;line-height:1;letter-spacing:-.03em;text-wrap:balance}
 .sw-tail{color:var(--pv-muted)}
 .sw-stand{max-width:44ch;font-size:17px;line-height:1.5;color:var(--pv-muted)}
 .sw-by{margin-top:auto;font-family:var(--mono);font-size:13px;color:var(--pv-muted)}
@@ -100,6 +102,7 @@
   .sw{--sw-wu:220;--sw-x0:170;--sw-yc:180}
   .sw-mast{gap:var(--s-3);padding:0 var(--s-4)}
   .sw-nav{display:none}
+  .sw-menu{display:inline-flex}
   .sw-cta{margin-left:auto}
   .sw-hero{display:flex;flex-direction:column;min-height:0}
   .sw-field{order:-1;flex:none;aspect-ratio:4 / 3;border-left:0}
