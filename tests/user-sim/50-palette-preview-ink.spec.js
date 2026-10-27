@@ -43,7 +43,7 @@ import { clickPaletteAction } from './palette-helpers.js'
 // 4.075:1 in light.
 const PALETTE = ['#20838d', '#2994c7', '#5b89d7', '#8a9fea', '#c5c1f6']
 
-const SCENES = ['Energy dashboard', 'Dashboard', 'Phone app', 'Editorial hero', 'Product page', 'Landing page', 'Email receipt', 'Poster', 'Social tile', 'Invoices', 'Settings']
+const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio', 'Invoices', 'Settings']
 
 // The ONLY elements allowed to print in a raw brand colour. brandAsText() keeps the
 // user's own hex when it clears the floor on every ground it sits on (and walks it a
@@ -125,7 +125,7 @@ const SWEEP = `((inkVars, fillVars) => {
     const role = inkRole ? inkRole.slice(5) : fillRole ? 'fill:' + fillRole.slice(5) : 'other'
     const size = parseFloat(cs.fontSize)
     out.push({
-      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'),
+      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'), off: !!el.closest('.is-off'),
       ink: hex, ground: hexOf(g), ratio: ratio(ink, g),
       floor: (size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700)) ? 3 : 4.5,
     })
@@ -134,7 +134,7 @@ const SWEEP = `((inkVars, fillVars) => {
 })`
 
 test.describe('Palette Builder preview ink', () => {
-  test('every text node clears its floor on its real ground, in all eleven scenes and both preview themes', async ({ page }) => {
+  test('every text node clears its floor on its real ground, in all eight scenes and both preview themes', async ({ page }) => {
     watch(page, 'designer checking a palette on a UI mockup')
     await page.addInitScript((colors) => {
       const raw = localStorage.getItem('vs-current-design')
@@ -196,7 +196,7 @@ test.describe('Palette Builder preview ink', () => {
 
         const samples = await page.evaluate(`${SWEEP}(${JSON.stringify(INK_VARS)}, ${JSON.stringify(FILL_VARS)})`)
         expect(samples.filter((s) => s.gradient), `${name}/${theme}: a preview ink landed on a gradient, which this walk cannot measure`).toEqual([])
-        // The Poster is the sparest scene, with three text nodes. The bar is
+        // The sparest scene has only a handful of text nodes. The bar is
         // that, so content edits do not trip it, but a sweep that has stopped
         // FINDING the text still does.
         expect(samples.length, `${name}/${theme}: too few text nodes were found`).toBeGreaterThanOrEqual(3)
@@ -221,7 +221,7 @@ test.describe('Palette Builder preview ink', () => {
           // it must be marked aria-disabled, so any other node in the Product page is
           // still held to the floor, and so is a sold-out look that is not announced.
           const inactive = (name === 'Settings' && s.inactive)
-            || (name === 'Product page' && s.inactive && s.cls.split(' ').includes('is-off') && s.role === 'disabled')
+            || (name === 'Product page' && s.inactive && s.off && s.role === 'disabled')
           if (inactive) disabledSeen++
           else if (s.ratio < s.floor) failures.push('  ' + where)
           // The type floor for every scene.
@@ -241,7 +241,9 @@ test.describe('Palette Builder preview ink', () => {
     // Anti-vacuity for the roles the rules must be reading. If any reaches
     // zero the stylesheet has stopped painting that role as text, and every
     // assertion about it above is measuring nothing.
-    for (const role of ['text', 'muted', 'primary-ink', 'on-primary', 'success-ink', 'error-ink']) {
+    // primary-ink is left out: no live scene paints text in it since the
+    // retired scenes went, so its rule has nothing to read.
+    for (const role of ['text', 'muted', 'on-primary', 'success-ink', 'error-ink']) {
       expect(roleCounts[role] || 0, `no text was found in the ${role} role`).toBeGreaterThanOrEqual(2)
     }
 

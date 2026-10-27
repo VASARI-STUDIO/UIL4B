@@ -48,7 +48,7 @@ import {
 // ── ONE FRAME ───────────────────────────────────────────────────────────────
 // Every card is the same fixed size at a given width (spectrum.css, "one card
 // system"): a copy column and a stage. Card 1's stage is its live panel. Cards 2
-// and 3 put a plate in the stage: real renders of the product's own exports, made
+// and 3 put a picture in the stage (card 2 a plate, card 3 a shelf of covers): real renders of the product's own exports, made
 // by scripts/home-exports/generate.mjs and listed in src/data/homeExports.generated.js.
 //
 // ── ONE SWITCH, DRAWN TWICE ─────────────────────────────────────────────────
@@ -365,19 +365,34 @@ function OneCard({ index, setRef, base, font }) {
 /* ── cards 2 and 3 · the plate ────────────────────────────────────────────── */
 //
 // A plate is a picture of a real export on the stage's ground, with a switch that
-// picks which one. Card 2 uses it as a tab strip (Book, Brand deck, UI kit); card 3
-// as a radio group of the example projects, each shown as its book's cover beside
-// its contents page (a single cover on a phone).
+// picks which one. Card 2 uses it as a tab strip (Book, Brand deck, UI kit). Card 3
+// is a shelf: a radio group of the example projects, each shown as its book's real
+// cover, all three side by side, the chosen one in front.
 //
-// Loading: only the shown picture is fetched. A picture is mounted on its first
-// pointerenter, focus or press of its button, and every picture is lazy. The shown
-// picture changes only once the new one has decoded, so a swap never shows an
+// Card 2's loading: only the shown picture is fetched. A picture is mounted on its
+// first pointerenter, focus or press of its button, and every picture is lazy. The
+// shown picture changes only once the new one has decoded, so a swap never shows an
 // empty plate (the old one is held until then). Both pictures stay stacked in the
 // same box, so nothing below the card moves.
+//
+// Card 3's shelf: the three covers are always in the page (lazy, so they load once
+// the card is near), so there is nothing to hold back and nothing to decode first.
+// Picking a project only changes each cover's position (data-pos), and the move is
+// a CSS transition on transform and opacity, so a second pick mid-move carries on
+// from where each cover is and the shelf is never empty.
 
 const PLATE_SIZES = '(min-width: 1200px) min(700px, 52vw), calc(100vw - 118px)'
 const PORTRAIT_SIZES = 'calc(100vw - 72px)'
-const COVER_SIZES = '280px'
+// The front cover is 300 CSS px wide on the wide shelf and 220 on a phone (spectrum.css).
+const SHELF_SIZES = '(max-width: 760px) 220px, 300px'
+
+// The line under each export's name in the rows beside the copy (1200px and up).
+// The counts are the real book's and deck's, read by the generator.
+const TAB_SUB = {
+  'book-colour': `${HOME_EXPORTS.counts.bookPages} A4 pages`,
+  'guide-palette': `${HOME_EXPORTS.counts.deckSlides} slides at 16:9`,
+  'kit-colour': 'One HTML page with CSS and JSON tokens',
+}
 
 const TAB_ITEMS = HOME_EXPORTS.plates.map((p) => {
   // The accessible name has to contain the visible label ("Brand deck").
@@ -387,15 +402,16 @@ const TAB_ITEMS = HOME_EXPORTS.plates.map((p) => {
     key: p.id,
     label: p.tab,
     name,
-    rowName: name,
+    rowName: `${name}, ${TAB_SUB[p.id]}`,
     hint: p.tabName.split(', ').pop(), // 'Pro' or 'Free'
+    sub: TAB_SUB[p.id],
     alt: p.alt,
     variants: p,
   }
 })
 
-// The three example projects, each with its book cover and contents page. PROJECTS
-// and the covers are in the same order (Northbeam, Halcyon, Ferrule).
+// The three example projects, each with its book cover. PROJECTS and the covers are
+// in the same order (Northbeam, Halcyon, Ferrule).
 const PROJECT_ITEMS = PROJECTS.map(([name, when, parts], i) => {
   const cover = HOME_EXPORTS.covers[i]
   return {
@@ -417,10 +433,9 @@ const PROJECT_ITEMS = PROJECTS.map(([name, when, parts], i) => {
 
 function PlatePicture({ item, on, failed, imgRef, onLoad, onError }) {
   const v = item.variants
-  const cover = v.kind === 'cover'
   return (
     <picture>
-      <source media="(max-width: 760px)" type="image/webp" srcSet={v.portrait.srcset} sizes={cover ? COVER_SIZES : PORTRAIT_SIZES} />
+      <source media="(max-width: 760px)" type="image/webp" srcSet={v.portrait.srcset} sizes={PORTRAIT_SIZES} />
       <img
         ref={imgRef}
         className={on ? 'is-on' : undefined}
@@ -429,6 +444,7 @@ function PlatePicture({ item, on, failed, imgRef, onLoad, onError }) {
         sizes={PLATE_SIZES}
         width={v.landscape.width}
         height={v.landscape.height}
+        style={{ '--ar': v.landscape.aspect }}
         loading="lazy"
         decoding="async"
         alt={item.alt}
@@ -439,6 +455,62 @@ function PlatePicture({ item, on, failed, imgRef, onLoad, onError }) {
       />
     </picture>
   )
+}
+
+// A cover's place on the shelf: the chosen one in front, and the other two behind it
+// on either side, still in the order Northbeam, Halcyon, Ferrule.
+function shelfPos(i, active, count) {
+  if (i === active) return 'front'
+  const rank = [...Array(count).keys()].filter((j) => j !== active).indexOf(i)
+  return rank < (count - 1) / 2 ? 'left' : 'right'
+}
+
+// A back cover is also a click target for its project, with the pointer only: the rows and
+// pills are the keyboard and screen-reader path, so it stays out of the tab order and the
+// accessibility tree. The front cover has no handler.
+function ShelfCover({ item, pos, failed, onError, onPick }) {
+  const v = item.variants.portrait
+  return (
+    <img
+      className={pos === 'front' ? 'is-on' : undefined}
+      onClick={pos === 'front' ? undefined : onPick}
+      tabIndex={pos === 'front' ? undefined : -1}
+      data-pos={pos}
+      src={v.src}
+      srcSet={v.srcset}
+      sizes={SHELF_SIZES}
+      width={v.width}
+      height={v.height}
+      loading="lazy"
+      decoding="async"
+      alt={item.alt}
+      aria-hidden={pos === 'front' ? undefined : true}
+      hidden={failed}
+      onError={onError}
+    />
+  )
+}
+
+// After a click on a back cover, focus goes to its project's radio in whichever switch is on
+// screen (the rows from 1200px, the pills below; the other is display: none), so a keyboard or
+// screen-reader user carries on from the project that was chosen. PickList's ids are
+// `${uid}-${variant}-${i}`. A pointer click does not draw a focus ring on it.
+function focusPick(uid, i) {
+  const el = ['rows', 'pills']
+    .map((variant) => document.getElementById(`${uid}-${variant}-${i}`))
+    .find((b) => b && b.offsetParent !== null)
+  if (!el) return
+  el.focus({ preventScroll: true })
+  // The pills scroll sideways on a phone, as PickList's own click does for them.
+  if (el.className.includes('sp-pick-btn')) el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
+
+// The shelf's state: the chosen project and any cover that failed to load.
+function useShelf() {
+  const [active, setActive] = useState(0)
+  const [failed, setFailed] = useState(() => new Set())
+  const onError = (i) => () => setFailed((prev) => new Set(prev).add(i))
+  return { active, failed, select: setActive, onError }
 }
 
 function usePlate() {
@@ -482,9 +554,9 @@ function usePlate() {
   return { active, shown, mounted, failed, imgs, mount, select, onLoad, onError }
 }
 
-function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead }) {
+function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead, shelf }) {
   const tabs = role === 'tab'
-  const { active, shown, mounted, failed, imgs, mount, select, onLoad, onError } = plate
+  const { active, shown = active, mounted, failed, imgs, mount, select, onLoad, onError } = plate
 
   return (
     <div className="sp-stage">
@@ -495,20 +567,30 @@ function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead })
         aria-labelledby={tabs ? `${uid}-pills-${active}` : undefined}
         tabIndex={tabs ? 0 : undefined}
       >
-        <div className="sp-plate-art">
-          {items.map((item, i) => (mounted.has(i) ? (
-            <PlatePicture
-              key={item.id}
-              item={item}
-              on={shown === i}
-              failed={failed.has(i)}
-              imgRef={(el) => { imgs.current[i] = el }}
-              onLoad={onLoad(i)}
-              onError={onError(i)}
-            />
-          ) : null))}
-          {failed.has(shown) && <p className="sp-plate-fail">{items[shown].alt}</p>}
-        </div>
+        {shelf ? (
+          <div className="sp-shelf">
+            <span className="sp-shelf-tag" aria-hidden="true">Example projects</span>
+            {items.map((item, i) => (
+              <ShelfCover key={item.id} item={item} pos={shelfPos(i, active, items.length)} failed={failed.has(i)} onError={onError(i)} onPick={() => { select(i); focusPick(uid, i) }} />
+            ))}
+            {failed.has(active) && <p className="sp-plate-fail">{items[active].alt}</p>}
+          </div>
+        ) : (
+          <div className="sp-plate-art">
+            {items.map((item, i) => (mounted.has(i) ? (
+              <PlatePicture
+                key={item.id}
+                item={item}
+                on={shown === i}
+                failed={failed.has(i)}
+                imgRef={(el) => { imgs.current[i] = el }}
+                onLoad={onLoad(i)}
+                onError={onError(i)}
+              />
+            ) : null))}
+            {failed.has(shown) && <p className="sp-plate-fail">{items[shown].alt}</p>}
+          </div>
+        )}
         {caption(items[shown])}
       </div>
 
@@ -530,10 +612,10 @@ function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead })
   )
 }
 
-function PlateCard({ index, setRef, items, role, label, caption, lead, children }) {
+// The card is the same for a plate and for the shelf; only the state it reads differs.
+function PlateCardView({ index, setRef, items, role, label, caption, lead, children, plate, shelf }) {
   const uid = useId()
   const panelId = `${uid}-panel`
-  const plate = usePlate()
   return (
     <Card index={index} setRef={setRef}>
       <div className="sp-stack-say">
@@ -552,29 +634,42 @@ function PlateCard({ index, setRef, items, role, label, caption, lead, children 
           btnClass="sp-rows-btn"
         />
       </div>
-      <ExportPlate plate={plate} items={items} uid={uid} panelId={panelId} role={role} label={label} caption={caption} lead={lead} />
+      <ExportPlate plate={plate} items={items} uid={uid} panelId={panelId} role={role} label={label} caption={caption} lead={lead} shelf={shelf} />
     </Card>
   )
 }
 
+function PlateCard(props) {
+  return <PlateCardView {...props} plate={usePlate()} />
+}
+
+function ShelfCard(props) {
+  return <PlateCardView {...props} plate={useShelf()} shelf />
+}
+
 /* ── the stack ────────────────────────────────────────────────────────────── */
 
-// One line under the plate: the long form from 761px, a short one on a phone.
-const exportCaption = () => (
-  <div className="sp-plate-cap">
+// One line under the plate: the long form from 761px, a short one on a phone. Its left
+// edge is the picture's (--ar is the picture's aspect, so the CSS can find that edge).
+const exportCaption = (item) => (
+  <div className="sp-plate-cap sp-plate-cap--pic" style={{ '--ar': item.variants.landscape.aspect }}>
     <span className="sp-cap-long">Real exports, made from the Cobalt palette with Schibsted Grotesk and Literata.</span>
     <span className="sp-cap-short">Real exports, Cobalt palette.</span>
   </div>
 )
 
-// From 1200px the rows beside the copy carry the project's name, time and parts,
-// so the caption shows only below that; on a phone it is the one line of detail.
-const projectCaption = (item) => (
-  <div className="sp-plate-cap sp-plate-cap--proj">
-    <b>{item.name}</b>
-    <span>{item.when}, {item.parts}</span>
-  </div>
-)
+// One line under the shelf that follows the chosen project: "Northbeam, opened 2
+// hours ago. Colour, type, icons." On a phone the project's name is on the chosen
+// pill, so the short form starts at the time.
+const projectCaption = (item) => {
+  const opened = `${item.when.charAt(0).toLowerCase()}${item.when.slice(1)}`
+  return (
+    <div className="sp-plate-cap sp-plate-cap--project">
+      <span className="sp-cap-long">{item.label}, {opened}. {item.parts}.</span>
+      <span className="sp-cap-short">{item.when}. {item.parts}.</span>
+    </div>
+  )
+}
 
 const PROJECT_LEAD = <span className="sp-pick-label" aria-hidden="true">Example projects</span>
 
@@ -601,7 +696,7 @@ export default function SpectrumExports({ base, font }) {
           <div className="sp-stack-pad" aria-hidden="true" />
 
           <div className="sp-stack-nest">
-            <PlateCard index={2} setRef={setRef(2)} items={PROJECT_ITEMS} role="radio" label="Example projects" caption={projectCaption} lead={PROJECT_LEAD}>
+            <ShelfCard index={2} setRef={setRef(2)} items={PROJECT_ITEMS} role="radio" label="Example projects" caption={projectCaption} lead={PROJECT_LEAD}>
               <h3>You can come back to it anytime.</h3>
               {/* What is true: a project keeps its palette, fonts and icons,
                   and no version history or record of exports. Saved work is a
@@ -610,7 +705,7 @@ export default function SpectrumExports({ base, font }) {
               <p className="sp-stack-note">
                 {numberWord(FREE_SAVE_LIMITS.projects, { capital: true })} projects on Free, unlimited on Pro.
               </p>
-            </PlateCard>
+            </ShelfCard>
             <div className="sp-stack-pad sp-stack-pad--tail" aria-hidden="true" />
           </div>
         </div>

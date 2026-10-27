@@ -1,7 +1,8 @@
 // The Palette Builder's previews, painted with the palette the user is about to
-// export. Six older scenes show one small product (Fernway) from several sides;
-// the examples (src/components/palette/examples/) are each their own product
-// built around one drawn artefact, and load as their own chunks.
+// export. Two older scenes, Invoices and Settings, show one small product
+// (Fernway) in its table and form states; the examples
+// (src/components/palette/examples/) are each their own product built around
+// one drawn artefact, and load as their own chunks.
 //
 // Every component below is pure. It takes nothing but what it draws, holds no
 // state and reads no context. The colours arrive as --pv-* custom properties on
@@ -25,95 +26,15 @@ const Svg = ({ size = 16, children, ...rest }) => (
   </svg>
 )
 const Chevron = () => <Svg size={14}><path d="m6 9 6 6 6-6" /></Svg>
-const Arrow = () => <Svg size={14} strokeWidth="2.5"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></Svg>
 const Check = () => <Svg size={14} strokeWidth="3"><path d="m5 12 5 5 9-10" /></Svg>
-const Menu = () => <Svg size={20}><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></Svg>
-
-const TAB_ICONS = {
-  Today: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-  Clients: <><circle cx="9" cy="8" r="3.5" /><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /><path d="M16 5.5a3.5 3.5 0 0 1 0 5" /></>,
-  Invoices: <><path d="M7 3h8l4 4v14H7z" /><path d="M15 3v4h4" /><path d="M10 13h6" /><path d="M10 17h6" /></>,
-  Settings: <><path d="M4 8h16" /><path d="M4 16h16" /><circle cx="9" cy="8" r="2.5" /><circle cx="15" cy="16" r="2.5" /></>,
-}
 
 // ── Shared pieces ───────────────────────────────────────────────────────────
-
-function LeadPanel() {
-  return (
-    <section className="pvs-panel pvs-lead" data-role="neutral">
-      <p className="pvs-label">Paid this month</p>
-      <p className="pvs-fig">$8,420.00</p>
-      <p className="pvs-delta" data-role="success"><Arrow /> 18% on September</p>
-      <div className="pvs-chart" aria-hidden="true">
-        {FERNWAY.months.map((h, i) => (
-          <i key={i} className={i === FERNWAY.months.length - 1 ? 'is-now' : ''} data-role="primary" style={{ '--pv-h': `${h}%` }} />
-        ))}
-      </div>
-      <div className="pvs-axis" aria-hidden="true"><span>Nov</span><span>Oct</span></div>
-      <p className="pvs-foot">Updated 11:08</p>
-    </section>
-  )
-}
 
 function Toggle() {
   return <span className="pvs-toggle" data-role="primary"><i /></span>
 }
 
-// ── 1. Dashboard ────────────────────────────────────────────────────────────
-
-function Dashboard() {
-  return (
-    <div className="pvs-dash">
-      <aside className="pvs-nav" data-role="neutral">
-        <div className="pvs-nav-top">
-          <span className="pvs-brand">Fernway</span>
-          <span className="pvs-menu"><Menu /></span>
-        </div>
-        <ul className="pvs-navlist">
-          {FERNWAY.nav.map((item, i) => (
-            <li key={item} className={i === 0 ? 'is-on' : ''}>
-              {i === 0 && <b className="pvs-navbar" data-role="primary" />}
-              {item}
-            </li>
-          ))}
-        </ul>
-      </aside>
-      <div className="pvs-main">
-        <header className="pvs-head">
-          <h2 className="pvs-h1">Overview</h2>
-          <div className="pvs-actions">
-            <span className="pvs-select">This month <Chevron /></span>
-            <span className="pvs-btn pvs-btn--primary" data-role="primary">New invoice</span>
-          </div>
-        </header>
-        <div className="pvs-grid">
-          <LeadPanel />
-          <section className="pvs-panel" data-role="neutral">
-            <p className="pvs-label">Outstanding</p>
-            <p className="pvs-fig pvs-fig--s">$2,940.00</p>
-            <p className="pvs-muted">3 invoices, <span className="pvs-err" data-role="error">1 overdue</span></p>
-            <p className="pvs-foot">Updated 11:08</p>
-          </section>
-          <section className="pvs-panel" data-role="neutral">
-            <p className="pvs-label">Hours logged</p>
-            <p className="pvs-fig pvs-fig--s">96h 30m</p>
-            <div className="pvs-week" aria-hidden="true">
-              {FERNWAY.week.map((d, i) => (
-                <span key={i} className="pvs-day">
-                  <i className={`pvs-dot is-${d.state}`} data-role={d.state === 'today' ? 'accent' : d.state === 'logged' ? 'secondary' : undefined} />
-                  {d.day}
-                </span>
-              ))}
-            </div>
-            <p className="pvs-foot">Updated 11:08</p>
-          </section>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── 2. Invoices ─────────────────────────────────────────────────────────────
+// ── Invoices ─────────────────────────────────────────────────────────────
 
 function Invoices() {
   return (
@@ -166,7 +87,7 @@ function Invoices() {
   )
 }
 
-// ── 3. Settings ─────────────────────────────────────────────────────────────
+// ── Settings ─────────────────────────────────────────────────────────────
 
 function Field({ label, help, children }) {
   return (
@@ -214,156 +135,9 @@ function Settings() {
   )
 }
 
-// ── 4. Phone app ────────────────────────────────────────────────────────────
-
-function Phone() {
-  return (
-    <div className="pvs-phone">
-      <div className="pvs-device">
-        <div className="pvs-statusbar" aria-hidden="true">
-          <span>9:41</span>
-          <span className="pvs-signal"><i /><i /><i /><i /></span>
-        </div>
-        <div className="pvs-phone-body">
-          <div>
-            <h2 className="pvs-h1">Today</h2>
-            <p className="pvs-muted">Thu 23 Oct</p>
-          </div>
-          <section className="pvs-timer" data-role="primary">
-            <p>Harbour Physio · Brand refresh</p>
-            <p className="pvs-fig">2:14:05</p>
-            <span className="pvs-btn pvs-btn--invert">Stop</span>
-          </section>
-          <section>
-            <p className="pvs-between"><span>This week</span><span className="pvs-muted">31h 20m of 38h</span></p>
-            <div className="pvs-progress" aria-hidden="true"><i data-role="secondary" style={{ '--pv-w': '82%' }} /></div>
-          </section>
-          <ul className="pvs-entries">
-            {FERNWAY.entries.map((e) => (
-              <li key={e.client}>
-                <i className="pvs-cdot" data-role={e.role} />
-                <span className="pvs-entry-t"><b>{e.client}</b><span className="pvs-muted">{e.task}</span></span>
-                <span className="pvs-time">{e.time}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="pvs-sheet" data-role="neutral">
-          <i className="pvs-grab" aria-hidden="true" />
-          <span className="pvs-btn pvs-btn--primary pvs-btn--block" data-role="primary">Add time</span>
-        </div>
-        <nav className="pvs-tabbar" data-role="neutral">
-          {['Today', 'Clients', 'Invoices', 'Settings'].map((t, i) => (
-            <span key={t} className={i === 0 ? 'is-on' : ''}>
-              <Svg size={22} data-role={i === 0 ? 'primary' : undefined}>{TAB_ICONS[t]}</Svg>
-              {t}
-            </span>
-          ))}
-        </nav>
-      </div>
-    </div>
-  )
-}
-
-// ── 5. Landing page ─────────────────────────────────────────────────────────
-
-function Landing() {
-  return (
-    <div className="pvs-land">
-      <nav className="pvs-lnav">
-        <span className="pvs-brand">Fernway</span>
-        <span className="pvs-llinks"><span>Features</span><span>Pricing</span><span>Help</span></span>
-        <span className="pvs-login">Log in</span>
-        <span className="pvs-btn pvs-btn--primary" data-role="primary">Start free</span>
-      </nav>
-      <section className="pvs-hero">
-        <div className="pvs-hero-copy">
-          <h2 className="pvs-display">Send the invoice before you close the laptop.</h2>
-          <p className="pvs-sub">Fernway turns the time you log into an invoice your client can pay by card or bank transfer. Built for freelancers in Australia, GST included.</p>
-          <div className="pvs-cta">
-            <span className="pvs-btn pvs-btn--primary pvs-btn--l" data-role="primary">Start free</span>
-            <span className="pvs-link" data-role="primary">See pricing</span>
-          </div>
-        </div>
-        <div className="pvs-hero-art" data-role="subtle">
-          <LeadPanel />
-        </div>
-      </section>
-      <section className="pvs-plans">
-        <div className="pvs-planlist">
-          {FERNWAY.plans.map((p) => (
-            <article key={p.id} className={`pvs-plan${p.pick ? ' is-pick' : ''}`} data-role={p.pick ? 'primary' : undefined}>
-              {p.pick && <p className="pvs-pick" data-role="primary">Most picked</p>}
-              <h3 className="pvs-plan-n">{p.name}</h3>
-              <p className="pvs-price">{p.price}{p.per && <span className="pvs-per">{p.per}</span>}</p>
-              <p className="pvs-muted">{p.note}</p>
-            </article>
-          ))}
-        </div>
-        <p className="pvs-muted pvs-fine">Prices in AUD, GST included. Sample pricing for this preview.</p>
-      </section>
-    </div>
-  )
-}
-
-// ── 6. Email receipt ────────────────────────────────────────────────────────
-
-function Receipt() {
-  return (
-    <div className="pvs-mail">
-      <div className="pvs-mailbar" data-role="neutral">
-        <p><b>From</b> Fernway &lt;receipts@fernway.example&gt;</p>
-        <p><b>Subject</b> Kiri Walker paid invoice FW-0142</p>
-      </div>
-      <div className="pvs-mailcol">
-        <p className="pvs-brand">Fernway</p>
-        <h2 className="pvs-h1">{"You've been paid"}</h2>
-        <p className="pvs-paid" data-role="success">$1,250.00 from Kiri Walker</p>
-        <dl className="pvs-summary">
-          {FERNWAY.receipt.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-        </dl>
-        <span className="pvs-btn pvs-btn--primary pvs-btn--l" data-role="primary">View payment</span>
-        <p className="pvs-muted pvs-legal">Fernway Pty Ltd, PO Box 3104, Brisbane QLD 4101 · Notification settings</p>
-      </div>
-    </div>
-  )
-}
-
-// ── 7. Poster ───────────────────────────────────────────────────────────────
-
-function Poster() {
-  return (
-    <div className="pvs-poster">
-      <div className="pvs-band pvs-band--1" data-role="primary"><h2>Open studio night</h2></div>
-      <div className="pvs-band pvs-band--2" data-role="secondary"><p><span>Fri 14 Nov, 6 to 9 pm</span><span>22&nbsp;Boundary St, West End</span></p></div>
-      <div className="pvs-band pvs-band--3" data-role="deep"><p>Free entry. Bring a friend.</p></div>
-      <i className="pvs-circle" data-role="accent" />
-    </div>
-  )
-}
-
-// ── 8. Social tile ──────────────────────────────────────────────────────────
-
-function Social() {
-  return (
-    <div className="pvs-social" data-role="primary">
-      <h2>Fernway now does GST.</h2>
-      <p>Turn it on in Settings, then Business.</p>
-      <div className="pvs-minirow" data-role="neutral"><span>GST registered</span><Toggle /></div>
-      <p className="pvs-handle">fernway.app</p>
-    </div>
-  )
-}
-
 const SCENES = {
-  dashboard: Dashboard,
   invoices: Invoices,
   settings: Settings,
-  phone: Phone,
-  landing: Landing,
-  receipt: Receipt,
-  poster: Poster,
-  social: Social,
 }
 
 /**

@@ -151,7 +151,7 @@ async function stubNetwork(context) {
  * returns plain data only. Each list holds a short description of every offender.
  * Elements that clip by 1 to 3 px are marked `data-clip` so the test can settle them by pixels.
  */
-function measure({ media, name, template, number, heads }) {
+function measure({ media, name, number, heads }) {
   const PX_PER_PT = 96 / 72
   const tag = (el) => `${el.tagName.toLowerCase()}${typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : ''}`
   const flat = (s) => s.replace(/\s+/g, ' ').trim().toLowerCase()

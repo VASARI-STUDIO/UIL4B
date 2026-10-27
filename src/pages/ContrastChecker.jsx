@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Suspense, useDeferredValue, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ColorPickerPop from '../components/ColorPickerPop'
 import ExportMenu from '../components/tool/ExportMenu'
@@ -9,8 +9,36 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import { useProject } from '../contexts/ProjectContext'
 import { roleLabel } from '../utils/paletteRoles'
 import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness } from '../utils/colors'
+import { PAIR_VIEWS } from '../utils/palettePairSizes'
+import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { preloadExample } from '../components/palette/examples/registry'
+import { trackExampleLoad } from '../components/palette/examples/loading'
+import PairLegend from '../components/palette/PairLegend'
 // The page's own sheet; every rule is scoped under `.cc`, the page root.
 import '../styles/pages/contrast.css'
+
+// The example views (Editorial, Product page, Card) load only when picked, and
+// so does the preview stylesheet they share.
+const loadPair = () => import('../components/palette/PairExample')
+
+// Shown where the picture would be when its chunk fails to download. The page
+// around it, the colour fields and the numbers all keep working.
+function PairUnavailable({ onRetry }) {
+  return (
+    <div className="cc-pv cc-pv-wait cc-pv-fail" role="status">
+      <p className="cc-lede">{"This view didn't load."}</p>
+      <ToolButton onClick={onRetry}>Try again</ToolButton>
+    </div>
+  )
+}
+
+// A failed chunk resolves to the stub instead of throwing to the route's error
+// boundary, which would drop the pair being checked. It is counted as an
+// example load so main.jsx does not answer the failure with a page reload
+// (see components/palette/examples/loading.js). React keeps a lazy component's
+// first result, so a retry swaps in a fresh one.
+const makePairExample = () => lazy(() => trackExampleLoad(loadPair).catch(() => ({ default: PairUnavailable })))
+let PairExample = makePairExample()
 
 // Contrast Checker — /create/contrast.
 // A sticky tool toolbar with the Copy menu; a pair bar (the two colour fields
@@ -195,6 +223,14 @@ export default function ContrastChecker({ onCopy }) {
   const [bgInput, setBgInput] = useState(seed.bg)
   const [bg, setBg] = useState(seed.bg)
   const [target, setTarget] = useState('text') // which side the swatches set
+  // The picture the pair is painted on: the specimen, or one of the preview
+  // examples. `shown` trails `view` while an example loads, so the picture on
+  // screen stays until the next one is ready.
+  const [view, setViewRaw] = useState('specimen')
+  const shown = useDeferredValue(view)
+  const [pinned, setPinned] = useState(null) // a size class a tap or click holds
+  const [hovered, setHovered] = useState(null) // a size class under the pointer or focus
+  const setView = (id) => { setViewRaw(id); setPinned(null); setHovered(null) }
   const stacked = useMediaQuery('(max-width: 559px)')
 
   const fgValid = normaliseHex(fgInput) != null
@@ -209,6 +245,14 @@ export default function ContrastChecker({ onCopy }) {
   const setBgHex = (hex) => { setBg(hex); setBgInput(hex) }
 
   const swap = () => { setFgHex(bg); setBgHex(fg) }
+  const [, setPairTry] = useState(0)
+  const retryPair = () => { PairExample = makePairExample(); setPairTry((n) => n + 1) }
+  // Starts the downloads when the pointer or focus reaches the control. The
+  // shared preview stylesheet goes first: an example's own sheet must load after
+  // it, or the shared reset (`font:inherit`) overrides the example's type sizes.
+  const prefetchViews = () => {
+    loadPair().then(() => PAIR_VIEWS.forEach((v) => { if (v.id !== 'specimen') preloadExample(v.id) }), () => {})
+  }
 
   const ratio = useMemo(() => contrastRatio(fg, bg), [fg, bg])
   const ratioText = ratioStr(ratio)
@@ -311,19 +355,48 @@ export default function ContrastChecker({ onCopy }) {
             />
           </div>
 
+          {/* What the pair is painted on. The three examples fill the pair as given
+              and never correct it, so a failing pair looks as bad as it is. */}
+          <div className="cc-views-wrap" onPointerOver={prefetchViews} onFocus={prefetchViews}>
+            <ToolPills
+              label="Preview the pair on"
+              shape="block"
+              className="cc-views"
+              options={PAIR_VIEWS.map((v) => ({
+                value: v.id,
+                ariaLabel: v.name,
+                label: v.more ? <span>{v.label}<span className="cc-views-more">{v.more}</span></span> : v.label,
+              }))}
+              value={view}
+              onChange={setView}
+            />
+          </div>
+
+          {/* The legend sits above the picture it marks, so choosing a test and seeing
+              its parts need no scroll between them. */}
+          {shown !== 'specimen' && <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} />}
+
           {/* The pair, on a specimen. Each line is the size its test measures, at
               a fixed px, so the preview proves the verdict. It is a picture of
               text, so it is a depiction rather than a heading outline. */}
-          <section className="cc-preview" ref={pairRef(fg, bg)} aria-label="Preview of the pair">
-            <p className="cc-spec-h">Headings read first</p>
-            <p className="cc-spec-large">Large text at 24px needs 3:1.</p>
-            <p className="cc-spec-bold">Bold text at 19px counts as large too.</p>
-            <p className="cc-spec-body">Body text at 16px needs 4.5:1. Paragraphs, form labels and table cells sit at this size, so this line decides whether the pair works for reading.</p>
-            <span className="cc-spec-btn">
-              <ToolIcon name="check" size={16} />
-              <span>Button border and icon, 3:1</span>
-            </span>
-          </section>
+          {/* One boundary round both pictures, mounted from the start, so a switch
+              to an example that is still loading keeps the current picture. */}
+          <Suspense fallback={<div className="cc-pv cc-pv-wait" style={{ background: bg }} aria-hidden="true" />}>
+            {shown === 'specimen' ? (
+              <section className="cc-preview" ref={pairRef(fg, bg)} aria-label="Preview of the pair">
+                <p className="cc-spec-h">Headings read first</p>
+                <p className="cc-spec-large">Large text at 24px needs 3:1.</p>
+                <p className="cc-spec-bold">Bold text at 19px counts as large too.</p>
+                <p className="cc-spec-body">Body text at 16px needs 4.5:1. Paragraphs, form labels and table cells sit at this size, so this line decides whether the pair works for reading.</p>
+                <span className="cc-spec-btn">
+                  <ToolIcon name="check" size={16} />
+                  <span>Button border and icon, 3:1</span>
+                </span>
+              </section>
+            ) : (
+              <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} pinned={pinned} onRetry={retryPair} />
+            )}
+          </Suspense>
         </ToolMain>
 
         <ToolPanel label="Contrast result" className="cc-panel">

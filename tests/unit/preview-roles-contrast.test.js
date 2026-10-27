@@ -617,11 +617,16 @@ test('15 . the engine is WIRED to the page: the hand-off and the ink rules', () 
   assert.equal(vars['--pv-on-primary'], roles.onPrimary, 'pvVars no longer maps --pv-on-primary to onPrimary')
 
   const css = stripSourceComments(ALL_CSS)
+  // The shared stylesheet now holds the two States scenes (Invoices, Settings),
+  // so the text-in-ink rules left in it are the status chips and the error text.
+  // The brand-coloured text of the examples is set in their own recipes, which
+  // preview-role-tags and 153-preview-examples hold.
   const TEXT_RULES = [
-    ['.pvs-navlist li.is-on', '--pv-primary-ink'],
-    ['.pvs-link', '--pv-primary-ink'],
-    ['.pvs-pick', '--pv-primary-ink'],
-    ['.pvs-tabbar>span.is-on', '--pv-primary-ink'],
+    ['.pvs-chip[data-tone="success"]', '--pv-success-ink'],
+    ['.pvs-chip[data-tone="warning"]', '--pv-warning-ink'],
+    ['.pvs-chip[data-tone="error"]', '--pv-error-ink'],
+    ['.pvs-chip[data-tone="info"]', '--pv-info-ink'],
+    ['.pvs-err', '--pv-error-ink'],
   ]
   for (const [selector, token] of TEXT_RULES) {
     const rule = ruleFor(css, selector)
@@ -646,8 +651,10 @@ test('15 . the engine is WIRED to the page: the hand-off and the ink rules', () 
   }
 
   // Text may only take a raw fill role where the ground is another brand role
-  // that is checked against it (the inverted button) or where it is a 3:1 icon.
-  const ALLOWED_FILL_AS_COLOR = ['.pvs-btn--invert', '.pvs-tabbar .pvs-ico[data-role]']
+  // that is checked against it or where it is a 3:1 icon. The scenes that did
+  // (the inverted button, the phone tab bar) are retired, so nothing is allowed
+  // here until a rule is added with its reason.
+  const ALLOWED_FILL_AS_COLOR = []
   const offenders = []
   for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     if (!/(?:^|;)color:var\(--pv-(?:primary|accent)\)(?![-\w])/.test(m[2])) continue
