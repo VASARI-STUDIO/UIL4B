@@ -25,12 +25,8 @@ import { LIBRARY_RULES } from '../utils/libraryRules'
 import { useProLibrary } from '../hooks/useProLibrary'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
-// The eighteen preview scenes and the components that paint them. Lifted out of
-// this file on 2026-09-11 — 280 lines of pure, prop-only rendering that nothing
-// else in the builder reaches into. See the note at the top of PalettePreview.jsx
-// for why this block and not another, and for the equivalence evidence.
-import PreviewScene from '../components/palette/PalettePreview'
-import { PREVIEW_SCENES } from '../data/palettePreviewScenes'
+// The preview dialog: eight scenes, a scene list and the role legend.
+import PalettePreviewDialog from '../components/palette/PalettePreviewDialog'
 import { LockedPaletteRow, LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
@@ -679,7 +675,7 @@ const SUBMIT_SURFACE = 'palette'
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { registerExport, clearExport } = useExport()
-  const { isPro } = useSubscription()
+  const { isPro, planKnown } = useSubscription()
   const { openProModal } = useProModal()
   // The gallery popup's two library tabs. The bundle holds the free brands and
   // the free curated palettes in full and a name-only stub for every Pro brand;
@@ -943,7 +939,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }, [ctxMenu])
   const [swapIdx, setSwapIdx] = useState(null)     // column with the swap-direction popover open
   const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
-  const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
+  const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
   // Community submit popup (Wave 5 items 20–22): a proper modal with a palette
@@ -1253,7 +1249,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const closeSubmit = useCallback(() => setSubmitOpen(false), [])
   const closeImageDialog = useCallback(() => setImgOpen(false), [])
   const imageDialogRef = useModalDialog(closeImageDialog, { enabled: imgOpen })
-  const previewDialogRef = useModalDialog(closePreview, { enabled: preview != null })
   const submitDialogRef = useModalDialog(closeSubmit, { enabled: Boolean(submitOpen && uid) })
 
   // Spacebar = randomise only from the idle Palette canvas. Buttons, links and
@@ -1881,7 +1876,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       return
     }
     setGalleryOpen(false)
-    setPreview({ mode: 'light', tab: 'ui', compare: v })
+    setPreview({ mode: 'light', scene: 'dashboard', compare: v })
   }
   // Generic "line it up against the current palette" — used by the brand and
   // community rows, which carry no precomputed score, so we compute one here.
@@ -1889,7 +1884,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
     if (cols.length < 2) return
     setGalleryOpen(false)
-    setPreview({ mode: 'light', tab: 'ui', compare: { label, colors: cols, score: scorePalette(cols) } })
+    setPreview({ mode: 'light', scene: 'dashboard', compare: { label, colors: cols, score: scorePalette(cols) } })
   }
   // Import a community-gallery palette as a toggle. The FIRST import snapshots
   // the user's own pre-gallery system; applying it ticks the card. Clicking the
@@ -2351,9 +2346,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     {
       id: 'preview', priority: 2,
       render: () => (
-        <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
+        <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
       ),
-      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) } },
+      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) } },
     },
     { id: 'div', priority: 0, divider: true },
     { id: 'undo', priority: 5, render: () => undoRedo, menu: () => <div className="plb-menu-tray">{undoRedo}</div> },
@@ -3105,102 +3100,23 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* ── Preview modal ── */}
+      {/* ── Preview dialog ── */}
       {preview && (
-        <div
-          className="plb-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Palette preview"
-          tabIndex={-1}
-          ref={previewDialogRef}
-          onPointerDown={(e) => { if (e.target === e.currentTarget) setPreview(null) }}
-        >
-          <div className={preview.compare ? 'plb-modal-card' : 'plb-modal-card plb-modal-card--previews'}>
-            <div className="plb-modal-head">
-              <span className="plb-pop-title">{preview.compare ? 'Compare palettes' : 'Preview'}</span>
-              <div className="plb-modal-tabs" role="tablist" aria-label="Preview context">
-                {[['ui', 'UI'], ['brand', 'Brand'], ['graphic', 'Graphic Design']].map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={preview.tab === id}
-                    className={preview.tab === id ? 'plb-modal-tab plb-modal-tab--on' : 'plb-modal-tab'}
-                    onClick={() => setPreview(p => ({ ...p, tab: id }))}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="plb-modal-modes" role="group" aria-label="Preview theme">
-                {['light', 'dark'].map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={preview.mode === m ? 'plb-mode plb-mode--on' : 'plb-mode'}
-                    aria-pressed={preview.mode === m}
-                    onClick={() => setPreview(p => ({ ...p, mode: m }))}
-                  >
-                    {m === 'light' ? 'Light' : 'Dark'}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="plb-pop-x" aria-label="Close preview" onClick={() => setPreview(null)}><IcoX /></button>
-            </div>
-            {preview.compare ? (
-              <div className="plb-modal-body plb-modal-body--split">
-                <PreviewScene
-                  colors={adjusted}
-                  mode={preview.mode}
-                  tab={preview.tab}
-                  title={`Current — score ${paletteScore}`}
-                />
-                <PreviewScene
-                  colors={preview.compare.colors}
-                  mode={preview.mode}
-                  tab={preview.tab}
-                  title={`${preview.compare.label}${preview.compare.score != null ? ` — score ${preview.compare.score}` : ''}`}
-                />
-              </div>
-            ) : (
-              <div className="plb-preview-grid" aria-label={`${preview.tab} preview scenes`}>
-                {PREVIEW_SCENES[preview.tab].map((scene, index) => {
-                  const gated = !isPro && index >= 3
-                  return (
-                    <article className={gated ? 'plb-preview-item plb-preview-item--locked' : 'plb-preview-item'} key={scene.name}>
-                      <div className="plb-preview-label">
-                        <strong>{scene.name}</strong>
-                        {gated && <span><IcoLock open={false} size={11} /> Pro</span>}
-                      </div>
-                      <PreviewScene colors={adjusted} mode={preview.mode} tab={preview.tab} scene={scene} variant={index} />
-                      {gated && (
-                        <button
-                          type="button"
-                          className="plb-preview-gate"
-                          onClick={() => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
-                        >
-                          <IcoLock open={false} size={13} /> Unlock preview
-                        </button>
-                      )}
-                    </article>
-                  )
-                })}
-              </div>
-            )}
-            {preview.compare && (
-              <div className="plb-modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-s btn-accent"
-                  onClick={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
-                >
-                  Use {preview.compare.label}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <PalettePreviewDialog
+          preview={preview}
+          onChange={(patch) => setPreview((p) => (p ? { ...p, ...patch } : p))}
+          onClose={closePreview}
+          colors={adjusted}
+          paletteScore={paletteScore}
+          harmony={harmony}
+          vision={vision}
+          visionLabel={VISION_MODES.find(([id]) => id === vision)?.[1] || ''}
+          onResetVision={() => setVision('normal')}
+          isPro={isPro}
+          planKnown={planKnown}
+          onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
+          onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
+        />
       )}
 
       {/* ── Submit-to-community popup (Wave 5 items 20–22) ──
