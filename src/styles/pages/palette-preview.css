@@ -1,4 +1,6 @@
-/* The Palette Builder's eight previews (src/components/palette/PalettePreview.jsx).
+/* The Palette Builder's previews (src/components/palette/PalettePreview.jsx).
+ * The examples (src/components/palette/examples/) carry their own stylesheets;
+ * this one holds the six Fernway scenes and the legend's highlight rules.
  *
  * Colour comes only from the --pv-* custom properties that pvVars() sets on the
  * scene root; spacing comes from --s-*. Nothing here reads the app theme, so a
@@ -285,6 +287,14 @@
 .pvs [data-hit="on"][data-role~="neutral"],
 .pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
 .pvs [data-hit="off"]{opacity:.4}
+/* Chromium draws an outline on an SVG shape as its bounding box, which on a
+ * stretched chart is a heavy bar across the whole drawing. So an SVG part drops
+ * the outline and is stroked instead: dashed for "where this colour lands",
+ * solid for a role under its floor. Hit comes last, as in the outline rules
+ * above, so a hover on a failing role still shows the dashes. */
+.pvs svg [data-role]{outline:none}
+.pvs svg [data-fail="on"]{stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
+.pvs svg [data-hit="on"]{stroke:var(--pv-text);stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 
 /* ── Medium scenes: container width under 800px ───────────────────────────────
  * The dashboard drops its 200px nav for a top bar, so its right-hand panel keeps

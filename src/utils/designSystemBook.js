@@ -340,7 +340,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 
   // ── colophon ────────────────────────────────────────────────────────────
   // Listed at the top level with no section number. It belongs to the book
-  // rather than to a section, and filing it under "03 — Tokens" said it was
+  // rather than to a section, and filing it under "03 · Tokens" said it was
   // part of the token chapter, which it is not.
   folio += 1
   const colophonTitle = tpl.colophonTitle || 'Colophon'
@@ -357,7 +357,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(projectName)} — Design System</title>
+<title>${esc(projectName)} | Design System</title>
 <meta name="description" content="The colour, typography and token specification for ${esc(projectName)}.">
 ${fontHref}
 <style>
@@ -509,7 +509,7 @@ function matrixPage(d) {
   const head = axes.map(c => `<th scope="col"><span class="dot" style="background:${c}"></span><span class="mx-h">${esc(c.replace('#', ''))}</span></th>`).join('')
   const rows = cols.map(row => {
     const cells = axes.map(col => {
-      if (row === col) return '<td class="mx-self">—</td>'
+      if (row === col) return '<td class="mx-self">–</td>'
       const r = contrast(row, col)
       // Weight, not colour, carries the pass/fail. The book must never use a
       // colour to mean "status" — the colours here are the SUBJECT, and a green

@@ -31,7 +31,7 @@ function cover({ d, projectName, field, fieldInk, iso, year, slots, fit, contras
   <h1 class="cv-title${fit.clamp ? ' is-clamped' : ''}" style="font-size:${fit.size}pt">${esc(projectName)}</h1>
   <div class="cv-bottom">
     <dl class="cv-meta">
-      <div><dt>Primary</dt><dd>${esc(d.base || '—')}</dd></div>
+      <div><dt>Primary</dt><dd>${esc(d.base || 'None')}</dd></div>
       <div><dt>Type</dt><dd>${esc(d.heading)} · ${esc(d.body)}</dd></div>
       <div><dt>Issued</dt><dd>${esc(iso)}</dd></div>
     </dl>

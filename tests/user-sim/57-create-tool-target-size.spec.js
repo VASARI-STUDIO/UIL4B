@@ -56,7 +56,8 @@ const HANDOFF = [
   ['/create/font-gallery', '.fg-pair-link', 'Build a font pair'],
   // '/create/contrast' is not listed: its drawn screen has no
   // cross-tool links (the Create menu carries them), so the link is gone.
-  ['/create/gradient', '.grd-lib', 'Gradient Library'],
+  // '/create/gradient' is not listed: its header link to the library is gone
+  // (the Explore panel is the one way in).
 ]
 
 test.describe('cross-tool handoff links meet the 24px target floor', () => {
@@ -131,6 +132,8 @@ test.describe('the small in-page controls that actually do something', () => {
     // Adjust bar's value is a readout (D:1043), not a click-to-type control,
     // so it is no longer a target; its alignment is held below.
     ['/create/gradient', '.grd .tl-primary .tl-btn', 'the CSS copy button'],
+    ['/create/gradient', '.grd-wheel', 'the angle wheel'],
+    ['/create/gradient', '.grd-angle-input', 'the angle number field'],
   ]
 
   for (const [route, selector, human] of CASES) {

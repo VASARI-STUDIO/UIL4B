@@ -34,9 +34,10 @@
 // A slot the palette cannot fill takes a stop from the primary's own tint
 // scale — 100 for supporting, 300 for accent, 50 for canvas (or the primary
 // blended 95% toward white when that stop is too dark), 950 or 900 for text —
-// and its tint heading says so. Text falls back to black or white only
-// when no stop clears 4.5:1. Colours past position 5 are not drawn as slots;
-// they are in the CSS and JSON downloads.
+// and its tint heading says so; the swatch says it too (DERIVED_NOTE), because
+// the book and the deck show only the palette's own colours. Text falls back to black or white only
+// when no stop clears 4.5:1, and then the swatch says that instead (CONTRAST_NOTE).
+// Colours past position 5 are not drawn as slots; they are in the CSS and JSON downloads.
 // The shares (40 / 25 / 20 / 10 / 5) belong to the slot, not the colour: the
 // app records no proportions, and the template presents them as a starting
 // point for a page.
@@ -89,6 +90,12 @@ export const SLOT_COPY = Object.freeze({
   chalk: { role: 'Canvas', note: 'The breathing room. Let the content come forward.', share: 40 },
   ink: { role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', share: 5 },
 })
+// Said on any slot the palette could not fill, so the kit's five colours are
+// never mistaken for the same five the book and the deck show.
+export const DERIVED_NOTE = 'Derived from your primary colour.'
+// The text colour when no primary stop reads on the canvas: plain black or
+// white. That is not taken from the primary, so DERIVED_NOTE would be false.
+export const CONTRAST_NOTE = 'Set to black or white for contrast.'
 // The template's slot order: it sets the swatch grid's column widths.
 export const SLOT_ORDER = ['citron', 'pine', 'lilac', 'chalk', 'ink']
 const SEMANTIC_COPY = Object.freeze({
@@ -181,8 +188,28 @@ function quietInk(ink, toward, grounds) {
 }
 
 /**
+ * The kit's text colour on `canvas`: the palette's fifth colour when it reads,
+ * else the primary's 950 or 900 stop, else plain black or white (`plain: true`).
+ * A seam of its own because the last route needs a scale with no dark stop,
+ * which the tint settings a project can save never produce.
+ */
+export function kitInk(colors, primaryScale, canvas) {
+  if (colors[4] && contrast(colors[4], canvas) >= 4.5) return { hex: colors[4], source: 'Selected scale', index: 4 }
+  const stop = ['950', '900'].find((s) => contrast(primaryScale[s], canvas) >= 4.5)
+  if (stop) return { hex: primaryScale[stop], source: `Primary ${stop} · generated scale`, index: null }
+  const black = contrast('#000000', canvas) >= contrast('#FFFFFF', canvas)
+  return { hex: black ? '#000000' : '#FFFFFF', source: 'Set for contrast · generated scale', index: null, plain: true }
+}
+
+/** What a swatch says about where its colour came from; null for the palette's own. */
+export function derivedNoteFor(picked) {
+  if (picked.index !== null) return null
+  return picked.plain ? CONTRAST_NOTE : DERIVED_NOTE
+}
+
+/**
  * The five palette slots, from the design. See the note at the top of the file.
- * Each slot: { id, name, hex, role, note, share, scale, source }.
+ * Each slot: { id, name, hex, role, note, share, scale, source, derived, derivedNote }.
  */
 export function kitPalette(design) {
   const book = readBook(design)
@@ -203,16 +230,7 @@ export function kitPalette(design) {
     : lum(primaryScale['50']) >= CANVAS_MIN_LUM
       ? fromPrimary('50')
       : { hex: up(mixHex(primary, '#FFFFFF', 0.95)), source: 'Primary blended with white · generated scale', index: null }
-  let ink
-  if (colors[4] && contrast(colors[4], chalk.hex) >= 4.5) ink = fromPalette(4)
-  else {
-    const stop = ['950', '900'].find((s) => contrast(primaryScale[s], chalk.hex) >= 4.5)
-    if (stop) ink = fromPrimary(stop)
-    else {
-      const black = contrast('#000000', chalk.hex) >= contrast('#FFFFFF', chalk.hex)
-      ink = { hex: black ? '#000000' : '#FFFFFF', source: 'Set for contrast · generated scale', index: null }
-    }
-  }
+  const ink = kitInk(colors, primaryScale, chalk.hex)
 
   const picked = { citron, pine, lilac, chalk, ink }
   return SLOT_ORDER.map((id) => {
@@ -225,6 +243,10 @@ export function kitPalette(design) {
       scale: kitScale(design, p.hex),
       source: p.source,
       token: p.index === null ? null : `--color-${paletteRole(p.index)}`,
+      // Not one of the palette's own colours (the book and the deck show only those).
+      derived: p.index === null,
+      // What the swatch says about that; null for the palette's own colours.
+      derivedNote: derivedNoteFor(p),
     }
   })
 }
@@ -548,7 +570,7 @@ export function renderUiKit(design, {
 
   const roleRows = ROLES.map(([name, key, description]) => `<tr><th scope="row"><i style="background:${tokens[key]}"></i>${name}</th><td><button class="copy-text" data-copy="var(--${key})" aria-label="Copy ${name} CSS variable"><code>--${key}</code>${icon('copy')}</button></td><td><code>${tokens[key]}</code></td><td>${description}</td></tr>`).join('')
 
-  const swatches = sel.palette.map((p) => `<article class="swatch"><button class="colour-chip" style="--swatch:${p.hex};--on-swatch:${on(p.hex)}" data-copy="${p.hex}" aria-label="Copy ${esc(p.name)} ${p.hex}"><span>${esc(p.name)}</span><span class="chip-bottom"><code>${p.hex}</code>${icon('copy')}</span></button><div class="swatch-details"><h3>${esc(p.role)}</h3><p>${esc(p.note)}</p><code>RGB ${rgb(p.hex).join(' / ')}</code></div></article>`).join('')
+  const swatches = sel.palette.map((p) => `<article class="swatch"><button class="colour-chip" style="--swatch:${p.hex};--on-swatch:${on(p.hex)}" data-copy="${p.hex}" aria-label="Copy ${esc(p.name)} ${p.hex}"><span>${esc(p.name)}</span><span class="chip-bottom"><code>${p.hex}</code>${icon('copy')}</span></button><div class="swatch-details"><h3>${esc(p.role)}</h3><p>${esc(p.note)}${p.derivedNote ? ` ${esc(p.derivedNote)}` : ''}</p><code>RGB ${rgb(p.hex).join(' / ')}</code></div></article>`).join('')
 
   const semantics = sel.semantic.map((s) => {
     const ratio = contrast(s.hex, s.background)

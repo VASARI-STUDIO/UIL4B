@@ -310,7 +310,7 @@ function opening(section, field, ink, palette) {
 function markPage(ctx, folio) {
   const { logo } = ctx.d
   const facts = [
-    ['Format', logo.type === 'image/svg+xml' ? 'SVG — vector' : logo.type.replace('image/', '').toUpperCase()],
+    ['Format', logo.type === 'image/svg+xml' ? 'SVG vector' : logo.type.replace('image/', '').toUpperCase()],
     logo.width && logo.height ? ['Supplied at', `${Math.round(logo.width)} × ${Math.round(logo.height)}`] : null,
     logo.aspect ? ['Proportion', `${logo.aspect.toFixed(2)} : 1`] : null,
   ].filter(Boolean)
@@ -320,7 +320,7 @@ function markPage(ctx, folio) {
     notes: [
       'This is the artwork as supplied, reproduced without alteration. Nothing on this page has been redrawn, recoloured or retraced.',
       logo.type === 'image/svg+xml'
-        ? 'It is vector artwork, so it holds at any size — from a favicon to a building.'
+        ? 'It is vector artwork, so it holds at any size, from a favicon to a building.'
         : 'It is a raster file, so there is a size past which it will soften. Supply vector artwork for anything printed large.',
     ],
     body: `<div class="mk-stage">${markImg(logo, { cls: 'mk-hero', alt: `${ctx.projectName} logo` })}</div>
@@ -353,7 +353,7 @@ function groundsPage(ctx, folio) {
     title: 'On grounds',
     notes: [
       'The same artwork on paper, on ink and on each brand colour. Read it as a test: the mark is approved on a ground only where it still reads.',
-      'No reversed or single-colour version has been generated. Where the mark fails a ground below, that variant needs drawing — this document has not invented one for you.',
+      'No reversed or single-colour version has been generated. Where the mark fails a ground below, that variant needs drawing; this document has not invented one for you.',
     ],
     body: `<div class="grounds">${tiles}</div>`,
     folio,
@@ -366,7 +366,7 @@ function clearSpacePage(ctx, folio, cs) {
     title: 'Clear space',
     notes: [
       `Keep a margin of X on every side of the mark, where X is half the height of the mark itself. At the size drawn here that is ${cs.x.toFixed(0)}mm.`,
-      'This is the default rule this document applies, not a decision already taken. Replace it if your mark asks for more room — but replace it deliberately.',
+      'This is the default rule this document applies, not a decision already taken. Replace it if your mark asks for more room, but replace it deliberately.',
     ],
     body: `<div class="cs-stage">
       <div class="cs-box" style="width:${cs.boxWidth.toFixed(1)}mm;height:${cs.boxHeight.toFixed(1)}mm;padding:${cs.x.toFixed(1)}mm">
@@ -528,15 +528,15 @@ function scalePage(ctx, ladder, folio) {
  */
 function scopePage(ctx, folio) {
   const d = ctx.d
-  const covers = ctx.sections.map(s => `<li>${esc(s.title)} — ${esc(s.leaves.join(', ').toLowerCase())}</li>`).join('')
+  const covers = ctx.sections.map(s => `<li>${esc(s.title)}: ${esc(s.leaves.join(', ').toLowerCase())}</li>`).join('')
   const absent = []
   if (!d.logo) {
-    absent.push(`A logo section — ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel and these pages are generated from it.`)
+    absent.push(`A logo section: ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel and these pages are generated from it.`)
   } else if (!d.logo.aspect) {
     absent.push('The clear-space rule. Your logo file states no dimensions, so the keep-out box could only have been drawn to a guessed proportion.')
   }
   absent.push('Reversed and single-colour versions of the mark. Recolouring supplied artwork invents a lockup nobody approved, so this document checks the mark on each ground instead of redrawing it.')
-  absent.push('Photographic applications — signage, packaging, merchandise, a card in a hand. There is no imagery in this system to build them from, and inventing some would misrepresent a brand rather than document it.')
+  absent.push('Photographic applications: signage, packaging, merchandise, a card in a hand. There is no imagery in this system to build them from, and inventing some would misrepresent a brand rather than document it.')
   absent.push('Tone of voice, motion and iconography rules. Those are brand decisions taken outside these tools, so this document does not speak for them.')
   return `<section class="sl sl-scope">
   ${rail(ctx, null, folio)}
@@ -618,7 +618,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
         spacing: d.headingSpacing,
         folio: f,
         notes: one
-          ? [`${d.heading} carries the whole system, headings and reading alike — a single family held at different weights and sizes.`,
+          ? [`${d.heading} carries the whole system, headings and reading alike: a single family held at different weights and sizes.`,
             'The full character set is printed so a substitution is obvious the moment one happens.']
           : [`${d.heading} sets the headings at ${d.headingWeight}. It is chosen to be recognised at a glance rather than read at length.`,
             'The full character set is printed so a substitution is obvious the moment one happens.'],
@@ -645,8 +645,8 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(projectName)} — Brand Guidelines</title>
-<meta name="description" content="Brand guidelines for ${esc(projectName)} — logo, colour and typography, generated from the system itself.">
+<title>${esc(projectName)} | Brand Guidelines</title>
+<meta name="description" content="Brand guidelines for ${esc(projectName)}: logo, colour and typography, generated from the system itself.">
 ${fontLink(d)}
 <style>
 ${tpl.css(ctx)}

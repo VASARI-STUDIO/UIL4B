@@ -239,3 +239,76 @@ export function pvVars(r) {
     '--pv-info-tint': r.info.tint,
   }
 }
+
+// ── Large brand fields ───────────────────────────────────────────────────────
+// An example that spends the primary on a big area (water, a garment, a card)
+// sets type and linework on that field, and the field can be any colour the
+// user chose. These three helpers decide, per palette and mode, what reads on
+// it. Pure, and every answer is a measured ratio, never an assumption.
+
+// Type 24px and up, or 19px and up in bold, needs 3:1; everything else 4.5:1.
+export const TEXT_FLOOR = 4.5
+export const LARGE_TEXT_FLOOR = 3
+// A field closer than this to the canvas gets an edge, or it melts into the page.
+export const FIELD_EDGE_RATIO = 1.25
+
+const isHex = (h) => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h)
+
+/**
+ * The text colour for type set on a brand field.
+ *
+ * Tries, in order: the field's own on-ink; the neutral text or canvas,
+ * whichever clears (the higher ratio wins if both do); then a pole walked
+ * toward pure black or white by the smallest step that clears, which exists for
+ * every colour.
+ *
+ * @param {string} fill the field, #rrggbb
+ * @param {{on?: string, text?: string, canvas?: string}} inks candidates: the
+ *   field's on-* ink, then the neutral text and canvas
+ * @param {{large?: boolean}} opts large: the 3:1 floor instead of 4.5:1
+ * @returns {{hex: string, ratio: number, step: 'on'|'neutral'|'pole'}}
+ */
+export function inkOnField(fill, inks = {}, opts = {}) {
+  const floor = opts.large ? LARGE_TEXT_FLOOR : TEXT_FLOOR
+  // No field to read against: the neutral text, or black, rather than a throw.
+  if (!isHex(fill)) return { hex: isHex(inks.text) ? inks.text : '#000000', ratio: 1, step: 'pole' }
+  if (isHex(inks.on) && contrastRatio(inks.on, fill) >= floor) {
+    return { hex: inks.on, ratio: contrastRatio(inks.on, fill), step: 'on' }
+  }
+  let best = null
+  for (const h of [inks.text, inks.canvas]) {
+    if (!isHex(h)) continue
+    const ratio = contrastRatio(h, fill)
+    if (ratio >= floor && (!best || ratio > best.ratio)) best = { hex: h, ratio, step: 'neutral' }
+  }
+  if (best) return best
+  const hex = inkOnSolid(fill, floor)
+  return { hex, ratio: contrastRatio(hex, fill), step: 'pole' }
+}
+
+/**
+ * The edge colour for a big field: `edge` (the neutral border-strong) when the
+ * field is within FIELD_EDGE_RATIO of the canvas, else 'transparent'.
+ */
+export function fieldEdge(fill, canvas, edge) {
+  return contrastRatio(fill, canvas) < FIELD_EDGE_RATIO ? edge : 'transparent'
+}
+
+/**
+ * A brand colour set as TEXT (a link, a price, one highlighted word). The user's
+ * own hex when it clears the floor on every ground; otherwise the same colour
+ * walked toward black or white by the smallest step that does, flagged so the
+ * legend can say it was shown a step darker.
+ *
+ * @param {string} fill
+ * @param {string[]} grounds every ground the text sits on
+ * @param {{large?: boolean}} opts
+ * @returns {{hex: string, adjusted: boolean, ratio: number}}
+ */
+export function brandAsText(fill, grounds, opts = {}) {
+  const floor = opts.large ? LARGE_TEXT_FLOOR : TEXT_FLOOR
+  const own = pvWorstOn(fill, grounds)
+  if (own >= floor) return { hex: fill, adjusted: false, ratio: own }
+  const hex = pvInkFromFill(fill, grounds, floor)
+  return { hex, adjusted: true, ratio: pvWorstOn(hex, grounds) }
+}

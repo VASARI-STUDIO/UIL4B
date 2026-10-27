@@ -1,0 +1,119 @@
+/* E1, Slack Water (SlackWater.jsx). Colour only from --pv-* and the three
+ * --sw-* inks the component measures; layout by container query on .pvs.
+ * Literata loads only when this example opens, under its own alias.
+ *
+ * The fallback face is metric-matched so the swap from Georgia to Literata does
+ * not move the lines. Measured from public/fonts/literata-latin.woff2 (default
+ * instance): 1000 units per em, ascent 1177, descent 308, line gap 0, and an
+ * English-weighted average advance of 0.491em. Georgia's 0.446em (913 of 2048
+ * units) is taken from its published metrics, not measured here, so size-adjust
+ * is an estimate: 0.491 / 0.446 = 110%. Overrides are the Literata metric over
+ * size-adjust, because the browser scales them by it: 1.177 / 1.10 = 107%,
+ * 0.308 / 1.10 = 28%. */
+@font-face{font-family:'PV Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
+@font-face{font-family:'PV Literata Fallback';font-style:normal;font-weight:200 900;src:local('Georgia');size-adjust:110%;ascent-override:107%;descent-override:28%;line-gap-override:0%}
+
+.sw{
+  --sw-serif:'PV Literata','PV Literata Fallback',Georgia,serif;
+  /* The part of the chart the field shows, in chart units: the window is
+   * --sw-wu wide from --sw-x0 and centred on --sw-yc. Kept in step with
+   * WINDOWS in SlackWater.data.js, which a test reads. */
+  --sw-wu:520;--sw-x0:-20;--sw-yc:180;
+  display:flex;flex-direction:column;min-height:100%;font-family:var(--font);color:var(--pv-text);background:var(--pv-canvas)
+}
+
+.sw-mast{display:flex;align-items:center;gap:var(--s-5);min-height:64px;padding:0 var(--s-6);border-bottom:1px solid var(--pv-border)}
+.sw-name{font-family:var(--sw-serif);font-size:20px;font-weight:600;line-height:1.25;letter-spacing:-.01em}
+.sw-issue{font-family:var(--mono);font-size:13px;color:var(--pv-muted)}
+.sw-nav{display:flex;gap:var(--s-5);margin-left:auto;font-size:15px}
+/* Shown only where the links are hidden (narrow). Decorative, like the links. */
+.sw-menu{display:none;align-items:center;justify-content:center;width:32px;height:32px;margin-right:calc(var(--s-1) * -1);color:var(--pv-text)}
+.sw-navi{position:relative}
+.sw-ul{position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--pv-secondary)}
+.sw-cta{display:inline-flex;align-items:center;height:40px;padding:0 var(--s-4);font-size:13px;font-weight:600;white-space:nowrap;
+  color:var(--sw-ink);background:var(--pv-primary);border:1px solid var(--sw-edge);border-radius:8px}
+
+/* Wide: copy over columns 1 to 5, the field 6 to 12. The field has no margin and
+ * no padding: it starts at the masthead hairline and runs to the right and
+ * bottom edges of the hero, and its chart is placed inside it by the window. */
+.sw-hero{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:24px;flex:1;min-height:480px}
+.sw-copy{grid-column:1 / 6;display:flex;flex-direction:column;gap:var(--s-4);padding:var(--s-7) 0 var(--s-6) var(--s-6)}
+.sw-head{font-family:var(--sw-serif);font-size:clamp(36px,5.4cqi,64px);font-weight:300;line-height:1;letter-spacing:-.03em;text-wrap:balance}
+.sw-tail{color:var(--pv-muted)}
+.sw-stand{max-width:44ch;font-size:17px;line-height:1.5;color:var(--pv-muted)}
+.sw-by{margin-top:auto;font-family:var(--mono);font-size:13px;color:var(--pv-muted)}
+
+.sw-field{grid-column:6 / -1;position:relative;overflow:hidden;margin:0;padding:0;
+  background:var(--pv-primary);border-left:1px solid var(--sw-edge);border-bottom:1px solid var(--sw-edge)}
+/* The chart is 480 x 360 units; the window sets how many of them the field's
+ * width spans. Land runs past the chart on every side (see LAND), so a field
+ * taller or wider than the chart is land and water all the way out. */
+.sw-chart{position:absolute;top:50%;left:calc(var(--sw-x0) / var(--sw-wu) * -100%);width:calc(480 / var(--sw-wu) * 100%);aspect-ratio:480 / 360;
+  transform:translateY(calc(var(--sw-yc) / 360 * -100%))}
+.sw-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.sw-land{fill:var(--pv-subtle)}
+.sw-routeline{fill:none;stroke:var(--sw-ink);stroke-width:2;stroke-dasharray:6 5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.sw-wharf{fill:var(--pv-deep);stroke:var(--sw-ink);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.sw-ferry path{fill:var(--pv-accent);stroke:var(--sw-ink);stroke-width:1;vector-effect:non-scaling-stroke}
+/* A label is a plate in the field's colour with the ink measured on it, so it
+ * reads over whatever is under it. A test keeps every plate off the land. */
+.sw-label,.sw-cap{padding:2px 6px;border-radius:4px;background:var(--pv-primary);color:var(--sw-ink);font-size:12px;line-height:15px;white-space:nowrap}
+.sw-label{position:absolute}
+.sw-label.is-below{transform:translate(-50%,calc(8px + var(--gap)))}
+.sw-label.is-above{transform:translate(-50%,calc(-100% - 8px - var(--gap)))}
+.sw-label.is-left{transform:translate(calc(-100% - 8px - var(--gap)),-50%)}
+.sw-label.is-right{transform:translate(calc(8px + var(--gap)),-50%)}
+.sw-cap{position:absolute;left:var(--s-4);bottom:var(--s-4);max-width:calc(100% - var(--s-4) * 2)}
+
+/* The one signature moment: the route wipes in left to right, then the ferry
+ * arrives. Authored in its final state; reduced motion skips both. */
+.sw-route{animation:sw-route 700ms cubic-bezier(.23,1,.32,1) both}
+.sw-ferry{animation:sw-fade 150ms ease-out 700ms both}
+@keyframes sw-route{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes sw-fade{from{opacity:0}to{opacity:1}}
+
+/* An outline would sit half off the stage on a field that bleeds, so it goes in. */
+.sw-field[data-hit="on"],.sw-field[data-fail="on"]{outline-offset:-3px}
+
+.sw-contents{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-6)}
+.sw-kicker{font-family:var(--mono);font-size:12px;color:var(--pv-muted)}
+.sw-list{margin:0;padding:0;list-style:none}
+.sw-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:baseline;gap:var(--s-4);padding:var(--s-3) 0;border-top:1px solid var(--pv-border)}
+.sw-row:last-child{border-bottom:1px solid var(--pv-border)}
+.sw-page{font-family:var(--mono);font-size:15px;color:var(--pv-muted)}
+.sw-page.is-on{font-weight:600;color:var(--sw-sec)}
+.sw-title{font-family:var(--sw-serif);font-size:20px;line-height:1.25}
+.sw-desk{font-size:13px;color:var(--pv-muted)}
+.sw-next{font-size:13px;color:var(--pv-muted)}
+
+/* Mid: copy 1 to 6, field 7 to 12, the chart a closer crop. */
+@container pvs (max-width:959px){
+  .sw{--sw-wu:300;--sw-x0:110;--sw-yc:175}
+  .sw-copy{grid-column:1 / 7}
+  .sw-field{grid-column:7 / -1}
+  .sw-issue{display:none}
+}
+
+/* Narrow: the field leads, full width at 4:3, the chart cropped to the middle
+ * of the route. Every wharf is in the crop with its label or out of it with
+ * none (a test holds that), so nothing is hidden. The masthead is the wordmark
+ * and Subscribe. */
+@container pvs (max-width:599px){
+  .sw{--sw-wu:220;--sw-x0:170;--sw-yc:180}
+  .sw-mast{gap:var(--s-3);padding:0 var(--s-4)}
+  .sw-nav{display:none}
+  .sw-menu{display:inline-flex}
+  .sw-cta{margin-left:auto}
+  .sw-hero{display:flex;flex-direction:column;min-height:0}
+  .sw-field{order:-1;flex:none;aspect-ratio:4 / 3;border-left:0}
+  .sw-copy{padding:var(--s-5) var(--s-4)}
+  .sw-head{font-size:36px}
+  .sw-contents{padding:var(--s-5) var(--s-4)}
+  .sw-row{grid-template-columns:40px minmax(0,1fr)}
+  .sw-desk{grid-column:2}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.sw-route,.sw-ferry){animation:none}
+}
+html[data-reduced-motion="true"] :is(.sw-route,.sw-ferry){animation:none}

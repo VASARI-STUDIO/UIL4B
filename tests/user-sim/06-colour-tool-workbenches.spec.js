@@ -19,13 +19,15 @@ test.describe('Gradient Generator workbench resilience', () => {
       await expect(panel.getByRole('group', { name, exact: true })).toBeVisible()
     }
 
+    // The first-visit gradient is the first curated preset, Indigo Night.
+    const FIRST_STOP = '#0A0F2C'
     const firstHex = page.getByRole('textbox', { name: 'Stop 1 hex' })
-    await expect(firstHex).toHaveValue('#7C3AED')
+    await expect(firstHex).toHaveValue(FIRST_STOP)
     await firstHex.fill('#NOTHEX')
     await expect(firstHex).toHaveAttribute('aria-invalid', 'true')
     await expect(page.getByText('Use a 6-digit hex')).toBeVisible()
     await firstHex.press('Enter')
-    await expect(firstHex).toHaveValue('#7C3AED')
+    await expect(firstHex).toHaveValue(FIRST_STOP)
 
     const position = page.getByRole('slider', { name: 'Stop position' })
     await expect(position).toHaveValue('0')
@@ -120,8 +122,10 @@ test.describe('Gradient Generator workbench resilience', () => {
     const start = page.getByRole('region', { name: 'Start from a preset' })
     await expect(start).toBeVisible()
     await expect(start.locator('.grd-preset').first()).toBeVisible()
-    expect(await start.locator('.grd-preset').count()).toBeGreaterThanOrEqual(16)
-    await expect(start.getByRole('link', { name: /Gradient Library/ })).toBeVisible()
+    // Twelve curated presets (the unit test holds the set at exactly 12); no saved palette here.
+    await expect(start.locator('.grd-preset')).toHaveCount(12)
+    // The way into the library is the Explore panel below, not a second link up here.
+    await expect(start.getByRole('link', { name: /Gradient Library/ })).toHaveCount(0)
 
     const numbered = await page.locator('.grd').evaluate((root) =>
       [...root.querySelectorAll('*')].filter((el) => el.children.length === 0 && /^0\d\s*·/.test(el.textContent.trim())).length)

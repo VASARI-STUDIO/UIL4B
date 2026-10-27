@@ -16,11 +16,10 @@
 // a separate output (it feeds exports) and is left alone here.
 import { hexToOklchRaw, oklchInGamut, oklchToHex } from '../components/tool/oklch.js'
 
-export const TINT_LABELS = {
-  9: ['50', '100', '200', '300', '400', '500', '600', '700', '800'],
-  11: ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'],
-  13: ['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950', '975'],
-}
+import { TINT_LABELS as ALL_TINT_LABELS } from './tintLabels.js'
+
+// The step names of the Tint Generator's 9, 11 and 13 step ramps.
+export const TINT_LABELS = { 9: ALL_TINT_LABELS[9], 11: ALL_TINT_LABELS[11], 13: ALL_TINT_LABELS[13] }
 
 // Below this input chroma a colour is treated as neutral. White and the greys
 // read about 0 here, at a meaningless hue; a near-grey tint may read a little more.

@@ -194,7 +194,9 @@ function createFakeAuth(d) {
     onAuthStateChanged(next) {
       const cb = typeof next === 'function' ? next : next?.next
       listeners.add(cb)
-      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser) }, 0)
+      // `signIn(page, { authDelay: ms })` holds the first answer back, so a spec
+      // can look at the page while AuthContext is still (loading: true).
+      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser) }, Number(d.authDelay) || 0)
       return () => listeners.delete(cb)
     },
     notify() {
