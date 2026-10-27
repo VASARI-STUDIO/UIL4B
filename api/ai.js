@@ -1,6 +1,7 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForUser, dailyLimitFor, monthlyLimitFor, modelFor } from './_lib/plans.js'
 import { requireAdmin } from './_lib/admin.js'
+import { serveUsage, usageDayKey, usageMonthKey } from './_lib/aiUsage.js'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
 import {
@@ -73,9 +74,7 @@ const GEMINI_MODEL = 'gemini-2.0-flash'
 // `daysAgo` days back, as YYYY-MM-DD. The provider-health window reads a fixed
 // set of day docs by id, which needs no composite index and no ordering trick.
 function dayStr(daysAgo = 0) {
-  const d = new Date()
-  if (daysAgo) d.setDate(d.getDate() - daysAgo)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return usageDayKey(new Date(), daysAgo)
 }
 
 function todayStr() {
@@ -89,8 +88,7 @@ function todayStr() {
 // collection is what keeps the monthly ceiling free of a rules change, and
 // rules changes are published separately.
 function monthStr() {
-  const d = new Date()
-  return `m${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  return usageMonthKey(new Date())
 }
 
 // ── alt-text ─────────────────────────────────────────────────────────────────
@@ -1130,6 +1128,18 @@ export default async function handler(req, res) {
   // GET /api/ai?backlog=1. Ahead of the diagnostic because it is a different
   // question with the same gate; see serveBacklog above for why it lives here.
   if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
+
+  // ── This account's AI usage ───────────────────────────────────────────────
+  // GET /api/ai?usage=1. Token required, read-only; see api/_lib/aiUsage.js. The
+  // daily-usage documents are default-denied to clients, so this is the only way
+  // the dashboard can show the account's own count rather than one browser's.
+  if (req.method === 'GET' && 'usage' in (req.query || {})) {
+    return serveUsage(req, res, {
+      verifyIdToken: (token) => adminAuth().verifyIdToken(token),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+      readUsage: async (ids) => (await Promise.all(ids.map((id) => adminDb().doc(`daily-usage/${id}`).get()))).map((snap) => snap.data() || {}),
+    })
+  }
 
   // ── The Pro libraries ─────────────────────────────────────────────────────
   // GET /api/ai?library=palettes|gradients|prompts. Token + planForUser, like

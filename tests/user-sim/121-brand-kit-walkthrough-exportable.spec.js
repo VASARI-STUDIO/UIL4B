@@ -59,7 +59,7 @@ test.describe('Brand kit walkthrough: the saved project can be exported', () => 
 
       await expect(page.getByText('4 of 4 parts')).toBeVisible()
       await expect(page.getByText('Fill the gaps')).toHaveCount(0)
-      await expect(page.getByText('Export project', { exact: true })).toBeVisible()
+      await expect(page.locator('.pjd-head-actions').getByText('Export project', { exact: true })).toBeVisible()
       await expect(page.getByText('5 colours')).toBeVisible()
       await expect(page.getByText('11 steps, made from your colours')).toBeVisible()
 

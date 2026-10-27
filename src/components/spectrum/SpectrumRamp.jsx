@@ -77,8 +77,14 @@ export default function SpectrumRamp({ mirror = false, className = '' }) {
     if (!node || !bars || typeof ResizeObserver === 'undefined') return undefined
     const n = BARS.length
     const layout = () => {
+      // The CONTENT width: the hero strip has 2px of side padding, and sizing
+      // the bars from the border box made them up to 4px too wide for the room
+      // they sit in.
+      const cs = getComputedStyle(bars)
       const w = bars.getBoundingClientRect().width
-      if (!w) return
+        - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0)
+        - (parseFloat(cs.borderLeftWidth) || 0) - (parseFloat(cs.borderRightWidth) || 0)
+      if (w <= 0) return
       node.style.setProperty('--sp-bar-w', `${Math.max(1, Math.floor((w - 2 * (n - 1)) / n))}px`)
     }
     const ro = new ResizeObserver(layout)

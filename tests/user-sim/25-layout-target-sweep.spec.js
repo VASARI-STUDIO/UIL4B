@@ -1146,14 +1146,18 @@ const PLB_HIT = `(roots) => {
   const misses = []
   let tested = 0
   for (const el of controls) {
+    // Each control is brought to the middle of the screen first, as a person
+    // scrolls to what they want to press. Hit-testing it where the page happened
+    // to rest let a control whose centre-line fell within a pixel of the fixed
+    // tab bar read the bar instead; which row landed there changed with how the
+    // names above wrapped, so the result followed the random palette, not the page.
+    el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })
     const b = el.getBoundingClientRect()
     // Only points actually on screen can be pressed; skip the rest rather
-    // than counting them as either pass or fail. The test is made one pixel
-    // inside each bar's edge: the browser hit-tests the bar a fraction of a
-    // pixel beyond its box, so a centre-line that lands within a pixel of the
-    // phone tab bar already reads the bar, not the control. Which row lands
-    // there changes with how the rows above wrap, so without the pixel the
-    // result depends on the palette and the fonts, not on the page.
+    // than counting them as either pass or fail (a control the page cannot
+    // scroll to the middle, at the very top or bottom, can still sit under a
+    // bar). The test is made one pixel inside each bar's edge, as the browser
+    // hit-tests a bar a fraction of a pixel beyond its box.
     const y = b.top + b.height / 2
     if (y < top + 1 || y > bottom - 1) continue
     tested++

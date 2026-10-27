@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { answerIconify, fixturePacks, ICONIFY_HOSTS } from '../user-sim/iconify-stub.js'
+import { answerIconify, fixturePacks, headPackNames, headPackOfUrl, ICONIFY_HOSTS, refusesCollection } from '../user-sim/iconify-stub.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -163,4 +163,34 @@ test('the stub is installed once, in base.js, and checked by the teardown', () =
   assert.doesNotMatch(exempt, /\.abort\(/, `${EXEMPT} must fulfil the refusal, not abort it`)
   assert.match(exempt, /\[ICONIFY_STUB_HEADER\]:\s*REFUSED_VALUE/,
     `${EXEMPT} must stamp its refusals with REFUSED_VALUE, or the teardown reads them as requests that reached the network`)
+})
+
+test('refusesCollection matches /collection for a prefix and nothing else the API still answers', () => {
+  const u = (p) => new URL(`${HOST}${p}`)
+  assert.equal(refusesCollection(u('/collection?prefix=lucide&info=1')), true)
+  assert.equal(refusesCollection(u('/collection?prefix=lucide'), ['lucide']), false)
+  assert.equal(refusesCollection(u('/collection?prefix=tabler'), ['lucide']), true)
+  for (const ok of ['/collections', '/search?query=a', '/lucide.json?icons=zap', '/lucide/zap.svg']) {
+    assert.equal(refusesCollection(u(ok)), false, `${ok} stays answerable while /collection is refused`)
+  }
+  assert.equal(refusesCollection(new URL('https://api.unisvg.com/collection?prefix=lucide')), false)
+})
+
+test('headPackOfUrl names the pack of a head chunk, built or dev, and nothing else', () => {
+  const site = 'http://127.0.0.1:4680'
+  assert.equal(headPackOfUrl(`${site}/assets/lucide-C7UjpPtx.js`), 'lucide')
+  // A pack whose own name has a hyphen, and a hash that has one too.
+  assert.equal(headPackOfUrl(`${site}/assets/material-symbols-Ab-Cd_Ef.js`), 'material-symbols')
+  assert.equal(headPackOfUrl(`${site}/assets/fa6-solid-DukXp6dY.js`), 'fa6-solid')
+  assert.equal(headPackOfUrl(`${site}/src/data/iconHeads/tabler.json`), 'tabler')
+  assert.equal(headPackOfUrl(`${site}/src/data/iconHeads/tabler.json?import`), 'tabler')
+  for (const other of ['/assets/IconLibrary-C7UjpPtx.js', '/assets/lucide-react-C7UjpPtx.js',
+    '/assets/lucide-short.js', '/lucide.json?icons=zap', '/src/data/iconHeads/nope.json', '/assets/index-DukXp6dY.css']) {
+    assert.equal(headPackOfUrl(`${site}${other}`), null, `${other} is not a head file`)
+  }
+  assert.equal(headPackOfUrl('not a url'), null)
+  const heads = headPackNames()
+  for (const pack of ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'logos', 'circle-flags']) {
+    assert.ok(heads.includes(pack), `${pack} has a committed head`)
+  }
 })

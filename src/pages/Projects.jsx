@@ -17,6 +17,7 @@ import DiscoverPicks from '../components/userhome/DiscoverPicks'
 import ProPanel from '../components/userhome/ProPanel'
 import RecentExports from '../components/userhome/RecentExports'
 import useProjectIcons from '../hooks/useProjectIcons'
+import { useServerAiUsage } from '../hooks/useServerAiUsage'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -73,7 +74,7 @@ import '../styles/pages/projects.css'
 
 export default function Projects() {
   const navigate = useNavigate()
-  const { loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { plan, isPro, loading: planLoading } = useSubscription()
   const { openLogin } = useLoginPrompt()
   const { projects, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
@@ -107,7 +108,10 @@ export default function Projects() {
   }
 
   const recent = [...projects].sort(byRecent)
-  const ai = aiUsageToday(getUsageCount, plan)
+  // The account's own count from the server, once it answers; until then (and if
+  // it never does) this browser's count, which the strip labels as such.
+  const serverAi = useServerAiUsage(canSaveProjects ? user?.uid : null, plan?.id)
+  const ai = aiUsageToday(getUsageCount, plan, serverAi)
   const slots = projectSlots(projects.length, projectLimit)
 
   return (

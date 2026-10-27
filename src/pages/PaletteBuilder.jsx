@@ -25,12 +25,8 @@ import { LIBRARY_RULES } from '../utils/libraryRules'
 import { useProLibrary } from '../hooks/useProLibrary'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
-// The eighteen preview scenes and the components that paint them. Lifted out of
-// this file on 2026-09-11 — 280 lines of pure, prop-only rendering that nothing
-// else in the builder reaches into. See the note at the top of PalettePreview.jsx
-// for why this block and not another, and for the equivalence evidence.
-import PreviewScene from '../components/palette/PalettePreview'
-import { PREVIEW_SCENES } from '../data/palettePreviewScenes'
+// The preview dialog: eight scenes, a scene list and the role legend.
+import PalettePreviewDialog from '../components/palette/PalettePreviewDialog'
 import { LockedPaletteRow, LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
@@ -679,7 +675,7 @@ const SUBMIT_SURFACE = 'palette'
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { registerExport, clearExport } = useExport()
-  const { isPro } = useSubscription()
+  const { isPro, planKnown } = useSubscription()
   const { openProModal } = useProModal()
   // The gallery popup's two library tabs. The bundle holds the free brands and
   // the free curated palettes in full and a name-only stub for every Pro brand;
@@ -871,6 +867,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     columnRefs.current[removeFocusRef.current]?.querySelector('.plb-tool--key')?.focus({ preventScroll: true })
     removeFocusRef.current = null
   }, [colors.length])
+  // A choice in a swatch's "…" menu unmounts the focused item with the menu, so
+  // focus goes back to a swatch's "…" once the change has rendered: the swatch
+  // the action was for, wherever it ended up (Swap and Insert left move it), or
+  // for Remove the swatch that took its place. `ctxReturnRef` holds that
+  // swatch's index until the next commit.
+  const ctxReturnRef = useRef(null)
+  useLayoutEffect(() => {
+    const at = ctxReturnRef.current
+    if (at == null) return
+    ctxReturnRef.current = null
+    columnRefs.current[at]?.querySelector('.plb-tool--more')?.focus({ preventScroll: true })
+  })
   // Absolute coordinates remain relative to the size-contained column. Measure
   // in viewport space first so even the edge columns keep the whole panel visible.
   useLayoutEffect(() => {
@@ -943,7 +951,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }, [ctxMenu])
   const [swapIdx, setSwapIdx] = useState(null)     // column with the swap-direction popover open
   const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
-  const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
+  const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
   // Community submit popup (Wave 5 items 20–22): a proper modal with a palette
@@ -1253,7 +1261,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const closeSubmit = useCallback(() => setSubmitOpen(false), [])
   const closeImageDialog = useCallback(() => setImgOpen(false), [])
   const imageDialogRef = useModalDialog(closeImageDialog, { enabled: imgOpen })
-  const previewDialogRef = useModalDialog(closePreview, { enabled: preview != null })
   const submitDialogRef = useModalDialog(closeSubmit, { enabled: Boolean(submitOpen && uid) })
 
   // Spacebar = randomise only from the idle Palette canvas. Buttons, links and
@@ -1342,6 +1349,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     return () => clearTimeout(t)
   }, [colors, seed, seedInput, harmony, locked, adjust, vision, showContrast, importedGalleryId])
 
+  // Close the "…" menu after a choice and hand focus to the "…" of swatch `at`.
+  const closeCtxMenu = (at) => { ctxReturnRef.current = at; setCtxMenu(null) }
+
   const toggleLock = (i) => {
     setLocked(prev => {
       const next = new Set(prev)
@@ -1392,10 +1402,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (colors.length <= 2) { toast?.('A palette needs at least two colours'); return }
     if (outIdx != null) return // let the current close animation finish first
     const keyboard = event?.detail === 0
-    if (!keyboard) document.activeElement?.blur()
+    const fromMenu = event?.currentTarget?.closest?.('.plb-ctx') != null
+    if (!keyboard && !fromMenu) document.activeElement?.blur()
     setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setSwapIdx(null); setToolsIdx(null)
     const drop = () => {
-      if (keyboard) removeFocusRef.current = Math.min(i, colors.length - 2)
+      // The next swatch slides into this slot; the last one hands back to the one before.
+      if (fromMenu) ctxReturnRef.current = Math.min(i, colors.length - 2)
+      else if (keyboard) removeFocusRef.current = Math.min(i, colors.length - 2)
       setColors(prev => prev.filter((_, k) => k !== i))
       setLocked(prev => {
         const next = new Set()
@@ -1416,10 +1429,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Single insert path for the Add block AND the click-between gaps — gates
   // the caps, shifts locks right, and flags the slot for the grow-in animation.
   const insertAt = (idx, hex) => {
-    if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return }
+    if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return false }
     if (!isPro && colors.length >= PRO_MAX) {
       openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
-      return
+      return false
     }
     setColors(prev => { const n = [...prev]; n.splice(idx, 0, hex); return n })
     setLocked(prev => {
@@ -1429,6 +1442,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     })
     flashIn(idx)
     setLiveMsg('Colour added')
+    return true
   }
 
   const addCol = () => {
@@ -1479,7 +1493,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Per-colour HCT editing is a Pro tool — free users get the upgrade modal
   // instead of the picker; Pro users toggle the picker open on that column.
   const openHctPicker = (i) => {
-    setCtxMenu(null)
+    closeCtxMenu(i)
     if (!isPro) {
       openProModal({ gate: 'palette-hct-picker', eyebrow: 'Pro colour tools', title: 'Fine-tune any colour in HCT', subtitle: 'Edit hue, chroma and tone on each colour individually with the HCT picker — perceptual control the free tier keeps read-only.' })
       return
@@ -1881,7 +1895,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       return
     }
     setGalleryOpen(false)
-    setPreview({ mode: 'light', tab: 'ui', compare: v })
+    setPreview({ mode: 'light', scene: 'dashboard', compare: v })
   }
   // Generic "line it up against the current palette" — used by the brand and
   // community rows, which carry no precomputed score, so we compute one here.
@@ -1889,7 +1903,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
     if (cols.length < 2) return
     setGalleryOpen(false)
-    setPreview({ mode: 'light', tab: 'ui', compare: { label, colors: cols, score: scorePalette(cols) } })
+    setPreview({ mode: 'light', scene: 'dashboard', compare: { label, colors: cols, score: scorePalette(cols) } })
   }
   // Import a community-gallery palette as a toggle. The FIRST import snapshots
   // the user's own pre-gallery system; applying it ticks the card. Clicking the
@@ -2351,9 +2365,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     {
       id: 'preview', priority: 2,
       render: () => (
-        <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
+        <ToolButton icon="eye" collapse onClick={() => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
       ),
-      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) } },
+      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', scene: 'dashboard', compare: null }) } },
     },
     { id: 'div', priority: 0, divider: true },
     { id: 'undo', priority: 5, render: () => undoRedo, menu: () => <div className="plb-menu-tray">{undoRedo}</div> },
@@ -2754,22 +2768,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             items[next]?.focus({ preventScroll: true })
             items[next]?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
           }}>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoCopy /> Copy hex</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoShuffle /> Use as seed</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Copy hex</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); setCtxMenu(null) }}><IcoEye /> View tints</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); setCtxMenu(null) }}>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoEye /> View tints</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>
           <div className="plb-ctx-sep" aria-hidden="true" />
           {ctxMenu.i > 0 && (
-            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'left'); setCtxMenu(null) }}><IcoArrowLeft /> Swap left</button>
+            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'left'); closeCtxMenu(ctxMenu.i - 1) }}><IcoArrowLeft /> Swap left</button>
           )}
           {ctxMenu.i < colors.length - 1 && (
-            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'right'); setCtxMenu(null) }}><IcoArrowRight /> Swap right</button>
+            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'right'); closeCtxMenu(ctxMenu.i + 1) }}><IcoArrowRight /> Swap right</button>
           )}
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertAt(ctxMenu.i, midColor(colors[Math.max(0, ctxMenu.i - 1)], colors[ctxMenu.i])); setCtxMenu(null) }}><IcoPlus size={15} /> Insert left</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertBetween(ctxMenu.i); setCtxMenu(null) }}><IcoPlus size={15} /> Insert right</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { closeCtxMenu(ctxMenu.i + (insertAt(ctxMenu.i, midColor(colors[Math.max(0, ctxMenu.i - 1)], colors[ctxMenu.i])) ? 1 : 0)) }}><IcoPlus size={15} /> Insert left</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertBetween(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoPlus size={15} /> Insert right</button>
           {colors.length > 2 && (
             <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={(e) => { removeCol(ctxMenu.i, e); setCtxMenu(null) }}><IcoX /> Remove</button>
           )}
@@ -3105,102 +3119,23 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* ── Preview modal ── */}
+      {/* ── Preview dialog ── */}
       {preview && (
-        <div
-          className="plb-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Palette preview"
-          tabIndex={-1}
-          ref={previewDialogRef}
-          onPointerDown={(e) => { if (e.target === e.currentTarget) setPreview(null) }}
-        >
-          <div className={preview.compare ? 'plb-modal-card' : 'plb-modal-card plb-modal-card--previews'}>
-            <div className="plb-modal-head">
-              <span className="plb-pop-title">{preview.compare ? 'Compare palettes' : 'Preview'}</span>
-              <div className="plb-modal-tabs" role="tablist" aria-label="Preview context">
-                {[['ui', 'UI'], ['brand', 'Brand'], ['graphic', 'Graphic Design']].map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={preview.tab === id}
-                    className={preview.tab === id ? 'plb-modal-tab plb-modal-tab--on' : 'plb-modal-tab'}
-                    onClick={() => setPreview(p => ({ ...p, tab: id }))}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="plb-modal-modes" role="group" aria-label="Preview theme">
-                {['light', 'dark'].map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={preview.mode === m ? 'plb-mode plb-mode--on' : 'plb-mode'}
-                    aria-pressed={preview.mode === m}
-                    onClick={() => setPreview(p => ({ ...p, mode: m }))}
-                  >
-                    {m === 'light' ? 'Light' : 'Dark'}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="plb-pop-x" aria-label="Close preview" onClick={() => setPreview(null)}><IcoX /></button>
-            </div>
-            {preview.compare ? (
-              <div className="plb-modal-body plb-modal-body--split">
-                <PreviewScene
-                  colors={adjusted}
-                  mode={preview.mode}
-                  tab={preview.tab}
-                  title={`Current — score ${paletteScore}`}
-                />
-                <PreviewScene
-                  colors={preview.compare.colors}
-                  mode={preview.mode}
-                  tab={preview.tab}
-                  title={`${preview.compare.label}${preview.compare.score != null ? ` — score ${preview.compare.score}` : ''}`}
-                />
-              </div>
-            ) : (
-              <div className="plb-preview-grid" aria-label={`${preview.tab} preview scenes`}>
-                {PREVIEW_SCENES[preview.tab].map((scene, index) => {
-                  const gated = !isPro && index >= 3
-                  return (
-                    <article className={gated ? 'plb-preview-item plb-preview-item--locked' : 'plb-preview-item'} key={scene.name}>
-                      <div className="plb-preview-label">
-                        <strong>{scene.name}</strong>
-                        {gated && <span><IcoLock open={false} size={11} /> Pro</span>}
-                      </div>
-                      <PreviewScene colors={adjusted} mode={preview.mode} tab={preview.tab} scene={scene} variant={index} />
-                      {gated && (
-                        <button
-                          type="button"
-                          className="plb-preview-gate"
-                          onClick={() => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
-                        >
-                          <IcoLock open={false} size={13} /> Unlock preview
-                        </button>
-                      )}
-                    </article>
-                  )
-                })}
-              </div>
-            )}
-            {preview.compare && (
-              <div className="plb-modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-s btn-accent"
-                  onClick={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
-                >
-                  Use {preview.compare.label}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <PalettePreviewDialog
+          preview={preview}
+          onChange={(patch) => setPreview((p) => (p ? { ...p, ...patch } : p))}
+          onClose={closePreview}
+          colors={adjusted}
+          paletteScore={paletteScore}
+          harmony={harmony}
+          vision={vision}
+          visionLabel={VISION_MODES.find(([id]) => id === vision)?.[1] || ''}
+          onResetVision={() => setVision('normal')}
+          isPro={isPro}
+          planKnown={planKnown}
+          onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
+          onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
+        />
       )}
 
       {/* ── Submit-to-community popup (Wave 5 items 20–22) ──
