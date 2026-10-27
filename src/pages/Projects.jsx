@@ -80,10 +80,13 @@ import '../styles/pages/projects.css'
 // its project the first time both are known.
 
 
+// When the connection last dropped, for the "as of 07:41" on the allowances.
+let wentOfflineAt = 0
 const subscribeOnline = (fn) => {
-  window.addEventListener('online', fn)
-  window.addEventListener('offline', fn)
-  return () => { window.removeEventListener('online', fn); window.removeEventListener('offline', fn) }
+  const mark = () => { if (!readOnline()) wentOfflineAt = Date.now(); fn() }
+  window.addEventListener('online', mark)
+  window.addEventListener('offline', mark)
+  return () => { window.removeEventListener('online', mark); window.removeEventListener('offline', mark) }
 }
 const readOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
 
@@ -146,9 +149,7 @@ export default function Projects() {
   const slots = projectSlots(projects.length, projectLimit)
 
   // When the last answer came from, so the allowances can say "as of 07:41" while offline.
-  const lastOnline = useRef(null)
-  useEffect(() => { if (online) lastOnline.current = Date.now() })
-  const asOf = online || !lastOnline.current ? '' : new Date(lastOnline.current).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const asOf = online || !wentOfflineAt ? '' : new Date(wentOfflineAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   const hasProjects = projects.length > 0
   const loadingList = !signedOut && !resolving && projectsLoading && !hasProjects
