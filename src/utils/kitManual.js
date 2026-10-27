@@ -109,7 +109,7 @@ export function manualParts(sel, h) {
     const sample = ratio >= 4.5
       ? `<span class="smp" style="color:${f};background:${b}"><b>Aa</b> Body text</span>`
       : ratio >= 3
-        ? `<span class="smp" style="color:${f};background:${b}"><b>Aa</b></span><small>Large text only</small>`
+        ? `<span class="smp large" style="color:${f};background:${b}"><b>Aa</b></span><small>Large text only</small>`
         : '<small>No sample: below 3:1</small>'
     return `<tr><th scope="row"><span class="nm"><b>${name}</b><small>${esc(`--${fg}`)} on ${esc(`--${bg}`)}</small></span></th><td><code>${f}</code></td><td><code>${b}</code></td>${ratioCell(ratio)}<td class="samples">${sample}</td></tr>`
   }).join('')
