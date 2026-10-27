@@ -255,6 +255,11 @@ function VerifyNotice() {
 
 export default function NoticeStack() {
   const ref = useRef(null)
+  const { pathname } = useLocation()
+  // /login shows the offline state in its own form, so the app-wide banner would
+  // only float over the page and say it twice. Same normalisation as the /login
+  // branch in App.jsx.
+  const onLogin = pathname.toLowerCase().replace(/\/+$/, '') === '/login'
 
   useEffect(() => {
     const el = ref.current
@@ -286,7 +291,7 @@ export default function NoticeStack() {
 
   return (
     <div className="notice-stack" ref={ref}>
-      <OfflineBanner />
+      {!onLogin && <OfflineBanner />}
       <SyncNotice />
       <VerifyNotice />
     </div>

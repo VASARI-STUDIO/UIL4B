@@ -640,10 +640,21 @@ function AppHeader() {
   }
 
   // After a switch the popover closes and focus returns to the avatar, so a
-  // keyboard user is not dropped on <body>.
+  // keyboard user is not dropped on <body>. The switch dialog closes this menu
+  // as it opens, so when a dialog is already up it keeps the focus it took.
   const closeAccountMenuAndRestoreFocus = () => {
     setMenu(null)
-    requestAnimationFrame(() => accountBtnRef.current?.focus())
+    requestAnimationFrame(() => {
+      if (!document.querySelector('[role="dialog"]')) accountBtnRef.current?.focus()
+    })
+  }
+
+  // The phone sheet's switcher hands focus back to the menu button instead.
+  const closeSheetAndRestoreFocus = () => {
+    closeAll()
+    requestAnimationFrame(() => {
+      if (!document.querySelector('[role="dialog"]')) mobileBtnRef.current?.focus()
+    })
   }
 
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
@@ -987,7 +998,7 @@ function AppHeader() {
           <div className="pnav-sheet-group">
             {user ? (
               <div id="pnav-sheet-account">
-                <AccountSwitcher onDone={closeAll} />
+                <AccountSwitcher onDone={closeSheetAndRestoreFocus} />
                 <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
                   <GearIcon /><span>Account &amp; settings</span>
                 </Link>
