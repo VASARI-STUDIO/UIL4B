@@ -89,7 +89,7 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   watch(page, 'designer opening the icon library')
   // SIGNED IN AS PRO, BECAUSE THE SUBJECT IS THE FIXTURE AND NOT THE PAYWALL.
   // /create/icons is tiered (src/data/iconPackTiers.js): a
-  // signed-out visitor browses five packs, not twenty-five, so "one /collection
+  // signed-out visitor browses five packs, not twenty-seven, so "one /collection
   // per pack the page browses on first paint" would be measuring the gate here
   // rather than the stub. Pro is the tier that browses everything, which is the
   // state this test has always been written against. The tiers are measured in
