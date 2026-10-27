@@ -43,7 +43,10 @@
 //   projects.css   drop the phone's `.uh-today-clock` hide          -> "the date and time are one line under the title"
 //   useProjectIcons  writeIcon without { touch: false }              -> 52 "choosing an icon for an older project ..."
 //   Projects.jsx   StarterCard without `limit`                      -> "when archived projects already fill the Free plan ..."
-// Round 3 (the blurred locked cards; made in one build, each named test went red, then restored)://   DiscoverPicks  label text back to 'Pro palette. Opens with Pro'  -> "a locked Discover card says what it is, shows the blurred picture ..."//   DiscoverPicks  drop the picture's onError                        -> "when the picture cannot be had the card says so in text ..."//   preview.js     a tEXt chunk holding the hex codes                 -> tests/unit/palette-preview-png.test.js "no hex string of the palette is in the bytes"
+// Round 3 (the blurred locked cards; made in one build, each named test went red, then restored):
+//   DiscoverPicks  label text back to 'Pro palette. Opens with Pro'  -> "a locked Discover card says what it is, shows the blurred picture ..."
+//   DiscoverPicks  drop the picture's onError                        -> "when the picture cannot be had the card says so in text ..."
+//   preview.js     a tEXt chunk holding the hex codes                 -> tests/unit/palette-preview-png.test.js "no hex string of the palette is in the bytes"
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
