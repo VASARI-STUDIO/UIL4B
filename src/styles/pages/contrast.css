@@ -165,8 +165,8 @@
   color: var(--tl-ink);
 }
 .cc .cc-pair-meta { display: flex; align-items: baseline; gap: var(--s-2); min-width: 0; }
-.cc .cc-pair-ratio { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
-.cc .cc-pair-mark { font-family: var(--font); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.cc .cc-pair-ratio { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.cc .cc-pair-mark { font-family: var(--font); font-size: 12px; font-weight: 500; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
   .cc .cc-pair:hover { border-color: var(--tl-line-on); }
 }
@@ -198,13 +198,14 @@
 .cc .cc-tests { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
 .cc .cc-check {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  /* Fixed tracks, so the needs and the Pass/Fail words line up row to row. */
+  grid-template-columns: 16px minmax(0, 1fr) 40px 30px;
   align-items: center;
-  gap: var(--s-2) var(--s-3);
+  gap: var(--s-2);
 }
 .cc .cc-check-name { font-size: 13px; line-height: 1.35; color: var(--tl-soft); }
-.cc .cc-check-need { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
-.cc .cc-check-mark { min-width: 3ch; font-size: 12px; font-weight: 500; text-align: right; }
+.cc .cc-check-need { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); font-variant-numeric: tabular-nums; text-align: right; }
+.cc .cc-check-mark { font-size: 12px; font-weight: 500; text-align: right; }
 .cc .cc-note { display: grid; gap: 4px; margin-top: 2px; }
 .cc .cc-note p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 .cc .cc-note-link { justify-self: start; display: inline-flex; align-items: center; min-height: 24px; font-size: 13px; line-height: 1.5; color: var(--tl-link); }
@@ -233,7 +234,7 @@
 .cc .cc-fix-desc { display: grid; gap: 2px; min-width: 0; }
 .cc .cc-fix-line { font-size: 13px; line-height: 1.35; color: var(--tl-ink); }
 .cc .cc-fix-line strong { font-weight: 600; font-variant-numeric: tabular-nums; }
-.cc .cc-fix-ratio { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.cc .cc-fix-ratio { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 /* ── Palette swatches ───────────────────────────────────────────────────── */
 .cc .cc-colours { gap: 11px; }
@@ -261,7 +262,10 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .cc .cc-pairs { grid-column: 1; grid-row: 2; }
+  .cc .cc-pairs { grid-column: 1; grid-row: 2; align-self: start; }
+  /* The panel spans both rows; its extra height goes to the second, so the pairs
+     sit right under the specimen and do not move as the fix list grows. */
+  .cc .tl-grid { grid-template-rows: auto 1fr; }
 }
 
 /* ── Touch: every control reaches 44px ──────────────────────────────────── */

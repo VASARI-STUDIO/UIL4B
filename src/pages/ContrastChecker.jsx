@@ -46,9 +46,9 @@ function normaliseHex(raw) {
   return `#${hex.toUpperCase()}`
 }
 
-// Round DOWN to `dp` places. The epsilon absorbs binary noise (4.54 held as
-// 4.5399999…) without ever lifting a value across a real step.
-const floorTo = (r, dp) => Math.floor(r * 10 ** dp + 1e-9) / 10 ** dp
+// Round DOWN to `dp` places, with no epsilon: binary noise can only ever show a
+// value a hundredth low, never lift one across a pass/fail step.
+const floorTo = (r, dp) => Math.floor(r * 10 ** dp) / 10 ** dp
 const ratioStr = (r) => floorTo(r, 2).toFixed(2)
 
 // The five tests, named as WCAG names them. Non-text contrast (1.4.11) is AA
