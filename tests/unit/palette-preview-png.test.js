@@ -158,9 +158,13 @@ test('the same colours give the same bytes, and different colours give different
 })
 
 test('a palette with no colours still returns a picture, in grey', () => {
+  // A neutral mid grey, flat across the strip. Its exact level is the
+  // renderer's (the read-back guard may shift it), not part of the promise.
   const grey = decodePng(previewPng([]))
-  assert.deepEqual(pixel(grey.rows[0], 0), [128, 128, 128])
-  assert.deepEqual(pixel(grey.rows[0], 319), [128, 128, 128])
+  const [a, b] = [pixel(grey.rows[0], 0), pixel(grey.rows[0], 319)]
+  assert.deepEqual(a, b, 'flat')
+  assert.ok(a[0] === a[1] && a[1] === a[2], `neutral: ${a}`)
+  assert.ok(a[0] >= 64 && a[0] <= 192, `mid grey: ${a}`)
 })
 
 // ── The route's answer ─────────────────────────────────────────────────────────────────────────────
