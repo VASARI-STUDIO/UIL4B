@@ -67,11 +67,19 @@ import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, TOPICS } from '../src/data/learnI
 
 export const CARD_DIR = '/previews'
 
-/** The card every route falls back to — and the RIGHT card for the homepage. */
+/**
+ * The card every route falls back to — and the RIGHT card for the homepage.
+ *
+ * It is the brand kit's own Open Graph card (the logo on ivory), committed as
+ * exported rather than drawn by og-cards.mjs. `twitterFile` is the kit's X
+ * card, the 2:1 crop X shows, used as twitter:image wherever this card is the
+ * og:image. The section cards below are 1200x630 for both.
+ */
 export const DEFAULT_CARD = Object.freeze({
   id: 'og-image',
   file: 'og-image.png',
-  alt: 'UI L4B Design Toolkit — colour, icon, emoji and imagery tools',
+  twitterFile: 'x-card.png',
+  alt: 'UI L4B logo on ivory',
 })
 
 /**
@@ -212,6 +220,9 @@ export function cardFor(pathname) {
 
 /** Absolute URL for a card, which is what og:image requires. */
 export const cardUrl = (origin, card) => `${origin}${CARD_DIR}/${card.file}`
+
+/** The twitter:image for a card: its X-specific file if it has one. */
+export const twitterCardUrl = (origin, card) => `${origin}${CARD_DIR}/${card.twitterFile || card.file}`
 
 /** Every card file the site references, for the "does it exist" test. */
 export function allCardFiles() {

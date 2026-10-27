@@ -600,7 +600,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
   })
 })
 
-// The design's GEOMETRY "Interpolation: OKLCH | sRGB" control (D:692-699),
+// The design's GEOMETRY "Interpolation" control (D:692-699), labelled Perceived (OKLCH) | Standard (sRGB),
 // implemented for real: the choice reaches the copied CSS, the painted canvas
 // and the SVG export (SVG cannot say `in oklch`, so it is sampled instead).
 //
@@ -611,8 +611,8 @@ test.describe('Gradient interpolation space', () => {
     watch(page, 'front-end developer choosing an interpolation space')
     await go(page, '/create/gradient')
     const code = page.locator('.grd-code-text code')
-    const oklch = page.getByRole('button', { name: 'OKLCH', exact: true })
-    const srgb = page.getByRole('button', { name: 'sRGB', exact: true })
+    const oklch = page.getByRole('button', { name: 'Perceived (OKLCH)', exact: true })
+    const srgb = page.getByRole('button', { name: 'Standard (sRGB)', exact: true })
 
     await oklch.click()
     await expect(oklch).toHaveAttribute('aria-pressed', 'true')
@@ -631,5 +631,31 @@ test.describe('Gradient interpolation space', () => {
     await expect(srgb).toHaveAttribute('aria-pressed', 'true')
     await expect(code).not.toContainText('in oklch')
     await expect(code).toContainText('gradient(')
+  })
+
+  // The pills say Perceived / Standard and keep the real space name on demand:
+  // in the button's accessible name, its hover text, and a visible line (for
+  // touch and keyboard) that follows the chosen option.
+  //
+  // MUTATION: put 'OKLCH' / 'sRGB' back as the SPACES labels in
+  // GradientGenerator.jsx (or drop `real` from the hint) — this goes red.
+  test('the pills read Perceived and Standard, and the real space name is one step away', async ({ page }) => {
+    watch(page, 'designer reading the interpolation control')
+    await go(page, '/create/gradient')
+    const group = page.getByRole('group', { name: 'Interpolation' })
+    await expect(group.getByRole('button')).toHaveText(['Perceived', 'Standard'])
+    await expect(group.getByRole('button', { name: 'Perceived (OKLCH)' })).toHaveAttribute('title', /OKLCH/)
+    await expect(group.getByRole('button', { name: 'Standard (sRGB)' })).toHaveAttribute('title', /sRGB/)
+
+    const hint = page.locator('#grd-interp-hint')
+    await expect(group).toHaveAttribute('aria-describedby', 'grd-interp-hint')
+    await group.getByRole('button', { name: 'Perceived (OKLCH)' }).click()
+    await expect(hint).toBeVisible()
+    await expect(hint).toContainText('OKLCH')
+    await group.getByRole('button', { name: 'Standard (sRGB)' }).click()
+    await expect(hint).toContainText('sRGB')
+    await expect(hint).not.toContainText('OKLCH')
+    // sRGB here is the gamma-encoded default, so it must not claim to be linear.
+    await expect(group).not.toContainText(/linear/i)
   })
 })

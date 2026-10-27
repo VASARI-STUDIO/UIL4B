@@ -27,17 +27,15 @@ async function catalogWithin(ms, signal) {
  */
 export async function buildUiKit(design, { tier, onStage = () => {}, signal } = {}) {
   onStage('fonts')
-  const [catalog, publisher, mark] = await Promise.all([
+  const [catalog, publisher] = await Promise.all([
     catalogWithin(2500, signal),
     loadPublisherFonts({ signal }),
-    fetch('/favicon.svg', { signal }).then((r) => (r.ok ? r.text() : '')).catch(() => ''),
   ])
   const fonts = await loadKitFonts(kitFontRequests(design), { signal, catalog })
   onStage('building')
   const { html, filename, missing } = renderUiKit(design, {
     tier,
     template,
-    markSvg: mark,
     fonts,
     ...publisher,
     logo: tier === 'pro' ? readLogo(design) : null,

@@ -14,7 +14,6 @@ import { FREE_POINTS, PRO_POINTS } from '../../src/config/planFacts.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const TEMPLATE = read('src/templates/uiKit.html')
-const MARK = read('public/favicon.svg')
 const DATE = new Date('2026-01-02T00:00:00Z')
 const OFL = { name: 'SIL Open Font License', text: 'Copyright 2020 The Test Project Authors\nSIL OPEN FONT LICENSE Version 1.1' }
 
@@ -35,7 +34,7 @@ const PUBLISHER = {
   publisherLicense: 'Geist licence text',
 }
 const render = (design, opts = {}) => renderUiKit(design, {
-  template: TEMPLATE, markSvg: MARK, fonts: FONTS, ...PUBLISHER, date: DATE, ...opts,
+  template: TEMPLATE, fonts: FONTS, ...PUBLISHER, date: DATE, ...opts,
 })
 const dataOf = (html) => JSON.parse(/<script type="application\/json" id="brand-data">([\s\S]*?)<\/script>/.exec(html)[1])
 

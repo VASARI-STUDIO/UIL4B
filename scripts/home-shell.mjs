@@ -95,6 +95,7 @@
 // The Spectrum headline. ONE module feeds both the hydrated hero and this
 // shell.
 import { SPECTRUM_HERO } from '../src/components/spectrum/spectrumHero.js'
+import { logoSvg } from '../src/config/brandLogo.js'
 
 const heroHeadlineText = () => SPECTRUM_HERO.text
 const HERO_HEADLINE = SPECTRUM_HERO
@@ -249,7 +250,7 @@ export function homeShellRoot() {
       </main>
       <div class="boot-decoration" aria-hidden="true">
         <div class="boot-nav">
-          <span class="boot-mark">UIL4B</span>
+          ${logoSvg({ attrs: 'class="boot-mark" aria-hidden="true" focusable="false"' })}
           <span class="boot-nav-lines"><i class="boot-line"></i><i class="boot-line"></i><i class="boot-line"></i></span>
           <span class="boot-actions"><i class="boot-action"></i><i class="boot-action"></i></span>
         </div>

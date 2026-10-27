@@ -109,14 +109,17 @@ test('legacy login window gate is removed and nav handles switch outcomes in pla
 })
 
 test('forced password switching and prompt re-entrancy are guarded', async () => {
-  const [popup, prompt, pillNav, auth] = await Promise.all([
+  const [popupShell, authForm, prompt, pillNav, auth] = await Promise.all([
     readFile(new URL('../../src/components/LoginPopup.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../../src/components/auth/AuthForm.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../../src/contexts/LoginPromptContext.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../../src/components/nav/AccountSwitcher.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../../src/contexts/AuthContext.jsx', import.meta.url), 'utf8'),
   ])
-  assert.ok(popup.includes('!resetMode && !passwordOnly'))
-  assert.ok(popup.includes('!passwordOnly && <div className="auth-links">'))
+  // The form moved out of the shell into AuthForm; the guarantees are the same.
+  const popup = popupShell + authForm
+  assert.ok(authForm.includes("mode !== 'switch' && ("))
+  assert.ok(authForm.includes('className="auth-links"'))
   assert.ok(popup.includes('readOnly={lockEmail}'))
   // Switching account must land focus on the password field — the email is
   // already filled and read-only, so anywhere else costs a keyboard user a tab

@@ -64,7 +64,9 @@ service cloud.firestore {
       allow read, update, delete: if isReviewer();
     }
 
-    // Community prompts — signed-in users can create, a reviewer can manage
+    // Community prompts — signed-in users can create, a reviewer can manage.
+    // Read: a prompt is visible to signed-in users only once approved; until
+    // then only its author and reviewers can read it.
     match /community-prompts/{promptId} {
       // The exact record shape the client writes: hasOnly bounds the keys and
       // hasAll pins the required ones (ownerId, mediaType and mediaUrl are
@@ -110,13 +112,19 @@ service cloud.firestore {
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.status == 'pending'
         && promptShapeOk();
-      allow read: if request.auth != null;
+      // Rules are not filters: a list query must itself be constrained to
+      // status == 'approved' or authorUid == the caller, or it is refused.
+      allow read: if isReviewer()
+        || (request.auth != null
+            && (resource.data.status == 'approved'
+                || resource.data.authorUid == request.auth.uid));
       allow update, delete: if isReviewer();
     }
 
     // Community submissions — the shared review queue for gradients, designs
     // and palettes (utils/communityQueue.js). The owner may withdraw their own
-    // submission.
+    // submission. Pending, rejected and withdrawn items are readable only by
+    // their author and reviewers; approved items by any signed-in user.
     match /community-submissions/{submissionId} {
       function isSignedIn() { return request.auth != null; }
       function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
@@ -186,7 +194,11 @@ service cloud.firestore {
         && request.resource.data.status == 'pending'
         && submissionShapeOk();
 
-      allow read: if isSignedIn();
+      // Rules are not filters: listMySubmissions filters on authorUid and the
+      // reviewers' queue on status, which is what lets those lists through.
+      allow read: if isReviewer()
+        || isOwner()
+        || (isSignedIn() && resource.data.status == 'approved');
 
       // Reviewers may update; the owner may only set status to 'withdrawn',
       // and no other field may change in the same write.

@@ -1,0 +1,125 @@
+/* Log-in / sign-up form and its modal. Rules are scoped (.auth-form-root,
+   .ui-modal.ui-login) so they out-rank the global .btn and .ui-modal rules
+   whatever order the sheets load in. Spacing is a 4px scale: 6 between a label
+   and its input, 12 between fields, 16 from the last field to the submit,
+   24 between groups. */
+
+.auth-form-root{--ctl:48px;font-family:var(--font)}
+@media(min-width:1024px){.auth-form-root{--ctl:44px}}
+
+/* Mode change: opacity only, no slide. */
+.auth-swap--in{animation:auth-fade 150ms var(--ease-out)}
+@keyframes auth-fade{from{opacity:0}to{opacity:1}}
+
+.auth-form-root .auth-title{margin:0;font-size:22px;line-height:1.2;font-weight:640;letter-spacing:-.015em;color:var(--t0)}
+.auth-form-root .auth-title:focus-visible{outline:none}
+.ui-login .auth-title{padding-right:48px}
+.auth-form-root .auth-sub{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--t1);text-wrap:pretty}
+.auth-form-root .auth-sub strong{color:var(--t0);font-weight:600}
+.auth-body{margin-top:24px}
+
+/* "Why we ask first" and the caller's unlock list: plain, no ticks. */
+.auth-why{margin:16px 0 0}
+.auth-why-h{margin:0 0 4px;font-size:14px;line-height:1.5;font-weight:600;color:var(--t0)}
+.auth-list{list-style:none;margin:0;padding:0;font-size:14px;line-height:1.5;color:var(--t1)}
+.auth-list li{position:relative;padding-left:14px}
+.auth-list li+li{margin-top:4px}
+.auth-list li::before{content:"";position:absolute;left:0;top:.62em;width:4px;height:4px;border-radius:50%;background:var(--t3)}
+
+/* Error and offline: a plain line, not a box. */
+.auth-msg{display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;font-size:14px;line-height:1.45;color:var(--t1)}
+.auth-msg svg{flex:none;margin-top:2px}
+.auth-msg--err{color:var(--err-strong)}
+.auth-msg--err svg{color:var(--err)}
+.auth-msg:focus-visible{outline:none}
+.auth-inline{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--link);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* Continue with Google: the one accent fill. */
+.auth-form-root .auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:var(--ctl);padding:0 16px;border-radius:var(--btn-radius);border:1px solid var(--border);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;transition:background-color 150ms ease-out,border-color 150ms ease-out,transform var(--dur-1) ease-out}
+.auth-form-root .auth-google-btn--primary{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill)}
+@media(hover:hover){.auth-form-root .auth-google-btn--primary:hover:not(:disabled){background:var(--accent-fill-hover);border-color:var(--accent-fill-hover)}}
+.auth-form-root .auth-google-btn:active:not(:disabled),.auth-form-root .auth-submit:active:not(:disabled){transform:scale(.97)}
+.auth-form-root .auth-google-btn:disabled,.auth-form-root .auth-submit:disabled{opacity:.5;cursor:not-allowed}
+.auth-google-mark{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:var(--radius-xs);background:#fff}
+
+.auth-form-root .auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--t3);font-size:13px;line-height:16px;font-family:var(--font)}
+.auth-form-root .auth-divider::before,.auth-form-root .auth-divider::after{content:"";flex:1;height:1px;background:var(--border)}
+
+.auth-form-root .auth-form{display:flex;flex-direction:column;gap:12px}
+.auth-form-root .auth-field label{display:block;margin-bottom:6px;font-size:13px;line-height:18px;font-weight:560;color:var(--t1)}
+.auth-form-root .auth-field input{width:100%;min-height:var(--ctl);padding:0 14px;font-size:16px;border-radius:var(--radius);scroll-margin-block:96px;transition:border-color 150ms ease-out}
+.auth-form-root .auth-field input[aria-invalid="true"]{border-color:var(--err)}
+.auth-form-root .auth-field input:disabled{opacity:.5;cursor:not-allowed}
+.auth-pw{position:relative}
+.auth-form-root .auth-pw input{padding-right:64px}
+.auth-show{position:absolute;top:0;right:0;min-width:56px;height:var(--ctl);padding:0 14px 0 0;background:none;border:0;font-family:var(--font);font-size:13px;font-weight:560;color:var(--link);text-align:right;cursor:pointer}
+.auth-help{margin:4px 0 0;font-size:12px;line-height:18px;color:var(--t2)}
+.auth-help--err{color:var(--err-strong)}
+
+.auth-form-root .auth-submit{width:100%;justify-content:center;gap:8px;min-height:var(--ctl);margin-top:4px;padding:0 16px;font-size:15px;font-weight:600;transition:background-color 150ms ease-out,border-color 150ms ease-out,transform var(--dur-1) ease-out}
+.auth-spin{width:14px;height:14px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:auth-spin 800ms linear infinite}
+@keyframes auth-spin{to{transform:rotate(360deg)}}
+
+.auth-legal{margin:12px 0 0;font-size:12px;line-height:18px;color:var(--t2)}
+.auth-legal a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+
+/* Mode row: each item is its own 44px target. */
+.auth-form-root .auth-links{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:8px;margin-top:16px}
+.auth-link{min-height:44px;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;color:var(--t1);cursor:pointer;text-align:left}
+.auth-link-strong{font-weight:600;color:var(--link)}
+.auth-link--quiet{color:var(--link);text-align:right}
+.auth-link:disabled,.auth-show:disabled{opacity:.5;cursor:not-allowed}
+.auth-link:focus-visible,.auth-inline:focus-visible{text-decoration:underline}
+@media(hover:hover){.auth-link:hover:not(:disabled),.auth-inline:hover,.auth-show:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px}}
+.auth-notnow{display:block;width:fit-content;min-height:44px;margin:8px auto 0;padding:0 12px;background:none;border:0;font-family:var(--font);font-size:14px;color:var(--t2);cursor:pointer}
+.auth-notnow:disabled{opacity:.5;cursor:not-allowed}
+@media(hover:hover){.auth-notnow:hover:not(:disabled){color:var(--t0)}}
+
+/* The dialog. 17px left over from the 18px outer radius less its 1px border
+   only matters once a second pane sits inside it. */
+.ui-modal.ui-login{width:min(440px,100%);max-width:440px;isolation:isolate;box-shadow:var(--shadow-l);overscroll-behavior:contain}
+.ui-login-pane{padding:32px}
+.ui-login .ui-login-x{top:12px;right:12px;width:40px;height:40px;color:var(--t2);transition:color 150ms ease-out,background-color 150ms ease-out}
+@media(hover:hover){.ui-login .ui-login-x:hover{color:var(--t0)}}
+@media(pointer:coarse){.ui-login-x::after{content:"";position:absolute;inset:-4px}}
+.ui-login .ui-login-x{position:absolute;z-index:2}
+
+/* Phone: a bottom sheet. */
+@media(max-width:767px){
+  .ui-modal.ui-login{position:fixed;inset:auto 0 0 0;width:auto;max-width:none;max-height:calc(100dvh - 16px);border-radius:var(--radius-3xl) var(--radius-3xl) 0 0;border-bottom:0;animation:auth-sheet-in 240ms var(--ease-entrance)}
+  .ui-login-pane{padding:24px 24px calc(24px + env(safe-area-inset-bottom))}
+  .auth-body{margin-top:24px}
+}
+@keyframes auth-sheet-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* Short viewports (small phones in portrait, phones on their side): the whole
+   dialog has to fit, or at worst scroll with the submit and the mode links in
+   reach. Spend vertical rhythm first; controls stay at the 44px touch minimum. */
+@media(max-height:600px){
+  .auth-form-root{--ctl:44px}
+  .ui-login-pane{padding-top:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .auth-form-root .auth-links{margin-top:8px}
+}
+/* Phones on their side: tighter again. "Not now" goes; Close (top right) and
+   Escape do the same thing and every sign-in method stays. */
+@media(max-height:460px){
+  .ui-modal.ui-login{max-height:calc(100dvh - 16px)}
+  .ui-login-pane{padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  .auth-form-root .auth-title{font-size:20px}
+  .auth-body{margin-top:12px}
+  .auth-form-root .auth-divider{margin:4px 0}
+  .auth-form-root .auth-form{gap:8px}
+  .auth-form-root .auth-field label{margin-bottom:4px}
+  .auth-form-root .auth-submit{margin-top:0}
+  .auth-legal{margin-top:8px}
+  .auth-notnow{display:none}
+}
+
+html[data-reduced-motion="true"] .auth-swap--in{animation:none}
+html[data-reduced-motion="true"] .ui-modal.ui-login{animation:auth-fade 150ms linear}
+html[data-reduced-motion="true"] .auth-spin{animation-duration:2.4s}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .auth-swap--in{animation:none}
+  html:not([data-reduced-motion="false"]) .ui-modal.ui-login{animation:auth-fade 150ms linear}
+  html:not([data-reduced-motion="false"]) .auth-spin{animation-duration:2.4s}
+}

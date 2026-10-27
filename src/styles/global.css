@@ -746,26 +746,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
 
-/* ─── Auth ─── */
-.auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 16px;border-radius:var(--btn-radius);border:1px solid var(--border);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:560;cursor:pointer;transition:background var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
-.auth-google-btn:hover{background:var(--hvr);border-color:var(--bh)}
-.auth-google-btn:active{transition-duration:var(--dur-1)}
-.auth-google-btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
-.auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--t3);font-size:12px;font-family:var(--mono);letter-spacing:.04em}
-.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
-.auth-form{display:flex;flex-direction:column;gap:16px}
-.auth-field label{display:block;font-size:12px;font-weight:600;color:var(--t1);margin-bottom:6px;letter-spacing:0}
-.auth-field input{width:100%}
-.auth-submit{width:100%;justify-content:center;padding:13px;font-size:14px;font-weight:600;border-radius:var(--btn-radius);transition:transform var(--dur-2) var(--ease-out),filter var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
-.auth-submit:disabled{opacity:.5;cursor:not-allowed;transform:none!important;filter:none!important;box-shadow:none!important}
-.auth-links{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
-/* --accent (#0F6FFF) measures 4.43:1 on white and 3.82:1 on the page ground,
-   so these 13px links read the derived family. They carried opacity:.85 once,
-   which lightened the fail further; dimming accent text to signal "quiet" buys
-   tone with legibility, and the hover underline already carries that job. */
-.auth-links button{background:none;border:none;color:var(--accent-mid);font-size:13px;font-family:var(--font);cursor:pointer;padding:10px 14px;min-height:36px;border-radius:var(--radius-s)}
-.auth-links button:hover{color:var(--accent-text);text-decoration:underline}
-
 /* ─── Toast ─── */
 .toast{position:fixed;bottom:calc(24px + var(--toast-lift));right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
@@ -972,8 +952,6 @@ img,svg,video{max-width:100%;height:auto}
   .btn{padding:10px 16px;font-size:12px;min-height:44px}
   .btn-s{padding:7px 12px;font-size:11px;min-height:38px}}
 
-@media(max-width:640px){
-  .auth-links button{min-height:44px}}
 
 @media(max-width:640px){
   /* 104px, not 72. Fewer, wider cells is the whole point: 72px could not hold a
@@ -1529,6 +1507,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
+.app-footer-mark .brand-logo{display:block;height:.85em}
 .app-footer-tagline{max-width:42ch;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 /* The footer's one call to action, and it measured 133x23.1 — under the 24px
    minimum by nine tenths of a pixel, at every width. Mobbin/Retool gives the
@@ -1787,6 +1766,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:none;padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .onb-brand{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
+.onb-brand .brand-logo{display:block;height:1.1em}
 
 
 .onb-step{animation:onb-fade var(--dur-3) var(--ease-entrance)}
@@ -2702,12 +2682,20 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-inner{display:flex;align-items:center;flex-wrap:nowrap;gap:clamp(10px,1.6vw,20px);height:100%;padding:0 clamp(14px,2vw,22px)}
 .pnav-logo{flex:0 0 auto;display:flex;align-items:center;padding:4px 2px;border-radius:8px;color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
-/* 19px / 600 / -.035em (App line 102). */
+/* The logo lockup is an SVG drawn in currentColor, so it follows the ink colour
+   in both themes. Its height is set in em from the wrapper's font-size and its
+   width follows the viewBox; the wrapper keeps the 19px (21px on the phone
+   header) it always had, so the bar's height does not move. */
+.brand-logo{display:inline-block;flex:none;height:1em;width:auto;vertical-align:baseline;overflow:visible}
+.brand-logo--lockup{aspect-ratio:1195.5/200}
+.brand-logo--symbol{aspect-ratio:323.61/200}
 .pnav-word{font-size:19px;font-weight:600;letter-spacing:-.035em;line-height:1.2;color:rgb(var(--ink-rgb));white-space:nowrap}
-/* The file sets the "4" in the accent. At 19px/600 that is normal-size text,
-   and the bare fill measures 3.80:1 on the dark page, so it takes the accent's
-   text member: 6.02:1 light, 7.28:1 dark. */
-.pnav-word-mark{color:var(--accent-mid)}
+.pnav-word .brand-logo{display:block;height:.85em}
+/* The lockup is 35px wider than the old text wordmark, which overflows the row between 768 and 939px, so there the symbol stands alone. */
+.brand-logo-narrow{display:none}
+.pnav-word .brand-logo-narrow{display:none}
+@media(min-width:768px) and (max-width:939px){.pnav-word .brand-logo-wide{display:none}.pnav-word .brand-logo-narrow{display:block}}
+@media(min-width:768px) and (max-width:899px){.spnav-word .brand-logo-wide{display:none}.spnav-word .brand-logo-narrow{display:inline-block}}
 
 /* Search (App lines 103-107): flex 1 1 240px up to 380px, 41px, 12px radius,
    an ink .045 wash inside an ink .09 hairline, the magnifier and placeholder in
@@ -3046,7 +3034,12 @@ html.lenis{scroll-behavior:auto!important}
 .icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
 .icust-stage-host svg,.icust-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join)}
 .icust-stage.is-abs .icust-stage-host svg,.icust-stage.is-abs .icust-stage-host svg *{vector-effect:non-scaling-stroke}
-.icust-meta{display:flex;flex-wrap:wrap;gap:6px;padding:12px 24px 0}
+/* Tags on the left, Reset on the right: one row that never wraps. The name tag
+   gives way (ellipsis) before anything else does. */
+.icust-meta{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:12px 24px 0}
+.icust-tags{display:flex;gap:6px;min-width:0;flex:0 1 auto}
+.icust-tags .icust-tag{flex:none}
+.icust-tags .icust-tag--name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .icust-tag{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.03em;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px 9px}
 /* Controls */
 .icust-controls{display:flex;flex-direction:column;gap:14px;padding:18px 24px 4px}
@@ -3215,8 +3208,9 @@ html.lenis{scroll-behavior:auto!important}
 /* Locked panel is fully clickable — any click opens the Pro upgrade modal
    (no hover veil; less disruptive to the flow). */
 .icust-pro.is-locked{cursor:pointer}
-/* Footer + Pro save-lock — the four actions share the row width evenly and only
-   wrap to a second line when the footer is genuinely too narrow, so none clip. */
+/* Footer + Pro save-lock — the actions share the row width evenly. On the icon
+   page the footer holds one row at every width (see icon-emoji-library.css); the
+   wrap here is the fallback for anywhere else it is used. */
 .icust-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
 /* overflow / scrollbar / edge fade come from `.rail-overflow` (see the block by
    the global scrollbar rules). This was the eighth instance of the hidden-
@@ -3638,9 +3632,6 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
   .ui-modal{max-height:calc(100dvh - 16px)}
   .ui-modal-head{padding:12px 18px 0}
   .ui-modal-body{padding:10px 18px 16px}
-  .auth-divider{margin:12px 0}
-  .auth-form{gap:12px}
-  .auth-links{margin-top:10px}
 }
 
 /* --- Pro-upgrade modal: see the "W3 - V2 SHARED UI" block at the end of
@@ -3651,60 +3642,6 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
        either in the stylesheet keeps it one class name away from coming
        back. --- */
 
-/* --- Single-click login popup (reuses .auth-* form styles) --- */
-/* THE TITLE'S OWN SPACE. This was `padding-top:8px`, and 8px was the smallest
-   gap anywhere in the dialog bar the 6px between a label and its input. The
-   measured rhythm of everything below it: label→input 6, field→field 16,
-   button→divider 20, divider→form 20, form→links 14. So the dialog's <h2> was
-   separated from the content it heads by LESS than any two form fields are
-   separated from each other, and rendered at 320-1920 in both themes it reads
-   as a caption sitting on the accent-filled Google button rather than as the
-   title of the surface. Whitespace is what assigns rank here
-   (principle-website-engagement: "whitespace is a content element; it
-   organises attention"), and the title had been given the least of it.
-
-   18px, and the number is bounded at both ends by something measured rather
-   than chosen:
-
-     · It must EXCEED 16px, the gap between two adjacent form fields, or the
-       heading is still grouped no more loosely than the things it heads.
-     · It cannot exceed 18px, because this dialog fits every portrait viewport
-       in the matrix without scrolling and must keep doing so. Measured on the
-       rendered dialog by stepping the value: at 360x560 — the shortest portrait
-       phone 24-mobile-overhaul.spec.js S7 holds — `scrollHeight - clientHeight`
-       is 0 at 8, 12, 14, 16 and 18, and 1 at 20. The same step at 390x844 puts
-       the SIGN-UP dialog, which carries a whole aside column, at 0 through 18
-       and 1 at 20.
-
-   So 18 is simply the most the title can be given before something else on the
-   surface has to pay for it, and it clears the rhythm it has to clear. Nothing
-   moves but the gap: no type size, weight or colour changes, and the copy is
-   untouched. */
-.ui-login .ui-modal-body{padding-top:18px}
-/* …except on a landscape phone. The `@media(max-height:460px)` block above
-   spends vertical rhythm to claw back the 133px that were hidden below the fold
-   at 844x390, and it cannot reach this: `.ui-login .ui-modal-body` is (0,2,0),
-   `.ui-modal-body` is (0,1,0), and a media query adds no specificity — so the
-   18px would have won there too and given 10px of it straight back. Restated
-   here, AFTER the rule it has to beat, because at equal specificity the later
-   declaration is the one that applies. */
-@media(max-height:460px){
-  .ui-login .ui-modal-body{padding-top:8px}
-}
-.ui-login-note{display:flex;gap:9px;align-items:flex-start;margin:0 0 16px;padding:11px 13px;background:var(--accent-wash);border:1px solid var(--accent-border);border-radius:var(--radius);font-size:12.5px;line-height:1.45;color:var(--t1)}
-.ui-login-note svg{flex:none;margin-top:1px;color:var(--accent-mid)}
-/* The reset-link confirmation. These three were inline style objects. */
-.ui-login-sent{padding:10px 0 4px;text-align:center}
-.ui-login-sent-h{margin:0 0 6px;font-size:14px;font-weight:560;color:var(--t0)}
-.ui-login-sent-p{margin:0 0 14px;font-size:12.5px;color:var(--t2)}
-.ui-login-err{margin:0 0 12px;padding:9px 12px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius);font-size:12.5px;color:var(--err-strong)}
-.ui-login .auth-links{margin-top:14px}
-/* "Why we ask first" — the plain-language account rationale on the community
-   submission gate. Token-driven, so it follows light/dark like the note above. */
-.ui-login-why{margin:0 0 16px;padding:11px 13px;border:1px solid var(--border);border-radius:var(--radius);background:var(--cbg)}
-.ui-login-why-h{margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--t1)}
-.ui-login-why-list{margin:0;padding-left:16px;font-size:12.5px;line-height:1.5;color:var(--t1)}
-.ui-login-why-list li+li{margin-top:4px}
 .uname-owner .uname-text{color:#F6C453;text-shadow:0 1px 0 color-mix(in srgb,#6B4A00 45%,transparent)}
 [data-theme="light"] .uname-owner .uname-text{color:#8A5A00;text-shadow:none}
 
@@ -4592,159 +4529,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .ui-pro-plan-amount{font-size:23px}
 }
 
-/* -- Login-to-continue: the reason pane ------------------------------------
-   This dialog is interruptive by definition — it only ever appears because
-   someone tried to do something and was stopped. Its first job is making the
-   interruption feel worth taking, and the V1 answer to that was three stacked,
-   equally-weighted tinted cards (.ui-login-intent, its bullet list and
-   .ui-login-why) sitting ON TOP of the form. Those rules are deleted rather
-   than overridden: leaving them here keeps them one class name away from
-   coming back, which is the same reason the V1 Pro art panel above is gone.
-
-   What was wrong, measured:
-     - At 390px the three panels pushed "Continue with Google" — the fastest
-       way out of the interruption, and the control that already took focus on
-       open — to roughly 300px down a dialog capped at 100dvh-32px.
-     - At 834px the dialog is a 440px column with ~330px of dead scrim either
-       side, so the tablet paid the phone's height cost and got nothing for it.
-     - Every panel was a rounded box with a tinted fill and a 1px border, so
-       none of them was emphasis. (anti-slop, Composition: "every idea enclosed
-       in an equally weighted rounded card".)
-
-   The pane is now a column of its own beside the form at >=781px and a single
-   band above it below that, on exactly the grid .ui-pro already uses for its
-   proof rail — same breakpoint, same border-right -> border-top flip, same
-   --cbg ground. Two gate surfaces, one structure.
-
-   Mobbin references (input to the decision, not a copy):
-     Qatalog     https://mobbin.com/screens/dc77f807-fbec-4d79-9ccb-3d7f2696bd86
-                 - the "why" gets its own PANE, not a card above the controls;
-                   that split is what frees the form to start at the top.
-     Fiverr      https://mobbin.com/screens/1e7f10d2-5894-419a-859b-61cbebfe5cb0
-                 - benefit lines as one ticked list, not three bordered boxes.
-     Perplexity  https://mobbin.com/screens/94116bee-b475-4b0f-818c-e2739984d6ef
-                 - the provider button is the solid primary and the email path
-                   is the quiet one. We had that exactly backwards.
-     Lovable     https://mobbin.com/screens/8d49cc46-adf4-44eb-9d47-79400ecb0ce2
-                 - intent stated in the head ("Start Building."), mechanism
-                   underneath it, no explanatory box in between.
-     DoorDash    https://mobbin.com/screens/fccbb1ba-89e3-4295-8765-776a97487bc7
-                 - the Google mark keeps a light ground when the button is
-                   filled, which is what .auth-google-mark is for.
-
-   Deliberately NOT taken: ChatGPT's and Vimeo's two-step email form (collect
-   the address, then reveal the password). It is the bigger height win and it is
-   the better pattern, but changing when this surface collects credentials is an
-   auth-flow decision, not a layout one, and auth is a human-validation zone.
-   Recorded on the backlog instead. */
-
-/* Default = the phone/tablet band. The grid below upgrades it to a column. */
-.ui-login-aside{display:flex;flex-direction:column;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--cbg)}
-.ui-login-eyebrow{margin:0;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
-/* The one piece of type on this surface that is allowed to be big. It carries
-   the name of the action the user was actually taking, which is the whole
-   difference between a gate and a hand-off. */
-.ui-login-promise{margin:8px 0 0;font-size:16.5px;line-height:1.25;font-weight:600;letter-spacing:-.018em;color:var(--t1);text-wrap:balance}
-.ui-login-promise strong{color:var(--t0);font-weight:700}
-.ui-login-aside-sub{margin:8px 0 0;font-size:12.5px;line-height:1.5;color:var(--t2);text-wrap:pretty}
-
-/* "What you get" — the honest Free capability list. A tick rather than a dot:
-   a dot is a bullet, a tick is a claim about what you receive. Matches
-   .ui-pro-list, which makes the same kind of statement on the same kind of
-   surface. */
-.ui-login-gets{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
-.ui-login-get{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.4;color:var(--t1)}
-.ui-login-get-tick{flex:none;display:grid;place-items:center;width:16px;height:16px;margin-top:1px;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent-mid)}
-
-/* Inside the pane the "why we ask first" list loses its own border and fill.
-   It is already inside a distinct surface; a card within a card was the
-   redundancy this redesign exists to remove. */
-.ui-login-aside .ui-login-why{margin:14px 0 0;padding:0;border:none;background:none}
-.ui-login-aside .ui-login-why-h{color:var(--t2)}
-/* margin-top:auto pushes this to the foot of the column at width. In the
-   band layout the pane is not stretched, so it simply follows the list. */
-/* Hidden in the band layout BY DEFAULT. This line exists to resolve the FOOT
-   of a stretched column; a phone has no stretched column, and the ~48px it
-   costs there pushed a real control ("Already have an account? Sign in") below
-   the fold on the sign-up pane — 09-auth-modal-accessibility pins that pane to
-   "nothing below the fold at 390", and with this line it overflows by 21px.
-   THE INTERRUPT GATE IS THE EXCEPTION, below. The flow audit (#436) measured
-   that at 390px the sign-in gate had no visible way out — a corner ✕ and a
-   scrim, and nothing that says what closing does. A gate whose only exit is
-   unlabelled is the shape of a dark pattern whatever the intent, so when this
-   dialog interrupts an action (.ui-login--interrupt: LoginPopup carries a
-   reason) the sentence shows at every width, in compact spacing. Measured at
-   390×844 after: the gate runs y=36–808 of 844 with this line ending at y=275
-   and zero overflow; the sign-up pane is byte-identical to before (y=22–822,
-   zero overflow, its switch control ending at y=799).
-   Held by tests/user-sim/72-flow-followups.spec.js. */
-.ui-login-aside-foot{display:none;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
-@media(max-width:780px){
-  .ui-login--interrupt .ui-login-aside-foot{display:block;margin:8px 0 0;padding-top:6px}
-  /* THE INTERRUPT GATE GAINED A THIRD FIELD, AND THE WAY OUT WENT UNDER THE
-     FOLD BY 8px.
-     The measurement in the note above — "the gate runs y=36–808 of 844 … and
-     zero overflow" — was taken when this gate opened on the SIGN-IN pane, which
-     has two fields. On 2026-09-15 it began opening on CREATE ACCOUNT instead,
-     because everyone who reaches it has no account by definition; that adds the
-     Display Name field, 72px, and the dialog measured 8px of overflow at
-     390×844. Eight pixels is enough to put "Not now? Closing this changes
-     nothing" below the fold — which is the one sentence this whole block exists
-     to keep on screen, and a gate whose only visible exit is an unlabelled ✕ is
-     the shape of a dark pattern whatever the intent.
-     So the form tightens rather than the sentence moving. 2px off each gap,
-     across the fields, the submit and the switch, buys back more than the 8px
-     without changing a single type size or touch target — the fields stay 72px
-     and the compact spacing is what this block was already doing for
-     interrupts. Measured after: zero overflow at 390×844.
-     Held by tests/user-sim/72-flow-followups.spec.js, which fails if the gate
-     ever has to scroll to show its own way out. */
-  .ui-login--interrupt .auth-form{gap:10px}
-}
-
-/* The close button leaves .ui-modal-head, because at width the head is no
-   longer this dialog's top-right corner — the form column is. Same treatment
-   .ui-pro-x already gets. */
-.ui-login-x{position:absolute;top:13px;right:13px;z-index:2}
-/* The dialog close keeps its 32px square and gains a 44px target on touch
-   through an invisible ring (it is already positioned, so the ring anchors). */
-@media(pointer:coarse){.ui-login-x::after{content:"";position:absolute;inset:-7px}}
-.ui-login .ui-modal-head{padding-top:18px;padding-right:54px}
-
-/* Continue with Google is the primary path: one click, no typing, and it is
-   already where focus lands on open. It was drawn as a neutral outline while
-   the two-field email submit carried the accent fill — the slower path wearing
-   the primary's clothes. Swapped, using the same --accent-strong/--accent-fg
-   pair .btn-accent uses — --accent-mid under --accent-ink, --accent-text on
-   hover, 5.18 / 5.73 light and 9.17 / 9.65 dark — so it stays AA in both
-   themes and follows a premium accent (bare --accent is 4.14:1 under the ink
-   and is not allowed to carry 14px text here). */
-.ui-login .auth-google-btn--primary{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill);font-weight:600}
-.ui-login .auth-google-btn--primary:hover{background:var(--accent-fill-hover);border-color:var(--accent-fill-hover);color:var(--accent-ink)}
-.auth-google-mark{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:var(--radius-xs);background:#fff}
-.ui-login .auth-submit{font-weight:600}
-
-@media(min-width:781px){
-  .ui-login--split{max-width:772px;display:grid;grid-template-columns:minmax(0,.86fr) minmax(0,1fr);grid-template-areas:"aside head" "aside body";align-items:start}
-  .ui-login--split .ui-login-aside{grid-area:aside;align-self:stretch;padding:26px 24px;border-bottom:none;border-right:1px solid var(--border)}
-  .ui-login--split .ui-modal-head{grid-area:head}
-  .ui-login--split .ui-modal-body{grid-area:body}
-  .ui-login--split .ui-modal-head,.ui-login--split .ui-modal-body{padding-left:26px;padding-right:26px}
-  .ui-login--split .ui-modal-head{padding-right:54px}
-  .ui-login--split .ui-login-promise{font-size:18px}
-  .ui-login--split .ui-login-aside-foot{display:block;margin-top:auto}
-}
-
-/* Landscape phones. The existing max-height:460px block already spends the
-   vertical rhythm the form can afford to lose; the pane has to do the same or
-   it just moves the overflow rather than removing it. */
-@media(max-height:460px){
-  .ui-login-aside{padding:12px 18px}
-  .ui-login-gets{margin-top:10px;gap:6px}
-  .ui-login-promise{font-size:15px}
-
-}
-
 /* Touch: nothing on this surface may be discoverable only on hover
    (founder direction, 2026-09-02). Two controls here were.
 
@@ -4760,7 +4544,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    experience is unchanged. */
 @media(hover:none){
   .ui-modal-x{background:var(--bg-2);border-color:var(--border);color:var(--t1)}
-  .auth-links button{text-decoration:underline;text-underline-offset:3px}
 }
 
 

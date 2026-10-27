@@ -326,9 +326,10 @@ test('a signed-out client cannot queue anything', async () => {
   await assertFails(setDoc(submissionDoc(anon, 'anon'), submission()))
 })
 
-test('a signed-in user can read the queue, which is how their own list loads', async () => {
+test('an author can read their own queue entry, which is how their own list loads', async () => {
   // listMySubmissions(uid, kind) is the read behind "my submissions" — without
   // this the account copy never arrives and the merge has nothing to merge.
+  // Other users' reads are covered in community-read-rules.test.js.
   await seedSubmission('readable', submission())
   await assertSucceeds(getDoc(submissionDoc(aliceDb(), 'readable')))
 })

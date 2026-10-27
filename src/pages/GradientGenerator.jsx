@@ -130,10 +130,16 @@ const tailwindValue = (css) => `bg-[${css.replace(/ /g, '_')}]`
 // function (`linear-gradient(135deg in oklch, …)`, `radial-gradient(in oklch,
 // …)`, `conic-gradient(from 90deg at 50% 50% in oklch, …)`). sRGB is the
 // function's default, so it writes nothing.
+//
+// The control shows plain words and keeps the real space name on demand: the
+// pill's accessible name and hover text carry it, and `hint` is the visible
+// line under the pills for the chosen option (so touch and keyboard see it
+// too). `srgb` is gamma-encoded sRGB, the CSS default — not linear light — so
+// it is "Standard", not "Linear".
 const SPACES = [
-  { value: 'oklch', label: 'OKLCH' },
-  { value: 'srgb', label: 'sRGB' },
-]
+  { value: 'oklch', label: 'Perceived', real: 'OKLCH', hint: 'OKLCH — blends the way the eye sees colour, so steps look even' },
+  { value: 'srgb', label: 'Standard', real: 'sRGB', hint: 'sRGB — the CSS default, blends the raw red, green and blue values' },
+].map((o) => ({ ...o, ariaLabel: `${o.label} (${o.real})`, title: o.hint }))
 function gradientCssIn(type, angle, stops, space) {
   const css = gradientCss(type, angle, stops)
   if (space !== 'oklch') return css
@@ -1111,7 +1117,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             )}
             <div className="grd-interp">
               <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
-              <ToolPills labelledBy="grd-interp-label" mono options={SPACES} value={space} onChange={setSpace} />
+              <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={setSpace} />
+              <p className="grd-interp-hint" id="grd-interp-hint">{SPACES.find((o) => o.value === space)?.hint}</p>
             </div>
           </ToolSection>
         </ToolPanel>

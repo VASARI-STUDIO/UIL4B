@@ -14,7 +14,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, TOPICS } from '../../src/data/learnIndex.js'
 import { DEFAULT_CARD, SECTIONS, cardFor, learnBlurb, toolNamesFor } from '../../scripts/share-cards.mjs'
-import { railSections } from '../../scripts/og-cards.mjs'
 
 const REPO = process.cwd()
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8')
@@ -26,14 +25,11 @@ const meta = (html, attrName, key) => {
   return m ? m[1].replace(/&amp;/g, '&') : null
 }
 
-test('there is a Learn section, and it is the last one so the rail still finds AI Tools first', () => {
+test('there is a Learn section, and it is the last one', () => {
   assert.ok(learn, 'scripts/share-cards.mjs has no Learn section')
   assert.equal(SECTIONS[SECTIONS.length - 1].id, 'learn')
-  // Learn shares --hue-ai with AI Tools and owns no band of its own.
-  const rail = railSections()
-  assert.equal(rail.length, 6)
-  assert.ok(!rail.some((r) => r.label === 'Learn'), 'Learn has taken a homepage rail band')
-  assert.equal(rail.find((r) => r.hue === learn.hue)?.label, 'AI Tools')
+  // Learn shares --hue-ai with AI Tools and owns no card colour of its own.
+  assert.equal(learn.hue, 'ai')
 })
 
 test('THE ONE THAT MATTERS: /learn and every guide unfurl as the Learn card, not the homepage', () => {
