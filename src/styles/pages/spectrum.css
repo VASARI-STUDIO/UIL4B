@@ -367,6 +367,10 @@
   .sp-search .hcmd-bar { grid-template-columns: auto minmax(0, 1fr) auto; padding-right: 24px; }
   .sp-search .hcmd-kbd { display: inline-flex; }
 }
+/* A touch screen has no ⌘K. */
+@media (hover: none) and (pointer: coarse) {
+  .sp-search .hcmd-kbd { display: none; }
+}
 
 /* ── the bench ────────────────────────────────────────────────────────────── */
 

@@ -121,6 +121,9 @@ export default function SpectrumNav() {
   const quietHref = (q) => q.to || salesHref(q.hash, location.pathname)
 
   const [hidden, setHidden] = useState(false)
+  // True while the page's own "Open the toolkit" row is on screen, so the pill
+  // does not offer the same action a second time (spectrum-chrome.css hides it).
+  const [heroCta, setHeroCta] = useState(false)
   // 'closed' → 'in' while open → 'out' for the design's exit, then 'closed'.
   // The menu stays MOUNTED through 'out' so the close animation has something
   // to play on.
@@ -176,6 +179,16 @@ export default function SpectrumNav() {
       returnTimer.current = null
     }
   }, [])
+
+  // One observer on the hero's action row. A page without one (pricing,
+  // mobile) never sets the flag, and the pill keeps its own button.
+  useEffect(() => {
+    const row = document.querySelector('.sp-hero-cta')
+    if (!row || typeof IntersectionObserver === 'undefined') return undefined
+    const io = new IntersectionObserver(([entry]) => setHeroCta(entry.isIntersecting), { threshold: 0 })
+    io.observe(row)
+    return () => { io.disconnect(); setHeroCta(false) }
+  }, [location.pathname])
 
   // ESCAPE CLOSES AND GIVES FOCUS BACK TO THE BURGER (WCAG 2.4.3 / APG). The
   // SEARCH_KEY branch is the same contract PillNav holds: "/" opens the command
@@ -277,6 +290,7 @@ export default function SpectrumNav() {
         className="spnav"
         aria-label="Primary"
         data-nav-hidden={hidden ? '1' : '0'}
+        data-hero-cta={heroCta ? '1' : '0'}
       >
         <div className="spnav-bar">
           <Link className="spnav-mark" to="/" onClick={() => setOpen(false)}>

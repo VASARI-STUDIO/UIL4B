@@ -239,6 +239,12 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 @media(max-width:389px){
   .spnav-cta{display:none}
 }
+/* While the page's own "Open the toolkit" is on screen the pill's copy of it
+   steps aside. Hidden, not removed: the pill keeps its width, so the mark never
+   moves, and `visibility` takes it out of the tab order. */
+@media(max-width:767px){
+  .spnav[data-hero-cta="1"] .spnav-cta{opacity:0;visibility:hidden;pointer-events:none}
+}
 /* On phones the pill spans the viewport less a 16px gutter each side, the
    mark at its start and the controls at its end. */
 @media(max-width:767px){
