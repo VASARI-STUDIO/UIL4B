@@ -617,7 +617,7 @@
   overscroll-behavior: contain;
 }
 .plb .plb-match-legend { margin: 0 0 8px; font-size: 12px; line-height: 1.4; color: var(--t1); }
-.plb .plb-match-protag { margin-left: 8px; vertical-align: middle; }
+.plb .plb-match-protag { margin-left: 8px; font-size: 12px; vertical-align: middle; }
 .plb .plb-match-protag .lockt-glyph { width: 11px; height: 11px; }
 
 .plb .plb-match-group + .plb-match-group {
@@ -625,7 +625,7 @@
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
-.plb .plb-match-h { margin: 0 0 4px; font-size: 11px; font-weight: 600; line-height: 1.4; color: var(--t1); }
+.plb .plb-match-h { margin: 0 0 4px; font-size: 12px; font-weight: 600; line-height: 1.4; color: var(--t1); }
 .plb .plb-match-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
 /* Locked: a dashed edge so it reads as locked, not as a failed load. */
 .plb .plb-match-list--locked { padding: 4px; border: 1px dashed var(--bh); border-radius: 10px; }
@@ -675,16 +675,17 @@
 .plb .plb-match-main { display: grid; gap: 2px; min-width: 0; }
 .plb .plb-match-name { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--t0); overflow-wrap: break-word; }
 .plb .plb-match-btn.is-far .plb-match-name { font-weight: 500; color: var(--t1); }
-.plb .plb-match-meta { font-size: 11px; line-height: 1.35; color: var(--t1); }
+.plb .plb-match-meta { font-size: 12px; line-height: 1.35; color: var(--t1); }
 .plb .plb-match-meta code { font-family: var(--mono); font-size: inherit; color: inherit; background: none; padding: 0; }
 .plb .plb-match-near { display: grid; gap: 2px; text-align: right; }
 .plb .plb-match-word { font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--t0); }
-.plb .plb-match-de { font-size: 11px; line-height: 1.35; color: var(--t1); font-variant-numeric: tabular-nums; }
+.plb .plb-match-de { font-size: 12px; line-height: 1.35; color: var(--t1); font-variant-numeric: tabular-nums; }
 .plb .plb-match-copy { display: grid; place-items: center; color: var(--t2); }
 .plb .plb-match-copy svg { width: 14px; height: 14px; }
 @media (hover: hover) and (pointer: fine) {
   .plb .plb-match-btn:hover { background: var(--bg-2); }
   .plb .plb-match-btn:hover .plb-match-copy { color: var(--t0); }
+  .plb .plb-match-retry:hover { text-decoration-thickness: 2px; }
 }
 
 /* Locked: the bars hold the place of a name and a word. */
@@ -723,7 +724,7 @@
 /* The wall, sized like the gallery popup's. */
 .plb .plb-matchpop .lockt-cta { display: block; margin-top: 12px; padding: 12px 12px 14px; }
 .plb .plb-matchpop .lockt-cta-head { font-size: 12.5px; }
-.plb .plb-matchpop .lockt-cta-body { font-size: 11.5px; }
+.plb .plb-matchpop .lockt-cta-body { font-size: 12px; }
 .plb .plb-matchpop .lockt-cta-btn { width: 100%; margin-top: 10px; }
 
 /* How this works */
@@ -738,7 +739,7 @@
   cursor: pointer;
 }
 .plb .plb-match-how p,
-.plb .plb-match-how li { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: var(--t1); }
+.plb .plb-match-how li { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: var(--t1); }
 .plb .plb-match-how ul { margin: 4px 0 0; padding-left: 16px; }
 
 @media (pointer: coarse) {
