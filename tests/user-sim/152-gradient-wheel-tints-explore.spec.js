@@ -275,7 +275,7 @@ test.describe('the stop tints menu', () => {
 })
 
 test.describe('the Explore the library panel', () => {
-  test('it is a named region under the presets, its button opens the library and each mood chip opens it filtered', async ({ page }) => {
+  test('it is a named region under the presets, its button opens the library and a signed-out visitor sees the three mood chips they can open', async ({ page }) => {
     watch(page, 'a designer looking for more gradients')
     await go(page, ROUTE)
     const presets = page.getByRole('region', { name: 'Start from a preset' })
@@ -289,12 +289,14 @@ test.describe('the Explore the library panel', () => {
     expect(await explore.evaluate((el) => parseFloat(getComputedStyle(el.querySelector('h2')).fontSize)), 'the panel heading is no bigger than the presets heading').toBeLessThanOrEqual(
       await presets.evaluate((el) => parseFloat(getComputedStyle(el.querySelector('h2')).fontSize)))
 
-    // Six different moods, each a real link filtered by its own mood.
+    // Signed out, the library opens only its first three rows (Sunset Blaze,
+    // Golden Hour, Mango Pulp), so only the moods they carry get a chip: Warm,
+    // Light, Vivid. Cool, Dark and Pastel would land on an empty list.
     const chips = explore.getByRole('list', { name: 'Browse the library by mood' }).getByRole('link')
-    await expect(chips).toHaveCount(6)
+    await expect(chips).toHaveCount(3)
+    await expect(chips.locator('.grd-explore-mood')).toHaveText(['warm', 'light', 'vivid'])
     const hrefs = await chips.evaluateAll((els) => els.map((el) => el.getAttribute('href')))
-    expect(new Set(hrefs).size, 'six distinct moods').toBe(6)
-    for (const href of hrefs) expect(href).toMatch(/^\/discover\/gradients\?mood=[a-z]+$/)
+    expect(hrefs).toEqual(['/discover/gradients?mood=warm', '/discover/gradients?mood=light', '/discover/gradients?mood=vivid'])
 
     const link = explore.getByRole('link', { name: 'Browse all gradients' })
     await expect(link).toHaveAttribute('href', '/discover/gradients')
@@ -314,6 +316,162 @@ test.describe('the Explore the library panel', () => {
     // The filter is on: the light gradient is listed and a warm-only one is not.
     await expect(page.getByText('Mango Pulp').first()).toBeVisible()
     await expect(page.getByText('Sunset Blaze')).toHaveCount(0)
+  })
+
+  // MUTATION: in src/pages/GradientGenerator.jsx render EXPLORE_TASTE instead of
+  // exploreTaste; the chip-list check here and the three-chip count above go red.
+  test('every chip a signed-out visitor is shown lands on a grid with gradients in it', async ({ page }) => {
+    watch(page, 'a signed-out designer trying every mood chip')
+    const chipsOf = (p) => p.getByRole('list', { name: 'Browse the library by mood' }).getByRole('link')
+    await go(page, ROUTE)
+    const names = await chipsOf(page).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
+    // POSITIVE CONTROL: three chips to try, so the loop below is not vacuous.
+    expect(names).toEqual(['Warm gradients in the library', 'Light gradients in the library', 'Vivid gradients in the library'])
+    for (const label of names) {
+      const mood = label.split(' ')[0]
+      await go(page, ROUTE)
+      await page.getByRole('link', { name: label }).click()
+      await expect(page).toHaveURL(new RegExp(`/discover/gradients\\?mood=${mood.toLowerCase()}$`))
+      await expect(page.locator('.grg-card').first(), `${mood} lists a gradient`).toBeVisible()
+      await expect(page.locator('.lbry-empty'), `${mood} is not an empty state`).toHaveCount(0)
+    }
+  })
+
+  test('a Pro account sees all six chips, and so does a free one', async ({ page }) => {
+    watch(page, 'a signed-in designer opening Explore')
+    for (const plan of ['pro', 'free']) {
+      await signIn(page, { plan })
+      await go(page, ROUTE)
+      const chips = page.getByRole('region', { name: 'Explore the library' }).getByRole('list', { name: 'Browse the library by mood' }).getByRole('link')
+      // Auth and the plan resolve after the page paints, so the count settles.
+      await expect(chips, plan).toHaveCount(6)
+      await expect(chips.locator('.grd-explore-mood')).toHaveText(['warm', 'cool', 'dark', 'light', 'pastel', 'vivid'])
+    }
+  })
+
+  test('the Browse all gradients caret follows the label', async ({ page }) => {
+    watch(page, 'a designer reading the Browse button')
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, ROUTE)
+      const cta = page.getByRole('link', { name: 'Browse all gradients' })
+      await expect(cta).toBeVisible()
+      const at = await cta.evaluate((el) => {
+        const ico = el.querySelector('.tl-btn-ico')
+        const label = el.querySelector('.tl-btn-label')
+        if (!ico || !label) return null
+        return { labelRight: label.getBoundingClientRect().right, iconLeft: ico.getBoundingClientRect().left }
+      })
+      // POSITIVE CONTROL: both the icon and the label text were found.
+      expect(at, `${width}px: icon and label found`).not.toBeNull()
+      expect(at.iconLeft, `${width}px: the caret sits right of the label`).toBeGreaterThanOrEqual(at.labelRight - 0.5)
+    }
+  })
+})
+
+test.describe('the generator layout', () => {
+  // MUTATION: in gradient.css put .grd-swatches back to a wrapping flex row and
+  // the ten colours stop falling 5 + 5.
+  test('the ten quick colours sit in 2 rows of 5 at 390, 768 and 1440', async ({ page }) => {
+    watch(page, 'a designer picking a quick colour')
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, ROUTE)
+      const swatches = page.locator('.grd-swatches .grd-swatch')
+      await expect(swatches, `${width}px`).toHaveCount(10)
+      const perRow = await swatches.evaluateAll((els) => {
+        const rows = new Map()
+        for (const el of els) {
+          const top = Math.round(el.getBoundingClientRect().top)
+          rows.set(top, (rows.get(top) || 0) + 1)
+        }
+        return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, n]) => n)
+      })
+      expect(perRow, `${width}px: swatches per row`).toEqual([5, 5])
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow, `${width}px: no sideways scroll`).toBeLessThanOrEqual(0)
+    }
+  })
+
+  // MUTATION: delete the `@media (min-width: 901px)` block in gradient.css that
+  // grows the preview; the code box floats above a blank block and the gap is
+  // well over 48px.
+  test('at 1440 the code box sits within 48px of the presets, with no blank block between', async ({ page }) => {
+    watch(page, 'a designer scrolling from the code to the presets')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, ROUTE)
+    await expect(page.locator('.grd-code')).toBeVisible()
+    const gap = await page.evaluate(() => {
+      const code = document.querySelector('.grd-code').getBoundingClientRect()
+      const presets = document.querySelector('.grd-presets').getBoundingClientRect()
+      return presets.top - code.bottom
+    })
+    expect(gap, 'px between the code box and the presets').toBeGreaterThan(0)
+    expect(gap, 'px between the code box and the presets').toBeLessThan(48)
+  })
+})
+
+test.describe('the library when the signed-out cap empties a mood', () => {
+  const LIBRARY = '/discover/gradients'
+  const emptyOf = (page) => page.locator('.grg-empty')
+
+  // MUTATION: in src/pages/GradientGallery.jsx make accountMatches return 0
+  // always; the title reverts to "No gradients match those filters." and the
+  // sign-in button is gone, so this goes red.
+  test('?mood=dark signed out says the cap is the reason, keeps Clear filters, and the button opens the sign-in prompt', async ({ page }) => {
+    watch(page, 'a signed-out visitor who followed a Dark link')
+    await go(page, `${LIBRARY}?mood=dark`)
+    const empty = emptyOf(page)
+    await expect(empty).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Mood Dark' }), 'the filter really is on').toBeVisible()
+    await expect(page.locator('.grg-card'), 'nothing listed').toHaveCount(0)
+
+    await expect(empty).toContainText('None of the gradients you can open match those filters.')
+    // The first ten rows carry two dark ones (Bloody Mary, Ember Fade).
+    await expect(empty).toContainText('A free account opens 2 that fit these filters.')
+    await expect(empty.getByRole('button', { name: 'Clear filters' })).toBeVisible()
+    const signIn = empty.getByRole('button', { name: 'Sign in to see 2' })
+    await expect(signIn).toBeVisible()
+    await expect(page.getByRole('dialog'), 'no prompt before the click').toHaveCount(0)
+
+    await signIn.click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('dialog').getByRole('textbox').first()).toBeVisible()
+  })
+
+  test('Clear filters from that state brings the three open gradients back', async ({ page }) => {
+    watch(page, 'a signed-out visitor undoing a Dark link')
+    await go(page, `${LIBRARY}?mood=dark`)
+    await expect(emptyOf(page)).toBeVisible()
+    await emptyOf(page).getByRole('button', { name: 'Clear filters' }).click()
+    await expect(page.locator('.grg-card').first()).toBeVisible()
+    await expect(emptyOf(page)).toHaveCount(0)
+  })
+
+  // MUTATION: drop `|| query` from the accountMatches guard in GradientGallery.jsx;
+  // the sign-in button turns up under a typed search, and this goes red.
+  test('?mood=dark with a typed search that matches nothing open is the plain "No gradients match", with no sign-in button', async ({ page }) => {
+    watch(page, 'a signed-out visitor searching inside Dark')
+    await go(page, `${LIBRARY}?mood=dark`)
+    // POSITIVE CONTROL: the sign-in state is what this page shows before the search.
+    await expect(emptyOf(page).getByRole('button', { name: 'Sign in to see 2' })).toBeVisible()
+
+    // Ember Fade is a withheld dark gradient: a search that names it must not be
+    // answered with a count of withheld rows matching, however it is worded.
+    await page.getByLabel('Search gradients').fill('Ember')
+    const empty = emptyOf(page)
+    await expect(empty).toContainText('No gradients match “Ember”.')
+    await expect(empty).not.toContainText('None of the gradients you can open')
+    await expect(empty.getByRole('button', { name: /^Sign in/ })).toHaveCount(0)
+    await expect(empty.getByRole('button', { name: 'Clear filters' })).toBeVisible()
+  })
+
+  test('a free account on ?mood=dark gets the dark gradients, not the sign-in state', async ({ page }) => {
+    watch(page, 'a signed-in free visitor following a Dark link')
+    await signIn(page, { plan: 'free' })
+    await go(page, `${LIBRARY}?mood=dark`)
+    await expect(page.locator('.grg-card').filter({ hasText: 'Ember Fade' })).toHaveCount(1)
+    await expect(emptyOf(page)).toHaveCount(0)
   })
 })
 
