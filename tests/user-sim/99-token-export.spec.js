@@ -5,6 +5,7 @@
 // Export raises the same create-account gate as the style guide, and no file is
 // produced. The free files carry the "Made with UIL4B" line; the Pro files do
 // not, because that line is what Pro removes.
+import { chooseFormat } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
@@ -30,10 +31,8 @@ async function exportFormat(page, name, label) {
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
   const panel = page.getByRole('dialog', { name: /Export your design system/i })
   await expect(panel).toBeVisible()
-  const row = panel.getByRole('radio', { name: new RegExp(name, 'i') })
-  await expect(row.locator('.exp-fmt-soon'), `${name} still carries a Soon badge`).toHaveCount(0)
-  await row.click()
-  const cta = panel.getByRole('button', { name: `Export ${label}`, exact: true })
+  await chooseFormat(panel, label.toLowerCase())
+  const cta = panel.getByRole('button', { name: `Export ${label} tokens`, exact: true })
   await expect(cta).toBeEnabled()
   const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
   await expect(panel).toHaveCount(0)
@@ -105,8 +104,8 @@ test.describe('token export, signed out', () => {
       await opener.click()
       const panel = page.getByRole('dialog', { name: /Export your design system/i })
       await expect(panel).toBeVisible({ timeout: 15000 })
-      await panel.getByRole('radio', { name: new RegExp(name, 'i') }).click()
-      const cta = panel.getByRole('button', { name: `Export ${label}`, exact: true })
+      await chooseFormat(panel, label.toLowerCase())
+      const cta = panel.getByRole('button', { name: `Export ${label} tokens`, exact: true })
       await expect(cta, 'a free format is not relabelled as a Pro unlock').toBeVisible()
       await cta.click()
       await expect(page.locator('#ui-login-title')).toHaveText(/create your free account/i, { timeout: 10000 })

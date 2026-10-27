@@ -54,7 +54,7 @@ import {
   increment as realIncrement,
   deleteField as realDeleteField,
 } from 'firebase/firestore'
-import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor, readDelayFor } from './test-session.js'
+import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor, readDelayFor, heldWatch } from './test-session.js'
 
 export * from 'firebase/firestore'
 
@@ -249,7 +249,7 @@ export function onSnapshot(source, ...rest) {
     ? snapshot(source.store, source.path)
     : runQuery(source))
   let live = true
-  const fire = () => { if (live && next) next(read()) }
+  const fire = heldWatch(source.path, () => { if (live && next) next(read()) })
   setTimeout(fire, 0)
   const unwatch = source.store.watch(source.path, fire)
   return () => { live = false; unwatch() }
