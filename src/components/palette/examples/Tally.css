@@ -1,10 +1,10 @@
 /* Tally (Tally.jsx): a spending card painted with the user's palette.
  *
  * Colour comes only from --pv-* (set by the dialog) and the --ty-* inks, edges
- * and gaps the scene works out per palette. Layout is a container query on .ty
- * (named tally): wide 880+ (measured inside the padding, so about 1010px of stage) is the card beside the budget, mid 600 to 879 puts
- * the card and its actions on top, narrow under 600 is one column at the
- * stage's width.
+ * and gaps the scene works out per palette. Layout is a container query on .pvs,
+ * the scene root, so the queries can change .ty's own padding: wide (944px and
+ * up) is the card beside the budget, mid (632 to 943) puts the card and its
+ * actions on top, narrow (under 632) is one column at the stage's width.
  * Type: 12 / 13 / 15 / 20px, plus one figure size in clamp(). Schibsted Grotesk
  * and Martian Mono are loaded here only, so they are fetched only when this
  * example opens. */
@@ -22,11 +22,13 @@
   font-family:'PV Schibsted','Switzer Fallback',system-ui,sans-serif;
   font-size:15px;
   line-height:1.5;
+  /* The scene root turns tabular figures on for its children; Schibsted Grotesk's tabular feature spaces out commas, so only the mono face below takes it. */
+  font-variant-numeric:normal;
 }
 .ty :where(h3,p,ul,b,small){margin:0;padding:0;font:inherit}
 .ty :where(ul){list-style:none}
 .ty :where(*,*::before,*::after){box-sizing:border-box}
-/* Tabular figures on the mono face only: Schibsted Grotesk's tabular feature also loosens its commas and full stops. */
+/* Tabular figures on the mono face only. */
 .ty-num,.ty-fig,.ty-amt,.ty-money,.ty-share{font-family:'PV Martian Mono','Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 
 .ty-grid{display:grid;grid-template-columns:5fr 7fr;column-gap:var(--s-7);align-items:start}
@@ -94,7 +96,7 @@
 .ty-tx[data-tone="info"] :is(.ty-note,.ty-money){color:var(--pv-info-ink)}
 
 /* ── Mid: the card with its actions beside it, the budget and transactions below ── */
-@container tally (max-width:879px){
+@container pvs (max-width:943px){
   .ty{padding:var(--s-6) var(--s-5)}
   .ty-grid{grid-template-columns:1fr;row-gap:var(--s-6)}
   .ty-left{flex-direction:row;align-items:flex-end;gap:var(--s-5)}
@@ -104,13 +106,18 @@
 }
 
 /* ── Narrow: one column at the stage's width ── */
-@container tally (max-width:599px){
+@container pvs (max-width:631px){
   .ty{padding:var(--s-4)}
   .ty-grid{row-gap:var(--s-5)}
   .ty-left{flex-direction:column;align-items:stretch;gap:var(--s-3)}
   .ty-card{width:100%}
   .ty-actions{flex-direction:row;flex:none;width:100%;max-width:none}
+  .ty-act{flex:1 1 0}
   .ty-right{gap:var(--s-5)}
+}
+/* Three buttons in 254px: a tighter icon-to-label gap keeps "Details" on one line. */
+@container pvs (max-width:359px){
+  .ty-act{gap:var(--s-1);padding:0 var(--s-1)}
 }
 
 /* ── Signature moment: the card rises into place, then the budget bar grows across ── */

@@ -1,10 +1,11 @@
 /* Ridgeline (Ridgeline.jsx): a trail-run app painted with the palette.
  *
  * Colour comes only from --pv-* (set by the dialog) and the --rl-* inks and
- * edges the scene works out per palette. Layout is a container query on .rl
- * (named ridge): wide 880+ is two phones side by side, mid 600 to 879 is one
- * phone with the summary as plain content beside it, narrow under 600 drops the
- * frame and stacks the two.
+ * edges the scene works out per palette. Layout is a container query on .pvs,
+ * the scene root, so the queries can change .rl's own padding: wide (944px and
+ * up) is two phones side by side, mid (656 to 943) is one phone with the
+ * summary as plain content beside it (it takes whatever width is left, up to
+ * 296px), narrow (under 656) drops the frame and stacks the two.
  * Type: 12 / 13 / 15 / 17 / 20 / 28px. Outfit is loaded here only; figures use
  * the global Geist Mono. */
 
@@ -94,21 +95,24 @@
 .rl-tabs>span.is-on svg{color:var(--pv-primary)}
 
 /* ── Mid: one framed phone, the summary as plain content beside it ── */
-@container ridge (max-width:879px){
-  .rl{padding:var(--s-6) var(--s-5)}
-  .rl-pair{gap:var(--s-6)}
-  .rl-sum{width:296px;height:auto;margin-top:0;border:0;border-radius:0;box-shadow:none;overflow:visible;background:transparent}
+@container pvs (max-width:943px){
+  .rl{padding:var(--s-6) var(--s-4)}
+  .rl-pair{gap:var(--s-5)}
+  .rl-sum{flex:0 1 296px;width:auto;min-width:0;height:auto;margin-top:0;border:0;border-radius:0;box-shadow:none;overflow:visible;background:transparent}
   .rl-sum-in{padding:0;background:transparent}
   .rl-tabs{display:none}
 }
 
 /* ── Narrow: no frame, the live screen fills the stage and the summary follows ── */
-@container ridge (max-width:599px){
+@container pvs (max-width:655px){
   .rl{padding:0}
   .rl-pair{flex-direction:column;align-items:stretch;gap:0}
   .rl-phone,.rl-sum{width:100%;height:auto;margin:0;border:0;border-radius:0;box-shadow:none;overflow:visible}
   .rl-map{flex:none;height:320px}
   .rl-sheet{padding:var(--s-4)}
+  /* Three figures share the row; the size follows the width so "31:48" never meets "7:45". */
+  .rl-figs{gap:var(--s-2)}
+  .rl-figs dd{font-size:clamp(20px,7cqi,28px)}
   .rl-sum-in{padding:var(--s-6) var(--s-4) var(--s-4);border-top:1px solid var(--pv-border)}
   .rl-tabs{display:grid}
 }

@@ -4,9 +4,9 @@
 // Two kinds of scene live here. The examples (editorial, energy, product) are
 // each their own made-up product, built around one drawn artefact that is
 // painted with the palette; they are lazy chunks under
-// src/components/palette/examples/. The older scenes are one invoicing app,
-// Fernway, seen from several sides. Nothing here names a real person, a real
-// place's Country or this site, and nothing claims proof;
+// src/components/palette/examples/. The two older scenes are one invoicing app,
+// Fernway, seen as a table and as a form. Nothing here names a real person, a
+// real place's Country or this site, and nothing claims proof;
 // tests/unit/palette-preview-copy.test.js holds that line.
 //
 // This is content, not behaviour: no React, no hooks. The components that read
@@ -15,7 +15,6 @@
 export const PREVIEW_GROUPS = [
   { id: 'product', label: 'Product' },
   { id: 'marketing', label: 'Marketing' },
-  { id: 'graphic', label: 'Graphic' },
   { id: 'states', label: 'States' },
 ]
 
@@ -26,15 +25,9 @@ export const PREVIEW_SCENES = [
   { id: 'energy', name: 'Energy dashboard', group: 'product', free: true, example: true },
   { id: 'trail', name: 'Trail run app', group: 'product', free: true, example: true },
   { id: 'card', name: 'Spending card', group: 'product', free: false, example: true },
-  { id: 'dashboard', name: 'Dashboard', group: 'product', free: true },
-  { id: 'phone', name: 'Phone app', group: 'product', free: true },
   { id: 'editorial', name: 'Editorial hero', group: 'marketing', free: true, example: true },
   { id: 'product', name: 'Product page', group: 'marketing', free: true, example: true },
   { id: 'studio', name: 'Architect portfolio', group: 'marketing', free: false, example: true },
-  { id: 'landing', name: 'Landing page', group: 'marketing', free: true },
-  { id: 'receipt', name: 'Email receipt', group: 'marketing', free: false },
-  { id: 'poster', name: 'Poster', group: 'graphic', free: false },
-  { id: 'social', name: 'Social tile', group: 'graphic', free: false },
   // The only scenes with form focus, error and disabled states.
   { id: 'invoices', name: 'Invoices', group: 'states', free: false },
   { id: 'settings', name: 'Settings', group: 'states', free: false },
@@ -47,18 +40,6 @@ export const sceneById = (id) => PREVIEW_SCENES.find((s) => s.id === id) || PREV
 // ── Sample content ───────────────────────────────────────────────────────────
 
 export const FERNWAY = {
-  nav: ['Overview', 'Invoices', 'Clients', 'Time', 'Reports', 'Settings'],
-  // Monthly paid totals as a share of the tallest bar, November to October.
-  months: [38, 52, 41, 64, 58, 72, 49, 66, 61, 78, 70, 100],
-  week: [
-    { day: 'M', state: 'logged' },
-    { day: 'T', state: 'logged' },
-    { day: 'W', state: 'logged' },
-    { day: 'T', state: 'today' },
-    { day: 'F', state: 'empty' },
-    { day: 'S', state: 'empty' },
-    { day: 'S', state: 'empty' },
-  ],
   tabs: ['All', 'Drafts', 'Sent', 'Paid'],
   status: {
     paid: { label: 'Paid', shape: 'circle', role: 'success' },
@@ -73,22 +54,6 @@ export const FERNWAY = {
     { client: 'Lena Ostrowski', no: 'FW-0144', issued: '9 Oct', due: '23 Oct', status: 'due', amount: '$2,060.00' },
     { client: 'Marlo & Finch', no: 'FW-0145', issued: '12 Oct', due: '26 Oct', status: 'sent', amount: '$640.00' },
     { client: 'Tom Nguyen', no: 'FW-0146', issued: '', due: '', status: 'draft', amount: '$1,400.00' },
-  ],
-  entries: [
-    { client: 'Harbour Physio', task: 'Brand refresh', time: '2h 14m', role: 'accent' },
-    { client: 'Lena Ostrowski', task: 'Menu design', time: '1h 30m', role: 'secondary' },
-    { client: 'Marlo & Finch', task: 'Site updates', time: '45m', role: 'deep' },
-  ],
-  plans: [
-    { id: 'free', name: 'Free', price: '$0', note: '3 clients, invoices with Fernway branding' },
-    { id: 'solo', name: 'Solo', price: '$12', per: '/month', note: 'Unlimited clients, your logo, card payments', pick: true },
-    { id: 'studio', name: 'Studio', price: '$29', per: '/month', note: 'Up to 5 people, shared clients, reports' },
-  ],
-  receipt: [
-    ['Invoice', 'FW-0142'],
-    ['Paid', '16 Oct by card'],
-    ['Fee', '$21.25'],
-    ['To your account', '$1,228.75'],
   ],
   settingsTabs: ['Profile', 'Business', 'Notifications', 'Billing'],
 }
