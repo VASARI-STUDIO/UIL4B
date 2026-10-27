@@ -34,7 +34,7 @@ import {
   stickyStrokePx, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
-import { registerSymbols, symbolKnown, symbolRef } from '../utils/iconSprite'
+import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
 import {
   endBandKind, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
@@ -464,9 +464,9 @@ async function loadGlyphBatchOutcome(pack, names) {
   }
   // An animated answer that lands after the viewer left Pro is dropped, not stored.
   if (!applyGlyphData(pack, names, data, GLYPH_STORES)) return { ok: false, kind: classifyAnimatedFailure(staleAnimatedAnswer()) }
-  // Put the batch in the sprite now, in one DOM write, so the cells that paint
-  // on the tick that follows find their symbols already there.
-  registerGlyphSymbols(pack, names)
+  // Put the batch in the sprite before the answer is reported, so the cells that
+  // paint on the tick that follows find their symbols already there.
+  await registerGlyphSymbols(pack, names)
   return { ok: true }
 }
 const loadGlyphBatch = async (pack, names) => (await loadGlyphBatchOutcome(pack, names)).ok
@@ -515,17 +515,22 @@ function glyphDataUri(pack, name) {
 // which a <use> has no pixels to give. Animated packs keep it too, because the
 // sanitiser drops their <animate> elements.
 const inSprite = (pack) => !COLORED_PACKS.has(pack) && !isAnimatedPack(pack)
-function registerGlyphSymbols(pack, names) {
+// Sanitising a cold batch of 100 icons is one 28 ms task at 4x CPU (measured, median
+// of 5), so it goes in runs of SPRITE_SLICE with a yield between them: the longest
+// run is then about 15 ms.
+const SPRITE_SLICE = 25
+async function registerGlyphSymbols(pack, names) {
   if (!inSprite(pack)) return
-  registerSymbols(names.map((name) => ({ key: svgKey(pack, name), text: glyphSvgText(pack, name) })))
+  await registerSymbolsSliced(names.map((name) => ({ key: svgKey(pack, name), text: glyphSvgText(pack, name) })), SPRITE_SLICE)
 }
-/** `#id` of the icon's symbol, '' when it is not in the sprite (use the data: URI). */
+/**
+ * `#id` of the icon's symbol, '' when it is not in the sprite (use the data: URI).
+ * Read-only: every body arrives through loadGlyphBatchOutcome, which registers
+ * its batch, so a render never writes to the page. An icon the sprite has since
+ * let go of (see SPRITE_MAX) is drawn from its data: URI instead.
+ */
 function glyphSymbolRef(pack, name) {
-  if (!inSprite(pack)) return ''
-  const key = svgKey(pack, name)
-  // A body that arrived by another route than a batch is added on first use.
-  if (!symbolKnown(key)) registerGlyphSymbols(pack, [name])
-  return symbolRef(key)
+  return inSprite(pack) ? symbolRef(svgKey(pack, name)) : ''
 }
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
@@ -867,6 +872,18 @@ function LogoDevGlyph({ icon }) {
   )
 }
 
+// A sprite cell. The effect is the one place a drawn icon is marked as recently
+// used: it runs when the cell mounts (a page revealed, a ghost restored), not on
+// every render of the grid.
+function SpriteGlyph({ href, symKey, className }) {
+  useEffect(() => { touchSymbol(symKey) }, [symKey])
+  return (
+    <svg width="24" height="24" className={className} aria-hidden="true" focusable="false">
+      <use href={href} />
+    </svg>
+  )
+}
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
@@ -889,11 +906,7 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     // there is no load to wait for and no state to hold. The cell's own
     // aria-label names it, as it did the <img> alt.
     if (src.charCodeAt(0) === 35) {
-      return (
-        <svg width="24" height="24" className={`ig-sym ${invClass(icon.pack)}`.trim()} aria-hidden="true" focusable="false">
-          <use href={src} />
-        </svg>
-      )
+      return <SpriteGlyph href={src} symKey={svgKey(icon.pack, icon.name)} className={`ig-sym ${invClass(icon.pack)}`.trim()} />
     }
     return <MonoGlyph src={src} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
   }
@@ -3200,6 +3213,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // mounting a whole page at once was one 65-95 ms task on a phone. The chain of
   // frames lives in a ref because each chunk changes `visible`, which re-runs the
   // effect below; its cleanup must not cancel the chain it is part of.
+  //
+  // `icons` itself is a dependency, not just its length: a replaced listing of
+  // the same length ends the chain (the effect after this one) and must also
+  // start a fresh observer. An observer only reports when the sentinel's
+  // visibility changes, but a new one always reports once on observe(), so the
+  // reveal restarts from the current `visible` instead of waiting for a scroll.
   const revealRef = useRef(0)
   useEffect(() => {
     const el = sentinelRef.current
@@ -3207,6 +3226,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const obs = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting || revealRef.current) return
       const target = Math.min(visible + PAGE_SIZE, icons.length)
+      if (target <= visible) return
       let upTo = visible
       const step = () => {
         revealRef.current = 0
@@ -3218,7 +3238,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     }, { rootMargin: '600px' })
     obs.observe(el)
     return () => obs.disconnect()
-  }, [icons.length, visible])
+  }, [icons, visible])
   // A new listing (or leaving the page) ends any page still being revealed.
   useEffect(() => () => { cancelAnimationFrame(revealRef.current); revealRef.current = 0 }, [icons])
 
@@ -3941,7 +3961,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       // new pack or query), so a position prefix costs no reconciliation.
       key={`${idx}:${icon.id || icon.key || icon.name || ''}`}
       icon={icon}
-      src={icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
+      // A ghost draws no glyph, so it asks for no source.
+      src={!ghost && icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
       gone={!!icon.cdn && !icon.custom && !icon.logo && GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
       showPack={showPack}
       picked={isPicked(icon)}

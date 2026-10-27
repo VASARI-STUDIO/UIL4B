@@ -689,6 +689,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    black SVG document, so `currentColor` is black and nothing is inherited from the
    line-icon rule above. `.ig-inv` still flips it for the dark page. */
 .ic svg.ig-sym{color:#000;fill:#000;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter}
+/* Windows High Contrast: the system chooses the ink, so the theme filter comes off.
+   Left on, `.ig-inv` would invert the system text colour (white on a black
+   Canvas) back to black and the glyph would vanish. `forced-color-adjust:none`
+   was the other option; it keeps the black ink, which is invisible on a black Canvas. */
+@media (forced-colors:active){
+  .ic svg.ig-sym{color:CanvasText;fill:CanvasText;filter:none}
+}
 /* Long icon names must stay inside the cell — otherwise they paint past the
    hover background and look clipped against neighbouring cells. */
 /* THE LABEL EXISTS TO TELL TWO NEIGHBOURING ICONS APART. It was 8.5px dropping
