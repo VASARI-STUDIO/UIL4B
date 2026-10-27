@@ -18,11 +18,13 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { colorName } from '../../src/utils/paletteNames.js'
-import { renderUiKit, kitPalette, DERIVED_NOTE } from '../../src/utils/uiKitExport.js'
+import { renderUiKit, kitPalette, kitInk, derivedNoteFor, DERIVED_NOTE, CONTRAST_NOTE } from '../../src/utils/uiKitExport.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import { buildBrandGuidelines } from '../../src/utils/brandGuidelines.js'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../../src/utils/styleGuideExport.js'
 import { buildStyleGuideHTML } from '../../src/utils/exportBuilder.js'
+import { buildTokensCss, buildTokensJson } from '../../src/utils/designTokens.js'
+import { describeKey } from '../../src/utils/dataExport.js'
 
 const hex2 = (n) => n.toString(16).padStart(2, '0').toUpperCase()
 const grey = (v) => `#${hex2(v)}${hex2(v)}${hex2(v)}`
@@ -49,6 +51,58 @@ test('no dark grey or tinted near-black draws a word for white, and no light one
   }
   assert.deepEqual(offenders.slice(0, 10), [], `${offenders.length} neutrals named against their lightness`)
 })
+
+// The source's tone ranges (CIE L*, 0 black to 100 white), written out again so
+// a range that drifts in the source is not agreed with by its own test.
+const NOUN_TONE = {
+  Alabaster: [75, 100], Bone: [70, 100], Chalk: [75, 100], Plaster: [70, 100],
+  Oatmeal: [65, 96], Limestone: [65, 96], Vellum: [75, 100], Parchment: [75, 100],
+  Gesso: [75, 100], Travertine: [55, 92],
+  Concrete: [35, 82], Greige: [45, 88], Pewter: [30, 78], Titanium: [35, 82],
+  Steel: [30, 80], Alloy: [30, 80], Chrome: [50, 100],
+  Basalt: [0, 45], Graphite: [0, 50], Gunmetal: [0, 50], Carbon: [0, 40],
+}
+// L* of a grey, from the CIE definition (not from the code under test).
+const toneOfGrey = (v) => {
+  const c = v / 255
+  const y = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  return y > 216 / 24389 ? 116 * Math.cbrt(y) - 16 : (24389 / 27) * y
+}
+// A sentence naming the fault, or null when the grey's name fits its tone.
+const misnamed = (v) => {
+  const noun = nounOf(colorName(grey(v)))
+  const range = NOUN_TONE[noun]
+  const tone = toneOfGrey(v)
+  return range && (tone < range[0] || tone > range[1])
+    ? `${grey(v)} tone ${tone.toFixed(1)} is named ${noun}, which needs ${range[0]} to ${range[1]}`
+    : null
+}
+
+test('every grey from 0 to 255 draws only a word whose tone range holds it', () => {
+  const offenders = []
+  for (let v = 0; v <= 255; v += 1) {
+    const bad = misnamed(v)
+    if (bad) offenders.push(bad)
+  }
+  assert.deepEqual(offenders.slice(0, 10), [], `${offenders.length} greys named outside their word's range`)
+})
+
+// An 8-bit grey never lands exactly on a range edge, so test the greys either
+// side of each edge that matters, and a few neighbours.
+for (const edge of [45, 50, 65, 75]) {
+  test(`greys either side of tone ${edge} are named for the side they are on`, () => {
+    const tones = Array.from({ length: 256 }, (_, v) => toneOfGrey(v))
+    const below = tones.findLastIndex((t) => t <= edge)
+    const above = tones.findIndex((t) => t > edge)
+    assert.ok(below >= 0 && above > below, `no greys straddle tone ${edge}`)
+    const offenders = []
+    for (let v = Math.max(0, below - 3); v <= Math.min(255, above + 3); v += 1) {
+      const bad = misnamed(v)
+      if (bad) offenders.push(bad)
+    }
+    assert.deepEqual(offenders, [], `a grey near tone ${edge} is named against its lightness`)
+  })
+}
 
 test('the guard is not achieved by emptying the pool', () => {
   // Positive control: the light end still draws light words, the dark end dark
@@ -116,6 +170,7 @@ test('a canvas and text the palette could not supply are marked derived on their
     const block = blocks.find((b) => b.includes(`data-copy="${p.hex}"`))
     assert.ok(block, `${p.id} ${p.hex} has no swatch`)
     assert.equal(block.includes(DERIVED_NOTE), p.derived, `${p.id}: the note and the flag disagree`)
+    assert.equal(block.includes(DERIVED_NOTE), p.derivedNote === DERIVED_NOTE, `${p.id}: the swatch does not say what the slot says`)
   }
 })
 
@@ -126,6 +181,35 @@ test('the kit\'s text colour is named for its lightness, in the document itself'
     if (id === 'ink') assert.ok(!LIGHT_ONLY.includes(noun), `the text colour ${slots.ink.hex} is named "${slots.ink.name}"`)
     if (id === 'chalk') assert.ok(!DARK_ONLY.includes(noun), `the canvas ${slots.chalk.hex} is named "${slots.chalk.name}"`)
   }
+})
+
+test('a text colour set to plain black or white says so, not that it came from the primary', () => {
+  // No dark stop on the primary's scale, which the saved tint settings never
+  // produce, so the choice is tested directly.
+  const midScale = { 950: '#8A8A8A', 900: '#9A9A9A' }
+  const onLight = kitInk(['#2F6B5A'], midScale, '#EEF3EE')
+  assert.equal(onLight.hex, '#000000')
+  assert.equal(onLight.index, null)
+  assert.equal(derivedNoteFor(onLight), CONTRAST_NOTE)
+  assert.equal(CONTRAST_NOTE, 'Set to black or white for contrast.')
+  assert.notEqual(CONTRAST_NOTE, DERIVED_NOTE)
+  // Mid-greys that fail on a light canvas read well on a dark one, so use darker ones.
+  const onDark = kitInk(['#2F6B5A'], { 950: '#5A5A5A', 900: '#606060' }, '#101418')
+  assert.equal(onDark.hex, '#FFFFFF')
+  assert.equal(derivedNoteFor(onDark), CONTRAST_NOTE)
+})
+
+test('the other two routes to a text colour keep their own notes', () => {
+  const scale = { 950: '#0A1A14', 900: '#12281F' }
+  const own = kitInk(['#2F6B5A', '#8C6BB1', '#E3B23C', '#EEF3EE', '#1B2A26'], scale, '#EEF3EE')
+  assert.equal(own.hex, '#1B2A26')
+  assert.equal(derivedNoteFor(own), null, 'a palette colour carries no derivation note')
+  const fromScale = kitInk(['#2F6B5A'], scale, '#EEF3EE')
+  assert.equal(fromScale.hex, '#0A1A14')
+  assert.equal(derivedNoteFor(fromScale), DERIVED_NOTE)
+  // And through the real palette: a derived text colour reads the primary note.
+  const ink = kitPalette(SOFT).find((p) => p.id === 'ink')
+  assert.equal(ink.derivedNote, ink.derived ? DERIVED_NOTE : null)
 })
 
 // ── no em dashes in the export copy ─────────────────────────────────────────
@@ -150,11 +234,31 @@ test('no export writes an em dash into its copy', () => {
     'ui kit': kit(FULL),
     'ui kit, derived colours': kit(SOFT),
     'tint style guide': buildStyleGuideHTML({ design: FULL, projectName: 'Harbour', watermark: true }),
+    'token CSS, free': buildTokensCss(FULL, { projectName: 'Harbour', watermark: true }),
+    'token CSS, pro': buildTokensCss(FULL, { projectName: 'Harbour', watermark: false }),
+    'token JSON, free': buildTokensJson(FULL, { projectName: 'Harbour', watermark: true }),
+    'data export, an undescribed key': JSON.stringify(describeKey('vs-something-new')),
   }
   const offenders = Object.entries(docs)
     .map(([name, html]) => [name, [...copyOf(html).matchAll(new RegExp(`.{0,40}${EM}.{0,40}`, 'g'))].map((m) => m[0])])
     .filter(([, hits]) => hits.length)
   assert.deepEqual(offenders, [], 'an export still has an em dash in its copy')
+})
+
+test('an empty value reads "None", not a lone dash', () => {
+  const docs = {
+    'style guide, no palette': buildStyleGuideHtml({}, PRO),
+    'style guide markdown, no palette': buildStyleGuideMarkdown({}, PRO),
+    'design system book, no palette': buildDesignSystemBook({}, PRO),
+  }
+  for (const [name, doc] of Object.entries(docs)) {
+    const copy = copyOf(doc)
+    assert.doesNotMatch(copy, />\s*–\s*</, `${name} still prints a lone dash as a value`)
+    assert.doesNotMatch(copy, /\|\s*–\s*\|/, `${name} still prints a lone dash in a table cell`)
+  }
+  assert.match(docs['style guide markdown, no palette'], /\| Primary \| None \|/)
+  assert.match(docs['style guide, no palette'], /<dt>Primary<\/dt><dd>None<\/dd>/)
+  assert.match(docs['design system book, no palette'], /<dt>Primary<\/dt><dd>None<\/dd>/)
 })
 
 test('the contents line on the book no longer has the dash from the report', () => {

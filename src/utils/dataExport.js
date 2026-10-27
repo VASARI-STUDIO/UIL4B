@@ -131,7 +131,7 @@ export function describeKey(key) {
   if (stem) return { key, ...KEY_PURPOSES[stem] }
   // Honest fallback. An undescribed key is a documentation gap, not a reason to
   // hide it from the person whose data it is.
-  return { key, purpose: 'Not yet described — included in full in your export', pii: 'unknown' }
+  return { key, purpose: 'Not yet described, but included in full in your export', pii: 'unknown' }
 }
 
 // Pull every owned key out of a Storage-like object. Values are parsed when

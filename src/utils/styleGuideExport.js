@@ -195,7 +195,7 @@ ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link 
   <div class="rule"></div>
   <p class="lede">The colour, typography and contrast decisions behind this interface, written down so they can be applied consistently, and checked.</p>
   <dl>
-    <dt>Primary</dt><dd>${d.base || '–'}</dd>
+    <dt>Primary</dt><dd>${d.base || 'None'}</dd>
     <dt>Colours</dt><dd>${d.palette.length}</dd>
     <dt>Headings</dt><dd>${esc(d.heading)}</dd>
     <dt>Body</dt><dd>${esc(d.body)}</dd>
@@ -258,7 +258,7 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
     '',
     '| | |',
     '|---|---|',
-    `| Primary | ${d.base || '–'} |`,
+    `| Primary | ${d.base || 'None'} |`,
     `| Colours | ${d.palette.length} |`,
     `| Headings | ${d.heading} |`,
     `| Body | ${d.body} |`,
@@ -275,7 +275,7 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
     const { ratio, label } = inkFor(hex)
     lines.push(`| ${i === 0 ? 'Primary' : `Colour ${i + 1}`} | \`${hex}\` | ${label} | ${ratio}:1 | ${grade(ratio)} |`)
   })
-  if (!d.palette.length) lines.push('| – | – | – | – | – |')
+  if (!d.palette.length) lines.push('| None | | | | |')
   lines.push(
     '',
     '> Ratios follow WCAG 2.2 §1.4.3. AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1.',
