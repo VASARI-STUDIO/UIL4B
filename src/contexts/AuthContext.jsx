@@ -317,6 +317,13 @@ export function AuthProvider({ children }) {
     onboarding: profile.onboarding || null,
   } : null
 
+  // The name the person gave, and nothing made up from their email. `userProfile.displayName`
+  // falls back to the email prefix and then to "User", so it cannot tell a greeting whether
+  // there is a real name to use. '' means none was ever given.
+  const profileName = (profile?.displayName || '').trim()
+  // When the account was created (ms), from the sign-in record; null when it has not said.
+  const accountCreatedAt = Date.parse(firebaseUser?.metadata?.creationTime) || null
+
   // Every action below is URGENT: a person is waiting on it, so it opens the
   // deferral gate instead of queueing behind it.
   const login = useCallback(async (email, password) => {
@@ -563,7 +570,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, userProfile, loading, profileLoaded,
+      user, userProfile, loading, profileLoaded, profileName, accountCreatedAt,
       profileSyncError, dismissProfileSyncError,
       pendingOnboarding, clearPendingOnboarding,
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,

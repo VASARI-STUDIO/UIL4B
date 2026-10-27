@@ -86,8 +86,8 @@ test.describe('cross-tool handoff links meet the 24px target floor', () => {
 })
 
 test.describe('Palette Builder adjustment sliders are draggable on a phone', () => {
-  // MUTATION: put `height:14px` back on `.snapv--grad input[type="range"]`
-  // in global.css and all four go red at 14px.
+  // MUTATION: put `height:14px` back on `.tl-slider input[type="range"]` in
+  // tool-layout.css and all four go red at 14px.
   const SLIDERS = [
     ['#plb-h', 'Hue'],
     ['#plb-s', 'Saturation'],
@@ -159,17 +159,18 @@ test.describe('the small in-page controls that actually do something', () => {
   }
 
   test('the slider value keeps its right edge after being made taller', async ({ page }) => {
-    // A flex container ignores `text-align` for its items, so the min-height
-    // fix could have silently re-centred every number in the slider stack.
-    // `justify-content:flex-end` is what preserves the column of digits.
+    // The value sits in a fixed 34px column of the slider's grid, and
+    // `text-align:right` is what keeps the digits flush to its right edge: set
+    // it to `center` and every number drifts into the middle of the column.
     //
     // ASSERTED AT 390px, AND ONLY THERE, because that is the only width where
     // "a column of digits" exists. `.plb-adjust-fields` is a grid that runs
-    // `repeat(4, auto minmax(0,1fr))` on desktop, so the four values sit SIDE
-    // BY SIDE and having four different right edges is correct. Measured:
-    //   1440px  rights 283 / 601 / 876 / 1205, all on one row  (4 x 1)
-    //    640px  rights 283 / 624, two rows                     (2 x 2)
-    //    390px  rights 374 / 374 / 374 / 374, four rows        (1 x 4)
+    // `repeat(auto-fit, minmax(min(100%, 232px), 1fr))`, so on desktop the four
+    // values sit SIDE BY SIDE and having four different right edges is correct.
+    // Measured:
+    //   1440px  rights 371 / 642 / 912 / 1183, all on one row  (4 x 1)
+    //    640px  rights 312 / 627, two rows                     (2 x 2)
+    //    390px  rights 378 / 378 / 378 / 378, four rows        (1 x 4)
     // The first draft of this test asserted a shared edge at 1440 and failed
     // on a layout that was never wrong.
     await page.setViewportSize({ width: 390, height: 844 })
@@ -177,8 +178,8 @@ test.describe('the small in-page controls that actually do something', () => {
     await expect(page.locator('.plb-adjust .tl-slider-v').first()).toBeVisible()
     await settle(page)
 
-    // MEASURE THE TEXT, NOT THE BOX. The box is a fixed 56px and never moves,
-    // so `justify-content:center` would re-centre every number while leaving
+    // MEASURE THE TEXT, NOT THE BOX. The box is a fixed 34px and never moves,
+    // so `text-align:center` would re-centre every number while leaving
     // every bounding rect identical — an assertion on the element's own rect
     // CANNOT FAIL for the thing this test exists to defend. The first draft did
     // exactly that, and the mutation proved it: re-centring the values left the
@@ -211,7 +212,7 @@ test.describe('the small in-page controls that actually do something', () => {
       `the digits no longer share a right edge: ${vals.map((v) => v.right).join(', ')}`,
     ).toBe(1)
     // And they are flush right inside their box, not floating in the middle of
-    // it. `padding-right:6px` is the only thing that should separate them, so
+    // it. The box has no padding, so the digits should touch its right edge;
     // anything past ~8px means the text has been re-centred.
     for (const v of vals) {
       expect(

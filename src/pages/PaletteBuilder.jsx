@@ -1,10 +1,11 @@
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon,
+  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode,
 } from '../components/tool/ToolLayout'
 import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
@@ -14,6 +15,7 @@ import {
 // The Tint Generator's own ramp (one function, so the swatch tints and the
 // generator cannot drift): the strip is five of its steps, the popover all 11.
 import { swatchStripHexes, tintRampForHex } from '../utils/tintRamp'
+import { colourFormats } from '../utils/colourFormats'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
 // Column titles + the community-submit dice name share one vocabulary — see
 // utils/paletteNames.js for why `colorName` is deterministic and
@@ -87,6 +89,47 @@ function returnMenuFocus(el, pointer) {
   el.focus({ preventScroll: true, get focusVisible() { supported = true; return false } })
   if (!supported || el.matches(':focus-visible')) el.blur()
 }
+// The phone layout's breakpoint (the same one ToolLayout's overflow uses).
+const PHONE_QUERY = '(max-width: 767px)'
+function usePhone() {
+  const get = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(PHONE_QUERY).matches
+  const [phone, setPhone] = useState(get)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const mq = window.matchMedia(PHONE_QUERY)
+    const on = () => setPhone(mq.matches)
+    on()
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  return phone
+}
+
+// Palette CSS on a phone: the toolbar overflow's bottom sheet (the .tl-sheet
+// classes in tool-layout.css), holding the CSS and its copy button. The scrim
+// and Escape close it; useModalDialog traps focus and returns it to the button
+// that opened the sheet.
+function PaletteCssSheet({ css, onCopy, onClose }) {
+  const ref = useModalDialog(onClose)
+  return createPortal(
+    <div className="tl-sheet-layer">
+      <div className="tl-sheet-scrim" aria-hidden="true" onClick={onClose} />
+      <div className="tl-sheet" role="dialog" aria-modal="true" aria-label="Palette CSS" tabIndex={-1} ref={ref}>
+        <span className="tl-sheet-grab" aria-hidden="true" />
+        <div className="tl-sheet-head">
+          <span className="tl-sheet-title">Palette CSS</span>
+          <button type="button" className="tl-sheet-x" onClick={onClose} aria-label="Close">
+            <ToolIcon name="x" size={16} />
+          </button>
+        </div>
+        <ToolCode tone="page" label="Palette CSS variables">{css}</ToolCode>
+        <ToolButton variant="accent" icon="copy" className="plb-sheet-copy" onClick={onCopy}>Copy CSS</ToolButton>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -857,7 +900,39 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [varBase, setVarBase] = useState(null)
   const [activeVar, setActiveVar] = useState(null)
   const skipVarInvalidate = useRef(false)
-  const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
+  // One info panel per board: a column's tints or its colour values. They share
+  // one slot, so opening either closes the other and every existing
+  // `setTintsIdx(null)` close also closes the values panel.
+  const [colPanel, setColPanel] = useState(null)    // { kind: 'tints' | 'values', i }
+  const tintsIdx = colPanel?.kind === 'tints' ? colPanel.i : null
+  const valuesIdx = colPanel?.kind === 'values' ? colPanel.i : null
+  const setTintsIdx = useCallback((next) => setColPanel((cur) => {
+    const v = typeof next === 'function' ? next(cur?.kind === 'tints' ? cur.i : null) : next
+    return v == null ? null : { kind: 'tints', i: v }
+  }), [])
+  const setValuesIdx = useCallback((i) => setColPanel(i == null ? null : { kind: 'values', i }), [])
+  // The panel's index means "that column of this palette", so anything that
+  // swaps the palette or changes how many columns there are closes it; a stale
+  // index would point past the end and leave an open panel nobody can see.
+  const colPanelRef = useRef(null)
+  colPanelRef.current = colPanel
+  useEffect(() => { setColPanel((cur) => (cur ? null : cur)) }, [colors.length])
+  // Closing the panel hands focus back to the control that opened it: the
+  // column's "..." button, or its tint strip. The panel's own close button
+  // unmounts while it holds focus, which would otherwise drop focus to <body>.
+  const panelOpenerRef = useRef('more')
+  const panelReturnRef = useRef(null)
+  const closeColPanel = useCallback(() => {
+    const cur = colPanelRef.current
+    if (cur) panelReturnRef.current = { i: cur.i, opener: panelOpenerRef.current }
+    setColPanel(null)
+  }, [])
+  useLayoutEffect(() => {
+    const back = panelReturnRef.current
+    if (!back) return
+    panelReturnRef.current = null
+    columnRefs.current[back.i]?.querySelector(back.opener === 'ramp' ? '.plb-ramp' : '.plb-tool--more')?.focus({ preventScroll: true })
+  })
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const columnRefs = useRef([])
   const removeFocusRef = useRef(null)
@@ -881,7 +956,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Absolute coordinates remain relative to the size-contained column. Measure
   // in viewport space first so even the edge columns keep the whole panel visible.
   useLayoutEffect(() => {
-    const column = columnRefs.current[pickerIdx ?? tintsIdx]
+    const column = columnRefs.current[pickerIdx ?? tintsIdx ?? valuesIdx]
     const panel = column?.querySelector(pickerIdx != null ? '.plb-picker' : '.plb-tintpop')
     if (!panel) return
     const place = (event) => {
@@ -922,7 +997,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
     }
-  }, [pickerIdx, tintsIdx, colors.length])
+  }, [pickerIdx, tintsIdx, valuesIdx, colors.length])
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const ctxMenuRef = useRef(null)
   const ctxTriggerRef = useRef(null)
@@ -950,6 +1025,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }, [ctxMenu])
   const [swapIdx, setSwapIdx] = useState(null)     // column with the swap-direction popover open
   const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
+  const phone = usePhone()
+  const [cssSheetOpen, setCssSheetOpen] = useState(false) // Palette CSS bottom sheet (phone)
+  // The sheet belongs to the phone layout. Leaving it (rotating wider) closes
+  // it, so rotating back does not bring it up unasked.
+  useEffect(() => { if (!phone) setCssSheetOpen(false) }, [phone])
+  // Stable, because useModalDialog re-focuses the dialog whenever onClose changes.
+  const closeCssSheet = useCallback(() => setCssSheetOpen(false), [])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
@@ -1170,6 +1252,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Regenerate the current system over the UNLOCKED role slots; extras stay.
   const regen = (fromSeed, type) => {
+    setColPanel(null)
     // Free users can't regenerate through a paid/brand system — collapse to a
     // free default and snap the visible system back so the UI matches the engine.
     const sys = resolveSystem(type)
@@ -1221,6 +1304,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Only 'auto' is tonal now. Locked colours always survive; HSL fallback if
   // the HCT solver ever throws.
   const randomize = useCallback(() => {
+    setColPanel(null)
     // Same free-system guard as regen: a free user randomising from a paid/brand
     // system gets a free system instead, and the UI snaps to match.
     const sys = resolveSystem(harmony)
@@ -1249,7 +1333,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // useModalDialog owns its Escape and the scrim owns its outside press.
   const anyPopover = saveOpen || imgOpen
     || galleryOpen || histOpen
-    || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
+    || tintsIdx != null || valuesIdx != null || pickerIdx != null || ctxMenu != null || preview != null
 
   // Both of this page's dialogs declared aria-modal="true" and trapped nothing:
   // Tab walked out into the builder behind them, the canvas scrolled, and
@@ -1309,17 +1393,36 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // drag inside it is not an outside press. Nor is a press in the sign-in
       // dialog a gallery like opened: the gallery stays put behind it.
       if (!e.target.closest('.plb-menuwrap, .plb-modal, [aria-labelledby="ui-login-title"]')) closeAllMenus()
-      if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) closePops()
+      if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) {
+        // An open panel that held focus hands it back to its opener, unless the
+        // press landed on something that takes focus itself. The press's own
+        // focus change comes after this handler, so the hand-back waits a tick.
+        const cp = colPanelRef.current
+        const heldFocus = cp && document.activeElement?.closest('.plb-tintpop')
+        const opener = panelOpenerRef.current
+        closePops()
+        const takesFocus = 'a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="menuitem"]'
+        if (heldFocus && !e.target.closest(takesFocus)) {
+          setTimeout(() => {
+            // Page furniture (the body, a scroll region) took the press's focus;
+            // a real control the person moved to keeps it.
+            if (document.activeElement?.matches(takesFocus)) return
+            columnRefs.current[cp.i]?.querySelector(opener === 'ramp' ? '.plb-ramp' : '.plb-tool--more')?.focus({ preventScroll: true })
+          }, 0)
+        }
+      }
     }
     const onEsc = (e) => {
       if (e.key !== 'Escape') return
       if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') returnMenuFocus(ctxTriggerRef.current, !ctxMenu?.keyboard)
+      const cp = colPanelRef.current
+      if (cp && !ctxMenu) panelReturnRef.current = { i: cp.i, opener: panelOpenerRef.current }
       closeAllMenus(); closePops(); setPreview(null)
     }
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
-  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu])
+  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu, setTintsIdx])
 
   // Record the board into palette history. Debounced so slider scrubs and
   // rapid randomises collapse into one entry; identical heads are skipped.
@@ -1350,6 +1453,26 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Close the "…" menu after a choice and hand focus to the "…" of swatch `at`.
   const closeCtxMenu = (at) => { ctxReturnRef.current = at; setCtxMenu(null) }
+
+  // Opening a column's tints or colour values from the "..." menu: the menu
+  // closes without sending focus back to "..." (closeCtxMenu would), and focus
+  // goes into the panel instead, with the panel named for a screen reader. This
+  // runs after the layout effects above, so nothing takes focus back from it.
+  const openColPanel = (kind, i) => {
+    panelOpenerRef.current = 'more'
+    setCtxMenu(null)
+    if (kind === 'tints') setTintsIdx(i); else setValuesIdx(i)
+  }
+  useEffect(() => {
+    if (!colPanel) return
+    const panel = columnRefs.current[colPanel.i]?.querySelector('.plb-tintpop')
+    panel?.querySelector('.plb-pop-x')?.focus({ preventScroll: true })
+    const hex = String(adjusted[colPanel.i] || '').toUpperCase()
+    setLiveMsg(colPanel.kind === 'values' ? `Colour values for ${hex}` : `Tints of ${hex}`)
+  // Only a newly opened panel moves focus; the colours behind an open one can
+  // change without it grabbing focus again.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colPanel])
 
   const toggleLock = (i) => {
     setLocked(prev => {
@@ -1692,6 +1815,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Apply a whole ready-made palette (variation or brand). Resets the adjust
   // lens — the incoming colours ARE the new baseline. Locked slots survive.
   const applyPalette = (hexes, msg) => {
+    setColPanel(null)
     const next = hexes.map(c => normaliseHex(c)).filter(Boolean).slice(0, HARD_MAX)
     if (next.length < 2) return
     setColors(prev => {
@@ -1704,6 +1828,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
 
   const resetPalette = () => {
+    setColPanel(null)
     const current = {
       colors: [...colors],
       seed,
@@ -1791,6 +1916,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     vision, showContrast, importedGalleryId, at: Date.now(),
   })
   const applySnapshot = (h) => {
+    setColPanel(null)
     const restored = h.colors.slice(0, HARD_MAX)
     setColors(restored)
     setSeed(h.seed || restored[0])
@@ -1818,6 +1944,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
   const canRedo = redoTick >= 0 && redoRef.current.length > 0
   const undoPalette = () => {
+    setColPanel(null)
     const leaving = boardNow()
     redoRef.current.push(leaving)
     setRedoTick((t) => t + 1)
@@ -1912,6 +2039,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the board is now a derivative. Enabling a palette applies it directly — no
   // info popup — so the whole gallery swatch reads as a one-click select.
   const importGalleryPalette = (cols, name, id) => {
+    setColPanel(null)
     if (importedGalleryId === id && preImportRef.current) {
       const snap = preImportRef.current
       setColors(snap.colors)
@@ -2479,7 +2607,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 aria-label={`${role} ${adjusted[i]}`}
                 // Whole-swatch drag reorders; off while a tints or HCT popover
                 // is open on this column so slider drags aren't hijacked.
-                draggable={pickerIdx !== i && tintsIdx !== i}
+                draggable={pickerIdx !== i && tintsIdx !== i && valuesIdx !== i}
                 onDragStart={(e) => {
                   dragFrom.current = i
                   e.dataTransfer.effectAllowed = 'move'
@@ -2617,7 +2745,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   className="plb-ramp"
                   title={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900`}
                   aria-label={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900 — view all tints`}
-                  onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
+                  onClick={() => { panelOpenerRef.current = 'ramp'; setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
                 >
                   {ramp.map((rc, k) => (
                     <span key={k} className="plb-ramp-bar" ref={barRef(rc)} aria-hidden="true" />
@@ -2654,7 +2782,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <div className="plb-pop plb-tintpop" role="dialog" aria-label={`Tints of ${adjusted[i]}`}>
                     <div className="plb-pop-head">
                       <span className="plb-pop-title">Tints</span>
-                      <button type="button" className="plb-pop-x" aria-label="Close tints" onClick={() => setTintsIdx(null)}><IcoX /></button>
+                      <button type="button" className="plb-pop-x" aria-label="Close tints" onClick={closeColPanel}><IcoX /></button>
                     </div>
                     <div className="plb-tint-list">
                       {tintRampForHex(adjusted[i]).map(({ label, hex: tc }) => (
@@ -2668,6 +2796,27 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     <button type="button" className="btn btn-s plb-tintopen" onClick={() => openInTint(adjusted[i])}>
                       Open in Tint Generator
                     </button>
+                  </div>
+                )}
+
+                {valuesIdx === i && (
+                  // Shares the tints panel's anchoring (.plb-tintpop) and its
+                  // dismissal; reached from the swatch's "..." menu, which is on
+                  // screen on a phone.
+                  <div className="plb-pop plb-tintpop plb-valpop" role="dialog" aria-label={`Colour values for ${adjusted[i]}`}>
+                    <div className="plb-pop-head">
+                      <span className="plb-pop-title">Colour values</span>
+                      <button type="button" className="plb-pop-x" aria-label="Close colour values" onClick={closeColPanel}><IcoX /></button>
+                    </div>
+                    <ul className="plb-val-list">
+                      {colourFormats(adjusted[i]).map(({ key, label, value }) => (
+                        <li key={key} className="plb-val-row">
+                          <span className="plb-val-k">{label}</span>
+                          <code className="plb-val-v">{value}</code>
+                          <button type="button" className="plb-val-copy" aria-label={`Copy ${label} ${value}`} title={`Copy ${label}`} onClick={() => onCopy?.(value)}><IcoCopy /></button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
@@ -2770,7 +2919,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Copy hex</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}><IcoEye /> View tints</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('tints', ctxMenu.i)}><IcoEye /> View tints</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('values', ctxMenu.i)}><ToolIcon name="swatches" size={14} /> Colour values</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>
@@ -3221,6 +3371,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       {/* ── ADJUST ALL (D:1044-1057): one row, signed values, Copy CSS inline ── */}
       <footer className="plb-adjust" role="group" aria-labelledby="plb-adjust-title">
         <p className="plb-adjust-title" id="plb-adjust-title">Adjust all</p>
+        {/* One grid for the four sliders, so every row shares one column width
+            and the tracks come out the same length however it wraps. */}
+        <div className="plb-adjust-fields">
         {ADJUST_FIELDS.map(f => {
           const v = adjust[f.key]
           return (
@@ -3245,6 +3398,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             />
           )
         })}
+        </div>
         {/* Always laid out, so that the first nudge of a slider does not
             reflow the bar under the pointer; hidden until there is something
             to reset. */}
@@ -3257,9 +3411,28 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         >
           Reset
         </button>
-        <button type="button" className="plb-copycss" onClick={copyCssExport}>
-          <ToolIcon name="copy" size={14} /><span>Copy CSS</span>
-        </button>
+        {/* A phone opens the CSS in a bottom sheet to read and copy; wider
+            screens copy it straight away. */}
+        {phone ? (
+          <button type="button" className="plb-copycss" aria-haspopup="dialog" aria-expanded={cssSheetOpen} onClick={() => setCssSheetOpen(true)}>
+            <ToolIcon name="code" size={14} /><span>Palette CSS</span>
+          </button>
+        ) : (
+          <button type="button" className="plb-copycss" onClick={copyCssExport}>
+            <ToolIcon name="copy" size={14} /><span>Copy CSS</span>
+          </button>
+        )}
+        {phone && cssSheetOpen && (
+          <PaletteCssSheet
+            css={cssExport}
+            onClose={closeCssSheet}
+            onCopy={async () => {
+              // Shut the sheet only once the copy has gone through; a refused
+              // copy keeps it open beside the toast that says why.
+              if (await copyCssExport() === true) setCssSheetOpen(false)
+            }}
+          />
+        )}
       </footer>
 
       {/* Step 1 of the brand-kit walkthrough; renders nothing unless the

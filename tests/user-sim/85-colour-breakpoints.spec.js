@@ -509,12 +509,12 @@ test.describe('the gradient stop row under a thumb', () => {
   })
 })
 
-// The design's App design reads each palette column from its left edge; the
-// board used to centre name, hex and role, so five labels drifted sideways
-// with the length of each name. And a phone reaches lock / copy / more only
-// through the column's 32px tools, which a coarse pointer now gets at 44.
+// Each palette column's name, hex and role sit centred on the column, so the
+// five label stacks share one centre line whatever the length of a name. And a
+// phone reaches lock / copy / more only through the column's 32px tools, which
+// a coarse pointer now gets at 44.
 test.describe('the palette board, read and pressed', () => {
-  test('from 769px every column’s label stack starts at the same left edge as its column', async ({ browser }) => {
+  test('from 769px every column’s label stack is centred on its column', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440)
     await go(page, '/create/palette')
     await expect(page.locator('.plb-col')).toHaveCount(5)
@@ -522,15 +522,16 @@ test.describe('the palette board, read and pressed', () => {
     const cols = await page.locator('.plb-col').evaluateAll((els) => els.map((col) => {
       const c = col.getBoundingClientRect()
       const name = col.querySelector('.plb-name')
-      const n = name.getBoundingClientRect()
-      return { inset: Math.round(n.left - c.left), align: getComputedStyle(name).textAlign }
+      // The text's own ink box, so a centred block of full column width can't pass.
+      const r = document.createRange(); r.selectNodeContents(name)
+      const t = r.getBoundingClientRect()
+      return { off: Math.abs((t.left + t.right) / 2 - (c.left + c.right) / 2), align: getComputedStyle(name).textAlign, narrower: t.width < c.width - 24 }
     }))
     expect(cols.length).toBe(5)
     for (const c of cols) {
-      expect(c.align, 'name is set flush-left').toBe('left')
-      // The column's own inline padding, not a centred offset that varies
-      // with the length of the name.
-      expect(c.inset).toBeLessThanOrEqual(24)
+      expect(c.align, 'name is centred').toBe('center')
+      expect(c.narrower, 'the name is shorter than its column, so centring is visible').toBe(true)
+      expect(c.off, 'the name sits on the column centre line').toBeLessThanOrEqual(2)
     }
     await ctx.close()
   })

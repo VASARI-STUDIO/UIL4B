@@ -3,7 +3,7 @@
 // synced to the account)").
 //
 // The design's Spectrum file draws the list as rows of TYPE · NAME · SIZE ·
-// WHEN ("CSS · cobalt-marketing-tokens.css · 4.1 KB · 2H AGO"). Each entry here
+// WHEN ("CSS · cobalt-marketing-tokens.css · 4.1 KB · 2h ago"). Each entry here
 // carries exactly what those rows need plus the two facts the brief asked for:
 // which tool made it and which project, when the page knows one.
 //
@@ -105,19 +105,19 @@ export function formatBytes(bytes) {
   return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`
 }
 
-/** "JUST NOW", "5M AGO", "2H AGO", "YESTERDAY", "3 DAYS AGO", else a date. */
+/** "Just now", "5m ago", "2h ago", "Yesterday", "3 days ago", else a short date ("5 Mar"). */
 export function formatWhen(at, now = Date.now()) {
   if (!Number.isFinite(at)) return ''
   const s = Math.max(0, Math.round((now - at) / 1000))
-  if (s < 60) return 'JUST NOW'
+  if (s < 60) return 'Just now'
   const m = Math.round(s / 60)
-  if (m < 60) return `${m}M AGO`
+  if (m < 60) return `${m}m ago`
   const h = Math.round(m / 60)
-  if (h < 24) return `${h}H AGO`
+  if (h < 24) return `${h}h ago`
   const d = Math.floor(h / 24)
-  if (d === 1) return 'YESTERDAY'
-  if (d < 7) return `${d} DAYS AGO`
+  if (d === 1) return 'Yesterday'
+  if (d < 7) return `${d} days ago`
   try {
-    return new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }).toUpperCase()
+    return new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
   } catch { return '' }
 }

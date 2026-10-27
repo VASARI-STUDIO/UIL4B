@@ -82,11 +82,11 @@ const OLDER = '2026-09-01T09:00:00.000Z'
 const NEWER = '2026-09-05T09:00:00.000Z'
 const DELETED_AT = '2026-09-06T09:00:00.000Z'
 
-/** A project's card on the workspace, by its exact name. The card's open
+/** A project's open link on the workspace, by its exact name (the lead card's Open project, or a row). The open
  *  link is what marks a project as on screen; its actions live on the
  *  project's own page. */
 function projectCard(page, name) {
-  return page.locator('.uh-card-name').filter({ has: page.locator('.uh-card-title', { hasText: new RegExp(`^${name}$`) }) })
+  return page.locator(`.uh-card-name[data-project="${name}"]`)
 }
 
 test.describe('sync has a visible state, in both directions', () => {

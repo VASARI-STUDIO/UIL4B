@@ -79,8 +79,8 @@ test.describe('a signed-in free account', () => {
     // presence is proof the session was accepted, not just that a page loaded.
     const note = page.getByTestId('project-quota-note')
     await expect(note, 'a signed-in free account must be told its allowance').toBeVisible()
-    // The workspace's plan strip: "Project slots  3 of 3".
-    await expect(note).toContainText('Project slots')
+    // The workspace's plan strip: "Projects  3 of 3".
+    await expect(note).toContainText('Projects')
     await expect(note).toContainText(`${CAP} of ${CAP}`)
 
     const said = await saveAProject(page, 'One Too Many')

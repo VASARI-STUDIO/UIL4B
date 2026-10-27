@@ -2,7 +2,7 @@
  *
  * Source: "UIL4B App.dc.html", `isPalette` (D:945-1051), its phone rules
  * (D:65-76) and view model (D:1535-1570, D:2126-2181). The toolbar, its
- * overflow ("Tools") and the slider rows come from pages/tool-layout.css; this
+ * overflow ("Extra tools") and the slider rows come from pages/tool-layout.css; this
  * sheet is the board, the ADD rail, the ADJUST ALL bar and the floating panels.
  *
  * Every selector is scoped `.plb …`. The previous board, toolbar and adjust
@@ -190,7 +190,7 @@
 .plb .plb-ramp {
   display: flex;
   gap: 3px;
-  align-self: flex-start;
+  align-self: center;
   margin: 0 0 16px;
   padding: 0;
   border: 0;
@@ -207,10 +207,16 @@
      on a light swatch, so a bar close to the swatch colour keeps its edge. */
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--plb-ink, currentColor) 22%, transparent);
 }
-.plb .plb-col-body { display: grid; gap: 7px; text-align: left; }
-.plb .plb-name { font-size: 16px; font-weight: 540; line-height: 1.2; color: var(--plb-ink, currentColor); overflow-wrap: anywhere; }
+/* Everything about a colour sits on the swatch's centre line. */
+.plb .plb-col-body { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.plb .plb-name { font-size: 17px; font-weight: 540; line-height: 1.2; text-wrap: balance; color: var(--plb-ink, currentColor); overflow-wrap: anywhere; }
+/* In a narrow swatch a name may take two lines; reserve both so the tint strip
+   and hex sit at the same height across the board. */
+@container (width < 190px) {
+  .plb .plb-name { display: grid; align-content: end; min-height: 2.4em; }
+}
 .plb .plb-hex {
-  justify-self: start;
+  justify-self: center;
   min-height: 24px;
   padding: 0;
   border: 0;
@@ -219,7 +225,7 @@
   font-family: var(--mono);
   font-size: 14.5px;
   font-weight: 540;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 .plb .plb-role {
@@ -227,15 +233,20 @@
   font-size: 10px;
   font-weight: 540;
   letter-spacing: .18em;
+  /* trailing tracking would pull the centred word off-centre */
+  padding-left: .18em;
   text-transform: uppercase;
   color: var(--plb-ink, currentColor);
 }
 .plb .plb-aa {
   display: inline-flex;
-  align-self: flex-start;
+  align-self: center;
+  justify-content: center;
+  max-width: 100%;
+  text-align: center;
   align-items: center;
   gap: 7px;
-  margin-top: 14px;
+  margin-top: 16px;
   padding: 5px 10px;
   border: 0;
   border-radius: 999px;
@@ -245,7 +256,7 @@
   font-size: 10px;
   font-weight: 540;
   letter-spacing: .1em;
-  white-space: nowrap;
+  line-height: 1.3;
 }
 .plb .plb-aa--locked { min-height: 24px; cursor: pointer; }
 
@@ -334,12 +345,56 @@
   color: var(--tl-dim);
   white-space: nowrap;
 }
-.plb .plb-adjust .tl-slider { flex: 1 1 210px; gap: 11px; }
-/* The Adjust tracks are the drawn 20px pills (D:1042 sets no height, so the
-   global 20px range height applies), with the 15px thumb riding inside. */
-.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-runnable-track { height: 20px; }
-.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-thumb { margin-top: 2.5px; }
-.plb .plb-adjust .tl-slider input[type="range"]::-moz-range-track { height: 20px; }
+/* The four sliders share one set of dimensions: the label and value columns
+   are fixed, so a longer word (Temperature) cannot take length from its track,
+   and the grid gives every slider the same column width however it wraps. */
+.plb .plb-adjust {
+  --plb-sl-k: 5rem;
+  --plb-sl-v: 34px;
+  --plb-sl-track: 20px;
+  --plb-sl-thumb: 15px;
+}
+.plb .plb-adjust-fields {
+  flex: 1 1 520px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr));
+  gap: 12px clamp(16px, 1.6vw, 22px);
+}
+.plb .plb-adjust .tl-slider {
+  display: grid;
+  grid-template-columns: var(--plb-sl-k) minmax(0, 1fr) var(--plb-sl-v);
+  align-items: center;
+  gap: 8px;
+}
+.plb .plb-adjust .tl-slider input[type="range"] { width: 100%; }
+/* The Adjust tracks are 20px pills with the 15px thumb centred inside. */
+.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-runnable-track { height: var(--plb-sl-track); }
+.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-thumb {
+  width: var(--plb-sl-thumb);
+  height: var(--plb-sl-thumb);
+  margin-top: calc((var(--plb-sl-track) - var(--plb-sl-thumb)) / 2);
+}
+.plb .plb-adjust .tl-slider input[type="range"]::-moz-range-track { height: var(--plb-sl-track); }
+.plb .plb-adjust .tl-slider input[type="range"]::-moz-range-thumb {
+  width: var(--plb-sl-thumb);
+  height: var(--plb-sl-thumb);
+  box-sizing: border-box;
+}
+/* The control is taller than the drawn track (a 24px touch target, 44px on a
+   finger), so a ring on the control floats off the slider. The ring is drawn on
+   the track itself instead, hugging the pill that is visibly focused. The
+   track's pill radius is on its base rule in tool-layout.css. Each engine's
+   track is its own rule: a selector the browser cannot parse drops the list. */
+.plb .plb-adjust .tl-slider input[type="range"]:focus { outline: none; box-shadow: none; }
+.plb .plb-adjust .tl-slider input[type="range"]:focus::-webkit-slider-runnable-track {
+  outline: 2px solid var(--tl-link);
+  outline-offset: 2px;
+}
+.plb .plb-adjust .tl-slider input[type="range"]:focus::-moz-range-track {
+  outline: 2px solid var(--tl-link);
+  outline-offset: 2px;
+}
 .plb .plb-adjust .tl-slider-k {
   font-family: var(--mono);
   font-size: 9.5px;
@@ -347,7 +402,7 @@
   text-transform: uppercase;
   color: var(--tl-faint);
 }
-.plb .plb-adjust .tl-slider-v { min-width: 42px; text-align: right; color: color-mix(in srgb, var(--t0) 80%, var(--bg-0)); }
+.plb .plb-adjust .tl-slider-v { min-width: 0; text-align: right; color: color-mix(in srgb, var(--t0) 80%, var(--bg-0)); }
 .plb .plb-adjust-field--edited .tl-slider-v { color: var(--tl-ink); font-weight: 600; }
 /* Laid out while idle so the bar does not reflow on the first nudge. */
 .plb .plb-adjust-reset.is-idle { visibility: hidden; }
@@ -421,7 +476,7 @@
      without the reserve a row was 19px taller on some loads. The name sits on the
      hex, as a one-line name always did. */
   .plb .plb-name { display: grid; align-content: end; min-height: 2.4em; }
-  .plb .plb-aa { margin-top: 0; order: 2; align-self: center; }
+  .plb .plb-aa { margin-top: 0; order: 2; align-self: center; white-space: nowrap; }
   .plb .plb-tool--more { opacity: 1; }
   .plb .plb-gap { display: none; }
   .plb .plb-add {
@@ -434,7 +489,7 @@
     border-top: 1px solid var(--tl-hair);
   }
   .plb .plb-adjust { flex-direction: column; align-items: stretch; }
-  .plb .plb-adjust .tl-slider { flex: 1 1 auto; }
+  .plb .plb-adjust-fields { flex: 0 0 auto; }
   /* Stacked, the sliders sit above it: nothing under the pointer moves. */
   .plb .plb-adjust-reset.is-idle { display: none; }
   .plb .plb-copycss { justify-content: center; }
@@ -486,3 +541,60 @@
   :is(.plb, .tl-sheet-layer) .plb-seedchip-sw { forced-color-adjust: none; }
   .plb .plb-tool--on { outline: 2px solid Highlight; }
 }
+
+/* ── Colour values: the six notations of one swatch, from its "..." menu. It is
+   a .plb-tintpop too, so it takes that panel's anchoring and dismissal. ───── */
+.plb .plb-valpop { width: 312px; padding: 10px 12px 12px; }
+.plb .plb-val-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.plb .plb-val-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+.plb .plb-val-k {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: color-mix(in srgb, var(--t0) 68%, var(--card));
+}
+.plb .plb-val-v {
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--t0);
+  background: none;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+.plb .plb-val-copy {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t1);
+  cursor: pointer;
+}
+.plb .plb-val-copy:focus-visible { outline: 2px solid var(--tl-link, var(--accent)); outline-offset: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .plb .plb-val-copy:hover { background: var(--bg-2); color: var(--t0); }
+}
+@media (pointer: coarse) {
+  .plb .plb-val-row { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .plb .plb-val-copy { width: 44px; height: 44px; }
+  /* The close button of this panel and of the tints panel it is built on. */
+  .plb .plb-tintpop .plb-pop-x { width: 44px; height: 44px; }
+}
+@media (max-width: 767px) {
+  .plb .plb-valpop { width: calc(100% - 24px); }
+}
+
+/* ── Palette CSS sheet (phone): the .tl-sheet pattern, portalled to <body>, so
+   its parts are scoped to the layer and not to .plb. ───────────────────────── */
+.tl-sheet-layer .tl-code { max-height: 40dvh; overflow: auto; }
+.tl-sheet-layer .plb-sheet-copy { width: 100%; justify-content: center; margin-top: 12px; }
