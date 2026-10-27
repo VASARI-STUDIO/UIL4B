@@ -482,6 +482,9 @@ test.describe('the chosen sign-in dialog shows a still strip of the wall from 76
       } else {
         const strips = page.locator('.ui-login-strip')
         await expect(strips).toHaveCount(1)
+        // The wall loads as its own chunk; its box holds the space until then.
+        await expect(page.locator('.ui-login-strip .aw-tile')).toHaveCount(5)
+        await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity))
         const m = await page.evaluate(() => {
           const s = document.querySelector('.ui-login-strip')
           const pane = document.querySelector('.ui-login-pane')
