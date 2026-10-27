@@ -14,14 +14,14 @@
 // of tintRampForHex) and by source (PaletteBuilder.jsx and TintTool.jsx import
 // from utils/tintRamp, and neither carries its own ramp or the old tonalRamp).
 //
-// MUTATION (to watch red before trusting this file; the author was not allowed
-// to run tests, so none of these has been watched yet). Restore each byte-exact:
-//   · `0.97` -> `0.96` in buildRamp's lightness           -> the pinned-hex tests go red.
-//   · the chroma taper `* 0.9` -> `* 0.0` (no taper)        -> the pinned-hex tests go red.
-//   · STRIP_LABELS '500' -> '600'                           -> the strip tests go red.
+// MUTATION (each watched red, then restored byte-exact):
+//   · `0.97` -> `0.96` in buildRamp's lightness           -> 11 of 18 red (pinned hexes, strip, light end).
+//   · the chroma taper `* 0.9` -> `* 0.0` (no taper)        -> 13 of 18 red.
+//   · STRIP_LABELS '500' -> '600'                           -> 5 red (four strip tests, light-to-dark).
 //   · PaletteBuilder.jsx calling a local ramp instead of
-//     swatchStripHexes / tintRampForHex                     -> the source tests go red.
-//   · TintTool.jsx given its own `function buildRamp`       -> the source test goes red.
+//     swatchStripHexes / tintRampForHex                     -> the PaletteBuilder source test is red,
+//                                                              for the strip and the popover call alike.
+//   · TintTool.jsx given its own `function buildRamp`       -> the TintTool source test is red.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
