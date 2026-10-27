@@ -3,8 +3,9 @@
 
 .spt .spt-section { max-width: var(--sp-shell); margin: 0 auto; padding: clamp(40px, 6vw, 88px) var(--sp-gutter) 0; }
 .spt .spt-h2 { margin: 0 0 32px; font-family: var(--display); font-weight: 560; font-size: clamp(28px, 4vw, 48px); line-height: 1.05; letter-spacing: -.03em; }
-.spt .spt-cards { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: start; }
-.spt .spt-card { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px; padding: 20px; border: 1px solid var(--sp-line); border-radius: 20px; min-width: 0; }
+.spt .spt-cards { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; }
+/* Paired cards share a height: the preview takes the spare room, so the buttons line up. */
+.spt .spt-card { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr auto auto auto; gap: 12px; padding: 20px; border: 1px solid var(--sp-line); border-radius: 20px; min-width: 0; }
 .spt .spt-card:nth-child(4n + 1), .spt .spt-card:nth-child(4n + 4) { grid-column: span 7; }
 .spt .spt-card:nth-child(4n + 2), .spt .spt-card:nth-child(4n + 3) { grid-column: span 5; }
 .spt .spt-card h3 { margin: 4px 0 0; font-size: 22px; font-weight: 600; color: var(--sp-ink); }
@@ -63,8 +64,13 @@
 
 @media (max-width: 860px) {
   .spt .spt-card, .spt .spt-card:nth-child(n) { grid-column: span 6; }
+  /* Six 44px seeds do not fit one row of a half-width card, so they sit three by two. */
+  .spt .spt-seeds { display: grid; grid-template-columns: repeat(3, 44px); }
   .spt .spt-group { grid-template-columns: minmax(0, 1fr); }
   .spt .spt-group h3 { padding: 0 0 8px; }
+}
+@media (min-width: 761px) and (max-width: 860px) {
+  .spt .spt-fonts li > span:last-child { font-size: clamp(20px, 3vw, 28px); }
 }
 @media (max-width: 760px) {
   .spt .spt-card, .spt .spt-card:nth-child(n) { grid-column: 1 / -1; }
