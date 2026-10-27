@@ -9,7 +9,7 @@ import { renderUiKit } from '../../src/utils/uiKitExport.js'
 import { readLogo } from '../../src/utils/brandLogo.js'
 import { SAMPLES, FIXED_DATE } from './export-samples.js'
 
-export const KIT_TEMPLATE_PATH = 'src/templates/uiKit.html'
+export const KIT_TEMPLATE_PATH = 'src/templates/kit/studio.html'
 export const readKitTemplate = (file = KIT_TEMPLATE_PATH) => fs.readFileSync(path.resolve(file), 'utf8')
 
 // { 'book/northbeam': '<!doctype html>...', 'kit-pro/halcyon': ... }
