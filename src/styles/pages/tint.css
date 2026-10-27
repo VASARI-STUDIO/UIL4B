@@ -183,7 +183,17 @@
 /* Less room below the note than above it (above clearing the sticky bars and the
    notes header): open above it, with the bridge underneath. */
 .tt .tt-tip--above { top: auto; bottom: 100%; padding-top: 0; padding-bottom: 6px; }
-/* Neither side of the note holds the whole card: the script gives it a
+/* Not enough room above or below for the whole card: the help paragraph goes
+   (it stays in the page, outside the described body); the head and both rows
+   remain. */
+.tt .tt-tip--compact .tt-tip-help { display: none; }
+/* Not enough room above or below even for that: the card sits beside the note,
+   on the side the script found room, with the bridge on the note's side. The
+   script sets its vertical offset so it stays inside the window and under the
+   sticky bars. */
+.tt .tt-tip--right { top: 0; left: 100%; padding: 0 0 0 6px; }
+.tt .tt-tip--left { top: 0; left: auto; right: 100%; padding: 0 6px 0 0; }
+/* The last resort (no room beside either): the script gives the card a
    max-height that fits the room it has, and it scrolls inside. */
 .tt .tt-tip-card { overflow-y: auto; overscroll-behavior: contain; }
 /* A tap pins the detail inline under the note, in the flow, so it covers
