@@ -495,8 +495,20 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     await serveInk(page)
     let release
     const held = new Promise((resolve) => { release = resolve })
-    // Registered after serveInk, so it sees the request first and hands it on.
+    // Registered after serveInk, so it sees the request first and hands it on. Two
+    // things carry the markup: the grid's batch (logos.json) and the customiser's own
+    // fetch of the .svg. Both are held; the stage's <img> of the same .svg is a
+    // different resource type and loads straight away, so the picture is on screen
+    // while the markup is still unknown. (The customiser's fetch gives up after 3s, so
+    // everything before release() has to stay quick.)
     await page.route(/\/logos\.json\?.*icons=/, async (route) => { await held; await route.fallback() })
+    await page.route(
+      (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/logos\/[^/]+\.svg$/.test(u.pathname),
+      async (route) => {
+        if (route.request().resourceType() === 'fetch') await held
+        await route.fallback()
+      },
+    )
     try {
       await go(page, '/create/icons')
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
