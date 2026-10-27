@@ -114,7 +114,7 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   // requests on a page that was about to make them. The condition the assertion
   // below is really about is cells having painted, so wait for that.
   await expect
-    .poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 })
+    .poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20000 })
     .toBeGreaterThan(20)
 
   const tally = iconifyRequests(ctx)
@@ -199,7 +199,7 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
     .toBeVisible({ timeout: 20000 })
   // The summary line is up once the packs are named; the glyphs are a second round
   // of requests a beat later, so wait for cells to paint before counting them.
-  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20000 }).toBeGreaterThan(20)
   expect(iconifyRequests(ctx).collection, 'Try again lists from the heads, not /collection').toBe(0)
   expect(iconifyRequests(ctx).batch, 'Try again fetched the glyphs again').toBeGreaterThan(0)
   await ctx.close()
@@ -415,7 +415,7 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
   const listed = headPacksAsked(page)
   await go(page, '/create/icons')
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
-  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20000 }).toBeGreaterThan(20)
 
   const fetched = packsIn(urls)
   // PRESENCE, so a page that fetched nothing at all cannot pass this. The default
@@ -459,7 +459,7 @@ test('signed in free: the solid packs open, the brand, flag and emoji packs are 
   await signIn(page, { plan: 'free' })
   await go(page, '/create/icons')
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
-  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20000 }).toBeGreaterThan(20)
 
   // The listing names every pack the account opens from its head, and the grid
   // draws the first of them from the API; the later packs' glyphs are asked for as
@@ -654,7 +654,7 @@ test('reloading retains all five packs, and listing them never asks /collection'
     watch(page, 'visitor reloading cached icon collections')
     await go(page, '/create/icons')
     await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
-    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     // The default listing names its packs from the committed heads, so there is nothing to ask /collection.
     expect(iconifyRequests(ctx).collection).toBe(0)
     const packs = await page.locator('.ic .ic-pack').allTextContents()
@@ -662,7 +662,7 @@ test('reloading retains all five packs, and listing them never asks /collection'
 
     await page.reload()
     await expect(page.locator('.ig-status').filter({ hasText: /5 sets$/ })).toBeVisible({ timeout: 20000 })
-    await expect(page.locator('.ig .ic img').first()).toBeVisible()
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     expect(await page.locator('.ic .ic-pack').allTextContents()).toEqual(packs)
     expect(iconifyRequests(ctx).collection).toBe(0)
     await expect(refusedNotice(page)).toHaveCount(0)
@@ -678,14 +678,14 @@ test('a pack listed once is not listed again after a reload', async ({ browser }
     watch(page, 'visitor reloading a cached icon collection')
     const pack = page.getByRole('button', { name: 'Icon pack' })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
     await chooseMenuOption(page, pack, 'lucide')
     await expect(page.locator('.ig-status').filter({ hasText: /Lucide/ })).toBeVisible({ timeout: 20000 })
     // One pack's full listing is the one thing that still needs /collection.
     expect(iconifyRequests(ctx).collection, 'opening a pack asks for its listing once').toBe(1)
 
     await page.reload()
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
     await chooseMenuOption(page, pack, 'lucide')
     await expect(page.locator('.ig-status').filter({ hasText: /Lucide/ })).toBeVisible({ timeout: 20000 })
     expect(iconifyRequests(ctx).collection, 'the saved listing answers after a reload').toBe(1)
@@ -711,7 +711,7 @@ test('an expired collection keeps its pack available when collection requests fa
       return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
     })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
     // The default listing does not ask /collection at all, so the stale copy is not touched.
     expect(requests).toBe(0)
     await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
@@ -720,7 +720,7 @@ test('an expired collection keeps its pack available when collection requests fa
     const quiet = page.getByRole('status').filter({ hasText: /showing the copy saved on this device/ })
     await expect(quiet).toBeVisible({ timeout: 20000 })
     await expect(quiet.getByRole('button', { name: 'Try again' })).toBeVisible()
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
     const shown = await page.locator('.ig .ic > span').allTextContents()
     expect(shown.length).toBeGreaterThan(0)
     expect(shown.every(name => names.includes(name))).toBe(true)
@@ -744,7 +744,7 @@ test('Try again sends at most one collection request per pack on each click', as
       return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
     })
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
     expect(requests, 'the default listing asks nothing of /collection').toHaveLength(0)
 
     // One pack's full listing is refused: its first icons stand in, with a quiet line.
