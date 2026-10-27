@@ -55,6 +55,28 @@ const esc = (s) => String(s ?? '')
 const isHex = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)
 
 /**
+ * A font weight the documents may print: an integer from 100 to 900 in steps of
+ * 100, as a number, or null. Weights are written raw into style attributes, <dd>
+ * cells and <style> blocks, so anything else (a string carrying markup, 650, NaN)
+ * is refused here rather than escaped at every use.
+ */
+export function safeWeight(w) {
+  const n = Number(w)
+  return Number.isInteger(n) && n >= 100 && n <= 900 && n % 100 === 0 ? n : null
+}
+
+/**
+ * A font family name the documents may print: letters, digits, space, hyphen,
+ * underscore and period, up to 80 characters; otherwise null. esc() leaves ' alone,
+ * so a family containing one could break out of the quoted CSS value it sits in.
+ */
+export function safeFamily(f) {
+  if (typeof f !== 'string') return null
+  const t = f.trim()
+  return /^[A-Za-z0-9 _.-]{1,80}$/.test(t) ? t : null
+}
+
+/**
  * Normalise whatever the design context holds into exactly what the document
  * needs. Saved designs come from many tool versions, so every field is treated
  * as untrusted: a half-written palette produces a shorter guide, never a broken
@@ -64,16 +86,16 @@ export function readDesign(design) {
   const palette = (design?.palette?.colors || [])
     .filter(isHex).map(c => c.toUpperCase())
   const base = isHex(design?.palette?.base) ? design.palette.base.toUpperCase() : palette[0] || null
-  const heading = design?.fonts?.heading?.family || 'Inter'
-  const body = design?.fonts?.body?.family || 'Inter'
+  const heading = safeFamily(design?.fonts?.heading?.family) || 'Inter'
+  const body = safeFamily(design?.fonts?.body?.family) || 'Inter'
   const ts = design?.typeScale || {}
   return {
     palette,
     base,
     heading,
-    headingWeight: Number(ts.headingWeight) || design?.fonts?.heading?.weight || 700,
+    headingWeight: safeWeight(ts.headingWeight) ?? safeWeight(design?.fonts?.heading?.weight) ?? 700,
     body,
-    bodyWeight: design?.fonts?.body?.weight || 400,
+    bodyWeight: safeWeight(design?.fonts?.body?.weight) ?? 400,
     baseSize: Number(ts.base) > 0 ? Number(ts.base) : 16,
     ratio: Number(ts.ratio) > 1 ? Number(ts.ratio) : 1.25,
     lineHeight: Number(ts.lineHeight) > 0 ? Number(ts.lineHeight) : 1.5,

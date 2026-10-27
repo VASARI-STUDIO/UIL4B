@@ -38,6 +38,7 @@
 
 import { planForUser } from './plans.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { safeFamily, safeWeight } from '../../src/utils/styleGuideExport.js'
 
 // The generators, loaded on demand and only after the plan check has passed, so a
 // refused request never runs (or even parses) a Pro document builder. The paths
@@ -80,16 +81,30 @@ function isTokenRefusal(err) {
   return true
 }
 
+// A font role reduced to the two values the documents print, each checked: a
+// family from a safe character set and a weight from 100 to 900 in steps of 100.
+// An invalid one becomes undefined, so the generator's own default applies.
+function pickFont(f) {
+  const o = f && typeof f === 'object' ? f : {}
+  return {
+    family: safeFamily(o.family) ?? undefined,
+    weight: safeWeight(o.weight) ?? undefined,
+  }
+}
+
 // Only the fields the documents read. The generators treat everything as
 // untrusted already; this keeps the request from carrying (and the function from
-// walking) anything they never look at.
+// walking) anything they never look at. Fonts and weights are cleaned here too,
+// because the panel opens the finished HTML as a same-origin blob.
 function pickDesign(design) {
   const d = design && typeof design === 'object' ? design : {}
+  const fonts = d.fonts && typeof d.fonts === 'object' ? d.fonts : {}
+  const ts = d.typeScale && typeof d.typeScale === 'object' ? d.typeScale : undefined
   return {
     palette: d.palette,
     gradient: d.gradient,
-    fonts: d.fonts,
-    typeScale: d.typeScale,
+    fonts: { heading: pickFont(fonts.heading), body: pickFont(fonts.body) },
+    typeScale: ts && { ...ts, headingWeight: safeWeight(ts.headingWeight) ?? undefined },
     logo: d.logo,
   }
 }
