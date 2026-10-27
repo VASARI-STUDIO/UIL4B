@@ -725,6 +725,58 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     expect(where.position, 'the notice floats over the page instead of sitting in it').toBe('static')
   })
 
+  // The notice opens in the flow under the foot New project button. With the page scrolled to its foot that
+  // button sits just above the fixed tab bar, so the notice would open under the bar unless the page moves.
+  // MUTATION: revert the `ref={showCap}` in Projects.jsx, or the scroll-margin in projects.css: this goes red.
+  for (const motion of ['on', 'reduced']) {
+    test(`the limit notice ends above the tab bar when it opens from the page foot, motion ${motion}`, async ({ page }) => {
+      watch(page, `a free designer at the foot of the page pressing New project, motion ${motion}`)
+      // The Settings choice, as AppearanceContext stores it. The OS says "no preference" either way, so the
+      // page's own setting is the only thing that differs between the two runs.
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await page.addInitScript((reduced) => {
+        try { localStorage.setItem('vs-appearance', JSON.stringify({ reducedMotion: reduced })) } catch { /* private mode */ }
+      }, motion === 'reduced')
+      await open(page, phone)
+      await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', motion === 'reduced' ? 'true' : 'false')
+      await expect(page.locator('html')).toHaveClass(/has-tabbar/)
+      const button = page.locator('.uh-new-wrap--foot .uh-new')
+      await expect(button).toBeVisible()
+      // Scroll until the foot button's bottom edge is 8px above the tab bar: the thumb's position when it
+      // reaches the end of the work. (The button is not at the end of the document; Discover and exports follow.)
+      await page.evaluate(() => {
+        const b = document.querySelector('.uh-new-wrap--foot .uh-new').getBoundingClientRect()
+        const bar = document.querySelector('nav.pnav-tabs').getBoundingClientRect()
+        window.scrollBy({ top: b.bottom - (bar.top - 8), behavior: 'instant' })
+      })
+      const place = () => page.evaluate(() => {
+        const b = document.querySelector('.uh-new-wrap--foot .uh-new').getBoundingClientRect()
+        return { gap: Math.round(document.querySelector('nav.pnav-tabs').getBoundingClientRect().top - b.bottom), top: Math.round(b.top) }
+      })
+      // The setup is the case the fix is for: the button is whole on the screen with the bar right under it.
+      await expect.poll(async () => (await place()).gap).toBe(8)
+      expect((await place()).top, 'the button is on the screen').toBeGreaterThan(0)
+      await button.click()
+      const notice = page.getByTestId('project-create-refusal')
+      await expect(notice).toBeVisible()
+      // Wait for any smooth scroll to finish: the scroll position holds still for several frames.
+      await page.evaluate(() => new Promise((resolve) => {
+        let last = -1, still = 0
+        const tick = () => { still = scrollY === last ? still + 1 : 0; last = scrollY; still >= 8 ? resolve() : requestAnimationFrame(tick) }
+        requestAnimationFrame(tick)
+      }))
+      const edges = await page.evaluate(() => ({
+        noticeTop: document.querySelector('[data-testid="project-create-refusal"]').getBoundingClientRect().top,
+        noticeBottom: document.querySelector('[data-testid="project-create-refusal"]').getBoundingClientRect().bottom,
+        tabTop: document.querySelector('nav.pnav-tabs').getBoundingClientRect().top,
+        tabPosition: getComputedStyle(document.querySelector('nav.pnav-tabs')).position,
+      }))
+      expect(edges.tabPosition, 'the tab bar is the fixed one').toBe('fixed')
+      expect(edges.noticeBottom, `the notice (bottom ${edges.noticeBottom}) ends at or above the tab bar (top ${edges.tabTop})`).toBeLessThanOrEqual(edges.tabTop)
+      expect(edges.noticeTop, 'the notice is on the screen, not scrolled past the top').toBeGreaterThanOrEqual(0)
+    })
+  }
+
   test('the date and time are one line under the title, and the big clock is not drawn', async ({ page }) => {
     watch(page, 'a designer glancing at the top of their workspace on a phone')
     await open(page, phone)
