@@ -313,6 +313,10 @@ function seedProject(i, design) {
  *              spec with `window.__UIL4B_TEST_AUTH__.signInNow()`, without a
  *              reload. The account's document arrives a moment after the user
  *              does, as it does for a real sign-in made inside the page.
+ *   authDelay  ms to hold the FIRST auth answer back (default 0, a macrotask).
+ *              The page paints with AuthContext still at (loading: true), which
+ *              reads as signed out, so a signed-in session can be looked at in
+ *              the window before it is known to be signed in.
  *   deny       path substrings this session's Firestore must REFUSE, e.g.
  *              ['sync/projects']. Every read, write and listener whose path
  *              contains one answers with a FirebaseError('permission-denied')
@@ -368,6 +372,7 @@ export async function signIn(page, opts = {}) {
     noName = false,
     emailVerified = true,
     lateSignIn = false,
+    authDelay = 0,
     creationTime,
   } = opts
 
@@ -397,6 +402,7 @@ export async function signIn(page, opts = {}) {
     provider: 'password',
     emailVerified,
     lateSignIn,
+    authDelay,
     // Firebase reports creationTime as a UTC string; undefined leaves the double's own default.
     creationTime: creationTime === undefined ? undefined : new Date(creationTime).toUTCString(),
     claims,

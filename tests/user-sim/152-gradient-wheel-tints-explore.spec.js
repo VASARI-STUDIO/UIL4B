@@ -13,6 +13,8 @@
 // for a free account too; "a free account sees the ramp" goes red.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
+import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const ROUTE = '/create/gradient'
 // Tests start from Indigo Night's angle, 160deg; the first-visit stops are
@@ -302,6 +304,17 @@ test.describe('the Explore the library panel', () => {
     const swatchStyles = (await explore.locator('.grd-explore-swatch').evaluateAll((els) => els.map((el) => el.getAttribute('style') || ''))).join(' ').toLowerCase()
     expect(swatchStyles, 'the chips are painted').toContain('gradient')
     expect(swatchStyles).not.toMatch(/7c2d12|rgb\(124,\s*45,\s*18\)/)
+    // And the other way round: every colour in the chips is a stop of a row the
+    // visitor can open (the first GALLERY_TIER_LIMITS.anonymous rows), whichever
+    // withheld row a change might reach for.
+    const toHex = (n) => Number(n).toString(16).padStart(2, '0')
+    const found = [
+      ...[...swatchStyles.matchAll(/#([0-9a-f]{6})/g)].map((m) => m[1].toUpperCase()),
+      ...[...swatchStyles.matchAll(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/g)].map((m) => (toHex(m[1]) + toHex(m[2]) + toHex(m[3])).toUpperCase()),
+    ]
+    const openHexes = new Set(GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.anonymous).flatMap((g) => g.stops.map((st) => st.color.replace('#', '').toUpperCase())))
+    expect(found.length, 'the chips carry colours to check').toBeGreaterThan(0)
+    expect(found.filter((h) => !openHexes.has(h)), 'a chip colour from a row a signed-out visitor cannot open').toEqual([])
 
     const link = explore.getByRole('link', { name: 'Browse all gradients' })
     await expect(link).toHaveAttribute('href', '/discover/gradients')
@@ -416,6 +429,43 @@ test.describe('the generator layout', () => {
   })
 })
 
+test.describe('the live position over a dragged stop', () => {
+  // 12px type on a 3px-padded scrim sits above the handle, whole, and on screen,
+  // for the middle stop and for the two at the ends of the rail.
+  for (const width of [390, 1440]) test(`at ${width}px the position label is readable and clear of the handle while a stop is dragged`, async ({ page }) => {
+    watch(page, 'a designer dragging a stop')
+    await page.setViewportSize({ width, height: 900 })
+    await go(page, ROUTE)
+    for (const [n, toPct] of [[2, 40], [1, 0], [3, 100]]) {
+      const handle = page.getByRole('button', { name: new RegExp(`^Gradient stop ${n} at`) })
+      const rail = page.locator('.grd-rail')
+      await expect(handle).toBeVisible()
+      const hb = await handle.boundingBox()
+      const rb = await rail.boundingBox()
+      await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(rb.x + (rb.width * toPct) / 100, hb.y + hb.height / 2, { steps: 6 })
+      await expect(handle, `stop ${n} is being dragged`).toHaveClass(/is-dragging/)
+      const val = handle.locator('.grd-handle-val')
+      await expect(val).toHaveCSS('visibility', 'visible')
+      await expect.poll(() => val.evaluate((el) => getComputedStyle(el).opacity)).toBe('1')
+      const m = await val.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const h = el.parentElement.getBoundingClientRect()
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, handleTop: h.top, font: parseFloat(getComputedStyle(el).fontSize), clipped: el.scrollWidth > el.clientWidth, text: el.textContent, vw: innerWidth }
+      })
+      expect(m.font, `stop ${n}: the label is 12px`).toBe(12)
+      expect(m.text, `stop ${n}: it reads the live position`).toBe(`${toPct}%`)
+      expect(m.bottom, `stop ${n}: the label ends above the handle`).toBeLessThanOrEqual(m.handleTop)
+      expect(m.top, `stop ${n}: the label is on screen`).toBeGreaterThanOrEqual(0)
+      expect(m.left, `stop ${n}: inside the left edge`).toBeGreaterThanOrEqual(0)
+      expect(m.right, `stop ${n}: inside the right edge`).toBeLessThanOrEqual(m.vw)
+      expect(m.clipped, `stop ${n}: the text fits its box`).toBe(false)
+      await page.mouse.up()
+    }
+  })
+})
+
 test.describe('the library when the signed-out cap empties a mood', () => {
   const LIBRARY = '/discover/gradients'
   const emptyOf = (page) => page.locator('.grg-empty')
@@ -443,11 +493,11 @@ test.describe('the library when the signed-out cap empties a mood', () => {
     })
     expect(clearStyle.bg, 'Clear filters has no fill beside the sign-in action').toBe('rgba(0, 0, 0, 0)')
     expect(clearStyle.ring).toBe('1px')
-    const signIn =empty.getByRole('button', { name: 'Open 2 with a free account' })
-    await expect(signIn).toBeVisible()
+    const signInBtn = empty.getByRole('button', { name: 'Open 2 with a free account' })
+    await expect(signInBtn).toBeVisible()
     await expect(page.getByRole('dialog'), 'no prompt before the click').toHaveCount(0)
 
-    await signIn.click()
+    await signInBtn.click()
     await expect(page.getByRole('dialog')).toBeVisible()
     await expect(page.getByRole('dialog').getByRole('textbox').first()).toBeVisible()
   })
@@ -485,6 +535,37 @@ test.describe('the library when the signed-out cap empties a mood', () => {
     await go(page, `${LIBRARY}?mood=dark`)
     await expect(page.locator('.grg-card').filter({ hasText: 'Ember Fade' })).toHaveCount(1)
     await expect(emptyOf(page)).toHaveCount(0)
+  })
+
+  // MUTATION: drop `authLoading ||` from the accountMatches guard in
+  // GradientGallery.jsx; the button shows while the session is still resolving
+  // and the observer catches it.
+  for (const plan of ['free', 'pro']) test(`a ${plan} account landing on ?mood=dark is never offered "with a free account", even while auth is still resolving`, async ({ page }) => {
+    watch(page, 'a signed-in visitor following a Dark link before the session has answered')
+    {
+      await signIn(page, { plan, authDelay: 4000 })
+      // Records every moment the offer is on screen, from the first mutation on.
+      await page.addInitScript(() => {
+        window.__offerSeen = false
+        const look = () => {
+          for (const b of document.querySelectorAll('.grg-empty button')) {
+            if (/with a free account/.test(b.textContent || '')) window.__offerSeen = true
+          }
+        }
+        new MutationObserver(look).observe(document, { subtree: true, childList: true, characterData: true })
+      })
+      await go(page, `${LIBRARY}?mood=dark`)
+      // POSITIVE CONTROL: the page is inside the loading window. The session has
+      // not answered, so the library still reads signed out and holds the plain
+      // empty state, and no card has appeared yet.
+      await expect(emptyOf(page), `${plan}: the empty state shows while auth is pending`).toBeVisible()
+      await expect(emptyOf(page)).toContainText('No gradients match those filters.')
+      await expect(page.locator('.grg-card')).toHaveCount(0)
+      // Then the account answers and the dark gradients arrive.
+      await expect(page.locator('.grg-card').filter({ hasText: 'Ember Fade' }), `${plan}: Ember Fade after auth`).toHaveCount(1, { timeout: 10000 })
+      await expect(emptyOf(page)).toHaveCount(0)
+      expect(await page.evaluate(() => window.__offerSeen), `${plan}: the sign-up offer was never on screen`).toBe(false)
+    }
   })
 })
 

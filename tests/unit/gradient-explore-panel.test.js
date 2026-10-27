@@ -46,7 +46,9 @@ test('a chip is painted from the rows the tier can open, never from a named row'
 test('the library reads the mood from ?mood= and ignores an unknown one', () => {
   const gallery = read('src/pages/GradientGallery.jsx')
   assert.match(gallery, /searchParams\.get\('mood'\)/)
-  assert.match(gallery, /GRADIENT_TAGS\.includes\(mood\) \? mood : 'all'/)
+  // Source text only: it proves the unknown-mood fallback is still written, not
+  // that it runs. Spec 152 ("?mood=dark ...") drives the real filter.
+  assert.match(gallery, /GRADIENT_TAGS\.includes\(urlMood\) \? urlMood : 'all'/)
 })
 
 test('the panel sits after the presets and spans the page width', () => {
