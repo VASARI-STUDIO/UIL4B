@@ -520,9 +520,11 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       await expect.poll(() => stage.locator('.icust-stage-img').evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 20000 }).toBe(true)
       await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
       // Whether the logo has colours is unknown yet, so the Colour row shows nothing
-      // (no Default, no "Original colours") rather than flashing and switching.
+      // (no Default, no "Original colours") rather than flashing and switching. Its
+      // label stays, so the form has no blank spot.
       const colourRow = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
-      await expect(colourRow).toBeHidden()
+      await expect(colourRow.locator('label')).toBeVisible()
+      await expect(colourRow.locator('.icust-value')).toBeHidden()
       await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
       release()
       await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
