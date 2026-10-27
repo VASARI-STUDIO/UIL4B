@@ -125,10 +125,11 @@ test.describe('the Contrast Checker views', () => {
         await expect(pv.locator('[data-hit="on"]'), `${v.name}: hovering ${label} outlined nothing`).not.toHaveCount(0)
         const wrong = await pv.locator('[data-hit="on"]').evaluateAll((els, want) => els.filter((e) => e.dataset.size !== want).map((e) => e.className), id)
         expect(wrong, `${v.name}: hovering ${label} outlined parts of another test`).toEqual([])
-        // A box is outlined; a drawn (SVG) part is traced by a 2px dashed stroke instead.
+        // A box is outlined; a drawn (SVG) part keeps its own colour and is traced by a
+        // drop-shadow sleeve instead, so the part still shows the pair.
         const undrawn = await pv.locator('[data-hit="on"]').evaluateAll((els) => els.filter((e) => {
           const cs = getComputedStyle(e)
-          if (e instanceof SVGElement && !(e instanceof SVGSVGElement)) return !(parseFloat(cs.strokeWidth) >= 2 && cs.strokeDasharray !== 'none')
+          if (e instanceof SVGElement && !(e instanceof SVGSVGElement)) return !cs.filter.includes('drop-shadow')
           return !(cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 1)
         }).map((e) => `${e.tagName}.${e.getAttribute('class') || ''}`))
         expect(undrawn, `${v.name}: the ${label} outline is not drawn on these parts`).toEqual([])
