@@ -307,15 +307,12 @@ test.describe('on a phone', () => {
         const els = [...document.querySelectorAll('.uh a[href], .uh button')]
           .map((el) => ({ el, r: el.getBoundingClientRect() }))
           .filter(({ r }) => r.width > 0 && r.height > 0)
-        // Two kinds of link are text-wide by design and held to 24px across and 44px down:
-        // See plans (an inline link in a sentence, 24px both ways) and the walkthrough's step
-        // links, whose width is the word ("Type" is 32px wide, in a 44px row).
-        const textWide = (el) => el.classList.contains('uh-plans-link') || !!el.closest('.uh-steps')
+        // See plans is text-wide by design: an inline link in a sentence, held to 24px both ways.
+        const textWide = (el) => el.classList.contains('uh-plans-link')
         return {
           count: els.length,
           small: els
             .filter(({ el, r }) => !textWide(el) && (r.height < 44 || r.width < 44))
-            .concat(els.filter(({ el, r }) => el.closest('.uh-steps') && (r.height < 44 || r.width < 24)))
             .map(({ el, r }) => `${(el.getAttribute('aria-label') || el.innerText || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 32)} ${Math.round(r.width)}x${Math.round(r.height)}`),
           plans: els.filter(({ el, r }) => el.classList.contains('uh-plans-link') && r.height < 24).length,
         }
