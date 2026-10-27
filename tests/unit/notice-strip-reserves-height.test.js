@@ -62,12 +62,14 @@ function navDeclarations() {
   return found
 }
 
-// The three places ALLOWED to compute the nav offset by hand, and why each is.
+// The places ALLOWED to compute the nav offset by hand, and why each is.
 const EXEMPT = [
   // The token itself.
   ':root :: --chrome-h:calc(var(--nav-top) + var(--nav-h) + var(--notice-h))',
-  // The nav's own box. It is the thing being measured, not an offset from it.
-  '.pnav :: height:var(--nav-h)',
+  // The nav's own box. It is the thing being measured, not an offset from it:
+  // it grows by the top safe-area inset and pads its content below it.
+  '.pnav :: height:calc(var(--nav-top) + var(--nav-h))',
+  '.pnav :: padding-top:var(--nav-top)',
   // The strip's own top. A strip offset by its own height walks down the page.
   '.notice-stack :: top:calc(var(--nav-top) + var(--nav-h))',
 ]
@@ -90,7 +92,7 @@ test('no rule computes the offset below the nav by hand', () => {
     'use var(--chrome-h) or var(--nav-clear) — a hand-rolled offset sits under the notice strip')
 })
 
-test('the exemptions are real rules, not three strings nothing matches', () => {
+test('the exemptions are real rules, not strings nothing matches', () => {
   // POSITIVE CONTROL for the scanner. The test above is "this list is empty",
   // which a regex that silently stopped matching would also satisfy. Every
   // exemption must be found in the stylesheets, which proves the scan ran and

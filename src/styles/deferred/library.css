@@ -192,7 +192,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Copy hint */
 .pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-mid);transition:opacity var(--dur-2) var(--ease-standard)}
 /* Prompt modal overlay */
-.pl-modal-backdrop{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;animation:fg-fade var(--dur-2) var(--ease-entrance)}
+.pl-modal-backdrop{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:max(40px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(40px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));overflow-y:auto;animation:fg-fade var(--dur-2) var(--ease-entrance)}
 .pl-modal{background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);width:100%;max-width:680px;max-height:80vh;max-height:80dvh;display:flex;flex-direction:column;box-shadow:var(--warm-shadow-lg);position:relative;animation:fg-rise var(--dur-3) var(--ease-entrance)}
 .pl-modal-close{position:absolute;top:16px;right:16px;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all var(--t);z-index:2}
 .pl-modal-close:hover{background:var(--bg-3);color:var(--t0)}
@@ -289,12 +289,12 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    2 below is the pre-paint fallback and equals the 4px default at size 48. ══ */
 /* Rises without scaling, so the Stage measures the same size all the way through the entrance. */
 @keyframes icust-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade var(--dur-1) var(--ease-entrance)}
 /* Panel clips to its rounded corners; the header is fixed and a single inner
    .icust-body owns the scroll — so the scrollbar lives INSIDE the panel, never
    in the scrim. Height caps to the padded overlay box so the overlay itself
    never needs a second scrollbar. */
-.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - 32px));max-height:min(880px,calc(100dvh - max(6vh,48px) - 32px));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:icust-rise var(--dur-2) var(--ease-entrance)}
+.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - max(16px,env(safe-area-inset-left,0px)) - max(16px,env(safe-area-inset-right,0px))));max-height:min(880px,calc(100dvh - max(6vh,48px,env(safe-area-inset-top,0px)) - max(32px,env(safe-area-inset-bottom,0px))));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:icust-rise var(--dur-2) var(--ease-entrance)}
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -322,7 +322,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Signed-out upgrade gate — a small alert dialog floated over the customizer
    when a visitor taps a Pro-locked line-style control. (The overlay's
    backdrop-filter makes it the containing block for this fixed backdrop.) */
-.icust-gate-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.icust-gate-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 .icust-gate{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:min(380px,100%);padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .icust-gate-title{margin:0;font-size:var(--fs-h5);font-weight:640;color:var(--t0)}
 .icust-gate-copy{margin:0;font-size:var(--fs-body-s);line-height:1.55;color:var(--t1)}
@@ -536,8 +536,8 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .ig-attrib a:hover{text-decoration:underline}
 
 @media(max-width:560px){
-  .icust-overlay{padding:24px 12px 32px}
-  .icust-panel{max-height:min(880px,calc(100dvh - 56px))}
+  .icust-overlay{padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+  .icust-panel{max-height:min(880px,calc(100dvh - max(24px,env(safe-area-inset-top,0px)) - max(32px,env(safe-area-inset-bottom,0px))))}
   .icust-head{padding:20px 16px 12px}
   .icust-paste{padding:8px 16px 20px}}
 
@@ -1000,7 +1000,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   max-height:min(80dvh,640px);
   background:var(--card);border-top:1px solid var(--border);
   border-radius:20px 20px 0 0;box-shadow:var(--shadow-l);
-  padding-bottom:env(safe-area-inset-bottom,0px);
+  padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
 }
 .lbry-sheet:focus-visible{outline:none}
 .lbry-sheet-head{
