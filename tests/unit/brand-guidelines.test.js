@@ -175,7 +175,7 @@ test('the scope page is always present and names what the document cannot contai
   // The absent list must actually DIFFER between the two shapes, or it is a
   // fixed paragraph rather than a description of the document in hand.
   assert.match(BARE, /A logo section/, 'a document with no logo does not say its logo section is missing')
-  assert.ok(!DOC.includes('A logo section —'),
+  assert.ok(!DOC.includes('A logo section:'),
     'a document WITH a logo still lists the logo section as missing — the disclosure is boilerplate')
   assert.ok(BARE.includes('Add your logo in the export panel'),
     'the missing-logo line does not say how to fix it')

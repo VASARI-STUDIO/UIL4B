@@ -164,7 +164,7 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(projectName)} — Style Guide</title>
+<title>${esc(projectName)} | Style Guide</title>
 ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?${fontParam}&display=swap" rel="stylesheet">` : ''}
 <style>
   :root{--ink:#101014;--mut:#5F5F69;--line:#E4E4E8;--page:#fff;--accent:${d.base || '#101014'}}
@@ -215,29 +215,29 @@ ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link 
   <p class="eyebrow">Design System</p>
   <h1>${esc(projectName)}</h1>
   <div class="rule"></div>
-  <p class="lede">The colour, typography and contrast decisions behind this interface — written down so they can be applied consistently, and checked.</p>
+  <p class="lede">The colour, typography and contrast decisions behind this interface, written down so they can be applied consistently, and checked.</p>
   <dl>
-    <dt>Primary</dt><dd>${d.base || '—'}</dd>
+    <dt>Primary</dt><dd>${d.base || 'None'}</dd>
     <dt>Colours</dt><dd>${d.palette.length}</dd>
     <dt>Headings</dt><dd>${esc(d.heading)}</dd>
     <dt>Body</dt><dd>${esc(d.body)}</dd>
     <dt>Scale</dt><dd>${d.baseSize}px · ${d.ratio}</dd>
     <dt>Generated</dt><dd>${date.toISOString().slice(0, 10)}</dd>
   </dl>
-  <div class="foot"><span>${esc(projectName)} — Style Guide</span><span>${watermark ? 'Made with UIL4B' : ''}</span></div>
+  <div class="foot"><span>${esc(projectName)} | Style Guide</span><span>${watermark ? 'Made with UIL4B' : ''}</span></div>
 </section>
 
 <section class="page">
-  <p class="eyebrow">01 — Colour</p>
+  <p class="eyebrow">01 · Colour</p>
   <h2>The palette</h2>
   <p class="lede">Every colour is shown with the text colour that reads on it and the measured contrast ratio, so a choice made here is already checked.</p>
-  ${d.palette.length ? `<div class="sw-grid">${d.palette.map(swatch).join('')}</div>` : '<p class="note">No colours saved yet — build a palette and export again.</p>'}
+  ${d.palette.length ? `<div class="sw-grid">${d.palette.map(swatch).join('')}</div>` : '<p class="note">No colours saved yet. Build a palette and export again.</p>'}
   <div class="note"><strong>How to read this.</strong> Ratios are measured against WCAG 2.2 §1.4.3. AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. A swatch marked Fail is a fill, not a text colour.</div>
   <div class="foot"><span>Colour</span><span>${watermark ? 'Made with UIL4B' : '2'}</span></div>
 </section>
 
 <section class="page">
-  <p class="eyebrow">02 — Typography</p>
+  <p class="eyebrow">02 · Typography</p>
   <h2>The scale</h2>
   <p class="lede">A ${d.ratio} ratio from a ${d.baseSize}px base. Headings set in ${esc(d.heading)}, body in ${esc(d.body)}.</p>
   <table>
@@ -249,7 +249,7 @@ ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link 
 </section>
 
 <section class="page">
-  <p class="eyebrow">03 — Evidence</p>
+  <p class="eyebrow">03 · Evidence</p>
   <h2>Contrast</h2>
   <p class="lede">The measurements behind the palette, so an accessibility question has an answer rather than an opinion.</p>
   <table>
@@ -257,7 +257,7 @@ ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link 
     <tbody>${pairs || '<tr><td colspan="3">No colours saved yet.</td></tr>'}</tbody>
   </table>
   <div class="note">Measured with the WCAG 2.2 relative-luminance formula. These figures are reproducible: the same two hex values always give the same ratio.</div>
-  <div class="foot"><span>Evidence</span><span>${watermark ? 'Made with UIL4B — uil4b.com' : '4'}</span></div>
+  <div class="foot"><span>Evidence</span><span>${watermark ? 'Made with UIL4B | uil4b.com' : '4'}</span></div>
 </section>
 
 </body>
@@ -274,19 +274,19 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
   const d = readDesign(design)
   const ladder = typeLadder(d)
   const lines = [
-    `# ${projectName} — Style Guide`,
+    `# ${projectName}: Style Guide`,
     '',
     `Generated ${date.toISOString().slice(0, 10)}`,
     '',
     '| | |',
     '|---|---|',
-    `| Primary | ${d.base || '—'} |`,
+    `| Primary | ${d.base || 'None'} |`,
     `| Colours | ${d.palette.length} |`,
     `| Headings | ${d.heading} |`,
     `| Body | ${d.body} |`,
     `| Scale | ${d.baseSize}px · ${d.ratio} |`,
     '',
-    '## 01 — Colour',
+    '## 01 · Colour',
     '',
     'Each colour with the text colour that reads on it and the measured contrast ratio.',
     '',
@@ -297,12 +297,12 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
     const { ratio, label } = inkFor(hex)
     lines.push(`| ${i === 0 ? 'Primary' : `Colour ${i + 1}`} | \`${hex}\` | ${label} | ${ratio}:1 | ${grade(ratio)} |`)
   })
-  if (!d.palette.length) lines.push('| — | — | — | — | — |')
+  if (!d.palette.length) lines.push('| None | | | | |')
   lines.push(
     '',
-    '> Ratios follow WCAG 2.2 §1.4.3 — AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1.',
+    '> Ratios follow WCAG 2.2 §1.4.3. AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1.',
     '',
-    '## 02 — Typography',
+    '## 02 · Typography',
     '',
     `A ${d.ratio} ratio from a ${d.baseSize}px base. Headings in ${d.heading}, body in ${d.body}.`,
     '',
@@ -312,7 +312,7 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
     '',
     `Line height ${d.lineHeight} on body copy; headings tighten to 1.1.`,
     '',
-    '## 03 — Evidence',
+    '## 03 · Evidence',
     '',
     '| Pair | Ratio | Grade |',
     '|---|---|---|',

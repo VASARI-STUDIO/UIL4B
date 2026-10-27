@@ -290,7 +290,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
     const tokenField = d.palette[1] || d.palette[0] || '#111114'
     addOpening(
       '03', 'Tokens',
-      `${tokens.length} custom properties — the whole system as code, ready to paste into a stylesheet.`,
+      `${tokens.length} custom properties: the whole system as code, ready to paste into a stylesheet.`,
       tokenField, inkFor(tokenField).ink,
     )
     balancedChunk(tokens, TOKENS_PER_PAGE).forEach((group, gi) => {
@@ -302,7 +302,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 
   // ── colophon ────────────────────────────────────────────────────────────
   // Listed at the top level with no section number. It belongs to the book
-  // rather than to a section, and filing it under "03 — Tokens" said it was
+  // rather than to a section, and filing it under "03 · Tokens" said it was
   // part of the token chapter, which it is not.
   folio += 1
   contents.push({ num: '', title: 'Colophon', folio })
@@ -317,7 +317,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(projectName)} — Design System</title>
+<title>${esc(projectName)} | Design System</title>
 <meta name="description" content="The colour, typography and token specification for ${esc(projectName)}.">
 ${fontHref}
 <style>
@@ -373,7 +373,7 @@ function contentsPage({ d, projectName, contents, tokens, iso }) {
     </div>
     <aside class="ct-aside">
       <p class="lbl">About this book</p>
-      <p>This is the specification for <b>${esc(projectName)}</b> — the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.</p>
+      <p>This is the specification for <b>${esc(projectName)}</b>: the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.</p>
       <p>Every contrast figure in it was measured, not estimated. Nothing here is illustrative: each value is the value the system actually holds.</p>
       <dl class="ct-facts">
         <div><dt>Colours</dt><dd>${d.palette.length}</dd></div>
@@ -421,7 +421,7 @@ function colourBands(d, group, offset, first) {
   }).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">01 — Colour</p>
+      <p class="lbl">01 · Colour</p>
       ${first
     ? `<h3>The palette</h3><p class="lede">Each colour with its role in the ${esc(systemName(d.harmony))} system, its values in three notations, and the ink that reads on it.</p>`
     : '<h3 class="cont">The palette <span>continued</span></h3>'}
@@ -441,7 +441,7 @@ function matrixPage(d) {
   const head = axes.map(c => `<th scope="col"><span class="dot" style="background:${c}"></span><span class="mx-h">${esc(c.replace('#', ''))}</span></th>`).join('')
   const rows = cols.map(row => {
     const cells = axes.map(col => {
-      if (row === col) return '<td class="mx-self">—</td>'
+      if (row === col) return '<td class="mx-self">–</td>'
       const r = contrast(row, col)
       // Weight, not colour, carries the pass/fail. The book must never use a
       // colour to mean "status" — the colours here are the SUBJECT, and a green
@@ -453,9 +453,9 @@ function matrixPage(d) {
   const capped = d.palette.length > MATRIX_MAX
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">01 — Colour</p>
+      <p class="lbl">01 · Colour</p>
       <h3>Contrast matrix</h3>
-      <p class="lede">Every pair in the palette, measured. Read a row as the background and a column as the text on it — the figure is the same either way.</p>
+      <p class="lede">Every pair in the palette, measured. Read a row as the background and a column as the text on it. The figure is the same either way.</p>
     </header>
     <table class="mx">
       <thead><tr><th scope="col"><span class="mx-corner">bg ╲ fg</span></th>${head}</tr></thead>
@@ -480,7 +480,7 @@ function gradientPage(d) {
   </tr>`).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">01 — Colour</p>
+      <p class="lbl">01 · Colour</p>
       <h3>The gradient</h3>
       <p class="lede">A ${esc(g.type.toLowerCase())} blend at ${g.angle}°, specified by stop so it can be rebuilt exactly rather than eyeballed.</p>
     </header>
@@ -512,7 +512,7 @@ function familiesPage(d) {
   </div>`
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">02 — Typography</p>
+      <p class="lbl">02 · Typography</p>
       <h3>The families</h3>
       <p class="lede">Two faces carry the system. Every fallback is stated in the colophon, so the document degrades predictably rather than arbitrarily.</p>
     </header>
@@ -548,7 +548,7 @@ function scalePage(d, ladder) {
   }).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">02 — Typography</p>
+      <p class="lbl">02 · Typography</p>
       <h3>The scale</h3>
       <p class="lede">A ${d.ratio} ratio from a ${d.baseSize}px base. Each row is set in the face and size it specifies.</p>
     </header>
@@ -557,7 +557,7 @@ function scalePage(d, ladder) {
       <thead><tr><th>Step</th><th>Size</th><th>rem</th><th>Leading</th><th>Specimen</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="note">Specimens above 44px are shown reduced so the row fits the page; the size column is always the true value. Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15 — which is what stops a two-line heading reading as two separate lines.</p>
+    <p class="note">Specimens above 44px are shown reduced so the row fits the page; the size column is always the true value. Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15, which is what stops a two-line heading reading as two separate lines.</p>
   </div>`
 }
 
@@ -565,8 +565,8 @@ function tokensPage(group, first, total) {
   const rows = group.map(t => `<tr><td class="tk-n">${esc(t.name)}</td><td class="tk-v">${esc(t.value)}</td></tr>`).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      <p class="lbl">03 — Tokens</p>
-      ${first ? `<h3>Custom properties</h3><p class="lede">All ${total} tokens, named for the role each colour plays rather than the colour it happens to be — so a palette change does not orphan the name.</p>` : '<h3 class="cont">Custom properties <span>continued</span></h3>'}
+      <p class="lbl">03 · Tokens</p>
+      ${first ? `<h3>Custom properties</h3><p class="lede">All ${total} tokens, named for the role each colour plays rather than the colour it happens to be, so a palette change does not orphan the name.</p>` : '<h3 class="cont">Custom properties <span>continued</span></h3>'}
     </header>
     <table class="tk">${rows}</table>
   </div>`
@@ -581,13 +581,13 @@ function colophonPage(d, projectName, iso) {
     <div class="cl-grid">
       <div>
         <p class="lbl">Method</p>
-        <p>Contrast is the WCAG 2.2 relative-luminance ratio (§1.4.3). AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. Every figure is reproducible — the same two hex values always give the same ratio.</p>
+        <p>Contrast is the WCAG 2.2 relative-luminance ratio (§1.4.3). AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. Every figure is reproducible: the same two hex values always give the same ratio.</p>
         <p class="lbl">Typefaces</p>
         <p>Headings set in ${esc(d.heading)} at ${d.headingWeight}, body in ${esc(d.body)} at ${d.bodyWeight}. Both fall back to <code>system-ui</code>, then the platform sans, so this document reads correctly offline or behind a blocked font host.</p>
       </div>
       <div>
         <p class="lbl">What this book covers</p>
-        <p>Colour, typography and tokens — the decisions this system actually holds.</p>
+        <p>Colour, typography and tokens: the decisions this system actually holds.</p>
         <p class="lbl">What it does not</p>
         <p>A full identity manual would also carry logo construction, imagery direction, tone of voice and applied examples. Those are not in this book because they are not in the system: this document specifies only what was really designed, and states the boundary rather than filling it with placeholders.</p>
       </div>
