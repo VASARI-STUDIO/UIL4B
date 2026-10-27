@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -23,6 +23,7 @@ import RecentExports from '../components/userhome/RecentExports'
 import { useServerAiUsage } from '../hooks/useServerAiUsage'
 import useProjectIcons from '../hooks/useProjectIcons'
 import useMediaQuery from '../hooks/useMediaQuery'
+import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -134,6 +135,14 @@ export default function Projects() {
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown) }
   }, [capRefusal])
 
+  // The notice is in the flow on a phone and can open under the fixed tab bar. A ref callback runs once as
+  // it mounts (this one is stable, so a re-render never re-scrolls); `nearest` moves the page only as far as
+  // it takes, and projects.css gives it a scroll-margin that clears the tab bar. Smooth only when the
+  // user's own motion setting, then the OS, allows it.
+  const showCap = useCallback((el) => {
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [])
+
   // A new blank project: the cap refusal first, then the default design and the
   // walkthrough's first step, with its orientation card open.
   const startNew = () => {
@@ -227,7 +236,7 @@ export default function Projects() {
         <span>New project</span>
       </button>
       {capRefusal && capAt === where && (
-        <div className="uh-cap" role="alert" data-testid="project-create-refusal">
+        <div className="uh-cap" ref={showCap} role="alert" data-testid="project-create-refusal">
           <span>{capRefusal}</span>{' '}
           <Link to="/plans" className="uh-quota-link">See plans</Link>
         </div>

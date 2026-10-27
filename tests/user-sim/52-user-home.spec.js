@@ -443,10 +443,8 @@ test.describe('a new account', () => {
     const starter = page.getByTestId('starter-card')
     await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
     await expect(starter).toContainText('New project sets up colour, type, type scale and tints, and saves as you go.')
-    // The four parts, in order: a true sequence, so numbered. Each opens the tool that builds it.
+    // The four parts, in order: a true sequence, so numbered. Plain text: Start the walkthrough is the way in.
     await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colour', 'Type', 'Type scale', 'Tints'])
-    expect(await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href'))))
-      .toEqual(['/create/palette', '/create/font-pair', '/create/type-scale', '/create/tint'])
     await expect(page.getByText('No projects yet'), 'an account with no projects is not told it has none').toHaveCount(0)
     // Projects sync to a signed-in account, so "Nothing leaves the browser
     // until you export it" was false and is gone.
