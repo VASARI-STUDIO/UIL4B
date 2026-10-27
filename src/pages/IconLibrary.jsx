@@ -1347,7 +1347,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
   const rawBaseSvgText = localBase || fetchedBase || cachedCdnBase
-  const { coloured: isColoredPack, row: colourRow } = colourRowState({ inColouredPack: inColoredPack, svg: rawBaseSvgText })
+  // A saved icon carries its own markup and nothing fetches it, so it never waits.
+  const { coloured: isColoredPack, row: colourRow } = colourRowState({ inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom })
   const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
     ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
   [inColoredPack, isColoredPack, rawBaseSvgText])
@@ -1801,10 +1802,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 />
               </div>
 
-              <div className="icust-row">
+              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}`}>
                 <label>Colour</label>
                 {colourRow === 'original' ? (
                   <span className="icust-value">Original colours</span>
+                ) : colourRow === 'wait' ? (
+                  <span className="icust-value">&nbsp;</span>
                 ) : (
                   <>
                     <div className="icust-seg">

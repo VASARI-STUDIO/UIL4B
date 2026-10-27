@@ -316,6 +316,9 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    the label's tone. The block padding (3 track + 1 border + 6 button) gives it the
    height the segmented track gave the row, so the row does not change size. */
 .icust-value{flex:1;display:flex;align-items:center;padding-block:10px;font-size:var(--fs-caption);color:var(--t2);white-space:nowrap}
+/* Whether the art has colours is unknown until its markup lands: the row keeps its
+   height, shows nothing and cannot take focus, so no option flashes and then goes. */
+.icust-row--wait{visibility:hidden}
 /* Pro-gated line-style controls: buttons preview their own cap/join effect */
 .icust-seg--icon button{padding:6px}
 .icust-pro{display:flex;flex-direction:column;gap:12px;margin-top:2px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
