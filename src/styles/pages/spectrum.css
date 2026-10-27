@@ -896,7 +896,7 @@
   /* One fixed frame, never a minimum (see "one card system" below). The edge is a
      ring in the shadow, not a border, so the inner box is exactly the height less
      the padding. */
-  height: 640px;
+  height: 592px;
   overflow: hidden;
   border-radius: 24px;
   background: var(--sp-card);
@@ -1004,8 +1004,49 @@
 .sp-plate-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 4%; opacity: 0; transform: translateY(8px); transition: opacity 150ms ease, transform 150ms ease; }
 .sp-plate-art img.is-on { opacity: 1; transform: none; transition: opacity 240ms var(--sp-ease), transform 240ms var(--sp-ease); }
 .sp-plate-fail { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
-.sp-plate-cap { display: grid; justify-items: center; gap: 2px; padding: 0 16px 12px; text-align: center; font-size: 12px; line-height: 1.4; color: var(--sp-dim); }
+/* One line under the picture, left-aligned with it (4% in, the picture's own inset). */
+.sp-plate-cap { display: grid; justify-items: start; gap: 2px; padding: 0 4% 10px; text-align: left; font-size: 13px; line-height: 1.4; color: var(--sp-dim); }
 .sp-plate-cap b { font-weight: 540; color: var(--sp-ink); }
+/* In the dark the plate keeps its white paper: one hairline under the plate so the
+   paper sits on the well instead of floating. */
+[data-theme="dark"] .spectrum .sp-plate { box-shadow: 0 1px 0 oklch(1 0 0 / .06); }
+
+/* card 3: a shelf of the three projects' real covers, straight-on, overlapping, no
+   tilt. The box is a size container so the covers are sized from it: the front one
+   is 89% of its height (300 x 424 in the 680 x 476 box at 1440, 290 wide at 768),
+   capped at 300 wide; on a phone 69% of its width (220 of 318). The chosen cover
+   (data-pos="front") is at full size and opacity in front; the other two stand
+   behind on either side at .88 and .72, on the same baseline. A pick changes only
+   data-pos, and the move is a transition on transform and opacity (240ms), so an
+   interrupted pick carries on from where each cover is and the shelf is never
+   empty. */
+.sp-shelf {
+  position: relative;
+  min-height: 0;
+  container-type: size;
+  --sh-w: min(62.9cqh, 300px);
+  --sh-off: calc(var(--sh-w) * .5);
+}
+.sp-shelf img {
+  position: absolute;
+  left: 50%;
+  bottom: calc((100cqh - var(--sh-w) * 1.4142) / 2);
+  width: var(--sh-w);
+  height: auto;
+  aspect-ratio: 1 / 1.4142;
+  margin-left: calc(var(--sh-w) / -2);
+  object-fit: contain;
+  transform-origin: 50% 100%;
+  transform: translateX(var(--sh-x, 0px)) scale(var(--sh-s, 1));
+  opacity: var(--sh-o, 1);
+  transition: transform 240ms var(--sp-ease), opacity 240ms var(--sp-ease);
+}
+.sp-shelf img[data-pos="front"] { --sh-x: 0px; --sh-s: 1; --sh-o: 1; z-index: 3; }
+.sp-shelf img[data-pos="left"] { --sh-x: calc(var(--sh-off) * -1); --sh-s: .88; --sh-o: .72; z-index: 1; }
+.sp-shelf img[data-pos="right"] { --sh-x: var(--sh-off); --sh-s: .88; --sh-o: .72; z-index: 1; }
+@media (max-width: 760px) {
+  .sp-shelf { --sh-w: min(69cqw, 62.9cqh); --sh-off: calc(var(--sh-w) * .236); }
+}
 .sp-cap-short, .sp-lab-short { display: none; }
 
 .sp-pick { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
@@ -1030,7 +1071,7 @@
 .sp-rows-btn::before { content: ""; position: absolute; left: 4px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; border: 1.5px solid rgba(var(--sp-ink-rgb), .3); box-sizing: border-box; transition: background-color 150ms ease, border-color 150ms ease; }
 .sp-rows-lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-rows-hint { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
-.sp-rows-sub { grid-column: 1 / -1; font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-rows-sub { grid-column: 1 / -1; font-size: 13px; color: var(--sp-dim); }
 .sp-rows-btn[aria-selected="true"], .sp-rows-btn[aria-checked="true"] { color: var(--sp-ink); }
 .sp-rows-btn[aria-selected="true"]::before, .sp-rows-btn[aria-checked="true"]::before { background: var(--sp-ink); border-color: var(--sp-ink); }
 .sp-rows-btn:active { background: rgba(var(--sp-ink-rgb), .06); }
@@ -1042,7 +1083,7 @@
 /* ── ONE CARD SYSTEM ──────────────────────────────────────────────────────────
    All three cards are the same size at a width: a fixed height, never a minimum, so
    what is inside can never make one card taller than another. A copy column and a
-   stage: 1440 is 640 tall with the stage on the right; 768 is a single column,
+   stage: 1440 is 592 tall with the stage on the right; 768 is a single column,
    the copy over the stage; 390 is 710 tall. Below 1200 the copy row is as tall as
    its copy (auto) and the stage takes the rest, so the card's height never moves.
    From 761 to 1199 the stage is a full-width picture, so the height follows the
@@ -1077,13 +1118,12 @@
   .sp-stack-say > p.sp-stack-note { margin-top: 12px; }
   .sp-pick { padding: 8px 12px 12px; }
   .sp-pick-label, .sp-pick-ico { display: none; }
-  /* One line under the picture: the short caption in card 2; in card 3 only the
-     time and parts (the project's name is on the selected pill). */
+  /* One line under the picture: the short caption in card 2; in card 3 the time
+     and parts (the project's name is on the selected pill). */
   .sp-cap-long { display: none; }
   .sp-cap-short { display: inline; }
   .sp-plate-cap { grid-template-columns: minmax(0, 1fr); padding: 0 12px 8px; }
-  .sp-plate-cap > span { justify-self: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sp-plate-cap--proj b { display: none; }
+  .sp-plate-cap > span { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 /* Fine pointers from 761px: a 36px pill. The row keeps its height (36 + 2 x 10 + the
    hairline = 57, as 44 + 2 x 6 + 1 was), so the picture does not change size. */
@@ -1113,7 +1153,13 @@
   .sp-stack-say { align-self: stretch; display: flex; flex-direction: column; padding-top: 0; }
   .sp-stack-say > p.sp-stack-note { margin-bottom: 24px; }
   .sp-rows { display: flex; flex-direction: column; }
-  .sp-pick, .sp-ex-pieces, .sp-plate-cap--proj { display: none; }
+  .sp-pick, .sp-ex-pieces { display: none; }
+  /* Card 1's list fills the body: rows between 36 and 48 tall share what there is
+     (nine swatch rows take it all), and a list with fewer rows stops at 48 and sits
+     at the top. The swatch is as tall as its row. */
+  .sp-ex-body { display: flex; flex-direction: column; }
+  .sp-ex-rows, .sp-ex-type, .sp-ex-files { flex: 1 1 auto; min-height: 0; align-content: stretch; grid-auto-rows: minmax(36px, 48px); }
+  .sp-ex-rows .sp-ex-sw { align-self: stretch; height: auto; }
 }
 
 /* ── "Don't just take it from us" (#index) ────────────────────────────────────
@@ -1340,13 +1386,13 @@
    motion; these rules stop any transition that would animate them.
    tests/unit/spectrum-structure.test.js fails the build if either block goes. */
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
-:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html[data-reduced-motion="true"]) .spectrum .sp-disc-cta::after { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, .sp-shelf img, button), :where(html[data-reduced-motion="true"]) .spectrum .sp-disc-cta::after { transition: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
 :where(html[data-reduced-motion="true"]) .spectrum .sp-plate-art img { animation: none !important; transition: none !important; transform: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
-  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, .sp-shelf img, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum .sp-plate-art img { animation: none !important; transition: none !important; transform: none !important; }
