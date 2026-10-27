@@ -160,10 +160,9 @@ for (const size of SIZES) {
       } else {
         // Stacked: each section ends before the next begins, Today after the rows.
         for (let i = 1; i < ORDER.length; i++) below(ORDER[i - 1], ORDER[i], 'is not below')
-        // Recent exports shows all six when stacked, four beside the rail.
-        await expect(page.locator('.uh-export:visible')).toHaveCount(6)
       }
-      if (size.width > 1000) await expect(page.locator('.uh-export:visible')).toHaveCount(4)
+      // Recent exports shows four at every width, stacked or beside the rail, of the six seeded.
+      await expect(page.locator('.uh-export:visible')).toHaveCount(4)
     })
 
     test('the lead card is the newest project that is not archived', async ({ page }) => {
