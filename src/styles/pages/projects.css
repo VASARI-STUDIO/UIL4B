@@ -30,11 +30,7 @@
   --ws-acc-text: color-mix(in srgb, var(--accent) 60%, #EFEEEA);
   --ws-acc-hover: color-mix(in srgb, var(--accent) 76%, #EFEEEA);
   --ws-acc-wash: color-mix(in srgb, var(--accent) 10%, transparent);
-  --ws-acc-wash-2: color-mix(in srgb, var(--accent) 18%, transparent);
-  --ws-acc-border: color-mix(in srgb, var(--accent) 24%, transparent);
   --ws-card2: var(--bg-1);
-  --ws-shade-1: rgba(0, 0, 0, .5);
-  --ws-shade-2: rgba(0, 0, 0, .8);
   --ws-scrim: rgba(9, 10, 12, .34);
 
   /* THE PAGE, NOT THE SHELL, SETS THE MEASURE. The design's <main> is 1240 wide with
@@ -56,8 +52,6 @@ div.uh.uh { padding-top: 0; }
   --ws-faint: color-mix(in srgb, var(--t0) 72%, transparent);
   --ws-acc-text: color-mix(in srgb, var(--accent) 86%, #0B0C0E);
   --ws-card2: var(--bg-2);
-  --ws-shade-1: rgba(26, 30, 42, .08);
-  --ws-shade-2: rgba(26, 30, 42, .128);
 }
 
 .uh .uh-main {
@@ -83,15 +77,9 @@ div.uh.uh { padding-top: 0; }
 
 .uh :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ── The clock ───────────────────────
-   In the design's mono voice — the register of the design's "UIL4B PRO" eyebrow: Geist Mono,
-   tracked, small — in the ink's faint alpha rather than the accent, because
-   it is context for the page, not a label for a section. */
-.uh .uh-clock { display: block; margin: 0 0 10px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; color: var(--ws-faint); }
-
 /* ── Title row ──────────────────────────────────────────────────────────── */
 .uh .uh-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.uh .uh-h1 { margin: 0; padding: 0; font-family: var(--font); font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: -.015em; line-height: 1.04; color: var(--t0); text-wrap: balance; }
+.uh .uh-h1 { margin: 0; padding: 0; font-family: var(--font); font-size: clamp(26px, 3vw, 34px); font-weight: 600; letter-spacing: -.015em; line-height: 1.04; color: var(--t0); text-wrap: balance; }
 .uh .uh-new,
 .uh .uh-empty-cta {
   display: flex; align-items: center; gap: 9px;
@@ -158,18 +146,7 @@ div.uh.uh { padding-top: 0; }
   background: var(--card); text-align: left; text-decoration: none; color: inherit;
 }
 .uh .uh-tool-ico { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: 0 0 auto;
-  /* The design's six hue chips: OKLCH at a fixed hue per tool, the glyph darkened until
-     it clears AA on the card. Dark first, light below. */
-  color: oklch(.76 .1 var(--q-h));
-  background: color-mix(in oklab, oklch(.76 .1 var(--q-h)) 17%, transparent);
 }
-[data-theme="light"] .uh .uh-tool-ico { color: oklch(.44 .115 var(--q-h)); background: oklch(.93 .045 var(--q-h)); }
-.uh .uh-tool[data-tool="gradient"] { --q-h: 212; }
-.uh .uh-tool[data-tool="tint"] { --q-h: 168; }
-.uh .uh-tool[data-tool="semantic"] { --q-h: 286; }
-.uh .uh-tool[data-tool="contrast"] { --q-h: 24; }
-.uh .uh-tool[data-tool="icons"] { --q-h: 96; }
-.uh .uh-tool[data-tool="palettes"] { --q-h: 320; }
 .uh .uh-tool-text { flex: 1; min-width: 0; display: grid; gap: 3px; }
 .uh .uh-tool-name { font-size: 14px; color: var(--t0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .uh .uh-tool-note { font-size: 11.5px; line-height: 1.3; color: var(--ws-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -214,13 +191,11 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-card-pick[aria-pressed="true"] { background: var(--bg-0); color: var(--t0); }
 .uh .uh-card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: color-mix(in srgb, var(--t0) 14%, transparent); }
 .uh .uh-card-bar > span { display: block; height: 100%; background: var(--accent); }
-.uh .uh-card-name { display: block; width: 100%; padding: 13px 15px 15px; text-align: left; text-decoration: none; color: inherit; box-sizing: border-box; }
+.uh .uh-card-name:where(:not(.uh-open)) { display: block; width: 100%; padding: 13px 15px 15px; text-align: left; text-decoration: none; color: inherit; box-sizing: border-box; }
 .uh .uh-card-name:hover { text-decoration: none; }
 .uh .uh-card-name:focus-visible { outline-offset: -2px; }
 .uh .uh-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .uh .uh-card-title { min-width: 0; font-size: 14.5px; font-weight: 540; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.uh .uh-card-tag { font-size: 11.5px; color: var(--ws-dim); white-space: nowrap; }
-.uh .uh-card-tag.is-ready { color: var(--ws-acc-text); }
 .uh .uh-card-line { display: block; margin-top: 7px; font-size: 12.5px; color: var(--ws-faint); }
 
 /* The design's [data-lift]: the card and the Discover card. */
@@ -251,9 +226,10 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-disc-card { display: block; min-width: 0; border: 1px solid var(--ws-hair); border-radius: 18px; background: var(--card); overflow: hidden; text-align: left; text-decoration: none; color: inherit; transition: background .18s ease, border-color .18s ease; }
 .uh .uh-disc-strip { display: flex; height: 74px; }
 .uh .uh-disc-strip > span { flex: 1; }
-/* A palette the account has not opened: neutral steps stand in for its colours. */
-.uh .uh-disc-strip--locked > span { background: var(--ws-hair); }
-.uh .uh-disc-strip--locked > span:nth-child(even) { background: var(--ws-faint); opacity: .35; }
+/* A palette the account has not opened: no colours reach the page, so none are drawn and no grey
+   stand-in swatches either. The strip's place holds a lock label, there from the first frame. */
+.uh .uh-disc-lock { display: flex; align-items: flex-end; min-height: 74px; padding: var(--s-2); border-bottom: 1px solid var(--ws-hair); }
+.uh .uh-disc-lock-label { display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-1) var(--s-2); border: 1px solid var(--border); border-radius: var(--radius-xs); background: var(--bg-2); color: var(--t0); font-size: 13px; font-weight: 500; line-height: 1.3; }
 .uh .uh-disc-body { display: block; padding: 11px 13px 13px; }
 .uh .uh-disc-name { display: block; font-size: 13.5px; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uh .uh-disc-meta { display: block; margin-top: 5px; font-size: 11.5px; color: var(--ws-faint); }
@@ -262,9 +238,6 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-pro {
   margin-top: clamp(30px, 4vw, 52px);
   border-radius: 20px;
-  background: linear-gradient(170deg, var(--ws-acc-wash-2), var(--card) 62%);
-  border: 1px solid var(--ws-acc-border);
-  box-shadow: 0 2px 4px -2px var(--ws-shade-1), 0 22px 44px -24px var(--ws-shade-2);
   padding: clamp(22px, 3vw, 40px);
   display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: clamp(22px, 3vw, 44px); align-items: center;
 }
@@ -282,8 +255,6 @@ div.uh.uh { padding-top: 0; }
 }
 .uh .uh-pro-cta:hover { background: var(--ws-acc-hover); color: var(--accent-ink); text-decoration: none; }
 .uh .uh-pro-cta:active { transform: scale(.978); }
-.uh .uh-pro-cta-ico { width: 28px; height: 28px; border-radius: 999px; background: rgba(255, 255, 255, .16); display: grid; place-items: center; transition: transform .2s cubic-bezier(.23, 1, .32, 1); }
-@media (hover: hover) and (pointer: fine) { .uh .uh-pro-cta:hover .uh-pro-cta-ico { transform: rotate(45deg); } }
 .uh .uh-pro-billed { font-size: 12.5px; color: var(--ws-faint); }
 /* ONE SURFACE, NOT A CARD IN A CARD. The design
    file draws the perks as a 14px-radius tray of card-coloured rows inside the
@@ -322,14 +293,13 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-menu-danger:hover { background: color-mix(in srgb, var(--err) 9%, transparent); color: var(--err-strong); }
 
 /* ── Recent exports ─────────────────────────────────────────────────────────
-   A hairline, a mono label, then one row per file: type chip, name, size, when. */
-.uh .uh-exports { margin-top: clamp(24px, 3vw, 40px); padding-top: 22px; border-top: 1px solid color-mix(in srgb, var(--t0) 6%, transparent); }
-.uh .uh-exports-h { margin: 0; font-family: var(--mono); font-size: 9.5px; font-weight: 400; letter-spacing: .18em; text-transform: uppercase; color: var(--ws-faint); }
-.uh .uh-exports-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 1px; }
-.uh .uh-export { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 12px; border-radius: 12px; color: color-mix(in srgb, var(--t0) 86%, transparent); transition: background .18s ease, color .18s ease; }
-.uh .uh-export-type { flex: none; padding: 4px 9px; border-radius: 8px; background: color-mix(in srgb, var(--t0) 7%, transparent); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--ws-dim); }
-.uh .uh-export-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; }
-.uh .uh-export-meta { flex: none; font-family: var(--mono); font-size: 10.5px; white-space: nowrap; color: var(--ws-faint); }
+   One row per file: type chip, name, size, when. The rail section further down sets the sizes,
+   spacing and the heading; what is here is the row's structure and its hover. */
+.uh .uh-exports-list { list-style: none; padding: 0; display: grid; gap: 1px; }
+.uh .uh-export { display: flex; align-items: center; gap: 14px; min-width: 0; border-radius: 12px; color: color-mix(in srgb, var(--t0) 86%, transparent); transition: background .18s ease, color .18s ease; }
+.uh .uh-export-type { flex: none; font-family: var(--mono); color: var(--ws-dim); }
+.uh .uh-export-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uh .uh-export-meta { flex: none; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
   .uh .uh-export:hover { background: color-mix(in srgb, var(--t0) 5%, transparent); color: var(--t0); }
 }
@@ -350,3 +320,230 @@ html[data-reduced-motion="true"] .uh *:active { transform: none; }
   .uh .uh-card-bar > span,
   .uh .uh-meter-fill { background: CanvasText; }
 }
+
+/* ══ The dashboard layout: greeting, lead + Today rail, rows, flat Pro panel ═════════════════════
+   Work first. One 12-column grid at 1001px and up: the lead column is 8 wide, the rail 4. The rail comes
+   after the lead in the DOM (signed in) and is placed by column, so the reading order is the stacked
+   order. Below 1001px everything stacks in DOM order. Floor 13px, one ink for icons, nothing decorative. */
+.uh .uh-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.uh .uh-dash { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--s-5); row-gap: var(--s-4); align-items: start; }
+.uh .uh-dash-head, .uh .uh-dash-main, .uh .uh-rail { grid-column: 1 / -1; min-width: 0; }
+@media (min-width: 1001px) {
+  .uh .uh-dash { grid-template-rows: auto minmax(0, 1fr); }
+  .uh .uh-dash-head { grid-column: 1 / 9; grid-row: 1; }
+  .uh .uh-dash-main { grid-column: 1 / 9; grid-row: 2; }
+  .uh .uh-rail { grid-column: 9 / -1; grid-row: 1 / span 2; }
+}
+
+/* Greeting and title */
+.uh .uh-greet { min-height: 24px; margin: 0 0 var(--s-2); display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); font-size: 17px; font-weight: 500; line-height: 1.4; color: var(--t1); }
+.uh .uh-textbtn { min-height: 44px; margin-block: -10px; padding: 0 var(--s-1); border: 0; background: none; font-family: var(--font); font-size: 15px; color: var(--ws-acc-text); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.uh .uh-ask { position: relative; isolation: isolate; }
+.uh .uh-pop { position: absolute; top: calc(100% + var(--s-2)); left: 0; z-index: 2; width: min(300px, 80vw); padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-1); box-shadow: 0 8px 24px -12px rgba(0, 0, 0, .35); font-size: 15px; font-weight: 400; }
+.uh .uh-pop form { display: grid; gap: var(--s-2); }
+.uh .uh-pop label { font-size: 13px; color: var(--t2); }
+.uh .uh-pop input { min-height: 44px; padding: 0 var(--s-3); border: 1px solid var(--bh); border-radius: var(--radius); background: var(--bg-0); color: var(--t0); font: inherit; }
+.uh .uh-pop-actions { display: flex; gap: var(--s-2); }
+.uh .uh-title { gap: var(--s-4); }
+.uh .uh-new-wrap { position: relative; isolation: isolate; }
+.uh .uh-cap { position: absolute; z-index: 2; top: calc(100% + var(--s-2)); right: 0; width: min(320px, 86vw); padding: var(--s-3) var(--s-4); border: 1px solid var(--bh); border-radius: var(--radius); background: var(--bg-1); box-shadow: 0 8px 24px -12px rgba(0, 0, 0, .35); font-size: 13px; line-height: 1.5; color: var(--t0); }
+
+/* Buttons: one filled (accent) per state; the rest are outlined */
+.uh .uh-new { background: transparent; color: var(--t0); border: 1px solid var(--bh); font-size: 15px; }
+.uh .uh-new:hover { background: color-mix(in srgb, var(--t0) 5%, transparent); }
+.uh .uh-new.is-filled { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.uh .uh-new.is-filled:hover { background: var(--ws-acc-hover); }
+.uh .uh-cta, .uh .uh-ghost { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--s-5); border-radius: var(--radius-pill); font-family: var(--font); font-size: 15px; font-weight: 560; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.uh .uh-cta { border: 0; background: var(--accent); color: var(--accent-ink); }
+.uh .uh-cta:hover { background: var(--ws-acc-hover); color: var(--accent-ink); text-decoration: none; }
+.uh .uh-ghost { border: 1px solid var(--bh); background: transparent; color: var(--t0); }
+.uh .uh-ghost.uh-block { width: 100%; }
+.uh .uh-cta-sm { min-height: 44px; padding: 0 var(--s-4); }
+.uh .uh-link, .uh .uh-open { display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: 500; color: var(--ws-acc-text); text-decoration: none; }
+.uh .uh-link:hover, .uh .uh-open:hover { text-decoration: underline; text-underline-offset: 3px; }
+.uh .uh-plans-link { min-height: 24px; font-size: 13px; }
+
+/* The lead card */
+.uh .uh-continue { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-2xl); background: var(--card); overflow: hidden; }
+.uh .uh-strip { display: flex; height: 132px; }
+.uh .uh-strip > span { flex: 1; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .1); }
+[data-theme="light"] .uh .uh-strip > span { box-shadow: inset 0 0 0 1px oklch(0 0 0 / .1); }
+.uh .uh-strip-empty { height: 132px; display: grid; align-content: center; justify-items: start; gap: var(--s-2); padding: 0 var(--s-5); background: var(--bg-2); border-bottom: 1px dashed var(--bh); }
+.uh .uh-strip-empty p { margin: 0; font-size: 15px; color: var(--t1); }
+.uh .uh-strip-empty a { color: var(--ws-acc-text); font-size: 15px; }
+.uh .uh-strip-skel { height: 132px; background: var(--bg-3); }
+.uh .uh-continue-body { padding: var(--s-5); display: grid; gap: var(--s-3); }
+.uh .uh-continue-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.uh .uh-continue-name { margin: 0; min-width: 0; font-size: 24px; font-weight: 600; line-height: 1.15; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+h2.uh-continue-name { white-space: normal; }
+.uh .uh-badge { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius); background: var(--bg-2); color: var(--t1); }
+.uh .uh-badge-img { width: 20px; height: 20px; object-fit: contain; }
+.uh .uh-meta { margin: 0; font-size: 13px; color: var(--t2); }
+.uh .uh-parts, .uh .uh-steps { list-style: none; margin: 0; padding: var(--s-3) 0 0; border-top: 1px solid var(--ws-hair); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2) var(--s-4); }
+.uh .uh-parts li { display: flex; align-items: center; gap: var(--s-2); font-size: 13px; color: var(--t2); min-width: 0; }
+.uh .uh-parts li.is-done { color: var(--t0); }
+.uh .uh-part-mark { flex: none; color: var(--t2); }
+.uh .uh-part-mark.is-done { color: var(--ok-strong); }
+.uh .uh-steps { list-style: decimal inside; grid-template-columns: minmax(0, 1fr); gap: 0; font-size: 15px; color: var(--t1); }
+.uh .uh-steps a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; color: var(--ws-acc-text); text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .uh .uh-steps a:hover { color: var(--ws-acc-hover); } }
+.uh .uh-starter-text { margin: 0; font-size: 15px; line-height: 1.5; color: var(--t1); max-width: 60ch; }
+.uh .uh-continue-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); }
+.uh .uh-fail-text, .uh .uh-resolving p, .uh .uh-offline-note { margin: 0; font-size: 15px; color: var(--t1); }
+.uh .uh-offline-note { margin-bottom: var(--s-3); font-size: 13px; color: var(--t2); }
+.uh .uh-bar { display: block; height: 12px; border-radius: var(--radius-pill); background: var(--bg-3); }
+
+/* Other projects as rows */
+.uh .uh-rows-wrap { margin-top: var(--s-4); }
+.uh .uh-rows { list-style: none; margin: 0; padding: 0; }
+.uh .uh-row + .uh-row { border-top: 1px solid var(--ws-hair); }
+.uh .uh-row-link { display: flex; align-items: center; gap: var(--s-3); min-height: 56px; padding: var(--s-3) 0; color: inherit; text-decoration: none; }
+.uh .uh-row-link:focus-visible { outline-offset: -2px; }
+.uh .uh-mini { flex: none; display: flex; width: 72px; height: 24px; border-radius: var(--radius-xs); overflow: hidden; }
+.uh .uh-mini > span { flex: 1; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .1); }
+[data-theme="light"] .uh .uh-mini > span { box-shadow: inset 0 0 0 1px oklch(0 0 0 / .1); }
+.uh .uh-row-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uh .uh-row-meta { flex: none; margin-top: 0; font-size: 13px; color: var(--t2); }
+.uh .uh-mini.is-empty { box-sizing: border-box; border: 1px dashed var(--bh); background: var(--bg-2); }
+.uh .uh-row.is-archived .uh-row-name { color: var(--t1); }
+.uh .uh-more { min-height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; color: var(--ws-acc-text); cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .uh .uh-row-link:hover .uh-row-name { text-decoration: underline; text-underline-offset: 3px; } }
+
+/* Today */
+.uh .uh-rail { display: grid; gap: var(--s-5); }
+.uh .uh-today { padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--card); }
+.uh .uh-today-clock { min-height: 56px; }
+.uh .uh-clock { display: grid; gap: 0; margin: 0; font-family: var(--font); font-size: inherit; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; color: inherit; }
+.uh .uh-today-date { min-height: 21px; font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--t1); }
+.uh .uh-today-time { min-height: 35px; font-family: var(--mono); font-size: 32px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--t0); }
+.uh .uh-rule { margin: var(--s-4) 0; border: 0; border-top: 1px solid var(--ws-hair); }
+.uh .uh-plan { display: grid; gap: var(--s-4); margin: 0; padding: 0; border: 0; background: none; }
+.uh .uh-meter-row { font-size: 13px; color: var(--t2); }
+.uh .uh-meter-val { font-family: var(--mono); font-size: 13px; color: var(--t0); }
+.uh .uh-meter-track { height: 6px; background: var(--bg-3); }
+.uh .uh-meter-note { margin: 0; font-size: 13px; line-height: 1.4; color: var(--t2); }
+.uh .uh-plan-line { margin: 0; display: flex; align-items: center; gap: var(--s-3); font-size: 13px; color: var(--t2); }
+.uh .uh-signin { display: grid; gap: var(--s-3); }
+.uh .uh-signin-title { margin: 0; font-size: 15px; font-weight: 560; color: var(--t0); }
+.uh .uh-signin-text { margin: 0; font-size: 13px; line-height: 1.55; color: var(--t2); }
+
+/* Recent exports, in the rail */
+.uh .uh-exports { margin: 0; padding: 0; border: 0; }
+.uh .uh-exports-h { margin: 0 0 var(--s-2); font-family: var(--font); font-size: 15px; font-weight: 560; letter-spacing: 0; text-transform: none; color: var(--t0); }
+.uh .uh-exports-list { margin: 0; }
+.uh .uh-export { min-height: 44px; padding: var(--s-2) var(--s-3); }
+.uh .uh-export-type { padding: 2px 8px; border-radius: var(--radius-xs); background: var(--bg-2); font-size: 13px; letter-spacing: 0; }
+.uh .uh-export-name { font-size: 15px; }
+.uh .uh-export-meta { font-family: var(--font); font-size: 13px; color: var(--t2); }
+@media (min-width: 1001px) { .uh .uh-export:nth-child(n+5) { display: none; } }
+
+/* Start something: Palette Builder a third, six tools in one ink as 3 x 2 */
+.uh .uh-start { margin-top: var(--s-7); border: 0; background: none; border-radius: 0; overflow: visible; }
+.uh .uh-start-head { padding: 0 0 var(--s-3); border: 0; }
+.uh .uh-start-h, .uh .uh-sec-h { font-size: 17px; font-weight: 560; letter-spacing: 0; }
+.uh .uh-alltools { height: 44px; font-size: 15px; border-color: var(--bh); }
+.uh .uh-quick { border: 1px solid var(--border); border-radius: var(--radius-2xl); overflow: hidden; background: var(--ws-hair); grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr)); }
+.uh .uh-lead { grid-row: span 2; grid-column: 1; min-height: 152px; }
+.uh .uh-lead-name { font-size: 17px; }
+.uh .uh-lead-note { font-size: 13px; color: var(--t2); }
+.uh .uh-lead-ico { background: var(--bg-2); color: var(--t1); }
+.uh .uh-lead-ramp { height: 40px; margin-top: auto; border-radius: var(--radius-xs); }
+.uh .uh-tool { min-height: 76px; }
+.uh .uh-tool-ico { color: var(--t1); background: var(--bg-2); border-radius: var(--radius-s); }
+[data-theme="light"] .uh .uh-tool-ico { color: var(--t1); background: var(--bg-2); }
+.uh .uh-tool-name { font-size: 15px; }
+.uh .uh-tool-note { font-size: 13px; color: var(--t2); }
+.uh .uh-start--lead { margin-top: 0; }
+.uh .uh-start--lead .uh-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.uh .uh-start--lead .uh-lead { grid-column: 1 / -1; grid-row: auto; }
+@media (max-width: 1000px) {
+  .uh .uh-quick, .uh .uh-start--lead .uh-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uh .uh-lead { grid-column: span 2; grid-row: auto; }
+}
+@media (max-width: 520px) {
+  .uh .uh-quick, .uh .uh-start--lead .uh-quick { grid-template-columns: minmax(0, 1fr); }
+  .uh .uh-lead { grid-column: span 1; }
+  .uh .uh-parts { grid-template-columns: minmax(0, 1fr); }
+  .uh .uh-row-link { flex-wrap: wrap; }
+  .uh .uh-row-meta { flex-basis: 100%; }
+}
+
+/* Discover and Pro: flat, 13px floor */
+.uh .uh-disc-head { margin-top: var(--s-7); }
+.uh .uh-disc-all { font-size: 15px; }
+.uh .uh-disc-name { font-size: 15px; }
+.uh .uh-disc-meta { font-size: 13px; color: var(--t2); }
+.uh .uh-pro { margin-top: var(--s-7); padding: var(--s-6); border: 1px solid var(--border); border-radius: var(--radius-2xl); background: var(--card); box-shadow: none; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: var(--s-6); }
+@media (min-width: 1001px) { .uh .uh-pro { grid-template-columns: 5fr 7fr; } }
+.uh .uh-pro-eyebrow { margin: 0; font-family: var(--font); font-size: 15px; font-weight: 560; letter-spacing: 0; color: var(--t1); }
+.uh .uh-pro-h { font-size: 24px; line-height: 1.15; letter-spacing: -.02em; }
+.uh .uh-pro-line { font-size: 15px; color: var(--t2); }
+.uh .uh-pro-cta { gap: var(--s-2); padding: 0 var(--s-5); min-height: 44px; font-size: 15px; transition: background-color 120ms ease, transform 120ms ease; }
+.uh .uh-pro-billed { font-size: 13px; color: var(--t2); }
+.uh .uh-pro-perks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.uh .uh-pro-perk + .uh-pro-perk { border-top: 1px solid var(--ws-hair); }
+.uh .uh-pro-perk { border-top: 1px solid var(--ws-hair); }
+.uh .uh-pro-perk-ico { width: 16px; height: 16px; background: none; color: var(--t1); border-radius: 0; }
+.uh .uh-pro-perk-label { font-size: 15px; }
+.uh .uh-pro-perk-note { font-size: 13px; color: var(--t2); }
+@media (max-width: 640px) { .uh .uh-pro-perks { grid-template-columns: minmax(0, 1fr); } }
+/* The two meters are their own groups at every width. */
+.uh .uh-meters { display: grid; gap: var(--s-4); }
+/* Below the two-column width the copy sits above the perks, so the perks keep their full width. */
+@media (max-width: 1000px) { .uh .uh-pro { grid-template-columns: minmax(0, 1fr); } }
+/* Discover always shows four picks: one row of four, or two by two, never three and one. */
+.uh .uh-disc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .uh .uh-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* The icon picker on the project's page */
+.uh .uh-iconpick { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-4) 0; }
+.uh .uh-iconpick-label { font-size: 13px; color: var(--t2); margin-right: var(--s-2); }
+.uh .uh-iconpick-btn { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: var(--btn-radius); background: transparent; color: var(--t1); cursor: pointer; }
+.uh .uh-iconpick-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--bg-2); color: var(--t0); }
+
+/* ══ Tablet and phone composition ═══════════════════════════════════════════════════════════════
+   The phone's one-line date and time sits under the title and is hidden elsewhere; New project has a
+   second place under the work, shown on a phone only. */
+.uh .uh-clock-slot, .uh .uh-new-wrap--foot { display: none; }
+.uh .uh-clock-line { font-size: 15px; color: var(--t1); }
+.uh .uh-clk-time { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--t0); }
+.uh .uh-clk-short { display: none; }
+@media (max-width: 359px) {
+  .uh .uh-clk-long { display: none; }
+  .uh .uh-clk-short { display: inline; }
+}
+
+/* 641 to 1000: Today is one row. Date and time on the left, a vertical rule, the meters on the right,
+   the plan line across the foot. */
+@media (min-width: 641px) and (max-width: 1000px) {
+  .uh .uh-today { display: grid; grid-template-columns: 200px 1px minmax(0, 1fr); column-gap: var(--s-5); align-items: start; }
+  .uh .uh-today > .uh-sr { grid-column: 1; grid-row: 1; }
+  .uh .uh-today-clock { grid-column: 1; grid-row: 1; }
+  .uh .uh-today > .uh-rule { grid-column: 2; grid-row: 1; align-self: stretch; width: 0; margin: 0; border-top: 0; border-left: 1px solid var(--ws-hair); }
+  .uh .uh-today > .uh-plan, .uh .uh-today > .uh-signin { grid-column: 3; grid-row: 1; }
+  .uh .uh-today > .uh-plan { display: contents; }
+  .uh .uh-meters { grid-column: 3; grid-row: 1; }
+  .uh .uh-plan-line { grid-column: 1 / -1; grid-row: 2; margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--ws-hair); }
+}
+
+@media (max-width: 640px) {
+  .uh .uh-h1 { font-size: 28px; }
+  .uh .uh-title { display: grid; justify-content: stretch; gap: var(--s-2); }
+  .uh .uh-clock-slot { display: block; min-height: 22px; }
+  .uh .uh-clock-line { display: block; }
+  /* The big clock stays in Today on wider screens; here the line under the title carries it. */
+  .uh .uh-today-clock, .uh .uh-today-clock + .uh-rule { display: none; }
+  /* New project: filled and full width under the date when signed out; otherwise under the work. */
+  .uh .uh-new-wrap { width: 100%; margin-top: var(--s-2); }
+  .uh .uh-new { width: 100%; justify-content: center; }
+  .uh .uh-new-wrap--head.is-after-work { display: none; }
+  .uh .uh-new-wrap--foot { display: block; margin-top: var(--s-4); }
+  .uh .uh-cap { left: 0; right: 0; width: auto; }
+  /* Start something: four tools and an "All thirteen tools" row, 56px each. */
+  .uh .uh-start-head .uh-alltools { display: none; }
+  .uh .uh-tool[data-tool="semantic"], .uh .uh-tool[data-tool="palettes"] { display: none; }
+  .uh .uh-tool { min-height: 56px; padding-block: var(--s-2); }
+  .uh .uh-tool--all { display: flex; width: 100%; border: 0; font: inherit; color: inherit; cursor: pointer; }
+  .uh .uh-lead-ramp { height: 32px; }
+}
+@media (min-width: 641px) { .uh .uh-tool--all { display: none; } }

@@ -11,7 +11,7 @@
 // links) are answered from fixtures, so the result does not depend on Google.
 import fs from 'node:fs'
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, overlaysSettled, ready } from './helpers.js'
 
 const PRIMARY = '#1F4B8E'
 const BOARD = `/create/palette?c=${PRIMARY.slice(1)},2E7BB8,3FA9A0`
@@ -155,8 +155,13 @@ test.describe('the UI kit export', () => {
     expect(body).toContain('<p>Moorings and chandlery on the north quay.</p>')
     expect(body).toContain('<span class="pro-title">Harbour Studio</span>')
 
-    // Reopened, the panel still holds what was typed.
+    // Reopened, the panel still holds what was typed. The download closed the
+    // panel, which gives its history entry back asynchronously; a reload that
+    // starts before that settles is cancelled by it.
+    await expect(panel).toBeHidden()
+    await overlaysSettled(page, 'the closed Export panel')
     await page.reload()
+    await ready(page, 'the palette tool after the reload')
     const again = await openPanel(page)
     await expect(again.getByRole('group', { name: 'Identity' }).getByLabel('Name')).toHaveValue('Harbour Studio')
   })

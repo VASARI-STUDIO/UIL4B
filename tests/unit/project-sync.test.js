@@ -198,6 +198,104 @@ test('projectListsEqual sees a changed updatedAt, not just a changed length', ()
   assert.equal(projectListsEqual(a, []), false)
 })
 
+/* An icon choice does not move updatedAt ("last edited" and the lead project read it), so it
+ * carries its own stamp, iconAt, and the sync has to compare that stamp too. */
+
+test('with the same updatedAt, the copy with the newer iconAt wins the merge', () => {
+  const local = [project('a', T.mid, { icon: 'bolt', iconAt: T.early })]
+  const remote = [project('a', T.mid, { icon: 'moon', iconAt: T.late })]
+  assert.equal(mergeProjects(local, remote).list[0].icon, 'moon', 'the later icon choice comes in from the account')
+  assert.equal(mergeProjects(remote, local).list[0].icon, 'moon', 'and it wins from either side')
+})
+
+test('with the same updatedAt, an icon chosen here is not overwritten by an older one', () => {
+  const local = [project('a', T.mid, { icon: 'moon', iconAt: T.late })]
+  const remote = [project('a', T.mid, { icon: 'bolt', iconAt: T.early })]
+  assert.equal(mergeProjects(local, remote).list[0].icon, 'moon')
+})
+
+test('an icon with a stamp beats a copy that never had one, at the same updatedAt', () => {
+  const merged = mergeProjects(
+    [project('a', T.mid)],
+    [project('a', T.mid, { icon: 'leaf', iconAt: T.early })],
+  )
+  assert.equal(merged.list[0].icon, 'leaf')
+})
+
+test('a differing updatedAt still decides the merge, whatever the iconAt says', () => {
+  // Remote edited the design later; local chose its icon later. The edit time is the rule, so remote wins whole.
+  const local = [project('a', T.early, { name: 'Old', icon: 'bolt', iconAt: T.late })]
+  const remote = [project('a', T.mid, { name: 'New', icon: 'moon', iconAt: T.early })]
+  const merged = mergeProjects(local, remote)
+  assert.equal(merged.list[0].name, 'New')
+  assert.equal(merged.list[0].icon, 'moon')
+  assert.deepEqual(merged.replaced.map((r) => r.id), ['a'])
+  // And the other way round: local is the later edit, so a later remote iconAt does not displace it.
+  const back = mergeProjects(
+    [project('a', T.mid, { name: 'New', icon: 'moon', iconAt: T.early })],
+    [project('a', T.early, { name: 'Old', icon: 'bolt', iconAt: T.late })],
+  )
+  assert.equal(back.list[0].name, 'New')
+  assert.equal(back.list[0].icon, 'moon')
+  assert.deepEqual(back.replaced, [])
+})
+
+test('records that predate iconAt merge exactly as they did', () => {
+  const equal = mergeProjects([project('a', T.mid, { name: 'Mine' })], [project('a', T.mid, { name: 'Theirs' })])
+  assert.equal(equal.list[0].name, 'Mine')
+  assert.deepEqual(equal.replaced, [])
+  const newer = mergeProjects([project('a', T.early, { name: 'Old' })], [project('a', T.late, { name: 'Fresh' })])
+  assert.equal(newer.list[0].name, 'Fresh')
+  assert.deepEqual(newer.replaced.map((r) => r.id), ['a'])
+})
+
+test('projectListsEqual sees a changed iconAt when updatedAt is the same', () => {
+  const a = [project('a', T.mid, { iconAt: T.early })]
+  assert.equal(projectListsEqual(a, [project('a', T.mid, { iconAt: T.early })]), true)
+  assert.equal(projectListsEqual(a, [project('a', T.mid, { iconAt: T.late })]), false)
+  assert.equal(projectListsEqual(a, [project('a', T.mid)]), false, 'a stamped icon differs from none')
+  assert.equal(projectListsEqual([project('a', T.mid)], [project('a', T.mid)]), true, 'two unstamped copies are equal')
+})
+
+test('a push sends a project whose only change is the icon, and then stops', async () => {
+  const { fs, docs, calls } = fakeFirestore({
+    [`${PER}/a`]: { project: project('a', T.mid), updatedAt: T.mid, deletedAt: null },
+  })
+  const pulled = await readRemoteProjects(fs, UID, { perProject: true })
+  const iconed = project('a', T.mid, { icon: 'moon', iconAt: T.late })
+
+  const first = await writeRemoteProjects(fs, UID, {
+    list: [iconed], stored: pulled.stored, perProject: true, now: 1,
+  })
+  assert.equal(first.written, 1, 'updatedAt is unchanged but the icon is new, so it is sent')
+  assert.equal(docs.get(`${PER}/a`).project.icon, 'moon')
+  assert.equal(first.stored.get('a').iconAt, T.late, 'and the map moves forward with the write')
+
+  const writes = calls.setDoc
+  const second = await writeRemoteProjects(fs, UID, {
+    list: [iconed], stored: first.stored, perProject: true, now: 2,
+  })
+  assert.equal(second.written, 0, 'nothing changed since, so nothing is sent')
+  assert.equal(calls.setDoc, writes + 1, 'only the index is rewritten')
+})
+
+test('a push of unchanged projects, icon stamped or not, writes nothing', async () => {
+  const { fs, calls } = fakeFirestore({
+    [`${PER}/a`]: { project: project('a', T.mid, { icon: 'moon', iconAt: T.late }), updatedAt: T.mid, deletedAt: null },
+    [`${PER}/b`]: { project: project('b', T.mid), updatedAt: T.mid, deletedAt: null },
+  })
+  const pulled = await readRemoteProjects(fs, UID, { perProject: true })
+  assert.equal(pulled.stored.get('a').iconAt, T.late, 'the stored map reads iconAt from the document')
+  assert.equal(pulled.stored.get('b').iconAt, null, 'and holds null for a document that never had one')
+  const writes = calls.setDoc
+  const result = await writeRemoteProjects(fs, UID, {
+    list: [project('a', T.mid, { icon: 'moon', iconAt: T.late }), project('b', T.mid)],
+    stored: pulled.stored, perProject: true, now: 1,
+  })
+  assert.equal(result.written, 0)
+  assert.equal(calls.setDoc, writes + 1, 'only the index is rewritten')
+})
+
 /* ═══════════════════════════════════════════════════════════════════════════
    3. DELETES PROPAGATE AS DELETES
    ═══════════════════════════════════════════════════════════════════════════ */

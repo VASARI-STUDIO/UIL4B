@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import useRecentExports from '../../hooks/useRecentExports'
-import { formatBytes, formatWhen } from '../../utils/recentExports'
+import { formatWhen } from '../../utils/recentExports'
 
-// The workspace's "Recent exports" list: one row per file this account
-// exported, newest first — the file type, its name, its size and when. The
-// list follows the account (useRecentExports), so it is the same on every
-// device. With nothing exported yet there is nothing to list, and the section
-// is not drawn.
+// The workspace's "Recent exports" list, in the rail under Today: one row per file this account
+// exported, newest first — the file type, its name and when. The list follows the account
+// (useRecentExports), so it is the same on every device. With nothing exported yet there is nothing to
+// list, and the section is not drawn.
+//
+// Six are rendered; the stylesheet shows four beside the Today panel (1001px and up) and all six where
+// the list is stacked, so the rail stays as short as the column beside it.
 const SHOWN = 6
 
 export default function RecentExports() {
@@ -22,7 +24,6 @@ export default function RecentExports() {
           <li key={e.id} className="uh-export">
             <span className="uh-export-type">{e.format}</span>
             <span className="uh-export-name" title={e.filename}>{e.filename}</span>
-            {formatBytes(e.bytes) && <span className="uh-export-meta">{formatBytes(e.bytes)}</span>}
             <span className="uh-export-meta">{formatWhen(e.at, now)}</span>
           </li>
         ))}

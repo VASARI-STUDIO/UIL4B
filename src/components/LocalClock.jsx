@@ -31,7 +31,7 @@ import { useEffect, useState } from 'react'
 // every minute, interrupting whatever the reader was doing, to deliver
 // something they did not ask for and can get from their own OS. It is a <time>
 // element with a machine-readable dateTime, which is what actually helps.
-export default function LocalClock({ className }) {
+export default function LocalClock({ className, stacked = false, inline = false }) {
   const [now, setNow] = useState(null)
 
   useEffect(() => {
@@ -58,7 +58,32 @@ export default function LocalClock({ className }) {
   // request and matches how this page already formats project dates.
   // Omitting timeZone likewise resolves to the machine's own zone.
   const date = now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
-  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  // The hour has no leading zero ("1:11 PM"); the browser's locale still decides 12 or 24 hour.
+  const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+
+  // The dashboard's Today panel sets the date and the time as two lines, each in its own type.
+  if (stacked) {
+    return (
+      <time className={className} dateTime={now.toISOString()}>
+        <span className="uh-today-date">{date}</span>{' '}
+        <span className="uh-today-time">{time}</span>
+      </time>
+    )
+  }
+
+  // The phone's one line under the title: the date (without its weekday below 360px, where the line
+  // would not fit), a dot, and the time in the mono face. CSS shows one of the two date spans.
+  if (inline) {
+    const short = now.toLocaleDateString([], { day: 'numeric', month: 'long' })
+    return (
+      <time className={className} dateTime={now.toISOString()}>
+        <span className="uh-clk-long">{date}</span>
+        <span className="uh-clk-short">{short}</span>
+        <span aria-hidden="true"> · </span>
+        <span className="uh-clk-time">{time}</span>
+      </time>
+    )
+  }
 
   return (
     <time className={className} dateTime={now.toISOString()}>

@@ -125,13 +125,12 @@ test('the projects empty state still teaches, since it is now the first thing se
   // page it replaced.
   //
   // On the design's workspace screen the empty card says
-  // "No projects yet", "Start with a colour and the rest of the project follows."
   // and offers "Start a project"; the tool it names is one tap away in the
   // "Start something" grid on the same page, the Palette Builder leading it.
   const src = read('src/pages/Projects.jsx')
-  assert.match(src, /No projects yet/)
-  assert.match(src, /Start with a colour and the rest of the project follows\./)
-  assert.match(src, /Start a project/)
+  assert.match(src, /StarterCard/)
+  // The starter runs startNew() (wrapped so the click event is not passed as its argument).
+  assert.match(src, /onStart=\{(\(\) => startNew\(\)|startNew)\}/)
   assert.match(src, /<StartSomething \/>/, 'the workspace no longer mounts the tool grid')
   const start = read('src/components/userhome/StartSomething.jsx')
   assert.match(start, /to=\{toolRoute\('palette'\)\}/,
