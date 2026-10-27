@@ -78,20 +78,14 @@ test('oklch lightness is right for every colour (the part the OKLCH matrices get
   assert.match(values('#FF0000').oklch, /^oklch\(62\.8% 0\.258 29\.2\)$/)
 })
 
-// KNOWN PRODUCT FAULT, so these two are `todo`: they run and report, and do not
-// fail the run. hexToOklch (src/utils/colors.js, and the same lines in
-// src/components/tool/oklch.js) uses 0.2164557872 and 0.6652917509 for the
-// green and blue weights of its third cone response; the published values are
-// 0.2817188376 and 0.6299787005. The weights then sum to 0.970 and not 1, so
-// white is not neutral (it prints oklch(100% 0.009 119.1)) and every blue is
-// pushed a little (#2563EB prints 0.223 264.3). Fix the two constants and
-// remove `todo`; these expected values are the correct ones.
-test('white and grey are neutral in OKLCH: zero chroma', { todo: 'hexToOklch third cone weights are wrong' }, () => {
+// The OKLab weights sum to 1 per row, so neutrals carry no chroma; a wrong
+// weight in hexToOklch shows here first as a tinted white or grey.
+test('white and grey are neutral in OKLCH: zero chroma', () => {
   assert.equal(values('#FFFFFF').oklch, 'oklch(100% 0 0)')
   assert.equal(values('#808080').oklch, 'oklch(60% 0 0)')
 })
 
-test('a saturated blue prints its true OKLCH chroma and hue', { todo: 'hexToOklch third cone weights are wrong' }, () => {
+test('a saturated blue prints its true OKLCH chroma and hue', () => {
   assert.equal(values('#2563EB').oklch, 'oklch(54.6% 0.215 262.9)')
 })
 
