@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import ExportProTag from './ExportProTag'
+import { PREVIEW_PAGE_COUNT, previewCaption, previewKey, previewTemplateName } from '../utils/proPreviewKey'
 
 // The strip of three small page pictures under a Pro row: what the paid
 // document looks like, drawn from the person's own system.
@@ -15,32 +16,20 @@ import ExportProTag from './ExportProTag'
 // so the dock does not move when the images arrive.
 
 const KIND_NAME = { book: 'design system book', guidelines: 'brand guidelines' }
-// The short line under the strip: what the pictures are of.
-const KIND_CAPTION = { book: 'Your book, pages', guidelines: 'Your guidelines, slides' }
-const PAGE_COUNT = 3
 
 // Finished previews, kept so choosing another row and coming back is instant.
-// Holds the encoded blobs (a few kilobytes each), never object URLs.
+// Holds the encoded blobs (a few kilobytes each), never object URLs. The key
+// carries the template, so each template has its own entry per design.
 const cache = new Map()
 const CACHE_LIMIT = 8
 
-// What the previews depend on, as a short string. A change to the palette, the
-// type, the name or the logo draws them again.
-function designKey(design, projectName) {
-  return JSON.stringify([
-    projectName,
-    design?.palette?.colors, design?.palette?.base,
-    design?.fonts?.heading, design?.fonts?.body,
-    design?.typeScale?.headingWeight,
-    typeof design?.logo?.src === 'string' ? design.logo.src.length : 0,
-  ])
-}
-
-// `blurred` decides the pixels and stays on while the plan is read, so a Pro
-// document is never shown sharp on a guess. `showLock` is only the chip over the
-// strip, which the panel holds back until it knows the account is not Pro.
-export default function ExportProPreview({ kind, design, projectName, blurred, showLock = blurred }) {
-  const key = `${kind}|${blurred ? 'blur' : 'sharp'}|${designKey(design, projectName)}`
+// `template` is the row's chosen template id; the pictures and the caption below
+// them follow it. `blurred` decides the pixels and stays on while the plan is
+// read, so a Pro document is never shown sharp on a guess. `showLock` is only the
+// chip over the strip, which the panel holds back until it knows the account is
+// not Pro.
+export default function ExportProPreview({ kind, template, design, projectName, blurred, showLock = blurred }) {
+  const key = previewKey({ kind, template, blurred, design, projectName })
   const [result, setResult] = useState({ key: '', pages: [], failed: false })
 
   useEffect(() => {
@@ -60,7 +49,7 @@ export default function ExportProPreview({ kind, design, projectName, blurred, s
       finish(hit)
     } else {
       import('../utils/proPreviews')
-        .then(({ renderProPreviews }) => renderProPreviews(design, kind, { projectName, blurred }))
+        .then(({ renderProPreviews }) => renderProPreviews(design, kind, { projectName, blurred, template }))
         .then((pages) => {
           cache.set(key, pages)
           if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value)
@@ -79,6 +68,7 @@ export default function ExportProPreview({ kind, design, projectName, blurred, s
   // Anything drawn for a different input than the current one is stale.
   const ready = result.key === key ? result : { pages: [], failed: false }
   const name = KIND_NAME[kind]
+  const templateName = previewTemplateName(kind, template)
 
   return (
     <div className={`exp-preview is-${kind}`}>
@@ -92,7 +82,7 @@ export default function ExportProPreview({ kind, design, projectName, blurred, s
           data-state={ready.failed ? 'failed' : ready.pages.length ? 'ready' : 'loading'}
           tabIndex={0}
           role="group"
-          aria-label={`Pages of your ${name}`}
+          aria-label={`Pages of your ${name} in ${templateName}`}
         >
           {ready.pages.length
             ? ready.pages.map((p, i) => (
@@ -107,13 +97,13 @@ export default function ExportProPreview({ kind, design, projectName, blurred, s
                 draggable="false"
               />
             ))
-            : Array.from({ length: PAGE_COUNT }, (_, i) => <span key={i} className="exp-thumb exp-thumb-wait" aria-hidden="true" />)}
+            : Array.from({ length: PREVIEW_PAGE_COUNT }, (_, i) => <span key={i} className="exp-thumb exp-thumb-wait" aria-hidden="true" />)}
         </div>
         {showLock && <span className="exp-preview-lock"><ExportProTag className="exp-preview-tag" /></span>}
       </div>
       {ready.failed
         ? <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>
-        : <p className="exp-preview-caption" aria-hidden="true">{KIND_CAPTION[kind]} 1 to {PAGE_COUNT}</p>}
+        : <p className="exp-preview-caption" aria-hidden="true">{previewCaption(kind, template)}</p>}
     </div>
   )
 }

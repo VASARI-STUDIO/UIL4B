@@ -1,6 +1,7 @@
 // The small pictures that sell the two Pro documents: the first three pages of
 // the design system book, or of the brand guidelines, drawn from the person's
-// own system.
+// own system, in the template they have picked. This file lays out the default
+// templates (Specification, Presentation); proPreviewTemplates.js lays out the rest.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHAT THESE ARE, AND WHAT THEY ARE NOT
@@ -26,6 +27,8 @@
 import { readDesign, contrast, inkFor } from './styleGuideExport.js'
 import { drawOps } from './styleGuideRaster.js'
 import { readLogo } from './brandLogo.js'
+import { previewTemplate } from './proPreviewKey.js'
+import { font, colours, buildTemplatePreviewPages } from './proPreviewTemplates.js'
 
 // Pages are authored at four times the thumbnail so type reads in familiar
 // pixels, then drawn at PREVIEW_SCALE. The thumbnail is what lands in the page.
@@ -43,15 +46,6 @@ const INK = '#111318'
 const MUTED = '#5F5F69'
 const HAIRLINE = '#E3E4E8'
 const PAPER = '#FFFFFF'
-// A neutral ramp for a system with no palette yet, so the layout still reads.
-const NEUTRALS = ['#D9DBE1', '#B4B8C2', '#8B90A0', '#5F5F69', '#111318']
-
-const font = (weight, size, family) => `${weight} ${size}px ${JSON.stringify(family)}`
-
-function colours(d) {
-  return d.palette.length ? d.palette : NEUTRALS
-}
-
 // ── Layout ──────────────────────────────────────────────────────────────────
 
 /** The book's first three pages: cover, colour specimen, contrast matrix. */
@@ -272,21 +266,29 @@ const encode = (canvas) => new Promise((resolve, reject) => {
 /**
  * Draw the first three pages of a Pro document as small images.
  *
- * `kind` is 'book' or 'guidelines'. With `blurred` the blur is baked into the
- * pixels. Resolves `[{ id, title, blob, width, height }]` in page order.
+ * `kind` is 'book' or 'guidelines'. `template` is the row's chosen template id: the
+ * cover and the next two pages are drawn in that layout from the same design, and an
+ * id that is not a live template of the row draws the default. With `blurred` the
+ * blur is baked into the pixels. Resolves `[{ id, title, blob, width, height }]` in
+ * page order.
  */
-export async function renderProPreviews(design, kind, { projectName = 'Design System', blurred = true } = {}) {
+export async function renderProPreviews(design, kind, { projectName = 'Design System', blurred = true, template } = {}) {
   const d = readDesign(design)
   await settleFonts(d)
 
+  const chosen = previewTemplate(kind, template)
+  const size = kind === 'guidelines' ? GUIDELINES_PAGE : BOOK_PAGE
   let logoImage = null
   let pages
   if (kind === 'guidelines') {
     const logo = readLogo(design)
     logoImage = logo ? await loadImage(logo.src) : null
-    pages = buildGuidelinesPreviewPages(design, { projectName, logo: logoImage ? logo : null })
+    const withLogo = logoImage ? logo : null
+    pages = buildTemplatePreviewPages(kind, chosen, design, { projectName, logo: withLogo, size })
+      || buildGuidelinesPreviewPages(design, { projectName, logo: withLogo })
   } else {
-    pages = buildBookPreviewPages(design, { projectName })
+    pages = buildTemplatePreviewPages(kind, chosen, design, { projectName, size })
+      || buildBookPreviewPages(design, { projectName })
   }
 
   const out = []

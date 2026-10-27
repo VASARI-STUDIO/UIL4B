@@ -14,7 +14,7 @@ import {
 } from '../utils/exportDocument'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } from '../config/exportFormats'
-import { defaultTemplate, liveTemplates, readExportTemplates } from '../config/exportTemplates'
+import { liveTemplates, readExportTemplates } from '../config/exportTemplates'
 import { useProject } from '../contexts/ProjectContext'
 import ExportTemplatePicker from './ExportTemplatePicker'
 import { templateThumb } from '../utils/exportTemplateThumb'
@@ -650,10 +650,11 @@ export default function ExportPanel({ onClose }) {
           />
         </div>
       )}
-      {/* The pictures are drawn in the Specification layout, so the book shows them only for it. */}
-      {activeGroup.preview && chosenTemplates[activeFormat?.id] === defaultTemplate(activeFormat?.id) && (
+      {/* The pictures are drawn in the chosen template, from the person's own design. */}
+      {activeGroup.preview && (
         <ExportProPreview
           kind={activeGroup.preview}
+          template={chosenTemplates[activeFormat?.id]}
           design={design}
           projectName={design?.name || 'Design System'}
           blurred={!isPro}
