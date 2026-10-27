@@ -487,6 +487,8 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-pro-perk-label { font-size: 15px; }
 .uh .uh-pro-perk-note { font-size: 13px; color: var(--t2); }
 @media (max-width: 640px) { .uh .uh-pro-perks { grid-template-columns: minmax(0, 1fr); } }
+/* The two meters are their own groups at every width. */
+.uh .uh-meters { display: grid; gap: var(--s-4); }
 /* Below the two-column width the copy sits above the perks, so the perks keep their full width. */
 @media (max-width: 1000px) { .uh .uh-pro { grid-template-columns: minmax(0, 1fr); } }
 /* Discover always shows four picks: one row of four, or two by two, never three and one. */
@@ -520,7 +522,7 @@ h2.uh-continue-name { white-space: normal; }
   .uh .uh-today > .uh-rule { grid-column: 2; grid-row: 1; align-self: stretch; width: 0; margin: 0; border-top: 0; border-left: 1px solid var(--ws-hair); }
   .uh .uh-today > .uh-plan, .uh .uh-today > .uh-signin { grid-column: 3; grid-row: 1; }
   .uh .uh-today > .uh-plan { display: contents; }
-  .uh .uh-meters { grid-column: 3; grid-row: 1; display: grid; gap: var(--s-4); }
+  .uh .uh-meters { grid-column: 3; grid-row: 1; }
   .uh .uh-plan-line { grid-column: 1 / -1; grid-row: 2; margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--ws-hair); }
 }
 

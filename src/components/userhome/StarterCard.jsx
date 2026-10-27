@@ -35,15 +35,15 @@ export default function StarterCard({ design, onStart, archived = false, limit =
         </span>
       )}
       <div className="uh-continue-body">
-        <h2 id="uh-starter-h" className="uh-continue-name">{archived ? 'Start a new project' : 'Start your first project'}</h2>
+        <h2 id="uh-starter-h" className="uh-continue-name">{limit ? 'Your Free plan is full' : archived ? 'Start a new project' : 'Start your first project'}</h2>
         <p className="uh-starter-text">
           {limit
-            ? `All your projects are archived, and archived projects count toward the Free plan's ${limit}. Delete one, or go Pro to keep them all and start another.`
+            ? `All your projects are archived, and archived projects count toward the Free plan's ${limit}. Open one below to delete it, or go Pro to keep them all and start another.`
             : `${archived ? 'All your projects are archived. ' : ''}New project sets up colour, type, type scale and tints, and saves as you go.`}
         </p>
-        <ol className="uh-steps" aria-label="The walkthrough">
+        {!limit && <ol className="uh-steps" aria-label="The walkthrough">
           {STARTER_STEPS.map((s) => <li key={s.part}><Link to={s.tool}>{s.label}</Link></li>)}
-        </ol>
+        </ol>}
         <div className="uh-continue-actions">
           {limit
             ? <Link className="uh-cta" to="/plans">See plans</Link>

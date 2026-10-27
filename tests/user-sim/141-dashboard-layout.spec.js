@@ -404,7 +404,9 @@ for (const size of SIZES) {
       await open(page, size, { projects: [...ALL_ARCHIVED, { ...half('p-third', 'Third Archive', ago(90 * MINUTE)), archived: true }] })
 
       const starter = page.getByTestId('starter-card')
-      await expect(starter).toContainText("archived projects count toward the Free plan's 3")
+      await expect(starter.getByRole('heading', { level: 2, name: 'Your Free plan is full' })).toBeVisible()
+      await expect(starter).toContainText("archived projects count toward the Free plan's 3. Open one below to delete it")
+      await expect(starter.getByRole('list', { name: 'The walkthrough' }), 'no steps to start when nothing can start').toHaveCount(0)
       await expect(starter.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
       await expect(starter.getByRole('button', { name: 'Start the walkthrough' }), 'the walkthrough would only hit the cap').toHaveCount(0)
     })
