@@ -334,12 +334,56 @@
   color: var(--tl-dim);
   white-space: nowrap;
 }
-.plb .plb-adjust .tl-slider { flex: 1 1 210px; gap: 11px; }
-/* The Adjust tracks are the drawn 20px pills (D:1042 sets no height, so the
-   global 20px range height applies), with the 15px thumb riding inside. */
-.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-runnable-track { height: 20px; }
-.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-thumb { margin-top: 2.5px; }
-.plb .plb-adjust .tl-slider input[type="range"]::-moz-range-track { height: 20px; }
+/* The four sliders share one set of dimensions: the label and value columns
+   are fixed, so a longer word (Temperature) cannot take length from its track,
+   and the grid gives every slider the same column width however it wraps. */
+.plb .plb-adjust {
+  --plb-sl-k: 4.75rem;
+  --plb-sl-v: 34px;
+  --plb-sl-track: 20px;
+  --plb-sl-thumb: 15px;
+}
+.plb .plb-adjust-fields {
+  flex: 1 1 520px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr));
+  gap: 12px clamp(16px, 1.6vw, 22px);
+}
+.plb .plb-adjust .tl-slider {
+  display: grid;
+  grid-template-columns: var(--plb-sl-k) minmax(0, 1fr) var(--plb-sl-v);
+  align-items: center;
+  gap: 8px;
+}
+.plb .plb-adjust .tl-slider input[type="range"] { width: 100%; }
+/* The Adjust tracks are 20px pills with the 15px thumb centred inside. */
+.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-runnable-track { height: var(--plb-sl-track); }
+.plb .plb-adjust .tl-slider input[type="range"]::-webkit-slider-thumb {
+  width: var(--plb-sl-thumb);
+  height: var(--plb-sl-thumb);
+  margin-top: calc((var(--plb-sl-track) - var(--plb-sl-thumb)) / 2);
+}
+.plb .plb-adjust .tl-slider input[type="range"]::-moz-range-track { height: var(--plb-sl-track); }
+.plb .plb-adjust .tl-slider input[type="range"]::-moz-range-thumb {
+  width: var(--plb-sl-thumb);
+  height: var(--plb-sl-thumb);
+  box-sizing: border-box;
+}
+/* The control is taller than the drawn track (a 24px touch target, 44px on a
+   finger), so a ring on the control floats off the slider. The ring is drawn on
+   the track itself instead, hugging the pill that is visibly focused. The
+   track's pill radius is on its base rule in tool-layout.css. Each engine's
+   track is its own rule: a selector the browser cannot parse drops the list. */
+.plb .plb-adjust .tl-slider input[type="range"]:focus { outline: none; box-shadow: none; }
+.plb .plb-adjust .tl-slider input[type="range"]:focus::-webkit-slider-runnable-track {
+  outline: 2px solid var(--tl-link);
+  outline-offset: 2px;
+}
+.plb .plb-adjust .tl-slider input[type="range"]:focus::-moz-range-track {
+  outline: 2px solid var(--tl-link);
+  outline-offset: 2px;
+}
 .plb .plb-adjust .tl-slider-k {
   font-family: var(--mono);
   font-size: 9.5px;
@@ -347,7 +391,7 @@
   text-transform: uppercase;
   color: var(--tl-faint);
 }
-.plb .plb-adjust .tl-slider-v { min-width: 42px; text-align: right; color: color-mix(in srgb, var(--t0) 80%, var(--bg-0)); }
+.plb .plb-adjust .tl-slider-v { min-width: 0; text-align: right; color: color-mix(in srgb, var(--t0) 80%, var(--bg-0)); }
 .plb .plb-adjust-field--edited .tl-slider-v { color: var(--tl-ink); font-weight: 600; }
 /* Laid out while idle so the bar does not reflow on the first nudge. */
 .plb .plb-adjust-reset.is-idle { visibility: hidden; }
@@ -434,7 +478,7 @@
     border-top: 1px solid var(--tl-hair);
   }
   .plb .plb-adjust { flex-direction: column; align-items: stretch; }
-  .plb .plb-adjust .tl-slider { flex: 1 1 auto; }
+  .plb .plb-adjust-fields { flex: 0 0 auto; }
   /* Stacked, the sliders sit above it: nothing under the pointer moves. */
   .plb .plb-adjust-reset.is-idle { display: none; }
   .plb .plb-copycss { justify-content: center; }

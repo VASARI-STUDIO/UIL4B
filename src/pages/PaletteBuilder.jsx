@@ -3221,6 +3221,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       {/* ── ADJUST ALL (D:1044-1057): one row, signed values, Copy CSS inline ── */}
       <footer className="plb-adjust" role="group" aria-labelledby="plb-adjust-title">
         <p className="plb-adjust-title" id="plb-adjust-title">Adjust all</p>
+        {/* One grid for the four sliders, so every row shares one column width
+            and the tracks come out the same length however it wraps. */}
+        <div className="plb-adjust-fields">
         {ADJUST_FIELDS.map(f => {
           const v = adjust[f.key]
           return (
@@ -3245,6 +3248,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             />
           )
         })}
+        </div>
         {/* Always laid out, so that the first nudge of a slider does not
             reflow the bar under the pointer; hidden until there is something
             to reset. */}
