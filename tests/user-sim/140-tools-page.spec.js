@@ -50,8 +50,11 @@ test.describe('/tools content', () => {
     // Mutation: type a number or drop a tool from CARD_IDS/GROUPS → the count disagrees.
     const cards = page.locator('.spt-card h3')
     await expect(cards).toHaveText(ORDER)
+    // Beta tools sit in a line of their own under the rows, not in the heading's count.
     const rows = await page.locator('.spt-row').count()
-    expect(await cards.count() + rows).toBe(LISTED.length)
+    const beta = await page.locator('.spt-beta a').count()
+    expect(await cards.count() + rows + beta).toBe(LISTED.length)
+    expect(beta).toBe(LISTED.filter((t) => t.beta).length)
   })
 
   test('the Contrast card shows a ratio, and a failing pair never uses the pass colour', async ({ page }) => {

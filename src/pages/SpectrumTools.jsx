@@ -15,7 +15,6 @@ import { createTools, NAV_SECTIONS } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
 import { gradientCss } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
-import { MODEL_PREVIEW } from '../components/spectrum/spectrumKit'
 import '../styles/pages/spectrum-mobile.css'
 import '../styles/pages/spectrum-tools.css'
 
@@ -26,8 +25,11 @@ import '../styles/pages/spectrum-tools.css'
 // is built. The first four are live: they run the same maths the homepage ships
 // (rampOf, ratio, FONTS, the modular scale). Icon Library and File Converter
 // are real screenshots (SHOTS, from scripts/tool-shots.mjs).
-// THE LIST is derived: every listed, live tool that is not a card, grouped by the
-// nav's own labels. Counts are never typed. A row has a screenshot when SHOTS has one.
+// THE LIST is derived: every listed, live tool that is not a card or in beta,
+// grouped by the nav's own labels. Counts are never typed. A row has a thumbnail
+// when ROW_SHOTS names it: a crop of the tool's window, from the same script.
+// Beta tools are not in the count the heading gives, so they get a line of their
+// own under the list, not a row.
 
 const CARD_IDS = ['palette', 'contrast', 'font-gallery', 'type-scale', 'icons', 'file-converter']
 const LIVE = createTools().filter((t) => !t.soon)
@@ -38,50 +40,50 @@ const describe = (id) => CREATE_TOOL_SEARCH[id]?.description || ''
 // anything unbuilt taken out.
 const GROUPS = NAV_SECTIONS.find((s) => s.id === 'create').columns
   .flat()
-  .map((g) => ({ label: g.label, tools: g.tools.filter((t) => !t.soon && !CARD_IDS.includes(t.id)) }))
+  .map((g) => ({ label: g.label, tools: g.tools.filter((t) => !t.soon && !t.beta && !CARD_IDS.includes(t.id)) }))
   .filter((g) => g.tools.length)
+const BETA = LIVE.filter((t) => t.beta)
 const WORKSHOP = createTools().filter((t) => t.soon).map((t) => t.label)
 const joinNames = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
 
-// Alt text for each screenshot: the tool and the state it is photographed in.
+// Alt text for each card screenshot: the tool and the state it is photographed in.
 const SHOTS = {
   icons: 'Icon Library showing the Lucide pack, the icon grid filled with arrows, chevrons, files and media controls',
-  'file-converter': 'File Converter after compressing tasmanian-sunset.webp to WebP at 70% quality, the result line reading 139.1 KB to 115.7 KB, 17% smaller',
-  semantic: 'Semantic Colour with success, warning, error and info roles, each shown as a ten-step ramp beside the CSS tokens',
-  tint: 'Tint showing an eleven-step ramp from a blue seed, with the lightness per step and contrast notes below',
-  'font-pair': 'Font Pair with Schibsted Grotesk for headings over Literata for body text, in the article preview',
-  emoji: 'Emoji Library on All categories, the Smileys and Hands groups filling the grid',
-  ratio: 'Aspect & Resolution with 16:9 solved at 1920 by 1080, with its decimal, diagonal and physical size',
-  'alt-text': 'Alt Text Generator before any image is added, with examples of good and avoid alt text and the tips beneath',
+  'file-converter': 'File Converter after compressing a photo to WebP at 70% quality, the result line showing the file size before and after and the saving',
 }
+// The rows with a thumbnail: the tools scripts/tool-shots.mjs crops. The thumbnail
+// is decoration beside the row's own text, so its alt is empty.
+const ROW_SHOTS = ['semantic', 'tint', 'font-pair', 'emoji', 'ratio', 'alt-text']
 const SHOT_THEMES = ['light', 'dark']
 
 // Two pictures per screenshot, one for each theme. The stylesheet hides the one
 // that does not match the page's data-theme (or, before that is set, the
-// system setting), so the other is never painted.
-function Shot({ id, sizes, width, height }) {
-  const tool = BY_ID.get(id)
+// system setting), so the other is never painted. `widths` are the two files the
+// script wrote for it: the whole window for a card, a crop for a row.
+function Shot({ id, sizes, width, height, widths = [640, 1280], alt }) {
+  const [small, large] = widths
   return SHOT_THEMES.map((theme) => (
     <picture key={theme} className={`spt-shot spt-shot--${theme}`}>
       <img
-        src={`/tools/${id}-${theme}-1280.webp`}
-        srcSet={`/tools/${id}-${theme}-640.webp 640w, /tools/${id}-${theme}-1280.webp 1280w`}
+        src={`/tools/${id}-${theme}-${large}.webp`}
+        srcSet={`/tools/${id}-${theme}-${small}.webp ${small}w, /tools/${id}-${theme}-${large}.webp ${large}w`}
         sizes={sizes}
         width={width}
         height={height}
         loading="lazy"
         decoding="async"
-        alt={SHOTS[id] || tool.label}
+        alt={alt ?? SHOTS[id]}
       />
     </picture>
   ))
 }
 
 const CARD_SIZES = '(max-width: 760px) calc(100vw - 80px), 560px'
-const ROW_SIZES = '(max-width: 760px) 112px, 160px'
+const ROW_SIZES = '(max-width: 760px) 112px, 176px'
+const ROW_WIDTHS = [224, 352]
 
 const RATIOS = [1.2, 1.25, 1.333]
-const SCALE_STEPS = [3, 2, 1, 0, -1].map((n) => n)
+const SCALE_STEPS = [2, 1, 0, -1]
 
 function PaletteDemo() {
   const [seed, setSeed] = useState(0)
@@ -132,7 +134,7 @@ function FontDemo() {
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={FONT_SAMPLE.slice(0, 24)} aria-label="Sample text" autoComplete="off" spellCheck="false" />
       </label>
       <ul className="spt-fonts">
-        {FONTS.slice(0, 4).map((f) => (
+        {FONTS.slice(0, 3).map((f) => (
           <li key={f.name}><span className="spt-font-name">{f.name}</span><span style={{ fontFamily: f.family }}>{text || FONT_SAMPLE.slice(0, 24)}</span></li>
         ))}
       </ul>
@@ -182,17 +184,15 @@ function Card({ id }) {
 
 function Row({ tool }) {
   const grad = tool.id === 'gradient' ? LIBRARY_GRADIENT_ROWS.find((g) => g.stops) : null
-  const model = tool.id === '3d-converter'
-  const shot = Boolean(SHOTS[tool.id])
+  const shot = ROW_SHOTS.includes(tool.id)
   return (
     <li>
       <Link className="spt-row" to={route(tool.id)}>
-        <span className="spt-thumb" aria-hidden={shot ? undefined : 'true'} style={grad ? { background: gradientCss(grad.type, grad.angle, grad.stops) } : undefined}>
-          {model ? <img src={MODEL_PREVIEW.poster} alt="" width={MODEL_PREVIEW.width} height={MODEL_PREVIEW.height} loading="lazy" decoding="async" /> : null}
-          {shot ? <Shot id={tool.id} sizes={ROW_SIZES} width={160} height={100} /> : null}
+        <span className="spt-thumb" aria-hidden="true" style={grad ? { background: gradientCss(grad.type, grad.angle, grad.stops) } : undefined}>
+          {shot ? <Shot id={tool.id} sizes={ROW_SIZES} width={352} height={220} widths={ROW_WIDTHS} alt="" /> : null}
         </span>
         <span className="spt-row-text">
-          <b>{tool.label}{tool.beta ? ' Beta' : ''}</b>
+          <b>{tool.label}</b>
           <span>{describe(tool.id)}</span>
         </span>
         <span className="spt-row-go" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
@@ -218,7 +218,7 @@ export default function SpectrumTools() {
                 <SpectrumWords text={`${numberWord(TOOL_COUNT, { capital: true })} tools, one tab.`} />
               </h1>
               <p className="spm-lede">
-                Each one opens without an account. Start with the six most kits begin with, or jump to the one you came for.
+                Each one opens without an account. Start with the six that most kits begin with, or jump to the one you came for.
               </p>
             </div>
             <div className="spm-hero-side">
@@ -237,7 +237,7 @@ export default function SpectrumTools() {
           </div>
         </section>
 
-        <section className="spt-section" aria-labelledby="spt-rest-h">
+        <section className="spt-section spt-section--last" aria-labelledby="spt-rest-h">
           <h2 className="spt-h2" id="spt-rest-h">And the rest of the bench.</h2>
           {GROUPS.map((g) => (
             <div key={g.label} className="spt-group">
@@ -245,7 +245,15 @@ export default function SpectrumTools() {
               <ul className="spt-rows">{g.tools.map((t) => <Row key={t.id} tool={t} />)}</ul>
             </div>
           ))}
-          {WORKSHOP.length > 0 && <p className="spt-workshop">In the workshop: {joinNames(WORKSHOP)}.</p>}
+          {BETA.length > 0 && (
+            <p className="spt-more spt-beta">
+              In beta:{' '}
+              {BETA.map((t, i) => (
+                <span key={t.id}>{i > 0 ? (i === BETA.length - 1 ? ' and ' : ', ') : ''}<Link to={route(t.id)}>{t.label}</Link></span>
+              ))}.
+            </p>
+          )}
+          {WORKSHOP.length > 0 && <p className="spt-more">In the workshop: {joinNames(WORKSHOP)}.</p>}
         </section>
 
         <section className="sp-close" aria-labelledby="spt-close-h">
