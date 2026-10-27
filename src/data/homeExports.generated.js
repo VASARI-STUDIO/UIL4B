@@ -19,7 +19,7 @@
 //     alt,           the image's alt text
 //     sourceSha256,  sha256 of the export HTML the image was rendered from
 //     landscape,     Variant for screens 761px and wider; a cover's is the cover beside its contents page, facing
-//                    (not drawn now); the deck's is guide-overview: the palette slide over a strip of the next four
+//                    (not drawn now); the deck's is guide-overview: the palette slide over three more whole
 //     portrait,      Variant for screens 760px and narrower; for a cover this is the A4 cover on its own
 //   }
 //   Variant = {
@@ -54,7 +54,7 @@ export const HOME_EXPORTS = {
       "weight": 400
     }
   },
-  "totalBytes": 1225312,
+  "totalBytes": 1204278,
   "counts": {
     "bookPages": 12,
     "deckSlides": 9
@@ -141,39 +141,39 @@ export const HOME_EXPORTS = {
       "kind": "plate",
       "tab": "Brand deck",
       "tabName": "Brand guidelines deck, Pro",
-      "alt": "Brand guidelines deck, the palette page with five named colours, and the pages that follow it.",
+      "alt": "Brand guidelines deck, the palette slide with five named colours, over three more slides: In use, Typography and Headline face.",
       "sourceSha256": "ab7bab1079dcb864ddbad62dc13bb7e8db1620bde59acbe2f3eab0c2123752b3",
       "landscape": {
         "master": {
           "w": 3840,
-          "h": 2715
+          "h": 2492
         },
-        "aspect": 1.4142,
+        "aspect": 1.5409,
         "src": "/home-exports/guide-overview-1600.webp",
         "width": 1600,
-        "height": 1131,
+        "height": 1038,
         "srcset": "/home-exports/guide-overview-800.webp 800w, /home-exports/guide-overview-1600.webp 1600w, /home-exports/guide-overview-2400.webp 2400w",
         "files": [
           {
             "file": "guide-overview-800.webp",
             "w": 800,
-            "h": 566,
-            "bytes": 20510,
-            "sha256": "ccb12a82918e8f58e9439aca7e9d744584e5db868964f96fc73e63beb40e3abd"
+            "h": 519,
+            "bytes": 17304,
+            "sha256": "45e484fece2aeaab03956fcee48c6a781410260d370bd0ffbf42edbb6bee971b"
           },
           {
             "file": "guide-overview-1600.webp",
             "w": 1600,
-            "h": 1131,
-            "bytes": 52772,
-            "sha256": "8dc41b0f860f65436f4ef3563ad0427746deec6fa520548697c691486b13f231"
+            "h": 1038,
+            "bytes": 46784,
+            "sha256": "95ad80c0744b7b312c9fd468b3623eedbe4fce7f89a86d66380a1aa3f6cdb1ec"
           },
           {
             "file": "guide-overview-2400.webp",
             "w": 2400,
-            "h": 1697,
-            "bytes": 94534,
-            "sha256": "20e97e7f2b00601c3531a457acf146537eb05b9c51371b0dd494c037a57bb090"
+            "h": 1558,
+            "bytes": 82694,
+            "sha256": "f8282592dba911b1ced409880b711abd171db145280f87ba7843b3521ca70fcf"
           }
         ]
       },

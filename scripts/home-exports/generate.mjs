@@ -10,14 +10,14 @@
 // for each example project: the A4 cover on its own, which the shelf in card 3
 // shows at every width, and the cover beside its contents page as a facing spread
 // (kept in the manifest; the page does not draw it now). The deck's wide plate is
-// "guide-overview": the palette slide over a strip of the four slides after it.
+// "guide-overview": the palette slide at 80% of the width over a row of three more slides, none cropped.
 // The only processing is crop, compose onto a transparent ground with a thin page
 // outline, downscale and WebP encode. Run by hand; not part of CI. The outputs are
 // committed.
 //
 // Writes
 //   public/home-exports/<id>-<w>.webp        landscape plates (>= 761px wide screens)
-//   public/home-exports/guide-overview-<w>.webp  the deck's landscape plate (palette slide and a four-slide strip)
+//   public/home-exports/guide-overview-<w>.webp  the deck's landscape plate (the palette slide and three more, all 16:9, uncropped)
 //   public/home-exports/<id>-p-<w>.webp      portrait plates (<= 760px)
 //   public/home-exports/cover-<name>-<w>.webp         the three book covers, A4 on its own (the shelf, every width)
 //   public/home-exports/cover-<name>-spread-<w>.webp  cover + contents page, facing (not drawn by the page now)
@@ -92,8 +92,11 @@ const EDGE_COLOUR = 'rgba(17, 17, 20, 0.2)'
 // the shelf's front book: 220 CSS px wide at 390, the narrowest it is ever drawn.
 const TITLE_FLOOR = 12
 // Measured and kept: a whole A4 page, or two stacked 16:9 slides, cannot show its
-// title at 12px in a 318px stage. Listed by name so any new miss still fails the run.
-const TITLE_WAIVED = new Set(['book-colour portrait', 'guide-palette portrait'])
+// title at 12px in a 318px stage; and the deck's palette slide, at 80% of the plate
+// (the owner's brief: whole slides, no crop), shows "The palette" at 10.8px in the
+// 768 band and 11.3px at 1440. Reaching 12px would take 89% of the plate's width.
+// Listed by name so any new miss still fails the run.
+const TITLE_WAIVED = new Set(['book-colour portrait', 'guide-palette portrait', 'guide-palette landscape'])
 const DISPLAY = {
   landscape: 650 * 0.92,
   portrait: 318 * 0.92,
@@ -119,13 +122,18 @@ const PROJECT = { northbeam: 'Northbeam', halcyon: 'Halcyon', ferrule: 'Ferrule'
 
 // Page positions in each document, checked against the page's own text.
 const BOOK_PAGES = { cover: 0, contents: 1, opening: 2, palette: 3 } // .pg
-const DECK_PAGES = { cover: 0, palette: 2, inUse: 3, strip: [3, 4, 5, 6] } // .sl; the strip is the four slides after the palette
-// The deck's wide plate: the palette slide at full width, a 3% gap, then the strip
-// (each slide 23.5% wide, 2% apart, cropped at the foot so the whole is the plate's aspect).
-const STRIP_GAP = 0.03
-const STRIP_SLIDE = 0.235
-const STRIP_BETWEEN = 0.02
-const STRIP_KEEP_MIN = 0.8 // a strip slide keeps at least this share of its height
+// .sl; the three thumbs are real slides picked for variety, in deck order: "In use"
+// (colour), "Typography" (the dark section opener, which has no .hd-title) and
+// "Headline face" (type). The deck's other type slide ("Body face") is left out: at
+// thumb size it reads as the same specimen.
+const DECK_PAGES = { cover: 0, palette: 2, inUse: 3, strip: [3, 4, 5], stripTitles: ['In use', '', 'Headline face'] }
+// The deck's wide plate: the palette slide at 80% of the width, left-aligned, then a
+// gap, then three slides 31% wide with the rest of the width split between them.
+// Every slide is drawn whole at its own 16:9, so the plate's aspect (about 1.54)
+// follows from these shares. There is no crop.
+const DECK_HERO = 0.8
+const DECK_GAP = 0.025 // between the palette slide and the row, of the plate's width
+const DECK_THUMB = 0.31
 
 // The kit crops. The kit is a scrolling web page, so a crop is a rectangle of it.
 const KIT_LAND = { viewport: { width: 1280, height: 900 }, crop: { w: 1280, h: 905 }, dsf: 3 } // 3840 x 2715
@@ -253,9 +261,7 @@ async function shootElement(page, { locator, title, label }) {
 
 // Draw layers onto a transparent canvas and return the PNG. A layer is
 // { png, x, y, w, h } in canvas pixels; each gets the thin page outline, inside its
-// own edge, scaled to the canvas width (EDGE_PX is for a 3840 master). A layer may
-// carry keep (0 to 1): only that top share of its picture is drawn, into w x h
-// (so h is the cropped height).
+// own edge, scaled to the canvas width (EDGE_PX is for a 3840 master).
 async function compose(W, H, layers) {
   const edge = Math.max(1, Math.round(EDGE_PX * W / MASTER_W))
   const b64 = await util.evaluate(async ({ W: cw, H: ch, list, edge: ew, colour }) => {
@@ -267,7 +273,7 @@ async function compose(W, H, layers) {
     g.imageSmoothingQuality = 'high'
     for (const l of list) {
       const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(l.b64), (ch2) => ch2.charCodeAt(0))], { type: 'image/png' }))
-      g.drawImage(bmp, 0, 0, bmp.width, Math.round(bmp.height * (l.keep ?? 1)), l.x, l.y, l.w, l.h)
+      g.drawImage(bmp, l.x, l.y, l.w, l.h)
       g.strokeStyle = colour
       g.lineWidth = ew
       g.strokeRect(l.x + ew / 2, l.y + ew / 2, l.w - ew, l.h - ew)
@@ -277,7 +283,7 @@ async function compose(W, H, layers) {
     let s = ''
     for (let i = 0; i < out.length; i += 0x8000) s += String.fromCharCode(...out.subarray(i, i + 0x8000))
     return btoa(s)
-  }, { W, H, edge, colour: EDGE_COLOUR, list: layers.map((l) => ({ b64: l.png.toString('base64'), x: l.x, y: l.y, w: l.w, h: l.h, keep: l.keep })) })
+  }, { W, H, edge, colour: EDGE_COLOUR, list: layers.map((l) => ({ b64: l.png.toString('base64'), x: l.x, y: l.y, w: l.w, h: l.h })) })
   const buf = Buffer.from(b64, 'base64')
   const got = pngSize(buf)
   if (got.w !== W || got.h !== H) fail(`composed ${got.w}x${got.h}, expected ${W}x${H}`)
@@ -494,31 +500,38 @@ async function guidePlates() {
   })
   const sh = Math.round(MASTER_W * shots.pal.cssH / shots.pal.cssW) // slide height at 3840 wide
 
-  // Landscape ("guide-overview"): the palette slide at full width, a 3% gap, then
-  // the next four slides side by side, each cropped at the foot so the whole is
-  // exactly the plate's aspect. The strip's slides are real renders, shot at
-  // twice their drawn width and scaled down once.
-  const stripW = Math.round(MASTER_W * STRIP_SLIDE)
-  const stripGap = Math.round(MASTER_W * STRIP_BETWEEN)
-  const stripFull = Math.round(stripW * shots.pal.cssH / shots.pal.cssW) // an uncropped strip slide
-  const stripTop = sh + Math.round(MASTER_W * STRIP_GAP)
-  const stripH = LAND.masterH - stripTop
-  const keep = stripH / stripFull
-  if (keep < STRIP_KEEP_MIN || keep > 1) fail(`the deck strip would keep ${(keep * 100).toFixed(1)}% of each slide's height (wants ${STRIP_KEEP_MIN * 100}% to 100%)`)
-  const used = stripW * 4 + stripGap * 3
-  if (Math.abs(used - MASTER_W) > 4) fail(`the deck strip is ${used}px wide, the plate is ${MASTER_W}`)
-  const thumbs = await withDocument(html, { viewport: { width: 1300, height: 800 }, dsf: (stripW * 2) / slideW }, async (page) => {
+  // Landscape ("guide-overview"): the palette slide at 80% of the width, then three
+  // real slides side by side below it, each whole. A slide is 16:9, so the heights
+  // follow from the widths and the plate's aspect follows from the heights. The
+  // thumbs are shot at twice their drawn width and scaled down once.
+  const ratio = shots.pal.cssH / shots.pal.cssW
+  if (Math.abs(ratio - 9 / 16) / (9 / 16) > ASPECT_TOLERANCE) fail(`the deck's slide is ${(1 / ratio).toFixed(4)}:1, not 16:9`)
+  const heroW = Math.round(MASTER_W * DECK_HERO)
+  const heroH = Math.round(heroW * ratio)
+  const thumbW = Math.round(MASTER_W * DECK_THUMB)
+  const thumbH = Math.round(thumbW * ratio)
+  const between = Math.round((MASTER_W - thumbW * 3) / 2)
+  if (between < 0) fail(`the deck's three thumbs are ${thumbW * 3}px wide, the plate is ${MASTER_W}`)
+  const rowTop = heroH + Math.round(MASTER_W * DECK_GAP)
+  const deckH = rowTop + thumbH
+  const DECK_LAND = { ratio: MASTER_W / deckH, masterH: deckH, widths: LAND.widths }
+  const thumbs = await withDocument(html, { viewport: { width: 1300, height: 800 }, dsf: (thumbW * 2) / slideW }, async (page) => {
     await fontsLoaded(page, FACES, SAMPLE)
     const slides = page.locator('.sl')
+    const found = await page.evaluate(() => [...document.querySelectorAll('.sl')].map((x) => ({ cls: x.className, text: (x.querySelector('.hd-title, .cv-title')?.textContent || '').trim() })))
+    DECK_PAGES.strip.forEach((i, k) => {
+      const want = DECK_PAGES.stripTitles[k]
+      if (!found[i] || found[i].text !== want || (!want && !found[i].cls.includes('sl-open'))) fail(`deck slide ${i} is not the expected ${want || 'section opener'} (${found[i]?.text || found[i]?.cls})`)
+    })
     const out = []
     for (const i of DECK_PAGES.strip) out.push(await shootElement(page, { locator: slides.nth(i), label: `deck slide ${i}` }))
     return out
   })
-  const masterL = await compose(MASTER_W, LAND.masterH, [
-    { png: shots.pal.png, x: 0, y: 0, w: MASTER_W, h: sh },
-    ...thumbs.map((t, i) => ({ png: t.png, x: i * (stripW + stripGap), y: stripTop, w: stripW, h: stripH, keep })),
+  const masterL = await compose(MASTER_W, deckH, [
+    { png: shots.pal.png, x: 0, y: 0, w: heroW, h: heroH },
+    ...thumbs.map((t, i) => ({ png: t.png, x: i * (thumbW + between), y: rowTop, w: thumbW, h: thumbH })),
   ])
-  noteTitle(id, 'landscape', shots.pal, MASTER_W, MASTER_W)
+  noteTitle(id, 'landscape', shots.pal, MASTER_W, heroW)
 
   // Portrait: the palette slide over the "In use" slide, 3% of the height apart.
   const gap = Math.round(PORT.masterH * 0.03)
@@ -532,8 +545,8 @@ async function guidePlates() {
 
   await finish({
     id, kind: 'plate', tab: 'Brand deck', tabName: 'Brand guidelines deck, Pro',
-    alt: 'Brand guidelines deck, the palette page with five named colours, and the pages that follow it.', html,
-    variants: { landscape: { name: 'guide-overview-master', stem: 'guide-overview', master: masterL, spec: LAND }, portrait: { name: `${id}-p-master`, master: masterP, spec: PORT } },
+    alt: 'Brand guidelines deck, the palette slide with five named colours, over three more slides: In use, Typography and Headline face.', html,
+    variants: { landscape: { name: 'guide-overview-master', stem: 'guide-overview', master: masterL, spec: DECK_LAND }, portrait: { name: `${id}-p-master`, master: masterP, spec: PORT } },
   })
 }
 
@@ -722,7 +735,7 @@ async function writeOutputs(total) {
 //     alt,           the image's alt text
 //     sourceSha256,  sha256 of the export HTML the image was rendered from
 //     landscape,     Variant for screens 761px and wider; a cover's is the cover beside its contents page, facing
-//                    (not drawn now); the deck's is guide-overview: the palette slide over a strip of the next four
+//                    (not drawn now); the deck's is guide-overview: the palette slide over three more whole
 //     portrait,      Variant for screens 760px and narrower; for a cover this is the A4 cover on its own
 //   }
 //   Variant = {
