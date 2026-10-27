@@ -9,44 +9,44 @@ export const AUTH_WALL_GENERATED = {
     "f-merriweather-open-sans-dark.webp": {
       "width": 600,
       "height": 400,
-      "bytes": 13610,
-      "sha256": "e5e7cc1503865a67a157f98610ac231d47ff0d481f8614fa1caabc756e46782f"
+      "bytes": 11908,
+      "sha256": "25b3c73ab1ed57aac766e0a22006f19df3c5add2cdacde1d92c50cdb9eeb00f1"
     },
     "f-merriweather-open-sans-light.webp": {
       "width": 600,
       "height": 400,
-      "bytes": 13502,
-      "sha256": "2cbf613456b2d34db0b33c58e1c0680fe3fb0f82a5c2aacc3519232f43b67161"
+      "bytes": 11776,
+      "sha256": "fae5e0280e41bd7c48c29f672a5612525e2f889e08c13ab44d17d0a452e924f4"
     },
     "f-playfair-roboto-dark.webp": {
       "width": 600,
       "height": 400,
-      "bytes": 14064,
-      "sha256": "8a74c8e3d965631bd674d06af994eedb2f805da88d4dc9d6960cb32404812ce7"
+      "bytes": 11860,
+      "sha256": "79ea7cac070e1c13bc93601133d5944e2d33f2a62ab3cbe5dd39684c9cee8d83"
     },
     "f-playfair-roboto-light.webp": {
       "width": 600,
       "height": 400,
-      "bytes": 13804,
-      "sha256": "6ad9f510ef80f102c29b5c6491ea2de356f96407b92233f65607cd568b5c8f5d"
+      "bytes": 11588,
+      "sha256": "dfceb94a4c5f469fe606ea78121271bcb0074a883ae5dd30fb17902ada7c6ab5"
     },
     "f-space-grotesk-bitter-dark.webp": {
       "width": 600,
       "height": 400,
-      "bytes": 14104,
-      "sha256": "f53ac88ae69600ac520c04f99f5cb1272c03badbf4f41ba436b2f13a39bddd33"
+      "bytes": 11164,
+      "sha256": "9e630c25150f2d42e40bd517b46807b22c365241f45eba17abd2433f3ed0a7f4"
     },
     "f-space-grotesk-bitter-light.webp": {
       "width": 600,
       "height": 400,
-      "bytes": 13948,
-      "sha256": "8cfc93fbf77b9183f6d7eb53bafc5fe4281a025434d7aea997ded48a7f9ca796"
+      "bytes": 10878,
+      "sha256": "21833806307d3aecff00a5cb1bcbcf162560f8dce55151465f73553fe2bf4d0e"
     },
     "g-ocean-deep-guide.webp": {
       "width": 600,
       "height": 270,
-      "bytes": 16580,
-      "sha256": "16da8e4cad131c1423e9c6af456ca15748ca917667e6142db2974cce34860467"
+      "bytes": 16374,
+      "sha256": "e622a7ce03ae93b769d0520e51a7586aa0e7ab60664b1085f90d50601e6faefc"
     },
     "p-forest-floor.webp": {
       "width": 600,
@@ -82,7 +82,7 @@ export const AUTH_WALL_GENERATED = {
         "#A5D7E8"
       ],
       "colorsSha256": "c1e4a744247966ed247cb10bc5cbf30ac06da47ef4d71e19c52dba9c0d6ffc7a",
-      "rawSha256": "0b5b9f11bfb1103cb16abc91837f9b83596bd3ec48302e6fb05d9a2da40f000a",
+      "rawSha256": "f4c8a4e678a7d3ead3303dccb2f1a3de8befff3a61a1dbacb06d2393f7e747a4",
       "rawName": "uil4b-palette.png"
     },
     "p-forest-floor": {
@@ -93,7 +93,7 @@ export const AUTH_WALL_GENERATED = {
         "#F5EFE6"
       ],
       "colorsSha256": "388afdc053fc1330e4a02110fc25bb48481d73fbd29d47b36876a85f04cd40cf",
-      "rawSha256": "c232c92dabbdf4ce6abd8e77950a5bc2c91e264b72a2909e30ef5e1d3274294a",
+      "rawSha256": "c5e15ea463d518759005b358b0546b4fc9ad99da7ab4cdcfcf337849a86a406d",
       "rawName": "uil4b-palette.png"
     },
     "p-paper-ink": {
@@ -104,7 +104,7 @@ export const AUTH_WALL_GENERATED = {
         "#112D4E"
       ],
       "colorsSha256": "2a5135d898a40c94e2c1f70f59986c84cb36889d14b7cb03687efbc3f9aacb16",
-      "rawSha256": "2c8e4b88f93449b77134e50bf76cc191274b59f9548843f4d24ede048bd19cae",
+      "rawSha256": "b0bff5998e5c5159c64e7bf45d47892228c85015939deb818b408bcd419e8d54",
       "rawName": "uil4b-palette.png"
     },
     "p-terracotta-dusk": {
@@ -115,7 +115,7 @@ export const AUTH_WALL_GENERATED = {
         "#E76F51"
       ],
       "colorsSha256": "3cdecbc64e11a737bda441fc7c6fc174f7849173ebcf4646779a74299f02054e",
-      "rawSha256": "91c589aff0d4ae3849b8276208d014fcfbed877d75f2270ce603fe2514d8ba0f",
+      "rawSha256": "a386d5905e9991ccf3d159924e3716c268005d8ff8692fbc1bfd14b34da2807a",
       "rawName": "uil4b-palette.png"
     }
   },
@@ -139,6 +139,7 @@ export const AUTH_WALL_GENERATED = {
         "Montserrat",
         "IBM Plex Mono"
       ],
+      "specimenLine": "Roboto 400 for body text.",
       "cssSha256": "c89e248d3f64f1d6f3c21a888c0302263c3a237de64136f542b6939598da40ab"
     },
     "f-space-grotesk-bitter": {
@@ -160,6 +161,7 @@ export const AUTH_WALL_GENERATED = {
         "Source Serif 4",
         "Montserrat"
       ],
+      "specimenLine": "Bitter 400 for body text.",
       "cssSha256": "56bd21cec630a5f01989aa57164cbe12c6036449bd7e4a150ec60554f1d8f0f5"
     },
     "f-merriweather-open-sans": {
@@ -181,6 +183,7 @@ export const AUTH_WALL_GENERATED = {
         "Montserrat",
         "IBM Plex Mono"
       ],
+      "specimenLine": "Open Sans 400 for body text.",
       "cssSha256": "b88614a93830e85b17a1b3e520bcff479c9515e3ff07156fc48da52c0e99e472"
     }
   },
@@ -351,23 +354,23 @@ export const AUTH_WALL_GENERATED = {
       "steps": [
         {
           "step": "50",
-          "hex": "#CCF4FF"
+          "hex": "#F0F5FF"
         },
         {
           "step": "100",
-          "hex": "#ACDAFF"
+          "hex": "#CADCFF"
         },
         {
           "step": "200",
-          "hex": "#8DBFFF"
+          "hex": "#A4C2FF"
         },
         {
           "step": "300",
-          "hex": "#6EA4FF"
+          "hex": "#7EA7FF"
         },
         {
           "step": "400",
-          "hex": "#5188FF"
+          "hex": "#588BFF"
         },
         {
           "step": "500",
@@ -394,22 +397,22 @@ export const AUTH_WALL_GENERATED = {
           "hex": "#000349"
         }
       ],
-      "cssSha256": "b6e58940359bfe9dfdbedc7e81cd1e723707d18ea0b5c1e36707276730acbdbd"
+      "cssSha256": "56ea7cdfda415cb45009f6611872e43f8bb0cbcd671781ab9f297989a484f732"
     },
     "t-e76f51": {
       "source": "#E76F51",
       "steps": [
         {
           "step": "50",
-          "hex": "#FFE2CB"
+          "hex": "#FFF2EE"
         },
         {
           "step": "100",
-          "hex": "#FFC5AB"
+          "hex": "#FFCFC0"
         },
         {
           "step": "200",
-          "hex": "#FFA88C"
+          "hex": "#FFAA8F"
         },
         {
           "step": "300",
@@ -437,14 +440,14 @@ export const AUTH_WALL_GENERATED = {
         },
         {
           "step": "900",
-          "hex": "#4B0900"
+          "hex": "#480F00"
         },
         {
           "step": "950",
-          "hex": "#300000"
+          "hex": "#2B0400"
         }
       ],
-      "cssSha256": "6a99dab8e55c69202c6c219ad54c3ddca07613a85dc8740f7c35599939da9236"
+      "cssSha256": "44650c615a4b50851b5f0ced4402a6199b172df0c43df1645c4d246eaba78f2a"
     }
   },
   "code": {
@@ -494,10 +497,11 @@ export const AUTH_WALL_GENERATED = {
     "rawSha256": "c1104988c7a5af5d14bc4e09ef151003b4736cbbc01084d1fe55bf17e7f9127a",
     "crop": {
       "x": 150.8720703125,
-      "y": 468,
-      "w": 402.67,
-      "h": 192,
+      "y": 464.4672454833984,
+      "w": 418.37,
+      "h": 199.0655090332031,
       "padLeft": 24,
+      "padRight": 24,
       "ladderRows": 4
     }
   },
@@ -515,7 +519,7 @@ export const AUTH_WALL_GENERATED = {
         "top": 20,
         "bottom": 20,
         "scrollH": 200,
-        "lineH": 48,
+        "lineH": 24,
         "nameW": 260
       },
       "at217": 11.57
@@ -533,7 +537,7 @@ export const AUTH_WALL_GENERATED = {
         "top": 20,
         "bottom": 20,
         "scrollH": 200,
-        "lineH": 48,
+        "lineH": 24,
         "nameW": 260
       },
       "at217": 11.57
@@ -541,8 +545,8 @@ export const AUTH_WALL_GENERATED = {
     "g-ocean-deep-guide": {
       "text": true,
       "minTextCssPx": 25,
-      "artCssWidth": 426.67,
-      "at217": 12.71,
+      "artCssWidth": 442.37,
+      "at217": 12.26,
       "widestRow": 393
     },
     "p-paper-ink": {
@@ -558,7 +562,7 @@ export const AUTH_WALL_GENERATED = {
         "top": 20,
         "bottom": 20,
         "scrollH": 200,
-        "lineH": 48,
+        "lineH": 24,
         "nameW": 260
       },
       "at217": 11.57

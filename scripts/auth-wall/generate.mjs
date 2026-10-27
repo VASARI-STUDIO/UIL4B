@@ -58,6 +58,7 @@ const NARROWEST = 217 // the narrowest tile, in CSS px
 const FLOOR = 11 // smallest text in tile art at the narrowest tile, in CSS px
 const PAPER = '#FFFFFF' // the style guide's own paper colour (styleGuideRaster.js)
 const GUIDE_PAD_LEFT = 24 // CSS px of paper left of the ladder crop, so the type does not touch the edge
+const GUIDE_PAD_RIGHT = 24 // and the same to its right
 
 // Inputs the manifest does not carry.
 const SCALE_INPUTS = {
@@ -65,7 +66,9 @@ const SCALE_INPUTS = {
   's-perfect-fourth': { base: 18, ratioLabel: 'Perfect fourth', mobileBase: 16 },
 }
 const GUIDE_FONTS = { heading: { family: 'Space Grotesk', weight: 700, category: 'sans-serif' }, body: { family: 'Inter', weight: 400, category: 'sans-serif' } }
-const SPECIMEN_LINE = 'Set in the pair this tool suggested for it.'
+// Each specimen's body line names its own body face and weight, set in that face,
+// so no two tiles print the same sentence and the line is true by construction.
+const specimenLine = (family, weight) => `${family} ${weight} for body text.`
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex')
 const fail = (msg) => { throw new Error(msg) }
@@ -331,6 +334,8 @@ async function specimen(page, id, heading, css) {
     '--weight-body': cssVar(css, '--weight-body'),
   }
   const shots = {}
+  const bodyFamily = cssVar(css, '--font-body').split(',')[0].replace(/['"]/g, '').trim()
+  const line = specimenLine(bodyFamily, vars['--weight-body'])
   // The export's own @import brings the two faces in, as it would in a user's page.
   const importUrl = /@import url\('([^']+)'\)/.exec(css)?.[1] || fail(`${id}: the export has no @import`)
   await page.addStyleTag({ url: importUrl })
@@ -345,12 +350,12 @@ async function specimen(page, id, heading, css) {
     el.querySelector('#aws-name').textContent = name
     el.querySelector('#aws-line').textContent = line
     document.body.appendChild(el)
-  }, { v: vars, name: heading, line: SPECIMEN_LINE })
+  }, { v: vars, name: heading, line })
   const faces = [
     { family: heading, weight: Number(vars['--weight-heading']) },
-    { family: cssVar(css, '--font-body').split(',')[0].replace(/['"]/g, '').trim(), weight: Number(vars['--weight-body']) },
+    { family: bodyFamily, weight: Number(vars['--weight-body']) },
   ]
-  await fontsLoaded(page, faces, `Aa ${heading} ${SPECIMEN_LINE}`)
+  await fontsLoaded(page, faces, `Aa ${heading} ${line}`)
   const fit = await page.evaluate(() => {
     const box = document.getElementById('auth-wall-specimen')
     const r = box.getBoundingClientRect()
@@ -367,7 +372,7 @@ async function specimen(page, id, heading, css) {
     if (w !== 600 || h !== 400) fail(`${id}: ${theme} screenshot is ${w}x${h}, expected 600x400`)
     shots[theme] = await toWebp(png, { sx: 0, sy: 0, sw: w, sh: h, outW: 600, outH: 400 })
   }
-  return { shots, fit }
+  return { shots, fit, line }
 }
 
 async function pair(row) {
@@ -400,6 +405,7 @@ async function pair(row) {
     heading: { family: heading, stack: cssVar(result.css, '--font-heading'), weight: 700 },
     body: { family: body, stack: cssVar(result.css, '--font-body'), weight: 400 },
     suggestions: result.suggestions,
+    specimenLine: result.line,
     cssSha256: sha256(result.css),
   }
   outputs.floors[row.id] = { text: true, minTextCssPx: 16, artCssWidth: 300, fit: result.fit }
@@ -501,18 +507,29 @@ function sizeOf(op) { return Number(/(\d+(?:\.\d+)?)px/.exec(op.font)[1]) }
 
 // Which part of the sheet is kept: the biggest run of the type ladder, from the
 // top, whose smallest text stays at or over the floor once the crop is shrunk to
-// the narrowest tile. Derived from the layout, not typed in.
-function guideCrop(ops) {
-  const rows = ops.filter((o) => o.op === 'text' && o.text === 'The quick brown fox')
+// the narrowest tile. The tile holds the type with the same paper on both sides,
+// so a crop is as wide as the widest kept row plus both margins (never narrower
+// than the tile's aspect gives for the rows' own height) and grows taller, rows
+// centred, to keep that aspect. `boxes` are the measured text boxes, one per
+// text op. Derived from the layout, not typed in.
+function guideCrop(texts, boxes) {
+  const ladder = texts.filter((o) => o.text === 'The quick brown fox')
   let keep = null
-  for (let n = 1; n <= rows.length; n += 1) {
-    const set = rows.slice(0, n)
+  for (let n = 1; n <= ladder.length; n += 1) {
+    const set = ladder.slice(0, n)
+    const inSet = new Set(set)
     const top = Math.floor(Math.min(...set.map((o) => o.y - sizeOf(o)))) - 2
     const bottom = Math.ceil(Math.max(...set.map((o) => o.y + sizeOf(o) * 0.28)))
-    const h = bottom - top
-    const w = h * ART_W / ART_H
+    const labelRight = Math.max(0, ...boxes.filter((bx, i) => !inSet.has(texts[i]) && bx.bottom > top && bx.top < bottom && bx.left < 152).map((bx) => bx.right))
+    const x0 = Math.max(150, labelRight + 0.25)
+    const typeRight = Math.max(...boxes.filter((bx, i) => inSet.has(texts[i])).map((bx) => bx.right))
+    const w = Math.max((bottom - top) * ART_W / ART_H, GUIDE_PAD_LEFT + (typeRight - x0) + GUIDE_PAD_RIGHT)
+    const h = w * ART_H / ART_W
+    const y0 = top - (h - (bottom - top)) / 2
     const min = Math.min(...set.map(sizeOf))
-    if (min * NARROWEST / w >= FLOOR + 0.3) keep = { n, set, top, h, w, min }
+    // Taller than the rows need, so no other text may sit in the extra paper.
+    const intruder = boxes.some((bx, i) => !inSet.has(texts[i]) && bx.right > x0 + 0.5 && bx.left < x0 + w - GUIDE_PAD_LEFT && bx.bottom > y0 && bx.top < y0 + h)
+    if (!intruder && min * NARROWEST / w >= FLOOR + 0.3) keep = { n, set, x0, y0, h, w, min }
   }
   return keep || fail('no part of the type ladder stays over the floor')
 }
@@ -525,10 +542,7 @@ async function guide(row) {
   design.name = row.name // the export panel titles the sheet from design.name
   const project = { id: 'ocean-deep-kit', name: row.name, design, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' }
   const ops = buildStyleGuideLayout({ ...design, name: row.name }, { projectName: row.name, watermark: false, date: FIXED_TIME })
-  const plan = guideCrop(ops)
-  const crop = { x0: 150, y0: plan.top, w: plan.w - GUIDE_PAD_LEFT, h: plan.h }
   const texts = ops.filter((o) => o.op === 'text')
-  const kept = new Set(plan.set)
 
   const result = await withPage({ projects: [project] }, async (page) => {
     await go(page, `/projects/${project.id}`)
@@ -548,10 +562,15 @@ async function guide(row) {
     }, texts)
     await page.getByRole('button', { name: /^Export/ }).first().click()
     const dlg = page.getByRole('dialog')
-    await dlg.locator('button', { hasText: 'Style guide (PNG)' }).click()
-    const dl = await capture(page, row.id, () => dlg.getByRole('button', { name: /^Export / }).last().click())
+    // The panel lists formats, then the file type of the one chosen.
+    await dlg.getByText('Style guide', { exact: true }).click()
+    await dlg.getByText('PNG', { exact: true }).click()
+    const dl = await capture(page, row.id, () => dlg.getByRole('button', { name: 'Export style guide (PNG)' }).click())
     return { dl, boxes }
   })
+  const plan = guideCrop(texts, result.boxes)
+  const crop = { x0: plan.x0, y0: plan.y0, w: plan.w - GUIDE_PAD_LEFT, h: plan.h }
+  const kept = new Set(plan.set)
   const { w, h } = pngSize(result.dl.bytes)
   if (w !== GUIDE_EXPECT.w || h !== GUIDE_EXPECT.h) fail(`${row.id}: style guide PNG is ${w}x${h}, expected ${GUIDE_EXPECT.w}x${GUIDE_EXPECT.h}`)
   if (result.dl.name !== 'ocean-deep-kit-style-guide.png') fail(`${row.id}: downloaded ${result.dl.name}`)
@@ -570,7 +589,7 @@ async function guide(row) {
     const touches = b.right > crop.x0 + 0.5 && b.left < x1 && b.bottom > crop.y0 && b.top < y1
     if (!touches) return
     if (!kept.has(texts[i])) fail(`${row.id}: "${b.text}" (${b.size}px) falls inside the crop`)
-    if (b.left < crop.x0 || b.right > x1 - 8 || b.top < crop.y0 || b.bottom > y1) fail(`${row.id}: "${b.text}" is clipped by the crop (${JSON.stringify(b)} vs ${JSON.stringify(crop)})`)
+    if (b.left < crop.x0 || b.right > x1 - GUIDE_PAD_RIGHT || b.top < crop.y0 || b.bottom > y1) fail(`${row.id}: "${b.text}" is clipped by the crop (${JSON.stringify(b)} vs ${JSON.stringify(crop)})`)
     minInside = Math.min(minInside, b.size)
     widest = Math.max(widest, b.right - b.left)
   })
@@ -581,7 +600,7 @@ async function guide(row) {
   const out = await toWebp(result.dl.bytes, { sx: crop.x0 * DPR, sy: crop.y0 * DPR, sw: Math.round(crop.w * DPR), sh: Math.round(crop.h * DPR), outW: ART_W, outH: ART_H, padLeft: GUIDE_PAD_LEFT * DPR })
   await saveWebp(`${row.id}.webp`, out)
   outputs.floors[row.id] = { text: true, minTextCssPx: minInside, artCssWidth: Math.round(cropWidth * 100) / 100, at217: Math.round(at217 * 100) / 100, widestRow: Math.round(widest) }
-  outputs.guide = { project: row.name, fonts: GUIDE_FONTS, rawSha256: sha256(result.dl.bytes), crop: { x: crop.x0, y: crop.y0, w: Math.round(crop.w * 100) / 100, h: crop.h, padLeft: GUIDE_PAD_LEFT, ladderRows: plan.n } }
+  outputs.guide = { project: row.name, fonts: GUIDE_FONTS, rawSha256: sha256(result.dl.bytes), crop: { x: crop.x0, y: crop.y0, w: Math.round(crop.w * 100) / 100, h: crop.h, padLeft: GUIDE_PAD_LEFT, padRight: GUIDE_PAD_RIGHT, ladderRows: plan.n } }
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
