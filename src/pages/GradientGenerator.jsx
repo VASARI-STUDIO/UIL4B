@@ -579,6 +579,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       y: fromKeys ? box.bottom + 4 : e.clientY,
       focusFirst: fromKeys,
       fromButton,
+      // Keyboard and button opens hang off the control, which the menu must not cover.
+      anchor: fromKeys ? e.currentTarget : null,
       returnTo: returnTo || e.currentTarget,
     })
   }, [])
@@ -1321,6 +1323,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           focusFirst={tintMenu.focusFirst}
           returnTo={tintMenu.returnTo}
           ignoreDownOn={tintMenu.fromButton ? tintMenu.returnTo : null}
+          anchor={tintMenu.anchor}
           onApply={applyTint}
           onGate={gateTints}
           onClose={closeTintMenu}

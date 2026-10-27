@@ -92,7 +92,7 @@ export const topObstruction = () => {
 }
 
 // The line fixed bottom tabs begin on (the viewport's bottom when there are none).
-const bottomObstruction = () => {
+export const bottomObstruction = () => {
   const tabs = document.querySelector('.pnav-tabs')
   return tabs && getComputedStyle(tabs).position === 'fixed' ? Math.min(window.innerHeight, tabs.getBoundingClientRect().top) : window.innerHeight
 }
