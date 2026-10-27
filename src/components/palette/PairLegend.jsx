@@ -1,8 +1,9 @@
 // "Where each test lands": the three WCAG tests a pair is read against (body
 // text, large text, UI parts), each with Pass or Fail for the current ratio.
-// Hovering or focusing a chip outlines that class in the example above it; a tap
-// or click pins it. A failing class is outlined by default (PairExample), so the
-// chips only add the choice of which class to look at.
+// Hovering or focusing a chip outlines that class in the example below it; a tap
+// or click pins it. The largest part of a failing class is outlined by default
+// (PairExample), so the chips add the choice of which class to look at, and all
+// of its parts.
 import { ToolIcon } from '../tool/ToolLayout'
 import { SIZE_CLASSES } from '../../utils/palettePairSizes'
 
@@ -42,8 +43,8 @@ export default function PairLegend({ ratio, pinned, onPin, onHover }) {
       </div>
       <p className="cc-lede">
         {anyFail
-          ? 'The parts that miss their test are outlined in the example. Pick a test to outline its parts.'
-          : 'Every test passes. Pick a test to outline its parts in the example.'}
+          ? 'The largest part that misses its test is outlined. Pick a test to outline every part.'
+          : 'Every test passes. Pick a test to outline every part.'}
       </p>
     </section>
   )

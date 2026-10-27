@@ -351,6 +351,10 @@ export default function ContrastChecker({ onCopy }) {
             />
           </div>
 
+          {/* The legend sits above the picture it marks, so choosing a test and seeing
+              its parts need no scroll between them. */}
+          {shown !== 'specimen' && <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} />}
+
           {/* The pair, on a specimen. Each line is the size its test measures, at
               a fixed px, so the preview proves the verdict. It is a picture of
               text, so it is a depiction rather than a heading outline. */}
@@ -369,10 +373,9 @@ export default function ContrastChecker({ onCopy }) {
                 </span>
               </section>
             ) : (
-              <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} />
+              <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} pinned={pinned} />
             )}
           </Suspense>
-          {shown !== 'specimen' && <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} />}
         </ToolMain>
 
         <ToolPanel label="Contrast result" className="cc-panel">

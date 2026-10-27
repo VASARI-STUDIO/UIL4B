@@ -120,8 +120,9 @@
 .cc .cc-views .tl-pill { min-height: 36px; padding-block: 0; }
 .cc .cc-views-more { white-space: pre; }
 /* An example in the pair: the preview scene root, sized to the column. Its
-   hit colour is fixed, because the pair's own text colour can be the field. */
-.cc .cc-pv { border-radius: 18px; border-color: var(--tl-line); --pv-hit: #1d63d1; }
+   outline colour (--pv-hit, --pv-error) is set per pair in PairExample, because
+   the pair's own colours can be the field. */
+.cc .cc-pv { border-radius: 18px; border-color: var(--tl-line); }
 .cc .cc-pv-wait { min-height: 320px; border: 1px solid var(--tl-line); border-radius: 18px; }
 
 /* ── Where each test lands ──────────────────────────────────────────────── */
@@ -313,10 +314,12 @@
   .cc .cc-hex-input { height: 44px; font-size: 16px; }
   .cc .tl-btn.cc-swap { width: 44px; height: 44px; min-height: 44px; margin-top: 24px; }
   .cc .cc-pair { min-height: 44px; }
+  .cc .cc-views .tl-pill { min-height: 44px; }
 }
 
 /* ── Phone: fields stacked label-left, Swap down the right edge ─────────── */
 @media (max-width: 559px) {
+  .cc .cc-views .tl-pill { min-height: 44px; }
   .cc .cc-pairbar {
     grid-template-columns: minmax(0, 1fr) 44px;
     grid-template-rows: auto auto;

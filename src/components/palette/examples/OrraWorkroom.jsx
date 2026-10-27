@@ -130,7 +130,7 @@ export default function OrraWorkroom({ roles, labels = [] }) {
             <p className="or-opt-l">Size <b>M</b><span className="or-guide">Size guide</span></p>
             <div className="or-sizes">
               {PRODUCT.sizes.map((s) => (
-                <span key={s.id} className={`or-size${s.on ? ' is-on' : ''}${s.off ? ' is-off' : ''}`} aria-disabled={s.off ? 'true' : undefined}>{s.id}</span>
+                <span key={s.id} className={`or-size${s.on ? ' is-on' : ''}${s.off ? ' is-off' : ''}`} aria-disabled={s.off ? 'true' : undefined}><span>{s.id}</span></span>
               ))}
             </div>
             <p className="or-help">{PRODUCT.sizeHelp}</p>
@@ -140,7 +140,7 @@ export default function OrraWorkroom({ roles, labels = [] }) {
           {!roles.pair && <p className="or-stock" data-role="success"><i aria-hidden="true" />{PRODUCT.stock}</p>}
 
           <div className="or-ctas">
-            <span className="or-cta" data-role="primary">Add to bag · {price}</span>
+            <span className="or-cta" data-role="primary"><span>Add to bag · {price}</span></span>
             <span className="or-save" data-role="neutral"><Heart /> Save</span>
           </div>
 

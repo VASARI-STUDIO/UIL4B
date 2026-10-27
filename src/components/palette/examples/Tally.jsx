@@ -79,6 +79,8 @@ function Transactions({ pair }) {
     <section className="ty-txns" data-role="neutral">
       {TXNS.map((g) => {
         const rows = g.rows.filter((t) => !pair || !t.tone)
+        // A day whose rows were all state rows would be a heading over nothing.
+        if (!rows.length) return null
         return (
           <div key={g.day} className="ty-day">
             <h3 className="ty-dayname">{g.day}</h3>

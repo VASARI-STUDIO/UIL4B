@@ -5,12 +5,14 @@
 //
 // The legend of this view is "Where each test lands": every piece of the example
 // is sorted at runtime into body text, large text or a UI part (data-size), the
-// same way the Palette Builder's legend sorts by role (data-role). A class the
-// pair fails is outlined by default; hovering a legend chip outlines its parts.
+// same way the Palette Builder's legend sorts by role (data-role). At rest the
+// largest part of each class the pair fails is outlined; choosing a legend chip
+// outlines every part of that class.
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { contrastRatio } from '../../utils/colors'
 import { pairRoles, pvVars } from '../../utils/palettePreviewRoles'
-import { PAIR_VIEWS, UI_PARTS, failingSizes, textSizeClass } from '../../utils/palettePairSizes'
+import { PAIR_VIEWS, UI_PARTS, failingSizes, pickOutlineColour, textSizeClass } from '../../utils/palettePairSizes'
+import { prefersReducedMotion } from '../spectrum/reducedMotion'
 import { EXAMPLES } from './examples/registry'
 import '../../styles/pages/palette-preview.css'
 
@@ -24,9 +26,15 @@ const ownText = (el) => {
 }
 const shown = (el) => el.getClientRects().length > 0
 
-// Tags every visible piece of the example with data-size, then sets data-hit on
-// the chosen class and data-fail on each failing one. Idempotent: it clears its
-// own marks first, so it can run again after a resize or a late render.
+// Tags every visible piece of the example with data-size, then sets data-hit
+// on the chosen class and data-fail on the part that shows a failing one.
+// Idempotent: it clears its own marks first, so it can run again after a resize
+// or a late render.
+//
+// With a class chosen, data-hit outlines every part of it and the others dim, so
+// no failure marks are added. At rest each failing class marks only its largest
+// visible part: a pair that fails body text would otherwise outline every line
+// of the picture.
 function markSizes(root, uiSelector, highlight, failing) {
   for (const el of root.querySelectorAll('[data-size]')) {
     delete el.dataset.size
@@ -37,7 +45,12 @@ function markSizes(root, uiSelector, highlight, failing) {
   for (const el of root.querySelectorAll('*')) {
     if (!ownText(el) || !shown(el)) continue
     const cs = getComputedStyle(el)
-    el.dataset.size = textSizeClass(parseFloat(cs.fontSize), parseInt(cs.fontWeight, 10))
+    const cls = textSizeClass(parseFloat(cs.fontSize), parseInt(cs.fontWeight, 10))
+    // An inline run inside a block of the same class (a tail set in the heading's
+    // own size) is covered by the block's outline; its own would wrap the line.
+    const up = el.parentElement
+    if (cs.display === 'inline' && up?.dataset.size === cls) continue
+    el.dataset.size = cls
     tagged.push(el)
   }
   if (uiSelector) {
@@ -51,17 +64,29 @@ function markSizes(root, uiSelector, highlight, failing) {
     const cls = el.dataset.size
     if (highlight && cls === highlight) el.dataset.hit = 'on'
     else if (highlight && !el.querySelector('[data-size]')) el.dataset.hit = 'off'
-    if (failing.includes(cls)) el.dataset.fail = 'on'
+  }
+  if (highlight) return
+  for (const cls of failing) {
+    let largest = null
+    let area = 0
+    for (const el of tagged) {
+      if (el.dataset.size !== cls) continue
+      const r = el.getBoundingClientRect()
+      if (r.width * r.height > area) { largest = el; area = r.width * r.height }
+    }
+    if (largest) largest.dataset.fail = 'on'
   }
 }
 
 /**
  * @param {{viewId: 'editorial'|'product'|'card', fg: string, bg: string,
- *   highlight?: string|null}} props fg and bg are #rrggbb; highlight is a size
- *   class to outline
+ *   highlight?: string|null, pinned?: string|null}} props fg and bg are
+ *   #rrggbb; highlight is a size class to outline; pinned is the class a click
+ *   or tap holds, whose first part is brought into view
  */
-export default function PairExample({ viewId, fg, bg, highlight = null }) {
+export default function PairExample({ viewId, fg, bg, highlight = null, pinned = null }) {
   const roles = useMemo(() => pairRoles(fg, bg), [fg, bg])
+  const outline = useMemo(() => pickOutlineColour(bg, fg), [bg, fg])
   const view = PAIR_VIEWS.find((v) => v.id === viewId)
   const Body = EXAMPLES[viewId]
   const rootRef = useRef(null)
@@ -87,12 +112,23 @@ export default function PairExample({ viewId, fg, bg, highlight = null }) {
     return () => { cancelAnimationFrame(frame); mo.disconnect(); ro?.disconnect() }
   }, [viewId, failKey, highlight, roles])
 
+  // A pinned class can sit below the fold of a tall example: bring its first
+  // visible part into view (instantly under reduced motion), and leave the page
+  // where it is when that part is already in sight. Declared after the marking
+  // effect so the marks are there.
+  useEffect(() => {
+    const root = rootRef.current
+    if (!pinned || !root) return
+    const first = [...root.querySelectorAll('[data-hit="on"]')].find((el) => el.getBoundingClientRect().height > 0)
+    first?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [pinned, viewId])
+
   if (!Body || !view) return null
   return (
     <div
       ref={rootRef}
       className="pvs cc-pv"
-      style={pvVars(roles)}
+      style={{ ...pvVars(roles), '--pv-hit': outline, '--pv-error': outline }}
       data-scene={viewId}
       data-mode={roles.mode}
       data-pair="true"

@@ -98,8 +98,8 @@
   /* One column: twelve with their 24px gaps would be wider than a 320px stage. */
   .ho-hero{grid-template-columns:minmax(0,1fr)}
   .ho-draw{grid-column:1 / -1}
-  /* The drawing is small here, so the level label sits past the end of its leader instead of over the house wall. */
-  .ho-call--top{transform:translate(calc(-100% + var(--s-4)),-100%)}
+  /* The drawing is small here, so the level label sits up and to the right of its leader's end, clear of the studio wall and of the plot's back edge. */
+  .ho-call--top{transform:translate(calc(-100% + var(--s-5)),calc(-100% - var(--s-2)))}
   .ho-row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name year" "sub type";row-gap:0}
   .ho-row--head{display:none}
   .ho-name{grid-area:name}
