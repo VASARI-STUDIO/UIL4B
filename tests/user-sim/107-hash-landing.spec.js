@@ -119,9 +119,9 @@ test('a fresh sales hash still lands below its nav', async ({ page }) => {
 })
 
 test('a section link from another route lands on the sales page', async ({ page }) => {
-  watch(page, 'a visitor following Tools from the mobile page')
+  watch(page, 'a visitor following The bench from the footer on the mobile page')
   await go(page, '/mobile')
-  await page.locator('.spnav a[href="/home#bench"]').first().click()
+  await page.locator('.sp-footer a[href="/home#bench"]').first().click()
   await ready(page, '/home')
   await expectLanding(page, 'bench', '.spnav')
 })

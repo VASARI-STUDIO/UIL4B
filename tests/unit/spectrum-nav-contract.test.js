@@ -211,13 +211,13 @@ test('the quiet links are the design\'s three, and each one goes somewhere real'
   const labels = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)'/g)].map((m) => m[1])
   assert.deepEqual(labels, ['Tools', 'Pricing', 'On mobile'], 'the quiet links are the design\'s three, in its order')
   const hashes = [...src.matchAll(/hash: '#([a-z-]+)'/g)].map((m) => m[1])
-  assert.deepEqual(hashes, ['bench'])
+  assert.deepEqual(hashes, [])
   const page = read('src/pages/Spectrum.jsx')
   for (const id of hashes) {
     assert.match(page, new RegExp(`id="${id}"`), `SpectrumNav links to #${id}, which Spectrum.jsx does not define`)
   }
   const routes = [...src.matchAll(/to: '(\/[a-z-]+)'/g)].map((m) => m[1])
-  assert.deepEqual(routes, ['/plans', '/mobile'])
+  assert.deepEqual(routes, ['/tools', '/plans', '/mobile'])
   const app = stripJs(read('src/App.jsx'))
   assert.match(app, /=== '\/mobile'[\s\S]{0,400}<SpectrumMobile \/>/, 'App.jsx does not render a page at /mobile')
   assert.match(app, /=== '\/plans'[\s\S]{0,400}<Pricing \/>/, 'App.jsx does not render a page at /plans')
@@ -233,7 +233,7 @@ test('the screen you are on is announced as well as painted', () => {
   // aria-current.
   const src = stripJs(read(SPECTRUM_NAV))
   assert.match(src, /'aria-current': current \? 'page' : undefined/)
-  assert.match(src, /if \(onSalesPage\(p\)\) return 'tools'/)
+  assert.match(src, /if \(p === '\/tools'\) return 'tools'/)
   assert.match(src, /if \(p === '\/plans'\) return 'pricing'/)
   assert.match(src, /if \(p === '\/mobile'\) return 'mobile'/)
   const css = stripCss(read(CHROME_CSS))

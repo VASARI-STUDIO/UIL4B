@@ -12,6 +12,8 @@ const STATIC_INDEXABLE_ROUTES = [
   '/plans',
   // The Spectrum design's "On mobile" screen, a marketing page like /plans.
   '/mobile',
+  // The tools sales page, reached from the nav's Tools link.
+  '/tools',
   '/community',
   '/learn/help',
   '/info',
