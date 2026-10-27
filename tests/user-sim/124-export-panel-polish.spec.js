@@ -16,6 +16,7 @@
 // toggle fails both fade tests: with `className="exp-panel"` the top-of-list
 // test finds no class; with the class always on, the bottom-of-list test still
 // finds it.
+import { chooseFormat } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -56,11 +57,11 @@ for (const { width, height } of SIZES) {
     test('a finished JSON export names the downloaded file in a toast that is on screen', async ({ page }) => {
       watch(page, 'a designer exporting design tokens from a saved project')
       const panel = await openPanel(page)
-      await panel.getByRole('radio', { name: /^JSON tokens/ }).click()
+      await chooseFormat(panel, 'json')
 
       const [download] = await Promise.all([
         page.waitForEvent('download'),
-        panel.getByRole('button', { name: 'Export JSON', exact: true }).click(),
+        panel.getByRole('button', { name: 'Export JSON tokens', exact: true }).click(),
       ])
       const filename = download.suggestedFilename()
       expect(filename).toMatch(/\.tokens\.json$/)
