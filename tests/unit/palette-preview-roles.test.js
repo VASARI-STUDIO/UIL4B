@@ -151,6 +151,18 @@ test('4 . every --pv-* the stylesheet reads is set by pvVars', () => {
   // on the root; those names count as set when the component writes them.
   const scenes = stripJs(fs.readFileSync(path.join(process.cwd(), 'src/components/palette/PalettePreview.jsx'), 'utf8'))
   for (const [, name] of scenes.matchAll(/style=\{\{\s*'(--pv-[a-z0-9-]+)'\s*:/g)) set.add(name)
+  // The hit outline colour is read with a fallback (--pv-text) and set only by
+  // the Contrast Checker, on its own example wrapper (PairExample.jsx), because
+  // there the text colour can be the field colour. Its setter must stay there.
+  const SET_BY_CONTRAST_CHECKER = ['--pv-hit']
+  const checkerSetters = stripJs([
+    'src/components/palette/PairExample.jsx', 'src/styles/pages/contrast.css',
+  ].map((f) => fs.readFileSync(path.join(process.cwd(), f), 'utf8')).join('\n'))
+  for (const name of SET_BY_CONTRAST_CHECKER) {
+    assert.match(checkerSetters, new RegExp(`['"]${name}['"]\\s*:|${name}\\s*:\\s*[#\\w]`), `the Contrast Checker no longer sets ${name}`)
+    assert.match(css, new RegExp(`var\\(${name},`), `${name} is no longer read with a fallback, so it cannot be left to the Contrast Checker`)
+    set.add(name)
+  }
   assert.ok(used.size > 15, `only ${used.size} --pv-* names found in the stylesheets - the scan is not reading the preview CSS`)
   const orphans = [...used].filter((name) => !set.has(name)).sort()
   assert.deepEqual(orphans, [], 'these custom properties are read by the stylesheet but never set on the scene root')

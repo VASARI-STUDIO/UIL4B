@@ -58,7 +58,9 @@ const KEEP = {
     // the Suggest card's main hit area is a button that fills a rounded card, so it takes the card's own radius
     'plb-sg-main',
     // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
-    'grd-preset'],
+    'grd-preset',
+    // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
+    'cc-lg-chip'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
   // underline and folder tabs, and the phone tab bar's items

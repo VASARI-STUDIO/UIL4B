@@ -51,10 +51,13 @@ const SEAM_MIN = 1.5
  * @param {object} r derivePaletteRoles() output
  */
 export function orraVars(r) {
+  // A Contrast Checker pair is never corrected: the type on the garment colour
+  // is the pair's other colour, whatever its ratio.
+  const keep = Boolean(r.pair)
   const inks = { on: r.onPrimary, text: r.text, canvas: r.canvas }
   let seam = mixHex(r.primary, r.deep, 0.6)
-  if (contrastRatio(seam, r.primary) < SEAM_MIN) seam = inkOnField(r.primary, inks, { large: true }).hex
-  const cta = inkOnField(r.primary, inks)
+  if (contrastRatio(seam, r.primary) < SEAM_MIN) seam = inkOnField(r.primary, inks, { large: true, keep }).hex
+  const cta = inkOnField(r.primary, inks, { keep })
   const swatchEdge = (fill) => fieldEdge(fill, r.canvas, r.borderStrong)
   return {
     '--or-seam': seam,
