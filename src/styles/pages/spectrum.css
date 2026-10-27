@@ -1010,6 +1010,20 @@
 /* In the dark the plate keeps its white paper: one hairline under the plate so the
    paper sits on the well instead of floating. */
 [data-theme="dark"] .spectrum .sp-plate { box-shadow: 0 1px 0 oklch(1 0 0 / .06); }
+/* From 761px the picture is sized to its own aspect (--ar), not left to object-fit inside a
+   padded box, so its box is the picture and the caption can start at its left edge. (No CSS
+   outline on a plate: its pages carry their own hairline, baked in by the generator, and the
+   deck's picture has bare ground beside the palette slide that a box outline would ring.) The plate is a size container; the caption row is a fixed 28px (one line,
+   cut with an ellipsis), so the box left for the picture is known: the plate less that row,
+   less 4% of the width on every side. A picture that is wider than that box is limited by its
+   height and centred, and its caption moves in with it. */
+@media (min-width: 761px) {
+  .sp-plate { container-type: size; --cap-h: 28px; --pic-w: calc(100cqw - 8cqw); --pic-h: calc(100cqh - var(--cap-h) - 8cqw); }
+  .sp-plate-art img { inset: 0; margin: auto; padding: 0; width: min(var(--pic-w), calc(var(--pic-h) * var(--ar, 1.4142))); height: auto; aspect-ratio: var(--ar, 1.4142); }
+  .sp-plate-cap { box-sizing: border-box; height: var(--cap-h); padding-bottom: 10px; }
+  .sp-plate-cap > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sp-plate-cap--pic { padding-left: calc((100cqw - min(var(--pic-w), var(--pic-h) * var(--ar, 1.4142))) / 2); }
+}
 
 /* card 3: a shelf of the three projects' real covers, straight-on, overlapping, no
    tilt. The box is a size container so the covers are sized from it: the front one
@@ -1029,7 +1043,9 @@
   min-height: 0;
   container-type: size;
   --sh-w: min(62.9cqh, 300px);
-  --sh-off: calc(var(--sh-w) * .5);
+  /* Half a cover, but never so wide that a back cover (at .88) comes within 24px of
+     the plate's edge: the plate is 564px at 1200, the covers 600 at half a cover. */
+  --sh-off: min(calc(var(--sh-w) * .5), calc((100cqw - var(--sh-w) * 1.06) / 2 - 24px));
 }
 .sp-shelf img {
   position: absolute;
@@ -1048,9 +1064,24 @@
 .sp-shelf img[data-pos="front"] { --sh-x: 0px; --sh-s: 1; --sh-o: 1; z-index: 3; }
 .sp-shelf img[data-pos="left"] { --sh-x: calc(var(--sh-off) * -1); --sh-s: .88; --sh-o: .72; z-index: 1; }
 .sp-shelf img[data-pos="right"] { --sh-x: var(--sh-off); --sh-s: .88; --sh-o: .72; z-index: 1; }
+/* A cover leaving the front stays at full opacity until the z-index flips at 120ms, and
+   only then fades (120ms): fading from the start showed the arriving cover's title through
+   it. Transitions use the destination's properties, so the delay is set on the back
+   positions; the arriving cover (front) keeps its undelayed fade-in, under the leaving one.
+   A cover that moves between the two back positions does not change opacity, so the delay
+   shows nothing there. */
+.sp-shelf img:not([data-pos="front"]) { transition: transform 240ms var(--sp-ease), opacity 120ms var(--sp-ease) 120ms, z-index 0s linear 120ms; }
+/* A back cover picks its project on a click; the rows and pills are the keyboard path. */
+.sp-shelf img:not([data-pos="front"]) { cursor: pointer; }
 @media (max-width: 760px) {
-  .sp-shelf { --sh-w: min(69cqw, 62.9cqh); --sh-off: calc(var(--sh-w) * .236); }
+  /* 318px wide plate, 220px cover: a back cover at .58 of a cover from the middle shows
+     more of its own title than at .236, and the plate's edge crops the rest. */
+  .sp-shelf { --sh-w: min(69cqw, 62.9cqh); --sh-off: calc(var(--sh-w) * .58); }
 }
+/* A content image gets a hairline in pure black (white in the dark) at 10%, drawn inside
+   its own edge. A cover's box is the cover. */
+.sp-shelf img { outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
+[data-theme="dark"] .spectrum .sp-shelf img { outline-color: oklch(1 0 0 / .1); }
 .sp-cap-short, .sp-lab-short { display: none; }
 
 .sp-pick { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
@@ -1071,10 +1102,10 @@
    that the pills above are shown and this is display: none). A marker, the name,
    and what is in it, between hairlines. */
 .sp-rows { display: none; margin-top: auto; border-top: 1px solid rgba(var(--sp-ink-rgb), .12); }
-.sp-rows-btn { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 16px; row-gap: 2px; min-height: 52px; padding: 12px 4px 12px 24px; border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); border-radius: 0; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 15px; line-height: 1.3; text-align: left; cursor: pointer; transition: color 150ms ease, background-color 150ms ease; }
+.sp-rows-btn { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 16px; row-gap: 2px; align-content: center; min-height: 72px; padding: 12px 4px 12px 24px; border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); border-radius: 0; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 15px; line-height: 1.3; text-align: left; cursor: pointer; transition: color 150ms ease, background-color 150ms ease; }
 .sp-rows-btn::before { content: ""; position: absolute; left: 4px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; border: 1.5px solid rgba(var(--sp-ink-rgb), .3); box-sizing: border-box; transition: background-color 150ms ease, border-color 150ms ease; }
 .sp-rows-lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-rows-hint { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-rows-hint { font-size: 13px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-rows-sub { grid-column: 1 / -1; font-size: 13px; color: var(--sp-dim); }
 .sp-rows-btn[aria-selected="true"], .sp-rows-btn[aria-checked="true"] { color: var(--sp-ink); }
 .sp-rows-btn[aria-selected="true"]::before, .sp-rows-btn[aria-checked="true"]::before { background: var(--sp-ink); border-color: var(--sp-ink); }
@@ -1156,8 +1187,15 @@
 @media (min-width: 1200px) {
   .sp-stack-say { align-self: stretch; display: flex; flex-direction: column; padding-top: 0; }
   .sp-stack-say > p.sp-stack-note { margin-bottom: 24px; }
-  .sp-rows { display: flex; flex-direction: column; }
+  /* The list takes what the copy leaves, 56px below the note (32 + its 24 margin) at most
+     as a gap, in rows that share it evenly: 72px or taller (card 1's four rows are 56 at
+     least), so a list never floats under a void and never runs out of the column. */
+  .sp-rows { display: flex; flex: 1 1 auto; flex-direction: column; margin-top: 32px; }
+  .sp-rows-btn { flex: 1 1 0; max-height: 104px; }
+  .sp-stack-card[data-stack-card="0"] .sp-rows-btn { min-height: 56px; }
   .sp-pick, .sp-ex-pieces { display: none; }
+  /* The shelf's caption (name, time, parts) repeats the chosen row, which is beside it. */
+  .sp-plate-cap--project { display: none; }
   /* Card 1's list fills the body: rows between 36 and 48 tall share what there is
      (nine swatch rows take it all), and a list with fewer rows stops at 48 and sits
      at the top. The swatch is as tall as its row. */

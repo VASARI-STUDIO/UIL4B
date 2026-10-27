@@ -444,6 +444,7 @@ function PlatePicture({ item, on, failed, imgRef, onLoad, onError }) {
         sizes={PLATE_SIZES}
         width={v.landscape.width}
         height={v.landscape.height}
+        style={{ '--ar': v.landscape.aspect }}
         loading="lazy"
         decoding="async"
         alt={item.alt}
@@ -464,11 +465,16 @@ function shelfPos(i, active, count) {
   return rank < (count - 1) / 2 ? 'left' : 'right'
 }
 
-function ShelfCover({ item, pos, failed, onError }) {
+// A back cover is also a click target for its project, with the pointer only: the rows and
+// pills are the keyboard and screen-reader path, so it stays out of the tab order and the
+// accessibility tree. The front cover has no handler.
+function ShelfCover({ item, pos, failed, onError, onPick }) {
   const v = item.variants.portrait
   return (
     <img
       className={pos === 'front' ? 'is-on' : undefined}
+      onClick={pos === 'front' ? undefined : onPick}
+      tabIndex={pos === 'front' ? undefined : -1}
       data-pos={pos}
       src={v.src}
       srcSet={v.srcset}
@@ -550,7 +556,7 @@ function ExportPlate({ plate, items, uid, panelId, role, label, caption, lead, s
         {shelf ? (
           <div className="sp-shelf">
             {items.map((item, i) => (
-              <ShelfCover key={item.id} item={item} pos={shelfPos(i, active, items.length)} failed={failed.has(i)} onError={onError(i)} />
+              <ShelfCover key={item.id} item={item} pos={shelfPos(i, active, items.length)} failed={failed.has(i)} onError={onError(i)} onPick={() => select(i)} />
             ))}
             {failed.has(active) && <p className="sp-plate-fail">{items[active].alt}</p>}
           </div>
@@ -628,9 +634,10 @@ function ShelfCard(props) {
 
 /* ── the stack ────────────────────────────────────────────────────────────── */
 
-// One line under the plate: the long form from 761px, a short one on a phone.
-const exportCaption = () => (
-  <div className="sp-plate-cap">
+// One line under the plate: the long form from 761px, a short one on a phone. Its left
+// edge is the picture's (--ar is the picture's aspect, so the CSS can find that edge).
+const exportCaption = (item) => (
+  <div className="sp-plate-cap sp-plate-cap--pic" style={{ '--ar': item.variants.landscape.aspect }}>
     <span className="sp-cap-long">Real exports, made from the Cobalt palette with Schibsted Grotesk and Literata.</span>
     <span className="sp-cap-short">Real exports, Cobalt palette.</span>
   </div>
@@ -642,7 +649,7 @@ const exportCaption = () => (
 const projectCaption = (item) => {
   const opened = `${item.when.charAt(0).toLowerCase()}${item.when.slice(1)}`
   return (
-    <div className="sp-plate-cap">
+    <div className="sp-plate-cap sp-plate-cap--project">
       <span className="sp-cap-long">{item.label}, {opened}. {item.parts}.</span>
       <span className="sp-cap-short">{item.when}. {item.parts}.</span>
     </div>
