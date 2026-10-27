@@ -34,9 +34,7 @@ async function cssAngle(page) {
 async function open(page) {
   await go(page, ROUTE)
   await expect(wheelOf(page)).toBeVisible()
-  // The first visit opens at 135deg (the preset's stops, not its angle), so set a known angle.
-  await fieldOf(page).fill(String(FIRST_ANGLE))
-  await fieldOf(page).press('Enter')
+  // A first visit opens on the first preset, angle included (Indigo Night, 160deg).
   await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', String(FIRST_ANGLE))
 }
 
@@ -321,9 +319,8 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: 'Tints of stop 1', exact: true }).tap()
     const menu = page.getByRole('menu', { name: /^Tints of stop 1,/ })
     await expect(menu).toBeVisible()
-    // The menu pops in with a short scale animation; measured mid-way a 44px row
-    // reads 43. Wait for it to finish rather than for a timer.
-    await menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
+    // Measured straight away, with the entrance animation still running: the menu
+    // fades in but never scales, so a 44px row reads 44px from the first frame.
 
     const read = await page.evaluate(() => {
       const m = document.querySelector('.grd-tintmenu')
@@ -341,5 +338,43 @@ test.describe('on a phone', () => {
     expect(read.bottom, 'inside the bottom edge').toBeLessThanOrEqual(read.vh)
     expect(read.short, 'menu rows under 44px').toEqual([])
     expect(read.scroll).toBeLessThanOrEqual(read.client)
+  })
+})
+
+test.describe('one starting gradient, one focus ring', () => {
+  test('a first visit and Reset draw the same gradient: 160deg and identical CSS', async ({ page }) => {
+    watch(page, 'a designer resetting the gradient')
+    await go(page, ROUTE)
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', String(FIRST_ANGLE))
+    const first = await codeOf(page).innerText()
+    expect(first).toContain(`linear-gradient(${FIRST_ANGLE}deg in oklch`)
+
+    await wheelOf(page).focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', String(FIRST_ANGLE + 15))
+    await page.getByRole('button', { name: 'Reset', exact: true }).click()
+    await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', String(FIRST_ANGLE))
+    expect(await codeOf(page).innerText(), 'Reset matches the first visit').toBe(first)
+  })
+
+  test('the angle field shows exactly one focus ring: an outline, no halo, no border change', async ({ page }) => {
+    watch(page, 'a keyboard user in the angle field')
+    await go(page, ROUTE)
+    const field = fieldOf(page)
+    await expect(field).toBeVisible()
+    const look = () => field.evaluate((el) => {
+      const s = getComputedStyle(el)
+      return { outline: `${s.outlineStyle} ${s.outlineWidth}`, shadow: s.boxShadow, border: s.borderTopColor }
+    })
+    const rest = await look()
+    await page.keyboard.press('Tab') // land on a control, then move focus in by keyboard
+    await field.focus()
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Tab')
+    await expect(field).toBeFocused()
+    await expect.poll(async () => (await look()).outline).toMatch(/^solid [1-9]/)
+    const on = await look()
+    expect(on.shadow, 'no halo stacked on the outline').toBe('none')
+    expect(on.border, 'the border does not also change colour').toBe(rest.border)
   })
 })
