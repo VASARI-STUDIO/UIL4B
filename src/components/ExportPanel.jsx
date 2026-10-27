@@ -74,7 +74,7 @@ const PRO_GATE = {
     title: 'Export the design system book',
     subtitle: 'An A4 book of your system: cover, contents, colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
     features: [
-      'Cover, contents and numbered section openings',
+      'Cover, contents and section openings',
       'Three layouts to choose from: Specification, Monograph and Atlas',
       'Every colour with its role, three notations and its reading ink',
       'A contrast matrix measuring every pair in the palette',
