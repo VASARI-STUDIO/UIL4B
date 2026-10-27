@@ -64,8 +64,9 @@
   .spt .spt-seg button { min-width: 0; flex: 1; }
   .spt .spt-section:last-of-type { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 }
+html[data-reduced-motion="true"] .spt .spt-ramp li { transition: none; }
 @media (prefers-reduced-motion: reduce) {
-  .spt .spt-ramp li { transition: none; }
+  html:not([data-reduced-motion="false"]) .spt .spt-ramp li { transition: none; }
 }
 
 /* Screenshots: one picture per theme in the markup; the page's theme decides which
