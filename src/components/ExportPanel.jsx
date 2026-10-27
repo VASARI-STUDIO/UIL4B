@@ -226,14 +226,12 @@ export default function ExportPanel({ onClose }) {
     // asking them to sign in first would put a login popup in front of a Pro
     // CTA. The gate id is still reported, so the funnel can say WHICH wall
     // converted.
-    const proFormatGate = (pro) => {
-      if (!FORMATS.find(f => f.id === format)?.pro || pro) return false
+    if (FORMATS.find(f => f.id === format)?.pro && !isPro) {
       reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
       onClose()
       navigate('/plans')
-      return true
+      return
     }
-    if (proFormatGate(isPro)) return
 
     // ── ACCOUNT GATE ──────────────────────────────────────────────────────
     // Producing a FILE needs a free account; copying a value never does
@@ -258,7 +256,13 @@ export default function ExportPanel({ onClose }) {
         return
       }
       proNow = live.current.isPro
-      if (proFormatGate(proNow)) return
+      // The same Pro gate as above, read against the plan that just arrived.
+      if (FORMATS.find(f => f.id === format)?.pro && !proNow) {
+        reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
+        onClose()
+        navigate('/plans')
+        return
+      }
     }
 
     setBusy(true)
