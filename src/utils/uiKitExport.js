@@ -57,6 +57,7 @@ import { hexToOklch } from './exportTemplates/roles.js'
 import { MAX_SLOTS } from './exportTemplates/shared.js'
 import { roleLabel } from './paletteRoles.js'
 import { manualParts } from './kitManual.js'
+import { showcaseParts } from './kitShowcase.js'
 
 export const KIT_TIERS = Object.freeze(['free', 'pro'])
 
@@ -102,6 +103,7 @@ export const UNPLACED_LANDS = 'not assigned to a part of the interface'
 export const KIT_CHROME = Object.freeze({
   studio: Object.freeze(['Geist', 'Geist Mono']),
   manual: Object.freeze(['Hanken Grotesk', 'Martian Mono']),
+  showcase: Object.freeze(['Instrument Sans']),
 })
 // Said on any slot the palette could not fill, so the kit's five colours are
 // never mistaken for the same five the book and the deck show.
@@ -724,6 +726,15 @@ export function renderUiKit(design, {
   // Only a layout that tabulates every value asks for these.
   if (template.includes('@@COLOUR_TABLE@@')) {
     Object.assign(replacements, manualParts(sel, {
+      tokens, esc, on, g, contrast, grade: gradeOf, roles: ROLES, date,
+      tokenCount: designTokens(safeDesign).length + extra.length,
+      embedded: Object.fromEntries(notes.embedded.map((f) => [f, fonts[f].license.name])),
+      chrome: publisherFonts.map((pub) => pub.family),
+    }))
+  }
+
+  if (template.includes('@@STRIPES@@')) {
+    Object.assign(replacements, showcaseParts(sel, {
       tokens, esc, on, g, contrast, grade: gradeOf, roles: ROLES, date,
       tokenCount: designTokens(safeDesign).length + extra.length,
       embedded: Object.fromEntries(notes.embedded.map((f) => [f, fonts[f].license.name])),

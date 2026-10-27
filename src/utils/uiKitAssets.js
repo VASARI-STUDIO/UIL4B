@@ -13,6 +13,7 @@ import { readLogo } from './brandLogo.js'
 const KIT_TEMPLATES = Object.freeze({
   studio: () => import('../templates/kit/studio.html?raw'),
   manual: () => import('../templates/kit/manual.html?raw'),
+  showcase: () => import('../templates/kit/showcase.html?raw'),
 })
 const DEFAULT_KIT_TEMPLATE = 'studio'
 
