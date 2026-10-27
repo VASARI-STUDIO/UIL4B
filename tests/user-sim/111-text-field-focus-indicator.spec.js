@@ -130,6 +130,20 @@ for (const scheme of THEMES) {
       expectOneIndicator('picker hex', await focusedLook(page, page.locator('.cpk-hex')))
     })
 
+    test('the gradient angle field', async ({ page }) => {
+      await go(page, '/create/gradient')
+      const angle = page.getByRole('spinbutton', { name: 'Gradient angle in degrees' })
+      await expect(angle).toBeVisible()
+      expectOneIndicator('gradient angle', await focusedLook(page, angle))
+    })
+
+    test('the gradient stop hex field', async ({ page }) => {
+      await go(page, '/create/gradient')
+      const hex = page.getByRole('textbox', { name: 'Stop 1 hex' })
+      await expect(hex).toBeVisible()
+      expectOneIndicator('gradient stop hex', await focusedLook(page, hex))
+    })
+
     test('the Home search fields leave the underline on the wrapper and the halo off the input', async ({ page }) => {
       await go(page, '/')
       await globalSheetLast(page)

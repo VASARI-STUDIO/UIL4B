@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
@@ -14,6 +14,7 @@ import { useProLibrary } from '../hooks/useProLibrary'
 import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
+import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 import { mergeSubmissions } from '../utils/communityQueue'
 import { listMySubmissions } from '../utils/communityQueueApi'
@@ -65,7 +66,7 @@ const TYPE_OPTIONS = [
 ]
 
 export default function GradientGallery({ toast }) {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { isPro } = useSubscription()
   const { requireLogin } = useLoginPrompt()
   // A Pro account's full library comes from the server (src/utils/proLibrary.js);
@@ -80,7 +81,17 @@ export default function GradientGallery({ toast }) {
   // state still resolving shows the tier below, never the one above.
   const tier = galleryTier({ isPro: ready, signedIn: user != null })
   const [rawQuery, setRawQuery] = useState('')
-  const [tag, setTag] = useState('all')
+  // `?mood=warm` opens the library already filtered (the Gradient Generator's
+  // taste chips link here). Anything that is not a known mood reads as All.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlMood = searchParams.get('mood')
+  const moodFromUrl = GRADIENT_TAGS.includes(urlMood) ? urlMood : 'all'
+  const [tag, setTag] = useState(moodFromUrl)
+  // Following a mood link while already on the library (or Back / Forward
+  // between two of them) changes the URL without remounting, so the filter
+  // follows it. Keyed on the URL's mood only: picking a mood in the tray does
+  // not touch the URL and so is not undone here.
+  useEffect(() => { setTag(moodFromUrl) }, [moodFromUrl])
   // An ARRAY, because the type tray is multi-select (founder request,
   // 2026-08-08). `['all']` is the unfiltered state; picking every type collapses
   // straight back to it, which LibraryFilterGroup handles.
@@ -152,8 +163,7 @@ export default function GradientGallery({ toast }) {
   const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
 
   const visible = useMemo(() => browsable.filter(g => {
-    if (tag !== 'all' && !g.tags.includes(tag)) return false
-    if (!types.includes('all') && !types.includes(g.type)) return false
+    if (!matchesGradientFacets(g, tag, types)) return false
     if (query) {
       const hay = `${g.name} ${g.type} ${g.tags.join(' ')} ${g.stops.map(s => s.color).join(' ')}`.toLowerCase()
       if (!hay.includes(query)) return false
@@ -161,7 +171,30 @@ export default function GradientGallery({ toast }) {
     return true
   }), [browsable, query, tag, types])
 
-  const clearAll = () => { setRawQuery(''); setTag('all'); setTypes(['all']) }
+  const clearAll = () => {
+    setRawQuery(''); setTag('all'); setTypes(['all'])
+    // A mood in the URL would otherwise survive the reset and come back on reload.
+    if (searchParams.has('mood')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('mood')
+      setSearchParams(next, { replace: true })
+    }
+  }
+
+  // When a signed-out visitor's mood or type filter comes up empty, say so if
+  // the cap is the reason: a free account opens more rows, and some of them fit.
+  // Counted over the free tier's open rows by mood and type ONLY. A typed search
+  // is deliberately left out — it indexes hex values, so reporting whether
+  // withheld rows match it would be the oracle the gate above exists to close.
+  // Mood and type are public facets, so the count discloses nothing new.
+  //
+  // While auth is still resolving the tier reads anonymous even for a signed-in
+  // account, so nothing is claimed (and no sign-in action offered) until it has.
+  const accountMatches = useMemo(() => {
+    if (authLoading || tier !== 'anonymous' || query) return 0
+    if (tag === 'all' && types.includes('all')) return 0
+    return openGradientRows(rows, 'free').filter(g => matchesGradientFacets(g, tag, types)).length
+  }, [authLoading, tier, query, tag, types, rows])
 
   // The teased tail. Shown only while the view is unnarrowed: under a search or
   // a filter the visitor has asked a narrower question, and answering it with a
@@ -348,9 +381,22 @@ export default function GradientGallery({ toast }) {
           // where working out what to undo by hand was hardest.
           <LibraryEmpty
             className="grg-empty"
-            title={`No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
-            detail="Try a broader search, or reset the mood and type filters to see all of them again."
+            title={accountMatches > 0
+              ? 'Nothing open to you matches those filters.'
+              : `No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
+            detail={accountMatches > 0
+              ? `Signed out, you can browse ${browsable.length} of the ${rows.length} gradients. A free account opens ${accountMatches} that ${accountMatches === 1 ? 'fits' : 'fit'} these filters.`
+              : 'Try a broader search, or reset the mood and type filters to see all of them again.'}
             onClear={clearAll}
+            action={accountMatches > 0 ? (
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
+              >
+                {`Open ${accountMatches === 1 ? 'it' : accountMatches} with a free account`}
+              </button>
+            ) : null}
           />
         )}
       </section>
