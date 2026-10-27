@@ -381,9 +381,9 @@ test('/create/semantic-color · the custom-hue slider is a 24px control that sti
   const { ctx, page } = await at(browser, 390)
   watch(page, 'a designer dialling a custom hue on a phone')
   await go(page, '/create/semantic-color')
-  // The role's preset is a select on this screen, and the
+  // The role's presets are chips on this screen, with Custom last, and the
   // slider is the shared tool slider (a 24px control over the drawn 6px track).
-  await chooseMenuOption(page, page.getByRole('button', { name: 'Success preset' }), 'custom')
+  await page.getByRole('group', { name: 'Success preset' }).getByRole('button', { name: 'Custom' }).click()
   const slider = page.locator('.stc-hue input[type=range]').first()
   await slider.scrollIntoViewIfNeeded()
   await expect(slider).toBeVisible()
