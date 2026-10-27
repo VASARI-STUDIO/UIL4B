@@ -122,6 +122,24 @@ export default function Spectrum() {
   const [heroLit] = useState(() => typeof document !== 'undefined'
     && !document.documentElement.hasAttribute('data-hero-prepainted')
     && !prefersReducedMotion())
+  // THE ARRIVAL OF EVERYTHING REACT ADDS UNDER THE HEADLINE (spectrum.css, "the
+  // hero's arrival"): the sub-line, search and buttons rise in and the band is
+  // set. It plays on every path, since on a cold load these are the elements that
+  // appear after the painted headline, and it never touches the headline itself.
+  // Decided at first render, like `heroLit`, so nothing commits settled and then
+  // drops. Where the headline is rising (`heroLit`) the arrival starts 300ms in
+  // so the words lead and the band lands under them.
+  const [arrive] = useState(() => typeof document !== 'undefined' && !prefersReducedMotion())
+  const arriveAt = heroLit ? '300ms' : '0ms'
+
+  // The library's grid fades on a chip press, never on first paint. The two keys
+  // alternate so each press restarts the fade (spectrum.css, `sp-fade-a`).
+  const [swaps, setSwaps] = useState(0)
+  const pickTab = (id) => {
+    if (id === tab) return
+    setTab(id)
+    setSwaps((n) => n + 1)
+  }
 
   const activeTab = DISCOVER_TABS.find((t) => t.id === tab) || DISCOVER_TABS[0]
 
@@ -133,7 +151,10 @@ export default function Spectrum() {
       <main id="main" tabIndex={-1}>
 
         {/* ── Hero ────────────────────────────────────────────────────────── */}
-        <header className={heroLit ? 'sp-hero is-in' : 'sp-hero'}>
+        <header
+          className={`sp-hero${heroLit ? ' is-in' : ''}${arrive ? ' is-arriving' : ''}`}
+          style={arrive ? { '--sp-arrive-at': arriveAt } : undefined}
+        >
           <div className="sp-shell sp-hero-core">
             <h1 className="sp-hero-h1">
               <SpectrumWords text={SPECTRUM_HERO.text} mark={SPECTRUM_HERO.mark} joinMark />
@@ -157,7 +178,8 @@ export default function Spectrum() {
           </div>
         </header>
 
-        <SpectrumRamp mirror className="sp-ramp--hero" />
+        {/* Only this band is set on arrival; the closing one just sits there. */}
+        <SpectrumRamp mirror arrive={arrive} arriveAt={arriveAt} className="sp-ramp--hero" />
 
         {/* ── The bench ───────────────────────────────────────────────────── */}
         <section id="bench" className="sp-section" aria-labelledby="sp-bench-h">
@@ -217,14 +239,18 @@ export default function Spectrum() {
             </div>
             <div className="sp-chips" role="group" aria-label="Choose a library">
               {DISCOVER_TABS.map((t) => (
-                <button key={t.id} type="button" className="sp-chip" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>
+                <button key={t.id} type="button" className="sp-chip" aria-pressed={tab === t.id} onClick={() => pickTab(t.id)}>
                   {t.label}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="sp-disc-grid">
+          <div
+            className="sp-disc-grid"
+            data-swapped={swaps > 0 ? '' : undefined}
+            data-swap-key={swaps % 2 ? 'a' : 'b'}
+          >
             {activeTab.items.map((it) => (
               <Link className="sp-disc-card" to={it.to || activeTab.to || '/discover'} key={it.id}>
                 {it.swatches && <span className="sp-disc-art" aria-hidden="true">{it.swatches.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}</span>}

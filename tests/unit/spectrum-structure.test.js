@@ -164,9 +164,7 @@ test('the word reveal has a visible resting state', () => {
 test('the hero does not wait on a scroll observer to become visible', () => {
   // `[data-reveal]` starts at opacity:0 in global.css. On the fold that would
   // blank the largest paint of the prerendered shell until hydration.
-  assert.ok(!/className=\{heroLit \? 'sp-hero is-in' : 'sp-hero'\}[\s\S]{0,80}data-reveal/.test(PAGE),
-    'the hero carries data-reveal, which starts it at opacity:0')
-  const heroTag = /<header className=\{heroLit[^>]*>/.exec(PAGE)
+  const heroTag = /<header\s[^>]*heroLit[^>]*>/.exec(PAGE)
   assert.ok(heroTag, 'the hero header no longer toggles its own entrance class')
   assert.ok(!heroTag[0].includes('data-reveal'), 'the hero header has grown a data-reveal attribute')
   assert.ok(PAGE.includes('data-hero-prepainted'),

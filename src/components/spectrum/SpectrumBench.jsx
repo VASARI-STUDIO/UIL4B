@@ -448,45 +448,35 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
   const panels = useRef([])
   const tabs = useRef([])
 
-  // ONE rAF-throttled scroll pass, as the design's tick(): light the rail row
-  // for the panel nearest the middle, and write each panel's depth. Off while
-  // the bench is the switcher: the selected tab is the user's, and a window
-  // never gets an inline transform or opacity.
+  // THE RAIL LIGHT FOLLOWS ONE OBSERVER, NOT A SCROLL HANDLER. Each window's step
+  // is observed against a one-pixel line across the middle of the viewport (the
+  // root margin takes the other 99.9% away), and the step that line is in is the
+  // lit row. The steps sit edge to edge, so the line is always in exactly one of
+  // them. The windows' depth is CSS (spectrum.css, `sp-depth`). Off while the
+  // bench is the switcher: the selected tab is the user's.
   useEffect(() => {
-    if (switcher) {
-      panels.current.forEach((el) => { if (el) { el.style.transform = ''; el.style.opacity = '' } })
-      return undefined
-    }
-    let raf = 0
-    const run = () => {
-      raf = 0
-      const vh = window.innerHeight || 0
-      const reduce = prefersReducedMotion()
-      let best = -1
-      let bestDist = Infinity
-      panels.current.forEach((el, i) => {
-        if (!el) return
-        const r = el.getBoundingClientRect()
-        const mid = r.top + r.height / 2
-        const dist = Math.abs(mid - vh / 2)
-        if (dist < bestDist) { bestDist = dist; best = i }
-        if (reduce) { el.style.transform = ''; el.style.opacity = ''; return }
-        const t = Math.max(0, Math.min(1, dist / vh))
-        el.style.transform = `scale(${(1 - t * 0.022).toFixed(4)})`
-        el.style.opacity = (1 - t * 0.34).toFixed(3)
-      })
-      if (best > -1) setStep(best)
-    }
-    const request = () => { if (!raf) raf = requestAnimationFrame(run) }
-    run()
-    window.addEventListener('scroll', request, { passive: true })
-    window.addEventListener('resize', request, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', request)
-      window.removeEventListener('resize', request)
-      if (raf) cancelAnimationFrame(raf)
-    }
+    if (switcher || typeof IntersectionObserver === 'undefined') return undefined
+    const steps = panels.current.map((el) => el?.parentElement).filter(Boolean)
+    if (!steps.length) return undefined
+    const io = new IntersectionObserver((entries) => {
+      let at = -1
+      for (const entry of entries) {
+        if (entry.isIntersecting) at = steps.indexOf(entry.target)
+      }
+      if (at > -1) setStep(at)
+    }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 })
+    steps.forEach((el) => io.observe(el))
+    return () => io.disconnect()
   }, [switcher])
+
+  // Pick a window in the switcher. The first pick sets `data-swapped`, which is
+  // what lets the chosen window animate in; the paint before it never does.
+  const [swapped, setSwapped] = useState(false)
+  const choose = (i) => {
+    if (i === step) return
+    setStep(i)
+    setSwapped(true)
+  }
 
   // The tablist's keys (APG): arrows wrap, Home and End jump, and the tab
   // that takes focus is the one selected.
@@ -495,7 +485,7 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
     const next = { ArrowRight: step === last ? 0 : step + 1, ArrowLeft: step === 0 ? last : step - 1, Home: 0, End: last }[e.key]
     if (next === undefined) return
     e.preventDefault()
-    setStep(next)
+    choose(next)
     tabs.current[next]?.focus()
   }
 
@@ -530,6 +520,8 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
         {head}
         {switcher ? (
           <div className="sp-rail sp-rail--tabs" role="tablist" aria-label="Tools" onKeyDown={onTabKey}>
+            {/* The selected tab's pill, which slides between tabs. */}
+            <span className="sp-rail-ind" aria-hidden="true" style={{ '--sp-i': step }} />
             {TABS.map((label, i) => (
               <button
                 key={label}
@@ -541,7 +533,7 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
                 aria-selected={step === i}
                 aria-controls={`sp-tabpanel-${i}`}
                 tabIndex={step === i ? 0 : -1}
-                onClick={() => setStep(i)}
+                onClick={() => choose(i)}
               >
                 <span className="sp-rail-label">{label}</span>
               </button>
@@ -567,7 +559,7 @@ export default function SpectrumBench({ head, base, onBase, font, onFont }) {
         )}
       </div>
 
-      <div className="sp-steps">
+      <div className="sp-steps" data-swapped={switcher && swapped ? '' : undefined}>
         {windows.map((win, i) => (
           <div
             key={RAIL[i]}
