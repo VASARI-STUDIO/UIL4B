@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { useAuth } from './AuthContext'
 import LoginPopup from '../components/LoginPopup'
+import { isLocalPath } from '../utils/localPath'
 
 // Single-click sign-in, app-wide. Any feature can call
 //   const { requireLogin } = useLoginPrompt()
@@ -21,13 +22,6 @@ const RESUME_KEY = 'vs-resume-after-onboarding'
 // Paths that are not destinations: /home is already the post-onboarding default,
 // /login is where this starts, /onboarding is the flow itself, / redirects.
 const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding'])
-
-// A destination this app can navigate to without leaving it: a path on this
-// origin. A browser reads `//host` and `/\host` as another origin, so a `from`
-// taken from router state or storage is accepted only when it clears both.
-export function isLocalPath(value) {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
-}
 
 export function stashResumeTarget(explicitFrom) {
   let target = explicitFrom

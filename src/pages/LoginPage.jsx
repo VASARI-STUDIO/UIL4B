@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { isLocalPath, stashResumeTarget } from '../contexts/LoginPromptContext'
+import { stashResumeTarget } from '../contexts/LoginPromptContext'
+import { isLocalPath } from '../utils/localPath'
 import { openFirebaseGate } from '../utils/firebaseAccess'
 import { LOGIN_SIGNUP_TITLE, PAGE_TITLES } from '../data/routeMetaMap'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -21,7 +22,10 @@ export default function LoginPage() {
   const location = useLocation()
   const navigate = useNavigate()
   // A hand-built link can put anything in state, so only a path on this origin counts.
-  const from = isLocalPath(location.state?.from) ? location.state.from : '/home'
+  // /login itself is not somewhere to be sent on to: it would leave a
+  // signed-in visitor on this page.
+  const sent = location.state?.from
+  const from = isLocalPath(sent) && sent.split('?')[0].replace(/\/+$/, '') !== '/login' ? sent : '/home'
   // `/login?signup=1` (or `state.signup`) opens the sign-up form. The hero's
   // "Start building free" is a real link, so the intent has to survive a full
   // navigation.

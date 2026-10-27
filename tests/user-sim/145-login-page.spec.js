@@ -378,8 +378,8 @@ test.describe('the wall moves slowly and can be stopped', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the /login page hands the visitor on', () => {
-  // MUTATION: in LoginPage.jsx delete the effect
-  //   useEffect(() => { if (!loading && user) leave() }, ...)
+  // MUTATION: in LoginPage.jsx delete the effect that calls
+  //   navigate(from, { replace: true }) once the user is set
   test('a signed-in visitor is sent away from /login', async ({ page }) => {
     watch(page, 'signed-in visitor opening an old log-in bookmark')
     await signIn(page, { plan: 'free' })
