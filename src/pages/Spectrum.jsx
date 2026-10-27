@@ -205,7 +205,7 @@ export default function Spectrum() {
           <div className="sp-disc-head" data-sp-reveal>
             <div>
               <h2 className="sp-h2" id="sp-disc-h">
-                <SpectrumWords text="A library of palettes and gradients to start from." />
+                <SpectrumWords text="A growing library, from a growing community." />
               </h2>
               {/* The design's sentence minus "and icon sets" and "with new sets every
                   week": the library publishes no icon sets and keeps no weekly
