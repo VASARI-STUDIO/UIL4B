@@ -273,7 +273,7 @@ test.describe('a new account starts empty', () => {
         // IT SAYS WHAT TO DO NEXT: New project walks through the steps. The
         // first of them is the Palette Builder, the lead tile of "Start something" on the same page.
         await expect(empty.getByRole('heading', { name: 'Start your first project' })).toBeVisible()
-        await expect(empty).toContainText('New project walks you through colour, type, type scale and tints, and saves as you go.')
+        await expect(empty).toContainText('New project sets up colour, type, type scale and tints, and saves as you go.')
         await expect(page.locator('.uh-lead')).toHaveAttribute('href', '/create/palette')
 
         // THE FIRST SCREEN STILL CARRIES A WAY TO MAKE ONE. The design's layout puts

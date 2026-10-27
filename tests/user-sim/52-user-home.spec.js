@@ -378,7 +378,7 @@ test.describe('a new account', () => {
     await expectRendered(page, '/projects')
     const starter = page.getByTestId('starter-card')
     await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
-    await expect(starter).toContainText('New project walks you through colour, type, type scale and tints, and saves as you go.')
+    await expect(starter).toContainText('New project sets up colour, type, type scale and tints, and saves as you go.')
     // The four parts, in order: a true sequence, so numbered. Each opens the tool that builds it.
     await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colour', 'Type', 'Type scale', 'Tints'])
     expect(await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link').evaluateAll((a) => a.map((x) => x.getAttribute('href'))))

@@ -30,7 +30,7 @@ export default function StarterCard({ design, onStart }) {
       <div className="uh-continue-body">
         <h2 id="uh-starter-h" className="uh-continue-name">Start your first project</h2>
         <p className="uh-starter-text">
-          New project walks you through colour, type, type scale and tints, and saves as you go.
+          New project sets up colour, type, type scale and tints, and saves as you go.
         </p>
         <ol className="uh-steps" aria-label="The walkthrough">
           {STARTER_STEPS.map((s) => <li key={s.part}><Link to={s.tool}>{s.label}</Link></li>)}
