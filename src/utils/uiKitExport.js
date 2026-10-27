@@ -42,7 +42,7 @@
 // point for a page.
 
 import { contrast, typeLadder } from './styleGuideExport.js'
-import { readBook } from './designSystemBook.js'
+import { readBook } from './bookModel.js'
 import { generateTintScale, mixHex, T_LABELS } from './colors.js'
 import { colorName } from './paletteNames.js'
 import { buildTokensCss, buildTokensJson, HEADING_LINE_HEIGHT, paletteRole } from './designTokens.js'
