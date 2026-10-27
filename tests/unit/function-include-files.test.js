@@ -124,12 +124,20 @@ const NO_GIT = IGNORED === null
   && 'git cannot answer `check-ignore` in this directory, so which imports are deliberately '
   + 'local-only cannot be established here. This assertion needs a real work tree.'
 
-test('the api functions still import exactly the two internal boards', () => {
-  // Unchanged from the day this file was written, and still the anchor: if a
-  // function starts importing something else out of src/, it has to be
-  // classified below as bundled or as deliberately absent.
-  assert.deepEqual(IMPORTED, ['data/moduleBoard.js', 'data/pipeline.js'],
-    'api/ imports changed — every src/ file a function imports must be either named by '
+test('the api functions import exactly the two internal boards and the Pro export documents', () => {
+  // Still the anchor: if a function starts importing something else out of src/,
+  // it has to be classified below as bundled or as deliberately absent. The three
+  // export files are the format list and the two Pro document generators that
+  // api/_lib/exportDocument.js builds on the server (they are not in the browser
+  // bundle at all), and vercel.json bundles them.
+  assert.deepEqual(IMPORTED, [
+    'config/exportFormats.js',
+    'data/moduleBoard.js',
+    'data/pipeline.js',
+    'utils/brandGuidelines.js',
+    'utils/designSystemBook.js',
+  ],
+  'api/ imports changed — every src/ file a function imports must be either named by '
     + 'vercel.json includeFiles or gitignored on purpose, and a new one is neither')
 })
 

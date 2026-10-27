@@ -1153,6 +1153,22 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── The Pro export documents ───────────────────────────────────────────────
+  // POST /api/ai?export=document { format, projectName, design }. Token +
+  // planForUser, like the libraries above, and not metered: it reads one user
+  // document and builds a string. The design system book and the brand
+  // guidelines are built HERE and nowhere else, so the Pro check cannot be
+  // skipped by calling a generator in the browser; see api/_lib/exportDocument.js.
+  // Imported on demand so the generators do not ride in this function's cold start.
+  if (req.method === 'POST' && req.query?.export === 'document') {
+    const { serveExportDocument } = await import('./_lib/exportDocument.js')
+    return serveExportDocument(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      credentialProblem,
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
   // ── The soft stand-in for a locked palette ─────────────────────────────
   // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
   // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.

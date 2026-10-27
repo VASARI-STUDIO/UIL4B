@@ -42,7 +42,8 @@
 // styleGuideExport.js rather than reimplemented, so the two documents can never
 // state different ratios for the same pair.
 
-import { contrast, grade, inkFor, readDesign, typeLadder } from './styleGuideExport.js'
+import { contrast, grade, inkFor, typeLadder } from './styleGuideExport.js'
+import { readBook } from './bookModel.js'
 import { roleLabel } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 
@@ -50,7 +51,9 @@ const esc = (s) => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
 
-const isHex = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)
+// Kept as a name of this module for the callers and tests that already import it
+// from here. The reader itself lives in bookModel.js (see the note there).
+export { readBook }
 
 /** #rrggbb → "R, G, B". */
 function rgbOf(hex) {
@@ -116,49 +119,6 @@ function balancedChunk(list, max) {
  *  system" without it, which is the kind of thing that makes a paid document
  *  look machine-written. */
 const article = (word) => (/^[aeiou]/i.test(String(word)) ? 'an' : 'a')
-
-/**
- * Everything the book needs, normalised. Built ON TOP of readDesign() so the
- * palette/type reading is shared with the style guide, then extended with the
- * fields a book uses and the guide does not: the colour system that produced
- * the palette, the letter-spacing, and the gradient.
- *
- * Every field is treated as untrusted. A half-written design produces a shorter
- * book, never a broken one, and never a page of "undefined".
- */
-export function readBook(design) {
-  const base = readDesign(design)
-  const harmony = typeof design?.palette?.harmony === 'string' ? design.palette.harmony : 'auto'
-  const ts = design?.typeScale || {}
-
-  // Gradient stops resolve against the palette exactly as GradientGenerator
-  // does (a null stop colour means "the palette colour in this slot"). If they
-  // cannot resolve to two distinct colours the book simply has no gradient
-  // page — it does not invent one.
-  const rawStops = Array.isArray(design?.gradient?.stops) ? design.gradient.stops : []
-  const stops = rawStops
-    .map((s, i) => ({
-      color: isHex(s?.color) ? s.color.toUpperCase() : (base.palette[i] || null),
-      position: Number.isFinite(Number(s?.position)) ? Math.round(Number(s.position)) : null,
-    }))
-    .filter(s => s.color && s.position !== null)
-    .sort((a, b) => a.position - b.position)
-  const hasGradient = stops.length >= 2 && new Set(stops.map(s => s.color)).size >= 2
-
-  return {
-    ...base,
-    harmony,
-    headingSpacing: Number(ts.headingSpacing) || 0,
-    bodySpacing: Number(ts.bodySpacing) || 0,
-    gradient: hasGradient
-      ? {
-        stops,
-        angle: Number.isFinite(Number(design?.gradient?.angle)) ? Math.round(Number(design.gradient.angle)) : 135,
-        type: typeof design?.gradient?.type === 'string' ? design.gradient.type : 'Linear',
-      }
-      : null,
-  }
-}
 
 /**
  * The CSS custom properties the book documents, as {name, value} pairs.

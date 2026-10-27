@@ -42,6 +42,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn, firebaseRequests } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
+import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
 const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
@@ -215,10 +216,23 @@ test.describe('the export gate, driven', () => {
 
     await expect(page.locator('.exp-fmt-pro'), 'Pro sees no Pro badges').toHaveCount(0)
 
+    // The book is built by the server (POST /api/ai?export=document); the preview
+    // server has no /api, so the answer is stubbed with the real generator's
+    // output. The server's own rules are in tests/unit/export-document.test.js.
+    const asked = []
+    await page.route('**/api/ai?export=document', async (route) => {
+      asked.push({ auth: route.request().headers().authorization, body: route.request().postDataJSON() })
+      const html = buildDesignSystemBook({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }, { projectName: 'Stub' })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, format: 'book', html }) })
+    })
+
     const [book] = await Promise.all([
       context.waitForEvent('page'),
       page.getByRole('button', { name: /^Export book$/i }).click(),
     ])
+    expect(asked, 'the panel must ask the server once, with the account token and the format').toHaveLength(1)
+    expect(asked[0].auth).toMatch(/^Bearer .+/)
+    expect(asked[0].body.format).toBe('book')
     await book.waitForLoadState('domcontentloaded')
     // The generated artefact, not a page about it. buildDesignSystemBook titles
     // the document "<project> — Design System".
