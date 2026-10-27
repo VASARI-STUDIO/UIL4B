@@ -277,6 +277,7 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 .exp-tpl-picked{display:none;margin:8px 0 0;font-size:var(--fs-caption);color:var(--t1)}
 @media(max-width:560px){
   .exp-tpl-row{gap:8px}
+  .exp-tpl-tile:not(.has-pic){padding:10px 8px}
   .exp-tpl-desc{display:none}
   .exp-tpl-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .exp-tpl-picked{display:block}
