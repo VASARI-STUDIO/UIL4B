@@ -160,6 +160,20 @@ export const atlasSupported = () => (
   && typeof OffscreenCanvas.prototype.convertToBlob === 'function'
 )
 
+// True while a glyph's bitmap is still on its way: the atlas is in play, has not
+// failed, and has not ruled this glyph out. A pending cell paints a quiet
+// placeholder, not the live colour text, because laying out that text is what
+// made a search or a fast scroll freeze (about 7 ms a cell at 4x CPU). Text stays
+// the answer for a glyph in `textOnly` (the worker found it cannot be a bitmap,
+// such as a flag the font has no picture for), once the atlas has failed, and
+// wherever the atlas is not supported at all.
+let supported
+export function atlasPending(ch) {
+  if (atlas.failed || atlas.textOnly.has(ch)) return false
+  if (supported === undefined) supported = atlasSupported()
+  return supported
+}
+
 function atlasEmit() {
   atlas.version++
   atlas.listeners.forEach(fn => fn())

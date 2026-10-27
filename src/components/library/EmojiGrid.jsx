@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore, memo } from 'react'
-import { atlas, atlasSubscribe, atlasVersion, atlasConfigure, atlasWant, atlasWarm, atlasTrim } from './emojiAtlas'
+import { atlas, atlasPending, atlasSubscribe, atlasVersion, atlasConfigure, atlasWant, atlasWarm, atlasTrim } from './emojiAtlas'
 
 // The Emoji Library's windowed grid, kept in its own component so the scroll
 // state (which row range is mounted, which cell just copied) re-renders THIS
@@ -32,14 +32,19 @@ function toneOf(emoji, tone) {
   return cps[0] + tone + rest.join('')
 }
 
-// Text → bitmap cell. `sprite` is null until the glyph has been drawn.
-const EmojiCell = memo(function EmojiCell({ emoji, tone, shown, sprite, isCopied, onCopy }) {
+// Placeholder → bitmap cell. `sprite` is null until the glyph has been drawn;
+// `pending` says a bitmap is still coming, so the cell shows a quiet placeholder
+// instead of laying out live colour text. With neither (a glyph that stays text,
+// a failed or unsupported atlas) the cell shows the real text. The label is the
+// glyph in every case: the text is hidden in two of the three, and a hidden
+// element gives the button no name of its own.
+const EmojiCell = memo(function EmojiCell({ emoji, tone, shown, sprite, pending, isCopied, onCopy }) {
   return (
     <button
-      className={`emoji-cell${isCopied ? ' copied' : ''}${sprite ? ' has-bitmap' : ''}`}
+      className={`emoji-cell${isCopied ? ' copied' : ''}${sprite ? ' has-bitmap' : ''}${pending ? ' pending' : ''}`}
       onClick={() => onCopy(emoji, tone)}
       title={`Copy ${shown}`}
-      aria-label={sprite ? shown : undefined}
+      aria-label={sprite || pending ? shown : undefined}
     >
       <span className="emoji-char">{shown}</span>
       {sprite && <span className="emoji-bitmap" style={sprite.style} aria-hidden="true" />}
@@ -239,13 +244,15 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
           <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
             {row.items.map((item, i) => {
               const shown = shownOf(item)
+              const sprite = atlas.sprites.get(shown) || null
               return (
                 <EmojiCell
                   key={i}
                   emoji={item.char}
                   tone={item.tone}
                   shown={shown}
-                  sprite={atlas.sprites.get(shown) || null}
+                  sprite={sprite}
+                  pending={!sprite && atlasPending(shown)}
                   isCopied={copied === item.char}
                   onCopy={handleCopy}
                 />
