@@ -29,6 +29,19 @@
 //   projects.css   `.uh .uh-link, .uh .uh-open { min-height: 30px }` and
 //                  `.uh .uh-cta` to 30px                    -> "every button and link on a phone is 44px"
 //   projects.css   `.uh .uh-quick { min-width: 520px }`     -> "no horizontal overflow"
+// Round 2 (same method; all made in one build, each named test went red, then restored):
+//   StarterCard    heading always 'Start your first project'      -> "when every project is archived the starter leads"
+//   ProjectRows    drop 'Colour not set · ' from the row            -> "a row whose Colour is not set draws a dashed empty box"
+//   ProjectRows    `collapsible = false`                            -> "past six projects five rows show"
+//   DiscoverPicks  drop ' · Pro' from the locked meta               -> "a locked Discover card says what it is"
+//   LocalClock     hour: '2-digit'                                  -> "the hour has no leading zero"
+//   projects.css   remove `.uh-new-wrap--head.is-after-work { display: none }` -> "New project is one outlined button under the work"
+//   projects.css   `.uh-steps a` text-decoration: none             -> "the starter's steps ... underlined links"
+//   projects.css   `.uh-clock-line` font-size 12px                  -> "no text is smaller than 13px" (390 cases)
+//   projects.css   `.uh-today { display: block }` at 641-1000      -> "on a tablet, Today is one row"
+//   projects.css   drop the phone's hide rule for Semantic and Palette Library -> "Start something is four tools"
+//   projects.css   drop the phone's `.uh-today-clock` hide          -> "the date and time are one line under the title"
+//   useProjectIcons  writeIcon without { touch: false }              -> 52 "choosing an icon for an older project ..."
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
