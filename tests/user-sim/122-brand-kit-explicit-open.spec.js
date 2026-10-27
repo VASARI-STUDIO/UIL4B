@@ -34,8 +34,9 @@ for (const width of [390, 1440]) {
 
       expect(await page.evaluate(() => localStorage.getItem('vs-uikit-guide-seen'))).toBe('1')
 
-      // At 390 the card opens from the menu sheet, which is still handing its
-      // history entry back; a reload before that settles is cancelled by it.
+      // At 390 the card opens from the menu sheet. Its route link pushes past the
+      // sheet's history entry, so nothing is handed back; the wait is a guard in
+      // case that ever changes, since a reload during a back-traversal is cancelled.
       await overlaysSettled(page, 'the menu sheet')
       await page.reload()
       await expect(page).toHaveURL(/\/create\/palette$/)
