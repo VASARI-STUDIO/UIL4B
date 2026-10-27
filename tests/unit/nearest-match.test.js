@@ -190,7 +190,7 @@ test('band distribution over 2,000 seeded colours per system (decides whether th
     assert.equal(total, 2000)
   }
   t.diagnostic('percent of 2,000 random colours per band:\n' + JSON.stringify(share, null, 1))
-  // Raise it with the designer, don't change the bands: CSS mostly "Not close".
+  // Raise it as a design question, don't change the bands: CSS mostly "Not close".
   assert.ok(share.css['not-close'] <= 40, `CSS not-close share ${share.css['not-close']}% is over 40%`)
   // The physical systems are dense: most colours should find a very close or close match.
   assert.ok(share.munsell['very-close'] + share.munsell.close > 50)
