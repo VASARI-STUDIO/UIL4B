@@ -28,8 +28,8 @@ export function designKey(design, projectName) {
     projectName,
     design?.palette?.colors, design?.palette?.base,
     design?.fonts?.heading, design?.fonts?.body,
-    design?.typeScale?.headingWeight,
-    typeof design?.logo?.src === 'string' ? design.logo.src.length : 0,
+    design?.typeScale?.headingWeight, design?.typeScale?.base, design?.typeScale?.ratio,
+    typeof design?.logo?.src === 'string' ? `${design.logo.src.length}:${design.logo.src.slice(-64)}` : 0,
   ])
 }
 

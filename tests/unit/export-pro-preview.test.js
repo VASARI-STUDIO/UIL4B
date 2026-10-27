@@ -38,6 +38,12 @@ test('the key still follows the blur and the design, and is steady for the same 
   assert.notEqual(previewKey({ ...base, kind: 'book', template: 'monograph', projectName: 'Other' }), a)
   const recoloured = { ...design, palette: { ...design.palette, colors: ['#000000', ...design.palette.colors.slice(1)] } }
   assert.notEqual(previewKey({ ...base, kind: 'book', template: 'monograph', design: recoloured }), a)
+  const g = previewKey({ ...base, kind: 'guidelines', template: 'grid' })
+  for (const typeScale of [{ ...design.typeScale, base: 18 }, { ...design.typeScale, ratio: 1.5 }]) {
+    assert.notEqual(previewKey({ ...base, kind: 'guidelines', template: 'grid', design: { ...design, typeScale } }), g, 'the type ladder is drawn, so the scale is in the key')
+  }
+  const logo = (src) => previewKey({ ...base, kind: 'guidelines', template: 'poster', design: { ...design, logo: { src } } })
+  assert.notEqual(logo('data:image/png;base64,AAAA'), logo('data:image/png;base64,BBBB'), 'two logos of one length are two entries')
 })
 
 test('no template, or one the row does not offer, is the row\'s default and shares its entry', () => {
