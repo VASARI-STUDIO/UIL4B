@@ -4,8 +4,12 @@
 // Lightness (-50..+50) and Saturation (0..150%) replaced Hue and Chroma, and
 // both shape the ramp. A Perceived / Linear Spacing switch spaces the steps
 // between the two ends. Each tint value in the Contrast notes is a copy button
-// whose tooltip shows white and black text against that tint: opened by hover,
-// focus or a tap (a tap pins it and copies), closed by Escape or a press outside.
+// whose tooltip shows white and black text against that tint. A mouse or a key
+// press on the note copies it. Hover or keyboard focus opens the card over the
+// note (above it, or below when the sticky bars leave no room); a tap pins the
+// card inline, in the flow under the note, and does NOT copy: the card has its
+// own "Copy #hex" and Close buttons, and Close hands focus back to the note.
+// Each note also carries its best-grade word (AAA, AA, Large or Low).
 //
 // What this holds, from a person's side of the screen:
 //   1. Left alone, the tool makes the ramp it always made (fixed hexes, written
@@ -17,11 +21,16 @@
 //      and Linear sits lighter. The oracle is WCAG relative luminance, computed
 //      here from the bytes on screen.
 //   4. The tooltip opens on hover, on focus and on a tap, and Escape closes it.
-//      A tap also pins it, copies, and a press elsewhere lets it go.
-//   5. Both rows show, each with a ratio, a tick or a cross, and a word; the
-//      ratio and the word agree with WCAG worked out here from the hex.
-//   6. At 390 on a touch screen the targets reach 44px and the tooltip stays
-//      inside the window, on top of whatever it lands near.
+//      A tap pins it (and does not copy); a press elsewhere lets it go; the
+//      Copy button copies; Close returns focus to the note.
+//   5. Both rows show, each with a ratio, a tick, dash or cross, and a word;
+//      the ratio and the word agree with WCAG worked out here from the hex, and
+//      each note's best-grade word agrees with the better of the two ratios.
+//   6. At 390 on a touch screen the targets reach 44px and the pinned card sits
+//      in the flow: it covers nothing (the notes header, the hint and the Curve
+//      pills keep the very same boxes), at 390 and at 768.
+//   7. The hint reads for the pointer in use, the Spacing note is on screen,
+//      and the marks and the best-grade words pass contrast in both themes.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -50,6 +59,25 @@ const ratioOn = (hex, pole) => {
 const gradeWord = (ratio) => (ratio >= 7 ? 'Passes AAA' : ratio >= 4.5 ? 'Passes AA' : ratio >= 3 ? 'Large text only' : 'Fails')
 // The ratio is shown cut down to one decimal, never rounded up.
 const shown = (ratio) => `${(Math.floor(ratio * 10 + 1e-9) / 10).toFixed(1)}:1`
+// The word on each note is the BETTER of the white and black ratios. (Because
+// the two ratios multiply to 21, the better one is never under 4.58, so only
+// AAA and AA can show for black and white text; Large and Low are not reachable.)
+const bestRatio = (hex) => Math.max(ratioOn(hex, 'white'), ratioOn(hex, 'black'))
+const bestWord = (ratio) => (ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'Large' : 'Low')
+// sRGB triple from any CSS colour string the page reports (rgb, oklch, color-mix).
+const rgbOfCss = (page, css) => page.evaluate((c) => {
+  const g = document.createElement('canvas').getContext('2d')
+  g.fillStyle = '#000'; g.fillStyle = c; g.fillRect(0, 0, 1, 1)
+  return Array.from(g.getImageData(0, 0, 1, 1).data)
+}, css)
+const luminanceRgb = (rgb) => {
+  const [r, g, b] = rgb.slice(0, 3).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const ratioRgb = (a, b) => { const x = luminanceRgb(a); const y = luminanceRgb(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
+// A box in document coordinates, so a scroll between two looks cannot move it.
+const docBox = (loc) => loc.evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height } })
+const overlap = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 1 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 1
 
 // ── Page helpers ────────────────────────────────────────────────────────────
 // The ramp as the step columns hold it. (The notes' own text turns to "Copied"
@@ -250,6 +278,29 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     await expect(openTip(page)).toHaveCount(0)
   })
 
+  test('a hover card sits above or below its note, never over it, and nothing sits on top of it', async ({ page }) => {
+    await openTint(page, 'someone pointing along the notes')
+    for (const i of [0, 5, 10]) {
+      await note(page, i).hover()
+      const card = openTip(page).locator('.tt-tip-card')
+      await expect(card, `note ${i}`).toBeVisible()
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+      const m = await card.evaluate((el, idx) => {
+        const c = el.getBoundingClientRect()
+        const n = document.querySelectorAll('.tt-note')[idx].getBoundingClientRect()
+        const probe = (x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && el.contains(hit) }
+        return {
+          above: c.bottom <= n.top + 2,
+          below: c.top >= n.bottom - 2,
+          covered: [[0.5, 0.5], [0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85]]
+            .filter(([fx, fy]) => !probe(c.left + c.width * fx, c.top + c.height * fy)).length,
+        }
+      }, i)
+      expect(m.above || m.below, `note ${i}: the card is neither wholly above nor wholly below its note`).toBe(true)
+      expect(m.covered, `note ${i}: something else sits on top of the card`).toBe(0)
+    }
+  })
+
   test('Escape closes a tooltip that hover opened', async ({ page }) => {
     await openTint(page, 'someone who wants the tooltip out of the way')
     await note(page, 3).hover()
@@ -261,6 +312,10 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
   test('focus opens it, blur closes it, and Escape closes it with focus kept', async ({ page }) => {
     await openTint(page, 'a keyboard user stepping through the notes')
     await note(page, 2).focus()
+    // POSITIVE CONTROL for the :focus-visible gate: a script's .focus() with no
+    // mouse use before it counts as keyboard focus, so the card opens. If this
+    // were false the open below would be the gate failing, not the card.
+    expect(await note(page, 2).evaluate((el) => el.matches(':focus-visible'))).toBe(true)
     await expect(openTip(page)).toBeVisible()
     await expect(openTip(page)).toContainText('200')
     // The button is described by the tooltip, so a screen reader reads it with the tint.
@@ -288,11 +343,26 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     await page.keyboard.press('Enter')
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(BLUE_EVEN_11[4])
     await expect(page.locator('.tt-note-hex').nth(4)).toHaveText('Copied')
+    // Focus opened the card, and it is still the hover/focus kind, not a pinned one.
     await expect(openTip(page)).toHaveCount(1)
-    // Not pinned: moving focus on lets it go.
-    await page.keyboard.press('Tab')
-    await expect(openTip(page)).toHaveCount(1)
-    await expect(openTip(page)).toContainText('500')
+    await expect(page.locator('.tt-tip--inline')).toHaveCount(0)
+    await expect(page.locator('.tt-tip-copy')).toHaveCount(0)
+    // Not pinned: moving focus to something that is not a note lets it go. (A
+    // pinned card ignores a blur, so it would still be open here.)
+    await page.getByRole('slider', { name: 'Lightness', exact: true }).focus()
+    await expect(openTip(page)).toHaveCount(0)
+  })
+
+  test('a mouse click on the note copies it and leaves no pinned card behind', async ({ page }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+    await openTint(page, 'a mouse user copying a tint')
+    await note(page, 3).click()
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(BLUE_EVEN_11[3])
+    await expect(page.locator('.tt-note-hex').nth(3)).toHaveText('Copied')
+    await expect(page.locator('.tt-tip--inline')).toHaveCount(0)
+    // The pointer is still over it, so the hover card shows; moving off lets it go.
+    await page.mouse.move(5, 5)
+    await expect(openTip(page)).toHaveCount(0)
   })
 
   test('both the white and the black row show, each with a ratio, a tick or cross, and a word', async ({ page }) => {
@@ -320,6 +390,7 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     await openTint(page, 'someone auditing every tint')
     const passMarks = new Set()
     const failMarks = new Set()
+    const largeMarks = new Set()
     for (let i = 0; i < 11; i++) {
       const rows = await page.locator('.tt-note-wrap').nth(i).locator('.tt-tip-row').evaluateAll((els) => els.map((e) => ({
         who: e.querySelector('.tt-tip-who').textContent,
@@ -335,14 +406,54 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
         expect(row.word, `${BLUE_EVEN_11[i]} ${row.who}`).toBe(gradeWord(want))
         expect(row.pass).toBe(want >= 4.5 ? 'true' : 'false')
         if (row.word === 'Fails') failMarks.add(row.mark)
+        else if (row.word === 'Large text only') largeMarks.add(row.mark)
         else if (row.pass === 'true') passMarks.add(row.mark)
       })
     }
-    // A pass is always one mark and a fail another, so the mark is not the only
-    // signal and never the same for both. ("Large text only" is not asserted.)
+    // A pass is always one mark, a fail another and "Large text only" a third (a
+    // dash), so the mark is not the only signal and no two grades share one.
+    // POSITIVE CONTROL: this ramp does have all three kinds of row (#538CFF on
+    // white is 3.2:1), otherwise the set checks below would pass on nothing.
+    expect(largeMarks.size, 'this ramp has "Large text only" rows').toBe(1)
     expect(passMarks.size, 'a pass is always the same mark').toBe(1)
     expect(failMarks.size, 'a fail is always the same mark').toBe(1)
-    expect([...passMarks][0]).not.toBe([...failMarks][0])
+    const [pass, fail, large] = [...passMarks, ...failMarks, ...largeMarks]
+    expect(new Set([pass, fail, large]).size, 'tick, cross and dash are three different marks').toBe(3)
+  })
+
+  test('each note carries its best-grade word, the better of its white and black ratios', async ({ page }) => {
+    await openTint(page, 'someone scanning the notes for the safe tints')
+    const words = async () => page.locator('.tt-note-best').allTextContents()
+    const want = (list) => list.map((h) => bestWord(bestRatio(h)))
+
+    expect(await words()).toEqual(want(BLUE_EVEN_11))
+    // POSITIVE CONTROL: the default ramp shows both words, so a word stuck on
+    // one value could not pass.
+    expect(new Set(want(BLUE_EVEN_11)).size, 'the default ramp holds both AAA and AA').toBe(2)
+
+    // Other ramps, read back from the swatches on screen and graded here.
+    await page.getByRole('slider', { name: 'Lightness', exact: true }).focus()
+    await page.keyboard.press('End')
+    expect(await ramp(page)).toEqual(LIGHTER_50)
+    expect(await words()).toEqual(want(LIGHTER_50))
+    await page.keyboard.press('Home')
+    expect(await ramp(page)).toEqual(DARKER_50)
+    expect(await words()).toEqual(want(DARKER_50))
+    await page.getByRole('slider', { name: 'Saturation', exact: true }).focus()
+    await page.keyboard.press('Home')
+    await page.getByRole('slider', { name: 'Lightness', exact: true }).dispatchEvent('dblclick')
+    expect(await ramp(page)).toEqual(GREY_11)
+    expect(await words()).toEqual(want(GREY_11))
+  })
+
+  test('the note word is a visible mark on the note and is not read out twice', async ({ page }) => {
+    await openTint(page, 'someone looking at the notes')
+    const best = page.locator('.tt-note-best').nth(5)
+    await expect(best).toBeVisible()
+    await expect(best, 'the tooltip already says it, so the screen reader skips the word').toHaveAttribute('aria-hidden', 'true')
+    // It sits on the same row as the hex, to its right.
+    const [hex, word] = [await docBox(page.locator('.tt-note-hex').nth(5)), await docBox(best)]
+    expect(word.x).toBeGreaterThanOrEqual(hex.x + hex.w - 1)
   })
 
   test('the tooltip follows the ramp when a slider moves it', async ({ page }) => {
@@ -366,6 +477,25 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     expect(box.x).toBeGreaterThanOrEqual(0)
     expect(box.x + box.width).toBeLessThanOrEqual(1440)
     expect(box.y).toBeGreaterThanOrEqual(0)
+    expect(box.y + box.height, 'the card ends inside the window').toBeLessThanOrEqual(900)
+  })
+
+  test('opening the card on every row by hover or by focus keeps the 1440x900 page from scrolling', async ({ page }) => {
+    await openTint(page, 'someone walking the notes at 1440x900')
+    const scrolls = () => page.evaluate(() => ({ h: document.documentElement.scrollHeight - innerHeight, w: document.documentElement.scrollWidth - innerWidth, y: scrollY }))
+    const rest = await scrolls()
+    expect(rest.h, 'the page fits before any card opens').toBeLessThanOrEqual(0)
+    for (let i = 0; i < 11; i++) {
+      await note(page, i).hover()
+      await expect(openTip(page).locator('.tt-tip-card'), `hover ${i}`).toBeVisible()
+      expect(await scrolls(), `hover on note ${i}`).toEqual(rest)
+    }
+    await page.mouse.move(5, 5)
+    for (let i = 0; i < 11; i++) {
+      await note(page, i).focus()
+      await expect(openTip(page).locator('.tt-tip-card'), `focus ${i}`).toBeVisible()
+      expect(await scrolls(), `focus on note ${i}`).toEqual(rest)
+    }
   })
 })
 
@@ -380,14 +510,69 @@ test.describe('the contrast tooltip on a phone', () => {
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
   }
 
-  test('a tap opens the tooltip and copies the tint', async ({ page }) => {
+  // Put something else on the clipboard so "a tap does not copy" is a fact about
+  // the clipboard and not about a label.
+  const SENTINEL = 'nothing copied yet'
+  const clipboard = (page) => page.evaluate(() => navigator.clipboard.readText())
+
+  test('a tap pins the card under the note and does not copy', async ({ page }) => {
     await open390(page)
+    await page.evaluate((s) => navigator.clipboard.writeText(s), SENTINEL)
     await note(page, 6).tap()
     await expect(openTip(page)).toBeVisible()
     await expect(openTip(page)).toContainText('600')
     await expect(openTip(page)).toContainText(BLUE_EVEN_11[6])
-    await expect(page.locator('.tt-note-hex').nth(6)).toHaveText('Copied')
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(BLUE_EVEN_11[6])
+    await expect(openTip(page)).toHaveClass(/tt-tip--inline/)
+    // It did not copy: the clipboard is as it was and the note still shows its hex.
+    await expect(page.locator('.tt-note-hex').nth(6)).toHaveText(BLUE_EVEN_11[6])
+    expect(await clipboard(page)).toBe(SENTINEL)
+    // The card carries its own two buttons, named for what they do.
+    await expect(page.locator('.tt-tip-copy')).toHaveText(`Copy ${BLUE_EVEN_11[6]}`)
+    await expect(page.locator('.tt-tip-close')).toHaveText('Close')
+  })
+
+  test('the Copy button on the pinned card copies that tint', async ({ page }) => {
+    await open390(page)
+    await page.evaluate((s) => navigator.clipboard.writeText(s), SENTINEL)
+    await note(page, 6).tap()
+    await page.locator('.tt-tip-copy').tap()
+    expect(await clipboard(page)).toBe(BLUE_EVEN_11[6])
+    await expect(page.locator('.tt-tip-copy')).toHaveText('Copied')
+    // Pressing a button inside the card is not "a press outside": the card stays.
+    await expect(openTip(page)).toHaveCount(1)
+  })
+
+  test('Close takes the card away and puts focus back on its note', async ({ page }) => {
+    await open390(page)
+    await note(page, 3).tap()
+    await expect(openTip(page)).toBeVisible()
+    await page.locator('.tt-tip-close').tap()
+    await expect(page.locator('.tt-tip--inline')).toHaveCount(0)
+    await expect(note(page, 3), 'focus goes back to the note it came from').toBeFocused()
+    // And that focus did not throw the hover/focus card open again.
+    await expect(openTip(page)).toHaveCount(0)
+    // Nothing else was copied on the way.
+    await expect(page.locator('.tt-note-hex').nth(3)).toHaveText(BLUE_EVEN_11[3])
+  })
+
+  test('Close by keyboard does the same: the card goes, focus returns to the note, nothing reopens', async ({ page }) => {
+    await open390(page)
+    await note(page, 8).tap()
+    await page.locator('.tt-tip-close').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.tt-tip--inline')).toHaveCount(0)
+    await expect(note(page, 8)).toBeFocused()
+    await expect(openTip(page)).toHaveCount(0)
+  })
+
+  test('the Copy and Close buttons are 44px targets', async ({ page }) => {
+    await open390(page)
+    await note(page, 6).tap()
+    for (const sel of ['.tt-tip-copy', '.tt-tip-close']) {
+      const box = await page.locator(sel).boundingBox()
+      expect(box.height, `${sel} height`).toBeGreaterThanOrEqual(44)
+      expect(box.width, `${sel} width`).toBeGreaterThanOrEqual(44)
+    }
   })
 
   test('the tap pins it: it stays until Escape', async ({ page }) => {
@@ -395,6 +580,8 @@ test.describe('the contrast tooltip on a phone', () => {
     await note(page, 2).tap()
     await expect(openTip(page)).toBeVisible()
     // Pinned means it is still there a moment later, with nothing touching it.
+    // (A blind wait is the point here: absence of a change cannot be waited for.
+    // It is longer than the one-second "Copied" flash and any hover leave.)
     await page.waitForTimeout(1200)
     await expect(openTip(page)).toHaveCount(1)
     await page.keyboard.press('Escape')
@@ -420,13 +607,15 @@ test.describe('the contrast tooltip on a phone', () => {
     await expect(openTip(page)).toHaveCount(0)
   })
 
-  test('a tooltip opened by a tap on any of the eleven notes stays inside the window and above everything else', async ({ page }) => {
+  test('a card pinned by a tap on any of the eleven notes is brought into the window and nothing sits on top of it', async ({ page }) => {
     await open390(page)
     for (let i = 0; i < 11; i++) {
       await note(page, i).tap()
       const card = openTip(page).locator('.tt-tip-card')
       await expect(card, `note ${i}`).toBeVisible()
-      // The entrance fades; wait for it to finish before measuring.
+      // The pinned card is in the flow, under the note, so the page scrolls it
+      // into view after it draws; wait for it to be there, then for the fade to end.
+      await expect.poll(() => card.evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight }), { message: `note ${i}: the card is scrolled into the window` }).toBe(true)
       await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
       const m = await card.evaluate((el) => {
         const r = el.getBoundingClientRect()
@@ -505,5 +694,161 @@ for (const width of [768, 1024]) {
         expect(m.t, `note ${i}: card top`).toBeGreaterThanOrEqual(0)
       }
     })
+  })
+}
+
+// ── The pinned card covers nothing ──────────────────────────────────────────
+// A tap pins the card in the flow under its note. It pushes the notes below it
+// down; it must not sit on, or move, anything above it: the notes header, the
+// hint and the Curve pills keep the very same boxes with the card open or closed.
+for (const width of [390, 768]) {
+  test.describe(`the pinned card at ${width} on a touch screen`, () => {
+    test.use({ viewport: { width, height: width < 768 ? 844 : 900 }, hasTouch: true, isMobile: true })
+
+    test('sits in the flow under its note and leaves the header, hint and Curve pills where they were', async ({ page }) => {
+      await openTint(page, `someone pinning a tint card at ${width}`)
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'a touch screen').toBe(true)
+      const watched = {
+        'the notes header': page.locator('.tt-notes-head'),
+        'the notes label': page.locator('#tt-notes-label'),
+        'the hint': page.locator('.tt-notes-hint'),
+        'the Curve pills': page.getByRole('group', { name: 'Curve', exact: true }),
+        'the Spacing pills': page.getByRole('group', { name: 'Spacing', exact: true }),
+        'the first note': note(page, 0),
+      }
+      const look = async () => Object.fromEntries(await Promise.all(Object.entries(watched).map(async ([k, loc]) => [k, await docBox(loc)])))
+      const before = await look()
+      const wrapBefore = await docBox(page.locator('.tt-note-wrap').nth(6))
+      const noteBefore = await docBox(note(page, 6))
+
+      await note(page, 6).tap()
+      const card = page.locator('.tt-tip--inline .tt-tip-card')
+      await expect(card).toBeVisible()
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+
+      // Nothing above moved by a pixel, and the note itself did not move.
+      expect(await look(), 'the card moved something it should not touch').toEqual(before)
+      expect(await docBox(note(page, 6))).toEqual(noteBefore)
+
+      // The card is in the flow: it takes room (the note's cell grew by about its height),
+      // starts at the note's bottom edge, and overlaps none of the things above.
+      const cardBox = await docBox(card)
+      const wrapAfter = await docBox(page.locator('.tt-note-wrap').nth(6))
+      expect(wrapAfter.h, 'the cell grew to hold the card').toBeGreaterThanOrEqual(wrapBefore.h + cardBox.h - 1)
+      expect(cardBox.y, 'the card starts at or below the note').toBeGreaterThanOrEqual(noteBefore.y + noteBefore.h - 1)
+      for (const [what, box] of Object.entries(before)) {
+        if (what === 'the first note') continue
+        expect(overlap(cardBox, box), `the card sits on ${what}`).toBe(false)
+      }
+      expect(await page.locator('.tt-tip--inline').evaluate((el) => getComputedStyle(el).position)).toBe('static')
+      const sideways = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)
+      expect(sideways, 'the card made the page scroll sideways').toBeLessThanOrEqual(0)
+
+      // Closing puts the cell back as it was.
+      await page.locator('.tt-tip-close').tap()
+      await expect(page.locator('.tt-tip--inline')).toHaveCount(0)
+      expect(await look()).toEqual(before)
+      expect(await docBox(page.locator('.tt-note-wrap').nth(6))).toEqual(wrapBefore)
+    })
+  })
+}
+
+// ── The hint reads for the pointer in use ───────────────────────────────────
+test.describe('the hint above the notes, for a mouse', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('says hover, and only says hover', async ({ page }) => {
+    await openTint(page, 'someone with a mouse reading the hint')
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'POSITIVE CONTROL: a fine pointer').toBe(false)
+    await expect(page.locator('.tt-hint-fine')).toBeVisible()
+    await expect(page.locator('.tt-hint-coarse')).toBeHidden()
+    await expect(page.locator('.tt-notes-hint')).toHaveText('Hover over a tint to see its contrast', { useInnerText: true })
+  })
+})
+
+test.describe('the hint above the notes, for a finger', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('says tap, and only says tap', async ({ page }) => {
+    await openTint(page, 'someone with a phone reading the hint')
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'POSITIVE CONTROL: a coarse pointer').toBe(true)
+    await expect(page.locator('.tt-hint-coarse')).toBeVisible()
+    await expect(page.locator('.tt-hint-fine')).toBeHidden()
+    await expect(page.locator('.tt-notes-hint')).toHaveText('Tap a tint to see its contrast', { useInnerText: true })
+  })
+})
+
+// ── The Spacing note ────────────────────────────────────────────────────────
+for (const [width, touch] of [[1440, false], [390, true]]) {
+  test.describe(`the Spacing note at ${width}`, () => {
+    test.use({ viewport: { width, height: width < 768 ? 844 : 900 }, hasTouch: touch, isMobile: touch })
+
+    test('is on screen under the Spacing pills and describes them', async ({ page }) => {
+      await openTint(page, `someone wondering what Spacing does at ${width}`)
+      const noteLine = page.locator('.tt-spacing-note')
+      await expect(noteLine).toBeVisible()
+      await expect(noteLine).toHaveText('Perceived looks even. Linear spaces by light.')
+      const pills = page.getByRole('group', { name: 'Spacing', exact: true })
+      await expect(pills).toHaveAttribute('aria-describedby', await noteLine.getAttribute('id'))
+      const [p, n] = [await docBox(pills), await docBox(noteLine)]
+      expect(n.y, 'the note sits under the pills').toBeGreaterThanOrEqual(p.y + p.h - 1)
+      expect(overlap(p, n), 'the note sits on the pills').toBe(false)
+      // 12px or more, and it stays inside the window.
+      expect(await noteLine.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)
+      expect(n.x + n.w).toBeLessThanOrEqual(width)
+    })
+  })
+}
+
+// ── The marks and the best-grade words pass contrast, in both themes ────────
+// The tick, dash and cross use the -strong tokens so they hold 3:1 against the
+// card; the best-grade word is 12px text and needs 4.5:1 against the notes panel.
+for (const theme of ['light', 'dark']) {
+  test(`the marks use the -strong tokens and the best-grade words are readable (${theme})`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: theme })
+    await ctx.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* private mode */ } }, theme)
+    const page = await ctx.newPage()
+    try {
+      await openTint(page, `a reviewer checking the tooltip marks in ${theme}`)
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+      // A theme change animates colours; read once it has stopped.
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+
+      const read = await page.evaluate(() => {
+        const css = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop]
+        const probe = (token) => { const el = document.createElement('span'); el.style.color = `var(${token})`; document.querySelector('.tt').appendChild(el); const c = getComputedStyle(el).color; el.remove(); return c }
+        return {
+          tokens: { ok: probe('--ok-strong'), warn: probe('--warn-strong'), err: probe('--err-strong') },
+          marks: {
+            pass: css('.tt-tip-row[data-pass="true"] .tt-tip-mark', 'color'),
+            large: css('.tt-tip-row[data-grade="large"] .tt-tip-mark', 'color'),
+            fail: css('.tt-tip-row[data-grade="fail"] .tt-tip-mark', 'color'),
+          },
+          cardBg: css('.tt-tip-card', 'backgroundColor'),
+          panelBg: css('.tt-notes', 'backgroundColor'),
+          words: [...document.querySelectorAll('.tt-note-best')].map((e) => ({ text: e.textContent, color: getComputedStyle(e).color })),
+        }
+      })
+
+      const rgb = (c) => rgbOfCss(page, c)
+      const tokens = { ok: await rgb(read.tokens.ok), warn: await rgb(read.tokens.warn), err: await rgb(read.tokens.err) }
+      const cardBg = await rgb(read.cardBg)
+      const panelBg = await rgb(read.panelBg)
+      expect(cardBg[3], 'the card is opaque, so the ratio below means something').toBe(255)
+      expect(panelBg[3], 'the notes panel is opaque').toBe(255)
+
+      for (const [kind, token] of [['pass', 'ok'], ['large', 'warn'], ['fail', 'err']]) {
+        const colour = await rgb(read.marks[kind])
+        expect(colour, `the ${kind} mark uses --${token}-strong`).toEqual(tokens[token])
+        expect(ratioRgb(colour, cardBg), `the ${kind} mark on the card (${theme})`).toBeGreaterThanOrEqual(3)
+      }
+      expect(read.words.length).toBe(11)
+      for (const w of read.words) {
+        const colour = await rgb(w.color)
+        expect(ratioRgb(colour, panelBg), `the "${w.text}" word on the notes panel (${theme})`).toBeGreaterThanOrEqual(4.5)
+      }
+    } finally {
+      await ctx.close()
+    }
   })
 }
