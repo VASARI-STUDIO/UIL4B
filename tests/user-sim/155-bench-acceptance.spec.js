@@ -335,3 +335,150 @@ for (const width of [390, 768, 1440]) {
     }
   })
 }
+
+// ── the polish pass (beb9ba56) ─────────────────────────────────────────────────
+//
+// Each test below was seen to fail against a temporary mutation of the source it
+// guards (the mutation is named beside it).
+
+const railLine = (page, i) => page.locator('.sp-rail-row .sp-rail-sum').nth(i)
+
+// A file that claims to be a PNG and is not one. The converter takes it (it is
+// an image by type), the browser cannot decode it, and the rail must say so
+// rather than wait for a figure that will never come.
+// Mutation: converterSummary() without the `result?.failed` line.
+test('a broken image in the converter reads "File not supported" in the rail, not "Measuring…"', async ({ page }) => {
+  watch(page, 'someone dropping a broken file on the bench converter')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await go(page, '/')
+  const panel = await openTool(page, 3)
+  // Settle first, so the rail has a real reading to replace.
+  await expect(railLine(page, 3)).toHaveText(/\d+% (smaller|larger) as WebP|No loss/, { timeout: 15000 })
+
+  await panel.locator('.sp-cv-pane.is-on input[type="file"]').setInputFiles({
+    name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('this is not a png, it is text'),
+  })
+  await expect(panel.locator('.sp-cv-pane.is-on .sp-saving')).toContainText('That file is not supported')
+  await expect(railLine(page, 3), 'the rail should say the file is not supported').toHaveText('File not supported')
+  // It stays that way: no later "Measuring…" or stale figure takes it back.
+  await page.waitForTimeout(600)
+  await expect(railLine(page, 3)).toHaveText('File not supported')
+})
+
+// Mutation: BenchConverter reads `out.size` whatever format it was encoded as
+// (outSize = out?.size, dropping the `out.format === formatLabel` check).
+test('after a format switch the rail never shows the old percentage under the new format name', async ({ page }) => {
+  watch(page, 'someone switching the converter format and reading the rail')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await go(page, '/')
+  const panel = await openTool(page, 3)
+  const rail = railLine(page, 3)
+  await expect(rail).toHaveText(/\d+% smaller as WebP/, { timeout: 15000 })
+  const webp = (await rail.innerText()).match(/(\d+)% smaller/)[1]
+
+  // Record every text the rail line takes from here on, in the page, so a flash
+  // between two settled states is seen as well as the settled ones.
+  await rail.evaluate((el) => {
+    window.__railSeen = [el.textContent]
+    new MutationObserver(() => window.__railSeen.push(el.textContent))
+      .observe(el, { subtree: true, childList: true, characterData: true })
+  })
+  await panel.getByRole('button', { name: 'JPEG', exact: true }).click()
+  await expect(rail).toHaveText(/\d+% (smaller|larger) as JPEG/, { timeout: 15000 })
+  const jpeg = (await rail.innerText()).match(/(\d+)% (smaller|larger)/)[1]
+  expect(jpeg, 'WebP and JPEG measured the same, so this test could not tell them apart').not.toBe(webp)
+
+  const seen = await page.evaluate(() => window.__railSeen)
+  for (const text of seen.filter((t) => /JPEG/.test(t) && /\d+%/.test(t))) {
+    expect(text, `the rail read "${text}" under JPEG before JPEG was measured`).toContain(`${jpeg}% `)
+  }
+  expect(seen.some((t) => /JPEG/.test(t)), 'the rail never named JPEG').toBe(true)
+  // And the other way: back to WebP.
+  await panel.getByRole('button', { name: 'WEBP', exact: true }).click()
+  await expect(rail).toHaveText(new RegExp(`${webp}% smaller as WebP`), { timeout: 15000 })
+  for (const text of (await page.evaluate(() => window.__railSeen)).filter((t) => /WebP/.test(t) && /\d+%/.test(t))) {
+    expect(text, `the rail read "${text}" under WebP before WebP was measured`).toContain(`${webp}% `)
+  }
+})
+
+// ── Clear search puts the cursor back in the field ─────────────────────────────
+
+// Mutation: the Clear search handlers only setQuery('') (no focus call).
+for (const [tool, index, field] of [['Icons', 1, 'Search icons'], ['Fonts', 2, 'Search families']]) {
+  test(`${tool}: Clear search puts focus back on the search field`, async ({ page }) => {
+    watch(page, 'someone clearing a search on the bench by keyboard')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/')
+    const panel = await openTool(page, index)
+    const search = panel.getByRole('textbox', { name: field })
+    await search.fill('zzz')
+    const clear = panel.getByRole('button', { name: 'Clear search' })
+    await clear.focus()
+    await page.keyboard.press('Enter')
+    await expect(clear, 'Clear search is still on screen').toHaveCount(0)
+    await expect(search).toHaveValue('')
+    await expect(search, 'focus fell to the page when the button went away').toBeFocused()
+  })
+}
+
+// ── the Fonts window on a phone ────────────────────────────────────────────────
+
+// Mutation: the `@media (max-width: 680px)` .sp-font-strip block removed from spectrum.css.
+test('the Fonts search is a full-width row on a phone, not a squeezed field', async ({ page }) => {
+  watch(page, 'someone searching families on a phone')
+  await page.setViewportSize({ width: 390, height: 900 })
+  await go(page, '/')
+  const panel = await openTool(page, 2)
+  const box = await panel.getByRole('textbox', { name: 'Search families' }).boundingBox()
+  expect(box, 'the Fonts search field is not drawn').not.toBeNull()
+  expect(box.width, `the Fonts search field is ${Math.round(box.width)}px wide at 390`).toBeGreaterThanOrEqual(280)
+})
+
+// Each link, all four edges, against the window and against the screen.
+// Mutation: the Fonts window's phone height rule changed so the window ends above its footer.
+for (const width of [320, 390]) {
+  test(`the Fonts footer links sit fully inside the window and the screen at ${width}px`, async ({ page }) => {
+    watch(page, 'someone reaching the Fonts footer on a phone')
+    await page.setViewportSize({ width, height: 900 })
+    await go(page, '/')
+    const panel = await openTool(page, 2)
+    const names = await panel.locator('.sp-tool-foot a').allInnerTexts()
+    expect(names.join(' | '), 'the Fonts footer lost a link').toMatch(/Open Font Gallery[\s\S]*Font Pair|Font Pair[\s\S]*Open Font Gallery/)
+    const out = await panel.evaluate((el) => {
+      const p = el.getBoundingClientRect()
+      const vw = document.documentElement.clientWidth
+      return [...el.querySelectorAll('.sp-tool-foot a')].map((a) => {
+        const r = a.getBoundingClientRect()
+        return { text: a.textContent.trim(), w: r.width, h: r.height, left: r.left - p.left, right: p.right - r.right, bottom: p.bottom - r.bottom, top: r.top - p.top, screenRight: vw - r.right, screenLeft: r.left }
+      })
+    })
+    expect(out.length, 'no footer link was measured').toBeGreaterThanOrEqual(2)
+    for (const l of out) {
+      expect(l.w > 0 && l.h > 0, `"${l.text}" has no size`).toBe(true)
+      expect(l.left, `"${l.text}" starts left of the window`).toBeGreaterThanOrEqual(-0.5)
+      expect(l.right, `"${l.text}" runs past the window's right edge`).toBeGreaterThanOrEqual(-0.5)
+      expect(l.top, `"${l.text}" starts above the window`).toBeGreaterThanOrEqual(-0.5)
+      expect(l.bottom, `"${l.text}" is cut off at the window's bottom`).toBeGreaterThanOrEqual(-0.5)
+      expect(l.screenLeft, `"${l.text}" is off the screen's left`).toBeGreaterThanOrEqual(-0.5)
+      expect(l.screenRight, `"${l.text}" is off the screen's right`).toBeGreaterThanOrEqual(-0.5)
+    }
+  })
+}
+
+// ── the icons window ───────────────────────────────────────────────────────────
+
+// Mutation: `align-items: start` on .sp-ico-main back to `center`, and the
+// `@media (min-width: 681px)` icon block removed.
+test('the icon grid starts level with the preview at 1440', async ({ page }) => {
+  watch(page, 'someone browsing the bench icons')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await go(page, '/')
+  const panel = await openTool(page, 1)
+  const tops = await panel.evaluate((el) => ({
+    grid: el.querySelector('.sp-icogrid').getBoundingClientRect().top,
+    prev: el.querySelector('.sp-ico-prev').getBoundingClientRect().top,
+    tiles: el.querySelectorAll('.sp-ico').length,
+  }))
+  expect(tops.tiles, 'no icon tiles were measured').toBeGreaterThan(0)
+  expect(Math.abs(tops.grid - tops.prev), `the grid starts ${Math.round(tops.grid - tops.prev)}px from the preview's top`).toBeLessThanOrEqual(4)
+})
