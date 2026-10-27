@@ -104,6 +104,40 @@ const DISCOVER_TABS = [
 
 /* ── the page ─────────────────────────────────────────────────────────────── */
 
+/** One library's cards and its "Open the gallery" card. `ghost` draws the same boxes
+ *  with no links and no words, only to size the box that holds the three libraries. */
+function DiscoverCards({ tab, ghost = false }) {
+  const Card = ghost ? 'span' : Link
+  const to = (path) => (ghost ? {} : { to: path })
+  const words = (text) => (ghost ? '' : text)
+  return (
+    <>
+      {tab.items.map((it) => (
+        <Card className="sp-disc-card" {...to(it.to || tab.to || '/discover')} key={it.id}>
+          {it.swatches && <span className="sp-disc-art" aria-hidden="true">{ghost ? null : it.swatches.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}</span>}
+          {it.art && <span className="sp-disc-art" aria-hidden="true" style={ghost ? undefined : { background: it.art }} />}
+          {it.glyphs && (
+            <span className="sp-disc-art sp-disc-art--icons" aria-hidden="true">
+              {ghost ? null : it.glyphs.map((body, i) => <PhIcon key={i} body={body} box={it.box} />)}
+            </span>
+          )}
+          <span className="sp-disc-row">
+            <span className="sp-disc-name">{words(it.name)}</span>
+            <span className="sp-disc-meta">{words(it.meta)}</span>
+          </span>
+        </Card>
+      ))}
+      <Card className="sp-disc-cta" {...to(tab.to || '/discover')}>
+        <span className="sp-disc-cta-say">Open the gallery</span>
+        <span className="sp-disc-cta-row">
+          <span className="sp-disc-cta-count">{words(tab.count)}</span>
+          <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
+        </span>
+      </Card>
+    </>
+  )
+}
+
 export default function Spectrum() {
   const [tab, setTab] = useState(DISCOVER_TABS[0].id)
   // The seed and the family chosen in the bench's windows drive the exports
@@ -246,33 +280,22 @@ export default function Spectrum() {
             </div>
           </div>
 
-          <div
-            className="sp-disc-grid"
-            data-swapped={swaps > 0 ? '' : undefined}
-            data-swap-key={swaps % 2 ? 'a' : 'b'}
-          >
-            {activeTab.items.map((it) => (
-              <Link className="sp-disc-card" to={it.to || activeTab.to || '/discover'} key={it.id}>
-                {it.swatches && <span className="sp-disc-art" aria-hidden="true">{it.swatches.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}</span>}
-                {it.art && <span className="sp-disc-art" aria-hidden="true" style={{ background: it.art }} />}
-                {it.glyphs && (
-                  <span className="sp-disc-art sp-disc-art--icons" aria-hidden="true">
-                    {it.glyphs.map((body, i) => <PhIcon key={i} body={body} box={it.box} />)}
-                  </span>
-                )}
-                <span className="sp-disc-row">
-                  <span className="sp-disc-name">{it.name}</span>
-                  <span className="sp-disc-meta">{it.meta}</span>
-                </span>
-              </Link>
+          {/* The three libraries share one grid cell, so the box is as tall as the tallest
+              of them and a chip press never moves what sits under it. The two that are
+              not showing are the same boxes drawn empty, hidden and unreachable. */}
+          <div className="sp-disc-stack">
+            <div
+              className="sp-disc-grid"
+              data-swapped={swaps > 0 ? '' : undefined}
+              data-swap-key={swaps % 2 ? 'a' : 'b'}
+            >
+              <DiscoverCards tab={activeTab} />
+            </div>
+            {DISCOVER_TABS.filter((t) => t.id !== activeTab.id).map((t) => (
+              <div className="sp-disc-grid sp-disc-grid--ghost" aria-hidden="true" key={t.id}>
+                <DiscoverCards tab={t} ghost />
+              </div>
             ))}
-            <Link className="sp-disc-cta" to={activeTab.to || '/discover'}>
-              <span className="sp-disc-cta-say">Open the gallery</span>
-              <span className="sp-disc-cta-row">
-                <span className="sp-disc-cta-count">{activeTab.count}</span>
-                <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-              </span>
-            </Link>
           </div>
 
           <div className="sp-disc-foot">
