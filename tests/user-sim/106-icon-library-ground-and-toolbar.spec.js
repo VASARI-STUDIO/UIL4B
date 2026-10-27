@@ -378,10 +378,11 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     const page = await ctx.newPage()
     watch(page, 'someone browsing the default mono icons')
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    // A mono icon is an inline <svg><use></svg> cell of the page's sprite (an <img> only when it falls back).
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
     const m = await page.evaluate(() => {
-      const img = document.querySelector('.ig .ic img')
-      return { chip: !!img.closest('.ig-chip'), inv: img.classList.contains('ig-inv') }
+      const glyph = document.querySelector('.ig .ic :is(img, svg.ig-sym)')
+      return { chip: !!glyph.closest('.ig-chip'), inv: glyph.classList.contains('ig-inv') }
     })
     expect(m.chip, 'a mono icon is wrapped in a coloured-icon slot').toBe(false)
     expect(m.inv, 'a mono icon lost its dark-mode ink').toBe(true)

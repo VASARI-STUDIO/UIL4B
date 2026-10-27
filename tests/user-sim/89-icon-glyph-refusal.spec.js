@@ -45,7 +45,7 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
       // longer the way to ask: a cell that DID get its markup carries a data:
       // URI, so the question is whether any catalogue glyph painted at all.
       // Counted inside the grid, because the masthead and rail are not it.
-      catalogueCells: document.querySelectorAll('.ig .ic img').length,
+      catalogueCells: document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)').length,
       // And no cell is left sitting on the placeholder: the fallback replaced
       // the grid rather than leaving 120 empty boxes, which is the whole
       // difference between this state and the bug at the top of this file.
@@ -97,10 +97,12 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
     expect(batched.length, 'the catalogue grid is not requesting any glyphs').toBeGreaterThan(0)
 
     const m = await page.evaluate(() => {
-      const cells = [...document.querySelectorAll('.ig .ic img')]
+      // A mono cell is a <use> of a symbol in the page's sprite; a coloured one is a decoded <img>.
+      const cells = [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')]
+      const sym = (c) => c.matches('svg')
       return {
-        painted: cells.filter((i) => i.complete && i.naturalWidth > 0).length,
-        notFromBatch: cells.filter((i) => !i.src.startsWith('data:')).length,
+        painted: cells.filter((c) => (sym(c) ? !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`) : c.complete && c.naturalWidth > 0)).length,
+        notFromBatch: cells.filter((c) => !sym(c) && !c.src.startsWith('data:')).length,
         waiting: document.querySelectorAll('.ig .ic .ig-glyph-wait').length,
       }
     })
@@ -175,7 +177,7 @@ test.describe('the icon grid when only one pack batch fails', () => {
     await page.waitForTimeout(5_000)
     expect(seen.requests, 'the failed pack is being asked again without a bound').toBe(3)
     // The packs that answered still painted, and the page did not fall over.
-    const painted = await page.evaluate(() => [...document.querySelectorAll('.ig .ic img')].filter((i) => i.complete && i.naturalWidth > 0).length)
+    const painted = await page.evaluate(() => [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')].filter((c) => (c.matches('svg') ? !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`) : c.complete && c.naturalWidth > 0)).length)
     expect(painted, 'the packs that answered did not paint').toBeGreaterThan(8)
     await expect(page.getByText(/couldn.t reach the icon service/i), 'a retry failing must not raise the outage notice').toHaveCount(0)
     // Names given up on are quiet empty slots, not skeletons that pulse for the
