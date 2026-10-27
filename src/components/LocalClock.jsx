@@ -31,7 +31,7 @@ import { useEffect, useState } from 'react'
 // every minute, interrupting whatever the reader was doing, to deliver
 // something they did not ask for and can get from their own OS. It is a <time>
 // element with a machine-readable dateTime, which is what actually helps.
-export default function LocalClock({ className }) {
+export default function LocalClock({ className, stacked = false }) {
   const [now, setNow] = useState(null)
 
   useEffect(() => {
@@ -59,6 +59,16 @@ export default function LocalClock({ className }) {
   // Omitting timeZone likewise resolves to the machine's own zone.
   const date = now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  // The dashboard's Today panel sets the date and the time as two lines, each in its own type.
+  if (stacked) {
+    return (
+      <time className={className} dateTime={now.toISOString()}>
+        <span className="uh-today-date">{date}</span>{' '}
+        <span className="uh-today-time">{time}</span>
+      </time>
+    )
+  }
 
   return (
     <time className={className} dateTime={now.toISOString()}>

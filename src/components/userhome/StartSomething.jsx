@@ -7,17 +7,17 @@ import { generateTintScale } from '../../utils/colors'
 import Glyph from './Glyph'
 import { liveToolCount, numberWord } from './workspace'
 
-// "Start something" — the design's quick-start grid (UIL4B App.dc.html,
-// `projects` screen): the Palette Builder as a lead tile spanning two columns
-// and three rows with a live ramp, six tools with their own hue chips, and a
-// button that opens the Create menu.
+// "Start something" — the quick-start grid: the Palette Builder as a lead tile
+// (a third of the width, with the live ramp at its foot), six tools in one ink
+// as three across and two down, and a button that opens the Create menu. The
+// tools used to wear six unrelated hues; colour that said nothing is gone.
 //
 // Every tile is a link to a live route, read from the tool tree, so a renamed
 // route fails the build instead of shipping a dead tile. None of it needs an
 // account, which is why a signed-out visitor landing here from the sales page
 // gets the same grid.
 
-// The design's six, in the design's order, with the design's notes. `hue` is the design's fixed OKLCH hue per chip.
+// The design's six, in the design's order, with the design's notes.
 const QUICK = [
   { id: 'gradient', icon: 'gradient', label: 'Gradient', note: 'Two stops and an angle', to: toolRoute('gradient') },
   { id: 'tint', icon: 'drop-half', label: 'Tint', note: 'Even ramp steps', to: toolRoute('tint') },
@@ -50,7 +50,9 @@ function openCreateMenu() {
   if (sheet && sheet.offsetParent !== null && sheet.getAttribute('aria-expanded') !== 'true') sheet.click()
 }
 
-export default function StartSomething() {
+// `inLead` is the signed-out workspace, where this block moves up into the lead slot and the Palette
+// Builder takes the full width of it, with the six tools under it.
+export default function StartSomething({ inLead = false }) {
   const { design } = useProject()
 
   // THE LIVE RAMP. The design's lead tile shows the Palette Builder's current columns.
@@ -66,10 +68,10 @@ export default function StartSomething() {
   const count = liveToolCount()
 
   return (
-    <section className="uh-start" aria-labelledby="uh-start-h">
+    <section className={`uh-start${inLead ? ' uh-start--lead' : ''}`} aria-labelledby="uh-start-h">
       <div className="uh-start-head">
         <h2 id="uh-start-h" className="uh-start-h">Start something</h2>
-        <button type="button" className="uh-alltools" onClick={openCreateMenu}>
+        <button type="button" className="uh-alltools" aria-haspopup="menu" onClick={openCreateMenu}>
           <span>All {numberWord(count)} tools</span>
           <Glyph name="caret-right" size={12} className="uh-alltools-caret" />
         </button>
