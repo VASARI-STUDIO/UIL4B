@@ -432,7 +432,8 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-export-type { padding: 2px 8px; border-radius: var(--radius-xs); background: var(--bg-2); font-size: 13px; letter-spacing: 0; }
 .uh .uh-export-name { font-size: 15px; }
 .uh .uh-export-meta { font-family: var(--font); font-size: 13px; color: var(--t2); }
-@media (min-width: 1001px) { .uh .uh-export:nth-child(n+5) { display: none; } }
+/* Four rows at every width (the dashboard spec), however many the list holds. */
+.uh .uh-export:nth-child(n+5) { display: none; }
 /* On a phone the list is mounted after Discover (Projects.jsx), a section of the page like Pro below it. */
 .uh .uh-main > .uh-exports { margin-top: var(--s-7); }
 
@@ -584,6 +585,8 @@ h2.uh-continue-name { white-space: normal; }
   .uh .uh-pro-cta { width: 100%; justify-content: center; }
   .uh .uh-pro-cta-row { display: grid; justify-items: start; gap: var(--s-2); }
   .uh .uh-pro-cta-row .uh-pro-cta { justify-self: stretch; }
+  /* Export rows start at the heading's edge, not 12px in (and 8px more inside the type chip). */
+  .uh .uh-export { padding-inline: 0; }
   /* The name form is a bottom sheet over the tab bar, with a scrim behind it. Stack order: the page
      (auto), the tab bar (118) and nav (120), this sheet and its scrim (299, 300), then the app's modals
      (500 and up). `.uh-ask` drops its isolation here, or the sheet's z-index would be local to it and
