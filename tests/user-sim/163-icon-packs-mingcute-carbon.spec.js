@@ -195,12 +195,14 @@ test.describe('search', () => {
     await openLibrary(page, 1440, 'designer on Pro searching every set', 'pro')
     await search(page, 'packprobe')
 
-    // The API really did offer the blocked sets, so the absence below is the page's doing.
-    const offered = answers.flatMap((a) => a?.icons || [])
-    expect(offered, 'the fixture offers a Remix hit').toContain('ri:packprobe-ri')
-    expect(offered, 'the fixture offers Streamline hits').toEqual(expect.arrayContaining(['streamline-flex:packprobe-flex', 'streamline:packprobe-sl']))
-
     await expect(page.locator('.ig-status').filter({ hasText: /3 matches/ })).toBeVisible()
+
+    // The API really did offer the blocked sets, so the absence below is the page's doing.
+    // The response body is read asynchronously, so wait for it rather than reading once.
+    const offered = () => answers.flatMap((a) => a?.icons || [])
+    await expect.poll(offered, { message: 'the fixture offers a Remix hit' }).toContain('ri:packprobe-ri')
+    expect(offered(), 'the fixture offers Streamline hits').toEqual(expect.arrayContaining(['streamline-flex:packprobe-flex', 'streamline:packprobe-sl']))
+
     expect((await cellNames(page)).sort()).toEqual(['logo-packprobe', 'packprobe', 'packprobe-line'])
     expect(urls.filter((u) => /\/(ri|streamline[a-z-]*)(\.json|\/)/.test(new URL(u).pathname)), 'no glyph request for a blocked set').toEqual([])
   })
