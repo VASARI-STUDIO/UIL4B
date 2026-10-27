@@ -17,9 +17,12 @@
 //   7. the button's top does not move between states, at 390, 768 and 1440
 //   plus: signed out, keyboard and focus, the walkthrough clause, 390 sheet.
 //
-// NOT COVERED HERE, and why: "Checking your plan..." (planKnown false) needs a
-// subscription read that never settles, which this harness cannot hold open; and
-// the server-refusal band does not exist yet (no server checks Pro formats).
+// "Checking your plan..." (planKnown false) is held open with
+// signIn({ slowReads: [{ path, hold: true }] }), which keeps the entitlement
+// listener silent until the page calls window.__UIL4B_TEST_HOLD__.release().
+//
+// NOT COVERED HERE, and why: the server-refusal band does not exist yet (no
+// server checks Pro formats).
 //
 // MUTATION (each break below must fail the test named after it):
 //   - Draw the previews without calling bakeBlur (utils/proPreviews.js,
@@ -308,3 +311,273 @@ for (const size of SIZES) {
     })
   })
 }
+
+// ─── THE PLAN STILL LOADING, THE ROW MEMORY, THE DOCK, THE PHONE EDGE, THE STRIP ───
+//
+// What the review of the five-row panel asked for, one test per behaviour.
+// Each MUTATION line names the break that must turn its test red.
+
+const settle = (page) => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+
+// A row is ready to measure once its pictures are in: the box is reserved, but a
+// shift when they land would be a real shift, so it is waited for here.
+async function showRow(panel, group) {
+  await rowFor(panel, group.name).click()
+  if (group.preview) await expect(panel.locator('.exp-preview-strip[data-state="ready"]')).toHaveCount(1)
+  await settle(panel.page())
+}
+
+const FONT_FILE = 'https://fonts.gstatic.com/s/kitfixture/latin.woff2'
+const CSS2 = `/* latin */
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(${FONT_FILE}) format('woff2'); unicode-range: U+0000-00FF; }`
+// The kit export fetches its fonts; answer them from fixtures, with no licence
+// text, so the export finishes with a "could not be embedded" notice in the dock.
+async function fontsWithoutLicence(page) {
+  const woff2 = fs.readFileSync('public/fonts/geist-latin.woff2')
+  await page.route(/fonts\.googleapis\.com\/css2/, (route) => (route.request().resourceType() === 'fetch'
+    ? route.fulfill({ status: 200, contentType: 'text/css', body: CSS2 })
+    : route.continue()))
+  await page.route(FONT_FILE, (route) => route.fulfill({ status: 200, contentType: 'font/woff2', body: woff2 }))
+  await page.route(/cdn\.jsdelivr\.net\/gh\/google\/fonts/, (route) => route.fulfill({ status: 404, body: '' }))
+}
+
+test.describe('while the plan is still loading', () => {
+  // MUTATION: ExportPanel.jsx `const checking = planKnown === false` ->
+  // `Boolean(activeFormat?.pro) && planKnown === false`. The free UI kit row then
+  // says "Export UI kit" and is enabled before the account has answered, so a
+  // free file could be built (watermarked) for someone who turns out to be Pro:
+  // the "free row" step fails. Dropping `|| checking` from `disabled` fails both.
+  for (const plan of ['free', 'pro']) {
+    test(`a ${plan} account sees "Checking your plan…", disabled, on a free row and a Pro row, until the plan answers`, async ({ page }) => {
+      watch(page, `a ${plan} account opening Export before its plan has answered`)
+      const uid = `test-uid-held-${plan}`
+      await signIn(page, { plan, uid, slowReads: [{ path: `users/${uid}`, hold: true }] })
+      await go(page, WORKED_BOARD)
+      const panel = await open(page)
+      const action = panel.locator('.exp-foot .btn-accent')
+
+      // A free row (the UI kit, chosen on open).
+      await expect(rowFor(panel, 'UI kit')).toHaveAttribute('aria-checked', 'true')
+      await expect(action, 'free row, plan unknown').toHaveText('Checking your plan…')
+      await expect(action).toBeDisabled()
+      // A Pro row.
+      await rowFor(panel, 'Design system book').click()
+      await expect(action, 'Pro row, plan unknown').toHaveText('Checking your plan…')
+      await expect(action).toBeDisabled()
+      // Nothing was held on the page itself: the plan is the only thing waiting.
+      expect(await page.evaluate(() => typeof window.__UIL4B_TEST_HOLD__?.release)).toBe('function')
+
+      await page.evaluate(() => window.__UIL4B_TEST_HOLD__.release())
+      await expect(action).toBeEnabled()
+      await expect(action, 'the Pro row once the plan is known').toHaveText(plan === 'pro' ? actionLabel('book') : 'Unlock with Pro')
+      await rowFor(panel, 'UI kit').click()
+      await expect(action, 'the free row once the plan is known').toHaveText(actionLabel('kit'))
+      await expect(action).toBeEnabled()
+    })
+  }
+})
+
+test('a row remembers the file type last chosen in it', async ({ page }) => {
+  // MUTATION: ExportPanel.jsx pickGroup -> `pickFormat(groupFormats(groupId)[0].id)`
+  // (always the row's first file type). Coming back to Style guide then lands on
+  // HTML, and Design tokens on CSS, so both assertions after the round trip fail.
+  watch(page, 'a free account choosing a file type, leaving the row and coming back')
+  await signIn(page, { plan: 'free' })
+  await go(page, WORKED_BOARD)
+  const panel = await open(page)
+  const fileType = (group, name) => panel.getByRole('radiogroup', { name: `${group} file type` }).getByRole('radio', { name, exact: true })
+
+  await chooseFormat(panel, 'png')
+  await chooseFormat(panel, 'json')
+  await rowFor(panel, 'UI kit').click()
+
+  await rowFor(panel, 'Style guide').click()
+  await expect(fileType('Style guide', 'PNG'), 'Style guide comes back on PNG').toHaveAttribute('aria-checked', 'true')
+  await expect(panel.locator('.exp-foot .btn-accent')).toHaveText('Export style guide (PNG)')
+  await rowFor(panel, 'Design tokens').click()
+  await expect(fileType('Design tokens', 'JSON'), 'Design tokens comes back on JSON').toHaveAttribute('aria-checked', 'true')
+  await expect(panel.locator('.exp-foot .btn-accent')).toHaveText('Export JSON tokens')
+})
+
+for (const size of [{ width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
+  test.describe(`the dock at ${size.width}px`, () => {
+    test.use({ viewport: size })
+
+    test('the action button keeps its top across every row and the downloaded notice', async ({ page }) => {
+      // MUTATION: overlay.css `.exp-coming{margin:auto 0 0}` -> `margin:0`. With no
+      // free space taken, the dock rides up under a short row and the button's top
+      // differs row to row. (Removing `margin-top:auto` from .exp-dock alone does
+      // not: `.exp-coming + .exp-dock{margin-top:0}` outranks it while the "on the
+      // way" line renders, so the coming line is what holds the dock down.)
+      watch(page, `a free account moving across every row at ${size.width}px`)
+      await fontsWithoutLicence(page)
+      await signIn(page, { plan: 'free' })
+      await go(page, WORKED_BOARD)
+      const panel = await open(page)
+      const top = () => panel.locator('.exp-foot .btn-accent').evaluate((el) => el.getBoundingClientRect().top)
+
+      await expect(rowFor(panel, 'UI kit')).toHaveAttribute('aria-checked', 'true')
+      const base = await top()
+      expect(base, 'the button is inside the window').toBeLessThan(size.height)
+      for (const group of EXPORT_GROUPS) {
+        await showRow(panel, group)
+        expect(Math.abs((await top()) - base), `the button's top on the ${group.name} row`).toBeLessThanOrEqual(1)
+      }
+
+      await showRow(panel, EXPORT_GROUPS[0])
+      await Promise.all([page.waitForEvent('download', { timeout: 30000 }), panel.getByRole('button', { name: 'Export UI kit', exact: true }).click()])
+      await expect(panel.getByRole('status')).toContainText('Your UI kit downloaded.')
+      await settle(page)
+      expect(Math.abs((await top()) - base), 'the button after the downloaded notice shows').toBeLessThanOrEqual(1)
+    })
+  })
+}
+
+test.describe('the dock at 390px', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('the dock stays at the foot of the sheet on every row and after the notice', async ({ page }) => {
+    // MUTATION: overlay.css `.exp-dock{position:sticky;bottom:0;...}` ->
+    // `position:static`. Where a row makes the sheet scroll, the dock then sits
+    // at the end of the content instead of the foot of the visible sheet.
+    watch(page, 'a free account moving across every row on a phone')
+    await fontsWithoutLicence(page)
+    await signIn(page, { plan: 'free' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    const gap = () => panel.evaluate((el) => {
+      const sheet = el.getBoundingClientRect()
+      const dock = el.querySelector('.exp-dock').getBoundingClientRect()
+      return { dockToSheet: Math.abs(sheet.bottom - dock.bottom), sheetToScreen: Math.abs(window.innerHeight - sheet.bottom) }
+    })
+
+    for (const group of EXPORT_GROUPS) {
+      await showRow(panel, group)
+      const g = await gap()
+      expect(g.dockToSheet, `the dock sits on the sheet's bottom edge on ${group.name}`).toBeLessThanOrEqual(1)
+      expect(g.sheetToScreen, `the sheet sits on the screen's bottom edge on ${group.name}`).toBeLessThanOrEqual(1)
+    }
+    await showRow(panel, EXPORT_GROUPS[0])
+    await Promise.all([page.waitForEvent('download', { timeout: 30000 }), panel.getByRole('button', { name: 'Export UI kit', exact: true }).click()])
+    await expect(panel.getByRole('status')).toContainText('Your UI kit downloaded.')
+    await settle(page)
+    expect((await gap()).dockToSheet, 'the dock after the notice').toBeLessThanOrEqual(1)
+  })
+})
+
+test.describe('the phone gutter', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('the title, the row radios, the first option control and the "on the way" line share one 16px edge', async ({ page }) => {
+    // MUTATION: overlay.css, put `.exp-options{padding:16px 16px 20px}` (the phone
+    // override) back above the base `.exp-options{...padding:12px 24px 16px...}`
+    // rule. The base rule then wins and the file-type switch starts at 24px.
+    watch(page, 'a free account reading the panel edge on a phone')
+    await signIn(page, { plan: 'free' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await rowFor(panel, 'Style guide').click()
+    await expect(panel.getByRole('region', { name: 'Options for Style guide' })).toBeVisible()
+    await settle(page)
+
+    const sheetLeft = (await panel.boundingBox()).x
+    const edges = await panel.evaluate((el) => {
+      const ink = (node) => { const r = document.createRange(); r.selectNodeContents(node); return r.getBoundingClientRect().left }
+      const left = (selector) => el.querySelector(selector).getBoundingClientRect().left
+      return {
+        title: ink(el.querySelector('.exp-title')),
+        radio: left('.exp-fmt-check'),
+        control: left('.exp-options .exp-pill'),
+        onTheWay: ink(el.querySelector('.exp-coming')),
+      }
+    })
+    for (const [name, x] of Object.entries(edges)) {
+      expect(Math.abs(x - (sheetLeft + 16)), `${name} starts ${x}px from the left, expected 16px in from the sheet`).toBeLessThanOrEqual(1)
+    }
+  })
+})
+
+test.describe('the preview strip', () => {
+  test('is a labelled group a keyboard reaches with Tab, and shows a focus ring', async ({ page }) => {
+    // MUTATION: ExportProPreview.jsx, drop `tabIndex={0}` from .exp-preview-strip.
+    // Tab from the book row then lands on Cancel, not on the pictures.
+    watch(page, 'a keyboard user tabbing from the book row to its pictures')
+    await signIn(page, { plan: 'free' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await rowFor(panel, 'Design system book').click()
+    const strip = panel.getByRole('group', { name: 'Pages of your design system book' })
+    await expect(strip).toHaveCount(1)
+    await expect(strip).toHaveAttribute('data-state', 'ready')
+
+    await rowFor(panel, 'Design system book').focus()
+    await page.keyboard.press('Tab')
+    await expect(strip, 'the next Tab stop after the row is the strip').toBeFocused()
+    const ring = await strip.evaluate((el) => {
+      const s = getComputedStyle(el)
+      return { style: s.outlineStyle, width: parseFloat(s.outlineWidth), colour: s.outlineColor }
+    })
+    expect(ring.style, 'a visible outline, not none').not.toBe('none')
+    expect(ring.width).toBeGreaterThanOrEqual(2)
+    expect(ring.colour, 'a coloured ring').not.toBe('rgba(0, 0, 0, 0)')
+  })
+})
+
+test.describe('the divider between free and paid rows', () => {
+  // MUTATION: ExportPanel.jsx `const startsPaid = showPro && ...` -> `false` (no
+  // band for a free account), or -> `paid && ...` (a band for Pro as well). The
+  // free test, or the Pro test, fails.
+  test('a free account sees one band, between the free rows and the book', async ({ page }) => {
+    watch(page, 'a free account looking for the free and paid divider')
+    await signIn(page, { plan: 'free' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    const band = panel.locator('.exp-fmt-gap')
+    await expect(band).toHaveCount(1)
+    await expect(band).toBeVisible()
+    const order = await band.evaluate((el) => [el.previousElementSibling?.getAttribute('aria-label'), el.nextElementSibling?.getAttribute('aria-label')])
+    expect(order, 'between Design tokens and the book').toEqual(['Design tokens', 'Design system book, Pro'])
+  })
+
+  test('a Pro account sees no band', async ({ page }) => {
+    watch(page, 'a Pro account looking for the free and paid divider')
+    await signIn(page, { plan: 'pro' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await expect(panel.getByRole('radio')).toHaveCount(5)
+    await expect(panel.locator('.exp-fmt-gap')).toHaveCount(0)
+  })
+})
+
+test.describe('the sheet head on a phone', () => {
+  // A short phone, so the sheet certainly scrolls.
+  test.use({ viewport: { width: 390, height: 600 } })
+
+  test('the title and close stay in view after scrolling the sheet to the bottom', async ({ page }) => {
+    // MUTATION: overlay.css, drop `position:sticky;top:0` from `.exp-head` in the
+    // phone block. Scrolled to the bottom, the head is then above the sheet.
+    watch(page, 'a free account scrolling the export sheet on a short phone')
+    await signIn(page, { plan: 'free' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await rowFor(panel, 'Brand guidelines').click()
+    await expect(panel.locator('.exp-preview-strip[data-state="ready"]')).toHaveCount(1)
+
+    const room = await panel.evaluate((el) => el.scrollHeight - el.clientHeight)
+    expect(room, 'the sheet has something to scroll, or this proves nothing').toBeGreaterThan(40)
+    await panel.evaluate((el) => { el.scrollTop = el.scrollHeight })
+    await expect.poll(() => panel.evaluate((el) => Math.round(el.scrollTop)), 'scrolled to the bottom').toBe(room)
+
+    const head = await panel.evaluate((el) => {
+      const sheet = el.getBoundingClientRect()
+      const box = el.querySelector('.exp-head').getBoundingClientRect()
+      const close = el.querySelector('.exp-close').getBoundingClientRect()
+      const hit = document.elementFromPoint(close.left + close.width / 2, close.top + close.height / 2)
+      return { offset: box.top - sheet.top - el.clientTop, closeHit: Boolean(hit?.closest('.exp-close')) }
+    })
+    expect(Math.abs(head.offset), 'the head is still at the top of the sheet').toBeLessThanOrEqual(1)
+    expect(head.closeHit, 'nothing covers the close button').toBe(true)
+    await expect(panel.getByRole('heading', { name: 'Export your design system' })).toBeInViewport()
+    await expect(panel.getByRole('button', { name: 'Close export' })).toBeInViewport()
+  })
+})
