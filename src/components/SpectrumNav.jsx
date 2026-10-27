@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
 import { crossRouteHashClick, normPath, salesHref } from './spectrum/salesLinks'
@@ -181,11 +181,19 @@ export default function SpectrumNav() {
   }, [])
 
   // One observer on the hero's action row. A page without one (pricing,
-  // mobile) never sets the flag, and the pill keeps its own button.
-  useEffect(() => {
+  // mobile) never sets the flag, and the pill keeps its own button. The flag is
+  // seeded from the row's position before paint, so the pill's button never
+  // shows for a frame on load. The top margin is the pill's height: a hero row
+  // hidden under the pill counts as out of view, so one button always shows.
+  useLayoutEffect(() => {
     const row = document.querySelector('.sp-hero-cta')
     if (!row || typeof IntersectionObserver === 'undefined') return undefined
-    const io = new IntersectionObserver(([entry]) => setHeroCta(entry.isIntersecting), { threshold: 0 })
+    const PILL = 72
+    // A microtask still runs before the first paint, and keeps the setState
+    // out of the effect body.
+    const r = row.getBoundingClientRect()
+    queueMicrotask(() => setHeroCta(r.bottom > PILL && r.top < window.innerHeight))
+    const io = new IntersectionObserver(([entry]) => setHeroCta(entry.isIntersecting), { threshold: 0, rootMargin: `-${PILL}px 0px 0px 0px` })
     io.observe(row)
     return () => { io.disconnect(); setHeroCta(false) }
   }, [location.pathname])
