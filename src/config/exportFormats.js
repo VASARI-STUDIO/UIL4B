@@ -43,7 +43,7 @@ export const EXPORT_FORMATS = Object.freeze([
   // The UI kit: the default export for every plan. Free carries the UIL4B
   // mark; Pro gets the same kit without it, plus the named identity section.
   // `kit` marks it for the plan lines, which list it apart from the style
-  // guide formats. Built by utils/uiKitExport.js from src/templates/uiKit.html.
+  // guide formats. Built by utils/uiKitExport.js from src/templates/kit/studio.html (the default kit template).
   Object.freeze({ id: 'kit', name: 'UI kit', desc: 'One HTML file with your palette and tints, semantic colours, type, foundations and component states. Opens offline, prints to A4, and carries its CSS, JSON and font files.', live: true, kit: true, group: 'kit', action: 'Export UI kit' }),
   // The two Pro deliverables, listed first because they are the best things the
   // panel makes — and listed as a PAIR because that is the offer. They are not

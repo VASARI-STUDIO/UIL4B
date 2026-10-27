@@ -1,5 +1,5 @@
 // The UI kit export: a saved design → one self-contained HTML document built
-// from src/templates/uiKit.html, plus the token, font and licence data that
+// from src/templates/kit/<template>.html, plus the token, font and licence data that
 // document offers as downloads.
 //
 // THE TEMPLATE IS THE DESIGN. This module only fills its @@PLACEHOLDERS@@. It
@@ -472,7 +472,7 @@ const ROLES = [
  * @param design    the saved design (ProjectContext's `design`)
  * @param options
  *   tier           'free' | 'pro' — from verified entitlement, never from a UI toggle
- *   template       the text of src/templates/uiKit.html
+ *   template       the text of src/templates/kit/<template>.html
  *   fonts          selected fonts by family, see embeddable()
  *   publisherFonts [{ family: 'Geist', axis: '300 700', faces: [{ subset, base64 }] }]
  *   publisherLicense  Geist's licence text

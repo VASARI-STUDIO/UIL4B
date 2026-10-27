@@ -152,7 +152,11 @@ test.describe('on a 390px phone, in a real touch context', () => {
       expect(l.bottom, 'the line is not above the work').toBeLessThanOrEqual(lead.top + 1)
       expect(l.height, 'it is one line').toBeLessThan(30)
       expect(l.width, 'it runs the width of the content').toBe(366)
-      expect(await page.locator('.uh-clock-line .uh-clk-time').evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Geist Mono|monospace/)
+      // One sans, tabular: the time is not set in the mono face.
+      const clk = await page.locator('.uh-clock-line .uh-clk-time').evaluate((el) => { const cs = getComputedStyle(el); return { family: cs.fontFamily, numeric: cs.fontVariantNumeric } })
+      expect(clk.family, `the clock is not mono (${clk.family})`).not.toMatch(/Geist Mono|monospace/i)
+      expect(clk.family, `the clock is the page's sans (${clk.family})`).toMatch(/Switzer/)
+      expect(clk.numeric, `the clock has tabular figures (${clk.numeric})`).toContain('tabular-nums')
       await expect(page.locator('.uh-today-clock'), 'the big clock is not drawn on a phone').toBeHidden()
     }, { clock: new Date(2026, 9, 27, 7, 5) })
   })

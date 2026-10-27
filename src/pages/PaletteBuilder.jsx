@@ -36,6 +36,7 @@ import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 // when Preview is first pointed at or opened (previewLoader.js).
 import { DEFAULT_SCENE } from '../data/palettePreviewScenes'
 import { loadPreviewDialog } from '../components/palette/previewLoader'
+import NearestMatchPanel from '../components/palette/NearestMatchPanel'
 import { LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
@@ -930,9 +931,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // One info panel per board: a column's tints or its colour values. They share
   // one slot, so opening either closes the other and every existing
   // `setTintsIdx(null)` close also closes the values panel.
-  const [colPanel, setColPanel] = useState(null)    // { kind: 'tints' | 'values', i }
+  const [colPanel, setColPanel] = useState(null)    // { kind: 'tints' | 'values' | 'match', i }
   const tintsIdx = colPanel?.kind === 'tints' ? colPanel.i : null
   const valuesIdx = colPanel?.kind === 'values' ? colPanel.i : null
+  const matchIdx = colPanel?.kind === 'match' ? colPanel.i : null
   const setTintsIdx = useCallback((next) => setColPanel((cur) => {
     const v = typeof next === 'function' ? next(cur?.kind === 'tints' ? cur.i : null) : next
     return v == null ? null : { kind: 'tints', i: v }
@@ -983,7 +985,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Absolute coordinates remain relative to the size-contained column. Measure
   // in viewport space first so even the edge columns keep the whole panel visible.
   useLayoutEffect(() => {
-    const column = columnRefs.current[pickerIdx ?? tintsIdx ?? valuesIdx]
+    const column = columnRefs.current[pickerIdx ?? tintsIdx ?? valuesIdx ?? matchIdx]
     const panel = column?.querySelector(pickerIdx != null ? '.plb-picker' : '.plb-tintpop')
     if (!panel) return
     const place = (event) => {
@@ -1024,7 +1026,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
     }
-  }, [pickerIdx, tintsIdx, valuesIdx, colors.length])
+  }, [pickerIdx, tintsIdx, valuesIdx, matchIdx, colors.length])
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const ctxMenuRef = useRef(null)
   const ctxTriggerRef = useRef(null)
@@ -1394,7 +1396,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // useModalDialog owns its Escape and the scrim owns its outside press.
   const anyPopover = saveOpen || imgOpen
     || galleryOpen || histOpen
-    || tintsIdx != null || valuesIdx != null || pickerIdx != null || ctxMenu != null || preview != null
+    || tintsIdx != null || valuesIdx != null || matchIdx != null || pickerIdx != null || ctxMenu != null || preview != null
 
   // Both of this page's dialogs declared aria-modal="true" and trapped nothing:
   // Tab walked out into the builder behind them, the canvas scrolled, and
@@ -1522,14 +1524,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const openColPanel = (kind, i) => {
     panelOpenerRef.current = 'more'
     setCtxMenu(null)
-    if (kind === 'tints') setTintsIdx(i); else setValuesIdx(i)
+    if (kind === 'tints') setTintsIdx(i); else if (kind === 'match') setColPanel({ kind: 'match', i }); else setValuesIdx(i)
   }
   useEffect(() => {
     if (!colPanel) return
     const panel = columnRefs.current[colPanel.i]?.querySelector('.plb-tintpop')
     panel?.querySelector('.plb-pop-x')?.focus({ preventScroll: true })
     const hex = String(adjusted[colPanel.i] || '').toUpperCase()
-    setLiveMsg(colPanel.kind === 'values' ? `Colour values for ${hex}` : `Tints of ${hex}`)
+    setLiveMsg(colPanel.kind === 'values' ? `Colour values for ${hex}` : colPanel.kind === 'match' ? `Nearest named colours for ${hex}` : `Tints of ${hex}`)
   // Only a newly opened panel moves focus; the colours behind an open one can
   // change without it grabbing focus again.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2749,7 +2751,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                 aria-label={`${role} ${adjusted[i]}`}
                 // Whole-swatch drag reorders; off while a tints or HCT popover
                 // is open on this column so slider drags aren't hijacked.
-                draggable={pickerIdx !== i && tintsIdx !== i && valuesIdx !== i}
+                draggable={pickerIdx !== i && tintsIdx !== i && valuesIdx !== i && matchIdx !== i}
                 onDragStart={(e) => {
                   dragFrom.current = i
                   e.dataTransfer.effectAllowed = 'move'
@@ -2962,6 +2964,19 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   </div>
                 )}
 
+                {matchIdx === i && (
+                  // The same slot, anchoring and dismissal as Tints and Colour values.
+                  <NearestMatchPanel
+                    hex={adjusted[i]}
+                    isPro={isPro}
+                    planKnown={planKnown}
+                    onCopy={(value) => onCopy?.(value)}
+                    onClose={closeColPanel}
+                    closeIcon={<IcoX />}
+                    copyIcon={<IcoCopy />}
+                  />
+                )}
+
                 {pickerIdx === i && (
                   <HctPicker key={i} hex={colors[i]} label={role} onChange={(hex) => setColorAt(i, hex)} onClose={() => setPickerIdx(null)} />
                 )}
@@ -3063,6 +3078,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('tints', ctxMenu.i)}><IcoEye /> View tints</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('values', ctxMenu.i)}><ToolIcon name="swatches" size={14} /> Colour values</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('match', ctxMenu.i)}><ToolIcon name="tag" size={14} /> Nearest named colours{planKnown && !isPro && <span className="plb-ctx-pro">Pro</span>}</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>

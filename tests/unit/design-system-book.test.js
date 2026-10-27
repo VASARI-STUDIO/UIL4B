@@ -348,7 +348,7 @@ test('the generator is not in the browser: the panel never imports it', () => {
   // who read the bundle. Now the server builds it (api/_lib/exportDocument.js);
   // tests/unit/export-document.test.js walks the whole import graph.
   assert.ok(!/designSystemBook/.test(PANEL), 'ExportPanel names the book generator again')
-  assert.match(PANEL, /requestExportDocument\(\{ format, design, projectName \}/)
+  assert.match(PANEL, /requestExportDocument\(\{ format, design, projectName, template: chosenTemplates\[format\] \}/)
 })
 
 test('the downloaded artefact never receives the print bootstrap', () => {

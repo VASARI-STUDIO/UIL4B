@@ -50,7 +50,8 @@ export default function PlanStrip({ planLabel, isPro, ai, slots, asOf }) {
           <div className="uh-meter" data-testid="project-quota-note">
             <div className="uh-meter-row">
               <span>Projects</span>
-              <span className="uh-meter-val">{atCap ? `${slots.used} of ${slots.limit}, the Free limit` : `${slots.used} of ${slots.limit}`}</span>
+              {/* The figure is the meter value (sans, tabular); ", the Free limit" is the row's own 13px --t2. */}
+              <span><span className="uh-meter-val">{slots.used} of {slots.limit}</span>{atCap ? ', the Free limit' : ''}</span>
             </div>
             <span
               className="uh-meter-track"
