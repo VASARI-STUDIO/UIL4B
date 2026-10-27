@@ -149,7 +149,9 @@ export function derivePaletteRoles(colors, opts = {}) {
   const unset = empty ? [] : BRAND_ROLES.slice(palette.length)
 
   const [pL, pC, pHue] = hexToOklch(primary)
-  const neutrals = neutralRamp(mode, pHue, clamp(pC * 0.1, 0.008, 0.02))
+  // A grey primary has no hue to lend, so its neutrals stay grey rather than
+  // taking a cast from hue 0.
+  const neutrals = neutralRamp(mode, pHue, pC === 0 ? 0 : clamp(pC * 0.1, 0.008, 0.02))
   const grounds = neutrals.grounds
 
   const semantics = {}

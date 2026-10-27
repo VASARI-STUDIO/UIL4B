@@ -23,7 +23,7 @@ export const TINT_LABELS = {
 }
 
 // Below this input chroma a colour is treated as neutral. White and the greys
-// read 0.005-0.009 here, at a meaningless hue.
+// read about 0 here, at a meaningless hue; a near-grey tint may read a little more.
 const NEUTRAL_CHROMA = 0.01
 
 // The largest chroma <= `chroma` that fits sRGB at this lightness and hue.
