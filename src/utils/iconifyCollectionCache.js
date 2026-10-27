@@ -103,7 +103,10 @@ export function createCollectionLoader({ cache, fetchEntry, storage = defaultSto
     if (!bypass && failed && now() - failed.at < COLLECTION_RETRY_DELAY) {
       return settleFailed(prefix, stored, failed.error, allowSample)
     }
-    const request = Promise.resolve().then(() => fetchEntry(prefix))
+    // A request can wait its turn behind a limiter; `refused` lets it re-check
+    // the endpoint-wide refusal when the turn comes, not only when it queued.
+    const refused = () => (refusal && now() < refusal.until ? refusal.error : null)
+    const request = Promise.resolve().then(() => fetchEntry(prefix, { refused }))
       .then(data => {
         cache.set(prefix, data)
         failures.delete(prefix)

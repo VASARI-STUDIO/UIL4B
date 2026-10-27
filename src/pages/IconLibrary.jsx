@@ -2079,7 +2079,9 @@ const collectionGate = createLimiter(2)
 // stands in (marked `sample`, never cached) so the pack still shows live glyphs.
 const getPublicCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
-  fetchEntry: (pack) => collectionGate(async () => {
+  fetchEntry: (pack, { refused } = {}) => collectionGate(async () => {
+    const stop = refused?.()
+    if (stop) throw stop
     const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
     const d = await r.json()
     return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }

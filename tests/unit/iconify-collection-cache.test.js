@@ -318,6 +318,28 @@ test('a Retry-After refusal holds back every prefix, Try again included, until i
   assert.deepEqual(asked, ['lucide', 'tabler'])
 })
 
+test('a request already queued when a refusal arrives does not go out when its turn comes', async () => {
+  // Two requests start together, as behind a limiter; the first is refused with a
+  // Retry-After before the second reaches the network.
+  let release
+  const gate = new Promise((resolve) => { release = resolve })
+  const sent = []
+  const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
+    fetchEntry: async (prefix, { refused }) => {
+      if (prefix === 'tabler') await gate
+      const stop = refused()
+      if (stop) throw stop
+      sent.push(prefix)
+      throw refusal(120)
+    } })
+  const first = load('lucide')
+  const second = load('tabler')
+  await assert.rejects(first)
+  release()
+  await assert.rejects(second)
+  assert.deepEqual(sent, ['lucide'], 'the queued request went out against a refusing endpoint')
+})
+
 test('without a Retry-After, Try again still bypasses the 60 second cooldown', async () => {
   let calls = 0
   const load = createCollectionLoader({ cache: new Map(), storage: () => memoryStorage(), now: () => NOW,
