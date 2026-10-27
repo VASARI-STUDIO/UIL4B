@@ -61,11 +61,14 @@ test.describe('Gradient Generator workbench resilience', () => {
     await expect(page.getByRole('textbox', { name: 'Stop 1 hex' })).toHaveValue('#123456')
 
     const add = page.getByRole('button', { name: 'Add a stop' })
-    while (await add.isVisible()) await add.click()
+    while (await page.locator('.grd-stop').count() < 12) await add.click()
     await expect(page.locator('.grd-stop')).toHaveCount(12)
-    // At the ceiling the drawn "Add a stop" row is gone, as the design hides it
-    // (addStopDisplay) — there is nothing to press that would do nothing.
+    // At the ceiling the button stays drawn, so the panel does not change
+    // height; it is disabled and says why.
     await expect(add).toHaveCount(0)
+    const full = page.getByRole('button', { name: '12 stops is the most' })
+    await expect(full).toBeVisible()
+    await expect(full).toBeDisabled()
   })
 
   test('clipboard denial is recoverable and the mobile canvas stays contained', async ({ page }) => {
