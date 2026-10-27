@@ -487,3 +487,115 @@ test('the icon grid starts level with the preview at 1440', async ({ page }) => 
   expect(tops.tiles, 'no icon tiles were measured').toBeGreaterThan(0)
   expect(Math.abs(tops.grid - tops.prev), `the grid starts ${Math.round(tops.grid - tops.prev)}px from the preview's top`).toBeLessThanOrEqual(4)
 })
+
+// ── the narrow-phone pass (192b8dd3) ───────────────────────────────────────────
+//
+// Mutations named beside each test are the temporary source changes each was seen
+// to fail against (restored after).
+
+// A family name wraps at its spaces, never inside a word. Each word of each name is
+// measured with a Range: a word that is split across two lines has two client rects.
+// Mutation: .sp-fontrow-name back to `overflow-wrap: anywhere` and the
+// `@media (max-width: 400px)` .sp-fontrow-top / .sp-fontrow-name / .sp-fontrow-meta block removed.
+for (const width of [320, 360, 390]) {
+  test(`no family name is broken inside a word at ${width}px`, async ({ page }) => {
+    watch(page, 'someone reading family names on a narrow phone')
+    await page.setViewportSize({ width, height: 900 })
+    await go(page, '/')
+    const panel = await openTool(page, 2)
+    const { words, split } = await panel.evaluate((root) => {
+      let words = 0
+      const split = []
+      for (const name of root.querySelectorAll('.sp-fontrow-name')) {
+        const walker = document.createTreeWalker(name, NodeFilter.SHOW_TEXT)
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          for (const m of n.textContent.matchAll(/\S+/g)) {
+            const range = document.createRange()
+            range.setStart(n, m.index)
+            range.setEnd(n, m.index + m[0].length)
+            words += 1
+            const lines = new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top)))
+            if (lines.size > 1) split.push(`"${m[0]}" is on ${lines.size} lines`)
+          }
+        }
+      }
+      return { words, split }
+    })
+    expect(words, 'no family-name word was measured').toBeGreaterThan(8)
+    expect(split, `a family name is broken inside a word at ${width}px`).toEqual([])
+  })
+}
+
+// The hex on a palette swatch is never clipped: no value is wider than its own box.
+// Mutation: the `.sp-role-row` wrap rule and the `.sp-role-val` overflow / flex lines
+// put back to `min-width: 0; font-size: var(--bt-m)` alone.
+for (const width of [320, 360, 390]) {
+  test(`no palette value is clipped at ${width}px`, async ({ page }) => {
+    watch(page, 'someone reading the palette values on a narrow phone')
+    await page.setViewportSize({ width, height: 900 })
+    await go(page, '/')
+    const panel = await openTool(page, 0)
+    const vals = await panel.locator('.sp-role-val').evaluateAll((els) => els.map((el) => ({
+      text: el.textContent.trim(), scroll: el.scrollWidth, client: el.clientWidth,
+    })))
+    expect(vals.length, 'no palette value was measured').toBeGreaterThanOrEqual(5)
+    for (const v of vals) {
+      expect(v.client, `"${v.text}" has no width`).toBeGreaterThan(0)
+      expect(v.scroll, `"${v.text}" is clipped (${v.scroll}px of text in ${v.client}px) at ${width}px`).toBeLessThanOrEqual(v.client)
+    }
+  })
+}
+
+// At 320 the four converter tabs are each as wide as their text, with a gap of
+// at least 8px between neighbours, and none is cut off by the row or by itself.
+// Mutation: the `@container sp-cv (max-width: 479px)` .sp-modes / .sp-utab rules put
+// back to four equal grid columns with `overflow: hidden; text-overflow: ellipsis`.
+test('the converter tabs have 8px gaps and none is clipped at 320px', async ({ page }) => {
+  watch(page, 'someone reading the converter tabs on a narrow phone')
+  await page.setViewportSize({ width: 320, height: 900 })
+  await go(page, '/')
+  const panel = await openTool(page, 3)
+  const tabs = await panel.locator('.sp-modes').evaluate((row) => {
+    const box = row.getBoundingClientRect()
+    return [...row.querySelectorAll('[role="tab"]')].map((t) => {
+      const r = t.getBoundingClientRect()
+      // The visible label's own box, so padding cannot hide a gap that is not there.
+      const label = [...t.children].find((c) => getComputedStyle(c).display !== 'none' && c.textContent.trim())
+      const l = (label || t).getBoundingClientRect()
+      return { text: t.textContent.trim(), left: l.left, right: l.right, rowLeft: box.left, rowRight: box.right, clipped: t.scrollWidth > t.clientWidth, tabLeft: r.left, tabRight: r.right }
+    })
+  })
+  expect(tabs, 'the converter has four mode tabs').toHaveLength(4)
+  for (const [i, t] of tabs.entries()) {
+    expect(t.clipped, `the "${t.text}" tab cuts its own label off`).toBe(false)
+    expect(t.left, `"${t.text}" starts left of the tab row`).toBeGreaterThanOrEqual(t.rowLeft - 0.5)
+    expect(t.right, `"${t.text}" runs past the tab row`).toBeLessThanOrEqual(t.rowRight + 0.5)
+    if (i > 0) expect(t.left - tabs[i - 1].right, `"${tabs[i - 1].text}" and "${t.text}" are ${Math.round(t.left - tabs[i - 1].right)}px apart`).toBeGreaterThanOrEqual(8 - 0.5)
+  }
+})
+
+// The saving figure and its word read as one line: the visible digits end no more
+// than 12px before "smaller". The figure sits on a hidden width pad, and a pad wider
+// than the digits it carries leaves a hole.
+// Mutation: the hidden pad back to "100%" in BenchConverter.jsx.
+for (const width of [320, 390, 1440]) {
+  test(`the saving figure sits within 12px of its word at ${width}px`, async ({ page }) => {
+    watch(page, 'someone reading the converter saving line')
+    await page.setViewportSize({ width, height: 900 })
+    await go(page, '/')
+    const panel = await openTool(page, 3)
+    await expect(panel.locator('.sp-cv-pane.is-on .sp-saving')).toHaveText(/^\d+%\s*smaller/, { timeout: 15000, useInnerText: true })
+    const m = await panel.locator('.sp-cv-pane.is-on .sp-saving').evaluate((line) => {
+      const fig = line.querySelector('.sp-saving-fig')
+      const range = document.createRange()
+      range.selectNodeContents(fig)
+      const digits = range.getBoundingClientRect()
+      const word = line.querySelector('.sp-saving-word').getBoundingClientRect()
+      return { text: fig.textContent.trim(), gap: word.left - digits.right, sameLine: Math.abs(word.top - digits.top) < digits.height }
+    })
+    expect(m.text, 'the saving figure is not a percentage').toMatch(/^\d+%$/)
+    expect(m.sameLine, 'the word is not on the figure\'s line').toBe(true)
+    expect(m.gap, `"${m.text}" is ${Math.round(m.gap)}px from its word at ${width}px`).toBeLessThanOrEqual(12)
+    expect(m.gap, 'the figure overlaps its word').toBeGreaterThanOrEqual(0)
+  })
+}
