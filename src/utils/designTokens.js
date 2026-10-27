@@ -30,7 +30,7 @@
 // Pure functions over a plain design object — no React, no DOM.
 
 import { generateTintScale, T_LABELS } from './colors.js'
-import { readBook } from './designSystemBook.js'
+import { readBook } from './bookModel.js'
 import { typeLadder } from './styleGuideExport.js'
 import { roleLabels } from './paletteRoles.js'
 import { SITE_ORIGIN } from './routeMeta.js'

@@ -25,7 +25,8 @@ import { openInNewTab } from '../utils/newTab'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
 import { loadPackHead } from '../data/iconHeads'
-import { isMulticolourSvg, monochromeSvg } from '../utils/iconPaint'
+import { isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
+import { colourRowState } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
@@ -621,6 +622,25 @@ const haloFor = (ink, theme, pack) => {
   return ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : ''
 }
 
+// Single-colour near-black pack art (GitHub, Apple, Vercel, X) is drawn in the page's
+// own ink in the grid, like a mono icon, instead of keeping its black behind a ring: the
+// same brand then reads solid in the Iconify and Logo.dev grids. Only the display
+// changes; the markup, copy and download keep the art's own colours. Mixed wordmarks
+// (more than one paint) are not this and keep their ring. The answer for a name never
+// changes once its body has arrived, so it is worked out once.
+const SOLID_INK = new Map() // 'pack:name' → true when the art is one near-black colour
+function readsAsThemeInk(pack, name) {
+  if (FLAG_PACKS.has(pack)) return false
+  const key = svgKey(pack, name)
+  const known = SOLID_INK.get(key)
+  if (known !== undefined) return known
+  const text = glyphSvgText(pack, name)
+  if (!text) return false
+  const solid = isNearBlackMono(text, INK_DARK_MAX)
+  SOLID_INK.set(key, solid)
+  return solid
+}
+
 // Ink tone already known for an icon in the customiser or My Icons: the grid's
 // measurement of the same pack glyph, else one taken from the saved markup.
 const SAVED_INK = new Map() // saved-icon key → 'dark' | 'light' | 'mid'
@@ -660,7 +680,8 @@ function BrandGlyph({ pack, name, src, gone = false }) {
   }
   const onError = () => setLoad({ key, phase: 'fail' })
   const wide = shape.ar > WIDE_INK
-  const halo = haloFor(shape.ink, theme, pack)
+  const solidInk = !!src && readsAsThemeInk(pack, name)
+  const halo = solidInk ? '' : haloFor(shape.ink, theme, pack)
   const waiting = !gone && (!src || phase === 'wait')
   return (
     <span
@@ -670,7 +691,7 @@ function BrandGlyph({ pack, name, src, gone = false }) {
       {src && (
         <img
           src={src}
-          className={phase === 'wait' ? 'ig-glyph-pending' : phase === 'in' ? 'ig-glyph-in' : ''}
+          className={[phase === 'wait' ? 'ig-glyph-pending' : phase === 'in' ? 'ig-glyph-in' : '', solidInk ? 'ig-inv' : ''].filter(Boolean).join(' ')}
           loading="lazy"
           alt={name}
           onLoad={onLoad}
@@ -1346,7 +1367,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
   const rawBaseSvgText = localBase || fetchedBase || cachedCdnBase
-  const isColoredPack = inColoredPack && (!rawBaseSvgText || isMulticolourSvg(rawBaseSvgText))
+  // A saved icon carries its own markup and nothing fetches it, so it never waits.
+  const { coloured: isColoredPack, row: colourRow } = colourRowState({ inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom })
   const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
     ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
   [inColoredPack, isColoredPack, rawBaseSvgText])
@@ -1800,15 +1822,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 />
               </div>
 
-              <div className="icust-row">
+              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}`}>
                 <label>Colour</label>
-                {isColoredPack ? (
-                  <>
-                    <div className="icust-seg">
-                      <span className="icust-seg-static active">Default</span>
-                    </div>
-                    <span className="icust-note icust-original">Original colours</span>
-                  </>
+                {colourRow === 'original' ? (
+                  <span className="icust-value">Original colours</span>
+                ) : colourRow === 'wait' ? (
+                  <span className="icust-value">&nbsp;</span>
                 ) : (
                   <>
                     <div className="icust-seg">
