@@ -45,6 +45,8 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 // rules cannot diverge between the fixture and the server.
 import { adminEmails } from '../../api/_lib/adminEmails.js'
 import { serveLibrary } from '../../api/_lib/library/serve.js'
+import { servePalettePreview } from '../../api/_lib/library/preview.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { resolveReportDir } from './report-dir.js'
 
 // A RESERVED TEST DOMAIN, never the founder's real address. The whole point
@@ -203,6 +205,35 @@ export function watch(page, persona) {
  * script, which runs before the app's own module scripts on every subsequent
  * page load; a page that has already booted signed out stays signed out.
  */
+
+/* THE BLURRED STAND-IN FOR A LOCKED PALETTE IS THE REAL RENDERER'S OUTPUT.
+ *
+ * A locked Discover card draws GET /api/ai?palettePreview=<id>, which `vite preview` does not
+ * serve (it answers the app shell, so the card would fall back to its text line). This route runs
+ * api/_lib/library/preview.js itself over the same library rows the deployed function uses, so a
+ * spec sees the real PNG, its headers, and the 404 for an unknown id. signIn() installs it; a spec
+ * that walks the page as a visitor (no signIn) calls it itself. Install it before the first
+ * navigation; a route a spec adds afterwards for the same URL takes precedence over this one. */
+export async function routePalettePreview(page) {
+  await page.route(/\/api\/ai\?palettePreview=/, async (route) => {
+    const url = new URL(route.request().url())
+    const reply = { status: 200, headers: {}, body: null }
+    const res = {
+      setHeader: (name, value) => { reply.headers[name] = value },
+      status: (code) => { reply.status = code; return res },
+      json: (body) => { reply.body = body; return res },
+      end: (body) => { reply.body = body; return res },
+    }
+    servePalettePreview({ query: { palettePreview: url.searchParams.get('palettePreview') } }, res, LIBRARY_PALETTES)
+    const isPng = Buffer.isBuffer(reply.body)
+    await route.fulfill({
+      status: reply.status,
+      headers: reply.headers,
+      contentType: isPng ? 'image/png' : 'application/json',
+      body: isPng ? reply.body : JSON.stringify(reply.body),
+    })
+  })
+}
 
 /** Every host the Firebase SDK would talk to. Exported so a spec can assert on it. */
 export const FIREBASE_HOSTS = [
@@ -414,6 +445,8 @@ export async function signIn(page, opts = {}) {
     )
     await route.fulfill({ status: reply.status, headers: reply.headers, contentType: 'application/json', body: JSON.stringify(reply.body) })
   })
+
+  await routePalettePreview(page)
 
   /* THE DECLARATION IS RE-READ ON EVERY LOAD; THE STORAGE IS SEEDED ONCE.
    *

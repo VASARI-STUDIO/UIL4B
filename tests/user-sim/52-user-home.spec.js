@@ -9,7 +9,7 @@
 //   signed-in session (helpers.js signIn), so every test below drives the real
 //   route; the fixture is used once, for four card states side by side.
 import { test, expect } from './base.js'
-import { go, watch, expectRendered, signIn } from './helpers.js'
+import { go, watch, expectRendered, signIn, routePalettePreview } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { createTools } from '../../src/data/toolTree.js'
@@ -148,6 +148,7 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
   // visitor straight here, and sign-up happens only when they save.
   test('the tools, the library and the sign-in are all on the page; the plan is not', async ({ page }) => {
     watch(page, 'a visitor arriving from "Open the toolkit"')
+    await routePalettePreview(page)
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
@@ -175,6 +176,15 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
     // New in Discover: four real library palettes and the way to the rest.
     await expect(page.locator('.uh-disc-card')).toHaveCount(4)
     await expect(page.getByRole('link', { name: 'Browse all' })).toHaveAttribute('href', '/discover/palettes')
+    // A visitor cannot open the Pro palettes, so those cards draw the server's blurred picture under
+    // "Opens with Pro" (the pictures load as they scroll into view), never the text fallback.
+    const locked = page.locator('.uh-disc-card.is-locked')
+    const lockedCount = await locked.count()
+    expect(lockedCount, 'no locked card for a visitor: the picture check measured nothing').toBeGreaterThan(0)
+    await page.locator('.uh-disc').scrollIntoViewIfNeeded()
+    await expect(page.locator('.uh-disc-lock.is-ready'), 'a locked card\'s picture did not arrive').toHaveCount(lockedCount)
+    await expect(locked.locator('.uh-disc-lock-label')).toHaveText(Array(lockedCount).fill('Opens with Pro'))
+    await expect(page.locator('.uh-disc-note')).toHaveCount(0)
   })
 
   test('Sign in opens the login popup where they are, instead of sending them to /login', async ({ page }) => {
