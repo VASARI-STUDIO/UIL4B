@@ -2,15 +2,15 @@
 //
 // The swatch "..." menu has a Pro item that opens a panel with the closest entry
 // of five colour systems (Tailwind v4, CSS, Material 2, Munsell, ISCC-NBS). The
-// colour data is five lazy chunks (/assets/<system>-<hash>.js, from
-// src/data/nearest/*.json) that only a Pro person's panel requests.
+// colour data is five hashed JSON files (/assets/<system>-<hash>.json, from
+// src/data/nearest/<system>.json) that only a Pro person's panel fetches.
 //
 // What this pins:
 //   1. Pro: the panel opens from "...", focus goes to its close button, five rows
 //      fill, pressing a row copies that system's code and shows the "Copied"
 //      toast, and Escape closes the panel and returns focus to that "...".
 //   2. Free: the panel is the locked preview. Five placeholder rows, no real
-//      match anywhere in the DOM, no request for any of the five chunks, and the
+//      match anywhere in the DOM, no request for any of the five files, and the
 //      wall's button goes to /plans.
 //   3. Offline: with the chunks refused every row says it failed and has its own
 //      "Try again"; pressing one fills that row and leaves the others failed.
@@ -29,7 +29,8 @@
 //      (a Free person's panel now requests all five chunks: "makes no request" goes red);
 //      or point the wall Link at another route.
 //   3. In nearestLoader.js stop deleting a failed promise from the cache (Try again
-//      re-rejects at once); or make `retry` start every id instead of the one asked.
+//      re-rejects at once: the recovery tests go red); or make `retry` start every id
+//      instead of the one asked.
 //   4. Drop the `@media (pointer: coarse)` min-height block for .plb-match-* in
 //      palette-builder.css, or `width: calc(100% - 24px)` in the 767px block.
 import { test, expect } from './base.js'
@@ -41,9 +42,9 @@ const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
 const BOARD = '/create/palette?c=6495ED,14224A,F2C14E,2563EB,C0392B'
 const SYSTEMS = ['tailwind', 'css', 'material', 'munsell', 'iscc-nbs']
 
-// A colour-system chunk as the build emits it: /assets/<id>-<8 hash characters>.js.
+// A colour-system file as the build emits it: /assets/<id>-<8 hash characters>.json.
 // The fixed hash length keeps material-symbols-<hash>.js, a different file, out.
-const CHUNK = /\/assets\/(tailwind|css|material|munsell|iscc-nbs)-[\w-]{8}\.js$/
+const CHUNK = /\/assets\/(tailwind|css|material|munsell|iscc-nbs)-[\w-]{8}\.json$/
 
 /** A visitor at an exact width: touch metrics on a phone, a mouse above it. */
 async function at(browser, width, { plan, height } = {}) {
@@ -53,7 +54,7 @@ async function at(browser, width, { plan, height } = {}) {
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
   const page = await ctx.newPage()
   watch(page, `${plan || 'signed-out'} palette visitor at ${width}px`)
-  // Every request for a colour-system chunk, whether or not it was answered.
+  // Every request for a colour-system file, whether or not it was answered.
   const chunks = []
   page.on('request', (req) => { if (CHUNK.test(new URL(req.url()).pathname)) chunks.push(new URL(req.url()).pathname) })
   if (plan) await signIn(page, { plan })
@@ -128,8 +129,8 @@ test.describe('Pro: nearest named colours', () => {
     const cssRow = panel.getByRole('button', { name: /^CSS: cornflowerblue, very close, difference 0\.0\. Copy cornflowerblue$/ })
     await expect(cssRow).toBeVisible()
     await expect(cssRow.locator('.plb-match-word')).toHaveText('Very close')
-    // Positive control for the Free test's "no request": a Pro panel asks for each chunk once.
-    expect([...new Set(chunks.map((c) => c.split('/').pop().replace(/-[\w-]{8}\.js$/, '')))].sort()).toEqual([...SYSTEMS].sort())
+    // Positive control for the Free test's "no request": a Pro panel asks for each file once.
+    expect([...new Set(chunks.map((c) => c.split('/').pop().replace(/-[\w-]{8}\.json$/, '')))].sort()).toEqual([...SYSTEMS].sort())
 
     // Pressing the CSS row copies its code and shows the toast.
     await cssRow.click()
@@ -157,7 +158,7 @@ test.describe('Pro: nearest named colours', () => {
 })
 
 test.describe('Free: the locked panel', () => {
-  test('shows placeholders only, requests no colour-system chunk, and the wall button goes to /plans', async ({ browser }) => {
+  test('shows placeholders only, requests no colour-system file, and the wall button goes to /plans', async ({ browser }) => {
     const { ctx, page, chunks } = await at(browser, 1440, { plan: 'free' })
     await page.locator('.plb-col').first().locator('.plb-tool--more').focus()
     await page.keyboard.press('Enter')
@@ -202,12 +203,11 @@ test.describe('Free: the locked panel', () => {
   })
 })
 
-// A person with no connection: the browser reports offline AND the chunks fail.
-// Both matter. Aborting alone leaves navigator.onLine true, and main.jsx answers
-// a chunk failure while "online" with one guarded page reload (it reads it as a
-// stale deploy), which closes the panel. "internetdisconnected" is also not one
-// of the build-asset guard's "file never arrived" errors, which would (rightly)
-// void a run that hit them by accident.
+// A person with no connection: the browser reports offline AND the files fail.
+// The loader uses fetch(), so a failure here is a rejected fetch. It never
+// reaches vite:preloadError, so the page is not reloaded under the person. The
+// tests prove that with a window marker that only survives while the page stays
+// the same document.
 const refuse = async (ctx) => {
   await ctx.route(CHUNK, (route) => route.abort('internetdisconnected'))
   await ctx.setOffline(true)
@@ -216,14 +216,13 @@ const restore = async (ctx) => {
   await ctx.setOffline(false)
   await ctx.unroute(CHUNK)
 }
-// Two systems refused while the network works for the other three. The browser
-// is told it is offline so the reload above does not fire.
+// Two systems refused while the network works for the other three.
 const refuseTwo = async (ctx, page) => {
-  await ctx.route(/\/assets\/(munsell|iscc-nbs)-[\w-]{8}\.js$/, (route) => route.abort('internetdisconnected'))
+  await ctx.route(/\/assets\/(munsell|iscc-nbs)-[\w-]{8}\.json$/, (route) => route.abort('internetdisconnected'))
   await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false }))
 }
-const restoreTwo = (ctx) => ctx.unroute(/\/assets\/(munsell|iscc-nbs)-[\w-]{8}\.js$/)
-const systemOf = (chunk) => chunk.split('/').pop().replace(/-[\w-]{8}\.js$/, '')
+const restoreTwo = (ctx) => ctx.unroute(/\/assets\/(munsell|iscc-nbs)-[\w-]{8}\.json$/)
+const systemOf = (chunk) => chunk.split('/').pop().replace(/-[\w-]{8}\.json$/, '')
 
 test.describe('Offline: the colour systems cannot load', () => {
   test('all five failing gives one message and one "Try again", and no rows', async ({ browser }) => {
@@ -242,19 +241,26 @@ test.describe('Offline: the colour systems cannot load', () => {
     await ctx.close()
   })
 
-  // KNOWN RED (product bug, not a test fault): the loader retries with import(), and
-  // Chromium keeps the failed import in its module map, so the retry never touches
-  // the network, fails at once, and main.jsx's vite:preloadError handler reloads the
-  // page (the connection is back, so it reads it as a stale deploy). The panel
-  // vanishes. src/data/emojiIndexLoader.js documents the same fault and uses fetch().
-  test('after the connection is back, "Try again" fills all five rows without reloading the page', async ({ browser }) => {
+  // Recovery. The loader fetch()es each file and drops a failed load from its
+  // cache, so "Try again" is a real request each time. (With import() the browser
+  // would cache the failure and the retry would never reach the network.)
+  test('a "Try again" that fails again stays failed; once the connection is back the next one fills all five rows without reloading the page', async ({ browser }) => {
     const { ctx, page, chunks } = await at(browser, 1440, { plan: 'pro' })
     await refuse(ctx)
     const panel = await openPanel(page, 0)
     const all = panel.locator('.plb-match-allfail')
     await expect(all).toBeVisible()
+    // Survives only while this is the same document: a reload clears it.
     await page.evaluate(() => { window.__nmStillHere = true })
 
+    // Still offline: pressing it asks for all five again (a real request each) and fails again.
+    const afterFirstFail = chunks.length
+    await all.getByRole('button', { name: 'Try again' }).click()
+    await expect.poll(() => chunks.length - afterFirstFail, { message: 'a retry while offline is a real request for each system' }).toBe(5)
+    await expect(all).toBeVisible()
+    await expect(rows(panel)).toHaveCount(0)
+
+    // The connection comes back; the same button now works.
     await restore(ctx)
     const before = chunks.length
     await all.getByRole('button', { name: 'Try again' }).click()
@@ -263,6 +269,9 @@ test.describe('Offline: the colour systems cannot load', () => {
     await expect(panel.getByRole('button', { name: /^CSS: cornflowerblue, very close/ })).toBeVisible()
     expect(await page.evaluate(() => window.__nmStillHere), 'the page was reloaded').toBe(true)
     expect(chunks.length - before, 'a retry is a real request for each system').toBe(5)
+    // Same panel, same swatch, same URL: nothing re-opened or navigated under the person.
+    await expect(panel).toHaveAccessibleName('Nearest named colours for #6495ED')
+    await expect(page).toHaveURL(/\/create\/palette\?c=6495ED/)
     await ctx.close()
   })
 
@@ -284,7 +293,6 @@ test.describe('Offline: the colour systems cannot load', () => {
     await ctx.close()
   })
 
-  // KNOWN RED for the same reason as above.
   test('a row\'s "Try again" fills only that row, asking for that one system, then the other', async ({ browser }) => {
     const { ctx, page, chunks } = await at(browser, 1440, { plan: 'pro' })
     await refuseTwo(ctx, page)
