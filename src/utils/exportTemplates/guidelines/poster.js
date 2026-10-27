@@ -16,7 +16,15 @@ const COVER_FIT = Object.freeze({ steps: Object.freeze([120, 92, 64, 48]), maxLi
 // With a logo the mark takes 40 mm above the title: two lines at 92 pt are the largest that fit the 71 mm left.
 const COVER_FIT_LOGO = Object.freeze({ steps: Object.freeze([92, 64, 48]), maxLines: 2, measure: MEASURE })
 const NAME_FIT = Object.freeze({ steps: Object.freeze([96, 72, 54]), maxLines: 2, measure: MEASURE })
-const FAMILY_FIT = Object.freeze({ steps: Object.freeze([140, 110, 88, 68, 52]), maxLines: 2, measure: MEASURE })
+// The family name: 140 pt only on one line; otherwise two lines at the largest step whose height the slide has room for.
+const FAMILY_ONE_LINE_PT = 140
+const FAMILY_STEPS = Object.freeze([110, 88, 68, 52])
+const FAMILY_FIT = Object.freeze({ steps: FAMILY_STEPS, maxLines: 2, measure: MEASURE })
+// The room the name has on the typography slide, in mm: the slide's body less the 24 pt chrome and the caption.
+const FAMILY_ROOM_MM = 119.8
+// What shares that room with the name: the 8 mm gap and the two-line alphabet (20 pt, 1.3 leading).
+const FAMILY_REST_MM = 8 + 18.3
+const PT_MM = 25.4 / 72
 const WEIGHT = { primary: 3, accent: 2, neutral: 1 }
 const BAND_AREA_MM = 269
 // A band this wide or wider carries its own "where it lands" line; below BAND_HEX_MM it carries no label at all (the list below names it).
@@ -107,7 +115,9 @@ function clearSpaceSlide(ctx, n) {
   const h = Math.min(50, 250 / ((logo.aspect || 1) + 1))
   const cs = ctx.clearSpaceAt(h)
   if (!cs) return ''
-  const accent = (ctx.slots.find((s) => s.kind === 'accent') || ctx.slots[0] || { hex: ctx.field, ink: ctx.fieldInk })
+  // The first accent that reads against the paper at 3:1 (a non-text graphic); if none does, the hairlines are ink.
+  const accent = ctx.slots.find((s) => s.kind === 'accent' && ctx.contrast(s.hex, ctx.roles.paper) >= 3)
+    || { hex: ctx.roles.ink, ink: ctx.roles.paper }
   return slide(n, 'Clear space', {
     bg: ctx.roles.paper, fg: ctx.roles.ink, cls: 'sl-cs',
     body: `<div class="pn-stage"><div class="pn-zone" style="--x:${cs.x.toFixed(1)}mm;--accent:${safeHex(accent.hex, 'GrayText')};--accent-ink:${safeHex(accent.ink, 'CanvasText')}">
@@ -118,14 +128,29 @@ function clearSpaceSlide(ctx, n) {
   })
 }
 
+/** The family name's size: one line at 140 pt if it fits, else the largest two-line step that fits the slide's width and height. */
+function familyFit(name) {
+  const spec = (size, maxLines) => ({ steps: [size], maxLines, measure: MEASURE })
+  // The name's height: its lines, the .14 em pad under them, then the gap and the alphabet.
+  const heightMm = (size, lines) => lines * size * PT_MM + size * 0.14 * PT_MM + FAMILY_REST_MM
+  const fits = (fit) => !fit.clamp && !fit.broken && heightMm(fit.size, fit.lines) <= FAMILY_ROOM_MM
+  const one = fitTitle(name, spec(FAMILY_ONE_LINE_PT, 1))
+  if (fits(one)) return { fit: one, opts: spec(FAMILY_ONE_LINE_PT, 1) }
+  for (const size of FAMILY_STEPS.slice(0, -1)) {
+    const two = fitTitle(name, spec(size, 2))
+    if (fits(two)) return { fit: two, opts: spec(size, 2) }
+  }
+  return { fit: fitTitle(name, FAMILY_FIT), opts: FAMILY_FIT }
+}
+
 function typeSlide(ctx, f, n, dark) {
-  const fit = fitTitle(f.family, FAMILY_FIT)
+  const { fit, opts } = familyFit(f.family)
   const bg = dark ? ctx.roles.ink : ctx.roles.paper
   const fg = dark ? ctx.roles.paper : ctx.roles.ink
   const soft = softInk(fg, bg, ctx.contrast)
   return slide(n, 'Typography', {
     bg, fg, cls: 'sl-type',
-    body: `<div class="pn-fam" style="font-family:${fam(f.family)};font-weight:${f.weight}">${titleBlock(f.family, fit, FAMILY_FIT, 'pn-famname')}
+    body: `<div class="pn-fam" style="font-family:${fam(f.family)};font-weight:${f.weight}">${titleBlock(f.family, fit, opts, 'pn-famname')}
       <p class="pn-set">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz 0123456789</p></div>
     <p class="pn-cap" style="color:${safeHex(soft, 'CanvasText')}">${esc(f.role)}, weight ${esc(f.weight)}</p>`,
   })
