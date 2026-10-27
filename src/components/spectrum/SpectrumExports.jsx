@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PhIcon from './PhIcon'
 import { FREE_SAVE_LIMITS } from '../../config/plans'
+import { HOME_EXPORTS } from '../../data/homeExports.generated'
 import { numberWord, route } from './spectrumFacts'
 import { prefersReducedMotion } from './reducedMotion'
 import {
@@ -12,9 +13,6 @@ import {
   FONTS,
   GLYPHS,
   ICON_FORMATS,
-  KIT_FILES,
-  KIT_PAGES,
-  KIT_ROLES,
   PROJECTS,
   TYPE_LABELS,
   TYPE_STEPS,
@@ -22,7 +20,6 @@ import {
   exFileOf,
   formatBytes,
   rampOf,
-  ratio,
   remPx,
 } from './spectrumKit'
 
@@ -45,19 +42,25 @@ import {
 // scale it by 1 − 0.045 per docked card and dim it by 1 − 0.05, from its top
 // edge, over the 240ms transition in spectrum.css. Two cards on top of card 0
 // give .91; one on card 1 gives .955. Skipped under reduced motion and, by the
-// CSS, below 900px, where the stack is three ordinary cards.
+// CSS, at 1199px and below, where the stack is three ordinary cards (a card there
+// is taller than most screens, so it cannot pin).
+//
+// ── ONE FRAME ───────────────────────────────────────────────────────────────
+// Every card is the same fixed size at a given width (spectrum.css, "one card
+// system"): a copy column and a stage. Card 1's stage is its live panel. Cards 2
+// and 3 put a plate in the stage: real renders of the product's own exports, made
+// by scripts/home-exports/generate.mjs and listed in src/data/homeExports.generated.js.
 //
 // ── WHAT IS LIVE ────────────────────────────────────────────────────────────
 // Card 1's panel builds a real file from the seed chosen in the bench's palette
 // window (and the family chosen in its font window), and "Copy file" copies it.
-// Card 2's document is the exported UI kit's own four pages, recoloured by the
-// same seed. The design's links between the windows are kept: change a seed
-// above and both cards follow.
+// Cards 2 and 3 are pictures, rendered once from fixed inputs (Cobalt, Schibsted
+// Grotesk, Literata, Northbeam); they do not follow the bench.
 
 const TOPS = [84, 116, 148]
 
 function stackPass(els) {
-  const off = prefersReducedMotion() || window.innerWidth <= 900
+  const off = prefersReducedMotion() || window.innerWidth <= 1199
   for (let i = 0; i < els.length; i += 1) {
     const el = els[i]
     if (!el) continue
@@ -220,106 +223,185 @@ function OnePiece({ base, font }) {
   )
 }
 
-/* ── card 2 · the UI kit document ─────────────────────────────────────────── */
+/* ── cards 2 and 3 · the plate ────────────────────────────────────────────── */
+//
+// A plate is a picture of a real export on the stage's ground, with a row of
+// buttons under it that picks which one. Card 2 uses it as a tab strip (UI kit,
+// Book, Brand deck); card 3 as a radio group of the example projects.
+//
+// Loading: only the shown picture is fetched. A tab's picture is mounted on its
+// first pointerenter, focus or press, and every picture is lazy. The shown
+// picture changes only once the new one has decoded, so a swap never shows an
+// empty plate (the old one is held until then). Both pictures stay stacked in the
+// same box, so nothing below the card moves.
 
-function KitDocument({ base, font }) {
-  const [page, setPage] = useState(0)
-  const seed = BASES[base]
-  const ramp = rampOf(seed)
-  const spec = FONTS[font]
-  const inkOnPaper = (hex) => (ratio(hex, '#F7F6F1') >= ratio(hex, '#18221E') ? '#F7F6F1' : '#18221E')
-  // The exported kit's own five roles and notes, in its order; only the fill
-  // comes from the seed's ramp.
-  const swatches = KIT_ROLES.map(({ role, note, at }) => [role, ramp[at].hex, note])
-  const headStyle = { fontFamily: spec.family }
+const PLATE_SIZES = '(min-width: 1200px) min(700px, 52vw), calc(100vw - 118px)'
+const PORTRAIT_SIZES = 'calc(100vw - 72px)'
+const COVER_SIZES = '(min-width: 1200px) 340px, 280px'
+
+const TAB_ITEMS = HOME_EXPORTS.plates.map((p) => ({
+  id: p.id,
+  label: p.tab,
+  // The accessible name has to contain the visible label ("Brand deck").
+  name: p.tabName.toLowerCase().includes(p.tab.toLowerCase()) ? p.tabName : `${p.tab}, ${p.tabName}`,
+  alt: p.alt,
+  variants: p,
+}))
+
+// The three example projects, each with its book cover. PROJECTS and the covers
+// are in the same order (Northbeam, Halcyon, Ferrule).
+const PROJECT_ITEMS = PROJECTS.map(([name, when, parts], i) => {
+  const cover = HOME_EXPORTS.covers[i]
+  return {
+    id: cover.id,
+    label: name.split(/[\s,]/)[0],
+    name,
+    alt: cover.alt,
+    variants: cover,
+    when,
+    parts,
+  }
+})
+
+function PlatePicture({ item, on, failed, imgRef, onLoad, onError }) {
+  const v = item.variants
+  const cover = v.landscape === null
+  const main = cover ? v.portrait : v.landscape
+  const img = (
+    <img
+      ref={imgRef}
+      className={on ? 'is-on' : undefined}
+      src={main.src}
+      srcSet={main.srcset}
+      sizes={cover ? COVER_SIZES : PLATE_SIZES}
+      width={main.width}
+      height={main.height}
+      loading="lazy"
+      decoding="async"
+      alt={item.alt}
+      aria-hidden={on ? undefined : true}
+      hidden={failed}
+      onLoad={onLoad}
+      onError={onError}
+    />
+  )
+  if (cover) return img
+  return (
+    <picture>
+      <source media="(max-width: 760px)" type="image/webp" srcSet={v.portrait.srcset} sizes={PORTRAIT_SIZES} />
+      {img}
+    </picture>
+  )
+}
+
+function ExportPlate({ items, mode, label, caption }) {
+  const tabs = mode === 'tabs'
+  const uid = useId()
+  const panelId = `${uid}-panel`
+  const tabId = (i) => `${uid}-pick-${i}`
+  const [active, setActive] = useState(0)
+  const [shown, setShown] = useState(0)
+  const [swapped, setSwapped] = useState(false)
+  const [mounted, setMounted] = useState(() => new Set([0]))
+  const [failed, setFailed] = useState(() => new Set())
+  const activeRef = useRef(0)
+  const imgs = useRef([])
+  const buttons = useRef([])
+
+  const mount = (i) => setMounted((prev) => (prev.has(i) ? prev : new Set(prev).add(i)))
+
+  // Show picture i once it has decoded, unless the reader has moved on.
+  const reveal = (i) => {
+    const el = imgs.current[i]
+    const done = () => { if (activeRef.current === i) setShown(i) }
+    if (el && el.decode) el.decode().then(done, done)
+    else done()
+  }
+
+  const select = (i) => {
+    if (i === activeRef.current) return
+    activeRef.current = i
+    setActive(i)
+    setSwapped(true)
+    mount(i)
+    const el = imgs.current[i]
+    if (el && el.complete && el.naturalWidth > 0) reveal(i)
+    buttons.current[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }
+
+  const onLoad = (i) => () => { if (activeRef.current === i) reveal(i) }
+  const onError = (i) => () => {
+    setFailed((prev) => new Set(prev).add(i))
+    if (activeRef.current === i) setShown(i)
+  }
+
+  const onKeyDown = (e) => {
+    const n = items.length
+    let to = -1
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (active + 1) % n
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (active - 1 + n) % n
+    else if (e.key === 'Home') to = 0
+    else if (e.key === 'End') to = n - 1
+    if (to < 0) return
+    e.preventDefault()
+    select(to)
+    buttons.current[to]?.focus()
+  }
 
   return (
-    <div className="sp-kit">
-      <div className="sp-kit-paper">
-        <div className="sp-kit-tabs">
-          {KIT_PAGES.map((label, i) => (
-            <button key={label} type="button" className="sp-kit-tab" aria-pressed={page === i} onClick={() => setPage(i)}>{label}</button>
-          ))}
+    <div className="sp-stage">
+      <div
+        className="sp-plate"
+        id={tabs ? panelId : undefined}
+        role={tabs ? 'tabpanel' : undefined}
+        aria-labelledby={tabs ? tabId(active) : undefined}
+        tabIndex={tabs ? 0 : undefined}
+      >
+        <div className={swapped ? 'sp-plate-art is-swap' : 'sp-plate-art'}>
+          {items.map((item, i) => (mounted.has(i) ? (
+            <PlatePicture
+              key={item.id}
+              item={item}
+              on={shown === i}
+              failed={failed.has(i)}
+              imgRef={(el) => { imgs.current[i] = el }}
+              onLoad={onLoad(i)}
+              onError={onError(i)}
+            />
+          ) : null))}
+          {failed.has(shown) && <p className="sp-plate-fail">{items[shown].alt}</p>}
         </div>
+        <div className="sp-plate-cap">{caption(items[shown])}</div>
+      </div>
 
-        <div className="sp-kit-body">
-          {page === 0 && (
-            <div className="sp-kit-colour">
-              <span className="sp-kit-h" style={headStyle}>A palette with purpose.</span>
-              <span className="sp-kit-sws">
-                {swatches.map(([name, hex, role]) => (
-                  <span className="sp-kit-sw" key={name}>
-                    <span style={{ background: hex, color: inkOnPaper(hex) }}>
-                      <b>{name}</b>
-                      <code>{hex}</code>
-                    </span>
-                    <small>{role}</small>
-                  </span>
-                ))}
-              </span>
-            </div>
-          )}
-          {page === 1 && (
-            <div className="sp-kit-type">
-              <span className="sp-kit-h" style={headStyle}>Type that does the work.</span>
-              <span className="sp-kit-pair">
-                <span>
-                  <small><span>{spec.name}</span><span>Display / 600</span></small>
-                  <span className="sp-kit-aa" style={headStyle}>Aa</span>
-                </span>
-                <span>
-                  <small><span>Body face</span><span>Body / 400</span></small>
-                  <span className="sp-kit-body-face">The everyday deserves a little extra thought.</span>
-                </span>
-              </span>
-              {TYPE_STEPS.map(([name, value]) => (
-                <span className="sp-kit-step" key={name}>
-                  <small>{name}</small>
-                  <b style={{ ...headStyle, fontSize: `${Math.min(34, Math.round(parseFloat(value) * 13))}px` }}>A fresh perspective.</b>
-                  <code>{value}</code>
-                </span>
-              ))}
-            </div>
-          )}
-          {page === 2 && (
-            <div className="sp-kit-found">
-              <span className="sp-kit-h" style={headStyle}>The quiet foundations.</span>
-              <span>
-                <small>Space to breathe.</small>
-                <span className="sp-kit-space">
-                  {[4, 8, 12, 16, 24, 32, 48].map((n, i) => (
-                    <span key={n}><i style={{ height: `${8 + i * 8}px` }} /><code>{n}</code></span>
-                  ))}
-                </span>
-              </span>
-              <span>
-                <small>Structure with flexibility. 12 columns, 1,200 px.</small>
-                <span className="sp-kit-cols">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</span>
-              </span>
-            </div>
-          )}
-          {page === 3 && (
-            <div className="sp-kit-files">
-              <span>
-                <span className="sp-kit-h" style={headStyle}>Ready for your next build.</span>
-                <small>Take the colour, type and spacing tokens straight into the project.</small>
-              </span>
-              <ul>
-                {KIT_FILES.map(([name, meta]) => (
-                  <li key={name}>
-                    <span><b>{name}</b><small>{meta}</small></span>
-                    <PhIcon name="download-simple" />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div className="sp-kit-foot">
-          <span>{`${seed.label} kit, page ${page + 1} of 4`}</span>
-          <span>UI kit / Free edition</span>
-        </div>
+      <div
+        className="sp-pick"
+        role={tabs ? 'tablist' : 'radiogroup'}
+        aria-label={label}
+        onKeyDown={onKeyDown}
+      >
+        {!tabs && <span className="sp-pick-label" aria-hidden="true">Example projects</span>}
+        {items.map((item, i) => (
+          <button
+            key={item.id}
+            ref={(el) => { buttons.current[i] = el }}
+            id={tabs ? tabId(i) : undefined}
+            type="button"
+            className="sp-pick-btn"
+            role={tabs ? 'tab' : 'radio'}
+            aria-selected={tabs ? active === i : undefined}
+            aria-checked={tabs ? undefined : active === i}
+            aria-controls={tabs ? panelId : undefined}
+            aria-label={item.name}
+            tabIndex={active === i ? 0 : -1}
+            onClick={() => select(i)}
+            onPointerEnter={() => mount(i)}
+            onFocus={() => mount(i)}
+          >
+            {!tabs && <PhIcon name="folder-simple" className="sp-pick-ico" />}
+            <span>{item.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   )
@@ -352,17 +434,18 @@ export default function SpectrumExports({ base, font }) {
           <Card index={1} setRef={setRef(1)}>
             <div className="sp-stack-say">
               <h3>Or a whole design system.</h3>
-              <p className="sp-stack-wide">
-                One click lays your colour, type and spacing into a full kit: a colour page with named
-                roles, the type specimen and scale, the spacing and grid foundations, and a files page
-                holding every download.
+              <p>
+                One click turns your colour, type and spacing into a UI kit. On Pro the same system
+                also leaves as a 12-page book and a 16:9 brand deck.
               </p>
-              {/* The design's chip row (PDF, Tokens) is a sentence: the kit has no
-                  PDF path, and its Files page lists .html, .css and .json. */}
-              <p>Leaves as one HTML document, with the CSS and JSON tokens beside it.</p>
-              <p className="sp-stack-note">The Free edition exports every page. Pro removes the mark.</p>
+              <p className="sp-stack-note">The UI kit is free. The book and the deck are Pro.</p>
             </div>
-            <KitDocument base={base} font={font} />
+            <ExportPlate
+              items={TAB_ITEMS}
+              mode="tabs"
+              label="Export type"
+              caption={() => 'Real exports, made from the Cobalt palette with Schibsted Grotesk and Literata.'}
+            />
           </Card>
           <div className="sp-stack-pad" aria-hidden="true" />
 
@@ -378,17 +461,17 @@ export default function SpectrumExports({ base, font }) {
                   {numberWord(FREE_SAVE_LIMITS.projects, { capital: true })} projects on Free, unlimited on Pro.
                 </p>
               </div>
-              <div className="sp-projects-wrap">
-                <p className="sp-projects-cap">Example projects</p>
-                <ul className="sp-projects">
-                  {PROJECTS.map(([name, when, parts]) => (
-                    <li key={name}>
-                      <span className="sp-projects-ico" aria-hidden="true"><PhIcon name="folder-simple" /></span>
-                      <span><b>{name}</b><small>{when}, {parts}</small></span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ExportPlate
+                items={PROJECT_ITEMS}
+                mode="radio"
+                label="Example projects"
+                caption={(item) => (
+                  <>
+                    <b>{item.name}</b>
+                    <span>{item.when}, {item.parts}</span>
+                  </>
+                )}
+              />
             </Card>
             <div className="sp-stack-pad sp-stack-pad--tail" aria-hidden="true" />
           </div>
