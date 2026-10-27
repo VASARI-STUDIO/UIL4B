@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { categoryDestination } from '../../data/toolTree'
 import FounderNote from '../FounderNote'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import PhGlyph from './PhGlyph'
 import { PH_ARROW_UP_RIGHT } from './phosphorNav'
 import { crossRouteHashClick, salesHref } from './salesLinks'
@@ -152,7 +153,10 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
   const footerRef = useRef(null)
-  const curtain = useCurtain(footerRef, reveal && !reducedMotion)
+  // A phone's toolbar resizes the window as it scrolls, which would switch the
+  // curtain on and off mid-scroll, so a coarse pointer gets a plain footer.
+  const coarse = useMediaQuery('(pointer: coarse)')
+  const curtain = useCurtain(footerRef, reveal && !reducedMotion && !coarse)
 
   return (
     <footer

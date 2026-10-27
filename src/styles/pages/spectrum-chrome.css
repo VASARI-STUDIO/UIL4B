@@ -329,6 +329,24 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
   .sp-footer .sp-footer-col ul{gap:0}
   .sp-footer .sp-footer-col a{display:flex;min-height:44px}
 }
+/* Phones and tablets: the brand cell takes the full width and the four link
+   columns sit under it, four across on a tablet and two by two on a phone, so
+   no column is left alone on its row. */
+@media(max-width:1000px){
+  .sp-footer .sp-footer-inner{padding-bottom:max(48px,env(safe-area-inset-bottom))}
+  .sp-footer .sp-footer-brand{grid-column:1 / -1}
+}
+@media(min-width:761px) and (max-width:1000px){
+  .sp-footer .sp-footer-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  /* Two stacks side by side, each holding whole columns in reading order, so the
+     short columns do not leave a hole beside the long one. */
+  .sp-footer .sp-footer-grid{grid-template-columns:minmax(0,1fr);row-gap:32px}
+  .sp-footer .sp-footer-links{display:block;columns:2;column-gap:16px}
+  .sp-footer .sp-footer-col{break-inside:avoid;padding-bottom:32px}
+  .sp-footer .sp-footer-col:last-child{padding-bottom:0}
+}
 /* The baseline (1631). */
 .sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t2)}
 .sp-footer .sp-footer-legal a{color:var(--t1)}
