@@ -9,6 +9,7 @@ import { buildCSSVars } from '../utils/exportBuilder'
 import { tintsCurrent } from '../utils/projectTints'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
+import IconPicker from '../components/userhome/IconPicker'
 import { UPGRADE_LINE, byRecent, projectSlots4, projectStatus, upgradeOffer } from '../components/userhome/workspace'
 import { usePrices, useProPrice } from '../hooks/usePrices'
 import '../styles/deferred/account.css'
@@ -268,6 +269,8 @@ function ProjectDetail({ id, toast }) {
           <div className="pjd-progress-track" aria-hidden="true"><span style={{ width: status.pct }} /></div>
           <span className="pjd-progress-label">{status.has}</span>
         </div>
+
+        <IconPicker project={project} />
 
         <div className="pjd-slots">
           {slots.map((s) => (

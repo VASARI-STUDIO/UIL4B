@@ -4,6 +4,7 @@ import { LIBRARY_PALETTE_ROWS } from '../../data/paletteLibrary'
 import { useProLibrary } from '../../hooks/useProLibrary'
 import { isStub, rowSlots } from '../../utils/libraryRules'
 import { classifyPalette, MOOD_LABELS } from '../../utils/paletteMood'
+import Glyph from './Glyph'
 import { newestPalettes } from './workspace'
 
 // "New in Discover" — four palette cards and "Browse all", as drawn in
@@ -14,9 +15,9 @@ import { newestPalettes } from './workspace'
 // find there.
 //
 // A palette the account has not opened is a name-only row in the bundle: its
-// card shows neutral steps where the colours would be, and links to the
-// library, which says what Pro opens. A Pro account fetches the whole library
-// and sees the colours.
+// card has no colours to draw, so it carries a lock label ("Pro palette. Opens with Pro") in the
+// strip's place, never grey stand-in swatches, and links to the library, which says what Pro
+// opens. A Pro account fetches the whole library and sees the colours.
 //
 // The meta line is the design's "<mood>, <n> colours". The mood is the library's own
 // classifier (utils/paletteMood.js) — the one its Mood filter uses — never a tag
@@ -49,12 +50,28 @@ export default function DiscoverPicks() {
           const size = held ? p.colors.length : rowSlots(p)
           const mood = held ? moodOf(p.colors) : null
           const count = `${size} colour${size === 1 ? '' : 's'}`
+          if (!held) {
+            // No colour reaches the page for a locked palette, and none is drawn: the label says what
+            // the card is from the first frame.
+            return (
+              <Link key={p.id} className="uh-disc-card is-locked" to="/discover/palettes" aria-label={`${p.name}, Pro palette, opens with Pro`}>
+                <span className="uh-disc-lock" aria-hidden="true">
+                  <span className="uh-disc-lock-label">
+                    <Glyph name="lock-simple" size={14} />
+                    <span>Pro palette. Opens with Pro</span>
+                  </span>
+                </span>
+                <span className="uh-disc-body">
+                  <span className="uh-disc-name">{p.name}</span>
+                  <span className="uh-disc-meta">{count} · Pro</span>
+                </span>
+              </Link>
+            )
+          }
           return (
             <Link key={p.id} className="uh-disc-card" to="/discover/palettes">
-              <span className={held ? 'uh-disc-strip' : 'uh-disc-strip uh-disc-strip--locked'} aria-hidden="true">
-                {held
-                  ? p.colors.map((c) => <span key={c} style={{ background: c }} />)
-                  : Array.from({ length: size }, (_, i) => <span key={i} />)}
+              <span className="uh-disc-strip" aria-hidden="true">
+                {p.colors.map((c) => <span key={c} style={{ background: c }} />)}
               </span>
               <span className="uh-disc-body">
                 <span className="uh-disc-name">{p.name}</span>
