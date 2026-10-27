@@ -466,7 +466,8 @@ async function loadGlyphBatchOutcome(pack, names) {
   if (!applyGlyphData(pack, names, data, GLYPH_STORES)) return { ok: false, kind: classifyAnimatedFailure(staleAnimatedAnswer()) }
   // Put the batch in the sprite before the answer is reported, so the cells that
   // paint on the tick that follows find their symbols already there.
-  await registerGlyphSymbols(pack, names)
+  // A sprite failure must not hold the batch: its icons fall back to their data URIs.
+  try { await registerGlyphSymbols(pack, names) } catch { /* drawn as images instead */ }
   return { ok: true }
 }
 const loadGlyphBatch = async (pack, names) => (await loadGlyphBatchOutcome(pack, names)).ok
