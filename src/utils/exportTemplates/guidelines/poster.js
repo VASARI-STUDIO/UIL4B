@@ -5,7 +5,7 @@
 // least two thirds of the slide. The template composes the whole deck (`slides`);
 // the generator hands it the facts and the logo geometry.
 
-import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale } from '../shared.js'
 import { mixHex, softInk } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Big Shoulders Display', weights: '100 900', file: 'big-shoulders-display-latin.woff2' })
@@ -13,12 +13,17 @@ const CHROME = Object.freeze({ family: 'Big Shoulders Display', weights: '100 90
 // 269 mm (the slide less a 14 mm safe area each side) in points.
 const MEASURE = 762
 const COVER_FIT = Object.freeze({ steps: Object.freeze([120, 92, 64, 48]), maxLines: 2, measure: MEASURE })
+// With a logo the mark takes 40 mm above the title: two lines at 92 pt are the largest that fit the 71 mm left.
+const COVER_FIT_LOGO = Object.freeze({ steps: Object.freeze([92, 64, 48]), maxLines: 2, measure: MEASURE })
 const NAME_FIT = Object.freeze({ steps: Object.freeze([96, 72, 54]), maxLines: 2, measure: MEASURE })
 const FAMILY_FIT = Object.freeze({ steps: Object.freeze([140, 110, 88, 68, 52]), maxLines: 2, measure: MEASURE })
 const WEIGHT = { primary: 3, accent: 2, neutral: 1 }
 const BAND_AREA_MM = 269
-// A band this wide or wider carries its own "where it lands" line.
+// A band this wide or wider carries its own "where it lands" line; below BAND_HEX_MM it carries no label at all (the list below names it).
 const BAND_TEXT_MM = 28
+const BAND_HEX_MM = 14
+// What the scale table has to fit, in mm: the height under its head, the specimen column's width, a row's padding and its row text.
+const SCALE_FIT = Object.freeze({ roomMm: 114, widthMm: 183, padMm: 4.45, textMm: 4.9, lineHeight: 1.15 })
 
 const pad = (n) => String(n).padStart(2, '0')
 const fam = (name) => `'${esc(name)}',system-ui,sans-serif`
@@ -39,11 +44,12 @@ function slide(n, section, { bg, fg, cls = '', body }) {
 
 function cover(ctx) {
   const { projectName, field, fieldInk, year, d } = ctx
-  const fit = fitTitle(projectName, COVER_FIT)
+  const spec = d.logo ? COVER_FIT_LOGO : COVER_FIT
+  const fit = fitTitle(projectName, spec)
   const mark = d.logo ? ctx.markImg({ cls: 'pn-cover-mark', alt: `${projectName} logo` }) : ''
   return `<section class="sl sl-poster sl-cover" style="background:${safeHex(field, 'Canvas')};color:${safeHex(fieldInk, 'CanvasText')}">
   <header class="pn-top"><span class="pn-sec">${mark || 'Brand guidelines'}</span><span class="pn-num">${esc(year)}</span></header>
-  ${titleBlock(projectName, fit, COVER_FIT, 'cv-title')}
+  ${titleBlock(projectName, fit, spec, 'cv-title')}
 </section>`
 }
 
@@ -68,9 +74,10 @@ function summarySlide(ctx, n) {
   const slots = ctx.slots
   const total = slots.reduce((sum, s) => sum + WEIGHT[s.kind], 0)
   const wide = (s) => BAND_AREA_MM * WEIGHT[s.kind] / total >= BAND_TEXT_MM
+  const bandMm = (s) => BAND_AREA_MM * WEIGHT[s.kind] / total
   const bands = slots.map((s) => `<div class="pn-band" style="flex:${WEIGHT[s.kind]} 1 0;background:${safeHex(s.hex, 'GrayText')};color:${safeHex(s.ink, 'CanvasText')}">${wide(s)
     ? `<b>${esc(s.name)}</b><span class="pn-hex">${esc(s.hex)}</span><span>${esc(s.lands)}</span>`
-    : `<span class="pn-hex">${esc(s.hex)}</span>`}</div>`).join('')
+    : bandMm(s) >= BAND_HEX_MM ? `<span class="pn-hex">${esc(s.hex)}</span>` : ''}</div>`).join('')
   const rest = slots.filter((s) => !wide(s))
   const list = rest.length
     ? `<ul class="pn-list">${rest.map((s) => `<li><i style="background:${safeHex(s.hex, 'GrayText')}"></i><b>${esc(s.name)}</b> ${esc(s.hex)}<span>${esc(s.lands)}</span></li>`).join('')}</ul>`
@@ -101,9 +108,10 @@ function clearSpaceSlide(ctx, n) {
   const accent = (ctx.slots.find((s) => s.kind === 'accent') || ctx.slots[0] || { hex: ctx.field, ink: ctx.fieldInk })
   return slide(n, 'Clear space', {
     bg: ctx.roles.paper, fg: ctx.roles.ink, cls: 'sl-cs',
-    body: `<div class="pn-stage"><div class="pn-zone" style="padding:${cs.x.toFixed(1)}mm;background:${safeHex(accent.hex, 'GrayText')};color:${safeHex(accent.ink, 'CanvasText')}">
-      <span class="pn-x" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
-      <span class="pn-markbox" style="background:${safeHex(ctx.roles.paper, 'Canvas')}">${ctx.markImg({ cls: 'pn-mark-cs', height: `${cs.markHeight.toFixed(1)}mm` })}</span>
+    body: `<div class="pn-stage"><div class="pn-zone" style="--x:${cs.x.toFixed(1)}mm;--accent:${safeHex(accent.hex, 'GrayText')};--accent-ink:${safeHex(accent.ink, 'CanvasText')}">
+      <span class="pn-x pn-x-a">X</span>
+      <span class="pn-x pn-x-b">X</span>
+      <span class="pn-markbox">${ctx.markImg({ cls: 'pn-mark-cs', height: `${cs.markHeight.toFixed(1)}mm` })}</span>
     </div></div><p class="pn-cap">X is half the height of the mark. This is the default rule this document applies, not a decision already taken.</p>`,
   })
 }
@@ -123,14 +131,16 @@ function typeSlide(ctx, f, n, dark) {
 
 function scaleSlide(ctx, n) {
   const { d, ladder } = ctx
+  // One share of true size for every specimen: 100% when the ladder fits, else the largest that does.
+  const { k, label } = specimenScale(ladder, SCALE_FIT)
   const rows = ladder.map((s) => {
     const heading = s.exp >= 1
     return `<tr><th scope="row">${esc(s.name)}</th><td>${s.px}px</td><td>${heading ? 1.15 : d.lineHeight}</td>
-      <td class="sp" style="font-size:${Math.min(s.px, 34)}px;font-family:${fam(heading ? d.heading : d.body)};font-weight:${heading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td></tr>`
+      <td class="sp" style="font-size:${(s.px * k).toFixed(1)}px;font-family:${fam(heading ? d.heading : d.body)};font-weight:${heading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td></tr>`
   }).join('')
   return slide(n, 'The scale', {
     bg: ctx.roles.paper, fg: ctx.roles.ink, cls: 'sl-scale',
-    body: `<table class="pn-scale"><thead><tr><th>Step</th><th>Size</th><th>Leading</th><th>Specimen</th></tr></thead><tbody>${rows}</tbody></table>`,
+    body: `<table class="pn-scale"><colgroup><col style="width:34mm"><col style="width:24mm"><col style="width:24mm"><col></colgroup><thead><tr><th>Step</th><th>Size</th><th>Leading</th><th>${esc(label)}</th></tr></thead><tbody>${rows}</tbody></table>`,
   })
 }
 
@@ -203,12 +213,12 @@ function css(ctx) {
 
   /* the summary: every colour as a band */
   .sl-bands{padding-bottom:var(--m)}
-  .pn-bands{display:flex;height:88mm;margin-top:6mm;border:.25mm solid var(--rule)}
+  .pn-bands{display:flex;flex:1 1 auto;min-height:60mm;margin-top:6mm;border:.25mm solid var(--rule)}
   .pn-band{min-width:0;padding:4mm 1.5mm;display:flex;flex-direction:column;justify-content:flex-end;gap:2mm;font-size:8pt;line-height:1.3;overflow:hidden}
   .pn-band b{font-family:var(--head);font-weight:${d.headingWeight};font-size:10pt;line-height:1.1;overflow-wrap:break-word}
   .pn-band span{overflow-wrap:break-word}
   .pn-band .pn-hex{white-space:nowrap;font-size:7pt;letter-spacing:-.01em}
-  .pn-list{list-style:none;padding:0;margin-top:5mm;columns:3;column-gap:6mm;font-size:8pt;line-height:1.35}
+  .pn-list{flex:none;list-style:none;padding:0;margin-top:5mm;columns:3;column-gap:6mm;font-size:8pt;line-height:1.35}
   .pn-list li{break-inside:avoid;padding:0 0 1.6mm;overflow-wrap:anywhere}
   .pn-list i{display:inline-block;width:3mm;height:3mm;margin-right:1.6mm;vertical-align:-.4mm;border:.25mm solid var(--rule)}
   .pn-list span{display:block;color:var(--muted)}
@@ -218,10 +228,14 @@ function css(ctx) {
   .pn-mark{display:block;max-height:83mm;max-width:240mm;width:auto;height:auto;object-fit:contain}
   .pn-mark-s{max-height:60mm}
   .pn-cap{flex:none;margin-top:4mm;font-size:12pt;max-width:220mm;overflow-wrap:anywhere}
-  .pn-zone{position:relative;display:flex}
-  .pn-markbox{display:flex;align-items:center;justify-content:center}
+  /* clear space drawn as measurement on paper: the zone's edge and the mark's box in accent hairlines, X as filled squares; nothing sits behind the mark */
+  .pn-zone{position:relative;display:flex;padding:var(--x)}
+  .pn-zone::before{content:'';position:absolute;inset:0;border:.6mm solid var(--accent);pointer-events:none}
+  .pn-markbox{display:flex;align-items:center;justify-content:center;outline:.25mm solid var(--accent)}
   .pn-mark-cs{display:block;width:auto;object-fit:contain}
-  .pn-x{position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center;font-family:var(--chrome);font-size:24pt}
+  .pn-x{position:absolute;display:flex;align-items:center;justify-content:center;width:var(--x);height:var(--x);background:var(--accent);color:var(--accent-ink);font-family:var(--chrome);font-size:24pt;line-height:1}
+  .pn-x-a{top:0;left:0}
+  .pn-x-b{bottom:0;right:0}
 
   /* typography */
   .pn-fam{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:8mm}

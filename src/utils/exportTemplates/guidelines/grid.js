@@ -6,7 +6,7 @@
 // Grotesk) carries the masthead, headings and captions; the user's own faces carry the
 // front-page name and the specimens. The template composes the whole deck (`slides`).
 
-import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale } from '../shared.js'
 import { mixHex } from '../roles.js'
 import { guidelineNotes } from './notes.js'
 
@@ -15,6 +15,8 @@ const CHROME = Object.freeze({ family: 'Schibsted Grotesk', weights: '400 900', 
 // 273 mm (the slide less a 12 mm margin each side) in points.
 const MEASURE = 774
 const COVER_STEPS = Object.freeze([72, 54, 40])
+// What the scale table has to fit, in mm: the height under its head, the specimen column's width, a row's padding and its row text.
+const SCALE_FIT = Object.freeze({ roomMm: 102, widthMm: 106, padMm: 3.05, textMm: 3.8, lineHeight: 1.15 })
 
 // The notes gathered on one slide, so they point at the logo slide rather than "this page".
 const WORDS = Object.freeze({ mark: 'the logo slide', ground: 'on the logo slide', drawn: 'on the logo slide', swatch: 'row' })
@@ -83,8 +85,8 @@ function cover(ctx) {
 const CHIP_MM = { primary: 0.85, accent: 0.62, neutral: 0.5 }
 
 function colourTable(ctx) {
-  // Rows share the height the slide has: 12 mm at most (few colours), about 7.4 mm at thirteen.
-  const row = Math.min(12, 96 / Math.max(1, ctx.slots.length))
+  // Rows share the height the slide has: 18 mm at most (few colours), about 7.7 mm at thirteen.
+  const row = Math.min(18, 100 / Math.max(1, ctx.slots.length))
   const rows = ctx.slots.map((s) => {
     const chip = (row * (CHIP_MM[s.kind] || 0.62)).toFixed(1)
     return `<tr class="${s.kind === 'primary' ? 'is-primary' : ''}">
@@ -96,8 +98,10 @@ function colourTable(ctx) {
       <td class="mu">${esc(s.lands)}</td>
     </tr>`
   }).join('')
+  // The chip column is as wide as the primary's chip (the largest) plus a 2.5 mm gap before the name.
+  const chipCol = Math.max(11, row * CHIP_MM.primary + 2.5)
   return `<table class="ct" style="--row:${row.toFixed(1)}mm">
-    <colgroup><col style="width:11mm"><col style="width:40mm"><col style="width:25mm"><col style="width:19mm"><col style="width:32mm"><col></colgroup>
+    <colgroup><col style="width:${chipCol.toFixed(1)}mm"><col style="width:40mm"><col style="width:25mm"><col style="width:19mm"><col style="width:32mm"><col></colgroup>
     <thead><tr><th scope="col"></th><th scope="col">Colour</th><th scope="col">Role</th><th scope="col">Hex</th><th scope="col">Reads with</th><th scope="col">Where it lands</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`
@@ -146,7 +150,7 @@ function logoSlide(ctx, n) {
   ]
   const cs = clearSpaceDrawn(ctx)
   if (cs) {
-    parts.push(['Clear space', `<div class="stage"><div class="zone" style="width:${cs.boxWidth.toFixed(1)}mm;height:${cs.boxHeight.toFixed(1)}mm;padding:${cs.x.toFixed(1)}mm">
+    parts.push(['Clear space', `<div class="stage"><div class="zone" style="width:${(cs.boxWidth + 0.5).toFixed(1)}mm;height:${(cs.boxHeight + 0.5).toFixed(1)}mm;padding:${cs.x.toFixed(1)}mm">
       <span class="xs xs-a" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
       <span class="xs xs-b" style="width:${cs.x.toFixed(1)}mm;height:${cs.x.toFixed(1)}mm">X</span>
       <span class="mbox" style="width:${cs.markWidth.toFixed(1)}mm;height:${cs.markHeight.toFixed(1)}mm">${ctx.markImg({ cls: 'gd-mark-cs', height: `${cs.markHeight.toFixed(1)}mm` })}</span>
@@ -159,14 +163,16 @@ function logoSlide(ctx, n) {
 
 function scaleSlide(ctx, n) {
   const { d, ladder } = ctx
+  // One share of true size for every specimen: 100% when the ladder fits, else the largest that does.
+  const { k, label } = specimenScale(ladder, SCALE_FIT)
   const rows = ladder.map((s) => {
     const heading = s.exp >= 1
     return `<tr><th scope="row">${esc(s.name)}</th><td class="num">${s.px}px</td><td class="num">${heading ? 1.15 : d.lineHeight}</td>
-      <td class="sp" style="font-size:${Math.min(s.px, 34)}px;${faceStyle(heading ? d.heading : d.body, heading ? d.headingWeight : d.bodyWeight)}">${esc(s.name)}</td></tr>`
+      <td class="sp" style="font-size:${(s.px * k).toFixed(1)}px;${faceStyle(heading ? d.heading : d.body, heading ? d.headingWeight : d.bodyWeight)}">${esc(s.name)}</td></tr>`
   }).join('')
   const table = `<table class="sc">
     <colgroup><col style="width:30mm"><col style="width:20mm"><col style="width:20mm"><col></colgroup>
-    <thead><tr><th scope="col">Step</th><th scope="col">Size</th><th scope="col">Leading</th><th scope="col">Specimen</th></tr></thead>
+    <thead><tr><th scope="col">Step</th><th scope="col">Size</th><th scope="col">Leading</th><th scope="col">${esc(label)}</th></tr></thead>
     <tbody>${rows}</tbody></table>`
   const facts = [['Base size', `${d.baseSize}px`], ['Ratio', String(d.ratio)], ['Body leading', String(d.lineHeight)], ['Heading leading', '1.15'], ['Headings', d.heading], ['Body', d.body]]
   const kv = `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`
@@ -188,7 +194,7 @@ function notesSlide(ctx, n, notes) {
   if (ctx.slots.length) groups.push(['Colour', [['The palette', notes.palette]]])
   groups.push(['Typography', [...notes.faces.map((f) => [f.role, f.notes]), ['The scale', notes.scale]]])
   const span = spans(groups.length)
-  return slide(ctx, n, 'Usage notes', 'gd-notes', groups.map(([title, items]) => topic(title, span, `<div class="nt${groups.length === 2 ? ' nt-two' : groups.length === 1 ? ' nt-three' : ''}">${noteBlocks(items)}</div>`)))
+  return slide(ctx, n, 'Usage notes', `gd-notes${ctx.d.logo ? '' : ' gd-notes-roomy'}`, groups.map(([title, items]) => topic(title, span, `<div class="nt${groups.length === 2 ? ' nt-two' : groups.length === 1 ? ' nt-three' : ''}">${noteBlocks(items)}</div>`)))
 }
 
 function scopeSlide(ctx, n, notes) {
@@ -239,7 +245,9 @@ function css(ctx) {
   .sl{position:relative;width:297mm;height:167mm;padding:var(--m);margin:6mm auto;overflow:hidden;display:flex;flex-direction:column;
     background:var(--paper);box-shadow:0 1px 12px var(--shade);break-after:page;break-inside:avoid;--a:8pt;font-size:var(--a)}
   .gd-cover{--a:9pt}
+  /* notes run to 10 pt where the slide has room: with the logo's three groups they only fit at 9 pt */
   .gd-notes{--a:9pt}
+  .gd-notes-roomy{--a:10pt}
   .gd-scope{--a:10pt}
 
   /* the masthead: project name, section and slide number over a rule in the brand's field colour */

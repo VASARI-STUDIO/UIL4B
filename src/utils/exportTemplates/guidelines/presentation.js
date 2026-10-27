@@ -72,7 +72,7 @@ function css(ctx) {
   p{margin:0}
 
   /* The chrome face: folios, labels, table heads and figures. */
-  .rail,.rail-folio,.cv-top,.cv-foot,.op-num,.op-leaves,.facts,.gr-label,.cs-x,.cs-rule,
+  .rail,.rail-folio,.cv-top,.cv-foot,.op-leaves,.facts,.gr-label,.cs-x,.cs-rule,
   .sw-role,.sw-spec,.use-meta,.tf-eyebrow,.tf-lbl,.scale thead th,.scale td.num,.sc-lbl{
     font-family:var(--chrome);font-variant-numeric:tabular-nums lining-nums;letter-spacing:.02em}
 
@@ -123,7 +123,6 @@ function css(ctx) {
     height:100%;width:58%;padding-right:10mm}
   .op-head{font-family:var(--head);font-weight:${d.headingWeight};font-size:46pt;
     letter-spacing:-.025em;line-height:1;overflow-wrap:anywhere}
-  .op-num{font-size:22pt;letter-spacing:0;color:var(--soft);vertical-align:.85em;margin-right:3mm}
   .op-leaves{list-style:none;margin:7mm 0 auto;padding:4mm 0 0;max-width:70mm;
     border-top:.25mm solid currentColor;font-size:8pt;color:var(--soft)}
   .op-leaves li{padding:1.2mm 0}
@@ -230,7 +229,7 @@ function css(ctx) {
   .alpha-all{grid-template-columns:repeat(13,1fr)}
   .alpha-all span{height:7mm;font-size:10.5pt}
   .scale{width:100%;border-collapse:collapse;font-size:8pt;table-layout:fixed}
-  .scale th,.scale td{text-align:left;padding:2.6mm 2mm;
+  .scale th,.scale td{text-align:left;padding:1.8mm 2mm;
     border-bottom:.25mm solid var(--hair);vertical-align:middle}
   .scale thead th{font-size:7.5pt;font-weight:400;color:var(--mut);border-bottom:.25mm solid var(--ink)}
   .scale th[scope=row]{font-weight:600;white-space:nowrap;width:34mm}

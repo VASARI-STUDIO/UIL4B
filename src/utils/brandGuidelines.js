@@ -106,7 +106,7 @@ import { contrast, grade, inkFor, readDesign, typeLadder } from './styleGuideExp
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
-import { esc, orderSections, paletteLayout, MAX_SLOTS } from './exportTemplates/shared.js'
+import { esc, orderSections, paletteLayout, specimenScale, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, isNeutral, softInk } from './exportTemplates/roles.js'
 import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
 import { guidelineNotes } from './exportTemplates/guidelines/notes.js'
@@ -119,6 +119,9 @@ const IN_USE_PER_PAGE = 6
 /** How tall the mark is drawn on the clear-space page, in mm. The X measurement
  *  is derived from it, so it is a constant rather than a magic number. */
 const CLEAR_SPACE_MARK_MM = 34
+/** What the scale table has to fit, in mm: the height under its head on a spread, the specimen
+ *  column's width, a row's padding and the height of its 8 pt row text. */
+const SCALE_FIT = Object.freeze({ roomMm: 95, widthMm: 183, padMm: 3.85, textMm: 4.2, lineHeight: 1.1 })
 
 /** "ALTERNATIVE 1" as "Alternative 1": a label in sentence case, since the layouts do not shout their labels. */
 const sentence = (text) => {
@@ -317,7 +320,7 @@ function opening(section, field, ink, palette) {
     : ''
   return `<section class="sl sl-open" style="background:${field};color:${ink};--soft:${soft}">
   <div class="op-left">
-    <p class="op-head"><span class="op-num">${esc(section.num)}</span> ${esc(section.title)}</p>
+    <p class="op-head">${esc(section.title)}</p>
     <ul class="op-leaves">${leaves}</ul>
     <p class="op-abs">${esc(section.abstract)}</p>
   </div>
@@ -523,17 +526,17 @@ function facePage(ctx, { role, family, weight, spacing, folio, notes }) {
 
 function scalePage(ctx, ladder, folio) {
   const d = ctx.d
-  // Clamped for the same measured reason designSystemBook.js clamps: the
-  // specimen column has a known width and an unclamped display step sets past
-  // it, printing a type specimen with the type cut off. The px column beside it
-  // is always the true value.
+  // Every specimen is set at one share of its true size: 100% when the ladder fits
+  // the table, else the largest share that does (the ratios between steps stay true).
+  // The px column beside it is always the true value, and the column head says so.
+  const { k, label } = specimenScale(ladder, SCALE_FIT)
   const rows = ladder.map((s) => {
     const isHeading = s.exp >= 1
     return `<tr>
       <th scope="row">${esc(s.name)}</th>
       <td class="num">${s.px}px</td>
       <td class="num">${isHeading ? 1.15 : d.lineHeight}</td>
-      <td class="sp" style="font-size:${Math.min(s.px, 34)}px;font-family:'${esc(isHeading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${isHeading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td>
+      <td class="sp" style="font-size:${(s.px * k).toFixed(1)}px;font-family:'${esc(isHeading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${isHeading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td>
     </tr>`
   }).join('')
   return spread(ctx, {
@@ -541,7 +544,8 @@ function scalePage(ctx, ladder, folio) {
     title: 'The scale',
     notes: ctx.notes.scale,
     body: `<table class="scale">
-      <thead><tr><th>Step</th><th>Size</th><th>Leading</th><th>Specimen</th></tr></thead>
+      <colgroup><col style="width:34mm"><col style="width:22mm"><col style="width:22mm"><col></colgroup>
+      <thead><tr><th>Step</th><th>Size</th><th>Leading</th><th>${esc(label)}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`,
     folio,
@@ -617,10 +621,8 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
   // The id is only a lookup key; the layout is the module in GUIDELINES_TEMPLATES.
   const tpl = Object.hasOwn(GUIDELINES_TEMPLATES, template) ? GUIDELINES_TEMPLATES[template] : GUIDELINES_TEMPLATES[DEFAULT_TEMPLATE]
   const d = readGuidelines(design)
-  // The generator decides which sections exist; the template orders them, and the
-  // numerals follow the order they are laid out in.
+  // The generator decides which sections exist; the template orders them.
   const sections = orderSections(guidelineSections(d), tpl.sectionOrder, (s) => s.id)
-    .map((s, i) => ({ ...s, num: String(i + 1).padStart(2, '0') }))
   const ctx = { d, projectName, sections }
   const iso = date.toISOString().slice(0, 10)
   const year = iso.slice(0, 4)
@@ -643,9 +645,9 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
   ctx.notes = guidelineNotes(d, ctx.slots)
   ctx.scope = scopeFacts(ctx)
   const pages = [tpl.cover({ ...ctx })]
-  let folio = 0
   const push = (html) => pages.push(html)
-  const numbered = (make) => { folio += 1; push(make(folio)) }
+  // The folio is the slide's place in the PDF (the cover is 1): the number a reader quotes from the viewer.
+  const numbered = (make) => push(make(pages.length + 1))
 
   if (tpl.slides) tpl.slides(ctx).filter(Boolean).forEach(push)
   for (const section of tpl.slides ? [] : sections) {

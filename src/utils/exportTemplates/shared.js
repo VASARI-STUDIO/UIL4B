@@ -203,3 +203,34 @@ export function chromeFace(chrome, base64) {
 
 /** The name of a reading ink the generator hands over: black is all zeros, anything else is white. */
 export const inkName = (hex) => (/^#0+$/.test(String(hex)) ? 'Black' : 'White')
+
+const PX_MM = 25.4 / 96
+
+/**
+ * The one factor every specimen in a type scale is set at: 1 (true size) when the
+ * ladder fits its table, else the largest k that does. One factor for the whole
+ * ladder keeps the ratios between steps true, which a per-row cap does not.
+ * A row is as tall as its specimen (`lineHeight` × size) or its row text
+ * (`textMm`), whichever is taller, plus `padMm`; the widest specimen must fit `widthMm`.
+ *
+ * @param {{ name: string, px: number }[]} ladder
+ * @param {{ roomMm: number, widthMm: number, padMm: number, textMm: number, lineHeight?: number }} fit
+ * @returns {{ k: number, label: string }} `label` is the column head: "Specimen", or "Specimen, at 72%"
+ */
+export function specimenScale(ladder, { roomMm, widthMm, padMm, textMm, lineHeight = 1.15 }) {
+  const height = (k) => ladder.reduce((sum, s) => sum + Math.max(s.px * k * lineHeight * PX_MM, textMm) + padMm, 0)
+  const widest = Math.max(...ladder.map((s) => String(s.name).length * 0.6 * s.px * PX_MM))
+  let k = Math.min(1, widthMm / widest)
+  if (height(k) > roomMm) {
+    let lo = 0.1
+    let hi = k
+    for (let i = 0; i < 24; i += 1) {
+      const mid = (lo + hi) / 2
+      if (height(mid) > roomMm) hi = mid
+      else lo = mid
+    }
+    k = lo
+  }
+  k = Math.floor(k * 100) / 100
+  return { k, label: k < 1 ? `Specimen, at ${Math.round(k * 100)}%` : 'Specimen' }
+}
