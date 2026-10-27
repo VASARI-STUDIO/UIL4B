@@ -158,7 +158,14 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 @media (prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .exp-options{animation:none}}
 /* The kit's identity and the logo row were sections of the list; here they are
    fields of the region and take its padding and gap. */
-.exp-options .exp-identity{gap:12px;padding:0;border-top:0}
+.exp-options .exp-identity{gap:10px;padding:0;border-top:0}
+/* On a desktop panel capped at 760px the Pro kit's name, description and the whole
+   logo row must fit above the dock; the textarea gives back the height its two rows
+   do not need, the labels sit closer to their fields. */
+@media (min-width:561px){
+  .exp-options .exp-identity .exp-field{gap:4px}
+  .exp-options .exp-identity .exp-field textarea{min-height:52px}
+}
 .exp-options .exp-logo,.exp-options .exp-identity + .exp-logo{padding:0;border-top:0}
 
 /* The quiet line for formats that are not built. Not a row, not a button. It

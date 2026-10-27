@@ -615,6 +615,10 @@ export default function ExportPanel({ onClose }) {
           onChange={pickFormat}
         />
       )}
+      {/* A Pro UI kit is personalised; a free kit carries no identity. Above the
+          template choice: the name, description and logo are what the kit needs
+          in view when the panel opens, and the picker may sit below the fold. */}
+      {activeGroup.id === 'kit' && isPro && <KitIdentityFields />}
       {/* Shown only while the row has a choice: one live template needs no picker. */}
       {liveTemplates(activeFormat?.id).length > 1 && (
         <ExportTemplatePicker
@@ -623,8 +627,6 @@ export default function ExportPanel({ onClose }) {
           onChange={(id) => updateDesign({ exportTemplates: { [activeFormat.id]: id } })}
         />
       )}
-      {/* A Pro UI kit is personalised; a free kit carries no identity. */}
-      {activeGroup.id === 'kit' && isPro && <KitIdentityFields />}
       {/* The pictures are drawn in the Specification layout, so the book shows them only for it. */}
       {activeGroup.preview && chosenTemplates[activeFormat?.id] === defaultTemplate(activeFormat?.id) && (
         <ExportProPreview
