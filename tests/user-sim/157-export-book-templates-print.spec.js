@@ -135,7 +135,9 @@ function measure({ media, name }) {
         const high = el.scrollHeight - el.clientHeight
         const wide = el.scrollWidth - el.clientWidth
         const isTitle = pi < 2 && /(^|\s)(cv|at)-title(\s|$)/.test(el.className)
-        if (high > 0 && isTitle && long) {
+        // A title cut at a whole word by the generator ends in an ellipsis and does not overflow.
+        const cutInText = el.textContent.trim().endsWith('…')
+        if (isTitle && long && (high > 0 || cutInText)) {
           out.clampedTitles += 1 // spec 2.4: the 120-character name is cut on the cover, and printed whole later
         } else if (high > 3) {
           out.clipped.push(`page ${pi + 1} ${tag(el)} hides ${high}px of height (${el.scrollHeight} in ${el.clientHeight})`)

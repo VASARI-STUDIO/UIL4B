@@ -258,7 +258,7 @@ function css(ctx) {
   /* The running head: small caps, no wider than .04em, cut at 90 mm. */
   .rh{position:absolute;top:12mm;width:90mm;font-family:var(--chrome);font-size:8pt;line-height:1.2;
     font-variant-caps:all-small-caps;letter-spacing:.04em;color:var(--muted)}
-  .rh span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rh span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
   .rt .rh{left:var(--inner)}
   .vs .rh{left:calc(var(--edge) + var(--note) + var(--gap))}
   .foot{position:absolute;bottom:12mm;width:20mm;font-family:var(--chrome);font-size:8pt;line-height:1.2;color:var(--muted)}
