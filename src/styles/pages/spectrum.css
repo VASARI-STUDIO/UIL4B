@@ -533,8 +533,10 @@
 .sp-tabs-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .sp-tabs-row .sp-utab { padding: 13px 0; font-size: 12.5px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-tabs-row .sp-utab[aria-pressed="true"] { color: var(--sp-ink); font-weight: 560; }
-.sp-icogrid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); grid-auto-rows: minmax(76px, 1fr); align-content: stretch; gap: 8px; padding: 14px clamp(14px, 1.8vw, 20px); }
-.sp-ico { display: grid; place-items: center; min-height: 0; padding: 8px; border: 1px solid rgba(var(--sp-ink-rgb), .1); border-radius: 12px; background: transparent; color: rgba(var(--sp-ink-rgb), .74); cursor: pointer; }
+/* 24 small tiles on fixed 44px rows, centred in the space the window gives them: the whole
+   set always fits in one frame at any width, so the grid never scrolls. */
+.sp-icogrid { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); grid-auto-rows: 44px; align-content: center; gap: 8px; padding: 14px clamp(14px, 1.8vw, 20px); }
+.sp-ico { display: grid; place-items: center; min-height: 0; padding: 4px; border: 1px solid rgba(var(--sp-ink-rgb), .1); border-radius: 12px; background: transparent; color: rgba(var(--sp-ink-rgb), .74); cursor: pointer; }
 .spectrum .sp-ico { transition: background .16s ease; }
 @media (hover: hover) and (pointer: fine) { .sp-ico:not([aria-pressed="true"]):hover { background: rgba(var(--sp-ink-rgb), .06); } }
 .sp-ico[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
@@ -1093,10 +1095,47 @@
   .sp-bench-grid { grid-template-columns: minmax(0, 1fr); gap: clamp(22px, 4vw, 34px); }
   .sp-bench-col { position: static; top: auto; }
   .sp-step { min-height: 0; padding: 0; }
-  .sp-step + .sp-step { margin-top: clamp(18px, 3vw, 28px); }
+
+  /* THE TOOL SWITCHER. The rail is one row of four segments (SpectrumBench.jsx renders it
+     as a tablist at this width); the four windows share one grid cell, so the
+     cell is as tall as the tallest and switching moves nothing. The unselected
+     windows are hidden and inert but stay mounted. */
+  .sp-rail--tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 24px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(var(--sp-ink-rgb), .06);
+  }
+  .sp-rail--tabs .sp-rail-row {
+    justify-content: center;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 540;
+    color: var(--sp-dim);
+    text-align: center;
+  }
+  .sp-rail--tabs .sp-rail-label { flex: 0 1 auto; white-space: nowrap; }
+  .sp-rail--tabs .sp-rail-row.is-on { background: var(--sp-ink); color: var(--sp-page); }
+  .sp-steps { display: grid; }
+  .sp-step { grid-area: 1 / 1; align-items: stretch; }
+  /* opacity, not visibility: a child that sets its own visibility (the converter panes) would show through. */
+  .sp-step[data-on="false"] { opacity: 0; pointer-events: none; }
+  .sp-step > .sp-panel { height: auto; }
+  .sp-panel:has(.sp-fontlist) { max-height: 700px; }
 }
 @media (max-width: 760px) {
-  .sp-panel { height: min(78dvh, 620px); border-radius: 16px; }
+  .sp-panel { border-radius: 16px; }
+  .sp-panel:has(.sp-fontlist) { max-height: 620px; }
+  /* A family name wraps instead of ending in an ellipsis. */
+  .sp-fontrow-name { white-space: normal; overflow-wrap: anywhere; text-wrap: balance; line-height: 1.02; }
+}
+@media (max-width: 340px) {
+  .sp-rail--tabs .sp-rail-row { font-size: 13px; }
 }
 
 /* ── the Font Gallery panel's six families ────────────────────────────────
