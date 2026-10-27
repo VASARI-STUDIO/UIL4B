@@ -61,6 +61,15 @@ function windowOf(rows, minY, maxY) {
   return { start, end }
 }
 
+// The glyphs of `cells` ordered by how far their row is from the viewport
+// (`top` is the page scroll position in the grid's own coordinates). A stable
+// sort, so the glyphs inside the viewport keep their reading order.
+function nearestFirst({ chars, rowOf }, top) {
+  const bottom = top + window.innerHeight
+  const gap = (row) => (row.top + row.h < top ? top - (row.top + row.h) : row.top > bottom ? row.top - bottom : 0)
+  return chars.map((ch, i) => [ch, gap(rowOf[i])]).sort((a, b) => a[1] - b[1]).map(c => c[0])
+}
+
 const NO_WINDOW = { layout: null, start: 0, end: 0 }
 
 export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
@@ -196,13 +205,16 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     return plain.concat(toned)
   }, [catalogue, shownOf])
 
-  const visibleChars = useMemo(() => {
+  // The glyphs in the mounted rows, and for each the row it sits in.
+  const visibleCells = useMemo(() => {
     const chars = []
+    const rowOf = []
     for (const row of visible) {
-      if (row.type === 'cells') for (const item of row.items) chars.push(shownOf(item))
+      if (row.type === 'cells') for (const item of row.items) { chars.push(shownOf(item)); rowOf.push(row) }
     }
-    return chars
+    return { chars, rowOf }
   }, [visible, shownOf])
+  const visibleChars = visibleCells.chars
 
   const visibleSet = useMemo(() => new Set(visibleChars), [visibleChars])
 
@@ -213,9 +225,12 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     return () => atlasMounted(new Set())
   }, [visibleSet])
 
+  // Drawn nearest the viewport first: the mounted band reaches 500px past the
+  // screen each way, and the glyphs on screen must not queue behind the ones above.
   useEffect(() => {
-    if (atlas.config) atlasWant(visibleChars)
-  }, [visibleChars, atlasGen])
+    if (!atlas.config || !virtEl) return
+    atlasWant(nearestFirst(visibleCells, -virtEl.getBoundingClientRect().top))
+  }, [visibleCells, virtEl, atlasGen])
 
   useEffect(() => {
     if (!atlas.config) return

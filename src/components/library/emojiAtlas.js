@@ -34,7 +34,7 @@
 
 export const SLOT = 36           // css px each glyph is drawn into (24px font plus its overhang)
 export const SHEET_COLS = 12
-const URGENT_CHUNK = 48          // glyphs on screen: small sheets, so they arrive quickly
+const URGENT_CHUNK = 24          // glyphs on screen: small sheets, so the first lands quickly
 const BACKGROUND_CHUNK = 96
 const IDLE_TEARDOWN_MS = 30000   // the worker and sheets go this long after the grid unmounts
 
