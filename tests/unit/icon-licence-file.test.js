@@ -6,7 +6,7 @@
 // group uses today, so a pack added later cannot ship a download without them.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ICON_PACK_CREDITS, licenceOf } from '../../src/data/iconPackCredits.js'
+import { ICON_PACK_CREDITS, packCredit } from '../../src/data/iconPackCredits.js'
 import { APACHE_2_0, licenceFileText, licenceText } from '../../src/data/iconLicenceTexts.js'
 
 const NEEDS_TEXT = { MIT: 'Permission is hereby granted', ISC: 'Permission to use, copy, modify', 'Apache-2.0': 'Apache License' }
@@ -25,7 +25,8 @@ test('the file for each such pack holds its copyright line and the licence text'
     const file = licenceFileText([prefix])
     assert.ok(file.includes(row.copyright), `${prefix}: copyright line missing from the file`)
     assert.ok(file.includes(needle), `${prefix}: ${row.spdx} text missing from the file`)
-    assert.ok(file.includes(licenceOf(row.spdx).url), `${prefix}: licence link missing`)
+    // A pack with its own licenceUrl (MingCute, Carbon) links its upstream LICENSE file; the rest link the SPDX page.
+    assert.ok(file.includes(packCredit(prefix).licenceUrl), `${prefix}: licence link missing`)
   }
 })
 
@@ -35,8 +36,10 @@ test('the two new packs name their notices exactly', () => {
   assert.ok(carbon.includes('Apache License') && carbon.includes('Version 2.0, January 2004'))
   assert.ok(carbon.includes('END OF TERMS AND CONDITIONS'))
   assert.ok(!carbon.includes('[yyyy]'), 'the appendix template must not be shipped as if it were a notice')
+  assert.ok(carbon.includes('https://github.com/carbon-design-system/carbon/blob/main/LICENSE'))
   const ming = licenceFileText(['mingcute'])
   assert.ok(ming.includes('MingCute Design') && ming.includes('Apache License'))
+  assert.ok(ming.includes('https://github.com/Richard9394/MingCute/blob/main/LICENSE'))
 })
 
 test('Lucide also carries the MIT text for its Feather-derived icons; CC0 and CC BY point at their licence', () => {
