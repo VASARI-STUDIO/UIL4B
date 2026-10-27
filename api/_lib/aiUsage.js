@@ -21,8 +21,9 @@
 
 import { planForUser, dailyLimitFor, monthlyLimitFor } from './plans.js'
 
-/** The tools whose allowance is daily; the Brand Starter is metered another way. */
-export const USAGE_TOOLS = Object.freeze(['alt-text', 'prompts-ai'])
+/** The tools whose allowance is daily, each in its own field of the same day document
+ *  (api/ai.js TASKS: field = toolId). The Brand Starter is metered another way. */
+export const USAGE_TOOLS = Object.freeze(['alt-text', 'scan-photo', 'prompts-ai'])
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -85,8 +86,9 @@ export async function serveUsage(req, res, { verifyIdToken, readUser, readUsage,
         monthLimit: monthlyLimitFor(plan, id),
       }
     }
-    // The busiest tool is the one that tells someone how close they are to a refusal.
-    const busiest = USAGE_TOOLS.reduce((a, b) => (tools[b].used > tools[a].used ? b : a))
+    // The tool with the least left is the one that tells someone how close they are to
+    // a refusal; each is measured against its own limit, and a tie keeps the first.
+    const busiest = USAGE_TOOLS.reduce((a, b) => (tools[b].remaining < tools[a].remaining ? b : a))
     return res.status(200).json({ day, plan: plan.id, ...tools[busiest], tools })
   } catch (err) {
     console.error('usage: could not read the account usage', { error: err?.message, code: err?.code })
