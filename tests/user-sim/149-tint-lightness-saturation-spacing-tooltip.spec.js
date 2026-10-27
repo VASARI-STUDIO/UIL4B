@@ -296,13 +296,19 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
       const m = await card.evaluate((el, idx) => {
         const c = el.getBoundingClientRect()
         const n = document.querySelectorAll('.tt-note')[idx].getBoundingClientRect()
+        // A click-through card is never the element under the point, so test its stacking with the pointer given back for the probe.
+        const tip = el.closest('.tt-tip')
+        const ghost = tip.classList.contains('tt-tip--ghost')
+        if (ghost) tip.style.pointerEvents = 'auto'
         const probe = (x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && el.contains(hit) }
+        const covered = [[0.5, 0.5], [0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85]]
+          .filter(([fx, fy]) => !probe(c.left + c.width * fx, c.top + c.height * fy)).length
+        if (ghost) tip.style.pointerEvents = ''
         return {
           above: c.bottom <= n.top + 2,
           below: c.top >= n.bottom - 2,
           beside: c.left >= n.right - 2 || c.right <= n.left + 2,
-          covered: [[0.5, 0.5], [0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85]]
-            .filter(([fx, fy]) => !probe(c.left + c.width * fx, c.top + c.height * fy)).length,
+          covered,
         }
       }, i)
       expect(m.above || m.below || m.beside, `note ${i}: the card sits over its note`).toBe(true)
@@ -324,6 +330,8 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
       winW: innerWidth, winH: innerHeight,
       scrollH: el.scrollHeight, clientH: el.clientHeight, capped: !!el.style.maxHeight, overflowY: getComputedStyle(el).overflowY,
       tabindex: el.getAttribute('tabindex'),
+      ghost: tip.classList.contains('tt-tip--ghost'), pointerEvents: getComputedStyle(tip).pointerEvents,
+      noteRects: [...document.querySelectorAll('.tt-note')].map(R),
       above: tip.classList.contains('tt-tip--above'), compact: tip.classList.contains('tt-tip--compact'),
       side: tip.classList.contains('tt-tip--right') ? 'right' : tip.classList.contains('tt-tip--left') ? 'left' : '',
       helpShown: getComputedStyle(help).display !== 'none' && help.getBoundingClientRect().height > 0,
@@ -394,6 +402,101 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     }
     // 1440x900 leaves 70px under the lowest row of notes: a compact card below for the upper notes, a side card for the rest.
     expect([...kinds].sort(), 'the squeezed placements seen at 1440x900').toEqual(['below compact', 'beside right'])
+  })
+
+  // ── Walking the pointer along the notes ──────────────────────────────────
+  // A real pointer crosses the page in a line, not a jump: it leaves one note and
+  // arrives on the next through whatever a card has put between them.
+  const centreOf = (page, i) => note(page, i).evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })
+  const labelOf = (page, i) => note(page, i).locator('.tt-note-step').innerText()
+  // Moves to each note's centre in turn, with steps, and checks the one open card is that note's own.
+  // Returns how many times the note being walked to lay under the card of the note before it.
+  const walkNotes = async (page, order) => {
+    let under = 0
+    for (const i of order) {
+      const c = await centreOf(page, i)
+      const hid = await openTip(page).count() ? await openTip(page).locator('.tt-tip-card').evaluate((el, p) => { const r = el.getBoundingClientRect(); return p.x >= r.left && p.x < r.right && p.y >= r.top && p.y < r.bottom }, c) : false
+      if (hid) under++
+      await page.mouse.move(c.x, c.y, { steps: 10 })
+      const label = await labelOf(page, i)
+      await expect(openTip(page), `walking to note ${i}: one card open`).toHaveCount(1)
+      await expect(openTip(page).locator('.tt-tip-head'), `walking to note ${i}: it is that note's own card`).toHaveText(new RegExp(`^${label} · #`))
+    }
+    return under
+  }
+  const ALONG = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  const BACK = [...ALONG].reverse().slice(1)
+
+  test('a beside card at 1440x900 meets no note and sits right of the notes card, and a mouse walk along the notes shows each note its own card, there and back', async ({ page }) => {
+    await openTint(page, 'someone running a pointer along the notes')
+    const notesRight = await page.locator('.tt-notes').evaluate((el) => el.getBoundingClientRect().right)
+    let beside = 0
+    for (let i = 0; i < 11; i++) {
+      await settle(page, i)
+      const m = await cardFit(page, i)
+      if (!m.side) continue
+      beside++
+      expect(m.card.left, `note ${i}: a beside card sits right of the notes card`).toBeGreaterThanOrEqual(notesRight - 1)
+      expect(m.noteRects.filter((n) => meets(m.card, n)).length, `note ${i}: a beside card meets no note`).toBe(0)
+      expect(m.ghost, `note ${i}: with room past the notes card the card takes the pointer`).toBe(false)
+    }
+    expect(beside, 'some cards sit beside at 1440x900').toBeGreaterThan(0)
+    await page.mouse.move(5, 5)
+    await expect(openTip(page)).toHaveCount(0)
+    await walkNotes(page, ALONG)
+    await walkNotes(page, BACK)
+  })
+
+  test('the pointer can step from a note onto its card and the card stays; it goes when the pointer leaves', async ({ page }) => {
+    await openTint(page, 'someone reading a card')
+    for (const i of [3, 7, 10]) {
+      await page.mouse.move(5, 5)
+      await expect(openTip(page)).toHaveCount(0)
+      const c = await centreOf(page, i)
+      // In from the left along the note's own row, so no other note's card is crossed on the way.
+      await page.mouse.move(30, c.y)
+      await page.mouse.move(c.x, c.y, { steps: 10 })
+      const label = await labelOf(page, i)
+      await expect(openTip(page).locator('.tt-tip-head'), `note ${i}`).toHaveText(new RegExp(`^${label} · #`))
+      const box = await openTip(page).locator('.tt-tip-card').boundingBox()
+      // Across to the card along the note's own line (a card below is reached by going down), then to the middle of it.
+      const inRow = box.y <= c.y && c.y < box.y + box.height
+      if (inRow) await page.mouse.move(box.x + 20, c.y, { steps: 12 })
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 8 })
+      await page.waitForTimeout(150)
+      await expect(openTip(page), `note ${i}: the pointer on the card keeps it open`).toHaveCount(1)
+      await expect(openTip(page).locator('.tt-tip-head'), `note ${i}: and it is the same card`).toHaveText(new RegExp(`^${label} · #`))
+      await page.mouse.move(5, 5, { steps: 6 })
+      await expect(openTip(page), `note ${i}: it closes once the pointer is away`).toHaveCount(0)
+    }
+  })
+
+  // At 768 the notes card runs close to the window's edge: no room past it, so a card
+  // sits right beside its note, over the next ones, and takes no pointer.
+  test.describe('at 768, where a card sits over the next notes', () => {
+    test.use({ viewport: { width: 768, height: 1024 } })
+
+    test('a card beside its note is click-through, and the pointer walking on opens the note under it', async ({ page }) => {
+      await openTint(page, 'someone running a pointer along the notes at 768')
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
+      let ghosts = 0
+      for (let i = 0; i < 11; i++) {
+        await settle(page, i)
+        const m = await cardFit(page, i)
+        if (m.ghost) {
+          ghosts++
+          expect(m.pointerEvents, `note ${i}: a ghost card takes no pointer`).toBe('none')
+        }
+      }
+      expect(ghosts, 'some cards are click-through at 768').toBeGreaterThan(0)
+      await page.mouse.move(5, 5)
+      await expect(openTip(page)).toHaveCount(0)
+      const under = await walkNotes(page, ALONG)
+      expect(under, 'the walk met a note lying under the card of the note before it').toBeGreaterThan(0)
+      await walkNotes(page, BACK)
+      await page.mouse.move(5, 5, { steps: 6 })
+      await expect(openTip(page), 'the card goes when the pointer leaves').toHaveCount(0)
+    })
   })
 
   test.describe('in a tall window', () => {
