@@ -84,6 +84,11 @@ const GUIDE_COPY = Object.freeze({
 // template's: 745 px is the cover block's text width at 1440, and 287 pt is its
 // text width on A4, so each title is fitted for the page it is drawn on.
 const COVER_SCREEN = Object.freeze({ maxLines: 2, steps: [80, 62, 46], measure: 745 })
+// On a phone the title scales with its box. It stops at half its fitted size when the
+// words still make two whole lines at COVER_PHONE (a 390 px screen's text width), and
+// otherwise follows the box down to COVER_FLOOR, so a long name never grows a third line.
+const COVER_PHONE = 300
+const COVER_FLOOR = 16
 const COVER_PRINT = Object.freeze({ maxLines: 3, steps: [44, 34, 26], measure: 287 })
 const WEBSITE_COPY = Object.freeze({
   headline: 'A place for your next idea.',
@@ -682,6 +687,8 @@ export function renderUiKit(design, {
     return { size: fit.size, text: fit.clamp ? clampTitle(sel.title, fit.size, opts) : sel.title }
   }
   const onScreen = coverText(COVER_SCREEN)
+  const halfFit = fitTitle(onScreen.text, { ...COVER_SCREEN, steps: [onScreen.size / 2], measure: COVER_PHONE })
+  const coverFloor = halfFit.clamp || halfFit.broken ? COVER_FLOOR : onScreen.size / 2
   const onPaper = coverText(COVER_PRINT)
   const coverTitle = onScreen.text === onPaper.text
     ? `<span class="ct">${esc(onScreen.text)}</span>`
@@ -736,6 +743,7 @@ export function renderUiKit(design, {
     TAGLINE: esc(sel.tagline),
     COVER_TITLE: coverTitle,
     COVER_SIZE: String(onScreen.size),
+    COVER_FLOOR: String(coverFloor),
     COVER_PRINT: String(onPaper.size),
     COVER_MEASURE: String(COVER_SCREEN.measure),
     COVER_FACTS: esc(coverFacts),
