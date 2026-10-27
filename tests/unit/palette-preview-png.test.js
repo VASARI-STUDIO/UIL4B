@@ -1,24 +1,29 @@
-// GET /api/ai?palettePreview=<id> is what a locked Discover card draws in place of the palette: the
-// stops blurred sideways until they run together. This pins what that picture must be and must not be.
+// GET /api/ai?palettePreview=<id> is what a locked Discover card draws in place of the palette: a soft
+// three-tone wash (the palette's mean and its two most distinct stops, snapped to a coarse grid).
+// This pins what that picture must be and must not be.
 //
 //   a real PNG        signature, IHDR 320 x 74 8-bit RGB, every chunk's CRC, pixel data that inflates
 //   small             under 6 KB, so a page of four cards costs almost nothing
-//   no hex anywhere   neither as text in the bytes, nor as a pixel that IS a stop (a stop drawn sharp
-//                     would hand the colour over as surely as the code does)
-//   blurred           neighbouring columns differ by far less than a hard stop does
+//   no hex anywhere   neither as text in the bytes, nor as a pixel that IS a stop
+//   not invertible    the earlier renderer (a block per stop, a public Gaussian blur, a pull to the mean)
+//                     is a linear map of the stops, so least squares over its 320 columns gave each stop
+//                     back to within a few levels. The fit below is run on that renderer (copied in here)
+//                     to show the attack works, then on the current one, which must leave every
+//                     recovered stop 25 or more levels from every true stop
+//   soft              neighbouring columns differ by far less than a hard stop does
 //
 // MUTATION (made, the named tests went red, then restored):
-//   preview.js  PREVIEW_SIGMA = 0   -> "neighbouring columns differ by less than a hard stop",
-//                                      "no stop keeps its own colour at its centre"
-//   preview.js  PREVIEW_MEAN_MIX = 0 and clamped edges (the old renderer)
-//                                   -> "no pixel of the picture is within 24 per channel of any of the palette's stops"
+//   preview.js  previewRow is the old block-and-blur renderer
+//                                   -> "no stop of the fixture can be fitted back out of the picture",
+//                                      "no stop of any library palette can be fitted back out of the picture"
 //   preview.js  the PNG body writes the palette's hex text (a tEXt chunk of the colours)
 //                                   -> "no hex string of the palette is in the bytes"
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { previewPng, previewRow, servePalettePreview, PREVIEW_WIDTH, PREVIEW_HEIGHT, PREVIEW_SIGMA } from '../../api/_lib/library/preview.js'
+import { previewPng, previewRow, servePalettePreview, PREVIEW_WIDTH, PREVIEW_HEIGHT } from '../../api/_lib/library/preview.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { decodePng, pixel, hexRgb, hexNeedles } from '../helpers/png.js'
+import { oldBlurRow, fitStops, bestRecovery, nearestTrue } from '../helpers/previewAttack.js'
 
 // Four stops with big steps between them, so "blurred" and "hard" are far apart. Hand-checked, the
 // largest channel step at each boundary: 0B -> F2 is 231 (red), F2 -> C9 is 78 (green), C9 -> 4B is 211 (green).
@@ -119,19 +124,18 @@ test('every palette in the library comes out at least 25 per channel from each o
   }
 })
 
-test('neighbouring columns differ by less than a hard stop', () => {
+test('neighbouring columns differ by far less than a hard stop', () => {
   let widest = 0
   for (let x = 1; x < PREVIEW_WIDTH; x++) {
     const a = pixel(row, x - 1)
     const b = pixel(row, x)
     widest = Math.max(widest, ...a.map((v, i) => Math.abs(v - b[i])))
   }
-  // A Gaussian of sigma 30 across a step of 231 climbs at most 231 / (30 * sqrt(2 * pi)) = 3.1 a column.
-  // The hard stops are 78, 211 and 231, so anything under 10 is a blur and anything near 200 is not.
-  assert.ok(widest < 10, `adjacent columns differ by ${widest}; sigma is ${PREVIEW_SIGMA}`)
-  // ...and it is a picture of the palette, not a flat one: the strip wraps, so its two ends now meet
-  // (they used to be the first and last stop, 60 or more apart); instead the colour must travel by 60 or
-  // more somewhere along it, and climb from column to column (a blank or black strip would pass "< 10").
+  // Smoothstep between tones a third of the strip (107 columns) apart climbs at most 1.5 x 255 / 107 = 3.6
+  // a column. The hard stops are 78, 211 and 231, so anything under 10 is soft and anything near 200 is not.
+  assert.ok(widest < 10, `adjacent columns differ by ${widest}`)
+  // ...and it is a picture of the palette, not a flat one: the colour must travel by 60 or more somewhere
+  // along it, and climb from column to column (a blank or black strip would pass "< 10").
   let spread = 0
   for (let k = 0; k < 3; k++) {
     const ch = [...Array(PREVIEW_WIDTH).keys()].map((x) => pixel(row, x)[k])
@@ -145,11 +149,20 @@ test('neighbouring columns differ by less than a hard stop', () => {
   assert.ok(Math.max(...a.map((v, i) => Math.abs(v - b[i]))) < 10, 'the strip has a hard seam at its ends')
 })
 
-test('the picture still carries the palette\'s mood: its average colour is the stops\' average', () => {
-  const mean = [0, 1, 2].map((k) => Math.round(STOPS.reduce((n, hex) => n + hexRgb(hex)[k], 0) / STOPS.length))
-  const got = [0, 1, 2].map((k) => Math.round([...Array(PREVIEW_WIDTH).keys()].reduce((n, x) => n + pixel(row, x)[k], 0) / PREVIEW_WIDTH))
-  assert.deepEqual(mean, [132, 120, 110], 'hand-checked average of the four stops')
-  got.forEach((v, k) => assert.ok(Math.abs(v - mean[k]) <= 12, `channel ${k}: the picture averages ${v}, the stops ${mean[k]}`))
+test("the picture still carries the palette's mood: its two most distinct stops show, and it is about as light as the palette", () => {
+  // The picture is the mean and the two stops furthest apart (here #0B2A45 and #C9F24D), each snapped to a
+  // coarse grid and possibly lifted or dropped as a whole to clear the stops, so "shows" is within 64 of
+  // one channel, not exact (the clearance test above is what keeps it from being exact).
+  const columns = [...Array(PREVIEW_WIDTH).keys()].map((x) => pixel(row, x))
+  for (const hex of ['#0B2A45', '#C9F24D']) {
+    const s = hexRgb(hex)
+    const nearest = Math.min(...columns.map((p) => Math.max(...p.map((v, i) => Math.abs(v - s[i])))))
+    assert.ok(nearest <= 64, `no column is within 64 of ${hex}; the nearest is ${nearest}`)
+  }
+  const luma = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+  const stopsLuma = STOPS.map(hexRgb).reduce((n, c) => n + luma(c), 0) / STOPS.length
+  const pictureLuma = columns.reduce((n, c) => n + luma(c), 0) / columns.length
+  assert.ok(Math.abs(pictureLuma - stopsLuma) <= 40, `the picture's lightness is ${pictureLuma.toFixed(0)}, the stops' ${stopsLuma.toFixed(0)}`)
 })
 
 test('the same colours give the same bytes, and different colours give different ones', () => {
@@ -165,6 +178,46 @@ test('a palette with no colours still returns a picture, in grey', () => {
   assert.deepEqual(a, b, 'flat')
   assert.ok(a[0] === a[1] && a[1] === a[2], `neutral: ${a}`)
   assert.ok(a[0] >= 64 && a[0] <= 192, `mid grey: ${a}`)
+})
+
+// The fit has to be a reading of this picture, not noise. A wrong stop count throws up a dozen colours that
+// explain nothing, and one of them lands near a true stop now and then by chance (on this fixture an 8-stop
+// fit puts one at 19.5 while leaving a 6.5-level error in the picture). So a fit only counts if it
+// reproduces the picture to within RESIDUAL_LIMIT level on every column and every stop it recovers is a
+// real colour (see tests/helpers/previewAttack.js). Exact stops would leave half a level of rounding.
+test("the fit recovers the fixture's stops from the earlier renderer (the attack is real)", () => {
+  const old = oldBlurRow(STOPS)
+  const { stops, residual } = fitStops(old, STOPS.length)
+  assert.ok(residual <= 1, `the fit leaves ${residual.toFixed(2)} levels unexplained`)
+  STOPS.forEach((hex, j) => {
+    const gap = Math.max(...hexRgb(hex).map((v, i) => Math.abs(v - stops[j][i])))
+    assert.ok(gap <= 6, `stop ${j} (${hex}) is recovered to within ${gap.toFixed(1)}`)
+  })
+  assert.ok(bestRecovery(old, STOPS).gap <= 6)
+})
+
+test('no stop of the fixture can be fitted back out of the picture (stop counts 2 to 12)', () => {
+  const { gap, n } = bestRecovery(row, STOPS)
+  assert.ok(gap > 24, `a fit with ${n} stops lands within ${gap.toFixed(1)} levels of a true stop`)
+  // Nor is there a near miss: not one stop count gives a fit that explains the picture.
+  assert.equal(gap, Infinity)
+})
+
+test('no stop of any library palette can be fitted back out of the picture (its own stop count)', () => {
+  // The attacker's best case: the palette's real stop count, as the number of blocks to solve for.
+  let controlRecovered = 0
+  for (const p of LIBRARY_PALETTES) {
+    const n = Math.max(2, Math.min(12, p.colors.length))
+    const truth = p.colors.map(hexRgb)
+    const now = fitStops(previewRow(p.colors), n)
+    if (now.plausible && now.residual <= 1) {
+      assert.ok(nearestTrue(now.stops, truth) > 24, `${p.id}: a fit with ${n} stops explains the picture and lands within 24 of a true stop`)
+    }
+    // The same fit on the earlier renderer, to show the loop is able to find something.
+    const then = fitStops(oldBlurRow(p.colors), n)
+    if (then.plausible && then.residual <= 1 && nearestTrue(then.stops, truth) <= 24) controlRecovered++
+  }
+  assert.ok(controlRecovered >= 20, `only ${controlRecovered} palettes give their stops up to the earlier renderer; the fit is too weak to prove anything`)
 })
 
 // ── The route's answer ─────────────────────────────────────────────────────────────────────────────

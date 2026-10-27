@@ -1153,9 +1153,9 @@ export default async function handler(req, res) {
     })
   }
 
-  // ── The blurred stand-in for a locked palette ─────────────────────────────
+  // ── The soft stand-in for a locked palette ─────────────────────────────
   // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
-  // and what it returns is a blurred picture, never a colour; see api/_lib/library/preview.js.
+  // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.
   if (req.method === 'GET' && 'palettePreview' in (req.query || {})) {
     const [{ servePalettePreview }, { LIBRARY_PALETTES }] = await Promise.all([
       import('./_lib/library/preview.js'),

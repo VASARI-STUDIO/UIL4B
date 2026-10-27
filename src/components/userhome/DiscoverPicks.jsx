@@ -15,8 +15,8 @@ import { newestPalettes } from './workspace'
 // find there.
 //
 // A palette the account has not opened is a name-only row in the bundle: it has no colours to
-// draw. Its strip is a picture the SERVER makes, the palette's real stops blurred until they run
-// together (api/_lib/library/preview.js), so no hex code reaches the page. The card says "Opens with
+// draw. Its strip is a picture the SERVER makes, a soft wash of the palette's mean and its two most distinct
+// stops on a coarse grid (api/_lib/library/preview.js), so no hex code reaches the page. The card says "Opens with
 // Pro" on it from the first frame, before the picture has arrived. If the picture cannot be had, the
 // strip is dropped and a line of text says the same thing, never a grey box. The card links to the
 // library, which shows what Pro opens. A Pro account fetches the whole library and sees the colours.
@@ -37,7 +37,7 @@ function moodOf(colors) {
   }
 }
 
-/** The blurred strip of a locked palette: the server's picture under a solid "Opens with Pro" label. */
+/** The soft strip of a locked palette: the server's picture under a solid "Opens with Pro" label. */
 function LockedStrip({ id, onFail }) {
   const [ready, setReady] = useState(false)
   return (
