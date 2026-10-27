@@ -38,11 +38,11 @@
 <meta name="twitter:image" content="https://uil4b.com/previews/x-card.png">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://uil4b.com/">
-<!-- Icons: the UI L4B kit's own files, committed as they were exported. The
-     SVG is the primary icon (it recolours the bare symbol, with no tile, for a dark
-     browser chrome); the ICO is what browsers and scrapers request off the
-     site root on their own; the manifest names the four web-app PNGs, which
-     nothing links directly.
+<!-- Icons. The SVG is the primary icon (it recolours the bare symbol, with no
+     tile, for a dark browser chrome), placed on a whole-pixel grid so it stays
+     sharp at tab size; the ICO is drawn from it by scripts/favicon-ico.mjs and is
+     what browsers and scrapers request off the site root on their own; the
+     manifest names the four web-app PNGs, which nothing links directly.
      ABSOLUTE hrefs, deliberately. The relative "favicon.svg" this replaces was
      treated by Vite as a bundled asset and fingerprinted into
      /assets/favicon-<hash>.svg, so the icon shipped TWICE — once hashed for

@@ -1,4 +1,5 @@
-// The site icons: the UI L4B brand kit's own files, committed as exported.
+// The site icons: the brand kit's files, with the favicon placed on a whole-pixel
+// grid and its ICO drawn from the SVG by scripts/favicon-ico.mjs.
 //
 // Two failure modes this file guards:
 //
@@ -42,8 +43,8 @@ function pngHeader(file) {
   }
 }
 
-/** Alpha at the four corners of a PNG payload, decoded for real (8-bit, not interlaced). */
-function pngCornerAlpha(png) {
+/** Alpha at any pixel of a PNG payload, decoded for real (8-bit, not interlaced). */
+function pngAlpha(png) {
   assert.equal(png.subarray(1, 4).toString('ascii'), 'PNG', 'not a PNG payload')
   const width = png.readUInt32BE(16)
   const height = png.readUInt32BE(20)
@@ -97,6 +98,12 @@ function pngCornerAlpha(png) {
     if (colourType === 3) return trns && row[x] < trns.length ? trns[row[x]] : 255
     return 255 // grey or RGB with no alpha channel: every pixel is opaque
   }
+  return { width, height, alphaAt }
+}
+
+/** Alpha at the four corners of a PNG payload. */
+function pngCornerAlpha(png) {
+  const { width, height, alphaAt } = pngAlpha(png)
   return [alphaAt(0, 0), alphaAt(width - 1, 0), alphaAt(0, height - 1), alphaAt(width - 1, height - 1)]
 }
 
@@ -199,6 +206,23 @@ test('the SVG favicon recolours for a dark browser chrome and draws no backgroun
   assert.match(svg, /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)\s*\{[^}]*\{[^}]*fill\s*:/i,
     'favicon.svg has no dark prefers-color-scheme rule; a dark-ink mark vanishes on a dark tab strip')
   assert.ok(!/<rect[\s>/]/i.test(svg), 'favicon.svg draws a <rect>; the mark must not sit on a background tile')
+})
+
+test('the SVG favicon puts every straight edge of the mark on a whole pixel at 16, 32 and 48px', () => {
+  // The mark's straight edges sit at these coordinates in its own units: the
+  // left edge, the gap between the two strokes, the inner corner, the top and the
+  // foot. Between pixels, a tab-size render softens each one into a grey column.
+  const svg = read('public/favicon.svg')
+  const view = Number(svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) /)[1])
+  const placed = svg.match(/transform="translate\(([\d.]+) ([\d.]+)\) scale\(([\d.]+)\)"/)
+  assert.ok(placed, 'favicon.svg no longer places the mark with translate(x y) scale(s)')
+  const [, tx, ty, s] = placed.map(Number)
+  const near = (v) => Math.abs(v - Math.round(v)) < 1e-6
+  for (const px of [16, 32, 48]) {
+    const k = px / view
+    for (const x of [0, 100, 125, 225]) assert.ok(near((tx + x * s) * k), `x=${x} lands at ${(tx + x * s) * k}px at ${px}px`)
+    for (const y of [0, 125, 200]) assert.ok(near((ty + y * s) * k), `y=${y} lands at ${(ty + y * s) * k}px at ${px}px`)
+  }
 })
 
 test('apple-touch-icon is 180px, square and opaque', () => {
@@ -315,3 +339,21 @@ test('the runtime chrome tint reads the token instead of restating it', () => {
     'the runtime theme-color should read --bg-0 rather than hard-code the grounds')
 })
 
+test('the 16px image in favicon.ico is drawn from the pixel-snapped SVG, not left stale', () => {
+  // Read off the ICO itself, so an SVG change without `npm run icons:ico` fails
+  // here. At 16px the mark's left stroke fills columns 2-5 from row 4, the gap
+  // between the strokes is column 6, and nothing sits above row 4 or left of 2.
+  const ico = bin('public/favicon.ico')
+  const count = ico.readUInt16LE(4)
+  const entry = [...Array(count)].map((_, i) => 6 + 16 * i).find((o) => ico[o] === 16)
+  assert.ok(entry !== undefined, 'favicon.ico has no 16px image')
+  const png = ico.subarray(ico.readUInt32LE(entry + 12), ico.readUInt32LE(entry + 12) + ico.readUInt32LE(entry + 8))
+  const { alphaAt } = pngAlpha(png)
+  for (let x = 0; x < 16; x += 1) assert.equal(alphaAt(x, 3), 0, `row 3 is above the mark, but x=${x} has alpha`)
+  for (let y = 0; y < 16; y += 1) assert.equal(alphaAt(1, y), 0, `column 1 is left of the mark, but y=${y} has alpha`)
+  for (let x = 2; x <= 5; x += 1) assert.equal(alphaAt(x, 4), 255, `the top edge of the left stroke is soft at x=${x}`)
+  for (let y = 4; y <= 8; y += 1) {
+    assert.equal(alphaAt(2, y), 255, `the left edge is soft at y=${y}`)
+    assert.equal(alphaAt(6, y), 0, `the gap between the strokes is filled at y=${y}`)
+  }
+})
