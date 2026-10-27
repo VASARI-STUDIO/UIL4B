@@ -789,12 +789,16 @@ ${stateVars}
   }
   // Blue ↔ purple keeps the position in the preset list (the two lists are
   // parallel: Blue/Violet, Sky/Purple, Indigo/Fuchsia, Apple, Material,
-  // Tailwind). A custom hue returns to the first preset of the new family.
+  // Tailwind). A custom hue returns to the first preset of the new family. A
+  // selected bundle stays selected: it takes its own ramp in the new family,
+  // which for some bundles is not the same position.
   const pickInfoHue = (hue) => {
     if (hue === infoHue) return
     setInfoHue(hue)
     const sel = stateColors.info
-    if (sel && typeof sel === 'object') setStateColors({ ...stateColors, info: 0 })
+    const bundle = STATE_BUNDLES[activeStateBundleIndex]
+    if (bundle) setStateColors({ ...bundle.config, info: hue === 'purple' ? bundle.purple : bundle.config.info })
+    else if (sel && typeof sel === 'object') setStateColors({ ...stateColors, info: 0 })
     setSemCopied(false)
   }
 
@@ -979,6 +983,8 @@ ${stateVars}
                       options={[...presets.map((p, pi) => ({ value: String(pi), label: p.name })), { value: 'custom', label: 'Custom' }]}
                       value={isCustom ? 'custom' : String(Number.isInteger(sel) ? sel : 0)}
                       onChange={(v) => {
+                        // Pressing Custom again keeps the hue already dialled in.
+                        if (v === 'custom' && isCustom) return
                         if (v === 'custom') setCustomHue(state, arc.canonical)
                         else setStateColors({ ...stateColors, [state]: Number(v) })
                         setHexErrors({})

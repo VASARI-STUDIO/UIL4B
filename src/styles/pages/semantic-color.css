@@ -38,7 +38,9 @@
   cursor: pointer;
   transition: border-color 150ms ease;
 }
-.stc .stc-bundle.is-on { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
+.stc .stc-bundle.is-on { border-color: var(--tl-line-on); background: color-mix(in srgb, var(--t0) 6%, var(--tl-card)); }
+.stc .stc-bundle.is-on .stc-bundle-desc { color: var(--tl-soft); }
+@media (forced-colors: active) { .stc .stc-bundle.is-on { border-color: Highlight; } }
 .stc .stc-bundle-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
 .stc .stc-bundle-name { font-size: 14px; font-weight: 560; line-height: 1.4; }
 .stc .stc-bundle-check { color: var(--tl-ink); flex: 0 0 auto; }

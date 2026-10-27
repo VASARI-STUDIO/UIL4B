@@ -351,6 +351,41 @@ test.describe('Semantic Colour, rebuilt', () => {
     })
   }
 
+  // ── A choice survives the next click ──────────────────────────────────────
+  //
+  // MUTATION: drop the `v === 'custom' && isCustom` early return and pressing
+  // Custom again snaps the dialled hue back to the canonical one. Drop the
+  // bundle re-pick in pickInfoHue and Cool loses its highlight on Purple.
+  test('pressing Custom again keeps the dialled hue', async ({ browser }) => {
+    const { ctx, page } = await openPage(browser)
+    const row = page.locator('[data-role="success"]')
+    const custom = row.getByRole('group', { name: 'Success preset' }).getByRole('button', { name: 'Custom' })
+    await custom.click()
+    const slider = page.getByRole('slider', { name: 'success custom hue' })
+    await slider.focus()
+    await slider.press('ArrowRight')
+    await slider.press('ArrowRight')
+    await slider.press('ArrowRight')
+    const base = row.locator('.stc-cell.is-base')
+    const dialled = await base.getAttribute('aria-label')
+    await custom.click()
+    await expect(custom).toHaveAttribute('aria-pressed', 'true')
+    await expect(base).toHaveAttribute('aria-label', dialled)
+    await ctx.close()
+  })
+
+  test('a selected bundle stays selected when Information changes family', async ({ browser }) => {
+    const { ctx, page } = await openPage(browser)
+    for (const name of ['Cool', 'Balanced', 'Tailwind']) {
+      await page.getByRole('radio', { name }).click()
+      await page.getByRole('button', { name: 'Purple family' }).click()
+      await expect(page.getByRole('radio', { name }), `${name} on purple`).toHaveAttribute('aria-checked', 'true')
+      await page.getByRole('button', { name: 'Blue family' }).click()
+      await expect(page.getByRole('radio', { name }), `${name} back on blue`).toHaveAttribute('aria-checked', 'true')
+    }
+    await ctx.close()
+  })
+
   test('the code box expands behind "Show all N variables", and N is the copied variable count', async ({ browser }) => {
     const { ctx, page } = await openPage(browser)
     const toggle = page.locator('.stc-code-toggle')
