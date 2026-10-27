@@ -364,11 +364,12 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
    element, label, aria-haspopup and press-only opening are FounderNote's. */
 .sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sp-footer .app-footer-note:hover{color:var(--t0)}
-/* On a phone the legal links (Privacy, Terms, Credits) sit in this baseline row
-   beside the copyright and the about note, in the same mono, each underlined like
-   the note so it reads as a link without a hover. Inline, not stacked: on a touch
-   screen each is a 44px-tall box (at least 44px wide), so a thumb never meets two. */
-.sp-footer .sp-footer-legal-links{display:contents}
+/* On a phone the legal links (Privacy, Terms, Credits) sit in the baseline row
+   with the copyright and the about note, in the same mono, each underlined like
+   the note so it reads as a link without a hover. The three share a row of their
+   own, so at 320px none is left alone on a wrapped line. On a touch screen each
+   is a box at least 44px tall and wide, so a thumb never meets two. */
+.sp-footer .sp-footer-legal-links{display:flex;flex-wrap:wrap;flex:1 0 100%;align-items:center;gap:0 clamp(14px,2vw,28px)}
 .sp-footer .sp-footer-legal-links a{display:inline-flex;align-items:center;justify-content:center;min-height:24px;text-decoration:underline;text-underline-offset:3px}
 @media(pointer:coarse){
   .sp-footer .sp-footer-legal-links a{min-height:44px;min-width:44px}
