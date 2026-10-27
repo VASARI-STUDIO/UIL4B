@@ -435,7 +435,7 @@ function palettePage(ctx, folio) {
       `Every colour carries a name as well as a value. Say “${slots[0].name}” in a review and the decision survives; say the hex and it does not.`,
       'The ink noted on each card is the one measured to read on it, at the ratio printed beside it. Nothing here was estimated.',
     ],
-    body: `<div class="swatches">${rows.map((row) => `<div class="sw-row">${row.map(card).join('')}</div>`).join('')}</div>`,
+    body: `<div class="swatches${rows.length > 1 ? ' swatches-two' : ''}">${rows.map((row) => `<div class="sw-row">${row.map(card).join('')}</div>`).join('')}</div>`,
     folio,
   })
 }

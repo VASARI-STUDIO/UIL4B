@@ -179,8 +179,15 @@ function css(ctx) {
     border-top:.25mm solid var(--soft);padding-top:1.2mm}
   .sw-spec dt{color:var(--soft);flex:none}
   .sw-spec dd{margin:0;text-align:right;overflow-wrap:anywhere}
+  .sw-spec dd{white-space:nowrap}
   .sw-spec .sw-lands{display:block}
-  .sw-spec .sw-lands dd{text-align:left;margin-top:.4mm}
+  .sw-spec .sw-lands dd{text-align:left;margin-top:.4mm;white-space:normal}
+  /* Two rows leave each card about half the height and, for the neutrals, a quarter of the width. */
+  .swatches-two .sw{padding:3.5mm;gap:1.5mm}
+  .swatches-two .sw-name{font-size:10pt;overflow-wrap:break-word;hyphens:manual}
+  .swatches-two .sw-primary .sw-name{font-size:17pt}
+  .swatches-two .sw-spec div{padding-top:.9mm;flex-direction:column;gap:0}
+  .swatches-two .sw-spec dd{text-align:left}
 
   /* ── in use ─────────────────────────────────────────────────────────── */
   .uses{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;flex:1 1 auto;min-height:0}
