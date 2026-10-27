@@ -294,8 +294,8 @@ export const HOME_EXPORTS = {
       "id": "cover-northbeam",
       "kind": "cover",
       "tab": "Northbeam",
-      "tabName": "Northbeam book cover and contents",
-      "alt": "Design system book for Northbeam, the cover and the contents page.",
+      "tabName": "Northbeam book cover",
+      "alt": "Design system book for Northbeam, the cover.",
       "sourceSha256": "4caa29c9da270a4e42c2de3e20b4dea66371875ecc5d00be09500e17906c2f1e",
       "landscape": {
         "master": {
@@ -370,8 +370,8 @@ export const HOME_EXPORTS = {
       "id": "cover-halcyon",
       "kind": "cover",
       "tab": "Halcyon",
-      "tabName": "Halcyon book cover and contents",
-      "alt": "Design system book for Halcyon, the cover and the contents page.",
+      "tabName": "Halcyon book cover",
+      "alt": "Design system book for Halcyon, the cover.",
       "sourceSha256": "3970b6677a51edd493474db321129ae8db957d00118f41d821ec989066e9f757",
       "landscape": {
         "master": {
@@ -446,8 +446,8 @@ export const HOME_EXPORTS = {
       "id": "cover-ferrule",
       "kind": "cover",
       "tab": "Ferrule",
-      "tabName": "Ferrule book cover and contents",
-      "alt": "Design system book for Ferrule, the cover and the contents page.",
+      "tabName": "Ferrule book cover",
+      "alt": "Design system book for Ferrule, the cover.",
       "sourceSha256": "3af3dfcde828df7410d48ff154e659e558dc22eb0784083e6fd12b89e0144a18",
       "landscape": {
         "master": {

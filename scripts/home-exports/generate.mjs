@@ -455,8 +455,8 @@ async function bookPlates(name) {
     const masterC = await compose(COVER_MASTER_W, COVER.masterH, [{ png: shot.png, x: 0, y: 0, w: COVER_MASTER_W, h: COVER.masterH }])
     noteTitle(ids.cover, 'cover', shot, COVER_MASTER_W, COVER_MASTER_W)
     await finish({
-      id: ids.cover, kind: 'cover', tab: PROJECT[name], tabName: `${PROJECT[name]} book cover and contents`,
-      alt: `Design system book for ${PROJECT[name]}, the cover and the contents page.`, html,
+      id: ids.cover, kind: 'cover', tab: PROJECT[name], tabName: `${PROJECT[name]} book cover`,
+      alt: `Design system book for ${PROJECT[name]}, the cover.`, html,
       variants: {
         landscape: { name: `${ids.cover}-spread-master`, master: masterS, spec: LAND },
         portrait: { name: `${ids.cover}-master`, master: masterC, spec: COVER },
