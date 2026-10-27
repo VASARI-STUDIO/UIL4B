@@ -13,7 +13,7 @@ const t = (id, name, desc, { isDefault = false, live = false } = {}) =>
 export const EXPORT_TEMPLATES = Object.freeze({
   kit: Object.freeze([
     t('studio', 'Studio', 'A working page, components first.', { isDefault: true, live: true }),
-    t('manual', 'Manual', 'Every token in a ruled table.'),
+    t('manual', 'Manual', 'Every token in a ruled table.', { live: true }),
     t('showcase', 'Showcase', 'Your typefaces at full size.'),
   ]),
   book: Object.freeze([

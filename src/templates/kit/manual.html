@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="A fixed UI kit export laid out as a reference manual: every colour, type step and foundation as a ruled table.">
+<link rel="icon" href="data:,">
+<title>@@NAME@@ | UI kit</title>
+<style>
+@@FONT_CSS@@
+@@TOKEN_CSS@@
+:root{--ui:"Publisher Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"Publisher Martian Mono",ui-monospace,SFMono-Regular,Consolas,monospace;--hair:1px}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:var(--color-background);color:var(--color-text);font:400 13px/1.55 var(--ui);font-variant-numeric:lining-nums tabular-nums;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,p{margin:0}
+h2{font:600 24px/1.2 var(--ui);letter-spacing:-.01em}
+h3{font:600 15px/1.3 var(--ui)}
+p{max-width:68ch}
+small{font-size:11px;color:var(--color-text-muted)}
+code{font:400 11px/1.45 var(--mono);font-variant-numeric:lining-nums tabular-nums;overflow-wrap:anywhere}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-underline-offset:3px}
+svg{width:16px;height:16px;flex-shrink:0}
+button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visible{outline:2px solid var(--color-text);outline-offset:2px}
+::selection{background:var(--color-primary);color:var(--color-on-primary)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.skip{position:fixed;top:-100px;left:12px;z-index:20;background:var(--color-text);color:var(--color-background);padding:10px 14px}
+.skip:focus{top:12px}
+
+/* Frame: a fixed index column and a field of eight columns. */
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);max-width:1560px;margin:0 auto;min-height:100vh}
+.index{position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;gap:28px;padding:32px 20px 24px;border-right:var(--hair) solid var(--color-border)}
+.index-name{display:block;font:600 13px/1.3 var(--ui);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.index-id small{display:block;margin-top:2px}
+.nav-links{display:flex;flex-direction:column}
+.nav-links a{padding:5px 0 5px 10px;margin-left:-10px;border-left:2px solid transparent;text-decoration:none;color:var(--color-text-muted);font-size:13px}
+.nav-links a:hover,.nav-links a[aria-current]{color:var(--color-text)}
+.nav-links a[aria-current]{border-left-color:var(--color-primary);font-weight:600}
+.index-files{margin-top:auto}
+.file{display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%;padding:9px 0;border:0;border-top:var(--hair) solid var(--color-border);background:none;text-align:left;font-size:13px}
+.file:hover{text-decoration:underline;text-underline-offset:3px}
+.file code{color:var(--color-text-muted);font-size:10px}
+.index-foot .section-watermark,.index-foot .free-notice{margin:0}
+.field{padding:48px 56px 80px;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));column-gap:16px;align-content:start}
+.field>*{grid-column:1/-1}
+.js-only{display:none}
+.js .js-only{display:block}
+.no-js{margin:0 0 24px;padding:12px 14px;border:var(--hair) solid var(--color-border);font-size:13px}
+
+/* Cover: the name in the heading face and one rule in the primary colour. */
+.cover-title{font-family:var(--font-display);font-weight:var(--weight-display);font-size:calc(var(--cover-size) * 1px);line-height:1.12;letter-spacing:-.02em;overflow-wrap:anywhere;hyphens:auto;max-width:100%}
+.cover-title .clip{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;padding-bottom:.1em}
+.rule{height:8px;background:var(--color-primary);margin:24px 0 14px}
+.facts{font:400 11px/1.6 var(--mono);font-variant-numeric:lining-nums tabular-nums;color:var(--color-text-muted);max-width:none}
+
+/* Sections and blocks: a head over a table. */
+.section-head,.bhead{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));column-gap:16px;align-items:baseline}
+.section-head h2,.bhead h3{grid-column:1/3}
+.section-head p,.bhead p{grid-column:3/-1;color:var(--color-text-muted)}
+.section-head{margin-top:80px;padding-top:20px;border-top:var(--hair) solid var(--color-text)}
+.bhead{margin:48px 0 14px}
+.chapter{margin-top:80px}
+.chapter .section-head{margin-top:0}
+.section-end{display:flex;justify-content:flex-end;margin-top:28px}
+.tbl-wrap{overflow-x:auto;max-width:100%}
+.tbl-note{margin-top:10px;font-size:11px;color:var(--color-text-muted);max-width:none}
+.component-note{margin-top:12px;font-size:12px;color:var(--color-text-muted)}
+
+/* Tables: hairline rows, one chip, mono for every value. */
+.t{width:100%;border-collapse:collapse;text-align:left}
+.t th,.t td{padding:10px 12px 10px 0;vertical-align:top;font-weight:400;border-top:var(--hair) solid var(--color-border)}
+.t thead th{padding:0 12px 8px 0;border-top:0;border-bottom:var(--hair) solid var(--color-text);font-size:11px;font-weight:600;color:var(--color-text-muted);white-space:nowrap}
+.t tbody th{display:table-cell}
+.t td>small,.t th small{display:block}
+.nm{display:inline-block;vertical-align:top}
+.nm b{display:block;font-weight:600}
+.chip{display:inline-block;vertical-align:top;width:16px;height:16px;margin:2px 8px 0 0;box-shadow:inset 0 0 0 var(--hair) var(--color-border)}
+.cv{display:inline;padding:0;border:0;background:none;text-align:left}
+.cv code{display:inline;overflow-wrap:anywhere}
+.cv:hover code{text-decoration:underline dotted;text-underline-offset:3px}
+.ct b{display:block;font:600 12px/1.4 var(--mono)}
+.ct.weak small{font-weight:600;color:var(--color-text)}
+.lands{color:var(--color-text-muted)}
+.long{overflow-wrap:anywhere}
+.colours{min-width:820px}
+.colours tbody{border-top:var(--hair) solid var(--color-border)}
+.colours .ramp td{border-top:0;padding:0 0 14px}
+.colours tbody tr:first-child>*{border-top:var(--hair) solid var(--color-border)}
+.colours tbody tr:first-child>*:first-child{padding-bottom:6px}
+.stops{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:2px}
+.stop{display:flex;flex-direction:column;justify-content:space-between;gap:14px;min-height:52px;padding:8px 7px;border:0;text-align:left;box-shadow:inset 0 0 0 var(--hair) var(--color-border)}
+.stop span{font-size:11px;white-space:nowrap}
+.stop code{font-size:10px}
+.stop:focus-visible{outline-color:currentColor;outline-offset:-4px}
+.spec p{max-width:none;overflow-wrap:anywhere}
+.type{min-width:720px}
+.bar{display:block;height:8px;border:var(--hair) solid var(--color-text);border-left-width:2px}
+.corner{display:block;width:44px;height:28px;border:var(--hair) solid var(--color-text)}
+.curve{width:60px;height:40px;fill:none;stroke:var(--color-text);stroke-width:1.5;overflow:visible}
+.samples{white-space:nowrap}
+.smp{display:inline-block;padding:6px 12px;font-size:13px;line-height:1.4;margin-right:10px;border:var(--hair) solid var(--color-border)}
+.smp b{font-weight:700;font-size:15px;margin-right:6px}
+.samples small{display:inline}
+.pairs,.states,.roles{min-width:640px}
+.states .chip,.roles .chip{margin-right:8px}
+
+/* Components: static specimens drawn with the kit's own tokens. */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:var(--radius-control);background:var(--color-primary);color:var(--color-on-primary);font:600 13px/1 var(--font-body);white-space:nowrap}
+.btn.hover{background:var(--color-primary-hover)}
+.btn.focus,.field-box.focus{outline:2px solid var(--color-focus);outline-offset:3px}
+.btn.off{background:var(--color-disabled-background);color:var(--color-disabled-text)}
+.btn.line{background:transparent;color:var(--color-primary);border-color:var(--color-primary)}
+.btn.line.hover{background:var(--color-disabled-background)}
+.comp{min-width:640px}
+.comp td{vertical-align:middle}
+.comp th small{margin-top:2px}
+.field-box{display:flex;align-items:center;min-height:44px;padding:10px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-control);font:400 14px/1.3 var(--font-body)}
+.field-box.error{border-color:var(--color-danger)}
+.caret{width:1px;height:17px;margin-left:2px;background:var(--color-text)}
+.field-msg{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--color-danger)}
+.field-msg svg{width:14px;height:14px}
+.box{display:grid;place-items:center;width:20px;height:20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:4px}
+.box.on{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
+.box svg{width:14px;height:14px}
+.dot{display:block;position:relative;width:20px;height:20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:50%}
+.dot.on{border-color:var(--color-primary)}
+.dot.on::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--color-primary)}
+.sw{display:block;position:relative;width:34px;height:20px;border-radius:20px;background:var(--color-disabled-background)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--color-surface)}
+.sw.on{background:var(--color-primary)}
+.sw.on::after{left:17px}
+
+/* Identity (Pro), licences and the free credit. */
+.identity-name{margin-top:20px;font:var(--weight-display) 40px/1.15 var(--font-display);overflow-wrap:anywhere}
+.identity-logo{margin-top:20px;padding:24px;border:var(--hair) solid var(--color-border)}
+.identity-logo img{display:block;max-width:100%;max-height:160px;object-fit:contain}
+.license-details{margin-top:24px;border-top:var(--hair) solid var(--color-border);padding-top:12px;font-size:12px;color:var(--color-text-muted)}
+.license-details summary{cursor:pointer;min-height:28px}
+.license-details pre{white-space:pre-wrap;max-height:320px;overflow:auto;font:400 11px/1.6 var(--mono)}
+.license-note{margin-top:14px;font-size:12px;color:var(--color-text-muted)}
+.publisher-link{display:inline-flex;color:inherit;text-decoration:none}
+.publisher-link:hover{opacity:.7}
+.publisher-lockup{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font:700 13px/1 var(--ui);letter-spacing:-.02em}
+.section-watermark{display:inline-flex;align-items:center;gap:6px;color:var(--color-text-muted);font-size:11px}
+.free-notice{display:flex;align-items:center;gap:10px;width:max-content;max-width:100%;color:var(--color-text-muted);font-size:11px}
+.free-notice>span:last-child{border-left:var(--hair) solid var(--color-border);padding-left:10px}
+.site-links{margin-top:48px;padding:24px 0;border-top:var(--hair) solid var(--color-border);border-bottom:var(--hair) solid var(--color-border);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 40px}
+.site-links h3{font-size:15px}
+.site-links p{margin-top:6px;color:var(--color-text-muted)}
+.site-links nav{display:flex;flex-direction:column}
+.site-links nav a{display:flex;align-items:center;justify-content:space-between;min-height:40px;padding:6px 0;border-top:var(--hair) solid var(--color-border);text-decoration:none}
+.site-links nav a:first-child{border-top:0}
+.site-links nav a:hover{text-decoration:underline}
+.site-links>small{grid-column:1/-1}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,12px);max-width:calc(100% - 32px);padding:10px 18px;background:var(--color-text);color:var(--color-background);font-size:13px;text-align:center;opacity:0;pointer-events:none;transition:opacity 180ms,transform 180ms;z-index:30}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:1000px){
+  .shell{display:block}
+  .index{position:static;height:auto;gap:16px;padding:20px 20px 16px;border-right:0;border-bottom:var(--hair) solid var(--color-border)}
+  .nav-links{flex-direction:row;gap:18px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links a{white-space:nowrap;padding:8px 0;margin-left:0;border-left:0;border-bottom:2px solid transparent}
+  .nav-links a[aria-current]{border-bottom-color:var(--color-primary)}
+  .index-files{margin-top:0;display:none}
+  .js .index-files{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}
+  .field{padding:28px 20px 56px}
+  .section-head h2,.bhead h3,.section-head p,.bhead p{grid-column:1/-1}
+  .section-head p,.bhead p{margin-top:6px}
+  .section-head{margin-top:56px}
+  .bhead{margin-top:36px}
+  .cover-title{font-size:calc(var(--cover-size) * .72px)}
+  .site-links{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .cover-title{font-size:calc(var(--cover-size) * .55px)}
+  .index-files{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .toast{transition:none}
+}
+
+/* Print: A4 with 14 mm margins. The index becomes a strip above the cover. */
+@page{size:A4;margin:14mm}
+@media print{
+  :root{--hair:.25mm}
+  html{scroll-behavior:auto}
+  body{background:none;font-size:8.5pt;line-height:1.45}
+  h2{font-size:15pt}
+  h3{font-size:10.5pt}
+  small{font-size:7pt}
+  code{font-size:7pt}
+  .skip,.toast,.js-only,.no-js,.index-files,.index-foot,.license-details,.section-end{display:none!important}
+  .shell{display:block;max-width:none}
+  .index{position:static;height:auto;display:block;padding:0 0 3mm;margin-bottom:7mm;border:0;border-bottom:var(--hair) solid var(--color-text)}
+  .index-id{display:flex;justify-content:space-between;align-items:baseline;gap:6mm}
+  .index-id small{margin:0}
+  .index nav{margin-top:2mm}
+  .nav-links{flex-direction:row;flex-wrap:wrap;gap:0 5mm}
+  .nav-links a{padding:0;margin:0;border:0;font-size:7pt}
+  .field{display:block;padding:0}
+  .cover-title{font-size:calc(var(--cover-size) * .76px)}
+  .rule{margin:6mm 0 4mm}
+  .facts{font-size:7pt}
+  .section-head{margin-top:0;padding-top:3mm;break-after:avoid}
+  .section-head p,.bhead p{font-size:8.5pt}
+  #tokens .section-head{margin-top:10mm}
+  #pairs,#components,#identity,#licences{break-before:page;margin-top:0}
+  .bhead{margin:8mm 0 3mm;break-after:avoid}
+  .t th,.t td{padding:2mm 3mm 2mm 0}
+  .t thead th{font-size:7pt;padding-bottom:1.5mm}
+  .t tr,.t tbody,.stop{break-inside:avoid}
+  .tbl-wrap{overflow:visible}
+  .colours,.type,.pairs,.states,.roles,.comp{min-width:0}
+  .ct b{font-size:7.5pt}
+  .stop{min-height:9mm;padding:1mm;gap:2mm;print-color-adjust:exact}
+  .stop span{font-size:7pt}
+  .stop code{font-size:7pt}
+  .colours .ramp td{padding-bottom:3mm}
+  .btn{min-height:9mm;padding:2mm 3mm;font-size:8pt}
+  .field-box{min-height:9mm;font-size:9pt}
+  .smp{padding:1.5mm 3mm;font-size:8pt}
+  .smp b{font-size:10pt}
+  .identity-name{font-size:30pt}
+  .site-links{break-inside:avoid;margin-top:8mm;padding:5mm 0}
+  .site-links nav a{min-height:0;padding:1mm 0}
+  .site-links nav a::after{content:attr(href);font:400 7pt var(--mono);margin-left:3mm}
+  .site-links nav a svg{display:none}
+  .site-links p,.site-links>small{font-size:7.5pt}
+}
+</style>
+<style>
+@@PRINT_WATERMARK@@
+</style>
+</head>
+<body>
+<a class="skip" href="#tokens">Skip to the manual</a>
+<div class="shell">
+<aside class="index">
+<div class="index-id"><a class="index-name" href="#top" title="@@INDEX_NAME@@">@@INDEX_NAME@@</a><small>@@EDITION@@</small></div>
+<nav aria-label="Manual contents"><div class="nav-links"><a href="#colour" aria-current="location">Colour</a><a href="#roles">Interface roles</a><a href="#states">State colours</a><a href="#typography">Typography</a><a href="#spacing">Spacing</a><a href="#radius">Radius</a><a href="#motion">Motion</a><a href="#pairs">Contrast pairs</a><a href="#components">Components</a><a href="#licences">Licences</a></div></nav>
+<div class="index-files js-only"><button class="file" data-action="print">Print / PDF</button><button class="file" data-action="css">CSS variables <code>.css</code></button><button class="file" data-action="json">Design tokens <code>.json</code></button><button class="file" data-action="fonts">Font styles <code>.css</code></button><button class="file" data-action="html">This manual <code>.html</code></button></div>
+<div class="index-foot">@@FREE_NOTICE@@</div>
+</aside>
+<main class="field" id="top">
+<noscript><p class="no-js">This manual is fully readable offline. Enable JavaScript to copy values and download tokens, or use your browser’s Print menu to save a PDF.</p></noscript>
+<header class="cover"><h1 class="cover-title" style="--cover-size:@@COVER_SIZE@@"><span class="clip">@@COVER_TITLE@@</span></h1><div class="rule" aria-hidden="true"></div><p class="facts">@@FACTS@@</p></header>
+
+<section id="tokens" aria-labelledby="tokens-title">
+<div class="section-head"><h2 id="tokens-title">Tokens</h2><p>Every value below is a CSS variable in the CSS and JSON downloads. Select a value to copy it.</p></div>
+
+<div class="block" id="colour"><div class="bhead"><h3>Colour</h3><p>@@COLOUR_NOTE@@</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Colour table"><table class="t colours"><caption class="sr-only">Colours, with contrast, tints and where each lands</caption><colgroup><col style="width:18%"><col style="width:18%"><col style="width:10%"><col style="width:18%"><col style="width:8%"><col style="width:8%"><col style="width:20%"></colgroup><thead><tr><th scope="col">Colour</th><th scope="col">Variable</th><th scope="col">Hex</th><th scope="col">OKLCH</th><th scope="col">On canvas</th><th scope="col">On text</th><th scope="col">Where it lands</th></tr></thead>@@COLOUR_TABLE@@</table></div>
+<p class="tbl-note">On canvas and On text are contrast ratios against this kit’s canvas and text colours. Each colour’s tints run from 50 to 950; 500 is the colour itself.</p></div>
+
+<div class="block" id="roles"><div class="bhead"><h3>Interface roles</h3><p>Use roles in components, so a change to one value reaches every instance.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Interface roles table"><table class="t roles"><caption class="sr-only">Interface colour roles and CSS custom properties</caption><thead><tr><th scope="col">Role</th><th scope="col">Variable</th><th scope="col">Value</th><th scope="col">Use</th></tr></thead><tbody>@@ROLE_ROWS@@</tbody></table></div></div>
+
+<div class="block" id="states"><div class="bhead"><h3>State colours</h3><p>Pair each with a message and an icon, so colour is never the only cue.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="State colours table"><table class="t states"><caption class="sr-only">Success, warning, error and information colours</caption><thead><tr><th scope="col">State</th><th scope="col">Text</th><th scope="col">Background</th><th scope="col">Contrast</th><th scope="col">Sample</th></tr></thead><tbody>@@SEMANTIC_ROWS@@</tbody></table></div></div>
+
+<div class="block" id="typography"><div class="bhead"><h3>Typography</h3><p>Headings use <code>--font-display</code>, set in @@FONT_DISPLAY@@ at @@WEIGHT_DISPLAY@@. Body text uses <code>--font-body</code>, set in @@FONT_BODY@@ at @@WEIGHT_BODY@@.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Type scale table"><table class="t type"><caption class="sr-only">Type scale: size, line height and weight of each step</caption>@@TYPE_TABLE@@</table></div>
+<p class="tbl-note">@@FONT_EMBED_NOTE@@</p></div>
+
+<div class="block" id="spacing"><div class="bhead"><h3>Spacing</h3><p>A four-pixel foundation. Use smaller steps within a group and larger steps between groups.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Spacing table"><table class="t"><caption class="sr-only">Spacing scale</caption><thead><tr><th scope="col">Variable</th><th scope="col">Pixels</th><th scope="col">Rem</th><th scope="col">Scale</th></tr></thead><tbody>@@SPACE_ROWS@@</tbody></table></div></div>
+
+<div class="block" id="radius"><div class="bhead"><h3>Radius</h3><p>Soften what people touch. Keep editorial colour fields square.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Radius table"><table class="t"><caption class="sr-only">Corner radii</caption><thead><tr><th scope="col">Variable</th><th scope="col">Value</th><th scope="col">Used for</th><th scope="col">Shape</th></tr></thead><tbody>@@RADIUS_ROWS@@</tbody></table></div></div>
+
+<div class="block" id="motion"><div class="bhead"><h3>Motion</h3><p>Respect the reader’s reduced-motion setting by removing movement and keeping the fade.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Motion table"><table class="t"><caption class="sr-only">Duration and easing</caption><thead><tr><th scope="col">Variable</th><th scope="col">Value</th><th scope="col">Used for</th><th scope="col">Curve</th></tr></thead><tbody>@@MOTION_ROWS@@</tbody></table></div></div>
+<div class="section-end">@@WATERMARK@@</div>
+</section>
+
+<section class="chapter" id="pairs" aria-labelledby="pairs-title">
+<div class="section-head"><h2 id="pairs-title">Contrast pairs</h2><p>Ratios are calculated for these exact pairs. Normal text needs 4.5:1 and large text 3:1. A pair under 4.5:1 is not shown with body text, and one under 3:1 is not shown at all.</p></div>
+<div class="bhead"><h3>Pairs</h3><p>Recheck when a colour changes.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Contrast pairs table"><table class="t pairs"><caption class="sr-only">Contrast ratio of each text and background pair</caption><thead><tr><th scope="col">Pair</th><th scope="col">Foreground</th><th scope="col">Background</th><th scope="col">Contrast</th><th scope="col">Sample</th></tr></thead><tbody>@@PAIR_ROWS@@</tbody></table></div>
+<div class="section-end">@@WATERMARK@@</div>
+</section>
+
+<section class="chapter" id="components" aria-labelledby="components-title">
+<div class="section-head"><h2 id="components-title">Components</h2><p>The states people rely on, drawn from the tokens above. These are fixed specimens, not form controls.</p></div>
+<div class="bhead"><h3>Buttons</h3><p>One primary action per context. Keep touch targets at least 44 px high.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Button states table"><table class="t comp"><caption class="sr-only">Button states</caption><thead><tr><th scope="col">Component</th><th scope="col">Default</th><th scope="col">Hover</th><th scope="col">Focus</th><th scope="col">Disabled</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Primary action</b><small>@@RADIUS_CONTROL@@ px radius · 44 px height</small></span></th><td><span class="btn">Continue @@ARROW_ICON@@</span></td><td><span class="btn hover">Continue @@ARROW_ICON@@</span></td><td><span class="btn focus">Continue @@ARROW_ICON@@</span></td><td><span class="btn off">Continue @@ARROW_ICON@@</span></td></tr><tr><th scope="row"><span class="nm"><b>Secondary action</b><small>1 px border · 44 px height</small></span></th><td><span class="btn line">Go back</span></td><td><span class="btn line hover">Go back</span></td><td><span class="btn line focus">Go back</span></td><td><span class="btn off">Go back</span></td></tr></tbody></table></div>
+<div class="bhead"><h3>Fields</h3><p>Explain an error beside the field that caused it.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Field states table"><table class="t comp"><caption class="sr-only">Text field states</caption><thead><tr><th scope="col">Component</th><th scope="col">Default</th><th scope="col">Focus</th><th scope="col">Error</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Text field</b><small>Email address</small></span></th><td><div class="field-box">alex@example.com</div></td><td><div class="field-box focus">alex@example.com<span class="caret" aria-hidden="true"></span></div></td><td><div class="field-box error">alex@</div><p class="field-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg>Enter a complete email address.</p></td></tr></tbody></table></div>
+<div class="bhead"><h3>Selection</h3><p>Selected states use the primary colour.</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Selection states table"><table class="t comp"><caption class="sr-only">Selection control states</caption><thead><tr><th scope="col">Component</th><th scope="col">Selected</th><th scope="col">Unselected</th></tr></thead><tbody><tr><th scope="row"><span class="nm"><b>Checkbox</b></span></th><td><span class="box on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span></td><td><span class="box"></span></td></tr><tr><th scope="row"><span class="nm"><b>Radio</b></span></th><td><span class="dot on"></span></td><td><span class="dot"></span></td></tr><tr><th scope="row"><span class="nm"><b>Switch</b></span></th><td><span class="sw on"></span></td><td><span class="sw"></span></td></tr></tbody></table></div>
+<div class="section-end">@@WATERMARK@@</div>
+</section>
+@@IDENTITY@@
+<section class="chapter" id="licences" aria-labelledby="licences-title">
+<div class="section-head"><h2 id="licences-title">Licences</h2><p>@@LICENSE_NOTE@@</p></div>
+<div class="bhead"><h3>Document</h3><p>The name is printed in full here, even where the cover shortens it.</p></div>
+<div class="tbl-wrap"><table class="t"><caption class="sr-only">Document details</caption><tbody>@@DOC_ROWS@@</tbody></table></div>
+<div class="bhead"><h3>Typefaces</h3><p>@@FONT_EMBED_NOTE@@</p></div>
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="Typefaces table"><table class="t"><caption class="sr-only">Typefaces and their licences</caption><thead><tr><th scope="col">Family</th><th scope="col">Used for</th><th scope="col">Licence</th></tr></thead><tbody>@@FONT_ROWS@@</tbody></table></div>
+<details class="license-details"><summary>Licence texts</summary><pre id="license-text">Font licence text is included in this document’s embedded data and in the accompanying source assets.</pre></details>
+@@SITE_LINKS@@
+<div class="section-end">@@WATERMARK@@</div>
+</section>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<script type="application/json" id="brand-data">@@DATA@@</script>
+<script>
+(() => {
+  'use strict';
+  const data = JSON.parse(document.getElementById('brand-data').textContent);
+  document.documentElement.classList.add('js');
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  const tell = message => { clearTimeout(toastTimer); toast.textContent = message; toast.classList.add('show'); toastTimer = setTimeout(() => toast.classList.remove('show'), 2800); };
+  document.getElementById('license-text').textContent = data.licenses;
+  async function copy(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(text); return; } catch (_) { /* file browsers may deny clipboard permissions */ }
+    }
+    const previous = document.activeElement;
+    const field = document.createElement('textarea'); field.value = text; field.style.cssText = 'position:fixed;left:-10000px;top:0'; field.setAttribute('aria-label', 'Copy value'); document.body.appendChild(field); field.select();
+    const success = document.execCommand('copy'); field.remove(); if (previous) previous.focus({preventScroll:true});
+    if (!success) throw new Error('Copy unavailable');
+  }
+  function download(content, suffix, mime) {
+    const blob = new Blob([content], {type:mime}); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = data.brand.slug + suffix; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 15000);
+    tell('Download ready: ' + data.brand.slug + suffix);
+  }
+  function exportHTML() {
+    const clone = document.documentElement.cloneNode(true); clone.classList.remove('js');
+    const t = clone.querySelector('#toast'); t.textContent = ''; t.classList.remove('show');
+    clone.querySelectorAll('[aria-current]').forEach(el => el.removeAttribute('aria-current'));
+    clone.querySelector('.nav-links a').setAttribute('aria-current', 'location');
+    download('<!doctype html>\n' + clone.outerHTML, '-export.html', 'text/html;charset=utf-8');
+  }
+  document.addEventListener('click', async event => {
+    const value = event.target.closest('[data-copy]');
+    if (value) { try { await copy(value.dataset.copy); tell(value.dataset.copy + ' copied'); } catch (_) { tell('Copy unavailable. Select the printed value and copy it manually.'); } return; }
+    const button = event.target.closest('[data-action]'); if (!button) return;
+    try {
+      switch (button.dataset.action) {
+        case 'print': window.print(); break;
+        case 'html': exportHTML(); break;
+        case 'css': download(data.cssCredit+'/* Download selected font styles separately. */\n'+data.css, '-tokens.css', 'text/css;charset=utf-8'); break;
+        case 'json': download(data.json, '-tokens.json', 'application/json;charset=utf-8'); break;
+        case 'fonts': {
+          const rules = [...document.styleSheets[0].cssRules].filter(rule => rule.type === CSSRule.FONT_FACE_RULE && !rule.style.fontFamily.includes('Publisher ')).map(rule => rule.cssText).join('\n');
+          download('/*\n'+data.licenses.replace(/\*\//g,'* /')+'\n*/\n'+rules, '-fonts.css', 'text/css;charset=utf-8'); break;
+        }
+      }
+    } catch (_) { tell('The export could not be created. Try your browser’s Save page option.'); }
+  });
+  if ('IntersectionObserver' in window) {
+    const links = [...document.querySelectorAll('.nav-links a')];
+    const sections = links.map(link => document.querySelector(link.getAttribute('href')));
+    function updateSection() {
+      let active = sections[0]; for (const section of sections) { if(section.getBoundingClientRect().top <= 170) active = section; }
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 30) active = sections[sections.length-1];
+      links.forEach(link => { if(link.hash === '#'+active.id) link.setAttribute('aria-current','location'); else link.removeAttribute('aria-current'); });
+    }
+    let queued = false; window.addEventListener('scroll', () => { if(!queued) { queued = true; requestAnimationFrame(() => {updateSection(); queued=false;}); } }, {passive:true}); updateSection();
+  }
+})();
+</script>
+</body>
+</html>

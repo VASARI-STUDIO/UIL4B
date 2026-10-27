@@ -46,7 +46,7 @@ import { contrast, typeLadder } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
 import { generateTintScale, mixHex, T_LABELS } from './colors.js'
 import { colorName } from './paletteNames.js'
-import { buildTokensCss, buildTokensJson, HEADING_LINE_HEIGHT, paletteRole } from './designTokens.js'
+import { buildTokensCss, buildTokensJson, designTokens, HEADING_LINE_HEIGHT, paletteRole } from './designTokens.js'
 import { tintConfigFor, DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { semanticShades, SEMANTIC_STEPS } from '../data/semanticPresets.js'
 import { SITE_ORIGIN } from './routeMeta.js'
@@ -56,6 +56,7 @@ import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { hexToOklch } from './exportTemplates/roles.js'
 import { MAX_SLOTS } from './exportTemplates/shared.js'
 import { roleLabel } from './paletteRoles.js'
+import { manualParts } from './kitManual.js'
 
 export const KIT_TIERS = Object.freeze(['free', 'pro'])
 
@@ -346,6 +347,8 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     ...GUIDE_COPY,
     palette,
     colours,
+    // How many colours the design holds, so a layout that shows only 13 can say so.
+    colourCount: book.palette.length,
     semantic,
     fonts: { display, body },
     typeScale,
@@ -578,7 +581,7 @@ export function renderUiKit(design, {
       fontCss += `@font-face{font-family:"Publisher ${cssFamily(pub.family)}";src:url(data:font/woff2;base64,${data}) format("woff2");font-weight:${pub.axis};font-style:normal;font-display:swap;unicode-range:${range};}\n`
     }
   }
-  if (publisherLicense) licenses += `\nGeist and Geist Mono (publisher interface)\n${publisherLicense}\n`
+  if (publisherLicense) licenses += `\n${publisherFonts.map((pub) => pub.family).join(' and ') || 'Geist and Geist Mono'} (publisher interface)\n${publisherLicense}\n`
 
   // The lockup is drawn from the shared logo geometry, sized in em, so the
   // template's existing font-size rules size it wherever it appears.
@@ -685,6 +688,15 @@ export function renderUiKit(design, {
     RADIUS_CARD: String(sel.radius.card),
   }
   for (const [k, v] of Object.entries(sel.website)) replacements[`WEBSITE_${k.toUpperCase()}`] = esc(v)
+  // Only a layout that tabulates every value asks for these.
+  if (template.includes('@@COLOUR_TABLE@@')) {
+    Object.assign(replacements, manualParts(sel, {
+      tokens, esc, on, g, contrast, grade: gradeOf, roles: ROLES, date,
+      tokenCount: designTokens(safeDesign).length + extra.length,
+      embedded: Object.fromEntries(notes.embedded.map((f) => [f, fonts[f].license.name])),
+      chrome: publisherFonts.map((pub) => pub.family),
+    }))
+  }
 
   // split/join rather than String.replace: a replacement string is never
   // interpreted, so a `$&` in someone's project name stays literal.

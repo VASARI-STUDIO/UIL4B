@@ -3,7 +3,7 @@
 // utils/uiKitExport.js. Loaded on demand from the export panel, so none of this
 // (the template is about 75 KB) reaches anyone who never exports a kit.
 
-import { renderUiKit, kitFontRequests } from './uiKitExport.js'
+import { renderUiKit, kitFontRequests, KIT_CHROME } from './uiKitExport.js'
 import { loadKitFonts, loadPublisherFonts } from './kitFonts.js'
 import { fetchFontCatalog } from './googleFonts.js'
 import { readLogo } from './brandLogo.js'
@@ -12,6 +12,7 @@ import { readLogo } from './brandLogo.js'
 // Keys are the live ids in src/config/exportTemplates.js.
 const KIT_TEMPLATES = Object.freeze({
   studio: () => import('../templates/kit/studio.html?raw'),
+  manual: () => import('../templates/kit/manual.html?raw'),
 })
 const DEFAULT_KIT_TEMPLATE = 'studio'
 
@@ -32,11 +33,12 @@ async function catalogWithin(ms, signal) {
  * not be embedded, which the document itself also states.
  */
 export async function buildUiKit(design, { tier, template: templateId = DEFAULT_KIT_TEMPLATE, onStage = () => {}, signal } = {}) {
-  const load = Object.hasOwn(KIT_TEMPLATES, templateId) ? KIT_TEMPLATES[templateId] : KIT_TEMPLATES[DEFAULT_KIT_TEMPLATE]
+  const id = Object.hasOwn(KIT_TEMPLATES, templateId) ? templateId : DEFAULT_KIT_TEMPLATE
+  const load = KIT_TEMPLATES[id]
   onStage('fonts')
   const [catalog, publisher] = await Promise.all([
     catalogWithin(2500, signal),
-    loadPublisherFonts({ signal }),
+    loadPublisherFonts({ signal, families: KIT_CHROME[id] }),
   ])
   const fonts = await loadKitFonts(kitFontRequests(design), { signal, catalog })
   onStage('building')
