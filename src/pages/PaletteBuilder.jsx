@@ -1,10 +1,11 @@
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon,
+  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode,
 } from '../components/tool/ToolLayout'
 import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
@@ -88,6 +89,47 @@ function returnMenuFocus(el, pointer) {
   el.focus({ preventScroll: true, get focusVisible() { supported = true; return false } })
   if (!supported || el.matches(':focus-visible')) el.blur()
 }
+// The phone layout's breakpoint (the same one ToolLayout's overflow uses).
+const PHONE_QUERY = '(max-width: 767px)'
+function usePhone() {
+  const get = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(PHONE_QUERY).matches
+  const [phone, setPhone] = useState(get)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const mq = window.matchMedia(PHONE_QUERY)
+    const on = () => setPhone(mq.matches)
+    on()
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  return phone
+}
+
+// Palette CSS on a phone: the toolbar overflow's bottom sheet (the .tl-sheet
+// classes in tool-layout.css), holding the CSS and its copy button. The scrim
+// and Escape close it; useModalDialog traps focus and returns it to the button
+// that opened the sheet.
+function PaletteCssSheet({ css, onCopy, onClose }) {
+  const ref = useModalDialog(onClose)
+  return createPortal(
+    <div className="tl-sheet-layer">
+      <div className="tl-sheet-scrim" aria-hidden="true" onClick={onClose} />
+      <div className="tl-sheet" role="dialog" aria-modal="true" aria-label="Palette CSS" tabIndex={-1} ref={ref}>
+        <span className="tl-sheet-grab" aria-hidden="true" />
+        <div className="tl-sheet-head">
+          <span className="tl-sheet-title">Palette CSS</span>
+          <button type="button" className="tl-sheet-x" onClick={onClose} aria-label="Close">
+            <ToolIcon name="x" size={16} />
+          </button>
+        </div>
+        <ToolCode tone="page" label="Palette CSS variables">{css}</ToolCode>
+        <ToolButton variant="accent" icon="copy" className="plb-sheet-copy" onClick={onCopy}>Copy CSS</ToolButton>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -961,6 +1003,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }, [ctxMenu])
   const [swapIdx, setSwapIdx] = useState(null)     // column with the swap-direction popover open
   const [toolsIdx, setToolsIdx] = useState(null)   // column whose quick tools a tap has opened (touch)
+  const phone = usePhone()
+  const [cssSheetOpen, setCssSheetOpen] = useState(false) // Palette CSS bottom sheet (phone)
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
@@ -1330,7 +1374,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
-  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu])
+  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu, setTintsIdx])
 
   // Record the board into palette history. Debounced so slider scrubs and
   // rapid randomises collapse into one entry; identical heads are skipped.
@@ -3294,9 +3338,24 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         >
           Reset
         </button>
-        <button type="button" className="plb-copycss" onClick={copyCssExport}>
-          <ToolIcon name="copy" size={14} /><span>Copy CSS</span>
-        </button>
+        {/* A phone opens the CSS in a bottom sheet to read and copy; wider
+            screens copy it straight away. */}
+        {phone ? (
+          <button type="button" className="plb-copycss" aria-haspopup="dialog" aria-expanded={cssSheetOpen} onClick={() => setCssSheetOpen(true)}>
+            <ToolIcon name="copy" size={14} /><span>Palette CSS</span>
+          </button>
+        ) : (
+          <button type="button" className="plb-copycss" onClick={copyCssExport}>
+            <ToolIcon name="copy" size={14} /><span>Copy CSS</span>
+          </button>
+        )}
+        {phone && cssSheetOpen && (
+          <PaletteCssSheet
+            css={cssExport}
+            onClose={() => setCssSheetOpen(false)}
+            onCopy={() => { copyCssExport(); setCssSheetOpen(false) }}
+          />
+        )}
       </footer>
 
       {/* Step 1 of the brand-kit walkthrough; renders nothing unless the

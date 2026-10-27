@@ -591,3 +591,8 @@
 @media (max-width: 767px) {
   .plb .plb-valpop { width: calc(100% - 24px); }
 }
+
+/* ── Palette CSS sheet (phone): the .tl-sheet pattern, portalled to <body>, so
+   its parts are scoped to the layer and not to .plb. ───────────────────────── */
+.tl-sheet-layer .tl-code { max-height: 40dvh; overflow: auto; }
+.tl-sheet-layer .plb-sheet-copy { width: 100%; justify-content: center; margin-top: 12px; }
