@@ -76,7 +76,7 @@
 .rl-prof-area{fill:color-mix(in srgb,var(--pv-secondary) 20%,var(--pv-surface))}
 .rl-prof-line{fill:none;stroke:var(--pv-secondary);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .rl-prof-steep{fill:none;stroke:var(--pv-accent);stroke-width:4;stroke-linecap:round;vector-effect:non-scaling-stroke}
-.rl-prof-hi,.rl-prof-lo{position:absolute;font-size:12px;line-height:18px;color:var(--pv-muted)}
+.rl-prof-hi,.rl-prof-lo{position:absolute;font-size:12px;line-height:18px;color:var(--pv-text)}
 /* Centred over the peak, a few pixels clear of the line. */
 .rl-prof-hi{transform:translateX(-50%);margin-bottom:var(--s-2);white-space:nowrap}
 .rl-prof-lo{right:0;bottom:var(--s-1)}

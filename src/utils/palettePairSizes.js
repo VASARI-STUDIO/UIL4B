@@ -1,7 +1,7 @@
 // The three WCAG tests a Contrast Checker example is read against, and how a
 // piece of an example is sorted into one of them. Pure and DOM-free; the DOM
 // walk that applies it is in components/palette/PairExample.jsx.
-import { contrastRatio } from './colors'
+import { contrastRatio } from './colors.js'
 
 // Text at 24px, or 18.66px (14pt) in bold, is "large" and needs 3:1; smaller
 // text needs 4.5:1. Icons, lines and chart marks that carry meaning need 3:1.
