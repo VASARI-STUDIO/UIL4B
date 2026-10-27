@@ -269,19 +269,18 @@ test('the export table advertises it, and only because it is built', () => {
     'Pro is back to a single export document — "multiple export variations" is no longer true')
 })
 
-test('ExportPanel actually calls the generator for this format', () => {
+test('ExportPanel actually asks the server for this format', () => {
   // THE CALL SITE. Reverting the branch in ExportPanel must fail here — a test
   // that only exercises buildBrandGuidelines() would stay green while nothing
-  // in the product could reach it.
+  // in the product could reach it. The generator itself is server-only now, so
+  // the panel's job is the request, the activation name and the file name.
   const code = stripComments(PANEL)
-  assert.match(code, /format === 'guidelines'/, 'ExportPanel has no branch for the guidelines format')
-  assert.match(code, /await import\('\.\.\/utils\/brandGuidelines'\)/,
-    'ExportPanel no longer lazily imports the guidelines generator')
-  assert.match(code, /buildBrandGuidelines\(design, \{ projectName \}\)/,
-    'the generator is not being called with the saved design')
-  assert.match(code, /activation = 'brand-guidelines'/,
-    'the guidelines export reports under the book\'s activation name, so the two paid documents cannot be told apart')
-  assert.match(code, /brand-guidelines\.html/, 'the file is not named after the document it is')
+  assert.match(code, /guidelines: \{[\s\S]*?activation: 'brand-guidelines'/,
+    'the guidelines export reports under its own activation name, so the two paid documents can be told apart')
+  assert.match(code, /file: 'brand-guidelines\.html'/, 'the file is not named after the document it is')
+  assert.match(code, /requestExportDocument\(\{ format, design, projectName \}/,
+    'the panel is not asking the server for the document')
+  assert.ok(!/brandGuidelines/.test(code), 'ExportPanel imports the guidelines generator again')
 })
 
 test('the paywall names the document the user clicked, not the other one', () => {

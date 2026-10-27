@@ -297,8 +297,10 @@ test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {
   const gate = PANEL.indexOf("?.pro && !isPro")
   assert.ok(gate > -1, 'runExport must check the paid flag against the live entitlement')
 
-  const build = PANEL.indexOf("import('../utils/designSystemBook')")
-  assert.ok(build > -1, 'the generator is loaded somewhere in this file')
+  // The generator is not in the browser at all: the panel asks the server for the
+  // finished document, so the request is the "build" this gate must precede.
+  const build = PANEL.indexOf('requestExportDocument(')
+  assert.ok(build > -1, 'the panel asks the server for the document somewhere in this file')
 
   // ORDER IS THE ASSERTION. If the gate ever moves below the import, or is
   // deleted, a free user reaches the artefact and this goes red.
@@ -336,13 +338,17 @@ test('a free user is told what they are hitting before they click', () => {
 test('the book reports its own activation, not the style guide’s', () => {
   // Otherwise the paid deliverable is averaged into the free one and the single
   // number meant to say whether the product was useful stops distinguishing.
-  assert.match(PANEL, /activation = 'design-system-book'/)
+  assert.match(PANEL, /activation: 'design-system-book'/)
+  assert.match(PANEL, /activation = doc\.activation/)
   assert.match(PANEL, /trackActivation\(activation, 'export'\)/)
 })
 
-test('the generator is loaded on demand, off the homepage JS budget', () => {
-  assert.match(PANEL, /await import\('\.\.\/utils\/designSystemBook'\)/,
-    'a static import would put the whole book in the main bundle')
+test('the generator is not in the browser: the panel never imports it', () => {
+  // It used to be a lazy import, which still shipped the book to every visitor
+  // who read the bundle. Now the server builds it (api/_lib/exportDocument.js);
+  // tests/unit/export-document.test.js walks the whole import graph.
+  assert.ok(!/designSystemBook/.test(PANEL), 'ExportPanel names the book generator again')
+  assert.match(PANEL, /requestExportDocument\(\{ format, design, projectName \}/)
 })
 
 test('the downloaded artefact never receives the print bootstrap', () => {
@@ -351,6 +357,8 @@ test('the downloaded artefact never receives the print bootstrap', () => {
   // every downloaded book would carry executable code.
   const src = stripComments(read('src/utils/designSystemBook.js'))
   assert.ok(!/window\.print|<script/.test(src), 'the generator emits no script')
-  assert.match(PANEL, /const printBook = \(html, filename\) => \{[\s\S]*?html\.replace\(/,
-    'the bootstrap is applied in the panel, to a copy')
+  assert.match(PANEL, /withPrintBootstrap\(html\)/, 'the bootstrap is applied in the panel, to a copy')
+  const util = stripComments(read('src/utils/exportDocument.js'))
+  assert.match(util, /export function withPrintBootstrap\(html\) \{\s*return html\.replace\(/,
+    'the bootstrap is applied by replace, to the copy handed in')
 })
