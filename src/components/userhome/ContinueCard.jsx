@@ -97,7 +97,7 @@ export default function ContinueCard({ project, design, onSignIn }) {
           <Link
             className="uh-cta"
             to={step.to}
-            aria-label={working ? undefined : `${step.label.startsWith('Continue') ? `Continue ${name}${step.label.slice('Continue'.length)}` : `${step.label} for ${name}`}`}
+            aria-label={working ? undefined : `${step.label}, ${name}`}
           >
             {step.label}
           </Link>
@@ -107,7 +107,7 @@ export default function ContinueCard({ project, design, onSignIn }) {
             <Link
               className="uh-card-name uh-open"
               to={`/projects/${encodeURIComponent(project.id)}`}
-              aria-label={`Open ${name}`}
+              aria-label={`Open project, ${name}`}
               data-project={name}
             >
               Open project
