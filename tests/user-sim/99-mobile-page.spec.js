@@ -167,15 +167,14 @@ test.describe('the back gesture and the menu', () => {
     await expect(page).toHaveURL(/127\.0\.0\.1:\d+\/$/)
   })
 
-  test('a section link in the menu scrolls there without pushing over the menu\'s entry', async ({ page }) => {
+  test('Tools in the menu closes it and opens the /tools page', async ({ page }) => {
     await go(page, '/')
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     await page.locator('.spnav-menu .spnav-mi', { hasText: 'Tools' }).click()
+    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /#bench and the page stays the sales page.
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
-    await expect(page).toHaveURL(/#bench$/)
-    await expect.poll(async () => page.evaluate(() => Math.round(document.getElementById('bench').getBoundingClientRect().top)),
-      { message: 'the bench never came up' }).toBeLessThan(200)
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 
