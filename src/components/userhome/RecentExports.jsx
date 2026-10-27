@@ -7,8 +7,8 @@ import { formatWhen } from '../../utils/recentExports'
 // (useRecentExports), so it is the same on every device. With nothing exported yet there is nothing to
 // list, and the section is not drawn.
 //
-// Six are rendered; the stylesheet shows four beside the Today panel (1001px and up) and all six where
-// the list is stacked, so the rail stays as short as the column beside it.
+// Six are rendered; the stylesheet shows four at every width (the dashboard spec), so the list stays as
+// short as the column beside it and the same length on a phone.
 const SHOWN = 6
 
 export default function RecentExports() {

@@ -1,4 +1,6 @@
-// GET /api/ai?library=<kind> is the only way a Pro row's values leave the server.
+// GET /api/ai?library=<kind> is the only way a Pro row's VALUES leave the server as data. A blurred picture of a
+// locked palette also leaves it, from GET /api/ai?palettePreview=<id> (api/_lib/library/preview.js; pinned by
+// palette-preview-png.test.js): the colours as pixels, never as hex text.
 // serveLibrary is the whole decision, with the token check and the user document
 // injected, so every refusal is exercised here without Firebase.
 //

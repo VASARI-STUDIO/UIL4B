@@ -9,7 +9,9 @@
 //         the greeting. Start something, Discover and the Pro panel run the full
 //         width underneath, so the rail never leaves a hole beside them.
 //   768   One column, in reading order: the lead and the rows, then Today and
-//   390   Recent exports, then Start something, Discover, Pro.
+//         Recent exports, then Start something, Discover, Pro.
+//   390   The same, except Recent exports follows Discover: Today, Start something,
+//         Discover, Recent exports, Pro.
 //
 // Everything is asserted on MEASURED boxes and on the text a person reads, from a
 // fixed set of three projects with known parts and known ages, so "1 of 4 parts ·
@@ -43,10 +45,15 @@
 //   projects.css   drop the phone's `.uh-today-clock` hide          -> "the date and time are one line under the title"
 //   useProjectIcons  writeIcon without { touch: false }              -> 52 "choosing an icon for an older project ..."
 //   Projects.jsx   StarterCard without `limit`                      -> "when archived projects already fill the Free plan ..."
+// Round 3 (the blurred locked cards; made in one build, each named test went red, then restored):
+//   DiscoverPicks  label text back to 'Pro palette. Opens with Pro'  -> "a locked Discover card says what it is, shows the blurred picture ..."
+//   DiscoverPicks  drop the picture's onError                        -> "when the picture cannot be had the card says so in text ..."
+//   preview.js     a tEXt chunk holding the hex codes                 -> tests/unit/palette-preview-png.test.js "no hex string of the palette is in the bytes"
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
+import { decodePng, hexNeedles } from '../helpers/png.js'
 
 const SIZES = [
   { name: 'phone', width: 390, height: 844 },
@@ -120,9 +127,11 @@ for (const size of SIZES) {
       await withExports(page)
       await open(page, size)
 
-      const ORDER = ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-exports', '.uh-start', '.uh-disc-head', '.uh-pro']
-      // Reading order is the same at every width: the rail follows the work in the DOM and is
-      // placed beside it by the grid at 1001px and up.
+      // The rail follows the work in the DOM and is placed beside it by the grid at 1001px and up. On a
+      // phone (640 and under) Recent exports is mounted after Discover instead, as the spec orders it.
+      const ORDER = size.width <= 640
+        ? ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-start', '.uh-disc-head', '.uh-exports', '.uh-pro']
+        : ['.uh-greet', '.uh-h1', '.uh-dash-main > .uh-continue', '.uh-rows', '.uh-today', '.uh-exports', '.uh-start', '.uh-disc-head', '.uh-pro']
       const dom = await page.evaluate((sels) => {
         const els = sels.map((s) => document.querySelector(s))
         return {
@@ -151,10 +160,9 @@ for (const size of SIZES) {
       } else {
         // Stacked: each section ends before the next begins, Today after the rows.
         for (let i = 1; i < ORDER.length; i++) below(ORDER[i - 1], ORDER[i], 'is not below')
-        // Recent exports shows all six when stacked, four beside the rail.
-        await expect(page.locator('.uh-export:visible')).toHaveCount(6)
       }
-      if (size.width > 1000) await expect(page.locator('.uh-export:visible')).toHaveCount(4)
+      // Recent exports shows four at every width, stacked or beside the rail, of the six seeded.
+      await expect(page.locator('.uh-export:visible')).toHaveCount(4)
     })
 
     test('the lead card is the newest project that is not archived', async ({ page }) => {
@@ -477,50 +485,132 @@ for (const size of SIZES) {
       await expect(page.locator('.uh-more'), 'six projects fit without a toggle').toHaveCount(0)
     })
 
-    test('a locked Discover card says what it is and carries no colour', async ({ page }) => {
+    test('a locked Discover card says what it is, shows the blurred picture, and carries no colour of its own', async ({ page }) => {
       watch(page, 'a free designer looking at what is new in Discover')
       await open(page, size)
       const locked = page.locator('.uh-disc-card.is-locked')
-      expect(await locked.count(), 'no locked card on a free account: the sweep measured nothing').toBeGreaterThan(0)
-      const cards = await locked.evaluateAll((els) => els.map((el) => ({
-        label: el.querySelector('.uh-disc-lock-label')?.textContent?.trim(),
-        name: el.querySelector('.uh-disc-name')?.textContent?.trim(),
-        meta: el.querySelector('.uh-disc-meta')?.textContent?.trim(),
-        accessible: el.getAttribute('aria-label'),
-        strips: el.querySelectorAll('.uh-disc-strip, .uh-disc-strip--locked').length,
-        painted: [...el.querySelectorAll('[style]')].length,
-      })))
+      const count = await locked.count()
+      expect(count, 'no locked card on a free account: the sweep measured nothing').toBeGreaterThan(0)
+      // The pictures load as they come into view; wait for each card to say it has its picture.
+      await page.locator('.uh-disc').scrollIntoViewIfNeeded()
+      await expect(page.locator('.uh-disc-lock.is-ready'), 'a locked card\'s picture did not arrive').toHaveCount(count)
+      const cards = await locked.evaluateAll((els) => els.map((el) => {
+        const img = el.querySelector('.uh-disc-lock > img.uh-disc-blur')
+        const label = el.querySelector('.uh-disc-lock-label')
+        const lb = label?.getBoundingClientRect()
+        const lock = el.querySelector('.uh-disc-lock')?.getBoundingClientRect()
+        return {
+          label: label?.textContent?.trim(),
+          name: el.querySelector('.uh-disc-name')?.textContent?.trim(),
+          meta: el.querySelector('.uh-disc-meta')?.textContent?.trim(),
+          accessible: el.getAttribute('aria-label'),
+          strips: el.querySelectorAll('.uh-disc-strip, .uh-disc-strip--locked').length,
+          painted: [...el.querySelectorAll('[style]')].length,
+          note: !!el.querySelector('.uh-disc-note'),
+          picture: img && { src: img.getAttribute('src'), alt: img.getAttribute('alt'), natural: `${img.naturalWidth}x${img.naturalHeight}`, opacity: getComputedStyle(img).opacity },
+          labelOnPicture: !!(lb && lock && lb.left >= lock.left - 1 && lb.right <= lock.right + 1 && lb.top >= lock.top - 1 && lb.bottom <= lock.bottom + 1),
+        }
+      }))
       for (const c of cards) {
-        expect(c.label).toBe('Pro palette. Opens with Pro')
+        expect(c.label).toBe('Opens with Pro')
         expect(c.meta, `${c.name}: the meta line`).toMatch(/^\d+ colours? · Pro$/)
         expect(c.accessible, 'the link name contains what is shown, plus what it is').toBe(`${c.name}, Pro palette, opens with Pro`)
         expect(c.strips, `${c.name} draws a stand-in strip`).toBe(0)
         expect(c.painted, `${c.name} paints something inline`).toBe(0)
+        expect(c.note, `${c.name} shows the text fallback although its picture arrived`).toBe(false)
+        expect(c.picture.src, `${c.name}: where the picture comes from`).toMatch(/^\/api\/ai\?palettePreview=[\w%.-]+$/)
+        expect(c.picture.alt, 'the picture is decoration; the card\'s name says what it is').toBe('')
+        expect(c.picture.natural, `${c.name}: the picture the server sent`).toBe('320x74')
+        expect(c.labelOnPicture, `${c.name}: the label sits on the picture`).toBe(true)
       }
       await expect(page.getByRole('link', { name: `${cards[0].name}, Pro palette, opens with Pro` })).toHaveAttribute('href', '/discover/palettes')
+      // The picture fades in (150ms) once it has loaded; it ends fully opaque.
+      await expect.poll(() => page.locator('.uh-disc-blur').evaluateAll((imgs) => imgs.map((i) => getComputedStyle(i).opacity)), 'the pictures fade in')
+        .toEqual(Array(count).fill('1'))
     })
 
-    test('no colour of a locked palette is anywhere in the Discover section', async ({ page }) => {
+    test('when the picture cannot be had the card says so in text and draws no box', async ({ page }) => {
+      watch(page, 'a free designer whose network drops the blurred pictures')
+      await page.setViewportSize({ width: size.width, height: size.height })
+      await signIn(page, { plan: 'free', projects: THREE })
+      // Registered after signIn's own route for the pictures, so it answers first.
+      await page.route(/\/api\/ai\?palettePreview=/, (route) => route.abort('failed'))
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+      const locked = page.locator('.uh-disc-card.is-locked')
+      const count = await locked.count()
+      expect(count, 'no locked card on a free account: the sweep measured nothing').toBeGreaterThan(0)
+      await page.locator('.uh-disc').scrollIntoViewIfNeeded()
+      await expect(page.locator('.uh-disc-note')).toHaveCount(count)
+      await expect(page.locator('.uh-disc-note')).toHaveText(Array(count).fill('Pro palette'))
+      await expect(page.locator('.uh-disc-lock'), 'the strip is dropped with the picture').toHaveCount(0)
+      await expect(page.locator('.uh-disc-blur')).toHaveCount(0)
+      // Still a card that names the palette and links to the library.
+      await expect(locked.first().locator('.uh-disc-name')).not.toHaveText('')
+      await expect(locked.first()).toHaveAttribute('href', '/discover/palettes')
+    })
+
+    test('no colour of a locked palette is anywhere in the Discover section, the page, or the picture', async ({ page }) => {
       watch(page, 'a free designer whose page must not hold a paid palette')
-      await open(page, size)
+      // No projects: their own strips are the page's colours, and a library palette can share them (the fixture's Violet Lime does).
+      await open(page, size, { projects: [] })
+      await page.locator('.uh-disc').scrollIntoViewIfNeeded()
+      const ids = await page.locator('.uh-disc-card.is-locked .uh-disc-blur').evaluateAll((imgs) => imgs.map((i) => new URL(i.src).searchParams.get('palettePreview')))
+      expect(ids.length, 'no locked card to look for').toBeGreaterThan(0)
+      const palettes = ids.map((id) => LIBRARY_PALETTES.find((p) => p.id === id))
+      expect(palettes.every(Boolean), 'a locked card names a palette the library does not hold').toBe(true)
       const names = await page.locator('.uh-disc-card.is-locked .uh-disc-name').allInnerTexts()
-      expect(names.length, 'no locked card to look for').toBeGreaterThan(0)
-      // Greys and white are half the stylesheet, so only the chromatic colours can tell a leak from the page's own ink.
+      expect(names, 'the picture and the name belong to the same palette').toEqual(palettes.map((p) => p.name))
+
+      // Greys and white are half the stylesheet, so only the chromatic colours can tell a leak from the
+      // page's own ink; the Discover section itself holds no hex at all, so there every colour is looked for.
       const chromatic = (h) => Math.max(...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))) - Math.min(...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))) >= 24
-      const hexes = [...new Set(GALLERY_PALETTES.filter((p) => names.includes(p.name)).flatMap((p) => p.colors.map((c) => c.toUpperCase())).filter(chromatic))]
-      expect(hexes.length, 'the locked palettes were not found in the library').toBeGreaterThan(0)
-      const inPage = await page.evaluate((list) => {
+      const everyHex = [...new Set(palettes.flatMap((p) => p.colors.map((c) => c.toUpperCase())))]
+      const chromaticHex = everyHex.filter(chromatic)
+      expect(chromaticHex.length, 'the locked palettes have no chromatic colour to look for').toBeGreaterThan(0)
+
+      // 1. The page. The section's markup and painted colours, and the whole document's markup.
+      const inPage = await page.evaluate(({ every, chroma }) => {
         const section = document.querySelector('.uh-disc')
-        const html = section.outerHTML.toUpperCase()
+        const sectionHtml = section.outerHTML.toUpperCase()
+        const pageHtml = document.documentElement.outerHTML.toUpperCase()
         const rgb = (h) => `RGB(${parseInt(h.slice(1, 3), 16)}, ${parseInt(h.slice(3, 5), 16)}, ${parseInt(h.slice(5, 7), 16)})`
         const painted = new Set()
         for (const el of section.querySelectorAll('*')) {
           const cs = getComputedStyle(el)
           for (const v of [cs.backgroundColor, cs.color, cs.borderTopColor, cs.borderBottomColor]) painted.add(v.toUpperCase())
         }
-        return list.filter((h) => html.includes(h) || html.includes(rgb(h)) || painted.has(rgb(h)))
-      }, hexes)
-      expect(inPage, 'a locked palette\'s colours are on the page').toEqual([])
+        return {
+          section: every.filter((h) => sectionHtml.includes(h) || sectionHtml.includes(h.slice(1))),
+          document: chroma.filter((h) => pageHtml.includes(h) || pageHtml.includes(rgb(h))),
+          painted: chroma.filter((h) => painted.has(rgb(h))),
+        }
+      }, { every: everyHex, chroma: chromaticHex })
+      expect(inPage, 'a locked palette\'s colours are on the page').toEqual({ section: [], document: [], painted: [] })
+
+      // 2. The picture, fetched the way the card fetches it. Fetch from the page so it goes through the
+      // same route; read the bytes back and look for each hex as text, in either case, with or without #.
+      for (const palette of palettes) {
+        const got = await page.evaluate(async (src) => {
+          const r = await fetch(src)
+          const b = new Uint8Array(await r.arrayBuffer())
+          let s = ''
+          for (let i = 0; i < b.length; i += 1) s += String.fromCharCode(b[i])
+          return { status: r.status, type: r.headers.get('content-type'), b64: btoa(s) }
+        }, `/api/ai?palettePreview=${encodeURIComponent(palette.id)}`)
+        expect(got.status, `${palette.name}: the picture's status`).toBe(200)
+        expect(got.type, `${palette.name}: the picture's type`).toBe('image/png')
+        const bytes = Buffer.from(got.b64, 'base64')
+        const picture = decodePng(bytes) // throws if it is not a PNG, or a chunk's CRC is wrong
+        expect([picture.width, picture.height]).toEqual([320, 74])
+        // POSITIVE CONTROL: the byte search can find text in this file.
+        expect(bytes.includes(Buffer.from('IHDR', 'ascii'))).toBe(true)
+        for (const hex of palette.colors) {
+          for (const needle of hexNeedles(hex)) {
+            expect(bytes.includes(Buffer.from(needle, 'ascii')), `${palette.name}: ${needle} is in the picture's bytes`).toBe(false)
+          }
+        }
+      }
     })
   })
 }

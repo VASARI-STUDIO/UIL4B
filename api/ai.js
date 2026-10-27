@@ -1153,6 +1153,17 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── The soft stand-in for a locked palette ─────────────────────────────
+  // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
+  // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.
+  if (req.method === 'GET' && 'palettePreview' in (req.query || {})) {
+    const [{ servePalettePreview }, { LIBRARY_PALETTES }] = await Promise.all([
+      import('./_lib/library/preview.js'),
+      import('./_lib/library/paletteLibrary.js'),
+    ])
+    return servePalettePreview(req, res, LIBRARY_PALETTES)
+  }
+
   // ── The animated icon sets (Pro) ──────────────────────────────────────────
   // GET /api/ai?animatedIcons=<prefix>[&icons=a,b,c]. Same token + planForUser
   // gate as the libraries; see api/_lib/icons/animated.js.
