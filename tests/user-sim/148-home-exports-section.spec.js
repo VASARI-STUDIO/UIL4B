@@ -492,6 +492,40 @@ test.describe("card 3's shelf stacking while a pick moves", () => {
   })
 })
 
+/**
+ * Come back when nothing on the shelf is moving. A pick starts a 240ms move (and a 120ms hold on the
+ * stacking order), so a cover's box read straight after a click is somewhere short of where it ends
+ * up, and a click aimed from that box lands on the front cover or the card instead. Waits on the
+ * running animations themselves, not a timer, after two frames so that a pick the page has just
+ * been given has started its moves.
+ */
+const shelfSettled = (page) => page.evaluate(async () => {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+  const moving = () => document.getAnimations().filter((a) => a.effect?.target?.closest?.('.sp-shelf') && a.playState !== 'finished')
+  for (let list = moving(), n = 0; list.length && n < 20; list = moving(), n += 1) await Promise.allSettled(list.map((a) => a.finished))
+})
+
+/**
+ * Aim at the middle of the part of the `side` back cover that shows: past the front cover's edge and
+ * inside the plate and the window (on a phone the plate crops a back cover). Returns the cover's file
+ * and a function that clicks there.
+ */
+async function aimAtBackCover(page, side) {
+  await shelfSettled(page)
+  const cover = card(page, 2).locator(`.sp-shelf img[data-pos="${side}"]`)
+  const src = await cover.evaluate((el) => el.currentSrc)
+  const x = await cover.evaluate((el, s) => {
+    const c = el.getBoundingClientRect()
+    const front = el.parentElement.querySelector('[data-pos="front"]').getBoundingClientRect()
+    const plate = el.closest('.sp-plate').getBoundingClientRect()
+    const lo = s === 'right' ? Math.max(front.right, c.left, plate.left) : Math.max(c.left, plate.left, 0)
+    const hi = s === 'right' ? Math.min(c.right, plate.right, innerWidth) : Math.min(front.left, c.right, plate.right)
+    return (lo + hi) / 2
+  }, side)
+  const box = await cover.boundingBox()
+  return { src, click: () => cover.click({ position: { x: x - box.x, y: box.height / 2 } }) }
+}
+
 test.describe("card 3's back covers", () => {
   for (const [width, height, touch] of [[1440, 900, false], [390, 844, true]]) {
     test(`at ${width}px a click on a back cover checks its project and brings its cover to the front`, async ({ browser }) => {
@@ -505,27 +539,215 @@ test.describe("card 3's back covers", () => {
       expect(await checked(), 'the first project starts checked').toEqual([0])
       // Right, left, right again: each click is on whichever cover is in that back position now.
       for (const side of ['right', 'left', 'right']) {
-        const cover = card(page, 2).locator(`.sp-shelf img[data-pos="${side}"]`)
-        const src = await cover.evaluate((el) => el.currentSrc)
+        const { src, click } = await aimAtBackCover(page, side)
         const want = ids.findIndex((id) => src.includes(`/home-exports/${id}`))
         expect(want, `the ${side} cover is one of the three projects (${src})`).toBeGreaterThan(-1)
         const before = await checked()
         expect(before, `before the click, the ${side} cover's project is not the checked one`).not.toEqual([want])
-        // The middle of the part of the cover that shows: past the front cover's edge and inside the
-        // plate and the window (on a phone the plate crops a back cover).
-        const x = await cover.evaluate((el, s) => {
-          const c = el.getBoundingClientRect()
-          const front = el.parentElement.querySelector('[data-pos="front"]').getBoundingClientRect()
-          const plate = el.closest('.sp-plate').getBoundingClientRect()
-          const lo = s === 'right' ? Math.max(front.right, c.left, plate.left) : Math.max(c.left, plate.left, 0)
-          const hi = s === 'right' ? Math.min(c.right, plate.right, innerWidth) : Math.min(front.left, c.right, plate.right)
-          return (lo + hi) / 2
-        }, side)
-        const box = await cover.boundingBox()
-        await cover.click({ position: { x: x - box.x, y: box.height / 2 } })
+        await click()
         await expect.poll(checked, { message: `clicking the ${side} cover did not check its project`, timeout: 5000 }).toEqual([want])
         await waitShown(page, 2, ids[want])
-        await twoFrames(page)
+      }
+      await ctx.close()
+    })
+  }
+
+  // The click also moves focus to that project's radio in whichever switch is on screen: the rows
+  // from 1200px, the pills below it. (The other switch is display: none, so it cannot take focus.)
+  for (const [width, height, touch, where] of [[390, 844, true, 'pills'], [768, 1024, false, 'pills'], [1199, 900, false, 'pills'], [1200, 900, false, 'rows'], [1440, 900, false, 'rows']]) {
+    test(`at ${width}px a click on a back cover puts focus on that project's radio in the ${where}`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height, touch })
+      await go(page, '/')
+      await show(page, 2)
+      await expect(radios(page)).toHaveCount(3)
+      const ids = [await projectId(page, 0), await projectId(page, 1), await projectId(page, 2)]
+      await waitShown(page, 2, ids[0])
+      for (const side of ['right', 'left']) {
+        const { src, click } = await aimAtBackCover(page, side)
+        const want = ids.findIndex((id) => src.includes(`/home-exports/${id}`))
+        expect(want, `the ${side} cover is one of the three projects (${src})`).toBeGreaterThan(-1)
+        await click()
+        await waitShown(page, 2, ids[want])
+        // The radio in the accessibility tree at this width has focus (not the picture that was clicked).
+        await expect(radios(page).nth(want), `after a click on the ${side} cover, focus is on its project's radio`).toBeFocused()
+        const focus = await page.evaluate(() => ({ tag: document.activeElement.tagName, row: !!document.activeElement.closest('.sp-rows'), pill: !!document.activeElement.closest('.sp-pick') }))
+        expect(focus, `focus is on a button in the ${where}`).toEqual({ tag: 'BUTTON', row: where === 'rows', pill: where === 'pills' })
+      }
+      await ctx.close()
+    })
+  }
+})
+
+// ── 2b. what the shelf's covers leave showing at the edges ─────────────────────
+
+// The covers are pictures, and each has its title, details and year drawn into it, so "is there text
+// in the side strip" is a question about pixels. On a phone each back cover shows only a strip about
+// 40 to 50px wide beside the front cover, and the design puts the part of the cover that is plain
+// colour there (a back cover is plain from 57% to 86% of its width), so no half a word shows. The
+// check looks at a picture of the plate as it is painted, over the strip and nothing else: every pixel
+// of it must be within a few levels of the strip's own colour. (The foot of the cover, where its colour bar is, is left out.)
+
+/** The strip of a back cover that shows, in the plate's own coordinates (CSS px), inset 2px from the front cover and the plate's edge. */
+const stripOf = (page, side) => card(page, 2).evaluate((c, s) => {
+  const plate = c.querySelector('.sp-plate').getBoundingClientRect()
+  const cover = c.querySelector(`.sp-shelf img[data-pos="${s}"]`).getBoundingClientRect()
+  const front = c.querySelector('.sp-shelf img[data-pos="front"]').getBoundingClientRect()
+  const lo = s === 'right' ? Math.max(front.right, cover.left, plate.left) : Math.max(cover.left, plate.left, 0)
+  const hi = s === 'right' ? Math.min(cover.right, plate.right, innerWidth) : Math.min(front.left, cover.right, plate.right)
+  // Down to where the colour bar starts (the bar is the cover's last 4%); in from the top by 3px (the hairline).
+  const top = Math.max(cover.top + 3, plate.top)
+  const bottom = Math.min(cover.bottom - cover.height * 0.06, plate.bottom)
+  return { x: lo + 2 - plate.left, y: top - plate.top, w: hi - lo - 4, h: bottom - top, coverW: cover.width, coverLeft: cover.left - plate.left }
+}, side)
+
+/** How many pixels of `png` (the plate, at `dpr`) inside `rect` are not the median colour of that rectangle, by more than `tol` levels in any channel. */
+const inkIn = (page, png, rect, dpr, tol) => page.evaluate(async ({ b64, rect, dpr, tol }) => {
+  const bin = atob(b64)
+  const bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0))
+  const bmp = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
+  const g = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })
+  g.drawImage(bmp, 0, 0)
+  const x = Math.ceil(rect.x * dpr), y = Math.ceil(rect.y * dpr)
+  const w = Math.floor(rect.w * dpr), h = Math.floor(rect.h * dpr)
+  const d = g.getImageData(x, y, w, h).data
+  const median = [0, 1, 2].map((ch) => {
+    const v = []
+    for (let i = ch; i < d.length; i += 4) v.push(d[i])
+    return v.sort((a, b) => a - b)[v.length >> 1]
+  })
+  let ink = 0, worst = 0
+  for (let i = 0; i < d.length; i += 4) {
+    const diff = Math.max(Math.abs(d[i] - median[0]), Math.abs(d[i + 1] - median[1]), Math.abs(d[i + 2] - median[2]))
+    worst = Math.max(worst, diff)
+    if (diff > tol) ink += 1
+  }
+  return { ink, worst, pixels: w * h, median }
+}, { b64: png.toString('base64'), rect, dpr, tol })
+
+test.describe('the side strips of the shelf on a phone', () => {
+  for (const width of [320, 390, 430]) {
+    for (const theme of ['light', 'dark']) {
+      test(`show only the cover's plain colour, no text, at ${width}px, ${theme}`, async ({ browser }) => {
+        const dpr = 2
+        const { ctx, page } = await open(browser, { width, height: 844, touch: true, theme, dpr })
+        await go(page, '/')
+        await show(page, 2)
+        await expect(card(page, 2).locator('.sp-shelf img')).toHaveCount(3)
+        await waitShown(page, 2, (await projectId(page, 0)))
+        // Each back cover in turn is in the left and in the right: the three covers have different
+        // words in different places, so the strip is read once with each of them there.
+        for (const pick of [0, 1, 2]) {
+          await radios(page).nth(pick).click()
+          await waitShown(page, 2, (await projectId(page, pick)))
+          await shelfSettled(page)
+          for (const side of ['left', 'right']) {
+            const strip = await stripOf(page, side)
+            const where = `${side} strip with project ${pick + 1} in front at ${width}px, ${theme}`
+            // A strip that is not there would pass for plain colour, so it has to have a width worth the name.
+            expect(strip.w, `${where}: the strip has width (${strip.w.toFixed(1)}px)`).toBeGreaterThan(25)
+            expect(strip.h, `${where}: the strip has height`).toBeGreaterThan(100)
+            const png = await card(page, 2).locator('.sp-plate').screenshot()
+            const r = await inkIn(page, png, strip, dpr, 12)
+            expect(r.pixels, `${where}: pixels were read`).toBeGreaterThan(1000)
+            expect(r.ink, `${where}: ${r.ink} of ${r.pixels} pixels differ from the plain colour ${r.median} (largest difference ${r.worst} levels): text shows in the strip`).toBe(0)
+          }
+        }
+        await ctx.close()
+      })
+    }
+  }
+})
+
+// ── 2c. the "Example projects" tag ─────────────────────────────────────────────
+
+test.describe('the "Example projects" tag', () => {
+  for (const [width, height, touch] of [[390, 844, true], [1200, 900, false], [1440, 900, false]]) {
+    test(`is in the plate's corner and clear of the covers at ${width}px`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height, touch })
+      await go(page, '/')
+      await show(page, 2)
+      await waitShown(page, 2, (await projectId(page, 0)))
+      await shelfSettled(page)
+      const tag = card(page, 2).locator('.sp-shelf-tag')
+      await expect(tag, 'the tag is on screen').toBeVisible()
+      await expect(tag).toHaveText('Example projects')
+      const m = await card(page, 2).evaluate((c) => {
+        const rectOf = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom } }
+        const tagBox = rectOf(c.querySelector('.sp-shelf-tag'))
+        const plate = rectOf(c.querySelector('.sp-plate'))
+        return { tag: tagBox, plate, covers: [...c.querySelectorAll('.sp-shelf img')].map((im) => ({ pos: im.dataset.pos, ...rectOf(im) })) }
+      })
+      // In the plate.
+      expect(m.tag.left, 'the tag starts inside the plate').toBeGreaterThanOrEqual(m.plate.left)
+      expect(m.tag.top, 'the tag starts inside the plate').toBeGreaterThanOrEqual(m.plate.top)
+      expect(m.tag.right, 'the tag ends inside the plate').toBeLessThanOrEqual(m.plate.right)
+      // Clear of every cover: the boxes do not share any area.
+      for (const c of m.covers) {
+        const w = Math.min(m.tag.right, c.right) - Math.max(m.tag.left, c.left)
+        const h = Math.min(m.tag.bottom, c.bottom) - Math.max(m.tag.top, c.top)
+        expect(w > 0 && h > 0, `the tag (${JSON.stringify(m.tag)}) overlaps the ${c.pos} cover (${JSON.stringify(c)})`).toBe(false)
+      }
+      await ctx.close()
+    })
+  }
+
+  for (const width of [768, 1199]) {
+    test(`is not shown at ${width}px, where the pills carry the label`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height: 900 })
+      await go(page, '/')
+      await show(page, 2)
+      await expect(card(page, 2).locator('.sp-shelf-tag')).toBeHidden()
+      await expect(card(page, 2).locator('.sp-pick').getByText('Example projects'), 'the pills row names the group').toBeVisible()
+      await ctx.close()
+    })
+  }
+})
+
+// ── 2d. the row hints can be read ──────────────────────────────────────────────
+
+/** WCAG contrast ratio of the text colour of each visible .sp-rows-hint against the ground it sits on (the ancestors' backgrounds laid over one another). */
+const hintContrasts = (page) => page.evaluate(() => {
+  const toRGBA = (css) => {
+    const m = /^rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)$/.exec(css)
+    if (m) return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : +m[4] }
+    // A colour space the page was written in (oklch, color-mix...): let the canvas turn it into sRGB.
+    const g = new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true })
+    g.fillStyle = css
+    g.fillRect(0, 0, 1, 1)
+    const [r, gg, b, a] = g.getImageData(0, 0, 1, 1).data
+    return { r, g: gg, b, a: a / 255 }
+  }
+  const over = (top, under) => {
+    const a = top.a + under.a * (1 - top.a)
+    const mix = (k) => (top[k] * top.a + under[k] * under.a * (1 - top.a)) / a
+    return { r: mix('r'), g: mix('g'), b: mix('b'), a }
+  }
+  const lum = ({ r, g, b }) => [r, g, b].map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0)
+  return [...document.querySelectorAll('.sp-rows-hint')].filter((el) => el.offsetParent !== null).map((el) => {
+    const chain = []
+    for (let e = el.parentElement; e; e = e.parentElement) chain.unshift(e)
+    // A ground that is not a flat colour (a picture, a gradient, a see-through layer) cannot be read from styles.
+    const notFlat = [el, ...chain].filter((e) => getComputedStyle(e).backgroundImage !== 'none' || getComputedStyle(e).opacity !== '1').map((e) => e.className)
+    let ground = { r: 255, g: 255, b: 255, a: 1 }
+    for (const e of chain) ground = over(toRGBA(getComputedStyle(e).backgroundColor), ground)
+    const ink = over(toRGBA(getComputedStyle(el).color), ground)
+    const [hi, lo] = [lum(ink), lum(ground)].sort((a, b) => b - a)
+    return { text: el.textContent, color: getComputedStyle(el).color, ground: [ground.r, ground.g, ground.b].map(Math.round), ratio: (hi + 0.05) / (lo + 0.05), notFlat }
+  })
+})
+
+test.describe('the hint under each project name', () => {
+  for (const theme of ['light', 'dark']) {
+    test(`is readable against its ground at 1440px, ${theme} (4.5:1)`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width: 1440, height: 900, theme })
+      await go(page, '/')
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+      await show(page, 2)
+      const hints = await hintContrasts(page)
+      expect(hints.length, 'the hints are on screen (one a row, in cards 2 and 3)').toBeGreaterThanOrEqual(3)
+      for (const h of hints) {
+        expect(h.notFlat, `"${h.text}": the ground is a flat colour, so a ratio can be worked out`).toEqual([])
+        expect(h.ratio, `"${h.text}" is ${h.color} on rgb(${h.ground}): ${h.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
       }
       await ctx.close()
     })
