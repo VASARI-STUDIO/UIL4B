@@ -573,13 +573,11 @@ const READY_BACKSTOP_MS = 20000
  *
  * `own` is the route's OWN content — `main` plus any open modal — with the
  * shared chrome excluded, which is the measurement `expectRendered` used to get
- * wrong. The modal half is not a special case for one route: /login (and every
- * RequireAuth redirect into it) is a launcher for the app-wide login popup, so
- * its content genuinely lives in a `[role="dialog"]` outside the shell and its
- * `main` is EMPTY once the dialog is up. (It used to hold a spinner that never
- * stopped; App.jsx now renders that only while AuthContext is still resolving —
- * 2026-09-11. The modal half of this measurement is what made that safe, and it
- * is why it must stay.)
+ * wrong. /login is a full-screen page, so its own content (the h1, the form and
+ * the wall of exports) lives in `main` like any other route. The modal half
+ * stays because the sign-in dialog still opens over other pages, outside the
+ * shell: a route that raises one has its content in a `[role="dialog"]` while
+ * its `main` holds only the page behind it.
  *
  * `crashed` is App.jsx's ErrorBoundary card. It is reported because a crashed
  * route LOOKS rendered by every other measure here — the fallback is gone and
@@ -849,7 +847,7 @@ export async function ready(page, what) {
  *
  * The floor stays 40 characters, but it now sits in a gap that was measured
  * rather than guessed: every unarrived route scores exactly 0 on `own`, and the
- * thinnest real page in the suite is /login's popup at 127.
+ * thinnest real surface in the suite, the sign-in dialog, measured 127.
  */
 export async function expectRendered(page, what) {
   const where = what || page.url()
@@ -1072,4 +1070,25 @@ export async function chooseMenuOption(page, trigger, choice) {
     }, choice)
   if (!name) throw new Error(`No listbox option for ${String(choice)}`)
   await list.getByRole('option', { name, exact: true }).click()
+}
+
+/**
+ * Open the sign-in dialog the way a visitor does now that /login is a page of
+ * its own: from the header, over an app-header page. Neither entry passes a
+ * reason, so both open the "chosen" variant of the dialog.
+ *
+ * `entry` is 'Log in' (opens on the log-in form) or 'Create a free account'
+ * (opens on sign-up). Wide screens have a "Menu" popover; a phone has the
+ * "Open menu" sheet. Both carry both entries.
+ */
+export async function openChosenDialog(page, entry = 'Log in') {
+  await go(page, '/learn/help')
+  const desktopMenu = page.getByRole('button', { name: 'Menu', exact: true })
+  if (await desktopMenu.isVisible()) {
+    await desktopMenu.click()
+    await page.locator('.pnav-pop-item').filter({ hasText: new RegExp(`^${entry}$`) }).click()
+  } else {
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await page.locator('.pnav-sheet').getByRole('button', { name: entry, exact: true }).click()
+  }
 }

@@ -1,11 +1,11 @@
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, openChosenDialog } from './helpers.js'
 
 const PERSONA = 'keyboard account access'
 
 test('login dialog focuses, traps keyboard navigation, labels fields and restores scroll', async ({ page }) => {
   watch(page, PERSONA)
-  await go(page, '/login')
+  await openChosenDialog(page, 'Log in')
 
   const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
   await expect(dialog).toBeVisible()
@@ -116,7 +116,7 @@ test('closing the dialog restores focus even when its opener was in a menu that 
 
 test('a reason-less sign-up says what the account is for before asking for one', async ({ page }) => {
   watch(page, 'a first-time visitor clicking the primary call to action')
-  await go(page, '/login?signup=1')
+  await openChosenDialog(page, 'Create a free account')
 
   const dialog = page.getByRole('dialog', { name: /create your free account/i })
   await expect(dialog).toBeVisible()
@@ -167,7 +167,9 @@ test.describe('on a phone', () => {
     // sign-up form carries a name field on top of everything else, and 53px of
     // it — including 'Already have an account? Sign in' — sat below the fold
     // at 390x844 before the pane was reworked.
-    await go(page, '/login?signup=1')
+    await dialog.getByRole('button', { name: 'Close' }).tap()
+    await expect(dialog).toBeHidden()
+    await openChosenDialog(page, 'Create a free account')
     const signup = page.getByRole('dialog', { name: /create your free account/i })
     await expect(signup).toBeVisible()
     await expect.poll(
@@ -178,7 +180,7 @@ test.describe('on a phone', () => {
 
   test('the close control has a visible boundary without a hover', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/login')
+    await openChosenDialog(page, 'Log in')
 
     const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
     await expect(dialog).toBeVisible()
@@ -201,44 +203,38 @@ test.describe('on a phone', () => {
     expect(paint.border, 'and a border that is actually drawn').not.toBe('rgba(0, 0, 0, 0)')
   })
 })
-// THE /login ROUTE HAD NO h1, AND THE DIALOG IS THE ONLY THING ON IT.
+// THE TITLE'S LEVEL FOLLOWS WHAT IT SITS ON.
 //
-// LoginRoute returns null once auth resolves — App.jsx says so in as many
-// words, "the dialog IS the page" — so <main> is an empty 501px box and the
-// popup's title was the only heading in the document. Measured 2026-09-15 at
-// 1280: h1 count 0, main innerText 0 characters. A screen-reader user landing
-// on the sign-in page got a document with no title at all, on the surface the
-// entire signup funnel points at.
-//
-// Both halves are asserted here because fixing one by breaking the other is the
-// easy mistake: promoting the title unconditionally would put a SECOND h1 on
-// every page the popup opens over, which is worse than the defect.
-test.describe('the sign-in dialog titles itself for the context it opens in', () => {
-  test('on /login it is the page h1, because nothing else on the route is', async ({ page }) => {
+// /login is a page of its own, so its title is the document's one h1 and it
+// lives in <main>. The same form inside the dialog is an h2, because the dialog
+// opens over a page that already has an h1. Both halves are asserted here
+// because fixing one by breaking the other is the easy mistake: promoting the
+// dialog title would put a SECOND h1 on every page the popup opens over, and
+// demoting the page title would leave /login with no h1 at all.
+test.describe('the sign-in form titles itself for the context it appears in', () => {
+  test('on /login it is the page h1, inside main, with no dialog', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/login')
-    await page.waitForSelector('#ui-login-title', { timeout: 10000 })
+    await page.waitForSelector('main #ui-login-title', { timeout: 10000 })
 
     const seen = await page.evaluate(() => ({
       h1s: [...document.querySelectorAll('h1')].map((h) => (h.textContent || '').trim()),
       titleTag: document.querySelector('#ui-login-title')?.tagName,
-      labelledBy: document.querySelector('[role="dialog"]')?.getAttribute('aria-labelledby'),
-      canSignIn: !!document.querySelector('.auth-google-btn'),
+      titleInMain: !!document.querySelector('main #ui-login-title'),
+      dialogs: document.querySelectorAll('[role="dialog"], [aria-modal="true"]').length,
+      canSignIn: !!document.querySelector('main .auth-google-btn'),
     }))
 
-    // POSITIVE CONTROL: a route that failed to raise the dialog has no title
+    // POSITIVE CONTROL: a route that failed to render its form has no title
     // element and no sign-in control, and every assertion about headings below
     // would then be measuring an empty page.
     expect(seen.canSignIn, 'the sign-in control never rendered, so this test is '
-      + 'measuring a route that did not open its dialog').toBe(true)
+      + 'measuring a page that did not draw its form').toBe(true)
 
-    expect(seen.titleTag, 'the dialog title on /login is not an h1. That route renders '
-      + 'null once auth resolves, so this heading is the document outline — see the '
-      + 'isPageTitle note in LoginPopup.jsx').toBe('H1')
-    expect(seen.h1s, 'exactly one h1, and it is the dialog title').toEqual(['Log in to UIL4B'])
-
-    // The promotion must not cost the dialog its accessible name.
-    expect(seen.labelledBy, 'the dialog lost its aria-labelledby').toBe('ui-login-title')
+    expect(seen.titleTag, 'the form title on /login is not an h1').toBe('H1')
+    expect(seen.titleInMain, 'the h1 is not inside main').toBe(true)
+    expect(seen.h1s, 'exactly one h1, and it is the form title').toEqual(['Log in to UIL4B'])
+    expect(seen.dialogs, 'the page is not a dialog').toBe(0)
   })
 
   test('opened over a page it stays an h2, so that page keeps one h1', async ({ page }) => {
@@ -264,7 +260,7 @@ test.describe('the sign-in dialog titles itself for the context it opens in', ()
       titleTag: document.querySelector('#ui-login-title')?.tagName,
     }))
     expect(seen.titleTag, 'the dialog title is an h1 while open OVER a page. A dialog '
-      + 'title is not a second page title; only the /login route passes isPageTitle')
+      + 'title is not a second page title; only the /login page carries an h1')
       .toBe('H2')
     expect(seen.h1Count, 'the page now has more than one h1 because the dialog promoted '
       + 'its own title').toBe(1)

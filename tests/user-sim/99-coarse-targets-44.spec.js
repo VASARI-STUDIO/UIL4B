@@ -42,7 +42,19 @@ const CASES = [
   // control a finger lands on is 44px tall, not a 20px box inside a label.
   { route: '/create/3d-converter', sels: ['.v3d-out input'] },
   { route: '/create/tint', sels: ['.tt-iconbtn', '.tt-picker', '.tt-hex-input'] },
-  { route: '/login', sels: ['.ui-login-x'] },
+  // The /login page: the Google button and the wall's pause button (a phone
+  // gets the band, which carries it).
+  { route: '/login', sels: ['.auth-google-btn', '.aw-pause'] },
+  // The sign-in dialog's close control, opened from the header's Menu.
+  {
+    route: '/learn/help',
+    label: '/learn/help (sign-in dialog)',
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Open menu' }).click()
+      await page.locator('.pnav-sheet').getByRole('button', { name: 'Log in', exact: true }).click()
+    },
+    sels: ['.ui-login-x'],
+  },
   { route: '/projects', signin: true, sels: ['.uh-card-name'] },
   // The sales page's bench header and the sales footer's link rows.
   { route: '/', sels: ['.sp-shuffle'] },
@@ -50,12 +62,13 @@ const CASES = [
 ]
 
 for (const c of CASES) {
-  test(`${c.route}: ${c.sels.join(', ')} reach 44px under a coarse pointer`, async ({ browser }) => {
+  test(`${c.label || c.route}: ${c.sels.join(', ')} reach 44px under a coarse pointer`, async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
     const page = await ctx.newPage()
     watch(page, 'someone on a phone reaching for a small control')
     if (c.signin) await signIn(page, { plan: 'free', projects: 2 })
     await go(page, c.route)
+    if (c.open) await c.open(page)
     // POSITIVE CONTROL: the context really is a coarse pointer.
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
     for (const sel of c.sels) {

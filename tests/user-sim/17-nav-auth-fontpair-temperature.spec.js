@@ -86,12 +86,16 @@ test.describe('nav auth opens over the page you are on', () => {
   test('/login still works as a route, for bookmarks and RequireAuth redirects', async ({ page }) => {
     watch(page, 'arriving on a bookmarked sign-in URL')
     await go(page, '/login')
-    await expect(page.getByRole('dialog')).toBeVisible()
+    // The route is a page of its own now: its h1 and form sit in main, and no
+    // dialog is involved.
+    await expect(page.locator('main').getByRole('heading', { level: 1, name: 'Log in to UIL4B' })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
 
     // A protected route still bounces a signed-out visitor here rather than
     // rendering an empty page — and carries the query it was asked for.
     await go(page, '/checkout/return?session_id=cs_test_resume')
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.locator('main').getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
     expect(new URL(page.url()).pathname).toBe('/login')
     expect(await resumeTarget(page), 'the query survives the auth gate').toBe('/checkout/return?session_id=cs_test_resume')
   })
@@ -109,12 +113,12 @@ test.describe('nav auth opens over the page you are on', () => {
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await resumeTarget(page), 'onboarding will return them to the library').toBe('/discover/palettes')
 
-    // Dismissing and then arriving at the bare /login launcher must not leave
-    // the old page behind as a destination.
+    // Dismissing and then arriving at the bare /login page must not leave the
+    // old page behind as a destination.
     await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
     await go(page, '/login')
-    await expect(page.getByRole('dialog')).toBeVisible()
-    expect(await resumeTarget(page), 'a launcher is not a destination').toBeNull()
+    await expect(page.locator('main').getByRole('heading', { level: 1 })).toBeVisible()
+    expect(await resumeTarget(page), 'a bare /login is not a destination').toBeNull()
   })
 })
 
