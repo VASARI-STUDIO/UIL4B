@@ -98,13 +98,14 @@
 .or-opt-l b{font-weight:600;color:var(--pv-text)}
 .or-guide{margin-left:auto;color:var(--pv-text);text-decoration:underline;text-underline-offset:3px}
 
-.or-swatches{display:flex;flex-wrap:wrap;gap:var(--s-3) var(--s-4)}
-.or-sw{display:flex;flex-direction:column;align-items:center;gap:var(--s-1);width:60px}
+/* Five equal columns across the buying column: one row at every width. */
+.or-swatches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s-3) var(--s-1)}
+.or-sw{position:relative;display:flex;flex-direction:column;align-items:center;gap:var(--s-1);min-width:0}
 .or-sw>i{
   width:36px;height:36px;border-radius:50%;border:1px solid transparent;
 }
 .or-sw.is-on>i{outline:2px solid var(--pv-text);outline-offset:2px}
-/* A name the width cannot hold (a long custom label) wraps instead of being cut. */
+/* A name the column cannot hold (a long custom label) wraps instead of being cut. */
 .or-sw-t{max-width:100%;text-align:center;overflow-wrap:anywhere;font-size:12px;line-height:1.25;color:var(--pv-muted)}
 .or-sw.is-on .or-sw-t{color:var(--pv-text);font-weight:600}
 
@@ -151,6 +152,10 @@
   .or-shown{display:none}
   .or-buy{grid-column:7 / span 6}
   .or-sizes{grid-template-columns:repeat(3,minmax(44px,1fr))}
+  /* The buying column is under 330px here, too narrow for five names. The "Colourway"
+   * line above names the selected one; the others stay in the text, hidden visually. */
+  .or-sw>i{width:40px;height:40px}
+  .or-sw-t{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 }
 
 /* ── Narrow: one column, stage first ── */
@@ -162,9 +167,6 @@
   .or-main{padding:var(--s-3) var(--s-4) var(--s-6);gap:var(--s-5)}
   .or-stage,.or-buy{grid-column:1 / -1}
   .or-title{font-size:28px;margin-top:calc(var(--s-4) * -1)}
-  /* Five colourways in one row: they shrink from 60px rather than wrap. */
-  .or-swatches{flex-wrap:nowrap;gap:var(--s-3) var(--s-2)}
-  .or-sw{flex:0 1 60px;min-width:0}
   .or-ctas{flex-wrap:wrap}
   .or-cta{flex-basis:100%}
   .or-save{flex:1;justify-content:center}
