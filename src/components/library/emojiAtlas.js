@@ -152,6 +152,13 @@ export const atlas = {
   listeners: new Set(),
   idle: 0,
   fullFor: null,      // the wanted list the background pass ran out of room for
+  mounted: new Set(), // glyphs in the cells mounted now: a reply for none of them changes nothing on screen
+}
+
+// The grid says which glyphs its mounted cells show, in the same commit that
+// mounts them, so no reply can land between a cell mounting and this being set.
+export function atlasMounted(chars) {
+  atlas.mounted = chars
 }
 
 export const atlasSupported = () => (
@@ -255,7 +262,10 @@ function atlasWorker() {
     atlas.current = null
     if (reply.error) { atlasFail(); return }
     atlasInstall(job, reply)
-    atlasEmit()
+    // Tell the grid only when a mounted cell can change: a background sheet for
+    // glyphs nobody is looking at would re-render the whole grid for nothing. A
+    // cell mounted later reads the sprite straight from the atlas.
+    if (job.chars.some(ch => atlas.mounted.has(ch))) atlasEmit()
     atlasPump()
   }
   worker.onerror = () => atlasFail()
@@ -382,7 +392,7 @@ export function atlasTrim(shown, wanted) {
   }
   atlas.sheets = atlas.sheets.filter(s => !drop.has(s))
   atlas.bytes = bytes
-  atlasEmit()
+  // No emit: a sheet holding a mounted glyph is never dropped, so no cell changes.
 }
 
 // Measure how a real cell lays its glyph out, so the bitmap lands on the same

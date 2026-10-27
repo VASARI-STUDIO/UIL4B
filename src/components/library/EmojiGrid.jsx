@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore, memo } from 'react'
-import { atlas, atlasPending, atlasSubscribe, atlasVersion, atlasConfigure, atlasWant, atlasWarm, atlasTrim } from './emojiAtlas'
+import { atlas, atlasPending, atlasSubscribe, atlasVersion, atlasConfigure, atlasMounted, atlasWant, atlasWarm, atlasTrim } from './emojiAtlas'
 
 // The Emoji Library's windowed grid, kept in its own component so the scroll
 // state (which row range is mounted, which cell just copied) re-renders THIS
@@ -204,15 +204,24 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     return chars
   }, [visible, shownOf])
 
+  const visibleSet = useMemo(() => new Set(visibleChars), [visibleChars])
+
+  // The atlas re-renders this grid for a worker reply only when the reply holds
+  // a glyph mounted here; layout effect, so it is set in the commit that mounts.
+  useLayoutEffect(() => {
+    atlasMounted(visibleSet)
+    return () => atlasMounted(new Set())
+  }, [visibleSet])
+
   useEffect(() => {
     if (atlas.config) atlasWant(visibleChars)
   }, [visibleChars, atlasGen])
 
   useEffect(() => {
     if (!atlas.config) return
-    atlasTrim(new Set(visibleChars), wanted)
+    atlasTrim(visibleSet, wanted)
     atlasWarm(wanted)
-  }, [visibleChars, wanted, atlasGen, atlasVer])
+  }, [visibleSet, wanted, atlasGen, atlasVer])
 
   const handleCopy = useCallback((emoji, tone) => {
     const text = tone ? toneOf(emoji, skinTone) : emoji
