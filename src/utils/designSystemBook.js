@@ -254,48 +254,48 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 
   // ── colour ──────────────────────────────────────────────────────────────
   sections.colour = () => {
-  if (hasPalette) {
-    const sys = systemName(d.harmony)
-    addOpening(
-      '01', 'Colour',
-      `${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'} built on ${article(sys)} ${sys} system, each with the ink that reads on it and the ratio that proves it.`,
-      field, fieldInk,
-    )
-    let seen = 0
-    balancedChunk(d.palette, BANDS_PER_PAGE).forEach((group, gi) => {
-      addNumbered(colourBands(d, group, seen, gi === 0), 'Colour', gi === 0 ? 'The palette' : null)
-      seen += group.length
-    })
-    addNumbered(matrixPage(d), 'Colour', 'Contrast matrix')
-  }
+    if (hasPalette) {
+      const sys = systemName(d.harmony)
+      addOpening(
+        '01', 'Colour',
+        `${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'} built on ${article(sys)} ${sys} system, each with the ink that reads on it and the ratio that proves it.`,
+        field, fieldInk,
+      )
+      let seen = 0
+      balancedChunk(d.palette, BANDS_PER_PAGE).forEach((group, gi) => {
+        addNumbered(colourBands(d, group, seen, gi === 0), 'Colour', gi === 0 ? 'The palette' : null)
+        seen += group.length
+      })
+      addNumbered(matrixPage(d), 'Colour', 'Contrast matrix')
+    }
 
-  if (d.gradient) {
-    addNumbered(gradientPage(d), 'Colour', 'The gradient')
-  }
+    if (d.gradient) {
+      addNumbered(gradientPage(d), 'Colour', 'The gradient')
+    }
   }
 
   // ── typography ──────────────────────────────────────────────────────────
   sections.typography = () => {
-  addOpening(
-    '02', 'Typography',
-    `${d.heading} for headings, ${d.body} for reading, on a ${d.ratio} scale from ${d.baseSize}px.`,
-    '#111114', '#FFFFFF',
-  )
-  addNumbered(familiesPage(d), 'Typography', 'The families')
-  addNumbered(scalePage(d, ladder), 'Typography', 'The scale')
+    addOpening(
+      '02', 'Typography',
+      `${d.heading} for headings, ${d.body} for reading, on a ${d.ratio} scale from ${d.baseSize}px.`,
+      '#111114', '#FFFFFF',
+    )
+    addNumbered(familiesPage(d), 'Typography', 'The families')
+    addNumbered(scalePage(d, ladder), 'Typography', 'The scale')
   }
 
   // ── tokens ──────────────────────────────────────────────────────────────
   sections.tokens = () => {
-  const tokenField = d.palette[1] || d.palette[0] || '#111114'
-  addOpening(
-    '03', 'Tokens',
-    `${tokens.length} custom properties — the whole system as code, ready to paste into a stylesheet.`,
-    tokenField, inkFor(tokenField).ink,
-  )
-  balancedChunk(tokens, TOKENS_PER_PAGE).forEach((group, gi) => {
-    addNumbered(tokensPage(group, gi === 0, tokens.length), 'Tokens', gi === 0 ? 'Custom properties' : null)
-  })
+    const tokenField = d.palette[1] || d.palette[0] || '#111114'
+    addOpening(
+      '03', 'Tokens',
+      `${tokens.length} custom properties — the whole system as code, ready to paste into a stylesheet.`,
+      tokenField, inkFor(tokenField).ink,
+    )
+    balancedChunk(tokens, TOKENS_PER_PAGE).forEach((group, gi) => {
+      addNumbered(tokensPage(group, gi === 0, tokens.length), 'Tokens', gi === 0 ? 'Custom properties' : null)
+    })
   }
 
   for (const id of orderSections(Object.keys(sections), tpl.sectionOrder)) sections[id]()
