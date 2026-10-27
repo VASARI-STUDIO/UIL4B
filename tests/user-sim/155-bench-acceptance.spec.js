@@ -317,10 +317,16 @@ for (const width of [390, 768, 1440]) {
     await go(page, '/')
     for (let i = 0; i < TOOLS.length; i++) {
       const panel = await openTool(page, i)
-      const box = await panel.boundingBox()
-      const foot = await panel.locator('.sp-tool-foot').boundingBox()
-      expect(foot, `${TOOLS[i]} has a footer`).not.toBeNull()
-      expect(foot.y + foot.height, `${TOOLS[i]}'s footer ends inside its window at ${width}px`).toBeLessThanOrEqual(box.y + box.height + 0.5)
+      // Both rects in one read. On the scrolling bench each window is scaled by its
+      // distance from the middle, and that scale is rewritten on scroll; two separate
+      // boundingBox calls can straddle a rewrite and read the window at 0.978 and the
+      // footer at 1.0, which looks like a 6px overflow that is not there.
+      const ends = await panel.evaluate((el) => {
+        const foot = el.querySelector('.sp-tool-foot')
+        return foot ? { panel: el.getBoundingClientRect().bottom, foot: foot.getBoundingClientRect().bottom } : null
+      })
+      expect(ends, `${TOOLS[i]} has a footer`).not.toBeNull()
+      expect(ends.foot, `${TOOLS[i]}'s footer ends inside its window at ${width}px`).toBeLessThanOrEqual(ends.panel + 0.5)
       const clipped = await panel.locator('.sp-tool-foot a, .sp-tool-foot button').evaluateAll((els) => els.filter((el) => {
         const r = el.getBoundingClientRect(); const p = el.closest('.sp-panel').getBoundingClientRect()
         return r.height === 0 || r.bottom > p.bottom + 0.5
