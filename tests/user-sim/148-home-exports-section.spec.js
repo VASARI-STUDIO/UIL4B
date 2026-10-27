@@ -506,28 +506,55 @@ const shelfSettled = (page) => page.evaluate(async () => {
 })
 
 /**
+ * The strip of a back cover that shows, in the plate's own coordinates (CSS px), inset 2px from the front
+ * cover and the plate's edge (plus `plateLeft`, the plate's left edge in the window). From 451px to 760px
+ * the design clips each back cover to a window of its own plain band, so what shows is the part of
+ * the cover from 60% of its width to the front cover's edge on the left, and from the front cover's edge
+ * to 84% on the right. A cover's box is not clipped (getBoundingClientRect reports the whole picture),
+ * so that window is worked out here from the box. Below 451px and from 761px nothing is clipped and the
+ * whole of the cover beside the front one is in view. In the clipped widths `away` is the rest of the
+ * cover (outside the window), which has to show the plate's own colour.
+ */
+const stripOf = (page, side) => card(page, 2).evaluate((c, s) => {
+  const plate = c.querySelector('.sp-plate').getBoundingClientRect()
+  const cover = c.querySelector(`.sp-shelf img[data-pos="${s}"]`).getBoundingClientRect()
+  const front = c.querySelector('.sp-shelf img[data-pos="front"]').getBoundingClientRect()
+  const windowed = innerWidth >= 451 && innerWidth <= 760
+  const lo = s === 'right' ? Math.max(front.right, cover.left, plate.left) : Math.max(windowed ? cover.left + cover.width * 0.6 : cover.left, plate.left, 0)
+  const hi = s === 'right' ? Math.min(windowed ? cover.left + cover.width * 0.84 : cover.right, plate.right, innerWidth) : Math.min(front.left, cover.right, plate.right)
+  // Down to where the colour bar starts (the bar is the cover's last 4%); in from the top by 3px (the hairline).
+  const top = Math.max(cover.top + 3, plate.top)
+  const bottom = Math.min(cover.bottom - cover.height * 0.06, plate.bottom)
+  // Where the clip should have taken the cover away (the other side of the window from the front cover),
+  // so the plate's own colour should show there. With no clip the title or the year would show here, which
+  // is what the strip alone cannot see, because the strip is the window and the window is plain either way.
+  let away = null
+  if (windowed) {
+    const aLo = s === 'right' ? cover.left + cover.width * 0.84 : Math.max(cover.left, plate.left, 0)
+    const aHi = s === 'right' ? Math.min(cover.right, plate.right, innerWidth) : cover.left + cover.width * 0.6
+    away = { x: aLo + 2 - plate.left, y: top - plate.top, w: aHi - aLo - 4, h: bottom - top }
+  }
+  return { x: lo + 2 - plate.left, y: top - plate.top, w: hi - lo - 4, h: bottom - top, coverW: cover.width, coverLeft: cover.left - plate.left, plateLeft: plate.left, away }
+}, side)
+
+/**
  * Aim at the middle of the part of the `side` back cover that shows: past the front cover's edge and
- * inside the plate and the window (on a phone the plate crops a back cover). Returns the cover's file
- * and a function that clicks there.
+ * inside the plate and the window (on a phone the plate crops a back cover; from 451px to 760px the
+ * cover is also clipped to its own window, and a click outside the window does not reach it). Returns
+ * the cover's file and a function that clicks there.
  */
 async function aimAtBackCover(page, side) {
   await shelfSettled(page)
   const cover = card(page, 2).locator(`.sp-shelf img[data-pos="${side}"]`)
   const src = await cover.evaluate((el) => el.currentSrc)
-  const x = await cover.evaluate((el, s) => {
-    const c = el.getBoundingClientRect()
-    const front = el.parentElement.querySelector('[data-pos="front"]').getBoundingClientRect()
-    const plate = el.closest('.sp-plate').getBoundingClientRect()
-    const lo = s === 'right' ? Math.max(front.right, c.left, plate.left) : Math.max(c.left, plate.left, 0)
-    const hi = s === 'right' ? Math.min(c.right, plate.right, innerWidth) : Math.min(front.left, c.right, plate.right)
-    return (lo + hi) / 2
-  }, side)
+  const strip = await stripOf(page, side)
+  const x = strip.plateLeft + strip.x + strip.w / 2
   const box = await cover.boundingBox()
   return { src, click: () => cover.click({ position: { x: x - box.x, y: box.height / 2 } }) }
 }
 
 test.describe("card 3's back covers", () => {
-  for (const [width, height, touch] of [[1440, 900, false], [390, 844, true]]) {
+  for (const [width, height, touch] of [[1440, 900, false], [600, 900, false], [390, 844, true]]) {
     test(`at ${width}px a click on a back cover checks its project and brings its cover to the front`, async ({ browser }) => {
       const { ctx, page } = await open(browser, { width, height, touch })
       await go(page, '/')
@@ -581,24 +608,13 @@ test.describe("card 3's back covers", () => {
 // ── 2b. what the shelf's covers leave showing at the edges ─────────────────────
 
 // The covers are pictures, and each has its title, details and year drawn into it, so "is there text
-// in the side strip" is a question about pixels. On a phone each back cover shows only a strip about
+// in the side strip" is a question about pixels. Below 451px each back cover shows only a strip about
 // 40 to 50px wide beside the front cover, and the design puts the part of the cover that is plain
-// colour there (a back cover is plain from 57% to 86% of its width), so no half a word shows. The
-// check looks at a picture of the plate as it is painted, over the strip and nothing else: every pixel
-// of it must be within a few levels of the strip's own colour. (The foot of the cover, where its colour bar is, is left out.)
-
-/** The strip of a back cover that shows, in the plate's own coordinates (CSS px), inset 2px from the front cover and the plate's edge. */
-const stripOf = (page, side) => card(page, 2).evaluate((c, s) => {
-  const plate = c.querySelector('.sp-plate').getBoundingClientRect()
-  const cover = c.querySelector(`.sp-shelf img[data-pos="${s}"]`).getBoundingClientRect()
-  const front = c.querySelector('.sp-shelf img[data-pos="front"]').getBoundingClientRect()
-  const lo = s === 'right' ? Math.max(front.right, cover.left, plate.left) : Math.max(cover.left, plate.left, 0)
-  const hi = s === 'right' ? Math.min(cover.right, plate.right, innerWidth) : Math.min(front.left, cover.right, plate.right)
-  // Down to where the colour bar starts (the bar is the cover's last 4%); in from the top by 3px (the hairline).
-  const top = Math.max(cover.top + 3, plate.top)
-  const bottom = Math.min(cover.bottom - cover.height * 0.06, plate.bottom)
-  return { x: lo + 2 - plate.left, y: top - plate.top, w: hi - lo - 4, h: bottom - top, coverW: cover.width, coverLeft: cover.left - plate.left }
-}, side)
+// colour there (a back cover is plain from 57% to 86% of its width), so no half a word shows. From 451px
+// to 760px the strip is wider (59px at 451, 193px at 760), so each back cover is clipped to a window of
+// its own plain band (60% to 84% of its width). The check looks at a picture of the plate as it is
+// painted, over the strip and nothing else: every pixel of it must be within a few levels of the strip's
+// own colour. (The foot of the cover, where its colour bar is, is left out.)
 
 /** How many pixels of `png` (the plate, at `dpr`) inside `rect` are not the median colour of that rectangle, by more than `tol` levels in any channel. */
 const inkIn = (page, png, rect, dpr, tol) => page.evaluate(async ({ b64, rect, dpr, tol }) => {
@@ -624,12 +640,13 @@ const inkIn = (page, png, rect, dpr, tol) => page.evaluate(async ({ b64, rect, d
   return { ink, worst, pixels: w * h, median }
 }, { b64: png.toString('base64'), rect, dpr, tol })
 
-test.describe('the side strips of the shelf on a phone', () => {
-  for (const width of [320, 390, 430]) {
+test.describe('the side strips of the shelf below 761px', () => {
+  // 451 is where the clip to a back cover's plain band starts, 760 where it ends; 320 to 430 are phones (a touch screen).
+  for (const width of [320, 390, 430, 451, 520, 600, 680, 760]) {
     for (const theme of ['light', 'dark']) {
       test(`show only the cover's plain colour, no text, at ${width}px, ${theme}`, async ({ browser }) => {
         const dpr = 2
-        const { ctx, page } = await open(browser, { width, height: 844, touch: true, theme, dpr })
+        const { ctx, page } = await open(browser, { width, height: 844, touch: width < 451, theme, dpr })
         await go(page, '/')
         await show(page, 2)
         await expect(card(page, 2).locator('.sp-shelf img')).toHaveCount(3)
@@ -650,6 +667,16 @@ test.describe('the side strips of the shelf on a phone', () => {
             const r = await inkIn(page, png, strip, dpr, 12)
             expect(r.pixels, `${where}: pixels were read`).toBeGreaterThan(1000)
             expect(r.ink, `${where}: ${r.ink} of ${r.pixels} pixels differ from the plain colour ${r.median} (largest difference ${r.worst} levels): text shows in the strip`).toBe(0)
+            // From 451px the cover is clipped to the window, so the rest of the cover must not show: it is the plate's colour.
+            if (width >= 451) {
+              expect(strip.away, `${where}: the part of the cover outside the window is worked out`).toBeTruthy()
+              if (width >= 520) expect(strip.away.w, `${where}: the part outside the window has width (${strip.away.w.toFixed(1)}px)`).toBeGreaterThan(20)
+              if (strip.away.w >= 8) {
+                const out = await inkIn(page, png, strip.away, dpr, 12)
+                expect(out.pixels, `${where}: pixels outside the window were read`).toBeGreaterThan(200)
+                expect(out.ink, `${where}: ${out.ink} of ${out.pixels} pixels outside the cover's window differ from ${out.median} (largest difference ${out.worst} levels): the cover is not clipped to its window`).toBe(0)
+              }
+            }
           }
         }
         await ctx.close()
