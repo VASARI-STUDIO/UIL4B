@@ -15,6 +15,8 @@ import { refreshScrollLimit } from '../utils/hashLanding'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
 import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
+// The ramp is shared with the Palette Builder's swatch tints.
+import { buildRamp } from '../utils/tintRamp'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -50,27 +52,9 @@ function normaliseHex(raw) {
   return `#${hex.toUpperCase()}`
 }
 
-const LABELS = {
-  9: ['50', '100', '200', '300', '400', '500', '600', '700', '800'],
-  11: ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'],
-  13: ['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950', '975'],
-}
 const CURVES = ['Even', 'Soft ends', 'High contrast']
 const INK_DARK = '#0B0C0E'
 const INK_LIGHT = '#F7F7F4'
-
-// The design's ramp, exactly (D:1436-1442).
-function buildRamp(hue, chroma, steps, curve) {
-  const labels = LABELS[steps]
-  return labels.map((label, i) => {
-    const t = i / (steps - 1)
-    let L = 0.97 - t * 0.78
-    if (curve === 1) L = 0.97 - (0.5 - Math.cos(Math.PI * t) / 2) * 0.78
-    if (curve === 2) L = 0.97 - Math.pow(t, 0.78) * 0.83
-    const c = chroma * (1 - Math.abs(t - 0.5) * 0.9)
-    return { label, L, hex: oklchToHex(L, c, hue) }
-  })
-}
 
 let seq = 0
 const mkSource = (hex) => ({ id: ++seq, hex, input: hex })

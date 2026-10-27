@@ -7,7 +7,7 @@
 // kept numerically identical so a scale built here matches the one drawn there.
 // Channels are clamped, so an out-of-gamut request lands on the sRGB edge
 // rather than throwing.
-import { hexToRgb } from '../../utils/colors'
+import { hexToRgb } from '../../utils/colors.js'
 
 const toHexByte = (u) => {
   const v = u <= 0.0031308 ? 12.92 * u : 1.055 * Math.pow(Math.max(u, 0), 1 / 2.4) - 0.055
@@ -15,8 +15,9 @@ const toHexByte = (u) => {
   return c.length === 1 ? '0' + c : c
 }
 
-// L 0-1, C 0-~0.4, H degrees.
-export function oklchToHex(L, C, H) {
+// Linear-light sRGB of an OKLCH colour, unclamped: a channel outside 0-1 means
+// the colour is outside the sRGB gamut.
+function oklchToLinearRgb(L, C, H) {
   const h = (H * Math.PI) / 180
   const a = Math.cos(h) * C
   const b = Math.sin(h) * C
@@ -26,10 +27,24 @@ export function oklchToHex(L, C, H) {
   const l = l_ * l_ * l_
   const m = m_ * m_ * m_
   const s = s_ * s_ * s_
-  const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
-  const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
-  const bl = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ]
+}
+
+// L 0-1, C 0-~0.4, H degrees.
+export function oklchToHex(L, C, H) {
+  const [r, g, bl] = oklchToLinearRgb(L, C, H)
   return ('#' + toHexByte(r) + toHexByte(g) + toHexByte(bl)).toUpperCase()
+}
+
+// True when the colour fits in sRGB with no channel clamped (a hair of slack,
+// so a colour on the edge is not thrown out by float noise).
+export function oklchInGamut(L, C, H) {
+  const EPS = 0.0005
+  return oklchToLinearRgb(L, C, H).every((v) => v >= -EPS && v <= 1 + EPS)
 }
 
 // Unrounded [L 0-1, C, H degrees] — utils/colors.hexToOklch rounds for display,
