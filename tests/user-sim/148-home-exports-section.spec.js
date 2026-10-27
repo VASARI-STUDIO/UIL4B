@@ -3,7 +3,8 @@
 // Three stacking cards. Card 1 is a live panel; cards 2 and 3 each put a plate
 // (a real render of the product's own export, from public/home-exports/) in the
 // stage with a row of buttons under it: card 2 a tab strip (UI kit, Book, Brand
-// deck), card 3 a radio group of example projects showing a book cover.
+// deck), card 3 a radio group of example projects shown as a shelf of their three real
+// book covers (the chosen one in front).
 //
 //   1. ONE FRAME. All three .sp-stack-card boxes are the same width and height at
 //      390 (a touch phone), 768 and 1440, in light and dark. Read as layout sizes
@@ -33,8 +34,9 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 const CARD = '.sp-stack-card'
-const ART_IMG = '.sp-plate-art img'
-const SHOWN = '.sp-plate-art img.is-on'
+// Card 3's pictures are the shelf's covers; the one in front carries is-on, as a plate's shown picture does.
+const ART_IMG = '.sp-plate-art img, .sp-shelf img'
+const SHOWN = '.sp-plate-art img.is-on, .sp-shelf img.is-on'
 
 // Card 2 has the tabs UI kit, Book and Brand deck, card 3 the projects Northbeam, Halcyon
 // and Ferrule. Their ORDER is the design's to change, so nothing here counts on it: a
@@ -106,7 +108,7 @@ const docTop = (page, sel) => page.locator(sel).evaluate((el) => el.getBoundingC
 const FRAMES = [
   { width: 390, height: 844, touch: true, tall: 710 },
   { width: 768, height: 1024, touch: false, tall: 780 },
-  { width: 1440, height: 900, touch: false, tall: 640 },
+  { width: 1440, height: 900, touch: false, tall: 592 },
 ]
 
 for (const { width, height, touch, tall } of FRAMES) {
@@ -314,17 +316,17 @@ test.describe("card 3's radio group", () => {
  * Reads the painted opacity, not the is-on class: a picture can hold the class
  * while an animation has it at 0.
  */
-const startOpacityWatch = (page, i) => card(page, i).evaluate((c) => {
+const startOpacityWatch = (page, i) => card(page, i).evaluate((c, sel) => {
   window.__minPeak = 1
   window.__frames = 0
   const tick = () => {
-    const peak = Math.max(0, ...[...c.querySelectorAll('.sp-plate-art img')].map((im) => parseFloat(getComputedStyle(im).opacity)))
+    const peak = Math.max(0, ...[...c.querySelectorAll(sel)].map((im) => parseFloat(getComputedStyle(im).opacity)))
     window.__minPeak = Math.min(window.__minPeak, peak)
     window.__frames += 1
     window.__peakRaf = requestAnimationFrame(tick)
   }
   tick()
-})
+}, ART_IMG)
 const stopOpacityWatch = (page) => page.evaluate(() => {
   cancelAnimationFrame(window.__peakRaf)
   return { minPeak: window.__minPeak, frames: window.__frames }
@@ -333,6 +335,7 @@ const stopOpacityWatch = (page) => page.evaluate(() => {
 test.describe('a swap never blanks the plate', () => {
   // A crossfade has the leaving picture at 1 falling to 0 over 150ms while the arriving
   // one rises from 0 over 240ms, so the brighter of the two is never below about 0.5.
+  // Card 3's shelf never fades a cover out: the front is at 1 and the others at .72.
   // Below 0.2 the plate is, to the eye, empty.
   const FLOOR = 0.2
 
@@ -454,17 +457,17 @@ const animationsSettled = (page) => page.evaluate(() => Promise.allSettled(docum
  * than what a style says might.
  */
 async function swapAndWatch(page) {
-  await page.evaluate(() => {
+  await page.evaluate((sel) => {
     window.__motion = new Set()
     const tick = () => {
       for (const a of document.getAnimations()) {
-        if (!a.effect?.target?.matches?.('.sp-plate-art img')) continue
+        if (!a.effect?.target?.matches?.(sel)) continue
         window.__motion.add(a instanceof CSSTransition ? 'transition' : a instanceof CSSAnimation ? 'animation' : 'other')
       }
       window.__motionRaf = requestAnimationFrame(tick)
     }
     tick()
-  })
+  }, ART_IMG)
   await show(page, 1)
   for (const i of [1, 2]) {
     await tabs(page).nth(i).click()
@@ -565,10 +568,10 @@ async function loadBothCards(page) {
 }
 
 test.describe('plate requests', () => {
-  /** The pictures the page should have asked for after load: what card 2 and card 3 open on. */
-  const openingIds = async (page) => [await tabId(page, 0), await projectId(page, 0)]
+  /** The pictures the page should have asked for after load: what card 2 opens on, and all three of card 3's covers (the shelf shows them together). */
+  const openingIds = async (page) => [await tabId(page, 0), ...(await Promise.all([0, 1, 2].map((i) => projectId(page, i))))]
 
-  test('only the selected tab and project are requested until another is hovered or focused', async ({ browser }) => {
+  test('only the selected tab is requested until another is hovered or focused (card 3 shows its three covers at once)', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 1440, height: 900 })
     const seen = trackExports(page)
     await loadBothCards(page)
@@ -600,19 +603,19 @@ test.describe('plate requests', () => {
     await ctx.close()
   })
 
-  test('hovering a project asks for that project only', async ({ browser }) => {
+  test('picking a project asks for nothing new: the shelf already holds all three covers', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 1440, height: 900 })
     const seen = trackExports(page)
     await loadBothCards(page)
     const opening = await openingIds(page)
-    const other = await projectId(page, 1)
-    await radios(page).nth(1).hover()
-    await expect.poll(seen.ids, { message: `hovering ${other} never requested it` }).toContain(other)
-    expect(seen.ids(), 'hovering one project fetched only that project').toEqual([...opening, other].sort())
+    await radios(page).nth(1).click()
+    await waitShown(page, 2, await projectId(page, 1))
+    await twoFrames(page)
+    expect(seen.ids(), 'picking a project fetched something new').toEqual([...opening].sort())
     await ctx.close()
   })
 
-  test('a phone asks for one picture per card too (the portrait files)', async ({ browser }) => {
+  test('a phone asks for the opening tab picture (the portrait files) and the covers', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 390, height: 844, touch: true, dpr: 3 })
     const seen = trackExports(page)
     await loadBothCards(page)

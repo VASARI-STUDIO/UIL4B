@@ -133,3 +133,17 @@ test('the cards say nothing the product does not do', () => {
 test('the stack settles in 240ms, not .4s', () => {
   assert.match(CSS, /\.sp-stack-card\s*\{[^}]*transition:\s*transform 240ms[^}]*filter 240ms/)
 })
+
+test('card 3 is a shelf: 240ms on transform and opacity, instant under reduced motion, positions kept', () => {
+  const shelfImg = /\.sp-shelf img\s*\{[^}]*\}/.exec(CSS)?.[0] || ''
+  assert.match(shelfImg, /transition:\s*transform 240ms var\(--sp-ease\),\s*opacity 240ms var\(--sp-ease\)/, 'the shelf move is not 240ms on transform and opacity')
+  assert.ok(!/transition:\s*all/.test(shelfImg), 'the shelf transitions all')
+  // Both reduced-motion spellings stop the move; neither may carry transform: none for the shelf (that would drop the positions).
+  for (const spelling of ['html[data-reduced-motion="true"]', 'html:not([data-reduced-motion="false"])']) {
+    assert.ok(CSS.split('\n').some((l) => l.includes(spelling) && l.includes('.sp-shelf img') && l.includes('transition: none !important')), `${spelling}: .sp-shelf img is not in the transition guard`)
+    assert.ok(!CSS.split('\n').some((l) => l.includes(spelling) && l.includes('.sp-shelf img') && l.includes('transform: none')), `${spelling}: the guard would flatten the shelf`)
+  }
+  for (const pos of ['front', 'left', 'right']) assert.ok(CSS.includes(`.sp-shelf img[data-pos="${pos}"]`), `no ${pos} position`)
+  assert.match(CSS, /\.sp-stack-card\s*\{[^}]*height:\s*592px/, 'the card is 592px tall at 1440')
+  assert.match(EXPORTS_SRC, /function shelfPos\(/, 'the shelf has no position rule in the component')
+})
