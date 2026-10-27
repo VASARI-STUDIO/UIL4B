@@ -22,7 +22,8 @@
     "sync:sitemap": "node scripts/sync-sitemap.mjs",
     "sync:llms": "node scripts/llms-txt.mjs",
     "sync:credits": "node scripts/sync-credits.mjs",
-    "design:md": "node scripts/design-md.mjs"
+    "design:md": "node scripts/design-md.mjs",
+    "icons:ico": "node scripts/favicon-ico.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.6",

@@ -201,6 +201,21 @@ test('the SVG favicon recolours for a dark browser chrome and draws no backgroun
   assert.ok(!/<rect[\s>/]/i.test(svg), 'favicon.svg draws a <rect>; the mark must not sit on a background tile')
 })
 
+test('the SVG favicon puts every straight edge of the mark on a whole pixel at 16 and 32px', () => {
+  // The mark's straight edges sit at these coordinates in its own units: the
+  // left edge, the gap between the two strokes, the inner corner, the top and the
+  // foot. Between pixels, a tab-size render softens each one into a grey column.
+  const svg = read('public/favicon.svg')
+  const view = Number(svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) /)[1])
+  const [, tx, ty, s] = svg.match(/transform="translate\(([\d.]+) ([\d.]+)\) scale\(([\d.]+)\)"/).map(Number)
+  const near = (v) => Math.abs(v - Math.round(v)) < 1e-6
+  for (const px of [16, 32]) {
+    const k = px / view
+    for (const x of [0, 100, 125, 225]) assert.ok(near((tx + x * s) * k), `x=${x} lands at ${(tx + x * s) * k}px at ${px}px`)
+    for (const y of [0, 200]) assert.ok(near((ty + y * s) * k), `y=${y} lands at ${(ty + y * s) * k}px at ${px}px`)
+  }
+})
+
 test('apple-touch-icon is 180px, square and opaque', () => {
   const h = pngHeader(pub('apple-touch-icon.png'))
   assert.equal(h.width, APPLE_SIZE)
