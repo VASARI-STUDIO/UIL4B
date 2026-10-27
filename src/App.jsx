@@ -83,6 +83,9 @@ const DesignPrinciples = lazy(() => import('./pages/DesignPrinciples'))
 const InfoCentre = lazy(() => import('./pages/InfoCentre'))
 const SeoInspector = lazy(() => import('./pages/SeoInspector'))
 const GradientGallery = lazy(() => import('./pages/GradientGallery'))
+// Dev-only proof-of-concept board for the gradient style families. `DEV` is
+// false in every build, so the import below is dropped from production.
+const GradientStylesPoc = import.meta.env.DEV ? lazy(() => import('./pages/dev/GradientStylesPoc')) : null
 const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 // Moved from Create to Discover: it is a browse-and-take surface, not a tool
 // you operate, so it belongs beside the palette and gradient libraries.
@@ -578,6 +581,7 @@ function AppInner({ toast }) {
               <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
               <Route path="/style-guide" element={<RequireAdmin><StyleGuide toast={toast} /></RequireAdmin>} />
+              {GradientStylesPoc ? <Route path="/dev/gradient-poc" element={<GradientStylesPoc />} /> : null}
               {/* A real 404, not a redirect. The redirect made every typo and
                   dead backlink a 200-status indexable copy of the homepage, and
                   silently teleported the user so a broken link looked like it

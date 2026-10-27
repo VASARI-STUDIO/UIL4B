@@ -1,0 +1,122 @@
+/* gradient-poc.css: the dev-only board at /dev/gradient-poc. Imported by
+ * src/pages/dev/GradientStylesPoc.jsx, which is only reachable in `vite dev`.
+ * Tokens only: no hex, no transition:all. The gradients on the board are the
+ * content being judged, so they are painted inline by the engine. */
+
+.gpoc { --gpoc-gap: var(--s-5); padding-bottom: var(--s-9); }
+.gpoc h2 { font-size: var(--fs-h5); line-height: 1.2; margin: 0; }
+.gpoc-sub { font-size: var(--fs-caption); color: var(--t2); margin: var(--s-1) 0 0; max-width: 65ch; }
+.gpoc-cap { font-size: var(--fs-caption); color: var(--t2); margin: var(--s-2) 0 0; }
+.gpoc code { font-family: var(--mono); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; }
+
+.gpoc-btn {
+  min-height: 36px;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--card);
+  color: var(--t0);
+  font: inherit;
+  font-size: var(--fs-body-s);
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}
+@media (hover: hover) { .gpoc-btn:hover:not(:disabled) { background: var(--card2); } }
+.gpoc-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gpoc-btn:active:not(:disabled) { background: var(--bg-3); }
+.gpoc-btn:disabled { color: var(--t3); cursor: not-allowed; }
+.gpoc-btn[aria-pressed="true"] { border-color: var(--t0); background: var(--t0); color: var(--bg-1); }
+.gpoc-btn-main { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+
+.gpoc-load, .gpoc-summary, .gpoc-section { margin-top: var(--s-6); }
+.gpoc-files { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: stretch; margin-top: var(--s-3); }
+.gpoc-file {
+  position: relative;
+  display: grid;
+  gap: var(--s-1);
+  min-width: 240px;
+  padding: var(--s-3) var(--s-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+}
+.gpoc-file:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gpoc-file-name { font-size: var(--fs-body-s); font-weight: 600; color: var(--t0); }
+.gpoc-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.gpoc-files .gpoc-btn { align-self: center; }
+
+.gpoc-summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-4); padding: var(--s-3) var(--s-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.gpoc-summary p { margin: 0; font-size: var(--fs-body-s); }
+.gpoc-summary #gpoc-summary-line { flex: 1 1 320px; color: var(--t0); }
+.gpoc-status { min-height: 1.4em; color: var(--t2); }
+
+.gpoc-rows { display: grid; gap: var(--s-7); margin-top: var(--s-6); }
+.gpoc-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 300px)) minmax(0, 1fr);
+  gap: var(--s-5);
+  align-items: start;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--border);
+}
+.gpoc-row-title { font-size: var(--fs-h5); margin: 0; }
+.gpoc-cell { margin: 0; min-width: 0; }
+.gpoc-cell-ours { padding-top: var(--s-7); }
+.gpoc-row .gpoc-cell:first-child { display: grid; align-content: start; }
+.gpoc-row .gpoc-cell:first-child .gpoc-frame { margin-top: var(--s-3); }
+
+.gpoc-frame {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--bg-3);
+  outline: 1px solid color-mix(in srgb, var(--t0) 10%, transparent);
+  outline-offset: -1px;
+}
+.gpoc-frame canvas, .gpoc-frame svg { display: block; width: 100%; height: 100%; }
+.gpoc-cell-ours .gpoc-frame { margin-top: 0; }
+.gpoc-empty { display: grid; place-items: center; padding: var(--s-4); text-align: center; }
+.gpoc-empty p { margin: 0; font-size: var(--fs-caption); color: var(--t2); }
+.gpoc-poster-type { position: absolute; left: var(--s-4); top: var(--s-4); display: grid; gap: var(--s-1); max-width: 70%; }
+.gpoc-poster-type strong { font-size: 28px; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em; }
+.gpoc-poster-type span { font-size: var(--fs-caption); }
+
+.gpoc-facts { display: grid; gap: var(--s-3); margin: 0; min-width: 0; }
+.gpoc-facts > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--s-3); font-size: var(--fs-body-s); }
+.gpoc-facts dt { color: var(--t2); }
+.gpoc-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.gpoc-hexes { display: grid; gap: var(--s-1); margin: 0; padding: 0; list-style: none; }
+.gpoc-hexes li, .gpoc-sampled { display: inline-flex; align-items: center; gap: var(--s-2); margin-right: var(--s-3); }
+.gpoc-hexes li { display: flex; margin-right: 0; }
+.gpoc-hexes span { color: var(--t2); font-size: var(--fs-caption); }
+.gpoc-swatch { width: 16px; height: 16px; flex: none; border-radius: 50%; outline: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); outline-offset: -1px; }
+.gpoc-check { display: inline-flex; align-items: center; gap: var(--s-2); margin-top: var(--s-2); font-size: var(--fs-caption); cursor: pointer; }
+.gpoc-ok { color: var(--ok); }
+.gpoc-warn { color: var(--t0); font-weight: 600; }
+.gpoc-problems { margin: var(--s-1) 0 0; padding-left: var(--s-4); color: var(--t1); font-size: var(--fs-caption); }
+.gpoc-pick { display: grid; gap: var(--s-2); }
+.gpoc-pick-btns { display: flex; gap: var(--s-2); }
+.gpoc-note { display: grid; gap: var(--s-1); font-size: var(--fs-caption); color: var(--t2); }
+.gpoc-note input { min-height: 36px; padding: 0 var(--s-3); border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--card); color: var(--t0); font: inherit; font-size: var(--fs-body-s); }
+.gpoc-note input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.gpoc-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 300px)); gap: var(--s-5); margin-top: var(--s-4); }
+.gpoc-table { border-collapse: collapse; margin-top: var(--s-3); font-size: var(--fs-body-s); font-variant-numeric: tabular-nums; }
+.gpoc-table th, .gpoc-table td { padding: var(--s-2) var(--s-4) var(--s-2) 0; text-align: left; border-bottom: 1px solid var(--border); }
+.gpoc-table thead th { color: var(--t2); font-weight: 500; }
+
+@media (max-width: 1100px) {
+  .gpoc-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gpoc-facts { grid-column: 1 / -1; }
+  .gpoc-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .gpoc-row { grid-template-columns: minmax(0, 1fr); }
+  .gpoc-cell-ours { padding-top: 0; }
+  .gpoc-strip { grid-template-columns: minmax(0, 1fr); }
+  .gpoc-facts > div { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
+}
+@media (prefers-reduced-motion: reduce) { .gpoc-btn { transition: none; } }
