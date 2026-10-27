@@ -27,7 +27,9 @@ export function documentDesign(design) {
   return { palette: d.palette, gradient: d.gradient, fonts: d.fonts, typeScale: d.typeScale, logo: d.logo }
 }
 
-export async function requestExportDocument({ format, design, projectName }, { loadAuth, fetchImpl } = {}) {
+// `template` is the id the user picked for this format; the server checks it and
+// answers with the id it used.
+export async function requestExportDocument({ format, design, projectName, template }, { loadAuth, fetchImpl } = {}) {
   try {
     const sdk = await loadAuth?.()
     const user = sdk?.auth?.currentUser
@@ -35,7 +37,7 @@ export async function requestExportDocument({ format, design, projectName }, { l
     if (!token) return { status: 'signed-out' }
 
     const doFetch = fetchImpl || globalThis.fetch
-    const payload = JSON.stringify({ format, projectName, design: documentDesign(design) })
+    const payload = JSON.stringify({ format, projectName, template, design: documentDesign(design) })
     const ask = (idToken) => doFetch(EXPORT_DOCUMENT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
@@ -57,7 +59,7 @@ export async function requestExportDocument({ format, design, projectName }, { l
     // A 200 must also say it is for this format and carry a document, so a stray
     // cached or proxied 200 for something else cannot be printed as the book.
     if (body?.ok === true && body.format === format && typeof body.html === 'string' && body.html) {
-      return { status: 'ok', html: body.html }
+      return { status: 'ok', html: body.html, ...(typeof body.template === 'string' ? { template: body.template } : {}) }
     }
     return { status: 'error' }
   } catch {

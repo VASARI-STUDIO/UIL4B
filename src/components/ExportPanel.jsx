@@ -14,6 +14,9 @@ import {
 } from '../utils/exportDocument'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS, EXPORT_GROUPS, comingLine, groupFormats, isGroupPro } from '../config/exportFormats'
+import { liveTemplates, readExportTemplates } from '../config/exportTemplates'
+import { useProject } from '../contexts/ProjectContext'
+import ExportTemplatePicker from './ExportTemplatePicker'
 import BrandLogoField from './BrandLogoField'
 import KitIdentityFields from './KitIdentityFields'
 import ExportFormatSwitch from './ExportFormatSwitch'
@@ -144,6 +147,10 @@ export default function ExportPanel({ onClose }) {
   // There is nothing left to cancel, so the secondary action reads Close.
   const [done, setDone] = useState(false)
   const design = useExportDesign()
+  // The template picked for each format lives on the working design, beside the
+  // identity, so it follows the project.
+  const { design: working, updateDesign } = useProject()
+  const chosenTemplates = readExportTemplates(working)
   const { isPro, planKnown } = useSubscription()
   const { user } = useAuth()
   // A file needs an account; a copy never does. See useExportGate.js.
@@ -322,6 +329,7 @@ export default function ExportPanel({ onClose }) {
         activation = 'ui-kit'
         const { blob, filename, missing } = await buildUiKit(design, {
           tier: proNow ? 'pro' : 'free',
+          template: chosenTemplates.kit,
           onStage: setStage,
         })
         savedFile = download(blob, filename)
@@ -343,7 +351,7 @@ export default function ExportPanel({ onClose }) {
         activation = doc.activation
         setStage('document')
         labelPrintWindow(printWin, doc.waiting)
-        const answer = await requestExportDocument({ format, design, projectName }, { loadAuth: loadAuthSdk })
+        const answer = await requestExportDocument({ format, design, projectName, template: chosenTemplates[format] }, { loadAuth: loadAuthSdk })
         // A refusal stays in the panel and says so. It is not sent to /plans: this
         // account passed the Pro check on this page a moment ago, so the likely
         // cause is a plan that just ended or a stale read, and a pricing page
@@ -564,6 +572,7 @@ export default function ExportPanel({ onClose }) {
     || (activeGroup?.id === 'kit' && isPro)
     || Boolean(activeGroup?.preview)
     || Boolean(activeFormat?.logo)
+    || liveTemplates(activeFormat?.id).length > 1
   const options = activeGroup && needsOptions ? (
     <div className="exp-options" role="region" aria-label={`Options for ${activeGroup.name}`} key={activeGroup.id}>
       {choices.length > 1 && (
@@ -572,6 +581,14 @@ export default function ExportPanel({ onClose }) {
           options={choices.map(f => ({ id: f.id, label: f.option }))}
           value={pickedFile}
           onChange={pickFormat}
+        />
+      )}
+      {/* Shown only while the row has a choice: one live template needs no picker. */}
+      {liveTemplates(activeFormat?.id).length > 1 && (
+        <ExportTemplatePicker
+          format={activeFormat.id}
+          value={chosenTemplates[activeFormat.id]}
+          onChange={(id) => updateDesign({ exportTemplates: { [activeFormat.id]: id } })}
         />
       )}
       {/* A Pro UI kit is personalised; a free kit carries no identity. */}
