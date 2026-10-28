@@ -28,6 +28,7 @@ import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
+import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
 // tool-shell.css is the shared tool shell the other tool pages load too.
@@ -468,6 +469,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
   const { user } = useAuth()
   const { requireLogin } = useLoginPrompt()
+  // Gradients an earlier visit queued in this browser move to the account on sign-in.
+  useGradientSubmissionMigration({ toast })
   const requireExportAccount = useExportGate()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
