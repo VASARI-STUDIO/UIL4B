@@ -583,3 +583,14 @@ test('the reserved print window: opened, shown into, released', () => {
   assert.equal(showInPrintWindow(win, 'blob:y', () => fresh), fresh, 'a closed reserved window falls back to a fresh one')
   assert.equal(showInPrintWindow(null, 'blob:z', () => null), null, 'both blocked: the caller downloads the file')
 })
+
+test('the gradient goes to the server as colours and positions only, without the tool\'s lock flags', () => {
+  const sent = documentDesign({
+    gradient: {
+      stops: [{ color: '#112233', position: 0, lockColour: true, lockPosition: false }, { color: '#445566', position: 100, lockColour: false, lockPosition: true }],
+      angle: 90, type: 'Linear',
+    },
+  }).gradient
+  assert.deepEqual(sent, { stops: [{ color: '#112233', position: 0 }, { color: '#445566', position: 100 }], angle: 90, type: 'Linear' })
+  assert.equal(documentDesign({}).gradient, undefined, 'no gradient stays no gradient')
+})

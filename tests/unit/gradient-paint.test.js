@@ -4,10 +4,10 @@
 //
 // MUTATIONS (each turns the tests named red):
 //   nextPaintTarget returns `from`               -> "two presses paint stop 1 then stop 2"
-//   nextPaintTarget ignores `locked`             -> "the target skips a stop whose colour is locked"
+//   nextPaintTarget ignores `lockColour`         -> "the target skips a stop whose colour is locked"
 //   orderByPosition sorts by index, not position -> "the target follows position, not list order"
 //   applyStarterPair mixes in sRGB, not OKLCH    -> "a pair re-mixes the middle stops in OKLCH"
-//   a pair drops its `locked` flag               -> "a pair keeps each stop's lock"
+//   a pair drops its `lockColour` flag               -> "a pair keeps each stop's lock"
 //   a hex in STARTER_PAIRS loses its #           -> "the six pairs are named, distinct and valid hex"
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -35,17 +35,17 @@ test('two presses paint stop 1 then stop 2, and the target is back on stop 1', (
 
 test('the target skips a stop whose colour is locked', () => {
   const stops = three()
-  stops[1].locked = true
+  stops[1].lockColour = true
   assert.equal(nextPaintTarget(stops, 0), 2)
   assert.equal(nextPaintTarget(stops, 2), 0)
 })
 
 test('with no other free stop the target stays put, and a fully locked gradient says so', () => {
   const stops = two()
-  stops[1].locked = true
+  stops[1].lockColour = true
   assert.equal(nextPaintTarget(stops, 0), 0)
   assert.equal(allColoursLocked(stops), false)
-  stops[0].locked = true
+  stops[0].lockColour = true
   assert.equal(allColoursLocked(stops), true)
   assert.equal(allColoursLocked([]), false)
 })
@@ -89,7 +89,7 @@ test('a pair re-mixes the middle stops in OKLCH, by their own position', () => {
 
 test('a pair keeps each stop\'s lock', () => {
   const stops = three()
-  stops[1].locked = true
+  stops[1].lockColour = true
   const out = applyStarterPair(stops, STARTER_PAIRS[1])
-  assert.deepEqual(out.map((s) => !!s.locked), [false, true, false])
+  assert.deepEqual(out.map((s) => !!s.lockColour), [false, true, false])
 })
