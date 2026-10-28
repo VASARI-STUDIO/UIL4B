@@ -364,12 +364,17 @@
 .grd .grd-avail-note:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .grd .grd-avail-link { display: inline-flex; align-items: center; min-height: 28px; border-radius: 6px; font-size: 12.5px; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-avail-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+/* "Choose colours for Shuffle" is a button that reads as the same quiet link. */
+.grd button.grd-avail-link { padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-avail-link:hover { color: var(--tl-ink); }
+}
 .grd .grd-avail-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .grd .grd-shades { display: grid; gap: 6px; }
 .grd .grd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .grd .grd-chips--shades { gap: 3px; }
-/* The starter colours are two even rows of five, so ten chips never wrap nine and one. */
-.grd .grd-chips--starter { display: grid; grid-template-columns: repeat(5, 28px); justify-content: space-between; gap: 8px; }
+/* The Colours slot is two even rows of five, so ten starters never wrap nine and one. */
+.grd .grd-chips--slot { display: grid; grid-template-columns: repeat(5, 28px); grid-template-rows: repeat(2, 28px); justify-content: space-between; gap: 8px; }
 /* "+3 more": a palette past thirteen colours, at chip height so the rows keep theirs. */
 .grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
@@ -422,16 +427,20 @@
   .grd .grd-pair:hover { border-color: var(--tl-line-on); }
 }
 
-/* The no-palette and one-colour states. The blocks sit in slots that are the same
-   height whichever of them is drawn (pairs and colours, or a project's colours; a
-   project select or none), so nothing in the panel moves when a press, a project
-   choice or the projects loading changes what is shown. */
+/* The no-palette and one-colour states: a note (held at two lines), the Pairs, and a
+   Colours block that is always two rows of five, whether it holds the ten starters, a
+   palette of one or a project's colours. Nothing is held as spare room except the
+   "From a project" row, and that only while a person is signed in. So a press, a
+   project choice or the projects loading moves nothing. */
 .grd .grd-sparse { display: grid; gap: 8px; }
 .grd .grd-sparse .grd-avail-note { min-height: 36px; line-height: 18px; }
-.grd .grd-sparse-body { display: grid; gap: 8px; align-content: start; min-height: 178px; }
+.grd .grd-sparse-body { display: grid; gap: 8px; align-content: start; }
 .grd .grd-avail-block { display: grid; gap: 6px; align-content: start; }
+/* The Colours label and the way to the Palette Builder share one row. */
+.grd .grd-avail-subrow { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; min-width: 0; }
+.grd .grd-avail-subrow .grd-avail-sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grd .grd-avail-subrow .grd-avail-link { flex: 0 0 auto; align-items: flex-end; }
 .grd .grd-avail-from { display: flex; align-items: center; gap: 8px; min-height: 32px; }
-.grd .grd-avail-from .grd-avail-link { margin-left: auto; flex: 0 0 auto; }
 .grd .grd-from-select {
   flex: 0 1 auto;
   min-width: 0;
@@ -797,13 +806,12 @@
   .grd .grd-chip { width: 44px; height: 44px; }
   .grd .grd-pair { width: 72px; height: 44px; border-radius: 22px; }
   .grd .grd-sparse .grd-avail-note { min-height: 36px; }
-  .grd .grd-sparse-body { min-height: 242px; }
   .grd .grd-avail-from { min-height: 44px; }
   .grd .grd-from-select { height: 44px; font-size: 13px; }
-  .grd .grd-chips--starter { grid-template-columns: repeat(5, 44px); }
+  .grd .grd-chips--slot { grid-template-columns: repeat(5, 44px); grid-template-rows: repeat(2, 44px); }
   .grd .grd-chips-more { height: 44px; }
   .grd .grd-chips--shades { gap: 4px; }
-  .grd .grd-chips--shades .grd-chip { width: 36px; height: 36px; }
+  .grd .grd-chips--shades .grd-chip { width: 44px; height: 44px; }
   .grd .grd-avail-link { min-height: 44px; }
   .grd .grd-stop { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
   .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr) 36px; grid-template-rows: auto auto; row-gap: 0; }
@@ -944,7 +952,11 @@
    under the chips. The status line is always drawn at one line's height, so a press
    changes its words and never the section's height. */
 .grd .grd-avail-tip { font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.grd .grd-avail-foot { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.grd .grd-avail-foot .grd-avail-pool { flex: 0 0 auto; margin-left: auto; }
 .grd .grd-avail-status {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   min-height: 16px;
   font-size: 12px;
@@ -990,9 +1002,15 @@
   border-radius: 50%;
   border: 2px solid var(--tl-card);
   box-shadow: 0 0 0 1px var(--tl-line-on);
-  transition: background-color 150ms var(--ease-standard);
+  transition: background-color 150ms var(--ease-standard), transform var(--dur-1) var(--ease-standard);
 }
-.grd .grd-ramp-dot[aria-pressed="true"] .grd-ramp-dot-vis { box-shadow: 0 0 0 2px var(--t0); }
+/* The target ring is ink, with a 1px ring of the card tone outside it, so it holds
+   against a stop as dark as the ink (light mode) or as pale as it (dark mode). */
+.grd .grd-ramp-dot[aria-pressed="true"] .grd-ramp-dot-vis { box-shadow: 0 0 0 2px var(--t0), 0 0 0 3px var(--tl-card); }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-ramp-dot:hover .grd-ramp-dot-vis { transform: scale(1.15); }
+}
+.grd .grd-ramp-dot:active .grd-ramp-dot-vis { transform: scale(0.94); }
 /* The chip zone adds no box of its own: the section's gaps stay where they were. */
 .grd .grd-avail-zone { display: contents; }
 @media (pointer: coarse) {

@@ -29,6 +29,7 @@ import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { useAuth } from '../contexts/AuthContext'
+import { readSessionHint } from '../utils/sessionHint'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
@@ -345,14 +346,25 @@ const rampStart = (list) => list.find((el) => el.getAttribute('aria-pressed') ==
 // can move the section.
 function MiniRamp({ stops, railCss, targets, onTarget }) {
   const trackRef = useRef(null)
+  const hintId = `grd-ramp-hint-${useId().replace(/:/g, '')}`
   const roving = useRoving(trackRef, '.grd-ramp-dot', rampStart)
   const order = stops.map((s, i) => ({ s, i })).sort((a, b) => a.s.position - b.s.position || a.i - b.i)
+  // Selection follows focus: an arrow key (or Home or End) that lands on a dot makes
+  // its stop the target. With several stops selected the keys only move focus, so a
+  // multi-selection is not cleared by walking along the ramp.
+  const onKeyDown = (e) => {
+    roving.onKeyDown(e)
+    if (!e.defaultPrevented || targets.length > 1) return
+    const dot = document.activeElement?.closest?.('.grd-ramp-dot')
+    if (dot && trackRef.current?.contains(dot) && Number(dot.dataset.stop) !== targets[0]) onTarget(Number(dot.dataset.stop))
+  }
   const press = (e, i) => {
     let to = i
     const track = trackRef.current
     // Close stops have overlapping hit areas, so a pointer press goes to the dot
-    // nearest it by x. A key press (detail 0) is always the focused dot.
-    if (e.detail > 0 && track) {
+    // nearest it by x. A key press (detail 0) is always the focused dot, and so is a
+    // synthetic click with no position (a screen reader's), as openTintMenu treats it.
+    if (e.detail > 0 && (e.clientX || e.clientY) && track) {
       const box = track.getBoundingClientRect()
       const x = e.clientX - box.left
       const dist = (j) => Math.abs(x - (box.width * stops[j].position) / 100)
@@ -367,7 +379,18 @@ function MiniRamp({ stops, railCss, targets, onTarget }) {
   }
   return (
     <div className="grd-ramp">
-      <div ref={trackRef} className="grd-ramp-track" role="toolbar" aria-label="Stop to paint" aria-orientation="horizontal" {...roving}>
+      <div
+        ref={trackRef}
+        className="grd-ramp-track"
+        role="toolbar"
+        aria-label="Stop to paint"
+        aria-orientation="horizontal"
+        aria-describedby={hintId}
+        title="Choose which stop to paint"
+        {...roving}
+        onKeyDown={onKeyDown}
+      >
+        <span id={hintId} className="sr-only">Choose which stop to paint</span>
         <div className="grd-ramp-bar" style={{ background: railCss }} aria-hidden="true" />
         {order.map(({ s, i }) => (
           <button
@@ -519,8 +542,10 @@ function PoolRow({ colours, filters, setFilters }) {
   const picking = listOpen || n >= 2
   const toggle = (hex) => {
     const h = hex.toUpperCase()
+    // Against the stored pool, not the live one: a pick the palette no longer holds
+    // stays in storage (livePool only hides it), so it is there if the colour returns.
     setFilters((f) => {
-      const cur = livePool(f.pool, colours)
+      const cur = f.pool || []
       return { ...f, pool: cur.includes(h) ? cur.filter((x) => x !== h) : [...cur, h] }
     })
   }
@@ -532,6 +557,7 @@ function PoolRow({ colours, filters, setFilters }) {
         <button
           type="button"
           className={`tl-pill${picking ? '' : ' is-on'}`}
+          data-pool-first=""
           aria-pressed={!picking}
           onClick={() => { setListOpen(false); setFilters((f) => ({ ...f, pool: [] })) }}
         >All palette colours</button>
@@ -660,6 +686,11 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours }
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
   const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
   const { user, loading: authLoading } = useAuth()
+  // Whether to hold the "From a project" slot in Available colours. A person who was
+  // signed in last time is treated as signed in until auth answers, so the slot does
+  // not appear after first paint.
+  const [hadSession] = useState(readSessionHint)
+  const signedIn = user != null || (authLoading && hadSession)
   const { requireLogin } = useLoginPrompt()
   // Gradients an earlier visit queued in this browser: a signed-in person is
   // asked whether to keep them with the account (never moved unasked).
@@ -1173,6 +1204,30 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setPaletteMissing(0)
     randomiseFromPalette()
   }, [canRandomFromPalette, randomiseFromPalette, toast])
+
+  // "Choose colours for Shuffle": opens Shuffle settings and puts focus on its Colours
+  // row. Where the toolbar has room the settings are the button's popover (or its
+  // sheet on a phone); where it has not they sit inline in the More menu, so that
+  // opens instead. Focus waits until the row has been in the page for a few frames:
+  // the popover moves focus to its first control on its own frame, and this lands after.
+  const openPoolSettings = useCallback(() => {
+    const trigger = document.querySelector('.grd-shuf-btn')
+    const more = document.querySelector('[data-tl-more] > button')
+    if (trigger) {
+      if (trigger.getAttribute('aria-expanded') !== 'true') setShuffleOpen(true)
+    } else if (more && more.getAttribute('aria-expanded') !== 'true') {
+      more.click()
+    }
+    let frames = 0
+    let seen = 0
+    const tick = () => {
+      const row = document.querySelector('[data-pool-first]')
+      seen = row ? seen + 1 : 0
+      if (seen >= 3) row.focus()
+      else if (++frames < 60) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }, [])
 
   // The note is in the panel, which the sticky toolbar can leave off screen on a
   // phone scrolled down: bring it into view and move focus to it. Focus goes
@@ -1960,61 +2015,52 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             {sparse ? (
               <div className="grd-sparse">
                 <p className="grd-avail-note" ref={paletteNoteRef} tabIndex={-1}>
-                  {chips.length === 0 ? 'No palette yet. Start from a pair, or use your own colours.' : 'Add a second colour in Palette Builder to shuffle from it.'}
+                  {chips.length === 0 ? 'No palette yet. Start from a pair or a starter colour, or make a palette.' : 'Add a second colour in Palette Builder to shuffle from it.'}
                 </p>
                 <div className="grd-sparse-body">
-                  {fromProject ? (
-                    <div className="grd-avail-block">
-                      <span className="grd-avail-sub" id="grd-from-label">Colours from {fromProject.name}</span>
-                      <div className="grd-chips" role="group" aria-labelledby="grd-from-label">
-                        {fromProject.colors.map((hex, i) => (
-                          <ColourChip key={`${hex}-${i}`} hex={hex.toUpperCase()} label={`${fromProject.name} colour ${i + 1}`} on={usedHexes.has(hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
-                        ))}
-                      </div>
+                  <div className="grd-avail-block">
+                    <span className="grd-avail-sub" id="grd-pairs-label">Pairs</span>
+                    <div className="grd-pairs" role="group" aria-labelledby="grd-pairs-label">
+                      {STARTER_PAIRS.map((pair) => (
+                        <StarterPair key={pair.id} pair={pair} unavailable={allLocked} onApply={applyPair} />
+                      ))}
                     </div>
-                  ) : (
-                    <>
-                      <div className="grd-avail-block">
-                        <span className="grd-avail-sub" id="grd-pairs-label">Pairs</span>
-                        <div className="grd-pairs" role="group" aria-labelledby="grd-pairs-label">
-                          {STARTER_PAIRS.map((pair) => (
-                            <StarterPair key={pair.id} pair={pair} unavailable={allLocked} onApply={applyPair} />
-                          ))}
-                        </div>
-                      </div>
-                      <div className="grd-avail-block">
-                        <span className="grd-avail-sub" id="grd-starter-label">Colours</span>
-                        {chips.length === 0 ? (
-                          <div className="grd-chips grd-chips--starter" role="group" aria-labelledby="grd-starter-label">
-                            {STARTER_COLOURS.map((c) => (
-                              <ColourChip key={c.hex} hex={c.hex} label={c.name} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="grd-chips" role="group" aria-labelledby="grd-starter-label">
-                            {chips.map((c) => (
-                              <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
+                  </div>
+                  <div className="grd-avail-block">
+                    {/* The way to the Palette Builder sits on this label row, so the
+                        section needs no row of its own for it. */}
+                    <div className="grd-avail-subrow">
+                      <span className="grd-avail-sub" id="grd-colours-label">{fromProject ? `Colours from ${fromProject.name}` : 'Colours'}</span>
+                      <Link to="/create/palette" className="grd-avail-link">{chips.length === 0 ? 'Make a palette' : 'Open Palette Builder'}</Link>
+                    </div>
+                    {/* Two rows of five whatever fills them (ten starters, a palette of
+                        one, a project's five at most), so the block never changes height. */}
+                    <div className="grd-chips grd-chips--slot" role="group" aria-labelledby="grd-colours-label">
+                      {fromProject ? fromProject.colors.map((hex, i) => (
+                        <ColourChip key={`${hex}-${i}`} hex={hex.toUpperCase()} label={`${fromProject.name} colour ${i + 1}`} on={usedHexes.has(hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
+                      )) : chips.length === 0 ? STARTER_COLOURS.map((c) => (
+                        <ColourChip key={c.hex} hex={c.hex} label={c.name} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
+                      )) : chips.map((c) => (
+                        <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                {/* The row keeps its height whether or not a project select is drawn,
-                    so projects arriving later move nothing. */}
-                <div className="grd-avail-from">
-                  {projectSources.length > 0 && (
-                    <MenuSelect
-                      className="grd-from-select"
-                      ariaLabel="From a project"
-                      value={fromProject ? fromProject.key : ''}
-                      options={[{ value: '', label: 'From a project' }, ...projectSources.map((s) => ({ value: s.key, label: s.name }))]}
-                      onChange={setFromKey}
-                    />
-                  )}
-                  <Link to="/create/palette" className="grd-avail-link">{chips.length === 0 ? 'Make a palette' : 'Open Palette Builder'}</Link>
-                </div>
+                {/* Held while a person is signed in, projects loaded or not, so projects
+                    arriving later move nothing; signed out, it is not drawn at all. */}
+                {(signedIn || projectSources.length > 0) && (
+                  <div className="grd-avail-from">
+                    {projectSources.length > 0 && (
+                      <MenuSelect
+                        className="grd-from-select"
+                        ariaLabel="From a project"
+                        value={fromProject ? fromProject.key : ''}
+                        options={[{ value: '', label: 'From a project' }, ...projectSources.map((s) => ({ value: s.key, label: s.name }))]}
+                        onChange={setFromKey}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="grd-chips" role="group" aria-label="Palette colours">
@@ -2039,9 +2085,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </div>
             )}
             </div>
-            <p id="grd-avail-status" className="grd-avail-status" role="status" aria-live="polite" aria-atomic="true">
-              {noteNow ? noteNow.text + (noteNow.n % 2 ? '\u200B' : '') : <span className="grd-avail-idle" aria-hidden="true">{availIdle}</span>}
-            </p>
+            <div className="grd-avail-foot">
+              <p id="grd-avail-status" className="grd-avail-status" role="status" aria-live="polite" aria-atomic="true">
+                {noteNow ? noteNow.text + (noteNow.n % 2 ? '\u200B' : '') : <span className="grd-avail-idle" aria-hidden="true">{availIdle}</span>}
+              </p>
+              {/* The Shuffle pool lives in Shuffle settings; this is the way to it from
+                  the colours it is chosen from. Only a palette has a pool to choose. */}
+              {!sparse && (
+                <button type="button" className="grd-avail-link grd-avail-pool" aria-haspopup="dialog" onClick={openPoolSettings}>
+                  Choose colours for Shuffle
+                </button>
+              )}
+            </div>
           </ToolSection>
 
           <ToolSection
