@@ -15,10 +15,23 @@
 //   · at 390 the Pro block comes before Free, the toggle sits over its price and
 //     Upgrade to Pro is inside the first screen; at 700 (nav is a list, tiers
 //     still two columns) and at 1440 Free stays first, on the left;
-//   · the "All settings" bar stays under the site header after a scroll.
+//   · the "All settings" bar stays under the site header after a scroll;
+//   · Data: Export JSON, Clear data and the Confirm pair are one line each at 768
+//     and 390, and the Clear data confirm takes focus (on Cancel) and gives it
+//     back to the trigger;
+//   · Accessibility on touch: Reduced motion is a switch (role, aria-checked), its
+//     tap target is 44 high, its words flip it, the theme segments are 44 tall;
+//   · Account on touch at 390: an open edit row has the field full width and Save /
+//     Cancel sharing a line; the delete confirm's pair too; the avatar's camera cue
+//     is drawn without a hover;
+//   · Language at 390 is hairline rows in one card (no bordered tile) and "English (AU)"
+//     is printed once; at 1440 the tiles and both lines are as they were;
+//   · at 1440 with a mouse the switch, segments and camera cue are as they were.
 //
 // Positions are read from the layout, in document coordinates, with no
-// screenshots: the contexts here are plain viewport ones.
+// screenshots: viewport contexts only. The touch cases use isMobile + hasTouch so
+// `pointer: coarse` and `hover: none` are true; nothing here takes a full-page or
+// element screenshot, which turns the touch media off in such a context.
 //
 // MUTATIONS (each turns the tests named red):
 //   phoneView back to useState and pickSection not navigating -> "Back from a section ...", "Forward ...", "the All settings bar ...", "focus returns ..."
@@ -31,6 +44,21 @@
 //   tiersStacked uses (max-width: 720px)                       -> "at 700 the tiers are still two columns, Free on the left"
 //   tiersStacked always true                                   -> "at 700 ...", "at 1440 ..."
 //   the `.stg[data-phone-view="section"] .stg-bar` rule removed -> "the All settings bar stays under the site header after a scroll"
+//   `settings-row-main` back to a bare <div> on Export or Clear  -> "at 768 Export JSON, Clear data ..." (the text block takes the row and the button breaks)
+//   `white-space: nowrap` / `flex: none` dropped from the `.settings-row > .btn` rule -> the same test, at 768
+//   clearCancelRef.current?.focus() removed                    -> "the confirm opens on Cancel ..."
+//   clearTriggerRef.current?.focus() removed                   -> "... and Cancel returns focus to Clear data"
+//   `role="switch"` removed (back to aria-pressed)             -> "Reduced motion is a switch ..." and spec 41 "/settings offers the theme beside reduced motion"
+//   the <label htmlFor="set-reduced-motion"> back to a <div>   -> "Reduced motion is a switch ..." (the tap on the words does not flip it)
+//   `.stg .toggle-switch::before` (the 44px reach) removed     -> "Reduced motion is a switch ..." (target 24 high)
+//   `.stg .toggle-row .theme-seg-btn { height: 44px }` removed -> "the theme segments are 44px tall on touch"
+//   the 520 `.settings-edit-line > input { flex: 1 1 100% }` or `> .btn { flex: 1 1 0 }` removed -> "Account edit rows ..."
+//   `.danger-confirm-actions { gap: 12px }` / its `> .btn` flex removed -> "the Delete account confirm keeps its two buttons ..."
+//   the `@media (hover: none)` avatar rule removed             -> "the avatar shows it can be tapped ..."
+//   the Language block in the 640 query removed                -> "at 390 the card holds hairline rows ..."
+//   `.stg .lang-tile:hover, .stg .lang-tile.active { border-color }` restatement removed -> "at 390 the card holds hairline rows" (the chosen row's divider turns ink)
+//   the `!tiersStacked ||` gate dropped from the code line      -> "at 1440 the tiles are unchanged ..."; `l.native !== l.label` dropped -> "at 390 the card holds hairline rows ..."
+//   `.stg .settings-avatar-edit` touch band, or the 1440 opacity:0 base, changed -> "the switch has no extra reach ..."
 import { test, expect } from './base.js'
 import { go, restingScrollY, signIn, watch, wheelToRest } from './helpers.js'
 import { withAvailability } from './price-payload.js'
@@ -256,5 +284,303 @@ test.describe('settings on a phone: Subscription order', () => {
     expect(Math.abs(b.free.top - b.pro.top)).toBeLessThan(2)
     // The toggle is above both, as it always was.
     expect(b.toggle.bottom).toBeLessThanOrEqual(Math.min(b.free.top, b.pro.top) + 1)
+  })
+})
+
+// ── Part B: Data, Accessibility, Account, Language ─────────────────────────────
+// (board card 2612b30345, section-level fixes)
+
+/** How many lines of text each button holds: the distinct tops of its text boxes. */
+const textLines = (page, selector) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map((btn) => {
+  const range = document.createRange()
+  range.selectNodeContents(btn)
+  const tops = new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top)))
+  return { text: btn.textContent.trim(), lines: tops.size }
+}), selector)
+
+test.describe('settings: Data buttons stay on one line', () => {
+  for (const width of [768, 390]) {
+    test(`at ${width} Export JSON, Clear data, Full disclosure and the Confirm pair are one line each`, async ({ page }) => {
+      watch(page, `a person on a ${width}px screen opening Your data`)
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page, { plan: 'free' })
+      await go(page, '/settings')
+      await page.locator('#settab-data').click()
+      await expect(page.locator('#set-data')).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+
+      const rest = await textLines(page, '#set-data .settings-row > .btn, #set-data .settings-card-h > .btn')
+      // POSITIVE CONTROL: the three buttons were found, so "all one line" is not vacuous.
+      expect(rest.map((b) => b.text).sort()).toEqual(['Clear data', 'Export JSON', 'Full disclosure'])
+      for (const b of rest) expect(b.lines, `"${b.text}" broke onto ${b.lines} lines at ${width}`).toBe(1)
+
+      await page.getByRole('button', { name: 'Clear data', exact: true }).click()
+      const armed = await textLines(page, '#set-data .settings-edit-actions > .btn')
+      expect(armed.map((b) => b.text)).toEqual(['Confirm clear', 'Cancel'])
+      for (const b of armed) expect(b.lines, `"${b.text}" broke onto ${b.lines} lines at ${width}`).toBe(1)
+    })
+  }
+})
+
+test.describe('settings: Clear data hands focus to Cancel and takes it back', () => {
+  for (const width of [390, 1440]) {
+    test(`at ${width} the confirm opens on Cancel, and Cancel returns focus to Clear data`, async ({ page }) => {
+      watch(page, `a keyboard user clearing local data at ${width}px`)
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page, { plan: 'free' })
+      await go(page, '/settings')
+      await page.locator('#settab-data').click()
+      await expect(page.locator('#set-data')).toBeVisible()
+
+      const clear = page.getByRole('button', { name: 'Clear data', exact: true })
+      const cancel = page.locator('#set-data').getByRole('button', { name: 'Cancel', exact: true })
+      await expect(clear, 'opening the section must not put focus on the button').not.toBeFocused()
+
+      await clear.click()
+      await expect(cancel).toBeVisible()
+      await expect(cancel, 'focus fell to the page when the confirm opened').toBeFocused()
+      // Never the destructive one: Enter on it would wipe the browser's data.
+      await expect(page.getByRole('button', { name: 'Confirm clear' })).not.toBeFocused()
+
+      await page.keyboard.press('Enter')
+      await expect(cancel).toHaveCount(0)
+      await expect(clear, 'focus did not return to Clear data').toBeFocused()
+    })
+  }
+})
+
+test.describe('settings on a touch phone: Accessibility and Account', () => {
+  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true })
+
+  async function open(page, section) {
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+    await page.locator(`#settab-${section}`).tap()
+    await expect(page.locator(`#set-${section}`)).toBeVisible()
+    await restingScrollY(page, section)
+  }
+
+  /** How far a tap reaches around an element, found by hit-testing outwards from its middle. */
+  const reach = (locator) => locator.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const cx = r.left + r.width / 2
+    const cy = r.top + r.height / 2
+    const hits = (x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && el.contains(hit) }
+    const run = (dx, dy) => { let n = 0; while (n < 80 && hits(cx + dx * (n + 1), cy + dy * (n + 1))) n++; return n }
+    return { drawnH: r.height, w: run(-1, 0) + run(1, 0) + 1, h: run(0, -1) + run(0, 1) + 1, cx, top: r.top }
+  })
+
+  test('Reduced motion is a switch with a 44px target, and its words flip it', async ({ page }) => {
+    watch(page, 'a person turning on reduced motion with a thumb')
+    await open(page, 'accessibility')
+    const sw = page.getByRole('switch', { name: 'Reduced motion' })
+    await expect(sw, 'no switch named Reduced motion').toBeVisible()
+    await expect(sw).toBeInViewport()
+    await expect(sw).toHaveAttribute('aria-checked', /^(true|false)$/)
+    const start = await sw.getAttribute('aria-checked')
+    const other = start === 'true' ? 'false' : 'true'
+
+    const box = await reach(sw)
+    expect(box.drawnH, 'the drawn track should keep its 24px').toBeLessThan(30)
+    expect(box.h, `the target is ${box.h}px tall`).toBeGreaterThanOrEqual(44)
+    expect(box.w, `the target is ${box.w}px wide`).toBeGreaterThanOrEqual(44)
+
+    // The words are the label: tapping them flips the switch.
+    await page.locator('#set-rm-label').tap()
+    await expect(sw, 'a tap on the words did not flip it').toHaveAttribute('aria-checked', other)
+    await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', other)
+
+    // And a tap in the invisible margin above the track flips it back.
+    await page.touchscreen.tap(box.cx, box.top - 8)
+    await expect(sw, 'a tap just above the track missed it').toHaveAttribute('aria-checked', start)
+  })
+
+  test('the theme segments are 44px tall on touch', async ({ page }) => {
+    watch(page, 'a person choosing a theme with a thumb')
+    await open(page, 'accessibility')
+    const heights = await page.locator('#set-accessibility .theme-seg-btn').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
+    expect(heights.length, 'POSITIVE CONTROL: Light, Dark and System are there').toBe(3)
+    for (const h of heights) expect(h, `a theme segment is ${h}px tall`).toBeGreaterThanOrEqual(44)
+  })
+
+  /** Where the buttons of one open edit row sit: grouped by line, with the field's width. */
+  const editLine = (row) => row.locator('.settings-edit-line').evaluate((line) => {
+    const box = line.getBoundingClientRect()
+    const lines = new Map()
+    const buttons = [...line.querySelectorAll(':scope > .btn')]
+    for (const b of buttons) {
+      const top = Math.round(b.getBoundingClientRect().top)
+      lines.set(top, [...(lines.get(top) || []), b.textContent.trim()])
+    }
+    const field = line.querySelector(':scope > input, :scope > .settings-suggest-wrap')
+    return {
+      shared: [...lines.values()],
+      fieldWidth: Math.round(field.getBoundingClientRect().width),
+      lineWidth: Math.round(box.width),
+      heights: buttons.map((b) => Math.round(b.getBoundingClientRect().height)),
+      spill: buttons.some((b) => b.getBoundingClientRect().right > box.right + 1),
+    }
+  })
+
+  test('Account edit rows: the field is full width and no button is alone on a line', async ({ page }) => {
+    watch(page, 'a person editing their profile on a phone')
+    await open(page, 'account')
+
+    const cases = [
+      { label: 'Display name', buttons: ['Save', 'Cancel'] },
+      { label: 'Location', buttons: ['Save', 'Cancel'] },
+      { label: 'Email address', buttons: ['Next', 'Cancel'] },
+    ]
+    for (const { label, buttons } of cases) {
+      const row = page.locator('.settings-row', { hasText: label })
+      await row.getByRole('button', { name: 'Edit' }).tap()
+      await expect(row.locator('.settings-edit-line'), `${label}: the edit row did not open`).toBeVisible()
+      const m = await editLine(row)
+      expect(m.shared.flat(), `${label}: the buttons were not found`).toEqual(buttons)
+      for (const line of m.shared) expect(line.length, `${label}: ${line.join('')} sits alone on a line`).toBeGreaterThanOrEqual(2)
+      expect(m.shared.length, `${label}: the buttons are on ${m.shared.length} lines`).toBe(1)
+      expect(m.fieldWidth, `${label}: the field is ${m.fieldWidth}px of ${m.lineWidth}`).toBeGreaterThanOrEqual(m.lineWidth - 1)
+      expect(m.spill, `${label}: a button runs past the row`).toBe(false)
+      for (const h of m.heights) expect(h, `${label}: a button is ${h}px tall`).toBeGreaterThanOrEqual(44)
+
+      if (label === 'Email address') {
+        // Step 2 of the email change: Save and Back.
+        await row.locator('input').fill('new.person@uil4b.example')
+        await row.getByRole('button', { name: 'Next' }).tap()
+        await expect(row.getByRole('button', { name: 'Save' })).toBeVisible()
+        const second = await editLine(row)
+        expect(second.shared.flat()).toEqual(['Save', 'Back'])
+        expect(second.shared.length, 'Email step 2: Save and Back are not on one line').toBe(1)
+        expect(second.fieldWidth).toBeGreaterThanOrEqual(second.lineWidth - 1)
+        await row.getByRole('button', { name: 'Back' }).tap()
+      }
+      await row.getByRole('button', { name: 'Cancel' }).tap()
+      await expect(row.locator('.settings-edit-line')).toHaveCount(0)
+    }
+  })
+
+  test('the Delete account confirm keeps its two buttons on one line, 12px apart', async ({ page }) => {
+    watch(page, 'a person reading the delete confirmation on a phone')
+    await open(page, 'account')
+    await page.getByRole('button', { name: 'Delete account', exact: true }).tap()
+    const actions = page.locator('.danger-confirm-actions')
+    await expect(actions).toBeVisible()
+    const m = await actions.evaluate((el) => {
+      const boxes = [...el.querySelectorAll(':scope > .btn')].map((x) => x.getBoundingClientRect())
+      const [a, b] = boxes
+      return { n: boxes.length, sameLine: Math.abs(a.top - b.top) < 1, gap: Math.round(b.left - a.right), widthGap: Math.abs(a.width - b.width) }
+    })
+    expect(m.n).toBe(2)
+    expect(m.sameLine, 'Permanently delete and Cancel are on different lines').toBe(true)
+    expect(m.gap, 'the two buttons are too close').toBeGreaterThanOrEqual(12)
+    expect(m.widthGap, 'the pair should be equal width').toBeLessThan(2)
+  })
+
+  test('the avatar shows it can be tapped: the camera band is drawn without a hover', async ({ page }) => {
+    watch(page, 'a person who has never hovered a phone screen')
+    await open(page, 'account')
+    const edit = page.locator('.settings-avatar-edit')
+    await expect.poll(() => edit.evaluate((el) => getComputedStyle(el).opacity), { message: 'the change-photo cue is hidden on touch' }).toBe('1')
+    const m = await page.evaluate(() => {
+      const avatar = document.querySelector('.settings-profile-avatar').getBoundingClientRect()
+      const band = document.querySelector('.settings-avatar-edit').getBoundingClientRect()
+      return { avatarH: avatar.height, bandH: band.height, bandBottom: band.bottom - avatar.bottom, bandTop: band.top - avatar.top }
+    })
+    expect(m.bandH, 'the cue should be a band, not the whole avatar').toBeLessThan(m.avatarH * 0.5)
+    expect(m.bandH).toBeGreaterThan(12)
+    expect(m.bandBottom).toBeLessThanOrEqual(1)
+    expect(m.bandTop).toBeGreaterThan(m.avatarH * 0.5)
+  })
+})
+
+test.describe('settings: Language is rows on a phone, tiles on a desktop', () => {
+  const tiles = (page) => page.evaluate(() => [...document.querySelectorAll('#set-language .lang-tile')].map((t) => {
+    const cs = getComputedStyle(t)
+    const r = t.getBoundingClientRect()
+    return {
+      active: t.classList.contains('active'),
+      sides: [cs.borderTopWidth, cs.borderRightWidth, cs.borderLeftWidth].map(parseFloat),
+      foot: parseFloat(cs.borderBottomWidth),
+      footColor: cs.borderBottomColor,
+      radius: parseFloat(cs.borderTopLeftRadius),
+      ring: cs.boxShadow,
+      top: r.top, bottom: r.bottom, height: r.height,
+      lines: [...t.querySelectorAll('.lang-tile-label, .lang-tile-code')].map((e) => e.textContent.trim()),
+    }
+  }))
+
+  async function openLanguage(page, width) {
+    await page.setViewportSize({ width, height: 900 })
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+    await page.locator('#settab-language').click()
+    await expect(page.locator('#set-language .lang-tile').first()).toBeVisible()
+    await restingScrollY(page, 'Language')
+  }
+
+  test('at 390 the card holds hairline rows: no bordered tile, no ring, no repeated line', async ({ page }) => {
+    watch(page, 'a person choosing a language on a phone')
+    await openLanguage(page, 390)
+    const rows = await tiles(page)
+    expect(rows.length, 'POSITIVE CONTROL: the language list is there').toBeGreaterThanOrEqual(8)
+    rows.forEach((row, i) => {
+      expect(row.sides, `row ${i} still has a bordered edge`).toEqual([0, 0, 0])
+      expect(row.radius, `row ${i} still has rounded tile corners`).toBe(0)
+      expect(row.ring, `row ${i} still has a ring`).toBe('none')
+      expect(row.height, `row ${i} is under 52px`).toBeGreaterThanOrEqual(52)
+      // A hairline between rows, none under the last.
+      expect(row.foot, `row ${i} divider`).toBe(i === rows.length - 1 ? 0 : 1)
+      // The chosen row's divider is the same hairline as the others, not ink.
+      if (i < rows.length - 1) expect(row.footColor, `row ${i} divider is a different colour`).toBe(rows[rows.length - 2].footColor)
+      if (i > 0) expect(Math.abs(row.top - rows[i - 1].bottom), `row ${i} has a gap above it`).toBeLessThan(1)
+      expect(new Set(row.lines).size, `row ${i} prints a line twice: ${row.lines.join(' / ')}`).toBe(row.lines.length)
+    })
+    expect(rows.filter((r) => r.active).length).toBe(1)
+    // The chosen row is marked by a tick, not by colour alone.
+    await expect(page.locator('#set-language .lang-tile.active .lang-tile-check')).toHaveCount(1)
+    const body = await page.locator('#set-language .settings-card-body--grid').evaluate((el) => getComputedStyle(el).padding)
+    expect(body, 'the card still pads a panel inside itself').toBe('0px')
+  })
+
+  test('at 1440 the tiles are unchanged: bordered, rounded, with both lines', async ({ page }) => {
+    watch(page, 'a person choosing a language on a desktop')
+    await openLanguage(page, 1440)
+    const grid = await tiles(page)
+    expect(grid[0].sides, 'the 1440 tiles lost their border').toEqual([1, 1, 1])
+    expect(grid[0].radius).toBeGreaterThan(0)
+    expect(grid[0].lines, 'the English (AU) tile lost its second line at 1440').toEqual(['English (AU)', 'English (AU)'])
+  })
+})
+
+test.describe('settings with a mouse at 1440: Accessibility and Account are as they were', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('the switch has no extra reach, the segments are 34px, and the camera cue waits for hover', async ({ page }) => {
+    watch(page, 'a person on a desktop')
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+    await page.locator('#settab-accessibility').click()
+    await expect(page.locator('#set-accessibility')).toBeVisible()
+    await restingScrollY(page, 'Accessibility')
+
+    const sw = page.getByRole('switch', { name: 'Reduced motion' })
+    await expect(sw).toBeVisible()
+    const box = await sw.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      const cx = r.left + r.width / 2
+      const cy = r.top + r.height / 2
+      let up = 0
+      while (up < 40) { const hit = document.elementFromPoint(cx, cy - up - 1); if (!hit || !el.contains(hit)) break; up++ }
+      return { w: Math.round(r.width), h: Math.round(r.height), up }
+    })
+    expect({ w: box.w, h: box.h }, 'the mouse switch changed size').toEqual({ w: 44, h: 24 })
+    expect(box.up, 'the mouse switch grew a hidden margin').toBeLessThanOrEqual(13)
+
+    const heights = await page.locator('#set-accessibility .theme-seg-btn').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
+    expect(heights).toEqual([34, 34, 34])
+
+    await page.locator('#settab-account').click()
+    await expect(page.locator('#set-account')).toBeVisible()
+    await expect.poll(() => page.locator('.settings-avatar-edit').evaluate((el) => getComputedStyle(el).opacity)).toBe('0')
   })
 })
