@@ -240,7 +240,8 @@ test('a keyboard landing on <main> draws no page-sized frame', () => {
 test('signing in from the signed-out landing re-reads the account and says the answer', () => {
   const settings = stripComments(read('src/pages/Settings.jsx'))
   assert.match(settings, /requireLogin\('finish verifying your email'\)\.then\(\(signedIn\) =>/)
-  assert.match(settings, /if \(signedIn\) \{\s*setActive\('account'\)\s*setPhoneView\('section'\)\s*setFinishAfterSignIn\(true\)/)
+  // Account opens as a section (a history entry on a phone) before the re-read.
+  assert.match(settings, /if \(signedIn\) \{\s*setActive\('account'\)[^}]*navigate\([^)]*state: \{ section: 'account' \} \}\)\s*setFinishAfterSignIn\(true\)/)
   // The re-read runs once the account is in (the callback belongs to the signed-in user).
   assert.match(settings, /if \(!finishAfterSignIn \|\| !user\) return\s*setFinishAfterSignIn\(false\)\s*refreshEmailVerified\(\)\.then/)
   // An account that changed mid-read answers null, which says nothing.

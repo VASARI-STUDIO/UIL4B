@@ -447,12 +447,14 @@ test.describe('settings on a touch phone: Accessibility and Account', () => {
         // Step 2 of the email change: Save and Back.
         await row.locator('input').fill('new.person@uil4b.example')
         await row.getByRole('button', { name: 'Next' }).tap()
-        await expect(row.getByRole('button', { name: 'Save' })).toBeVisible()
-        const second = await editLine(row)
+        // Step 2 relabels the row "Confirm password", so it is found as the open row.
+        const open2 = page.locator('.settings-row--open')
+        await expect(open2.getByRole('button', { name: 'Save' })).toBeVisible()
+        const second = await editLine(open2)
         expect(second.shared.flat()).toEqual(['Save', 'Back'])
         expect(second.shared.length, 'Email step 2: Save and Back are not on one line').toBe(1)
         expect(second.fieldWidth).toBeGreaterThanOrEqual(second.lineWidth - 1)
-        await row.getByRole('button', { name: 'Back' }).tap()
+        await open2.getByRole('button', { name: 'Back' }).tap()
       }
       await row.getByRole('button', { name: 'Cancel' }).tap()
       await expect(row.locator('.settings-edit-line')).toHaveCount(0)
@@ -474,6 +476,8 @@ test.describe('settings on a touch phone: Accessibility and Account', () => {
     expect(m.sameLine, 'Permanently delete and Cancel are on different lines').toBe(true)
     expect(m.gap, 'the two buttons are too close').toBeGreaterThanOrEqual(12)
     expect(m.widthGap, 'the pair should be equal width').toBeLessThan(2)
+    const clipped = await actions.evaluate((el) => [...el.querySelectorAll(':scope > .btn')].some((b) => b.scrollWidth > b.clientWidth + 1))
+    expect(clipped, 'a button label is cut off').toBe(false)
   })
 
   test('the avatar shows it can be tapped: the camera band is drawn without a hover', async ({ page }) => {

@@ -365,7 +365,7 @@
   .stg .settings-edit-line > .settings-suggest-wrap { flex: 1 1 100%; }
   .stg .settings-edit-line > .btn { flex: 1 1 0; }
   .stg .danger-confirm-actions { gap: 12px; }
-  .stg .danger-confirm-actions > .btn { flex: 1 1 0; }
+  .stg .danger-confirm-actions > .btn { flex: 1 1 0; padding-inline: 12px; }
 }
 
 [data-density="compact"] .stg .settings-row { padding: 10px 0; }
