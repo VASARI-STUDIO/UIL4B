@@ -26,14 +26,18 @@ async function requireAdmin(req) {
     return { error: 'Missing auth token', status: 401 }
   }
   try {
-    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
+    // checkRevoked: a token from a session that was ended must not move prices.
+    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7), true)
     // Require a Firebase-verified email — an unverified signup could
     // otherwise register the admin address and pass the allowlist check.
     if (!decoded.email_verified || !isAdminEmail(decoded.email)) {
       return { error: 'Admin access required', status: 403 }
     }
     return { decoded }
-  } catch {
+  } catch (err) {
+    if (err?.code === 'auth/id-token-revoked') {
+      return { error: 'Your session was ended. Sign in again.', code: 'session-revoked', status: 401 }
+    }
     return { error: credentialProblem() || 'Invalid auth token', status: 401 }
   }
 }
@@ -121,7 +125,7 @@ export default async function handler(req, res) {
   }
 
   const auth = await requireAdmin(req)
-  if (auth.error) return res.status(auth.status).json({ error: auth.error })
+  if (auth.error) return res.status(auth.status).json({ error: auth.error, ...(auth.code ? { code: auth.code } : {}) })
 
   try {
     const stripe = getStripeServer()
