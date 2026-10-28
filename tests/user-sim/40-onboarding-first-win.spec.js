@@ -198,10 +198,13 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     expect(box.height, '"Not now" is shorter than 44px on a phone').toBeGreaterThanOrEqual(44)
     const card = await page.locator('.onb-card').evaluate((el) => {
       const s = getComputedStyle(el)
-      return { border: s.borderTopWidth, width: el.getBoundingClientRect().width }
+      return { border: s.borderTopWidth, left: s.paddingLeft, right: s.paddingRight }
     })
     expect(card.border, 'the onboarding card still has a border on a phone').toBe('0px')
-    expect(card.width, 'the onboarding card still spends width on padding').toBeGreaterThanOrEqual(390 - 2 * 16 - 1)
+    // The card is width 100% and border-box, so its own width can't show the
+    // padding; the padding itself does (36px on a wider screen).
+    expect(card.left, 'the onboarding card still pads its left edge on a phone').toBe('0px')
+    expect(card.right, 'the onboarding card still pads its right edge on a phone').toBe('0px')
   })
 
   test('the three unread survey questions are gone from the flow', async ({ page, baseURL }) => {

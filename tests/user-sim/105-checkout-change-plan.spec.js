@@ -9,7 +9,8 @@
 //   · signed out, the page renders and only the payment form asks for a login;
 //     at 390px that ask sits above the features list
 //   · at 390px the features list is folded and the payment panel comes before
-//     "Back to settings"; at 1440px the list is open
+//     "Back to settings" in the page and so in the tab order; at 1440px the
+//     list is open
 //   · a quick monthly, yearly, monthly ends on one live monthly form, asks for
 //     no session for the monthly it passed through, and sends one
 //     checkout_started; a failed request for a period already left is ignored
@@ -148,6 +149,13 @@ test.describe('changing billing period at checkout', () => {
     const back = await page.getByRole('link', { name: 'Back to settings' }).boundingBox()
     expect(form.y, 'the payment panel sits below Back to settings').toBeLessThan(back.y)
     expect(form.y, 'the payment panel starts below the first screen').toBeLessThan(844)
+    // Tab order is DOM order (WCAG 2.4.3), so the sheet cannot reorder the
+    // link below the panel by CSS alone: the panel must come first in the DOM.
+    const formFirst = await page.locator('.checkout-form').evaluate((el) => {
+      const link = [...document.querySelectorAll('a')].find((a) => a.textContent.includes('Back to settings'))
+      return !!(el.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING)
+    })
+    expect(formFirst, 'Back to settings comes before the payment panel in the tab order').toBe(true)
 
     await included.locator('summary').click()
     await expect(included.locator('.checkout-features')).toBeVisible()

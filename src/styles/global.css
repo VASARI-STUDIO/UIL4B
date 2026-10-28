@@ -1850,7 +1850,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
   .onb-option:hover .onb-option-arrow{color:var(--accent-mid);transform:translateX(3px)}
 }
 
-.onb-back{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:16px;padding:0 4px;background:none;border:none;color:var(--t1);font-size:14px;font-family:var(--font);cursor:pointer;transition:color var(--dur-2) var(--ease-standard)}
+.onb-back{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:16px;padding:0;background:none;border:none;color:var(--t1);font-size:14px;font-family:var(--font);cursor:pointer;transition:color var(--dur-2) var(--ease-standard)}
 @media (hover:hover){
   .onb-back:hover{color:var(--t0)}
 }
@@ -1870,7 +1870,9 @@ main[tabindex="-1"]:focus-visible{outline:none}
    who has not made anything yet. */
 .onb-firstwin-foot{margin:18px 0 0;font-size:13px;color:var(--t3)}
 .onb-firstwin-foot a{color:var(--t1);text-decoration:underline;text-underline-offset:2px}
-.onb-firstwin-foot a:hover{color:var(--accent-mid)}
+@media (hover:hover){
+  .onb-firstwin-foot a:hover{color:var(--accent-mid)}
+}
 
 
 /* On a phone the options are the only panels: no card around them, so the

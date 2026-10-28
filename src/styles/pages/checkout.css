@@ -52,7 +52,19 @@
 .checkout-page .card:hover { border-color: var(--co-hair); }
 
 .checkout-page .checkout-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
-.checkout-page .checkout-summary { position: sticky; top: calc(var(--nav-clear) + 12px); display: flex; flex-direction: column; gap: 14px; }
+/* The DOM order is the summary, the payment panel, then "Back to settings", so
+   the tab order is the reading order on a phone, where they stack that way.
+   From 761px the link goes back under the summary card by grid area. That media
+   query is the exact complement of the phone block's (and of the page's own
+   `wide`), so no fractional width matches neither. The 14px between card and
+   link is the 20px grid gap less 6px. */
+.checkout-page .checkout-grid > .checkout-back { justify-self: start; }
+@media not all and (max-width: 760px) {
+  .checkout-page .checkout-grid { grid-template-areas: "summary form" "back form"; grid-template-rows: auto 1fr; }
+  .checkout-page .checkout-summary { grid-area: summary; }
+  .checkout-page .checkout-form { grid-area: form; }
+  .checkout-page .checkout-grid > .checkout-back { grid-area: back; margin-top: -6px; }
+}
 
 .checkout-page .checkout-plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--co-hair); }
 .checkout-page .checkout-plan-name { font-size: 16px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
@@ -89,7 +101,7 @@
 .checkout-page .checkout-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
 /* The list folds into a disclosure on a phone only. Wider, the summary is
    hidden and the list is open (the page sets `open`), as it was before. */
-@media (min-width: 761px) { .checkout-page .checkout-included > summary { display: none; } }
+@media not all and (max-width: 760px) { .checkout-page .checkout-included > summary { display: none; } }
 @media (max-width: 760px) {
   .checkout-page .checkout-included { margin-top: 18px; border-top: 1px solid var(--co-hair); }
   .checkout-page .checkout-included > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; font-size: 14px; font-weight: 560; color: var(--t0); cursor: pointer; list-style: none; }
@@ -182,21 +194,16 @@
 
 /* Two columns, panel at its narrowest: the yearly trial sentence needs three
    lines until about 790px. The band runs to 860px for room (a longer amount
-   adds characters); wider, two lines hold. */
-@media (min-width: 761px) and (max-width: 860px) {
+   adds characters); wider, two lines hold. One column has the same floor, so
+   the band has no lower edge and no width falls between it and the phone
+   block. */
+@media (max-width: 860px) {
   .checkout-page .checkout-renewal { min-height: 4.5em; }
 }
 @media (max-width: 760px) {
   .checkout-page .checkout-grid { grid-template-columns: minmax(0, 1fr); }
-  /* The summary's children join the grid, so the payment panel follows the
-     summary card and "Back to settings" comes last. */
-  .checkout-page .checkout-summary { position: static; display: contents; }
-  .checkout-page .checkout-summary-card { order: 1; }
-  .checkout-page .checkout-form { order: 2; }
-  .checkout-page .checkout-summary > .checkout-back { order: 3; justify-self: start; }
   .checkout-page .checkout-plan-note, .checkout-page .checkout-trial, .checkout-page .checkout-terms { font-size: 13px; }
   .checkout-page .checkout-back { min-height: 44px; }
-  .checkout-page .checkout-renewal { min-height: 4.5em; }
   /* Signed out, the sign-in moves up into the summary card, above the
      folded features list, and the panel that held it goes. */
   .checkout-page .checkout-form.is-signed-out { display: none; }

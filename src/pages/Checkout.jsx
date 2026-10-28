@@ -206,7 +206,7 @@ export default function Checkout() {
   const { requireLogin } = useLoginPrompt()
   // The features list is open beside the form and folded on a phone. The
   // breakpoint is the sheet's one-column break.
-  const wide = useMediaQuery('(min-width: 761px)')
+  const wide = useMediaQuery('not all and (max-width: 760px)')
 
   const requestedPlan = params.get('plan')
   const planKey = Object.hasOwn(PLANS, requestedPlan) ? requestedPlan : null
@@ -477,8 +477,6 @@ export default function Checkout() {
               </ul>
             </details>
           </div>
-
-          {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
         </aside>
 
         {/* Embedded Stripe checkout */}
@@ -557,6 +555,11 @@ export default function Checkout() {
             </>
           )}
         </div>
+
+        {/* After the payment panel, so the tab order is the reading order on a
+            phone, where it stacks last. From 761px the sheet puts it back
+            under the summary card by grid area. */}
+        {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
       </div>
     </div>
   )
