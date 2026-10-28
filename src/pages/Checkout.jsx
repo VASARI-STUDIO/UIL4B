@@ -11,7 +11,8 @@ import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
 import { verifyErrorText } from '../utils/emailVerification'
-import { checkoutErrorText, plainError } from '../utils/checkoutError'
+import { checkoutErrorText, checkoutErrorAction, plainError } from '../utils/checkoutError'
+import ReportProblemLink from '../components/ReportProblemLink'
 import useMediaQuery from '../hooks/useMediaQuery'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -165,7 +166,7 @@ function SignInToPay({ className = '', cadence, onClick }) {
 // reminder bar and Settings send. "I've verified" re-reads the account and mints
 // a fresh ID token first, because the server judges the token's own copy of the
 // flag, then asks for the form again.
-function VerifyEmailPrompt({ email, message, onResend, onRetry }) {
+function VerifyEmailPrompt({ email, onResend, onRetry }) {
   const [state, setState] = useState('idle') // idle | sending | sent | failed
   const [failure, setFailure] = useState('')
   const resend = async () => {
@@ -181,7 +182,6 @@ function VerifyEmailPrompt({ email, message, onResend, onRetry }) {
   }
   return (
     <>
-      <span className="checkout-error-p">{message}</span>
       <span className="checkout-error-p" role="status">
         {state === 'sent'
           ? <> Link sent{email ? <> to {email}</> : null}. Check your inbox and spam folder.</>
@@ -215,7 +215,8 @@ export default function Checkout() {
   const proPrice = useProPrice()
   const { prices } = usePrices()
   const [error, setError] = useState('')
-  // The server's reason code for the error, when it sent one.
+  // The server's reason code for the error, when it sent one, or 'log-in' when
+  // the sign-in expired (what the panel offers instead of Try again).
   const [errorCode, setErrorCode] = useState('')
   // One failure can report twice (the fetch wrapper, then Stripe's own
   // rejection), so a later call without a code keeps the code already set.
@@ -224,7 +225,7 @@ export default function Checkout() {
     // The buyer reads a sentence of this page's own; the raw text stays here.
     console.warn('checkout: the payment session failed:', err?.message, { code: err?.code, status: err?.status })
     setError(checkoutErrorText(err))
-    setErrorCode((prev) => err?.code || prev)
+    setErrorCode((prev) => err?.code || checkoutErrorAction(err) || prev)
   }, [])
   // The plan the payment form is built for. It follows the chosen plan once
   // the choice has rested for SESSION_DEBOUNCE_MS.
@@ -509,7 +510,6 @@ export default function Checkout() {
                   <strong className="checkout-error-h">Verify your email to continue</strong>
                   <VerifyEmailPrompt
                     email={user.email}
-                    message={error}
                     onResend={sendVerificationEmail}
                     onRetry={async () => {
                       await refreshEmailVerified().catch(() => {})
@@ -521,8 +521,23 @@ export default function Checkout() {
                 <>
                   <strong className="checkout-error-h">Checkout unavailable</strong>
                   <span className="checkout-error-p">{error}</span>
-                  <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
+                  {errorCode === 'log-in' ? (
+                    // The session is no good, so a retry would fail the same way:
+                    // sign in again (forced, though the account looks signed in),
+                    // then ask for the form again.
+                    <button className="btn btn-s checkout-error-retry" onClick={() => {
+                      requireLogin('continue to checkout', { force: true, email: user?.email }).then((back) => {
+                        if (back) { setError(''); setErrorCode('') }
+                      })
+                    }}>Log in</button>
+                  ) : (
+                    <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
+                  )}
                 </>
+              )}
+              {/* Quiet, and drawn only where the Feedback bubble is hidden. */}
+              {errorCode !== 'email-unverified' && (
+                <div><ReportProblemLink subject="Problem at checkout" /></div>
               )}
             </div>
           ) : (

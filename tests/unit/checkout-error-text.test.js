@@ -3,7 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
-import { checkoutErrorText, plainError, CHECKOUT_GENERIC } from '../../src/utils/checkoutError.js'
+import { checkoutErrorText, checkoutErrorAction, plainError, CHECKOUT_GENERIC } from '../../src/utils/checkoutError.js'
 
 const failure = (status, message = 'raw server text', extra = {}) => Object.assign(new Error(message), { status, ...extra })
 
@@ -41,7 +41,19 @@ test('an unverified email keeps its reason code and reads as a plain sentence', 
 
 test('the page\'s own sentences pass through, and a reference id is kept', () => {
   assert.equal(checkoutErrorText(plainError('The payment form couldn’t load.')), 'The payment form couldn’t load.')
-  assert.equal(checkoutErrorText(failure(500, 'x', { correlationId: 'abc123' })), `${CHECKOUT_GENERIC} [ref abc123]`)
+  assert.equal(checkoutErrorText(failure(500, 'x', { correlationId: 'abc123' })), `${CHECKOUT_GENERIC} Reference: abc123`)
+})
+
+test('only an expired sign-in swaps Try again for a log-in', () => {
+  assert.equal(checkoutErrorAction(failure(401)), 'log-in')
+  for (const status of [400, 403, 409, 429, 500, 503, undefined]) {
+    assert.equal(checkoutErrorAction(failure(status)), '', `${status} should keep Try again`)
+  }
+  assert.equal(checkoutErrorAction(plainError('x')), '')
+})
+
+test('a 429 says to wait', () => {
+  assert.match(checkoutErrorText(failure(429)), /wait a few minutes/i)
 })
 
 test('the billing helper hands the status and reference id to the page', () => {

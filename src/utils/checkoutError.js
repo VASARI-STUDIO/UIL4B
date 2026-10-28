@@ -15,7 +15,7 @@ const BY_STATUS = {
   400: 'Checkout couldn’t open with those details. Pick the billing period again, or try again in a moment.',
   401: 'Your sign-in has expired. Log in again to continue.',
   409: 'Checkout can’t open for this account right now. Nothing was charged.',
-  429: 'Too many checkout attempts. Wait a few minutes, then try again. Nothing was charged.',
+  429: 'Too many checkout attempts. Please wait a few minutes before trying again. Nothing was charged.',
   503: 'The price isn’t available right now. Try again in a moment. Nothing was charged.',
 }
 
@@ -25,11 +25,17 @@ export function plainError(message) {
   return Object.assign(new Error(message), { plain: true })
 }
 
+// What the panel offers besides the sentence: 'log-in' replaces Try again (a
+// retry with the same expired sign-in would fail the same way), '' leaves it.
+export function checkoutErrorAction(err) {
+  return err?.status === 401 && !err?.plain ? 'log-in' : ''
+}
+
 export function checkoutErrorText(err) {
   if (err?.plain) return err.message
   const text = err?.code === 'email-unverified'
     ? VERIFY_EMAIL
     : BY_STATUS[err?.status] || CHECKOUT_GENERIC
   // The id lets support find the exact server log line.
-  return err?.correlationId ? `${text} [ref ${err.correlationId}]` : text
+  return err?.correlationId ? `${text} Reference: ${err.correlationId}` : text
 }
