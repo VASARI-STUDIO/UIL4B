@@ -33,14 +33,15 @@ export const hasPairExample = (id) => Object.hasOwn(LOADERS, id)
 // query on the end, which is a new module as far as the page is concerned.
 const chunkUrl = new Map() // view id -> address of its chunk, once a failure named it
 const attempts = {} // view id -> how many retries have been asked for
-const ADDRESS = /https?:\/\/[^\s'"]+?\.js/
+const ADDRESS = /https?:\/\/[^\s'"?#]+?\.js(?=[?#\s'"]|$)/
 
 const makeLazy = (id) => lazy(() => {
   const retry = attempts[id] ? chunkUrl.get(id) : null
   const load = retry ? () => import(/* @vite-ignore */ `${retry}?retry=${attempts[id]}`) : LOADERS[id]
   return trackExampleLoad(load).catch((error) => {
     const found = String(error?.message ?? error).match(ADDRESS)
-    if (found) chunkUrl.set(id, found[0])
+    // Only this site's own chunks are retried by address.
+    if (found && new URL(found[0]).origin === window.location.origin) chunkUrl.set(id, found[0])
     return { default: ViewUnavailable }
   })
 })

@@ -446,14 +446,19 @@ export default function ContrastChecker({ onCopy }) {
           </ToolSection>
 
           <ToolSection label="Nearest passing colours" className="cc-fixes-sec">
-            {/* The section reserves a fixed height, so the swatches below it do not
-                jump as the pair changes: a hidden copy of the fullest state shares
+            {/* The section reserves a fixed height, so the page does not change
+                height as the pair changes: a hidden copy of the fullest state shares
                 the cell with what is showing. Its rows use the real classes and
                 buttons at the longest real wording ("Lighten", the 4.5:1 lede, and
                 "background"), so it wraps wherever a live row wraps. From 901px
                 it holds the lede and one row (the page is as tall as its main
                 column there, so the panel does not set it); below that it holds
                 the lede and two rows, because the panel sits in the page flow.
+                Below 901px the swatches under it stay still; from 901px they move
+                down one row (about 69px) when a pair needs two fixes, and the
+                page height does not change. Two rows there would leave a blank
+                under the usual single fix and push the swatches below a 900px
+                window.
                 Its words are CSS generated content, so they are in no one's page
                 text: not a screen reader's, a find, or a test's. */}
             <div className="cc-fixes-body">

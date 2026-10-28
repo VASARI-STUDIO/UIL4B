@@ -317,7 +317,7 @@ test.describe('Contrast Checker · Interface on a phone', () => {
 })
 
 test.describe('Contrast Checker · the fixes reserve', () => {
-  test('R3: the reserve holds the fullest live state at 1440 and 390, so the swatches never move below it', async ({ browser }) => {
+  test('R3: the page never changes height at 1440 and 390, and at 390 the reserve holds the fullest state so the swatches stay still', async ({ browser }) => {
     for (const vp of [{ width: 1440, height: 900, phone: false }, { width: 390, height: 844, phone: true }]) {
       const { ctx, page } = await open(browser, vp)
       watch(page, `a window ${vp.width}px wide`)
@@ -327,18 +327,31 @@ test.describe('Contrast Checker · the fixes reserve', () => {
       for (const fg of ['#AAAAAA', '#949494', '#767676', '#000000', '#AAAAAA']) {
         await page.locator('#cc-fg').fill(fg)
         await expect(page.locator('.cc-ratio-num')).not.toHaveText('')
-        const read = await page.evaluate(() => ({
-          ghost: document.querySelector('.cc-fixes-ghost').getBoundingClientRect().height,
+        const read = await page.evaluate(() => {
+          // The reserve's own height: in the shared cell it would stretch to the
+          // taller of the two, which hides a reserve that is too short.
+          const ghostEl = document.querySelector('.cc-fixes-ghost')
+          ghostEl.style.alignSelf = 'start'
+          const ghost = ghostEl.getBoundingClientRect().height
+          ghostEl.style.alignSelf = ''
+          return {
+          ghost,
           live: document.querySelector('.cc-fixes-live').getBoundingClientRect().height,
           swatches: Math.round(document.querySelector('.cc-swatches').getBoundingClientRect().top + scrollY),
-        }))
-        expect(read.live, `${fg}: the live fixes are ${read.live}px and the reserve ${read.ghost}px`).toBeLessThanOrEqual(read.ghost + 1)
+          page: document.documentElement.scrollHeight,
+          }
+        })
+        // Below 901px the reserve holds the fullest state; from 901px it holds
+        // one row by design, and the page height is what stays still there.
+        if (vp.width < 901) expect(read.live, `${fg}: the live fixes are ${read.live}px and the reserve ${read.ghost}px`).toBeLessThanOrEqual(read.ghost + 1)
         tops.push({ fg, ...read })
       }
       if (vp.width < 901) {
         const ys = tops.map((t) => t.swatches)
         expect(Math.max(...ys) - Math.min(...ys), JSON.stringify(tops)).toBeLessThanOrEqual(1)
       }
+      const pages = tops.map((t) => t.page)
+      expect(Math.max(...pages) - Math.min(...pages), `page heights ${JSON.stringify(pages)}`).toBeLessThanOrEqual(1)
       await ctx.close()
     }
   })
