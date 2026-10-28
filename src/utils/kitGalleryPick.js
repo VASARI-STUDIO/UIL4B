@@ -51,9 +51,11 @@ export const PICK_KEY = 'uil4b.kitGalleryPick'
 // A pick older than this is not a purchase in progress.
 export const PICK_MAX_AGE_MS = 6 * 60 * 60 * 1000
 
-export function storePick(projectId, pick, { storage = globalThis.sessionStorage, now = Date.now() } = {}) {
+// `uid` is the signed-in account that made the pick: another account on the same browser must not be
+// offered a way back into it.
+export function storePick(projectId, pick, { storage = globalThis.sessionStorage, now = Date.now(), uid = '' } = {}) {
   try {
-    storage.setItem(PICK_KEY, JSON.stringify({ projectId: String(projectId), ...normalisePick(pick), at: now }))
+    storage.setItem(PICK_KEY, JSON.stringify({ projectId: String(projectId), ...normalisePick(pick), ...(uid ? { uid: String(uid) } : {}), at: now }))
     return true
   } catch { return false }
 }
@@ -66,7 +68,7 @@ export function readPick({ storage = globalThis.sessionStorage, now = Date.now()
     const v = JSON.parse(raw)
     if (!v || typeof v.projectId !== 'string' || !v.projectId) return null
     if (typeof v.at !== 'number' || now - v.at > PICK_MAX_AGE_MS || now < v.at) return null
-    return { projectId: v.projectId, ...normalisePick(v) }
+    return { projectId: v.projectId, ...normalisePick(v), ...(typeof v.uid === 'string' && v.uid ? { uid: v.uid } : {}) }
   } catch { return null }
 }
 

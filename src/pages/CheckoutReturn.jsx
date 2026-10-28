@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { readPick } from '../utils/kitGalleryPick'
+import { clearPick, readPick } from '../utils/kitGalleryPick'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -15,9 +16,14 @@ export default function CheckoutReturn() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { getCheckoutStatus } = useSubscription()
+  const { projects } = useProject()
 
-  // Set by the export gallery just before checkout; read once, here, on success.
-  const [galleryPick] = useState(() => readPick())
+  // Set by the export gallery just before checkout; read once, here, and cleared once the payment is
+  // confirmed. It is only a way back for the account that made it, into a project that still exists.
+  const [storedPick] = useState(() => readPick())
+  const galleryPick = storedPick && user && storedPick.uid === user.uid && projects.some((p) => p.id === storedPick.projectId)
+    ? storedPick
+    : null
   const sessionId = params.get('session_id')
   // Missing session id is an error state from the start — no effect needed.
   const [state, setState] = useState(sessionId ? 'loading' : 'error') // loading | success | error
@@ -41,6 +47,7 @@ export default function CheckoutReturn() {
             setState('error')
             return
           }
+          clearPick()
           setCheckoutMode(data.mode || 'subscription')
           // Both modes, not just the one-off. This page used to state flatly
           // that "Your Pro subscription is active" for every completed
@@ -54,14 +61,16 @@ export default function CheckoutReturn() {
           setState('success')
         } else if (data.status === 'open') {
           // Payment not finished — send them back to retry.
-          navigate(`/checkout?plan=${data.interval || 'yearly'}`, { replace: true })
+          // A buyer who came from the export gallery keeps the label that says so.
+          const fromGallery = params.get('from') === 'kit-gallery' || storedPick
+          navigate(`/checkout?plan=${data.interval || 'yearly'}${fromGallery ? '&from=kit-gallery' : ''}`, { replace: true })
         } else {
           setState('error')
         }
       })
       .catch(() => { if (!cancelled) setState('error') })
     return () => { cancelled = true }
-  }, [user, sessionId, getCheckoutStatus, navigate])
+  }, [user, sessionId, getCheckoutStatus, navigate, params, storedPick])
 
   return (
     <div className="sec checkout-page">
@@ -101,7 +110,7 @@ export default function CheckoutReturn() {
                   after someone paid, ended on the page trying to acquire them,
                   being told about the free tier they had just moved off. */}
               {/* A buyer who came from the export gallery goes back to the pick they made. */}
-              {galleryPick && <NavLink to={`/projects/${encodeURIComponent(galleryPick.projectId)}/export`} className="btn btn-accent">Back to your export</NavLink>}
+              {galleryPick && <NavLink to={`/projects/${encodeURIComponent(galleryPick.projectId)}/export`} state={{ kitPick: { design: galleryPick.design, format: galleryPick.format } }} className="btn btn-accent">Back to your export</NavLink>}
               <NavLink to="/projects" className={galleryPick ? 'btn' : 'btn btn-accent'}>Start building</NavLink>
               <NavLink to="/settings" className="btn">{checkoutMode === 'payment' ? 'View account details' : 'Manage subscription'}</NavLink>
             </div>
