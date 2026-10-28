@@ -222,3 +222,117 @@ test.describe('Palette Builder to Contrast Checker', () => {
     ])
   })
 })
+
+// THE "YOUR PALETTE" STRIP (slice 3, part B1). The palette is the same one as
+// above, under the analogous system, so each slot's on-screen name differs from
+// its role name. Names are written out by hand from the Palette Builder's labels
+// for that system (−30° is U+2212, as the board draws it):
+//
+//   slot 0  #1E3A8A  Primary
+//   slot 1  #F59E0B  Analogous −30°
+//   slot 2  #0F766E  Analogous +30°
+//   slot 3  #F7F7F4  Soft −15°
+//   slot 4  #0B1220  Soft +15°
+//   then White and Near black, which no palette colour equals
+//
+// MUTATIONS (each turns the tests named red):
+//   kitFrom names a slot with roleName(roleAt(i), 'auto')     -> "P2 the strip lists"
+//   a swatch's onClick always calls setFgHex                  -> "P2 a tap sets the targeted side"
+//   sideName ignores the role and returns the side word       -> "P2 a fix row names"
+//   reserveWord returns the side word only (no strip names)   -> "P2 the page does not change height" at 390
+const STRIP_NAMES = ['Primary', 'Analogous −30°', 'Analogous +30°', 'Soft −15°', 'Soft +15°', 'White', 'Near black']
+const STRIP_HEX = [...PALETTE.map((h) => h.toUpperCase()), '#FFFFFF', '#0B0C0E']
+const swatches = (page) => page.locator('.cc-swatch')
+const targetPill = (page, name) => page.getByRole('group', { name: 'Swatches change the' }).getByRole('button', { name, exact: true })
+
+test.describe('The Your palette strip', () => {
+  test('P2 the strip lists the roles by the Palette Builder\'s names, in slot order', async ({ page }) => {
+    watch(page, 'a designer whose palette uses the analogous system')
+    await seed(page, { harmony: 'analogous' })
+    await go(page, '/create/contrast')
+    await expect(swatches(page)).toHaveCount(STRIP_NAMES.length)
+    await expect(page.locator('.cc-swatch-name')).toHaveText(STRIP_NAMES)
+    const hexes = await swatches(page).evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label').match(/#[0-9A-F]{6}/i) || [''])[0].toUpperCase()))
+    expect(hexes).toEqual(STRIP_HEX)
+    await expect(page.getByRole('heading', { name: 'Pairs to check in your palette' })).toBeVisible()
+    // The strip is the palette's own, so it says so and never says "kit".
+    await expect(page.locator('.cc-strip')).not.toContainText(/\bkit\b/i)
+    await expect(page.locator('.cc-pairs .cc-lede')).not.toContainText('base generates')
+  })
+
+  test('P2 a tap sets the targeted side', async ({ page }) => {
+    watch(page, 'a designer picking colours from their palette')
+    await seed(page, { harmony: 'analogous' })
+    await go(page, '/create/contrast')
+    // Text is targeted first.
+    await expect(targetPill(page, 'Text')).toHaveAttribute('aria-pressed', 'true')
+    await swatches(page).filter({ hasText: 'Analogous +30°' }).click()
+    await expect(fgField(page)).toHaveValue('#0F766E')
+    await expect(bgField(page)).toHaveValue('#FFFFFF')
+    await expect(swatches(page).filter({ hasText: 'Analogous +30°' })).toHaveAttribute('aria-pressed', 'true')
+
+    await targetPill(page, 'Background').click()
+    await swatches(page).filter({ hasText: 'Soft −15°' }).click()
+    await expect(bgField(page)).toHaveValue('#F7F7F4')
+    await expect(fgField(page)).toHaveValue('#0F766E')
+    // The pressed swatch follows the targeted side.
+    await expect(swatches(page).filter({ hasText: 'Soft −15°' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(swatches(page).filter({ hasText: 'Analogous +30°' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('P2 a fix row names the side by its role', async ({ page }) => {
+    watch(page, 'a designer fixing the colour they were sent with')
+    await seed(page, { harmony: 'analogous' })
+    // Secondary on Subtle is about 2:1, and both sides have a fix.
+    await go(page, '/create/contrast?fg=F59E0B&bg=F7F7F4&from=palette&fgRole=secondary&bgRole=subtle')
+    const lines = page.locator('.cc-fixes-live .cc-fix-line')
+    await expect(lines.first()).toContainText('Darken Analogous −30° to #')
+    await expect(lines.nth(1)).toContainText('Darken Soft −15° to #')
+
+    // A side changed to a strip colour is named by that colour, not by the role it arrived with.
+    await fgField(page).fill('#0F766E')
+    await fgField(page).press('Enter')
+    await expect(lines.first()).toContainText('Darken Analogous +30° to #')
+
+    // A colour that is not in the strip falls back to the side's own word.
+    await fgField(page).fill('#E07B00')
+    await fgField(page).press('Enter')
+    await expect(lines.first()).toContainText('Darken text to #')
+  })
+
+  test('P2 a direct visit with no palette names its sides "text" and "background"', async ({ page }) => {
+    watch(page, 'someone opening the checker from the tools list')
+    await go(page, '/create/contrast?fg=AAAAAA&bg=FFFFFF')
+    await expect(page.locator('.cc-fixes-live .cc-fix-line').first()).toContainText('Darken text to #')
+    await expect(page.locator('.cc-pairs .cc-lede')).toContainText('From the colours your base generates. Build a palette to check your own.')
+  })
+
+  // R: spec 5.2. Tapping through every text and background colour of the strip
+  // changes the pair, so the fix rows change in count and wording. The page must
+  // stay the same height. At 390 the fixes reserve is what holds it still; from
+  // 901px the page is as tall as its main column.
+  for (const vp of [{ width: 1440, height: 900, phone: false }, { width: 390, height: 844, phone: true }]) {
+    test(`P2 the page does not change height as strip colours are tapped at ${vp.width}`, async ({ browser }) => {
+      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.phone, hasTouch: vp.phone })
+      const page = await ctx.newPage()
+      watch(page, `a window ${vp.width}px wide`)
+      await seed(page, { harmony: 'analogous' })
+      await go(page, '/create/contrast?fg=F59E0B&bg=F7F7F4&from=palette&fgRole=secondary&bgRole=subtle')
+      await expect(swatches(page)).toHaveCount(STRIP_NAMES.length)
+      await page.evaluate(() => document.fonts.ready)
+      const heights = []
+      for (let b = 0; b < STRIP_NAMES.length; b++) {
+        await targetPill(page, 'Background').click()
+        await swatches(page).nth(b).click()
+        await targetPill(page, 'Text').click()
+        for (let t = 0; t < STRIP_NAMES.length; t++) {
+          await swatches(page).nth(t).click()
+          heights.push(await page.evaluate(() => document.documentElement.scrollHeight))
+        }
+      }
+      expect(heights.length, 'every text and background pair was visited').toBe(STRIP_NAMES.length ** 2)
+      expect(Math.max(...heights) - Math.min(...heights), `page heights ${[...new Set(heights)]}`).toBeLessThanOrEqual(1)
+      await ctx.close()
+    })
+  }
+})
