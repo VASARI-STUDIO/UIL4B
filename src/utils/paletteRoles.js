@@ -41,6 +41,9 @@
 //
 // DOM-free and React-free.
 
+import { TINT_LABELS, tintLabelsFor } from './tintLabels.js'
+import { activeColour, tintsCurrent } from './projectTints.js'
+
 // The tonal engine's five outputs, which the original array was written for and
 // which are accurate for it.
 const AUTO = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
@@ -101,4 +104,115 @@ export function slotLandsBook(index) {
 /** Every label for a system — used by the tests and by any summary view. */
 export function roleLabels(harmony) {
   return HARMONY_ROLE_LABELS[harmony] || AUTO
+}
+
+// ── Role and shade names for a colour in the project's palette ──────────────
+// "Primary 500", "Secondary 300": the stable slot identity (the same names the
+// exports print), not the per-system display label above. What the project
+// holds decides what can be named. `design.palette.colors` is a list of hexes,
+// and a colour's role is its place in it. `design.tints.scale` is ONE ramp
+// (50 to 950) of the active colour only; other steps exist for the active
+// colour alone. A colour that matches neither is "Custom".
+//
+// The ramp's own 500 is only close to the palette colour (the tint engine
+// re-derives it), and a very dark or light colour repeats hexes down the ramp.
+// So the shades the tool offers are `activeShades`: the 500 step IS the palette
+// colour, and a hex that is already offered (the palette colour, another palette
+// colour, an earlier step) is not offered again. One hex then has one name: the
+// palette colour first, then the lowest step that offers it.
+
+const HEX_RE = /^#[0-9a-f]{6}$/i
+
+/** Role names by palette position. From the seventh colour on, "Colour 7". */
+export const PALETTE_LABELS = Object.freeze(['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight'])
+
+/** The eleven steps of a project's tint ramp. */
+export const SHADE_LABELS = TINT_LABELS[11]
+
+/** The step a palette colour itself sits at in the ramp. */
+export const BASE_SHADE = SHADE_LABELS[5]
+
+/** The role name for the palette colour at position `i` (zero-based). */
+export const roleName = (i) => PALETTE_LABELS[i] || `Colour ${i + 1}`
+
+const norm = (hex) => String(hex || '').toUpperCase()
+const paletteColours = (design) => (Array.isArray(design?.palette?.colors) ? design.palette.colors : [])
+
+// The palette position of the active colour (the one the ramp was made from), or
+// -1 when the palette does not hold it (a project with only a base colour).
+// It is the FIRST place that hex holds in the raw palette list, the same place
+// labelFor and paletteChips name it from, so a repeated colour has one name
+// everywhere. `activeIdx` is deliberately not used: `activeColour` counts it
+// against the hex-only list, so it is not a position in this raw list, and when
+// the palette repeats the active colour it would name the later copy.
+function activeRoleIndex(design) {
+  const hex = norm(activeColour(design))
+  if (!HEX_RE.test(hex)) return -1
+  return paletteColours(design).findIndex((c) => norm(c) === hex)
+}
+
+const named = (role, shade) => ({ role, shade, label: `${role} ${shade}`, custom: false })
+
+/**
+ * The active colour's shades as the tool offers them: `{ role, items }`, each
+ * item `{ hex, role, shade, label }`. Null when there is nothing honest to
+ * offer: no ramp made from the active colour (a stale ramp would name steps of
+ * some other colour), or an active colour the palette does not hold (its shades
+ * would sit under a role that has no chip).
+ */
+export function activeShades(design) {
+  if (!tintsCurrent(design)) return null
+  const at = activeRoleIndex(design)
+  if (at < 0) return null
+  const role = roleName(at)
+  const base = norm(activeColour(design))
+  const scale = design.tints.scale
+  const steps = tintLabelsFor(scale.length)
+  const baseStep = steps.indexOf(BASE_SHADE)
+  const inPalette = new Set(paletteColours(design).map(norm))
+  const seen = new Set([base])
+  const items = []
+  scale.forEach((c, k) => {
+    const isBase = k === baseStep
+    const hex = isBase ? base : norm(c)
+    if (!HEX_RE.test(hex)) return
+    if (!isBase && (inPalette.has(hex) || seen.has(hex))) return
+    seen.add(hex)
+    items.push({ hex, ...named(role, steps[k]) })
+  })
+  return { role, items }
+}
+
+/**
+ * What to call `hex` in this project: `{ role, shade, label, custom }`.
+ * A palette colour is "<role> 500" (its first place, if repeated). Otherwise,
+ * while the project's ramp is current, a shade the tool offers for the active
+ * colour is "<role> <step>". Anything else is "Custom"; a colour close to a
+ * palette colour is not rounded to it.
+ */
+export function labelFor(hex, design) {
+  const key = norm(hex)
+  if (HEX_RE.test(key)) {
+    const i = paletteColours(design).findIndex((c) => norm(c) === key)
+    if (i >= 0) return named(roleName(i), BASE_SHADE)
+    const hit = activeShades(design)?.items.find((s) => s.hex === key)
+    if (hit) return named(hit.role, hit.shade)
+  }
+  return { role: null, shade: null, label: 'Custom', custom: true }
+}
+
+/**
+ * The palette's colours as chips: valid six-digit hexes, de-duplicated without
+ * regard to case, in palette order, each with the role it holds in the palette.
+ */
+export function paletteChips(design) {
+  const seen = new Set()
+  const out = []
+  paletteColours(design).forEach((c, i) => {
+    const hex = norm(c)
+    if (!HEX_RE.test(hex) || seen.has(hex)) return
+    seen.add(hex)
+    out.push({ hex, index: i, ...named(roleName(i), BASE_SHADE) })
+  })
+  return out
 }

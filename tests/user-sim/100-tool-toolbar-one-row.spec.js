@@ -17,7 +17,7 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 // An action's accessible name starts with its label; a disabled one may add a
-// reason after it ("From palette — add 2+ colours …").
+// reason after it ("Shuffle from palette — add 2+ colours …").
 const startsWith = (s) => new RegExp('^' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
 
 const WIDTHS = [320, 360, 390, 480, 640, 768, 900, 1024, 1280, 1440, 1920]
@@ -47,7 +47,7 @@ const TOOLS = [
     selects: ['Colour system', 'Colour vision check'],
     menuOnly: ['Open in Gradient', 'History', 'Reset palette'],
   },
-  { route: '/create/gradient', actions: ['Random', 'From palette', 'Reset', 'Submit for review'], primary: /^Copy /, title: 'Gradient' },
+  { route: '/create/gradient', actions: ['Random', 'Shuffle from palette', 'Reset', 'Submit for review'], primary: /^Copy /, title: 'Gradient' },
   { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker' },
   { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint' },
   // Signed out, so "Add to project" (canSaveProjects) is not offered here.

@@ -32,53 +32,6 @@
   color: var(--tl-dim);
 }
 
-/* The From palette note: a small chip in the canvas's bottom-left corner, one
-   line of text, a text link to the Palette Builder and a dismiss square. The
-   bottom corner leaves the canvas's top edge, where the first colour reads, clear.
-   It is out of flow, so the page is the same height with it as without it. The wrapper is the always-mounted live region and takes no
-   pointer events itself. scroll-margin keeps the note clear of the sticky toolbar
-   when it is scrolled into view. */
-.grd .grd-live {
-  position: absolute;
-  inset: auto auto 12px 12px;
-  max-width: calc(100% - 24px);
-  z-index: 1;
-  pointer-events: none;
-}
-.grd .grd-note--palette {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  padding: 2px 2px 2px 12px;
-  border: 1px solid var(--tl-line);
-  background: var(--tl-card);
-  color: var(--tl-ink);
-  white-space: nowrap;
-  scroll-margin-top: calc(var(--chrome-h) + 72px);
-  border-radius: 12px;
-  pointer-events: auto;
-}
-.grd .grd-note--palette:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-.grd .grd-note-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.grd .grd-note-sep { color: var(--tl-dim); }
-.grd .grd-note-link {
-  display: inline-block;
-  flex: 0 0 auto;
-  line-height: 28px;
-  border-radius: 6px;
-  color: var(--tl-link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.grd .grd-note-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
-.grd .tl-btn.grd-note-x { width: 28px; height: 28px; min-height: 28px; border: 0; }
-/* Narrow: the link drops its lead-in words ("Make one in") so the chip stays on one line. */
-@media (max-width: 520px) {
-  .grd .grd-note-pre { display: none; }
-}
-
 /* ── Canvas (D:627) ─────────────────────────────────────────────────────────
    The stage is the canvas's slot: a fixed minimum height the canvas fills, and
    the anchor for anything laid over it. isolation keeps the layers inside from
@@ -229,10 +182,11 @@
    scrolls. */
 .grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
 .grd .grd-stop {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 26px 26px;
   align-items: center;
+  gap: 8px;
   flex: 0 0 var(--grd-row);
-  gap: 10px;
   height: var(--grd-row);
   padding: 6px;
   border-radius: 12px;
@@ -255,15 +209,18 @@
 .grd .grd-stop-swatch { overflow: hidden; background: transparent; }
 .grd .grd-stop-swatch[aria-disabled="true"] { opacity: 1; cursor: pointer; }
 .grd .grd-stop-chip { display: block; width: 100%; height: 100%; }
-/* Selecting the stop: its colour and position, one button. */
+/* Selecting the stop is one button: the role and shade ("Primary 500"), the
+   hex and the position. The role column is capped (it holds "Secondary 500"), so
+   a wide row keeps the hex beside it and sends only the position to the edge.
+   On touch the role stacks over the hex. */
 .grd .grd-stop-select {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 96px) 52px minmax(28px, 1fr);
   align-items: center;
-  gap: 10px;
-  flex: 1;
+  gap: 6px;
   min-width: 0;
   min-height: 28px;
-  padding: 0 4px;
+  padding: 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -273,8 +230,10 @@
   cursor: pointer;
 }
 .grd .grd-stop-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
-.grd .grd-stop-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
-.grd .grd-stop-pos { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); }
+.grd .grd-stop-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--tl-ink); }
+.grd .grd-stop-role.is-custom { font-weight: 400; color: var(--tl-dim); }
+.grd .grd-stop-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
+.grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; color: var(--tl-dim); }
 .grd .grd-iconbtn {
   display: grid;
   place-items: center;
@@ -305,20 +264,47 @@
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 
-/* ── SELECTED STOP (D:657-668) ──────────────────────────────────────────── */
-/* Ten quick colours as 5x2, spread across the panel's width. A wrapping flex row
-   left two orphans on the second line at every width the panel is 336px or a
-   phone column wide. */
-.grd .grd-swatches { display: grid; grid-template-columns: repeat(5, 30px); justify-content: space-between; gap: 8px; max-width: 320px; }
-.grd .grd-swatch {
-  width: 30px;
-  height: 30px;
+/* ── AVAILABLE COLOURS ──────────────────────────────────────────────────────
+   Round chips: every palette colour, then the active colour's shades. The chosen
+   chip carries a ring and a tick, so the state is not colour alone. */
+.grd .grd-avail-help { display: grid; justify-items: start; gap: 2px; }
+.grd .grd-avail-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); scroll-margin-top: calc(var(--chrome-h) + 72px); border-radius: 6px; }
+.grd .grd-avail-note:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-avail-link { display: inline-flex; align-items: center; min-height: 28px; border-radius: 6px; font-size: 12.5px; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
+.grd .grd-avail-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-avail-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd .grd-shades { display: grid; gap: 6px; }
+.grd .grd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.grd .grd-chips--shades { gap: 3px; }
+/* The starter colours are two even rows of five, so ten chips never wrap nine and one. */
+.grd .grd-chips--starter { display: grid; grid-template-columns: repeat(5, 28px); justify-content: space-between; gap: 8px; }
+/* "+3 more": a palette past thirteen colours, at chip height so the rows keep theirs. */
+.grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
+.grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-chip {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border-radius: 999px;
-  border: 2px solid color-mix(in srgb, var(--t0) 14%, transparent);
+  border: 1px solid var(--tl-line);
+  border-radius: 50%;
+  color: oklch(0.98 0 0);
   cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
 }
-.grd .grd-swatch.is-on { border-color: var(--t0); }
+.grd .grd-chip:active { transform: scale(0.97); }
+.grd .grd-chip.is-light { color: oklch(0.2 0 0); }
+.grd .grd-chips--shades .grd-chip { width: 24px; height: 24px; }
+.grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
+.grd .grd-chips--shades .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
+.grd .grd-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-chip:hover { border-color: var(--tl-line-on); }
+}
+
+/* ── SELECTED STOP (D:657-668) ──────────────────────────────────────────── */
 .grd .grd-pick { display: flex; align-items: center; gap: 8px; }
 .grd .grd-pick-swatch { flex: 0 0 auto; display: flex; }
 /* Every swatch in the panel is a circle: the trigger, the chip inside it, and
@@ -664,6 +650,22 @@
    iOS does not zoom the page when it takes focus. ────────────────────────── */
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
+  .grd .grd-chip { width: 44px; height: 44px; }
+  .grd .grd-chips--starter { grid-template-columns: repeat(5, 44px); }
+  .grd .grd-chips-more { height: 44px; }
+  .grd .grd-chips--shades { gap: 4px; }
+  .grd .grd-chips--shades .grd-chip { width: 36px; height: 36px; }
+  .grd .grd-avail-link { min-height: 44px; }
+  .grd .grd-stop { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
+  .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr) 36px; grid-template-rows: auto auto; row-gap: 0; }
+  .grd .grd-stop-role { grid-area: 1 / 1; font-size: 13px; }
+  .grd .grd-stop-hex { grid-area: 2 / 1; }
+  .grd .grd-stop-pos { grid-area: 1 / 2 / 3 / 3; }
+  /* Below 360 the position cell goes; it is still on the handle and the slider. */
+  @media (max-width: 359px) {
+    .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr); }
+    .grd .grd-stop-pos { display: none; }
+  }
   .grd .grd-add { height: 44px; min-height: 44px; }
   /* Touch scrollbars overlay the content, so the window keeps its full width for the hex fields.
      A finger that runs past the end of the window carries on scrolling the page, so the list is never a trap. */
@@ -671,33 +673,32 @@
   /* At the narrowest phones the row's gaps give the stop's hex its full width. */
   @media (max-width: 360px) {
     .grd .grd-stop { gap: 6px; padding: 4px; }
-    .grd .grd-stop-select { gap: 6px; }
   }
   .grd .grd-row--angle { height: 76px; }
   .grd .grd-iconbtn { width: 44px; height: 44px; }
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
-  .grd .grd-swatches { grid-template-columns: repeat(5, 44px); }
-  .grd .grd-swatch { width: 44px; height: 44px; }
   .grd .grd-hex { height: 44px; font-size: 16px; }
   .grd .grd-pick-swatch .cpk-trigger { width: 44px; height: 44px; }
   .grd .grd-fmt-btn { min-height: 44px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
   .grd .grd-stop-select { min-height: 44px; }
-  .grd .tl-btn.grd-note-x { width: 44px; height: 44px; min-height: 44px; }
-  .grd .grd-note-link { line-height: 44px; }
   .grd .grd-wheel { width: 76px; height: 76px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
 
 :where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
 :where(html[data-reduced-motion="true"]) .grd .grd-iconbtn { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .grd .grd-chip:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .grd .grd-handle-val,
   :where(html:not([data-reduced-motion="false"])) .grd .grd-iconbtn { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-chip:active { transform: none; }
 }
 @media (forced-colors: active) {
+  .grd .grd-chip { forced-color-adjust: none; border-color: CanvasText; }
+  .grd .grd-chip.is-on,
   .grd .grd-stop.is-on,
   .grd .grd-preset.is-on { outline: 2px solid Highlight; }
   .grd .grd-wheel { border-color: CanvasText; forced-color-adjust: none; }
@@ -707,6 +708,5 @@
   .grd .grd-canvas,
   .grd .grd-rail,
   .grd .grd-preset-swatch,
-  .grd .grd-swatch,
   .grd .grd-stop-swatch { forced-color-adjust: none; }
 }

@@ -249,6 +249,7 @@ export function ToolToolbar({
             data-tl-menu-item={it.id}
             disabled={m.disabled}
             aria-disabled={m.ariaDisabled || undefined}
+            aria-describedby={m.describedBy}
             aria-pressed={m.pressed == null ? undefined : !!m.pressed}
             title={m.title}
             onClick={() => { closeToTrigger(); m.onSelect?.() }}

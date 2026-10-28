@@ -394,28 +394,62 @@ test.describe('the Explore the library panel', () => {
 })
 
 test.describe('the generator layout', () => {
-  // MUTATION: in gradient.css put .grd-swatches back to a wrapping flex row and
-  // the ten colours stop falling 5 + 5.
-  test('the ten quick colours sit in 2 rows of 5 at 390, 768 and 1440', async ({ page }) => {
-    watch(page, 'a designer picking a quick colour')
-    for (const width of [390, 768, 1440]) {
+  // The ten quick colours became Available colours' chips. The most it ever shows
+  // is the palette's thirteen and the ramp's eleven shades; every one must stay
+  // inside the panel and the page must not scroll sideways.
+  // MUTATION: in gradient.css make .grd-chips nowrap (or .grd-chips--shades a
+  // wider chip) and the chips run past the panel's edge.
+  const THIRTEEN = [
+    '#2F6BFF', '#E0784E', '#3FAFA0', '#0B0C0E', '#F7F7F4', '#D9B93C', '#8B5CF0',
+    '#52A069', '#E894AC', '#1B3FA8', '#7A7A7A', '#B0C4DE', '#CD5C5C',
+  ]
+  const RAMP = [
+    '#EEF3FF', '#D9E5FF', '#B8CEFF', '#8FB0FF', '#5F8BFF', '#2F6BFF',
+    '#2556D1', '#1B41A3', '#142F78', '#0D1E4F', '#071230',
+  ]
+  for (const width of [390, 768, 1440]) {
+    test(`at ${width}px thirteen palette chips and eleven shades stay inside the panel and the page does not scroll sideways`, async ({ page }) => {
+      watch(page, 'a designer with a full palette')
+      await page.addInitScript(([colors, scale]) => {
+        localStorage.setItem('vs-current-design', JSON.stringify({
+          palette: { base: colors[0], harmony: 'auto', extraColors: [], activeIdx: 0, colors },
+          tints: { from: colors[0], scale },
+        }))
+      }, [THIRTEEN, RAMP])
       await page.setViewportSize({ width, height: 900 })
       await go(page, ROUTE)
-      const swatches = page.locator('.grd-swatches .grd-swatch')
-      await expect(swatches, `${width}px`).toHaveCount(10)
-      const perRow = await swatches.evaluateAll((els) => {
-        const rows = new Map()
-        for (const el of els) {
-          const top = Math.round(el.getBoundingClientRect().top)
-          rows.set(top, (rows.get(top) || 0) + 1)
+      const chips = page.locator('.grd-avail .grd-chip')
+      await expect(chips, 'thirteen palette chips and eleven shades').toHaveCount(24)
+      const geo = await page.evaluate(() => {
+        const panel = document.querySelector('.grd-avail').getBoundingClientRect()
+        const all = [...document.querySelectorAll('.grd-avail .grd-chip')].map((el) => {
+          const r = el.getBoundingClientRect()
+          return { left: r.left, right: r.right, top: Math.round(r.top), shades: !!el.closest('.grd-chips--shades') }
+        })
+        const rowsOf = (list) => {
+          const rows = new Map()
+          for (const c of list) rows.set(c.top, (rows.get(c.top) || 0) + 1)
+          return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, n]) => n)
         }
-        return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, n]) => n)
+        return {
+          panelLeft: panel.left, panelRight: panel.right,
+          outside: all.filter((c) => c.left < panel.left - 0.5 || c.right > panel.right + 0.5).length,
+          paletteRows: rowsOf(all.filter((c) => !c.shades)),
+          shadeRows: rowsOf(all.filter((c) => c.shades)),
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        }
       })
-      expect(perRow, `${width}px: swatches per row`).toEqual([5, 5])
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-      expect(overflow, `${width}px: no sideways scroll`).toBeLessThanOrEqual(0)
-    }
-  })
+      expect(geo.outside, `${width}px: chips outside the section`).toBe(0)
+      expect(geo.overflow, `${width}px: no sideways scroll`).toBeLessThanOrEqual(0)
+      // Hand-checked from the spec (§3.2): a 336px panel holds 300px of chips, so
+      // 28px chips with a 6px gap fit 9 to a row and thirteen fall 9 + 4; the 24px
+      // shade chips with a 3px gap fit all eleven on one row (294 of 300).
+      if (width === 1440) {
+        expect(geo.paletteRows, 'palette chips per row').toEqual([9, 4])
+        expect(geo.shadeRows, 'shade chips per row').toEqual([11])
+      }
+    })
+  }
 
   // MUTATION: delete the `@media (min-width: 901px)` block in gradient.css that
   // grows the preview; the code box floats above a blank block and the gap is

@@ -12,7 +12,8 @@ import {
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
 import { GRAD_TYPE_WEIGHTS, pickGradientType, pickStopCount } from '../utils/gradientRandom'
-import { hexToRgb } from '../utils/colors'
+import { hexToRgb, hexToOklch } from '../utils/colors'
+import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
@@ -174,8 +175,40 @@ const supportsOklchGradients = (() => {
   try { return typeof CSS !== 'undefined' && CSS.supports('background-image', 'linear-gradient(90deg in oklch, red, blue)') } catch { return false }
 })()
 
-// SELECTED STOP swatches — the design's ten (GRAD_SWATCHES, D:1150).
-const STOP_SWATCHES = ['#2F6BFF', '#1B3FA8', '#8B5CF0', '#E894AC', '#E0784E', '#D9B93C', '#3FAFA0', '#52A069', '#0B0C0E', '#F7F7F4']
+// Ten starter colours, offered in Available colours while there is no palette to
+// draw from. Each has a name so its chip reads as more than a hex.
+const STARTER_COLOURS = [
+  { hex: '#2F6BFF', name: 'Starter blue' }, { hex: '#1B3FA8', name: 'Starter navy' },
+  { hex: '#8B5CF0', name: 'Starter violet' }, { hex: '#E894AC', name: 'Starter pink' },
+  { hex: '#E0784E', name: 'Starter orange' }, { hex: '#D9B93C', name: 'Starter gold' },
+  { hex: '#3FAFA0', name: 'Starter teal' }, { hex: '#52A069', name: 'Starter green' },
+  { hex: '#0B0C0E', name: 'Starter ink' }, { hex: '#F7F7F4', name: 'Starter paper' },
+]
+
+// The most items Available colours draws in the palette row (two rows at a fine
+// pointer). A palette past it shows one fewer colour and a "+N more" link in the
+// last place, so the row never takes more room than thirteen colours do.
+const MAX_CHIPS = 13
+
+// A round colour chip that sets the selected stop. The chosen state is a ring and
+// a tick, so it never rests on colour alone; the tick takes white or near-black
+// ink by the chip's own lightness.
+function ColourChip({ hex, label, on, onPick }) {
+  const light = useMemo(() => hexToOklch(hex)[0] >= 60, [hex])
+  return (
+    <button
+      type="button"
+      className={`grd-chip${on ? ' is-on' : ''}${light ? ' is-light' : ''}`}
+      style={{ background: hex }}
+      aria-pressed={on}
+      aria-label={`${label}, ${hex}`}
+      title={`${label}, ${hex}`}
+      onClick={() => onPick(hex, label)}
+    >
+      {on && <ToolIcon name="check" size={12} />}
+    </button>
+  )
+}
 
 // Hex text field with a local draft, so partially-typed values aren't wiped by
 // the controlled stop colour on every keystroke. Commits when the text is a
@@ -282,6 +315,10 @@ function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
     </div>
   )
 }
+
+// Why Shuffle from palette is inert: its title, its accessible description and
+// the toast a press raises all say this.
+const SHUFFLE_PALETTE_NEEDS = 'Needs a palette with two or more colours'
 
 // Small lock toggle — pins a setting so it survives a randomise. `on` = locked;
 // the glyph flips its shackle to say so. Drawn at the size of the design's
@@ -484,7 +521,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       gate: 'gradient-gallery-edit',
       eyebrow: 'Pro gradient tools',
       title: 'Editing gallery gradients is Pro',
-      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Hit Reset, Random or From palette to start an editable gradient of your own.',
+      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Press Reset, Random or Shuffle from palette to start an editable gradient of your own.',
       features: [
         'Add, move & recolour stops on any gallery gradient',
         'Switch gradient type and fine-tune the angle',
@@ -651,22 +688,31 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setFromLibrary(false)
   }, [rollStops, locks.type, locks.angle])
 
+  // ── Available colours ──
+  // The palette's colours (de-duplicated without regard to case, in palette
+  // order), each with the role it holds, and the active colour's shades when the
+  // project's ramp is current. The palette cannot change while this page is
+  // open, so both are settled by the first paint and the section's height does
+  // not move during a session.
+  const roleDesign = useMemo(() => ({ palette: design?.palette, tints: design?.tints }), [design?.palette, design?.tints])
+  const chips = useMemo(() => paletteChips(roleDesign), [roleDesign])
+  const shades = useMemo(() => activeShades(roleDesign), [roleDesign])
+  // The rest of a long palette is one link away in Palette Builder.
+  const shownChips = chips.length > MAX_CHIPS ? chips.slice(0, MAX_CHIPS - 1) : chips
+  const hiddenChips = chips.length - shownChips.length
+
   // Valid hex colours in the live Palette Builder palette — feeds the
   // "From palette" button (needs 2+ to build a gradient).
-  const paletteHexes = useMemo(
-    () => [...new Set((design?.palette?.colors || []).filter(isValidHex))],
-    [design?.palette?.colors]
-  )
+  const paletteHexes = useMemo(() => chips.map((c) => c.hex), [chips])
   const canRandomFromPalette = paletteHexes.length >= 2
-  // Pressing From palette with nothing to draw from says so on the page, with a
-  // way to make a palette, rather than leaving the reason in a tooltip. The
-  // count is how many times it was pressed, so a second press brings the note
-  // back into view; it clears itself once a palette with 2+ colours exists.
+  // Pressing Shuffle from palette with nothing to draw from says why in a toast
+  // and takes the person to the Available colours note, which holds the way to
+  // make a palette. The count is how many times it was pressed, so a second
+  // press brings the note back into view.
   const [paletteMissing, setPaletteMissing] = useState(0)
-  const showPaletteMissing = paletteMissing > 0 && !canRandomFromPalette
   const paletteNoteRef = useRef(null)
-  // Once the palette can make a gradient the count goes back to zero, so the
-  // note does not return on its own if the palette later drops below two.
+  // Once the palette can make a gradient the count goes back to zero, so a
+  // later drop below two colours does not pull focus on its own.
   useEffect(() => {
     if (canRandomFromPalette) setPaletteMissing(0)
   }, [canRandomFromPalette])
@@ -693,14 +739,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [paletteHexes, randomise, rollStops, locks.type, locks.angle, toast])
 
   const fromPalette = useCallback(() => {
-    if (!canRandomFromPalette) { setPaletteMissing((n) => n + 1); return }
+    if (!canRandomFromPalette) {
+      setPaletteMissing((n) => n + 1)
+      toast?.(SHUFFLE_PALETTE_NEEDS)
+      return
+    }
     setPaletteMissing(0)
     randomiseFromPalette()
-  }, [canRandomFromPalette, randomiseFromPalette])
+  }, [canRandomFromPalette, randomiseFromPalette, toast])
 
-  // The note sits above the canvas, which the sticky toolbar can leave off
-  // screen on a phone scrolled down: bring it into view and move focus to it.
-  // Focus goes first with preventScroll so the one scroll is the animated one.
+  // The note is in the panel, which the sticky toolbar can leave off screen on a
+  // phone scrolled down: bring it into view and move focus to it. Focus goes
+  // first with preventScroll so the one scroll is the animated one.
   useEffect(() => {
     if (!paletteMissing) return
     const note = paletteNoteRef.current
@@ -709,15 +759,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     note.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }, [paletteMissing])
 
-  // Dismiss unmounts the focused button, so focus goes back to what opened the
-  // note: the From palette button, or More when that button has moved into it.
-  const dismissPaletteNote = useCallback(() => {
-    const toolbar = document.querySelector('[data-tool-toolbar]')
-    const origin = toolbar?.querySelector('[data-tl-item="from-palette"] button')
-      || toolbar?.querySelector('[data-tl-more] button')
-    origin?.focus()
-    setPaletteMissing(0)
-  }, [])
+  // The live region is emptied and refilled a tick later, so pressing the same
+  // chip again after the colour was changed elsewhere announces again (an
+  // unchanged string would not).
+  const [pickNote, setPickNote] = useState('')
+  const pickNoteTimer = useRef(0)
+  useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
+  const pickColour = useCallback((hex, name) => {
+    if (!guardEdit()) return
+    setStops((prev) => prev.map((s, i) => (i === activeStop ? { ...s, color: hex } : s)))
+    setPickNote('')
+    clearTimeout(pickNoteTimer.current)
+    pickNoteTimer.current = setTimeout(() => setPickNote(`Stop ${activeStop + 1} set to ${name}`), 60)
+  }, [guardEdit, activeStop])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
@@ -989,6 +1043,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
   const selected = stops[activeStop] || stops[0]
+  const selectedHex = selected?.color?.toUpperCase()
   // The rail reads the stops left to right, so it is always a 90deg ramp in the
   // chosen space whatever the gradient's type — the design paints the gradient
   // itself there, which for a radial or conic would put no stop where its
@@ -1044,15 +1099,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               icon="swatches"
               onClick={fromPalette}
               aria-disabled={!canRandomFromPalette || undefined}
-              aria-label={canRandomFromPalette ? undefined : 'From palette — add 2+ colours in the Palette Builder to use this'}
-              title={canRandomFromPalette ? 'Build a random gradient from your current palette' : 'Add 2+ colours in the Palette Builder to use this'}
+              aria-describedby={canRandomFromPalette ? undefined : 'grd-shuffle-palette-hint'}
+              title={canRandomFromPalette ? 'Build a random gradient from your current palette' : SHUFFLE_PALETTE_NEEDS}
             >
-              From palette
+              Shuffle from palette
             </ToolButton>
           ),
           menu: {
-            label: 'From palette', icon: 'swatches', ariaDisabled: !canRandomFromPalette,
-            title: canRandomFromPalette ? 'Build a random gradient from your current palette' : 'Add 2+ colours in the Palette Builder to use this',
+            label: 'Shuffle from palette', icon: 'swatches', ariaDisabled: !canRandomFromPalette,
+            describedBy: canRandomFromPalette ? undefined : 'grd-shuffle-palette-hint',
+            title: canRandomFromPalette ? 'Build a random gradient from your current palette' : SHUFFLE_PALETTE_NEEDS,
             onSelect: fromPalette,
           },
         },
@@ -1095,26 +1151,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               <span>Gallery gradient — free to preview &amp; copy. Editing it is a Pro tool; Reset or Random to start a free, editable one.</span>
             </p>
           )}
-          {/* The stage is the canvas's fixed slot. The palette note lays over
-              the canvas's foot instead of pushing it down, so showing or
-              hiding it never changes the page's height. */}
+          {/* The stage is the canvas's fixed slot. */}
           <div className="grd-stage">
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
-            {/* A live region that is always mounted: one inserted already full
-                is often not announced. */}
-            <div className="grd-live" role="status">
-              {showPaletteMissing && (
-                <div className="grd-note grd-note--palette" ref={paletteNoteRef} tabIndex={-1}>
-                  <span className="grd-note-text">{paletteHexes.length === 1 ? 'Needs two or more colours' : 'No palette yet'}</span>
-                  <span className="grd-note-sep" aria-hidden="true">·</span>
-                  <Link to="/create/palette" className="grd-note-link">
-                    <span className="grd-note-pre">{paletteHexes.length === 1 ? 'Add colours in ' : 'Make one in '}</span>Palette Builder
-                  </Link>
-                  <ToolButton variant="square" icon="x" iconSize={14} onClick={dismissPaletteNote} aria-label="Dismiss" title="Dismiss" className="grd-note-x" />
-                </div>
-              )}
-            </div>
           </div>
+          {!canRandomFromPalette && <span id="grd-shuffle-palette-hint" className="sr-only">{SHUFFLE_PALETTE_NEEDS}</span>}
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
               keep dragging to place it; drag or arrow a handle to move it
@@ -1189,6 +1230,56 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         </ToolMain>
 
         <ToolPanel label="Gradient controls" className="grd-panel">
+          {/* AVAILABLE COLOURS. Every colour in the palette, one press from the
+              selected stop, then its shades when the project's ramp is current.
+              With no palette the ten starter colours stand in. */}
+          <ToolSection label="Available colours" labelId="grd-avail-label" className="grd-avail">
+            <div className="sr-only" role="status">{pickNote}</div>
+            {chips.length === 0 && (
+              <div className="grd-avail-help">
+                <p className="grd-avail-note" ref={paletteNoteRef} tabIndex={-1}>No palette yet. Colours you build in Palette Builder show up here.</p>
+                <Link to="/create/palette" className="grd-avail-link">Open Palette Builder</Link>
+              </div>
+            )}
+            {chips.length === 0 ? (
+              <>
+                <span className="grd-avail-sub" id="grd-starter-label">Starter colours</span>
+                <div className="grd-chips grd-chips--starter" role="group" aria-labelledby="grd-starter-label">
+                  {STARTER_COLOURS.map((c) => (
+                    <ColourChip key={c.hex} hex={c.hex} label={c.name} on={selectedHex === c.hex} onPick={pickColour} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="grd-chips" role="group" aria-label="Palette colours">
+                {shownChips.map((c) => (
+                  <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} onPick={pickColour} />
+                ))}
+                {hiddenChips > 0 && (
+                  <Link to="/create/palette" className="grd-chips-more">
+                    +{hiddenChips} more<span className="sr-only">{hiddenChips === 1 ? ' colour' : ' colours'} in Palette Builder</span>
+                  </Link>
+                )}
+              </div>
+            )}
+            {chips.length === 1 && (
+              <div className="grd-avail-help">
+                <p className="grd-avail-note" ref={paletteNoteRef} tabIndex={-1}>Add a second colour in Palette Builder to shuffle from it.</p>
+                <Link to="/create/palette" className="grd-avail-link">Open Palette Builder</Link>
+              </div>
+            )}
+            {shades && (
+              <div className="grd-shades">
+                <span className="grd-avail-sub" id="grd-shades-label">{shades.role} shades</span>
+                <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label">
+                  {shades.items.map((c) => (
+                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} onPick={pickColour} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </ToolSection>
+
           <ToolSection
             label="Stops"
             aside={(
@@ -1210,7 +1301,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               aria-label="Stop list"
               onScroll={syncStopScroll}
             >
-            {stops.map((s, i) => (
+            {stops.map((s, i) => {
+              const role = labelFor(s.color, roleDesign)
+              return (
               <div
                 key={i}
                 className={`grd-stop${activeStop === i ? ' is-on' : ''}`}
@@ -1237,7 +1330,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   onClick={() => setActiveStop(i)}
                   aria-pressed={activeStop === i}
                   aria-label={`Select stop ${i + 1}, ${s.color.toUpperCase()}`}
+                  aria-describedby={`grd-stop-role-${i}`}
+                  title={`${role.label}, ${s.color.toUpperCase()}, ${Math.round(s.position)}%`}
                 >
+                  {/* The role and shade ("Primary 500"), or "Custom" when the
+                      colour is not one of the palette's. The accessible name
+                      stays "Select stop N, #HEX"; this is its description. */}
+                  <span id={`grd-stop-role-${i}`} className={`grd-stop-role${role.custom ? ' is-custom' : ''}`}>{role.label}</span>
                   <span className="grd-stop-hex">{s.color.toUpperCase()}</span>
                   <span className="grd-stop-pos">{Math.round(s.position)}%</span>
                 </button>
@@ -1261,7 +1360,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   <ToolIcon name="x" size={12} />
                 </button>
               </div>
-            ))}
+              )
+            })}
             </div>
             {/* The reason the × is inert at two stops. A press also says it in a
                 toast, which is how a finger or the keyboard sees it. */}
@@ -1272,23 +1372,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </ToolSection>
 
           <ToolSection label="Selected stop">
-            <div className="grd-swatches" role="group" aria-label="Quick colours for the selected stop">
-              {STOP_SWATCHES.map((hex) => {
-                const on = selected?.color?.toUpperCase() === hex
-                return (
-                  <button
-                    key={hex}
-                    type="button"
-                    className={`grd-swatch${on ? ' is-on' : ''}`}
-                    style={{ background: hex }}
-                    aria-label={`Use ${hex}`}
-                    aria-pressed={on}
-                    title={hex}
-                    onClick={() => updateStop(activeStop, { color: hex })}
-                  />
-                )
-              })}
-            </div>
             {selected && (
               <div className="grd-pick">
                 <span className="grd-pick-swatch">

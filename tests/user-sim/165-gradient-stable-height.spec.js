@@ -19,7 +19,10 @@
 //   the Add button unmounted at 12                -> "Add a stop stays drawn at twelve"
 //   the angle row unmounted for Radial            -> the Linear > Radial > Conic sequence
 //   .grd .grd-code { height: auto }               -> the CSS > Tailwind > SVG sequence
-//   the palette note back in the flow             -> the "no palette" sequence
+//   the Available colours note given a height that
+//     changes when Shuffle from palette is pressed -> the "no palette" sequence
+//   the stop row's role label wrapping or growing  -> the "chips change the labels" sequence
+//   .grd-chip back to a square at 8px              -> "the Available colours chips are round"
 //   popClassName dropped from ColorPickerPop      -> the picker popover swatches
 //   removeStop ends in setActiveStop(0)           -> the four "removing ..." selection tests
 //   LockBtn ignores `unavailable` (click, or aria) -> "on a Radial gradient the angle lock ..."
@@ -48,7 +51,7 @@ const removeButtons = (panel) => panel.getByRole('button', { name: /^Remove stop
 const settle = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
 
 /** The sizes that must not move, in CSS pixels. */
-const SHAPE_KEYS = ['page', 'panel', 'main', 'stage', 'window', 'code']
+const SHAPE_KEYS = ['page', 'panel', 'main', 'stage', 'window', 'code', 'avail', 'role']
 async function shapeOf(page) {
   return page.evaluate(() => {
     const h = (sel) => {
@@ -62,6 +65,11 @@ async function shapeOf(page) {
       stage: h('.grd-stage'),
       window: h('.grd-stops'),
       code: h('.grd-code'),
+      // The Available colours section, and the first stop row's role label
+      // ("Custom", "Primary 500"): a name that wraps or a note that appears would
+      // change one of them.
+      avail: h('.grd-avail'),
+      role: h('.grd-stop-role'),
     }
   })
 }
@@ -102,8 +110,26 @@ async function toolbarAction(page, name, { force = false } = {}) {
   else await row.click()
 }
 
-/** With no palette, "From palette" is aria-disabled but still answers a press with its note. */
-const fromPalette = (page) => toolbarAction(page, /palette/i, { force: true })
+/** With no palette, "Shuffle from palette" is aria-disabled but still answers a press (a toast, and focus on the note). */
+const shuffleFromPalette = (page) => toolbarAction(page, /^Shuffle from palette/, { force: true })
+
+/** A palette of thirteen colours with a ramp made from the first, as a project would hold. */
+const THIRTEEN = [
+  '#2F6BFF', '#E0784E', '#3FAFA0', '#0B0C0E', '#F7F7F4', '#D9B93C', '#8B5CF0',
+  '#52A069', '#E894AC', '#1B3FA8', '#7A7A7A', '#B0C4DE', '#CD5C5C',
+]
+const RAMP = [
+  '#EEF3FF', '#D9E5FF', '#B8CEFF', '#8FB0FF', '#5F8BFF', '#2F6BFF',
+  '#2556D1', '#1B41A3', '#142F78', '#0D1E4F', '#071230',
+]
+const withFullPalette = (page) => page.addInitScript(([colors, scale]) => {
+  localStorage.setItem('vs-current-design', JSON.stringify({
+    palette: { base: colors[0], harmony: 'auto', extraColors: [], activeIdx: 0, colors },
+    tints: { from: colors[0], scale },
+  }))
+}, [THIRTEEN, RAMP])
+const chipNamed = (page, name) => page.locator('.grd-avail').getByRole('button', { name: new RegExp(`^${name}, #`) }).first()
+const roleOf = (page, n) => stopRows(page).nth(n - 1).locator('.grd-stop-role')
 
 async function open(page) {
   await go(page, ROUTE)
@@ -229,41 +255,77 @@ for (const screen of SCREENS) {
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
-    test('Shuffle from palette with no palette lays its note over the canvas, and dismissing it changes nothing', async ({ page }) => {
+    test('Shuffle from palette with no palette answers with a toast and focus on the note, and changes nothing', async ({ page }) => {
       watch(page, 'a designer with no palette yet')
       await open(page)
       const l = ledger(page)
-      await l.mark('before the note')
-      const note = page.locator('.grd-note--palette')
-      await expect(note).toHaveCount(0)
-
-      await fromPalette(page)
+      // The note is part of Available colours from the first paint (a fresh visit
+      // holds the one seed colour), so a press has nothing to add to the page.
+      const note = page.locator('.grd-avail-note')
       await expect(note).toBeVisible()
-      await l.mark('note showing')
+      await l.mark('before the press')
+      expect((await l.first()).avail, 'the Available colours section is drawn').toBeGreaterThan(0)
+      expect((await l.first()).role, 'the first stop row has a role label').toBeGreaterThan(0)
 
-      // It is laid over the foot of the canvas, inside the canvas's own slot.
-      const geo = await page.evaluate(() => {
-        const n = document.querySelector('.grd-note--palette').getBoundingClientRect()
-        const c = document.querySelector('.grd-canvas').getBoundingClientRect()
-        return { noteTop: n.top, noteBottom: n.bottom, noteLeft: n.left, noteRight: n.right,
-          canvasTop: c.top, canvasBottom: c.bottom, canvasLeft: c.left, canvasRight: c.right,
-          inStage: !!document.querySelector('.grd-stage .grd-note--palette') }
-      })
-      expect(geo.inStage, 'the note is a child of the canvas slot').toBe(true)
-      expect(geo.noteTop).toBeGreaterThanOrEqual(geo.canvasTop - 1)
-      expect(geo.noteBottom).toBeLessThanOrEqual(geo.canvasBottom + 1)
-      expect(geo.noteLeft).toBeGreaterThanOrEqual(geo.canvasLeft - 1)
-      expect(geo.noteRight).toBeLessThanOrEqual(geo.canvasRight + 1)
+      await shuffleFromPalette(page)
+      await expect(page.locator('.toast.show')).toContainText('Needs a palette with two or more colours')
+      await expect(note).toBeFocused()
+      await l.mark('pressed')
 
-      await fromPalette(page)
-      await l.mark('pressed again with the note up')
-      await page.getByRole('button', { name: 'Dismiss' }).click()
-      await expect(note).toHaveCount(0)
-      await l.mark('note dismissed')
-      await fromPalette(page)
-      await expect(note).toBeVisible()
-      await l.mark('note back')
+      await shuffleFromPalette(page)
+      await l.mark('pressed again')
+      // The canvas slot is only the canvas now: nothing lies over it.
+      await expect(page.locator('.grd-stage > :not(.grd-canvas)')).toHaveCount(0)
       expect(l.drift(), l.drift().join('\n')).toEqual([])
+    })
+
+    test('pressing Available colours chips changes the stop labels and nothing\'s size', async ({ page }) => {
+      watch(page, 'a designer filling stops from a full palette')
+      await withFullPalette(page)
+      await open(page)
+      const l = ledger(page)
+      await l.mark('start')
+      // The seed gradient's stops are not palette colours.
+      await expect(roleOf(page, 1)).toHaveText('Custom')
+      await expect(chipNamed(page, 'Primary 500')).toBeVisible()
+      for (const [stop, chip, label] of [
+        [1, 'Primary 500', 'Primary 500'],
+        [2, 'Colour 7 500', 'Colour 7 500'],
+        [3, 'Primary 300', 'Primary 300'],
+        [1, 'Highlight 500', 'Highlight 500'],
+        [2, 'Secondary 500', 'Secondary 500'],
+        [3, 'Primary 950', 'Primary 950'],
+      ]) {
+        await page.getByRole('button', { name: new RegExp(`^Select stop ${stop}, #`) }).click()
+        await chipNamed(page, chip).click()
+        await expect(roleOf(page, stop), `stop ${stop} after ${chip}`).toHaveText(label)
+        await l.mark(`stop ${stop} set to ${chip}`)
+      }
+      expect(l.count).toBe(7)
+      expect(l.drift(), l.drift().join('\n')).toEqual([])
+    })
+
+    test('the longest role names fit their cell on every row, at twelve stops', async ({ page }) => {
+      watch(page, 'a designer reading role labels')
+      await withFullPalette(page)
+      await open(page)
+      const panel = panelOf(page)
+      while ((await stopRows(page).count()) < MAX_STOPS) await addButton(panel).click()
+      // Stop n takes palette colour n: Primary, Secondary, Accent, Neutral, Surface,
+      // Highlight, then Colour 7 to Colour 12.
+      const names = ['Primary 500', 'Secondary 500', 'Accent 500', 'Neutral 500', 'Surface 500', 'Highlight 500',
+        'Colour 7 500', 'Colour 8 500', 'Colour 9 500', 'Colour 10 500', 'Colour 11 500', 'Colour 12 500']
+      for (let n = 1; n <= MAX_STOPS; n++) {
+        await stopRows(page).nth(n - 1).locator('.grd-stop-select').click()
+        await chipNamed(page, names[n - 1]).click()
+        await expect(roleOf(page, n)).toHaveText(names[n - 1])
+      }
+      const cut = await page.locator('.grd-stop-role').evaluateAll((els) => els
+        .map((el) => ({ text: el.textContent, cut: el.scrollWidth - el.clientWidth }))
+        .filter((e) => e.cut > 0))
+      expect(cut, 'role labels cut short by an ellipsis').toEqual([])
+      const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(sideways, 'no sideways scroll').toBeLessThanOrEqual(0)
     })
   })
 }
@@ -788,6 +850,31 @@ test.describe('every swatch in the gradient panel is a circle', () => {
         const r = await roundReport(page, '.grd-stop-swatch')
         expect(r.count).toBe(MAX_STOPS)
         expect(r.bad, r.bad.join('\n')).toEqual([])
+      })
+
+      test('the Available colours chips and the shades are round', async ({ page }) => {
+        watch(page, 'a designer looking at the Available colours chips')
+        await withFullPalette(page)
+        await open(page)
+        const palette = await roundReport(page, '.grd-chips:not(.grd-chips--shades) .grd-chip')
+        expect(palette.count, 'thirteen palette chips are drawn').toBe(13)
+        expect(palette.bad, palette.bad.join('\n')).toEqual([])
+        const shades = await roundReport(page, '.grd-chips--shades .grd-chip')
+        expect(shades.count, 'eleven shade chips are drawn').toBe(11)
+        expect(shades.bad, shades.bad.join('\n')).toEqual([])
+      })
+
+      test('the starter colours that stand in for a missing palette are round', async ({ page }) => {
+        watch(page, 'a designer with no palette looking at the starter colours')
+        await page.addInitScript(() => {
+          localStorage.setItem('vs-current-design', JSON.stringify({
+            palette: { base: '#0051FF', harmony: 'auto', extraColors: [], activeIdx: 0, colors: [] },
+          }))
+        })
+        await open(page)
+        const starters = await roundReport(page, '.grd-chips .grd-chip')
+        expect(starters.count, 'ten starter chips are drawn').toBe(10)
+        expect(starters.bad, starters.bad.join('\n')).toEqual([])
       })
 
       test('the picker a stop row opens has round colour samples', async ({ page }) => {
