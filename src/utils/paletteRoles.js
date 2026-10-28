@@ -140,12 +140,15 @@ const paletteColours = (design) => (Array.isArray(design?.palette?.colors) ? des
 
 // The palette position of the active colour (the one the ramp was made from), or
 // -1 when the palette does not hold it (a project with only a base colour).
+// It is the FIRST place that hex holds in the raw palette list, the same place
+// labelFor and paletteChips name it from, so a repeated colour has one name
+// everywhere. `activeIdx` is deliberately not used: `activeColour` counts it
+// against the hex-only list, so it is not a position in this raw list, and when
+// the palette repeats the active colour it would name the later copy.
 function activeRoleIndex(design) {
-  const colours = paletteColours(design)
   const hex = norm(activeColour(design))
-  const idx = design?.palette?.activeIdx
-  if (Number.isInteger(idx) && norm(colours[idx]) === hex) return idx
-  return colours.findIndex((c) => norm(c) === hex)
+  if (!HEX_RE.test(hex)) return -1
+  return paletteColours(design).findIndex((c) => norm(c) === hex)
 }
 
 const named = (role, shade) => ({ role, shade, label: `${role} ${shade}`, custom: false })

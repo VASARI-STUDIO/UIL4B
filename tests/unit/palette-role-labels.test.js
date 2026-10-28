@@ -14,7 +14,7 @@ import assert from 'node:assert/strict'
 import {
   labelFor, paletteChips, activeShades, roleName, PALETTE_LABELS, SHADE_LABELS, BASE_SHADE,
 } from '../../src/utils/paletteRoles.js'
-import { tintsCurrent } from '../../src/utils/projectTints.js'
+import { tintsCurrent, activeColour } from '../../src/utils/projectTints.js'
 
 // Thirteen distinct colours, the most the tool shows. Index 6 is the seventh.
 const COLOURS = [
@@ -270,4 +270,47 @@ test('only a base colour: no chips, no shades row, and a ramp hex is "Custom" ra
   assert.equal(activeShades(d), null)
   assert.equal(labelFor(RAMP[3], d).label, 'Custom')
   assert.equal(labelFor(COLOURS[0], d).label, 'Custom')
+})
+
+// ── The active colour is named from its first place, wherever activeIdx points ──
+
+const PINK_RAMP = ['#FCEEF2', '#F8DDE5', '#F4CAD6', '#EFB6C8', '#EBA5BB', '#E894AC', '#C27F90', '#9C6573', '#764C57', '#50333A', '#2A1A1E']
+
+test('the active colour repeated in the palette: shades, palette chip and labelFor all say "Primary"', () => {
+  // activeIdx points at the second copy (index 1, "Secondary" by position), but
+  // the hex's first place is index 0, so that is its one name.
+  const d = {
+    palette: { activeIdx: 1, colors: ['#e894ac', '#E894AC', '#2f6bff'] },
+    tints: { from: '#E894AC', scale: PINK_RAMP },
+  }
+  const s = activeShades(d)
+  assert.equal(s.role, 'Primary')
+  assert.equal(s.items.find((i) => i.shade === '500').label, 'Primary 500')
+  assert.equal(labelFor('#E894AC', d).label, 'Primary 500')
+  assert.equal(paletteChips(d)[0].label, 'Primary 500')
+  assert.equal(paletteChips(d).length, 2)
+  for (const i of s.items) assert.equal(labelFor(i.hex, d).label, i.label, `shade ${i.hex}`)
+})
+
+test('an invalid entry before the active colour: activeColour and the role index agree on the colour', () => {
+  // activeColour counts activeIdx against the valid hexes, so activeIdx 1 is
+  // '#E894AC' (the second valid colour), which sits at raw position 2: "Accent".
+  const d = {
+    palette: { activeIdx: 1, colors: ['nope', '#2F6BFF', '#E894AC'] },
+    tints: { from: '#E894AC', scale: PINK_RAMP },
+  }
+  assert.equal(activeColour(d), '#E894AC')
+  const s = activeShades(d)
+  assert.equal(s.role, 'Accent')
+  assert.equal(s.items.find((i) => i.shade === '500').hex, '#E894AC')
+  assert.equal(labelFor('#E894AC', d).label, 'Accent 500')
+  assert.equal(paletteChips(d).find((c) => c.hex === '#E894AC').label, 'Accent 500')
+})
+
+test('an active colour the palette list does not hold gives no shades, and a blank entry is not mistaken for it', () => {
+  const d = {
+    palette: { base: '#E894AC', activeIdx: 0, colors: [null, ''] },
+    tints: { from: '#E894AC', scale: PINK_RAMP },
+  }
+  assert.equal(activeShades(d), null)
 })
