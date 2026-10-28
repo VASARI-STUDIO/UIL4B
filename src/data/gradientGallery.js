@@ -42,13 +42,16 @@ export function gradientToolUrl(g) {
   return `/create/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}${optional}`
 }
 
+// Most stops a link may carry; the generator's own limit.
+const MAX_STOPS = 12
+
 // Parse a gallery hand-off out of the tool's search params. Returns
 // { type, angle, stops, name } or null when there is no (valid) hand-off —
 // every field is validated so a mangled URL can never produce broken stops.
 export function decodeGradientParams(params) {
   const gs = params.get('gs')
   if (!gs) return null
-  const stops = gs.split('_').map(part => {
+  const stops = gs.split('_').slice(0, MAX_STOPS).map(part => {
     const m = /^([0-9a-f]{6})-(\d{1,3})$/i.exec(part)
     return m ? { color: `#${m[1].toUpperCase()}`, position: Math.min(100, +m[2]) } : null
   })
