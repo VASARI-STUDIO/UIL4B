@@ -42,6 +42,17 @@ test('the mild mode is the paper\'s deuteranomaly matrix at severity 0.6', () =>
   assert.ok(near(simCvd('#00FF00', 'deuteranomaly'), [0.674741, 0.754872, 0.030969]), simCvd('#00FF00', 'deuteranomaly'))
 })
 
+// MUTATION: change a number in the third column of the deuteranomaly row of MACHADO_2009 (the red, green or blue-channel entry).
+test('the mild mode keeps the matrix\'s blue column', () => {
+  const enc = v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055)
+  const near = (hex, linear) => channels(hex).every((v, i) => Math.abs(v - enc(Math.max(0, linear[i]))) <= 1.5)
+  // Pure blue picks the third column, (-0.173604, 0.039929, 0.980162); the negative red is clamped to 0.
+  assert.ok(near(simCvd('#0000FF', 'deuteranomaly'), [0, 0.039929, 0.980162]), simCvd('#0000FF', 'deuteranomaly'))
+  // Magenta (red plus blue) lets the negative entry show in red: 0.498864 - 0.173604 = 0.32526;
+  // green 0.205199 + 0.039929 = 0.245128; blue -0.011131 + 0.980162 = 0.969031.
+  assert.ok(near(simCvd('#FF00FF', 'deuteranomaly'), [0.32526, 0.245128, 0.969031]), simCvd('#FF00FF', 'deuteranomaly'))
+})
+
 // MUTATION: put an em dash in any hint in visionModes.js.
 test('hints fit the row and follow the copy rules', () => {
   for (const m of VISION_MODES) {

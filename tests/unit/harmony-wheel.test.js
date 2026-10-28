@@ -33,12 +33,15 @@ test('each hue system\'s offsets are the hues generateHarmony gives at full stre
   }
 })
 
-// MUTATION: change `h + 30` for the sibling in autoTonalFromSeed, or the auto row of HARMONY_OFFSETS.
+// MUTATION: change `h + 30` for the sibling in autoTonalFromSeed (even to `h + 35`), or the auto row of HARMONY_OFFSETS.
+// The engine lands within 1 degree of +30 across the wheel, so 2 degrees is room for rounding and no more.
 test('auto puts its second hue where the tonal engine puts it', () => {
-  const [seedHue] = hexToHct(SEED)
-  const second = hexToHct(autoTonalFromSeed(SEED)[1])[0]
   assert.deepEqual(HARMONY_OFFSETS.auto, [0, 30])
-  assert.ok(gap(second - seedHue, HARMONY_OFFSETS.auto[1]) <= 6, `second hue is ${Math.round(wrap(second - seedHue))} degrees on`)
+  for (const seed of [SEED, hslToHex(0, 60, 50), hslToHex(150, 80, 40), hslToHex(330, 30, 60)]) {
+    const [seedHue] = hexToHct(seed)
+    const second = hexToHct(autoTonalFromSeed(seed)[1])[0]
+    assert.ok(gap(second - seedHue, HARMONY_OFFSETS.auto[1]) <= 2, `${seed}: second hue is ${wrap(second - seedHue).toFixed(1)} degrees on`)
+  }
 })
 
 // MUTATION: drop a system from HARMONY_OFFSETS.
