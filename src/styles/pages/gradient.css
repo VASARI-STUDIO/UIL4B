@@ -62,12 +62,14 @@
 
 /* Side by side, the 336px panel is taller than the preview column, which left a
    blank block under the code box before the presets. The preview grows into that
-   height instead (capped, so a twelve-stop panel does not make a tower). Stacked
-   at 900px and under, the column is its own height and nothing changes. */
+   height instead (capped, so a twelve-stop panel does not make a tower). The cap sits
+   above the panel's height with the starter stops (976px: stage 750 + rail + code box
+   + gaps), so the Available colours block's held rows never strand the code box.
+   Stacked at 900px and under, the column is its own height and nothing changes. */
 @media (min-width: 901px) {
   .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
   .grd .tl-main > * { flex-shrink: 0; }
-  .grd .tl-main > .grd-stage { flex: 1 0 auto; max-height: 640px; }
+  .grd .tl-main > .grd-stage { flex: 1 0 auto; max-height: 900px; }
 }
 
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
@@ -361,7 +363,7 @@
    chip carries a ring and a tick, so the state is not colour alone. */
 .grd .grd-avail-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); scroll-margin-top: calc(var(--chrome-h) + 72px); border-radius: 6px; }
 .grd .grd-avail-note:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-.grd .grd-avail-link { display: inline-flex; align-items: center; min-height: 28px; border-radius: 6px; font-size: 12.5px; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
+.grd .grd-avail-link { display: inline-flex; align-items: center; min-height: 28px; border-radius: var(--btn-radius); font-size: 12.5px; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-avail-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 /* "Choose colours for Shuffle" is a button that reads as the same quiet link. */
 .grd button.grd-avail-link { padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
@@ -413,7 +415,7 @@
   height: 28px;
   padding: 0;
   border: 1px solid var(--tl-line);
-  border-radius: 14px;
+  border-radius: var(--btn-radius);
   overflow: hidden;
   background: none;
   cursor: pointer;
@@ -806,7 +808,7 @@
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
   .grd .grd-chip { width: 44px; height: 44px; }
-  .grd .grd-pair { width: 72px; height: 44px; border-radius: 22px; }
+  .grd .grd-pair { width: 72px; height: 44px; }
   .grd .grd-sparse .grd-avail-note { min-height: 36px; }
   .grd .grd-avail-from { min-height: 44px; }
   .grd .grd-from-select { height: 44px; font-size: 13px; }
