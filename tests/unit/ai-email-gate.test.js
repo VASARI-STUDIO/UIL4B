@@ -162,7 +162,7 @@ for (const task of PAID_TASKS) {
 
 test('the refusal body carries the code the client matches on', () => {
   assert.equal(EMAIL_UNVERIFIED_CODE, 'email-unverified')
-  assert.deepEqual(emailGateBody({ emailVerified: false, planId: 'free' }), {
+  assert.deepEqual(emailGateBody({ emailVerified: false }), {
     error: 'Verify your email to use AI tools.',
     code: 'email-unverified',
   })
@@ -243,12 +243,41 @@ test('a lapsed or revoked subscription is free use, so an unverified holder is r
   }
 })
 
-test('emailGateBody: verified passes, pro passes, anything else on a free plan is refused', () => {
-  assert.equal(emailGateBody({ emailVerified: true, planId: 'free' }), null)
-  assert.equal(emailGateBody({ emailVerified: false, planId: 'pro' }), null)
-  assert.ok(emailGateBody({ emailVerified: false, planId: 'free' }))
-  assert.ok(emailGateBody({ emailVerified: false, planId: undefined }), 'an unknown plan must fail closed')
-  assert.ok(emailGateBody({ emailVerified: undefined, planId: 'free' }))
+test('a trial or a past-due grace window is not paid capacity, so an unverified holder is refused', async () => {
+  // Both resolve to the Pro plan (planForSubscription), so a gate keyed on the
+  // plan id would have let them through. The exemption is active/lifetime only.
+  const trialing = { status: 'trialing', currentPeriodEnd: Date.now() + 5 * 86_400_000 }
+  const pastDue = { status: 'past_due', paymentFailedAt: Date.now() - 86_400_000, currentPeriodEnd: Date.now() + 20 * 86_400_000 }
+  for (const subscription of [trialing, pastDue]) {
+    assert.equal(planForUser({ subscription }).id, 'pro', `${subscription.status} no longer resolves to pro: the premise of this test moved`)
+    for (const task of PAID_TASKS) {
+      const ai = loadAi({ decoded: PASSWORD_UNVERIFIED, user: { subscription } })
+      const res = await ai.call(task)
+      assert.equal(res.statusCode, 403, `${task}: a ${subscription.status} subscription counted as paid`)
+      assert.equal(ai.ledger.metered, 0)
+    }
+  }
+})
+
+test('a verified account on a trial still runs paid tasks', async () => {
+  const trialing = { status: 'trialing', currentPeriodEnd: Date.now() + 5 * 86_400_000 }
+  const ai = loadAi({ decoded: PASSWORD_VERIFIED, user: { subscription: trialing } })
+  assert.equal((await ai.call('alt-text')).statusCode, 200)
+})
+
+test('emailGateBody: verified passes, active or lifetime passes, everything else is refused', () => {
+  const active = ACTIVE_PRO
+  assert.equal(emailGateBody({ emailVerified: true }), null)
+  assert.equal(emailGateBody({ emailVerified: false, subscription: active }), null)
+  assert.equal(emailGateBody({ emailVerified: false, lifetimeEntitlement: { active: true } }), null)
+  assert.ok(emailGateBody({ emailVerified: false, lifetimeEntitlement: { active: true, revokedAt: 1 } }), 'a revoked lifetime entitlement is free use')
+  assert.ok(emailGateBody({ emailVerified: false, subscription: { ...active, status: 'trialing' } }))
+  assert.ok(emailGateBody({ emailVerified: false, subscription: { ...active, status: 'past_due', paymentFailedAt: Date.now() } }))
+  assert.ok(emailGateBody({ emailVerified: false, subscription: { status: 'active', currentPeriodEnd: Date.now() - 5 * 86_400_000 } }), 'a lapsed period is free use')
+  assert.ok(emailGateBody({ emailVerified: false }), 'nothing known must fail closed')
+  assert.ok(emailGateBody({ emailVerified: undefined, subscription: null }))
+  assert.ok(emailGateBody({ emailVerified: 'true' }), 'only a literal true is verified')
+  assert.ok(emailGateBody({ emailVerified: false, planId: 'pro' }), 'a plan id alone no longer exempts anyone')
 })
 
 // ── What is not gated ───────────────────────────────────────────────────────

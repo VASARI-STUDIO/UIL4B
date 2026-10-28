@@ -1313,20 +1313,18 @@ export default async function handler(req, res) {
   // The response carries the count back so the UI can show what is left
   // without ever reading the collection itself.
   if (task.quota === 'generation') {
-    let plan
+    let plan, subscription, lifetimeEntitlement
     try {
       const snap = await fireDb.doc(`users/${uid}`).get()
-      plan = planForUser({
-        subscription: snap.data()?.subscription || null,
-        lifetimeEntitlement: snap.data()?.lifetimeEntitlement || null,
-        email,
-      })
+      subscription = snap.data()?.subscription || null
+      lifetimeEntitlement = snap.data()?.lifetimeEntitlement || null
+      plan = planForUser({ subscription, lifetimeEntitlement, email })
     } catch (e) {
       return res.status(500).json({ error: `Could not read your plan from Firestore (${String(e?.message || e).slice(0, 140)}).` })
     }
 
     // Before the meter is touched, so a refused request reserves nothing.
-    const unverified = emailGateBody({ emailVerified, planId: plan.id })
+    const unverified = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
     if (unverified) return res.status(403).json(unverified)
 
     const bucket = generationBucket(plan.id, monthStr())
@@ -1371,14 +1369,12 @@ export default async function handler(req, res) {
 
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
   const monthRef = fireDb.doc(`daily-usage/${uid}_${monthStr()}`)
-  let plan, limit, monthLimit
+  let plan, limit, monthLimit, subscription, lifetimeEntitlement
   try {
     const userSnap = await fireDb.doc(`users/${uid}`).get()
-    plan = planForUser({
-      subscription: userSnap.data()?.subscription || null,
-      lifetimeEntitlement: userSnap.data()?.lifetimeEntitlement || null,
-      email,
-    })
+    subscription = userSnap.data()?.subscription || null
+    lifetimeEntitlement = userSnap.data()?.lifetimeEntitlement || null
+    plan = planForUser({ subscription, lifetimeEntitlement, email })
     limit = dailyLimitFor(plan, toolId)
     monthLimit = monthlyLimitFor(plan, toolId)
   } catch (e) {
@@ -1387,7 +1383,7 @@ export default async function handler(req, res) {
 
   // Free use of a paid task needs a verified email; see _lib/emailGate.js. It
   // runs before the meters so a refused request reserves nothing.
-  const blocked = emailGateBody({ emailVerified, planId: plan.id })
+  const blocked = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
   if (blocked) return res.status(403).json(blocked)
 
   // BOTH ceilings are reserved in ONE transaction, month first. The order is the
