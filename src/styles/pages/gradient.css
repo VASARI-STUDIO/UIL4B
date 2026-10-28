@@ -751,6 +751,7 @@
    The wrapper anchors the popover to its button. Pills reuse the tool's own. */
 .grd .grd-shuf-wrap { position: relative; display: inline-flex; }
 .grd .tl-pop.grd-shuf { width: 320px; right: auto; left: 0; display: grid; gap: 12px; padding: 12px; }
+.grd .grd-shuf-inline { display: grid; gap: 12px; padding: 8px 12px 12px; }
 .grd .grd-shuf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .grd .grd-shuf-title { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
 .grd .grd-shuf-row { display: grid; gap: 6px; }

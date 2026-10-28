@@ -435,10 +435,35 @@ const LockBtn = ({ on, onClick, label, className = '', unavailable = false, desc
 // The Shuffle settings popover: a popover from 768px, a bottom sheet below
 // (the CSS moves it). Style only lists families that are built; with none, the
 // row would offer nothing to choose, so it is left out.
-function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
-  const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose)
+// The settings themselves, shared by the popover and the toolbar's More menu
+// (where the button has no room, the same controls sit inline in that menu).
+function ShuffleBody({ filters, setFilters }) {
   const coarse = useMediaQuery('(pointer: coarse)')
   const summary = `Random makes ${sentence(filters.types.filter((t) => t !== ANY).length ? filters.types : ['any type'])}, ${sentence(filters.counts.filter((c) => c !== ANY).length ? filters.counts.map((c) => `${c} stops`) : ['any number of stops'])}`
+  return (
+    <>
+      {/* STYLE_FAMILIES is empty until a family is built. The Style row,
+          a FilterGroup over [Plain, ...STYLE_FAMILIES] whose empty
+          selection falls back to Plain, goes here. */}
+      <FilterGroup label="Type" options={[ANY, ...GRAD_TYPES]} value={filters.types} coarse={coarse} onChange={(types) => setFilters((f) => ({ ...f, types }))} />
+      <FilterGroup label="Stops" options={COUNT_OPTIONS} value={filters.counts} coarse={coarse} onChange={(counts) => setFilters((f) => ({ ...f, counts }))} />
+      <button
+        type="button"
+        className={`grd-shuf-keep${filters.keepAngle ? ' is-on' : ''}`}
+        aria-pressed={filters.keepAngle}
+        onClick={() => setFilters((f) => ({ ...f, keepAngle: !f.keepAngle }))}
+      >
+        <ToolIcon name={filters.keepAngle ? 'lock-simple' : 'lock-simple-open'} size={13} />
+        <span>Keep the angle</span>
+      </button>
+      <p className="grd-shuf-hint">{coarse ? 'Tap to add or remove.' : 'Shift-click to pick more than one.'}</p>
+      <div className="sr-only" role="status">{summary}</div>
+    </>
+  )
+}
+
+function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
+  const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose)
   return (
     <span className="grd-shuf-wrap">
       <ToolButton
@@ -457,22 +482,7 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
             <span className="grd-shuf-title">Random makes</span>
             <button type="button" className="grd-iconbtn grd-shuf-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={14} /></button>
           </div>
-          {/* STYLE_FAMILIES is empty until a family is built. The Style row,
-              a FilterGroup over [Plain, ...STYLE_FAMILIES] whose empty
-              selection falls back to Plain, goes here. */}
-          <FilterGroup label="Type" options={[ANY, ...GRAD_TYPES]} value={filters.types} coarse={coarse} onChange={(types) => setFilters((f) => ({ ...f, types }))} />
-          <FilterGroup label="Stops" options={COUNT_OPTIONS} value={filters.counts} coarse={coarse} onChange={(counts) => setFilters((f) => ({ ...f, counts }))} />
-          <button
-            type="button"
-            className={`grd-shuf-keep${filters.keepAngle ? ' is-on' : ''}`}
-            aria-pressed={filters.keepAngle}
-            onClick={() => setFilters((f) => ({ ...f, keepAngle: !f.keepAngle }))}
-          >
-            <ToolIcon name={filters.keepAngle ? 'lock-simple' : 'lock-simple-open'} size={13} />
-            <span>Keep the angle</span>
-          </button>
-          <p className="grd-shuf-hint">{coarse ? 'Tap to add or remove.' : 'Shift-click to pick more than one.'}</p>
-          <div className="sr-only" role="status">{summary}</div>
+          <ShuffleBody filters={filters} setFilters={setFilters} />
         </div>
       )}
     </span>
@@ -1392,7 +1402,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Random', icon: 'shuffle', onSelect: randomise },
         },
         {
-          id: 'shuffle-settings', priority: 3, menu: false,
+          id: 'shuffle-settings', priority: 3,
+          // Too narrow for the button: the same settings sit inline in More.
+          menu: () => (
+            <div className="grd-shuf-inline">
+              <span className="grd-shuf-title">Random makes</span>
+              <ShuffleBody filters={filters} setFilters={setFilters} />
+            </div>
+          ),
           render: () => (
             <ShuffleSettings
               open={shuffleOpen}
