@@ -296,6 +296,98 @@ const STARTER_COLOURS = [
 // last place, so the row never takes more room than thirteen colours do.
 const MAX_CHIPS = 13
 
+// One tab stop for a row of buttons inside `rootRef`. The item last focused takes
+// tabindex 0 (else `start(items)`, else the first) and the rest -1; Left, Right,
+// Home and End move focus. Tabindex is written to the DOM after each render, so a
+// row whose items come and go needs no bookkeeping. Leaving the row forgets the
+// last item, so the next Tab in lands on `start` again.
+function useRoving(rootRef, selector, start) {
+  const last = useRef(null)
+  const items = useCallback(() => [...(rootRef.current?.querySelectorAll(selector) || [])], [rootRef, selector])
+  const apply = useCallback(() => {
+    const list = items()
+    if (!list.length) return
+    const stop = list.includes(last.current) ? last.current : (start?.(list) || list[0])
+    list.forEach((el) => { el.tabIndex = el === stop ? 0 : -1 })
+  }, [items, start])
+  useEffect(apply)
+  const onFocus = (e) => {
+    const el = e.target.closest?.(selector)
+    if (!el) return
+    last.current = el
+    apply()
+  }
+  const onBlur = (e) => {
+    if (rootRef.current?.contains(e.relatedTarget)) return
+    last.current = null
+    apply()
+  }
+  const onKeyDown = (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+    const el = e.target.closest?.(selector)
+    if (!el) return
+    const list = items()
+    const at = list.indexOf(el)
+    const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: list.length - 1 }[e.key]
+    if (to === undefined) return
+    e.preventDefault()
+    list[Math.max(0, Math.min(list.length - 1, to))]?.focus()
+  }
+  return { onFocus, onBlur, onKeyDown }
+}
+
+// The target dot is where the next press lands, so it is the ramp's tab stop.
+const rampStart = (list) => list.find((el) => el.getAttribute('aria-pressed') === 'true')
+
+// The gradient being painted, small, with one dot per stop. Each dot is a button
+// that makes its stop the target; the targeted dot(s) wear a ring. The bar paints
+// the same 90deg ramp as the rail. Its height is fixed, so nothing a press changes
+// can move the section.
+function MiniRamp({ stops, railCss, targets, onTarget }) {
+  const trackRef = useRef(null)
+  const roving = useRoving(trackRef, '.grd-ramp-dot', rampStart)
+  const order = stops.map((s, i) => ({ s, i })).sort((a, b) => a.s.position - b.s.position || a.i - b.i)
+  const press = (e, i) => {
+    let to = i
+    const track = trackRef.current
+    // Close stops have overlapping hit areas, so a pointer press goes to the dot
+    // nearest it by x. A key press (detail 0) is always the focused dot.
+    if (e.detail > 0 && track) {
+      const box = track.getBoundingClientRect()
+      const x = e.clientX - box.left
+      const dist = (j) => Math.abs(x - (box.width * stops[j].position) / 100)
+      let best = dist(i)
+      stops.forEach((_, j) => {
+        const d = dist(j)
+        if (d < best - 0.5) { best = d; to = j }
+      })
+    }
+    onTarget(to)
+    if (to !== i) track.querySelector(`[data-stop="${to}"]`)?.focus({ preventScroll: true })
+  }
+  return (
+    <div className="grd-ramp">
+      <div ref={trackRef} className="grd-ramp-track" role="toolbar" aria-label="Stop to paint" aria-orientation="horizontal" {...roving}>
+        <div className="grd-ramp-bar" style={{ background: railCss }} aria-hidden="true" />
+        {order.map(({ s, i }) => (
+          <button
+            key={i}
+            type="button"
+            className="grd-ramp-dot"
+            data-stop={i}
+            style={{ left: `${s.position}%` }}
+            aria-pressed={targets.includes(i)}
+            aria-label={`Stop ${i + 1}, ${s.color.toUpperCase()}, ${Math.round(s.position)}%`}
+            onClick={(e) => press(e, i)}
+          >
+            <span className="grd-ramp-dot-vis" style={{ backgroundColor: s.color }} />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // A round colour chip that sets the selected stop(s). The chosen state is a ring
 // and a tick, so it never rests on colour alone; the tick takes white or
 // near-black ink by the chip's own lightness.
@@ -653,6 +745,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // an identical sentence so a screen reader says it again.
   const [paintNote, setPaintNote] = useState(null)
   const paintCount = useRef(0)
+  // Every colour chip in Available colours (the palette, the starters, a project's
+  // colours, the shades) is one tab stop; arrows move between them.
+  const chipsRef = useRef(null)
+  const chipRoving = useRoving(chipsRef, '.grd-chip')
   useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
   const say = useCallback((text) => {
     setPickNote('')
@@ -1859,7 +1955,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             className="grd-avail"
             aside={<span className="grd-avail-tip">{availHead}</span>}
           >
-            <div className="sr-only" role="status">{pickNote}</div>
+            <MiniRamp stops={stops} railCss={railCss} targets={targets} onTarget={selectOnly} />
+            <div className="grd-avail-zone" ref={chipsRef} {...chipRoving}>
             {sparse ? (
               <div className="grd-sparse">
                 <p className="grd-avail-note" ref={paletteNoteRef} tabIndex={-1}>
@@ -1941,6 +2038,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 </div>
               </div>
             )}
+            </div>
             <p id="grd-avail-status" className="grd-avail-status" role="status" aria-live="polite" aria-atomic="true">
               {noteNow ? noteNow.text + (noteNow.n % 2 ? '\u200B' : '') : <span className="grd-avail-idle" aria-hidden="true">{availIdle}</span>}
             </p>
@@ -1971,6 +2069,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </span>
             )}
           >
+            {/* The page's one spoken region for stop edits and selections. Available
+                colours has only its own visible status line, so no press is said twice. */}
+            <div className="sr-only" role="status">{pickNote}</div>
             <div
               ref={stopListRef}
               className={`grd-stops${stopScroll.above ? ' is-above' : ''}${stopScroll.below ? ' is-below' : ''}`}

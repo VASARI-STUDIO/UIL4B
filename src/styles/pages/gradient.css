@@ -387,7 +387,7 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+  transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), background-color 150ms var(--ease-standard);
 }
 .grd .grd-chip:active { transform: scale(0.97); }
 .grd .grd-chip.is-light { color: oklch(0.2 0 0); }
@@ -956,3 +956,59 @@
 }
 .grd .grd-avail-idle { color: var(--tl-dim); }
 .grd .grd-chip[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+
+/* ── Mini ramp (Available colours) ───────────────────────────────────────────
+   The gradient being painted, with a dot button per stop. The track is a fixed 24px
+   (32px on a finger), so the section never changes height; the dot hit areas are
+   24px (44px on a finger), centred on the dot and free to overhang the track. The
+   bar is a gradient image, which cannot transition, so it repaints at once; the dot
+   colours ease. The target dot has a ring in --t0 (an outline under forced colours),
+   so the state is never colour alone. */
+.grd .grd-ramp { padding: 0 12px; }
+.grd .grd-ramp-track { position: relative; height: 24px; }
+.grd .grd-ramp-bar { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--tl-line); }
+.grd .grd-ramp-dot {
+  position: absolute;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.grd .grd-ramp-dot:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
+.grd .grd-ramp-dot-vis {
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--tl-card);
+  box-shadow: 0 0 0 1px var(--tl-line-on);
+  transition: background-color 150ms var(--ease-standard);
+}
+.grd .grd-ramp-dot[aria-pressed="true"] .grd-ramp-dot-vis { box-shadow: 0 0 0 2px var(--t0); }
+/* The chip zone adds no box of its own: the section's gaps stay where they were. */
+.grd .grd-avail-zone { display: contents; }
+@media (pointer: coarse) {
+  .grd .grd-ramp { padding: 0 16px; }
+  .grd .grd-ramp-track { height: 32px; }
+  .grd .grd-ramp-bar { border-radius: 16px; }
+  .grd .grd-ramp-dot { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+  .grd .grd-ramp-dot-vis { width: 20px; height: 20px; }
+}
+:where(html[data-reduced-motion="true"]) .grd :is(.grd-ramp-dot-vis, .grd-chip) { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-ramp-dot-vis, .grd-chip) { transition: none !important; }
+}
+@media (forced-colors: active) {
+  .grd .grd-ramp-bar { forced-color-adjust: none; border-color: CanvasText; }
+  .grd .grd-ramp-dot-vis { forced-color-adjust: none; border: 1px solid CanvasText; box-shadow: none; }
+  .grd .grd-ramp-dot[aria-pressed="true"] .grd-ramp-dot-vis { outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
+  .grd .grd-ramp-dot:focus-visible { outline-color: Highlight; }
+}
