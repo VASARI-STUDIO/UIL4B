@@ -80,7 +80,7 @@ const SEED = {
 }
 
 const seed = (page, { palette = THIRTEEN, gradient = SEED } = {}) => page.addInitScript((d) => {
-  const design = { palette: { base: d.palette[0], harmony: 'auto', extraColors: [], activeIdx: 0, colors: d.palette } }
+  const design = { palette: { base: d.palette[0] || '#0051FF', harmony: 'auto', extraColors: [], activeIdx: 0, colors: d.palette } }
   if (d.gradient) design.gradient = d.gradient
   localStorage.setItem('vs-current-design', JSON.stringify(design))
 }, { palette, gradient })
@@ -520,7 +520,11 @@ test.describe('selecting several stops at 1440px', () => {
     const after = await hexes(page)
     for (const n of [1, 2, 4]) expect(after[n - 1], `stop ${n}`).toBe(THIRTEEN[1])
     for (const n of [3, 5]) expect(after[n - 1], `stop ${n} left alone`).toBe(before[n - 1])
-    await expect.poll(() => said(page)).toContain('3 stops set to')
+    // The sentence is Available colours' own status line now; the Stops region does not repeat it.
+    await expect(page.locator('#grd-avail-status')).toHaveText(/^3 selected stops set to Secondary 500\.​?$/)
+    await expect(page.locator('[role="status"]').filter({ hasText: 'set to Secondary 500' })).toHaveCount(1)
+    // A selection stays a selection: no advance.
+    await expect(selCount(page)).toHaveText('3 selected')
   })
 
   test('the lock on a selected row locks every selected stop', async ({ page }) => {
@@ -758,9 +762,43 @@ test.describe('selecting several stops by touch at 390px', () => {
   })
 })
 
-// ── 6 · chip picks are the shuffle pool ─────────────────────────────────────
+// ── 6 · the Shuffle pool lives in Shuffle settings → Colours ────────────────
+// It used to be a Shift-click or press-and-hold on a chip. The chips now only
+// paint (spec gradient-generation-v2 §2.2, T-A6); the pool is a Colours row in
+// Shuffle settings: "All palette colours" or "Pick colours…", a checklist, and
+// two or more ticks make the pool. It is kept in sessionStorage, in
+// filters.pool, as upper-case hexes in the order they were ticked.
 
-test.describe('picking colours for Shuffle at 1440px', () => {
+const A = THIRTEEN[3] // Neutral 500
+const B = THIRTEEN[7] // Colour 8 500
+const C = THIRTEEN[10] // Colour 11 500
+const FILTER_KEY = 'vs-gradient-shuffle-filters'
+const poolRow = (scope) => group(scope, 'Colours')
+const allPill = (scope) => poolRow(scope).getByRole('button', { name: 'All palette colours' })
+const pickPill = (scope) => poolRow(scope).getByRole('button', { name: /^(Pick colours…|\d+ colours)$/ })
+const checklist = (scope) => scope.getByRole('group', { name: 'Colours to shuffle from' })
+const tick = (scope, name) => scope.getByRole('checkbox', { name })
+const storedPool = (page) => page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) || 'null')?.pool, FILTER_KEY)
+const settingsButton = (page) => page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings/ })
+
+test.describe('the chips no longer carry the Shuffle pool', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('no tip, no ring, no "picked for shuffle", and Shift-click on a chip only paints', async ({ page }) => {
+    watch(page, 'someone who remembers picking Shuffle colours on the chips')
+    await seed(page, { gradient: null })
+    await open(page)
+    await expect(page.getByText(/Shift-click to pick for Shuffle|Hold to pick for Shuffle/)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Clear picks' })).toHaveCount(0)
+    await chips(page).nth(3).click({ modifiers: ['Shift'] })
+    await expect(chips(page).nth(3)).not.toHaveAttribute('aria-label', /picked for shuffle/)
+    expect((await hexes(page))[0], 'a Shift-click is just a press').toBe(A)
+    expect(await storedPool(page), 'and picks nothing for Shuffle').toEqual([])
+    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+  })
+})
+
+test.describe('Shuffle settings → Colours at 1440px', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   test.beforeEach(async ({ page }) => {
     watch(page, 'a designer shuffling from a few chosen colours')
@@ -768,78 +806,200 @@ test.describe('picking colours for Shuffle at 1440px', () => {
     await open(page)
   })
 
-  test('picked colours drive Shuffle from palette, and "Shuffle from N picked colours" says so', async ({ page }) => {
-    const [a, b] = [THIRTEEN[3], THIRTEEN[7]]
-    const button = shuffleBtn(page)
-    await expect(button).toHaveAttribute('title', 'Build a random gradient from your current palette')
-
-    await chips(page).nth(3).click({ modifiers: ['Shift'] })
-    await expect(chips(page).nth(3)).toHaveAttribute('aria-label', new RegExp(`${a}, picked for shuffle$`))
-    await expect.poll(() => said(page)).toContain('1 colour picked')
-    // One pick is a mark, not yet a pool.
-    await expect(button).toHaveAttribute('title', 'Build a random gradient from your current palette')
-
-    await chips(page).nth(7).click({ modifiers: ['Control'] })
-    await expect.poll(() => said(page)).toContain('Shuffle from 2 picked colours')
-    await expect(button).toHaveAttribute('title', 'Shuffle from 2 picked colours')
-    // The dashed ring: the picked chips only.
-    const ring = (i) => chips(page).nth(i).evaluate((e) => getComputedStyle(e, '::after').borderTopStyle)
-    expect(await ring(3)).toBe('dashed')
-    expect(await ring(7)).toBe('dashed')
-    expect(await ring(1), 'an unpicked chip has no ring').not.toBe('dashed')
-    // A pick is not a press: no stop took the colour.
-    expect(await hexes(page)).not.toContain(a)
-
-    for (let i = 0; i < 12; i++) {
-      await button.click()
-      for (const h of await hexes(page)) expect([a, b], `Shuffle ${i + 1}`).toContain(h)
-    }
-    await expect(page.locator('.toast.show')).toContainText('Random gradient from 2 picked colours')
+  test('the row offers "All palette colours" (on) and "Pick colours…", and no checklist until asked', async ({ page }) => {
+    const scope = await openSettings(page)
+    await on(allPill(scope))
+    await off(pickPill(scope))
+    await expect(pickPill(scope)).toHaveText('Pick colours…')
+    await expect(checklist(scope)).toHaveCount(0)
+    await pickPill(scope).click()
+    await expect(checklist(scope)).toBeVisible()
+    await expect(checklist(scope).getByRole('checkbox')).toHaveCount(13)
+    expect(await checklist(scope).getByRole('checkbox').evaluateAll((els) => els.filter((e) => e.checked).length), 'nothing is ticked yet').toBe(0)
+    await expect(checklist(scope)).toContainText('Tick two or more colours.')
   })
 
-  test('Clear picks empties the pool, and Shuffle goes back to the whole palette', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Clear picks' })).toHaveCount(0)
-    await chips(page).nth(3).click({ modifiers: ['Shift'] })
-    await chips(page).nth(7).click({ modifiers: ['Shift'] })
-    await expect(page.getByRole('button', { name: 'Clear picks' })).toBeVisible()
-    await page.getByRole('button', { name: 'Clear picks' }).click()
-    await expect(page.getByRole('button', { name: 'Clear picks' })).toHaveCount(0)
-    await expect(chips(page).nth(3)).not.toHaveAttribute('aria-label', /picked for shuffle/)
+  test('ticking three colours makes Shuffle from palette use only those, and says so', async ({ page }) => {
+    const button = shuffleBtn(page)
+    await expect(button).toHaveAttribute('title', 'Build a random gradient from your current palette')
+    const scope = await openSettings(page)
+    await pickPill(scope).click()
+    await tick(scope, 'Neutral 500').check()
+    await expect(checklist(scope)).toContainText('Tick two or more colours.')
+    await expect(button, 'one tick is a mark, not yet a pool').toHaveAttribute('title', 'Build a random gradient from your current palette')
+    await tick(scope, 'Colour 8 500').check()
+    await tick(scope, 'Colour 11 500').check()
+    await expect(checklist(scope)).toContainText('Shuffle from 3 colours.')
+    await expect(pickPill(scope)).toHaveText('3 colours')
+    await expect(button).toHaveAttribute('title', 'Shuffle from 3 picked colours')
+    expect(await storedPool(page)).toEqual([A, B, C])
+    // A tick is not a press: no stop took a colour.
+    expect(await hexes(page)).not.toContain(A)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Shuffle settings' })).toBeHidden()
+
+    const seen = new Set()
+    for (let i = 0; i < 15; i++) {
+      await button.click()
+      for (const h of await hexes(page)) { seen.add(h); expect([A, B, C], `Shuffle ${i + 1}`).toContain(h) }
+    }
+    expect(seen.size, 'it really draws from the three, not one of them').toBeGreaterThan(1)
+    await expect(page.locator('.toast.show')).toContainText('Random gradient from 3 picked colours')
+  })
+
+  test('Shuffle settings reads "narrowed" from two ticks, and not before', async ({ page }) => {
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings')
+    const scope = await openSettings(page)
+    await pickPill(scope).click()
+    await tick(scope, 'Neutral 500').check()
+    await expect(settingsButton(page), 'one tick').toHaveAccessibleName('Shuffle settings')
+    await expect(settingsButton(page)).not.toHaveClass(/is-narrowed/)
+    await tick(scope, 'Colour 8 500').check()
+    await expect(settingsButton(page), 'two ticks').toHaveAccessibleName('Shuffle settings, narrowed')
+    await expect(settingsButton(page)).toHaveClass(/is-narrowed/)
+    await tick(scope, 'Colour 8 500').uncheck()
+    await expect(settingsButton(page), 'back to one').toHaveAccessibleName('Shuffle settings')
+  })
+
+  test('"All palette colours" clears the pool, and Shuffle goes back to the whole palette', async ({ page }) => {
+    const scope = await openSettings(page)
+    await pickPill(scope).click()
+    await tick(scope, 'Neutral 500').check()
+    await tick(scope, 'Colour 8 500').check()
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed')
+    await allPill(scope).click()
+    await on(allPill(scope))
+    await expect(checklist(scope)).toHaveCount(0)
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings')
+    expect(await storedPool(page)).toEqual([])
+    await page.keyboard.press('Escape')
     await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
-    await expect.poll(() => said(page)).toContain('Picks cleared')
     // The control: 25 shuffles from the whole palette use more than the two.
     const seen = new Set()
     for (let i = 0; i < 25; i++) {
       await shuffleBtn(page).click()
       for (const h of await hexes(page)) seen.add(h)
     }
-    expect([...seen].some((h) => h !== THIRTEEN[3] && h !== THIRTEEN[7])).toBe(true)
+    expect([...seen].some((h) => h !== A && h !== B)).toBe(true)
+    // And the checklist starts empty again.
+    const again = await openSettings(page)
+    await pickPill(again).click()
+    expect(await checklist(again).getByRole('checkbox').evaluateAll((els) => els.filter((e) => e.checked).length)).toBe(0)
   })
 
-  test('a Shift-click on a picked chip unpicks it, and a plain click still sets the stop', async ({ page }) => {
-    await chips(page).nth(2).click({ modifiers: ['Shift'] })
-    await chips(page).nth(2).click({ modifiers: ['Shift'] })
-    await expect(chips(page).nth(2)).not.toHaveAttribute('aria-label', /picked for shuffle/)
-    await expect(page.getByRole('button', { name: 'Clear picks' })).toHaveCount(0)
-    await chips(page).nth(2).click()
-    expect((await hexes(page))[0]).toBe(THIRTEEN[2])
+  test('unticking down to one colour stops the narrowing, and Shuffle uses the whole palette again', async ({ page }) => {
+    const scope = await openSettings(page)
+    await pickPill(scope).click()
+    await tick(scope, 'Neutral 500').check()
+    await tick(scope, 'Colour 8 500').check()
+    await tick(scope, 'Colour 8 500').uncheck()
+    await expect(checklist(scope)).toContainText('Tick two or more colours.')
+    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+    expect(await storedPool(page)).toEqual([A])
+  })
+
+  test('the pool survives a reload', async ({ page }) => {
+    const scope = await openSettings(page)
+    await pickPill(scope).click()
+    await tick(scope, 'Neutral 500').check()
+    await tick(scope, 'Colour 8 500').check()
+    await page.reload()
+    await expect(panelOf(page)).toBeVisible()
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed')
+    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Shuffle from 2 picked colours')
+    const after = await openSettings(page)
+    await expect(pickPill(after)).toHaveText('2 colours')
+    await off(allPill(after))
+    await pickPill(after).click()
+    await expect(tick(after, 'Neutral 500')).toBeChecked()
+    await expect(tick(after, 'Colour 8 500')).toBeChecked()
+    await expect(tick(after, 'Primary 500')).not.toBeChecked()
+    expect(await storedPool(page)).toEqual([A, B])
   })
 })
 
-test.describe('picking colours for Shuffle by touch at 390px', () => {
+test.describe('a filters entry saved before the pool existed', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('loads with an empty pool and keeps what it did hold', async ({ page }) => {
+    watch(page, 'someone whose session was saved by the previous version')
+    await page.addInitScript((k) => {
+      if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Radial'], counts: ['Any'], keepAngle: true }))
+    }, FILTER_KEY)
+    await seed(page, { gradient: null })
+    await open(page)
+    const scope = await openSettings(page)
+    await on(allPill(scope))
+    await expect(pickPill(scope)).toHaveText('Pick colours…')
+    await on(scope.getByRole('button', { name: 'Keep the angle' }))
+    await on(option(scope, 'Type', 'Radial'))
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed') // by its type and angle, not by a pool
+    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+  })
+
+  test('a pool holding junk or colours the palette does not have is ignored, not trusted', async ({ page }) => {
+    watch(page, 'someone whose saved pool names a colour that is gone')
+    await page.addInitScript((k) => {
+      if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Any'], counts: ['Any'], keepAngle: false, pool: ['#123456', 'red', 42, '#2f6bff'] }))
+    }, FILTER_KEY)
+    await seed(page, { gradient: null })
+    await open(page)
+    // One valid hex (#2F6BFF is lower case here, so it is dropped as unusable) and one
+    // the palette lacks: nothing narrows.
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings')
+    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+  })
+})
+
+test.describe('Shuffle settings → Colours without a palette', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('the ten starter colours stand in, and two ticks make Shuffle from palette live', async ({ page }) => {
+    watch(page, 'someone with no palette shuffling from starter colours')
+    await seed(page, { palette: [], gradient: null })
+    await open(page)
+    await expect(shuffleBtn(page)).toHaveAttribute('aria-disabled', 'true')
+    const scope = await openSettings(page)
+    await pickPill(scope).click()
+    await expect(checklist(scope).getByRole('checkbox')).toHaveCount(10)
+    await tick(scope, 'Starter blue').check()
+    await tick(scope, 'Starter paper').check()
+    await expect(shuffleBtn(page)).not.toHaveAttribute('aria-disabled', /.*/)
+    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Shuffle from 2 picked colours')
+  })
+
+  test('with one palette colour the row has nothing to choose, so it is not drawn', async ({ page }) => {
+    watch(page, 'someone with a one-colour palette')
+    await seed(page, { palette: [THIRTEEN[0]], gradient: null })
+    await open(page)
+    const scope = await openSettings(page)
+    await expect(scope.getByText('Keep the angle')).toBeVisible()
+    await expect(poolRow(scope)).toHaveCount(0)
+  })
+})
+
+test.describe('Shuffle settings → Colours by touch at 390px', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-  test('press and hold picks a chip; a tap still sets the stop', async ({ page }) => {
+  test('ticks in the More menu make the pool; rows are 44px; the chips only paint', async ({ page }) => {
     watch(page, 'a phone user picking shuffle colours')
     await seed(page, { gradient: null })
     await open(page)
-    await longPress(page, chips(page).nth(3))
-    await expect(chips(page).nth(3)).toHaveAttribute('aria-label', /picked for shuffle$/)
-    await longPress(page, chips(page).nth(7))
-    await expect.poll(() => said(page)).toContain('Shuffle from 2 picked colours')
+    const scope = await openSettings(page)
+    await pickPill(scope).tap()
+    await tick(scope, 'Neutral 500').check()
+    await tick(scope, 'Colour 8 500').check()
+    await expect(checklist(scope)).toContainText('Shuffle from 2 colours.')
+    const rows = await checklist(scope).locator('.grd-pool-opt').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
+    expect(Math.min(...rows), 'tick rows are at least 44px').toBeGreaterThanOrEqual(44)
+    expect(await storedPool(page)).toEqual([A, B])
+    await page.keyboard.press('Escape')
+    // A long press on a chip is nothing now; a tap still sets the stop.
+    await longPress(page, chips(page).nth(5))
+    await expect(chips(page).nth(5)).not.toHaveAttribute('aria-label', /picked for shuffle/)
     await chips(page).nth(5).tap()
     expect((await hexes(page))[0], 'a tap sets the colour').toBe(THIRTEEN[5])
-    await expect(chips(page).nth(5)).not.toHaveAttribute('aria-label', /picked for shuffle/)
+    expect(await storedPool(page), 'and the pool is as the checklist left it').toEqual([A, B])
   })
 })
 
@@ -888,14 +1048,19 @@ test.describe('the page does not move at 1440px', () => {
     await page.keyboard.press('Control+A'); await l.mark('all selected')
     await page.keyboard.press('Escape'); await l.mark('selection cleared')
 
-    await chips(page).nth(3).click({ modifiers: ['Shift'] }); await l.mark('one pick (Clear picks appears)')
-    await chips(page).nth(7).click({ modifiers: ['Shift'] }); await l.mark('two picks')
+    const pool = await openSettings(page)
+    await pickPill(pool).click(); await l.mark('Pick colours… (the checklist opens)')
+    await tick(pool, 'Neutral 500').check(); await l.mark('one tick')
+    await tick(pool, 'Colour 8 500').check(); await l.mark('two ticks (Shuffle settings reads narrowed)')
+    await page.keyboard.press('Escape'); await l.mark('settings closed')
     await shuffleBtn(page).click(); await l.mark('Shuffle from 2 picks')
-    await page.getByRole('button', { name: 'Clear picks' }).click(); await l.mark('picks cleared')
+    const again = await openSettings(page)
+    await allPill(again).click(); await l.mark('All palette colours')
+    await page.keyboard.press('Escape'); await l.mark('settings closed again')
 
     await stopSelect(page, 1).click(); await page.keyboard.press('Control+A')
     await page.getByRole('button', { name: /^Remove the \d selected stops$/ }).first().click(); await l.mark('bulk delete down to the floor')
-    expect(l.count).toBe(16)
+    expect(l.count).toBe(19)
     expect(l.drift(), l.drift().join('\n')).toEqual([])
   })
 })
@@ -921,10 +1086,13 @@ test.describe('the page does not move at 390px (touch)', () => {
     await chips(page).nth(1).tap(); await l.mark('bulk colour')
     await page.locator('.grd-sel-clear').tap(); await l.mark('Done')
 
-    await longPress(page, chips(page).nth(3)); await l.mark('one pick (Clear picks appears)')
-    await longPress(page, chips(page).nth(7)); await l.mark('two picks')
-    await page.getByRole('button', { name: 'Clear picks' }).tap(); await l.mark('picks cleared')
-    expect(l.count).toBe(12)
+    const pool = await openSettings(page)
+    await pickPill(pool).tap(); await l.mark('Pick colours… (the checklist opens in the More menu)')
+    await tick(pool, 'Neutral 500').check(); await l.mark('one tick')
+    await tick(pool, 'Colour 8 500').check(); await l.mark('two ticks')
+    await allPill(pool).tap(); await l.mark('All palette colours')
+    await page.keyboard.press('Escape'); await l.mark('menu closed')
+    expect(l.count).toBe(17)
     expect(l.drift(), l.drift().join('\n')).toEqual([])
   })
 })

@@ -1,14 +1,17 @@
-// /create/gradient: Available colours, the first section of the panel.
+// /create/gradient: Available colours (v2), the first section of the panel.
 //
-// It lists the palette's colours as round chips (one press sets the selected
-// stop), the active colour's shades while the project's ramp is current, and
-// the ten starter colours with a way to the Palette Builder when there is no
-// palette. Each stop row then names its colour ("Primary 500", "Custom"), and the
-// toolbar button is "Shuffle from palette" everywhere a person can meet it.
+// A chip press paints the ringed stop (the "target"), then the target moves to the
+// next stop by position whose colour is not locked, so two presses make a whole
+// gradient. The section shows what it is painting: a mini ramp with one dot button
+// per stop, a head ("Painting stop 1 of 3") and a visible status line. With no
+// palette, or one colour, it offers six starter pairs, the ten starter colours and
+// a way to a saved project's colours. Each stop row names its colour ("Primary
+// 500", "Custom"), and the toolbar button is "Shuffle from palette" everywhere a
+// person can meet it.
 //
-// Expected names are hand-checked from the spec (handover/specs/
-// gradient-tool-overhaul-spec-2026-10-28.md §3.2, §3.3, §13), not read back from
-// the code.
+// Expected names, copy and orders are hand-checked from the spec (handover/specs/
+// gradient-generation-v2-2026-10-28.md §2 and §10, T-A1 to T-A8), not read back
+// from the code.
 //
 // MUTATIONS (each turns the tests named red):
 //   drop `if (!guardEdit()) return` from pickColour   -> "a free account ... Pro modal"
@@ -19,7 +22,7 @@
 //   MAX_CHIPS 13 -> 14 (or 99)                         -> "the chip cap" tests
 //   pickColour drops its `setPickNote('')`             -> "pressing the same chip again announces again"
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 
 const ROUTE = '/create/gradient'
 
@@ -40,8 +43,13 @@ const STEPS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '90
 const SEED_STOPS = ['#0A0F2C', '#27348B', '#6E6BFF']
 
 const NEEDS = 'Needs a palette with two or more colours'
-const NO_PALETTE_NOTE = 'No palette yet. Colours you build in Palette Builder show up here.'
+const NO_PALETTE_NOTE = 'No palette yet. Start from a pair or a starter colour, or make a palette.'
 const ONE_COLOUR_NOTE = 'Add a second colour in Palette Builder to shuffle from it.'
+// The six starter pairs, name and both ends (spec §2.4).
+const PAIRS = [
+  ['Harbour night', '#0B1B3A', '#3D7BFF'], ['Ember', '#3A1238', '#F08A4B'], ['Sea glass', '#CFEFE6', '#6FB7C9'],
+  ['Citrus', '#FFB23F', '#F0436A'], ['Fog', '#E9ECF2', '#7A8496'], ['Plum', '#2A0F3D', '#9C5BD9'],
+]
 
 /** Seed the project the page reads: a palette, and optionally a ramp, an active index and a gradient. */
 const seed = (page, { colors, tints, activeIdx = 0, gradient } = {}) => page.addInitScript((d) => {
@@ -54,7 +62,19 @@ const seed = (page, { colors, tints, activeIdx = 0, gradient } = {}) => page.add
 const current = (colors, idx = 0, ramp = RAMP) => ({ from: colors[idx], scale: ramp })
 
 const section = (page) => page.getByRole('group', { name: 'Available colours' })
-const chips = (page) => section(page).getByRole('button')
+// Chips only: the ramp's stop dots and the starter pairs are buttons too, and are not counted here.
+const chips = (page) => section(page).locator('.grd-chip')
+const pairs = (page) => section(page).locator('.grd-pair')
+const dots = (page) => section(page).locator('.grd-ramp-dot')
+const dot = (page, n) => section(page).locator(`.grd-ramp-dot[data-stop="${n - 1}"]`)
+const statusLine = (page) => page.locator('#grd-avail-status')
+const head = (page) => page.locator('.grd-avail-tip')
+const lockBtn = (page, n) => page.locator('.grd-stop').nth(n - 1).locator('.grd-lock')
+/** The status line's words. A repeat of the same sentence carries an invisible character so a screen reader says it again. */
+const words = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\u200B?$`)
+/** The stop numbers (1-based) whose ramp dot is pressed: where the next press lands. */
+const targetOf = (page) => page.evaluate(() => [...document.querySelectorAll('.grd-ramp-dot')]
+  .filter((d) => d.getAttribute('aria-pressed') === 'true').map((d) => Number(d.dataset.stop) + 1))
 const shadesGroup = (page, role = 'Primary') => page.getByRole('group', { name: `${role} shades` })
 const chip = (page, label) => section(page).getByRole('button', { name: new RegExp(`^${label}, #`) })
 const stopSelect = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #`) })
@@ -76,12 +96,20 @@ test.describe('Available colours · the states', () => {
     await seed(page, { colors: [] })
     await open(page)
     await expect(page.locator('.grd-avail-note')).toHaveText(NO_PALETTE_NOTE)
-    await expect(page.locator('.grd-avail').getByRole('link', { name: 'Open Palette Builder' })).toHaveAttribute('href', '/create/palette')
-    const starters = page.getByRole('group', { name: 'Starter colours' }).getByRole('button')
+    await expect(page.locator('.grd-avail').getByRole('link', { name: 'Make a palette' })).toHaveAttribute('href', '/create/palette')
+    // Pairs: six, each named for itself and both ends.
+    const pairRow = section(page).getByRole('group', { name: 'Pairs' }).getByRole('button')
+    await expect(pairRow).toHaveCount(6)
+    expect(await names(pairRow)).toEqual(PAIRS.map(([n, l, r]) => `${n}, ${l} to ${r}`))
+    // Colours: the ten starters.
+    const starters = section(page).getByRole('group', { name: 'Colours' }).getByRole('button')
     await expect(starters).toHaveCount(10)
     expect((await names(starters))[0]).toBe('Starter blue, #2F6BFF')
     expect((await names(starters))[9]).toBe('Starter paper, #F7F7F4')
-    await expect(page.locator('.grd-avail .grd-chip'), 'only the starters are drawn, no palette chips').toHaveCount(10)
+    await expect(chips(page), 'only the starters are drawn as chips, no palette chips').toHaveCount(10)
+    await expect(section(page).getByRole('group', { name: 'Starter colours' }), 'the old group name is gone').toHaveCount(0)
+    await expect(head(page)).toHaveText('Painting stop 1 of 3')
+    await expect(statusLine(page), 'idle, the line says what a press will do').toHaveText('Press a colour to paint stop 1.')
     await expect(page.locator('.grd-shades'), 'no ramp, no shades line').toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Shuffle from palette/ })).toHaveAttribute('aria-disabled', 'true')
   })
@@ -90,11 +118,12 @@ test.describe('Available colours · the states', () => {
     watch(page, 'someone with a one-colour palette')
     await seed(page, { colors: ['#0051FF'] })
     await open(page)
-    await expect(chips(page)).toHaveCount(1)
+    await expect(chips(page), 'its one chip, and no starter colours standing in for a palette').toHaveCount(1)
     expect(await names(chips(page))).toEqual(['Primary 500, #0051FF'])
     await expect(page.locator('.grd-avail-note')).toHaveText(ONE_COLOUR_NOTE)
     await expect(page.locator('.grd-avail').getByRole('link', { name: 'Open Palette Builder' })).toHaveAttribute('href', '/create/palette')
-    await expect(page.getByRole('group', { name: 'Starter colours' }), 'starters only stand in for no palette').toHaveCount(0)
+    // The pairs are still useful with one colour.
+    await expect(pairs(page)).toHaveCount(6)
     await expect(page.getByRole('button', { name: /^Shuffle from palette/ })).toHaveAccessibleDescription(NEEDS)
   })
 
@@ -104,7 +133,8 @@ test.describe('Available colours · the states', () => {
     await open(page)
     expect(await names(chips(page))).toEqual(['Primary 500, #0051FF', 'Secondary 500, #FF5A1F'])
     await expect(page.locator('.grd-avail-note')).toHaveCount(0)
-    await expect(page.locator('.grd-avail').getByRole('link')).toHaveCount(0)
+    await expect(page.locator('.grd-avail').getByRole('link', { name: /Palette Builder|Make a palette/ })).toHaveCount(0)
+    await expect(pairs(page), 'a palette is enough: no starter pairs').toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Shuffle from palette/ })).not.toHaveAttribute('aria-disabled', /.*/)
   })
 
@@ -187,8 +217,10 @@ test.describe('Available colours · pressing a chip', () => {
     await expect(roleOf(page, 1)).toHaveText('Secondary 500')
     await expect(secondary).toHaveAttribute('aria-pressed', 'true')
     await expect(secondary.locator('svg'), 'the chosen chip carries a tick, not colour alone').toHaveCount(1)
-    await expect(section(page).locator('[aria-pressed="true"]'), 'one palette chip is chosen').toHaveCount(1)
-    await expect(page.locator('.grd-avail').getByRole('status')).toHaveText('Stop 1 set to Secondary 500')
+    await expect(section(page).locator('.grd-chip[aria-pressed="true"]'), 'one palette chip is in the gradient').toHaveCount(1)
+    await expect(statusLine(page)).toHaveText(words('Stop 1 set to Secondary 500. Next: stop 2.'))
+    await expect(head(page), 'and the target moved on').toHaveText('Painting stop 2 of 3')
+    expect(await targetOf(page)).toEqual([2])
     // The other stops are untouched.
     await expect(hexOf(page, 2)).toHaveText(SEED_STOPS[1])
     await expect(hexOf(page, 3)).toHaveText(SEED_STOPS[2])
@@ -204,10 +236,15 @@ test.describe('Available colours · pressing a chip', () => {
     await expect(hexOf(page, 2)).toHaveText('#8FB0FF')
     await expect(roleOf(page, 2)).toHaveText('Primary 300')
     await expect(hexOf(page, 1), 'stop 1 was not the selected one').toHaveText(SEED_STOPS[0])
-    await expect(page.locator('.grd-avail').getByRole('status')).toHaveText('Stop 2 set to Primary 300')
-    // Select stop 1 again: the ticked chip leaves, since stop 1 is not a palette colour.
+    await expect(statusLine(page)).toHaveText(words('Stop 2 set to Primary 300. Next: stop 3.'))
+    // Select stop 1 again. The tick means "in this gradient", not "on the target
+    // stop": Primary 300 stays ticked, and the ringed dot is the one that moved.
     await stopSelect(page, 1).click()
-    await expect(page.locator('.grd-avail [aria-pressed="true"]')).toHaveCount(0)
+    const shade = shadesGroup(page).getByRole('button', { name: /^Primary 300, #/ })
+    await expect(shade).toHaveAttribute('aria-pressed', 'true')
+    await expect(shade).toHaveAccessibleName('Primary 300, #8FB0FF, in this gradient')
+    await expect(section(page).locator('.grd-chip[aria-pressed="true"]')).toHaveCount(1)
+    expect(await targetOf(page)).toEqual([1])
   })
 
   test('a keyboard press sets the stop and focus stays on the chip', async ({ page }) => {
@@ -246,7 +283,9 @@ test.describe('Available colours · pressing a chip', () => {
     await chip(page, 'Secondary 500').click()
     await expect(page.getByText('Editing gallery gradients is Pro')).toBeVisible()
     await expect(hexOf(page, 1), 'the free account did not get the edit').toHaveText(SEED_STOPS[0])
-    await expect(page.locator('.grd-avail').getByRole('status'), 'nothing was announced for an edit that did not happen').toHaveText('')
+    await expect(statusLine(page), 'nothing was announced for an edit that did not happen').not.toContainText('set to')
+    await expect(statusLine(page)).toHaveText('Press a colour to paint stop 1.')
+    expect(await targetOf(page), 'and the target did not move on').toEqual([1])
   })
 })
 
@@ -272,6 +311,8 @@ test.describe('Stop rows · role and shade', () => {
     await open(page)
     await chip(page, 'Primary 500').click()
     await expect(roleOf(page, 1)).toHaveText('Primary 500')
+    // The press moved the target on to stop 2, and the hex field edits the target stop.
+    await dot(page, 1).click()
     const hex = page.locator('.grd-hex').first()
     await hex.fill('#2F6BFE')
     await hex.press('Enter')
@@ -508,36 +549,449 @@ test.describe('Available colours · announcing a pick', () => {
     watch(page, 'a screen reader user picking the same palette colour twice')
     await seed(page, { colors: THIRTEEN })
     await open(page)
-    const status = page.locator('.grd-avail').getByRole('status')
-    // Every change to the live region's text, in order: a screen reader speaks a
-    // region when its text changes, so two spoken lines are two non-empty entries.
+    const status = statusLine(page)
+    const SENTENCE = 'Stop 1 set to Secondary 500. Next: stop 2.'
+    // Every change to the live region's text, in order. A screen reader speaks a
+    // region when its text changes; the line's idle text is aria-hidden, so it
+    // counts as empty to a reader.
     await page.evaluate(() => {
-      const el = document.querySelector('.grd-avail [role="status"]')
+      const el = document.getElementById('grd-avail-status')
       window.__said = []
       new MutationObserver(() => window.__said.push(el.textContent))
         .observe(el, { childList: true, characterData: true, subtree: true })
     })
-    const said = () => page.evaluate(() => window.__said)
+    const log = () => page.evaluate(() => window.__said)
 
     const secondary = chip(page, 'Secondary 500')
     await secondary.click()
-    await expect(status).toHaveText('Stop 1 set to Secondary 500')
-    expect(await said(), 'first press: said once').toEqual(['Stop 1 set to Secondary 500'])
+    await expect(status).toHaveText(words(SENTENCE))
+    expect((await log()).map((t) => t.replace('​', '')), 'first press: said once').toEqual([SENTENCE])
+    // No other live region on the page says the same press a second time.
+    await expect(page.locator('[role="status"]').filter({ hasText: 'set to Secondary 500' })).toHaveCount(1)
+    await expect(page.locator('.grd-avail [role="status"]'), 'Available colours has its one visible status line').toHaveCount(1)
 
-    // The colour is changed another way, so the region still holds the old line.
+    // The colour is changed another way: the line no longer describes the stops,
+    // so it goes back to idle (hidden from a screen reader) instead of keeping a stale claim.
+    // (The press moved the target on to stop 2, and the hex field edits the target stop.)
+    await dot(page, 1).click()
     const hex = page.locator('.grd-hex').first()
     await hex.fill('#112233')
     await hex.press('Enter')
     await expect(hexOf(page, 1)).toHaveText('#112233')
     await expect(roleOf(page, 1)).toHaveText('Custom')
-    await expect(status, 'nothing new is said for a typed colour').toHaveText('Stop 1 set to Secondary 500')
+    await expect(status.locator('.grd-avail-idle'), 'the stale sentence is gone').toHaveAttribute('aria-hidden', 'true')
+    await expect(status).not.toContainText('set to')
 
     await secondary.click()
     await expect(hexOf(page, 1)).toHaveText('#E0784E')
-    // Emptied, then filled again with the same words.
-    await expect.poll(said, { message: 'the region was emptied and refilled' }).toEqual([
-      'Stop 1 set to Secondary 500', '', 'Stop 1 set to Secondary 500',
+    await expect(status).toHaveText(words(SENTENCE))
+    // Said, gone, said again: two spoken lines with the idle line between them.
+    const entries = await log()
+    const spoken = entries.filter((t) => t.startsWith('Stop 1 set to'))
+    expect(spoken.length, 'the same words were spoken twice').toBe(2)
+    expect(entries.slice(entries.indexOf(spoken[0]) + 1, entries.lastIndexOf(spoken[1])).some((t) => /^Press a colour to paint/.test(t)), 'with the hidden idle line between').toBe(true)
+  })
+})
+
+// ── v2: paint in order, the ramp, the status line (spec §2, T-A1 to T-A4) ──
+const FOUR_OUT_OF_ORDER = {
+  // List order is not rail order: left to right is stops 1, 3, 2.
+  source: 'own', type: 'Linear', angle: 160, space: 'oklch',
+  stops: [{ color: '#0A0F2C', position: 0 }, { color: '#27348B', position: 100 }, { color: '#6E6BFF', position: 50 }],
+}
+
+test.describe('Available colours · paint in order', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('three presses paint stops 1, 2, 3 and the target comes back to stop 1', async ({ page }) => {
+    watch(page, 'a designer building a gradient by pressing three palette colours')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await expect(head(page)).toHaveText('Painting stop 1 of 3')
+    await expect(statusLine(page)).toHaveText('Press a colour to paint stop 1.')
+    expect(await targetOf(page)).toEqual([1])
+
+    await chip(page, 'Primary 500').click()
+    await expect(hexOf(page, 1)).toHaveText('#2F6BFF')
+    await expect(statusLine(page)).toHaveText(words('Stop 1 set to Primary 500. Next: stop 2.'))
+    await expect(head(page)).toHaveText('Painting stop 2 of 3')
+
+    await chip(page, 'Secondary 500').click()
+    await expect(hexOf(page, 2)).toHaveText('#E0784E')
+    await expect(statusLine(page)).toHaveText(words('Stop 2 set to Secondary 500. Next: stop 3.'))
+
+    await chip(page, 'Accent 500').click()
+    await expect(hexOf(page, 3)).toHaveText('#3FAFA0')
+    await expect(statusLine(page)).toHaveText(words('Stop 3 set to Accent 500. Next: stop 1.'))
+    await expect(head(page), 'back at the start').toHaveText('Painting stop 1 of 3')
+    expect(await targetOf(page)).toEqual([1])
+    await expect(stopSelect(page, 1), 'the stop list follows the target').toHaveAttribute('aria-pressed', 'true')
+    // The tick means "in this gradient": all three are on at once.
+    for (const label of ['Primary 500', 'Secondary 500', 'Accent 500']) {
+      await expect(chip(page, label)).toHaveAttribute('aria-pressed', 'true')
+    }
+    await expect(section(page).locator('.grd-chip[aria-pressed="true"]'), 'and no others').toHaveCount(3)
+  })
+
+  test('the tick means in this gradient: a chip stays on when the target is somewhere else', async ({ page }) => {
+    watch(page, 'a designer who pressed one colour and moved on')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    const primary = chip(page, 'Primary 500')
+    await expect(primary).toHaveAttribute('aria-pressed', 'false')
+    await primary.click()
+    // The target is stop 2 now, and stop 2 is not Primary, yet the chip is ticked.
+    expect(await targetOf(page)).toEqual([2])
+    await expect(primary).toHaveAttribute('aria-pressed', 'true')
+    await expect(primary.locator('svg'), 'a tick, not colour alone').toHaveCount(1)
+    await expect(primary).toHaveAccessibleName('Primary 500, #2F6BFF, in this gradient')
+  })
+
+  test('the target follows position along the rail, not the order of the list', async ({ page }) => {
+    watch(page, 'a designer whose stops were dragged out of list order')
+    await seed(page, { colors: THIRTEEN, gradient: FOUR_OUT_OF_ORDER })
+    await open(page)
+    await chip(page, 'Primary 500').click()
+    // Stop 1 sits at 0%; the next one to its right is stop 3 (50%), not stop 2 (100%).
+    await expect(statusLine(page)).toHaveText(words('Stop 1 set to Primary 500. Next: stop 3.'))
+    expect(await targetOf(page)).toEqual([3])
+    await chip(page, 'Secondary 500').click()
+    await expect(statusLine(page)).toHaveText(words('Stop 3 set to Secondary 500. Next: stop 2.'))
+    await chip(page, 'Accent 500').click()
+    await expect(statusLine(page)).toHaveText(words('Stop 2 set to Accent 500. Next: stop 1.'))
+    await expect(hexOf(page, 2)).toHaveText('#3FAFA0')
+  })
+
+  test('pressing the colour the target already has changes nothing and still moves on', async ({ page }) => {
+    watch(page, 'a designer pressing through the palette in order')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await chip(page, 'Primary 500').click()
+    await dot(page, 1).click()
+    await chip(page, 'Primary 500').click()
+    await expect(statusLine(page)).toHaveText(words('Stop 1 is already Primary 500.'))
+    await expect(hexOf(page, 1)).toHaveText('#2F6BFF')
+    await expect(hexOf(page, 2), 'stop 2 was not painted').toHaveText(SEED_STOPS[1])
+    await expect(head(page), 'the press never stalls').toHaveText('Painting stop 2 of 3')
+  })
+
+  test('the target skips a locked stop, both ways round', async ({ page }) => {
+    watch(page, 'a designer who locked the middle stop')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await lockBtn(page, 2).click()
+    await dot(page, 1).click()
+    await chip(page, 'Primary 500').click()
+    await expect(statusLine(page)).toHaveText(words('Stop 1 set to Primary 500. Next: stop 3.'))
+    expect(await targetOf(page)).toEqual([3])
+    await chip(page, 'Secondary 500').click()
+    await expect(statusLine(page)).toHaveText(words('Stop 3 set to Secondary 500. Next: stop 1.'))
+    await expect(hexOf(page, 2), 'the locked stop kept its colour').toHaveText(SEED_STOPS[1])
+  })
+
+  test('with every colour locked the chips refuse, and say why', async ({ page }) => {
+    watch(page, 'a designer who locked every stop')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    for (const n of [1, 2, 3]) await lockBtn(page, n).click()
+    await expect(head(page)).toHaveText('Every colour is locked')
+    await expect(statusLine(page)).toHaveText('Every colour is locked. Unlock a stop to paint it.')
+    const secondary = chip(page, 'Secondary 500')
+    await expect(secondary).toHaveAttribute('aria-disabled', 'true')
+    // aria-disabled is not `disabled`: the chip still takes a press, and refuses it.
+    await secondary.click({ force: true })
+    for (const n of [1, 2, 3]) await expect(hexOf(page, n)).toHaveText(SEED_STOPS[n - 1])
+    await expect(statusLine(page)).toHaveText('Every colour is locked.')
+    await expect(secondary, 'the reason is its description').toHaveAccessibleDescription('Every colour is locked.')
+    // Unlock one and the chips work again.
+    await lockBtn(page, 2).click()
+    await expect(secondary).not.toHaveAttribute('aria-disabled', /.*/)
+    await expect(head(page)).toHaveText(/^Painting stop \d of 3$/)
+  })
+
+  test('a press on a stop in a multi-selection paints them all and the target stays', async ({ page }) => {
+    watch(page, 'a designer painting two selected stops')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await stopSelect(page, 1).click()
+    await stopSelect(page, 3).click({ modifiers: ['Control'] })
+    await expect(head(page)).toHaveText('Painting 2 selected stops')
+    await chip(page, 'Highlight 500').click()
+    await expect(hexOf(page, 1)).toHaveText('#D9B93C')
+    await expect(hexOf(page, 3)).toHaveText('#D9B93C')
+    await expect(statusLine(page)).toHaveText(words('2 selected stops set to Highlight 500.'))
+    await expect(head(page), 'a selection stays a selection').toHaveText('Painting 2 selected stops')
+  })
+})
+
+test.describe('Available colours · the mini ramp', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('one dot button per stop, named for its stop, colour and place; the target dot is pressed', async ({ page }) => {
+    watch(page, 'a screen reader user meeting the ramp')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    const toolbar = section(page).getByRole('toolbar', { name: 'Stop to paint' })
+    await expect(toolbar.getByRole('button')).toHaveCount(3)
+    expect(await names(dots(page))).toEqual([
+      expect.stringMatching(/^Stop 1, #0A0F2C, 0%$/), expect.stringMatching(/^Stop 2, #27348B, \d+%$/), expect.stringMatching(/^Stop 3, #6E6BFF, 100%$/),
     ])
+    expect(await targetOf(page)).toEqual([1])
+    await expect(dot(page, 2)).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('a dot press makes its stop the target without leaving the section, and the next chip paints it', async ({ page }) => {
+    watch(page, 'a designer aiming at the last stop')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await dot(page, 3).click()
+    expect(await targetOf(page)).toEqual([3])
+    await expect(head(page)).toHaveText('Painting stop 3 of 3')
+    await expect(statusLine(page)).toHaveText('Press a colour to paint stop 3.')
+    await expect(stopSelect(page, 3), 'the stop list follows').toHaveAttribute('aria-pressed', 'true')
+    await expect(dot(page, 3), 'focus stays in the ramp').toBeFocused()
+    await chip(page, 'Accent 500').click()
+    await expect(hexOf(page, 3)).toHaveText('#3FAFA0')
+    await expect(hexOf(page, 1)).toHaveText(SEED_STOPS[0])
+  })
+
+  test('Enter and Space on a focused dot set the target', async ({ page }) => {
+    watch(page, 'a keyboard user choosing a stop')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await dot(page, 3).focus()
+    await page.keyboard.press('Enter')
+    expect(await targetOf(page)).toEqual([3])
+    await dot(page, 2).focus()
+    await page.keyboard.press('Space')
+    expect(await targetOf(page)).toEqual([2])
+  })
+
+  test('the keyboard path: Tab to the ramp, right arrow to stop 2, Tab to the chips, Enter paints stop 2', async ({ page }) => {
+    watch(page, 'a keyboard user painting the second stop')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    // A press on the section's heading puts the next Tab just after it.
+    await page.locator('#grd-avail-label').click()
+    await page.keyboard.press('Tab')
+    await expect(dot(page, 1), 'the ramp has one tab stop: the target dot').toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect(dot(page, 2)).toBeFocused()
+    expect(await targetOf(page), 'the arrow also aims the paint').toEqual([2])
+    await page.keyboard.press('Tab')
+    await expect(chips(page).first(), 'Tab leaves the ramp for the chips').toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(hexOf(page, 2)).toHaveText('#2F6BFF')
+    await expect(hexOf(page, 1), 'stop 1 was not painted').toHaveText(SEED_STOPS[0])
+    await expect(chips(page).first(), 'focus stays on the chip').toBeFocused()
+  })
+
+  test('Home and End go to the first and last stop', async ({ page }) => {
+    watch(page, 'a keyboard user jumping along the ramp')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await dot(page, 1).focus()
+    await page.keyboard.press('End')
+    await expect(dot(page, 3)).toBeFocused()
+    expect(await targetOf(page)).toEqual([3])
+    await page.keyboard.press('Home')
+    await expect(dot(page, 1)).toBeFocused()
+    expect(await targetOf(page)).toEqual([1])
+  })
+})
+
+test.describe('Available colours · the chips are one tab stop', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('one chip takes Tab, arrows move between them, and Tab back finds the last one used', async ({ page }) => {
+    watch(page, 'a keyboard user crossing a long chip row')
+    await seed(page, { colors: THIRTEEN, tints: current(THIRTEEN) })
+    await open(page)
+    // 13 palette chips and 11 shades, one tab stop between them.
+    await expect(chips(page)).toHaveCount(24)
+    await expect(section(page).locator('.grd-chip[tabindex="0"]')).toHaveCount(1)
+    await expect(section(page).locator('.grd-chip[tabindex="-1"]')).toHaveCount(23)
+
+    const focused = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') || null)
+    await dot(page, 1).focus()
+    await page.keyboard.press('Tab')
+    await expect.poll(focused).toMatch(/^Primary 500, #/)
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(focused).toMatch(/^Accent 500, #/)
+    await page.keyboard.press('End')
+    await expect.poll(focused).toMatch(/^Primary 950, #/)
+    await page.keyboard.press('Home')
+    await expect.poll(focused).toMatch(/^Primary 500, #/)
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(focused).toMatch(/^Secondary 500, #/)
+
+    // One Tab leaves the row altogether, not on to the next chip.
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => !!document.activeElement?.closest('.grd-avail-zone'))).toBe(false)
+    // And Shift+Tab comes back to the chip that was last used.
+    await page.keyboard.press('Shift+Tab')
+    await expect.poll(focused).toMatch(/^Secondary 500, #/)
+  })
+})
+
+test.describe('Available colours · the status line is where the eye is', () => {
+  for (const [w, h] of [[768, 1024], [390, 844]]) {
+    test.describe(`at ${w}px, touch`, () => {
+      test.use({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
+
+      // Measure first and take no screenshot: a full-page or element screenshot in
+      // a touch context turns pointer: coarse off for the page.
+      test('a chip press changes the ramp dot and the status line in view, with no scroll', async ({ page }) => {
+        watch(page, 'a designer on a phone painting stop 1')
+        await seed(page, { colors: THIRTEEN })
+        await open(page)
+        expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'on the coarse-pointer rules').toBe(true)
+        const secondary = chip(page, 'Secondary 500')
+        await secondary.scrollIntoViewIfNeeded()
+        await expect(dot(page, 1)).toBeVisible()
+        const read = () => page.evaluate(() => {
+          const box = (sel) => document.querySelector(sel).getBoundingClientRect()
+          const sec = box('.grd-avail')
+          const dotEl = document.querySelector('.grd-ramp-dot[data-stop="0"] .grd-ramp-dot-vis')
+          const status = box('#grd-avail-status')
+          const inView = (r) => r.top >= 0 && r.bottom <= window.innerHeight
+          const inSection = (r) => r.top >= sec.top - 0.5 && r.bottom <= sec.bottom + 0.5
+          return {
+            y: window.scrollY,
+            dotColour: getComputedStyle(dotEl).backgroundColor,
+            statusText: document.getElementById('grd-avail-status').textContent,
+            dotIn: inView(dotEl.getBoundingClientRect()) && inSection(dotEl.getBoundingClientRect()),
+            statusIn: inView(status) && inSection(status) && status.height > 0,
+          }
+        })
+        const before = await read()
+        expect(before.dotColour).toBe('rgb(10, 15, 44)')
+        await secondary.tap()
+        await expect(statusLine(page)).toHaveText(words('Stop 1 set to Secondary 500. Next: stop 2.'))
+        // The dot's colour eases for 150ms (not under reduced motion, which this context asks for).
+        await expect.poll(async () => (await read()).dotColour, 'the ramp\'s stop 1 took the colour').toBe('rgb(224, 120, 78)')
+        const after = await read()
+        expect(after.y, 'the page did not scroll').toBe(before.y)
+        expect(after.dotIn, 'the dot is inside the section and on screen').toBe(true)
+        expect(after.statusIn, 'the status line is inside the section and on screen').toBe(true)
+        expect(after.statusText).toMatch(words('Stop 1 set to Secondary 500. Next: stop 2.'))
+      })
+    })
+  }
+})
+
+// ── v2: no palette and one colour: starter pairs, From a project (spec §2.4, T-A5) ──
+test.describe('Available colours · starter pairs', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('one press on a pair sets the first and last stop, and the target goes back to stop 1', async ({ page }) => {
+    watch(page, 'someone with no palette starting from a pair')
+    await seed(page, { colors: [] })
+    await open(page)
+    await dot(page, 3).click()
+    expect(await targetOf(page)).toEqual([3])
+    await section(page).getByRole('button', { name: 'Harbour night, #0B1B3A to #3D7BFF' }).click()
+    await expect(hexOf(page, 1)).toHaveText('#0B1B3A')
+    await expect(hexOf(page, 3)).toHaveText('#3D7BFF')
+    const middle = (await hexOf(page, 2).textContent()).trim()
+    expect(middle, 'the middle stop was re-mixed, not left as it was').not.toBe(SEED_STOPS[1])
+    expect(new Set([middle, '#0B1B3A', '#3D7BFF']).size, 'and is a new colour, not either end').toBe(3)
+    await expect(statusLine(page)).toHaveText(words('Stops set to Harbour night.'))
+    expect(await targetOf(page)).toEqual([1])
+    await expect(head(page)).toHaveText('Painting stop 1 of 3')
+  })
+
+  for (const [name, left, right] of PAIRS) {
+    test(`${name} sets the ends to ${left} and ${right}`, async ({ page }) => {
+      watch(page, `someone pressing the ${name} pair`)
+      await seed(page, { colors: [] })
+      await open(page)
+      await section(page).getByRole('button', { name: `${name}, ${left} to ${right}` }).click()
+      await expect(hexOf(page, 1)).toHaveText(left)
+      await expect(hexOf(page, 3)).toHaveText(right)
+    })
+  }
+
+  test('with every colour locked a pair is refused too', async ({ page }) => {
+    watch(page, 'someone with locked stops pressing a pair')
+    await seed(page, { colors: [] })
+    await open(page)
+    for (const n of [1, 2, 3]) await lockBtn(page, n).click()
+    const pair = pairs(page).first()
+    await expect(pair).toHaveAttribute('aria-disabled', 'true')
+    await pair.click({ force: true })
+    for (const n of [1, 2, 3]) await expect(hexOf(page, n)).toHaveText(SEED_STOPS[n - 1])
+    await expect(statusLine(page)).toHaveText('Every colour is locked.')
+  })
+
+  test('a starter colour paints in order, like a palette chip', async ({ page }) => {
+    watch(page, 'someone with no palette pressing starter colours')
+    await seed(page, { colors: [] })
+    await open(page)
+    await section(page).getByRole('button', { name: /^Starter blue, #/ }).click()
+    await expect(hexOf(page, 1)).toHaveText('#2F6BFF')
+    await expect(statusLine(page)).toHaveText(words('Stop 1 set to Starter blue. Next: stop 2.'))
+  })
+})
+
+test.describe('Available colours · From a project', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+  const PROJECT = {
+    id: 'proj-harbour', name: 'Harbour rebrand', createdAt: '2026-09-01T09:00:00.000Z', updatedAt: '2026-09-01T09:00:00.000Z',
+    design: { palette: { base: '#0B1B3A', harmony: 'auto', extraColors: [], activeIdx: 0, colors: ['#0B1B3A', '#3D7BFF', '#CFEFE6'] } },
+  }
+  const fromSelect = (page) => section(page).getByRole('button', { name: /^From a project/ })
+
+  test('signed in with a saved project: the select lists it and swaps the chip row', async ({ page }) => {
+    watch(page, 'a signed-in designer with a saved palette and no current one')
+    await signIn(page, { plan: 'free', projects: [PROJECT] })
+    await seed(page, { colors: [] })
+    await open(page)
+    await expect(pairs(page)).toHaveCount(6)
+    await expect(fromSelect(page)).toBeVisible()
+    await chooseMenuOption(page, fromSelect(page), { label: 'Harbour rebrand' })
+    const row = section(page).getByRole('group', { name: 'Colours from Harbour rebrand' })
+    await expect(row.getByRole('button')).toHaveCount(3)
+    expect(await names(row.getByRole('button'))).toEqual([
+      'Harbour rebrand colour 1, #0B1B3A', 'Harbour rebrand colour 2, #3D7BFF', 'Harbour rebrand colour 3, #CFEFE6',
+    ])
+    await expect(pairs(page), 'the pairs row gave its place to the project colours').toHaveCount(0)
+    await expect(section(page).getByRole('group', { name: 'Colours', exact: true })).toHaveCount(0)
+    await row.getByRole('button').nth(1).click()
+    await expect(hexOf(page, 1)).toHaveText('#3D7BFF')
+    await expect(statusLine(page)).toHaveText(words('Stop 1 set to Harbour rebrand colour 2. Next: stop 2.'))
+  })
+
+  test('signed out there is no select, and the pairs and starter colours are all there is', async ({ page }) => {
+    watch(page, 'a signed-out visitor with no palette')
+    await seed(page, { colors: [] })
+    await open(page)
+    await expect(pairs(page)).toHaveCount(6)
+    await expect(section(page).getByRole('button', { name: /From a project/ })).toHaveCount(0)
+  })
+
+  test('signed in with no saved palette there is no select either', async ({ page }) => {
+    watch(page, 'a new signed-in account')
+    await signIn(page, { plan: 'free', projects: 0 })
+    await seed(page, { colors: [] })
+    await open(page)
+    await expect(pairs(page)).toHaveCount(6)
+    await expect(section(page).getByRole('button', { name: /From a project/ })).toHaveCount(0)
+  })
+})
+
+test.describe('Available colours · the old Shuffle tip is gone', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+  test('nothing says "Shift-click to pick" or "Hold to pick for Shuffle"', async ({ page }) => {
+    watch(page, 'someone looking for the pool on the chips')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    // POSITIVE CONTROL: the head is drawn and says what the section is doing instead.
+    await expect(head(page)).toHaveText('Painting stop 1 of 3')
+    await expect(page.getByText(/Shift-click to pick for Shuffle|Hold to pick for Shuffle/)).toHaveCount(0)
+    expect(await page.evaluate(() => [...document.querySelectorAll('[title],[aria-label]')]
+      .filter((e) => /pick for Shuffle|picked for shuffle/i.test(`${e.getAttribute('title')} ${e.getAttribute('aria-label')}`)).length)).toBe(0)
   })
 })
 
