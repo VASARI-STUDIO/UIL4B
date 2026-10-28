@@ -93,6 +93,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, .45);
 }
 .grd .grd-handle.is-active .grd-handle-dot { border-color: var(--t0); }
+/* Selected with others: a ring outside the dot, so it reads without colour. */
+.grd .grd-handle.is-sel .grd-handle-dot { border-color: var(--t0); box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
 .grd .grd-handle.is-locked .grd-handle-dot { border-style: double; }
 .grd .grd-handle:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
 /* The live position, over the handle while it moves. White on a near-black
@@ -181,6 +183,27 @@
    12", eleven mono cells) and right-aligned, so the header does not shift as it
    scrolls. */
 .grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
+/* "3 selected" and its Clear / Done button sit in the Stops head row, which the
+   flip button already makes 26px (44 on touch), so showing them moves nothing. */
+.grd .grd-sel-count { margin-right: 6px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--tl-ink); }
+.grd .grd-sel-clear {
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--btn-radius);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--tl-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.grd .grd-sel-clear:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-sel-clear:active { background: var(--tl-wash-on); }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-sel-clear:hover { background: var(--tl-wash-2); }
+}
 .grd .grd-stop {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) 26px 26px;
@@ -193,6 +216,9 @@
   background: transparent;
 }
 .grd .grd-stop.is-on { background: var(--tl-row-on); }
+/* A stop in a multi-selection: the wash above, plus a ring round its swatch, so
+   the state is never the wash alone. */
+.grd .grd-stop.is-multi .grd-stop-swatch { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-stop-swatch {
   flex: 0 0 auto;
   width: 28px;
@@ -228,6 +254,9 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .grd .grd-stop-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
 .grd .grd-stop-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--tl-ink); }
@@ -292,6 +321,9 @@
   border-radius: 50%;
   color: oklch(0.98 0 0);
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
 }
 .grd .grd-chip:active { transform: scale(0.97); }
@@ -300,6 +332,19 @@
 .grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
 .grd .grd-chips--shades .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
+/* Picked for the Shuffle pool: a dashed 2px ring just inside the chip, in the
+   chip's own ink (white or near-black), so it reads on any colour and never
+   collides with the outer ring and tick that mark the stop's colour. */
+.grd .grd-chip.is-picked { position: relative; }
+.grd .grd-chip.is-picked::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 2px dashed currentColor;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.grd .grd-chips--shades .grd-chip.is-picked::after { inset: 2px; border-width: 1.5px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-chip:hover { border-color: var(--tl-line-on); }
 }
@@ -676,6 +721,7 @@
   }
   .grd .grd-row--angle { height: 76px; }
   .grd .grd-iconbtn { width: 44px; height: 44px; }
+  .grd .grd-sel-clear { height: 44px; min-width: 44px; }
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
   .grd .grd-hex { height: 44px; font-size: 16px; }
@@ -710,3 +756,58 @@
   .grd .grd-preset-swatch,
   .grd .grd-stop-swatch { forced-color-adjust: none; }
 }
+
+/* ── Shuffle settings: a popover from 768px, a bottom sheet below ──────────
+   Below 768px the component draws the shared .tl-sheet-layer (tool-layout.css),
+   portalled to <body>: a fixed panel inside the toolbar would be positioned
+   against the toolbar's backdrop-filter, not the screen. Only the popover is
+   styled here. The wrapper anchors it to its button. Pills reuse the tool's own.
+   The body is shared by the popover, the sheet and the More menu's copy, and the
+   sheet renders in .tl-sheet-layer outside .grd, so everything inside the body
+   is scoped by .grd-shuf-body (and the title / inline wrapper by their own
+   classes), never by .grd. */
+.grd .grd-shuf-wrap { position: relative; display: inline-flex; }
+.grd .tl-pop.grd-shuf { width: 320px; right: auto; left: 0; display: grid; gap: 12px; padding: 12px; }
+.grd-shuf-inline { display: grid; gap: 12px; padding: 8px 12px 12px; }
+.grd-shuf-body { display: grid; gap: 12px; }
+.grd .grd-shuf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.grd-shuf-title { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
+/* A setting narrows what Random makes: the toolbar button wears a wash and a
+   dot, and the More menu's copy says so beside its title. */
+.grd .tl-btn.grd-shuf-btn { position: relative; }
+.grd .tl-btn.grd-shuf-btn.is-narrowed { background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+.grd .grd-shuf-btn.is-narrowed::after {
+  content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--tl-link); forced-color-adjust: none;
+}
+.grd-shuf-inline-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.grd-shuf-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--tl-dim); }
+.grd-shuf-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--tl-link); forced-color-adjust: none; }
+.grd-shuf-body .grd-shuf-row { display: grid; gap: 6px; }
+.grd-shuf-body .grd-shuf-k { font-size: 12px; color: var(--tl-dim); }
+.grd-shuf-body .tl-pills { flex-wrap: wrap; }
+.grd-shuf-body .grd-shuf-keep {
+  display: inline-flex; align-items: center; gap: 8px; justify-self: start;
+  min-height: 32px; padding: 0 10px; border: 1px solid var(--tl-line); border-radius: var(--btn-radius);
+  background: transparent; color: var(--tl-ink); font: inherit; font-size: 12.5px; cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-standard);
+}
+.grd-shuf-body .grd-shuf-keep.is-on { background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+.grd-shuf-body .grd-shuf-keep:focus-visible,
+.grd-shuf-body .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd-shuf-body .grd-shuf-hint { margin: -6px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
+@media (pointer: coarse) {
+  .grd-shuf-body .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
+  .grd-shuf-body .grd-shuf-keep { min-height: 44px; }
+  .grd .grd-shuf-x { width: 44px; height: 44px; }
+}
+:where(html[data-reduced-motion="true"]) .grd-shuf-body .grd-shuf-keep { transition: none !important; }
+
+/* The Available colours head row is the height of its tallest possible content
+   (the "Clear picks" button), so picking colours never makes the panel taller. */
+.grd .grd-avail > .tl-sec-head { min-height: 26px; }
+/* The way in to picking, shown while nothing is picked. It takes the place of
+   the picks controls in the same row, so nothing moves. */
+.grd .grd-avail > .tl-sec-head .tl-sec-label { flex: 0 0 auto; white-space: nowrap; }
+.grd .grd-avail-tip { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--tl-dim); }
+@media (pointer: coarse) { .grd .grd-avail > .tl-sec-head { min-height: 44px; } }
