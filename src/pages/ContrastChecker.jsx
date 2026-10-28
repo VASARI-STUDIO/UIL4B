@@ -8,6 +8,7 @@ import {
 import useMediaQuery from '../hooks/useMediaQuery'
 import { useProject } from '../contexts/ProjectContext'
 import { roleLabel } from '../utils/paletteRoles'
+import { parseHandoff } from '../utils/contrastHandoff'
 import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness } from '../utils/colors'
 import { PAIR_VIEWS, legendLede } from '../utils/palettePairSizes'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
@@ -220,6 +221,18 @@ export default function ContrastChecker({ onCopy }) {
     fg: normaliseHex(searchParams.get('fg')) || '#6B7280',
     bg: normaliseHex(searchParams.get('bg')) || '#FFFFFF',
   }))
+  // The Palette Builder adds where it came from and what each side is in the
+  // palette (utils/contrastHandoff). Read once like the pair, so a reload of the
+  // same address keeps both the pair and the way back. A role is only kept when
+  // its side's colour came in the address too, or it would name the default grey.
+  const [handoff] = useState(() => {
+    const h = parseHandoff(searchParams)
+    return {
+      ...h,
+      fgRole: normaliseHex(searchParams.get('fg')) ? h.fgRole : null,
+      bgRole: normaliseHex(searchParams.get('bg')) ? h.bgRole : null,
+    }
+  })
   const [fgInput, setFgInput] = useState(seed.fg)
   const [fg, setFg] = useState(seed.fg)
   const [bgInput, setBgInput] = useState(seed.bg)
@@ -307,6 +320,22 @@ export default function ContrastChecker({ onCopy }) {
 
   const current = target === 'text' ? fg : bg
 
+  // A side keeps the role it arrived with only while it still holds the colour
+  // that came with it; once it is changed it is no longer that palette colour.
+  const fgRole = fg === seed.fg ? handoff.fgRole : null
+  const bgRole = bg === seed.bg ? handoff.bgRole : null
+  // Opened from the Palette Builder: the toolbar's way back names the palette
+  // and says plainly that a fix made here stays here.
+  const back = handoff.from === 'palette'
+    ? {
+        to: '/create/palette',
+        label: 'Back to palette',
+        text: 'Palette',
+        hint: "Back to your palette. Fixes here don't change it yet.",
+        history: false,
+      }
+    : undefined
+
   // ── Taking the result away ──
   const resultText = () => [
     `Text ${fg} on background ${bg}`,
@@ -345,6 +374,10 @@ export default function ContrastChecker({ onCopy }) {
       className="cc"
       title="Contrast Checker"
       titleId="cc-title"
+      back={back}
+      data-from={handoff.from || undefined}
+      data-fg-role={fgRole || undefined}
+      data-bg-role={bgRole || undefined}
       primary={<ExportMenu label="Copy" icon="copy" items={copyItems} />}
     >
       <ToolGrid>
