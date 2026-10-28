@@ -64,6 +64,9 @@ async function open(browser, { width, height = 900, touch = false, theme = 'dark
     } catch { /* private mode */ }
   }, [theme, appearance])
   const page = await ctx.newPage()
+  // CPU_THROTTLE=4 slows this page's CPU 4x (Chromium's own throttle), to see how a spec holds up on a slow CI runner.
+  const throttle = Number(process.env.CPU_THROTTLE)
+  if (throttle > 1) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: throttle })
   watch(page, 'a visitor on the homepage')
   return { ctx, page }
 }
@@ -382,39 +385,50 @@ test.describe("card 3's shelf stacking while a pick moves", () => {
   // both covers in the same frame: the leaving front cover stays on top for the first half, and the
   // two never tie. These read the computed z-index and opacity of the three covers on every frame.
 
+  /** The length of a move; every delay and transition on the shelf is over by then. */
+  const MOVE_MS = 240
+  /** Just before / after the 120ms midpoint, a frame's clock may sit this close to it without the order being asserted. */
+  const HOLD_UNTIL = 115
+  const FLIPPED_FROM = 125
+
   /**
-   * Make the picks in the page (the page draws the new state on the next frame, which is "frame 1" of that pick)
-   * and read the three covers on every animation frame until `until` ms after the first pick.
-   * picks: [{ index, at }] with `at` the ms since the start (the first is 0).
-   * Returns every frame's time, z-index, opacity and data-pos for the three covers, and `pickFrames`: the
-   * index in `frames` of the frame each pick was made in (it is read before the page draws the pick).
+   * Make one pick in the page and read the three covers on every animation frame until the shelf's
+   * transitions are over. Each frame carries `t`, the ms on the pick's own animation clock (the
+   * currentTime of the transitions the pick started), not the wall clock: a slow runner draws fewer
+   * frames, but a frame at t = 130 shows what the shelf looks like 130ms into the move whenever it was drawn.
+   * Returns every frame's `t`, z-index, opacity and data-pos for the three covers (the last frame is read
+   * once the transitions are over and has t = MOVE_MS), `startPos` (the data-pos of the covers before the
+   * pick, comma-joined) and `timedOut` if the page never drew the pick.
    */
-  const sampleShelf = (page, picks, until) => page.evaluate(({ picks, until }) => new Promise((resolve) => {
+  const playShelf = (page, index, moveMs) => page.evaluate(({ index, moveMs }) => new Promise((resolve) => {
     const cardEl = document.querySelectorAll('.sp-stack-card')[2]
-    const radioEls = [...cardEl.querySelectorAll('[role="radio"]')]
+    const radioEl = cardEl.querySelectorAll('[role="radio"]')[index]
     const imgs = [...cardEl.querySelectorAll('.sp-shelf img')]
+    const moving = () => document.getAnimations().filter((a) => a instanceof CSSTransition && imgs.includes(a.effect?.target) && a.playState !== 'finished')
+    const startPos = imgs.map((el) => el.dataset.pos).join()
     const frames = []
-    const pickFrames = []
-    const picked = []
-    let next = 0
-    // The clock starts at the first frame's own timestamp: a frame's timestamp can be earlier than a
-    // performance.now() taken before it, which would push the first pick on to the second frame.
     let t0 = null
+    let clicked = false
     const tick = (now) => {
       if (t0 === null) t0 = now
-      while (next < picks.length && now - t0 >= picks[next].at) {
-        radioEls[picks[next].index].click()
-        pickFrames.push(frames.length)
-        picked.push(Math.round(now - t0))
-        next++
-      }
+      if (!clicked) { radioEl.click(); clicked = true }
+      const running = moving()
       const cs = imgs.map((el) => getComputedStyle(el))
-      frames.push({ t: Math.round(now - t0), z: cs.map((c) => c.zIndex), o: cs.map((c) => Number(c.opacity)), pos: imgs.map((el) => el.dataset.pos) })
-      if (now - t0 < until) requestAnimationFrame(tick)
-      else resolve({ pickFrames, frames, picked })
+      const pos = imgs.map((el) => el.dataset.pos)
+      const read = (t) => ({ t, z: cs.map((c) => c.zIndex), o: cs.map((c) => Number(c.opacity)), pos })
+      if (pos.join() === startPos) {
+        // The page has not drawn the pick yet (a slow machine can take a while).
+        if (now - t0 > 15000) return resolve({ startPos, frames, timedOut: true })
+      } else if (running.length === 0) {
+        frames.push(read(moveMs))
+        return resolve({ startPos, frames, timedOut: false })
+      } else {
+        frames.push(read(Math.max(...running.map((a) => Number(a.currentTime) || 0))))
+      }
+      requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
-  }), { picks, until })
+  }), { index, moveMs })
 
   /** The cover (its DOM index) in front in frame `i`. */
   const frontIn = (frames, i) => frames[i].pos.indexOf('front')
@@ -448,6 +462,50 @@ test.describe("card 3's shelf stacking while a pick moves", () => {
     started.forEach((a) => a.cancel())
     return { before, running, frames }
   }, { index, times })
+
+  /**
+   * Make one pick, hold the shelf `gap` ms into its move, make a second pick there, and read the three
+   * covers at exact times after the second pick. The page's clock is not what puts the second pick
+   * at 60ms: the first pick's transitions are paused and moved to `gap` on their own clock, so a slow
+   * runner cannot land the second pick after the midpoint (a real-time timer did, at up to 300ms).
+   * The second pick starts its own transitions from where the paused ones are; every running
+   * transition is then paused and moved to each time in turn (those the first pick left running are
+   * `gap` ahead of the ones the second pick started).
+   * Returns `held`, the clock and phase ('before' while it holds) of each z-index step the first pick had when the second was made,
+   * the covers' state `before` the first pick and `atSecond` when the second was made, and `frames`.
+   */
+  const seekTwoPicks = (page, first, second, gap, times) => page.evaluate(async ({ first, second, gap, times }) => {
+    const cardEl = document.querySelectorAll('.sp-stack-card')[2]
+    const imgs = [...cardEl.querySelectorAll('.sp-shelf img')]
+    const radioEls = cardEl.querySelectorAll('[role="radio"]')
+    const twoFrames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const shelfAnims = () => document.getAnimations().filter((a) => imgs.includes(a.effect?.target))
+    const read = (t) => {
+      const cs = imgs.map((el) => getComputedStyle(el))
+      return { t, z: cs.map((c) => c.zIndex), o: cs.map((c) => Number(c.opacity)), pos: imgs.map((el) => el.dataset.pos) }
+    }
+    const before = read(0)
+    radioEls[first].click()
+    await twoFrames()
+    const firstSet = shelfAnims()
+    firstSet.forEach((a) => a.pause())
+    firstSet.forEach((a) => { a.currentTime = gap })
+    const held = firstSet.filter((a) => a.transitionProperty === 'z-index').map((a) => ({ clock: a.currentTime, phase: a.currentTime < a.effect.getComputedTiming().delay ? 'before' : 'after' }))
+    const atSecond = read(gap)
+    radioEls[second].click()
+    await twoFrames()
+    const all = shelfAnims()
+    const carried = all.filter((a) => firstSet.includes(a))
+    const fresh = all.filter((a) => !firstSet.includes(a))
+    all.forEach((a) => a.pause())
+    const frames = times.map((t) => {
+      carried.forEach((a) => { a.currentTime = gap + t })
+      fresh.forEach((a) => { a.currentTime = t })
+      return read(t)
+    })
+    all.forEach((a) => a.cancel())
+    return { before, held, atSecond, frames }
+  }, { first, second, gap, times })
 
   /** Every 10ms from the pick to 320ms, then 420ms (every move and delay is over by 240ms). */
   const EVERY_10MS = [...Array.from({ length: 33 }, (_, i) => i * 10), 420]
@@ -487,18 +545,28 @@ test.describe("card 3's shelf stacking while a pick moves", () => {
 
   test('the leaving front cover stays above the arriving one until the midpoint, then they swap and never tie', async ({ browser }) => {
     const { ctx, page } = await openShelf(browser)
-    const { pickFrames, frames: all } = await sampleShelf(page, [{ index: 1, at: 0 }], 320)
-    expect(pickFrames, 'the pick was made on the first frame read').toEqual([0])
-    const oldFront = frontIn(all, 0)
-    // The first frame that draws the pick: a slow machine can take more than one frame to draw it, so look for it.
-    const drawn = all.findIndex((f) => f.pos.indexOf('front') !== oldFront)
-    expect(drawn, 'the pick brought another cover to the front').toBeGreaterThan(0)
-    const arriving = frontIn(all, drawn)
-    // Times are taken from that frame. How many frames a runner draws in 320ms is the machine's, so only two are asked for here;
-    // the dense reading, every 10ms, is the next test's.
-    const frames = all.slice(drawn).map((f) => ({ ...f, t: f.t - all[drawn].t }))
-    expect(frames.length, 'frames read from the pick on').toBeGreaterThanOrEqual(2)
-    expectStepOrder(frames, oldFront, arriving)
+    const { startPos, frames, timedOut } = await playShelf(page, 1, MOVE_MS)
+    expect(timedOut, 'the page drew the pick').toBe(false)
+    expect(frames.length, 'frames read from the pick on (as many as the machine draws)').toBeGreaterThanOrEqual(2)
+    // The first frame read is the one that draws the pick: the cover in front there is the arriving one, and the leaving one is the one the shelf started with.
+    const leaving = startPos.split(',').indexOf('front')
+    const arriving = frontIn(frames, 0)
+    expect(leaving, 'a cover started in front').toBeGreaterThan(-1)
+    expect(arriving, 'the pick brought another cover to the front').not.toBe(leaving)
+    // The contract is per frame, read on the move's own clock: before the midpoint the leaving cover is above, after it the arriving one is.
+    // How many frames land on either side is the machine's, so the dense reading (every 10ms) is the next test's.
+    const hold = frames.filter((f) => f.t < HOLD_UNTIL)
+    expect(hold.length, 'frames read inside the hold (the pick is drawn on the first frame, at about 0ms)').toBeGreaterThanOrEqual(1)
+    expect(hold.filter((f) => !(z(f, leaving) > z(f, arriving))).map((f) => `${f.t}ms z=${f.z}`), 'frames inside the hold where the leaving cover is not above').toEqual([])
+    const after = frames.filter((f) => f.t > FLIPPED_FROM)
+    expect(after.filter((f) => !(z(f, arriving) > z(f, leaving))).map((f) => `${f.t}ms z=${f.z}`), 'frames past the midpoint where the arriving cover is not above').toEqual([])
+    expect(frames.filter((f) => z(f, leaving) === z(f, arriving)).map((f) => `${f.t}ms z=${f.z}`), 'frames where the two covers share a z-index').toEqual([])
+    const last = frames[frames.length - 1]
+    expect(z(last, arriving), 'arriving cover z-index at the end').toBe(3)
+    expect(z(last, leaving), 'leaving cover z-index at the end').toBe(1)
+    const flipAt = frames.findIndex((f) => z(f, arriving) > z(f, leaving))
+    expect(flipAt, 'the arriving cover reaches the top').toBeGreaterThan(0)
+    expect(frames.slice(flipAt).every((f) => z(f, arriving) > z(f, leaving)), 'the order holds once flipped').toBe(true)
     await ctx.close()
   })
 
@@ -534,16 +602,18 @@ test.describe("card 3's shelf stacking while a pick moves", () => {
 
   test('a second pick 60ms into the first keeps every cover visible and ends with the new front on top (3) and the others at 1', async ({ browser }) => {
     const { ctx, page } = await openShelf(browser)
-    const { pickFrames, frames: all, picked } = await sampleShelf(page, [{ index: 1, at: 0 }, { index: 2, at: 60 }], 520)
-    const oldFront = frontIn(all, 0)
-    const a = frontIn(all, pickFrames[0] + 1)
-    const b = frontIn(all, pickFrames[1] + 1)
-    const frames = all.slice(1)
+    const GAP = 60
+    const { before, held, atSecond, frames } = await seekTwoPicks(page, 1, 2, GAP, EVERY_10MS)
+    const oldFront = frontIn({ 0: before }, 0)
+    const a = frontIn({ 0: atSecond }, 0)
+    const b = frontIn(frames, 0)
     expect(new Set([oldFront, a, b]).size, 'three different covers came to the front in turn').toBe(3)
-    expect(picked[1], 'the second pick landed before the midpoint of the first').toBeLessThan(120)
+    // The second pick is made 60ms into the first on the first pick's own clock, so before its midpoint (120): a z-index step was running and was held there.
+    expect(held.length, 'the first pick had a z-index step running when the second was made').toBeGreaterThan(0)
+    expect(held.map((h) => h.clock), `the second pick landed ${GAP}ms into the first, on its own clock`).toEqual(held.map(() => GAP))
+    expect(held.map((h) => h.phase), 'the first pick was still holding the old z-index (before its flip) when the second was made').toEqual(held.map(() => 'before'))
     expect(Math.min(...frames.flatMap((f) => f.o)), 'the faintest cover in any frame').toBeGreaterThan(0)
     // The first pick's cover never reaches the top: its pick was replaced before its flip.
-    const z = (f, i) => Number(f.z[i])
     expect(frames.some((f) => z(f, a) > z(f, oldFront) && z(f, a) > z(f, b)), 'the replaced pick never took the top').toBe(false)
     const last = frames[frames.length - 1]
     expect(last.z.map(Number), 'final z-index of each cover').toEqual([0, 1, 2].map((i) => (i === b ? 3 : 1)))
