@@ -131,7 +131,7 @@ async function toolbarAction(page, name) {
  * has no room for the button.
  */
 async function openSettings(page) {
-  const trigger = page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Shuffle settings', exact: true })
+  const trigger = page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings(, narrowed)?$/ })
   if ((await trigger.count()) && (await trigger.first().isVisible())) {
     await trigger.first().click()
     const dialog = page.getByRole('dialog', { name: 'Shuffle settings' })
@@ -385,9 +385,9 @@ for (const w of [390, 360]) {
 
     test('the toolbar has no room for the button, so the settings sit in the More menu', async ({ page }) => {
       await open(page)
-      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Shuffle settings', exact: true })).toHaveCount(0)
+      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings(, narrowed)?$/ })).toHaveCount(0)
       const scope = await openSettings(page)
-      await expect(scope.locator('.grd-shuf-title')).toHaveText('Random makes')
+      await expect(scope.locator('.grd-shuf-title')).toHaveText('What Random and Shuffle make')
       for (const g of ['Type', 'Stops']) await expect(group(scope, g)).toBeVisible()
       await expect(scope.getByRole('button', { name: 'Keep the angle' })).toBeVisible()
       await expect(scope.getByText('Tap to add or remove.')).toBeVisible()
