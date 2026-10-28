@@ -21,10 +21,13 @@ export function textSizeClass(px, weight) {
   return 'body'
 }
 
-/** The help line under the legend chips, for this unrounded ratio. */
-export const legendLede = (ratio) => (failingSizes(ratio).length
-  ? 'The largest part that misses its test is outlined. Pick a test to outline every part.'
-  : 'Every test passes. Pick a test to outline every part.')
+/** The help line under the legend chips, for this unrounded ratio. The three
+ *  tests are the AA ones, so a pair that clears them but not AAA (7:1) says
+ *  "Every AA test passes", not "Every test". */
+export const legendLede = (ratio) => {
+  if (failingSizes(ratio).length) return 'The largest part that misses its test is outlined. Pick a test to outline every part.'
+  return `Every ${ratio >= 7 ? '' : 'AA '}test passes. Pick a test to outline every part.`
+}
 
 /** The class ids a pair of this ratio fails. Compares the unrounded ratio. */
 export function failingSizes(ratio) {
@@ -72,6 +75,6 @@ export const PAIR_VIEWS = [
 // wrapper and the words in a span inside it: the marking skips a box that has
 // text of its own, so a labelled button is measured as a UI part and as text.
 export const UI_PARTS = {
-  interface: '.ro-navico, .ro-navbar, .ro-menuico, .ro-card, .ro-toggle, .ro-select, .ro-chev, .ro-focus, .ro-check, .ro-shift, .ro-btn--outline, .ro-btn--fill',
+  interface: '.ro-navico, .ro-navbar, .ro-menuico, .ro-card, .ro-toggle, .ro-select, .ro-chev, .ro-focus, .ro-input, .ro-check, .ro-shift, .ro-btn--outline, .ro-btn--fill',
   specimen: '.sp-btn, .sp-btn svg',
 }

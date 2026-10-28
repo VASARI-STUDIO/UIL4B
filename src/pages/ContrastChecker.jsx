@@ -446,33 +446,31 @@ export default function ContrastChecker({ onCopy }) {
           </ToolSection>
 
           <ToolSection label="Nearest passing colours" className="cc-fixes-sec">
-            {/* The section is always as tall as its fullest state (two fixes under a
-                two-line lede): a hidden copy of that state shares the cell with
-                what is showing, so the page does not move when the pair changes.
-                Its words are CSS generated content, so they are in no one's
-                page text: not a screen reader's, a find, or a test's. */}
+            {/* The section reserves a fixed height, so the swatches below it do not
+                jump as the pair changes: a hidden copy of the fullest state shares
+                the cell with what is showing. Its rows use the real classes and
+                buttons at the longest real wording ("Lighten", the 4.5:1 lede, and
+                "background"), so it wraps wherever a live row wraps. From 901px
+                it holds the lede and one row (the page is as tall as its main
+                column there, so the panel does not set it); below that it holds
+                the lede and two rows, because the panel sits in the page flow.
+                Its words are CSS generated content, so they are in no one's page
+                text: not a screen reader's, a find, or a test's. */}
             <div className="cc-fixes-body">
               <div className="cc-fixes-ghost" aria-hidden="true">
                 <p className="cc-lede" data-t="To reach AA (4.5:1) for body text, change one colour:" />
                 <div className="cc-fixes">
-                  <div className="cc-fixg">
-                    <span className="cc-fixg-chip" />
-                    <span className="cc-fix-desc">
-                      <span className="cc-fixg-line" data-t="Darken background to #FFFFFF" />
-                      <span className="cc-fixg-ratio" data-t="4.50:1" />
-                    </span>
-                    <span className="cc-fixg-use" />
-                    <span className="cc-fixg-copy" />
-                  </div>
-                  <div className="cc-fixg">
-                    <span className="cc-fixg-chip" />
-                    <span className="cc-fix-desc">
-                      <span className="cc-fixg-line" data-t="Darken background to #FFFFFF" />
-                      <span className="cc-fixg-ratio" data-t="4.50:1" />
-                    </span>
-                    <span className="cc-fixg-use" />
-                    <span className="cc-fixg-copy" />
-                  </div>
+                  {['text', 'background'].map((side) => (
+                    <div key={side} className="cc-fix">
+                      <span className="cc-fix-chip" />
+                      <span className="cc-fix-desc">
+                        <span className="cc-fix-line"><span data-t={`Lighten ${side} to `} /><strong data-t="#DDDDDD" /></span>
+                        <span className="cc-fix-ratio" data-t="4.50:1" />
+                      </span>
+                      <ToolButton variant="quiet" className="cc-fix-use" tabIndex={-1}><span data-t="Use" /></ToolButton>
+                      <ToolButton variant="square" icon="copy" className="cc-fix-copy" tabIndex={-1} />
+                    </div>
+                  ))}
                 </div>
               </div>
               <div className="cc-fixes-live">

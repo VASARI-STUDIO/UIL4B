@@ -241,3 +241,119 @@ test.describe('Contrast Checker · the ratio on a narrow screen', () => {
     }
   })
 })
+
+// ── Fix round 1 ──────────────────────────────────────────────────────────────
+//
+//   R1  a view whose chunk fails to load can be tried again, and then it renders
+//   R2  the Interface frame holds the whole view on a phone (390, 375, 360, 320)
+//   R3  the fixes reserve is the same height as the fullest live state, so the
+//       swatches below it do not move when the wording is the longest
+//
+// MUTATIONS:
+//   R1  make retryPairExample() a no-op in views/registry.js (the stub stays cached)
+//   R2  add 40px of padding-bottom to `.ro .ro-main` in Interface.css (the buttons pass the frame)
+//   R3  shorten the ghost row wording in ContrastChecker.jsx ("Lighten background to " to "Darken text to ")
+const CHUNK_RE = /\/assets\/Interface-[\w-]{8}\.js$/
+
+test.describe('Contrast Checker · a view that did not load', () => {
+  test('R1: the failure names the view, and Try again fetches it and draws it', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    await context.addInitScript(() => { try { localStorage.setItem('vs-t', 'light') } catch { /* private mode */ } })
+    const p = await context.newPage()
+    // No watch(): the aborted download is the point, and it logs a console error.
+    await p.route(CHUNK_RE, (route) => route.abort('failed'))
+    await go(p, '/create/contrast')
+    const fail = p.locator('.cc-pv-fail')
+    await expect(fail, 'the stub is in the frame').toBeVisible()
+    await expect(fail).toContainText("This view didn't load.")
+    await expect(fail).not.toContainText('example')
+    await expect(p.locator('.cc-pv[data-scene="interface"] .ro')).toHaveCount(0)
+    // The fields and the numbers keep working while the picture is missing.
+    await p.locator('#cc-fg').fill('#000000')
+    await expect(p.locator('.cc-ratio-num')).toContainText('21')
+    // The frame is not announced as a picture while it holds a button.
+    await expect(p.locator('.cc-pv')).not.toHaveAttribute('role', 'img')
+    const retry = fail.getByRole('button', { name: 'Try again' })
+    await expect(retry).toBeVisible()
+
+    await p.unroute(CHUNK_RE)
+    await retry.click()
+    await expect(p.locator('.cc-pv[data-scene="interface"] .ro'), 'the view renders after Try again').toHaveCount(1)
+    await expect(p.locator('.cc-pv-fail')).toHaveCount(0)
+    await expect(p.locator('.cc-pv')).toHaveAttribute('role', 'img')
+    await expect.poll(() => p.locator('.cc-pv [data-size]').count(), { message: 'the view was sorted into tests again' }).toBeGreaterThan(3)
+    await context.close()
+  })
+})
+
+test.describe('Contrast Checker · Interface on a phone', () => {
+  for (const [width, height] of [[390, 844], [375, 667], [360, 740], [320, 568]]) {
+    test(`R2: the whole Interface view and the email address sit inside the frame at ${width}`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height, phone: true })
+      watch(page, `a phone ${width}px wide`)
+      await expect(page.locator('.cc-pv[data-scene="interface"] .ro-foot')).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      // Read before any element screenshot: those turn pointer:coarse off.
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'POSITIVE CONTROL: a touch context').toBe(true)
+      const read = await page.evaluate(() => {
+        const pv = document.querySelector('.cc-pv')
+        const frame = document.querySelector('.cc-frame').getBoundingClientRect()
+        const foot = document.querySelector('.ro-foot').getBoundingClientRect()
+        const inv = document.querySelector('.ro-inv')
+        const input = document.querySelector('.ro-input').getBoundingClientRect()
+        const text = inv.getBoundingClientRect()
+        return {
+          over: pv.scrollHeight - pv.clientHeight, footPast: foot.bottom - frame.bottom,
+          emailCut: inv.scrollWidth - inv.clientWidth, emailPast: text.right - (input.right - 1),
+        }
+      })
+      expect(read.over, `the view is ${read.over}px taller than its frame`).toBeLessThanOrEqual(0)
+      expect(read.footPast, 'the buttons end past the frame').toBeLessThanOrEqual(0)
+      expect(read.emailCut, 'the email address is cut').toBeLessThanOrEqual(0)
+      expect(read.emailPast, 'the email address runs past its box').toBeLessThanOrEqual(0)
+      await ctx.close()
+    })
+  }
+})
+
+test.describe('Contrast Checker · the fixes reserve', () => {
+  test('R3: the reserve holds the fullest live state at 1440 and 390, so the swatches never move below it', async ({ browser }) => {
+    for (const vp of [{ width: 1440, height: 900, phone: false }, { width: 390, height: 844, phone: true }]) {
+      const { ctx, page } = await open(browser, vp)
+      watch(page, `a window ${vp.width}px wide`)
+      await page.evaluate(() => document.fonts.ready)
+      // Two fixes under the 4.5:1 lede is the fullest state; the reserve is that at 390 and one row from 901px.
+      const tops = []
+      for (const fg of ['#AAAAAA', '#949494', '#767676', '#000000', '#AAAAAA']) {
+        await page.locator('#cc-fg').fill(fg)
+        await expect(page.locator('.cc-ratio-num')).not.toHaveText('')
+        const read = await page.evaluate(() => ({
+          ghost: document.querySelector('.cc-fixes-ghost').getBoundingClientRect().height,
+          live: document.querySelector('.cc-fixes-live').getBoundingClientRect().height,
+          swatches: Math.round(document.querySelector('.cc-swatches').getBoundingClientRect().top + scrollY),
+        }))
+        expect(read.live, `${fg}: the live fixes are ${read.live}px and the reserve ${read.ghost}px`).toBeLessThanOrEqual(read.ghost + 1)
+        tops.push({ fg, ...read })
+      }
+      if (vp.width < 901) {
+        const ys = tops.map((t) => t.swatches)
+        expect(Math.max(...ys) - Math.min(...ys), JSON.stringify(tops)).toBeLessThanOrEqual(1)
+      }
+      await ctx.close()
+    }
+  })
+
+  test('the panel at 1440x900 is as tall as its content, so "From your palette" is whole', async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width: 1440, height: 900 })
+    watch(page, 'someone on a laptop')
+    await page.evaluate(() => document.fonts.ready)
+    const read = await page.evaluate(() => {
+      const panel = document.querySelector('.cc-panel')
+      return { clip: panel.scrollHeight - panel.clientHeight, overflowY: getComputedStyle(panel).overflowY, swatches: document.querySelector('.cc-swatches').getBoundingClientRect().bottom, panel: panel.getBoundingClientRect().bottom }
+    })
+    expect(read.clip, 'the panel scrolls inside itself').toBeLessThanOrEqual(0)
+    expect(read.overflowY).toBe('visible')
+    expect(read.swatches, 'the swatches end inside the panel').toBeLessThanOrEqual(read.panel)
+    await ctx.close()
+  })
+})

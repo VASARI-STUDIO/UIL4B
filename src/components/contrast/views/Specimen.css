@@ -1,7 +1,8 @@
 /* The Specimen view (Specimen.jsx). Colour is the pair only: text takes the
  * scene's --pv-text, the ground its --pv-canvas. Rules sit under .sp so they
  * outrank the scene reset in palette-preview.css whichever loads first. Under
- * 560px the heading and the gaps shrink so the whole specimen fits the 440px
+ * 560px the heading and the gaps shrink and the lines sit from the top (a centred
+ * stack looks adrift in a tall narrow frame), so the whole specimen fits the 440px
  * frame down to 320px wide. */
 
 .sp{display:grid;align-content:center;gap:var(--s-4);height:100%;padding:var(--s-6);color:var(--pv-text)}
@@ -13,6 +14,6 @@
 .sp .sp-btn>span{font-size:14px;line-height:1.3}
 
 @container pvs (max-width:559px){
-  .sp{gap:var(--s-3);padding:var(--s-4)}
+  .sp{align-content:start;gap:var(--s-3);padding:var(--s-4)}
   .sp .sp-h{font-size:32px}
 }

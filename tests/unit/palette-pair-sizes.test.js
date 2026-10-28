@@ -6,7 +6,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   BOLD_WEIGHT, LARGE_BOLD_PX, LARGE_PX, OUTLINE_CANDIDATES, PAIR_VIEWS, SIZE_CLASSES, UI_PARTS,
-  failingSizes, pickOutlineColour, textSizeClass,
+  failingSizes, legendLede, pickOutlineColour, textSizeClass,
 } from '../../src/utils/palettePairSizes.js'
 
 test('the thresholds are the ones WCAG states: 24px, or 18.66px in bold', () => {
@@ -84,4 +84,18 @@ test('the pick is always one of the candidates, and the first wins a tie', () =>
   }
   assert.equal(pickOutlineColour('#ffffff', '#000000', ['#1D63D1', '#1d63d1']), '#1D63D1', 'equal scores keep the earlier one')
   assert.equal(pickOutlineColour('#ffffff', '#000000', ['#abcdef']), '#abcdef')
+})
+
+// The legend's three tests are the AA ones (4.5, 3, 3), so "every test" is only
+// true once the pair also clears AAA (7:1). Boundary values, worked by hand.
+test('the legend line says "Every AA test passes" until the pair also clears AAA', () => {
+  assert.match(legendLede(4.5), /^Every AA test passes\./, '4.5:1 clears AA, not AAA')
+  assert.match(legendLede(6.99), /^Every AA test passes\./, 'just under 7:1')
+  assert.match(legendLede(7), /^Every test passes\./, '7:1 clears AAA too')
+  assert.match(legendLede(21), /^Every test passes\./)
+  assert.match(legendLede(4.49), /^The largest part that misses its test is outlined\./, 'under 4.5:1 body text fails')
+})
+
+test('the Interface view lists the input box inside the focus ring as a UI part', () => {
+  assert.match(UI_PARTS.interface, /(^|, )\.ro-input(,|$)/)
 })

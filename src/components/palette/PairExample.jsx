@@ -8,12 +8,12 @@
 // same way the Palette Builder's legend sorts by role (data-role). At rest the
 // largest part of each class the pair fails is outlined; choosing a legend chip
 // outlines every part of that class.
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { contrastRatio } from '../../utils/colors'
 import { pairRoles, pvVars } from '../../utils/palettePreviewRoles'
 import { PAIR_VIEWS, UI_PARTS, failingSizes, pickOutlineColour, textSizeClass } from '../../utils/palettePairSizes'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
-import { PAIR_EXAMPLES } from '../contrast/views/registry'
+import { PAIR_EXAMPLES, retryPairExample } from '../contrast/views/registry'
 import '../../styles/pages/palette-preview.css'
 
 const ownTextNodes = (el) => [...el.childNodes].filter((n) => n.nodeType === 3 && n.nodeValue.trim())
@@ -121,13 +121,19 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
   const Body = PAIR_EXAMPLES[viewId]
   const rootRef = useRef(null)
   const failKey = failingSizes(contrastRatio(fg, bg)).join(',')
+  // A view whose chunk failed shows a stub with a Try again button. It reports
+  // itself here, so the frame stops presenting itself as a picture (a button
+  // inside role="img" is hidden from a screen reader) and nothing is marked.
+  const [failed, setFailed] = useState(false)
+  const [, setTries] = useState(0)
+  const retryView = useCallback(() => { retryPairExample(viewId); setTries((n) => n + 1) }, [viewId])
 
   // Re-marked when the pair or the chosen class changes, when the example
   // finishes loading (its nodes arrive after this effect) and when the width
   // changes (a container query can move a piece across a size boundary).
   useEffect(() => {
     const root = rootRef.current
-    if (!root) return undefined
+    if (!root || failed) return undefined
     const failing = failKey ? failKey.split(',') : []
     let frame = 0
     const run = () => {
@@ -140,7 +146,7 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(run)
     ro?.observe(root)
     return () => { cancelAnimationFrame(frame); mo.disconnect(); ro?.disconnect() }
-  }, [viewId, failKey, highlight, roles])
+  }, [viewId, failKey, highlight, roles, failed])
 
   // A pinned class can sit below the fold of a tall example: bring its first
   // visible part into view (instantly under reduced motion), and leave the page
@@ -162,11 +168,11 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
       data-scene={viewId}
       data-mode={roles.mode}
       data-pair="true"
-      role="img"
-      aria-label={`${view.name} example painted in your text and background colours`}
+      role={failed ? undefined : 'img'}
+      aria-label={failed ? undefined : `${view.name} example painted in your text and background colours`}
     >
       <Suspense fallback={<div className="cc-pv-wait" aria-hidden="true" />}>
-        <Body />
+        <Body onRetry={retryView} onFailed={setFailed} />
       </Suspense>
     </div>
   )
