@@ -25,6 +25,7 @@ const indexes = JSON.parse(read('firestore.indexes.json')).indexes
 const firebaseJson = JSON.parse(read('firebase.json'))
 
 const QUEUE_API = 'src/utils/communityQueueApi.js'
+const ADMIN_PAGE = 'src/pages/Admin.jsx'
 const queueApi = stripJs(read(QUEUE_API))
 const collectionName = /QUEUE_COLLECTION\s*=\s*'([^']+)'/.exec(stripJs(read('src/utils/communityQueue.js')))[1]
 
@@ -61,9 +62,9 @@ function requiredShapes(body) {
   return shapes
 }
 
-function hasIndex({ eq, sortField, dir }) {
+function hasIndex({ eq, sortField, dir }, collection = collectionName) {
   return indexes.some((ix) => {
-    if (ix.collectionGroup !== collectionName || ix.queryScope !== 'COLLECTION') return false
+    if (ix.collectionGroup !== collection || ix.queryScope !== 'COLLECTION') return false
     const f = ix.fields
     if (f.length !== eq.length + 1) return false
     const last = f[f.length - 1]
@@ -83,6 +84,16 @@ test('listQueue (admin community queue) has its composite index', () => {
   const shapes = requiredShapes(functionBody(queueApi, 'listQueue'))
   assert.deepEqual(shapes, [{ eq: ['status'], sortField: 'createdAt', dir: 'DESCENDING' }])
   for (const s of shapes) assert.ok(hasIndex(s), `missing index: ${JSON.stringify(s)} on ${collectionName}`)
+})
+
+test('the Admin Prompts tab query (community-prompts, one status, newest first) has its composite index', () => {
+  const src = stripJs(read(ADMIN_PAGE))
+  assert.ok(/collection\(db,\s*'community-prompts'\)/.test(src), 'the Admin prompts query moved; update this case')
+  const loader = src.slice(src.indexOf('const loadPrompts'), src.indexOf('const selectPromptFilter'))
+  assert.ok(/where\(\s*'status'\s*,\s*'=='/.test(loader), 'the Admin prompts query lost its status filter')
+  assert.ok(/orderBy\(\s*'createdAt'\s*,\s*'desc'\s*\)/.test(loader), 'the Admin prompts query no longer sorts newest first')
+  assert.ok(hasIndex({ eq: ['status'], sortField: 'createdAt', dir: 'DESCENDING' }, 'community-prompts'),
+    'community-prompts needs a status ASC + createdAt DESC index in firestore.indexes.json')
 })
 
 test('listMySubmissions has an index with and without the kind filter', () => {
@@ -113,7 +124,7 @@ function sourceFiles(dir) {
 }
 
 test('no other src/ or api/ query combines where with orderBy, or filters on two inequality fields, unaccounted for', () => {
-  const COVERED = new Set([QUEUE_API])
+  const COVERED = new Set([QUEUE_API, ADMIN_PAGE])
   const INEQUALITY = new Set(['<', '<=', '>', '>=', '!=', 'not-in'])
   const orderedWhere = []
   const multiInequality = []
@@ -127,5 +138,5 @@ test('no other src/ or api/ query combines where with orderBy, or filters on two
   assert.deepEqual(orderedWhere.filter((r) => !COVERED.has(r)), [],
     'a where + orderBy query needs an entry in firestore.indexes.json and a case in this test')
   assert.deepEqual(multiInequality, [], 'inequality filters on different fields need a composite index')
-  assert.deepEqual(orderedWhere, [...COVERED], 'the covered file no longer holds a where + orderBy query')
+  assert.deepEqual([...orderedWhere].sort(), [...COVERED].sort(), 'the covered file no longer holds a where + orderBy query')
 })
