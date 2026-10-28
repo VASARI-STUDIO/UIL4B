@@ -55,7 +55,7 @@ export default function VerifyEmailPrompt({ onVerified, focusAfter, className = 
   const finish = () => {
     if (done.current) return
     done.current = true
-    focusAfterVerified(document, focusAfter)
+    focusAfterVerified(document, focusAfter, rootRef.current)
     onVerified?.()
   }
 
@@ -70,6 +70,7 @@ export default function VerifyEmailPrompt({ onVerified, focusAfter, className = 
 
   const resend = () => {
     if (resendBlocked || !sendVerificationEmail) return
+    setCheckNote('')
     sendLink()
   }
 

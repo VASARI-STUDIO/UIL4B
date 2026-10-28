@@ -216,6 +216,21 @@ test('focus goes to the tool-supplied target, else to <main>, so it never drops 
   assert.equal(focusAfterVerified({ getElementById: () => null }), null, 'no target is not a crash')
 })
 
+test('focus moves only from inside the prompt or <body>, and never scrolls', () => {
+  const calls = []
+  const main = { focus: (opts) => calls.push(opts) }
+  const body = {}
+  const inside = {}
+  const field = {}
+  const root = { contains: (n) => n === inside }
+  const docWith = (active) => ({ body, activeElement: active, getElementById: () => main })
+  assert.equal(focusAfterVerified(docWith(field), null, root), null, 'a field the person is typing in keeps focus')
+  assert.equal(calls.length, 0)
+  assert.equal(focusAfterVerified(docWith(inside), null, root), main)
+  assert.equal(focusAfterVerified(docWith(body), null, root), main)
+  assert.deepEqual(calls, [{ preventScroll: true }, { preventScroll: true }])
+})
+
 // ── The AltText run state ──────────────────────────────────────────────────
 
 function runState() {
@@ -321,6 +336,8 @@ test('a send from one surface puts the same cooldown on the other', async () => 
   assert.equal(store.view('u1').left, VERIFY_RESEND_COOLDOWN_S - 10)
   advance(VERIFY_RESEND_COOLDOWN_S)
   assert.equal(store.view('u1').left, 0)
+  assert.equal(store.view('u1').state, 'idle', 'an old send is not reported as just sent')
+  assert.equal(store.view('u1').prior, 'sent')
   await store.resend('u1', async () => { sends += 1 })
   assert.equal(sends, 2, 'resend is offered again once the cooldown ends')
 })

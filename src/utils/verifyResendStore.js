@@ -40,8 +40,13 @@ export function createResendStore({
 
   const tick = () => {
     const left = secondsLeft(until, now())
-    if (left <= 0) halt()
-    if (left !== snap.left) set({ ...snap, left })
+    // When the cooldown ends the send is no longer news: back to idle, so a
+    // prompt opened minutes later does not say "New link sent.". `prior`
+    // keeps the bar's wording.
+    if (left <= 0) {
+      halt()
+      set({ ...snap, state: snap.state === 'sent' ? 'idle' : snap.state, left: 0 })
+    } else if (left !== snap.left) set({ ...snap, left })
   }
 
   // What `uid` sees: its own state, or idle when the store holds someone else's.

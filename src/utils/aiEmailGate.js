@@ -70,12 +70,18 @@ export function verifiedWhileOpen({ wasOwed, owed, openedFor, uid }) {
 /**
  * The prompt is about to leave the page: put keyboard focus somewhere that
  * stays, so it does not drop to <body>. `pick` may name a better target (the
- * tool's own Generate button); the page's <main> is the fallback. Returns the
+ * tool's own Generate button); the page's <main> is the fallback. Focus moves
+ * only when it is inside the prompt (`root`) or already on <body>: an
+ * auto-continue after verifying in another tab must not pull the caret out of
+ * the field the person is typing in. The page does not scroll. Returns the
  * element focused, or null.
  */
-export function focusAfterVerified(doc, pick) {
+export function focusAfterVerified(doc, pick, root) {
+  const active = doc?.activeElement
+  const inPrompt = !active || active === doc?.body || (root && root.contains?.(active))
+  if (!inPrompt) return null
   const target = pick?.() || doc?.getElementById?.('main') || null
-  target?.focus?.()
+  target?.focus?.({ preventScroll: true })
   return target
 }
 
