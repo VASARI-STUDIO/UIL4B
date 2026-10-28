@@ -693,11 +693,20 @@ export default function Settings({ toast }) {
   // back gesture) returns to the list instead of leaving /settings. A deep
   // link (Plans, the account menu) carries `state.section` and opens the same
   // view; it has no `fromList` flag because there is no list entry behind it.
+  // The account menu, from inside Settings, replaces the current entry and passes
+  // the flag on (PillNav), so it never stacks a second section entry.
   const phoneView = location.state?.section ? 'section' : 'list'
   // Read from callbacks that outlive the render that made them (the sign-in
   // toast action below), which would otherwise navigate to a stale URL.
   const locationRef = useRef(location)
   useEffect(() => { locationRef.current = location })
+  // The toast outlives this page, so its callbacks also ask whether Settings is
+  // still the page before touching the history.
+  const mountedRef = useRef(false)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
   const showSection = (id, { replace = false } = {}) => {
     const here = locationRef.current
     navigate({ pathname: here.pathname, search: here.search, hash: here.hash }, { replace, state: { section: id, fromList: !replace } })
@@ -839,7 +848,7 @@ export default function Settings({ toast }) {
     // Signed in, the replace carries the section too: on a phone the section
     // view is the history state, so a replace that dropped it would land on the
     // list instead of the Account section.
-    navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true, state: user ? { section: 'account' } : location.state })
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true, state: user ? { section: 'account', ...(location.state?.fromList ? { fromList: true } : null) } : location.state })
     const say = (landing) => {
       if (!landing) return
       const action = landing.signIn
@@ -849,10 +858,13 @@ export default function Settings({ toast }) {
               requireLogin('finish verifying your email').then((signedIn) => {
                 // Signed in: land on the account and re-read it (the effect
                 // below), so "Sign in to finish" ends with an answer.
-                if (signedIn) {
+                // Only while this page is still the one on screen: the toast
+                // outlives it, and a replace from here would overwrite whatever
+                // the person went on to.
+                const here = locationRef.current
+                if (signedIn && mountedRef.current && window.location.pathname === here.pathname) {
                   setActive('account')
-                  const here = locationRef.current
-                  navigate({ pathname: here.pathname, search: here.search, hash: here.hash }, { replace: true, state: { section: 'account' } })
+                  navigate({ pathname: here.pathname, search: here.search, hash: here.hash }, { replace: true, state: { section: 'account', ...(here.state?.fromList ? { fromList: true } : null) } })
                   setFinishAfterSignIn(true)
                 }
                 // The toast that held the button is gone; keep focus on the page.

@@ -10,6 +10,11 @@
 //   · a deep link (Plans -> Subscription) goes back to Plans, from the browser's
 //     Back and from the bar's "All settings" followed by Back;
 //   · /settings?verified=1 signed in still lands on Account in its section view;
+//   · the account menu's Manage plan from inside a section replaces that entry (no
+//     third entry), the bar returns to the list, and Back leaves /settings;
+//   · the verified-link toast's Sign in, tapped after leaving Settings, leaves the
+//     URL where the person went;
+//   · at 1440 the Reduced motion switch flips once on Space and once on Enter;
 //   · focus is on the section's heading after opening, and on the row that was
 //     opened after coming back; the page keeps an h1 inside a section;
 //   · at 390 the Pro block comes before Free, the toggle sits over its price and
@@ -38,6 +43,9 @@
 //   closeSection always replacing (never navigate(-1))        -> "the All settings bar from a section opened off the list is the browser's Back"
 //   closeSection always navigate(-1)                          -> "a deep link: the bar leaves the section, and Back still goes to Plans"
 //   `state: user ? { section: 'account' } ...` dropped         -> "a verified link lands on Account in its section view at 390"
+//   PillNav's `replace={isPro && onSettings}` dropped          -> "the account menu from inside a section replaces the entry ..." (history grows by one; Back lands on the first section)
+//   the `mountedRef.current && window.location.pathname === here.pathname` gate dropped from the toast's sign-in -> "the sign-in on the verified-link toast does nothing ..."
+//   an onKeyDown toggling the Reduced motion switch beside its onClick, or the <button> made a <div role="switch"> -> "the Reduced motion switch flips once on Space and once on Enter"
 //   the focus effect removed, or the h2 loses tabIndex={-1}    -> "opening a section moves focus to its heading"
 //   `.stg-back + .stg-title` back to display: none             -> "inside a section the page still has its h1"
 //   tiersStacked always false                                  -> "at 390 Pro comes first ..."
@@ -181,6 +189,61 @@ test.describe('settings on a phone: history and focus', () => {
     await expect(page.locator('#set-account')).toBeVisible()
     await expect(page.locator('.settings-nav')).toBeHidden()
     await expect(page).toHaveURL(SETTINGS)
+  })
+
+  test('the account menu from inside a section replaces the entry: the bar returns to the list and Back leaves /settings', async ({ page }) => {
+    // A push here stacks [list, secA, secB]; the bar then replaces secB with the
+    // list and the browser's Back lands on secA, so Back loops through sections.
+    watch(page, 'a Pro subscriber opening Manage plan from the avatar while in a section')
+    await signIn(page, { plan: 'pro' })
+    await stubPrices(page)
+    await go(page, '/projects')
+    await page.getByRole('button', { name: 'Account and settings' }).click()
+    await page.locator('#pnav-account-pop').getByRole('link', { name: 'Account & settings' }).click()
+    await expect(page).toHaveURL(SETTINGS)
+    await expect(page.locator('.settings-nav')).toBeVisible()
+
+    await page.locator('#settab-privacy').click()
+    await expect(page.locator('#set-privacy')).toBeVisible()
+    const lengthInSection = await page.evaluate(() => history.length)
+
+    await page.getByRole('button', { name: 'Account and settings' }).click()
+    await page.locator('#pnav-account-pop').getByRole('link', { name: 'Manage plan' }).click()
+    await expect(page.locator('#set-support'), 'the menu link did not open Subscription').toBeVisible()
+    expect(await page.evaluate(() => history.length), 'the deep link stacked another entry').toBe(lengthInSection)
+
+    await page.getByRole('button', { name: 'All settings' }).click()
+    await expect(page.locator('.settings-nav')).toBeVisible()
+    await expect(page).toHaveURL(SETTINGS)
+
+    await page.goBack()
+    await expect(page, 'Back from the list did not leave Settings for the page before it').toHaveURL(/\/projects\/?$/)
+    await expect(page.locator('#set-privacy')).toHaveCount(0)
+  })
+
+  test('the sign-in on the verified-link toast does nothing to a page the person has gone on to', async ({ page }) => {
+    // The toast outlives Settings. Its Sign in action used to replace the current
+    // history entry with /settings, whatever page that now was.
+    watch(page, 'a person who left Settings, then tapped Sign in on its toast')
+    await signIn(page, { plan: 'free', emailVerified: true, lateSignIn: true })
+    await go(page, '/settings?verified=1')
+    const toast = page.locator('.toast.show')
+    await expect(toast).toContainText('Sign in to finish')
+
+    await page.locator('.pnav-logo').first().click()
+    await expect(page, 'the logo did not leave Settings').not.toHaveURL(SETTINGS)
+
+    await toast.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+    await page.locator('#ui-login-email').fill('someone@uil4b.test')
+    await page.locator('#ui-login-password').fill('a-long-password')
+    await page.locator('form.auth-form button[type="submit"]').click()
+    await expect(page.locator('#ui-login-title')).toBeHidden()
+    // POSITIVE CONTROL: the sign-in did go through, so a URL that held was not a sign-in that failed.
+    await expect(page.getByRole('button', { name: 'Account and settings' })).toBeVisible()
+    // The action's own follow-up (two frames) has run by now.
+    await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(done)))))
+    await expect(page, 'the toast sign-in pulled the person back to /settings').not.toHaveURL(SETTINGS)
   })
 })
 
@@ -586,5 +649,36 @@ test.describe('settings with a mouse at 1440: Accessibility and Account are as t
     await page.locator('#settab-account').click()
     await expect(page.locator('#set-account')).toBeVisible()
     await expect.poll(() => page.locator('.settings-avatar-edit').evaluate((el) => getComputedStyle(el).opacity)).toBe('0')
+  })
+
+  test('the Reduced motion switch flips once on Space and once on Enter', async ({ page }) => {
+    watch(page, 'a keyboard user turning reduced motion on and off')
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+    await page.locator('#settab-accessibility').click()
+    await expect(page.locator('#set-accessibility')).toBeVisible()
+
+    const sw = page.getByRole('switch', { name: 'Reduced motion' })
+    await sw.focus()
+    await expect(sw).toBeFocused()
+    const start = await sw.getAttribute('aria-checked')
+    const other = start === 'true' ? 'false' : 'true'
+    // Count every write to aria-checked, so a second flip (a key handler beside
+    // the button's own click) shows even when it lands back on the start value.
+    await sw.evaluate((el) => {
+      window.__flips = 0
+      new MutationObserver((rows) => { window.__flips += rows.length }).observe(el, { attributes: true, attributeFilter: ['aria-checked'] })
+    })
+    const settle = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+
+    await page.keyboard.press('Space')
+    await expect(sw, 'Space did not flip the switch').toHaveAttribute('aria-checked', other)
+    await settle()
+    expect(await page.evaluate(() => window.__flips), 'Space flipped it more than once').toBe(1)
+
+    await page.keyboard.press('Enter')
+    await expect(sw, 'Enter did not flip the switch back').toHaveAttribute('aria-checked', start)
+    await settle()
+    expect(await page.evaluate(() => window.__flips), 'Enter flipped it more than once').toBe(2)
   })
 })
