@@ -768,6 +768,17 @@
 .grd-shuf-body { display: grid; gap: 12px; }
 .grd .grd-shuf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .grd-shuf-title { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
+/* A setting narrows what Random makes: the toolbar button wears a wash and a
+   dot, and the More menu's copy says so beside its title. */
+.grd .tl-btn.grd-shuf-btn { position: relative; }
+.grd .tl-btn.grd-shuf-btn.is-narrowed { background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+.grd .grd-shuf-btn.is-narrowed::after {
+  content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--tl-link); forced-color-adjust: none;
+}
+.grd-shuf-inline-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.grd-shuf-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--tl-dim); }
+.grd-shuf-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--tl-link); forced-color-adjust: none; }
 .grd-shuf-body .grd-shuf-row { display: grid; gap: 6px; }
 .grd-shuf-body .grd-shuf-k { font-size: 12px; color: var(--tl-dim); }
 .grd-shuf-body .tl-pills { flex-wrap: wrap; }

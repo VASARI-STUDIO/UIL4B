@@ -70,6 +70,8 @@ const engineFilters = (f) => ({
   types: f.types.includes(ANY) ? [] : f.types,
   counts: f.counts.includes(ANY) ? [] : f.counts,
 })
+// True when any setting narrows what Random and Shuffle may make from the default.
+const isNarrowed = (f) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.keepAngle
 // "Linear and radial", "2, 3 and 4": what the live region says after a press.
 const sentence = (vals) => {
   const t = vals.map((v) => String(v).toLowerCase())
@@ -468,6 +470,7 @@ const SHUFFLE_TITLE = 'What Random and Shuffle make'
 
 function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
   const phone = useMediaQuery(PHONE_QUERY)
+  const narrowed = isNarrowed(filters)
   // A press on the scrim (or Tab leaving the sheet) closes it. When focus is
   // still inside the sheet it goes back to the button first, so a sheet closed
   // by a press does not drop focus to the page.
@@ -493,8 +496,9 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
         ref={triggerRef}
         variant="square"
         icon="sliders-horizontal"
-        aria-label="Shuffle settings"
-        title="Shuffle settings"
+        className={`grd-shuf-btn${narrowed ? ' is-narrowed' : ''}`}
+        aria-label={narrowed ? 'Shuffle settings, narrowed' : 'Shuffle settings'}
+        title={narrowed ? 'Shuffle settings, narrowed' : 'Shuffle settings'}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => (open ? onClose() : onOpen())}
@@ -1479,7 +1483,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           // Too narrow for the button: the same settings sit inline in More.
           menu: () => (
             <div className="grd-shuf-inline">
-              <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
+              <div className="grd-shuf-inline-head">
+                <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
+                {isNarrowed(filters) && <span className="grd-shuf-state">Narrowed</span>}
+              </div>
               <ShuffleBody filters={filters} setFilters={setFilters} />
             </div>
           ),
@@ -1644,9 +1651,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             label="Available colours"
             labelId="grd-avail-label"
             className="grd-avail"
-            aside={chipPicks.length > 0
-              ? <button type="button" className="grd-sel-clear" onClick={clearPicks}>Clear picks</button>
-              : <span className="grd-avail-tip" aria-hidden="true">{coarse ? 'Hold to pick for Shuffle' : 'Shift-click to pick for Shuffle'}</span>}
+            aside={livePicks.length > 0
+              ? (
+                <span className="grd-sec-tools">
+                  <span className="grd-sel-count">{livePicks.length} picked</span>
+                  <button type="button" className="grd-sel-clear" onClick={clearPicks}>Clear picks</button>
+                </span>
+              )
+              :<span className="grd-avail-tip" aria-hidden="true">{coarse ? 'Hold to pick for Shuffle' : 'Shift-click to pick for Shuffle'}</span>}
           >
             <span id="grd-picks-hint" className="sr-only">Shift-click colours to pick them for Shuffle from palette. From the keyboard, press Shift with Enter or Space on a colour. On a touch screen, press and hold.</span>
             <div className="sr-only" role="status">{pickNote}</div>
