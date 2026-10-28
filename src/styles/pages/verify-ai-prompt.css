@@ -61,25 +61,35 @@
   transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) cubic-bezier(.23, 1, .32, 1);
 }
 
-.verify-ai-btn:hover:not([aria-disabled="true"]) { background: var(--hvr); border-color: var(--bh); }
+/* Hover only where there is a hover, so a touch screen does not keep it lit. */
+@media (hover: hover) {
+  .verify-ai-btn:hover:not([aria-disabled="true"]) { background: var(--hvr); border-color: var(--bh); }
+  .verify-ai-btn--primary:hover:not([aria-disabled="true"]) { background: var(--accent-fill-hover); border-color: transparent; }
+}
 
 .verify-ai-btn:active:not([aria-disabled="true"]) { transform: scale(.98); }
 
 .verify-ai-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* aria-disabled rather than disabled, so the button keeps focus while a send is
-   in flight or the cooldown runs. */
-.verify-ai-btn[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
-
 .verify-ai-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: transparent; }
 
-.verify-ai-btn--primary:hover:not([aria-disabled="true"]) { background: var(--accent-fill-hover); border-color: transparent; }
+/* aria-disabled rather than disabled, so the button keeps focus while a send is
+   in flight or the cooldown runs. Muted label and quiet ground, not opacity, so
+   the countdown stays legible. After the variants so it wins over them. */
+.verify-ai-btn[aria-disabled="true"],
+.verify-ai-btn--primary[aria-disabled="true"] {
+  color: var(--t2);
+  background: var(--bg-3);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
 
 .verify-ai-note {
   margin: 12px 0 0;
   font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--t1);
+  overflow-wrap: anywhere;
 }
 
 .verify-ai-note--error { color: var(--err); }
@@ -87,13 +97,15 @@
 /* An empty live region takes no room and no margin. */
 .verify-ai-note:empty { margin: 0; }
 
+/* 44px targets on a phone and on any touch screen, the pair the reminder bar
+   uses. */
+@media (max-width: 520px), (pointer: coarse) {
+  .verify-ai-btn { min-height: 44px; }
+}
+
 @media (max-width: 520px) {
   .verify-ai-actions { width: 100%; }
   .verify-ai-btn { flex: 1 1 140px; }
-}
-
-@media (pointer: coarse) {
-  .verify-ai-btn { min-height: 44px; }
 }
 
 html[data-reduced-motion="true"] .verify-ai-btn:active:not([aria-disabled="true"]) { transform: none; }
