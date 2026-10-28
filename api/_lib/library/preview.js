@@ -28,6 +28,7 @@
 // (serve.js) stay behind the Pro check; this route can only ever return the wash.
 
 import { deflateSync } from 'node:zlib'
+import { refuseUnexpectedQuery } from '../http.js'
 
 export const PREVIEW_WIDTH = 320
 export const PREVIEW_HEIGHT = 74
@@ -206,6 +207,9 @@ export function previewPng(colors, width = PREVIEW_WIDTH, height = PREVIEW_HEIGH
  * @param rows  the library rows to look the id up in (injected so a test needs no module graph)
  */
 export function servePalettePreview(req, res, rows) {
+  // The id is the whole cache key: any other key would be a second cache entry
+  // for the same image and a fresh PNG build.
+  if (refuseUnexpectedQuery(req, res, ['palettePreview'])) return
   const id = req.query?.palettePreview
   const row = typeof id === 'string' && id.length <= 80 ? rows.find((p) => p.id === id) : null
   if (!row || !Array.isArray(row.colors)) {

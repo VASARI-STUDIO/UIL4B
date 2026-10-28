@@ -6,6 +6,15 @@
 // falls back to fonts.google.com/metadata/fonts — which needs no key at all
 // but blocks browser requests via CORS, so it must be fetched server-side.
 
+import { refuseUnexpectedQuery } from './_lib/http.js'
+
+// The parsed catalogue, kept for an hour per warm instance. A CDN miss otherwise
+// downloads and parses the whole Google catalogue again. Only a catalogue that
+// was actually built is kept, so a failed fetch is retried on the next request.
+const CATALOGUE_TTL_MS = 60 * 60 * 1000
+let catalogue = null
+let catalogueAt = 0
+
 const API_KEY =
   process.env.GOOGLE_FONTS_API_KEY ||
   process.env.VITE_GOOGLE_FONTS_API_KEY ||
@@ -152,12 +161,8 @@ async function fromMetadataEndpoint() {
   return fonts.length ? fonts : degraded('Google Fonts metadata', `answered 200 with ${list.length} families, none of which had usable variants`)
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET')
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
+// Fetches the catalogue from the upstream sources, or null when both fail.
+async function loadCatalogue() {
   // METADATA FIRST, WebFonts second. This order is the reverse of what shipped,
   // and the reason is data rather than reliability: the WebFonts API answers
   // with family/category/variants/subsets and nothing else, while the metadata
@@ -189,6 +194,28 @@ export default async function handler(req, res) {
       fonts = await fromWebfontsApi()
     } catch (err) {
       console.error('[api/fonts] WebFonts API threw:', String(err?.message || err).slice(0, 300))
+    }
+  }
+  return fonts
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET')
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // The route reads no query keys. Each distinct query string is its own CDN
+  // cache entry, so an unused key is a way to force a fresh upstream fetch.
+  if (refuseUnexpectedQuery(req, res, [])) return
+
+  const now = Date.now()
+  let fonts = catalogue && now - catalogueAt < CATALOGUE_TTL_MS ? catalogue : null
+  if (!fonts) {
+    fonts = await loadCatalogue()
+    if (fonts) {
+      catalogue = fonts
+      catalogueAt = now
     }
   }
 

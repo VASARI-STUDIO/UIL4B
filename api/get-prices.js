@@ -1,5 +1,6 @@
 import { getStripeServer } from './_lib/stripe.js'
 import { allowedOrigins } from './_lib/origins.js'
+import { refuseUnexpectedQuery } from './_lib/http.js'
 import {
   BILLING_INTERVALS,
   CURRENCY_CODES,
@@ -107,18 +108,33 @@ export default async function handler(req, res) {
   const origin = req.headers.origin
   if (origin && allowedOrigins().includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin)
-    res.setHeader('Vary', 'Origin')
   }
+  // Always, now that the answer is cached: a response stored for a request with
+  // no Origin must not be replayed, without its CORS header, to one that has it.
+  res.setHeader('Vary', 'Origin')
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
+  // The route reads no query keys; an unused one would be a separate CDN entry
+  // and another round of Stripe lookups.
+  if (refuseUnexpectedQuery(req, res, [])) return
+
   try {
-    return res.status(200).json(await fetchPrices())
+    const prices = await fetchPrices()
+    // Live prices may sit in the CDN for five minutes. A table built from the
+    // fallback (Stripe failed or nothing sellable) is kept briefly, so a
+    // recovered Stripe is not hidden behind it.
+    const live = Object.values(prices.availability).some(Boolean)
+    res.setHeader('Cache-Control', live
+      ? 'public, s-maxage=300, stale-while-revalidate=600'
+      : 'public, s-maxage=30')
+    return res.status(200).json(prices)
   } catch (err) {
     console.error('get-prices failed:', err)
+    res.setHeader('Cache-Control', 'public, s-maxage=30')
     return res.status(200).json(responseFromLive())
   }
 }
