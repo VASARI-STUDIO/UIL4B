@@ -590,7 +590,9 @@ export async function goHoldingApp(page, url, untilPainted) {
   let release
   const gate = new Promise((resolve) => { release = resolve })
   page.once('close', release)
+  let held = false
   await page.route(/\/assets\/index-[^/]+\.js(\?.*)?$/, async (route) => {
+    held = true
     await gate
     await route.continue().catch(() => { /* the page closed while the script was held */ })
   })
@@ -599,6 +601,9 @@ export async function goHoldingApp(page, url, untilPainted) {
   const res = await goRaw(page, url, { waitUntil: 'commit' })
   try {
     await untilPainted()
+    // If the entry bundle is renamed, nothing is held and the old race is back
+    // silently; say so instead of passing on luck.
+    if (!held) throw new Error('goHoldingApp: the entry bundle /assets/index-*.js was never requested, so nothing was held')
   } finally {
     release()
   }
