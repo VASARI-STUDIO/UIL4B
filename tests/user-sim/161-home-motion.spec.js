@@ -29,7 +29,7 @@
 // WHAT THIS DOES NOT PROVE: the 4x-throttled frame trace of the spec's T8 (a manual
 // trace, recorded in the PR), and Firefox/Safari (no view timelines there).
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, goHoldingApp, watch } from './helpers.js'
 import { PROOF_STATS } from '../../src/components/spectrum/spectrumFacts.js'
 
 const PERSONA = 'a first-time visitor on the front door'
@@ -223,7 +223,16 @@ test('T1 arriving in-session, the headline leads and the controls and band start
 for (const view of [320, 390, 768, 1440]) {
   test(`T2 the largest paint stays the headline at ${view}px`, async ({ browser }) => {
     const { ctx, page } = await open(browser, view)
-    await go(page, '/')
+    // The app's script is held until the shell's first LCP candidate has been
+    // RECORDED. An entry's `element` reads null once its node has left the
+    // document, and React's createRoot replaces the shell, so on a slow runner the
+    // observer callback ran after the swap and the headline's own paint read as
+    // "(none)". See goHoldingApp in helpers.js. Every later candidate is still
+    // observed live, after hydration.
+    await goHoldingApp(page, '/', () => expect.poll(
+      () => hm(page, () => window.__hm.lcp.length),
+      { message: 'the served shell never produced a largest-contentful-paint entry', timeout: 15000 },
+    ).toBeGreaterThan(0))
     await settled(page)
     // Past SpectrumSearch's first typing beat, so a late candidate would have been recorded.
     await page.waitForTimeout(2500)
