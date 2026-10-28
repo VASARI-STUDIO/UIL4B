@@ -79,10 +79,10 @@ export function lockedRollOptions(engineFilters, locks, current, stops) {
   }
 }
 
-// Positions for `fixed` (a number where the position is locked, else null). A
-// run of free stops is spread evenly between the locked stops either side of it;
-// at an end of the ramp it runs out to 0 or 100. With nothing locked this is the
-// even spread the tool has always used.
+// Positions for `fixed`, listed in ramp order (a number where the position is
+// locked, else null). A run of free stops is spread evenly between the locked
+// stops either side of it; at an end of the ramp it runs out to 0 or 100. With
+// nothing locked this is the even spread the tool has always used.
 export function spacePositions(fixed) {
   const n = fixed.length
   if (n < 2) return fixed.map((p) => p ?? 0)
@@ -101,7 +101,7 @@ export function spacePositions(fixed) {
       if (left == null) p = (right * m) / k
       else if (right == null) p = left + ((100 - left) * (m + 1)) / k
       else p = left + ((right - left) * (m + 1)) / (k + 1)
-      out[i + m] = Math.round(p)
+      out[i + m] = Math.min(100, Math.max(0, Math.round(p)))
     }
     i = j
   }
@@ -109,34 +109,60 @@ export function spacePositions(fixed) {
 }
 
 /**
+ * The stop indexes in ramp order. The array is the order the stops were made in
+ * (a new stop is appended, and Flip or a drag moves a position without moving the
+ * stop), so the ramp order is the order of the positions. A free stop that shares
+ * a position with a locked one goes on the middle side of it, so a lock at 0 or
+ * 100 is never joined by a free stop on the outer side.
+ */
+export function rampOrder(stops) {
+  const at = (i) => Number(stops[i].position) || 0
+  return stops.map((_, i) => i).sort((a, b) => {
+    const d = at(a) - at(b)
+    if (d) return d
+    const la = !!stops[a].lockPosition
+    const lb = !!stops[b].lockPosition
+    if (la === lb) return a - b
+    const lockedFirst = at(a) < 50
+    return la === lockedFirst ? -1 : 1
+  })
+}
+
+/**
  * Build the stops after a roll, honouring each stop's locks.
  *
- * `sample(i)` gives the colour for a stop that is free to change; `count` is the
- * rolled stop count. A colour-locked stop keeps its colour; a position-locked
- * stop keeps its position; a stop with both is untouched. If ANY stop is locked
- * the current count is kept, so no locked stop is dropped.
+ * `sample(r)` gives the colour for the stop at ramp place `r` (0 is the lowest
+ * position) when that stop is free to change; `count` is the rolled stop count.
+ * A colour-locked stop keeps its colour; a position-locked stop keeps its
+ * position; a stop with both is untouched. If ANY stop is locked the current
+ * count is kept, so no locked stop is dropped. The result is in the same array
+ * order as `prev`; only the positions say where each stop sits on the ramp.
  *
  * `closeSeam` is set for a conic roll: locked stops and the cycling of `sample`
  * can leave the last colour off the first, so the last takes the first (or the
- * first takes the last, when only the last is colour-locked).
+ * first takes the last, when only the last is colour-locked). First and last are
+ * the two ends of the ramp.
  */
 export function rebuildStops(prev, sample, count, closeSeam = false) {
   const kept = hasStopLock(prev)
   const n = kept ? prev.length : count
-  const positions = spacePositions(Array.from({ length: n }, (_, i) => (kept && prev[i]?.lockPosition ? prev[i].position : null)))
-  const out = Array.from({ length: n }, (_, i) => {
+  const order = kept ? rampOrder(prev) : Array.from({ length: n }, (_, r) => r)
+  const spaced = spacePositions(order.map((i) => (kept && prev[i].lockPosition ? Number(prev[i].position) || 0 : null)))
+  const out = new Array(n)
+  order.forEach((i, r) => {
     const ex = kept ? prev[i] : undefined
-    return {
-      color: ex?.lockColour ? ex.color : sample(i),
-      position: positions[i],
+    out[i] = {
+      color: ex?.lockColour ? ex.color : sample(r),
+      position: spaced[r],
       lockColour: !!ex?.lockColour,
       lockPosition: !!ex?.lockPosition,
     }
   })
   if (closeSeam && kept && n >= 3) {
-    const last = out[n - 1]
-    if (!last.lockColour) last.color = out[0].color
-    else if (!out[0].lockColour) out[0].color = last.color
+    const first = out[order[0]]
+    const last = out[order[n - 1]]
+    if (!last.lockColour) last.color = first.color
+    else if (!first.lockColour) first.color = last.color
   }
   return out
 }

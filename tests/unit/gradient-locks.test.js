@@ -23,13 +23,17 @@
 //   rebuildStops resamples locked stops when all are locked    -> "with every colour locked the shape still rolls"
 //   setStopLock writes lockColour for kind 'position'          -> "setStopLock flips one lock on the chosen stops only"
 //   spacePositions ignores the locked neighbour                -> "free stops are spread between the locked positions"
+//   rebuildStops spaces in array order (rampOrder = identity)  -> "a position lock on a stop added between the ends ...", "after Flip a lock ...", "a stop locked at 100 is not joined ..."
+//   rebuildStops samples by array index, not ramp place       -> "a position lock on a stop added between the ends ..." (colours c0,c2,c1)
+//   rampOrder drops the tie rule                              -> "a stop locked at 100 is not joined ...", "rampOrder sorts by position ..."
+//   rebuildStops closes the seam on array first/last          -> "a rebuild with array order different from ramp order ..."
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { rollGradient, mulberry32, pickPaletteLook, radialGatePasses } from '../../src/utils/gradientRandom.js'
 import { hexToOklchRaw } from '../../src/components/tool/oklch.js'
 import {
   NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, setStopLock, hasStopLock,
-  parseGeometryLocks, geometryHolds, lockedRollOptions, rebuildStops, spacePositions,
+  parseGeometryLocks, geometryHolds, lockedRollOptions, rebuildStops, spacePositions, rampOrder,
 } from '../../src/utils/gradientLocks.js'
 
 const ROLLS = 200
@@ -177,6 +181,48 @@ test('free stops are spread between the locked positions', () => {
   assert.deepEqual(spacePositions([null, null, 60, null]), [0, 30, 60, 100])
   assert.deepEqual(spacePositions([20, null, null]), [20, 60, 100])
   assert.deepEqual(spacePositions([10, null, 70, null, 90]), [10, 40, 70, 80, 90])
+})
+
+// The array is creation order, not ramp order: a stop added later sits at the end of
+// the array wherever it was dropped, and Flip moves positions without moving stops.
+test('a position lock on a stop added between the ends still lets the ramp reach 100', () => {
+  const stops = [stop('#111111', 0), stop('#222222', 100), stop('#333333', 50, false, true)]
+  const out = rebuildStops(stops, (r) => `c${r}`, 3)
+  assert.deepEqual(out.map((s) => s.position), [0, 100, 50], 'the added stop keeps 50, the first stays at 0 and the second reaches 100')
+  assert.deepEqual(out.map((s) => s.color), ['c0', 'c2', 'c1'], 'colours follow the ramp, not the array')
+})
+
+test('after Flip a lock on the stop now at 100 does not collapse the ramp', () => {
+  const flipped = [stop('#111111', 100, false, true), stop('#222222', 50), stop('#333333', 0)]
+  const out = rebuildStops(flipped, (r) => `c${r}`, 3)
+  assert.deepEqual(out.map((s) => s.position), [100, 50, 0])
+  assert.equal(new Set(out.map((s) => s.position)).size, 3, 'no two stops stack')
+})
+
+test('a stop locked at 100 is not joined by a free stop that comes later in the array', () => {
+  const out = rebuildStops([stop('#111111', 0), stop('#222222', 100, false, true), stop('#333333', 60)], (r) => `c${r}`, 3)
+  assert.deepEqual(out.map((s) => s.position), [0, 100, 50])
+  // Tied at 100: the free stop goes on the inside of the lock, and the other way round at 0.
+  const tie = rebuildStops([stop('#111111', 100, false, true), stop('#222222', 100), stop('#333333', 0)], (r) => `c${r}`, 3)
+  assert.deepEqual(tie.map((s) => s.position), [100, 50, 0])
+  const tie0 = rebuildStops([stop('#111111', 0, false, true), stop('#222222', 0), stop('#333333', 100)], (r) => `c${r}`, 3)
+  assert.deepEqual(tie0.map((s) => s.position), [0, 50, 100])
+})
+
+test('a rebuild with array order different from ramp order keeps the array order and the seam at the ramp ends', () => {
+  // Array: middle, last, first. The first stop on the ramp (index 2) holds the colour.
+  const stops = [stop('#aaaaaa', 50), stop('#bbbbbb', 100), stop('#cccccc', 0, true)]
+  const out = rebuildStops(stops, (r) => `c${r}`, 3, true)
+  assert.deepEqual(out.map((s) => s.position), [50, 100, 0])
+  assert.equal(out[1].color, '#cccccc', 'the ramp end takes the colour of the locked ramp start')
+  assert.equal(out[2].color, '#cccccc')
+  assert.equal(out[0].color, 'c1')
+})
+
+test('rampOrder sorts by position, free beside locked on the inside', () => {
+  assert.deepEqual(rampOrder([stop('#1', 100), stop('#2', 0), stop('#3', 50)]), [1, 2, 0])
+  assert.deepEqual(rampOrder([stop('#1', 100), stop('#2', 100, false, true)]), [0, 1])
+  assert.deepEqual(rampOrder([stop('#1', 0), stop('#2', 0, false, true)]), [1, 0])
 })
 
 test('setStopLock flips one lock on the chosen stops only', () => {
