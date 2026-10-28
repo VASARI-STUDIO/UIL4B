@@ -42,7 +42,7 @@ export default function SaveShareMenu({
   const dialogRef = useRef(null)
   const inputRef = useRef(null)
   const closeRef = useRef(onClose)
-  closeRef.current = onClose
+  useEffect(() => { closeRef.current = onClose })
 
   useEffect(() => {
     if (!focusOnOpen) return
