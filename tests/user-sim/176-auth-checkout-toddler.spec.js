@@ -255,10 +255,13 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
         const bubble = document.querySelector('.global-feedback-btn')
         const drawn = !!bubble && bubble.getClientRects().length > 0
         const root = document.scrollingElement
+        // `behavior: 'instant'` is load-bearing: html carries
+        // `scroll-behavior:smooth` (global.css), so a plain scroll is still
+        // moving when the next line measures, and the submit reads as off screen.
         const steps = {
-          top: () => root.scrollTo(0, 0),
-          'submit at the foot': () => submit.scrollIntoView({ block: 'end' }),
-          bottom: () => root.scrollTo(0, root.scrollHeight),
+          top: () => root.scrollTo({ top: 0, behavior: 'instant' }),
+          'submit at the foot': () => submit.scrollIntoView({ block: 'end', behavior: 'instant' }),
+          bottom: () => root.scrollTo({ top: root.scrollHeight, behavior: 'instant' }),
         }
         const out = { drawn, covered: [], submitBlocked: [], offScreen: [] }
         for (const [name, scroll] of Object.entries(steps)) {
@@ -337,8 +340,8 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the Terms and Privacy links on /login are targets', () => {
-  // MUTATION: in src/styles/pages/auth.css delete `padding:3px 0` from
-  //   `.auth-legal a`. Each link is 15px tall. Make the padding 10px and the
+  // MUTATION: in src/styles/pages/auth.css delete `padding:5px 0` from
+  //   `.auth-legal a`. Each link is 15px tall. Make the padding 12px and the
   //   two boxes overlap at 320, and the overlap check goes red.
   for (const width of [320, 390, 1440]) {
     test(`at ${width} both links are at least 24px tall, clear of each other, and the paragraph did not grow`, async ({ page }, testInfo) => {
@@ -349,16 +352,17 @@ test.describe('the Terms and Privacy links on /login are targets', () => {
       await expect(legal).toBeVisible()
       await legal.scrollIntoViewIfNeeded()
       await page.screenshot({ path: testInfo.outputPath(`legal-${width}.png`) })
-      const boxes = []
-      for (const name of ['Terms', 'Privacy']) {
-        const box = await legal.getByRole('link', { name: new RegExp(`^${name}`) }).boundingBox()
-        expect(box, `${name} link is missing`).not.toBeNull()
-        expect(box.height, `the ${name} link is ${box.height}px tall`).toBeGreaterThanOrEqual(24)
-        boxes.push(box)
+      // One rect per line a link occupies (an inline link that wraps has two).
+      const frags = await page.evaluate(() => [...document.querySelectorAll('.auth-legal a')]
+        .map((a) => [...a.getClientRects()].map((r) => ({ x: r.x, y: r.y, w: r.width, h: r.height }))))
+      expect(frags, 'the Terms and Privacy links are missing').toHaveLength(2)
+      for (const rects of frags) {
+        for (const r of rects) expect(r.h, `a link box is ${r.h}px tall`).toBeGreaterThanOrEqual(24)
       }
-      // Wrapped onto neighbouring lines, the padded boxes must not cover each other.
-      const [a, b] = boxes
-      const overlaps = a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+      // Wrapped onto neighbouring lines, the padded boxes of the two links must
+      // not cover each other.
+      const [as, bs] = frags
+      const overlaps = as.some((a) => bs.some((b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y))
       expect(overlaps, 'the Terms and Privacy boxes overlap').toBe(false)
       // The padding must not move the text: the paragraph is whole 18px lines.
       const lines = (await legal.boundingBox()).height / 18

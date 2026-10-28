@@ -280,7 +280,7 @@ export default function AuthForm({
           )}
 
           {mode !== 'switch' && (
-            <div className={'auth-links' + (showReport ? ' auth-links--report' : '')}>
+            <div className="auth-links">
               {mode === 'login' && (
                 <>
                   <button type="button" className="auth-link" onClick={() => go('signup')} disabled={disabled}>{t('auth.noAccount')} <span className="auth-link-strong">{t('auth.noAccountAction')}</span></button>
