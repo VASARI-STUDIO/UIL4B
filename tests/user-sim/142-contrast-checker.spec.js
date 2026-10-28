@@ -143,6 +143,8 @@ test.describe('Contrast Checker · the first screen of a phone', () => {
     watch(page, 'someone checking a pair on their phone')
     await go(page, '/create/contrast')
     await expect(page.locator('.cc-ratio-num')).toBeVisible()
+    // The view is a lazy chunk: measure once it has drawn, not while it loads.
+    await expect(page.locator('.cc-pv')).toBeVisible()
     const read = await page.evaluate(() => {
       const box = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom) } }
       const tabs = document.querySelector('.pnav-tabs')
