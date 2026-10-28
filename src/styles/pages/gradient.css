@@ -93,6 +93,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, .45);
 }
 .grd .grd-handle.is-active .grd-handle-dot { border-color: var(--t0); }
+/* Selected with others: a ring outside the dot, so it reads without colour. */
+.grd .grd-handle.is-sel .grd-handle-dot { border-color: var(--t0); box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
 .grd .grd-handle.is-locked .grd-handle-dot { border-style: double; }
 .grd .grd-handle:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
 /* The live position, over the handle while it moves. White on a near-black
@@ -181,6 +183,23 @@
    12", eleven mono cells) and right-aligned, so the header does not shift as it
    scrolls. */
 .grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
+/* "3 selected" and its Clear / Done button sit in the Stops head row, which the
+   flip button already makes 26px (44 on touch), so showing them moves nothing. */
+.grd .grd-sel-count { margin-right: 6px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--tl-ink); }
+.grd .grd-sel-clear {
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--tl-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.grd .grd-sel-clear:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .grd .grd-stop {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) 26px 26px;
@@ -193,6 +212,9 @@
   background: transparent;
 }
 .grd .grd-stop.is-on { background: var(--tl-row-on); }
+/* A stop in a multi-selection: the wash above, plus a ring round its swatch, so
+   the state is never the wash alone. */
+.grd .grd-stop.is-multi .grd-stop-swatch { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-stop-swatch {
   flex: 0 0 auto;
   width: 28px;
@@ -676,6 +698,7 @@
   }
   .grd .grd-row--angle { height: 76px; }
   .grd .grd-iconbtn { width: 44px; height: 44px; }
+  .grd .grd-sel-clear { height: 44px; min-width: 44px; }
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
   .grd .grd-hex { height: 44px; font-size: 16px; }
@@ -683,7 +706,7 @@
   .grd .grd-fmt-btn { min-height: 44px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
-  .grd .grd-stop-select { min-height: 44px; }
+  .grd .grd-stop-select { min-height: 44px; -webkit-touch-callout: none; user-select: none; }
   .grd .grd-wheel { width: 76px; height: 76px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }

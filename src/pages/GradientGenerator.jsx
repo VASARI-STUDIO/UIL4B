@@ -13,6 +13,7 @@ import {
 import { sampleStopsOklch } from '../components/tool/oklch'
 import { GRAD_TYPE_WEIGHTS, STYLE_FAMILIES, rollGradient, pickFromPool } from '../utils/gradientRandom'
 import useShiftSelect from '../hooks/useShiftSelect'
+import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
 import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
@@ -512,6 +513,42 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     return DEFAULT_STOPS()
   })
   const [activeStop, setActiveStop] = useState(0)
+  // Stops selected together (indices). Fewer than two is not a multi-selection:
+  // the active stop alone is. `selMode` is the touch way in, where a long press
+  // starts selecting and every tap after it adds or removes a stop.
+  const [picked, setPicked] = useState([])
+  const [selMode, setSelMode] = useState(false)
+  const anchorRef = useRef(0)
+  const coarse = useMediaQuery('(pointer: coarse)')
+  const multi = picked.length >= 2
+  // The stops a colour, lock or delete acts on: the selection, or the active stop.
+  const targets = useMemo(() => (multi ? picked : [activeStop]), [multi, picked, activeStop])
+  // A control on row `i` acts on the whole selection when `i` is part of it.
+  const targetsFor = (i) => (multi && picked.includes(i) ? picked : [i])
+  // The live region is emptied and refilled a tick later, so saying the same
+  // thing twice (pressing the same chip again after the colour was changed
+  // elsewhere) announces twice; an unchanged string would not.
+  const [pickNote, setPickNote] = useState('')
+  const pickNoteTimer = useRef(0)
+  useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
+  const say = useCallback((text) => {
+    setPickNote('')
+    clearTimeout(pickNoteTimer.current)
+    pickNoteTimer.current = setTimeout(() => setPickNote(text), 60)
+  }, [])
+  // One stop, and nothing else, becomes the selection (and the anchor a later
+  // Shift+click ranges from).
+  const selectOnly = useCallback((i) => {
+    setActiveStop(i)
+    setPicked([])
+    setSelMode(false)
+    anchorRef.current = i
+  }, [])
+  const clearSelection = useCallback((announce = true) => {
+    setPicked([])
+    setSelMode(false)
+    if (announce) say('Selection cleared')
+  }, [say])
   const [copied, setCopied] = useState(false)
   const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
   // Interpolation space — the design's GEOMETRY control. OKLCH is its default
@@ -598,7 +635,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       setStops(incoming.stops.map(s => ({ ...s })))
       setType(incoming.type)
       setAngle(incoming.angle)
-      setActiveStop(0)
+      selectOnly(0)
       // A library gradient is drawn in sRGB there, so it opens in sRGB here —
       // the preview matches the card it came from until the person changes it.
       setSpace('srgb')
@@ -643,21 +680,37 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setType(p.type)
     setAngle(p.angle)
     if (p.space) setSpace(p.space)
-    setActiveStop(0)
+    selectOnly(0)
     setFromLibrary(false)
-  }, [])
+  }, [selectOnly])
 
   const updateStop = useCallback((idx, patch) => {
     if (!guardEdit()) return
     setStops(prev => prev.map((s, i) => i === idx ? { ...s, ...patch } : s))
   }, [guardEdit])
 
+  // The same patch on several stops at once (the selection).
+  const updateStops = useCallback((idxs, patch) => {
+    if (!guardEdit()) return
+    setStops(prev => prev.map((s, i) => idxs.includes(i) ? { ...s, ...patch } : s))
+  }, [guardEdit])
+
+  // Move the selection together; it stops as a group at 0 and 100.
+  const moveStops = useCallback((idxs, delta) => {
+    if (!guardEdit()) return
+    setStops(prev => shiftGroup(prev, idxs, delta))
+  }, [guardEdit])
+
   // Toggling a stop's randomise-lock isn't reshaping the gradient — it's a
   // shuffle control, exactly like the ungated type / angle / count locks — so it
-  // bypasses guardEdit and stays available on a gallery gradient.
+  // bypasses guardEdit and stays available on a gallery gradient. On a selected
+  // row it flips every selected stop to the opposite of that row.
   const toggleStopLock = useCallback((idx) => {
-    setStops(prev => prev.map((s, i) => i === idx ? { ...s, locked: !s.locked } : s))
-  }, [])
+    const idxs = targetsFor(idx)
+    const to = !stops[idx]?.locked
+    setStops(prev => prev.map((s, i) => idxs.includes(i) ? { ...s, locked: to } : s))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stops, picked])
 
   // Insert a stop at a given position (0–100), blending the colour from the two
   // stops it lands between. Used by both the "+ Stop" button (midpoint) and a
@@ -683,10 +736,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       const next = [...prev, { color: mixHex(lo.color, hi.color, t), position: Math.round(pct) }]
       return next
     })
-    setActiveStop(idx)
+    selectOnly(idx)
     focusStopRef.current = idx
     return idx
-  }, [stops.length, guardEdit, toast])
+  }, [stops.length, guardEdit, toast, selectOnly])
 
   const addStop = useCallback(() => {
     const sorted = [...stops].sort((a, b) => a.position - b.position)
@@ -704,16 +757,27 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // into its place (or the new last row), so the list does not jump back to row 1.
   // `keepFocus` is set when the keyboard pressed the row's ×: the rows are keyed
   // by index, so the pressed button can unmount, and focus is handed on below.
-  const removeStop = useCallback((idx, keepFocus = false) => {
+  // A selection goes together, but never below two stops: it removes as many as
+  // it can and says why the rest stayed.
+  const removeStops = useCallback((idxs, keepFocus = false) => {
     if (!guardEdit()) return
-    if (stops.length <= MIN_STOPS) {
+    const { remove, blocked } = removable(stops.length, idxs, MIN_STOPS)
+    if (!remove.length) {
       toast?.('A gradient needs at least two stops')
+      say('A gradient needs at least two stops.')
       return
     }
     if (keepFocus) focusRemovedRowRef.current = true
-    setStops(prev => prev.length > MIN_STOPS ? prev.filter((_, i) => i !== idx) : prev)
-    setActiveStop(a => (a > idx ? a - 1 : a === idx ? Math.min(idx, stops.length - 2) : a))
-  }, [guardEdit, stops.length, toast])
+    setStops(prev => prev.length - remove.length >= MIN_STOPS ? prev.filter((_, i) => !remove.includes(i)) : prev)
+    setActiveStop(a => {
+      const shift = remove.filter((r) => r < a).length
+      return remove.includes(a) ? Math.min(a - shift, stops.length - remove.length - 1) : a - shift
+    })
+    setPicked([])
+    setSelMode(false)
+    if (blocked) say('A gradient needs at least two stops.')
+    else if (remove.length > 1) say(`${remove.length} stops removed`)
+  }, [guardEdit, stops.length, toast, say])
 
   const flip = useCallback(() => {
     if (!guardEdit()) return
@@ -731,7 +795,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // The Tints button, the menu key and Shift+F10 have no pointer position:
     // hang the menu off the control and land focus on its first row.
     const fromKeys = fromButton || (!e.clientX && !e.clientY)
-    setActiveStop(idx)
+    selectOnly(idx)
     setTintMenu({
       idx,
       x: fromKeys ? box.left : e.clientX,
@@ -742,7 +806,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       anchor: fromKeys ? e.currentTarget : null,
       returnTo: returnTo || e.currentTarget,
     })
-  }, [])
+  }, [selectOnly])
   const applyTint = useCallback((hex, label) => {
     if (!tintMenu) return
     updateStop(tintMenu.idx, { color: hex })
@@ -791,9 +855,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setStops(rollStops((i) => g.stops[i % g.stops.length].color, g.stops.length))
     setType(g.type)
     if (!filters.keepAngle) setAngle(g.angle)
-    setActiveStop(0)
+    selectOnly(0)
     setFromLibrary(false)
-  }, [rollStops, filters])
+  }, [rollStops, filters, selectOnly])
 
   // ── Available colours ──
   // The palette's colours (de-duplicated without regard to case, in palette
@@ -838,10 +902,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setStops(rollStops((i) => picks[i % picks.length], g.stops.length))
     setType(g.type)
     if (!filters.keepAngle) setAngle(g.angle)
-    setActiveStop(0)
+    selectOnly(0)
     setFromLibrary(false)
     toast?.('Random gradient from your palette')
-  }, [paletteHexes, randomise, rollStops, filters, toast])
+  }, [paletteHexes, randomise, rollStops, filters, toast, selectOnly])
 
   const fromPalette = useCallback(() => {
     if (!canRandomFromPalette) {
@@ -864,19 +928,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     note.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }, [paletteMissing])
 
-  // The live region is emptied and refilled a tick later, so pressing the same
-  // chip again after the colour was changed elsewhere announces again (an
-  // unchanged string would not).
-  const [pickNote, setPickNote] = useState('')
-  const pickNoteTimer = useRef(0)
-  useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
+  // A chip sets the colour of every selected stop, or of the active one.
   const pickColour = useCallback((hex, name) => {
     if (!guardEdit()) return
-    setStops((prev) => prev.map((s, i) => (i === activeStop ? { ...s, color: hex } : s)))
-    setPickNote('')
-    clearTimeout(pickNoteTimer.current)
-    pickNoteTimer.current = setTimeout(() => setPickNote(`Stop ${activeStop + 1} set to ${name}`), 60)
-  }, [guardEdit, activeStop])
+    setStops((prev) => prev.map((s, i) => (targets.includes(i) ? { ...s, color: hex } : s)))
+    say(targets.length > 1 ? `${targets.length} stops set to ${name}` : `Stop ${targets[0] + 1} set to ${name}`)
+  }, [guardEdit, targets, say])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
@@ -1029,7 +1086,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // pointer leaving the rail; `dragIdx` state keeps the handle marked live so
   // its position readout stays on screen for the whole drag.
   const beginStopDrag = useCallback((idx) => {
-    setActiveStop(idx)
+    selectOnly(idx)
     setDragIdx(idx)
     const move = (ev) => {
       const rect = barRef.current?.getBoundingClientRect()
@@ -1047,15 +1104,67 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     window.addEventListener('pointermove', move, { passive: false })
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
-  }, [updateStop])
+  }, [updateStop, selectOnly])
+
+  // A press on a stop (its row, or its handle on the rail) with the modifier
+  // keys a pointer has, or the long-press mode a finger has. A plain press
+  // selects only that stop; Shift selects the run from the anchor along the
+  // rail; Ctrl/Cmd, or any press in touch selection mode, adds or removes one.
+  // Selecting is not an edit, so it never meets guardEdit.
+  const pressStop = useCallback((i, e) => {
+    if (e?.shiftKey && !coarse) {
+      const run = rangeOf(stops, anchorRef.current, i)
+      setActiveStop(i)
+      setPicked(run.length >= 2 ? run : [])
+      if (run.length >= 2) say(`${run.length} stops selected`)
+      return
+    }
+    if (e?.ctrlKey || e?.metaKey || (coarse && selMode)) {
+      const next = toggleIn(multi ? picked : [activeStop], i)
+      if (!next.length) return
+      anchorRef.current = i
+      setActiveStop(next.includes(i) ? i : next[next.length - 1])
+      setPicked(next.length >= 2 ? next : [])
+      say(next.length >= 2 ? `${next.length} stops selected` : '1 stop selected')
+      return
+    }
+    selectOnly(i)
+  }, [coarse, selMode, multi, picked, activeStop, stops, say, selectOnly])
+
+  // Touch: press and hold a row for 450ms to start selecting. The click that
+  // ends the hold is swallowed, and the long-press menu is kept off (the Tints
+  // button is how a finger opens that).
+  const holdRef = useRef({ timer: 0, fired: false })
+  const holdStart = useCallback((i, e) => {
+    holdRef.current.fired = false
+    if (e.pointerType !== 'touch') return
+    clearTimeout(holdRef.current.timer)
+    holdRef.current.timer = setTimeout(() => {
+      holdRef.current.fired = true
+      setSelMode(true)
+      setActiveStop(i)
+      setPicked([])
+      anchorRef.current = i
+      say('Selecting stops. Tap a stop to add or remove it.')
+    }, 450)
+  }, [say])
+  const holdEnd = useCallback(() => clearTimeout(holdRef.current.timer), [])
+  useEffect(() => holdEnd, [holdEnd])
+  // The row's click: the end of a long press selects nothing more.
+  const clickStop = useCallback((i, e) => {
+    if (holdRef.current.fired) { holdRef.current.fired = false; return }
+    pressStop(i, e)
+  }, [pressStop])
 
   const dragStop = useCallback((e, idx) => {
     if (e.button != null && e.button > 0) return // a right-click opens the tints menu, not a drag
     e.preventDefault()
     e.stopPropagation()
+    // Modifier presses and touch selection mode select instead of dragging.
+    if (e.shiftKey || e.ctrlKey || e.metaKey || (coarse && selMode)) { pressStop(idx, e); return }
     if (!guardEdit()) return
     beginStopDrag(idx)
-  }, [beginStopDrag, guardEdit])
+  }, [beginStopDrag, guardEdit, pressStop, coarse, selMode])
 
   // Press empty rail to drop a stop right where you press — on POINTERDOWN, not
   // on the click that ends the gesture. That is the whole fix: the handle exists
@@ -1182,6 +1291,38 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }
   const fmtLabel = EXPORT_FORMATS.find((f) => f.id === effFmt)?.label || 'CSS'
 
+  // Keys inside the stop list. Escape clears the selection; Ctrl/Cmd+A selects
+  // every stop; Shift+Up/Down on a row moves to the next row and extends the
+  // run to it; Delete/Backspace removes a selection.
+  const onStopListKey = (e) => {
+    // The colour picker's popover is a portal, and React events bubble out of it.
+    if (!stopListRef.current?.contains(e.target)) return
+    const row = e.target.closest?.('.grd-stop-select')
+    if (e.key === 'Escape' && (multi || selMode)) {
+      e.preventDefault()
+      clearSelection()
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) {
+      e.preventDefault()
+      if (stops.length < 2) return
+      setPicked(stops.map((_, i) => i))
+      say(`All ${stops.length} stops selected`)
+    } else if (row && e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault()
+      const from = Number(row.dataset.stop)
+      const to = Math.max(0, Math.min(stops.length - 1, from + (e.key === 'ArrowDown' ? 1 : -1)))
+      if (to === from) return
+      if (!multi) anchorRef.current = from
+      const run = rangeOf(stops, anchorRef.current, to)
+      setActiveStop(to)
+      setPicked(run.length >= 2 ? run : [])
+      say(run.length >= 2 ? `${run.length} stops selected` : '1 stop selected')
+      stopListRef.current?.querySelector(`.grd-stop-select[data-stop="${to}"]`)?.focus()
+    } else if (row && multi && picked.includes(Number(row.dataset.stop)) && (e.key === 'Delete' || e.key === 'Backspace')) {
+      e.preventDefault()
+      removeStops(picked, true)
+    }
+  }
+
   return (
     <ToolLayout
       className="grd"
@@ -1282,6 +1423,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               className="grd-rail"
               ref={barRef}
               onPointerDown={railPointerDown}
+              onKeyDown={(e) => { if (e.key === 'Escape' && (multi || selMode)) { e.preventDefault(); clearSelection() } }}
               title="Press the rail to add a stop, then drag to place it"
               role="group"
               aria-label="Gradient stop rail. Press empty space to add a stop and drag to place it."
@@ -1295,29 +1437,34 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     if (el) handleEls.current.set(s.i, el)
                     else handleEls.current.delete(s.i)
                   }}
-                  className={`grd-handle${activeStop === s.i ? ' is-active' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.locked ? ' is-locked' : ''}`}
+                  className={`grd-handle${activeStop === s.i ? ' is-active' : ''}${multi && picked.includes(s.i) ? ' is-sel' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.locked ? ' is-locked' : ''}`}
                   style={{ left: `${s.position}%`, '--grd-stop': s.color }}
                   onPointerDown={(e) => dragStop(e, s.i)}
                   onContextMenu={(e) => openTintMenu(e, s.i)}
-                  onFocus={() => setActiveStop(s.i)}
+                  onFocus={() => (picked.includes(s.i) ? setActiveStop(s.i) : selectOnly(s.i))}
                   onKeyDown={(e) => {
+                    // On a selected handle the arrows, Home and End move the
+                    // whole selection by the same amount.
+                    const group = multi && picked.includes(s.i)
+                    const by = (d) => (group ? moveStops(picked, d) : updateStop(s.i, { position: Math.max(0, Math.min(100, Math.round(s.position) + d)) }))
                     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
                       e.preventDefault()
-                      updateStop(s.i, { position: Math.min(100, Math.round(s.position) + (e.shiftKey ? 10 : 1)) })
+                      by(e.shiftKey ? 10 : 1)
                     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
                       e.preventDefault()
-                      updateStop(s.i, { position: Math.max(0, Math.round(s.position) - (e.shiftKey ? 10 : 1)) })
+                      by(e.shiftKey ? -10 : -1)
                     } else if (e.key === 'Home') {
                       e.preventDefault()
-                      updateStop(s.i, { position: 0 })
+                      by(-100)
                     } else if (e.key === 'End') {
                       e.preventDefault()
-                      updateStop(s.i, { position: 100 })
+                      by(100)
                     } else if ((e.key === 'Delete' || e.key === 'Backspace') && stops.length > 2) {
                       e.preventDefault()
-                      removeStop(s.i)
+                      removeStops(targetsFor(s.i))
                     }
                   }}
+                  aria-pressed={multi ? picked.includes(s.i) : undefined}
                   aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%${s.locked ? ', locked' : ''}`}
                 >
                   <span className="grd-handle-dot" aria-hidden="true" />
@@ -1401,7 +1548,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             label="Stops"
             aside={(
               <span className="grd-sec-tools">
-                {stops.length > 3 && (
+                {multi || selMode ? (
+                  <>
+                    <span className="grd-sel-count">{targets.length} selected</span>
+                    <button type="button" className="grd-sel-clear" onClick={() => clearSelection()}>{selMode ? 'Done' : 'Clear'}</button>
+                  </>
+                ) : stops.length > 3 && (
                   <span className="grd-stops-count">{`${stopScroll.first}–${Math.min(stops.length, stopScroll.first + 2)} of ${stops.length}`}</span>
                 )}
                 <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
@@ -1415,22 +1567,29 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               className={`grd-stops${stopScroll.above ? ' is-above' : ''}${stopScroll.below ? ' is-below' : ''}`}
               role="group"
               aria-label="Stop list"
+              aria-describedby="grd-stops-hint"
               onScroll={syncStopScroll}
+              onKeyDown={onStopListKey}
             >
             {stops.map((s, i) => {
               const role = labelFor(s.color, roleDesign)
+              const inSel = multi ? picked.includes(i) : activeStop === i
               return (
               <div
                 key={i}
-                className={`grd-stop${activeStop === i ? ' is-on' : ''}`}
-                onContextMenu={(e) => openTintMenu(e, i, e.currentTarget.querySelector('.grd-stop-select'))}
+                className={`grd-stop${inSel ? ' is-on' : ''}${multi && inSel ? ' is-multi' : ''}`}
+                onContextMenu={(e) => {
+                  // A finger's long press selects; the Tints button opens the menu there.
+                  if (coarse) { e.preventDefault(); return }
+                  openTintMenu(e, i, e.currentTarget.querySelector('.grd-stop-select'))
+                }}
               >
                 {/* The swatch opens this stop's colour picker. Selecting the
                     stop is the colour/position label beside it. */}
-                <span className="grd-stop-pick" onClick={() => setActiveStop(i)}>
+                <span className="grd-stop-pick" onClick={() => { if (!(multi && picked.includes(i))) selectOnly(i) }}>
                   <ColorPickerPop
                     value={s.color}
-                    onChange={(hex) => updateStop(i, { color: hex.toUpperCase() })}
+                    onChange={(hex) => updateStops(targetsFor(i), { color: hex.toUpperCase() })}
                     ariaLabel={`Pick stop ${i + 1} colour`}
                     triggerClassName="grd-stop-swatch"
                     triggerChildren={<span className="grd-stop-chip" style={{ background: s.color }} aria-hidden="true" />}
@@ -1443,8 +1602,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <button
                   type="button"
                   className="grd-stop-select"
-                  onClick={() => setActiveStop(i)}
-                  aria-pressed={activeStop === i}
+                  data-stop={i}
+                  onClick={(e) => clickStop(i, e)}
+                  onPointerDown={(e) => holdStart(i, e)}
+                  onPointerUp={holdEnd}
+                  onPointerCancel={holdEnd}
+                  onPointerLeave={holdEnd}
+                  aria-pressed={inSel}
                   aria-label={`Select stop ${i + 1}, ${s.color.toUpperCase()}`}
                   aria-describedby={`grd-stop-role-${i}`}
                   title={`${role.label}, ${s.color.toUpperCase()}, ${Math.round(s.position)}%`}
@@ -1460,18 +1624,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   on={!!s.locked}
                   onClick={() => toggleStopLock(i)}
                   className="grd-stop-lock"
-                  label={s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
+                  label={multi && inSel ? `Lock or unlock the ${picked.length} selected stops` : s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
                 />
                 {/* Always drawn, so the row keeps its columns; it only works
                     while there are more than two stops. */}
                 <button
                   type="button"
                   className="grd-iconbtn grd-stop-x"
-                  onClick={(e) => removeStop(i, e.detail === 0)}
+                  onClick={(e) => removeStops(targetsFor(i), e.detail === 0)}
                   aria-disabled={stops.length <= MIN_STOPS || undefined}
                   aria-describedby={stops.length <= MIN_STOPS ? 'grd-stop-min-hint' : undefined}
-                  aria-label={`Remove stop ${i + 1}`}
-                  title={stops.length <= MIN_STOPS ? 'A gradient needs at least two stops' : 'Remove this stop'}
+                  aria-label={multi && inSel ? `Remove the ${picked.length} selected stops` : `Remove stop ${i + 1}`}
+                  title={stops.length <= MIN_STOPS ? 'A gradient needs at least two stops' : multi && inSel ? 'Remove the selected stops' : 'Remove this stop'}
                 >
                   <ToolIcon name="x" size={12} />
                 </button>
@@ -1482,6 +1646,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             {/* The reason the × is inert at two stops. A press also says it in a
                 toast, which is how a finger or the keyboard sees it. */}
             {stops.length <= MIN_STOPS && <span id="grd-stop-min-hint" className="sr-only">A gradient needs at least two stops</span>}
+            <span id="grd-stops-hint" className="sr-only">Shift-click selects a run of stops. Ctrl-click adds or removes one. On a touch screen, press and hold. Shift with the up or down arrow extends the selection, Control A selects all, Escape clears it.</span>
             <ToolButton variant="dashed" icon="plus" iconSize={13} className="grd-add" onClick={addStop} aria-disabled={stops.length >= MAX_STOPS || undefined}>
               {stops.length >= MAX_STOPS ? `${MAX_STOPS} stops is the most` : 'Add a stop'}
             </ToolButton>
@@ -1493,8 +1658,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <span className="grd-pick-swatch">
                   <ColorPickerPop
                     value={selected.color}
-                    onChange={(hex) => updateStop(activeStop, { color: hex.toUpperCase() })}
-                    ariaLabel={`Stop ${activeStop + 1} colour`}
+                    onChange={(hex) => updateStops(targets, { color: hex.toUpperCase() })}
+                    ariaLabel={multi ? `Colour of the ${picked.length} selected stops` : `Stop ${activeStop + 1} colour`}
                     popClassName="grd-cpk-pop"
                     disabled={editLocked}
                     onDisabledClick={guardEdit}
@@ -1502,8 +1667,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 </span>
                 <StopHexInput
                   color={selected.color}
-                  label={`Stop ${activeStop + 1} hex`}
-                  onCommit={(v) => updateStop(activeStop, { color: v })}
+                  label={multi ? `Hex for the ${picked.length} selected stops` : `Stop ${activeStop + 1} hex`}
+                  onCommit={(v) => updateStops(targets, { color: v })}
                 />
                 <button
                   type="button"
@@ -1532,11 +1697,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               max={100}
               step={1}
               onChange={(v) => updateStop(activeStop, { position: v })}
-              display={`${Math.round(selected?.position ?? 0)}%`}
+              display={multi ? 'Mixed' : `${Math.round(selected?.position ?? 0)}%`}
               track={railCss}
               ariaLabel="Stop position"
-              ariaValueText={`${Math.round(selected?.position ?? 0)}%`}
-              disabled={editLocked}
+              ariaValueText={multi ? 'Mixed' : `${Math.round(selected?.position ?? 0)}%`}
+              disabled={editLocked || multi}
             />
           </ToolSection>
 
