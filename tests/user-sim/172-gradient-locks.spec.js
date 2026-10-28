@@ -20,7 +20,7 @@
 //   the EVERY_COLOUR_LOCKED toast dropped from randomise      -> "when every colour is locked ..."
 //   LockMark returns null                                     -> "a locked stop wears a mark on the rail and the ramp"
 //   .grd .grd-iconbtn { width: 44px } removed from coarse     -> "the lock buttons are 44px on a finger"
-//   a lock row given its own height (a new row)               -> "toggling every lock does not change the page height"
+//   a lock row given its own height (a new row)               -> "toggling every lock does not change the page height"  (also the 768 case)
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -62,6 +62,26 @@ const settingsDialog = async (page) => {
   const d = page.getByRole('dialog', { name: 'Shuffle settings' })
   await expect(d).toBeVisible()
   return d
+}
+
+/** The five lock buttons in Selected stop and Geometry, as [scope, what they keep]. */
+const LOCK_PLACES = (page) => [
+  [selectedSection(page), "stop 1's colour"], [selectedSection(page), "stop 1's position"],
+  [geometry(page), 'the type'], [geometry(page), 'the angle'], [geometry(page), 'the interpolation'],
+]
+/** Locking each one in turn moves neither the page, the panel nor Available colours. */
+async function expectLocksKeepHeight(page) {
+  const shape = () => page.evaluate(() => ({
+    page: document.documentElement.scrollHeight,
+    panel: document.querySelector('.tl-panel').getBoundingClientRect().height,
+    avail: document.querySelector('.grd-avail').getBoundingClientRect().height,
+  }))
+  const first = await shape()
+  for (const [scope, thing] of LOCK_PLACES(page)) {
+    await lockIn(scope, thing).click()
+    await settle(page)
+    expect(await shape(), `after locking ${thing}`).toEqual(first)
+  }
 }
 
 test.describe('the locks at 1440', () => {
@@ -216,16 +236,29 @@ test.describe('the locks at 1440', () => {
 
   test('toggling every lock does not change the page height', async ({ page }) => {
     await open(page)
-    const shape = () => page.evaluate(() => ({
-      page: document.documentElement.scrollHeight,
-      panel: document.querySelector('.tl-panel').getBoundingClientRect().height,
-      avail: document.querySelector('.grd-avail').getBoundingClientRect().height,
-    }))
-    const first = await shape()
-    for (const [scope, thing] of [[selectedSection(page), "stop 1's colour"], [selectedSection(page), "stop 1's position"], [geometry(page), 'the type'], [geometry(page), 'the angle'], [geometry(page), 'the interpolation']]) {
-      await lockIn(scope, thing).click()
-      await settle(page)
-      expect(await shape(), `after locking ${thing}`).toEqual(first)
+    await expectLocksKeepHeight(page)
+  })
+})
+
+test.describe('the locks at 768', () => {
+  test.use({ viewport: { width: 768, height: 1024 } })
+
+  test('every lock is there, and toggling them does not change the page height', async ({ page }) => {
+    await open(page)
+    for (const [scope, thing] of LOCK_PLACES(page)) await expect(lockIn(scope, thing), `${thing} lock`).toBeVisible()
+    await expectLocksKeepHeight(page)
+  })
+
+  test('Random keeps a locked colour and a locked type across five presses', async ({ page }) => {
+    await open(page)
+    const before = await hexOfStop(page, 2)
+    await lockIn(stopList(page), "stop 2's colour").click()
+    await geometry(page).getByRole('button', { name: 'Radial', exact: true }).click()
+    await lockIn(geometry(page), 'the type').click()
+    for (let i = 0; i < 5; i++) {
+      await random(page).click()
+      expect(await hexOfStop(page, 2), `Random ${i + 1} colour`).toBe(before)
+      expect(await typeOf(page), `Random ${i + 1} type`).toBe('Radial')
     }
   })
 })
