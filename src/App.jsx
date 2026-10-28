@@ -65,6 +65,8 @@ const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
 // One project's page, /projects/:id.
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
+// The export gallery the brand-kit walkthrough ends on, /projects/:id/export.
+const ProjectExport = lazy(() => import('./pages/ProjectExport'))
 const Checkout = lazy(() => import('./pages/Checkout'))
 const Pricing = lazy(() => import('./pages/Pricing'))
 // /mobile — the Spectrum design's "On mobile" screen. Lazy: it is a second
@@ -560,6 +562,7 @@ function AppInner({ toast }) {
                   guards, and it still guards it. */}
               <Route path="/projects" element={<Projects toast={toast} />} />
               <Route path="/projects/:id" element={<ProjectDetail toast={toast} />} />
+              <Route path="/projects/:id/export" element={<ProjectExport />} />
               {/* Not behind RequireAuth: the order summary and the period choice
                   need no account, so the page renders for everyone and asks for
                   a login only at the payment form, which does. */}

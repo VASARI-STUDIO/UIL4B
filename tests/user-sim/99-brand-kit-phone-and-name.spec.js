@@ -440,8 +440,8 @@ test.describe('Brand kit walkthrough: Name your project', () => {
 
     await field.fill('Harbour Studio')
     await nameForm(page).getByRole('button', { name: 'Save project' }).click()
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
-    await expect(page.getByText('Harbour Studio').first()).toBeVisible()
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
+    await expect(page.getByRole('heading', { name: 'Choose a design for Harbour Studio' })).toBeVisible()
 
     const stored = await page.evaluate(([dk, gk]) => ({
       projects: JSON.parse(localStorage.getItem('vs-projects') || '{}'),
@@ -525,7 +525,7 @@ test.describe('Brand kit walkthrough: Name your project', () => {
     await rail(page).getByRole('button', { name: /^Name your project/ }).click()
     await expect(nameField(page)).toHaveValue('Harbour Studio')
     await nameForm(page).getByRole('button', { name: 'Save project' }).click()
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
     const saved = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat())
     expect(saved).toHaveLength(1)
     expect(saved[0].design.palette.colors).toEqual(SEED_COLOURS)
@@ -554,7 +554,7 @@ test.describe('Brand kit walkthrough: Name your project', () => {
     expect(await storedProjects(page)).toHaveLength(0)
 
     await completeSignIn(page)
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
     await expect(page.getByTestId('brand-kit-save-refusal')).toHaveCount(0)
 
     // Let any second save show itself before counting.
@@ -575,7 +575,7 @@ test.describe('Brand kit walkthrough: Name your project', () => {
     await nameAndAskToSave(page, 'Fourth Kit')
 
     await completeSignIn(page)
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
     await expect(page.getByTestId('brand-kit-save-refusal'), 'a Pro account was told to go Pro').toHaveCount(0)
 
     await page.waitForTimeout(600)
