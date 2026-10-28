@@ -21,6 +21,7 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { allColoursLocked, nextPaintTarget, applyStarterPair } from '../utils/gradientPaint'
+import { NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, setStopLock, parseGeometryLocks, lockedRollOptions, rebuildStops } from '../utils/gradientLocks'
 import { STARTER_PAIRS } from '../data/gradientStarterPairs'
 import MenuSelect from '../components/tool/MenuSelect'
 import { gradientCss, gradientToolUrl, decodeGradientParams } from '../data/gradientGallery'
@@ -63,7 +64,15 @@ const COUNT_OPTIONS = [ANY, 2, 3, 4, 5]
 // `pool` is the colours Shuffle from palette draws from, as upper-case hexes. Empty
 // means every palette colour. An entry saved before the pool existed has none and
 // reads as empty.
-const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], keepAngle: false, pool: [] }
+const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], pool: [] }
+// The geometry locks (type, angle, interpolation) are kept for the session beside
+// the filters. An older filters entry's `keepAngle: true` becomes the angle lock
+// on load (parseGeometryLocks), and the filters no longer carry it.
+const LOCKS_KEY = 'vs-gradient-locks'
+function readLocks() {
+  try { return parseGeometryLocks(sessionStorage.getItem(LOCKS_KEY), sessionStorage.getItem(FILTER_KEY)) } catch { /* storage blocked */ }
+  return parseGeometryLocks(null, null)
+}
 const HEX_6 = /^#[0-9A-F]{6}$/
 function readFilters() {
   try {
@@ -71,7 +80,7 @@ function readFilters() {
     const ok = (arr, allowed) => Array.isArray(arr) && arr.length > 0 && arr.every((v) => allowed.includes(v))
     if (f && ok(f.types, [ANY, ...GRAD_TYPES]) && ok(f.counts, COUNT_OPTIONS)) {
       const pool = Array.isArray(f.pool) ? [...new Set(f.pool.filter((h) => typeof h === 'string' && HEX_6.test(h)))] : []
-      return { ...DEFAULT_FILTERS, ...f, keepAngle: !!f.keepAngle, pool }
+      return { types: f.types, counts: f.counts, pool }
     }
   } catch { /* storage blocked or unreadable: the defaults stand */ }
   return DEFAULT_FILTERS
@@ -90,7 +99,7 @@ const livePool = (pool, colours) => {
 }
 // True when any setting narrows what Random and Shuffle may make from the default.
 // Picked colours count from two up, the same rule Shuffle from palette uses.
-const isNarrowed = (f, colours) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.keepAngle || livePool(f.pool, colours).length >= 2
+const isNarrowed = (f, colours, locks) => !f.types.includes(ANY) || !f.counts.includes(ANY) || locks.angle || livePool(f.pool, colours).length >= 2
 // "Linear and radial", "2, 3 and 4": what the live region says after a press.
 const sentence = (vals) => {
   const t = vals.map((v) => String(v).toLowerCase())
@@ -589,7 +598,7 @@ function PoolRow({ colours, filters, setFilters }) {
   )
 }
 
-function ShuffleBody({ filters, setFilters, colours }) {
+function ShuffleBody({ filters, setFilters, colours, locks, toggleLock }) {
   const coarse = useMediaQuery('(pointer: coarse)')
   const summary = `Random makes ${sentence(filters.types.filter((t) => t !== ANY).length ? filters.types : ['any type'])}, ${sentence(filters.counts.filter((c) => c !== ANY).length ? filters.counts.map((c) => `${c} stops`) : ['any number of stops'])}`
   return (
@@ -604,11 +613,11 @@ function ShuffleBody({ filters, setFilters, colours }) {
       <PoolRow colours={colours} filters={filters} setFilters={setFilters} />
       <button
         type="button"
-        className={`grd-shuf-keep${filters.keepAngle ? ' is-on' : ''}`}
-        aria-pressed={filters.keepAngle}
-        onClick={() => setFilters((f) => ({ ...f, keepAngle: !f.keepAngle }))}
+        className={`grd-shuf-keep${locks.angle ? ' is-on' : ''}`}
+        aria-pressed={locks.angle}
+        onClick={() => toggleLock('angle')}
       >
-        <ToolIcon name={filters.keepAngle ? 'lock-simple' : 'lock-simple-open'} size={13} />
+        <ToolIcon name={locks.angle ? 'lock-simple' : 'lock-simple-open'} size={13} />
         <span>Keep the angle</span>
       </button>
       <div className="sr-only" role="status">{summary}</div>
@@ -619,9 +628,9 @@ function ShuffleBody({ filters, setFilters, colours }) {
 const PHONE_QUERY = '(max-width: 767px)'
 const SHUFFLE_TITLE = 'What Random and Shuffle make'
 
-function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours }) {
+function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours, locks, toggleLock }) {
   const phone = useMediaQuery(PHONE_QUERY)
-  const narrowed = isNarrowed(filters, colours)
+  const narrowed = isNarrowed(filters, colours, locks)
   const sheetId = `grd-shuf-sheet-${useId().replace(/:/g, '')}`
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose, { portalled: phone })
   // Turning the screen across 768px swaps popover and sheet: close rather than
@@ -651,7 +660,7 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours }
             <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
             <button type="button" className="grd-iconbtn grd-shuf-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={14} /></button>
           </div>
-          <ShuffleBody filters={filters} setFilters={setFilters} colours={colours} />
+          <ShuffleBody filters={filters} setFilters={setFilters} colours={colours} locks={locks} toggleLock={toggleLock} />
         </div>
       )}
       {/* Below 768px the same settings are a bottom sheet in the shared sheet
@@ -670,7 +679,7 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours }
               <span className="tl-sheet-title">{SHUFFLE_TITLE}</span>
               <button type="button" className="tl-sheet-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={16} /></button>
             </div>
-            <ShuffleBody filters={filters} setFilters={setFilters} colours={colours} />
+            <ShuffleBody filters={filters} setFilters={setFilters} colours={colours} locks={locks} toggleLock={toggleLock} />
           </div>
         </div>,
         document.body,
@@ -752,12 +761,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     return hasOwn ? (saved?.angle ?? DEFAULT_ANGLE) : DEFAULT_ANGLE
   })
   const [stops, setStops] = useState(() => {
-    if (carriedPalette) return stopsFromColors(carriedPalette.colors)
+    if (carriedPalette) return normaliseStops(stopsFromColors(carriedPalette.colors))
     const saved = design?.gradient?.stops
     if (Array.isArray(saved) && saved.some(s => s.color)) {
-      return saved.map((s, i) => ({ color: s.color || design?.palette?.colors?.[i] || '#2563EB', position: s.position }))
+      // A stop saved with the old single `locked` flag holds both locks now.
+      return saved.map((s, i) => normaliseStop({ color: s.color || design?.palette?.colors?.[i] || '#2563EB', position: s.position, lockColour: s.lockColour, lockPosition: s.lockPosition, locked: s.locked }))
     }
-    return DEFAULT_STOPS()
+    return normaliseStops(DEFAULT_STOPS())
   })
   const [activeStop, setActiveStop] = useState(0)
   // Stops selected together (indices). Fewer than two is not a multi-selection:
@@ -848,13 +858,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // must never inherit the gallery gradient's Pro edit lock.
   const [fromLibrary, setFromLibrary] = useState(() => !carriedPalette && design?.gradient?.source === 'gallery')
 
-  // Shuffle settings replace the type, angle and stop-count locks: picking one
-  // type is the same as locking it. Per-stop colour+position locks stay on the
-  // stop objects (`.locked`).
+  // Shuffle settings say what Random may make. Locks say what it must keep: the
+  // geometry locks (type, angle, interpolation) are session state here, and the
+  // per-stop colour and position locks sit on the stop objects
+  // (`.lockColour`, `.lockPosition`). A lock wins over a filter (spec §4.3).
   const [filters, setFilters] = useState(readFilters)
   useEffect(() => {
     try { sessionStorage.setItem(FILTER_KEY, JSON.stringify(filters)) } catch { /* private mode */ }
   }, [filters])
+  const [locks, setLocks] = useState(readLocks)
+  useEffect(() => {
+    try { sessionStorage.setItem(LOCKS_KEY, JSON.stringify(locks)) } catch { /* private mode */ }
+  }, [locks])
+  const toggleGeometryLock = useCallback((kind) => setLocks((l) => ({ ...l, [kind]: !l[kind] })), [])
   const [shuffleOpen, setShuffleOpen] = useState(false)
 
   // The stop currently being dragged (index, or null). Drives the live position
@@ -905,7 +921,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     const presetSlug = searchParams.get('preset')
     if (!incoming && !presetSlug && searchParams.get('tab') !== 'gradient') return
     if (incoming) {
-      setStops(incoming.stops.map(s => ({ ...s })))
+      // The stops are replaced, so no stop lock carries over.
+      setStops(clearStopLocks(normaliseStops(incoming.stops)))
       setType(incoming.type)
       setAngle(incoming.angle)
       selectOnly(0)
@@ -951,7 +968,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [fromLibrary, isPro, openProModal])
 
   const applyPreset = useCallback((p) => {
-    setStops(p.stops.map(s => ({ ...s })))
+    // A preset replaces the stops, so stop locks clear; the geometry locks are the
+    // person's settings and stay on (a locked angle keeps the one the preset set).
+    setStops(clearStopLocks(normaliseStops(p.stops)))
     setType(p.type)
     setAngle(p.angle)
     if (p.space) setSpace(p.space)
@@ -977,13 +996,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [guardEdit])
 
   // Toggling a stop's randomise-lock isn't reshaping the gradient — it's a
-  // shuffle control, exactly like the ungated type / angle / count locks — so it
-  // bypasses guardEdit and stays available on a gallery gradient. On a selected
-  // row it flips every selected stop to the opposite of that row.
-  const toggleStopLock = useCallback((idx) => {
+  // shuffle control, exactly like the ungated type / angle locks — so it
+  // bypasses guardEdit and stays available on a gallery gradient. `kind` is
+  // 'colour' or 'position'. On a selected row it flips every selected stop to the
+  // opposite of that row.
+  const toggleStopLock = useCallback((idx, kind = 'colour') => {
     const idxs = targetsFor(idx)
-    const to = !stops[idx]?.locked
-    setStops(prev => prev.map((s, i) => idxs.includes(i) ? { ...s, locked: to } : s))
+    const key = kind === 'position' ? 'lockPosition' : 'lockColour'
+    const to = !stops[idx]?.[key]
+    setStops(prev => setStopLock(prev, idxs, kind, to))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stops, picked])
 
@@ -1103,46 +1124,30 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     })
   }, [openProModal])
 
-  // Build a fresh set of stops that honours the current locks: a locked count
-  // keeps the same number, and any stop marked `.locked` keeps its colour +
-  // position while the rest are re-rolled. `sample(i)` supplies the colour for
-  // an unlocked slot (random hex, or a palette pick) so both randomisers share
-  // this logic. `closeSeam` is set for a conic roll: locked stops and the cycling
-  // of `sample` can leave the last colour off the first, so it is made the first
-  // again (or the first made the last, when only the last is locked).
-  const rollStops = useCallback((sample, count, closeSeam = false) => {
-    // A locked stop must always survive, even when the rolled count is smaller
-    // than its index — so if ANY stop is locked we keep the current length
-    // rather than shrinking to the rolled count and dropping locked stops.
-    const hasStopLock = stops.some(s => s.locked)
-    const n = hasStopLock ? stops.length : count
-    const out = Array.from({ length: n }, (_, i) => {
-      const ex = stops[i]
-      if (ex?.locked) return { color: ex.color, position: ex.position, locked: true }
-      return {
-        color: sample(i),
-        position: Math.round((i / (n - 1)) * 100),
-        locked: false,
-      }
-    })
-    if (closeSeam && hasStopLock && n >= 3) {
-      const last = out[n - 1]
-      if (!last.locked) last.color = out[0].color
-      else if (!out[0].locked) out[0].color = last.color
-    }
-    return out
-  }, [stops])
+  // Build a fresh set of stops that honours each stop's colour and position locks
+  // (the rules live in utils/gradientLocks). `sample(i)` supplies the colour for a
+  // free slot (random hex, or a palette pick) so both randomisers share them.
+  const rollStops = useCallback((sample, count, closeSeam = false) => rebuildStops(stops, sample, count, closeSeam), [stops])
+
+  // The options for one roll: the Shuffle filters, with the person's locks laid
+  // over them (a type lock replaces the Type filter, a stop lock fixes the count).
+  const rollOptions = useCallback(
+    () => lockedRollOptions(engineFilters(filters), locks, { type, angle, space }, stops),
+    [filters, locks, type, angle, space, stops],
+  )
 
   // Random: colours are chosen in OKLCH under the quality rules in
   // utils/gradientRandom, so the ends are related and the middle is never grey.
+  // Locked geometry comes back from the roll as it was (a locked Radial is
+  // re-rolled in colour, never turned into a Linear).
   const randomise = useCallback(() => {
-    const g = rollGradient(Math.random, engineFilters(filters))
+    const g = rollGradient(Math.random, rollOptions())
     setStops(rollStops((i) => g.stops[i % g.stops.length].color, g.stops.length, g.type === 'Conic'))
     setType(g.type)
-    if (!filters.keepAngle) setAngle(g.angle)
+    setAngle(g.angle)
     selectOnly(0)
     setFromLibrary(false)
-  }, [rollStops, filters, selectOnly])
+  }, [rollStops, rollOptions, selectOnly])
 
   // ── Available colours ──
   // The palette's colours (de-duplicated without regard to case, in palette
@@ -1189,18 +1194,21 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // The type, count and angle come from the same roll as Random; only the
     // colours differ. A two-colour pick has to differ in lightness or hue, and
     // the pool cycles if there are more stops than colours.
-    const engine = engineFilters(filters)
+    const engine = rollOptions()
     // The roll's own radial gate judges colours that are thrown away here, so it
-    // is off and the gate runs on the palette colours instead.
+    // is off and the gate runs on the palette colours instead. A locked type
+    // leaves `engine.types` out of the gate's fallback, so a locked Radial keeps
+    // the best of its draws rather than becoming Linear.
     const g = rollGradient(Math.random, { ...engine, radialGate: false })
-    const { type: lookType, colours: picks } = pickPaletteLook(pool, g.stops.length, g.type, engine.types, Math.random)
+    const gateTypes = engine.locks.type ? [engine.locks.type] : engine.types
+    const { type: lookType, colours: picks } = pickPaletteLook(pool, g.stops.length, g.type, gateTypes, Math.random)
     setStops(rollStops((i) => picks[i % picks.length], g.stops.length, lookType === 'Conic'))
     setType(lookType)
-    if (!filters.keepAngle) setAngle(g.angle)
+    setAngle(g.angle)
     selectOnly(0)
     setFromLibrary(false)
     toast?.(usingPicks ? `Random gradient from ${pool.length} picked colours` : 'Random gradient from your palette')
-  }, [pool, usingPicks, randomise, rollStops, filters, toast, selectOnly])
+  }, [pool, usingPicks, randomise, rollStops, rollOptions, toast, selectOnly])
 
   const fromPalette = useCallback(() => {
     if (!canRandomFromPalette) {
@@ -1285,7 +1293,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setPaintNote({ text: `Stops set to ${pair.name}.`, key: paintKey([0], painted), n: ++paintCount.current })
   }, [guardEdit, stops, targets, selectOnly])
 
-  const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
+  // Reset clears every lock: the stops are replaced and the geometry locks go too.
+  const reset = useCallback(() => { applyPreset(PRESETS[0]); setLocks(NO_GEOMETRY_LOCKS) }, [applyPreset])
 
   // ── Import colours: the live Palette Builder palette + saved projects ──
   // A source needs 2+ real hex colours to make a gradient; capped at 5 stops so
@@ -1793,9 +1802,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             <div className="grd-shuf-inline">
               <div className="grd-shuf-inline-head">
                 <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
-                {isNarrowed(filters, poolColours) && <span className="grd-shuf-state">Narrowed</span>}
+                {isNarrowed(filters, poolColours, locks) && <span className="grd-shuf-state">Narrowed</span>}
               </div>
-              <ShuffleBody filters={filters} setFilters={setFilters} colours={poolColours} />
+              <ShuffleBody filters={filters} setFilters={setFilters} colours={poolColours} locks={locks} toggleLock={toggleGeometryLock} />
             </div>
           ),
           render: () => (
@@ -1806,6 +1815,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               filters={filters}
               setFilters={setFilters}
               colours={poolColours}
+              locks={locks}
+              toggleLock={toggleGeometryLock}
             />
           ),
         },
@@ -1931,7 +1942,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     if (el) handleEls.current.set(s.i, el)
                     else handleEls.current.delete(s.i)
                   }}
-                  className={`grd-handle${activeStop === s.i ? ' is-active' : ''}${multi && picked.includes(s.i) ? ' is-sel' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.locked ? ' is-locked' : ''}`}
+                  className={`grd-handle${activeStop === s.i ? ' is-active' : ''}${multi && picked.includes(s.i) ? ' is-sel' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.lockColour || s.lockPosition ? ' is-locked' : ''}`}
                   style={{ left: `${s.position}%`, '--grd-stop': s.color }}
                   onPointerDown={(e) => dragStop(e, s.i)}
                   onContextMenu={(e) => openTintMenu(e, s.i)}
@@ -1959,7 +1970,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     }
                   }}
                   aria-pressed={multi ? picked.includes(s.i) : undefined}
-                  aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%${s.locked ? ', locked' : ''}`}
+                  aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%${s.lockColour ? ', colour kept' : ''}${s.lockPosition ? ', position kept' : ''}`}
                 >
                   <span className="grd-handle-dot" aria-hidden="true" />
                   {/* Live position while dragging or keyboard-focused, so a
@@ -2197,10 +2208,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   <span className="grd-stop-pos">{Math.round(s.position)}%</span>
                 </button>
                 <LockBtn
-                  on={!!s.locked}
-                  onClick={() => toggleStopLock(i)}
+                  on={!!s.lockColour}
+                  onClick={() => toggleStopLock(i, 'colour')}
                   className="grd-stop-lock"
-                  label={multi && inSel ? `Lock or unlock the ${picked.length} selected stops` : s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
+                  label={multi && inSel ? `Lock or unlock the ${picked.length} selected stops` : s.lockColour ? `Stop ${i + 1}'s colour is kept. Press to let Random change it.` : `Keep stop ${i + 1}'s colour when you press Random`}
                 />
                 {/* Always drawn, so the row keeps its columns; it only works
                     while there are more than two stops. */}

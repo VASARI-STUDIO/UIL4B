@@ -229,12 +229,19 @@ function drawCount(counts, rand) {
  * Roll a whole gradient.
  *
  * filters: { types: [] (empty = Any), counts: [] (empty = Any), styles: ['Plain'],
- *   radialGate: false to skip the radial gate when the colours are replaced afterwards }
+ *   radialGate: false to skip the radial gate when the colours are replaced afterwards,
+ *   locks: { type, angle, space } }
+ * `locks` holds the geometry the person keeps, each a value or null. A locked type
+ * replaces the Type filter, and a locked Radial never falls back to Linear: the
+ * colours are re-rolled instead. A locked angle and space come back unchanged.
+ * The angle is drawn even when it is locked, so a seeded run stays in step.
  * Returns { type, angle, stops: [{ color, position }], style, harmony, tone } with
- * colours as upper-case hex. `style` is always Plain until a family is built.
+ * colours as upper-case hex, plus `space` when it is locked. `style` is always
+ * Plain until a family is built.
  */
 export function rollGradient(rand = Math.random, filters = {}) {
-  const types = filters.types || []
+  const locks = filters.locks || {}
+  const types = locks.type ? [locks.type] : (filters.types || [])
   const counts = filters.counts || []
   let type = drawType(types, rand)
   let n = drawCount(counts, rand)
@@ -269,10 +276,12 @@ export function rollGradient(rand = Math.random, filters = {}) {
   const colours = ramp.map(hexOf)
   // A conic gradient closes its seam: the last stop is the first colour again.
   if (type === 'Conic') colours[colours.length - 1] = colours[0]
-  const angle = pickAngle(rand(), rand())
+  const drawnAngle = pickAngle(rand(), rand())
+  const angle = locks.angle ?? drawnAngle
   return {
     type,
     angle,
+    ...(locks.space ? { space: locks.space } : {}),
     style: PLAIN,
     harmony,
     tone,
