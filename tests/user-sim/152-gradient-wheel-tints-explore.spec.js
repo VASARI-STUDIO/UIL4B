@@ -67,7 +67,11 @@ test.describe('the angle wheel', () => {
   test('dragging round the dial sets the angle: right is 90, down is 180, left is 270, up is 0', async ({ page }) => {
     watch(page, 'a designer dragging the angle')
     await open(page)
+    // At 1440x900 the wheel sits below the fold (about y 943 to 1007), so a press
+    // aimed at its box would land off screen. Bring it into view, then read the box.
+    await wheelOf(page).scrollIntoViewIfNeeded()
     const box = await wheelOf(page).boundingBox()
+    expect(box.y + box.height, 'the wheel is on screen before the drag').toBeLessThanOrEqual(900)
     const cx = box.x + box.width / 2
     const cy = box.y + box.height / 2
     const r = box.width / 2 - 4
@@ -480,6 +484,9 @@ test.describe('the live position over a dragged stop', () => {
       const handle = page.getByRole('button', { name: new RegExp(`^Gradient stop ${n} at`) })
       const rail = page.locator('.grd-rail')
       await expect(handle).toBeVisible()
+      // The stops row can sit below the fold at 1440x900; a press aimed at an
+      // off-screen box lands on nothing. Scroll it in, then read the boxes.
+      await handle.scrollIntoViewIfNeeded()
       const hb = await handle.boundingBox()
       const rb = await rail.boundingBox()
       await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2)
