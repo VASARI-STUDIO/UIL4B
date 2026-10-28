@@ -26,6 +26,8 @@ import {
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
 import { isAdminEmail } from '../utils/constants'
+import { accountProviderIds } from '../utils/authSwitch'
+import { stashPriceDraft, takePriceDraft, overlayDraft } from '../utils/priceDraftStash'
 // No internal planning data is imported by this page, statically or
 // dynamically, and there is no code path from it to any such module.
 import { firstWinById } from '../utils/firstWin'
@@ -550,6 +552,9 @@ const roundLikeDefault = (x, reference) => {
 // Human label for an interval key, derived so a new interval needs no edit here.
 const intervalLabel = (id) => id.charAt(0).toUpperCase() + id.slice(1)
 
+// What the panel says when the server has ended this admin session.
+const SESSION_ENDED_COPY = 'Your session ended. Sign in again.'
+
 function StripeSetupPanel({ toast }) {
   const [config, setConfig] = useState(null)
   const [draft, setDraft] = useState(null)
@@ -559,12 +564,16 @@ function StripeSetupPanel({ toast }) {
   const [error, setError] = useState('')
   const [autoFill, setAutoFill] = useState(true)
   // The route wants a sign-in from the last few minutes before it changes a
-  // price (or says the session was ended): `reauth` holds that state.
-  const [reauth, setReauth] = useState(false)
+  // price, or says the session was ended: `signInIssue` holds which of the two
+  // codes ('reauth-required' | 'session-revoked') the route answered, or ''.
+  const [signInIssue, setSignInIssue] = useState('')
+  const [signingIn, setSigningIn] = useState(false)
+  // True when the draft was put back after a sign-in.
+  const [restored, setRestored] = useState(false)
   // Set when the route refuses a change of more than 10x; holds its message so
   // the admin can confirm the amount is meant.
   const [bigChange, setBigChange] = useState('')
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
 
   const authedFetch = useCallback(async (opts = {}) => {
     const { auth: fbAuth } = await import('../utils/firebase')
@@ -638,15 +647,20 @@ function StripeSetupPanel({ toast }) {
         const data = await authedFetch({ method: 'GET' })
         if (cancelled) return
         setConfig(data)
-        setDraft(buildDraft(data))
+        // A draft parked before a sign-in comes back once, over the live prices.
+        const parked = takePriceDraft(window.sessionStorage, user?.uid)
+        setDraft(overlayDraft(buildDraft(data), parked))
+        if (parked) setRestored(true)
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (cancelled) return
+        if (err.code === 'session-revoked' || err.code === 'reauth-required') setSignInIssue(err.code)
+        else setError(err.message)
       } finally {
         if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
-  }, [authedFetch, buildDraft])
+  }, [authedFetch, buildDraft, user?.uid])
 
   // #12 auto-fill: editing one cell scales every other currency, in every
   // interval, off its default ratio. The edited cell keeps the raw string so
@@ -682,7 +696,7 @@ function StripeSetupPanel({ toast }) {
   const intervals = useMemo(() => Object.keys(config?.defaults || {}), [config])
 
   const save = async (force = false) => {
-    setSaving(true); setError(''); setResult(null); setReauth(false); setBigChange('')
+    setSaving(true); setError(''); setResult(null); setSignInIssue(''); setBigChange(''); setRestored(false)
     try {
       // Every interval the route validates, or it answers 400 and nothing is
       // created. This used to post monthly and yearly only.
@@ -696,8 +710,8 @@ function StripeSetupPanel({ toast }) {
       toast?.('Prices saved to Stripe')
     } catch (err) {
       if (err.code === 'reauth-required' || err.code === 'session-revoked') {
-        setReauth(true)
-        toast?.('Sign in again to change prices', 'error')
+        setSignInIssue(err.code)
+        toast?.(err.code === 'session-revoked' ? SESSION_ENDED_COPY : 'Sign in again to change prices', 'error')
       } else if (err.code === 'price-change-too-large') {
         setBigChange(err.message)
       } else {
@@ -709,6 +723,62 @@ function StripeSetupPanel({ toast }) {
     }
   }
 
+  // "Sign in again". An account that signs in with Google alone and was only
+  // asked for a fresher sign-in re-proves itself in a popup and keeps its
+  // session, so nothing unmounts. Every other case (a password account, or a
+  // session the server ended) signs out; the draft is parked in sessionStorage
+  // first and put back by the load effect after the next sign-in.
+  const signInAgain = async () => {
+    setSigningIn(true)
+    try {
+      if (signInIssue === 'reauth-required') {
+        try {
+          const { auth: fbAuth } = await import('../utils/firebase')
+          const fbUser = fbAuth.currentUser
+          const providers = accountProviderIds(fbUser)
+          if (fbUser && providers.includes('google.com') && !providers.includes('password')) {
+            const { loadAuthSdk } = await import('../utils/firebaseAccess')
+            const A = await loadAuthSdk()
+            await A.reauthenticateWithPopup(fbUser, new A.GoogleAuthProvider())
+            // The cached token still carries the old auth_time; ask for a new one.
+            await fbUser.getIdToken(true)
+            setSignInIssue('')
+            toast?.('Signed in again. Save the prices again.')
+            return
+          }
+        } catch (err) {
+          // A closed popup is a decision, not a failure: stay on this card.
+          if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return
+          // Anything else falls through to the sign-out route below.
+        }
+      }
+      if (draft) stashPriceDraft(window.sessionStorage, user?.uid, draft)
+      await logout()
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
+  // Shown in place of the price table when loading it was refused, and above
+  // the Save button when a save was. The copy differs by cause: a session the
+  // server ended is not the same as one that is merely too old to move prices.
+  const signInCard = signInIssue ? (
+    <div className="adm-card adm-verify-error" role="alert" style={{ marginBottom: 16 }}>
+      <div className="adm-card-body">
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>
+          {signInIssue === 'session-revoked' ? 'Session ended' : 'Sign in again to change prices'}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--t1)', marginBottom: 12 }}>
+          {signInIssue === 'session-revoked'
+            ? SESSION_ENDED_COPY
+            : 'Price changes need a sign-in from the last 5 minutes. Nothing was saved. Sign in again, then save.'}
+          {draft ? ' Your price edits are kept.' : ''}
+        </div>
+        <button className="btn btn-accent" onClick={signInAgain} disabled={signingIn}>{signingIn ? 'Signing in...' : 'Sign in again'}</button>
+      </div>
+    </div>
+  ) : null
+
   return (
     <div className="adm-section">
       <div className="adm-section-h">
@@ -716,6 +786,8 @@ function StripeSetupPanel({ toast }) {
       </div>
       {loading ? (
         <div className="adm-card"><div className="adm-empty">Loading current prices...</div></div>
+      ) : !config && signInCard ? (
+        signInCard
       ) : !config ? (
         <div className="adm-card adm-verify-error">
           <div className="adm-card-body">
@@ -797,16 +869,10 @@ function StripeSetupPanel({ toast }) {
             </div>
           </div>
 
-          {reauth && (
-            <div className="adm-card adm-verify-error" role="alert" style={{ marginBottom: 16 }}>
-              <div className="adm-card-body">
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Sign in again to change prices</div>
-                <div style={{ fontSize: 12, color: 'var(--t1)', marginBottom: 12 }}>
-                  Price changes need a sign-in from the last 5 minutes. Nothing was saved. Sign in again, then save.
-                </div>
-                <button className="btn btn-accent" onClick={() => logout()}>Sign in again</button>
-              </div>
-            </div>
+          {signInCard}
+
+          {restored && (
+            <p className="adm-stripe-tip" role="status">Your unsaved price edits were restored. Check them, then save.</p>
           )}
 
           {bigChange && (
