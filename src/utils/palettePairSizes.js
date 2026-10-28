@@ -53,23 +53,20 @@ export function pickOutlineColour(bg, fg, candidates = OUTLINE_CANDIDATES) {
 
 // The views a pair can fill, in the order the control lists them. `label` is
 // what the control always shows; `more` is the part a narrow screen drops
-// ("Product page" shortens to "Product"). `name` is the whole name.
+// ("Landing page" shortens to "Landing"). `name` is the whole name. Interface is
+// the first view and Specimen the last; Article and Landing page join between
+// them in the next part of the rework.
 export const PAIR_VIEWS = [
+  { id: 'interface', label: 'Interface', name: 'Interface' },
   { id: 'specimen', label: 'Specimen', name: 'Specimen' },
-  { id: 'editorial', label: 'Editorial', name: 'Editorial' },
-  { id: 'product', label: 'Product', more: ' page', name: 'Product page' },
-  { id: 'card', label: 'Card', name: 'Card' },
 ]
 
-// Per example: the parts that are not text but carry meaning (icons, lines,
-// marks), as a selector. Only parts drawn in exactly one of the pair's two
-// colours are listed, so the pair's ratio is what they are held to; a tint of
-// the text colour (a land fill, a lighter segment) is decoration and is left out.
+// Per view: the parts that are not text but carry meaning (icons, lines, fills,
+// borders), as a selector. A view is painted in the pair's two colours only, so
+// every part listed is held to the pair's own ratio. A border or fill sits on a
+// wrapper and the words in a span inside it: the marking skips a box that has
+// text of its own, so a labelled button is measured as a UI part and as text.
 export const UI_PARTS = {
-  editorial: '.sw-menu svg, .sw-routeline, .sw-wharf',
-  // The colourway discs of the two roles that are the text colour itself, the
-  // chosen size button and the Add to bag button: each is a fill whose edge
-  // against the page is the pair's ratio.
-  product: '.or-menu svg, .or-save svg, .or-details svg, .or-sw > i[data-role="primary"], .or-sw > i[data-role="deep"], .or-size.is-on, .or-cta',
-  card: '.ty-nfc, .ty-act svg, .ty-seg--1, .ty-seg--4, .ty-key--1, .ty-key--4',
+  interface: '.ro-navico, .ro-navbar, .ro-menuico, .ro-card, .ro-toggle, .ro-select, .ro-chev, .ro-focus, .ro-check, .ro-shift, .ro-btn--outline, .ro-btn--fill',
+  specimen: '.sp-btn, .sp-btn svg',
 }

@@ -49,15 +49,17 @@ test('the three classes are body 4.5, large 3 and UI parts 3, in that order', ()
   assert.deepEqual(SIZE_CLASSES.map((c) => [c.id, c.min]), [['body', 4.5], ['large', 3], ['ui', 3]])
 })
 
-test('the four views are listed in control order and only Product page has a part to drop on a phone', () => {
-  assert.deepEqual(PAIR_VIEWS.map((v) => v.id), ['specimen', 'editorial', 'product', 'card'])
+// Part 1 of the views rework builds Interface and Specimen; part 2 adds Article and
+// Landing page between them (and 'landing' becomes the one view with a part to drop).
+test('the views are listed in control order, Interface first and Specimen last', () => {
+  const ids = PAIR_VIEWS.map((v) => v.id)
+  assert.equal(ids[0], 'interface')
+  assert.equal(ids.at(-1), 'specimen')
   for (const v of PAIR_VIEWS) assert.equal(v.label + (v.more || ''), v.name, `${v.id}: label plus the dropped part is the name`)
-  assert.deepEqual(PAIR_VIEWS.filter((v) => v.more).map((v) => v.id), ['product'])
-  assert.equal(PAIR_VIEWS.find((v) => v.id === 'product').label, 'Product')
 })
 
-test('every view that paints an example has a UI-part selector, and the specimen has none', () => {
-  assert.deepEqual(Object.keys(UI_PARTS).sort(), ['card', 'editorial', 'product'])
+test('every view has a UI-part selector, because the legend runs on every view', () => {
+  assert.deepEqual(Object.keys(UI_PARTS).sort(), PAIR_VIEWS.map((v) => v.id).sort())
   for (const [id, selector] of Object.entries(UI_PARTS)) assert.match(selector, /\S/, `${id} has an empty selector`)
 })
 

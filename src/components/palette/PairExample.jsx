@@ -1,7 +1,7 @@
-// A Contrast Checker pair painted on one of the preview examples (Editorial,
-// Product page, Card). The pair is two colours, not a palette, and the picture
-// exists to prove the verdict: pairRoles() builds roles that correct nothing, so
-// a failing pair looks as bad here as it is.
+// A Contrast Checker pair painted on one of the pair views (Interface,
+// Specimen; src/components/contrast/views). The pair is two colours, not a
+// palette, and the picture exists to prove the verdict: a view paints only
+// --pv-text and --pv-canvas, so a failing pair looks as bad here as it is.
 //
 // The legend of this view is "Where each test lands": every piece of the example
 // is sorted at runtime into body text, large text or a UI part (data-size), the
@@ -13,12 +13,8 @@ import { contrastRatio } from '../../utils/colors'
 import { pairRoles, pvVars } from '../../utils/palettePreviewRoles'
 import { PAIR_VIEWS, UI_PARTS, failingSizes, pickOutlineColour, textSizeClass } from '../../utils/palettePairSizes'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
-import { EXAMPLES } from './examples/registry'
+import { PAIR_EXAMPLES } from '../contrast/views/registry'
 import '../../styles/pages/palette-preview.css'
-
-// The names the pair's swatches and labels carry in an example that names its
-// five brand slots.
-const SLOT_LABELS = ['Text', '70% text', '45% text', '20% text', 'Text']
 
 const ownTextNodes = (el) => [...el.childNodes].filter((n) => n.nodeType === 3 && n.nodeValue.trim())
 const shown = (el) => el.getClientRects().length > 0
@@ -113,7 +109,7 @@ function markSizes(root, uiSelector, highlight, failing) {
 }
 
 /**
- * @param {{viewId: 'editorial'|'product'|'card', fg: string, bg: string,
+ * @param {{viewId: 'interface'|'specimen', fg: string, bg: string,
  *   highlight?: string|null, pinned?: string|null}} props fg and bg are
  *   #rrggbb; highlight is a size class to outline; pinned is the class a click
  *   or tap holds, whose first part is brought into view
@@ -122,7 +118,7 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
   const roles = useMemo(() => pairRoles(fg, bg), [fg, bg])
   const outline = useMemo(() => pickOutlineColour(bg, fg), [bg, fg])
   const view = PAIR_VIEWS.find((v) => v.id === viewId)
-  const Body = EXAMPLES[viewId]
+  const Body = PAIR_EXAMPLES[viewId]
   const rootRef = useRef(null)
   const failKey = failingSizes(contrastRatio(fg, bg)).join(',')
 
@@ -170,7 +166,7 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
       aria-label={`${view.name} example painted in your text and background colours`}
     >
       <Suspense fallback={<div className="cc-pv-wait" aria-hidden="true" />}>
-        <Body roles={roles} labels={SLOT_LABELS} />
+        <Body />
       </Suspense>
     </div>
   )
