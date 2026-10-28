@@ -685,6 +685,7 @@ export default function Settings({ toast }) {
   const isPhone = useMediaQuery('(max-width: 720px)')
   // The tiers only stack at 640 (settings.css), so this is not `isPhone`:
   // between 641 and 720 they are still two columns and Free stays on the left.
+  // The Language tiles turn into rows at the same line.
   const tiersStacked = useMediaQuery('(max-width: 640px)')
   const navigate = useNavigate()
   // Which view a phone shows lives in the history entry, not in component
@@ -722,6 +723,21 @@ export default function Settings({ toast }) {
     navigate({ pathname: location.pathname, search: location.search, hash: location.hash }, { replace: true, state: null })
   }
   const [confirmClear, setConfirmClear] = useState(false)
+  // Pressing "Clear data" unmounts that button for the Confirm / Cancel pair,
+  // and focus went with it (to <body>). The pair opens on Cancel, never on
+  // "Confirm clear": Enter on a freshly focused destructive button would be a
+  // one-keystroke wipe. When the pair closes, focus goes back to the trigger,
+  // unless the person has already moved it elsewhere. Nothing moves until the
+  // first press, so landing on the Data section does not take focus.
+  const clearTriggerRef = useRef(null)
+  const clearCancelRef = useRef(null)
+  const clearFocusOwed = useRef(false)
+  useEffect(() => {
+    if (!clearFocusOwed.current) return
+    if (confirmClear) { clearCancelRef.current?.focus(); return }
+    const held = document.activeElement
+    if (!held || held === document.body) clearTriggerRef.current?.focus()
+  }, [confirmClear])
   const [exporting, setExporting] = useState(false)
   // Counted from storage, not from the length of a hand-written list. The old
   // page reported "15 items" whatever was actually there — including for a
@@ -1251,12 +1267,24 @@ export default function Settings({ toast }) {
                   </div>
                   <ThemeChoice />
                 </div>
+                {/* A switch, not a pressed button: it announces "on" / "off", and
+                    the words beside it are its label, so a tap on them flips it
+                    (the way a phone settings row with a switch behaves). */}
                 <div className="toggle-row">
-                  <div className="toggle-row-info">
-                    <div className="toggle-row-label">Reduced motion</div>
-                    <div className="toggle-row-meta">Minimise animations and transitions</div>
-                  </div>
-                  <button className={`toggle-switch${reducedMotion ? ' on' : ''}`} onClick={() => setReducedMotion(!reducedMotion)} aria-label="Toggle reduced motion" aria-pressed={reducedMotion} />
+                  <label className="toggle-row-info" htmlFor="set-reduced-motion">
+                    <span className="toggle-row-label" id="set-rm-label">Reduced motion</span>
+                    <span className="toggle-row-meta" id="set-rm-meta">Minimise animations and transitions</span>
+                  </label>
+                  <button
+                    id="set-reduced-motion"
+                    type="button"
+                    role="switch"
+                    aria-checked={reducedMotion}
+                    aria-labelledby="set-rm-label"
+                    aria-describedby="set-rm-meta"
+                    className={`toggle-switch${reducedMotion ? ' on' : ''}`}
+                    onClick={() => setReducedMotion(!reducedMotion)}
+                  />
                 </div>
               </div>
             </div>
@@ -1283,7 +1311,10 @@ export default function Settings({ toast }) {
                       </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
-                        <span className="lang-tile-code">{l.label}</span>
+                        {/* "English (AU)" over "English (AU)": where the tiles are
+                            rows (640 and below, with `tiersStacked`) the repeat
+                            is dropped. The wider tiles keep both lines. */}
+                        {(!tiersStacked || l.native !== l.label) && <span className="lang-tile-code">{l.label}</span>}
                       </div>
                       {lang === l.code && (
                         <svg className="lang-tile-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1411,7 +1442,7 @@ export default function Settings({ toast }) {
                   We don&rsquo;t sell your data or use third-party trackers.
                 </p>
                 <div className="settings-row settings-row--pad">
-                  <div>
+                  <div className="settings-row-main">
                     <div className="settings-row-label">Export</div>
                     <div className="settings-row-meta">
                       A JSON copy of everything — every key in this browser
@@ -1423,7 +1454,7 @@ export default function Settings({ toast }) {
                   </button>
                 </div>
                 <div className="settings-row">
-                  <div>
+                  <div className="settings-row-main">
                     <div className="settings-row-label">Clear local data</div>
                     <div className="settings-row-meta">
                       Removes everything stored in this browser except your sign-in.
@@ -1433,10 +1464,10 @@ export default function Settings({ toast }) {
                   {confirmClear ? (
                     <div className="settings-edit-actions settings-edit-actions--tight">
                       <button className="btn btn-s settings-danger-go" onClick={deleteAllData}>Confirm clear</button>
-                      <button className="btn btn-s" onClick={() => setConfirmClear(false)}>Cancel</button>
+                      <button ref={clearCancelRef} className="btn btn-s" onClick={() => setConfirmClear(false)}>Cancel</button>
                     </div>
                   ) : (
-                    <button className="btn btn-s settings-danger" onClick={() => setConfirmClear(true)}>Clear data</button>
+                    <button ref={clearTriggerRef} className="btn btn-s settings-danger" onClick={() => { clearFocusOwed.current = true; setConfirmClear(true) }}>Clear data</button>
                   )}
                 </div>
               </div>
