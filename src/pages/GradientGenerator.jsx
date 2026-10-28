@@ -289,11 +289,11 @@ function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
 // without adding a new control shape.
 // `unavailable` keeps the button focusable (aria-disabled, not disabled) and
 // inert, so its reason can be read through `describedBy` rather than lost.
-const LockBtn = ({ on, onClick, label, className = '', unavailable = false, describedBy }) => (
+const LockBtn = ({ on, onClick, label, className = '', unavailable = false, describedBy, onUnavailable }) => (
   <button
     type="button"
     className={`grd-iconbtn grd-lock${on ? ' is-on' : ''}${className ? ' ' + className : ''}`}
-    onClick={unavailable ? undefined : onClick}
+    onClick={unavailable ? onUnavailable : onClick}
     aria-pressed={on}
     aria-disabled={unavailable || undefined}
     aria-describedby={describedBy}
@@ -414,6 +414,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // straight away instead of only after the user hunts it down and clicks it.
   const handleEls = useRef(new Map())
   const focusStopRef = useRef(null)
+  const focusRemovedRowRef = useRef(false)
 
   const css = gradientCssIn(type, angle, stops, space)
   // What the canvas paints: the chosen space where the browser can, else sRGB.
@@ -558,12 +559,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // The selection follows the rows: removing a row above the active one moves
   // it up with them, and removing the active one hands it to the row that slides
   // into its place (or the new last row), so the list does not jump back to row 1.
-  const removeStop = useCallback((idx) => {
+  // `keepFocus` is set when the keyboard pressed the row's ×: the rows are keyed
+  // by index, so the pressed button can unmount, and focus is handed on below.
+  const removeStop = useCallback((idx, keepFocus = false) => {
     if (!guardEdit()) return
     if (stops.length <= MIN_STOPS) {
       toast?.('A gradient needs at least two stops')
       return
     }
+    if (keepFocus) focusRemovedRowRef.current = true
     setStops(prev => prev.length > MIN_STOPS ? prev.filter((_, i) => i !== idx) : prev)
     setActiveStop(a => (a > idx ? a - 1 : a === idx ? Math.min(idx, stops.length - 2) : a))
   }, [guardEdit, stops.length, toast])
@@ -930,6 +934,17 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // which edges have more rows past them (the CSS fades and rules that edge) and
   // `first`, the top visible row, for the "1–3 of 12" count in the header.
   const stopListRef = useRef(null)
+  // After a keyboard remove, focus lands on the active row's ×, or on its label
+  // button when the × has just gone inert at two stops. A pointer remove leaves
+  // focus alone.
+  useEffect(() => {
+    if (!focusRemovedRowRef.current) return
+    focusRemovedRowRef.current = false
+    const row = stopListRef.current?.querySelector('.grd-stop.is-on')
+    const x = row?.querySelector('.grd-stop-x')
+    const target = x && x.getAttribute('aria-disabled') !== 'true' ? x : row?.querySelector('.grd-stop-select')
+    target?.focus()
+  }, [stops.length])
   const [stopScroll, setStopScroll] = useState({ above: false, below: false, first: 1 })
   const syncStopScroll = useCallback(() => {
     const el = stopListRef.current
@@ -1237,7 +1252,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <button
                   type="button"
                   className="grd-iconbtn grd-stop-x"
-                  onClick={() => removeStop(i)}
+                  onClick={(e) => removeStop(i, e.detail === 0)}
                   aria-disabled={stops.length <= MIN_STOPS || undefined}
                   aria-describedby={stops.length <= MIN_STOPS ? 'grd-stop-min-hint' : undefined}
                   aria-label={`Remove stop ${i + 1}`}
@@ -1356,6 +1371,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 on={locks.angle}
                 onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))}
                 unavailable={!angleActive}
+                onUnavailable={() => toast?.('A radial gradient has no angle')}
                 describedBy={angleActive ? undefined : 'grd-angle-none'}
                 label={locks.angle ? 'Angle locked, unlock to randomise it' : 'Lock angle when randomising'}
               />

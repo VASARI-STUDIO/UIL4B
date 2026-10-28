@@ -32,15 +32,15 @@
   color: var(--tl-dim);
 }
 
-/* The From palette note: a small chip in the canvas's top-left corner, one line
-   of text, a text link to the Palette Builder and a dismiss square. It is out of
-   flow and sits clear of the ramp's far end, so the page is the same height with
-   it as without it. The wrapper is the always-mounted live region and takes no
+/* The From palette note: a small chip in the canvas's bottom-left corner, one
+   line of text, a text link to the Palette Builder and a dismiss square. The
+   bottom corner leaves the canvas's top edge, where the first colour reads, clear.
+   It is out of flow, so the page is the same height with it as without it. The wrapper is the always-mounted live region and takes no
    pointer events itself. scroll-margin keeps the note clear of the sticky toolbar
    when it is scrolled into view. */
 .grd .grd-live {
   position: absolute;
-  inset: 12px auto auto 12px;
+  inset: auto auto 12px 12px;
   max-width: calc(100% - 24px);
   z-index: 1;
   pointer-events: none;
@@ -224,9 +224,10 @@
 }
 .grd .grd-stops.is-above { border-top-color: var(--grd-edge); --grd-fade-top: var(--grd-fade); }
 .grd .grd-stops.is-below { border-bottom-color: var(--grd-edge); --grd-fade-bottom: var(--grd-fade); }
-/* "1–3 of 12": which rows the window shows. Held to the digits' width so the
-   header does not shift as it scrolls. */
-.grd .grd-stops-count { margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
+/* "1–3 of 12": which rows the window shows. Held to the widest label ("10–12 of
+   12", eleven mono cells) and right-aligned, so the header does not shift as it
+   scrolls. */
+.grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
 .grd .grd-stop {
   display: flex;
   align-items: center;
@@ -664,8 +665,9 @@
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
   .grd .grd-add { height: 44px; min-height: 44px; }
-  /* Touch scrollbars overlay the content, so the window keeps its full width for the hex fields. */
-  .grd .grd-stops { scrollbar-gutter: auto; }
+  /* Touch scrollbars overlay the content, so the window keeps its full width for the hex fields.
+     A finger that runs past the end of the window carries on scrolling the page, so the list is never a trap. */
+  .grd .grd-stops { scrollbar-gutter: auto; overscroll-behavior: auto; }
   /* At the narrowest phones the row's gaps give the stop's hex its full width. */
   @media (max-width: 360px) {
     .grd .grd-stop { gap: 6px; padding: 4px; }
