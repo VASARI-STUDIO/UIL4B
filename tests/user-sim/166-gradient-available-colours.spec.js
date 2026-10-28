@@ -156,6 +156,38 @@ test.describe('Available colours · the states', () => {
   })
 })
 
+test.describe('Available colours · the way to the Shuffle colours', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+  const poolLink = (page) => section(page).getByRole('button', { name: 'Choose colours for Shuffle' })
+
+  test('with a palette the link is on its own row under the status line', async ({ page }) => {
+    watch(page, 'someone looking for where Shuffle takes its colours from')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await expect(poolLink(page)).toBeVisible()
+    await expect(poolLink(page)).toHaveAttribute('aria-haspopup', 'dialog')
+    const g = await page.evaluate(() => {
+      const box = (e) => { const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left, right: b.right } }
+      const link = document.querySelector('.grd-avail-pool')
+      const status = document.getElementById('grd-avail-status')
+      return { link: box(link), status: box(status), sameParent: link.parentElement === status.parentElement, siblings: link.parentElement.children.length }
+    })
+    expect(g.link.top, 'below the status line, not beside it').toBeGreaterThanOrEqual(g.status.bottom - 0.5)
+    expect(g.sameParent, 'in the same foot as the status line').toBe(true)
+    expect(g.link.left, 'at the section\'s left edge, like the line above').toBeCloseTo(g.status.left, 0)
+  })
+
+  for (const [name, colors] of [['no palette', []], ['one colour', ['#0051FF']]]) {
+    test(`${name}: there is no pool to choose, so no link`, async ({ page }) => {
+      watch(page, `someone with ${name}`)
+      await seed(page, { colors })
+      await open(page)
+      await expect(chips(page).first()).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Choose colours for Shuffle' })).toHaveCount(0)
+    })
+  }
+})
+
 test.describe('Available colours · the shades line shows only while the ramp is current', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
@@ -414,7 +446,7 @@ for (const [w, h] of [[768, 1024], [390, 844], [360, 780]]) {
   test.describe(`touch at ${w}px`, () => {
     test.use({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
 
-    test('chips are 44px (shades 36px), the Palette Builder link and stop rows are 44px+, nothing runs past the screen', async ({ page }) => {
+    test('chips, shades and ramp dots are 44px, stop rows 56px, nothing runs past the screen', async ({ page }) => {
       watch(page, 'a designer on a touch screen')
       await seed(page, { colors: THIRTEEN, tints: current(THIRTEEN) })
       await open(page)
@@ -425,13 +457,14 @@ for (const [w, h] of [[768, 1024], [390, 844], [360, 780]]) {
         const out = [...document.querySelectorAll('.grd-avail .grd-chip')].filter((c) => { const r = c.getBoundingClientRect(); return r.left < avail.left - 0.5 || r.right > avail.right + 0.5 }).length
         return {
           palette: sizes('.grd-chips:not(.grd-chips--shades) .grd-chip'), shades: sizes('.grd-chips--shades .grd-chip'),
-          select: sizes('.grd-stop-select'), row: sizes('.grd-stop'), out,
+          dots: sizes('.grd-ramp-dot'), select: sizes('.grd-stop-select'), row: sizes('.grd-stop'), out,
           sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           roleCut: [...document.querySelectorAll('.grd-stop-role')].filter((e) => e.scrollWidth > e.clientWidth).length,
         }
       })
       expect(m.palette, 'palette chips').toEqual(['44x44'])
-      expect(m.shades, 'shade chips').toEqual(['36x36'])
+      expect(m.shades, 'shade chips (eleven of them, all 44px)').toEqual(['44x44'])
+      expect(m.dots, 'ramp dots').toEqual(['44x44'])
       expect(m.row, 'stop rows').toEqual([expect.stringMatching(/x56$/)])
       expect(m.select.every((s) => Number(s.split('x')[1]) >= 44), `stop select buttons ${m.select}`).toBe(true)
       expect(m.out, 'chips outside the section').toBe(0)
@@ -439,16 +472,23 @@ for (const [w, h] of [[768, 1024], [390, 844], [360, 780]]) {
       expect(m.roleCut, 'role labels cut short').toBe(0)
     })
 
-    test('the starter colours and the Palette Builder link are 44px', async ({ page }) => {
+    test('the starter colours are 44px, the pairs 72x44, and the Make a palette link keeps a 44px hit area', async ({ page }) => {
       watch(page, 'a designer on a touch screen with no palette')
       await seed(page, { colors: [] })
       await open(page)
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'the page is on the coarse-pointer rules').toBe(true)
       const m = await page.evaluate(() => {
         const sz = (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] }
-        return { chips: [...document.querySelectorAll('.grd-avail .grd-chip')].map(sz), link: sz(document.querySelector('.grd-avail-link')) }
+        return {
+          chips: [...document.querySelectorAll('.grd-avail .grd-chip')].map(sz),
+          pairs: [...document.querySelectorAll('.grd-avail .grd-pair')].map(sz),
+          link: sz(document.querySelector('.grd-avail-link')),
+        }
       })
       expect(m.chips.length).toBe(10)
       expect(m.chips.every(([cw, ch]) => cw === 44 && ch === 44), JSON.stringify(m.chips)).toBe(true)
+      expect(m.pairs.length).toBe(6)
+      expect(m.pairs.every(([pw, ph]) => pw === 72 && ph === 44), JSON.stringify(m.pairs)).toBe(true)
       expect(m.link[1], 'the link is at least 44px tall').toBeGreaterThanOrEqual(44)
     })
   })
@@ -698,14 +738,23 @@ test.describe('Available colours · paint in order', () => {
     await expect(statusLine(page)).toHaveText('Every colour is locked. Unlock a stop to paint it.')
     const secondary = chip(page, 'Secondary 500')
     await expect(secondary).toHaveAttribute('aria-disabled', 'true')
+    // The reason is the chip's description before any press: the live region only
+    // says it after one, and a screen reader on a chip is told why it is inert.
+    await expect(secondary).toHaveAttribute('aria-describedby', 'grd-avail-locked')
+    await expect(page.locator('#grd-avail-locked'), 'the description is outside the live region').toHaveText('Every colour is locked.')
+    expect(await page.evaluate(() => document.getElementById('grd-avail-locked').closest('[aria-live], [role="status"]')), 'and is not announced on its own').toBeNull()
+    await expect(secondary).toHaveAccessibleDescription('Every colour is locked.')
+    await expect(statusLine(page), 'before any press the idle line tells the way out').toHaveText('Every colour is locked. Unlock a stop to paint it.')
     // aria-disabled is not `disabled`: the chip still takes a press, and refuses it.
     await secondary.click({ force: true })
     for (const n of [1, 2, 3]) await expect(hexOf(page, n)).toHaveText(SEED_STOPS[n - 1])
     await expect(statusLine(page)).toHaveText('Every colour is locked.')
-    await expect(secondary, 'the reason is its description').toHaveAccessibleDescription('Every colour is locked.')
-    // Unlock one and the chips work again.
+    await expect(secondary, 'the reason is still its description').toHaveAccessibleDescription('Every colour is locked.')
+    // Unlock one and the chips work again, and the description goes with the reason.
     await lockBtn(page, 2).click()
     await expect(secondary).not.toHaveAttribute('aria-disabled', /.*/)
+    await expect(secondary).not.toHaveAttribute('aria-describedby', /.*/)
+    await expect(page.locator('#grd-avail-locked')).toHaveCount(0)
     await expect(head(page)).toHaveText(/^Painting stop \d of 3$/)
   })
 
@@ -738,6 +787,83 @@ test.describe('Available colours · the mini ramp', () => {
     ])
     expect(await targetOf(page)).toEqual([1])
     await expect(dot(page, 2)).toHaveAttribute('aria-pressed', 'false')
+    // The ramp says what it is for, on hover and to a screen reader.
+    await expect(toolbar).toHaveAttribute('title', 'Choose which stop to paint')
+    await expect(toolbar).toHaveAccessibleDescription('Choose which stop to paint')
+  })
+
+  test('on a fine pointer the dots are 24px, with a 16px colour disc inside', async ({ page }) => {
+    watch(page, 'a mouse user aiming at a dot')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    expect(await page.evaluate(() => matchMedia('(pointer: fine)').matches), 'the page is on the fine-pointer rules').toBe(true)
+    const m = await page.evaluate(() => {
+      const sz = (e) => { const r = e.getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}` }
+      return {
+        dots: [...document.querySelectorAll('.grd-ramp-dot')].map(sz),
+        discs: [...document.querySelectorAll('.grd-ramp-dot-vis')].map(sz),
+      }
+    })
+    expect(m.dots).toEqual(['24x24', '24x24', '24x24'])
+    expect(m.discs).toEqual(['16x16', '16x16', '16x16'])
+  })
+
+  test('the target dot has an outer ring of the card tone around its ink ring; the others have neither', async ({ page }) => {
+    watch(page, 'someone telling the target dot from the rest')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    const shadow = (n) => dot(page, n).locator('.grd-ramp-dot-vis').evaluate((e) => getComputedStyle(e).boxShadow)
+    // Each ring is "colour offset blur spread": the target has two (ink 2px, then the
+    // card tone out to 3px), a resting dot has one thin line.
+    const rings = (s) => (s === 'none' ? [] : s.split(/,\s*(?![^(]*\))/))
+    const colourOf = (ring) => ring.replace(/\s[-\d.]+px.*$/, '')
+    const target = rings(await shadow(1))
+    expect(target, 'the target dot wears two rings').toHaveLength(2)
+    expect(target[0], 'the inner ring is 2px').toMatch(/ 2px$/)
+    expect(target[1], 'the outer ring is 3px').toMatch(/ 3px$/)
+    expect(colourOf(target[0]), 'ink inside, the card tone outside').not.toBe(colourOf(target[1]))
+    expect(rings(await shadow(2)), 'a resting dot has one thin line').toHaveLength(1)
+    await dot(page, 2).click()
+    expect(rings(await shadow(1)), 'the ring went with the target').toHaveLength(1)
+    expect(rings(await shadow(2))).toHaveLength(2)
+  })
+
+  test('hover grows a dot a little and a press shrinks it', async ({ page }) => {
+    watch(page, 'a mouse user hovering and pressing a dot')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    const scaleOf = () => dot(page, 2).locator('.grd-ramp-dot-vis').evaluate((e) => new DOMMatrix(getComputedStyle(e).transform).a)
+    expect(await scaleOf(), 'at rest').toBe(1)
+    await dot(page, 2).hover()
+    await expect.poll(scaleOf, 'hovered').toBeCloseTo(1.15, 2)
+    await page.mouse.down()
+    await expect.poll(scaleOf, 'pressed').toBeCloseTo(0.94, 2)
+    await page.mouse.up()
+  })
+
+  test('a pointer press goes to the nearest dot, a synthetic click without a position stays on its own', async ({ page }) => {
+    watch(page, 'a designer pressing close stops, and a screen reader clicking one')
+    // Stops 1 and 2 sit 2% apart: their 24px hit areas overlap.
+    await seed(page, {
+      colors: THIRTEEN,
+      gradient: {
+        source: 'own', type: 'Linear', angle: 160, space: 'oklch',
+        stops: [{ color: '#0A0F2C', position: 40 }, { color: '#27348B', position: 42 }, { color: '#6E6BFF', position: 100 }],
+      },
+    })
+    await open(page)
+    const b1 = await dot(page, 1).boundingBox()
+    const b2 = await dot(page, 2).boundingBox()
+    expect(b2.x - b1.x, 'POSITIVE CONTROL: the dots overlap, so the second one\'s left edge is nearer the first').toBeLessThan(12)
+    // Stop 2 is on top. Press it 4px in from its left edge: its own centre is 8px away,
+    // stop 1's centre is closer.
+    await dot(page, 2).click({ position: { x: 4, y: 12 } })
+    expect(await targetOf(page), 'the nearest dot took the press').toEqual([1])
+    await expect(dot(page, 1), 'and focus went with it').toBeFocused()
+    // A click event with a button count but no position, the way assistive tech makes one.
+    await page.evaluate(() => document.querySelector('.grd-ramp-dot[data-stop="1"]')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, clientX: 0, clientY: 0 })))
+    expect(await targetOf(page), 'with no position the dot clicked is the dot chosen').toEqual([2])
   })
 
   test('a dot press makes its stop the target without leaving the section, and the next chip paints it', async ({ page }) => {
@@ -771,8 +897,14 @@ test.describe('Available colours · the mini ramp', () => {
     watch(page, 'a keyboard user painting the second stop')
     await seed(page, { colors: THIRTEEN })
     await open(page)
-    // A press on the section's heading puts the next Tab just after it.
-    await page.locator('#grd-avail-label').click()
+    // Put the keyboard just before the ramp. A click on the heading cannot do it: the
+    // click focuses <main> (tabindex -1), and the next Tab starts from the top of the page.
+    await page.evaluate(() => {
+      const before = document.createElement('button')
+      before.textContent = 'before the ramp'
+      document.querySelector('.grd-avail .grd-ramp').before(before)
+      before.focus()
+    })
     await page.keyboard.press('Tab')
     await expect(dot(page, 1), 'the ramp has one tab stop: the target dot').toBeFocused()
     await page.keyboard.press('ArrowRight')
@@ -797,6 +929,46 @@ test.describe('Available colours · the mini ramp', () => {
     await page.keyboard.press('Home')
     await expect(dot(page, 1)).toBeFocused()
     expect(await targetOf(page)).toEqual([1])
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await expect(dot(page, 3)).toBeFocused()
+    await page.keyboard.press('ArrowLeft')
+    await expect(dot(page, 2)).toBeFocused()
+    expect(await targetOf(page), 'the left arrow aims the paint too').toEqual([2])
+    await expect(head(page)).toHaveText('Painting stop 2 of 3')
+  })
+
+  test('with two stops selected the arrows only move focus, and the selection stays', async ({ page }) => {
+    watch(page, 'a keyboard user walking the ramp with two stops selected')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await stopSelect(page, 1).click()
+    await stopSelect(page, 3).click({ modifiers: ['Control'] })
+    await expect(head(page)).toHaveText('Painting 2 selected stops')
+    expect(await targetOf(page)).toEqual([1, 3])
+    await dot(page, 1).focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(dot(page, 2), 'focus moved').toBeFocused()
+    expect(await targetOf(page), 'the selection did not collapse onto the focused dot').toEqual([1, 3])
+    await page.keyboard.press('End')
+    await expect(dot(page, 3)).toBeFocused()
+    await page.keyboard.press('Home')
+    await expect(dot(page, 1)).toBeFocused()
+    await expect(head(page)).toHaveText('Painting 2 selected stops')
+    expect(await targetOf(page)).toEqual([1, 3])
+  })
+
+  test('the ramp has one tab stop, and it follows the target', async ({ page }) => {
+    watch(page, 'a keyboard user leaving the ramp and coming back')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await expect(section(page).locator('.grd-ramp-dot[tabindex="0"]')).toHaveCount(1)
+    await expect(section(page).locator('.grd-ramp-dot[tabindex="-1"]')).toHaveCount(2)
+    await dot(page, 3).click()
+    // The tab stop followed the target.
+    await expect(dot(page, 3)).toHaveAttribute('tabindex', '0')
+    await expect(dot(page, 1)).toHaveAttribute('tabindex', '-1')
+    await expect(section(page).locator('.grd-ramp-dot[tabindex="0"]')).toHaveCount(1)
   })
 })
 
@@ -881,6 +1053,76 @@ test.describe('Available colours · the status line is where the eye is', () => 
   }
 })
 
+// The status line is the full width of the section, never cut, and in the palette
+// state it is always two lines tall, so a sentence that wraps moves nothing.
+const statusBox = (page) => page.evaluate(() => {
+  const el = document.getElementById('grd-avail-status')
+  const sec = document.querySelector('.grd-avail')
+  const cs = getComputedStyle(sec)
+  const inner = sec.getBoundingClientRect().width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+  const st = getComputedStyle(el)
+  return {
+    w: el.getBoundingClientRect().width, inner, h: el.getBoundingClientRect().height, text: el.textContent,
+    clipX: el.scrollWidth > el.clientWidth, clipY: el.scrollHeight > el.clientHeight + 1,
+    ellipsis: st.textOverflow === 'ellipsis', nowrap: st.whiteSpace === 'nowrap', two: el.classList.contains('grd-avail-status--two'),
+    section: sec.getBoundingClientRect().height,
+  }
+})
+
+test.describe('Available colours · the status line, full width and two lines tall', () => {
+  test.describe('at 1440px', () => {
+    test.use({ viewport: { width: 1440, height: 900 } })
+
+    test('in the palette state it is the section\'s full width and at least two lines tall, before and after a press', async ({ page }) => {
+      watch(page, 'a designer reading the status line')
+      await seed(page, { colors: THIRTEEN })
+      await open(page)
+      const idle = await statusBox(page)
+      expect(idle.two, 'the palette state carries the two-line rule').toBe(true)
+      expect(Math.abs(idle.w - idle.inner), 'as wide as the section\'s content').toBeLessThanOrEqual(1)
+      expect(idle.h, 'two lines of room even for a one-line idle sentence').toBeGreaterThanOrEqual(32)
+      expect([idle.clipX, idle.clipY, idle.ellipsis, idle.nowrap], 'nothing cut').toEqual([false, false, false, false])
+      await chip(page, 'Colour 13 500').click()
+      await expect(statusLine(page)).toHaveText(words('Stop 1 set to Colour 13 500. Next: stop 2.'))
+      const said = await statusBox(page)
+      expect(said.h, 'the sentence did not change the line\'s height').toBe(idle.h)
+      expect(said.section, 'nor the section\'s').toBe(idle.section)
+      expect([said.clipX, said.clipY]).toEqual([false, false])
+    })
+
+    test('in the no-palette state it is also full width and uncut, and does not hold two lines open', async ({ page }) => {
+      watch(page, 'someone with no palette reading the status line')
+      await seed(page, { colors: [] })
+      await open(page)
+      const idle = await statusBox(page)
+      expect(idle.two, 'the sparse states do not carry the two-line rule').toBe(false)
+      expect(Math.abs(idle.w - idle.inner)).toBeLessThanOrEqual(1)
+      expect([idle.clipX, idle.clipY, idle.ellipsis, idle.nowrap]).toEqual([false, false, false, false])
+    })
+  })
+
+  test.describe('at 320px, touch', () => {
+    test.use({ viewport: { width: 320, height: 700 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
+
+    test('the longest sentence wraps to a second line inside the same height, and nothing is cut', async ({ page }) => {
+      watch(page, 'a designer on the smallest phone with every colour locked')
+      await seed(page, { colors: THIRTEEN })
+      await open(page)
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'on the coarse-pointer rules').toBe(true)
+      const idle = await statusBox(page)
+      expect(idle.h, 'two lines of room').toBeGreaterThanOrEqual(32)
+      expect(Math.abs(idle.w - idle.inner)).toBeLessThanOrEqual(1)
+      for (const n of [1, 2, 3]) await lockBtn(page, n).click()
+      await expect(head(page)).toHaveText('Every colour is locked')
+      const locked = await statusBox(page)
+      expect(locked.text, 'POSITIVE CONTROL: the long sentence is the one showing').toBe('Every colour is locked. Unlock a stop to paint it.')
+      expect(locked.h, 'it fills the same two lines').toBe(idle.h)
+      expect(locked.section, 'and the section did not grow').toBe(idle.section)
+      expect([locked.clipX, locked.clipY, locked.ellipsis, locked.nowrap], 'cut by nothing').toEqual([false, false, false, false])
+    })
+  })
+})
+
 // ── v2: no palette and one colour: starter pairs, From a project (spec §2.4, T-A5) ──
 test.describe('Available colours · starter pairs', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
@@ -920,6 +1162,11 @@ test.describe('Available colours · starter pairs', () => {
     for (const n of [1, 2, 3]) await lockBtn(page, n).click()
     const pair = pairs(page).first()
     await expect(pair).toHaveAttribute('aria-disabled', 'true')
+    // Described before any press, for the pairs and the starter colours alike.
+    for (const inert of [pair, pairs(page).last(), chips(page).first(), chips(page).last()]) {
+      await expect(inert).toHaveAttribute('aria-describedby', 'grd-avail-locked')
+      await expect(inert).toHaveAccessibleDescription('Every colour is locked.')
+    }
     await pair.click({ force: true })
     for (const n of [1, 2, 3]) await expect(hexOf(page, n)).toHaveText(SEED_STOPS[n - 1])
     await expect(statusLine(page)).toHaveText('Every colour is locked.')
@@ -935,6 +1182,62 @@ test.describe('Available colours · starter pairs', () => {
   })
 })
 
+// The layout of the two sparse states: the way to the Palette Builder is on the
+// Colours label row, and the Colours block is a fixed 5x2 slot whatever fills it.
+test.describe('Available colours · the sparse layout', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  const geometry = (page) => page.evaluate(() => {
+    const r = (sel) => { const e = document.querySelector(sel); if (!e) return null; const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left, right: b.right, w: b.width, h: b.height } }
+    const slot = document.querySelector('.grd-chips--slot')
+    const cs = slot && getComputedStyle(slot)
+    return {
+      label: r('#grd-colours-label'), link: r('.grd-avail-subrow .grd-avail-link'), slot: r('.grd-chips--slot'), pairs: r('.grd-pairs'),
+      cols: cs && cs.gridTemplateColumns.split(' ').length, rows: cs && cs.gridTemplateRows.split(' ').length,
+      slotName: slot && slot.getAttribute('aria-labelledby'),
+      linkInRow: !!document.querySelector('.grd-avail-subrow #grd-colours-label')
+        && !!document.querySelector('.grd-avail-subrow .grd-avail-link'),
+    }
+  })
+
+  for (const [name, colors, linkText, count] of [
+    ['no palette', [], 'Make a palette', 10],
+    ['one colour', ['#0051FF'], 'Open Palette Builder', 1],
+  ]) {
+    test(`${name}: "${linkText}" sits on the Colours label row, the slot is a 5x2 grid, and the group is named by the label`, async ({ page }) => {
+      watch(page, `someone with ${name}`)
+      await seed(page, { colors })
+      await open(page)
+      await expect(chips(page)).toHaveCount(count)
+      const g = await geometry(page)
+      expect(g.linkInRow, 'the link and the label share one row element').toBe(true)
+      expect(g.link.right, 'the link is to the right of the label').toBeGreaterThan(g.label.right)
+      const mid = (b) => (b.top + b.bottom) / 2
+      expect(Math.abs(mid(g.link) - mid(g.label)), 'and on the same line').toBeLessThanOrEqual(8)
+      expect(g.link.top, 'the link is above the slot, not under it').toBeLessThan(g.slot.top)
+      expect([g.cols, g.rows], 'the slot is five columns by two rows').toEqual([5, 2])
+      expect(g.slotName).toBe('grd-colours-label')
+      await expect(section(page).getByRole('group', { name: 'Colours', exact: true }), 'its name is the label').toHaveCount(1)
+      await expect(page.locator('.grd-chips--starter'), 'the old class is gone').toHaveCount(0)
+      await expect(page.locator('.grd-avail-from'), 'signed out: no From a project row at all').toHaveCount(0)
+    })
+  }
+
+  test('the Colours slot is as tall for ten starters as for one colour', async ({ page, context }) => {
+    watch(page, 'someone comparing the two sparse states')
+    await seed(page, { colors: [] })
+    await open(page)
+    const none = await geometry(page)
+    expect(none.slot.h, 'POSITIVE CONTROL: two rows of 28px and an 8px gap').toBe(64)
+    const other = await context.newPage()
+    await seed(other, { colors: ['#0051FF'] })
+    await open(other)
+    const one = await geometry(other)
+    expect(one.slot.h, 'the slot did not shrink for a single chip').toBe(none.slot.h)
+    expect(one.slot.w).toBe(none.slot.w)
+  })
+})
+
 test.describe('Available colours · From a project', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   const PROJECT = {
@@ -943,21 +1246,29 @@ test.describe('Available colours · From a project', () => {
   }
   const fromSelect = (page) => section(page).getByRole('button', { name: /^From a project/ })
 
-  test('signed in with a saved project: the select lists it and swaps the chip row', async ({ page }) => {
+  test('signed in with a saved project: choosing it swaps the Colours slot and leaves the pairs', async ({ page }) => {
     watch(page, 'a signed-in designer with a saved palette and no current one')
     await signIn(page, { plan: 'free', projects: [PROJECT] })
     await seed(page, { colors: [] })
     await open(page)
     await expect(pairs(page)).toHaveCount(6)
     await expect(fromSelect(page)).toBeVisible()
+    const slotBefore = await page.locator('.grd-chips--slot').boundingBox()
+    const heightBefore = await page.evaluate(() => document.querySelector('.grd-avail').getBoundingClientRect().height)
     await chooseMenuOption(page, fromSelect(page), { label: 'Harbour rebrand' })
     const row = section(page).getByRole('group', { name: 'Colours from Harbour rebrand' })
     await expect(row.getByRole('button')).toHaveCount(3)
     expect(await names(row.getByRole('button'))).toEqual([
       'Harbour rebrand colour 1, #0B1B3A', 'Harbour rebrand colour 2, #3D7BFF', 'Harbour rebrand colour 3, #CFEFE6',
     ])
-    await expect(pairs(page), 'the pairs row gave its place to the project colours').toHaveCount(0)
+    await expect(pairs(page), 'the pairs stay: only the Colours slot was replaced').toHaveCount(6)
+    expect(await names(pairs(page))).toEqual(PAIRS.map(([n, l, r]) => `${n}, ${l} to ${r}`))
+    await expect(page.locator('#grd-colours-label'), 'the label names the project').toHaveText('Colours from Harbour rebrand')
     await expect(section(page).getByRole('group', { name: 'Colours', exact: true })).toHaveCount(0)
+    await expect(chips(page), 'the ten starters gave way to the three project colours').toHaveCount(3)
+    const slotAfter = await page.locator('.grd-chips--slot').boundingBox()
+    expect([slotAfter.x, slotAfter.y, slotAfter.width, slotAfter.height], 'the slot did not move or resize').toEqual([slotBefore.x, slotBefore.y, slotBefore.width, slotBefore.height])
+    expect(await page.evaluate(() => document.querySelector('.grd-avail').getBoundingClientRect().height), 'nor did the section').toBe(heightBefore)
     await row.getByRole('button').nth(1).click()
     await expect(hexOf(page, 1)).toHaveText('#3D7BFF')
     await expect(statusLine(page)).toHaveText(words('Stop 1 set to Harbour rebrand colour 2. Next: stop 2.'))
