@@ -69,6 +69,7 @@ export function fakeDb(seed = {}) {
   const docs = new Map(Object.entries(seed))
   let autoId = 0
   const ref = (col, id) => ({
+    id,
     path: `${col}/${id}`,
     async get() {
       const data = docs.get(`${col}/${id}`)
@@ -85,6 +86,14 @@ export function fakeDb(seed = {}) {
     collection: (col) => ({
       // `doc()` with no id makes a fresh document, as the Admin SDK does.
       doc: (id) => ref(col, id ?? `auto${(autoId += 1)}`),
+      // Only `==` on one field: all setup-stripe's open-save check needs.
+      where: (field, op, value) => ({
+        async get() {
+          if (op !== '==') throw new Error(`fake where() supports only ==, not ${op}`)
+          const matches = [...docs.entries()].filter(([k, v]) => k.startsWith(`${col}/`) && v[field] === value)
+          return { docs: matches.map(([, v]) => ({ data: () => v })) }
+        },
+      }),
       async add(data) {
         autoId += 1
         docs.set(`${col}/auto${autoId}`, { ...data })

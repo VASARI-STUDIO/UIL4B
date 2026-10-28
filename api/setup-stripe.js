@@ -7,7 +7,7 @@ import { proProductDescription } from './_lib/plans.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { adminDb } from './_lib/firebase-admin.js'
 import { isReauthFresh } from './_lib/accountDeletion.js'
-import { clientIp } from './_lib/rateLimit.js'
+import { clientIp, hashKey } from './_lib/rateLimit.js'
 import { failRequest } from './_lib/http.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
@@ -106,35 +106,120 @@ function validatePrices(prices) {
   return null
 }
 
+// Every price change is recorded in this collection before it is made. It has
+// no rule in firestore.rules, so only the Admin SDK can read or write it.
+export const AUDIT_COLLECTION = 'admin-audit'
+
+// A POST is refused (409) while another audit row is still 'applying' and is
+// younger than this. A row older than this is a request that died without
+// settling, and must not block price changes for ever.
+export const APPLYING_GUARD_MS = 2 * 60 * 1000
+
 // Marks the audit row with how the change ended. Never throws: the change has
 // already happened (or failed), and the row still says 'applying' if this fails.
-async function settleAudit(ref, status) {
+// `extra` is merged in as given: per-interval progress and a cleaned error.
+async function settleAudit(ref, status, extra = {}) {
   if (!ref) return
   try {
-    await ref.set({ status, settledAt: new Date().toISOString() }, { merge: true })
+    await ref.set({ status, settledAt: new Date().toISOString(), ...extra }, { merge: true })
   } catch (err) {
     console.error('setup-stripe: could not mark the audit row', { status, error: err?.message })
   }
 }
 
-// Every price change is recorded in this collection before it is made. It has
-// no rule in firestore.rules, so only the Admin SDK can read or write it.
-export const AUDIT_COLLECTION = 'admin-audit'
+// Best-effort progress write after each interval, so a request that dies
+// mid-loop (a timeout) still leaves a row that says how far it got.
+async function recordProgress(ref, progress) {
+  if (!ref) return
+  try {
+    await ref.set({ progress }, { merge: true })
+  } catch (err) {
+    console.error('setup-stripe: could not record progress on the audit row', { error: err?.message })
+  }
+}
 
-// A single save may not move any price by more than this factor, up or down,
-// unless the request carries `force: true`. A mistyped extra zero is the likely
-// error; a stolen session is the unlikely one; both are stopped by it.
+// An error message that is safe to keep in the audit row: Stripe object ids and
+// keys are replaced, and the length is capped. Stripe's own messages name the
+// object ("No such price: 'price_1Abc...'"), and a key can appear in an
+// authentication error.
+export function safeErrorMessage(err) {
+  const raw = String(err?.message || 'Unknown error')
+  return raw
+    .replace(/\b(?:price|prod|cus|cs|sub|si|pi|in|ii|ch|re|evt|acct|pm|plan|req|txn|seti|sk|rk|pk|whsec)_[A-Za-z0-9_]{6,}/g, '[id]')
+    .slice(0, 300)
+}
+
+// How a settled change is described: 'applied' when every interval was created
+// and archived, 'partial' when some price changed but not all of the work was
+// done, 'failed' when nothing changed.
+export function auditStatusFor(progress, complete) {
+  if (complete) return 'applied'
+  return Object.values(progress).some((p) => p.created) ? 'partial' : 'failed'
+}
+
+// The audit fields that identify who asked. The address is hashed the way the
+// rate limiter hashes it, so the raw address is not stored.
+function auditActor(req, auth, authTimeMs) {
+  const ip = clientIp(req)
+  return {
+    actorUid: auth.decoded.uid,
+    actorEmail: auth.decoded.email || null,
+    authTime: authTimeMs > 0 ? new Date(authTimeMs).toISOString() : null,
+    ip: ip ? hashKey(ip) : null,
+  }
+}
+
+// A refused attempt is recorded too. Best-effort: the refusal is already the
+// answer, and a failed write must not turn it into a 500.
+async function auditRefusal(req, auth, authTimeMs, reason, extra = {}) {
+  try {
+    await adminDb().collection(AUDIT_COLLECTION).doc().set({
+      action: 'stripe-prices-update',
+      status: 'refused',
+      reason,
+      at: new Date().toISOString(),
+      ...auditActor(req, auth, authTimeMs),
+      ...extra,
+    })
+  } catch (err) {
+    console.error('setup-stripe: could not record a refused attempt', { reason, error: err?.message })
+  }
+}
+
+// Writes the 'applying' row unless a recent one is still open. Both happen in
+// one transaction so two saves arriving together cannot both pass the check.
+// Returns { busy: true } when another save is under way.
+async function openAudit(db, ref, row) {
+  return db.runTransaction(async (tx) => {
+    const open = await tx.get(db.collection(AUDIT_COLLECTION).where('status', '==', 'applying'))
+    const now = Date.now()
+    const recent = open.docs.some((d) => now - Date.parse(d.data().at) < APPLYING_GUARD_MS)
+    if (recent) return { busy: true }
+    tx.set(ref, row)
+    return { busy: false }
+  })
+}
+
+// A save may not move any price by more than this factor, up or down, unless
+// the request carries `force: true`. This is a guard against a mistyped extra
+// zero. It is NOT a control against a stolen session: whoever holds a fresh
+// admin session can send `force: true` themselves. The session controls are the
+// fresh sign-in, the revocation check and the audit row.
 export const MAX_PRICE_CHANGE_FACTOR = 10
 
-// { lookupKey: { currency: { old, new } } } for the amounts a save would write.
-// `old` is null where no live price exists for that lookup key and currency.
+// { lookupKey: { currency: { old, new, newCents } } } for the amounts a save
+// would write. `new` is what the price will really be: the amount rounded
+// through toCents, as it is sent to Stripe, so 7.999 is recorded as 8 and 800
+// rather than as the 7.999 that was typed. `old` is null where no live price
+// exists for that lookup key and currency.
 export function describePriceChanges(before, prices) {
   const out = {}
   for (const interval of BILLING_INTERVALS) {
     const live = before?.[interval]?.currencies || {}
     out[LOOKUP_KEYS[interval]] = {}
     for (const [cur, amt] of Object.entries(prices[interval])) {
-      out[LOOKUP_KEYS[interval]][cur] = { old: live[cur] ?? null, new: Number(amt) }
+      const newCents = toCents(amt)
+      out[LOOKUP_KEYS[interval]][cur] = { old: live[cur] ?? null, new: fromCents(newCents), newCents }
     }
   }
   return out
@@ -177,8 +262,10 @@ export default async function handler(req, res) {
   const auth = await requireAdmin(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error, ...(auth.code ? { code: auth.code } : {}) })
 
-  // The audit row for this request, once it exists, so a failure can mark it.
+  // The audit row for this request, once it exists, so a failure can mark it,
+  // and how far the interval loop got (`{ monthly: { created, archived } }`).
   let auditRef = null
+  const progress = {}
 
   try {
     const stripe = getStripeServer()
@@ -199,6 +286,7 @@ export default async function handler(req, res) {
     // cannot move prices. The admin page maps the code to "Sign in again".
     const authTimeMs = (auth.decoded.auth_time || 0) * 1000
     if (!isReauthFresh(authTimeMs)) {
+      await auditRefusal(req, auth, authTimeMs, 'reauth-required')
       return res.status(401).json({
         code: 'reauth-required',
         error: 'For your security, please sign in again before changing prices.',
@@ -213,6 +301,7 @@ export default async function handler(req, res) {
     const changes = describePriceChanges(await readPrices(stripe), prices)
     const oversized = oversizedChange(changes)
     if (oversized && !force) {
+      await auditRefusal(req, auth, authTimeMs, 'price-change-too-large', { forced: false, prices: changes })
       return res.status(400).json({
         code: 'price-change-too-large',
         error: `${oversized.lookupKey} ${oversized.currency.toUpperCase()} would change from ${oversized.old} to ${oversized.new}, more than ${MAX_PRICE_CHANGE_FACTOR}x. Nothing was changed.`,
@@ -221,19 +310,26 @@ export default async function handler(req, res) {
 
     // Recorded BEFORE anything is changed: if the audit row cannot be written
     // the prices stay as they are, so no change is ever made without a record.
-    auditRef = adminDb().collection(AUDIT_COLLECTION).doc()
+    // The same step refuses a save while another is still 'applying' (409), so
+    // a double click or a second tab cannot run the interval loop twice at once.
+    const db = adminDb()
+    auditRef = db.collection(AUDIT_COLLECTION).doc()
     try {
-      await auditRef.set({
+      const { busy } = await openAudit(db, auditRef, {
         action: 'stripe-prices-update',
         status: 'applying',
         at: new Date().toISOString(),
-        actorUid: auth.decoded.uid,
-        actorEmail: auth.decoded.email || null,
-        authTime: new Date(authTimeMs).toISOString(),
-        ip: clientIp(req) || null,
+        ...auditActor(req, auth, authTimeMs),
         forced: force,
         prices: changes,
       })
+      if (busy) {
+        auditRef = null
+        return res.status(409).json({
+          code: 'change-in-progress',
+          error: 'Another price change is still being applied. Wait a minute, then check the prices and try again. Nothing was changed.',
+        })
+      }
     } catch (err) {
       auditRef = null
       return failRequest(res, {
@@ -282,16 +378,25 @@ export default async function handler(req, res) {
         interval: INTERVAL_MAP[interval],
         interval_count: INTERVAL_COUNTS[interval] ?? 1,
       }
-      const newPrice = await stripe.prices.create(priceParams)
+      // The idempotency keys come from this request's audit id and the
+      // interval, so Stripe replays the first result rather than making a
+      // second price or a second archive if this call is repeated within its
+      // own request (a network retry).
+      progress[interval] = { created: false, archived: false }
+      const newPrice = await stripe.prices.create(priceParams, { idempotencyKey: `${auditRef.id}-create-${interval}` })
+      progress[interval].created = true
 
       if (existing.data[0] && existing.data[0].id !== newPrice.id) {
-        await stripe.prices.update(existing.data[0].id, { active: false })
+        await stripe.prices.update(existing.data[0].id, { active: false }, { idempotencyKey: `${auditRef.id}-archive-${interval}` })
       }
+      // True also when there was no old price to archive.
+      progress[interval].archived = true
+      await recordProgress(auditRef, progress)
 
       out[interval] = { id: newPrice.id, currencies: amounts }
     }
 
-    await settleAudit(auditRef, 'applied')
+    await settleAudit(auditRef, auditStatusFor(progress, true), { progress })
 
     return res.status(200).json({
       ok: true,
@@ -301,7 +406,19 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('setup-stripe failed:', err)
-    await settleAudit(auditRef, 'failed')
-    return res.status(500).json({ error: err?.message || 'Setup failed' })
+    // 'partial' when at least one interval's price was already created: the
+    // live prices are then a mix of old and new, and the row says which.
+    const status = auditStatusFor(progress, false)
+    await settleAudit(auditRef, status, { progress, error: safeErrorMessage(err) })
+    const message = err?.message || 'Setup failed'
+    if (status === 'partial') {
+      const applied = Object.keys(progress).filter((k) => progress[k].created)
+      return res.status(500).json({
+        partial: true,
+        applied,
+        error: `Only some prices were changed (${applied.join(', ')}) before this failed. Reload to see the live prices, then save again. ${message}`,
+      })
+    }
+    return res.status(500).json({ error: message })
   }
 }
