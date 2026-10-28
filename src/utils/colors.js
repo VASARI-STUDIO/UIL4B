@@ -167,6 +167,23 @@ export function textColorForBg(hex) {
 function soften(s, factor) { return Math.max(10, Math.round(s * factor)) }
 function lShift(l, delta) { return Math.max(5, Math.min(95, l + delta)) }
 
+// Where each system puts its full-strength colours, in degrees of hue from the
+// seed (positive is the direction hue increases round the wheel). The wheel icons
+// in the System menu draw from this. generateHarmony keeps its offsets inline
+// beside each system's tonal steps, so tests/unit/harmony-wheel.test.js holds the
+// two together. `auto` is the tonal engine's sibling hue (HCT, +30); the
+// monochromatic system never leaves the seed's hue.
+export const HARMONY_OFFSETS = {
+  auto: [0, 30],
+  monochromatic: [0],
+  analogous: [0, -30, 30],
+  complement: [0, 180],
+  triadic: [0, 120, 240],
+  split: [0, 150, 210],
+  tetradic: [0, 90, 180, 270],
+  custom: [0, 60, 180],
+}
+
 export function generateHarmony(hex, type) {
   const [h, s, l] = hexToHsl(hex)
   const colors = [hex]

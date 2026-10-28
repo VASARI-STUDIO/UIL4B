@@ -16,7 +16,8 @@ function childOptions(children) {
 
 // An option may also carry `icon` (a node drawn before the label), `triggerIcon`
 // (the smaller node the toolbar trigger shows), `short` (the trigger's text) and
-// `divider` (a hairline above the row). Any `icon` turns the whole list into the
+// `divider` (a hairline above the row) and `note` (a quiet word after the name in
+// the list row only; the trigger leaves it out). Any `icon` turns the whole list into the
 // two-line "rich" form; `footnote` is a note under the rows. A list that passes
 // none of these renders as it always has.
 export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote }) {
@@ -143,13 +144,15 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     // the option's description after its name. The name is set to the label
     // alone, so the description is not also read as part of the name.
     const descId = option.desc ? `${listId}-${rowIndex}-desc` : undefined
-    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={option.mark || groupMark ? `${option.label}, ${option.mark || groupMark}` : option.desc ? option.label : undefined} aria-describedby={descId} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
+    // The note is spoken after the name ("Auto, recommended"), then any mark.
+    const spoken = [option.label, option.note && option.note.toLowerCase(), option.mark || groupMark].filter(Boolean)
+    return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={spoken.length > 1 || option.desc ? spoken.join(', ') : undefined} aria-describedby={descId} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
       className={`pop-item menu-select-option${option.desc ? ' menu-select-option--desc' : ''}${option.icon ? ' menu-select-option--rich' : ''}${option.divider ? ' menu-select-option--divider' : ''}${active === rowIndex ? ' is-active' : ''}`} data-option-index={rowIndex} data-value={String(option.value)}
       onPointerMove={() => { if (!option.disabled) setActive(rowIndex) }} onClick={() => choose(rowIndex)}>
       {option.icon && <span className="menu-select-icon" aria-hidden="true">{option.icon}</span>}
       {option.desc
-        ? <span className="menu-select-body"><span className="menu-select-text">{option.label}</span><span id={descId} className="menu-select-desc">{option.desc}</span></span>
-        : <span className="menu-select-text">{option.label}</span>}
+        ? <span className="menu-select-body"><span className="menu-select-text">{option.label}{option.note && <span className="menu-select-note"> ({option.note})</span>}</span><span id={descId} className="menu-select-desc">{option.desc}</span></span>
+        : <span className="menu-select-text">{option.label}{option.note && <span className="menu-select-note"> ({option.note})</span>}</span>}
       {option.mark && <span className="menu-select-mark">{option.mark}</span>}
       <svg className="menu-select-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m5 12 4 4L19 6" /></svg>
     </div>

@@ -38,6 +38,7 @@ import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import { DEFAULT_SCENE } from '../data/palettePreviewScenes'
 import { loadPreviewDialog } from '../components/palette/previewLoader'
 import NearestMatchPanel from '../components/palette/NearestMatchPanel'
+import HarmonyWheel from '../components/palette/HarmonyWheel'
 import { LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
@@ -2592,7 +2593,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
-  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, desc: h.desc, mark: h.free || isPro ? '' : 'Pro' }))
+  // Each system carries its wheel (the rich row) and a 16px one for the toolbar trigger.
+  // `note` is a quiet word beside the name in the menu row only; the trigger stays "Auto".
+  const systemOptions = HARMONIES.map(h => ({
+    value: h.id, label: h.label, desc: h.desc, mark: h.free || isPro ? '' : 'Pro', note: h.id === 'auto' ? 'Recommended' : '',
+    icon: <HarmonyWheel system={h.id} size={20} />, triggerIcon: <HarmonyWheel system={h.id} size={16} />,
+  }))
   // `desc` is the one-line hint under each name; the divider sets Normal apart
   // from the modes, and `short` / `triggerIcon` are what the toolbar trigger shows.
   const visionOptions = VISION_MODES.map((m, i) => ({
