@@ -68,7 +68,7 @@ diff --git a/firestore.rules b/firestore.rules
        // The exact seven keys buildQueueRecord writes. `payload` is bounded by a
        // key allowlist and a size cap on every field.
        function submissionPayloadOk() {
-@@ -157,7 +217,7 @@ service cloud.firestore {
+@@ -157,6 +217,6 @@ service cloud.firestore {
            // Gradient stops and palette colours are lists, capped by length.
            && (!('stops' in request.resource.data.payload)
                || (request.resource.data.payload.stops is list
@@ -76,7 +76,6 @@ diff --git a/firestore.rules b/firestore.rules
 +                  && request.resource.data.payload.stops.size() <= 12))
            && (!('colors' in request.resource.data.payload)
                || (request.resource.data.payload.colors is list
-                   && request.resource.data.payload.colors.size() <= 32));
 @@ -185,7 +245,8 @@ service cloud.firestore {
            && request.resource.data.authorName.size() <= 60
            && request.resource.data.createdAt is string
