@@ -20,6 +20,7 @@ import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
+import { allColoursLocked, nextPaintTarget } from '../utils/gradientPaint'
 import { gradientCss, gradientToolUrl, decodeGradientParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
@@ -283,17 +284,19 @@ const MAX_CHIPS = 13
 // near-black ink by the chip's own lightness. A colour picked as part of the
 // Shuffle pool wears a dashed ring in that same ink. Shift, Ctrl or Cmd+click
 // picks or unpicks it without applying it; on touch a press and hold does.
-function ColourChip({ hex, label, on, picked, onPick, onTogglePick }) {
+function ColourChip({ hex, label, on, picked, unavailable = false, onPick, onTogglePick }) {
   const light = useMemo(() => hexToOklch(hex)[0] >= 60, [hex])
   const hold = useRef({ timer: 0, fired: false })
   useEffect(() => () => clearTimeout(hold.current.timer), [])
-  const name = `${label}, ${hex}${picked ? ', picked for shuffle' : ''}`
+  const name = `${label}, ${hex}${on ? ', in this gradient' : ''}${picked ? ', picked for shuffle' : ''}`
   return (
     <button
       type="button"
       className={`grd-chip${on ? ' is-on' : ''}${picked ? ' is-picked' : ''}${light ? ' is-light' : ''}`}
       style={{ background: hex }}
       aria-pressed={on}
+      aria-disabled={unavailable || undefined}
+      aria-describedby={unavailable ? 'grd-avail-status' : undefined}
       aria-label={name}
       title={name}
       onPointerDown={(e) => {
@@ -315,6 +318,11 @@ function ColourChip({ hex, label, on, picked, onPick, onTogglePick }) {
     </button>
   )
 }
+
+// What the status line's last sentence was about: the target stop(s) and every
+// stop's colour. Once either changes the sentence is stale and the line goes back
+// to saying what the next press will do.
+const paintKey = (idxs, list) => `${idxs.join(',')}|${list.map((st) => st.color).join('')}`
 
 // Hex text field with a local draft, so partially-typed values aren't wiped by
 // the controlled stop colour on every keystroke. Commits when the text is a
@@ -562,6 +570,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // elsewhere) announces twice; an unchanged string would not.
   const [pickNote, setPickNote] = useState('')
   const pickNoteTimer = useRef(0)
+  // The Available colours status line: the last press's sentence and the key that
+  // says which stops and colours it describes. `n` flips an invisible character on
+  // an identical sentence so a screen reader says it again.
+  const [paintNote, setPaintNote] = useState(null)
+  const paintCount = useRef(0)
   useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
   const say = useCallback((text) => {
     setPickNote('')
@@ -1014,12 +1027,29 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     note.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }, [paletteMissing])
 
-  // A chip sets the colour of every selected stop, or of the active one.
+  // A chip paints the selected stops, or the target stop; then the target moves on
+  // to the next stop whose colour is not locked, so two presses make a whole
+  // gradient. A selection stays where it is. Pressing a colour a stop already has
+  // changes nothing but still moves the target, so pressing through a palette in
+  // order never stalls.
   const pickColour = useCallback((hex, name) => {
     if (!guardEdit()) return
-    setStops((prev) => prev.map((s, i) => (targets.includes(i) ? { ...s, color: hex } : s)))
-    say(targets.length > 1 ? `${targets.length} stops set to ${name}` : `Stop ${targets[0] + 1} set to ${name}`)
-  }, [guardEdit, targets, say])
+    if (allColoursLocked(stops)) {
+      setPaintNote({ text: 'Every colour is locked.', key: paintKey(targets, stops), n: ++paintCount.current })
+      return
+    }
+    const upper = hex.toUpperCase()
+    const same = targets.every((i) => stops[i]?.color?.toUpperCase() === upper)
+    const painted = same ? stops : stops.map((st, i) => (targets.includes(i) ? { ...st, color: hex } : st))
+    if (!same) setStops(painted)
+    const next = multi ? activeStop : nextPaintTarget(painted, activeStop)
+    if (next !== activeStop) { setActiveStop(next); anchorRef.current = next }
+    let text
+    if (multi) text = `${targets.length} selected stops ${same ? 'are already' : 'set to'} ${name}.`
+    else if (same) text = `Stop ${activeStop + 1} is already ${name}.`
+    else text = `Stop ${activeStop + 1} set to ${name}.${next !== activeStop ? ` Next: stop ${next + 1}.` : ''}`
+    setPaintNote({ text, key: paintKey(multi ? targets : [next], painted), n: ++paintCount.current })
+  }, [guardEdit, targets, stops, multi, activeStop])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
@@ -1417,7 +1447,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
   const selected = stops[activeStop] || stops[0]
-  const selectedHex = selected?.color?.toUpperCase()
+  // A chip is on when any stop uses its colour; the ringed dot on the ramp, not the
+  // chip, says where the next press lands.
+  const usedHexes = new Set(stops.map((st) => st.color.toUpperCase()))
+  const allLocked = allColoursLocked(stops)
+  const noteNow = paintNote && paintNote.key === paintKey(targets, stops) ? paintNote : null
+  const availHead = allLocked ? 'Every colour is locked' : multi ? `Painting ${targets.length} selected stops` : `Painting stop ${activeStop + 1} of ${stops.length}`
+  const availIdle = allLocked ? 'Every colour is locked. Unlock a stop to paint it.' : multi ? `Press a colour to paint the ${targets.length} selected stops.` : `Press a colour to paint stop ${activeStop + 1}.`
   // The rail reads the stops left to right, so it is always a 90deg ramp in the
   // chosen space whatever the gradient's type — the design paints the gradient
   // itself there, which for a radial or conic would put no stop where its
@@ -1743,7 +1779,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   <button type="button" className="grd-sel-clear" onClick={clearPicks}>Clear picks</button>
                 </span>
               )
-              :<span className="grd-avail-tip" aria-hidden="true">{coarse ? 'Hold to pick for Shuffle' : 'Shift-click to pick for Shuffle'}</span>}
+              :<span className="grd-avail-tip">{availHead}</span>}
           >
             <span id="grd-picks-hint" className="sr-only">Shift-click colours to pick them for Shuffle from palette. From the keyboard, press Shift with Enter or Space on a colour. On a touch screen, press and hold.</span>
             <div className="sr-only" role="status">{pickNote}</div>
@@ -1758,14 +1794,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <span className="grd-avail-sub" id="grd-starter-label">Starter colours</span>
                 <div className="grd-chips grd-chips--starter" role="group" aria-labelledby="grd-starter-label" aria-describedby="grd-picks-hint">
                   {STARTER_COLOURS.map((c) => (
-                    <ColourChip key={c.hex} hex={c.hex} label={c.name} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
+                    <ColourChip key={c.hex} hex={c.hex} label={c.name} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
                   ))}
                 </div>
               </>
             ) : (
               <div className="grd-chips" role="group" aria-label="Palette colours" aria-describedby="grd-picks-hint">
                 {shownChips.map((c) => (
-                  <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
+                  <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
                 ))}
                 {hiddenChips > 0 && (
                   <Link to="/create/palette" className="grd-chips-more">
@@ -1785,11 +1821,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <span className="grd-avail-sub" id="grd-shades-label">{shades.role} shades</span>
                 <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label" aria-describedby="grd-picks-hint">
                   {shades.items.map((c) => (
-                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
+                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
                   ))}
                 </div>
               </div>
             )}
+            <p id="grd-avail-status" className="grd-avail-status" role="status" aria-live="polite" aria-atomic="true">
+              {noteNow ? noteNow.text + (noteNow.n % 2 ? '\u200B' : '') : <span className="grd-avail-idle" aria-hidden="true">{availIdle}</span>}
+            </p>
           </ToolSection>
 
           <ToolSection
