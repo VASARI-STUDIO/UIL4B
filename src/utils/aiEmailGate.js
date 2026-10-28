@@ -36,6 +36,80 @@ export function verifyCheckOutcome(verified) {
 }
 
 /**
+ * "I've verified" end to end, given `refresh` (AuthContext's refreshEmailVerified).
+ * A refresh that rejects is a failed check, not a verified account: it says so
+ * and does not retry, because the token in hand may still carry the old claim.
+ */
+export async function checkVerified(refresh) {
+  try {
+    return verifyCheckOutcome(await refresh())
+  } catch {
+    return { retry: false, message: VERIFY_CHECK_FAILED }
+  }
+}
+
+// Shown under the buttons after a Resend. The sentence above already names the
+// address, so this does not repeat it.
+export const VERIFY_RESENT = 'New link sent.'
+
+/** The status line under the buttons: a check's answer wins over a send's. */
+export function verifyPromptNote({ checkNote, sendState }) {
+  return checkNote || (sendState === 'sent' ? VERIFY_RESENT : '')
+}
+
+/**
+ * Did the address become verified while the prompt was open? True only for the
+ * same signed-in account going from owing verification to not owing it. A
+ * prompt that opens on an account that does not owe it (it cannot be helped by
+ * verifying) never answers yes, and signing out is not a verification.
+ */
+export function verifiedWhileOpen({ wasOwed, owed, openedFor, uid }) {
+  return wasOwed === true && owed === false && !!uid && uid === openedFor
+}
+
+/**
+ * The prompt is about to leave the page: put keyboard focus somewhere that
+ * stays, so it does not drop to <body>. `pick` may name a better target (the
+ * tool's own Generate button); the page's <main> is the fallback. Returns the
+ * element focused, or null.
+ */
+export function focusAfterVerified(doc, pick) {
+  const target = pick?.() || doc?.getElementById?.('main') || null
+  target?.focus?.()
+  return target
+}
+
+/**
+ * Starting a generation in the AltText tool clears any earlier refusal. `retry`
+ * is what to repeat if this run is refused too: null for one card (recorded at
+ * the refusal), `{ id: null, batch: true }` for the whole batch. Without this a
+ * prompt left over from an earlier refusal stays up, and a stale retry target
+ * is repeated after the person verifies.
+ */
+export function beginVerifyRun({ setNeeded, stop, retryRef }, retry) {
+  setNeeded(false)
+  stop.current = false
+  retryRef.current = retry
+}
+
+/**
+ * A run was refused for the unverified email: stop the batch, show the prompt,
+ * and remember what to repeat. The first refusal in a run decides the target.
+ */
+export function refuseForVerify({ setNeeded, stop, retryRef }, itemId) {
+  stop.current = true
+  retryRef.current ??= { id: itemId, batch: false }
+  setNeeded(true)
+}
+
+/** What to repeat once verified: the whole batch, one card, or nothing. */
+export function verifyRetryTarget(retry, items) {
+  if (retry?.batch) return { kind: 'batch' }
+  const item = (items || []).find((it) => it.id === retry?.id)
+  return item ? { kind: 'one', item } : { kind: 'none' }
+}
+
+/**
  * The Resend button's label. After a send it reads "Sent" with the seconds left
  * on the cooldown, then goes back to offering another link.
  */

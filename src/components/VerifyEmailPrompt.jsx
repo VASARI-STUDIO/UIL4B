@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import {
-  VERIFY_RESEND_COOLDOWN_S,
-  verifyResendBlocked,
-  verifyErrorText,
-} from '../utils/emailVerification'
+import useVerifyResend from '../hooks/useVerifyResend'
+import { verifyResendBlocked } from '../utils/emailVerification'
 import {
   VERIFY_PROMPT_TITLE,
-  VERIFY_CHECK_FAILED,
   verifyPromptSent,
-  verifyCheckOutcome,
+  verifyPromptNote,
+  verifiedWhileOpen,
+  focusAfterVerified,
+  checkVerified,
   resendLabel,
 } from '../utils/aiEmailGate'
 import '../styles/pages/verify-ai-prompt.css'
@@ -21,20 +20,26 @@ import '../styles/pages/verify-ai-prompt.css'
 // (refreshEmailVerified does both), because the token in hand still says the
 // address is unverified even after the link has been opened in another tab.
 // Only when the re-read shows it verified does `onVerified` run, and the tool
-// uses it to repeat the request it had to give up on.
-export default function VerifyEmailPrompt({ onVerified, className = '' }) {
+// uses it to repeat the request it had to give up on. The link is usually
+// opened in another tab, so the reminder bar's recheck (useVerificationRecheck,
+// on focus) can be what notices; this block then runs `onVerified` by itself,
+// once. Resend shares its state and cooldown with that bar (useVerifyResend).
+//
+// `focusAfter` may return the element to focus when this block leaves; the
+// page's <main> is the default, so focus never drops to <body>.
+export default function VerifyEmailPrompt({ onVerified, focusAfter, className = '' }) {
   const auth = useAuth() || {}
-  const { user, sendVerificationEmail, refreshEmailVerified } = auth
+  const { user, emailVerificationOwed: owed, sendVerificationEmail, refreshEmailVerified } = auth
+  const uid = user?.uid
   const email = user?.email || ''
 
-  const [sendState, setSendState] = useState('idle') // idle | sending | sent | failed
-  const [sendError, setSendError] = useState('')
-  const [until, setUntil] = useState(0)
-  const [left, setLeft] = useState(0)
+  const { state: sendState, error: sendError, left, resend: sendLink } = useVerifyResend(uid, sendVerificationEmail)
   const [checking, setChecking] = useState(false)
   const [checkNote, setCheckNote] = useState('')
   const alive = useRef(true)
   const rootRef = useRef(null)
+  const done = useRef(false)
+  const opened = useRef({ owed, uid })
 
   useEffect(() => {
     alive.current = true
@@ -45,53 +50,38 @@ export default function VerifyEmailPrompt({ onVerified, className = '' }) {
   // focus (and scrolls into view) rather than appearing unannounced above it.
   useEffect(() => { rootRef.current?.focus() }, [])
 
+  // Verified, by either route: focus moves off this block (it is about to be
+  // removed), then the tool repeats its request. Once only.
+  const finish = () => {
+    if (done.current) return
+    done.current = true
+    focusAfterVerified(document, focusAfter)
+    onVerified?.()
+  }
+
   useEffect(() => {
-    if (!until) return undefined
-    const tick = () => {
-      const seconds = Math.ceil((until - Date.now()) / 1000)
-      setLeft(Math.max(0, seconds))
-      if (seconds <= 0) setUntil(0)
-    }
-    const timer = setInterval(tick, 1000)
-    return () => clearInterval(timer)
-  }, [until])
+    const { owed: wasOwed, uid: openedFor } = opened.current
+    if (verifiedWhileOpen({ wasOwed, owed, openedFor, uid })) finish()
+    // finish reads refs and the latest props; it is not a dependency on purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [owed, uid])
 
   const resendBlocked = verifyResendBlocked(sendState, left)
 
-  const resend = async () => {
+  const resend = () => {
     if (resendBlocked || !sendVerificationEmail) return
-    setSendState('sending')
-    setSendError('')
-    try {
-      await sendVerificationEmail()
-      if (!alive.current) return
-      setSendState('sent')
-      setLeft(VERIFY_RESEND_COOLDOWN_S)
-      setUntil(Date.now() + VERIFY_RESEND_COOLDOWN_S * 1000)
-    } catch (e) {
-      if (!alive.current) return
-      setSendError(verifyErrorText(e))
-      setSendState('failed')
-    }
+    sendLink()
   }
 
   const check = async () => {
     if (checking || !refreshEmailVerified) return
     setChecking(true)
     setCheckNote('')
-    try {
-      const outcome = verifyCheckOutcome(await refreshEmailVerified())
-      if (!alive.current) return
-      if (outcome.retry) {
-        onVerified?.()
-        return
-      }
-      setCheckNote(outcome.message)
-    } catch {
-      if (alive.current) setCheckNote(VERIFY_CHECK_FAILED)
-    } finally {
-      if (alive.current) setChecking(false)
-    }
+    const outcome = await checkVerified(refreshEmailVerified)
+    if (!alive.current) return
+    setChecking(false)
+    if (outcome.retry) finish()
+    else setCheckNote(outcome.message)
   }
 
   return (
@@ -129,7 +119,7 @@ export default function VerifyEmailPrompt({ onVerified, className = '' }) {
       {/* Two regions that stay in the page and only change their text, so each
           message is announced once. */}
       <p className="verify-ai-note" role="status">
-        {checkNote || (sendState === 'sent' ? `Link sent to ${email || 'your email'}.` : '')}
+        {verifyPromptNote({ checkNote, sendState })}
       </p>
       <p className="verify-ai-note verify-ai-note--error" role="alert">
         {sendState === 'failed' ? sendError : ''}

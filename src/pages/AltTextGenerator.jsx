@@ -15,7 +15,7 @@ import { AI_IMAGE_SENT, AI_TERMS_PATH } from '../config/aiImageConsent'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { toCsv } from '../utils/csv'
 import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
-import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
+import { isEmailUnverifiedReply, beginVerifyRun, refuseForVerify, verifyRetryTarget } from '../utils/aiEmailGate'
 // The `alt-text` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -140,6 +140,7 @@ export default function AltTextGenerator({ toast }) {
   const [verifyNeeded, setVerifyNeeded] = useState(false)
   const verifyStop = useRef(false)
   const verifyRetry = useRef(null)
+  const verifyRun = { setNeeded: setVerifyNeeded, stop: verifyStop, retryRef: verifyRetry }
   const fileInputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
   const { plan, isPro } = useSubscription()
@@ -239,9 +240,7 @@ export default function AltTextGenerator({ toast }) {
       if (isEmailUnverifiedReply(r.status, data)) {
         // Not an error on the card: the card goes back to ready, and the prompt
         // above the dropzone says what to do.
-        verifyStop.current = true
-        verifyRetry.current ??= { id: item.id, batch: false }
-        setVerifyNeeded(true)
+        refuseForVerify(verifyRun, item.id)
         setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'ready', error: null } : p))
         return false
       }
@@ -274,16 +273,14 @@ export default function AltTextGenerator({ toast }) {
   // One card's Generate or Retry: the same account check as the batch.
   const generateOne = async (item) => {
     if (!(await ensureAccount())) return
-    verifyStop.current = false
-    verifyRetry.current = null
+    beginVerifyRun(verifyRun, null)
     await generateForItem(item)
   }
 
   const generateAll = async () => {
     if (!(await ensureAccount())) return
     setBusy(true)
-    verifyStop.current = false
-    verifyRetry.current = { id: null, batch: true }
+    beginVerifyRun(verifyRun, { id: null, batch: true })
     const targets = items.filter(it => it.status === 'ready' || it.status === 'error')
     let done = 0
     for (let i = 0; i < targets.length; i++) {
@@ -299,15 +296,11 @@ export default function AltTextGenerator({ toast }) {
 
   // The address is verified and the token is fresh: repeat what was refused.
   const retryAfterVerify = () => {
-    const retry = verifyRetry.current
+    const target = verifyRetryTarget(verifyRetry.current, items)
     setVerifyNeeded(false)
     verifyRetry.current = null
-    if (retry?.batch) {
-      generateAll()
-    } else {
-      const item = items.find(it => it.id === retry?.id)
-      if (item) generateOne(item)
-    }
+    if (target.kind === 'batch') generateAll()
+    else if (target.kind === 'one') generateOne(target.item)
   }
 
   const copyOne = async (it) => {
