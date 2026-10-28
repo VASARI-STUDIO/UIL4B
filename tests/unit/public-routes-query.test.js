@@ -159,6 +159,43 @@ test('share: nothing from the request but a validated code reaches Location', ()
   assert.ok(!/[\r\n]/.test(res.headers.Location))
 })
 
+test('share: the rewrite path param `code`, when it repeats c, is part of the rewrite: served, never redirected', () => {
+  // If the platform adds :code to the query, a redirect here would send every
+  // share link to a URL that redirects again.
+  const page = askShare({ c: CODE, code: CODE })
+  assert.equal(page.statusCode, 200)
+  assert.equal(page.headers.Location, undefined)
+  assert.match(page.headers['Content-Type'], /text\/html/)
+
+  const image = askShare({ c: CODE, code: CODE, img: '1' })
+  assert.equal(image.statusCode, 200)
+  assert.equal(image.headers.Location, undefined)
+  assert.equal(image.headers['Content-Type'], 'image/png')
+
+  // With a tracking key as well it redirects, and the target is stable: asking
+  // for it with the same rewrite param is served.
+  const tracked = askShare({ c: CODE, code: CODE, fbclid: 'x' })
+  assert.equal(tracked.statusCode, 308)
+  assert.equal(tracked.headers.Location, `/p/${CODE}`)
+  assert.equal(askShare({ c: CODE, code: CODE }).statusCode, 200)
+})
+
+test('share: a `code` that differs from c, or repeats, is a 400', () => {
+  for (const code of ['AAAAAA', '', ['4338E0,7C6CF0'], ['4338E0,7C6CF0', '4338E0,7C6CF0']]) {
+    const res = askShare({ c: CODE, code })
+    assert.equal(res.statusCode, 400, `code=${JSON.stringify(code)}`)
+    assert.equal(res.headers.Location, undefined)
+  }
+})
+
+test('share: Location uses the upper-cased code, so case variants share one cache entry', () => {
+  const lower = askShare({ c: '4338e0,7c6cf0', fbclid: 'x' })
+  const upper = askShare({ c: '4338E0,7C6CF0', fbclid: 'y' })
+  assert.equal(lower.headers.Location, '/p/4338E0,7C6CF0')
+  assert.equal(lower.headers.Location, upper.headers.Location)
+  assert.equal(askShare({ c: '4338e0', img: '1', fbclid: 'x' }).headers.Location, '/api/share?c=4338E0&img=1')
+})
+
 test('share: a repeated c is still a 400, not read as a comma list and not redirected', () => {
   const res = askShare({ c: ['4338E0', '7C6CF0'], fbclid: 'x' })
   assert.equal(res.statusCode, 400)

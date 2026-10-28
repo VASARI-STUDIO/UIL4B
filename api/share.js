@@ -94,13 +94,23 @@ export default function handler(req, res) {
   // for the same palette, so it is sent on to the clean URL instead of served.
   // A link shared on social media picks up tracking keys, and a refusal would
   // break the link and its unfurl. The redirect builds no page and no PNG, and
-  // is itself cacheable. `Location` holds only the validated code: nothing else
-  // from the request is copied into it.
+  // is itself cacheable. `Location` holds only the validated code, upper-cased
+  // so that case variants share one cache entry: nothing else from the request
+  // is copied into it.
+  //
+  // `code` is the path parameter of the /p/:code rewrite. If the platform adds
+  // it to the query, it is part of the rewrite and must not count as an extra
+  // key, or every share link would redirect to a URL that redirects again. It
+  // is only that when it repeats `c`; any other value is refused.
   const query = req.query || {}
+  if (query.code !== undefined && query.code !== code) {
+    return res.status(400).json({ error: 'Unexpected query parameter' })
+  }
   const imgValid = query.img === '1'
-  const extraKeys = Object.keys(query).some((key) => key !== 'c' && key !== 'img')
+  const extraKeys = Object.keys(query).some((key) => key !== 'c' && key !== 'img' && key !== 'code')
   if (extraKeys || (query.img !== undefined && !imgValid)) {
-    res.setHeader('Location', imgValid ? `/api/share?c=${code}&img=1` : `/p/${code}`)
+    const clean = hexes.join(',')
+    res.setHeader('Location', imgValid ? `/api/share?c=${clean}&img=1` : `/p/${clean}`)
     res.setHeader('Cache-Control', 'public, s-maxage=86400')
     return res.status(308).end()
   }
