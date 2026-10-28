@@ -72,7 +72,10 @@
 .stg .stg-title { margin: 0; padding: 0; font-family: var(--font); font-size: 15px; font-weight: 560; letter-spacing: -.02em; line-height: 1.3; color: var(--t0); white-space: nowrap; }
 .stg .stg-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: -9px 0 -9px -10px; padding: 0 10px; border: 0; border-radius: var(--btn-radius); background: none; font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--t1); cursor: pointer; }
 .stg .stg-back:hover { color: var(--t0); background: var(--stg-wash); }
-.stg .stg-back + .stg-title { display: none; }
+.stg .stg-back:focus-visible { outline-offset: -2px; }
+/* Beside the back control the title is not drawn, but it stays the page's h1
+   in the accessibility tree; the section's own h2 is what focus lands on. */
+.stg .stg-back + .stg-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .stg .stg-chev { flex-shrink: 0; color: var(--t2); }
 
 /* ── Layout and the section nav ───────────────────────────────────────────────
@@ -105,6 +108,13 @@
 .stg .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--stg-hair); }
 .stg .settings-row:last-child { border-bottom: none; }
 .stg .settings-row-main { flex: 1 1 auto; min-width: 0; }
+/* The words give way, the action does not: a button that shares a row with a
+   paragraph shrinks to its longest word ("Export / JSON") unless it is held at
+   its own width. A row that cannot fit both wraps the button to its own line
+   (the 520 block below), whole. */
+.stg .settings-row > .btn,
+.stg .settings-row > .settings-edit-actions,
+.stg .settings-card-h > .btn { flex: none; white-space: nowrap; }
 .stg .settings-row-label { margin: 0 0 4px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
 .stg .settings-row-value { font-size: 14px; color: var(--t0); overflow-wrap: anywhere; }
 .stg .settings-row-meta { margin-top: 2px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
@@ -198,6 +208,8 @@
    left to global.css. */
 .stg .toggle-switch { background: color-mix(in srgb, var(--t0) 22%, var(--card)); }
 .stg .toggle-switch.on { background: var(--accent-fill); }
+/* The words beside the switch are its <label>, so they act like it. */
+.stg label.toggle-row-info { cursor: pointer; }
 
 /* ── Language ─────────────────────────────────────────────────────────────── */
 .stg .lang-tile { min-height: 48px; border-color: var(--stg-hair); border-radius: var(--radius); background: transparent; box-shadow: none; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
@@ -305,6 +317,11 @@
   .stg .settings-nav-item svg { color: var(--t1); }
   .stg .settings-nav-item .stg-chev,
   .stg .settings-nav-item.active .stg-chev { color: var(--t2); }
+  /* Inside a section the way back stays under the site header, which is
+     already sticky at --chrome-h (its height plus the safe-area top), so a long
+     section is never a long scroll from the list. The list view keeps its
+     plain title bar. */
+  .stg[data-phone-view="section"] .stg-bar { position: sticky; top: var(--chrome-h); z-index: 20; margin-bottom: 16px; background: rgb(var(--page-rgb)); }
 }
 @media (max-width: 640px) {
   .stg .settings-card-h,
@@ -318,12 +335,37 @@
   .stg .sub-billing-toggle button { flex: 1 1 0; min-width: 0; justify-content: center; gap: 0; min-height: 44px; padding: 0 var(--s-3); }
   .stg .sub-tiers { grid-template-columns: minmax(0, 1fr); }
   .stg .sub-tier { padding: 20px 16px; }
-  .stg .sub-tier-pro { border-left: 0; border-top: 1px solid var(--stg-hair); }
+  /* Settings.jsx puts Pro first from here down, so the hairline sits on the
+     block that comes second. */
+  .stg .sub-tier-pro { border-left: 0; border-top: 0; }
+  .stg .sub-tier-free { border-top: 1px solid var(--stg-hair); }
+  /* Language: one surface of hairline rows, the shape of the section list the
+     person just came from, not a card holding ten bordered tiles. The chosen
+     row is marked by the check, the wash and the weight, not by a ring. Every
+     state restates the hairline: the base hover and active rules recolour the
+     whole border, which would otherwise paint the divider ink. */
+  .stg .settings-card-body--grid { padding: 0; overflow: hidden; border-radius: calc(var(--radius-2xl) - 1px); }
+  .stg .lang-grid { gap: 0; padding: 0; }
+  .stg .lang-tile { min-height: 52px; padding: 8px 16px; border: 0; border-bottom: 1px solid var(--stg-hair); border-radius: 0; }
+  .stg .lang-tile:hover,
+  .stg .lang-tile.active { border-color: var(--stg-hair); }
+  .stg .lang-tile:last-child { border-bottom: 0; }
+  .stg .lang-tile.active { background: var(--stg-wash-2); box-shadow: none; }
+  .stg .lang-tile.active .lang-tile-label { font-weight: 650; }
 }
 @media (max-width: 520px) {
   .stg .toggle-row { flex-wrap: wrap; gap: 10px; }
   .stg .toggle-row .theme-seg { flex: 1 1 100%; width: auto; }
   .stg .settings-row { flex-wrap: wrap; }
+  /* An open edit row: the field on its own line, then Save and Cancel as an
+     equal pair. At 334px the field (220) + Save + Cancel is 356, which left
+     Cancel alone on a second line. The wider gap keeps "Permanently delete"
+     off Cancel. */
+  .stg .settings-edit-line > input,
+  .stg .settings-edit-line > .settings-suggest-wrap { flex: 1 1 100%; }
+  .stg .settings-edit-line > .btn { flex: 1 1 0; }
+  .stg .danger-confirm-actions { gap: 12px; }
+  .stg .danger-confirm-actions > .btn { flex: 1 1 0; padding-inline: 12px; }
 }
 
 [data-density="compact"] .stg .settings-row { padding: 10px 0; }
@@ -346,4 +388,17 @@ html[data-reduced-motion="true"] .stg .settings-nav-item { transition: none; }
    touch block at the top. */
 @media (pointer: coarse) {
   .stg .settings-nav-item { min-height: 44px; }
+  /* Reduced motion: the 44x24 track stays as drawn, and an invisible box
+     around it brings the target to 44 high and 56 wide. The words beside it
+     (its label) take the rest of the row, so the whole row is the tap target. */
+  .stg .toggle-switch::before { content: ""; position: absolute; inset: -10px -6px; }
+  .stg label.toggle-row-info { flex: 1 1 0; min-width: 0; align-self: stretch; justify-content: center; padding: 4px 0; }
+  .stg .toggle-row .theme-seg-btn { height: 44px; }
+}
+
+/* No hover to reveal the change-photo camera, so on a touch screen it is always
+   drawn: a band along the foot of the avatar, which clips to its circle. */
+@media (hover: none) {
+  .stg .settings-avatar-edit { inset: auto 0 0 0; height: 36%; border-radius: 0; opacity: 1; }
+  .stg .settings-avatar-edit svg { width: 12px; height: 12px; }
 }
