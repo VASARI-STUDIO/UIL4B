@@ -779,3 +779,8 @@
   .grd .grd-shuf-x { width: 44px; height: 44px; }
 }
 :where(html[data-reduced-motion="true"]) .grd .grd-shuf-keep { transition: none !important; }
+
+/* The Available colours head row is the height of its tallest possible content
+   (the "Clear picks" button), so picking colours never makes the panel taller. */
+.grd .grd-avail > .tl-sec-head { min-height: 26px; }
+@media (pointer: coarse) { .grd .grd-avail > .tl-sec-head { min-height: 44px; } }
