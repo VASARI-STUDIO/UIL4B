@@ -212,9 +212,12 @@ export default function Checkout() {
   const [error, setError] = useState('')
   // The server's reason code for the error, when it sent one.
   const [errorCode, setErrorCode] = useState('')
+  // One failure can report twice (the fetch wrapper, then Stripe's own
+  // rejection), so a later call without a code keeps the code already set.
+  // Every path that clears the error clears the code with it.
   const failCheckout = useCallback((message, code) => {
     setError(message)
-    setErrorCode(code || '')
+    setErrorCode((prev) => code || prev)
   }, [])
   // The plan the payment form is built for. It follows the chosen plan once
   // the choice has rested for SESSION_DEBOUNCE_MS.
@@ -252,7 +255,7 @@ export default function Checkout() {
   // the page before checkout rather than through every period tried.
   const choosePlan = (next) => {
     if (paying || next === planKey || !Object.hasOwn(PLANS, next)) return
-    setError('')
+    setError(''); setErrorCode('')
     setParams((prev) => {
       const nextParams = new URLSearchParams(prev)
       nextParams.set('plan', next)
@@ -502,7 +505,7 @@ export default function Checkout() {
                     onResend={sendVerificationEmail}
                     onRetry={async () => {
                       await refreshEmailVerified().catch(() => {})
-                      setError('')
+                      setError(''); setErrorCode('')
                     }}
                   />
                 </>
@@ -516,7 +519,7 @@ export default function Checkout() {
                       If you're the site owner, check Vercel environment variables.
                     </p>
                   )}
-                  <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); }}>Try again</button>
+                  <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
                 </>
               )}
             </div>
