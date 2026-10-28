@@ -402,9 +402,17 @@ function curtainsLayers(st, p, seed) {
   const rng = mulberry32(seed * 6151 + p.bands * 31)
   const bh = hexToOk(st[0])
   const base = okToHex(0.08 + (p.sky / 100) * 0.17, Math.min(bh.C, 0.04), bh.H)
-  const [c1, c2] = curtainColours(st)
-  const body = [shiftColour(c1, { dL: -0.2, dC: 0.04 }), shiftColour(c2, { dL: -0.24, dC: 0.04 })]
-  const core = [shiftColour(c1, { dL: 0.05, dC: -0.02 }), shiftColour(c2, { dL: 0.04, dC: -0.02 })]
+  // The curtain stop and a second tone 8 degrees round the hue wheel. (Not the
+  // 14 that curtainColours uses for names: 8-bit rounding eats a few degrees,
+  // and the family has to stay inside 15 of its stops.)
+  const cur = st[st.length - 1]
+  const tones = [0, 8]
+  // The body is never darker than L 0.26. Near black, an 8-bit colour has too
+  // few steps per channel to hold its hue (a dark orange rounds to pure red),
+  // and the gamut clamp can drop a channel to zero.
+  const deepen = (dL, dH) => { const L = hexToOk(cur).L; return shiftColour(cur, { dL: Math.max(L + dL, 0.26) - L, dC: 0.04, dH }) }
+  const body = tones.map((dH, i) => deepen(i ? -0.24 : -0.2, dH))
+  const core = tones.map((dH, i) => shiftColour(cur, { dL: i ? 0.04 : 0.05, dC: -0.02, dH }))
   const glows = []
   const groups = []
   const ribbons = []
