@@ -165,3 +165,31 @@ test('a counter that cannot be updated under contention is a 429, not a free che
   assert.ok(Number(res.headers['Retry-After']) >= 1)
   assert.equal(stripe.sessions.length, 0)
 })
+
+/* ── Limiter hardening (audit M5): the checkout limits fail closed ─────────── */
+
+test('a database outage on the counter is a 429, not a free checkout', async () => {
+  const { db, stripe } = world()
+  db.runTransaction = async () => { throw Object.assign(new Error('unavailable'), { code: 14 }) }
+  const res = await callWith({ headers: { 'x-forwarded-for': '198.51.100.7' } })
+  assert.equal(res.statusCode, 429)
+  assert.ok(Number(res.headers['Retry-After']) >= 1)
+  assert.match(res.body.error, /No payment session was created/)
+  assert.equal(stripe.sessions.length, 0, 'a session was created while the limiter could not count')
+})
+
+test('checkoutRateLimit refuses on an outage for the account limit and for the address limit', async () => {
+  const { db } = world()
+  const outage = () => { throw Object.assign(new Error('deadline exceeded'), { code: 4 }) }
+  const realTransaction = db.runTransaction.bind(db)
+
+  db.runTransaction = outage
+  const accountLimit = await checkoutRateLimit(db, { uid: 'u0', ip: '1.1.1.1' })
+  assert.ok(accountLimit && accountLimit.retryAfter > 0, 'the account limit let the call through')
+
+  // The account counter works, only the address counter is down.
+  let calls = 0
+  db.runTransaction = (fn) => (++calls === 1 ? realTransaction(fn) : outage())
+  const addressLimit = await checkoutRateLimit(db, { uid: 'u1', ip: '1.1.1.1' })
+  assert.ok(addressLimit && addressLimit.retryAfter > 0, 'the address limit let the call through')
+})
