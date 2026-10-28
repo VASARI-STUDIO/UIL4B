@@ -3615,8 +3615,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* ── ADJUST ALL (D:1044-1057): one row, signed values, Copy CSS inline ── */}
+      {/* ── ADJUST ALL (D:1044-1057): one row, signed values, Copy CSS inline ──
+          The footer is a size container: the bar re-flows on its own width, never
+          the window's, into three set shapes (see palette-builder.css). */}
       <footer className="plb-adjust" role="group" aria-labelledby="plb-adjust-title">
+        <div className="plb-adjust-bar">
         <p className="plb-adjust-title" id="plb-adjust-title">Adjust all</p>
         {/* One grid for the four sliders, so every row shares one column width
             and the tracks come out the same length however it wraps. */}
@@ -3646,6 +3649,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           )
         })}
         </div>
+        <div className="plb-adjust-actions">
         {/* Always laid out, so that the first nudge of a slider does not
             reflow the bar under the pointer; hidden until there is something
             to reset. */}
@@ -3669,6 +3673,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             <ToolIcon name="copy" size={14} /><span>Copy CSS</span>
           </button>
         )}
+        </div>
+        </div>
         {phone && cssSheetOpen && (
           <PaletteCssSheet
             css={cssExport}
