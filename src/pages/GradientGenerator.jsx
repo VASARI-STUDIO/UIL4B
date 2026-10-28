@@ -684,7 +684,7 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours }
 // correctly if it is ever mounted outside CreateTool; the activation naming
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
-  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
+  const { design, setGradient, projects, projectsLoading, saveProject, overwriteProject, canSaveProjects } = useProject()
   const { user, loading: authLoading } = useAuth()
   // Whether to hold the "From a project" slot in Available colours. A person who was
   // signed in last time is treated as signed in until auth answers, so the slot does
@@ -2046,9 +2046,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     </div>
                   </div>
                 </div>
-                {/* Held while a person is signed in, projects loaded or not, so projects
-                    arriving later move nothing; signed out, it is not drawn at all. */}
-                {(signedIn || projectSources.length > 0) && (
+                {/* Held only while it can still fill: while auth or the account's projects
+                    are loading (so projects arriving move nothing), or once there are some.
+                    Signed out, or loaded with none, it is not drawn at all. */}
+                {(projectSources.length > 0 || (signedIn && (authLoading || projectsLoading))) && (
                   <div className="grd-avail-from">
                     {projectSources.length > 0 && (
                       <MenuSelect

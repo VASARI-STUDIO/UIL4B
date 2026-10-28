@@ -359,7 +359,6 @@
 /* ── AVAILABLE COLOURS ──────────────────────────────────────────────────────
    Round chips: every palette colour, then the active colour's shades. The chosen
    chip carries a ring and a tick, so the state is not colour alone. */
-.grd .grd-avail-help { display: grid; justify-items: start; gap: 2px; }
 .grd .grd-avail-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); scroll-margin-top: calc(var(--chrome-h) + 72px); border-radius: 6px; }
 .grd .grd-avail-note:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .grd .grd-avail-link { display: inline-flex; align-items: center; min-height: 28px; border-radius: 6px; font-size: 12.5px; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
@@ -392,6 +391,7 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), background-color 150ms var(--ease-standard);
 }
 .grd .grd-chip:active { transform: scale(0.97); }
@@ -439,7 +439,9 @@
 /* The Colours label and the way to the Palette Builder share one row. */
 .grd .grd-avail-subrow { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; min-width: 0; }
 .grd .grd-avail-subrow .grd-avail-sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.grd .grd-avail-subrow .grd-avail-link { flex: 0 0 auto; align-items: flex-end; }
+/* The link keeps the label's height; its hit area grows by padding with an equal
+   negative margin, so the row stays one line tall (28px hit box here, 44px on touch). */
+.grd .grd-avail-subrow .grd-avail-link { flex: 0 0 auto; align-items: flex-end; min-height: 16px; line-height: 16px; padding-block: 6px; margin-block: -6px; }
 .grd .grd-avail-from { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 .grd .grd-from-select {
   flex: 0 1 auto;
@@ -813,6 +815,7 @@
   .grd .grd-chips--shades { gap: 4px; }
   .grd .grd-chips--shades .grd-chip { width: 44px; height: 44px; }
   .grd .grd-avail-link { min-height: 44px; }
+  .grd .grd-avail-subrow .grd-avail-link { min-height: 16px; padding-block: 14px; margin-block: -14px; }
   .grd .grd-stop { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
   .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr) 36px; grid-template-rows: auto auto; row-gap: 0; }
   .grd .grd-stop-role { grid-area: 1 / 1; font-size: 13px; }
