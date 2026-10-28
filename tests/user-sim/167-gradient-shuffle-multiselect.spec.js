@@ -17,8 +17,9 @@
 // give Radial 15% (0.15^20 is nothing). Nothing here relies on a draw landing
 // on a particular value, only on a filter letting through what it must not.
 //
-// No screenshot is taken in this file: in a touch context a full-page or
-// element screenshot turns pointer: coarse off for the page.
+// No screenshot is taken in this file, except one on purpose: in a touch context
+// a full-page or element screenshot turns pointer: coarse off for the page, and
+// "selection-mode taps still add and remove ..." uses that to read a fine pointer.
 //
 // MUTATIONS (each turns the tests named red):
 //   engineFilters returns no types                    -> "Type = Radial only ..." and the 360 More-menu test
@@ -46,6 +47,21 @@
 //   Ctrl+A selects two stops only                     -> "Ctrl+A selects every stop"
 // All 22 were run on a throwaway build (a copy of src under .claude/scratch/grads3/mut, patched,
 // built, served on 4960); every one turned the named tests red and the lane's src was not touched.
+//
+// Added with the logic-review fixes (same throwaway-build method):
+//   rollStops does not close a conic seam round a locked stop     -> the two "a locked stop and a conic roll" tests
+//   the controls panel has no Escape handler                      -> "Escape in the hex input", "Escape on a palette chip",
+//                                                                    "Escape inside the open colour picker ..."
+//   the hex input swallows Escape (stopPropagation)               -> "Escape in the hex input ..."
+//   removeStops leaves the Shift-click anchor where it was        -> the two "delete ..., then Shift-click" tests
+//   pressStop / dragStop need coarse && selMode, not selMode      -> "selection-mode taps still add and remove ..."
+//   the panel's Escape guards AND the popover's stopPropagation   -> "Escape with the picker button focused ...",
+//     both gone                                                      "Escape on the row swatch picker ..."
+// The panel's own guard (the "something is open in front" check) alone is an equivalent mutant: usePopover and
+// StopTintMenu stop Escape at the document's capture phase, so the panel never sees it. The tests hold the
+// behaviour (picker first, then the selection), not that guard.
+// Unit mutations for pickPaletteLook and the Radial fallback (tests/unit/gradient-random.test.js) are in the commit message:
+// all 7 turn at least one test red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -245,6 +261,45 @@ test.describe('Shuffle settings at 1440px', () => {
     await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(0)
     await expect(panelOf(page).getByRole('button', { name: /lock the (type|angle|stop count)/i })).toHaveCount(0)
     await expect(page.locator('.grd-lock')).toHaveCount(await stopRows(page).count()) // only the per-stop locks remain
+  })
+})
+
+// A conic gradient closes its seam: the last colour is the first again, even when
+// a locked stop keeps the stop count and one end is not the roll's to colour.
+test.describe('a locked stop and a conic roll at 1440px', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+  test.beforeEach(async ({ page }) => {
+    watch(page, 'a designer who locked one end and rolls a conic')
+    await seed(page)
+    await open(page)
+    const scope = await openSettings(page)
+    await option(scope, 'Type', 'Conic').click()
+    await on(option(scope, 'Type', 'Conic'))
+  })
+
+  // `lockIdx` is the list position of the locked stop; its colour is in SEED.
+  async function rollsKeepSeam(page, lockIdx) {
+    const locked = SEED.stops[lockIdx].color
+    await page.locator('.grd-stop-lock').nth(lockIdx).click()
+    await expect(page.locator('.grd-stop-lock').nth(lockIdx)).toHaveAttribute('aria-pressed', 'true')
+    for (const [label, action] of [['Random', /^Random$/], ['Shuffle', /^Shuffle from palette$/]]) {
+      for (let i = 0; i < 10; i++) {
+        await toolbarAction(page, action)
+        expect(await typeOf(page), `${label} ${i + 1}`).toBe('Conic')
+        const h = await hexes(page)
+        expect(h.length, 'the lock keeps all five stops').toBe(5)
+        expect(h[lockIdx], `${label} ${i + 1}: the locked stop keeps its colour`).toBe(locked)
+        expect(h[h.length - 1], `${label} ${i + 1}: the seam is open on ${h}`).toBe(h[0])
+      }
+    }
+  }
+
+  test('the first stop locked: Random and Shuffle end on the locked colour', async ({ page }) => {
+    await rollsKeepSeam(page, 0)
+  })
+
+  test('the last stop locked: Random and Shuffle start on the locked colour', async ({ page }) => {
+    await rollsKeepSeam(page, 4)
   })
 })
 
@@ -536,6 +591,101 @@ test.describe('selecting several stops at 1440px', () => {
     await page.keyboard.press('Escape')
     await expect(selCount(page)).toHaveCount(0)
   })
+
+  /** Stops 1, 2 and 4 selected, the way the other tests do it. */
+  async function selectThree(page) {
+    await stopSelect(page, 1).click()
+    await stopSelect(page, 2).click({ modifiers: ['Shift'] })
+    await expect(selCount(page)).toHaveText('3 selected')
+    expect(await pressed(page)).toEqual([1, 2, 4])
+  }
+
+  test('Escape in the hex input clears the selection, and the hex is left as it was', async ({ page }) => {
+    await selectThree(page)
+    const before = await hexes(page)
+    const hex = page.getByRole('textbox', { name: 'Hex for the 3 selected stops' })
+    await hex.focus()
+    await hex.fill('#12')
+    await page.keyboard.press('Escape')
+    await expect(selCount(page)).toHaveCount(0)
+    expect((await pressed(page)).length, 'back to the one active stop').toBe(1)
+    expect(await hexes(page), 'a half-typed hex is thrown away, not applied').toEqual(before)
+    await expect.poll(() => said(page)).toContain('Selection cleared')
+  })
+
+  test('Escape on a palette chip clears the selection', async ({ page }) => {
+    await selectThree(page)
+    await chips(page).nth(4).focus()
+    await expect(chips(page).nth(4)).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(selCount(page)).toHaveCount(0)
+    expect((await pressed(page)).length).toBe(1)
+  })
+
+  test('Escape inside the open colour picker closes the picker first and keeps the selection', async ({ page }) => {
+    await selectThree(page)
+    const trigger = page.getByRole('button', { name: 'Colour of the 3 selected stops' })
+    const picker = page.getByRole('dialog', { name: 'Colour of the 3 selected stops' })
+    await trigger.click()
+    await expect(picker).toBeVisible()
+    // The picker takes focus onto its pad; the key is pressed from inside it.
+    await expect.poll(() => picker.evaluate((el) => el.contains(document.activeElement))).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(picker).toBeHidden()
+    await expect(selCount(page), 'the first Escape only closed the picker').toHaveText('3 selected')
+    expect(await pressed(page)).toEqual([1, 2, 4])
+    // With nothing in front of it, the next Escape is the selection's.
+    await expect(trigger).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(selCount(page)).toHaveCount(0)
+  })
+
+  test('Escape with the picker button focused and the picker open keeps the selection too', async ({ page }) => {
+    await selectThree(page)
+    const trigger = page.getByRole('button', { name: 'Colour of the 3 selected stops' })
+    await trigger.click()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    await trigger.focus()
+    await page.keyboard.press('Escape')
+    await expect(selCount(page)).toHaveText('3 selected')
+  })
+
+  test('Escape on the row swatch picker (a portal) does not clear a selection either', async ({ page }) => {
+    await selectThree(page)
+    const swatch = page.getByRole('button', { name: 'Pick stop 1 colour' })
+    const picker = page.getByRole('dialog', { name: 'Pick stop 1 colour' })
+    await swatch.click()
+    await expect(picker).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(picker).toBeHidden()
+    await expect(selCount(page)).toHaveText('3 selected')
+    expect(await pressed(page)).toEqual([1, 2, 4])
+  })
+
+  // Shift-click ranges from the anchor. A delete moves the stops under it, so
+  // the anchor follows the stop that is active afterwards.
+  test('delete a stop, then Shift-click ranges from the stop that is active now', async ({ page }) => {
+    await stopSelect(page, 2).click() // 60%, the active stop and the anchor
+    await page.getByRole('button', { name: 'Remove stop 1' }).click()
+    await expect(stopRows(page)).toHaveCount(4)
+    // Now: 1 #27348B 60%, 2 #6E6BFF 100%, 3 #C6F36B 30%, 4 #E0788C 80%.
+    expect(await hexes(page)).toEqual(['#27348B', '#6E6BFF', '#C6F36B', '#E0788C'])
+    expect(await pressed(page), 'the active stop moved up with the delete').toEqual([1])
+    await stopSelect(page, 4).click({ modifiers: ['Shift'] })
+    // From 60% to 80% along the rail is stops 1 and 4. From the old index (stop 2, at 100%) it would be 2 and 4.
+    expect(await pressed(page)).toEqual([1, 4])
+    await expect(selCount(page)).toHaveText('2 selected')
+  })
+
+  test('delete the active stop, then Shift-click ranges from the stop that took its place', async ({ page }) => {
+    await stopSelect(page, 5).click() // 80%, last in the list
+    await page.getByRole('button', { name: 'Remove stop 5' }).click()
+    await expect(stopRows(page)).toHaveCount(4)
+    expect(await pressed(page), 'the last row is active again').toEqual([4])
+    // Now: 1 #0A0F2C 0%, 2 #27348B 60%, 3 #6E6BFF 100%, 4 #C6F36B 30%.
+    await stopSelect(page, 2).click({ modifiers: ['Shift'] })
+    expect(await pressed(page), '30% to 60% along the rail').toEqual([2, 4])
+  })
 })
 
 // ── 5 · touch: press and hold ────────────────────────────────────────────────
@@ -564,6 +714,30 @@ test.describe('selecting several stops by touch at 390px', () => {
     // Out of selection mode a tap is a plain select again.
     await stopSelect(page, 3).tap()
     expect(await pressed(page)).toEqual([3])
+  })
+
+  test('selection-mode taps still add and remove when the pointer query reads fine', async ({ page }) => {
+    const coarse = () => page.evaluate(() => matchMedia('(pointer: coarse)').matches)
+    await longPress(page, stopSelect(page, 2))
+    await expect(selCount(page)).toHaveText('1 selected')
+    expect(await coarse(), 'a touch context starts coarse').toBe(true)
+    // The harness turns pointer: coarse off for the page when it takes a full-page
+    // screenshot. A laptop with a touch screen, or a pen, reads the same: the mode
+    // a long press started is what the taps follow, not the media query.
+    await page.screenshot({ fullPage: true })
+    expect(await coarse(), 'the screenshot made the pointer fine').toBe(false)
+    await expect(selCount(page), 'and the mode is still on').toHaveText('1 selected')
+    await expect(page.locator('.grd-sel-clear')).toHaveText('Done')
+    await stopSelect(page, 4).tap()
+    await expect(selCount(page)).toHaveText('2 selected')
+    await stopSelect(page, 5).tap()
+    expect(await pressed(page)).toEqual([2, 4, 5])
+    await stopSelect(page, 4).tap()
+    expect(await pressed(page)).toEqual([2, 5])
+    await page.locator('.grd-sel-clear').tap()
+    await expect(selCount(page)).toHaveCount(0)
+    await stopSelect(page, 3).tap()
+    expect(await pressed(page), 'out of the mode a tap selects one again').toEqual([3])
   })
 
   test('a short press is only a select', async ({ page }) => {

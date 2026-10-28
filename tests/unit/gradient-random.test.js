@@ -11,7 +11,7 @@ import path from 'node:path'
 import {
   GRAD_TYPE_WEIGHTS, TWO_STOP_SHARE, MIN_MIDPOINT_CHROMA,
   weightedPick, pickGradientType, pickStopCount, pickHarmony, pickTone,
-  mulberry32, rollGradient, radialGatePasses, pickFromPool,
+  mulberry32, rollGradient, radialGatePasses, pickFromPool, pickPaletteLook,
 } from '../../src/utils/gradientRandom.js'
 import { hexToOklchRaw } from '../../src/components/tool/oklch.js'
 import { nextSelection, rangeBetween, modeFor } from '../../src/hooks/useShiftSelect.js'
@@ -114,6 +114,25 @@ test('filters: a Radial-only filter is always radial, a Linear+Conic filter neve
   assert.ok(five.every((g) => g.stops.length === 5))
 })
 
+test('a filter without Linear never gets Linear, even when the radial gate fails every try', () => {
+  // Radial + Conic: a roll that cannot find a pair reading as a light or a vignette keeps Radial.
+  const seen = new Set()
+  let keptFailing = 0
+  for (let i = 0; i < 3000; i++) {
+    const g = rollGradient(mulberry32(i), { types: ['Radial', 'Conic'] })
+    assert.notEqual(g.type, 'Linear', `seed ${i} came back Linear`)
+    seen.add(g.type)
+    if (g.type === 'Radial') {
+      const a = hexToOklchRaw(g.stops[0].color)
+      const b = hexToOklchRaw(g.stops[g.stops.length - 1].color)
+      if (!radialGatePasses({ L: a[0], C: a[1] }, { L: b[0], C: b[1] })) keptFailing++
+    }
+  }
+  assert.deepEqual([...seen].sort(), ['Conic', 'Radial'], 'both allowed types still come up')
+  // The control: some seeds do run out of tries, so the fallback path is what was exercised.
+  assert.ok(keptFailing > 0, 'no Radial roll failed the gate, so the old Linear fallback was never reached')
+})
+
 test('the radial gate accepts a light centre or a dark vignette and rejects a flat pair', () => {
   assert.ok(radialGatePasses({ L: 0.85, C: 0.1 }, { L: 0.6, C: 0.1 }))
   assert.ok(radialGatePasses({ L: 0.3, C: 0.1 }, { L: 0.5, C: 0.1 }))
@@ -154,6 +173,107 @@ test('a range runs in position order and a touch press always toggles', () => {
   assert.equal(modeFor({ shiftKey: false }, true), 'toggle')
   assert.equal(modeFor({ shiftKey: false }, false), 'only')
   assert.equal(modeFor({ metaKey: true }, false), 'toggle')
+})
+
+// ── Shuffle from palette: the gate and the seam run on the colours drawn ────
+// Hand-picked pools. Black and white differ by L ~1.0 (a vignette either way
+// round); two near-identical blues differ by ~0.02 L and ~0 hue, so no ordering
+// of them reads as a light or a vignette.
+const LIGHT_DARK = ['#0B0C0E', '#F7F7F4']
+const FLAT = ['#2F6BFF', '#3270FF']
+const MIXED = ['#2F6BFF', '#3270FF', '#2D68FA', '#3571FF', '#F7F7F4'] // four flat blues and a white
+const FOUR = ['#2F6BFF', '#8B5CF0', '#E0784E', '#3FAFA0']
+const endsGate = (colours) => {
+  const a = hexToOklchRaw(colours[0])
+  const b = hexToOklchRaw(colours[colours.length - 1])
+  return radialGatePasses({ L: a[0], C: a[1] }, { L: b[0], C: b[1] })
+}
+const gapOf = (colours) => Math.abs(hexToOklchRaw(colours[0])[0] - hexToOklchRaw(colours[colours.length - 1])[0])
+
+test('palette look: the sample pools really are a gate pass and a gate fail', () => {
+  assert.ok(endsGate(LIGHT_DARK) && endsGate([...LIGHT_DARK].reverse()), 'black and white read either way round')
+  assert.ok(!endsGate(FLAT) && !endsGate([...FLAT].reverse()), 'two near-identical blues never read')
+})
+
+test('palette look: Radial stays Radial when the drawn colours pass the gate', () => {
+  for (let i = 0; i < 200; i++) {
+    const { type, colours } = pickPaletteLook(LIGHT_DARK, 2, 'Radial', [], mulberry32(i))
+    assert.equal(type, 'Radial', `seed ${i}`)
+    assert.ok(endsGate(colours))
+  }
+})
+
+test('palette look: Radial colours that cannot pass the gate become Linear when Linear is allowed', () => {
+  for (const types of [[], ['Linear', 'Radial']]) {
+    for (let i = 0; i < 100; i++) {
+      const { type, colours } = pickPaletteLook(FLAT, 2, 'Radial', types, mulberry32(i))
+      assert.equal(type, 'Linear', `types ${JSON.stringify(types)} seed ${i}`)
+      assert.deepEqual([...colours].sort(), FLAT.map((c) => c.toUpperCase()).sort())
+    }
+  }
+})
+
+test('palette look: never a type outside the filter, even when no draw passes the radial gate', () => {
+  for (const [type, types] of [['Radial', ['Radial']], ['Radial', ['Radial', 'Conic']], ['Conic', ['Radial', 'Conic']]]) {
+    for (let i = 0; i < 300; i++) {
+      for (const pool of [FLAT, MIXED, FOUR, LIGHT_DARK]) {
+        const out = pickPaletteLook(pool, i % 2 ? 2 : 3, type, types, mulberry32(i))
+        assert.equal(out.type, type, `${type} in ${JSON.stringify(types)} came back ${out.type} (seed ${i})`)
+      }
+    }
+  }
+})
+
+test('palette look: the radial gate is judged on the drawn palette colours, and a pass is never thrown away', () => {
+  // Pool of four: only the pairs that include black or white pass. Whatever comes
+  // back as Radial must pass on its own ends; redrawing rescues most rolls.
+  let radial = 0
+  let linear = 0
+  for (let i = 0; i < 600; i++) {
+    const { type, colours } = pickPaletteLook(MIXED, 3, 'Radial', [], mulberry32(i))
+    if (type === 'Radial') { radial++; assert.ok(endsGate(colours), `seed ${i}: Radial that fails the gate on ${colours}`) }
+    else { linear++; assert.equal(type, 'Linear') }
+  }
+  assert.ok(radial > linear, `three redraws should rescue most rolls (${radial} Radial, ${linear} Linear)`)
+  assert.ok(linear > 0, 'and a few seeds do run out of tries')
+})
+
+test('palette look: with Linear filtered out and no pass found, the widest lightness gap stands', () => {
+  // The first draw of a seed is what pickFromPool gives with the same seed.
+  let outOfTries = 0
+  for (let i = 0; i < 300; i++) {
+    const first = pickFromPool(MIXED, 3, mulberry32(i))
+    const { type, colours } = pickPaletteLook(MIXED, 3, 'Radial', ['Radial'], mulberry32(i))
+    assert.equal(type, 'Radial')
+    if (!endsGate(colours)) outOfTries++
+    assert.ok(endsGate(colours) || gapOf(colours) >= gapOf(first) - 1e-9, `seed ${i}: ${colours} is a narrower gap than the first draw ${first}`)
+  }
+  assert.ok(outOfTries > 0, 'some seeds must run out of tries, or the widest-gap rule was never reached')
+})
+
+test('palette look: Conic with three or more pool colours ends on its first colour', () => {
+  for (const count of [3, 4, 5]) {
+    for (let i = 0; i < 200; i++) {
+      const { type, colours } = pickPaletteLook(FOUR, count, 'Conic', [], mulberry32(i))
+      assert.equal(type, 'Conic')
+      assert.equal(colours.length, count)
+      assert.equal(colours[count - 1], colours[0], `${count} stops, seed ${i}: the seam is open on ${colours}`)
+      assert.ok(colours.every((c) => FOUR.includes(c)))
+    }
+  }
+  // Only the last colour is rewritten: the ones before it are the draw's own.
+  const drawn = pickFromPool(FOUR, 5, mulberry32(7))
+  const closed = pickPaletteLook(FOUR, 5, 'Conic', [], mulberry32(7)).colours
+  assert.deepEqual(closed.slice(0, 4), drawn.slice(0, 4))
+})
+
+test('palette look: a conic roll of two pool colours is left as drawn, and Linear is untouched', () => {
+  for (let i = 0; i < 50; i++) {
+    assert.deepEqual(pickPaletteLook(FLAT, 4, 'Conic', [], mulberry32(i)).colours, pickFromPool(FLAT, 4, mulberry32(i)))
+    const lin = pickPaletteLook(FOUR, 4, 'Linear', [], mulberry32(i))
+    assert.equal(lin.type, 'Linear')
+    assert.deepEqual(lin.colours, pickFromPool(FOUR, 4, mulberry32(i)))
+  }
 })
 
 // Wiring: the page rolls through rollGradient, not its own uniform pick.
