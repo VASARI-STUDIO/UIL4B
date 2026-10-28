@@ -457,22 +457,6 @@ export default function ContrastChecker({ onCopy }) {
                 Its words are CSS generated content, so they are in no one's page
                 text: not a screen reader's, a find, or a test's. */}
             <div className="cc-fixes-body">
-              <div className="cc-fixes-ghost" aria-hidden="true">
-                <p className="cc-lede" data-t="To reach AA (4.5:1) for body text, change one colour:" />
-                <div className="cc-fixes">
-                  {['text', 'background'].map((side) => (
-                    <div key={side} className="cc-fix">
-                      <span className="cc-fix-chip" />
-                      <span className="cc-fix-desc">
-                        <span className="cc-fix-line"><span data-t={`Lighten ${side} to `} /><strong data-t="#DDDDDD" /></span>
-                        <span className="cc-fix-ratio" data-t="4.50:1" />
-                      </span>
-                      <ToolButton variant="quiet" className="cc-fix-use" tabIndex={-1}><span data-t="Use" /></ToolButton>
-                      <ToolButton variant="square" icon="copy" className="cc-fix-copy" tabIndex={-1} />
-                    </div>
-                  ))}
-                </div>
-              </div>
               <div className="cc-fixes-live">
                 {goal ? (
                   fixes.length > 0 ? (
@@ -503,6 +487,22 @@ export default function ContrastChecker({ onCopy }) {
                 ) : (
                   <p className="cc-hint cc-nothing">Passes every WCAG 2.2 check. Nothing to change.</p>
                 )}
+              </div>
+              <div className="cc-fixes-ghost" aria-hidden="true">
+                <p className="cc-lede" data-t="To reach AA (4.5:1) for body text, change one colour:" />
+                <div className="cc-fixes">
+                  {['text', 'background'].map((side) => (
+                    <div key={side} className="cc-fix">
+                      <span className="cc-fix-chip" />
+                      <span className="cc-fix-desc">
+                        <span className="cc-fix-line"><span data-t={`Lighten ${side} to `} /><strong data-t="#DDDDDD" /></span>
+                        <span className="cc-fix-ratio" data-t="4.50:1" />
+                      </span>
+                      <ToolButton variant="quiet" className="cc-fix-use" tabIndex={-1}><span data-t="Use" /></ToolButton>
+                      <ToolButton variant="square" icon="copy" className="cc-fix-copy" tabIndex={-1} />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </ToolSection>

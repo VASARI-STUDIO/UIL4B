@@ -303,7 +303,7 @@ test.describe('Contrast Checker · Use applies a fix', () => {
     await bgInput(page).fill('#FFFFFF')
     await expect(page.locator('.cc-ratio-verdict')).toHaveText('Large text and UI parts only.')
 
-    const fix = page.locator('.cc-fix').first()
+    const fix = page.locator('.cc-fixes-live .cc-fix').first()
     await expect(fix.locator('.cc-fix-line')).toContainText('Darken text to')
     const offered = (await fix.locator('.cc-fix-line strong').textContent()).toUpperCase()
     expect(ratioOf(offered, '#FFFFFF'), `the offered ${offered} must clear 4.5:1`).toBeGreaterThanOrEqual(4.5)
@@ -320,7 +320,7 @@ test.describe('Contrast Checker · Use applies a fix', () => {
     await go(page, '/create/contrast')
     await fgInput(page).fill('#000099')
     await bgInput(page).fill('#009900')
-    const fix = page.locator('.cc-fix').nth(1)
+    const fix = page.locator('.cc-fixes-live .cc-fix').nth(1)
     await expect(fix.locator('.cc-fix-line')).toContainText('background to')
     const offered = (await fix.locator('.cc-fix-line strong').textContent()).toUpperCase()
 
@@ -499,17 +499,17 @@ test.describe('Contrast Checker · a thumb on a phone', () => {
     // A failing pair, so the fix rows (Use, Copy) are on the page too.
     await go(page, '/create/contrast')
     await fgInput(page).fill('#777777')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
     const read = await page.evaluate(() => ({
       coarse: matchMedia('(pointer: coarse)').matches,
       boxes: [
-        '.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fix-use', '.cc-fix-copy', '.cc-pair', '.cc-swatch',
+        '.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch',
         '.tl-export-btn', '.cc-note-link', '.cc-lg-chip',
       ].flatMap((sel) => [...document.querySelectorAll(sel)].map((el, i) => {
         const r = el.getBoundingClientRect()
         return { sel: `${sel}[${i}]`, w: Math.round(r.width), h: Math.round(r.height) }
       })),
-      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fix-use', '.cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-note-link', '.cc-lg-chip']
+      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-note-link', '.cc-lg-chip']
         .map((sel) => [sel, document.querySelectorAll(sel).length]),
     }))
     expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
@@ -530,7 +530,7 @@ test.describe('Contrast Checker · a thumb on a phone', () => {
     watch(page, 'someone on the narrowest phone')
     await go(page, '/create/contrast')
     await fgInput(page).fill('#777777')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
     await bgInput(page).fill('#12345Z')
     await expect(page.locator('#cc-bg-hint')).not.toHaveText('')
 
