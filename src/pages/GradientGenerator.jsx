@@ -80,8 +80,6 @@ const engineFilters = (f) => ({
   types: f.types.includes(ANY) ? [] : f.types,
   counts: f.counts.includes(ANY) ? [] : f.counts,
 })
-// True when any setting narrows what Random and Shuffle may make from the default.
-const isNarrowed = (f) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.keepAngle
 // The pool colours that are still on offer, in the order they were picked. A colour
 // the palette no longer holds is ignored rather than deleted, so coming back to the
 // same palette finds the pick again.
@@ -89,6 +87,9 @@ const livePool = (pool, colours) => {
   const offered = new Set(colours.map((c) => c.hex.toUpperCase()))
   return (pool || []).filter((h) => offered.has(h))
 }
+// True when any setting narrows what Random and Shuffle may make from the default.
+// Picked colours count from two up, the same rule Shuffle from palette uses.
+const isNarrowed = (f, colours) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.keepAngle || livePool(f.pool, colours).length >= 2
 // "Linear and radial", "2, 3 and 4": what the live region says after a press.
 const sentence = (vals) => {
   const t = vals.map((v) => String(v).toLowerCase())
@@ -502,7 +503,7 @@ const SHUFFLE_TITLE = 'What Random and Shuffle make'
 
 function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours }) {
   const phone = useMediaQuery(PHONE_QUERY)
-  const narrowed = isNarrowed(filters)
+  const narrowed = isNarrowed(filters, colours)
   const sheetId = `grd-shuf-sheet-${useId().replace(/:/g, '')}`
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose, { portalled: phone })
   // Turning the screen across 768px swaps popover and sheet: close rather than
@@ -1634,7 +1635,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             <div className="grd-shuf-inline">
               <div className="grd-shuf-inline-head">
                 <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
-                {isNarrowed(filters) && <span className="grd-shuf-state">Narrowed</span>}
+                {isNarrowed(filters, poolColours) && <span className="grd-shuf-state">Narrowed</span>}
               </div>
               <ShuffleBody filters={filters} setFilters={setFilters} colours={poolColours} />
             </div>
