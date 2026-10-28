@@ -237,9 +237,9 @@ test('the four rules-audit fixes (M1-M4) each land their rule, and the route hal
   assert.match(route, /location: profileText\(d\.location, 200\)/)
   assert.match(route, /company: profileText\(d\.company, 200\)/)
   // M4 · angle is a number, and every list index up to the cap is checked.
-  assert.match(rules, /payload\.angle is number/)
-  assert.match(rules, /stopAt\(31\)/)
-  assert.match(rules, /colorAt\(31\)/)
+  assert.match(rules, /p\.angle is number/)
+  assert.match(rules, /stopOk\(list\[31\]\)/)
+  assert.match(rules, /colorOk\(list\[31\]\)/)
   assert.match(rules, /&& submissionPayloadOk\(\)\s*&& payloadElementsOk\(\)/)
 })
 

@@ -1,7 +1,7 @@
 diff --git a/firestore.rules b/firestore.rules
 --- a/firestore.rules
 +++ b/firestore.rules
-@@ -129,6 +129,110 @@ service cloud.firestore {
+@@ -129,6 +129,108 @@ service cloud.firestore {
        function isSignedIn() { return request.auth != null; }
        function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
  
@@ -110,7 +110,7 @@ diff --git a/firestore.rules b/firestore.rules
        // The exact seven keys buildQueueRecord writes. `payload` is bounded by a
        // key allowlist and a size cap on every field.
        function submissionPayloadOk() {
-@@ -185,7 +289,8 @@ service cloud.firestore {
+@@ -185,7 +287,8 @@ service cloud.firestore {
            && request.resource.data.authorName.size() <= 60
            && request.resource.data.createdAt is string
            && request.resource.data.createdAt.size() <= 40
