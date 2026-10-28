@@ -142,12 +142,18 @@ export function rampOrder(stops) {
  * can leave the last colour off the first, so the last takes the first (or the
  * first takes the last, when only the last is colour-locked). First and last are
  * the two ends of the ramp.
+ *
+ * `rolled` is the roll's own positions in ramp order (Random draws 8/92 ends and an
+ * off-centre middle). They are used when no stop is position-locked and the count
+ * matches; otherwise the free stops are spaced evenly as above.
  */
-export function rebuildStops(prev, sample, count, closeSeam = false) {
+export function rebuildStops(prev, sample, count, closeSeam = false, rolled = null) {
   const kept = hasStopLock(prev)
   const n = kept ? prev.length : count
   const order = kept ? rampOrder(prev) : Array.from({ length: n }, (_, r) => r)
-  const spaced = spacePositions(order.map((i) => (kept && prev[i].lockPosition ? Number(prev[i].position) || 0 : null)))
+  const anchored = order.map((i) => (kept && prev[i].lockPosition ? Number(prev[i].position) || 0 : null))
+  const useRolled = rolled && rolled.length === n && anchored.every((p) => p == null)
+  const spaced = useRolled ? rolled : spacePositions(anchored)
   const out = new Array(n)
   order.forEach((i, r) => {
     const ex = kept ? prev[i] : undefined

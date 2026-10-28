@@ -52,7 +52,7 @@
 //   rollStops does not close a conic seam round a locked stop     -> the three "a locked stop and a conic roll" tests
 //   (G2) those tests read the PAINTED ramp (the canvas CSS, sorted by position), not the list order: the seed puts
 //   stop 5 last in the list but fourth on the ramp, so a seam closed on list index 0 and n-1 fails them.
-//   (G2) RANDOM_DRAWS_SPACE = true (interpolation lock back)      -> "the locks sit beside the controls ..."
+//   (G3) RANDOM_DRAWS_SPACE = false (interpolation lock hidden) -> "the locks sit beside the controls ..."
 //   (G2) the angle lock label drops the value                     -> "the angle lock in Geometry holds ...", the 390 and 360 44px tests,
 //                                                                    "a filters entry saved before the pool existed", "the page does not move" (1440)
 //   the controls panel has no Escape handler                      -> "Escape in the hex input", "Escape on a palette chip",
@@ -259,12 +259,12 @@ test.describe('Shuffle settings at 1440px', () => {
     }
     expect(moved, 'with the angle lock off, twenty Randoms never moved the angle').toBe(true)
   })
-  test('the locks sit beside the controls they keep: a colour lock per stop row, plus one each for the selected stop colour and position, type and angle (no interpolation lock yet)', async ({ page }) => {
+  test('the locks sit beside the controls they keep: a colour lock per stop row, plus one each for the selected stop colour and position, type, angle and interpolation', async ({ page }) => {
     await open(page)
     await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(1)
-    // + Selected stop's colour and position, Type, Angle. Interpolation has none: Random does not draw it yet.
-    await expect(page.locator('.grd-lock')).toHaveCount((await stopRows(page).count()) + 4)
-    await expect(page.getByRole('button', { name: /the interpolation/i }), 'no interpolation lock while Random leaves the interpolation alone').toHaveCount(0)
+    // + Selected stop's colour and position, Type, Angle, Interpolation (Random draws it, so it can be kept).
+    await expect(page.locator('.grd-lock')).toHaveCount((await stopRows(page).count()) + 5)
+    await expect(page.getByRole('button', { name: /the interpolation/i }), 'one interpolation lock').toHaveCount(1)
   })
 })
 

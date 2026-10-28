@@ -66,7 +66,8 @@ test('the default roll is Plain, 2-3 stops, and two-stop linear is the single bi
   const twoLinear = seeded.filter((g) => g.type === 'Linear' && g.stops.length === 2).length / RUNS
   assert.ok(twoLinear >= 0.55, `two-stop linear share ${twoLinear}`)
   const linear = seeded.filter((g) => g.type === 'Linear').length / RUNS
-  assert.ok(linear >= 0.8, `linear share ${linear}, the gate can only add to it`)
+  // The type is drawn once per press, so the weights hold; the gate adds to Linear and the pick among eight can nudge it.
+  assert.ok(linear >= 0.78, `linear share ${linear}`)
   const radial = seeded.filter((g) => g.type === 'Radial').length / RUNS
   assert.ok(radial <= 0.15 + 0.02, `radial share ${radial}`)
 })
@@ -283,4 +284,229 @@ test('GradientGenerator rolls through the weighted engine', () => {
   assert.match(src, /rollGradient\(/, 'Random no longer uses the quality engine')
   assert.doesNotMatch(src, /GRAD_TYPES\[Math\.floor\(Math\.random\(\)/)
   assert.doesNotMatch(src, /Math\.random\(\) \* 0xffffff/, 'random hex colours are back')
+})
+
+// ── Random v2 (spec gradient-generation-v2 §3): drawn interpolation, narrowed ranges, best of eight ──
+// Mutations that make these fail:
+//   STANDARD_SHARE 0.3 -> 0.6, or the standardStaysClean call dropped from drawSpace -> "Standard share ..."
+//   the complementary guard dropped from drawSpace AND the check dropped              -> "never Standard on a complementary pair"
+//   rollCandidate ignores locks.space                                                 -> "a locked interpolation ..."
+//   TONE_RANGES.Clear C cap back to 0.20                                              -> "chroma never above 0.17 ..."
+//   clearMud / the MUD_TRIES loop removed                                             -> "the mud zone is never produced"
+//   ANCHOR_SHARE 0.5 -> 0                                                             -> "anchor"
+//   rollPositions always [0, 100] / [0, 50, 100]                                      -> "positions"
+//   withStopLocks returns the candidate unchanged                                     -> "stop locks survive ..."
+//   chooseAmongTop picks the worst of the three, or TOP_PICKS = 8                     -> "best of eight ..."
+//   the notSeen weight set to 0 (or `recent` not passed to scoreContext)              -> "not seen ..."
+import {
+  rollCandidate, rollCandidates, drawSpace, inMudZone, rollPositions, STANDARD_SHARE,
+} from '../../src/utils/gradientRandom.js'
+import { standardStaysClean, endsOf, scoreGradient, pushRecent, labEnds } from '../../src/utils/gradientScore.js'
+import { deltaE2000 } from '../../src/utils/nearestMatch.js'
+
+const V2 = Array.from({ length: 2000 }, (_, i) => rollGradient(mulberry32(5000 + i)))
+const lchOf = (g) => g.stops.map((s) => hexToOklchRaw(s.color))
+
+test('Standard share is at most 30%, and Standard really is drawn', () => {
+  const share = V2.filter((g) => g.space === 'srgb').length / V2.length
+  // The spec's 30% as a literal, not the exported constant: a constant raised to 0.6 must fail here.
+  assert.ok(share <= 0.3, `Standard share ${share}`)
+  assert.equal(STANDARD_SHARE, 0.3)
+  assert.ok(share >= 0.1, `Standard share ${share}: Standard is never drawn`)
+  assert.ok(V2.every((g) => g.space === 'srgb' || g.space === 'oklch'))
+})
+
+test('Standard is only used where the middle stays clean, and the check is what holds it back', () => {
+  for (const g of V2) if (g.space === 'srgb') assert.ok(standardStaysClean(g.stops), `Standard on ${g.stops.map((s) => s.color)}`)
+  // Control: ask for Standard on every roll. Some are refused, so the check is doing work.
+  const asked = V2.map((g) => drawSpace(g, 0, g.harmony === 'Complementary'))
+  assert.ok(asked.filter((s) => s === 'oklch').length > 100 && asked.filter((s) => s === 'srgb').length > 100)
+})
+
+test('never Standard on a complementary pair', () => {
+  const comp = V2.filter((g) => g.harmony === 'Complementary')
+  assert.ok(comp.length > 100)
+  assert.ok(comp.every((g) => g.space === 'oklch'))
+  for (const g of comp) assert.equal(drawSpace(g, 0, true), 'oklch')
+})
+
+test('a locked interpolation keeps the person\'s choice, even where Standard would be refused', () => {
+  for (const space of ['srgb', 'oklch']) {
+    for (let i = 0; i < 500; i++) {
+      assert.equal(rollGradient(mulberry32(i), { locks: { space } }).space, space)
+      assert.equal(rollCandidate(mulberry32(i), { locks: { space } }).space, space)
+    }
+  }
+})
+
+test('the mud zone is never produced, and its edges are where the spec puts them', () => {
+  assert.ok(inMudZone({ L: 0.54, C: 0.05, H: 85 }) && inMudZone({ L: 0.3, C: 0.1, H: 135 }))
+  assert.ok(!inMudZone({ L: 0.54, C: 0.05, H: 84.9 }) && !inMudZone({ L: 0.54, C: 0.05, H: 135.1 }))
+  assert.ok(!inMudZone({ L: 0.55, C: 0.05, H: 100 }) && !inMudZone({ L: 0.4, C: 0.04, H: 100 }))
+  for (const g of V2) for (const [L, C, H] of lchOf(g)) assert.ok(!inMudZone({ L, C, H }), `mud ${L} ${C} ${H}`)
+  const cands = Array.from({ length: 400 }, (_, i) => rollCandidate(mulberry32(i)))
+  assert.ok(cands.every((g) => lchOf(g).every(([L, C, H]) => !inMudZone({ L, C, H }))))
+})
+
+test('a draw that lands in the mud zone on every retry is drained of colour, not shipped', () => {
+  // A constant rand repeats the same draw on all six tries, so only the drain after the
+  // retries can keep it out of the zone. Without the drain, 16% of these 1000 draws are mud.
+  for (let k = 0; k < 1000; k++) {
+    const v = k / 1000
+    const g = rollCandidate(() => v)
+    for (const [L, C, H] of lchOf(g)) assert.ok(!inMudZone({ L, C, H }), `mud at constant rand ${v}: ${L} ${C} ${H}`)
+  }
+})
+
+test('chroma never goes above 0.17 in clear tones (hex rounding allows 0.002)', () => {
+  const clear = V2.filter((g) => g.tone === 'Clear')
+  assert.ok(clear.length > 1000)
+  let top = 0
+  for (const g of clear) for (const c of lchOf(g)) top = Math.max(top, c[1])
+  assert.ok(top <= 0.172, `top clear chroma ${top}`)
+  assert.ok(top >= 0.12, `top clear chroma ${top}: clear tones never reach their range`)
+})
+
+test('anchor: at least half the candidates have a dark or a light end, and the shipped ones too', () => {
+  const anchored = (g) => endsOf(g).map(hexToOklchRaw).some((c) => c[0] <= 0.28 || c[0] >= 0.88)
+  const cands = Array.from({ length: 1000 }, (_, i) => rollCandidate(mulberry32(i)))
+  assert.ok(cands.filter(anchored).length / 1000 >= 0.55, 'forced in half, plus those that land there')
+  assert.ok(V2.filter(anchored).length / V2.length >= 0.5)
+})
+
+test('positions: two stops at 0/100 or 8/92 (about 30% soft), three stops with the middle at 45, 55 or 62', () => {
+  const two = Array.from({ length: 2000 }, (_, i) => rollPositions(2, mulberry32(i)))
+  assert.ok(two.every((p) => (p[0] === 0 && p[1] === 100) || (p[0] === 8 && p[1] === 92)))
+  const soft = two.filter((p) => p[0] === 8).length / 2000
+  assert.ok(Math.abs(soft - 0.3) < 0.04, `soft ends ${soft}`)
+  const mids = new Set(Array.from({ length: 300 }, (_, i) => rollPositions(3, mulberry32(i))[1]))
+  assert.deepEqual([...mids].sort((a, b) => a - b), [45, 55, 62])
+  for (const g of V2.filter((x) => x.type === 'Conic')) assert.equal(g.stops[g.stops.length - 1].position, 100)
+})
+
+test('stop locks survive best of eight: colour, position, type, angle and interpolation', () => {
+  const stops = [
+    { color: '#336699', position: 0, lockColour: true, lockPosition: false },
+    { color: '#AABBCC', position: 30, lockColour: false, lockPosition: true },
+    { color: '#112233', position: 100, lockColour: false, lockPosition: false },
+  ]
+  const filters = { stops, counts: [3], locks: { type: 'Radial', angle: 77, space: 'srgb' } }
+  const seen = new Set()
+  for (let i = 0; i < 300; i++) {
+    for (const c of rollCandidates(mulberry32(i), filters)) {
+      assert.equal(c.g.stops[0].color, '#336699', 'colour lock on every candidate, before scoring')
+      assert.equal(c.g.stops[1].position, 30, 'position lock on every candidate')
+    }
+    const g = rollGradient(mulberry32(i), filters)
+    assert.equal(g.stops.length, 3)
+    assert.equal(g.stops[0].color, '#336699')
+    assert.equal(g.stops[1].position, 30)
+    assert.equal(g.stops[0].lockColour, true)
+    assert.equal(g.type, 'Radial')
+    assert.equal(g.angle, 77)
+    assert.equal(g.space, 'srgb')
+    seen.add(g.stops[1].color)
+  }
+  assert.ok(seen.size > 100, 'the position-locked stop still gets a new colour each time')
+})
+
+test('best of eight: the shipped gradient scores above the average candidate, for Random and for the palette', () => {
+  const pool = ['#2F6BFF', '#8B5CF0', '#E0784E', '#3FAFA0', '#0B0C0E', '#F7F7F4']
+  for (const extra of [{}, { palette: pool }]) {
+    let shipped = 0
+    let single = 0
+    for (let i = 0; i < 300; i++) {
+      shipped += scoreGradient(rollGradient(mulberry32(100 + i), extra)).total
+      single += scoreGradient(rollCandidate(mulberry32(8000 + i), extra)).total
+    }
+    assert.ok(shipped / 300 > single / 300 + 0.03, `${Object.keys(extra)}: shipped ${shipped / 300} vs single ${single / 300}`)
+  }
+  // Eight candidates are scored per press.
+  assert.equal(rollCandidates(mulberry32(1)).length, 8)
+})
+
+test('palette picks stay inside the pool', () => {
+  const pool = ['#2F6BFF', '#8B5CF0', '#E0784E', '#3FAFA0']
+  for (let i = 0; i < 200; i++) assert.ok(rollGradient(mulberry32(i), { palette: pool }).stops.every((s) => pool.includes(s.color)))
+})
+
+test('not seen: remembering the last ten results moves rolls away from them', () => {
+  const farShare = (useMemory) => {
+    let far = 0
+    let total = 0
+    for (let s = 0; s < 40; s++) {
+      const m = mulberry32(100 + s)
+      let recent = []
+      for (let i = 0; i < 60; i++) {
+        const r = rollGradient(m, { recent: useMemory ? recent : [] })
+        if (i >= 10) {
+          const me = labEnds([endsOf(r)])[0]
+          const dist = (o) => Math.min((deltaE2000(me[0], o[0]) + deltaE2000(me[1], o[1])) / 2, (deltaE2000(me[0], o[1]) + deltaE2000(me[1], o[0])) / 2)
+          total++
+          if (labEnds(recent).every((o) => dist(o) >= 12)) far++
+        }
+        recent = pushRecent(recent, r)
+      }
+    }
+    return far / total
+  }
+  const withMemory = farShare(true)
+  const without = farShare(false)
+  assert.ok(withMemory > without + 0.02, `with memory ${withMemory}, without ${without}`)
+})
+
+test('best of eight is quick: eight candidates, scored, under 2ms on average', (t) => {
+  const rand = mulberry32(77)
+  for (let i = 0; i < 300; i++) rollGradient(rand) // warm up the JIT
+  const start = performance.now()
+  const N = 1500
+  for (let i = 0; i < N; i++) rollGradient(rand)
+  const avg = (performance.now() - start) / N
+  t.diagnostic(`best of eight: ${avg.toFixed(3)} ms per press`)
+  assert.ok(avg < 2, `${avg} ms`)
+})
+
+// Wiring: the page applies the rolled interpolation and offers its lock.
+test('GradientGenerator applies the rolled space and shows the interpolation lock', () => {
+  const src = fs.readFileSync(path.join(process.cwd(), 'src/pages/GradientGenerator.jsx'), 'utf8')
+    .replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  assert.match(src, /setSpace\(g\.space\)/, 'a roll no longer sets the interpolation')
+  assert.match(src, /const RANDOM_DRAWS_SPACE = true/)
+})
+
+// ── Fix round 1: the space is drawn on the ramp that ships ───────────────────
+// Mutation: rollCandidate calls drawSpace before withStopLocks (the old order)  -> "Standard on a locked ramp ..."
+// Mutation: endsOfRamp keeps the seam stop for Conic (ends = first + last)       -> "Conic ends ..."
+import { hueGap, endsOfRamp } from '../../src/utils/gradientScore.js'
+
+test('Standard on a locked ramp still keeps the middle clean and stays under 140 degrees of hue gap', () => {
+  const stops = [
+    { color: '#E03030', position: 0, lockColour: true, lockPosition: false },
+    { color: '#336699', position: 100, lockColour: false, lockPosition: false },
+  ]
+  let standard = 0
+  for (let i = 0; i < 2000; i++) {
+    const g = rollGradient(mulberry32(9000 + i), { stops })
+    assert.equal(g.stops.find((s) => s.lockColour).color, '#E03030')
+    if (g.space !== 'srgb') continue
+    standard++
+    assert.ok(standardStaysClean(g.stops), `Standard, dirty middle: ${g.stops.map((s) => s.color)}`)
+    const [a, b] = endsOf(g).map(hexToOklchRaw)
+    assert.ok(hueGap(a, b) < 140, `Standard on a ${hueGap(a, b)} degree gap: ${g.stops.map((s) => s.color)}`)
+  }
+  assert.ok(standard > 100, `Standard was drawn only ${standard} times: the test checks nothing`)
+})
+
+test('Conic ends are scored on the first stop and the stop before the seam', () => {
+  const A = '#1A2A6C'
+  const B = '#F5E27A'
+  const conic = { type: 'Conic', space: 'oklch', stops: [{ color: A, position: 0 }, { color: B, position: 50 }, { color: A, position: 100 }] }
+  assert.deepEqual(endsOf(conic), [A, B])
+  assert.deepEqual(endsOfRamp(conic.stops, 'Conic'), [A, B])
+  // The ends drive the pair terms, so the conic scores like the open A-to-B ramp, not like A-to-A.
+  const open = { type: 'Linear', space: 'oklch', stops: [{ color: A, position: 0 }, { color: B, position: 100 }] }
+  const c = scoreGradient(conic).terms
+  const l = scoreGradient(open).terms
+  for (const k of ['valueStep', 'chromaBalance', 'hueRelation', 'anchor', 'notSeen']) assert.equal(c[k], l[k], k)
+  assert.ok(c.valueStep > 0, 'a dark-to-light pair has a value step; A-to-A would have none')
 })
