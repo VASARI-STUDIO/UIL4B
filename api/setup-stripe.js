@@ -5,6 +5,10 @@ import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
 import { isAdminEmail } from './_lib/adminEmails.js'
 import { proProductDescription } from './_lib/plans.js'
 import { allowedOrigins } from './_lib/origins.js'
+import { adminDb } from './_lib/firebase-admin.js'
+import { isReauthFresh } from './_lib/accountDeletion.js'
+import { clientIp } from './_lib/rateLimit.js'
+import { failRequest } from './_lib/http.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
   LOOKUP_KEYS, INTERVAL_MAP, INTERVAL_COUNTS, BILLING_INTERVALS,
@@ -102,6 +106,52 @@ function validatePrices(prices) {
   return null
 }
 
+// Marks the audit row with how the change ended. Never throws: the change has
+// already happened (or failed), and the row still says 'applying' if this fails.
+async function settleAudit(ref, status) {
+  if (!ref) return
+  try {
+    await ref.set({ status, settledAt: new Date().toISOString() }, { merge: true })
+  } catch (err) {
+    console.error('setup-stripe: could not mark the audit row', { status, error: err?.message })
+  }
+}
+
+// Every price change is recorded in this collection before it is made. It has
+// no rule in firestore.rules, so only the Admin SDK can read or write it.
+export const AUDIT_COLLECTION = 'admin-audit'
+
+// A single save may not move any price by more than this factor, up or down,
+// unless the request carries `force: true`. A mistyped extra zero is the likely
+// error; a stolen session is the unlikely one; both are stopped by it.
+export const MAX_PRICE_CHANGE_FACTOR = 10
+
+// { lookupKey: { currency: { old, new } } } for the amounts a save would write.
+// `old` is null where no live price exists for that lookup key and currency.
+export function describePriceChanges(before, prices) {
+  const out = {}
+  for (const interval of BILLING_INTERVALS) {
+    const live = before?.[interval]?.currencies || {}
+    out[LOOKUP_KEYS[interval]] = {}
+    for (const [cur, amt] of Object.entries(prices[interval])) {
+      out[LOOKUP_KEYS[interval]][cur] = { old: live[cur] ?? null, new: Number(amt) }
+    }
+  }
+  return out
+}
+
+// The first change beyond MAX_PRICE_CHANGE_FACTOR, or null.
+export function oversizedChange(changes) {
+  for (const [lookupKey, byCurrency] of Object.entries(changes)) {
+    for (const [currency, { old, new: next }] of Object.entries(byCurrency)) {
+      if (old > 0 && (next > old * MAX_PRICE_CHANGE_FACTOR || next < old / MAX_PRICE_CHANGE_FACTOR)) {
+        return { lookupKey, currency, old, new: next }
+      }
+    }
+  }
+  return null
+}
+
 export default async function handler(req, res) {
   // An allowlisted origin is reflected, anything else gets no CORS header at
   // all — the same allowlist and the same shape as api/support.js, which
@@ -127,6 +177,9 @@ export default async function handler(req, res) {
   const auth = await requireAdmin(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error, ...(auth.code ? { code: auth.code } : {}) })
 
+  // The audit row for this request, once it exists, so a failure can mark it.
+  let auditRef = null
+
   try {
     const stripe = getStripeServer()
 
@@ -139,9 +192,57 @@ export default async function handler(req, res) {
     }
 
     // POST — create/update the product and both prices.
+    //
+    // Changing a live price needs a sign-in from the last few minutes, checked
+    // on the token's own `auth_time` exactly as api/delete-account.js does: an
+    // hour-old admin token from a machine someone walked away from (or lifted)
+    // cannot move prices. The admin page maps the code to "Sign in again".
+    const authTimeMs = (auth.decoded.auth_time || 0) * 1000
+    if (!isReauthFresh(authTimeMs)) {
+      return res.status(401).json({
+        code: 'reauth-required',
+        error: 'For your security, please sign in again before changing prices.',
+      })
+    }
+
     const prices = req.body?.prices || DEFAULT_PRICES
     const invalid = validatePrices(prices)
     if (invalid) return res.status(400).json({ error: invalid })
+
+    const force = req.body?.force === true
+    const changes = describePriceChanges(await readPrices(stripe), prices)
+    const oversized = oversizedChange(changes)
+    if (oversized && !force) {
+      return res.status(400).json({
+        code: 'price-change-too-large',
+        error: `${oversized.lookupKey} ${oversized.currency.toUpperCase()} would change from ${oversized.old} to ${oversized.new}, more than ${MAX_PRICE_CHANGE_FACTOR}x. Nothing was changed.`,
+      })
+    }
+
+    // Recorded BEFORE anything is changed: if the audit row cannot be written
+    // the prices stay as they are, so no change is ever made without a record.
+    auditRef = adminDb().collection(AUDIT_COLLECTION).doc()
+    try {
+      await auditRef.set({
+        action: 'stripe-prices-update',
+        status: 'applying',
+        at: new Date().toISOString(),
+        actorUid: auth.decoded.uid,
+        actorEmail: auth.decoded.email || null,
+        authTime: new Date(authTimeMs).toISOString(),
+        ip: clientIp(req) || null,
+        forced: force,
+        prices: changes,
+      })
+    } catch (err) {
+      auditRef = null
+      return failRequest(res, {
+        status: 500,
+        scope: 'setup-stripe audit write',
+        message: 'The audit record could not be written, so no prices were changed.',
+        err,
+      })
+    }
 
     const product = await findOrCreateProduct(stripe)
     const out = {}
@@ -190,6 +291,8 @@ export default async function handler(req, res) {
       out[interval] = { id: newPrice.id, currencies: amounts }
     }
 
+    await settleAudit(auditRef, 'applied')
+
     return res.status(200).json({
       ok: true,
       product: product.id,
@@ -198,6 +301,7 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('setup-stripe failed:', err)
+    await settleAudit(auditRef, 'failed')
     return res.status(500).json({ error: err?.message || 'Setup failed' })
   }
 }

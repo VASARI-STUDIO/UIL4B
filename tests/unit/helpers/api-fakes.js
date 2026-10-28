@@ -74,7 +74,8 @@ export function fakeDb(seed = {}) {
     docs,
     inCollection: (col) => [...docs.entries()].filter(([k]) => k.startsWith(`${col}/`)).map(([, v]) => v),
     collection: (col) => ({
-      doc: (id) => ref(col, id),
+      // `doc()` with no id makes a fresh document, as the Admin SDK does.
+      doc: (id) => ref(col, id ?? `auto${(autoId += 1)}`),
       async add(data) {
         autoId += 1
         docs.set(`${col}/auto${autoId}`, { ...data })
