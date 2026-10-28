@@ -754,9 +754,12 @@
 }
 
 /* ── Shuffle settings: a popover from 768px, a bottom sheet below ──────────
-   The wrapper anchors the popover to its button. Pills reuse the tool's own.
-   The body is shared by the popover and the More menu's copy, and the sheet
-   copy renders in .tl-sheet-layer outside .grd, so everything inside the body
+   Below 768px the component draws the shared .tl-sheet-layer (tool-layout.css),
+   portalled to <body>: a fixed panel inside the toolbar would be positioned
+   against the toolbar's backdrop-filter, not the screen. Only the popover is
+   styled here. The wrapper anchors it to its button. Pills reuse the tool's own.
+   The body is shared by the popover, the sheet and the More menu's copy, and the
+   sheet renders in .tl-sheet-layer outside .grd, so everything inside the body
    is scoped by .grd-shuf-body (and the title / inline wrapper by their own
    classes), never by .grd. */
 .grd .grd-shuf-wrap { position: relative; display: inline-flex; }
@@ -778,12 +781,6 @@
 .grd-shuf-body .grd-shuf-keep:focus-visible,
 .grd-shuf-body .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .grd-shuf-body .grd-shuf-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
-@media (max-width: 767px) {
-  .grd .tl-pop.grd-shuf {
-    position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); top: auto;
-    width: auto; max-height: calc(100dvh - 72px); overscroll-behavior: contain;
-  }
-}
 @media (pointer: coarse) {
   .grd-shuf-body .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
   .grd-shuf-body .grd-shuf-keep { min-height: 44px; }

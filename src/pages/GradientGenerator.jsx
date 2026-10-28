@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -433,7 +434,7 @@ const LockBtn = ({ on, onClick, label, className = '', unavailable = false, desc
 )
 
 // The Shuffle settings popover: a popover from 768px, a bottom sheet below
-// (the CSS moves it). Style only lists families that are built; with none, the
+// (ShuffleSettings draws it in the shared sheet layer). Style only lists families that are built; with none, the
 // row would offer nothing to choose, so it is left out.
 // The settings themselves, shared by the popover and the toolbar's More menu
 // (where the button has no room, the same controls sit inline in that menu).
@@ -462,8 +463,30 @@ function ShuffleBody({ filters, setFilters }) {
   )
 }
 
+const PHONE_QUERY = '(max-width: 767px)'
+const SHUFFLE_TITLE = 'What Random and Shuffle make'
+
 function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
-  const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose)
+  const phone = useMediaQuery(PHONE_QUERY)
+  // A press on the scrim (or Tab leaving the sheet) closes it. When focus is
+  // still inside the sheet it goes back to the button first, so a sheet closed
+  // by a press does not drop focus to the page.
+  const dismissRef = useRef(null)
+  const { triggerRef, popRef, closeToTrigger } = usePopover(open, () => dismissRef.current?.(), { portalled: phone })
+  useEffect(() => {
+    dismissRef.current = () => {
+      if (phone && popRef.current?.contains(document.activeElement)) triggerRef.current?.focus?.({ preventScroll: true })
+      onClose()
+    }
+  })
+  // Turning the screen across 768px swaps popover and sheet: close rather than
+  // leave the open one wired to the other's element.
+  const wasPhone = useRef(phone)
+  useEffect(() => {
+    if (wasPhone.current === phone) return
+    wasPhone.current = phone
+    if (open) onClose()
+  }, [phone, open, onClose])
   return (
     <span className="grd-shuf-wrap">
       <ToolButton
@@ -476,14 +499,32 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
         aria-expanded={open}
         onClick={() => (open ? onClose() : onOpen())}
       />
-      {open && (
+      {open && !phone && (
         <div ref={popRef} className="tl-pop grd-shuf" role="dialog" aria-label="Shuffle settings" tabIndex={-1}>
           <div className="grd-shuf-head">
-            <span className="grd-shuf-title">Random makes</span>
+            <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
             <button type="button" className="grd-iconbtn grd-shuf-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={14} /></button>
           </div>
           <ShuffleBody filters={filters} setFilters={setFilters} />
         </div>
+      )}
+      {/* Below 768px the same settings are a bottom sheet in the shared sheet
+          layer (the More menu's), portalled to <body>: the toolbar's
+          backdrop-filter makes it the containing block of anything fixed
+          inside it, so a fixed sheet drawn here hung off the toolbar. */}
+      {open && phone && createPortal(
+        <div className="tl-sheet-layer">
+          <div className="tl-sheet-scrim" aria-hidden="true" onClick={closeToTrigger} />
+          <div ref={popRef} className="tl-sheet" role="dialog" aria-label="Shuffle settings" tabIndex={-1}>
+            <span className="tl-sheet-grab" aria-hidden="true" />
+            <div className="tl-sheet-head">
+              <span className="tl-sheet-title">{SHUFFLE_TITLE}</span>
+              <button type="button" className="tl-sheet-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={16} /></button>
+            </div>
+            <ShuffleBody filters={filters} setFilters={setFilters} />
+          </div>
+        </div>,
+        document.body,
       )}
     </span>
   )
@@ -1429,7 +1470,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           // Too narrow for the button: the same settings sit inline in More.
           menu: () => (
             <div className="grd-shuf-inline">
-              <span className="grd-shuf-title">Random makes</span>
+              <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
               <ShuffleBody filters={filters} setFilters={setFilters} />
             </div>
           ),
