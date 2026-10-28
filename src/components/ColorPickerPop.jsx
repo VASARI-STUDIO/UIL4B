@@ -164,6 +164,9 @@ export default function ColorPickerPop({
   onDisabledClick,
   triggerClassName = '',
   triggerChildren,
+  // For a tool that restyles its own picker's panel; a portalled panel sits
+  // outside the tool's wrapper, so a descendant selector cannot reach it.
+  popClassName = '',
   portal = false,
 }) {
   const [open, setOpen] = useState(false)
@@ -405,7 +408,7 @@ export default function ColorPickerPop({
           <div ref={scrimRef} className="menu-select-scrim cpk-scrim" aria-hidden="true" data-pop-scrim={`${ids}-pop`}
             onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); close() }} />
         )}
-        <div id={`${ids}-pop`} className="pop cpk-pop" data-pop-fixed={portal || undefined} ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
+        <div id={`${ids}-pop`} className={`pop cpk-pop${popClassName ? ` ${popClassName}` : ''}`} data-pop-fixed={portal || undefined} ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
           {/* The panel says which colour it is editing, in the shared .pop-head
               voice. Near-free on a surface with one picker; the difference
               between usable and guesswork on a gradient with five stops, a

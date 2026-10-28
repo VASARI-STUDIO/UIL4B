@@ -32,26 +32,65 @@
   color: var(--tl-dim);
 }
 
-/* The From palette note: one row of text, a pill link to the Palette Builder
-   and a dismiss square. No card or border; it sits on the page like the Pro
-   note above. The wrapper is the always-mounted live region: while it is empty
-   it leaves the flow, so the grid gap above the canvas is not doubled.
-   scroll-margin keeps the note clear of the sticky toolbar when it is scrolled
-   into view. */
-.grd .grd-live:empty { position: absolute; }
-.grd .grd-note--palette {
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  color: var(--tl-ink);
-  scroll-margin-top: calc(var(--chrome-h) + 72px);
-  border-radius: 8px;
+/* The From palette note: a small chip in the canvas's bottom-left corner, one
+   line of text, a text link to the Palette Builder and a dismiss square. The
+   bottom corner leaves the canvas's top edge, where the first colour reads, clear.
+   It is out of flow, so the page is the same height with it as without it. The wrapper is the always-mounted live region and takes no
+   pointer events itself. scroll-margin keeps the note clear of the sticky toolbar
+   when it is scrolled into view. */
+.grd .grd-live {
+  position: absolute;
+  inset: auto auto 12px 12px;
+  max-width: calc(100% - 24px);
+  z-index: 1;
+  pointer-events: none;
 }
-.grd .grd-note--palette:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 4px; }
+.grd .grd-note--palette {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 2px 2px 12px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+  color: var(--tl-ink);
+  white-space: nowrap;
+  scroll-margin-top: calc(var(--chrome-h) + 72px);
+  border-radius: 12px;
+  pointer-events: auto;
+}
+.grd .grd-note--palette:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-note-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.grd .grd-note-sep { color: var(--tl-dim); }
+.grd .grd-note-link {
+  display: inline-block;
+  flex: 0 0 auto;
+  line-height: 28px;
+  border-radius: 6px;
+  color: var(--tl-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.grd .grd-note-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
+.grd .tl-btn.grd-note-x { width: 28px; height: 28px; min-height: 28px; border: 0; }
+/* Narrow: the link drops its lead-in words ("Make one in") so the chip stays on one line. */
+@media (max-width: 520px) {
+  .grd .grd-note-pre { display: none; }
+}
 
-/* ── Canvas (D:627) ─────────────────────────────────────────────────────── */
-.grd .grd-canvas {
+/* ── Canvas (D:627) ─────────────────────────────────────────────────────────
+   The stage is the canvas's slot: a fixed minimum height the canvas fills, and
+   the anchor for anything laid over it. isolation keeps the layers inside from
+   stacking over the toolbar or a popover. */
+.grd .grd-stage {
   position: relative;
+  isolation: isolate;
   min-height: clamp(240px, 42vh, 440px);
+}
+.grd .grd-canvas {
+  position: absolute;
+  inset: 0;
   border-radius: 18px;
   border: 1px solid var(--tl-line);
 }
@@ -63,7 +102,7 @@
 @media (min-width: 901px) {
   .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
   .grd .tl-main > * { flex-shrink: 0; }
-  .grd .tl-main > .grd-canvas { flex: 1 0 auto; max-height: 640px; }
+  .grd .tl-main > .grd-stage { flex: 1 0 auto; max-height: 640px; }
 }
 
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
@@ -127,17 +166,26 @@
 .grd .grd-handle:focus-visible .grd-handle-val { opacity: 1; visibility: visible; transition-delay: 0s; }
 
 /* ── Code well (D:638-640), with the format tabs on top ─────────────────── */
+/* A fixed height at every format and every stop count: the tab row, then the
+   code, which scrolls inside itself (a 12-stop SVG is far longer than a line of
+   CSS, so a content-sized well would grow and shrink the page). */
 .grd .grd-code {
+  display: flex;
+  flex-direction: column;
+  height: 152px;
   border-radius: 12px;
   border: 1px solid var(--tl-line);
   background: var(--tl-card);
   overflow: hidden;
 }
-.grd .grd-fmt { display: flex; gap: 5px; flex-wrap: wrap; padding: 10px 12px 0; }
+.grd .grd-fmt { display: flex; gap: 5px; flex-wrap: wrap; flex: 0 0 auto; padding: 10px 12px 0; }
 .grd .grd-code-text {
+  flex: 1 1 0;
+  min-height: 0;
   margin: 0;
   padding: 12px 16px 14px;
-  overflow-x: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.7;
@@ -145,14 +193,47 @@
   white-space: pre;
 }
 .grd .grd-code-text code { font: inherit; color: inherit; background: none; padding: 0; }
-.grd .grd-code-text--block { max-height: 260px; }
+/* The CSS is one long line at twelve stops. It wraps inside the fixed box rather
+   than scrolling sideways, and the box keeps its height. */
+.grd .grd-code-text--wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ── Side card: STOPS (D:645-654) ───────────────────────────────────────── */
 .grd .grd-sec-tools { display: inline-flex; align-items: center; gap: 2px; }
+/* The stop list: a window three rows tall that scrolls inside itself, so adding
+   or removing a stop never changes the panel's height. The 1px top and bottom
+   borders are always there (transparent) and take a colour when rows sit past
+   that edge, which is a cue that does not move anything. The edge with more
+   rows also fades its last 18px, which shows on overlay scrollbars too. The
+   gutter is held so the rows are the same width with two stops as with twelve. */
+.grd { --grd-row: 40px; --grd-row-gap: 2px; --grd-fade: 18px; --grd-edge: color-mix(in srgb, var(--t0) 50%, transparent); }
+.grd .grd-stops {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--grd-row-gap);
+  height: calc(var(--grd-row) * 3 + var(--grd-row-gap) * 2);
+  box-sizing: content-box;
+  border-block: 1px solid transparent;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  --grd-fade-top: 0px;
+  --grd-fade-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .2), rgb(0 0 0) var(--grd-fade-top), rgb(0 0 0) calc(100% - var(--grd-fade-bottom)), rgb(0 0 0 / .2));
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / .2), rgb(0 0 0) var(--grd-fade-top), rgb(0 0 0) calc(100% - var(--grd-fade-bottom)), rgb(0 0 0 / .2));
+}
+.grd .grd-stops.is-above { border-top-color: var(--grd-edge); --grd-fade-top: var(--grd-fade); }
+.grd .grd-stops.is-below { border-bottom-color: var(--grd-edge); --grd-fade-bottom: var(--grd-fade); }
+/* "1–3 of 12": which rows the window shows. Held to the widest label ("10–12 of
+   12", eleven mono cells) and right-aligned, so the header does not shift as it
+   scrolls. */
+.grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
 .grd .grd-stop {
   display: flex;
   align-items: center;
+  flex: 0 0 var(--grd-row);
   gap: 10px;
+  height: var(--grd-row);
   padding: 6px;
   border-radius: 12px;
   background: transparent;
@@ -163,7 +244,7 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--t0) 20%, transparent);
   cursor: pointer;
 }
@@ -209,10 +290,18 @@
   transition: background .16s ease, color .16s ease;
 }
 .grd .grd-lock.is-on { color: var(--tl-ink); background: var(--tl-wash-on); }
+.grd .grd-iconbtn[disabled],
+.grd .grd-iconbtn[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
 @media (hover: hover) and (pointer: fine) {
-  .grd .grd-iconbtn:hover { background: var(--tl-wash-2); color: var(--tl-ink); }
+  .grd .grd-iconbtn:hover:not([disabled]):not([aria-disabled="true"]) { background: var(--tl-wash-2); color: var(--tl-ink); }
 }
-.grd .grd-add { width: 100%; font-size: 13px; }
+.grd .grd-add { width: 100%; height: 36px; min-height: 36px; font-size: 13px; }
+/* Out of stops: the label keeps full text contrast (it says why), and only the
+   dashed border and the plus step back. The button stays focusable, so a press
+   can still explain itself. */
+.grd .tl-btn.grd-add[aria-disabled="true"] { border-color: var(--tl-line); color: var(--tl-ink); cursor: not-allowed; }
+.grd .tl-btn.grd-add[aria-disabled="true"]:active { transform: none; }
+.grd .tl-btn.grd-add[aria-disabled="true"] .tl-btn-ico { opacity: .4; }
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 
@@ -232,7 +321,13 @@
 .grd .grd-swatch.is-on { border-color: var(--t0); }
 .grd .grd-pick { display: flex; align-items: center; gap: 8px; }
 .grd .grd-pick-swatch { flex: 0 0 auto; display: flex; }
-.grd .grd-pick-swatch .cpk-trigger { width: 36px; height: 36px; border-radius: 12px; }
+/* Every swatch in the panel is a circle: the trigger, the chip inside it, and
+   the colour samples in the picker it opens. The picker panel can be portalled
+   out of .grd, so it carries its own class. */
+.grd .grd-pick-swatch .cpk-trigger { width: 36px; height: 36px; border-radius: 50%; }
+.grd .grd-pick-swatch .cpk-trigger-chip { border-radius: 50%; }
+.cpk-pop.grd-cpk-pop .cpk-swatch,
+.cpk-pop.grd-cpk-pop .cpk-chip { border-radius: 50%; }
 .grd .grd-pick-swatch .cpk-pop { left: 0; right: auto; }
 .grd .grd-hex-field { position: relative; flex: 1; min-width: 0; display: flex; }
 .grd .grd-hex {
@@ -276,6 +371,10 @@
 .grd .grd-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .grd .grd-row > .tl-slider { flex: 1; min-width: 0; }
 .grd .grd-row > .grd-angle { flex: 1; min-width: 0; }
+/* The angle row is the wheel's height whether the wheel is there or a radial
+   gradient has said it has no angle. */
+.grd .grd-row--angle { height: 64px; }
+.grd .grd-angle-none { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); }
 
 /* ── Angle wheel ─────────────────────────────────────────────────────────────
    A dial you drag, step with the arrow keys, or type into. 0deg is straight up
@@ -379,7 +478,11 @@
 .grd .grd-angle-unit { font-size: 12px; }
 .grd .grd-interp { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .grd .grd-interp-k { font-size: 12.5px; color: var(--tl-dim); }
-.grd .grd-interp-hint { flex: 1 0 100%; margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); text-wrap: pretty; }
+/* Both hints share one grid cell and the idle one is hidden, so the cell is as
+   tall as the longer hint and switching space never moves what is below. */
+.grd .grd-interp-hints { display: grid; flex: 1 0 100%; }
+.grd .grd-interp-hint { grid-area: 1 / 1; margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); text-wrap: pretty; }
+.grd .grd-interp-hint.is-idle { visibility: hidden; }
 
 /* ── Start from a preset ────────────────────────────────────────────────────
    Not a card: the heading sits on the page and each preset is its own tile, so
@@ -545,7 +648,7 @@
 @media (hover: hover) and (pointer: fine) {
   .grd-tintmenu-item:hover { background: color-mix(in srgb, var(--t0) 6%, transparent); }
 }
-.grd-tintmenu-chip { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 6px; box-shadow: inset 0 0 0 1px oklch(0 0 0 / .12); }
+.grd-tintmenu-chip { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px oklch(0 0 0 / .12); }
 .grd-tintmenu-label { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 .grd-tintmenu-hex { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--t1); }
 @media (pointer: coarse) { .grd-tintmenu-item { min-height: 44px; } }
@@ -560,6 +663,17 @@
 /* ── Coarse pointers: 44px on every stop control, 16px in the hex field so
    iOS does not zoom the page when it takes focus. ────────────────────────── */
 @media (pointer: coarse) {
+  .grd { --grd-row: 56px; }
+  .grd .grd-add { height: 44px; min-height: 44px; }
+  /* Touch scrollbars overlay the content, so the window keeps its full width for the hex fields.
+     A finger that runs past the end of the window carries on scrolling the page, so the list is never a trap. */
+  .grd .grd-stops { scrollbar-gutter: auto; overscroll-behavior: auto; }
+  /* At the narrowest phones the row's gaps give the stop's hex its full width. */
+  @media (max-width: 360px) {
+    .grd .grd-stop { gap: 6px; padding: 4px; }
+    .grd .grd-stop-select { gap: 6px; }
+  }
+  .grd .grd-row--angle { height: 76px; }
   .grd .grd-iconbtn { width: 44px; height: 44px; }
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
@@ -571,6 +685,8 @@
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
   .grd .grd-stop-select { min-height: 44px; }
+  .grd .tl-btn.grd-note-x { width: 44px; height: 44px; min-height: 44px; }
+  .grd .grd-note-link { line-height: 44px; }
   .grd .grd-wheel { width: 76px; height: 76px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
