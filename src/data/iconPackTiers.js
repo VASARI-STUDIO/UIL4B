@@ -75,6 +75,8 @@ export const ICON_PACK_TIERS = {
   solar:              { tier: 'free', why: 'figma.com/community — 480 Design publish the whole set free there. Named free by the founder.' },
   'fa6-solid':        { tier: 'free', why: 'fontawesome.com/search — Font Awesome run it themselves and the free tier browses without an account.' },
   bxs:                { tier: 'free', why: 'boxicons.com — BoxIcons run it themselves, free. The solid-set equivalent of the five above.' },
+  mingcute:           { tier: 'free', why: 'mingcute.com — MingCute Design run the icon browser themselves, free. Line and fill pairs on one grid.' },
+  carbon:             { tier: 'free', why: 'carbondesignsystem.com/elements/icons/library — IBM run it themselves, free. Its logo-* brand marks are Pro (see PRO_ONLY_ICONS).' },
 
   // ── paid · brands ────────────────────────────────────────────────────────
   // Read the `why` before moving one of these. The first four HAVE a free
@@ -113,6 +115,60 @@ export const ICON_PACK_TIERS = {
   'line-md':          { tier: 'paid', animated: true, why: 'Material Line Icons — animated line icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
   'svg-spinners':     { tier: 'paid', animated: true, why: 'SVG Spinners — animated loaders, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
   meteocons:          { tier: 'paid', animated: true, why: 'Meteocons — animated weather icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+}
+
+/* ── PACKS THAT ARE NEVER SHOWN OR EXPORTED ─────────────────────────────────
+ *
+ * Not even on Pro. Pro search is unscoped, so it can return any Iconify set;
+ * these are the sets whose own terms restrict this use. Remix Icon moved to a
+ * licence that bars an icon library whose main feature is the icons, and
+ * Streamline's terms bar apps that let users download its icons. canSeePack
+ * reads this first, so every path that asks it (browse, search results, the
+ * group export plan, the end band) refuses them. To block another set, add its
+ * prefix here and nowhere else. */
+export const BLOCKED_PACKS = Object.freeze({
+  exact: Object.freeze(['ri']),
+  // A family: 'streamline' and every 'streamline-*' (-flex, -plump, -color, ...).
+  families: Object.freeze(['streamline']),
+})
+
+/** Is this prefix on the block-list? */
+export function isBlockedPack(prefix) {
+  if (typeof prefix !== 'string') return false
+  const p = prefix.toLowerCase()
+  return BLOCKED_PACKS.exact.includes(p) || BLOCKED_PACKS.families.some((f) => p === f || p.startsWith(`${f}-`))
+}
+
+/* ── ICONS INSIDE AN OPEN PACK THAT ARE PRO ONLY ────────────────────────────
+ *
+ * Brand marks are Pro (the founder's rule), and Carbon carries 49 of them
+ * inside an otherwise free pack, all named logo-*. A free or signed-out viewer
+ * never lists, searches or fetches these; Pro sees them. One rule per pack. */
+export const PRO_ONLY_ICONS = Object.freeze({
+  carbon: (name) => name.startsWith('logo-'),
+})
+
+/** Does this pack keep this icon for Pro? */
+export function isProOnlyIcon(prefix, name) {
+  const rule = PRO_ONLY_ICONS[prefix]
+  return typeof name === 'string' && !!rule && rule(name)
+}
+
+/** May this viewer see this one icon? Pack rules first, then the per-icon rule. */
+export function canSeeIcon(prefix, name, tier) {
+  if (!canSeePack(prefix, tier)) return false
+  return tier === 'paid' || !isProOnlyIcon(prefix, name)
+}
+
+/** The names of one pack this viewer may see. Anything but 'paid' is held back. */
+export function visibleIconNames(prefix, names, tier) {
+  if (!PRO_ONLY_ICONS[prefix] || tier === 'paid') return names
+  return names.filter((n) => !isProOnlyIcon(prefix, n))
+}
+
+/** How many of these names are held back for Pro. */
+export function proOnlyIconCount(prefix, names) {
+  return PRO_ONLY_ICONS[prefix] ? names.filter((n) => isProOnlyIcon(prefix, n)).length : 0
 }
 
 /** Is this one of the animated sets, which only ever load through the server's Pro check? */
@@ -180,6 +236,7 @@ export function viewerTier({ user, isPro, resolving } = {}) {
  * pack is refused rather than waved through.
  */
 export function canSeePack(prefix, tier) {
+  if (isBlockedPack(prefix)) return false
   if (tier === 'paid') return true
   const packTier = tierOf(prefix)
   if (packTier === null) return false
@@ -217,8 +274,8 @@ export const ICON_GATE_COPY = {
   end: {
     anon: {
       heading: 'Log in to keep browsing.',
-      // `cap` is ANON_ICON_CAP; `n` is how many solid packs an account adds.
-      body: (cap, n) => `Signed out, you see the first ${cap} icons. A free account lifts that cap and adds ${n.toLocaleString()} solid ${n === 1 ? 'pack' : 'packs'}.`,
+      // `cap` is ANON_ICON_CAP; `n` is how many packs an account adds.
+      body: (cap, n) => `Signed out, you see the first ${cap} icons. A free account lifts that cap and adds ${n.toLocaleString()} more ${n === 1 ? 'pack' : 'packs'}.`,
       action: 'Log in',
       secondary: 'See the plans',
       // The hover chip on a blurred icon.
@@ -236,7 +293,7 @@ export const ICON_GATE_COPY = {
   // both: "Solar needs a free account", "Solid needs a free account".
   lockedFree: {
     heading: (label) => `${label} needs a free account`,
-    body: 'The solid sets open once you are signed in.',
+    body: 'A free account opens this pack and lifts the signed-out cap.',
     action: 'Log in',
   },
   // When any viewer picks a pack or group that is Pro.

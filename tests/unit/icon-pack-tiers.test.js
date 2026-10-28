@@ -110,7 +110,7 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   // The concrete cases that matter, so a refactor that inverts the
   // comparison cannot pass by being internally consistent.
   assert.equal(canSeePack('lucide', 'anon'), true, 'Lucide is the signed-out sample')
-  assert.equal(canSeePack('material-symbols', 'anon'), false, 'a solid set needs an account')
+  assert.equal(canSeePack('material-symbols', 'anon'), false, 'Material Symbols needs an account')
   assert.equal(canSeePack('material-symbols', 'free'), true, 'Material Symbols has a free official browser, so an account opens it')
   assert.equal(canSeePack('simple-icons', 'free'), false, 'brand marks are the named exclusion')
   assert.equal(canSeePack('twemoji', 'free'), false, 'the emoji sets are paid')
@@ -121,9 +121,9 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   // in our list at all; below Pro that must be refused rather than waved
   // through, and on Pro it must be allowed, because an unscoped Pro search has
   // always reached the whole Iconify registry.
-  assert.equal(canSeePack('mingcute', 'anon'), false)
-  assert.equal(canSeePack('mingcute', 'free'), false)
-  assert.equal(canSeePack('mingcute', 'paid'), true)
+  assert.equal(canSeePack('some-unlisted-set', 'anon'), false)
+  assert.equal(canSeePack('some-unlisted-set', 'free'), false)
+  assert.equal(canSeePack('some-unlisted-set', 'paid'), true)
 })
 
 test('viewerTier fails closed — only an explicit Pro is Pro, and an unresolved session is signed out', () => {

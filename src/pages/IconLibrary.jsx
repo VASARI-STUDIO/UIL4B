@@ -45,7 +45,7 @@ import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 // see src/data/iconPackTiers.js for the rule and for how to move a
 // pack between tiers with a one-word edit.
 import {
-  ANIMATED_PACKS, ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, isAnimatedPack, tierOf, viewerTier, visiblePacks,
+  ANIMATED_PACKS, ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeeIcon, canSeePack, isAnimatedPack, isBlockedPack, proOnlyIconCount, tierOf, viewerTier, visibleIconNames, visiblePacks,
 } from '../data/iconPackTiers'
 // THE ANIMATED SETS NEVER TOUCH api.iconify.design FROM THE BROWSER. Their listing
 // and glyphs come only from this client, which calls the server's Pro check.
@@ -112,7 +112,7 @@ const GROUP_ORDER = ['coloured', 'brands', 'flags', 'emoji']
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs']
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
 const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs)])]
 
 // The group tray's options were built HERE, at module scope, so that
@@ -279,10 +279,13 @@ const WEIGHT_RULES = {
 const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
 // Collections use the pack's Regular artwork; other scopes honour the weight.
-const keepWeight = (pack, names, weight, groupKey = null) => {
-  if (groupKey || weight === 'regular') return names.filter(name => matchesRegular(pack, name))
+// `tier` also drops the icons a pack keeps for Pro (Carbon's logo-*), so a name the
+// viewer may not have never becomes a cell, a glyph request or a search hit.
+const keepWeight = (pack, names, weight, groupKey = null, tier) => {
+  const open = visibleIconNames(pack, names, tier)
+  if (groupKey || weight === 'regular') return open.filter(name => matchesRegular(pack, name))
   const rule = WEIGHT_RULES[weight]?.[pack]
-  return rule ? names.filter(rule) : []
+  return rule ? open.filter(rule) : []
 }
 const matchesWeight = (pack, name, weight) => (
   weight === 'regular' ? matchesRegular(pack, name) : !!WEIGHT_RULES[weight]?.[pack]?.(name)
@@ -327,6 +330,8 @@ const svgTextReady = new Map()
 const svgKey = glyphKey
 
 function fetchSvgText(pack, name, params = {}) {
+  // The block-list in iconPackTiers.js covers every path that takes an icon's markup.
+  if (isBlockedPack(pack)) return Promise.reject(new Error('This icon set is not offered'))
   const cacheable = !params || Object.keys(params).length === 0
   const key = svgKey(pack, name)
   if (cacheable && svgTextCache.has(key)) return svgTextCache.get(key)
@@ -1393,14 +1398,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         setSimilar({
           id,
           list: names
-            .filter(n => n !== name && n.split(/[-_]/)[0] === root)
+            .filter(n => n !== name && n.split(/[-_]/)[0] === root && canSeeIcon(pack, n, isPro ? 'paid' : 'free'))
             .slice(0, 6)
             .map(n => ({ id: `${pack}:${n}`, pack, name: n, cdn: true })),
         })
       })
       .catch(() => { /* non-fatal — just hide the row */ })
     return () => { cancelled = true }
-  }, [activeIcon])
+  }, [activeIcon, isPro])
 
   const currentId = activeIcon ? (activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`) : null
   const similarList = similar.id === currentId ? similar.list : []
@@ -2246,7 +2251,7 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
 const PACK_MENU = [
   {
     label: 'Interface',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon']],
   },
   {
     label: 'Brand logos',
@@ -2622,6 +2627,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      "you cannot have this" and "the service refused" two distinguishable
      states. Null whenever the current scope is one the viewer may browse. */
   const [gated, setGated] = useState(null)
+  // How many icons of the open pack are held back for Pro: { pack, n }. Drives the quiet notice under the pack menu.
+  const [proHeld, setProHeld] = useState({ pack: '', n: 0 })
   // An ephemeral draft handed over from the homepage icon preview. Read during
   // render and re-validated HERE before anything is applied, so a tampered,
   // stale or already-consumed record simply opens the normal editor state
@@ -2751,7 +2758,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (allowedPacks.every(p => COLLECTION_CACHE.has(p))) {
       cdnOk.current = true
       allowedPacks.forEach((p, idx) => {
-        const names = keepWeight(p, COLLECTION_CACHE.get(p).names, weightRef.current).slice(0, perPackCap)
+        const names = keepWeight(p, COLLECTION_CACHE.get(p).names, weightRef.current, null, tier).slice(0, perPackCap)
         lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
       })
       const merged = capList(lists.flat())
@@ -2786,7 +2793,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           cdnOk.current = true
           okCount++
           if (wasDegraded) degraded++
-          const names = keepWeight(p, raw, weightRef.current).slice(0, perPackCap)
+          const names = keepWeight(p, raw, weightRef.current, null, tier).slice(0, perPackCap)
           lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
           // Default sort = pack-by-pack: lists stays in allowedPacks order and
           // each pack's icons are contiguous, so flat() groups every pack
@@ -2816,7 +2823,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           }
         })
     })
-  }, [renderLocal, allowedPacks, perPackCap, capList, scopeLine])
+  }, [renderLocal, allowedPacks, perPackCap, capList, scopeLine, tier])
 
   /* ── REFUSING A SCOPE COSTS NOTHING ──────────────────────────────────────
      The whole point of the gate: the browse functions call this INSTEAD of
@@ -2928,7 +2935,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         cdnOk.current = true
         // A saved or partial list is still shown when its refresh failed; the notice and Try again stay up.
         if (getCollectionNames.failed(packFilter)) setSoftNotice(sample ? 'sample' : 'stale')
-        const names = capList(keepWeight(packFilter, raw, weightRef.current, groupKey))
+        setProHeld({ pack: packFilter, n: tier === 'paid' ? 0 : proOnlyIconCount(packFilter, raw) })
+        const names = capList(keepWeight(packFilter, raw, weightRef.current, groupKey, tier))
         // A weight this pack does not draw is an empty answer, not a failure:
         // the built-in fallback would show Regular glyphs under a Bold label.
         if (!names.length && weightRef.current !== 'regular' && !groupKey) {
@@ -2951,7 +2959,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope, failAnimatedScope])
+  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope, failAnimatedScope, tier])
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
@@ -2974,7 +2982,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
     Promise.all(packs.map(p =>
       getCollectionNames(p, retryOptions(manualRetry))
-        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').sort().slice(0, PER_PACK_CAP), pack: p, ok: !getCollectionNames.failed(p) }))
+        .then(({ names }) => ({ names: keepWeight(p, names, 'regular', null, tier).sort().slice(0, PER_PACK_CAP), pack: p, ok: !getCollectionNames.failed(p) }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
@@ -3000,7 +3008,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll])
+  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll, tier])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -3116,6 +3124,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         const matches = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
+          // A pack's Pro-only icons (Carbon's logo-*) are left out for everyone below Pro.
+          .filter(ic => canSeeIcon(ic.pack, ic.name, tier))
           // An unscoped Pro search can name an animated set. Its glyphs only load
           // through the server's Pro check, so a direct hit is left out of this list.
           .filter(ic => !isAnimatedPack(ic.pack))
@@ -3195,6 +3205,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     lastTier.current = tier
     // Leaving Pro (sign-out, a lapsed plan) drops the animated sets' listing and glyphs.
     if (tier !== 'paid') forgetAnimatedSets()
+    // An icon opened under the old tier closes if the new one cannot see it.
+    if (selected?.cdn && !canSeeIcon(selected.pack, selected.name, tier)) setSelected(null)
     if (source === 'custom') browseCustom()
     else if (query.trim().length >= 2) doSearch(query, { pack, group })
     else if (pack) browsePack(pack, group)
@@ -3398,8 +3410,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      Nothing of the visitor's is destroyed: recentIcons.js still holds it, and
      it reappears the moment the tier does. */
   const visibleRecents = useMemo(
-    () => recents.filter(r => !r.cdn || canSee(r.pack)),
-    [recents, canSee],
+    () => recents.filter(r => !r.cdn || canSeeIcon(r.pack, r.name, tier)),
+    [recents, tier],
   )
 
   /* The group tray, marked the same way the pack menu is. A chip whose every
@@ -3533,7 +3545,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // localStorage, which survives signing out — so a viewer who was Pro
         // yesterday has simple-icons names in there today, and without this
         // line the rail would fetch them.
-        if (!canSee(icon.pack)) continue
+        if (!canSee(icon.pack) || !canSeeIcon(icon.pack, icon.name, tier)) continue
         const key = svgKey(icon.pack, icon.name)
         // A name the server would refuse is never sent: one such name fails its whole batch.
         if (isAnimatedPack(icon.pack) && !isAnimatedName(icon.name)) { GLYPH_MISSING.add(key); continue }
@@ -3621,7 +3633,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       })
     }, 120)
     return () => clearTimeout(t)
-  }, [icons, visible, recents, renderLocal, canSee, retryTick])
+  }, [icons, visible, recents, renderLocal, canSee, tier, retryTick])
 
   // The one read of `glyphTick`. The caches above are module-level Maps, so a
   // tranche landing changes nothing React can see; tying this callback's
@@ -4209,6 +4221,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 {animatedNotice === 'forbidden'
                   ? <button type="button" className="lib-btn ig-notice-btn" onClick={() => openGate('paid')}>{ICON_GATE_COPY.lockedPro.action}</button>
                   : <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>}
+              </div>
+            )}
+
+            {/* CARBON'S BRAND MARKS ARE PRO. They are left out of the list, so this says so once instead of the pack just looking shorter. */}
+            {proHeld.n > 0 && proHeld.pack === pack && source === 'pack' && !gated && !loading && (
+              <div className="ig-notice ig-notice-quiet" role="status">
+                <span>{`${proHeld.n} ${packLabel(pack)} brand logos are on Pro.`}</span>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => openGate('paid')}>{ICON_GATE_COPY.lockedPro.action}</button>
               </div>
             )}
 

@@ -1372,7 +1372,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // The rule is "name the pack only when the result set holds more than one",
   // and it needs a genuinely SINGLE-pack default grid to be falsifiable. Since
   // the pack tiers landed (src/data/iconPackTiers.js) that is a Pro viewer: one
-  // browses 250 names from each of 25 packs, so the first page of 120 cells is
+  // browses 250 names from each of 27 packs, so the first page of 120 cells is
   // all Lucide. A signed-out viewer gets the 60-icon sample — twelve from each
   // of five outlined packs — which genuinely mixes packs and therefore SHOULD
   // label every cell, so it satisfies the rule by the other branch and measures
