@@ -38,6 +38,14 @@
 //   randomiseFromPalette ignores the picks            -> "picked colours drive Shuffle from palette"
 //   Clear picks does not clear                        -> "Clear picks"
 //   the Clear picks aside given a changing height     -> "the page does not move"
+//   the Available colours head-row min-height removed -> "the page does not move" (1440 and 390)
+//   .grd-sel-clear made 60px tall (head row grows)    -> "the page does not move" (1440 and 390)
+//   the shuffle-settings More-menu item dropped       -> the 390 and 360 "More menu" and tap tests
+//   chip press-and-hold 450 -> 4500                   -> "press and hold picks a chip"
+//   toggleStopLock acts on one stop                   -> "the lock on a selected row"
+//   Ctrl+A selects two stops only                     -> "Ctrl+A selects every stop"
+// All 22 were run on a throwaway build (a copy of src under .claude/scratch/grads3/mut, patched,
+// built, served on 4960); every one turned the named tests red and the lane's src was not touched.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -328,6 +336,28 @@ for (const w of [390, 360]) {
       for (const g of ['Type', 'Stops']) await expect(group(scope, g)).toBeVisible()
       await expect(scope.getByRole('button', { name: 'Keep the angle' })).toBeVisible()
       await expect(scope.getByText('Tap to add or remove.')).toBeVisible()
+    })
+
+    // KNOWN PRODUCT DEFECT, held as an expected failure (test.fail) until it is fixed:
+    // the More menu is portalled into .tl-sheet-layer, outside .grd, so the
+    // `.grd .grd-shuf-keep` rules in gradient.css (and the 44px touch rule) never
+    // reach the inline copy. Measured 107x21 at 390 and 360: an unstyled browser
+    // button. When the CSS is scoped to reach the menu, this goes green-as-failed:
+    // delete the test.fail line then.
+    test('Keep the angle in the More menu is a 44px touch target', async ({ page }) => {
+      test.fail(true, 'gradient.css scopes .grd-shuf-keep under .grd; the More menu renders outside it')
+      await open(page)
+      const scope = await openSettings(page)
+      const box = await scope.getByRole('button', { name: 'Keep the angle' }).boundingBox()
+      expect(box.height, 'Keep the angle is 44px tall').toBeGreaterThanOrEqual(44)
+    })
+
+    test('the Type and Stops options are 44px tall targets in the More menu', async ({ page }) => {
+      await open(page)
+      const scope = await openSettings(page)
+      for (const b of await scope.locator('.tl-pill').all()) {
+        expect((await b.boundingBox()).height, await b.textContent()).toBeGreaterThanOrEqual(44)
+      }
     })
 
     test('a tap adds or removes (no Shift on a phone), and Type = Radial then governs Random from the menu', async ({ page }) => {
