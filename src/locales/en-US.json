@@ -512,6 +512,7 @@
       "emailInUse": "There's already an account for that email.",
       "emailInUseAction": "Log in instead",
       "weakPassword": "Use at least 6 characters.",
+      "weakPasswordSpaces": "Use at least 6 characters that aren't spaces.",
       "tooManyRequests": "Too many tries in a row. Wait a minute and try again, or reset your password.",
       "network": "We couldn't reach the server. Check your connection and try again.",
       "popupBlocked": "Your browser blocked the Google window. Allow pop-ups for this site, or log in with email.",

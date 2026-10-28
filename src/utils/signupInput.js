@@ -12,6 +12,14 @@ export function passwordIsWeak(password) {
   return String(password ?? '').replace(/\s/g, '').length < PASSWORD_MIN
 }
 
+// Which error line a refused password gets, or null if it is fine. Long enough
+// to look like six characters but not once spaces are set aside: the plain
+// "at least 6 characters" would tell the person they had already done that.
+export function passwordProblem(password) {
+  if (!passwordIsWeak(password)) return null
+  return String(password ?? '').length >= PASSWORD_MIN ? 'weakPasswordSpaces' : 'weakPassword'
+}
+
 // The name is optional: whitespace alone is no name, and the ends are cut.
 export function cleanDisplayName(name) {
   return String(name ?? '').trim().slice(0, NAME_MAX)

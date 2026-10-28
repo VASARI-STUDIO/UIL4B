@@ -3,7 +3,7 @@
 // replace) and the whitespace cases go red.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { passwordIsWeak, cleanDisplayName, NAME_MAX, EMAIL_MAX, PASSWORD_MIN } from '../../src/utils/signupInput.js'
+import { passwordIsWeak, passwordProblem, cleanDisplayName, NAME_MAX, EMAIL_MAX, PASSWORD_MIN } from '../../src/utils/signupInput.js'
 
 test('a password of only whitespace is weak, however long', () => {
   assert.equal(passwordIsWeak('      '), true)
@@ -24,6 +24,14 @@ test('six non-space characters is enough, and inner spaces are allowed', () => {
   assert.equal(passwordIsWeak('abcdef'), false)
   assert.equal(passwordIsWeak('abc def'), false)
   assert.equal(passwordIsWeak(' abcdef '), false)
+})
+
+test('which error line a refused password gets', () => {
+  assert.equal(passwordProblem('      '), 'weakPasswordSpaces')
+  assert.equal(passwordProblem('  ab c  '), 'weakPasswordSpaces')
+  assert.equal(passwordProblem('abc'), 'weakPassword')
+  assert.equal(passwordProblem(''), 'weakPassword')
+  assert.equal(passwordProblem('abcdef'), null)
 })
 
 test('a missing password is weak, not a crash', () => {
