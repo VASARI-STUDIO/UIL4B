@@ -161,7 +161,7 @@ for (const screen of SCREENS) {
         await l.mark(`type ${type}`)
         await expect(angleRow, `the angle row is drawn for ${type}`).toBeVisible()
         if (type === 'Radial') {
-          await expect(angleRow).toContainText('Radial gradients have no angle')
+          await expect(angleRow).toContainText('A radial gradient has no angle')
           await expect(page.getByRole('slider', { name: 'Gradient angle' })).toHaveCount(0)
         } else {
           await expect(page.getByRole('slider', { name: 'Gradient angle' })).toBeVisible()
