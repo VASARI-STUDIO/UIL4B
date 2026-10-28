@@ -12,6 +12,7 @@ import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
+import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
 import { GRAD_TYPE_WEIGHTS, rollGradient, pickPaletteLook } from '../utils/gradientRandom'
 import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
@@ -19,21 +20,20 @@ import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
-import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
+import { gradientCss, gradientToolUrl, decodeGradientParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
-import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
-import { buildQueueRecord } from '../utils/communityQueue'
-import { publishToQueue } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import useModalDialog from '../hooks/useModalDialog'
-import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
+import useExportGate from '../hooks/useExportGate'
+import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
+import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
+import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
-// tool-shell.css carries the .ui-form / .ui-field rules the submit modal uses.
+// tool-shell.css is the shared tool shell the other tool pages load too.
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/gradient.css'
 
@@ -188,6 +188,18 @@ const EXPORT_FORMATS = [
   { id: 'tailwind', label: 'Tailwind' },
   { id: 'svg', label: 'SVG' },
 ]
+
+// One face of the code well's Copy button: an icon and a label. The button stacks
+// several in one grid cell (see .grd-copy-stack), so its width is the widest face
+// and never moves between "Copy CSS", "Copy Tailwind", "Copy SVG" and "Copied".
+function CopyFace({ icon, className, children }) {
+  return (
+    <span className={`grd-copy-face${className ? ` ${className}` : ''}`}>
+      <ToolIcon name={icon} size={14} />
+      <span>{children}</span>
+    </span>
+  )
+}
 
 // Build a standalone, paste-ready SVG for a linear or radial gradient. The CSS
 // angle (0deg = up, 90deg = right, clockwise) is converted to the gradient
@@ -344,72 +356,6 @@ function StopHexInput({ color, label, onCommit }) {
   )
 }
 
-// Submit-for-review modal for the gradient library. Same shape and the same
-// `ui-modal` chrome the Community Hub's design submission already uses, on the
-// same local-first storage pattern — this adds no backend and publishes nothing.
-// The note is the honest part: the gradient is QUEUED, not live.
-function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
-  const [form, setForm] = useState({ name: gradient.name || '', author: authorName || '', note: '' })
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const submitDialogRef = useModalDialog(onClose)
-
-  const submit = () => {
-    if (busy) return                                   // double-submit guard
-    if (!form.name.trim()) return setError('Give your gradient a name.')
-    setBusy(true)
-    const ok = onSubmit({
-      name: form.name.trim(),
-      author: form.author.trim(),
-      note: form.note.trim(),
-    })
-    if (!ok) { setBusy(false); setError('That gradient could not be queued. Try again.') }
-  }
-
-  return (
-    <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a gradient for review" tabIndex={-1} ref={submitDialogRef}>
-        <div className="ui-modal-head">
-          <h2 className="ui-modal-title">Submit for review</h2>
-          <button className="ui-modal-x" onClick={onClose} aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
-        </div>
-        <div className="ui-modal-body">
-          <div className="grd-submit-preview" style={{ background: gradient.css }} aria-hidden="true" />
-          <div className="ui-form">
-            <label className="ui-field">
-              <span>Name</span>
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Harbour Dusk" maxLength={60} />
-            </label>
-            <label className="ui-field">
-              <span>Author</span>
-              <input type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Your name (optional)" maxLength={40} />
-            </label>
-            <label className="ui-field">
-              <span>Note for the reviewer</span>
-              <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Where it works well (optional)" maxLength={200} />
-            </label>
-            {error && <div className="ui-modal-err" role="alert">{error}</div>}
-            <p className="ui-modal-note">
-              Your gradient is queued for review on this browser — it is <strong>not published</strong>.
-              Shared publishing to the gradient library isn’t live yet, so nothing appears in the
-              gallery until a reviewer approves it. You can withdraw it any time from the gallery.
-            </p>
-          </div>
-          <div className="ui-modal-actions ui-modal-actions--row">
-            <button className="btn" onClick={onClose}>Cancel</button>
-            <button className="btn btn-accent" onClick={submit} disabled={busy}>
-              {busy ? 'Queueing…' : 'Queue for review'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // Why Shuffle from palette is inert: its title, its accessible description and
 // the toast a press raises all say this.
 const SHUFFLE_PALETTE_NEEDS = 'Needs a palette with two or more colours'
@@ -529,19 +475,18 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
   )
 }
 
-// Community submission surface name for the sign-in gate (utils/submitIntent).
-const SUBMIT_SURFACE = 'gradient'
-
 // `onExport` is this tool's ONE declared export hook — the copy of the payload
 // that IS the artefact. It defaults to `onCopy` so the component still copies
 // correctly if it is ever mounted outside CreateTool; the activation naming
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
-  const { design, setGradient, projects } = useProject()
-  const { user, userProfile, loading: authLoading } = useAuth()
+  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
+  const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
-  // Stable primitive so the gate effect doesn't re-run on every AuthContext render.
-  const uid = user?.uid || null
+  // Gradients an earlier visit queued in this browser: a signed-in person is
+  // asked whether to keep them with the account (never moved unasked).
+  const keepGradients = useGradientSubmissionMigration({ toast })
+  const requireExportAccount = useExportGate()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -636,8 +581,28 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setSelMode(false)
     if (announce) say('Selection cleared')
   }, [say])
-  const [copied, setCopied] = useState(false)
+  // The Save or share menu (SaveShareMenu). `pendingSave` is a save waiting for the
+  // account to reach ProjectContext — see doSave.
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [saveName, setSaveName] = useState('')
+  const [saveNameError, setSaveNameError] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [pendingSave, setPendingSave] = useState(null)
+  const [saveNote, setSaveNote] = useState('')
+  const saveTriggerRef = useRef(null)
+  // doSave waits on the sign-in popup; these say what became of the tool meanwhile.
+  const mountedRef = useRef(true)
+  const saveOpenRef = useRef(false)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+  useEffect(() => { saveOpenRef.current = saveOpen }, [saveOpen])
   const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
+  // The code well's Copy button swaps to "Copied" for a beat after a press.
+  const [copied, setCopied] = useState(false)
+  const copiedTimer = useRef(0)
+  useEffect(() => () => clearTimeout(copiedTimer.current), [])
   // Interpolation space — the design's GEOMETRY control. OKLCH is its default
   // (D:1306, gSpace: 0). A saved gradient keeps the space it was saved in; one
   // saved before this control existed was drawn in sRGB, so it stays sRGB.
@@ -670,10 +635,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // The stop currently being dragged (index, or null). Drives the live position
   // readout on the handle so a fine adjustment is read, not guessed.
   const [dragIdx, setDragIdx] = useState(null)
-
-  // Submit-for-review (gradient library). Local-first queue only — see
-  // utils/gradientSubmissions.js.
-  const [submitOpen, setSubmitOpen] = useState(false)
 
   const barRef = useRef(null)
   // Handle elements by stop index, so a stop added by pressing the rail can be
@@ -725,8 +686,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       selectOnly(0)
       // A library gradient is drawn in sRGB there, so it opens in sRGB here —
       // the preview matches the card it came from until the person changes it.
-      setSpace('srgb')
-      setFromLibrary(true)
+      setSpace(incoming.space || 'srgb')
+      // A link copied from the tool is someone's own gradient; only a library
+      // hand-off (no src marker) opens locked.
+      setFromLibrary(!incoming.link)
       toast?.(`Loaded ${incoming.name || 'gradient'}`)
     } else {
       const preset = presetSlug ? PRESETS.find(p => slugify(p.n) === presetSlug) : null
@@ -734,7 +697,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       toast?.(preset ? `Loaded ${preset.n}` : 'Opened in Gradient Generator')
     }
     const next = new URLSearchParams(searchParams)
-    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn'].forEach(k => next.delete(k))
+    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi', 'src'].forEach(k => next.delete(k))
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1097,110 +1060,154 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     }))
   }, [importSources])
 
-  const copyCode = useCallback(async () => {
-    try {
-      const result = await onExport?.(exportCode)
-      if (result === false) {
-        setCopied(false)
-        return
-      }
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1400)
-    } catch {
-      setCopied(false)
-      toast?.('Copy failed — select the code and copy it manually')
-    }
-  }, [exportCode, onExport, toast])
+  // ── Save or share ──
+  // The name the field opens with. No generated name exists yet, so the type
+  // stands in; the naming step swaps this one line.
+  const defaultSaveName = `${type} gradient`
 
-  // Queue the current gradient for review. Local-first, exactly like the
-  // Community Hub's design submission: it lands in this browser's queue with a
-  // 'pending' status and is not published anywhere. Returns false if the
-  // gradient could not be stored, so the modal can say so rather than lie.
-  // Ask a signed-out user to sign in BEFORE the submission form exists, so
-  // nobody names a gradient and writes a reviewer note only to be told they need
-  // an account. While auth is still resolving we show neither prompt — the
-  // trigger is disabled rather than flashing the wrong dialog.
-  //
-  // The gradient itself lives in ProjectContext (persisted), so signing in never
-  // costs the user their work; the intent slot only remembers that the FORM
-  // should re-open if the sign-in remounted this surface.
-  // The single place the submission form is opened. Both the gate below and the
-  // post-sign-in resume go through it, so there is exactly one path to a form.
-  const openSubmitForm = useCallback(() => {
-    consumeSubmitIntent()
-    setSubmitOpen(true)
+  const closeSave = useCallback((reason) => {
+    setSaveOpen(false)
+    setSaveNote('')
+    setSaveNameError('')
+    setPendingSave(null)
+    // A closed menu has nothing to reopen on a remount.
+    clearPendingSave()
+    // Keyboard and the row actions hand focus back to the button; a press outside
+    // is already somewhere else.
+    if (reason !== 'outside') saveTriggerRef.current?.focus()
   }, [])
-
-  const openSubmit = useCallback(async () => {
-    if (authLoading) return
-    if (!uid) {
-      setSubmitIntent(SUBMIT_SURFACE)
-      // `signup: true` for the same reason as the Type Scale save and the
-      // export gate: this branch is only reached when `uid` is absent, so the
-      // person meeting it has no account, and "Log in to continue" greets them
-      // with a form for one they have never made.
-      const signedIn = await requireLogin('submit a gradient to the community library', {
-        free: true,
-        signup: true,
-        reasons: COMMUNITY_SUBMIT_REASONS,
-      })
-      if (!signedIn) { resetSubmitIntent(); return }
-    }
-    openSubmitForm()
-  }, [authLoading, uid, requireLogin, openSubmitForm])
-
-  // Resume the intent when signing in remounted this surface. In-memory only —
-  // a full page reload finds nothing and the tool opens normally.
+  const toggleSave = () => {
+    if (saveOpen) { closeSave('button'); return }
+    setSaveName(defaultSaveName)
+    setSaveNameError('')
+    setSaveError('')
+    setSaveNote('')
+    setSaveOpen(true)
+  }
+  // Back from onboarding after signing up to save: reopen the menu with the name
+  // typed before, and let the person press Save. Decided once per mount, when
+  // the account is first known.
+  const restoreCheckedRef = useRef(false)
   useEffect(() => {
-    if (authLoading || !uid) return
-    if (!hasSubmitIntent(SUBMIT_SURFACE)) return
-    openSubmitForm()
-  }, [authLoading, uid, openSubmitForm])
+    if (authLoading || restoreCheckedRef.current) return
+    restoreCheckedRef.current = true
+    if (!user) return
+    const stashed = takePendingSave('gradient')
+    if (stashed == null) return
+    setSaveName(stashed || defaultSaveName)
+    setSaveNote('You’re signed in. Press Save to finish.')
+    setSaveOpen(true)
+  }, [authLoading, user, defaultSaveName])
 
-  const submitForReview = useCallback(async (fields) => {
-    if (!uid) { setSubmitOpen(false); return false }   // defence in depth
-    const record = sanitizeGradientSubmission({
-      id: `g${Date.now()}`,
-      ...fields,
-      authorEmail: user?.email,
-      type,
-      angle: Math.round(angle),
-      stops: stops.map(s => ({ color: s.color, position: Math.round(s.position) })),
-      status: 'pending',
-      submittedAt: Date.now(),
-    })
-    if (!record) return false
+  // Copy CSS and Copy Tailwind class go through onExport so the activation count
+  // is unchanged; it writes the clipboard and toasts.
+  // The one export call: every copy and download path runs through it.
+  const sendExport = useCallback(value => onExport?.(value), [onExport])
+  const copyExport = useCallback((value) => {
+    closeSave('item')
+    return sendExport(value)
+  }, [sendExport, closeSave])
 
-    // Local first: submitting works offline and the user's own list updates
-    // without waiting on a round trip.
-    appendGradientSubmission(record)
-    setSubmitOpen(false)
+  // The code well's Copy button and Ctrl/Cmd+C. Straight to onExport, the same
+  // path as the menu rows, so activation counting is unchanged. It does not go
+  // through copyExport: that hands focus back to the Save button, which would
+  // pull a keyboard user out of the well. Only a refused clipboard (false) skips
+  // the "Copied" swap; the toast carries that error.
+  const copyCode = useCallback(async () => {
+    const ok = await sendExport(exportCode)
+    if (ok === false) return
+    clearTimeout(copiedTimer.current)
+    setCopied(true)
+    copiedTimer.current = setTimeout(() => setCopied(false), 1400)
+  }, [sendExport, exportCode])
+  const onCodeKeyDown = (e) => {
+    // Ctrl/Cmd+C with nothing selected copies the whole snippet. With a text
+    // selection the browser's own copy runs untouched.
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.repeat || e.key.toLowerCase() !== 'c') return
+    if (window.getSelection()?.toString()) return
+    e.preventDefault()
+    copyCode()
+  }
 
-    // Then publish to the shared queue. Until this existed, a submission never
-    // left the browser — invisible on the user's other devices, and invisible
-    // to any reviewer, so "pending" described a review that could not happen.
-    const queued = buildQueueRecord({
-      kind: 'gradient',
-      name: record.name,
-      user,
-      payload: { type: record.type, angle: record.angle, stops: record.stops },
-    })
-    if (!queued) {
-      // No signed-in user — the local copy stands, and the message says so
-      // rather than claiming it reached a reviewer.
-      toast?.('Saved to this browser. Sign in to submit it for review.')
-      return true
-    }
+  // Free, no account. Written to the clipboard here rather than through onExport:
+  // a link is not an export.
+  const copyLink = async () => {
+    closeSave('item')
+    // No name yet (it comes with the generated name), so `gn` is left off. A
+    // gradient of the person's own carries src=link so it opens editable; one still
+    // sourced from the library stays a library hand-off and opens locked.
+    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space, src: fromLibrary ? undefined : 'link' })}`
     try {
-      await publishToQueue({ ...queued, localId: record.id })
-      toast?.('Gradient submitted for review')
+      await navigator.clipboard.writeText(url)
+      toast?.('Link copied')
     } catch {
-      // Never claim it reached the queue when it did not. The local copy is
-      // kept, so nothing the user made is lost.
-      toast?.('Saved locally — we could not reach the review queue. Try again later.')
+      toast?.('Couldn’t copy the link', 'error')
     }
-    return true
-  }, [angle, stops, type, toast, uid, user])
+  }
+
+  // A file, so it needs a free account (useExportGate). Conic has no SVG form.
+  const downloadSvg = async () => {
+    if (type === 'Conic') return
+    if (!(await requireExportAccount('download this gradient as an SVG'))) return
+    closeSave('item')
+    const blob = new Blob([gradientSvg(type, angle, stops, space)], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'uil4b-gradient.svg'
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 4000)
+  }
+
+  // The account is asked for BEFORE the name, as on the palette: a signed-out
+  // visitor pressing Save with an empty name meets the sign-in, not a refusal
+  // about the name.
+  const doSave = async () => {
+    if (!canSaveProjects) {
+      // A new account is sent to onboarding, which unmounts this page; the stash
+      // lets the page reopen the menu with the name when it comes back.
+      stashPendingSave('gradient', saveName.trim())
+      const signedIn = await requireLogin('save this gradient to your account', { free: true, signup: true })
+      // Unmounted: a new account was sent to onboarding. The stash stays for the
+      // remount to find. It is cleared only once the save has run, or when the
+      // sign-in is cancelled or the menu closed (closeSave).
+      if (!mountedRef.current) return
+      if (!signedIn) { clearPendingSave(); setPendingSave(null); return }
+      // Closed while the sign-in was open: nothing to finish.
+      if (!saveOpenRef.current) { clearPendingSave(); return }
+    }
+    const name = saveName.trim()
+    // Refused here with the page still open: nothing is waiting to be reopened.
+    if (!name) { clearPendingSave(); setSaveNameError('Name the project to save it.'); return }
+    // The save runs in the effect below. Right after the sign-in resolves this
+    // closure still holds the signed-out `saveProject`, which throws "Sign in to
+    // save projects"; the effect re-runs with the fresh one once the account has
+    // reached ProjectContext.
+    setPendingSave(name)
+  }
+  useEffect(() => {
+    if (pendingSave == null || !canSaveProjects) return
+    setPendingSave(null)
+    // The save is being attempted, so a remount has nothing left to reopen.
+    clearPendingSave()
+    try {
+      saveProject(pendingSave)
+      closeSave('item')
+      toast?.('Project saved')
+    } catch (err) {
+      // The free cap's refusal stays under the field, with the way forward as a link.
+      setSaveError(err?.message || 'Couldn’t save')
+    }
+  }, [pendingSave, canSaveProjects, saveProject, closeSave, toast])
+  const overwriteWith = (project) => {
+    try {
+      overwriteProject(project.id)
+      closeSave('item')
+      toast?.('Updated: ' + project.name)
+    } catch (err) {
+      toast?.(err?.message || 'Couldn’t save', 'error')
+    }
+  }
 
   // ── Drag: stop handles on the preview rail ──
   // One drag session, shared by "grab an existing handle" and "press the rail to
@@ -1549,31 +1556,66 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Reset', icon: 'arrow-counter-clockwise', onSelect: reset },
         },
         {
-          id: 'submit', priority: 0,
-          render: () => (
-            <ToolButton
-              icon="upload-simple"
-              onClick={openSubmit}
-              disabled={authLoading}
-              aria-busy={authLoading || undefined}
-              title={authLoading ? 'Checking your account…' : 'Submit this gradient for review for the gradient library'}
-            >
-              Submit for review
-            </ToolButton>
-          ),
-          menu: { label: 'Submit for review', icon: 'upload-simple', disabled: authLoading, onSelect: openSubmit },
-        },
-        {
           id: 'count', priority: 2, align: 'end', menu: false,
           render: () => <span className="tl-meta grd-count">{stops.length} {stops.length === 1 ? 'stop' : 'stops'}</span>,
         },
       ]}
       primary={(
-        <ToolButton variant="accent" icon="copy" iconSize={14} onClick={copyCode}>
-          {copied ? 'Copied' : `Copy ${fmtLabel}`}
+        <ToolButton
+          ref={saveTriggerRef}
+          variant="accent"
+          icon="bookmark-simple"
+          iconSize={14}
+          aria-haspopup="dialog"
+          aria-expanded={saveOpen}
+          onClick={toggleSave}
+        >
+          Save or share
         </ToolButton>
       )}
     >
+      {saveOpen && (
+        <SaveShareMenu
+          label="Save, share and export this gradient"
+          name={saveName}
+          onNameChange={(v) => { setSaveName(v); setSaveNameError('') }}
+          onSave={doSave}
+          busy={authLoading}
+          nameError={saveNameError}
+          note={saveNote}
+          sheetBelow={768}
+          saveError={saveError}
+          refusalTestId="gradient-save-refusal"
+          projects={projects}
+          onOverwrite={overwriteWith}
+          onClose={closeSave}
+          dismiss
+          triggerRef={saveTriggerRef}
+          focusOnOpen
+          selectOnFocus
+          share={(
+            <SaveShareItem onClick={copyLink}>Copy link to this gradient</SaveShareItem>
+          )}
+          exports={(
+            <>
+              {/* Seams, no rows yet: "Copy CSS with finishes" (a finish is on),
+                  Curtains and Beams (their own CSS and the SVG refusal), and
+                  "Download image" (Pro). */}
+              <SaveShareItem onClick={() => copyExport(`background: ${css};`)}>Copy CSS</SaveShareItem>
+              <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>Copy Tailwind class</SaveShareItem>
+              <SaveShareItem
+                icon="download"
+                onClick={downloadSvg}
+                disabled={type === 'Conic'}
+                reason="SVG can't draw a conic gradient"
+                hint={user ? undefined : 'Needs a free account'}
+              >
+                Download SVG
+              </SaveShareItem>
+            </>
+          )}
+        />
+      )}
       <ToolGrid>
         <ToolMain>
           {editLocked && (
@@ -1649,18 +1691,38 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
           </div>
 
-          <div className="grd-code">
-            <div className="grd-fmt" role="tablist" aria-label="Export format">
-              {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
-                <button
-                  key={f.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={effFmt === f.id}
-                  className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
-                  onClick={() => setFmt(f.id)}
-                >{f.label}</button>
-              ))}
+          <div className="grd-code" onKeyDown={onCodeKeyDown}>
+            <div className="grd-fmt">
+              <div className="grd-fmt-tabs" role="tablist" aria-label="Export format">
+                {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={effFmt === f.id}
+                    className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                    onClick={() => { setFmt(f.id); clearTimeout(copiedTimer.current); setCopied(false) }}
+                  >{f.label}</button>
+                ))}
+              </div>
+              {/* Seam: the "+ finishes" toggle (spec 11.2) goes here, just left of
+                  Copy. Copy's margin-left:auto keeps it at the right edge either way. */}
+              <button
+                type="button"
+                className={`grd-copy${copied ? ' is-copied' : ''}`}
+                onClick={copyCode}
+                aria-label={copied ? 'Copied' : `Copy ${fmtLabel}`}
+              >
+                <span className="grd-copy-stack" aria-hidden="true">
+                  <CopyFace icon="copy" className="grd-copy-idle">Copy<span className="grd-copy-fmt"> {fmtLabel}</span></CopyFace>
+                  <CopyFace icon="check" className="grd-copy-done">Copied</CopyFace>
+                  {/* Hidden faces that hold the width at the widest label. */}
+                  {EXPORT_FORMATS.map((f) => (
+                    <CopyFace key={f.id} icon="copy" className="grd-copy-size">Copy<span className="grd-copy-fmt"> {f.label}</span></CopyFace>
+                  ))}
+                  <CopyFace icon="check" className="grd-copy-size">Copied</CopyFace>
+                </span>
+              </button>
             </div>
             <pre className={`grd-code-text${effFmt === 'svg' ? ' grd-code-text--block' : ''}${effFmt === 'css' ? ' grd-code-text--wrap' : ''}`} tabIndex={0} aria-label={`${fmtLabel} code`}><code>{exportCode}</code></pre>
           </div>
@@ -1941,6 +2003,20 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         </ToolPanel>
       </ToolGrid>
 
+      {/* The question about gradients this browser holds comes last in the editor,
+          after the code well and the controls: it mounts once the account is known,
+          so anywhere above would push the canvas or the panel down mid-edit. */}
+      {keepGradients.waiting > 0 && (
+        <div className="grd-keep">
+          <LegacyGradientsPrompt
+            count={keepGradients.waiting}
+            busy={keepGradients.busy}
+            onKeep={keepGradients.keep}
+            onDismiss={keepGradients.notMine}
+          />
+        </div>
+      )}
+
       {/* START FROM A PRESET. The person's own palettes come first (one-tap
           gradients of their saved colours), then the curated set. */}
       <section className="grd-presets" aria-labelledby="grd-presets-title">
@@ -1996,16 +2072,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           onApply={applyTint}
           onGate={gateTints}
           onClose={closeTintMenu}
-        />
-      )}
-
-      {/* Only ever mounted for a signed-in user — see openSubmit above. */}
-      {submitOpen && uid && (
-        <SubmitGradientModal
-          gradient={{ css: paintCss, name: '' }}
-          authorName={userProfile?.displayName || user?.displayName || ''}
-          onClose={() => setSubmitOpen(false)}
-          onSubmit={submitForReview}
         />
       )}
     </ToolLayout>

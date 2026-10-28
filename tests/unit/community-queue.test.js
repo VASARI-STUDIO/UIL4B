@@ -216,18 +216,25 @@ test('the admin custom claim is actually granted somewhere', () => {
   assert.match(src, /claimUpdated/, 'the client needs to know to refresh its token')
 })
 
-test('the submission flow never claims a review it did not queue', () => {
+test('the gradient tool has no browser-held submission path left', () => {
+  // Gradient submissions are account-connected. The tool must not write the
+  // old browser key or offer a submit form; the migration is the only thing
+  // that touches it, and only to move it to the account.
   const src = read('src/pages/GradientGenerator.jsx')
-  assert.match(src, /Sign in to submit it for review/, 'a signed-out save says what it is')
-  assert.match(src, /could not reach the review queue/, 'a failed publish says so')
-  assert.ok(/appendGradientSubmission\(record\)/.test(src),
-    'the local copy is kept regardless, so nothing the user made is lost')
+  assert.ok(!/appendGradientSubmission|SubmitGradientModal|submitForReview/.test(src),
+    'the browser-queue submit path is gone')
+  assert.ok(!/Submit for review/.test(src), 'and so is its toolbar item')
+  assert.match(src, /useGradientSubmissionMigration\(/, 'the old key is moved to the account on sign-in')
 })
 
-test('the gallery reads the account, not just this browser', () => {
+test('the gallery reads the account only, and withdraws from the account', () => {
   const src = read('src/pages/GradientGallery.jsx')
-  assert.match(src, /listMySubmissions\(user\.uid, 'gradient'\)/)
-  assert.match(src, /mergeSubmissions\(/)
+  assert.match(src, /listMySubmissions\(uid, 'gradient'\)/)
+  assert.match(src, /deleteSubmission\(s\.docId\)/)
+  assert.ok(!/mergeSubmissions\(/.test(src), 'no merge with a browser-held list')
+  assert.ok(src.includes("from this browser {legacyCount === 1 ? 'is' : 'are'} waiting."))
+  assert.ok(src.includes("Sign in to keep {legacyCount === 1 ? 'it' : 'them'} with your account."))
+  assert.match(src, /useGradientSubmissionMigration\(/)
 })
 
 // ── The other two kinds ─────────────────────────────────────────────────────
@@ -300,4 +307,29 @@ test('a submission from the wire is sanitised like one from this browser', () =>
   // is not a way around it.
   const src = read('src/pages/Community.jsx')
   assert.match(src, /sanitizeCommunitySubmission\(\{/)
+})
+
+test('the migration publishes at a fixed document id and treats a refused repeat as already there', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  const body = src.slice(src.indexOf('export async function publishToQueueOnce'), src.indexOf('export async function listMySubmissions'))
+  assert.match(body, /setDoc\(ref, record\)/, 'a write at a chosen id, not addDoc')
+  assert.match(body, /permission-denied/, 'the rules refuse a second write to an existing document')
+  assert.match(body, /await getDoc\(ref\)/, 'and the owner reading it back is what proves it is there')
+  assert.match(body, /snap\.exists\(\) && snap\.data\(\)\?\.authorUid === uid/, 'and only a document this author wrote counts (behaviour: publish-to-queue-once.test.js)')
+  assert.match(body, /created: false/)
+  assert.match(body, /throw err/, 'any other refusal still surfaces')
+})
+
+test('the rules let the owner only withdraw, so a repeat write at the same id cannot overwrite', () => {
+  const rules = read('firestore.rules')
+  const update = rules.slice(rules.indexOf('allow update: if isReviewer()'), rules.indexOf('allow delete: if isReviewer()'))
+  assert.match(update, /request\.resource\.data\.status == 'withdrawn'/)
+  assert.match(update, /hasOnly\(\['status'\]\)/)
+})
+
+test('the listing can ask for a bigger page than the 100 the gallery shows', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  assert.match(src, /listMySubmissions\(uid, kind = null, max = 100\)/)
+  assert.match(src, /limit\(max\)/)
+  assert.match(read('src/hooks/useGradientSubmissionMigration.js'), /listMySubmissions\(uid, kind, LIST_MAX\)/)
 })

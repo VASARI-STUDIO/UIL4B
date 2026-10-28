@@ -25,6 +25,8 @@
 .lib-surface.grg-wrap .grg-like:hover{background:rgba(10,10,14,.72)}
 .lib-surface.grg-wrap .grg-queue{border-radius:var(--radius-2xl)}
 .lib-surface.grg-wrap .grg-queue-status{border-radius:var(--radius-xs)}
+/* A reviewer has decided: the warn fill is for "waiting", so a decided row reads neutral. */
+.lib-surface.grg-wrap .grg-queue-status.is-decided{background:var(--bg-3);color:var(--t0)}
 /* The like button measured 32px on a coarse pointer. */
 @media(pointer:coarse){.lib-surface.grg-wrap .grg-like{width:44px;height:44px}}
 

@@ -484,6 +484,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .grg-queue-id{flex:1 1 100%;order:2}
   .grg-queue-status{order:1}
 }
+/* The "keep these gradients with this account?" question, in the gallery and on
+   the generator. Text first, the two answers beside it, wrapping on a narrow screen. */
+.lgp{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2) var(--s-3)}
+.lgp-text{margin:0;flex:1 1 220px;font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
+.lgp-actions{display:flex;gap:var(--s-2)}
+@media(pointer:coarse){.lgp-actions .btn{min-height:44px}}
 .pgl-note{margin:-8px 0 22px;font-size:12.5px;line-height:1.55;color:var(--t2)}
 /* Category sections. The heading STICKS while its own grid scrolls past, so
    the answer to "what am I looking at" survives a hundred cards — that is what

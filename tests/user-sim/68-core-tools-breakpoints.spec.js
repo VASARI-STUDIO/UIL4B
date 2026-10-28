@@ -554,7 +554,7 @@ for (const theme of ['light', 'dark']) {
   })
 }
 
-test('/create/gradient · the inspector’s Copy link does not fade to 3.6:1 on hover', async ({ browser }) => {
+test('/create/gradient · the code well’s Copy button does not fade on hover', async ({ browser }) => {
   // `.ggn-copy:hover{opacity:.75}` took the 11.5px link from 5.8:1 to 3.64:1
   // (light) and 3.71:1 (dark) exactly when it is being read. Hover is an
   // underline now.
@@ -563,10 +563,10 @@ test('/create/gradient · the inspector’s Copy link does not fade to 3.6:1 on 
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a developer copying the gradient CSS')
   await go(page, '/create/gradient')
-  const copy = page.locator('.grd .tl-primary .tl-btn').first()
+  const copy = page.locator('.grd-copy').first()
   await copy.scrollIntoViewIfNeeded()
-  await hoverSettled(page, copy, '.grd .tl-primary .tl-btn')
-  const m = await page.evaluate(contrastOf, '.grd .tl-primary .tl-btn')
+  await hoverSettled(page, copy, '.grd-copy')
+  const m = await page.evaluate(contrastOf, '.grd-copy')
   await ctx.close()
   expect(m.text).toMatch(/copy/i)
   expect(m.ratio, `hovered Copy: rgb(${m.ink}) on rgb(${m.bg})`).toBeGreaterThanOrEqual(4.5)

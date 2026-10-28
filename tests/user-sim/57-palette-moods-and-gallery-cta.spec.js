@@ -227,7 +227,7 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
 // which answers the same question with something real.
 const GALLERIES = [
   { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
-  { route: '/discover/gradients', card: '.grg-card', action: 'Create and submit your own', href: '/create/gradient' },
+  { route: '/discover/gradients', card: '.grg-card', action: 'Make your own', href: '/create/gradient' },
   { route: '/discover/prompts', card: '.pl-card', action: 'Create and submit your own', href: null },
   { route: '/community', card: '.ch-card', action: 'Create and submit your own', href: null },
 ]
