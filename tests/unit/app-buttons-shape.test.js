@@ -40,8 +40,9 @@ function blocksFor(sel, source = css) {
 
 // Classes on button elements that are not drawn as buttons, by what they are.
 const KEEP = {
-  // colour swatches and swatch triggers: the sample is the control
-  swatch: ['cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
+  // colour swatches and swatch triggers: the sample is the control (a Contrast Checker swatch is the
+  // colour chip with its role name under it, in one 10px-cornered target)
+  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
   // rows in a menu, list or popover
   row: ['plb-menu-item', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
