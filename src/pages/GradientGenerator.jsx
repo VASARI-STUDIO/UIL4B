@@ -299,9 +299,9 @@ const MAX_CHIPS = 13
 // One tab stop for a row of buttons inside `rootRef`. The item last focused takes
 // tabindex 0 (else `start(items)`, else the first) and the rest -1; Left, Right,
 // Home and End move focus. Tabindex is written to the DOM after each render, so a
-// row whose items come and go needs no bookkeeping. Leaving the row forgets the
-// last item, so the next Tab in lands on `start` again.
-function useRoving(rootRef, selector, start) {
+// row whose items come and go needs no bookkeeping. Unless `remember` is set,
+// leaving the row forgets the last item, so the next Tab in lands on `start` again.
+function useRoving(rootRef, selector, start, remember = false) {
   const last = useRef(null)
   const items = useCallback(() => [...(rootRef.current?.querySelectorAll(selector) || [])], [rootRef, selector])
   const apply = useCallback(() => {
@@ -318,7 +318,7 @@ function useRoving(rootRef, selector, start) {
     apply()
   }
   const onBlur = (e) => {
-    if (rootRef.current?.contains(e.relatedTarget)) return
+    if (remember || rootRef.current?.contains(e.relatedTarget)) return
     last.current = null
     apply()
   }
@@ -748,7 +748,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // Every colour chip in Available colours (the palette, the starters, a project's
   // colours, the shades) is one tab stop; arrows move between them.
   const chipsRef = useRef(null)
-  const chipRoving = useRoving(chipsRef, '.grd-chip')
+  const chipRoving = useRoving(chipsRef, '.grd-chip', undefined, true)
   useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
   const say = useCallback((text) => {
     setPickNote('')
