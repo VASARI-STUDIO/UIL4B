@@ -94,6 +94,12 @@ export function validateSupportBody(body, now = new Date()) {
 const BURST = { limit: 3, windowMs: 60 * 1000 }
 const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
 
+// A site-wide ceiling on notification emails to the founder, on top of the
+// per-address limits above: many addresses together can still send a flood, and
+// every email spends Resend quota and sending reputation. Over the ceiling the
+// message is still stored and the sender still sees success, but no email goes.
+export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
+
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -224,7 +230,18 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   const resendKey = process.env.RESEND_API_KEY
   const notifyEmail = process.env.SUPPORT_NOTIFY_EMAIL
 
-  const mailed = resendKey && notifyEmail ? (async () => {
+  // The cap applies only to a stored message. An unstored one has the email as
+  // its only copy (see below), so that email is never held back.
+  let mailAllowed = Boolean(resendKey && notifyEmail)
+  if (mailAllowed && stored) {
+    const verdict = await consume(db, MAIL_CAP)
+    if (!verdict.allowed) {
+      mailAllowed = false
+      console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: MAIL_CAP.limit, retryAfter: verdict.retryAfter })
+    }
+  }
+
+  const mailed = mailAllowed ? (async () => {
     try {
       const sent = await fetch('https://api.resend.com/emails', {
         method: 'POST',
