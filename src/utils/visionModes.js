@@ -24,7 +24,7 @@ export const VISION_HUES = {
 }
 
 // Shown under the list, not an option.
-export const VISION_NOTE = 'Red-green, mild shows a lighter form. The others show the strongest form. About 1 in 12 men and 1 in 200 women have some form of red-green colour blindness.'
+export const VISION_NOTE = 'Red-green, mild is the lighter form; Green-blind and Red-blind show the strongest. About 1 in 12 men and 1 in 200 women have some form of red-green colour blindness.'
 
 export const visionMode = (id) => VISION_MODES.find((mode) => mode.id === id) || VISION_MODES[0]
 
