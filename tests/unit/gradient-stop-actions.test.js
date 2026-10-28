@@ -16,7 +16,7 @@ test('each stop row\'s swatch is a colour-picker trigger for that stop', () => {
   const src = read('src/pages/GradientGenerator.jsx')
   assert.match(src, /ariaLabel=\{`Pick stop \$\{i \+ 1\} colour`\}/)
   assert.match(src, /triggerClassName="grd-stop-swatch"/)
-  assert.match(src, /onChange=\{\(hex\) => updateStop\(i, \{ color: hex\.toUpperCase\(\) \}\)\}/)
+  assert.match(src, /onChange=\{\(hex\) => updateStops\(targetsFor\(i\), \{ color: hex\.toUpperCase\(\) \}\)\}/)
 })
 
 test('the stop row keeps a separate control to select the stop', () => {
@@ -26,7 +26,7 @@ test('the stop row keeps a separate control to select the stop', () => {
 
 test('right-click on a stop row and on a rail handle opens the tints menu', () => {
   const src = read('src/pages/GradientGenerator.jsx')
-  assert.match(src, /onContextMenu=\{\(e\) => openTintMenu\(e, i, /)
+  assert.match(src, /openTintMenu\(e, i, e\.currentTarget\.querySelector\('\.grd-stop-select'\)\)/)
   assert.match(src, /onContextMenu=\{\(e\) => openTintMenu\(e, s\.i\)\}/)
 })
 
