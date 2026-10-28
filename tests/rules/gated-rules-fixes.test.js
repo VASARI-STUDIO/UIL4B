@@ -151,7 +151,7 @@ test('M4 (the bug): gradient stops are { color, position } with a short colour',
   await assertSucceeds(setDoc(queue(aliceDb(), 's5'), gradient({ stops: [stop({ color: '#' + '0'.repeat(15) })] })))
 })
 
-test('M4 (the bug): palette colours are short strings, including the last index', async () => {
+test('M4 (the bug): palette colours are strings and the list is bounded in total, including the last index', async () => {
   await assertFails(setDoc(queue(aliceDb(), 'c1'), palette({ colors: [{ a: 1 }] })))
   await assertFails(setDoc(queue(aliceDb(), 'c2'), palette({ colors: ['x'.repeat(5000)] })))
   const last = Array.from({ length: 32 }, () => '#000000')

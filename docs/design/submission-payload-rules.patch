@@ -1,116 +1,200 @@
 diff --git a/firestore.rules b/firestore.rules
 --- a/firestore.rules
 +++ b/firestore.rules
-@@ -129,6 +129,108 @@ service cloud.firestore {
+@@ -129,6 +129,192 @@ service cloud.firestore {
        function isSignedIn() { return request.auth != null; }
        function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
  
 +      // The elements of the two payload lists. A rule cannot loop, so each
-+      // index up to the 32-entry list cap is checked in turn. Each rung tests
-+      // the length first and only then the element, so the work follows the
-+      // real list length: a 2-entry list stops at its third rung. The list is
-+      // passed in rather than re-read from the request, which would cost a
-+      // fresh path lookup at every rung. A gradient stop is the
-+      // { color, position } pair gradientSubmissions.js sanitises to; a palette
-+      // colour is a hex string.
-+      function stopOk(e) {
-+        return e is map
-+          && e.keys().hasOnly(['color', 'position'])
-+          && e.color is string
-+          && e.color.size() <= 16
-+          && e.position is number;
++      // index up to the 32-entry list cap is checked on its own term. A term
++      // tests the length first, so an index past the end of a shorter list
++      // costs one comparison and the element checks are skipped. The list is
++      // passed in rather than re-read from the request at every term. A
++      // gradient stop is the { color, position } pair gradientSubmissions.js
++      // sanitises to. The terms are split over two functions to keep each
++      // expression small enough for the rules compiler.
++      function stopsOkA(s) {
++        return (s.size() <= 0 || (s[0] is map
++          && s[0].keys().hasOnly(['color', 'position'])
++          && s[0].color is string
++          && s[0].color.size() <= 16
++          && s[0].position is number))
++        && (s.size() <= 1 || (s[1] is map
++          && s[1].keys().hasOnly(['color', 'position'])
++          && s[1].color is string
++          && s[1].color.size() <= 16
++          && s[1].position is number))
++        && (s.size() <= 2 || (s[2] is map
++          && s[2].keys().hasOnly(['color', 'position'])
++          && s[2].color is string
++          && s[2].color.size() <= 16
++          && s[2].position is number))
++        && (s.size() <= 3 || (s[3] is map
++          && s[3].keys().hasOnly(['color', 'position'])
++          && s[3].color is string
++          && s[3].color.size() <= 16
++          && s[3].position is number))
++        && (s.size() <= 4 || (s[4] is map
++          && s[4].keys().hasOnly(['color', 'position'])
++          && s[4].color is string
++          && s[4].color.size() <= 16
++          && s[4].position is number))
++        && (s.size() <= 5 || (s[5] is map
++          && s[5].keys().hasOnly(['color', 'position'])
++          && s[5].color is string
++          && s[5].color.size() <= 16
++          && s[5].position is number))
++        && (s.size() <= 6 || (s[6] is map
++          && s[6].keys().hasOnly(['color', 'position'])
++          && s[6].color is string
++          && s[6].color.size() <= 16
++          && s[6].position is number))
++        && (s.size() <= 7 || (s[7] is map
++          && s[7].keys().hasOnly(['color', 'position'])
++          && s[7].color is string
++          && s[7].color.size() <= 16
++          && s[7].position is number))
++        && (s.size() <= 8 || (s[8] is map
++          && s[8].keys().hasOnly(['color', 'position'])
++          && s[8].color is string
++          && s[8].color.size() <= 16
++          && s[8].position is number))
++        && (s.size() <= 9 || (s[9] is map
++          && s[9].keys().hasOnly(['color', 'position'])
++          && s[9].color is string
++          && s[9].color.size() <= 16
++          && s[9].position is number))
++        && (s.size() <= 10 || (s[10] is map
++          && s[10].keys().hasOnly(['color', 'position'])
++          && s[10].color is string
++          && s[10].color.size() <= 16
++          && s[10].position is number))
++        && (s.size() <= 11 || (s[11] is map
++          && s[11].keys().hasOnly(['color', 'position'])
++          && s[11].color is string
++          && s[11].color.size() <= 16
++          && s[11].position is number))
++        && (s.size() <= 12 || (s[12] is map
++          && s[12].keys().hasOnly(['color', 'position'])
++          && s[12].color is string
++          && s[12].color.size() <= 16
++          && s[12].position is number))
++        && (s.size() <= 13 || (s[13] is map
++          && s[13].keys().hasOnly(['color', 'position'])
++          && s[13].color is string
++          && s[13].color.size() <= 16
++          && s[13].position is number))
++        && (s.size() <= 14 || (s[14] is map
++          && s[14].keys().hasOnly(['color', 'position'])
++          && s[14].color is string
++          && s[14].color.size() <= 16
++          && s[14].position is number))
++        && (s.size() <= 15 || (s[15] is map
++          && s[15].keys().hasOnly(['color', 'position'])
++          && s[15].color is string
++          && s[15].color.size() <= 16
++          && s[15].position is number));
 +      }
 +
-+      function colorOk(e) {
-+        return e is string && e.size() <= 32;
-+      }
-+
-+      // The ladders nest as operators inside one function body, so the call
-+      // depth stays at three (payloadElementsOk, then a ladder, then an element
-+      // check) however long the list is.
-+      function stopsOk(list) {
-+        return list.size() <= 0 || (stopOk(list[0]) && (
-+          list.size() <= 1 || (stopOk(list[1]) && (
-+          list.size() <= 2 || (stopOk(list[2]) && (
-+          list.size() <= 3 || (stopOk(list[3]) && (
-+          list.size() <= 4 || (stopOk(list[4]) && (
-+          list.size() <= 5 || (stopOk(list[5]) && (
-+          list.size() <= 6 || (stopOk(list[6]) && (
-+          list.size() <= 7 || (stopOk(list[7]) && (
-+          list.size() <= 8 || (stopOk(list[8]) && (
-+          list.size() <= 9 || (stopOk(list[9]) && (
-+          list.size() <= 10 || (stopOk(list[10]) && (
-+          list.size() <= 11 || (stopOk(list[11]) && (
-+          list.size() <= 12 || (stopOk(list[12]) && (
-+          list.size() <= 13 || (stopOk(list[13]) && (
-+          list.size() <= 14 || (stopOk(list[14]) && (
-+          list.size() <= 15 || (stopOk(list[15]) && (
-+          list.size() <= 16 || (stopOk(list[16]) && (
-+          list.size() <= 17 || (stopOk(list[17]) && (
-+          list.size() <= 18 || (stopOk(list[18]) && (
-+          list.size() <= 19 || (stopOk(list[19]) && (
-+          list.size() <= 20 || (stopOk(list[20]) && (
-+          list.size() <= 21 || (stopOk(list[21]) && (
-+          list.size() <= 22 || (stopOk(list[22]) && (
-+          list.size() <= 23 || (stopOk(list[23]) && (
-+          list.size() <= 24 || (stopOk(list[24]) && (
-+          list.size() <= 25 || (stopOk(list[25]) && (
-+          list.size() <= 26 || (stopOk(list[26]) && (
-+          list.size() <= 27 || (stopOk(list[27]) && (
-+          list.size() <= 28 || (stopOk(list[28]) && (
-+          list.size() <= 29 || (stopOk(list[29]) && (
-+          list.size() <= 30 || (stopOk(list[30]) && (
-+          list.size() <= 31 || stopOk(list[31])))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
-+      }
-+
-+      function colorsOk(list) {
-+        return list.size() <= 0 || (colorOk(list[0]) && (
-+          list.size() <= 1 || (colorOk(list[1]) && (
-+          list.size() <= 2 || (colorOk(list[2]) && (
-+          list.size() <= 3 || (colorOk(list[3]) && (
-+          list.size() <= 4 || (colorOk(list[4]) && (
-+          list.size() <= 5 || (colorOk(list[5]) && (
-+          list.size() <= 6 || (colorOk(list[6]) && (
-+          list.size() <= 7 || (colorOk(list[7]) && (
-+          list.size() <= 8 || (colorOk(list[8]) && (
-+          list.size() <= 9 || (colorOk(list[9]) && (
-+          list.size() <= 10 || (colorOk(list[10]) && (
-+          list.size() <= 11 || (colorOk(list[11]) && (
-+          list.size() <= 12 || (colorOk(list[12]) && (
-+          list.size() <= 13 || (colorOk(list[13]) && (
-+          list.size() <= 14 || (colorOk(list[14]) && (
-+          list.size() <= 15 || (colorOk(list[15]) && (
-+          list.size() <= 16 || (colorOk(list[16]) && (
-+          list.size() <= 17 || (colorOk(list[17]) && (
-+          list.size() <= 18 || (colorOk(list[18]) && (
-+          list.size() <= 19 || (colorOk(list[19]) && (
-+          list.size() <= 20 || (colorOk(list[20]) && (
-+          list.size() <= 21 || (colorOk(list[21]) && (
-+          list.size() <= 22 || (colorOk(list[22]) && (
-+          list.size() <= 23 || (colorOk(list[23]) && (
-+          list.size() <= 24 || (colorOk(list[24]) && (
-+          list.size() <= 25 || (colorOk(list[25]) && (
-+          list.size() <= 26 || (colorOk(list[26]) && (
-+          list.size() <= 27 || (colorOk(list[27]) && (
-+          list.size() <= 28 || (colorOk(list[28]) && (
-+          list.size() <= 29 || (colorOk(list[29]) && (
-+          list.size() <= 30 || (colorOk(list[30]) && (
-+          list.size() <= 31 || colorOk(list[31])))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
++      function stopsOkB(s) {
++        return (s.size() <= 16 || (s[16] is map
++          && s[16].keys().hasOnly(['color', 'position'])
++          && s[16].color is string
++          && s[16].color.size() <= 16
++          && s[16].position is number))
++        && (s.size() <= 17 || (s[17] is map
++          && s[17].keys().hasOnly(['color', 'position'])
++          && s[17].color is string
++          && s[17].color.size() <= 16
++          && s[17].position is number))
++        && (s.size() <= 18 || (s[18] is map
++          && s[18].keys().hasOnly(['color', 'position'])
++          && s[18].color is string
++          && s[18].color.size() <= 16
++          && s[18].position is number))
++        && (s.size() <= 19 || (s[19] is map
++          && s[19].keys().hasOnly(['color', 'position'])
++          && s[19].color is string
++          && s[19].color.size() <= 16
++          && s[19].position is number))
++        && (s.size() <= 20 || (s[20] is map
++          && s[20].keys().hasOnly(['color', 'position'])
++          && s[20].color is string
++          && s[20].color.size() <= 16
++          && s[20].position is number))
++        && (s.size() <= 21 || (s[21] is map
++          && s[21].keys().hasOnly(['color', 'position'])
++          && s[21].color is string
++          && s[21].color.size() <= 16
++          && s[21].position is number))
++        && (s.size() <= 22 || (s[22] is map
++          && s[22].keys().hasOnly(['color', 'position'])
++          && s[22].color is string
++          && s[22].color.size() <= 16
++          && s[22].position is number))
++        && (s.size() <= 23 || (s[23] is map
++          && s[23].keys().hasOnly(['color', 'position'])
++          && s[23].color is string
++          && s[23].color.size() <= 16
++          && s[23].position is number))
++        && (s.size() <= 24 || (s[24] is map
++          && s[24].keys().hasOnly(['color', 'position'])
++          && s[24].color is string
++          && s[24].color.size() <= 16
++          && s[24].position is number))
++        && (s.size() <= 25 || (s[25] is map
++          && s[25].keys().hasOnly(['color', 'position'])
++          && s[25].color is string
++          && s[25].color.size() <= 16
++          && s[25].position is number))
++        && (s.size() <= 26 || (s[26] is map
++          && s[26].keys().hasOnly(['color', 'position'])
++          && s[26].color is string
++          && s[26].color.size() <= 16
++          && s[26].position is number))
++        && (s.size() <= 27 || (s[27] is map
++          && s[27].keys().hasOnly(['color', 'position'])
++          && s[27].color is string
++          && s[27].color.size() <= 16
++          && s[27].position is number))
++        && (s.size() <= 28 || (s[28] is map
++          && s[28].keys().hasOnly(['color', 'position'])
++          && s[28].color is string
++          && s[28].color.size() <= 16
++          && s[28].position is number))
++        && (s.size() <= 29 || (s[29] is map
++          && s[29].keys().hasOnly(['color', 'position'])
++          && s[29].color is string
++          && s[29].color.size() <= 16
++          && s[29].position is number))
++        && (s.size() <= 30 || (s[30] is map
++          && s[30].keys().hasOnly(['color', 'position'])
++          && s[30].color is string
++          && s[30].color.size() <= 16
++          && s[30].position is number))
++        && (s.size() <= 31 || (s[31] is map
++          && s[31].keys().hasOnly(['color', 'position'])
++          && s[31].color is string
++          && s[31].color.size() <= 16
++          && s[31].position is number));
 +      }
 +
 +      // Without these, `angle` took any type and `stops` and `colors` took any
 +      // elements, so a document could still reach 1 MiB inside the list caps.
++      // A palette colour is a hex string: `join` refuses a list with any
++      // non-string element, and 32 colours of at most 32 characters each fit
++      // in 1024 characters, so one test types the list and bounds its size.
 +      function payloadElementsOk() {
 +        let p = request.resource.data.payload;
 +        return (!('angle' in p) || p.angle is number)
-+          && (!('stops' in p) || stopsOk(p.stops))
-+          && (!('colors' in p) || colorsOk(p.colors));
++          && (!('stops' in p) || (stopsOkA(p.stops) && stopsOkB(p.stops)))
++          && (!('colors' in p) || p.colors.join('').size() <= 1024);
 +      }
 +
        // The exact seven keys buildQueueRecord writes. `payload` is bounded by a
        // key allowlist and a size cap on every field.
        function submissionPayloadOk() {
-@@ -185,7 +287,8 @@ service cloud.firestore {
+@@ -185,7 +371,8 @@ service cloud.firestore {
            && request.resource.data.authorName.size() <= 60
            && request.resource.data.createdAt is string
            && request.resource.data.createdAt.size() <= 40
