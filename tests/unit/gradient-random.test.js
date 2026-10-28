@@ -1,129 +1,166 @@
-// The gradient randomiser's weighting.
+// The gradient randomiser's weighting and its quality rules.
 //
-// Founder request (2026-08-08): a two-stop LINEAR gradient should come up
-// slightly more often than the rest — a WEIGHTING, NOT AN EXCLUSION. Both
-// halves of that sentence are asserted below, because the easy way to satisfy
-// the first half is to break the second.
-//
-// The rendered proof that the tool actually calls these — that pressing Random
-// still produces every type, and produces linear most often — is in
-// tests/user-sim/30-gradient-random-nav-search.spec.js.
+// Random is a two-colour, mostly linear tool. The distributions are asserted by
+// sampling the whole roll space on a fine grid (the pickers take the roll as an
+// argument), and the colour rules by a seeded run of `rollGradient`, so nothing
+// here depends on Math.random and nothing is flaky.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  GRAD_TYPE_WEIGHTS,
-  TWO_STOP_SHARE,
-  weightedPick,
-  pickGradientType,
-  pickStopCount,
+  GRAD_TYPE_WEIGHTS, TWO_STOP_SHARE, MIN_MIDPOINT_CHROMA,
+  weightedPick, pickGradientType, pickStopCount, pickHarmony, pickTone,
+  mulberry32, rollGradient, radialGatePasses, pickFromPool,
 } from '../../src/utils/gradientRandom.js'
+import { hexToOklchRaw } from '../../src/components/tool/oklch.js'
+import { nextSelection, rangeBetween, modeFor } from '../../src/hooks/useShiftSelect.js'
 
-// Sample the whole roll space at a fine, deterministic grid rather than calling
-// Math.random N times: a statistical test of a random source is a flaky test,
-// and the functions take the roll precisely so this can be exact.
 const GRID = 100000
 const rolls = Array.from({ length: GRID }, (_, i) => i / GRID)
+const shareOf = (fn, value) => rolls.filter((r) => fn(r) === value).length / GRID
+const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`)
 
-function shareOf(fn, value) {
-  return rolls.filter(r => fn(r) === value).length / GRID
-}
-
-test('every gradient type still appears — the weighting excludes nothing', () => {
-  for (const [type] of GRAD_TYPE_WEIGHTS) {
-    assert.ok(shareOf(pickGradientType, type) > 0, `${type} can never be rolled`)
-  }
+test('type weights are Linear 80, Radial 15, Conic 5, and every type can still appear', () => {
+  near(shareOf(pickGradientType, 'Linear'), 0.8, 0.001, 'linear')
+  near(shareOf(pickGradientType, 'Radial'), 0.15, 0.001, 'radial')
+  near(shareOf(pickGradientType, 'Conic'), 0.05, 0.001, 'conic')
+  for (const [type] of GRAD_TYPE_WEIGHTS) assert.ok(shareOf(pickGradientType, type) > 0)
 })
 
-test('linear is favoured, at the declared 50%', () => {
-  const linear = shareOf(pickGradientType, 'Linear')
-  assert.ok(Math.abs(linear - 0.5) < 0.001, `linear share ${linear}`)
-  // …and the two it is favoured over split the rest evenly.
-  assert.ok(Math.abs(shareOf(pickGradientType, 'Radial') - 0.25) < 0.001)
-  assert.ok(Math.abs(shareOf(pickGradientType, 'Conic') - 0.25) < 0.001)
+test('the stop count is only ever 2 or 3, two at 75%', () => {
+  near(shareOf(pickStopCount, 2), TWO_STOP_SHARE, 0.001, 'two-stop')
+  near(shareOf(pickStopCount, 2) + shareOf(pickStopCount, 3), 1, 1e-9, 'sum')
+  near(TWO_STOP_SHARE, 0.75, 1e-9, 'declared share')
 })
 
-test('the stop count is only ever 2 or 3, and 2 is favoured', () => {
-  const two = shareOf(pickStopCount, 2)
-  const three = shareOf(pickStopCount, 3)
-  assert.ok(Math.abs(two - TWO_STOP_SHARE) < 0.001, `two-stop share ${two}`)
-  assert.ok(Math.abs(two + three - 1) < 1e-9, 'a roll produced neither 2 nor 3 stops')
-  assert.ok(two > three)
+test('a two-stop linear is 60% of rolls before the quality gate', () => {
+  near(shareOf(pickGradientType, 'Linear') * shareOf(pickStopCount, 2), 0.6, 0.001, 'two-stop linear')
 })
 
-// The point of the request, stated as the joint distribution it asks for.
-test('a two-stop linear is the single most likely outcome, without dominating', () => {
-  const typeShare = Object.fromEntries(
-    GRAD_TYPE_WEIGHTS.map(([t]) => [t, shareOf(pickGradientType, t)]),
-  )
-  const combos = []
-  for (const [type, share] of Object.entries(typeShare)) {
-    combos.push({ name: `2-stop ${type}`, p: share * shareOf(pickStopCount, 2) })
-    combos.push({ name: `3-stop ${type}`, p: share * shareOf(pickStopCount, 3) })
-  }
-  combos.sort((a, b) => b.p - a.p)
-
-  assert.equal(combos[0].name, '2-stop Linear')
-  // "Slightly more often", not "most of the time": it wins, it stays a minority
-  // of all rolls, and nothing else is squeezed out.
-  assert.ok(combos[0].p > combos[1].p, 'the favoured combination is not actually favoured')
-  assert.ok(combos[0].p < 0.5, `a two-stop linear now happens ${combos[0].p} of the time — that is an exclusion, not a weighting`)
-  assert.ok(combos[combos.length - 1].p > 0.05, 'the rarest combination has been squeezed out')
+test('harmony is 60/25/15 and tone is 70/15/15', () => {
+  near(shareOf(pickHarmony, 'Analogous'), 0.6, 0.001, 'analogous')
+  near(shareOf(pickHarmony, 'Monochrome'), 0.25, 0.001, 'monochrome')
+  near(shareOf(pickHarmony, 'Complementary'), 0.15, 0.001, 'complementary')
+  near(shareOf(pickTone, 'Clear'), 0.7, 0.001, 'clear')
+  near(shareOf(pickTone, 'Muted'), 0.15, 0.001, 'muted')
+  near(shareOf(pickTone, 'Deep'), 0.15, 0.001, 'deep')
 })
 
-// Regression guards on the picker itself. The second one is the reason the
-// clamp exists: a roll of exactly 1 walks off the end of the weight list and
-// returns undefined, which reaches the UI as a gradient with no type.
-test('weightedPick lands in the right band at each boundary', () => {
+test('weightedPick lands in the right band and never returns undefined', () => {
   const w = [['a', 2], ['b', 1], ['c', 1]]
   assert.equal(weightedPick(w, 0), 'a')
-  assert.equal(weightedPick(w, 0.499), 'a')
   assert.equal(weightedPick(w, 0.5), 'b')
-  assert.equal(weightedPick(w, 0.749), 'b')
   assert.equal(weightedPick(w, 0.75), 'c')
+  for (const roll of [1, 1.5, -0.2, Number.EPSILON]) assert.ok(weightedPick(w, roll) !== undefined)
 })
 
-test('weightedPick never returns undefined, whatever it is handed', () => {
-  const w = [['a', 2], ['b', 1], ['c', 1]]
-  for (const roll of [1, 1.5, -0.2, Number.EPSILON]) {
-    assert.ok(weightedPick(w, roll) !== undefined, `roll ${roll} produced no type`)
+// ── Seeded runs of the whole roll ────────────────────────────────────────────
+const RUNS = 6000
+const seeded = Array.from({ length: RUNS }, (_, i) => rollGradient(mulberry32(1000 + i)))
+const oklchOf = (hex) => hexToOklchRaw(hex)
+
+test('the default roll is Plain, 2-3 stops, and two-stop linear is the single biggest share', () => {
+  assert.ok(seeded.every((g) => g.style === 'Plain'))
+  assert.ok(seeded.every((g) => g.stops.length === 2 || g.stops.length === 3))
+  const twoLinear = seeded.filter((g) => g.type === 'Linear' && g.stops.length === 2).length / RUNS
+  assert.ok(twoLinear >= 0.55, `two-stop linear share ${twoLinear}`)
+  const linear = seeded.filter((g) => g.type === 'Linear').length / RUNS
+  assert.ok(linear >= 0.8, `linear share ${linear}, the gate can only add to it`)
+  const radial = seeded.filter((g) => g.type === 'Radial').length / RUNS
+  assert.ok(radial <= 0.15 + 0.02, `radial share ${radial}`)
+})
+
+test('no ramp has a grey or muddy midpoint, and every end is in a sensible lightness range', () => {
+  for (const g of seeded) {
+    if (g.type === 'Conic') continue
+    const a = oklchOf(g.stops[0].color)
+    const b = oklchOf(g.stops[g.stops.length - 1].color)
+    const midChroma = (a[1] + b[1]) / 2
+    assert.ok(midChroma >= MIN_MIDPOINT_CHROMA - 0.005, `midpoint chroma ${midChroma} in ${g.stops.map((s) => s.color)}`)
+    for (const c of [a, b]) {
+      assert.ok(c[0] >= 0.04 && c[0] <= 0.93, `lightness ${c[0]}`)
+    }
+    // The two ends differ in chroma by at most 0.08 (one does not shout over the other).
+    assert.ok(Math.abs(a[1] - b[1]) <= 0.08 + 0.01, `chroma gap ${Math.abs(a[1] - b[1])}`)
   }
 })
 
-// ── The tool is actually wired to the weighting ──────────────────────────────
-//
-// The browser spec used to assert "linear comes up most often" over 60 presses
-// of Random. CI caught that for what it was: at 50/25/25 the expected counts
-// are 30/15/15, it drew 24/24, and the run went red on a tie. Sampling a random
-// source is probably-right by construction, and a build gate may not depend on
-// "probably".
-//
-// So the wiring is pinned here instead, deterministically. Between this and the
-// distribution tests above, the pair says everything the sampled version was
-// trying to: the arithmetic is correct, and the page uses it.
-test('GradientGenerator rolls through the weighted pickers, not its own uniform pick', () => {
-  const src = fs.readFileSync(
-    path.join(process.cwd(), 'src/pages/GradientGenerator.jsx'), 'utf8',
-  ).replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-
-  assert.match(src, /pickGradientType\(Math\.random\(\)\)/, 'the type is no longer drawn from the weighted picker')
-  assert.match(src, /pickStopCount\(Math\.random\(\)\)/, 'the stop count is no longer drawn from the weighted picker')
-
-  // The two shapes it used to have. Either coming back is the weighting being
-  // silently reverted while every test above still passes.
-  assert.doesNotMatch(src, /GRAD_TYPES\[Math\.floor\(Math\.random\(\)/,
-    'the type is being drawn uniformly from GRAD_TYPES again')
-  assert.doesNotMatch(src, /2 \+ Math\.floor\(Math\.random\(\) \* 2\)/,
-    'the stop count is being drawn uniformly again')
+test('a complementary pair has a real value step', () => {
+  for (const g of seeded.filter((x) => x.harmony === 'Complementary' && x.type !== 'Conic')) {
+    const a = oklchOf(g.stops[0].color)
+    const b = oklchOf(g.stops[g.stops.length - 1].color)
+    assert.ok(Math.abs(a[0] - b[0]) >= 0.1, `lightness gap ${Math.abs(a[0] - b[0])}`)
+  }
 })
 
-// The type toggle in the UI is built from the weights table, so the two cannot
-// drift into offering a type the randomiser can never produce (or the reverse).
-test('the UI type list and the weights table are the same list', () => {
-  const src = fs.readFileSync(
-    path.join(process.cwd(), 'src/pages/GradientGenerator.jsx'), 'utf8',
-  ).replace(/\r\n/g, '\n')
-  assert.match(src, /const GRAD_TYPES = GRAD_TYPE_WEIGHTS\.map/,
-    'GRAD_TYPES is declared independently again — it can now list a type the randomiser never rolls')
+test('a conic gradient has three or more stops and closes its seam', () => {
+  const conics = seeded.filter((g) => g.type === 'Conic')
+  assert.ok(conics.length > 0)
+  for (const g of conics) {
+    assert.ok(g.stops.length >= 3)
+    assert.equal(g.stops[g.stops.length - 1].color, g.stops[0].color)
+    assert.equal(g.stops[g.stops.length - 1].position, 100)
+  }
+})
+
+test('filters: a Radial-only filter is always radial, a Linear+Conic filter never radial, counts follow the filter', () => {
+  const only = Array.from({ length: 800 }, (_, i) => rollGradient(mulberry32(i), { types: ['Radial'] }))
+  assert.ok(only.every((g) => g.type === 'Radial'))
+  const two = Array.from({ length: 800 }, (_, i) => rollGradient(mulberry32(i + 9), { types: ['Linear', 'Conic'] }))
+  assert.ok(two.every((g) => g.type === 'Linear' || g.type === 'Conic'))
+  assert.ok(two.filter((g) => g.type === 'Conic').length > 200)
+  const five = Array.from({ length: 200 }, (_, i) => rollGradient(mulberry32(i + 5), { types: ['Linear'], counts: [5] }))
+  assert.ok(five.every((g) => g.stops.length === 5))
+})
+
+test('the radial gate accepts a light centre or a dark vignette and rejects a flat pair', () => {
+  assert.ok(radialGatePasses({ L: 0.85, C: 0.1 }, { L: 0.6, C: 0.1 }))
+  assert.ok(radialGatePasses({ L: 0.3, C: 0.1 }, { L: 0.5, C: 0.1 }))
+  assert.ok(!radialGatePasses({ L: 0.6, C: 0.1 }, { L: 0.62, C: 0.1 }))
+  assert.ok(!radialGatePasses({ L: 0.85, C: 0.02 }, { L: 0.7, C: 0.02 }), 'a light centre with no colour and a small step')
+})
+
+test('the same seed always gives the same gradient', () => {
+  assert.deepEqual(rollGradient(mulberry32(42)), rollGradient(mulberry32(42)))
+})
+
+test('Shuffle from palette returns the count asked for, from the pool', () => {
+  const pool = ['#2F6BFF', '#8B5CF0', '#E0784E', '#3FAFA0']
+  for (let i = 0; i < 100; i++) {
+    const pick = pickFromPool(pool, 3, mulberry32(i))
+    assert.equal(pick.length, 3)
+    assert.ok(pick.every((c) => pool.includes(c)))
+  }
+})
+
+// ── The multi-select rules (useShiftSelect) ──────────────────────────────────
+test('a plain press replaces the selection, a toggle adds and removes', () => {
+  assert.deepEqual(nextSelection(['Linear'], 'Radial', { mode: 'only', any: 'Any' }), ['Radial'])
+  assert.deepEqual(nextSelection(['Linear'], 'Radial', { mode: 'toggle', any: 'Any' }), ['Linear', 'Radial'])
+  assert.deepEqual(nextSelection(['Linear', 'Radial'], 'Linear', { mode: 'toggle', any: 'Any' }), ['Radial'])
+})
+
+test('Any is exclusive, and an empty set returns to Any (or to Plain for Style)', () => {
+  assert.deepEqual(nextSelection(['Linear', 'Radial'], 'Any', { mode: 'toggle', any: 'Any' }), ['Any'])
+  assert.deepEqual(nextSelection(['Any'], 'Radial', { mode: 'toggle', any: 'Any' }), ['Radial'])
+  assert.deepEqual(nextSelection(['Radial'], 'Radial', { mode: 'toggle', any: 'Any' }), ['Any'])
+  assert.deepEqual(nextSelection(['Mesh'], 'Mesh', { mode: 'toggle', any: null, fallback: 'Plain' }), ['Plain'])
+})
+
+test('a range runs in position order and a touch press always toggles', () => {
+  assert.deepEqual(rangeBetween([3, 0, 2, 1], 0, 1), [0, 2, 1])
+  assert.deepEqual(rangeBetween([3, 0, 2, 1], 1, 0), [0, 2, 1])
+  assert.equal(modeFor({ shiftKey: false }, true), 'toggle')
+  assert.equal(modeFor({ shiftKey: false }, false), 'only')
+  assert.equal(modeFor({ metaKey: true }, false), 'toggle')
+})
+
+// Wiring: the page rolls through rollGradient, not its own uniform pick.
+test('GradientGenerator rolls through the weighted engine', () => {
+  const src = fs.readFileSync(path.join(process.cwd(), 'src/pages/GradientGenerator.jsx'), 'utf8')
+    .replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  assert.match(src, /rollGradient\(/, 'Random no longer uses the quality engine')
+  assert.doesNotMatch(src, /GRAD_TYPES\[Math\.floor\(Math\.random\(\)/)
+  assert.doesNotMatch(src, /Math\.random\(\) \* 0xffffff/, 'random hex colours are back')
 })

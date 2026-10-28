@@ -11,7 +11,10 @@ import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
-import { GRAD_TYPE_WEIGHTS, pickGradientType, pickStopCount } from '../utils/gradientRandom'
+import { GRAD_TYPE_WEIGHTS, STYLE_FAMILIES, rollGradient, pickFromPool } from '../utils/gradientRandom'
+import useShiftSelect from '../hooks/useShiftSelect'
+import usePopover from '../hooks/usePopover'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
@@ -43,6 +46,57 @@ import '../styles/pages/gradient.css'
 // a jump to any other colour tool. (Class prefix `grd-`.)
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
+
+// ── Shuffle settings ──
+// What Random and Shuffle from palette may make. A group holds the values that
+// are allowed; 'Any' means the weights decide. The choice is kept for the
+// session only.
+const FILTER_KEY = 'vs-gradient-shuffle-filters'
+const ANY = 'Any'
+const COUNT_OPTIONS = [ANY, 2, 3, 4, 5]
+const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], keepAngle: false }
+function readFilters() {
+  try {
+    const f = JSON.parse(sessionStorage.getItem(FILTER_KEY) || 'null')
+    const ok = (arr, allowed) => Array.isArray(arr) && arr.length > 0 && arr.every((v) => allowed.includes(v))
+    if (f && ok(f.types, [ANY, ...GRAD_TYPES]) && ok(f.counts, COUNT_OPTIONS)) return { ...DEFAULT_FILTERS, ...f, keepAngle: !!f.keepAngle }
+  } catch { /* storage blocked or unreadable: the defaults stand */ }
+  return DEFAULT_FILTERS
+}
+// The engine's view of a filter: an empty list means Any.
+const engineFilters = (f) => ({
+  types: f.types.includes(ANY) ? [] : f.types,
+  counts: f.counts.includes(ANY) ? [] : f.counts,
+})
+// "Linear and radial", "2, 3 and 4": what the live region says after a press.
+const sentence = (vals) => {
+  const t = vals.map((v) => String(v).toLowerCase())
+  return t.length < 2 ? t.join('') : `${t.slice(0, -1).join(', ')} and ${t[t.length - 1]}`
+}
+
+// One row of toggle buttons that can hold more than one value. A press picks
+// only that value; Shift, Ctrl or Cmd adds or removes it; on a touch screen a
+// tap adds or removes. Space and Enter fire the same click, so Shift+Space
+// and Shift+Enter add or remove from the keyboard.
+function FilterGroup({ label, options, value, onChange, coarse, onAnnounce }) {
+  const { select, isOn } = useShiftSelect({ value, onChange, any: options.includes(ANY) ? ANY : null, fallback: options.includes(ANY) ? ANY : options[0], coarse })
+  return (
+    <div className="grd-shuf-row">
+      <span className="grd-shuf-k" id={`grd-shuf-${label}`}>{label}</span>
+      <div className="tl-pills" role="group" aria-labelledby={`grd-shuf-${label}`}>
+        {options.map((o) => (
+          <button
+            key={String(o)}
+            type="button"
+            className={`tl-pill${isOn(o) ? ' is-on' : ''}`}
+            aria-pressed={isOn(o)}
+            onClick={(e) => { select(o, e); onAnnounce?.(label) }}
+          >{String(o)}</button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // Starter presets: twelve ready-to-use gradients for real interfaces, nine
 // linear and three radial. Each carries what it is good for, so the list reads
@@ -341,6 +395,53 @@ const LockBtn = ({ on, onClick, label, className = '', unavailable = false, desc
   </button>
 )
 
+// The Shuffle settings popover: a popover from 768px, a bottom sheet below
+// (the CSS moves it). Style only lists families that are built; with none, the
+// row would offer nothing to choose, so it is left out.
+function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
+  const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose)
+  const coarse = useMediaQuery('(pointer: coarse)')
+  const summary = `Random makes ${sentence(filters.types.filter((t) => t !== ANY).length ? filters.types : ['any type'])}, ${sentence(filters.counts.filter((c) => c !== ANY).length ? filters.counts.map((c) => `${c} stops`) : ['any number of stops'])}`
+  return (
+    <span className="grd-shuf-wrap">
+      <ToolButton
+        ref={triggerRef}
+        variant="square"
+        icon="sliders-horizontal"
+        aria-label="Shuffle settings"
+        title="Shuffle settings"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => (open ? onClose() : onOpen())}
+      />
+      {open && (
+        <div ref={popRef} className="tl-pop grd-shuf" role="dialog" aria-label="Shuffle settings" tabIndex={-1}>
+          <div className="grd-shuf-head">
+            <span className="grd-shuf-title">Random makes</span>
+            <button type="button" className="grd-iconbtn grd-shuf-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={14} /></button>
+          </div>
+          {/* STYLE_FAMILIES is empty until a family is built. The Style row,
+              a FilterGroup over [Plain, ...STYLE_FAMILIES] whose empty
+              selection falls back to Plain, goes here. */}
+          <FilterGroup label="Type" options={[ANY, ...GRAD_TYPES]} value={filters.types} coarse={coarse} onChange={(types) => setFilters((f) => ({ ...f, types }))} />
+          <FilterGroup label="Stops" options={COUNT_OPTIONS} value={filters.counts} coarse={coarse} onChange={(counts) => setFilters((f) => ({ ...f, counts }))} />
+          <button
+            type="button"
+            className={`grd-shuf-keep${filters.keepAngle ? ' is-on' : ''}`}
+            aria-pressed={filters.keepAngle}
+            onClick={() => setFilters((f) => ({ ...f, keepAngle: !f.keepAngle }))}
+          >
+            <ToolIcon name={filters.keepAngle ? 'lock-simple' : 'lock-simple-open'} size={13} />
+            <span>Keep the angle</span>
+          </button>
+          <p className="grd-shuf-hint">{coarse ? 'Tap to add or remove.' : 'Shift-click to pick more than one.'}</p>
+          <div className="sr-only" role="status">{summary}</div>
+        </div>
+      )}
+    </span>
+  )
+}
+
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'gradient'
 
@@ -433,9 +534,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // must never inherit the gallery gradient's Pro edit lock.
   const [fromLibrary, setFromLibrary] = useState(() => !carriedPalette && design?.gradient?.source === 'gallery')
 
-  // Randomise locks — pin any of type / angle / stop-count so a shuffle keeps
-  // them. Per-stop colour+position locks live on the stop objects (`.locked`).
-  const [locks, setLocks] = useState({ type: false, angle: false, count: false })
+  // Shuffle settings replace the type, angle and stop-count locks: picking one
+  // type is the same as locking it. Per-stop colour+position locks stay on the
+  // stop objects (`.locked`).
+  const [filters, setFilters] = useState(readFilters)
+  useEffect(() => {
+    try { sessionStorage.setItem(FILTER_KEY, JSON.stringify(filters)) } catch { /* private mode */ }
+  }, [filters])
+  const [shuffleOpen, setShuffleOpen] = useState(false)
 
   // The stop currently being dragged (index, or null). Drives the live position
   // readout on the handle so a fine adjustment is read, not guessed.
@@ -656,19 +762,17 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     })
   }, [openProModal])
 
-  const randomHex = () => '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0').toUpperCase()
-
   // Build a fresh set of stops that honours the current locks: a locked count
   // keeps the same number, and any stop marked `.locked` keeps its colour +
   // position while the rest are re-rolled. `sample(i)` supplies the colour for
   // an unlocked slot (random hex, or a palette pick) so both randomisers share
   // this logic.
-  const rollStops = useCallback((sample) => {
+  const rollStops = useCallback((sample, count) => {
     // A locked stop must always survive, even when the rolled count is smaller
     // than its index — so if ANY stop is locked we keep the current length
-    // rather than shrinking to a random 2–3 and dropping locked stops.
+    // rather than shrinking to the rolled count and dropping locked stops.
     const hasStopLock = stops.some(s => s.locked)
-    const n = (locks.count || hasStopLock) ? stops.length : pickStopCount(Math.random())
+    const n = hasStopLock ? stops.length : count
     return Array.from({ length: n }, (_, i) => {
       const ex = stops[i]
       if (ex?.locked) return { color: ex.color, position: ex.position, locked: true }
@@ -678,15 +782,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         locked: false,
       }
     })
-  }, [locks.count, stops])
+  }, [stops])
 
+  // Random: colours are chosen in OKLCH under the quality rules in
+  // utils/gradientRandom, so the ends are related and the middle is never grey.
   const randomise = useCallback(() => {
-    setStops(rollStops(() => randomHex()))
-    if (!locks.type) setType(pickGradientType(Math.random()))
-    if (!locks.angle) setAngle(Math.round(Math.random() * 360))
+    const g = rollGradient(Math.random, engineFilters(filters))
+    setStops(rollStops((i) => g.stops[i % g.stops.length].color, g.stops.length))
+    setType(g.type)
+    if (!filters.keepAngle) setAngle(g.angle)
     setActiveStop(0)
     setFromLibrary(false)
-  }, [rollStops, locks.type, locks.angle])
+  }, [rollStops, filters])
 
   // ── Available colours ──
   // The palette's colours (de-duplicated without regard to case, in palette
@@ -723,20 +830,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const randomiseFromPalette = useCallback(() => {
     const pool = paletteHexes // already filtered + deduped
     if (pool.length < 2) { randomise(); return }
-    const shuffled = [...pool]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    // Draw unlocked slots from the shuffled palette, cycling if there are more
-    // stops than colours so a locked count never runs the pool dry.
-    setStops(rollStops(i => shuffled[i % shuffled.length].toUpperCase()))
-    if (!locks.type) setType(pickGradientType(Math.random()))
-    if (!locks.angle) setAngle(Math.round(Math.random() * 360))
+    // The type, count and angle come from the same roll as Random; only the
+    // colours differ. A two-colour pick has to differ in lightness or hue, and
+    // the pool cycles if there are more stops than colours.
+    const g = rollGradient(Math.random, engineFilters(filters))
+    const picks = pickFromPool(pool, g.stops.length, Math.random)
+    setStops(rollStops((i) => picks[i % picks.length], g.stops.length))
+    setType(g.type)
+    if (!filters.keepAngle) setAngle(g.angle)
     setActiveStop(0)
     setFromLibrary(false)
     toast?.('Random gradient from your palette')
-  }, [paletteHexes, randomise, rollStops, locks.type, locks.angle, toast])
+  }, [paletteHexes, randomise, rollStops, filters, toast])
 
   const fromPalette = useCallback(() => {
     if (!canRandomFromPalette) {
@@ -1093,6 +1198,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Random', icon: 'shuffle', onSelect: randomise },
         },
         {
+          id: 'shuffle-settings', priority: 3, menu: false,
+          render: () => (
+            <ShuffleSettings
+              open={shuffleOpen}
+              onOpen={() => setShuffleOpen(true)}
+              onClose={() => setShuffleOpen(false)}
+              filters={filters}
+              setFilters={setFilters}
+            />
+          ),
+        },
+        {
           id: 'from-palette', priority: 1,
           render: () => (
             <ToolButton
@@ -1287,7 +1404,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 {stops.length > 3 && (
                   <span className="grd-stops-count">{`${stopScroll.first}–${Math.min(stops.length, stopScroll.first + 2)} of ${stops.length}`}</span>
                 )}
-                <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked, unlock to randomise it' : 'Lock the number of stops when randomising'} />
                 <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
                   <ToolIcon name="arrows-left-right" size={13} />
                 </button>
@@ -1432,7 +1548,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 value={type}
                 onChange={(t) => { if (guardEdit()) setType(t) }}
               />
-              <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked, unlock to randomise it' : 'Lock type when randomising'} />
             </div>
             {/* The row is always drawn, at the wheel's height; a radial gradient
                 says it has no angle in the same space instead of removing it. */}
@@ -1448,16 +1563,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   onLockedPress={guardEdit}
                 />
               ) : (
-                <p className="grd-angle-none" id="grd-angle-none">A radial gradient has no angle. The lock applies again if you switch type.</p>
+                <p className="grd-angle-none" id="grd-angle-none">Radial gradients have no angle</p>
               )}
-              <LockBtn
-                on={locks.angle}
-                onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))}
-                unavailable={!angleActive}
-                onUnavailable={() => toast?.('A radial gradient has no angle')}
-                describedBy={angleActive ? undefined : 'grd-angle-none'}
-                label={locks.angle ? 'Angle locked, unlock to randomise it' : 'Lock angle when randomising'}
-              />
             </div>
             <div className="grd-interp">
               <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
