@@ -114,14 +114,14 @@ for (const width of WIDTHS) {
       await page.keyboard.press('ArrowDown')
       await expect(list.locator('[data-value="deuteranopia"]')).toHaveClass(/is-active/)
       await page.keyboard.press('Enter')
-      const strip = page.locator('.plb-vision[role="status"]')
+      const strip = page.locator('.plb-vision')
       // Read what is on screen (innerText skips display:none), not textContent: at
       // 390 the long name is in the markup but hidden, and §1.7 shows the short one.
       if (width >= 768) {
         await expect(strip).toContainText('Green-blind (deuteranopia).', { useInnerText: true })
         await expect(strip).toContainText('Top half: your colour. Bottom half: how it looks.', { useInnerText: true })
       } else {
-        await expect(strip).toContainText('Green-blind in the bottom half.', { useInnerText: true })
+        await expect(strip).toContainText('Green-blind. Bottom half: how it looks.', { useInnerText: true })
         await expect(strip).not.toContainText('deuteranopia', { useInnerText: true })
         await expect(strip.locator('.plb-vision-short').first()).toBeVisible()
         await expect(strip.locator('.plb-vision-long').first()).toBeHidden()
@@ -159,7 +159,8 @@ for (const width of WIDTHS) {
       await ctx.close()
     })
 
-    // MUTATION: drop the `target?.focus(...)` line from `turnOffVision` in PaletteBuilder.jsx.
+    // MUTATION: make `focusVisionFallback` in PaletteBuilder.jsx do nothing (this test and the Undo one below both fail).
+    // The strip is not a live region: the page's sr-only message is the one announcement.
     test(`Turn off removes the strip, returns to normal and keeps focus (${width})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
       await chooseMode(page, 'protanopia')
@@ -170,6 +171,32 @@ for (const width of WIDTHS) {
       const focused = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || '')
       expect(focused.startsWith('Colour vision check') || focused === 'Extra tools', `focus is on "${focused}"`).toBe(true)
       await expect(page.locator('p.sr-only[aria-live="polite"]')).toHaveText('Colour vision check off.')
+      await ctx.close()
+    })
+
+    // MUTATION: drop the `requestAnimationFrame(...)` block from the cleanup in `VisionStrip` in PaletteBuilder.jsx
+    // (focus then falls to the page body when Undo takes the strip away), or drop the `useEffect` after `changeVision`
+    // (Redo then brings the mode back without saying so).
+    test(`Undo that removes the strip keeps focus on the toolbar, and Redo says the mode is back (${width})`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, width)
+      // A board change first, so Undo has a step that was taken before the mode was chosen.
+      await page.getByRole('button', { name: /^Randomise/ }).first().click()
+      await expect(page.locator('button.plb-undo:not(:disabled)')).toBeVisible()
+      await chooseMode(page, 'protanopia')
+      const strip = page.locator('.plb-vision')
+      await expect(strip).toBeVisible()
+      await expect(strip).not.toHaveAttribute('role', /./)
+      await strip.getByRole('button', { name: 'Turn off the colour vision check' }).focus()
+      // A script click, so focus stays on Turn off until the strip goes.
+      await page.evaluate(() => document.querySelector('button.plb-undo:not(:disabled)').click())
+      await expect(strip).toHaveCount(0)
+      await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute('aria-label') || ''), { message: 'focus is back on the toolbar' })
+        .toMatch(/^(Colour vision check|Extra tools)/)
+      if (await page.locator('button.plb-redo:not(:disabled)').count()) {
+        await page.evaluate(() => document.querySelector('button.plb-redo:not(:disabled)').click())
+        await expect(strip).toBeVisible()
+        await expect(page.locator('p.sr-only[aria-live="polite"]')).toContainText('Colour vision check on: red-blind (protanopia).')
+      }
       await ctx.close()
     })
 

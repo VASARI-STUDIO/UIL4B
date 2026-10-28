@@ -4472,7 +4472,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-option--divider{position:relative;margin-top:9px}
 .menu-select-option--divider::before{content:'';position:absolute;inset-inline:0;top:-5px;border-top:1px solid var(--border)}
 .menu-select-foot{max-width:46ch;margin:0;padding:8px 10px 4px;font-size:11px;line-height:15px;color:var(--t2)}
-@media(pointer:coarse){.menu-select-option{min-height:44px}}
+@media(pointer:coarse){.menu-select-option{min-height:44px}.menu-select-foot{font-size:12px;line-height:16px}}
 @media(pointer:coarse){.menu-select-option.menu-select-option--rich{min-height:56px}}
 @media(max-width:960px){
   .menu-select-option{min-height:44px}

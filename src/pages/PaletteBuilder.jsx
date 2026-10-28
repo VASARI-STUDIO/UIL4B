@@ -625,6 +625,52 @@ const VisionIcon = ({ mode, size = 20, className }) => {
   )
 }
 
+// The strip above the board while a colour-vision check is on: names the mode,
+// says which half is which, and gives a way out. The icon and the text each have a
+// phone form that CSS swaps in at 767px and below. It is not a live region: the
+// page's sr-only message announces the change. If it goes while focus is inside
+// it (Undo, the Reset shortcut), focus moves somewhere that stays.
+//
+// Where focus goes once the strip's button is gone: the Vision select if it is on
+// the row, else the Extra tools button. Turn off uses this too.
+const focusVisionFallback = () => {
+  const bar = document.querySelector('[data-tool-toolbar]')
+  const target = bar?.querySelector('[data-tl-item="vision"] .menu-select-trigger') || bar?.querySelector('.tl-more-btn')
+  target?.focus({ preventScroll: true })
+}
+const VisionStrip = ({ mode, onTurnOff }) => {
+  const ref = useRef(null)
+  // A layout cleanup on unmount runs before React takes the node out, so focus is still readable.
+  // The move waits a frame: the toolbar measures its row again in the same commit
+  // (the mode name changed), and for a moment shows every item, so a target found now
+  // can leave the row before paint. Focus that someone has already placed is left alone.
+  useLayoutEffect(() => () => {
+    if (!ref.current?.contains(document.activeElement)) return
+    requestAnimationFrame(() => {
+      const now = document.activeElement
+      if (!now || now === document.body) focusVisionFallback()
+    })
+  }, [])
+  const m = visionMode(mode)
+  return (
+    <div className="plb-vision" ref={ref}>
+      <VisionIcon mode={mode} size={20} className="plb-vision-ico plb-vision-ico--lg" />
+      <VisionIcon mode={mode} size={16} className="plb-vision-ico plb-vision-ico--sm" />
+      <span className="plb-vision-text">
+        <b className="plb-vision-name">
+          <span className="plb-vision-long">{m.name}.</span>
+          <span className="plb-vision-short">{m.short}.</span>
+        </b>
+        <span className="plb-vision-rest">
+          <span className="plb-vision-long">Top half: your colour. Bottom half: how it looks.</span>
+          <span className="plb-vision-short">Bottom half: how it looks.</span>
+        </span>
+      </span>
+      <button type="button" className="tl-btn tl-btn--quiet plb-vision-off" aria-label="Turn off the colour vision check" onClick={onTurnOff}>Turn off</button>
+    </div>
+  )
+}
+
 // ── HctPicker — per-column Hue·Chroma·Tone editor (the M3 space the whole
 // engine runs in), plus a hex field. Edits the RAW colour; the global adjust
 // lens still applies on top, same as every other way of setting a colour. ──
@@ -889,6 +935,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // rather than re-applying whatever lens was last left on this device.
   const [adjust, setAdjust] = useState(initial.adjust)
   const [vision, setVision] = useState('normal')
+  // A stored or restored value this build does not know is treated as normal: no
+  // split board, no strip. The raw value is kept as it came.
+  const activeVision = VISION_MODES.some((m) => m.id === vision) ? vision : 'normal'
   const [showContrast, setShowContrast] = useState(false)
   const [liveMsg, setLiveMsg] = useState('')
 
@@ -2540,15 +2589,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // from the modes, and `short` / `triggerIcon` are what the toolbar trigger shows.
   const visionOptions = VISION_MODES.map((m, i) => ({
     value: m.id, label: m.name, desc: m.hint, short: m.short, divider: i === 1,
-    icon: <VisionIcon mode={m.id} size={20} />, triggerIcon: <VisionIcon mode={m.id} size={16} className="tl-select-ico" />,
+    icon: <VisionIcon mode={m.id} size={20} />, triggerIcon: <VisionIcon mode={m.id} size={16} />,
   }))
-  const changeVision = (id) => { setVision(id); setLiveMsg(visionAnnouncement(id)) }
-  // The strip's button unmounts with the mode, so focus moves first: to the
-  // Vision select if it is on the row, else to the Extra tools button.
+  // The mode the live region last said. A mode that comes back some other way
+  // (Undo, Redo, a restore from history) is announced by the effect below, after
+  // that action's own message.
+  const announcedVisionRef = useRef('normal')
+  const changeVision = (id) => { announcedVisionRef.current = id; setVision(id); setLiveMsg(visionAnnouncement(id)) }
+  useEffect(() => {
+    if (announcedVisionRef.current === activeVision) return
+    announcedVisionRef.current = activeVision
+    const said = visionAnnouncement(activeVision)
+    setLiveMsg((prev) => (prev ? `${prev} ${said}` : said))
+  }, [activeVision])
+  // The strip's button goes with the mode, so focus moves off it first.
   const turnOffVision = () => {
-    const bar = document.querySelector('[data-tool-toolbar]')
-    const target = bar?.querySelector('[data-tl-item="vision"] .menu-select-trigger') || bar?.querySelector('.tl-more-btn')
-    target?.focus({ preventScroll: true })
+    focusVisionFallback()
     changeVision('normal')
   }
   // From the Extra tools overflow a choice also closes the panel, so that a Pro
@@ -2568,7 +2624,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       className={className}
       label="Vision"
       ariaLabel="Colour vision check"
-      value={vision}
+      value={activeVision}
       options={visionOptions}
       footnote={VISION_NOTE}
       onChange={(v) => { closePanel?.(); changeVision(v) }}
@@ -2628,7 +2684,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       menu: { label: 'From image', icon: 'image', onSelect: () => { closeAllMenus(); setImgOpen(true) } },
     },
     { id: 'system', priority: 1, render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
-    { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
+    // `measure`: the trigger's width follows the mode name, so the row is measured again when it changes.
+    { id: 'vision', priority: 0, measure: activeVision, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
     { id: 'div', priority: 2, divider: true },
     { id: 'undo', priority: 5, render: () => historyButton('undo'), menu: { label: 'Undo', icon: 'arrow-counter-clockwise', disabled: !canUndo, onSelect: undoPalette } },
     { id: 'redo', priority: 4, render: () => historyButton('redo'), menu: { label: 'Redo', icon: 'arrow-clockwise', disabled: !canRedo, onSelect: redoPalette } },
@@ -2729,25 +2786,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* A colour-vision check is on: say so above the board, name it, say which
-          half is which, and give a way out. The icon and the text each have a
-          phone form that CSS swaps in at 767px and below. */}
-      {vision !== 'normal' && (
-        <div className="plb-vision" role="status">
-          <VisionIcon mode={vision} size={20} className="plb-vision-ico plb-vision-ico--lg" />
-          <VisionIcon mode={vision} size={16} className="plb-vision-ico plb-vision-ico--sm" />
-          <span className="plb-vision-text">
-            <b className="plb-vision-name">
-              <span className="plb-vision-long">{visionMode(vision).name}.</span>
-              <span className="plb-vision-short">{visionMode(vision).short}</span>
-            </b>
-            <span className="plb-vision-rest">
-              <span className="plb-vision-long">Top half: your colour. Bottom half: how it looks.</span>
-              <span className="plb-vision-short">in the bottom half.</span>
-            </span>
-          </span>
-          <button type="button" className="tl-btn tl-btn--quiet plb-vision-off" aria-label="Turn off the colour vision check" onClick={turnOffVision}>Turn off</button>
-        </div>
+      {/* A colour-vision check is on: say so above the board and give a way out. */}
+      {activeVision !== 'normal' && (
+        <VisionStrip mode={activeVision} onTurnOff={turnOffVision} />
       )}
 
       {/* THE BOARD (D:1017-1043). The set is the named unit (role=group,
@@ -2758,8 +2799,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           {adjusted.map((c, i) => {
             // Vision check: the TOP half paints the real colour, the BOTTOM
             // half simulates it through the chosen colour-vision deficiency.
-            const isSplit = vision !== 'normal'
-            const sim = isSplit ? simCvd(c, vision) : c
+            const isSplit = activeVision !== 'normal'
+            const sim = isSplit ? simCvd(c, activeVision) : c
             const ink = textColorForBg(sim)
             const anti = ink === '#000000' ? '#FFFFFF' : '#000000'
             const meta = columnMeta[i]
@@ -3560,8 +3601,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             colors={adjusted}
             paletteScore={paletteScore}
             harmony={harmony}
-            vision={vision}
-            visionLabel={visionMode(vision).name}
+            vision={activeVision}
+            visionLabel={visionMode(activeVision).name}
             onResetVision={() => changeVision('normal')}
             isPro={isPro}
             planKnown={planKnown}

@@ -29,6 +29,11 @@ test('hints fit the row and follow the copy rules', () => {
   assert.equal(VISION_MODES[0].name, 'Normal vision')
 })
 
+// MUTATION: change "colour blindness" back to "type" in VISION_NOTE in visionModes.js.
+test('the note under the list says what the 1 in 12 figure counts', () => {
+  assert.match(VISION_NOTE, /About 1 in 12 men and 1 in 200 women have some form of red-green colour blindness\.$/)
+})
+
 // MUTATION: drop the case or the sentence from the "on" message in visionAnnouncement.
 test('the live message names the mode, and turning it off says so', () => {
   assert.equal(visionAnnouncement('normal'), 'Colour vision check off.')

@@ -71,6 +71,11 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-vision-ico { flex: none; }
 .plb .plb-vision-ico--sm { display: none; }
 .plb .plb-vision-text { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; white-space: nowrap; color: var(--t1); }
+/* From 768px the text keeps its own width, so Turn off sits 8px after it (the strip's gap) instead of at the far edge.
+   On a phone the text fills the strip and the button stays at the right. */
+@media (min-width: 768px) {
+  .plb .plb-vision-text { flex: 0 1 auto; }
+}
 .plb .plb-vision-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 560; color: var(--tl-ink); }
 .plb .plb-vision-rest { flex: 0 0 auto; }
 .plb .plb-vision-short { display: none; }
@@ -80,6 +85,12 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   .plb .plb-vision-ico--sm { display: block; }
   .plb .plb-vision-long { display: none; }
   .plb .plb-vision-short { display: inline; }
+}
+/* At 359px and below the name and "Bottom half: how it looks." cannot share a line (the name would be cut to a
+   letter), so they stack: still no wrap inside either, and the strip is still one height for every mode. */
+@media (max-width: 359px) {
+  .plb .plb-vision-text { flex-direction: column; gap: 0; line-height: 18px; }
+  .plb .plb-vision-name { flex: none; }
 }
 /* A finger gets 44px; the strip grows round it and stays one height for every mode. */
 @media (pointer: coarse) {
